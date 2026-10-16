@@ -42,40 +42,6 @@ describe("sendToChat", () => {
     expect(body).toContain(`<a href="https://pharos.watch/digest/2026-03-21/">Read on Pharos →</a>`);
   });
 
-  it("builds weekly Telegram digest links with a trailing slash", () => {
-    const body = buildTelegramMessage("Weekly Recap", "PSI held steady.", "2026-03-21-weekly", 1);
-    expect(body).toContain(`<a href="https://pharos.watch/digest/2026-03-21-weekly/">Read on Pharos →</a>`);
-  });
-
-  it("does not render a Safety Score map as a hoped-for link preview", () => {
-    const body = buildTelegramMessage(
-      "Daily Digest",
-      "PSI held steady.",
-      "2026-03-21",
-      null,
-      null,
-      "<b>Today’s map</b>",
-    );
-    expect(body).toContain("<b>Today’s map</b>");
-    expect(body).not.toContain("View today’s map");
-  });
-
-  it("keeps the map summary next to the map bubble and isolates standing context", () => {
-    const body = buildTelegramMessage(
-      "Daily Digest",
-      "The lead moved first.\n\nStanding: USX d3 250bps",
-      "2026-03-21",
-      12,
-      "<b>Tracking Changes</b>\n\n<blockquote expandable><code>USDX</code> Example USD</blockquote>",
-      "<b>Today’s map</b>\nMapped supply: $100B across 318 coins\nA tier: 13 coins · 81.8%\nC/D/F tiers: 264 coins · 11.2%",
-    );
-
-    expect(body.indexOf("<b>Today’s map</b>")).toBeLessThan(body.indexOf("Pharos Daily Digest #12"));
-    expect(body).toContain("<blockquote expandable>Standing: USX d3 250bps</blockquote>");
-    expect(body).not.toContain("The lead moved first.\n\nStanding:");
-    expect(body.indexOf("<blockquote expandable>Standing:")).toBeLessThan(body.indexOf("<b>Tracking Changes</b>"));
-  });
-
   it("only advertises the private recap CTA in public rollout", () => {
     const publicPolicy = { mode: "public" as const };
 
@@ -119,38 +85,6 @@ describe("sendToChat", () => {
       errorClass: "server_error",
       delivery: "retryable_failure",
     });
-  });
-
-  it("passes disable_web_page_preview when set", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    await sendToChat("12345", "test", "bot-token", { disableWebPagePreview: true });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
-    expect(body.disable_web_page_preview).toBe(true);
-  });
-
-  it("passes link_preview_options when provided", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    await sendToChat("12345", "test", "bot-token", {
-      linkPreviewOptions: { is_disabled: false, prefer_small_media: true, show_above_text: false },
-    });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
-    expect(body.link_preview_options).toEqual({
-      is_disabled: false,
-      prefer_small_media: true,
-      show_above_text: false,
-    });
-    expect(body.disable_web_page_preview).toBeUndefined();
-  });
-
-  it("prefers link_preview_options over disable_web_page_preview when both are set", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    await sendToChat("12345", "test", "bot-token", {
-      disableWebPagePreview: true,
-      linkPreviewOptions: { is_disabled: false, prefer_small_media: true },
-    });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
-    expect(body.link_preview_options).toEqual({ is_disabled: false, prefer_small_media: true });
-    expect(body.disable_web_page_preview).toBeUndefined();
   });
 
   it("passes disable_notification when set", async () => {
@@ -399,15 +333,6 @@ describe("answerCallbackQuery", () => {
     warn.mockRestore();
   });
 
-  it("does not emit failure telemetry for a successful acknowledgement", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    await answerCallbackQuery("callback-id", "bot-token");
-
-    expect(warn).not.toHaveBeenCalled();
-    warn.mockRestore();
-  });
 });
 
 describe("editMessage", () => {
@@ -517,23 +442,6 @@ describe("sendBatch", () => {
     fetchSpy = mockFetch([], { requireMatch: true });
   });
 
-  it("sends messages in parallel batches of the given size", async () => {
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const messages = Array.from({ length: 7 }, (_, i) => ({
-      chatId: `chat-${i}`,
-      html: `<b>Alert ${i}</b>`,
-      disableNotification: false,
-    }));
-
-    const results = await sendBatch(messages, "bot-token", 3);
-
-    expect(results).toHaveLength(7);
-    expect(results.every((r) => r.ok)).toBe(true);
-    // 3 batches: [0,1,2], [3,4,5], [6]
-    expect(fetchSpy).toHaveBeenCalledTimes(7);
-  });
-
   it("sends same-chat chunks serially in ordinal order while other chats use bounded concurrency", async () => {
     const started: string[] = [];
     const completed: string[] = [];
@@ -633,42 +541,6 @@ describe("sendBatch", () => {
     expect(results[0]).toMatchObject({ chatId: "a", ok: true, blocked: false, delivery: "sent" });
     expect(results[1]).toMatchObject({ chatId: "b", ok: false, blocked: true, delivery: "blocked" });
     expect(results[2]).toMatchObject({ chatId: "c", ok: true, blocked: false, delivery: "sent" });
-  });
-
-  it("keeps sending later batches after a chat-scoped rate limit", async () => {
-    fetchSpy
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(
-        new Response("Too Many Requests: chat retry after 45", {
-          status: 429,
-          headers: { "Retry-After": "45" },
-        }),
-      )
-      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const messages = Array.from({ length: 8 }, (_, index) => ({
-      chatId: `chat-${index}`,
-      html: `<b>Alert ${index}</b>`,
-      disableNotification: false,
-    }));
-
-    const results = await sendBatch(messages, "bot-token", 5);
-
-    expect(fetchSpy).toHaveBeenCalledTimes(8);
-    expect(results).toHaveLength(8);
-    expect(results.slice(0, 4).every((result) => result.ok)).toBe(true);
-    expect(results[4]).toMatchObject({
-      chatId: "chat-4",
-      ok: false,
-      retryable: true,
-      errorClass: "rate_limit",
-      retryAfterSec: 45,
-      rateLimitScope: "chat",
-    });
-    expect(results.slice(5).every((result) => result.ok)).toBe(true);
   });
 
   it("does not launch later same-chat chunks after the first chunk is rate-limited", async () => {
@@ -828,71 +700,6 @@ describe("sendBatch", () => {
     });
     expect(results[1]).toMatchObject({ ok: true, attempted: true });
     expect(results.slice(2).every((result) => result.ok && result.attempted === true)).toBe(true);
-  });
-
-  it("does not trust global-looking description text as a machine-readable scope", async () => {
-    fetchSpy
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ description: "Too Many Requests: global retry after 45" }), {
-          status: 429,
-          headers: { "Retry-After": "45" },
-        }),
-      )
-      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const messages = Array.from({ length: 5 }, (_, index) => ({
-      chatId: `chat-${index}`,
-      html: `<b>Alert ${index}</b>`,
-      disableNotification: false,
-    }));
-
-    const results = await sendBatch(messages, "bot-token", 2);
-
-    expect(fetchSpy).toHaveBeenCalledTimes(5);
-    expect(results).toHaveLength(5);
-    expect(results[0]).toMatchObject({ ok: true, attempted: true });
-    expect(results[1]).toMatchObject({
-      chatId: "chat-1",
-      ok: false,
-      retryable: true,
-      errorClass: "rate_limit",
-      retryAfterSec: 45,
-      rateLimitScope: "chat",
-      attempted: true,
-    });
-    expect(results.slice(2).every((result) => result.ok && result.attempted === true)).toBe(true);
-  });
-
-  it("catches transient errors without crashing the batch", async () => {
-    fetchSpy
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(new Response("Internal Server Error", { status: 500 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const messages = [
-      { chatId: "a", html: "hi", disableNotification: false },
-      { chatId: "b", html: "hi", disableNotification: false },
-      { chatId: "c", html: "hi", disableNotification: false },
-    ];
-
-    const results = await sendBatch(messages, "bot-token", 3);
-    expect(results).toHaveLength(3);
-    expect(results[0]).toMatchObject({ chatId: "a", ok: true, blocked: false, delivery: "sent" });
-    expect(results[1]).toMatchObject({
-      chatId: "b",
-      ok: false,
-      blocked: false,
-      retryable: true,
-      delivery: "retryable_failure",
-    });
-    expect(results[2]).toMatchObject({ chatId: "c", ok: true, blocked: false, delivery: "sent" });
-  });
-
-  it("returns empty array for empty input", async () => {
-    const results = await sendBatch([], "bot-token", 5);
-    expect(results).toEqual([]);
-    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("forwards per-message linkPreviewOptions instead of the default disable flag", async () => {

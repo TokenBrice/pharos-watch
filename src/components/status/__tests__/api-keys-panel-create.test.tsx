@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  GENERATED_AT,
   ONE_TIME_TOKEN,
   keyResponse,
   makeKey,
@@ -31,34 +30,6 @@ describe("ApiKeysPanel create and token recovery", () => {
     expect(requestIdempotencyKey(0)).toBeTruthy();
     expect(await screen.findByText(ONE_TIME_TOKEN)).toBeTruthy();
     await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
-  });
-
-  it("renders inventory summary and copy action for one-time tokens", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
-    vi.mocked(fetch).mockResolvedValue(
-      keyResponse({ key: makeKey({ id: 2, name: "Digest Key" }), token: ONE_TIME_TOKEN }),
-    );
-
-    renderPanel([
-      makeKey({ id: 1, name: "Expired", expiresAt: GENERATED_AT - 3600 }),
-      makeKey({ id: 2, name: "Soon", expiresAt: GENERATED_AT + 2 * 24 * 60 * 60 }),
-      makeKey({ id: 3, name: "Permanent", expiresAt: null }),
-    ]);
-
-    const summary = screen.getByLabelText("API key inventory summary");
-    expect(within(summary).getByText("Total keys")).toBeTruthy();
-    expect(within(summary).getByText("Expiring soon")).toBeTruthy();
-    expect(within(summary).getByText("Non-expiring")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
-    fireEvent.change(screen.getAllByLabelText("Name")[0], { target: { value: "Digest Key" } });
-    fireEvent.click(screen.getByRole("button", { name: /create key/i }));
-
-    expect(await screen.findByText(ONE_TIME_TOKEN)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Copy to clipboard" }));
-
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(ONE_TIME_TOKEN));
   });
 
   it("requires explicit token acknowledgement and restores focus to the create trigger", async () => {

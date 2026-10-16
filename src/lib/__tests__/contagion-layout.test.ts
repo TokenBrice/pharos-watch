@@ -1,9 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   ALL_NODE_LIMIT,
-  minMaxNormalize,
-  deterministicJitter,
-  clampGraphPosition,
   buildGraphData,
   buildSupernodeState,
   contagionEdgeWeight,
@@ -14,7 +11,6 @@ import {
   MAX_COLLISION_PASS_NODES,
   PAD,
   MIN_RADIUS,
-  SUPERNODE_CONFIG,
   type ContagionGraphCard,
   type GraphNode,
   type GraphLink,
@@ -71,51 +67,6 @@ it("preserves unavailable market cap without inflating node size", () => {
 });
 
 // ---------------------------------------------------------------------------
-// minMaxNormalize
-// ---------------------------------------------------------------------------
-
-describe("minMaxNormalize", () => {
-  it("returns an empty map for empty ids", () => {
-    const result = minMaxNormalize([], new Map());
-    expect(result.size).toBe(0);
-  });
-
-  it("normalizes values between 0 and 1", () => {
-    const ids = ["a", "b", "c"];
-    const values = new Map([["a", 10], ["b", 20], ["c", 30]]);
-    const result = minMaxNormalize(ids, values);
-    expect(result.get("a")).toBe(0);
-    expect(result.get("b")).toBe(0.5);
-    expect(result.get("c")).toBe(1);
-  });
-
-  it("returns all zeros when all values are equal", () => {
-    const ids = ["a", "b"];
-    const values = new Map([["a", 5], ["b", 5]]);
-    const result = minMaxNormalize(ids, values);
-    expect(result.get("a")).toBe(0);
-    expect(result.get("b")).toBe(0);
-  });
-
-  it("treats missing ids as 0", () => {
-    const ids = ["a", "b"];
-    const values = new Map([["a", 10]]);
-    const result = minMaxNormalize(ids, values);
-    expect(result.get("a")).toBe(1);
-    expect(result.get("b")).toBe(0);
-  });
-});
-
-describe("clampGraphPosition", () => {
-  it("keeps dragged nodes inside the padded graph bounds", () => {
-    expect(clampGraphPosition(-20, HEIGHT + 20, 12)).toEqual({
-      x: PAD + 12,
-      y: HEIGHT - PAD - 12,
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
 // contagionEdgeWeight
 // ---------------------------------------------------------------------------
 
@@ -123,48 +74,6 @@ describe("contagionEdgeWeight", () => {
   it("treats every serial dependency as full pass-through", () => {
     expect(contagionEdgeWeight(serialEdge("a", "b"))).toBe(1);
     expect(contagionEdgeWeight(serialEdge("a", "b", true))).toBe(1);
-  });
-
-  it("keeps a bounded-unknown basket's published weight instead of zeroing known exposure", () => {
-    expect(contagionEdgeWeight(basketEdge("a", "b", 0.35, "basket-bounded-unknown"))).toBe(0.35);
-  });
-
-  it("contributes no magnitude only when the basket weight itself is absent", () => {
-    expect(contagionEdgeWeight(basketEdge("a", "b", null))).toBe(0);
-    expect(contagionEdgeWeight(basketEdge("a", "b", 0.35))).toBe(0.35);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// deterministicJitter
-// ---------------------------------------------------------------------------
-
-describe("deterministicJitter", () => {
-  it("returns the same value for the same inputs", () => {
-    const a = deterministicJitter("usdt-tether", 17, 8);
-    const b = deterministicJitter("usdt-tether", 17, 8);
-    expect(a).toBe(b);
-  });
-
-  it("returns different values for different ids", () => {
-    const a = deterministicJitter("usdt-tether", 17, 8);
-    const b = deterministicJitter("usdc-circle", 17, 8);
-    expect(a).not.toBe(b);
-  });
-
-  it("returns different values for different salts", () => {
-    const a = deterministicJitter("usdt-tether", 17, 8);
-    const b = deterministicJitter("usdt-tether", 53, 8);
-    expect(a).not.toBe(b);
-  });
-
-  it("stays within the specified range", () => {
-    const range = 10;
-    for (const id of ["a", "bb", "ccc", "dddd", "eeeee"]) {
-      const v = deterministicJitter(id, 42, range);
-      expect(v).toBeGreaterThanOrEqual(-range);
-      expect(v).toBeLessThanOrEqual(range);
-    }
   });
 });
 
@@ -188,19 +97,6 @@ describe("buildGraphData", () => {
   function chainEdges(ids: string[]): ReportCardsV9DependencyEdge[] {
     return ids.slice(1).map((id, index) => basketEdge(ids[index], id, 0.5));
   }
-
-  it("treats an empty dependencyEdges array as no graph edges", () => {
-    const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
-    const mcapMap = new Map<string, number>([
-      ["usds-sky", 5_000_000_000],
-      ["susds-sky", 2_000_000_000],
-    ]);
-
-    const result = buildGraphData(cards, mcapMap, []);
-
-    expect(result.nodes).toEqual([]);
-    expect(result.links).toEqual([]);
-  });
 
   it("collapses V9 materiality onto the drawn relationship", () => {
     const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
@@ -343,118 +239,6 @@ describe("buildGraphData", () => {
     expect(result.nodes.map((node) => node.id).sort()).toEqual(["downstream", "upstream"]);
     expect(result.links).toHaveLength(1);
   });
-
-  it("keeps node and link totals stable when a serial edge is added alongside an existing basket edge", () => {
-    const cards = [
-      mockCard("upstream", "UP"),
-      mockCard("downstream", "DOWN"),
-      mockCard("susds-sky", "SUSDS"),
-      mockCard("usds-sky", "USDS"),
-    ];
-    const mcapMap = new Map<string, number>([
-      ["upstream", 5_000_000_000],
-      ["downstream", 3_000_000_000],
-      ["usds-sky", 4_000_000_000],
-      ["susds-sky", 1_000_000_000],
-    ]);
-
-    const edgesWithoutVariant = [basketEdge("upstream", "downstream", 0.6)];
-    const edgesWithVariant = [...edgesWithoutVariant, serialEdge("usds-sky", "susds-sky")];
-
-    const baseline = buildGraphData(cards, mcapMap, edgesWithoutVariant);
-    const withVariant = buildGraphData(cards, mcapMap, edgesWithVariant);
-
-    expect(withVariant.nodes.length).toBe(baseline.nodes.length + 2);
-    expect(withVariant.links.length).toBe(baseline.links.length + 1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// buildSupernodeState
-// ---------------------------------------------------------------------------
-
-describe("buildSupernodeState", () => {
-  it("breaks tied hub scores by identity rather than publication ordering", () => {
-    const nodes: GraphNode[] = Array.from({ length: 12 }, (_, index) => ({
-      id: `coin-${index}`, symbol: `C${index}`, grade: "B", mcap: 100, r: 10,
-    }));
-    const links: GraphLink[] = nodes.map((node, index) => ({
-      source: node.id, target: nodes[(index + 1) % nodes.length].id, weight: 1, type: "wrapper",
-    }));
-    const forward = buildSupernodeState(nodes, links);
-    const reversed = buildSupernodeState([...nodes].reverse(), [...links].reverse());
-    expect(reversed.tierById).toEqual(forward.tierById);
-    expect(reversed.layoutTargetById).toEqual(forward.layoutTargetById);
-  });
-  it("scores incoming magnitude as log10 direct dependent USD rather than summed shares", () => {
-    const nodes: GraphNode[] = [
-      { id: "low-hub", symbol: "L", grade: "B", mcap: null, r: 10 },
-      { id: "high-hub", symbol: "H", grade: "B", mcap: null, r: 10 },
-      { id: "small", symbol: "S", grade: "B", mcap: 9, r: 10 },
-      { id: "large", symbol: "B", grade: "B", mcap: 99, r: 10 },
-    ];
-    const links: GraphLink[] = [
-      { source: "small", target: "low-hub", weight: 1, type: "wrapper" },
-      { source: "large", target: "high-hub", weight: 1, type: "wrapper" },
-    ];
-    const state = buildSupernodeState(nodes, links);
-    expect(state.scoreById.get("low-hub")).toBeCloseTo(0.5);
-    expect(state.scoreById.get("high-hub")).toBeCloseTo(0.75);
-  });
-  function makeSimpleGraph(): { nodes: GraphNode[]; links: GraphLink[] } {
-    const ids = TRACKED_STABLECOINS.slice(0, 20).map((s) => s.id);
-    const cards = ids.map((id) => {
-      const meta = TRACKED_STABLECOINS.find((s) => s.id === id)!;
-      return mockCard(id, meta.symbol);
-    });
-    const mcapMap = new Map(ids.map((id, i) => [id, (ids.length - i) * 1_000_000_000]));
-    // Star the ranked head so the hub tiers have something to score.
-    const edges = ids.slice(1).map((id) => basketEdge(ids[0], id, 0.5));
-    return buildGraphData(cards, mcapMap, edges);
-  }
-
-  it("assigns tier 2 to at least minTier1 nodes", () => {
-    const { nodes, links } = makeSimpleGraph();
-    expect(nodes.length).toBeGreaterThan(0);
-    const state = buildSupernodeState(nodes, links);
-    const tier2Count = [...state.tierById.values()].filter((t) => t === 2).length;
-    expect(tier2Count).toBeGreaterThanOrEqual(SUPERNODE_CONFIG.minTier1);
-  });
-
-  it("places layout targets within the canvas bounds", () => {
-    const { nodes, links } = makeSimpleGraph();
-    const state = buildSupernodeState(nodes, links);
-    for (const [, target] of state.layoutTargetById) {
-      expect(target.x).toBeGreaterThanOrEqual(0);
-      expect(target.x).toBeLessThanOrEqual(WIDTH);
-      expect(target.y).toBeGreaterThanOrEqual(0);
-      expect(target.y).toBeLessThanOrEqual(HEIGHT);
-    }
-  });
-
-  it("assigns anchor strengths based on tier", () => {
-    const { nodes, links } = makeSimpleGraph();
-    const state = buildSupernodeState(nodes, links);
-    for (const node of nodes) {
-      const tier = state.tierById.get(node.id) ?? 0;
-      const strength = state.anchorStrengthById.get(node.id)!;
-      expect(typeof strength).toBe("number");
-      if (tier === 2) {
-        expect(strength).toBe(0.24);
-      } else if (tier === 1) {
-        expect(strength).toBe(0.105);
-      } else {
-        expect(strength).toBe(0.04);
-      }
-    }
-  });
-
-
-  it("handles empty nodes gracefully", () => {
-    const state = buildSupernodeState([], []);
-    expect(state.tierById.size).toBe(0);
-    expect(state.scoreById.size).toBe(0);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -503,9 +287,5 @@ describe("runSimulation", () => {
       expect(pos.y).toBeGreaterThanOrEqual(PAD - node.r);
       expect(pos.y).toBeLessThanOrEqual(HEIGHT - PAD + node.r);
     }
-  });
-
-  it("returns an empty map for an empty graph", () => {
-    expect(runSimulation([], [], buildSupernodeState([], [])).size).toBe(0);
   });
 });

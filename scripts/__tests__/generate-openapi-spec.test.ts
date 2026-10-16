@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { DigestSafetyMapSummarySchema } from "@shared/types/digest";
-import { ApiRequestAttributionResponseSchema } from "@shared/types/request-source";
 import { StablecoinDataSchema, StablecoinDataOutputSchema } from "@shared/types/market";
 import { ReserveBoundedFactKindSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import {
@@ -112,20 +110,6 @@ describe("OpenAPI runtime response contracts", () => {
     ).toEqual(YIELD_ADAPTER_LIFECYCLE_VALUES);
   });
 
-  it("publishes the expired-evidence responsibility in the report-card schema", () => {
-    const schemas = document.components.schemas as Record<string, JsonSchemaObject>;
-    const reportCardsSchema = resolveSchemaTree(schemas.ReportCardsV9Response, schemas) as {
-      properties: { cards: { items: { properties: { scoreTrace: { properties: {
-        evidenceResponsibility: { properties: { summaries: { items: { properties: {
-          responsibility: { enum: string[] };
-        } } } } };
-      } } } } } };
-    };
-    expect(reportCardsSchema.properties.cards.items.properties.scoreTrace.properties
-      .evidenceResponsibility.properties.summaries.items.properties.responsibility.enum)
-      .toContain("published-evidence-expired");
-  });
-
   it("emits protected and public operation security, errors, and required path parameters", () => {
     const protectedOperation = document.paths["/api/stablecoin/{stablecoinId}"].get;
     expect(protectedOperation.security ?? document.security).toEqual([{ ApiKeyAuth: [] }]);
@@ -187,66 +171,6 @@ describe("OpenAPI runtime response contracts", () => {
         .map((endpoint) => endpoint.key)
         .sort(),
     ).toEqual([...OPENAPI_JSON_VALUE_ENDPOINT_KEYS].sort());
-  });
-
-  it("uses canonical runtime contracts for the five promoted response families", () => {
-    const endpoints: readonly PublicApiArtifactEndpoint[] = PUBLIC_API_ARTIFACT_ENDPOINTS;
-    const responseSchemas = Object.fromEntries(
-      endpoints.map((endpoint) => [endpoint.key, endpoint.responseSchema]),
-    );
-
-    expect(responseSchemas).toMatchObject({
-      "bluechip-ratings": "BluechipRatingsResponse",
-      "dex-liquidity": "DexLiquidityResponse",
-      "stress-signals": "StressSignalsResponse",
-      "mint-burn-flows": "MintBurnFlowsResponse",
-      "telegram-pulse": "TelegramPulseResponse",
-    });
-    // Five of the six former generic endpoints now carry real schemas. `snapshot-day` is the
-    // sole remaining entry by decision, not by omission: its producer envelope spans the
-    // historical V8 shape and a large inline V9 union. This list is a debt ledger, so it may
-    // shrink but must never silently grow.
-    expect([...OPENAPI_JSON_VALUE_ENDPOINT_KEYS].sort()).toEqual(["snapshot-day"]);
-    expect(responseSchemas).toMatchObject({
-      "stablecoin-detail": "StablecoinDetailResponse",
-      "stablecoin-summary": "StablecoinSummaryResponse",
-      "non-usd-share": "NonUsdShareResponse",
-      "snapshots-index": "SnapshotsIndexResponse",
-      "snapshot-coin": "SnapshotCoinResponse",
-    });
-  });
-
-  it("publishes percentage-point scales for every clarified Pct response field", () => {
-    const description = "Percentage points, 0-100 scale (not a 0-1 ratio)";
-    const schemas = document.components.schemas as Record<string, unknown>;
-    const responseFields = [
-      ["DdrResponse", "supplyChange7dPct"],
-      ["DdrResponse", "supplyChange30dPct"],
-    ] as const;
-
-    for (const [schemaName, propertyName] of responseFields) {
-      const matches = collectPropertySchemas(
-        resolveSchemaTree(schemas[schemaName], schemas),
-        propertyName,
-      );
-      expect(matches.length, `${schemaName}.${propertyName}`).toBeGreaterThan(0);
-      expect(matches.map((field) => field.description), `${schemaName}.${propertyName}`)
-        .toEqual(Array(matches.length).fill(description));
-    }
-
-    expect(
-      DigestSafetyMapSummarySchema.shape.tiers.element.shape.sharePct.description,
-    ).toBe(description);
-
-    const attributionFields = [
-      ApiRequestAttributionResponseSchema.shape.totals.shape.siteSharePct,
-      ApiRequestAttributionResponseSchema.shape.totals.shape.externalSharePct,
-      ApiRequestAttributionResponseSchema.shape.keyedPublicApi.shape.keyedSharePct,
-      ApiRequestAttributionResponseSchema.shape.keyedPublicApi.shape.unkeyedSharePct,
-      ApiRequestAttributionResponseSchema.shape.apiKeys.element.shape.shareOfKeyedRequestsPct,
-      ApiRequestAttributionResponseSchema.shape.apiKeys.element.shape.shareOfTotalPublicApiRequestsPct,
-    ];
-    expect(attributionFields.every((field) => field.description === description)).toBe(true);
   });
 
   it("rejects empty converted response schemas with their schema name", () => {

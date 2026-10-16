@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import * as React from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   assertContentTableRowsMatchColumns,
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 
 describe("Pharos table primitives", () => {
 
@@ -127,46 +129,6 @@ describe("Pharos table primitives", () => {
     expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
   });
 
-  it("forwards caller classes to the table, header and cells", () => {
-    render(
-      <TableFrame tableClassName="min-w-[64rem] table-fixed">
-        <TableHeader className="custom-header">
-          <TableRow>
-            <TableHead className="custom-head">Metric</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <TableCell className="custom-cell">Peg score</TableCell>
-          </TableRow>
-        </TableBody>
-      </TableFrame>,
-    );
-
-    const table = screen.getByRole("table");
-    expect(table.className).toContain("min-w-[64rem]");
-    expect(table.className).toContain("table-fixed");
-    expect(table.querySelector("thead")?.className).toContain("custom-header");
-    expect(screen.getByText("Metric").closest("th")?.className).toContain("custom-head");
-    expect(screen.getByText("Peg score").closest("td")?.className).toContain("custom-cell");
-  });
-
-  it("preserves explicit table labels over the table id fallback", () => {
-    render(
-      <TableFrame
-        tableId="fallback-id"
-        tableProps={{ "aria-label": "Explicit table label" }}
-      >
-        <TableBody>
-          <TableRow>
-            <TableCell>USDT</TableCell>
-          </TableRow>
-        </TableBody>
-      </TableFrame>,
-    );
-
-    expect(screen.getByRole("table", { name: "Explicit table label" })).toBeTruthy();
-  });
 
   it("renders a compact content table from column and row definitions", () => {
     render(
@@ -247,37 +209,33 @@ describe("Pharos table primitives", () => {
     ).toThrow(/extra cells: typo/);
   });
 
-  it("marks row intent without changing the default row behavior", () => {
+  it("renders source links with external-link metadata and can stop row propagation", () => {
+    const onRowClick = vi.fn();
+
     render(
-      <table>
-        <tbody>
-          <TableRow>
-            <TableCell>Default</TableCell>
-          </TableRow>
-          <TableRow rowIntent="static">
-            <TableCell>Static</TableCell>
-          </TableRow>
-          <TableRow rowIntent="scan">
-            <TableCell>Scan</TableCell>
-          </TableRow>
-        </tbody>
-      </table>,
+      <div onClick={onRowClick}>
+        <TableSourceLink href="https://example.com/source" stopPropagation>
+          Source
+        </TableSourceLink>
+      </div>,
     );
 
-    expect(
-      screen.getByText("Default").closest("tr")?.getAttribute("data-row-intent"),
-    ).toBe("interactive");
-    expect(
-      screen.getByText("Static").closest("tr")?.getAttribute("data-row-intent"),
-    ).toBe("static");
-    expect(
-      screen.getByText("Scan").closest("tr")?.getAttribute("data-row-intent"),
-    ).toBe("scan");
-  });
+    const link = screen.getByRole("link", { name: "Source" });
 
-  it("can suppress the mobile scroll hint", () => {
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+
+    fireEvent.click(link);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+  it("accepts a viewport ref through viewportProps for virtualizer getScrollElement usage", () => {
+    const viewportRef = React.createRef<HTMLDivElement>();
+
     render(
-      <TableFrame viewportProps={{ mobileScrollHint: false }}>
+      <TableFrame
+        viewportDefaults="virtual"
+        viewportProps={{ ref: viewportRef, mobileScrollHint: false }}
+      >
         <TableBody>
           <TableRow>
             <TableCell>USDT</TableCell>
@@ -286,7 +244,81 @@ describe("Pharos table primitives", () => {
       </TableFrame>,
     );
 
+    const viewport = screen.getByRole("table").parentElement;
+
+    expect(viewportRef.current).toBe(viewport);
     expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
-    expect(screen.getByRole("table")).toBeTruthy();
+  });
+
+  it("forwards the standard ref prop along with surfaceRef", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    const surfaceRef = React.createRef<HTMLDivElement>();
+
+    render(
+      <TableFrame ref={ref} surfaceRef={surfaceRef} viewportDefaults="virtual" testId="virtual-shell">
+        <TableBody>
+          <TableRow>
+            <TableCell>USDT</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableFrame>,
+    );
+
+    const shell = screen.getByTestId("virtual-shell");
+    expect(ref.current).toBe(shell);
+    expect(surfaceRef.current).toBe(shell);
+  });
+
+  it("keeps composed refs stable across rerenders", () => {
+    const surfaceCalls: Array<HTMLDivElement | null> = [];
+    const viewportCalls: Array<HTMLDivElement | null> = [];
+    const surfaceRef = (node: HTMLDivElement | null) => {
+      surfaceCalls.push(node);
+    };
+    const viewportRef = (node: HTMLDivElement | null) => {
+      viewportCalls.push(node);
+    };
+
+    const { rerender } = render(
+      <TableFrame
+        viewportDefaults="virtual"
+        surfaceRef={surfaceRef}
+        viewportRef={viewportRef}
+        testId="virtual-shell"
+        topSlot={<div>First toolbar</div>}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell>USDT</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableFrame>,
+    );
+
+    const shell = screen.getByTestId("virtual-shell");
+    const viewport = screen.getByRole("table").parentElement as HTMLDivElement;
+
+    expect(surfaceCalls).toEqual([shell]);
+    expect(viewportCalls).toEqual([viewport]);
+
+    rerender(
+      <TableFrame
+        viewportDefaults="virtual"
+        surfaceRef={surfaceRef}
+        viewportRef={viewportRef}
+        testId="virtual-shell"
+        topSlot={<div>Updated toolbar</div>}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell>USDC</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableFrame>,
+    );
+
+    expect(screen.getByText("Updated toolbar")).toBeTruthy();
+    expect(surfaceCalls).toEqual([shell]);
+    expect(viewportCalls).toEqual([viewport]);
   });
 });

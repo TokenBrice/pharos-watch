@@ -126,25 +126,6 @@ describe("adaptZephyrScanner", () => {
     });
   });
 
-  it("passes the registered adapter output validator for timestamped snapshots", () => {
-    const result = adaptZephyrScanner({
-      results: [
-        {
-          captured_at: "2024-03-09T16:00:00.000Z",
-          on_chain: {
-            zeph_reserve: 1000,
-            zsd_circ: 500,
-            reserve_ratio: 2,
-          },
-          pricing_record: {
-            spot: 1000000000000,
-          },
-        },
-      ],
-    });
-    expectValidAdapterOutput("zephyr-scanner", result);
-  });
-
   it("maps the ZYS yield reserve to the exact tracked ZSD dependency", () => {
     const result = adaptZephyrScanner(
       {

@@ -251,7 +251,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   },
 ];
 
-export function normalizeNavPath(pathname: string): string {
+function normalizeNavPath(pathname: string): string {
   if (pathname === "/") return "/";
   return pathname.replace(/\/+$/, "");
 }

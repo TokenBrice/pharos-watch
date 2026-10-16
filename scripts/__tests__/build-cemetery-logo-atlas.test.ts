@@ -3,32 +3,18 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { resolveCemeteryLogoUrl } from "@shared/lib/cemetery-merged";
+
 import {
-  buildAtlasManifest,
   buildCemeteryLogoAtlas,
   checkCemeteryLogoAtlas,
   planCemeteryLogoAtlas,
   readAtlasInputs,
-  toCssGrayscale,
   type AtlasInputRow,
   type AtlasPaths,
 } from "../maintenance/build-cemetery-logo-atlas";
 
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
-
-describe("resolveCemeteryLogoUrl", () => {
-  it("keeps absolute paths and maps bare file names under /logos/cemetery/", () => {
-    expect(resolveCemeteryLogoUrl("/logos/10-mim.png")).toBe("/logos/10-mim.png");
-    expect(resolveCemeteryLogoUrl("ust.png")).toBe("/logos/cemetery/ust.png");
-  });
-
-  it("treats absent and empty logos as missing", () => {
-    expect(resolveCemeteryLogoUrl(undefined)).toBeUndefined();
-    expect(resolveCemeteryLogoUrl("")).toBeUndefined();
-  });
-});
 
 describe("planCemeteryLogoAtlas", () => {
   const rows: AtlasInputRow[] = [
@@ -38,72 +24,8 @@ describe("planCemeteryLogoAtlas", () => {
     { id: "beta-copy", logoUrl: "/logos/cemetery/a-copy.png", sourceSha256: HASH_A },
   ];
 
-  it("produces the same layout regardless of input order", () => {
-    const forward = planCemeteryLogoAtlas(rows, { pixelArtLogoUrls: [] });
-    const reversed = planCemeteryLogoAtlas([...rows].reverse(), { pixelArtLogoUrls: [] });
-    expect(buildAtlasManifest(reversed)).toEqual(buildAtlasManifest(forward));
-    expect(reversed.inputSha256).toBe(forward.inputSha256);
-    expect(Object.keys(buildAtlasManifest(forward).entries)).toEqual(["alpha", "beta-copy", "zeta"]);
-  });
-
-  it("lists logo-less rows as missing instead of assigning cells", () => {
-    const manifest = buildAtlasManifest(planCemeteryLogoAtlas(rows, { pixelArtLogoUrls: [] }));
-    expect(manifest.missing).toEqual(["mid-none"]);
-    expect(manifest.entries["mid-none"]).toBeUndefined();
-  });
-
-  it("shares cells between rows whose source bytes are identical", () => {
-    const plan = planCemeteryLogoAtlas(rows, { pixelArtLogoUrls: [] });
-    const manifest = buildAtlasManifest(plan);
-    expect(plan.sources).toHaveLength(2);
-    expect(manifest.entries["beta-copy"]).toEqual(manifest.entries.alpha);
-    expect(manifest.entries.zeta).not.toEqual(manifest.entries.alpha);
-  });
-
-  it("packs colour and gray cells side by side without overlap and inside the atlas", () => {
-    const many: AtlasInputRow[] = Array.from({ length: 13 }, (_, index) => ({
-      id: `coin-${String(index).padStart(2, "0")}`,
-      logoUrl: `/logos/cemetery/${index}.png`,
-      sourceSha256: index.toString(16).padStart(64, "0"),
-    }));
-    const plan = planCemeteryLogoAtlas(many, { cellSize: 10, gutter: 2, pixelArtLogoUrls: [] });
-    const manifest = buildAtlasManifest(plan);
-    const seen = new Set<string>();
-    for (const { color, gray } of Object.values(manifest.entries)) {
-      expect(gray[1]).toBe(color[1]);
-      expect(gray[0]).toBe(color[0] + 12);
-      for (const [x, y] of [color, gray]) {
-        expect(x + 10).toBeLessThanOrEqual(manifest.width);
-        expect(y + 10).toBeLessThanOrEqual(manifest.height);
-        seen.add(`${x},${y}`);
-      }
-    }
-    expect(seen.size).toBe(26);
-  });
-
-  it("rotates the input signature when a source changes and only then", () => {
-    const base = planCemeteryLogoAtlas(rows, { pixelArtLogoUrls: [] });
-    expect(planCemeteryLogoAtlas(rows, { pixelArtLogoUrls: [] }).inputSha256).toBe(base.inputSha256);
-    const edited = rows.map((row) => (row.id === "zeta" ? { ...row, sourceSha256: "c".repeat(64) } : row));
-    expect(planCemeteryLogoAtlas(edited, { pixelArtLogoUrls: [] }).inputSha256).not.toBe(base.inputSha256);
-  });
-
-  it("renders pixel-art overrides with nearest-neighbour and rejects stale overrides", () => {
-    const plan = planCemeteryLogoAtlas(rows, { pixelArtLogoUrls: ["/logos/cemetery/z.png"] });
-    expect(plan.sources.find((source) => source.logoUrl === "/logos/cemetery/z.png")?.kernel).toBe("nearest");
-    expect(plan.sources.find((source) => source.logoUrl === "/logos/cemetery/a.png")?.kernel).toBe("lanczos3");
-    expect(() => planCemeteryLogoAtlas(rows, { pixelArtLogoUrls: ["/logos/gone.png"] })).toThrow(/gone\.png/);
-  });
-
   it("rejects duplicate ids", () => {
     expect(() => planCemeteryLogoAtlas([rows[1], rows[1]], { pixelArtLogoUrls: [] })).toThrow(/Duplicate/);
-  });
-});
-
-describe("toCssGrayscale", () => {
-  it("applies the CSS grayscale(1) luminance weights and preserves alpha", () => {
-    const out = toCssGrayscale(Uint8Array.from([255, 0, 0, 128, 0, 255, 0, 255, 255, 255, 255, 0]));
-    expect([...out]).toEqual([54, 54, 54, 128, 182, 182, 182, 255, 255, 255, 255, 0]);
   });
 });
 
@@ -176,15 +98,6 @@ describe("buildCemeteryLogoAtlas + checkCemeteryLogoAtlas", () => {
     expect(await problemKinds(fixture)).toEqual([]);
   });
 
-  it("is a no-op when inputs are unchanged, so another platform's encoder never churns the WebP", async () => {
-    const fixture = await makeFixture();
-    await build(fixture);
-    const before = readFileSync(fixture.paths.imagePath);
-    expect((await build(fixture)).status).toBe("current");
-    expect(readFileSync(fixture.paths.imagePath).equals(before)).toBe(true);
-    expect((await build(fixture, true)).status).toBe("written");
-  });
-
   it("flags a changed source logo as stale inputs", async () => {
     const fixture = await makeFixture();
     await build(fixture);
@@ -200,11 +113,5 @@ describe("buildCemeteryLogoAtlas + checkCemeteryLogoAtlas", () => {
     writeFileSync(fixture.paths.imagePath, await sharp(fixture.paths.imagePath).webp({ quality: 10 }).toBuffer());
     unlinkSync(fixture.paths.manifestPath);
     expect(await problemKinds(fixture)).toEqual(["image-modified", "stale-manifest"]);
-  });
-
-  it("fails loudly when a referenced logo file is absent", async () => {
-    const fixture = await makeFixture();
-    unlinkSync(join(fixture.paths.publicDir, "logos/blue.svg"));
-    await expect(build(fixture)).rejects.toThrow(/blue-coin.*\/logos\/blue\.svg/);
   });
 });

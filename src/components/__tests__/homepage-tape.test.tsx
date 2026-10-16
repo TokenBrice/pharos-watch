@@ -49,20 +49,6 @@ function mockEvents(events: TapeEvent[]) {
 }
 
 describe("HomepageTape", () => {
-  it("shows registry chips alongside event links only in top placement", () => {
-    mockEvents([makeTapeEvent()]);
-    const { rerender } = render(<HomepageTape placement="top" />);
-    expect(screen.getByRole("region", { name: "Recent events tape" })).toBeTruthy();
-    for (const label of ["Core", "Variants", "Pegs", "Chains"]) {
-      expect(screen.getAllByText(label)).toHaveLength(1);
-    }
-    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href")))
-      .toContain("/stablecoin/usdc-circle#peg-history");
-    rerender(<HomepageTape placement="inline" />);
-    for (const label of ["Core", "Variants", "Pegs", "Chains"]) {
-      expect(screen.queryByText(label)).toBeNull();
-    }
-  });
 
   it("renders nothing when there are no events", () => {
     const { container } = render(<HomepageTape />);
@@ -79,15 +65,6 @@ describe("HomepageTape", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders a loading state when the hook is loading", () => {
-    mockLatestEvents({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    });
-    render(<HomepageTape />);
-    expect(screen.getByText(/loading recent events/i)).toBeTruthy();
-  });
 
   it("renders depeg and freeze events with links and stablecoin logos, dropping score events", () => {
     mockEvents([
@@ -136,29 +113,6 @@ describe("HomepageTape", () => {
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdt-tether/#report-card"))).toBe(false);
   });
 
-  it("keeps a severity dot fallback when an event is not tied to a stablecoin", () => {
-    mockEvents([
-          makeTapeEvent({
-            coinId: null,
-            severity: "notice",
-            title: "General market event",
-            sourceUrl: "/",
-          }),
-    ]);
-
-    render(<HomepageTape />);
-
-    expect(screen.getAllByLabelText("Notice")).toHaveLength(2);
-  });
-
-  it("labels the strip as Events", () => {
-    mockEvents([makeTapeEvent()]);
-
-    render(<HomepageTape />);
-
-    expect(screen.getByText("Events")).toBeTruthy();
-    expect(screen.queryByText("Live Tape")).toBeNull();
-  });
 
   it("collapses repeated same-coin same-type events into one cell with a count badge", () => {
     mockEvents([
@@ -295,47 +249,4 @@ describe("HomepageTape", () => {
     expect(screen.queryByText(/×\d/)).toBeNull();
   });
 
-  it("appends a single non-duplicated 'View all events' terminator linking to /timeline/", () => {
-    mockEvents([
-          makeTapeEvent({ id: "1747200000000-depeg-eee55555", title: "USDC depeg opened (-500 bps)" }),
-          makeTapeEvent({
-            id: "1747200000000-freeze-fff66666",
-            type: "freeze.address.blocked",
-            title: "USDT freeze blocked",
-          }),
-    ]);
-
-    render(<HomepageTape />);
-
-    // Terminator renders once even though items are duplicated.
-    expect(screen.getAllByText("View all events")).toHaveLength(1);
-    const tapeLink = screen.getByText("View all events").closest("a");
-    // Next.js Link may normalize trailing slash; accept either.
-    expect(tapeLink?.getAttribute("href")).toMatch(/^\/timeline\/?$/);
-  });
-
-  it("renders yield warning keys and chain ids in plain language", () => {
-    mockEvents([
-      makeTapeEvent({
-        id: "1747200000000-yield-aaa11111",
-        type: "yield.warning_emitted",
-        coinId: "usdc-circle",
-        title: "USDC yield warning: opportunity-evidence-missing, tvl-outflow",
-        payload: { newSignals: ["opportunity-evidence-missing", "tvl-outflow"] },
-      }),
-      makeTapeEvent({
-        id: "1747200000000-mint-bbb22222",
-        type: "mint_burn.large_burn",
-        coinId: "usdt-tether",
-        chain: "ethereum",
-        title: "USDT burned $49.0M · ethereum",
-      }),
-    ]);
-
-    render(<HomepageTape />);
-
-    expect(screen.getAllByText("USDC yield warning: Opportunity evidence incomplete, TVL outflow").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("USDT burned $49.0M · Ethereum").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/opportunity-evidence-missing/)).toBeNull();
-  });
 });

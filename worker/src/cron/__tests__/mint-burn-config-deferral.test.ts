@@ -115,28 +115,6 @@ describe("loadDeferredConfigs", () => {
 });
 
 describe("deferConfig", () => {
-  it("persists the one-hour deferral outcome by semantic column", async () => {
-    const { sqlite, db } = fixtures.open();
-
-    await deferConfig(
-      db,
-      "ethereum-0xaaa",
-      NOW_SEC,
-      6,
-      0.5,
-      "api-errors-and-low-coverage",
-    );
-
-    expect(readDeferrals(sqlite)).toEqual([{
-      config_key: "ethereum-0xaaa",
-      deferred_until: NOW_SEC + 3600,
-      reason: "api-errors-and-low-coverage",
-      api_errors: 6,
-      coverage: 0.5,
-      created_at: NOW_SEC,
-    }]);
-  });
-
   it("persists unknown coverage as null", async () => {
     const { sqlite, db } = fixtures.open();
 

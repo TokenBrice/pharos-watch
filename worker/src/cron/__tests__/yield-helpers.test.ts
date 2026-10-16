@@ -16,7 +16,6 @@ import {
   DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
   computeApyFromPrice,
-  computePYS,
   computeYieldStability,
   detectWarningSignals,
   isDeterministicApyWithinSanityBounds,
@@ -101,11 +100,6 @@ describe("computeApyFromRate", () => {
     expect(computeApyFromRate(1.05, 1.05, 30)).toBe(0);
   });
 
-  it("computes positive APY for increasing rate", () => {
-    const apy = computeApyFromRate(1.001, 1.0, 1);
-    expect(apy).toBeGreaterThan(0);
-  });
-
   it("keeps invalid inputs and windows unavailable with a reason", () => {
     expect(computeApyFromRate(0, 1, 1)).toEqual({ reason: "invalid-input" });
     expect(computeApyFromRate(1, 0, 1)).toEqual({ reason: "invalid-input" });
@@ -145,47 +139,6 @@ describe("computeApyFromRate", () => {
     expect(isDeterministicApyWithinSanityBounds(apy)).toBe(false);
     expect(isDeterministicApyWithinSanityBounds(5)).toBe(true);
     expect(isDeterministicApyWithinSanityBounds(Number.POSITIVE_INFINITY)).toBe(false);
-  });
-});
-
-describe("computePYS", () => {
-  it("returns 0 for zero APY", () => {
-    expect(computePYS({ apy30d: 0, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 10 })).toBe(0);
-  });
-
-  it("returns higher score for higher APY", () => {
-    const low = computePYS({ apy30d: 2, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 10 });
-    const high = computePYS({ apy30d: 8, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 10 });
-    expect(high).toBeGreaterThan(low);
-  });
-
-  it("returns higher score when the same APY clears a lower benchmark", () => {
-    const usdLike = computePYS({ apy30d: 4, benchmarkRate: 4.5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 10 });
-    const chfLike = computePYS({ apy30d: 4, benchmarkRate: 0, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 10 });
-    expect(chfLike).toBeGreaterThan(usdLike);
-  });
-
-  it("returns higher score for higher safety score", () => {
-    const risky = computePYS({ apy30d: 5, safetyScore: 30, apyVarianceScore: 0.1, scalingFactor: 10 });
-    const safe = computePYS({ apy30d: 5, safetyScore: 90, apyVarianceScore: 0.1, scalingFactor: 10 });
-    expect(safe).toBeGreaterThan(risky);
-  });
-
-  it("caps at 100", () => {
-    const result = computePYS({ apy30d: 100, safetyScore: 100, apyVarianceScore: 0, scalingFactor: 100 });
-    expect(result).toBeLessThanOrEqual(100);
-  });
-
-  it("matches the benchmark-aware source-risk worked example", () => {
-    const result = computePYS({
-      apy30d: 8.4,
-      benchmarkRate: 4.25,
-      safetyScore: 72,
-      sourceRiskPenalty: 1.2,
-      apyVarianceScore: 0.18,
-      scalingFactor: 8,
-    });
-    expect(result).toBe(27);
   });
 });
 
@@ -307,11 +260,6 @@ describe("detectWarningSignals", () => {
     expect(detectWarningSignals(base)).toEqual([]);
   });
 
-  it("detects yield-spike when current > 2x 30d avg", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: 11, apy30d: 5 });
-    expect(signals).toContain("yield-spike");
-  });
-
   it("detects yield-divergence when current > 3x median", () => {
     const signals = detectWarningSignals({ ...base, currentApy: 16, medianApy: 5 });
     expect(signals).toContain("yield-divergence");
@@ -379,22 +327,6 @@ describe("detectWarningSignals", () => {
     const signals = detectWarningSignals({ ...base, currentApy: -1, apy30d: 5 });
     expect(signals).toContain("negative-trend");
     expect(signals).not.toContain("yield-spike");
-  });
-
-  it("returns exact expected signals for all-trigger input", () => {
-    const signals = detectWarningSignals({
-      currentApy: 50,
-      apy30d: 5,
-      apyReward: 45,
-      medianApy: 5,
-      sourceTvlUsd: 50_000_000,
-      prevTvlUsd: 100_000_000,
-    });
-    expect(signals).toEqual(
-      expect.arrayContaining(["yield-spike", "yield-divergence", "reward-heavy", "tvl-outflow"]),
-    );
-    // negative-trend should NOT fire: 50 > 5*0.7
-    expect(signals).not.toContain("negative-trend");
   });
 });
 

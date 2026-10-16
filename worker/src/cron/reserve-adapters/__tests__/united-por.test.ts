@@ -68,15 +68,6 @@ describe("adaptUnitedPorPayload", () => {
     expectWarningEffect(result, "united-por-ripcord", "degraded");
   });
 
-  it("still degrades a ripcord=true snapshot with no disclosed details", () => {
-    const payload: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, ripcord: true, ripcordDetails: [] };
-
-    const result = adaptUnitedPorPayload(payload, SLICE);
-
-    expectWarnings(result, ["united-por-ripcord"]);
-    expectWarningEffect(result, "united-por-ripcord", "degraded");
-  });
-
   it("treats missing or malformed ripcordDetails as undisclosed provider detail", () => {
     const payload = { ...UNITED_POR_PAYLOAD, ripcord: true, ripcordDetails: null } as unknown as UnitedPorPayload;
 

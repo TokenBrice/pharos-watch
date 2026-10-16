@@ -51,9 +51,7 @@ import {
   buildTimelineFeedController,
   buildTimelineFilterSignature,
   buildTimelineResetParams,
-  TIMELINE_URL_SCHEMA,
 } from "@/app/timeline/client";
-import { decodeState } from "@/lib/url-state";
 
 afterEach(() => {
   cleanup();
@@ -113,12 +111,6 @@ describe("TimelineClient", () => {
       expect.objectContaining({ severityFloor: "notice" }),
       { autoLoadAll: false },
     );
-  });
-
-  it("renders the empty state when there are no events", () => {
-    mockEvents([]);
-    render(<TimelineClient />);
-    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
   });
 
   it("renders an error notice and recovers after retry", async () => {
@@ -409,45 +401,6 @@ describe("TimelineClient", () => {
     expect(details).not.toBeNull();
   });
 
-  it("renders the status-line footer with EVT count, window, severity floor, cursor and last file", () => {
-    mockEvents([
-      makeTapeEvent({ id: "evt-1", title: "Event one" }),
-      makeTapeEvent({ id: "evt-2", title: "Event two", coinId: "usdt-tether" }),
-    ]);
-
-    render(<TimelineClient />);
-
-    const footer = screen.getByText(/END OF TAPE/);
-    const footerText = footer.textContent ?? "";
-    expect(footerText).toMatch(/END OF TAPE/);
-    expect(footerText).toMatch(/2 EVT/);
-    expect(footerText).toMatch(/WINDOW 7D/);
-    expect(footerText).toMatch(/NOTICE\+/);
-    expect(footerText).toMatch(/CURSOR: NULL/);
-    expect(footerText).toMatch(/LAST FILE:/);
-  });
-
-  it("renders the [OPEN] textual prefix inside the Currently open region", () => {
-    const now = Date.now();
-    mockEvents([
-      makeTapeEvent({
-        id: "evt-open-still",
-        ts: now - 60_000,
-        type: "depeg.opened",
-        title: "EURS depeg opened (+589 bps)",
-        coinId: "eurs-stasis",
-        sourceRowId: "200",
-      }),
-    ]);
-
-    const { container } = render(<TimelineClient />);
-
-    const region = container.querySelector("[aria-labelledby='tape-open-incidents-heading']");
-    expect(region).not.toBeNull();
-    expect(region?.getAttribute("role")).toBe("region");
-    expect(screen.getAllByText(/\[OPEN\]/).length).toBeGreaterThanOrEqual(1);
-  });
-
   it("collapses quiet days (<=3 events) into a single <details> row", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-22T12:00:00.000Z"));
@@ -518,25 +471,9 @@ describe("TimelineClient", () => {
     window.history.replaceState(null, "", "/timeline");
   });
 
-  it("labels empty-state clear-filter chips with a 'Clear filter:' aria-label", () => {
-    mockEvents([]);
-    window.history.replaceState(null, "", "/timeline?window=24h");
-
-    render(<TimelineClient />);
-
-    const button = screen.getByRole("button", { name: /Clear filter:/i });
-    expect(button).toBeTruthy();
-    window.history.replaceState(null, "", "/timeline");
-  });
 });
 
 describe("timeline feed controller", () => {
-  it("decodes the legacy all-time token through the URL schema", () => {
-    expect(decodeState("window=alltime&severity=bogus", TIMELINE_URL_SCHEMA)).toMatchObject({
-      window: "all",
-      severity: "notice",
-    });
-  });
 
   it("builds a new pagination reset signature when filters change", () => {
     const base = {

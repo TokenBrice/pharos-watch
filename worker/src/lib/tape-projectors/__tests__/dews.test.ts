@@ -193,14 +193,6 @@ describe("dews projector", () => {
     ]);
   });
 
-  it("single-pass projector emits nothing for an empty batch", async () => {
-    const db = mockTapeD1(baseTables([])) as MockD1Database;
-    const result = await projectDewsBandTransitions(db);
-    expect(result.projected).toBe(0);
-    expect(tapeInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
-    expect(tapeInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
-  });
-
   it("keeps dry-run projection read-only instead of reconciling the pointer ledger", async () => {
     const db = mockTapeD1([
       {

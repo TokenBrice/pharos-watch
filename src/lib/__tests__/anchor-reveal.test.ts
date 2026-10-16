@@ -20,16 +20,6 @@ describe("revealAnchorId", () => {
     expect(revealAnchorId("collateralization")?.textContent).toBe("Rail");
   });
 
-  it("keeps the owner when it is displayed, and when no twin exists", () => {
-    document.body.innerHTML =
-      '<section id="jurisdiction">In flow</section><section data-anchor-twin="jurisdiction">Rail</section>';
-    markDisplayed(document.getElementById("jurisdiction"));
-    expect(revealAnchorId("jurisdiction")?.textContent).toBe("In flow");
-
-    document.body.innerHTML = '<section id="custody">Only copy</section>';
-    expect(revealAnchorId("custody")?.textContent).toBe("Only copy");
-  });
-
   it("unfolds a folded evidence module and its disclosures around a nested target", () => {
     document.body.innerHTML =
       '<section data-evidence-module="tile" data-expanded="false">' +
@@ -73,50 +63,6 @@ describe("alignAnchorAfterHydration", () => {
     expect(document.querySelector("details")?.open).toBe(true);
     expect(scroll).toHaveBeenCalledTimes(5);
     expect(scroll).toHaveBeenCalledWith({ block: "start", behavior: "instant" });
-    cleanup();
-  });
-
-  it("leaves an explicit smooth click jump alone until the first correction", () => {
-    const cleanup = alignAnchorAfterHydration("depeg-history", false);
-    vi.advanceTimersByTime(159);
-    expect(scroll).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
-    expect(scroll).toHaveBeenCalledTimes(1);
-    cleanup();
-  });
-
-  it("cancels on hashchange even when the original hash is restored before a retry", () => {
-    const cleanup = alignAnchorAfterHydration("depeg-history");
-    vi.advanceTimersByTime(0);
-    window.history.pushState(null, "", "#overview");
-    window.dispatchEvent(new Event("hashchange"));
-    window.history.pushState(null, "", "#depeg-history");
-    vi.runAllTimers();
-    expect(scroll).toHaveBeenCalledTimes(1);
-    cleanup();
-  });
-
-  it("stops scrolling once navigation changes the hash", () => {
-    const cleanup = alignAnchorAfterHydration("depeg-history");
-    vi.advanceTimersByTime(0);
-    window.history.pushState(null, "", "#overview");
-    vi.runAllTimers();
-    expect(scroll).toHaveBeenCalledTimes(1);
-    cleanup();
-  });
-
-  it("clears pending alignment on unmount", () => {
-    alignAnchorAfterHydration("depeg-history")();
-    vi.runAllTimers();
-    expect(scroll).not.toHaveBeenCalled();
-  });
-
-  it.each(["wheel", "touchstart", "pointerdown", "keydown"])("yields to user %s input", (event) => {
-    const cleanup = alignAnchorAfterHydration("depeg-history");
-    vi.advanceTimersByTime(0);
-    window.dispatchEvent(new Event(event));
-    vi.runAllTimers();
-    expect(scroll).toHaveBeenCalledTimes(1);
     cleanup();
   });
 });

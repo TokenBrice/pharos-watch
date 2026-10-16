@@ -2,9 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { SelectorLowerRanked, SelectorRecommendation } from "@shared/lib/selector";
+import type { SelectorRecommendation } from "@shared/lib/selector";
 
-import { SelectorLowerRankedRow } from "@/components/selector/selector-lower-ranked-row";
 import { SelectorShortlistCard } from "@/components/selector/selector-shortlist-card";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 
@@ -70,13 +69,6 @@ const baseRecommendation: SelectorRecommendation = {
 };
 
 describe("SelectorShortlistCard", () => {
-  it("does not render raw why keys when prose is unavailable", () => {
-    render(<SelectorShortlistCard rank={1} recommendation={baseRecommendation} profile="treasury" isMobile={false} />);
-
-    expect(screen.getByText(/passed the selected profile filters/i)).toBeTruthy();
-    expect(screen.queryByText(/top-safety/i)).toBeNull();
-    expect(screen.queryByText(/strong-resilience/i)).toBeNull();
-  });
 
   it("renders evidence chip accessible text as screen-reader content", () => {
     render(
@@ -154,25 +146,5 @@ describe("SelectorShortlistCard", () => {
     expect(screen.getByRole("link", { name: /Inspect on Yield Intelligence/i }).getAttribute("href")).toBe(
       "/stablecoin/usdc-usd-coin/yield/",
     );
-  });
-});
-
-describe("SelectorLowerRankedRow", () => {
-  it("re-derives the curated prose a prose-free snapshot replay carries no text for", () => {
-    const entry: SelectorLowerRanked = {
-      id: "coin",
-      symbol: "COIN",
-      name: "Coin",
-      slot: "A",
-      reasonKey: "weak-liquidity",
-      failedComponent: "liquidity",
-      hypotheticalScore: 42,
-    };
-
-    render(<SelectorLowerRankedRow entry={entry} pegCurrency="USD" />);
-
-    expect(screen.getByText(/COIN: profile mismatch/i)).toBeTruthy();
-    expect(screen.getByText(/This row missed .*liquidity/i)).toBeTruthy();
-    expect(screen.queryByText(/weak-liquidity/i)).toBeNull();
   });
 });

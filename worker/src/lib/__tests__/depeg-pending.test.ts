@@ -5,7 +5,6 @@ import {
   normalizePendingDepegRow,
 } from "../depeg-pending";
 import {
-  buildPendingReason,
   isExtremeMovePending,
   parsePendingReason,
 } from "../depeg-helpers";
@@ -13,12 +12,6 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("pending reason helpers", () => {
-  it("buildPendingReason orders flags canonically", () => {
-    expect(buildPendingReason(["large-cap", "low-confidence"])).toBe("large-cap+low-confidence");
-    expect(buildPendingReason(["low-confidence", "large-cap", "extreme-move"])).toBe("extreme-move+large-cap+low-confidence");
-    expect(buildPendingReason(["extreme-move"])).toBe("extreme-move");
-  });
-
   it("parsePendingReason round-trips composite strings", () => {
     const parsed = parsePendingReason("large-cap+low-confidence");
     expect(parsed.has("large-cap")).toBe(true);

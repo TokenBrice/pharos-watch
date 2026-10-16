@@ -23,7 +23,7 @@ interface OverviewSort {
 }
 
 /** `?sort=mica-asc` etc.; anything else is the default directory order. */
-export function parseOverviewSort(raw: string): OverviewSort | null {
+function parseOverviewSort(raw: string): OverviewSort | null {
   const match = /^(mica|genius)-(asc|desc)$/.exec(raw);
   return match ? { column: match[1] as OverviewSortColumn, direction: match[2] as "asc" | "desc" } : null;
 }

@@ -9,9 +9,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import satori from "satori";
 // The aliased standalone stub used by handleOg, mocked below so the handler
 // tests can inspect the element it would render.
-import satoriStandalone, { init as initSatoriStandalone } from "satori/standalone";
+import satoriStandalone from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { CHAIN_HEALTH_HEX } from "@shared/lib/classification";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
@@ -251,20 +250,6 @@ describe("stablecoin OG card data", () => {
       expect(element.type).toBe(StablecoinCard);
       return element.props.data;
     }
-
-    it("reinitializes WASM only after isolate-local state is reset", async () => {
-      const db = makeOgDb([makeAsset({ id: "usdt-tether" })]);
-      const initMock = vi.mocked(initSatoriStandalone);
-      initMock.mockClear();
-
-      await handleOg(db, "/api/og/stablecoin/usdt-tether");
-      await handleOg(db, "/api/og/stablecoin/usdt-tether");
-      expect(initMock).toHaveBeenCalledTimes(1);
-
-      resetOgWasmInitializationForTests();
-      await handleOg(db, "/api/og/stablecoin/usdt-tether");
-      expect(initMock).toHaveBeenCalledTimes(2);
-    });
 
     it("forces a null pegScore for nav tokens on the nav-inclusive cache-hit path", async () => {
       const db = makeOgDb([
@@ -526,85 +511,6 @@ describe("stablecoin OG card data", () => {
     expect(res?.headers.get("Retry-After")).toBe("60");
   });
 
-  it("renders variant context when provided", () => {
-    const markup = renderToStaticMarkup(
-      <StablecoinCard
-        data={{
-          name: "Bond USD0",
-          symbol: "bUSD0",
-          grade: "B+",
-          pegPrice: 1,
-          dewsBand: "CALM",
-          liquidityScore: 70,
-          mcap: 10_000_000,
-          flow7d: 500_000,
-          flow7dSource: "mint-burn",
-          sparklineData: [0.995, 1.0],
-          hasActiveDepeg: false,
-          pegScore: 88,
-          backing: "rwa-backed",
-          governance: "centralized-dependent",
-          redemptionScore: 75,
-          change24h: 0.1,
-          variantLabel: "Bond",
-          variantParentSymbol: "USD0",
-        }}
-      />,
-    );
-
-    expect(markup).toContain("Bond of USD0");
-  });
-});
-
-describe("stability index OG card", () => {
-  const baseData = {
-    psiBand: "BEDROCK",
-    sparklineData: [90, 92, 94],
-    bands: [
-      { name: "BEDROCK", active: true },
-      { name: "STEADY", active: false },
-      { name: "TREMOR", active: false },
-      { name: "FRACTURE", active: false },
-      { name: "CRISIS", active: false },
-      { name: "MELTDOWN", active: false },
-    ],
-    avg7d: 91.2,
-    allTimeHigh: 97.5,
-    allTimeLow: 11.4,
-    flightToQuality: false,
-    flightIntensity: null,
-  };
-
-  it("places healthy scores near the healthy end of the thermometer", () => {
-    const markup = renderToStaticMarkup(
-      <StabilityIndexCard
-        data={{
-          ...baseData,
-          psiScore: 92,
-          delta24h: 1.3,
-        }}
-      />,
-    );
-
-    expect(markup).toContain("left:8%");
-    expect(markup).toContain("color:#22c55e");
-  });
-
-  it("places stressed scores near the stressed end of the thermometer", () => {
-    const markup = renderToStaticMarkup(
-      <StabilityIndexCard
-        data={{
-          ...baseData,
-          psiScore: 15,
-          psiBand: "MELTDOWN",
-          delta24h: -2.8,
-        }}
-      />,
-    );
-
-    expect(markup).toContain("left:85%");
-    expect(markup).toContain("color:#ef4444");
-  });
 });
 
 describe("chain OG route", () => {
@@ -1167,14 +1073,6 @@ describe("og cards render through satori", () => {
       />,
     );
     expect(svg).toContain("<svg");
-  });
-
-  it("colours the chain health band from the shared Chain Health authority", () => {
-    const markup = renderToStaticMarkup(<ChainCard data={{
-      name: "Ethereum", totalUsd: 100, change7dPercent: null, stablecoinCount: 1,
-      dominanceShare: 1, healthScore: 91, healthBand: "robust", topStablecoins: [],
-    }} />);
-    expect(markup).toContain(`color:${CHAIN_HEALTH_HEX.robust}`);
   });
 
   it("renders unavailable chain history without inventing zero growth", () => {

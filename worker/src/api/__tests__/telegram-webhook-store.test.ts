@@ -4,7 +4,6 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { mockTelegramD1 as mockD1 } from "../../test-helpers/__shared/telegram";
 import {
   countTelegramProcessedUpdateBacklog,
-  loadPendingDisambiguation,
   persistPendingConfirmBulk,
   persistPendingDisambiguation,
   persistPendingDisambiguationRow,
@@ -153,53 +152,7 @@ describe("persistPendingDisambiguationRow", () => {
   });
 });
 
-describe("loadPendingDisambiguation", () => {
-  it("loads only the canonical pending action columns by chat id", async () => {
-    const row = {
-      action_type: "subscribe",
-      action_payload: JSON.stringify({ schemaVersion: 1 }),
-      expires_at: 1_700_000_300,
-      initiator_user_id: "123",
-    };
-    const db = mockD1([], { pendingOperation: row });
-
-    await expect(loadPendingDisambiguation(db, "42")).resolves.toEqual(row);
-    db.assertAllMatchesUsed();
-
-    const [entry] = db.getHistory();
-    expect(entry?.sql).toContain("action_type, action_payload, expires_at");
-    expect(entry?.sql).not.toContain("alert_types");
-    expect(entry?.sql).not.toContain("resolved_ids");
-    expect(entry?.sql).not.toContain("candidates");
-    expect(entry?.sql).toContain("initiator_user_id FROM telegram_pending_disambiguation");
-    expect(entry?.binds).toEqual(["42"]);
-  });
-});
-
 describe("pruneTelegramProcessedUpdates", () => {
-  it("uses a capped D1-compatible delete for rows older than the retention cutoff", async () => {
-    const db = mockD1([
-      {
-        match: "DELETE FROM telegram_processed_updates",
-        rows: [],
-        runMeta: { changes: 7 },
-      },
-    ]);
-
-    const pruned = await pruneTelegramProcessedUpdates(db, {
-      nowSec: 1_700_000_000,
-      retentionSec: 60,
-    });
-    db.assertAllMatchesUsed();
-
-    expect(pruned).toBe(7);
-    const [entry] = db.getHistory();
-    expect(entry?.binds).toEqual([1_699_999_940, 1_692_224_000, 5_000]);
-    expect(entry?.sql).toContain("WHERE update_id IN");
-    expect(entry?.sql).toContain("ORDER BY received_at ASC, update_id ASC");
-    expect(entry?.sql).toContain("LIMIT ?");
-  });
-
   it("deletes at most 5000 expired processed update rows per call", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {

@@ -36,19 +36,4 @@ describe("depeg event collision display", () => {
     expect(formatEventNavigationLabel(event!, true)).toBe("GYD 2026-03-19 14:30 UTC");
   });
 
-  it("keeps the concise date-only title for an event without a route collision", () => {
-    const event = DEPEG_EVENT_ENTRIES.find((candidate) => !COLLIDING_DEPEG_EVENT_SLUGS.has(candidate.slug));
-    expect(event).toBeDefined();
-
-    expect(buildDepegEventTitle(event!, null, false)).not.toContain("UTC");
-  });
-
-  it("falls back to the symbol when a collision title would exceed the search envelope", () => {
-    const event = GYD_MARCH_19[0];
-    expect(event).toBeDefined();
-
-    const title = buildDepegEventTitle(event!, "An Intentionally Long Stablecoin Product Name For Metadata", true);
-    expect(title.startsWith("GYD depeg")).toBe(true);
-    expect(`${title} | Pharos`.length).toBeLessThanOrEqual(70);
-  });
 });

@@ -139,17 +139,6 @@ describe("current shadow membership at the persisted catalog boundary", () => {
     }));
   });
 
-  it("still attempts remaining Base V3 shadow members while refusing obsolete IDs", async () => {
-    const remaining = makeV3Target({ chain: "base" });
-    mocks.load.mockResolvedValue(catalog([...retired, remaining]));
-    await syncDexShadowMeasuredExecution(makeNoopD1(), new Map());
-    expect(mocks.block).toHaveBeenCalledTimes(1);
-    expect(mocks.block.mock.calls[0]![0]).toBe("base");
-    expect(mocks.publish.mock.calls[0]![0].outcomes).toContainEqual(expect.objectContaining({
-      target: remaining, failureReason: "block-number-unavailable", observedThisRun: true,
-    }));
-  });
-
   it.each([null, catalog([])])("distinguishes missing and intentional empty catalogs without publishing quotes", async (generation) => {
     mocks.load.mockResolvedValue(generation);
     const result = await syncDexShadowMeasuredExecution(makeNoopD1(), new Map());

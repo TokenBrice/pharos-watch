@@ -27,16 +27,6 @@ describe("buildDiscrepancy — discrepancyReason", () => {
     expect(d.discrepancyReason).toBe("in-sync");
   });
 
-  it("returns probe-missing when probe.timestamp is null", () => {
-    const d = buildDiscrepancy(
-      "healthy",
-      { timestamp: null, status: "unknown", sampleCount: 0, passCount: 0, failCount: 0, p95LatencyMs: null },
-      1010,
-      0,
-    );
-    expect(d.discrepancyReason).toBe("probe-missing");
-  });
-
   it("returns probe-stale when probe age exceeds STATUS_SYSTEM_FRESHNESS_SEC (1800s)", () => {
     // probe.timestamp = 1000, now = 1000 + 1801 → age = 1801 > 1800
     const d = buildDiscrepancy(

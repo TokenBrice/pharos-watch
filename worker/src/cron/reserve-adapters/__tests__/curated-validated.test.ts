@@ -7,7 +7,6 @@ vi.mock("@shared/lib/redemption-backstop-configs", () => ({
   REDEMPTION_BACKSTOP_CONFIGS: {
     "coin-with-open-route": { routeStatus: "open" },
     "coin-with-unknown-route": { routeStatus: "unknown" },
-    "coin-without-route": {},
   },
 }));
 
@@ -85,35 +84,6 @@ describe("fetchCuratedValidatedReserves", () => {
 
     expect(result.slices).toEqual(MULTI_SLICE_RESERVES);
     expect(result.metadata?.totalSupplyRaw).toBe("1000000");
-  });
-
-  it("resolves the supply through the scheduled chain RPC context", async () => {
-    const network = installSupplyNetwork(1000000n);
-    const config: LiveReservesConfig = {
-      ...BASE_CONFIG,
-      inputs: { primary: { kind: "onchain-solana" } },
-    };
-    const coin = makeCoin(MULTI_SLICE_RESERVES, [{ chain: "solana", address: SOLANA_MINT }]);
-
-    const result = await fetchCuratedValidatedReserves(coin, config, signal, scheduledCtx(network));
-
-    expect(result.metadata?.totalSupplyRaw).toBe("1000000");
-    expect(network.requests.map((request) => request.url)).toContain(`${SOLANA_RPC}/`);
-  });
-
-  it("preserves coinId and depType from curated reserves", async () => {
-    const network = installSupplyNetwork(500n);
-
-    const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }]),
-      BASE_CONFIG,
-      signal,
-      scheduledCtx(network),
-    );
-
-    const usdcSlice = result.slices.find((s) => s.name === "USDC");
-    expect(usdcSlice?.coinId).toBe("usdc-circle");
-    expect(usdcSlice?.depType).toBe("wrapper");
   });
 
   it("throws when coin.reserves is empty", async () => {
@@ -198,18 +168,6 @@ describe("fetchCuratedValidatedReserves", () => {
     const network = installSupplyNetwork(1n);
     const result = await fetchCuratedValidatedReserves(
       makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }], "coin-unmapped"),
-      BASE_CONFIG,
-      signal,
-      scheduledCtx(network),
-    );
-    const redemption = result.metadata?.redemption as { routeStatus?: string };
-    expect(redemption.routeStatus).toBe("unknown");
-  });
-
-  it("falls back to routeStatus 'unknown' when the backstop config does not specify one", async () => {
-    const network = installSupplyNetwork(1n);
-    const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }], "coin-without-route"),
       BASE_CONFIG,
       signal,
       scheduledCtx(network),

@@ -147,18 +147,6 @@ describe("Safety Score V9 peg provenance", () => {
     ]);
   });
 
-  it("retains low-provenance and unprovenanced live events in the diagnostic scenario", () => {
-    const events = [
-      event({ id: 81, startedAt: CLOCK_SEC - 10 * DAY_SEC, peakDeviationBps: -200, provenance: replayProvenance("low") }),
-      event({ id: 82, startedAt: CLOCK_SEC - 5 * DAY_SEC, peakDeviationBps: 300, source: "live" }),
-    ];
-    const summary = build(events);
-    expect(summary.classes["provenance-low"].eventCount).toBe(1);
-    expect(summary.classes["legacy-live-unprovenanced"].eventCount).toBe(1);
-    expect(summary.verifiedOnlyDiagnostic.result).toEqual(summary.legacyInclusive.result);
-    expect(summary.verifiedOnlyDiagnostic.omittedClasses).toEqual(["legacy-backfill-unprovenanced"]);
-  });
-
   it("canonicalizes event and provider ordering while content-binding material changes", () => {
     const first = event({
       id: 11,

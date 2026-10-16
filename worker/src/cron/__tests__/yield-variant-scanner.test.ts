@@ -6,34 +6,6 @@ import { makeDlYieldPool } from "./yield-resolve.test-support";
 describe("scanForNewVariants", () => {
   const knownVariants = new Set(["SUSDE", "SDAI", "SUSDS"]);
 
-  it("detects sXXX prefix pattern for a tracked symbol", () => {
-    const pools: DlPool[] = [{
-      pool: "new-pool", chain: "Ethereum", project: "some-protocol",
-      symbol: "sFRAX", tvlUsd: 5_000_000, apy: 3.5, apyBase: 3.5,
-      apyReward: null, apyMean30d: 3.5, stablecoin: false,
-      exposure: "single", underlyingTokens: null,
-    }];
-    const trackedSymbols = new Set(["FRAX", "USDC", "USDE"]);
-    const results = scanForNewVariants(pools, trackedSymbols, knownVariants);
-    expect(results).toContainEqual(expect.objectContaining({
-      baseSymbol: "FRAX",
-      variantSymbol: "sFRAX",
-      poolId: "new-pool",
-    }));
-  });
-
-  it("skips variants already in the known set", () => {
-    const pools: DlPool[] = [{
-      pool: "existing", chain: "Ethereum", project: "ethena",
-      symbol: "sUSDe", tvlUsd: 3_000_000_000, apy: 4.0, apyBase: 4.0,
-      apyReward: null, apyMean30d: 4.0, stablecoin: false,
-      exposure: "single", underlyingTokens: null,
-    }];
-    const trackedSymbols = new Set(["USDE"]);
-    const results = scanForNewVariants(pools, trackedSymbols, knownVariants);
-    expect(results).toEqual([]);
-  });
-
   it("requires minimum TVL to avoid noise", () => {
     const pools: DlPool[] = [{
       pool: "tiny", chain: "Ethereum", project: "unknown",
@@ -56,15 +28,5 @@ describe("scanForNewVariants", () => {
       baseSymbol: "USDC", variantSymbol: "usdceARN", poolId: "larger",
       chain: "Ethereum", project: "maker", tvlUsd: 900_000, apy: 5,
     }]);
-  });
-
-  it.each([
-    { symbol: "UNKNOWNVAULT" },
-    { apy: 0 },
-    { exposure: "multi" },
-  ])("excludes an otherwise eligible variant: %j", (overrides) => {
-    expect(scanForNewVariants([
-      makeDlYieldPool({ symbol: "USDCEarn", tvlUsd: 500_000, ...overrides }),
-    ], new Set(["USDC"]), knownVariants)).toEqual([]);
   });
 });

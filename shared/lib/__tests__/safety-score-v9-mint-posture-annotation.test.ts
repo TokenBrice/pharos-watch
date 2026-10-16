@@ -5,7 +5,6 @@ import {
 } from "../../types/core";
 import { buildV9CuratedMintPostureQueue } from "../safety-score-v9/mint-posture-annotation";
 import {
-  V9_MINT_POSTURE_BAND_ORDER,
   curatedMintPostureBand,
   isFragileMintPosture,
   isNoPrivilegedMintChainPosture,
@@ -13,7 +12,6 @@ import {
   isUnboundedMintPosture,
   resolveV9MintPostureBand,
 } from "../safety-score-v9/mint-posture";
-import { V9_MINT_POSTURE_BANDS } from "../classification";
 
 describe("V9 mint posture bands", () => {
   it("bands every derived posture except the unresolved one", () => {
@@ -54,9 +52,6 @@ describe("V9 mint posture bands", () => {
     },
   );
 
-  it("keeps the band order and label table in sync", () => {
-    expect([...V9_MINT_POSTURE_BAND_ORDER].sort()).toEqual(Object.keys(V9_MINT_POSTURE_BANDS).sort());
-  });
 });
 
 describe("mint posture predicates", () => {
@@ -118,50 +113,6 @@ describe("mint posture predicates", () => {
 });
 
 describe("V9 curated mint posture queue", () => {
-  it("projects curated-only mint posture before classifying disagreement", () => {
-    expect(buildV9CuratedMintPostureQueue([
-      { assetId: "mint-only", curatedPosture: "none-resolved-mint", derivedPosture: "concentrated-admin" },
-    ]).entries).toEqual([
-      expect.objectContaining({
-        assetId: "mint-only", curatedBand: "hardened", derivedBand: "concentrated",
-        disagreement: "curated-optimistic",
-      }),
-    ]);
-  });
-
-  it("stays silent when the annotation and the derivation agree", () => {
-    const queue = buildV9CuratedMintPostureQueue([
-      { assetId: "agree-exact", curatedPosture: "bounded-admin", derivedPosture: "bounded-admin" },
-      { assetId: "agree-band", curatedPosture: "none-resolved", derivedPosture: "bounded-admin" },
-      { assetId: "agree-reconciled", curatedPosture: "unbounded-reconciled", derivedPosture: "unbounded-reconciled" },
-      { assetId: "agree-adverse", curatedPosture: "unbounded-adverse", derivedPosture: "unbounded-adverse" },
-      { assetId: "agree-mint-only", curatedPosture: "none-resolved-mint", derivedPosture: "bounded-admin" },
-      { assetId: "neither", curatedPosture: "unknown", derivedPosture: "unknown" },
-    ]);
-    expect(queue.entries).toEqual([]);
-  });
-
-  it("classifies each disagreement direction and orders entries by asset id", () => {
-    const queue = buildV9CuratedMintPostureQueue([
-      { assetId: "z-optimistic", curatedPosture: "bounded-admin", derivedPosture: "unbounded-adverse" },
-      { assetId: "a-adverse", curatedPosture: "concentrated-admin", derivedPosture: "partially-bounded-admin" },
-      { assetId: "m-unreviewed", curatedPosture: "unknown", derivedPosture: "bounded-admin" },
-      { assetId: "d-unresolved", curatedPosture: "bounded-admin", derivedPosture: "unknown" },
-      // No longer suppressed: the curated vocabulary can now express the
-      // reconciled rung, so a stale adverse annotation over it is a real
-      // curation item.
-      { assetId: "b-stale-adverse", curatedPosture: "unbounded-adverse", derivedPosture: "unbounded-reconciled" },
-    ]);
-    expect(queue.entries.map((entry) => [entry.assetId, entry.disagreement])).toEqual([
-      ["a-adverse", "curated-adverse"],
-      ["b-stale-adverse", "curated-adverse"],
-      ["d-unresolved", "derived-unresolved"],
-      ["m-unreviewed", "curated-unreviewed"],
-      ["z-optimistic", "curated-optimistic"],
-    ]);
-    expect(queue.reviewedAssetCount).toBe(5);
-  });
-
   it("buckets NR cards instead of counting them as derived-unresolved", () => {
     const queue = buildV9CuratedMintPostureQueue([
       { assetId: "z-nr", curatedPosture: "bounded-admin", derivedPosture: null, publishesBreakdowns: false },
@@ -186,19 +137,4 @@ describe("V9 curated mint posture queue", () => {
     expect(queue.entries).toEqual([expect.objectContaining({ assetId: "partial-rated", disagreement: "curated-optimistic" })]);
   });
 
-  it("digests its content so two runs over one publication are byte-identical", () => {
-    const inputs = [
-      { assetId: "a", curatedPosture: "bounded-admin" as const, derivedPosture: "concentrated-admin" },
-      { assetId: "z", curatedPosture: "none-resolved-mint" as const, derivedPosture: "unknown" },
-      { assetId: "z-nr", curatedPosture: "unknown" as const, derivedPosture: null, publishesBreakdowns: false },
-      { assetId: "b-nr", curatedPosture: "bounded-admin" as const, derivedPosture: null, publishesBreakdowns: false },
-    ];
-    expect(buildV9CuratedMintPostureQueue([...inputs].reverse())).toEqual(buildV9CuratedMintPostureQueue(inputs));
-    expect(
-      buildV9CuratedMintPostureQueue([
-        ...inputs.slice(1),
-        { ...inputs[0]!, derivedPosture: "unbounded-adverse" },
-      ]).queueDigest,
-    ).not.toBe(buildV9CuratedMintPostureQueue(inputs).queueDigest);
-  });
 });

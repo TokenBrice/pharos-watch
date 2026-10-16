@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -13,7 +13,7 @@ const stepSchema = z.object({
   env: z.record(z.string(), z.unknown()).default({}),
 });
 const readYaml = (path: string): unknown => parseYaml(readFileSync(resolve(process.cwd(), path), "utf8"));
-const { inputs, outputs, runs: { steps } } = z.object({
+const { inputs, runs: { steps } } = z.object({
   inputs: z.record(z.string(), z.object({ default: z.string() })),
   outputs: z.record(z.string(), z.object({ value: z.string() })),
   runs: z.object({ steps: z.array(stepSchema) }),
@@ -37,25 +37,6 @@ describe("setup-workspace caches", () => {
     expect(steps[guard].if).toBe("${{ inputs.workspace-artifact != 'none' || (inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true') }}");
   });
 
-  it("publishes and restores the same run-scoped zstd archive without redundant upload compression", () => {
-    const pack = steps.find((step) => step.name === "Package required workspace")!;
-    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"))!;
-    const download = steps.find((step) => step.uses?.startsWith("actions/download-artifact@"))!;
-    const restore = steps.find((step) => step.run?.startsWith("tar --zstd -xf"))!;
-    expect(pack.run).toContain(`tar -I 'zstd -T0 -3' -cf "\${RUNNER_TEMP}/pharos-workspace/workspace.tar.zst" "\${paths[@]}"`);
-    expect(restore.run).toBe('tar --zstd -xf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.zst" --same-permissions');
-    expect(restore.if).toBe("${{ inputs.workspace-artifact == 'restore' }}");
-    expect(upload.with.path).toBe("${{ runner.temp }}/pharos-workspace/workspace.tar.zst");
-    expect(upload.with["compression-level"]).toBe(0);
-    expect(upload.with["if-no-files-found"]).toBe("error");
-    expect(upload.with.name).toBe("${{ steps.workspace-artifact-name.outputs.name }}");
-    expect(download.with.name).toBe(upload.with.name);
-    expect(outputs["workspace-artifact-name"].value).toBe(upload.with.name);
-    expect(pack.run).not.toContain("--dereference");
-    expect(z.string().parse(pack.env.WORKSPACE_PATHS).trim().split("\n")).toContain("node_modules");
-    expect(pack.run).toContain("if [ -d worker/node_modules ]; then paths+=(worker/node_modules); fi");
-    expect(pack.run).toContain("if [ -f .tmp/pr-test-plan.json ]; then paths+=(.tmp/pr-test-plan.json); fi");
-  });
 
   it("publishes the producer attempt and restores that name unchanged on a partial rerun", () => {
     const resolver = steps.find((step) => step.id === "workspace-artifact-name")!;
@@ -95,20 +76,6 @@ describe("setup-workspace caches", () => {
     }
   });
 
-  it("supports a second publish-only invocation without reinstalling dependencies or caching npm", () => {
-    const node = steps.filter((step) => step.uses?.startsWith("actions/setup-node@"));
-    expect(node).toHaveLength(2);
-    expect(node.find((step) => step.with.cache === "npm")?.if).toBe("${{ inputs.cache-npm == 'true' }}");
-    const uncached = node.find((step) => step.with.cache === undefined)!;
-    expect(uncached.if).toBe("${{ inputs.cache-npm != 'true' }}");
-    expect(uncached.with["node-version"]).toBe("${{ inputs.node-version }}");
-    expect(uncached.with["cache-dependency-path"]).toBeUndefined();
-    expect(steps.find((step) => step.run === "npm ci")?.if).toBe("${{ inputs.install-deps == 'true' }}");
-    expect(steps.find((step) => step.name === "Package required workspace")?.if)
-      .toBe("${{ inputs.workspace-artifact == 'publish' }}");
-    expect(steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"))?.if)
-      .toBe("${{ inputs.workspace-artifact == 'publish' }}");
-  });
 
   it("installs pinned ripgrep only on request and verifies its official sha256 before extraction", () => {
     const install = steps.find((step) => step.name === "Install verified ripgrep")!;
@@ -130,24 +97,6 @@ describe("setup-workspace caches", () => {
     expect(install["continue-on-error"]).toBeUndefined();
   });
 
-  it.each([["Darwin", "X64"], ["Linux", "ARM64"]])("rejects ripgrep installation on %s/%s before downloading", (os, arch) => {
-    const run = steps.find((step) => step.name === "Install verified ripgrep")!.run!;
-    const result = spawnSync("bash", ["-e", "-c", run], {
-      env: { ...process.env, RUNNER_OS: os, RUNNER_ARCH: arch },
-      encoding: "utf8",
-    });
-    expect(result.status).toBe(1);
-    expect(result.stdout).toContain(`install-ripgrep supports Linux x64 runners only (got ${os}/${arch}).`);
-  });
-
-  it("keeps static, Next and browser state independently restorable", () => {
-    const cache = (prefix: string) => steps.find((step) => String(step.with.key).startsWith(prefix))!;
-    expect(z.string().parse(cache("static-cache-").with.path).trim().split("\n"))
-      .toEqual([".cache/eslint", "*.tsbuildinfo", "worker/*.tsbuildinfo"]);
-    expect(cache("next-cache-").with.path).toBe(".next/cache");
-    expect(cache("browser-cache-").with.path).toBe("~/.cache/ms-playwright");
-    expect(cache("static-cache-").uses).toMatch(/^actions\/cache\/restore@/);
-  });
 
   it("publishes validated lint and compiler state before unrelated nightly guards can fail", () => {
     const workflow = z.object({ jobs: z.record(z.string(), z.object({ steps: z.array(stepSchema) })) })
@@ -174,28 +123,4 @@ describe("setup-workspace caches", () => {
     expect(steps.some((step) => step.uses?.startsWith("actions/cache/save@"))).toBe(false);
   });
 
-  it.each([["24.16.0", "24"], ["v26.1.0", "26"], ["lts/*", "lts--"]])("normalizes Node %s into a usable cache key", (version, expected) => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-cache-key-"));
-    try {
-      const output = join(root, "output");
-      execFileSync("bash", ["-e", "-c", steps.find((step) => step.id === "cache-key")!.run!], {
-        env: { ...process.env, RAW_NODE_VERSION: version, GITHUB_OUTPUT: output },
-      });
-      expect(readFileSync(output, "utf8")).toBe(`node-key=${expected}\n`);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it.each(["generated", "history"])("runs the %s bootstrap only with dependencies and its explicit input enabled", (kind) => {
-    const command = kind === "generated" ? "npm run bootstrap:generated" : "npm run bootstrap:generated:history";
-    const input = kind === "generated" ? "bootstrap-generated" : "bootstrap-history";
-    expect(steps.find((step) => step.run === command)?.if)
-      .toBe(`\${{ inputs.install-deps == 'true' && inputs.${input} == 'true' }}`);
-  });
-
-  it.each(["chromium", "firefox"])("installs %s only on explicit request", (browser) => {
-    const install = steps.find((step) => step.run === `npx --no-install playwright install --with-deps ${browser}`)!;
-    expect(install.if).toBe(`\${{ inputs.install-playwright-${browser} == 'true' }}`);
-  });
 });

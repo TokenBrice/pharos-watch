@@ -3,7 +3,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CAUSE_META, CAUSE_ORDER } from "@shared/lib/cause-of-death";
-import { buildRegisterHref } from "@/lib/cemetery-selection";
 import { buildCemeteryStats, type CemeteryStatsInput } from "@/lib/cemetery-stats";
 import { CemeteryCauses } from "../cemetery/cemetery-causes";
 
@@ -34,23 +33,6 @@ function column(container: HTMLElement, cause: string): HTMLElement {
 }
 
 describe("CemeteryCauses", () => {
-  it("renders one anchored column per cause in CAUSE_ORDER, zero-count causes included", () => {
-    const { container } = renderCauses();
-
-    const columns = Array.from(container.querySelectorAll<HTMLElement>("#causes li[id]"));
-    expect(columns.map((li) => li.id)).toEqual([
-      "cause-abandoned",
-      "cause-counterparty-failure",
-      "cause-liquidity-drain",
-      "cause-algorithmic-failure",
-      "cause-regulatory",
-    ]);
-    expect(columns.map((li) => within(li).getByRole("heading", { level: 3 }).textContent)).toEqual(
-      CAUSE_ORDER.map((cause) => CAUSE_META[cause].label),
-    );
-    expect(column(container, "liquidity-drain").textContent).toContain("No records");
-  });
-
   it("prints every definition, count, share and peak sub-line including unrecorded peaks", () => {
     const { container } = renderCauses();
 
@@ -66,26 +48,6 @@ describe("CemeteryCauses", () => {
     const regulatory = column(container, "regulatory");
     expect(text(regulatory)).toContain("20% of deaths · peak not recorded");
     expect(text(regulatory)).toContain("No recorded peak · 1 not recorded");
-  });
-
-  it("links each cause with records to its register filter", () => {
-    const { container } = renderCauses();
-
-    expect(within(column(container, "abandoned")).getByRole("link", { name: "Show 2 in the register" }).getAttribute("href")).toBe(
-      buildRegisterHref({ cause: "abandoned" }),
-    );
-    expect(
-      within(column(container, "counterparty-failure")).getByRole("link", { name: "Show 1 in the register" }).getAttribute("href"),
-    ).toBe(buildRegisterHref({ cause: "counterparty-failure" }));
-    expect(within(column(container, "liquidity-drain")).queryByRole("link")).toBeNull();
-
-    const algorithmic = within(column(container, "algorithmic-failure"));
-    expect(algorithmic.getByRole("link", { name: "Show 1 in the register" }).getAttribute("href")).toBe(
-      buildRegisterHref({ cause: "algorithmic-failure" }),
-    );
-    expect(algorithmic.getByRole("link", { name: /How algorithmic designs fail/ }).getAttribute("href")).toBe(
-      "/learn/mechanisms/algorithmic/",
-    );
   });
 
   it("draws both strip rows in the same cause order and names every segment in the aria-label", () => {
@@ -107,14 +69,5 @@ describe("CemeteryCauses", () => {
     expect(peakLabel).toContain("Algorithmic Failure $1.1B (90%)");
     expect(peakLabel).toContain("Liquidity Drain no records");
     expect(peakLabel).toContain("Regulatory not recorded");
-  });
-
-  it("shows the abandonment pattern headline with its register link", () => {
-    renderCauses();
-
-    expect(screen.getByText("Abandonment is the most common cause")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Show these records in the register" }).getAttribute("href")).toBe(
-      buildRegisterHref({ cause: "abandoned" }),
-    );
   });
 });

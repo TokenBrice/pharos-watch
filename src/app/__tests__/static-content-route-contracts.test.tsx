@@ -1,9 +1,7 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
-import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 
@@ -60,25 +58,6 @@ describe("static content route adapters", () => {
     );
   });
 
-  it("projects each registry key into its canonical metadata", async () => {
-    const blog = BLOG_POSTS[0]!;
-    const doc = PUBLIC_DOCS[0]!;
-    const digest = DIGEST_ENTRIES[0]!;
-    const study = CASE_STUDY_LIST[0]!;
-    const archetype = MECHANISM_ARCHETYPE_VALUES[0]!;
-
-    expect((await blogRoute.generateMetadata({ params: Promise.resolve({ slug: blog.slug }) })).alternates?.canonical)
-      .toBe(`/blog/${blog.slug}/`);
-    expect((await docsRoute.generateMetadata({ params: Promise.resolve({ slug: doc.slug }) })).alternates?.canonical)
-      .toBe(`/docs/${doc.slug}/`);
-    expect((await digestRoute.generateMetadata({ params: Promise.resolve({ date: digest.date }) })).alternates?.canonical)
-      .toBe(`/digest/${digest.date}/`);
-    expect((await caseStudyRoute.generateMetadata({ params: Promise.resolve({ slug: study.slug }) })).alternates?.canonical)
-      .toBe(`/learn/case-studies/${study.slug}/`);
-    expect((await mechanismRoute.generateMetadata({ params: Promise.resolve({ archetype }) })).alternates?.canonical)
-      .toBe(getMechanismExplainerPath(archetype));
-  });
-
   it("returns route-specific missing metadata and rejects missing pages", async () => {
     const missing = "not-a-real-entry";
     expect(await blogRoute.generateMetadata({ params: Promise.resolve({ slug: missing }) })).toEqual({
@@ -100,15 +79,4 @@ describe("static content route adapters", () => {
     await expect(MechanismPage({ params: Promise.resolve({ archetype: missing }) })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
-  it("keeps Learn breadcrumbs and article JSON-LD inside each route renderer", async () => {
-    const study = CASE_STUDY_LIST[0]!;
-    const archetype = MECHANISM_ARCHETYPE_VALUES[0]!;
-    const caseHtml = renderToStaticMarkup(await CaseStudyPage({ params: Promise.resolve({ slug: study.slug }) }));
-    const mechanismHtml = renderToStaticMarkup(await MechanismPage({ params: Promise.resolve({ archetype }) }));
-
-    expect(caseHtml).toContain('"name":"Case Studies"');
-    expect(caseHtml).toContain('type="application/ld+json"');
-    expect(mechanismHtml).toContain('"name":"Mechanisms"');
-    expect(mechanismHtml).toContain('type="application/ld+json"');
-  });
 });

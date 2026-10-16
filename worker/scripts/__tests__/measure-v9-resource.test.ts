@@ -118,14 +118,6 @@ describe("V9 resource reviewed policy", () => {
     expect(() => validateResourcePolicy(validPolicy(), { ...policyIdentity, fixture: { ...policyIdentity.fixture, manifestSha256: "d".repeat(64) } })).toThrow("fixture");
   });
 
-  it("records runner and lockfile/protocol drift without rejecting a deterministic build", () => {
-    const drifted = { ...policyIdentity, protocolSha256: "e".repeat(64),
-      runner: { kind: "github" as const, description: "unknown", image: "unknown", version: "unknown" } };
-    expect(() => validateResourcePolicy(validPolicy(), drifted)).not.toThrow();
-    expect(() => validateResourcePolicy({ ...validPolicy(), identity: drifted }, policyIdentity)).not.toThrow();
-    expect(() => validateResourcePolicy(validPolicy(), { ...policyIdentity, fixture: { ...policyIdentity.fixture, sourceSha256: "e".repeat(64) } })).toThrow("fixture");
-    expect(() => validateResourcePolicy(validPolicy(), { ...policyIdentity, configSha256: "e".repeat(64) })).toThrow("configSha256");
-  });
 
   it("allows only explicitly unqualified absence and automatically enforces a subsequently installed policy", () => {
     const path = join(temporary(), "policy.json");

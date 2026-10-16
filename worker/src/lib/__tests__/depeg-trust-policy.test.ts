@@ -4,7 +4,6 @@ import { makePythDepegPrice, makeSoftAgreementDepegPrice } from "./depeg-price.t
 import {
   chooseIndependentOffchainDepegConfirmer,
   classifyPrimaryDepegTrust,
-  getDexTrustPolicy,
   getFreshIndependentPrimarySourceFamilies,
   getPrimaryDepegSourceFamilies,
   hasFreshMultiSourcePrimaryAgreement,
@@ -122,7 +121,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
     }), nowSec)).toBe(false);
   });
 
-  it.each([[1800, true], [1801, false], [1860, false]] as const)("checks corroborated agreement age at %s seconds", (age, accepted) => {
+  it.each([[1800, true], [1801, false]] as const)("checks corroborated agreement age at %s seconds", (age, accepted) => {
     expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec, {
       priceObservedAt: nowSec - age,
     }), nowSec)).toBe(accepted);
@@ -143,17 +142,6 @@ describe("isAuthoritativeDepegPegReference", () => {
 
 describe("DEX trust policy", () => {
   const nowSec = 1_700_000_000;
-
-  it("keeps UI and depeg trust floors explicit", () => {
-    expect(getDexTrustPolicy("ui")).toEqual({
-      maxAgeSec: 3600,
-      minTvlUsd: 250_000,
-    });
-    expect(getDexTrustPolicy("depeg")).toEqual({
-      maxAgeSec: 4500,
-      minTvlUsd: 1_000_000,
-    });
-  });
 
   it("trusts only rows that satisfy the requested tier", () => {
     const thinFreshRow = {

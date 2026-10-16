@@ -98,12 +98,8 @@ import {
   buildComplianceStatusDistribution,
   buildComplianceSummary,
   buildComplianceViewModel,
-  groupComplianceRowsIntoBands,
-  normalizeComplianceRegimeFilter,
-  normalizeComplianceStatusFilter,
-  normalizeMicaTokenTypeFilter,
 } from "@/lib/compliance-model";
-import type { ComplianceFilters, ComplianceRow, GeniusComplianceRow, MicaComplianceRow } from "@/lib/compliance-model";
+import type { ComplianceFilters, ComplianceRow } from "@/lib/compliance-model";
 
 const NO_FILTERS: ComplianceFilters = {
   regime: "all",
@@ -177,33 +173,6 @@ describe("Compliance model", () => {
     expect(ids(watchRows)).toEqual(["future-coin"]);
   });
 
-  it("applies each MiCA filter axis independently", () => {
-    expect(ids(viewModel({ regime: "mica", status: "authorized" }).rows)).toEqual(["euro-emt"]);
-    expect(ids(viewModel({ regime: "mica", tokenType: "ART" }).rows)).toEqual(["art-basket"]);
-    expect(ids(viewModel({ peg: "EUR" }).rows)).toEqual(["euro-emt", "art-basket"]);
-    // The only EUR assets are MiCA-only, so the GENIUS watch list empties out.
-    expect(viewModel({ peg: "EUR" }).watchRows).toHaveLength(0);
-    // Search covers MiCA authority fields, not just names.
-    expect(ids(viewModel({ search: "bafin" }).rows)).toEqual(["euro-emt"]);
-    // Conflicting axes intersect rather than fall back to either one.
-    expect(viewModel({ regime: "mica", status: "authorized", tokenType: "ART" }).rows).toHaveLength(0);
-  });
-
-  it("filters the GENIUS watch list by status, peg, and issuer/regulator search", () => {
-    expect(ids(viewModel({ regime: "genius", status: "issuer-announced-intent" }).watchRows)).toEqual([
-      "dollar-intent",
-    ]);
-    expect(viewModel({ regime: "genius", status: "issuer-announced-intent" }).rows).toHaveLength(0);
-    expect(ids(viewModel({ regime: "genius", peg: "USD" }).watchRows)).toEqual([
-      "future-coin",
-      "dollar-intent",
-      "dollar-review",
-    ]);
-    // "Nebraska" only appears in a state-regulator field.
-    expect(ids(viewModel({ regime: "genius", search: "nebraska" }).watchRows)).toEqual(["dollar-intent"]);
-    expect(ids(viewModel({ regime: "genius", search: "intent labs" }).watchRows)).toEqual(["dollar-intent"]);
-  });
-
   it("projects GENIUS disclosure and regulators without loading fold evidence", () => {
     const { watchRows } = viewModel({ regime: "genius" });
     const intent = watchRows.find((row) => row.id === "dollar-intent");
@@ -248,48 +217,6 @@ describe("Compliance model", () => {
     expect(searched.rows.map((row) => row.symbol)).toEqual(["DINT"]);
   });
 
-  it("sorts overview rows by their most notable regime status, then symbol", () => {
-    const { rows } = buildComplianceOverviewModel({ peg: "all", search: "" });
-
-    // EEMT authorized (best MiCA), FUT official-application-pending, then the
-    // rank tie between BSKT (non-compliant) and DINT (issuer intent) broken by
-    // symbol, then DREV (unknown).
-    expect(rows.map((row) => row.symbol)).toEqual(["EEMT", "FUT", "BSKT", "DINT", "DREV"]);
-  });
-
-  it("groups regime rows in display order with collapsed null-signal bands", () => {
-    const { rows, watchRows } = viewModel();
-    const micaRow = rows.find((row): row is MicaComplianceRow => row.regime === "mica")!;
-    const geniusRow = watchRows.find((row): row is GeniusComplianceRow => row.regime === "genius")!;
-
-    const micaBands = groupComplianceRowsIntoBands([
-      { ...micaRow, status: "out-of-scope" },
-      { ...micaRow, status: "authorized" },
-      { ...micaRow, status: "non-compliant" },
-    ], "mica");
-    expect(micaBands.map(({ status, label, collapsedByDefault }) => ({ status, label, collapsedByDefault }))).toEqual([
-      { status: "authorized", label: "Authorized", collapsedByDefault: false },
-      { status: "non-compliant", label: "Non-Compliant", collapsedByDefault: false },
-      { status: "out-of-scope", label: "Out of Scope", collapsedByDefault: true },
-    ]);
-
-    const geniusBands = groupComplianceRowsIntoBands([
-      { ...geniusRow, status: "not-applicable" },
-      { ...geniusRow, status: "issuer-announced-intent" },
-      { ...geniusRow, status: "unknown" },
-      { ...geniusRow, status: "no-public-authorization-found" },
-    ], "genius");
-    expect(geniusBands.map(({ status, collapsedByDefault }) => ({ status, collapsedByDefault }))).toEqual([
-      { status: "issuer-announced-intent", collapsedByDefault: false },
-      { status: "no-public-authorization-found", collapsedByDefault: true },
-      { status: "unknown", collapsedByDefault: true },
-      { status: "not-applicable", collapsedByDefault: true },
-    ]);
-    // A band only exists where rows exist, and it keeps its own rows.
-    expect(groupComplianceRowsIntoBands([{ ...micaRow, status: "pending" }], "genius")).toEqual([]);
-    expect(micaBands[0]!.rows).toHaveLength(1);
-  });
-
   it("counts distribution bands and the summary from the same assessed rows", () => {
     expect(buildComplianceStatusDistribution()).toEqual({
       mica: [
@@ -313,15 +240,4 @@ describe("Compliance model", () => {
     });
   });
 
-  it("normalizes URL filter values against the selected regime", () => {
-    expect(normalizeComplianceRegimeFilter("bogus")).toBe("all");
-    expect(normalizeComplianceRegimeFilter("genius")).toBe("genius");
-    expect(normalizeComplianceStatusFilter("bogus")).toBe("all");
-    expect(normalizeComplianceStatusFilter("authorized", "genius")).toBe("all");
-    expect(normalizeComplianceStatusFilter("ppsi-approved", "genius")).toBe("ppsi-approved");
-    expect(normalizeComplianceStatusFilter("ppsi-approved", "mica")).toBe("all");
-    expect(normalizeComplianceStatusFilter("authorized", "all")).toBe("authorized");
-    expect(normalizeMicaTokenTypeFilter("bogus")).toBe("all");
-    expect(normalizeMicaTokenTypeFilter("ART")).toBe("ART");
-  });
 });

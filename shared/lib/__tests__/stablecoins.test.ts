@@ -5,7 +5,6 @@ import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import usdxlSource from "../../data/stablecoins/coins/usdxl-last.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
-import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS, LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
@@ -367,20 +366,6 @@ describe("tracked stablecoin metadata", () => {
         /Expected an http\(s\) URL/,
       );
     }
-  });
-
-  it("allows local or http featured content images only", () => {
-    const content = { type: "article", url: "https://example.com/article", title: "Article" };
-    for (const image of ["/featured/example.png", "https://example.com/image.png"]) {
-      expect(parseStablecoinMetaAssets(
-        [makeStablecoinAsset({ featuredContent: [{ ...content, image }] })],
-        "valid featured image",
-      )[0]?.featuredContent?.[0]?.image).toBe(image);
-    }
-    expect(() => parseStablecoinMetaAssets(
-      [makeStablecoinAsset({ featuredContent: [{ ...content, image: "ftp://example.com/image.png" }] })],
-      "bad featured image",
-    )).toThrow(/Invalid input/);
   });
 
   it("tracks the current implementation-scope variants", () => {
@@ -1149,15 +1134,6 @@ describe("tracked stablecoin metadata", () => {
     });
 
     expect(underConfigured).toEqual([]);
-  });
-
-  it("assigns a reserve display badge to every configured live-reserve adapter", () => {
-    const missingBadgeAdapters = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig)
-      .map((coin) => coin.liveReservesConfig!.adapter)
-      .filter((adapter, index, adapters) => adapters.indexOf(adapter) === index)
-      .filter((adapter) => !hasReserveDisplayBadgeForAdapter(adapter));
-
-    expect(missingBadgeAdapters).toEqual([]);
   });
 
   it("keeps direct ETH and WETH reserve mappings aligned with the canonical ETH risk tier", () => {

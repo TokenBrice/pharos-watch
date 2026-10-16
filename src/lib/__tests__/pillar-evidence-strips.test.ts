@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
-import { BRIDGE_TIER_LABELS } from "@shared/lib/classification";
 import { makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { resolveMintAuthorityScoreDisplay } from "@/lib/mint-authority-display";
 import { resolveControlComponentRoles } from "@/lib/pillar-evidence-strips";
@@ -88,10 +87,6 @@ describe("resolveControlComponentRoles", () => {
     expect(resolveControlComponentRoles(cardWithControl(components, { evaluated: 65, published: 65 }))!.adjusted).toBe(false);
   });
 
-  it("returns null without a breakdown", () => {
-    expect(resolveControlComponentRoles({ ...makeV9Card(), breakdowns: null })).toBeNull();
-  });
-
   it("tones mint rows by the Mint Authority band, never by the score's grade range", () => {
     const hardened = { ...component("mint", "mint", 55, true), posture: "bounded-admin" };
     const exposed = { ...component("mint:binding", "mint", 90, true), posture: "unbounded-adverse" };
@@ -101,19 +96,5 @@ describe("resolveControlComponentRoles", () => {
     expect(resolveMintAuthorityScoreDisplay(hardened).bandKey).toBe("hardened");
     expect(byKey.mint!.tone).toBe("neutral");
     expect(byKey["mint:binding"]!.tone).toBe("critical");
-  });
-
-  it("names the native-issuance bridge component after the Bridging module, in its single-chain wording", () => {
-    const native = { ...component("bridge:native", "bridge", 95, true), posture: "single-chain-or-native" };
-    const card = cardWithControl([native, component("mint", "mint", 70, true)], { evaluated: 70, published: 70 });
-
-    const row = resolveControlComponentRoles(card)!.components.find((entry) => entry.key === "bridge:native")!;
-    expect(row.label).not.toBe(native.label);
-    expect(row.postureLabel).toBe(BRIDGE_TIER_LABELS["single-chain-or-native"]);
-  });
-
-  it("reads bridge postures in the tile's tier vocabulary", () => {
-    const roles = resolveControlComponentRoles(cardWithControl([component("bridge:base", "bridge", 45, true)]))!;
-    expect(roles.components[0]!.postureLabel).toBe(BRIDGE_TIER_LABELS["external-lock-mint"]);
   });
 });

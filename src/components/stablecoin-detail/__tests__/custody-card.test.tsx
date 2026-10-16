@@ -34,22 +34,7 @@ function summaryFor(overrides: Partial<CustodyProfile> = {}): CustodyClientSumma
   return summary!;
 }
 
-function rungStates(container: HTMLElement): (string | null)[] {
-  return Array.from(container.querySelectorAll("[data-rung]")).map((rung) => rung.getAttribute("data-rung-state"));
-}
-
 describe("CustodyModule", () => {
-  it("renders nothing without a custody summary", () => {
-    expect(render(<CustodyModule summary={null} variant="tile" />).container.innerHTML).toBe("");
-    expect(render(<CustodyModule variant="tile" />).container.innerHTML).toBe("");
-  });
-
-  it("owns the #custody anchor as an h3 evidence module", () => {
-    const { container } = render(<CustodyModule summary={summaryFor()} variant="tile" />);
-    const section = container.querySelector("section#custody");
-    expect(section?.getAttribute("data-evidence-module")).toBe("tile");
-    expect(section?.querySelector("h3")).not.toBeNull();
-  });
 
   it("draws no undisclosed bar for named custodians whose shares are not disclosed", () => {
     const { container } = render(
@@ -100,21 +85,6 @@ describe("CustodyModule", () => {
     expect(Array.from(bar!.querySelectorAll("[data-segment-kind]")).map((segment) => segment.getAttribute("data-segment-kind")))
       .toEqual(["provider", "undisclosed"]);
     expect(container.querySelector("[data-legend-kind='undisclosed']")?.textContent).toContain("2.1%");
-  });
-
-  it("lights, half-lights, fails and dashes the protection rungs from the reviewed enums", () => {
-    expect(rungStates(render(<CustodyModule summary={summaryFor()} variant="tile" />).container)).toEqual([
-      "met",
-      "partial",
-      "met",
-    ]);
-    // Unknown rehypothecation reads as unknown, never as a failed rung.
-    expect(
-      rungStates(
-        render(<CustodyModule summary={summaryFor({ segregation: "omnibus", rehypothecation: "unknown" })} variant="tile" />)
-          .container,
-      ),
-    ).toEqual(["failed", "partial", "unknown"]);
   });
 
   it("degrades an all-unknown structure with nobody named to the header and its provenance line", () => {

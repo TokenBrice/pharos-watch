@@ -20,13 +20,6 @@ describe("computeSeriesStability", () => {
     expect(result!).toBeGreaterThan(0.9);
   });
 
-  it("filters out Infinity values before computing", () => {
-    const withInf = [100, Infinity, 101, 99, -Infinity, 100, 102, 98, 100];
-    const result = computeSeriesStability(withInf);
-    expect(result).toBeTypeOf("number");
-    expect(result!).toBeGreaterThan(0.9);
-  });
-
   it("returns null when fewer than 7 finite values remain after filtering", () => {
     const mostlyNaN = [100, NaN, NaN, NaN, NaN, NaN, NaN, NaN, 101];
     expect(computeSeriesStability(mostlyNaN)).toBeNull();

@@ -39,7 +39,7 @@ export interface StablecoinReservesQueryState {
   dataUpdatedAt: number;
 }
 
-export function toReserveResult(response: StablecoinReservesResponse): StablecoinReserveResult {
+function toReserveResult(response: StablecoinReservesResponse): StablecoinReserveResult {
   const { stablecoinId: _stablecoinId, ...reserveResult } = response;
   return reserveResult;
 }

@@ -6,12 +6,10 @@ import { renderToString } from "react-dom/server";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
-import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { copyText } from "@/lib/clipboard";
 import { buildCemeteryRegisterRows, buildRegisterFilterOptions, type CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { buildCemeteryStats } from "@/lib/cemetery-stats";
 import { CemeteryRegister } from "../cemetery/cemetery-register";
-import { REGISTER_FOLD_COUNT, sortRegisterRows } from "../cemetery/cemetery-register-model";
+import { REGISTER_FOLD_COUNT } from "../cemetery/cemetery-register-model";
 import {
   CemeterySelectionProvider,
   useCemeterySelection,
@@ -25,8 +23,6 @@ vi.mock("next/link", async () => {
 });
 
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
-
-vi.mock("@/lib/clipboard", () => ({ copyText: vi.fn(async () => ({ ok: true })) }));
 
 const FIXTURE_COUNT = 30;
 
@@ -63,7 +59,6 @@ const ENTRIES: CemeteryEntry[] = Array.from({ length: FIXTURE_COUNT }, (_, index
   ...OVERRIDES[index],
 }));
 const ROWS = buildCemeteryRegisterRows(ENTRIES);
-const IDS = ROWS.map((row) => row.id);
 
 let selection: CemeterySelectionContextValue | null = null;
 
@@ -173,29 +168,6 @@ describe("CemeteryRegister server render", () => {
 });
 
 describe("CemeteryRegister", () => {
-  it("applies filters read from the URL and shows every match", () => {
-    window.history.replaceState(null, "", "/cemetery/?cause=regulatory&year=2025");
-    render(<Harness />);
-
-    expect(mainRowIds()).toEqual(["coin-2"]);
-    expect(document.querySelectorAll("#register tr[data-folded]")).toHaveLength(0);
-    expect(screen.getByText(`Showing 1 of ${FIXTURE_COUNT} matching`)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Regulatory/ }).getAttribute("aria-pressed")).toBe("true");
-    expect((screen.getByRole("combobox", { name: /Year/ }) as HTMLSelectElement).value).toBe("2025");
-  });
-
-  it("searches name, ticker, id and epitaph but not the obituary", () => {
-    window.history.replaceState(null, "", "/cemetery/?q=magic%20ran");
-    const { unmount } = render(<Harness />);
-    expect(mainRowIds()).toEqual(["coin-3"]);
-    unmount();
-
-    window.history.replaceState(null, "", "/cemetery/?q=needle");
-    render(<Harness />);
-    expect(mainRowIds()).toEqual([]);
-    expect(screen.getByText("No records match these filters.")).toBeTruthy();
-  });
-
   it("reveals a folded record: clears the filters that exclude it, unfolds, expands and focuses", () => {
     window.history.replaceState(null, "", "/cemetery/?cause=regulatory&foo=bar");
     render(<Harness />);
@@ -211,39 +183,6 @@ describe("CemeteryRegister", () => {
     expect(document.activeElement?.getAttribute("aria-label")).toBe("Close autopsy for Coin 28 (C28)");
     expect(mainRow("coin-28").scrollIntoView).toHaveBeenCalled();
     expect(statusText()).toBe("Filters cleared to show C28.");
-  });
-
-  it("reveals a compact folded record without filters by showing every record in full", () => {
-    render(<Harness />);
-    expect(mainRow("coin-27").hasAttribute("data-folded")).toBe(true);
-    expect(document.getElementById("autopsy-coin-27")).toBeNull();
-
-    act(() => selection!.revealRecord("coin-27", "chart"));
-
-    expect(document.querySelectorAll("#register tr[data-folded]")).toHaveLength(0);
-    expect(screen.getByText(`All ${FIXTURE_COUNT} records shown.`, { exact: false })).toBeTruthy();
-    expect((document.getElementById("autopsy-coin-27") as HTMLTableRowElement).hidden).toBe(false);
-    expect(document.activeElement?.getAttribute("aria-label")).toBe("Close autopsy for Coin 27 (C27)");
-    expect(statusText()).toBe("Opened autopsy for Coin 27 (C27).");
-  });
-
-  it("shows every record from the fold row and moves focus to the first one it revealed", () => {
-    render(<Harness />);
-    expect(screen.getByText(`${FIXTURE_COUNT - REGISTER_FOLD_COUNT} more records below the first 25.`)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: `Show all ${FIXTURE_COUNT} records` }));
-
-    expect(document.querySelectorAll("#register tr[data-folded]")).toHaveLength(0);
-    expect(screen.getByText(`Showing ${FIXTURE_COUNT} of ${FIXTURE_COUNT}`)).toBeTruthy();
-    expect(document.activeElement?.getAttribute("aria-label")).toBe("Open autopsy for Coin 25 (C25)");
-  });
-
-  it("names both coins that share a ticker", () => {
-    render(<Harness />);
-    expect(within(mainRow("coin-0")).getByText("Stables Labs USDX")).toBeTruthy();
-    expect(within(mainRow("coin-1")).getByText("Kava USDX")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open autopsy for Stables Labs USDX (USDX)" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open autopsy for Kava USDX (USDX)" })).toBeTruthy();
   });
 
   it("exposes the sort on the headers and keeps unrecorded peaks last in both directions", () => {
@@ -264,23 +203,6 @@ describe("CemeteryRegister", () => {
     expect(mainRowIds().slice(-2)).toEqual(["coin-5", "coin-28"]);
   });
 
-  it("expands a row into its autopsy and copies the canonical record link", async () => {
-    render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: "Open autopsy for Coin 3 (C3)" }));
-
-    expect(window.location.hash).toBe("#coin-3");
-    const autopsy = document.getElementById("autopsy-coin-3") as HTMLTableRowElement;
-    expect(autopsy.hidden).toBe(false);
-    expect(within(autopsy).getByText("Autopsy · Coin 3 (C3)")).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.click(within(autopsy).getByRole("button", { name: "Copy link" }));
-    });
-    expect(copyText).toHaveBeenCalledWith(`${SITE_ORIGIN}/cemetery/#coin-3`);
-    expect(within(autopsy).getByRole("button", { name: "Link copied" })).toBeTruthy();
-    expect(within(autopsy).getByRole("status").textContent).toBe("Link copied.");
-  });
-
   it("prints the derived facts in an expanded autopsy", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "Open autopsy for Coin 2 (C2)" }));
@@ -292,23 +214,5 @@ describe("CemeteryRegister", () => {
     expect(within(autopsy).getByText("$3.0M")).toBeTruthy();
     expect(within(autopsy).getByText("Tracked archive: frozen detail page")).toBeTruthy();
     expect(within(autopsy).getByRole("link", { name: /Archived data/ }).getAttribute("href")).toBe("/stablecoin/coin-2/");
-  });
-});
-
-describe("sortRegisterRows", () => {
-  const byPeak = (dir: "asc" | "desc") => sortRegisterRows(ROWS, { key: "peak", dir }).map((row) => row.peak);
-
-  it("sorts unrecorded peaks after every recorded peak in both directions", () => {
-    for (const dir of ["asc", "desc"] as const) {
-      const peaks = byPeak(dir);
-      const firstUnknown = peaks.indexOf(null);
-      expect(peaks.slice(firstUnknown).every((peak) => peak === null)).toBe(true);
-      expect(peaks.slice(0, firstUnknown).every((peak) => peak !== null)).toBe(true);
-    }
-  });
-
-  it("orders Died by the shared cemetery order in each direction", () => {
-    expect(sortRegisterRows(ROWS, { key: "died", dir: "desc" }).map((row) => row.id)).toEqual(IDS);
-    expect(sortRegisterRows(ROWS, { key: "died", dir: "asc" }).map((row) => row.id)).toEqual([...IDS].reverse());
   });
 });

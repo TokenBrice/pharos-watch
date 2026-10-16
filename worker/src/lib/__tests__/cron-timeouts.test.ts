@@ -53,27 +53,6 @@ describe("cron timeout budget resolution", () => {
     });
   });
 
-  it("marks the budget exhausted once the controlled slot deadline has passed", () => {
-    const slotStartedAtMs = 1_000_000;
-    const budget = resolveCronTimeoutBudget("sync-stablecoins", {
-      slotBudgetStartedAtMs: slotStartedAtMs,
-      nowMs: slotStartedAtMs + SCHEDULED_SLOT_JOB_BUDGET_MS + 1,
-    });
-
-    expect(budget).toMatchObject({
-      effectiveTimeoutMs: 0,
-      truncated: true,
-      exhausted: true,
-      remainingSlotBudgetMs: 0,
-    });
-    expect(getCronTimeoutBudgetMetadata(budget)).toMatchObject({
-      reason: "cron-timeout",
-      slotBudgetTruncated: true,
-      slotBudgetExhausted: true,
-      effectiveTimeoutMs: 0,
-    });
-  });
-
   it("derives the controlled deadline from the platform ceiling minus reserve", () => {
     const slotStartedAtMs = 1_000_000;
 

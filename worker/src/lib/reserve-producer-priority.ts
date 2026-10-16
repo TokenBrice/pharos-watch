@@ -26,7 +26,7 @@ export type ReserveProducerPriority = {
   condition: "next-slot-lookahead" | "current-slot-unfinished" | "heavy-slot-running";
 };
 
-export function getReserveRecoveryLookaheadSec(): number {
+function getReserveRecoveryLookaheadSec(): number {
   return Math.ceil(resolveLiveReserveSyncBudgetConfig().runBudgetMs / 1000)
     + Math.max(RESERVE_RECOVERY_CLAIM_SEC,
       Math.ceil(CRON_TIMEOUT_MS["sync-live-reserves"] / 1000) + CRON_LEASE_TTL_ALLOWANCE_SEC,

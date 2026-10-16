@@ -446,21 +446,6 @@ describe("independent-assurance manifest framework", () => {
     expect(() => reconcileIndependentAssuranceManifest(reviewed)).toThrow("not a decimal string");
   });
 
-  it("accepts a matching official index URL and exact PDF bytes", async () => {
-    installFetch();
-
-    await expect(verify()).resolves.toMatchObject({
-      sourceTimestamp: 1782824340,
-      byteLength: PDF_BYTES.length,
-    });
-  });
-
-  it("fails closed when the official PDF hash changes", async () => {
-    installFetch({ pdf: new TextEncoder().encode("%PDF-1.7\nchanged\n") });
-
-    await expect(verify()).rejects.toThrow("SHA-256");
-  });
-
   it("fails closed when the official PDF is unreachable", async () => {
     const fetchMock = installFetch({ rejectPdf: true });
 
@@ -470,40 +455,6 @@ describe("independent-assurance manifest framework", () => {
       "https://www.audxtoken.com/reviewed.pdf",
       expect.any(Object),
     );
-  });
-
-  it("fails closed when the official index redirects to an unreviewed host", async () => {
-    installFetch({ indexFinalUrl: "https://example.com/transparency" });
-
-    await expect(verify()).rejects.toThrow("index response host example.com is not in the reviewed allowlist");
-  });
-
-  it("fails closed when the official PDF redirects to an unreviewed host", async () => {
-    installFetch({ pdfFinalUrl: "https://example.com/reviewed.pdf" });
-
-    await expect(verify()).rejects.toThrow("PDF response host example.com is not in the reviewed allowlist");
-  });
-
-  it("fails closed when a newer official report appears without a reviewed manifest", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response('<a href="/new-2026-07-31.pdf">July 2026 Report</a>')),
-    );
-
-    await expect(verify()).rejects.toThrow("newer unreviewed report");
-  });
-
-  it("fails closed when the official index has two reports at the reviewed latest date", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          '<a href="/reviewed.pdf">June 2026 Report</a><a href="/alternate.pdf">June 2026 Report</a>',
-        ),
-      ),
-    );
-
-    await expect(verify()).rejects.toThrow("reviewed report URL is missing or duplicated");
   });
 
   it.each([

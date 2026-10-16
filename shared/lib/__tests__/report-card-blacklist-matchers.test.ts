@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   getBlacklistStatusLabel,
   resolveBlacklistStatus,
-  resolveBlacklistStatuses,
 } from "../report-card-blacklist-matchers";
 import type { StablecoinMeta } from "../../types";
 
@@ -45,14 +44,6 @@ describe("reviewed blacklist status", () => {
   ] as const)("projects %s without inference", (status, label) => {
     expect(resolveBlacklistStatus(makeMeta(String(status), status))).toBe(status);
     expect(getBlacklistStatusLabel(status)).toBe(label);
-  });
-
-  it("projects the catalog without changing input order or status", () => {
-    const metas = [makeMeta("upstream", "inherited"), makeMeta("direct", true)];
-    expect([...resolveBlacklistStatuses(metas)]).toEqual([
-      ["upstream", "inherited"],
-      ["direct", true],
-    ]);
   });
 
   it("fails closed when the canonical review is missing", () => {

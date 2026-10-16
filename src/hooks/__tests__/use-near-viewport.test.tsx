@@ -52,27 +52,6 @@ afterEach(() => {
 });
 
 describe("useNearViewport", () => {
-  it("starts with near=false on the initial render when IntersectionObserver is available", () => {
-    window.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
-
-    const { getByTestId } = render(<Probe />);
-
-    // After the effect runs, the observer is wired up but no intersection has
-    // fired yet — `near` must still be false.
-    expect(getByTestId("probe").dataset.near).toBe("false");
-    expect(lastObserverInstance?.observe).toHaveBeenCalledTimes(1);
-  });
-
-  it("flips near=true after the effect runs when IntersectionObserver is missing", () => {
-    Reflect.deleteProperty(window, "IntersectionObserver");
-
-    const { getByTestId } = render(<Probe />);
-
-    // No IO available -> the effect short-circuits and sets near=true so the
-    // consumer renders content rather than waiting forever.
-    expect(getByTestId("probe").dataset.near).toBe("true");
-  });
-
   it("observes an element that is attached after the initial hook effect", () => {
     window.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
 
@@ -101,18 +80,6 @@ describe("useNearViewport", () => {
     });
 
     expect(getByTestId("probe").dataset.near).toBe("true");
-    expect(instance?.disconnect).toHaveBeenCalled();
-  });
-
-  it("disconnects the observer when the hook unmounts before intersection", () => {
-    window.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
-
-    const { unmount } = render(<Probe />);
-    const instance = lastObserverInstance;
-    expect(instance?.disconnect).not.toHaveBeenCalled();
-
-    unmount();
-
     expect(instance?.disconnect).toHaveBeenCalled();
   });
 });

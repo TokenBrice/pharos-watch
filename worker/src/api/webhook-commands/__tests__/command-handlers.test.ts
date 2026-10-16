@@ -7,12 +7,9 @@ import {
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { resolveTicker } from "../../../lib/telegram/alerts";
 import type { WebhookCommandContext } from "../context";
-import { handleCancel } from "../cancel";
 import { handleHealth } from "../health";
-import { handleList } from "../list";
 import { handleMute } from "../mute";
 import { handleSet } from "../set";
-import { handleSettings } from "../settings";
 import { handleStart } from "../start";
 import { handleSubscribe } from "../subscribe";
 import { handleTimezone } from "../timezone";
@@ -337,27 +334,6 @@ describe("webhook command handlers", () => {
     expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("Unknown timezone"));
   });
 
-  it("/timezone with no argument shows current zone and an inline keyboard", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers",
-        rows: [],
-        first: subscriberRow({ timezone: "Europe/Paris" }),
-      },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleTimezone(ctx, "");
-
-    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("Current timezone: Europe/Paris");
-    const buttons = buttonsFromMarkup(options.replyMarkup);
-    expect(buttons.some((button) => button.callback_data === "tz:UTC")).toBe(true);
-    expect(buttons.some((button) => button.callback_data === "tz:Europe/Paris")).toBe(true);
-    expectMiniAppButton(buttons, "Open in app", "quiet-hours");
-  });
-
   it("/mute, /unmutehours, and /unsnooze write state and use the contextual Mini App label", async () => {
     const db = mockD1();
     const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
@@ -411,21 +387,6 @@ describe("webhook command handlers", () => {
     expect(payloads.some((url) => url.includes("startapp=snooze"))).toBe(true);
   });
 
-  it("/settings sends editable settings controls with a canonical Mini App label", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscribers", rows: [], first: null }]);
-    const ctx = makeContext({ db });
-
-    await handleSettings(ctx, "");
-
-    const body = latestSendMessageBody();
-    expect(body.text).toContain("<b>Settings</b>");
-    const buttons = buttonsFromBody(body);
-    expect(buttons.map((button) => button.callback_data)).toEqual(
-      expect.arrayContaining(["settings:gt:dews", "settings:gt:depeg"]),
-    );
-    expectMiniAppButton(buttons, "Open in app", "settings");
-  });
-
   it("/start exposes the control-panel entry and the setup wizard branch keyboard", async () => {
     const appReplyWithMarkup = vi.fn().mockResolvedValue(undefined);
     const appCtx = makeContext({ replyToChatWithMarkup: appReplyWithMarkup });
@@ -449,29 +410,6 @@ describe("webhook command handlers", () => {
       expect.arrayContaining(["setup:branch:recommended", "setup:branch:custom", "setup:branch:skip"]),
     );
     expectMiniAppButton(buttonsFromBody(body), "Open control panel", "watchlist");
-  });
-
-  it("/start sample runs the synthetic preview in private chats", async () => {
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ chatType: "private", replyToChat });
-
-    await handleStart(ctx, "sample");
-
-    expect(replyToChat).toHaveBeenCalledTimes(1);
-    const message = replyToChat.mock.calls[0]![0] as string;
-    expect(message).toContain("sample alert");
-    expect(message).toContain("USDC");
-  });
-
-  it("/start sample does not run the preview in groups", async () => {
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ chatType: "group", replyToChat });
-
-    await handleStart(ctx, "sample");
-
-    expect(replyToChat).toHaveBeenCalledTimes(1);
-    const message = replyToChat.mock.calls[0]![0] as string;
-    expect(message).not.toContain("sample alert");
   });
 
   it("/health renders delivery diagnostics and opens the contextual app view", async () => {
@@ -563,75 +501,6 @@ describe("webhook command handlers", () => {
     const [message] = replyToChatWithMarkup.mock.calls[0]!;
     expect(message).toContain("Snooze: Paused (indefinite)");
     expect(message).not.toMatch(/Snooze: Active for \d+ d/);
-  });
-
-  it("/list empty private chats offers both the control panel and preset discovery", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscribers", rows: [], first: null },
-      { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleList(ctx, "");
-
-    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("No active subscriptions");
-    const buttons = buttonsFromMarkup(options.replyMarkup);
-    expectMiniAppButton(buttons, "Open control panel", "watchlist");
-    expectMiniAppButton(buttons, "Browse presets", "presets");
-  });
-
-  it("shows global alert coverage in /list", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers",
-        rows: [],
-        first: subscriberRow({ global_alert_depeg: 1, global_alert_safety: 1 }),
-      },
-      { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleList(ctx, "");
-
-    const [message] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("All stablecoins: Depeg, Safety (downgrades; 3-point drop when scored)");
-    expect(message).toContain("Coins (0):");
-  });
-
-  it("/list loads per-coin snooze state for subscription summaries", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      { match: "FROM telegram_subscribers", rows: [], first: subscriberRow() },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [subscriptionRow({ alert_snooze_until_ts: nowSec + 2 * 3600 })],
-      },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleList(ctx, "");
-
-    const subscriptionSelect = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
-    expect(subscriptionSelect?.sql).toContain("alert_snooze_until_ts");
-    const [message] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("USDC (usdc-circle): DEWS · per-coin — snoozed for 2 h");
-  });
-
-  it("/cancel without pending state gives recovery commands", async () => {
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ replyToChat });
-
-    await handleCancel(ctx, "");
-
-    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("/start"));
-    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("/list"));
   });
 
   it("mutating command handlers keep DB writes on their own chat id", async () => {

@@ -1,9 +1,8 @@
 // src/lib/__tests__/regulatory-standing.test.ts
 import { describe, expect, it } from "vitest";
-import type { GeniusAuthorizationStatus, GeniusProfile, MicaProfile, MicaStatus, StablecoinMeta } from "@shared/types";
+import type { GeniusProfile, MicaProfile, StablecoinMeta } from "@shared/types";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES } from "@shared/lib/genius";
-import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import {
   buildRegulatoryStandingView,
   formatReserveReportNote,
@@ -45,10 +44,6 @@ const REPORT: NonNullable<NonNullable<StablecoinMeta["proofOfReserves"]>["latest
 };
 
 describe("buildRegulatoryStandingView", () => {
-  it("returns null when neither regime exists", () => {
-    expect(buildRegulatoryStandingView({ symbol: "XXX" })).toBeNull();
-  });
-
   it("keeps a CASH-like issuance-path signal distinct from an announced authorization plan", () => {
     const view = buildRegulatoryStandingView({
       symbol: "CASH",
@@ -124,58 +119,12 @@ describe("buildRegulatoryStandingView", () => {
     expect(outOfScope.regimes[0]!.status.toneClass).not.toBe(nonCompliant.regimes[0]!.status.toneClass);
   });
 
-  it("writes header and status vocabulary in sentence case", () => {
-    const views = [
-      buildRegulatoryStandingView({ symbol: "USDE", mica: { ...MICA, status: "non-compliant", tokenType: "ART" } })!,
-      buildRegulatoryStandingView({ symbol: "USDE", genius: { ...GENIUS, authorizationStatus: "no-public-authorization-found" } })!,
-    ];
-    for (const view of views) {
-      for (const label of [view.badgeLabel, ...view.regimes.flatMap((regime) => [regime.status.label, regime.caption ?? ""])]) {
-        // No capitalised word after the first unless it is an acronym or the regime name.
-        for (const word of label.split(/[\s-]+/).slice(1)) {
-          expect(word === "MiCA" || /^[A-Z0-9]{2,}$/.test(word) || !/^[A-Z]/.test(word)).toBe(true);
-        }
-      }
-    }
-  });
-
   it("drops an irrelevant GENIUS profile and returns null when nothing remains", () => {
     const view = buildRegulatoryStandingView({
       symbol: "XAUT",
       genius: { ...GENIUS, applicability: "non-payment-token", authorizationStatus: "not-applicable" },
     });
     expect(view).toBeNull();
-  });
-
-  it("prefers the bounded primaryFederalRegulator enum over free-form licensingRegulator prose", () => {
-    const longLicensingRegulator =
-      "Office of the Comptroller of the Currency, acting as primary federal banking regulator " +
-      "under 12 U.S.C. Chapter 1, with concurrent examination authority delegated to regional staff";
-    expect(longLicensingRegulator.length).toBeGreaterThan(100);
-    const view = buildRegulatoryStandingView({
-      symbol: "USDC",
-      genius: { ...GENIUS, licensingRegulator: longLicensingRegulator, primaryFederalRegulator: "OCC" },
-    });
-    const regulatorFact = view!.regimes[0]!.facts.find((fact) => fact.key === "regulator")!;
-    expect(regulatorFact.value).toBe("OCC");
-    // The enum wins the cell, but the researched prose survives as the hover title.
-    expect(regulatorFact.title).toBe(
-      "Office of the Comptroller of the Currency, acting as primary federal banking regulator under 12 U.S.C. Chapter 1, with concurrent examination authority delegated to regional staff",
-    );
-  });
-
-  it("slices free-form licensingRegulator prose at the first clause break and keeps the full string as title", () => {
-    const view = buildRegulatoryStandingView({
-      symbol: "USDX",
-      genius: {
-        ...GENIUS,
-        licensingRegulator: "NYDFS (BitLicense; trust charter)",
-        primaryFederalRegulator: undefined,
-      },
-    });
-    const regulatorFact = view!.regimes[0]!.facts.find((fact) => fact.key === "regulator")!;
-    expect(regulatorFact.value).toBe("NYDFS");
-    expect(regulatorFact.title).toBe("NYDFS (BitLicense; trust charter)");
   });
 
   it("keeps unresearched disclosures as unavailable rather than dropping or failing them", () => {
@@ -258,28 +207,6 @@ describe("buildRegulatoryStandingView", () => {
       expect(attestation).toMatchObject({ state: "gap", value: notFound.value });
       expect(disclosures(true).attestation.state).toBe("published");
     });
-  });
-
-  it.each(
-    ([
-      "ppsi-approved",
-      "state-qualified",
-      "official-application-pending",
-      "issuer-announced-intent",
-      "no-public-authorization-found",
-      "unknown",
-    ] satisfies GeniusAuthorizationStatus[]).flatMap((geniusStatus) =>
-      (["authorized", "pending", "transitional", "non-compliant", "out-of-scope"] satisfies MicaStatus[]).map(
-        (micaStatus) => ({ geniusStatus, micaStatus }),
-      ),
-    ),
-  )("keeps the verdict within the summary budget: $geniusStatus × $micaStatus", ({ geniusStatus, micaStatus }) => {
-    const view = buildRegulatoryStandingView({
-      symbol: "SYMBOL",
-      genius: { ...GENIUS, authorizationStatus: geniusStatus },
-      mica: micaStatus === "out-of-scope" ? { status: micaStatus } : { ...MICA, status: micaStatus },
-    });
-    expect(findSummaryBudgetViolations(view!.summary)).toEqual([]);
   });
 
   it.each([

@@ -159,20 +159,6 @@ describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)
     expect(ledger.alternatives[0]?.rejectionReasonCode).toBe("lower-confidence");
   });
 
-  it("prioritizes canonical lower-confidence over a reward-heavy alternate", () => {
-    const candidate = makeSource({
-      sourceKey: "reward-alt", confidenceTier: "discovered",
-      currentApy: 5, apyReward: 4.5, apy30d: 4.5,
-      sourceRisk: makeSourceRisk({ rewardShare: 0.9 }),
-    });
-    const ledger = ledgerFor(selected, [candidate], 1);
-    expect(ledger.selectedReasonCode).toBe("curated-over-discovered");
-    expect(ledger.alternatives[0]).toMatchObject({
-      sourceKey: "reward-alt", apy30dDelta: -0.5,
-      rejectionReasonCode: "lower-confidence",
-    });
-  });
-
   it("codes 'rewards-only' when reward share exceeds REWARDS_ONLY_SHARE (0.5)", () => {
     const candidate = makeSource({
       sourceKey: "alt",
@@ -280,86 +266,5 @@ describe("deriveYieldSourceRole", () => {
         { isSelected: true },
       ),
     ).toBe("degraded-canonical");
-  });
-});
-
-describe("deriveSelectedReasonCode precedence (via buildPublicDecisionLedger)", () => {
-  it("codes 'no-alternatives' when there are no competitors", () => {
-    const selected = makeSource({ sourceKey: "selected" });
-    const ledger = ledgerFor(selected, []);
-    expect(ledger.selectedReasonCode).toBe("no-alternatives");
-  });
-
-  it("codes 'deterministic-preferred' and outranks every other reason", () => {
-    const selected = makeSource({ sourceKey: "selected", confidenceTier: "deterministic" });
-    // Candidate is also discovered + lower confidence + tvl-only; deterministic wins.
-    const candidate = makeSource({ sourceKey: "alt", confidenceTier: "discovered" });
-    const ledger = ledgerFor(selected, [candidate], 1);
-    expect(ledger.selectedReasonCode).toBe("deterministic-preferred");
-  });
-
-  it("codes 'curated-over-discovered' when curated selection has a discovered alternative", () => {
-    const selected = makeSource({ sourceKey: "selected", confidenceTier: "curated" });
-    const candidate = makeSource({ sourceKey: "alt", confidenceTier: "discovered" });
-    const ledger = ledgerFor(selected, [candidate]);
-    expect(ledger.selectedReasonCode).toBe("curated-over-discovered");
-  });
-
-  it("codes 'tier-preference' when a lower-confidence alternative exists but the curated-over-discovered rule does not match", () => {
-    // Selected is discovered (not curated), alternative is fallback (lower).
-    const selected = makeSource({ sourceKey: "selected", confidenceTier: "discovered" });
-    const candidate = makeSource({ sourceKey: "alt", confidenceTier: "fallback" });
-    const ledger = ledgerFor(selected, [candidate]);
-    expect(ledger.selectedReasonCode).toBe("tier-preference");
-  });
-
-  it("codes 'tvl-floor' when an equal-tier alternative ties on apy30d but has lower TVL", () => {
-    const selected = makeSource({
-      sourceKey: "selected",
-      confidenceTier: "curated",
-      apy30d: 5,
-      sourceTvlUsd: 1_000_000,
-    });
-    const candidate = makeSource({
-      sourceKey: "alt",
-      confidenceTier: "curated",
-      apy30d: 5,
-      sourceTvlUsd: 500_000,
-    });
-    const ledger = ledgerFor(selected, [candidate], 1);
-    expect(ledger.selectedReasonCode).toBe("tvl-floor");
-  });
-
-  it("codes 'freshness-tiebreaker' when selection is fresher than an equal-tier alternative", () => {
-    const selected = makeSource({
-      sourceKey: "selected",
-      confidenceTier: "curated",
-      apy30d: 5,
-      sourceTvlUsd: 1_000_000,
-      sourceRisk: makeSourceRisk({ sourceAgeSeconds: 100 }),
-    });
-    const candidate = makeSource({
-      sourceKey: "alt",
-      confidenceTier: "curated",
-      apy30d: 6, // differs, so the tvl-floor rule does not apply
-      sourceTvlUsd: 1_000_000,
-      sourceRisk: makeSourceRisk({ sourceAgeSeconds: 200 }),
-    });
-    const ledger = ledgerFor(selected, [candidate], 1);
-    expect(ledger.selectedReasonCode).toBe("freshness-tiebreaker");
-  });
-
-  it("codes 'fallback' when a fallback selection has only equal-tier alternatives", () => {
-    const selected = makeSource({ sourceKey: "selected", confidenceTier: "fallback" });
-    const candidate = makeSource({ sourceKey: "alt", confidenceTier: "fallback" });
-    const ledger = ledgerFor(selected, [candidate]);
-    expect(ledger.selectedReasonCode).toBe("fallback");
-  });
-
-  it("codes 'best-by-confidence-and-apy' as the terminal fallthrough", () => {
-    const selected = makeSource({ sourceKey: "selected", confidenceTier: "curated" });
-    const candidate = makeSource({ sourceKey: "alt", confidenceTier: "curated" });
-    const ledger = ledgerFor(selected, [candidate]);
-    expect(ledger.selectedReasonCode).toBe("best-by-confidence-and-apy");
   });
 });

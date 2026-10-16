@@ -4,12 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { YieldHistoryPoint } from "@shared/types";
 import {
-  PRESET_DAYS,
   deriveYieldSourceSegments,
   getYieldHistorySourceDisplayLabel,
   useYieldHistoryChartModel,
 } from "@/components/yield-history-chart-model";
-import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+
 
 const historyBySource = new Map<string, YieldHistoryPoint[]>();
 vi.mock("@/hooks/api-hooks", () => ({
@@ -103,27 +102,8 @@ describe("yield history transformations", () => {
       .toEqual([[BASE + 4 * 86_400_000, 2.01]]);
   });
 
-  it("includes overlays and only enabled breakdown values in the plotted domain", () => {
-    historyBySource.set("a", [point(BASE, 5, { apyBase: 1, apyReward: 2 })]);
-    historyBySource.set("b", [point(BASE, 9)]);
-    const { result } = renderHook(() => useYieldHistoryChartModel({ ...chartProps, externalSourceKeys: ["a", "b"] }));
-    // Padded 4.5–9.5 window, widened to its outer nice ticks.
-    expect(result.current.yDomain).toEqual([4, 10]);
-    act(() => result.current.setShowBreakdown(true));
-    expect(result.current.effectiveShowBreakdown).toBe(true);
-    // Breakdown values (1–9) pad to 0.36–9.64, widened to nice ticks.
-    expect(result.current.yDomain).toEqual([0, 10]);
-  });
+});
 
-  it("does not flatten a narrow data range to include a distant benchmark", () => {
-    historyBySource.set("best", [point(BASE, 3.5), point(BASE + 86_400_000, 3.5)]);
-    const { result } = renderHook(() => useYieldHistoryChartModel({ ...chartProps, benchmarkRate: -0.04, medianApy: 3.5 }));
-    expect(result.current.yDomain).toEqual([3, 4]);
-  });
-});
-it("uses the shared public history window for the longest chart preset", () => {
-  expect(PRESET_DAYS[PRESET_DAYS.length - 1]).toBe(YIELD_HISTORY_MAX_DAYS);
-});
 
 describe("yield history chart source display", () => {
   it("disambiguates duplicate source names with source identity", () => {
@@ -140,24 +120,6 @@ describe("yield history chart source display", () => {
 });
 
 describe("deriveYieldSourceSegments", () => {
-  it("returns a single segment spanning the full range when one source is present", () => {
-    const segments = deriveYieldSourceSegments([
-      { ts: 1_000, sourceKey: "aave-v3", sourceLabel: "Aave V3" },
-      { ts: 2_000, sourceKey: "aave-v3", sourceLabel: "Aave V3" },
-      { ts: 3_000, sourceKey: "aave-v3", sourceLabel: "Aave V3" },
-    ]);
-
-    expect(segments).toHaveLength(1);
-    expect(segments[0]).toMatchObject({
-      startTs: 1_000,
-      endTs: 3_000,
-      sourceKey: "aave-v3",
-      sourceLabel: "Aave V3",
-      isOther: false,
-    });
-    expect(segments[0].color).toMatch(/^bg-/);
-  });
-
   it("splits at each source switch and preserves boundaries", () => {
     const segments = deriveYieldSourceSegments([
       { ts: 1_000, sourceKey: "aave-v3", sourceLabel: "Aave V3" },

@@ -1,24 +1,12 @@
 import { V9_REASON_CODES } from "@shared/types/safety-score-v9";
 import { describe, expect, it } from "vitest";
 import {
-  priorityBand,
-  resolutionModeAction,
   V9_MISSING_DATA_WORK_TYPES,
 } from "../../lib/safety-score-v9-missing-data-work-types";
 import { classifyV9CurationWorklistStream } from "../generate-safety-score-v9-missing-data-registry";
 import { renderCurationWorklist } from "../generate-safety-score-v9-curation-worklist.mjs";
 
 describe("Safety Score v9 curation worklist routing", () => {
-  it("routes reserve refresh work through the typed missing-data registry", () => {
-    expect(classifyV9CurationWorklistStream("stale-audited-reserve-composition")).toBe("RESV");
-    expect(classifyV9CurationWorklistStream("missing-reserve-composition")).toBe("RESV");
-  });
-
-  it("keeps ordinary non-curation reasons silently unmapped", () => {
-    expect(classifyV9CurationWorklistStream("bounded-mechanism-review")).toBeNull();
-    expect(classifyV9CurationWorklistStream("nonmaterial-bridge-supply-unmatched")).toBeNull();
-    expect(classifyV9CurationWorklistStream("missing-pillar-evidence")).toBeNull();
-  });
 
   it("fails closed when a reason has no typed curation disposition", () => {
     expect(() => classifyV9CurationWorklistStream("unregistered-reason")).toThrow(
@@ -47,56 +35,6 @@ describe("Safety Score v9 curation worklist routing", () => {
     );
   });
 
-  it("uses the registry priority bands including the critical P0 escape hatch", () => {
-    expect(priorityBand(false, 999_999_999)).toBe("P1");
-    expect(priorityBand(true, 1)).toBe("P0");
-  });
-
-  it("derives each non-agent resolution action from the shared mode metadata", () => {
-    expect(resolutionModeAction("producer-runtime", "unused")).toBe("implement-or-refresh-producer-capability");
-    expect(resolutionModeAction("mixed-curation-and-runtime", "unused")).toBe(
-      "reconcile-metadata-then-refresh-producer",
-    );
-    expect(resolutionModeAction("methodology-capability", "unused")).toBe(
-      "define-reviewed-methodology-capability",
-    );
-    expect(resolutionModeAction("issuer-or-onchain-evidence", "unused")).toBe(
-      "obtain-measured-source-evidence-then-curate",
-    );
-    expect(resolutionModeAction("agent-curation", "contextual-agent-action")).toBe(
-      "contextual-agent-action",
-    );
-  });
-
-  it("routes CTRL and ORCL repair instructions to the typed domain sidecars, not base coin files", () => {
-    const markdown = renderCurationWorklist(
-      { pipeline: { candidate: { cards: [] }, evaluatedSet: { assets: [] } } },
-      { summary: { stablecoinCount: 0, warnings: [] }, stablecoins: [] },
-      "capture.json",
-    );
-    const control = markdown.split("## CTRL —")[1].split("\n## ")[0];
-    const oracle = markdown.split("## ORCL —")[1].split("\n## ")[0];
-    const source = {
-      file: "shared/data/stablecoins/coins/<id>.json",
-      sidecarFiles: [
-        "shared/data/stablecoins/domains/mint-authority/<id>.json",
-        "shared/data/stablecoins/domains/risk-review/<id>.json",
-      ],
-    };
-    for (const type of ["MINT_AUTHORITY", "DEPLOYMENT_CONTROLS"] as const) {
-      for (const path of V9_MISSING_DATA_WORK_TYPES[type].touchpoints(source, null)) {
-        expect(control).toContain(path);
-      }
-    }
-    for (const type of ["ORACLE_PROFILE", "ORACLE_BRANCH"] as const) {
-      for (const path of V9_MISSING_DATA_WORK_TYPES[type].touchpoints(source, null)) {
-        expect(oracle).toContain(path);
-      }
-    }
-    expect(control).not.toContain(source.file);
-    expect(oracle).not.toContain(source.file);
-    expect(oracle).not.toContain("in the coin JSON");
-  });
 
   it("renders mixed known, null, missing and zero supplies without false coverage or smallest-asset ordering", () => {
     const supplies = [

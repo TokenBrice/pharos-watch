@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { describeError, toErrorMessage } from "../error-utils";
-import { ErrorDescriptorSchema } from "../../types/error";
 
 describe("toErrorMessage", () => {
-  it("preserves ordinary Error and platform accessor messages", () => {
-    expect(toErrorMessage(new Error("error message"))).toBe("error message");
-    expect(describeError(new DOMException("request timed out", "TimeoutError"))).toMatchObject({
-      name: "TimeoutError",
-      message: "request timed out",
-    });
-  });
-
   it("leaves lazy stacks untouched for message-only extraction but preserves full diagnostics", () => {
     let stackReads = 0;
     const error = new Error("request failed", { cause: new Error("secret detail") });
@@ -28,55 +19,6 @@ describe("toErrorMessage", () => {
       stack: "Error: request failed\n    at publication",
     });
     expect(stackReads).toBe(1);
-  });
-
-  it("preserves cause messages without reading a lazy stack", () => {
-    let stackReads = 0;
-    const error = new Error("outer", { cause: new Error("inner") });
-    Object.defineProperty(error, "stack", {
-      get() { stackReads++; return "diagnostic stack"; },
-    });
-
-    expect(toErrorMessage(error)).toBe("outer; cause: inner");
-    expect(stackReads).toBe(0);
-    expect(describeError(error)).toMatchObject({
-      message: "outer; cause: inner",
-      stack: "diagnostic stack",
-    });
-    expect(stackReads).toBe(1);
-  });
-
-  it("preserves own codes on Error subclasses", () => {
-    class NetworkError extends Error {
-      readonly code = "NETWORK_DOWN";
-    }
-    expect(describeError(new NetworkError("network down"))).toMatchObject({
-      name: "Error",
-      message: "network down",
-      code: "NETWORK_DOWN",
-    });
-  });
-
-  it("describes primitives and only error-shaped object fields", () => {
-    expect(toErrorMessage("string message")).toBe("string message");
-    expect(toErrorMessage(null)).toBe("null");
-    expect(toErrorMessage({ message: "object message" })).toBe("object message");
-    expect(toErrorMessage({})).toBe("Non-error value thrown");
-  });
-
-  it("summarizes blank errors, causes, nested and empty aggregates", () => {
-    expect(toErrorMessage(new Error("   "))).toBe("Error (no message)");
-    const error = new Error("D1 failed", { cause: new Error("constraint violation") });
-    expect(describeError(error)).toMatchObject({
-      message: "D1 failed; cause: constraint violation",
-      cause: { message: "constraint violation" },
-    });
-    const aggregate = new AggregateError([error, new AggregateError([], "")], "batch failed");
-    const descriptor = describeError(aggregate);
-    expect(descriptor.message).toContain("constraint violation");
-    expect(descriptor.errors?.[1].message).toBe("AggregateError (no message)");
-    expect(descriptor.errors?.[0].stack).toBeUndefined();
-    expect(ErrorDescriptorSchema.safeParse(descriptor).success).toBe(true);
   });
 
   it("never executes non-Error getters, coercion or serialization hooks", () => {

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import {
   expandOverlayReview,
   MechanismReviewOverlaySchema,
@@ -44,16 +43,6 @@ describe("Safety Score V9 evidence-only mechanism curation", () => {
       },
     });
     expectNonScoring(overlay, ["custodyContinuity"]);
-  });
-
-  it("keeps all currently authored unavailable components non-scoring", () => {
-    for (const value of mechanismReviewOverlaysAsset.overlays) {
-      const overlay = MechanismReviewOverlaySchema.parse(value);
-      const keys = Object.entries(overlay.components)
-        .filter(([, component]) => "applicability" in component && component.applicability === "unavailable")
-        .map(([key]) => key);
-      expectNonScoring(overlay, keys);
-    }
   });
 
   it("leaves score and grade unchanged when mechanism evidence becomes unavailable", () => {

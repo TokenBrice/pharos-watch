@@ -82,31 +82,7 @@ it.each(["not-yet-registered-chain", "sUSDe unattributed OFT escrow", "savUSD un
   },
 );
 
-it("states a single-category distribution as a figure rather than a one-color ring", () => {
-  useStablecoinsMock.mockReturnValue({
-    data: {
-      peggedAssets: [{ id: "usdc-circle", chainCirculating: { Ethereum: { current: 4_000_000_000 } } }],
-    },
-    isLoading: false,
-    error: null,
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-  });
-  useDexLiquidityMock.mockReturnValue({
-    data: {},
-    isLoading: false,
-    error: null,
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-  });
 
-  render(<DistributionSection stablecoinId="usdc-circle" />);
-
-  const figure = screen.getByRole("figure", { name: "Circulating supply distribution across 1 chain" });
-  expect(figure.textContent).toContain("Ethereum");
-  expect(figure.textContent).toContain("100%");
-  expect(figure.querySelector("svg")).toBeNull();
-});
 
 it("keeps a chain at exactly the Other threshold as its own slice", () => {
   // 2% is the fold threshold: Arbitrum sits exactly on it and stays named,

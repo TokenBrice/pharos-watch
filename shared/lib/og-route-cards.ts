@@ -135,7 +135,7 @@ export const OG_ROUTE_CARDS = {
 export type OgRouteCardKey = keyof typeof OG_ROUTE_CARDS;
 
 /** Routes whose `og:image` is the live Worker card `/api/og/page/:slug`. */
-export const OG_LIVE_PAGE_SLUGS = [
+const OG_LIVE_PAGE_SLUGS = [
   "home",
   "chains",
   "dependency-map",

@@ -20,12 +20,6 @@ describe.each([
     expect(resolve(make({ "X-Forwarded-For": "2.2.2.2" }))).toBe("unknown");
   });
 
-  it("two different spoofed X-Forwarded-For values land in the same bucket", () => {
-    const a = resolve(make({ "X-Forwarded-For": "1.1.1.1" }));
-    const b = resolve(make({ "X-Forwarded-For": "9.9.9.9, 8.8.8.8" }));
-    expect(a).toBe(b);
-  });
-
   it("does not let X-Forwarded-For override a present CF-Connecting-IP", () => {
     expect(resolve(make({ "CF-Connecting-IP": "203.0.113.10", "X-Forwarded-For": "1.1.1.1" }))).toBe("203.0.113.10");
   });

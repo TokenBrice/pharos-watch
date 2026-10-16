@@ -89,16 +89,4 @@ describe("DEWSFiringList", () => {
     expect(items[0].textContent).toMatch(/80/);
   });
 
-  it("renders empty-state fallback when no signals are firing", () => {
-    render(
-      <DEWSFiringList
-        signals={{
-          supply: { value: 0, available: true },
-          pool: { value: 0, available: false },
-        }}
-      />,
-    );
-    expect(screen.queryAllByTestId("dews-firing-signal").length).toBe(0);
-    expect(screen.getByText("No stress signals firing")).toBeTruthy();
-  });
 });

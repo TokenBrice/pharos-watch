@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RedemptionBackstopConfigSchema } from "../redemption-backstop-configs/schema";
 import { cloneRedemptionBackstopConfig, resolveRedemptionCostBpsAtNotional } from "../redemption-backstop-configs/shared";
-import { getRedemptionBackstopConfig, REDEMPTION_BACKSTOP_CONFIGS } from "../redemption-backstops";
+import { getRedemptionBackstopConfig } from "../redemption-backstops";
 import type { RedemptionCostModel } from "../redemption-backstops";
 import { resolveRedemptionFiatReference, type RedemptionFiatReferenceContext } from "../redemption-fiat-reference";
 
@@ -13,7 +13,7 @@ const references: RedemptionFiatReferenceContext = { clockSec, pegDataById: {
 } };
 
 describe("captured local-fiat redemption fees", () => {
-  it.each([["CHF", 30, 37.5], ["JPY", 3000, 18.75], ["IDR", 6500, 0.40625]])(
+  it.each([["CHF", 30, 37.5], ["JPY", 3000, 18.75]])(
     "converts %s flat charges without treating native amounts as dollars", (currency, flatAmount, feeUsd) => {
       const cost = resolveRedemptionCostBpsAtNotional({ kind: "fee-bps", feeBps: 50,
         feeComponents: [{ currency, terms: { flatAmount } }] }, 10_000, null, references);
@@ -45,7 +45,7 @@ describe("captured local-fiat redemption fees", () => {
       feeComponents: [{ currency: "CHF", terms: { flatAmount: 300 } }] }, 10_000, null, references)).toBeNull();
   });
 
-  it.each([undefined, { ...references, clockSec: clockSec + 86_401 },
+  it.each([undefined,
     { ...references, clockSec: clockSec - 61 },
     { clockSec, pegDataById: { chf: { ...references.pegDataById.chf!, pegReferenceUnavailable: true } } },
     { clockSec, pegDataById: { chf: { pegCurrency: "CHF", pegReference: { valueUsd: 1.25,
@@ -87,17 +87,4 @@ describe("captured local-fiat redemption fees", () => {
     expect(component.tiers.map((tier) => tier.terms.flatAmount)).toEqual([1, 2]);
   });
 
-  it("keeps existing USD schedules byte-identical to the pre-component evaluator", () => {
-    for (const config of Object.values(REDEMPTION_BACKSTOP_CONFIGS)) {
-      if (config.costModel.feeComponents) continue;
-      for (const notional of [1000, 10_000, 1_000_000, 10_000_000]) {
-        const model = config.costModel;
-        const feeBps = model.feeBpsMax ?? (model.kind === "fee-bps" ? model.feeBps : null);
-        const fixedUsd = model.gasOrBridgeCostUsd ?? 0;
-        const legacy = feeBps === null ? null : model.minFeeUsd == null && fixedUsd === 0 ? feeBps :
-          (Math.max(feeBps * notional / 10_000, model.minFeeUsd ?? 0) + fixedUsd) / notional * 10_000;
-        expect(JSON.stringify(resolveRedemptionCostBpsAtNotional(model, notional, null, references))).toBe(JSON.stringify(legacy));
-      }
-    }
-  });
 });

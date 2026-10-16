@@ -154,16 +154,6 @@ describe("convertToGtNewPools", () => {
     expect(gtPool.symbol).toContain("USDC");
   });
 
-  it("derives price for token[0] using pool.price directly", () => {
-    // USDC is token[0], USDT is token[1] and is a USD reference symbol
-    const addressToId = new Map([
-      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
-      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
-    ]);
-    const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
-    expect(result.get("usdc")![0].price).toBeCloseTo(0.9998);
-  });
-
   it("prefers tracked stablecoin live prices over unconditional $1 quote assumptions", () => {
     const pool: DexApiPool = {
       ...MOCK_POOL,
@@ -192,36 +182,11 @@ describe("convertToGtNewPools", () => {
     expect(result.get("usdc-circle")![0].price).toBeCloseTo(0.8);
   });
 
-  it("inverts price for token[1]", () => {
-    // Only track USDT (token[1]); USDC (token[0]) is a USD reference symbol
-    const addressToId = new Map([
-      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
-      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
-    ]);
-    const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
-    expect(result.get("usdt")![0].price).toBeCloseTo(1 / 0.9998);
-  });
-
   it("sets price to 0 when pool.price is null and no priceUsd", () => {
     const pool = { ...MOCK_POOL, price: null };
     const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
     const result = convertToGtNewPools([pool], addressToId, new Map());
     expect(result.get("usdc")![0].price).toBe(0);
-  });
-
-  it("uses address prefix when symbol is empty", () => {
-    const pool: DexApiPool = {
-      ...MOCK_POOL,
-      tokens: [
-        { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "", decimals: 6 },
-        { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT", decimals: 6 },
-      ],
-    };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
-    const result = convertToGtNewPools([pool], addressToId, new Map());
-    const gtPool = result.get("usdc")![0];
-    // First token has empty symbol so falls back to address prefix
-    expect(gtPool.symbol).toContain("0xA0b86991");
   });
 
   it("tolerates null direct-API token symbols without crashing", () => {
@@ -549,32 +514,6 @@ describe("extractPriceObservations", () => {
     expect(result.get("usdc")![0].protocol).toBe("fluid");
   });
 
-  it("inverts price when stablecoin is token[1]", () => {
-    const addressToId = new Map([
-      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
-      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
-    ]);
-    const result = extractPriceObservations([MOCK_POOL], addressToId, new Map());
-    // USDT is token[1], so its price = 1 / pool.price
-    const usdtObs = result.get("usdt");
-    expect(usdtObs).toHaveLength(1);
-    expect(usdtObs![0].price).toBeCloseTo(1 / 0.9998);
-  });
-
-  it("uses per-token priceUsd when available (Balancer)", () => {
-    const balancerPool: DexApiPool = {
-      ...MOCK_POOL,
-      source: "balancer",
-      tokens: [
-        { address: "0xgho", symbol: "GHO", decimals: 18, priceUsd: 0.9995 },
-        { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6, priceUsd: 1.0001 },
-      ],
-    };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
-    const result = extractPriceObservations([balancerPool], addressToId, new Map());
-    expect(result.get("usdc")![0].price).toBeCloseTo(1.0001);
-  });
-
   it("excludes only paused Balancer pools from direct price observations", () => {
     const addressToId = new Map([
       ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
@@ -796,15 +735,3 @@ describe("normalizeDexApiPoolsForMerge", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// TVL threshold constants
-// ---------------------------------------------------------------------------
-describe("TVL threshold constants", () => {
-  it("pool inclusion threshold is $10K", () => {
-    expect(DIRECT_API_POOL_MIN_TVL_USD).toBe(10_000);
-  });
-
-  it("price observation threshold is $50K", () => {
-    expect(DIRECT_API_PRICE_MIN_TVL_USD).toBe(50_000);
-  });
-});

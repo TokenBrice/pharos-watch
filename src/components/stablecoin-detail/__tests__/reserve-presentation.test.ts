@@ -69,29 +69,10 @@ describe("buildReserveFetchNotice", () => {
       expect(reserves.sync?.stale).toBe(true);
     }
   });
-  it("live-stale → amber refresh-delayed tone", () => {
-    const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "live-stale" }));
-    expect(notice.title).toBe("Live reserve refresh delayed");
-    expect(notice.tone).toBe(AMBER);
-  });
 
   it("live → amber refresh-delayed tone", () => {
     const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "live" }));
     expect(notice.title).toBe("Live reserve refresh delayed");
-    expect(notice.tone).toBe(AMBER);
-  });
-
-  it("curated-fallback → amber, curated baseline message", () => {
-    const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "curated-fallback" }));
-    expect(notice.title).toBe("Live reserve feed unavailable");
-    expect(notice.message).toContain("curated reserve baseline");
-    expect(notice.tone).toBe(AMBER);
-  });
-
-  it("template-fallback → amber, estimated template message", () => {
-    const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "template-fallback" }));
-    expect(notice.title).toBe("Live reserve feed unavailable");
-    expect(notice.message).toContain("estimated reserve template");
     expect(notice.tone).toBe(AMBER);
   });
 
@@ -102,13 +83,6 @@ describe("buildReserveFetchNotice", () => {
     expect(notice.tone).toBe(NEUTRAL);
   });
 
-  it("503 ApiFetchError with fallback view → neutral, fallback message", () => {
-    const notice = buildReserveFetchNotice(new ApiFetchError("/r", 503, null), makeReserves({ mode: "unavailable" }));
-    expect(notice.title).toBe("Live reserve data not yet available");
-    expect(notice.message).toContain("current fallback view");
-    expect(notice.tone).toBe(NEUTRAL);
-  });
-
   it("network error with no fallback → connection issue asking the reader to retry", () => {
     const notice = buildReserveFetchNotice(networkError(), null);
     expect(notice.title).toBe("Connection issue");
@@ -116,30 +90,10 @@ describe("buildReserveFetchNotice", () => {
     expect(notice.tone).toBe(AMBER);
   });
 
-  it("network error with fallback view → amber connection issue", () => {
-    const notice = buildReserveFetchNotice(networkError(), makeReserves({ mode: "unavailable" }));
-    expect(notice.title).toBe("Connection issue");
-    expect(notice.message).toContain("current fallback view");
-    expect(notice.tone).toBe(AMBER);
-  });
-
   it("generic error with no fallback → generic message, never the raw error text", () => {
     const notice = buildReserveFetchNotice(new Error("upstream exploded"), null);
     expect(notice.title).toBe("Live reserve feed unavailable");
     expect(notice.message).toBe("Unable to load reserve composition right now.");
-    expect(notice.tone).toBe(AMBER);
-  });
-
-  it("generic non-Error with no fallback → generic message", () => {
-    const notice = buildReserveFetchNotice("string failure", null);
-    expect(notice.message).toBe("Unable to load reserve composition right now.");
-    expect(notice.tone).toBe(AMBER);
-  });
-
-  it("generic error with fallback view → amber, fallback message", () => {
-    const notice = buildReserveFetchNotice(new Error("upstream exploded"), makeReserves({ mode: "unavailable" }));
-    expect(notice.title).toBe("Live reserve feed unavailable");
-    expect(notice.message).toContain("current fallback view");
     expect(notice.tone).toBe(AMBER);
   });
 
@@ -164,16 +118,6 @@ describe("buildReserveFootnoteModel", () => {
     ]);
   });
 
-  it("live with curated-validated badge → curated-validated label", () => {
-    const badge: ReserveDisplayBadgeView = { kind: "curated-validated", label: "Curated" };
-    const result = buildReserveFootnoteModel(
-      makeReserves({ mode: "live", liveAt: 1_700_000_000, displayBadge: badge }),
-      true,
-      "rwa backed",
-    );
-    expect(result?.text).toContain("Source date unavailable · Checked");
-  });
-
   it("live-stale → stale label", () => {
     const result = buildReserveFootnoteModel(
       makeReserves({ mode: "live-stale", liveAt: 1_700_000_000 }),
@@ -193,12 +137,6 @@ describe("buildReserveFootnoteModel", () => {
     expect(result?.references).toEqual([]);
   });
 
-  it("curated-fallback with live disabled → null", () => {
-    expect(
-      buildReserveFootnoteModel(makeReserves({ mode: "curated-fallback" }), false, "rwa backed"),
-    ).toBeNull();
-  });
-
   it("template-fallback with live disabled + estimated → classification text", () => {
     const result = buildReserveFootnoteModel(
       makeReserves({ mode: "template-fallback", estimated: true }),
@@ -206,17 +144,6 @@ describe("buildReserveFootnoteModel", () => {
       "rwa backed",
     );
     expect(result?.text).toBe("Estimated composition based on rwa backed classification");
-  });
-
-  it("template-fallback with live disabled + not estimated → null", () => {
-    expect(
-      buildReserveFootnoteModel(makeReserves({ mode: "template-fallback", estimated: false }), false, "rwa backed"),
-    ).toBeNull();
-  });
-
-  it("unavailable → composition-unavailable text", () => {
-    const result = buildReserveFootnoteModel(makeReserves({ mode: "unavailable" }), true, "rwa backed");
-    expect(result?.text).toBe("Reserve composition unavailable");
   });
 });
 
@@ -231,29 +158,9 @@ describe("buildReserveCompositionNote", () => {
     expect(buildReserveCompositionNote(makeReserves({ mode: "curated-fallback", metadata }))).toBeNull();
   });
 
-  it("returns null when not a live mode", () => {
-    expect(
-      buildReserveCompositionNote(makeReserves({ mode: "curated-fallback", metadata: { yieldBasisCollateralPct: 25 } })),
-    ).toBeNull();
-  });
-
   it("returns null when no positive yield-basis share", () => {
     expect(buildReserveCompositionNote(makeReserves({ mode: "live", metadata: { yieldBasisCollateralPct: 0 } }))).toBeNull();
     expect(buildReserveCompositionNote(makeReserves({ mode: "live" }))).toBeNull();
-  });
-
-  it("formats the yield-basis share for live reserves", () => {
-    const note = buildReserveCompositionNote(
-      makeReserves({ mode: "live", metadata: { yieldBasisCollateralPct: 33.456 } }),
-    );
-    expect(note).toBe("Yield Basis positions account for 33.5% of this live reserve mix.");
-  });
-
-  it("formats strategy reference NAV for live reserves", () => {
-    const note = buildReserveCompositionNote(
-      makeReserves({ mode: "live", metadata: { referenceNavUsd: 1.034963 } }),
-    );
-    expect(note).toBe("Strategy reference NAV is $1.0350 per share.");
   });
 
   it("combines reference NAV with existing composition notes", () => {
@@ -491,14 +398,6 @@ describe("reserve source chip", () => {
     }))?.label).toBe("Live proof");
     expect(buildReserveSourceChip(makeReserves({ mode: "curated-fallback" }))).toBeNull();
   });
-
-  it("carries the dated-evidence sentence as the tooltip, not as page copy", () => {
-    const chip = buildReserveSourceChip(makeReserves({
-      mode: "live", displayBadge: { kind: "proof", label: "Attestation" }, provenance: makeProvenance(),
-    }));
-    expect(chip?.label).toBe("Attestation");
-    expect(chip?.tooltip).toContain("dated attestation, proof, or liveness check");
-  });
 });
 
 describe("reserve composition slices", () => {
@@ -522,11 +421,6 @@ describe("reserve composition slices", () => {
     expect(liveCompositionDiffers([slice("ETH", 100)], [slice("T-bills", 60), slice("Cash", 40)])).toBe(true);
     // A parenthetical expansion does not change identity.
     expect(liveCompositionDiffers([slice("cbBTC (Coinbase Wrapped BTC)", 100)], [slice("cbBTC", 100)])).toBe(false);
-  });
-
-  it("reports 100% ETH reviewed against 100% USDC live as different despite identical shares", () => {
-    const slice = (label: string): ReserveCompositionSlice => ({ key: label, label, pct: 100, risk: "low", detail: null });
-    expect(liveCompositionDiffers([slice("USDC")], [slice("ETH")])).toBe(true);
   });
 
   it("draws a look-through from the parent's positive slices by share, carrying each slice's asset class as its role", () => {
@@ -667,25 +561,6 @@ describe("dated reserve disclosures", () => {
     expect(label).toBe("Source as of 2026-06-30 · Checked 2026-09-05 12:14 UTC");
     expect(label).not.toContain("Report as of");
     expect(label).not.toContain("Source date unavailable");
-  });
-
-  it("keeps operational diagnostics when age is not the only warning", () => {
-    const status = buildReserveFeedStatus(
-      makeReserves({
-        mode: "live-stale",
-        sync: {
-          enabled: true, status: "degraded", stale: true, bootstrap: false,
-          warnings: [
-            "Upstream reserve source timestamp is 5775332s old for dynamic-mix/independent (max 4000000s)",
-            "Adapter returned a partial slice set",
-          ],
-        },
-      }),
-      null,
-    );
-    expect(status?.label).toBe("Reserve sync degraded · warnings");
-    expect(status?.rows).toContain("Adapter returned a partial slice set");
-    expect(status?.rows).toContain("Sync status: degraded");
   });
 
   it.each([

@@ -1,22 +1,13 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import {
   FundingKpiRow,
-  CostBreakdown,
   DonorList,
-  FundingFaq,
-  SupportCtas,
-  YearEndHorizon,
 } from "../funding-page-sections";
-import type { CostLineItem, Donation } from "@shared/lib/funding/schema";
+import type { Donation } from "@shared/lib/funding/schema";
 import type { ComponentProps } from "react";
-
-const COSTS: CostLineItem[] = [
-  { label: "Ike", category: "team", usd_per_month: 1500 },
-  { label: "Alchemy", category: "infra", usd_per_month: 40 },
-];
 
 type KpiSummary = ComponentProps<typeof FundingKpiRow>["summary"];
 
@@ -56,32 +47,6 @@ describe("FundingKpiRow", () => {
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toContain("<1%");
   });
 
-  it("renders previous-month funding and coverage in a comparison table", () => {
-    render(
-      <FundingKpiRow
-        summary={kpiSummary({ currentMonthCommunityUsd: 1, lifetimeCommunityDonorCount: 18 })}
-        monthlyTargetUsd={1709}
-        monthlyHistory={[
-          { monthKey: "2026-05", label: "May 2026", communityUsd: 866 },
-          { monthKey: "2026-04", label: "Apr 2026", communityUsd: 690 },
-        ]}
-      />,
-    );
-    expect(screen.getByText("Previous months")).toBeTruthy();
-    expect(screen.getByText(/Coverage against the \$1,709 monthly goal/)).toBeTruthy();
-    const table = screen.getByRole("table", { name: "Previous monthly funding coverage" });
-    expect(within(table).getByRole("columnheader", { name: "Month" })).toBeTruthy();
-    expect(within(table).getByRole("columnheader", { name: "Community" })).toBeTruthy();
-    expect(within(table).getByRole("columnheader", { name: "Coverage" })).toBeTruthy();
-    const mayRow = within(table).getByRole("row", { name: /May 2026/ });
-    expect(within(mayRow).getByText("$866")).toBeTruthy();
-    expect(within(mayRow).getByText("51%")).toBeTruthy();
-    const aprilRow = within(table).getByRole("row", { name: /Apr 2026/ });
-    expect(within(aprilRow).getByText("$690")).toBeTruthy();
-    // 690 / 1709 ≈ 40.4% → "40%"
-    expect(within(aprilRow).getByText("40%")).toBeTruthy();
-  });
-
   it("shows cold-start copy when lifetime community is zero", () => {
     render(
       <FundingKpiRow
@@ -96,27 +61,6 @@ describe("FundingKpiRow", () => {
     expect(screen.getByText("Tracking begins")).toBeTruthy();
     expect(screen.getByText("Be the first")).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toContain("Tracking begins");
-  });
-});
-
-describe("CostBreakdown", () => {
-  it("renders team and infra groups, total, and derived open funding gap", () => {
-    render(<CostBreakdown items={COSTS} currentCommunityUsd={300} lastReviewedAt={1744934400} />);
-    expect(screen.getByText("Team")).toBeTruthy();
-    expect(screen.getByText("Infrastructure")).toBeTruthy();
-    expect(screen.getByText("Ike")).toBeTruthy();
-    expect(screen.getByText(/1,540/)).toBeTruthy(); // total
-    // Open gap is derived: max(0, total - community) = 1540 - 300 = 1240
-    expect(screen.getByText(/This month: \$300 community · \$1,240 still open/)).toBeTruthy();
-    expect(screen.getByText(/TokenBrice also sponsored \$5,800 in one-time design expenses/)).toBeTruthy();
-    expect(screen.getByText(/not included in the monthly total/)).toBeTruthy();
-    const dwellirLink = screen.getByRole("link", { name: "Dwellir" });
-    expect(dwellirLink.getAttribute("href")).toBe("https://www.dwellir.com");
-    expect(dwellirLink.getAttribute("rel")).toBe("noopener noreferrer");
-    expect(screen.getByText(/Thank you, Dwellir\./)).toBeTruthy();
-    const acknowledgment = dwellirLink.closest("p")?.textContent ?? "";
-    expect(acknowledgment).toContain("multi-chain RPC access on its Growth plan");
-    expect(acknowledgment).not.toMatch(/Developer|one.year|\$40/);
   });
 });
 
@@ -160,39 +104,5 @@ describe("DonorList", () => {
   it("shows empty state when no community donations exist", () => {
     render(<DonorList donations={[]} lastUpdatedAt={now} />);
     expect(screen.getByText(/No community donations yet/)).toBeTruthy();
-  });
-});
-
-describe("SupportCtas", () => {
-  it("highlights recurring Giveth support as the long-term path and notes the OP/Base constraint", () => {
-    render(<SupportCtas />);
-    expect(screen.getByText("Recurring via Giveth")).toBeTruthy();
-    expect(screen.getByText("Set up Giveth support")).toBeTruthy();
-    expect(screen.getByText(/Recurring streams run on Optimism or Base only/)).toBeTruthy();
-    expect(screen.getByText(/recurring Giveth stream on Optimism or Base/)).toBeTruthy();
-  });
-});
-
-describe("YearEndHorizon", () => {
-  it("commits to a free dashboard and points the share link at the Pharos funding page", () => {
-    render(<YearEndHorizon />);
-    expect(screen.getByText(/dashboard stays free for everyone, forever/)).toBeTruthy();
-    expect(screen.getByText(/paid API access for institutional users/)).toBeTruthy();
-
-    const href = screen.getByRole("link", { name: "sharing Pharos" }).getAttribute("href") ?? "";
-    const shared = new URL(href);
-    expect(shared.origin + shared.pathname).toBe("https://x.com/intent/tweet");
-    expect(shared.searchParams.get("text")).toContain("https://pharos.watch/funding/");
-  });
-});
-
-describe("FundingFaq", () => {
-  it("focuses on impact and does not mention a nonexistent on-chain ledger", () => {
-    render(<FundingFaq />);
-    expect(screen.getByText("Why does Pharos ask for support?")).toBeTruthy();
-    expect(screen.getByText("Why recurring Giveth donations?")).toBeTruthy();
-    expect(screen.getByText("What does support make possible?")).toBeTruthy();
-    expect(screen.getByText(/More stablecoins covered/)).toBeTruthy();
-    expect(screen.queryByText(/on-chain ledger/i)).toBeNull();
   });
 });

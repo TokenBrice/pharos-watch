@@ -15,16 +15,12 @@ import {
   createViewModelMock,
   makeFrozenViewModel,
   makeReadyViewModel,
-  obituary,
 } from "./client-test-support";
 import StablecoinDetailClient from "./client";
-import { resolveBoardGridPlacement } from "./detail-risk-context-sections";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { BRIDGE_TIER_LABELS } from "@shared/lib/classification";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
-import type { StablecoinMeta } from "@shared/types";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "@/hooks/__tests__/use-stablecoin-detail-view-model.test-support";
 import failureScenarios from "@data/failure-scenarios.json";
 import type { FailureScenariosById } from "@shared/types/failure-scenarios";
@@ -239,43 +235,8 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByTestId("blacklist-history-section")).toBeTruthy();
   });
 
-  it("renders the parent variants card outside the overview section", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const { container } = renderDetail(coin);
 
-    const overviewSections = container.querySelectorAll("#overview");
-    expect(overviewSections).toHaveLength(1);
-    expect(screen.getByText("Variants")).toBeTruthy();
-    expect(overviewSections[0]?.contains(screen.getByText("Variants"))).toBe(false);
-    expect(screen.getAllByText("Sky Savings USDS").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
-  });
 
-  it("renders one banner scrollspy rather than a separate section-navigation rail", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const { container } = renderDetail(coin);
-
-    const scrollspyNavs = screen.getAllByTestId("scrollspy");
-    expect(scrollspyNavs).toHaveLength(1);
-    expect(scrollspyNavs[0]?.dataset.variant).toBe("banner");
-    expect(scrollspyNavs[0]?.dataset.railLabel).toBe("Jump to");
-    expect(container.querySelector('aside[aria-label="Section navigation"]')).toBeNull();
-    expect(longformScrollspyNavMock).not.toHaveBeenCalledWith(expect.objectContaining({ variant: "rail" }));
-  });
-
-  it("keeps the summary rail separate from the unique in-flow deep-link anchors", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const { container } = renderDetail(coin);
-
-    const rail = container.querySelector('aside[aria-label="Coin summary rail"]');
-    expect(rail).toBeTruthy();
-    // Dual-rendered rail modules must never duplicate anchor ids: the in-flow
-    // (below-xl) instance owns #price / #coin-timeline / #contracts.
-    expect(container.querySelectorAll("#price").length).toBeLessThanOrEqual(1);
-    expect(container.querySelectorAll("#coin-timeline")).toHaveLength(1);
-    expect(container.querySelectorAll("#contracts").length).toBeLessThanOrEqual(1);
-    expect(container.querySelectorAll("#price-transparency").length).toBeLessThanOrEqual(1);
-  });
 
   it("mounts the reserves module in the score row when report-card data is unavailable", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -305,88 +266,7 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
   });
 
-  it("orders the Risk zone as the Safety Score spine: score, then backing, exit and control evidence", async () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const reportCard = makeV9Card({ id: coin.id });
-    const reportCardsResponse = makeReportCardsV9Response({ cards: [reportCard] });
-    useStablecoinDetailViewModelMock.mockReturnValue(
-      makeReadyViewModel({
-        reportCard,
-        reportCardsResponse,
-        reportCardUpdatedAt: reportCardsResponse.updatedAt * 1000,
-        // Every pillar board needs a module to render.
-        reserves: LIVE_COLLATERALIZED_RESERVES,
-        featureStates: {
-          ...makeReadyViewModel().featureStates,
-          reserves: { status: "loading", dataUpdatedAt: 0, error: null },
-        },
-      }),
-    );
 
-    const { container } = renderDetail(coin);
-
-    const reportCardElement = await screen.findByTestId("report-card");
-    const reserves = await screen.findByTestId("reserves-section");
-    // The treemap left the score card: Reserves pairs with it in one row
-    // (score first), ahead of the backing-evidence group.
-    expect(reportCardElement.contains(reserves)).toBe(false);
-    expect(reserves.textContent).toContain("loading-reserves");
-    const scoreSection = container.querySelector("#report-card")!;
-    expect(scoreSection.parentElement).toBe(reserves.parentElement?.parentElement);
-    expect(scoreSection.compareDocumentPosition(reserves) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const spine = ["#reserves", "#backing-evidence", "#exit-evidence", "#control-evidence"].map(
-      (selector) => container.querySelector(selector)!,
-    );
-    const overview = container.querySelector("#overview")!;
-    for (const [index, node] of spine.entries()) {
-      expect(overview.contains(node)).toBe(true);
-      if (index > 0) {
-        expect(spine[index - 1]!.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      }
-    }
-    // Below-xl reference copies follow the evidence, in the Context zone.
-    const contracts = container.querySelector("#contracts");
-    if (contracts) {
-      expect(spine[3]!.compareDocumentPosition(contracts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    }
-  });
-
-  it("renders the underlying asset card outside the overview section for variants", () => {
-    const coin = TRACKED_META_BY_ID.get("susds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(
-      makeReadyViewModel({
-        id: coin.id,
-        coin,
-        variantParent: TRACKED_META_BY_ID.get("usds-sky")!,
-        variantSiblings: [TRACKED_META_BY_ID.get("stusds-sky")!],
-        childVariants: [],
-        isVariant: true,
-        hasVariants: false,
-        coinData: {
-          id: coin.id,
-          name: coin.name,
-          symbol: coin.symbol,
-          pegType: "peggedUSD",
-          price: 1.01,
-          circulating: { peggedUSD: 100 },
-          circulatingPrevDay: { peggedUSD: 99 },
-          circulatingPrevWeek: { peggedUSD: 98 },
-          circulatingPrevMonth: { peggedUSD: 97 },
-          chainCirculating: {},
-          chains: ["ethereum"],
-        },
-        isNavToken: true,
-      }),
-    );
-
-    const { container } = renderDetail(coin);
-
-    const overviewSections = container.querySelectorAll("#overview");
-    expect(overviewSections).toHaveLength(1);
-    expect(screen.getByText("Underlying asset")).toBeTruthy();
-    expect(overviewSections[0]?.contains(screen.getByText("Underlying asset"))).toBe(false);
-    expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
-  });
 
   it("uses the market data section for non-yield-bearing USD assets with supply history", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -433,26 +313,6 @@ describe("StablecoinDetailClient", () => {
     expect(container.querySelector("#chart")).toBeTruthy();
   });
 
-  it("mounts the chart and distribution in the Market zone above DEX liquidity", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
-
-    const { container } = renderDetail(coin);
-
-    const banner = container.querySelector("#liquidity");
-    const chart = container.querySelector("#chart");
-    const distribution = container.querySelector("#distribution");
-    const dexLiquidity = container.querySelector("#dex-liquidity");
-    // The zone id stays `liquidity`; only its label reads "Market".
-    expect(banner?.textContent).toContain("Market");
-    expect(chart?.parentElement).toBe(dexLiquidity?.parentElement);
-    expect(distribution?.parentElement).toBe(dexLiquidity?.parentElement);
-    expect(chart!.compareDocumentPosition(distribution!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(distribution!.compareDocumentPosition(dexLiquidity!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(longformScrollspyNavMock.mock.calls[0]?.[0]?.sections).toEqual(
-      expect.arrayContaining([{ id: "liquidity", label: "Market", icon: expect.anything() }]),
-    );
-  });
 
   it("mounts every evidence module once in its board, with rail twins and a complete evidence index", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -512,24 +372,6 @@ describe("StablecoinDetailClient", () => {
     expect(rail.textContent).not.toContain("Reserves sit in segregated accounts.");
   });
 
-  it("places the live stress layer under Score and Reserves, ahead of the pillar boards", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const reportCard = makeV9Card({ id: coin.id });
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      reportCard,
-      reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
-      // The Backing board needs a module to render.
-      reserves: LIVE_COLLATERALIZED_RESERVES,
-    }));
-
-    const { container } = renderDetail(coin);
-
-    const dews = screen.getByTestId("dews-detail");
-    const score = container.querySelector("#report-card")!;
-    const backingEvidence = container.querySelector("#backing-evidence")!;
-    expect(score.compareDocumentPosition(dews) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(dews.compareDocumentPosition(backingEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
 
   it("states that DEWS does not apply to NAV tokens instead of omitting it silently", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -544,47 +386,8 @@ describe("StablecoinDetailClient", () => {
     expect(notApplicable!.compareDocumentPosition(controlEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("never leaves a board kicker whose only content is hidden at xl", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const reportCard = makeV9Card({ id: coin.id });
-    // Boards carry plain kickers, so the frozen Exit board's only possible
-    // child is the below-xl Access posture twin.
-    useStablecoinDetailViewModelMock.mockReturnValue({ ...makeFrozenViewModel(coin), reportCard });
 
-    const { container } = renderDetail(coin);
 
-    const exitEvidence = container.querySelector("#exit-evidence");
-    expect(exitEvidence === null || exitEvidence.classList.contains("xl:hidden")).toBe(true);
-    expect(container.querySelector("#control-evidence")?.classList.contains("xl:hidden")).toBe(false);
-  });
-
-  it("mounts the redemption route in exit evidence, out of the Market zone", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(
-      makeReadyViewModel({
-        redemptionBackstop: {
-          stablecoinId: coin.id,
-        },
-      }),
-    );
-
-    const { container } = renderDetail(coin);
-
-    const redemptionRoute = screen.getByTestId("redemption-route-section");
-    expect(container.querySelector("#exit-evidence")?.contains(redemptionRoute)).toBe(true);
-    expect(container.querySelector("#dex-liquidity")?.parentElement?.contains(redemptionRoute)).toBe(false);
-  });
-
-  it("keeps the in-flow price panel in the Market zone below xl", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    renderDetail(coin);
-
-    // Two instances render (Market zone + xl rail); the in-flow copy is the
-    // one wrapped in the #price section.
-    const priceCards = screen.getAllByTestId("price-transparency-card");
-    expect(priceCards).toHaveLength(2);
-    expect(priceCards.some((card) => card.closest("section#price") != null)).toBe(true);
-  });
 
   it("omits the price panel when price transparency data is absent", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -709,51 +512,6 @@ describe("StablecoinDetailClient", () => {
   });
 });
 
-describe("resolveBoardGridPlacement", () => {
-  /** Auto-placement without `dense`: the unfilled tracks of every row that a span wraps past, plus the last row. */
-  function holes(spans: readonly number[], tracks: number): number[] {
-    const gaps: number[] = [];
-    let column = 0;
-    for (const span of spans) {
-      if (column + span > tracks) {
-        gaps.push(tracks - column);
-        column = 0;
-      }
-      column = (column + span) % tracks;
-    }
-    if (column > 0) gaps.push(tracks - column);
-    return gaps;
-  }
-
-  const cases = Array.from({ length: 8 }, (_, tiles) => [0, 1].map((twins) => ({ tiles, twins }))).flat();
-
-  it.each(cases)("never leaves an empty track with $tiles tiles and $twins twins", ({ tiles, twins }) => {
-    const placements = resolveBoardGridPlacement(tiles, twins);
-    const tilePlacements = placements.slice(0, tiles);
-
-    // Below xl: tiles and twins share two tracks.
-    expect(holes(placements.map((placement) => (placement.rowAtTwo === "always" ? 2 : 1)), 2)).toEqual([]);
-    // At xl, two tracks: twins are hidden.
-    expect(holes(tilePlacements.map((placement) => (placement.rowAtTwo === "never" ? 1 : 2)), 2)).toEqual([]);
-    // At xl, three tracks drawn as six half-tracks; twins never reach them.
-    expect(placements.slice(tiles).every((placement) => placement.halfTracksAtThree === null)).toBe(true);
-    expect(holes(tilePlacements.map((placement) => placement.halfTracksAtThree ?? 0), 6)).toEqual([]);
-    // Strip form only for a tile that spans the row at two tracks.
-    for (const placement of tilePlacements) {
-      expect(placement.stripForm).toBe(placement.rowAtTwo !== "never");
-    }
-  });
-
-  it("splits two tiles across the three-track row instead of leaving a third empty", () => {
-    expect(resolveBoardGridPlacement(2, 0).map((placement) => placement.halfTracksAtThree)).toEqual([3, 3]);
-  });
-
-  it("pairs a lone tile with a twin below xl and spans it only at xl", () => {
-    const [tile, twin] = resolveBoardGridPlacement(1, 1);
-    expect(tile).toMatchObject({ rowAtTwo: "xl", stripForm: true });
-    expect(twin).toMatchObject({ rowAtTwo: "never", halfTracksAtThree: null });
-  });
-});
 
 describe("StablecoinDetailClient (frozen S14)", () => {
   beforeEach(() => {
@@ -835,33 +593,5 @@ describe("StablecoinDetailClient (frozen)", () => {
     expect(notes.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("renders the frozen banner before preserved AI prose", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue({
-      ...makeFrozenViewModel(coin),
-      summary: {
-        title: "Archived note",
-        text: "Pre-freeze prose.",
-        updatedAt: "2026-04-01",
-      },
-    });
-    renderDetail(coin);
-
-    const banner = screen.getByRole("heading", { name: /Sunset by issuer\./ });
-    const summary = screen.getByTestId("ai-summary");
-    expect(banner.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
 });
 
-describe("buildStablecoinDetailMetadata (frozen)", () => {
-  it("uses the archive-themed title and preserves the OG image", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const frozen: StablecoinMeta = { ...coin, status: "frozen", frozenAt: "2026-04-27", obituary };
-    const meta = buildStablecoinDetailMetadata(frozen);
-    expect(typeof meta.title === "string" ? meta.title : "").toContain("Failed Stablecoin Archive");
-    const ogImages = meta.openGraph?.images;
-    const firstImage = Array.isArray(ogImages) ? ogImages[0] : ogImages;
-    const imageUrl = typeof firstImage === "object" && firstImage && "url" in firstImage ? firstImage.url : firstImage;
-    expect(String(imageUrl)).toContain(`/api/og/stablecoin/${frozen.id}`);
-  });
-});

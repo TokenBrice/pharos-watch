@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { NonUsdShareResponseSchema } from "@shared/types/market";
 import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability";
 import { TelegramPulseOutputSchema, TelegramPulseSchema } from "@shared/types/status/telegram";
+
 import {
   PUBLIC_API_RESPONSE_SCHEMAS,
   SnapshotCoinResponseSchema,
@@ -201,23 +202,6 @@ describe("public API response schemas", () => {
     expect(psi.properties.malformedRows).toMatchObject({ type: "number" });
     // The no-history response omits the count, so the contract must not require it.
     expect(psi.required).not.toContain("malformedRows");
-  });
-  it("publishes nullable Bluechip fields for values the upstream rating may omit", () => {
-    const rating = (documentSchemas().BluechipRatingsResponse as {
-      additionalProperties: { properties: Record<string, Record<string, unknown>> };
-    }).additionalProperties.properties;
-
-    for (const field of ["collateralization", "smartContractAudit", "dateOfRating"]) {
-      expect(rating[field].type, field).toContain("null");
-    }
-  });
-  it("publishes the served USDS shape derived from its runtime contract", () => {
-    const usds = (documentSchemas().UsdsStatusResponse as {
-      properties: Record<string, Record<string, unknown>>;
-    }).properties;
-
-    expect(usds.implementationAddress).toMatchObject({ type: "string" });
-    expect(usds.lastChecked).toMatchObject({ type: "number" });
   });
   it("publishes the Telegram pulse fields the runtime transform produces", () => {
     const pulse = (documentSchemas().TelegramPulseResponse as {

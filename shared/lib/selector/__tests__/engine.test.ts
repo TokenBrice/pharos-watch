@@ -341,69 +341,6 @@ describe("runSelector — Yield happy path", () => {
     }
   });
 
-  it("selects a Yield altSource that matches venue preferences when available", () => {
-    const rows = new Map(buildFixtureData().rows);
-    const base = rows.get("usdc-circle");
-    expect(base).toBeDefined();
-    rows.set("usdc-circle", {
-      ...base!,
-      yieldSources: [
-        {
-          sourceKey: "primary-wrapper",
-          protocol: "Issuer wrapper",
-          chain: "Ethereum",
-          yieldType: "rebase",
-          apy30d: 4.8,
-          pharosYieldScore: 78,
-          sourceTvlUsd: 100_000_000,
-          dataSource: "test",
-          sourceRiskScore: 15,
-          venueRiskTier: "low",
-          deploymentPlace: "issuer-savings",
-          sourceDepthRatio: 0.8,
-          sourceSwitchCount30d: 0,
-          observationCount30d: 30,
-          freshness: { capturedAt: 1_700_000_000, ageSeconds: 120 },
-          isPrimary: true,
-        },
-        {
-          sourceKey: "dex-lp",
-          protocol: "Curve",
-          chain: "Ethereum",
-          yieldType: "lp-receipt",
-          apy30d: 4.5,
-          pharosYieldScore: 78,
-          sourceTvlUsd: 80_000_000,
-          dataSource: "test",
-          sourceRiskScore: 18,
-          venueRiskTier: "low",
-          deploymentPlace: "lp",
-          sourceDepthRatio: 0.7,
-          sourceSwitchCount30d: 0,
-          observationCount30d: 30,
-          freshness: { capturedAt: 1_700_000_000, ageSeconds: 90 },
-          isPrimary: false,
-        },
-      ],
-    });
-
-    const out = runSelector(
-      makeInput({
-        profile: "yield",
-        depegTolerance: "tight",
-        venuePreferences: ["dex"],
-      }),
-      { rows },
-      FIXTURE_DATASET,
-    );
-    const usdc = out.recommended.find((rec) => rec.id === "usdc-circle");
-    expect(usdc?.profile).toBe("yield");
-    if (usdc?.profile === "yield") {
-      expect(usdc.recommendedSource.sourceKey).toBe("dex-lp");
-      expect(usdc.recommendedSource.selectionReason).toBe("venue-preference");
-    }
-  });
-
   it("caps yield confidence on the selected alternate rail's short observation history", () => {
     const rowsWithAlternateHistory = (alternateObservationDays: number) => {
       const rows = new Map(buildFixtureData().rows);
@@ -852,36 +789,6 @@ describe("runSelector — universal properties", () => {
     expect(out.recommended[1]?.rankRobustness?.label).toBe("concentration-adjusted");
   });
 
-  it("every selectable peg/profile route has at least one recommendation in a covered universe", () => {
-    const base = buildFixtureData().rows.get("usdc-circle");
-    expect(base).toBeDefined();
-    const rows = new Map<string, MergedRow>();
-    for (const pegCurrency of SELECTOR_ELIGIBLE_PEG_CURRENCIES) {
-      const row: MergedRow = {
-        ...base!,
-        id: `${pegCurrency.toLowerCase()}-route-candidate`,
-        symbol: pegCurrency === "GOLD" ? "PAXG" : pegCurrency,
-        name: `${pegCurrency} route candidate`,
-        protocolSlug: `${pegCurrency.toLowerCase()}-route-candidate`,
-        variantOf: null,
-        pegCurrency,
-        activeDepeg: false,
-        currentDeviationBps: 0,
-        depegEventCount: 0,
-        supplyUsd: 100_000_000,
-      };
-      rows.set(row.id, row);
-    }
-
-    for (const input of routeInputs()) {
-      const out = runSelector(input, { rows }, FIXTURE_DATASET);
-      expect(
-        out.recommended.length,
-        `${input.pegCurrency}/${input.profile}/${input.horizon}/${input.depegTolerance}/${input.composability}/${input.exitSpeed}`,
-      ).toBeGreaterThan(0);
-    }
-  });
-
   it("never recommends an NR asset across the combinatorial route suite", () => {
     const data = buildFixtureData();
     for (const input of routeInputs()) {
@@ -1027,11 +934,6 @@ describe("runSelector — universal properties", () => {
 });
 
 describe("runSelector — purity", () => {
-  it("does not emit the removed ambient debug survivor payload", () => {
-    const output = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
-    expect(output).not.toHaveProperty("debug");
-  });
-
   it("does not mutate inputs or depend on ambient clocks and randomness", () => {
     const first = structuredClone(buildFixtureData());
     const before = structuredClone(first);

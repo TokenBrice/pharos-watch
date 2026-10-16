@@ -1,20 +1,10 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { BLUECHIP_GRADE_VALUES, BluechipGradeSchema } from "../core";
+
 import type { BluechipGrade } from "../core";
 import { SAFETY_GRADE_VALUES, ReportCardGradeSchema } from "../report-card-grade";
 import type { SafetyGrade } from "../report-card-grade";
 
 describe("Pharos safety-grade vocabulary", () => {
-  it("owns its own grade ladder rather than deriving it from the vendor enum", () => {
-    // The assertion runs in this direction on purpose: SAFETY_GRADE_VALUES is
-    // the Pharos source of truth, and BLUECHIP_GRADE_VALUES is a third-party
-    // vendor scale that happens to coincide with it. A vendor change must fail
-    // here — visibly, in one place — instead of silently re-shaping every
-    // Pharos grade type, schema, threshold table, and rank ladder.
-    expect([...BLUECHIP_GRADE_VALUES]).toEqual([...SAFETY_GRADE_VALUES]);
-    expect(BluechipGradeSchema.options).toEqual([...SAFETY_GRADE_VALUES]);
-  });
-
   // Checked by tsconfig.test-typecheck.json, not by Vitest's runtime transpilation.
   expectTypeOf<BluechipGrade>().toEqualTypeOf<SafetyGrade>();
   expectTypeOf<SafetyGrade>().toEqualTypeOf<BluechipGrade>();

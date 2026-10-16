@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import ChainProfilePage from "./page";
-import { extractJsonLd, findJsonLdNode, getJsonLdNodeArrayProperty, isJsonLdNode } from "@/test/json-ld";
 
 vi.mock("./client", () => ({
   ChainProfileClient: ({ chainId }: { chainId: string }) => (
@@ -30,63 +29,4 @@ describe("ChainProfilePage", () => {
     expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
   });
 
-  it("emits structured data for tracked deployments", async () => {
-    const html = renderToStaticMarkup(
-      await ChainProfilePage({ params: Promise.resolve({ chain: "ethereum" }) }),
-    );
-    const jsonLd = extractJsonLd(html);
-    const collection = findJsonLdNode(jsonLd, (node) => node["@type"] === "CollectionPage", "CollectionPage");
-    const itemList = findJsonLdNode(jsonLd, (node) => node["@type"] === "ItemList", "ItemList");
-    const itemListElement = getJsonLdNodeArrayProperty(itemList, "itemListElement");
-
-    expect(collection).toMatchObject({
-      "@context": "https://schema.org",
-      "@type": "CollectionPage",
-      "@id": "https://pharos.watch/chains/ethereum/#collection",
-      name: "Ethereum Stablecoin Analytics",
-      url: "https://pharos.watch/chains/ethereum/",
-      mainEntity: { "@id": "https://pharos.watch/chains/ethereum/#deployments" },
-      about: expect.objectContaining({
-        "@type": "Thing",
-        "@id": "https://pharos.watch/chains/ethereum/#chain",
-        name: "Ethereum",
-      }),
-    });
-    expect(itemList).toMatchObject({
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      "@id": "https://pharos.watch/chains/ethereum/#deployments",
-      name: "Ethereum tracked stablecoin deployments",
-    });
-    expect(itemListElement).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          item: expect.objectContaining({
-            "@type": "Thing",
-            name: "USD Coin (USDC)",
-            url: "https://pharos.watch/stablecoin/usdc-circle/",
-          }),
-        }),
-      ]),
-    );
-    expect(itemListElement.every((entry) => {
-      const item = entry.item;
-      return isJsonLdNode(item) && item["@type"] === "Thing";
-    })).toBe(true);
-    expect(JSON.stringify(jsonLd)).not.toContain("\"Product\"");
-    expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
-  });
-
-  it("renders a single-deployment chain profile with its tracked stablecoin anchor", async () => {
-    const html = renderToStaticMarkup(
-      await ChainProfilePage({ params: Promise.resolve({ chain: "hydration" }) }),
-    );
-
-    expect(html).toContain("Hydration Stablecoins: HOLLAR, Supply &amp; Risk");
-    expect(html).toContain("Hydration has 1 tracked deployment");
-    expect(html).toContain("Tracked Stablecoins On Hydration");
-    expect(html).toContain('href="/stablecoin/hollar-hydrated"');
-    expect(html).toContain("Hydrated Dollar");
-    expect(html).toContain("HOLLAR");
-  });
 });

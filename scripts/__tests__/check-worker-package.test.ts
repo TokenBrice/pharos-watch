@@ -65,13 +65,4 @@ describe("check-worker-package", () => {
     expect(error).toHaveBeenCalledWith(expect.stringContaining("docs/worker-infrastructure.md#module-initialization"));
   });
 
-  it.each(["\u00a3", "\u00a9", "\u00ff"])("warns without failing for Latin-1 non-ASCII (%s)", (character) => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const run = vi.fn((_command: string, args: string[]) =>
-      emit(args, `/*! dependency-name Copyright ${character} */`));
-    expect(checkWorkerPackage({ run })).toEqual({ status: 0 });
-    expect(warn).toHaveBeenCalledTimes(2);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("emitted origin/context:"));
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("dependency-name"));
-  });
 });

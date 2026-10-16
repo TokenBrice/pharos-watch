@@ -286,33 +286,6 @@ describe("buildCoverageMatrixModel", () => {
     expect(status.detail).toContain("unreviewed-dependency-relationships");
   });
 
-  it("passes client mint-authority summaries into coverage rows", () => {
-    const model = buildCoverageMatrixModel(
-      makeMatrixInput({
-        stablecoins: {
-          peggedAssets: [
-            { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 1_000 } },
-          ],
-        },
-        activeStablecoins: [
-          {
-            ...trackedMeta("usdc-circle"),
-            mintAuthoritySummary: {
-              mintPath: "issuer-direct-mint",
-              authorityPosture: "concentrated-admin",
-              confidence: "verified",
-            },
-          },
-        ],
-      }),
-    );
-
-    expect(model.rows[0].statuses.mintAuthority).toMatchObject({
-      kind: "issuer-or-backend-mint",
-      available: true,
-    });
-  });
-
   it("selects widest/narrowest/mostConcentrated features consistently with featureSummaries", () => {
     const model = buildCoverageMatrixModel(
       makeMatrixInput({

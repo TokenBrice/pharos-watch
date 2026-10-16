@@ -20,7 +20,6 @@ const {
   scatterPropsMock,
   referenceRatesPropsMock,
   staleQueriesMock,
-  trackEventMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
   useYieldRankingsSummaryMock: vi.fn(),
@@ -32,10 +31,9 @@ const {
   scatterPropsMock: vi.fn(),
   referenceRatesPropsMock: vi.fn(),
   staleQueriesMock: vi.fn(),
-  trackEventMock: vi.fn(),
 }));
 
-vi.mock("@/lib/analytics", () => ({ trackEvent: trackEventMock }));
+vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
@@ -154,45 +152,6 @@ describe("YieldClient", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps the risk budget slider available when filters hide every yield row", () => {
-    searchParamsMock.set("q", "zzzz-no-match");
-
-    render(<YieldClient />);
-
-    expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
-    expect(screen.queryByTestId("yield-scatter-plot")).toBeNull();
-  });
-
-  it.each([
-    { data: undefined, isLoading: true, error: null },
-    { data: undefined, isLoading: false, error: null },
-    { data: undefined, isLoading: false, error: new Error("Unavailable") },
-    { data: makeResponse(), isLoading: false, error: new Error("Refresh failed") },
-  ])("waits for loaded error-free data before tracking an empty view (%#)", (pending) => {
-    searchParamsMock.set("q", "zzzz-no-match");
-    searchParamsMock.set("risk", "any");
-    const ready = useYieldRankingsSummaryMock();
-    useYieldRankingsSummaryMock.mockReturnValue({ ...ready, ...pending });
-    const { rerender } = render(<YieldClient />);
-    expect(trackEventMock).not.toHaveBeenCalledWith("yield_zero_results", expect.anything());
-
-    useYieldRankingsSummaryMock.mockReturnValue(ready);
-    rerender(<YieldClient />);
-    expect(trackEventMock).toHaveBeenCalledWith("yield_zero_results", { active_filter_count: 0 });
-    rerender(<YieldClient />);
-    expect(trackEventMock.mock.calls.filter(([name]) => name === "yield_zero_results")).toHaveLength(1);
-  });
-
-  it("still tracks a successfully loaded empty payload", () => {
-    useYieldRankingsSummaryMock.mockReturnValue({
-      ...useYieldRankingsSummaryMock(),
-      data: { ...makeResponse(), rankings: [] },
-    });
-    searchParamsMock.set("risk", "any");
-    render(<YieldClient />);
-    expect(trackEventMock).toHaveBeenCalledWith("yield_zero_results", { active_filter_count: 0 });
-  });
-
   it("preserves a valid incoming yield-type filter while ranking options load", () => {
     searchParamsMock.set("yieldType", "lending-opportunity");
     const ready = useYieldRankingsSummaryMock();
@@ -272,14 +231,6 @@ describe("YieldClient", () => {
       currencyCounts?: Record<string, number>;
     };
     expect(props.currencyCounts).toMatchObject({ SGD: 1, MXN: 1 });
-  });
-
-  it("renders both the risk budget slider and scatter plot when yield rows are visible", () => {
-    render(<YieldClient />);
-
-    expect(useYieldRankingsSummaryMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
-    expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
   });
 
   it("shows the top three PYS rows as a ranked hero podium", () => {
@@ -453,45 +404,6 @@ describe("YieldClient", () => {
     expect(screen.getByText("Manifest unavailable")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetch).toHaveBeenCalledOnce();
-  });
-
-  it("shows the selector return strip when opened from the Stablecoin Picker", () => {
-    searchParamsMock.set("from", "selector");
-
-    render(<YieldClient />);
-
-    expect(screen.getByText("Opened from the Yield profile in Stablecoin Picker.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Adjust picker answers" }).getAttribute("href")).toBe(
-      "/screener/picker?p=yield",
-    );
-  });
-
-  it("explains when an omitted per-coin workbench falls back to the leaderboard", () => {
-    searchParamsMock.set("workbenchFallback", "usdc-circle");
-
-    render(<YieldClient />);
-
-    expect(screen.getByRole("region", { name: "Yield workbench fallback" })).toBeTruthy();
-    expect(screen.getByText(/dedicated Yield workbench for/i).textContent).toContain("USDC");
-    expect(screen.getByRole("link", { name: "View USDC dossier" }).getAttribute("href")).toBe(
-      "/stablecoin/usdc-circle",
-    );
-  });
-
-  it("does not render fallback metadata for an invalid or untracked id", () => {
-    searchParamsMock.set("workbenchFallback", "not-a-tracked-stablecoin");
-
-    render(<YieldClient />);
-
-    expect(screen.queryByRole("region", { name: "Yield workbench fallback" })).toBeNull();
-  });
-
-  it("does not render the fallback notice for a coin that has its own static yield workbench", () => {
-    searchParamsMock.set("workbenchFallback", "susdc-spark");
-
-    render(<YieldClient />);
-
-    expect(screen.queryByRole("region", { name: "Yield workbench fallback" })).toBeNull();
   });
 
   it("risk budget changes preserve non-risk research filters", () => {

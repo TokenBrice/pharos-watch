@@ -60,10 +60,8 @@ Provider URLs that may embed credentials must pass through `redactProviderUrls()
 
 `Env` (`worker/src/lib/env.ts`) is consumed by the HTTP and scheduled context factories. Wrangler owns `DB`, `CORS_ORIGIN`, `SELF_URL`, Access bindings and hardening mode vars; other active bindings are runtime values, typically secrets. `shared/lib/env-contract.ts` owns the cross-runtime manifest, and `npm run check:env-contract` compares Wrangler `[vars]`/D1 bindings with the Worker type contract.
 
-`worker/src/lib/env.ts` still exports the worker runtime views:
+`worker/src/lib/env.ts` exports the worker runtime views used by validation:
 
-- `WORKER_REQUIRED_ENV_KEYS`
-- `WORKER_OPTIONAL_ENV_KEYS`
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 

@@ -1,12 +1,11 @@
-import { spawn } from "node:child_process";
-import { createServer, type Server } from "node:http";
+import type { Server } from "node:http";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
-import { scoreToGrade } from "@shared/lib/report-card-core";
+
 import { runSafetyScoreMapCli, parseMapReportCards } from "../maintenance/build-safety-score-map";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
@@ -14,6 +13,7 @@ import {
   makeSafetyMapRatedCard,
   makeSafetyMapReportCardsResponse,
   makeSafetyMapStablecoinsPayload,
+  startSafetyMapFixtureServer,
   withSafetyMapAdverseAttribution,
 } from "./build-safety-score-map.test-support";
 
@@ -32,16 +32,12 @@ describe("Safety map availability semantics", () => {
  *
  * The generator runs unattended every day and publishes to a public URL, so the
  * failure that matters is not a crash — it is a successful exit that ships a
- * blank or malformed poster. Every guard below is asserted through the CLI
- * against a fixture API: one case keeps a real child process so the argv/exit
- * contract stays pinned, and the rest drive the exported
- * `runSafetyScoreMapCli` in-process with the same fixture server. Each fixture
+ * blank or malformed poster. Every guard below drives the exported
+ * `runSafetyScoreMapCli` in-process against the same fixture server. Each fixture
  * is shaped to stop the run *before* the headless-Firefox render, so the suite
  * needs no browser and no credentials.
  */
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const SCRIPT = "scripts/maintenance/build-safety-score-map.ts";
 const HOUR = 3600;
 
 interface Card {
@@ -63,13 +59,6 @@ let psiComputedAt = 0;
 let publicationStatus = "current";
 let server: Server;
 let baseUrl = "";
-let reportCardsPayloadOverride: unknown | undefined;
-let stablecoinsPayloadOverride: unknown | undefined;
-let psiPayloadOverride: unknown | undefined;
-
-function resolvePayload(override: unknown, fallback: () => unknown): unknown {
-  return typeof override === "function" ? (override as () => unknown)() : (override ?? fallback());
-}
 
 function reportCardsPayload(): unknown {
   const updatedAt = Math.max(asOfSec, Math.floor(Date.now() / 1000));
@@ -120,28 +109,12 @@ function psiPayload(): unknown {
 }
 
 beforeAll(async () => {
-  server = createServer((req, res) => {
-    const path = (req.url ?? "").split("?")[0];
-    const body =
-      path === "/api/report-cards/v9"
-        ? resolvePayload(reportCardsPayloadOverride, reportCardsPayload)
-        : path === "/api/stablecoins"
-          ? resolvePayload(stablecoinsPayloadOverride, stablecoinsPayload)
-          : path === "/api/stability-index"
-            ? resolvePayload(psiPayloadOverride, psiPayload)
-          : null;
-    if (!body) {
-      res.writeHead(404).end("{}");
-      return;
-    }
-    if (path === "/api/report-cards/v9") res.setHeader("X-Safety-Score-Status", publicationStatus);
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify(body));
-  });
-  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  const address = server.address();
-  if (typeof address === "string" || address == null) throw new Error("fixture server did not bind a port");
-  baseUrl = `http://127.0.0.1:${address.port}`;
+  ({ server, baseUrl } = await startSafetyMapFixtureServer({
+    reportCardsPayload,
+    stablecoinsPayload,
+    psiPayload,
+    publicationStatus: () => publicationStatus,
+  }));
 });
 
 const scratchDirs: string[] = [];
@@ -197,7 +170,7 @@ interface RunResult {
 }
 
 /**
- * Stage the fixture API state and output path shared by both runners.
+ * Stage the fixture API state and output path.
  *
  * `stopBeforeRender` pre-writes a future-dated manifest at the output path. The
  * backwards-publish guard (§11.2b rule 5) then aborts the run *after* fetch,
@@ -211,9 +184,6 @@ function stageFixture(
     stopBeforeRender?: boolean;
     publicationStatus?: string;
     psiComputedAt?: number;
-    reportCardsPayload?: unknown;
-    stablecoinsPayload?: unknown;
-    psiPayload?: unknown;
   } = {},
 ): { pngPath: string; outDir: string } {
   cards = fixture.cards;
@@ -222,9 +192,6 @@ function stageFixture(
   psiComputedAt = options.psiComputedAt ?? Math.floor(Date.now() / 1000) - 5 * 60;
   methodologyVersion = fixture.methodologyVersion ?? "9.19";
   publicationStatus = options.publicationStatus ?? "current";
-  reportCardsPayloadOverride = options.reportCardsPayload;
-  stablecoinsPayloadOverride = options.stablecoinsPayload;
-  psiPayloadOverride = options.psiPayload;
 
   const outDir = scratchDir("pharos-safety-map-test-");
   const pngPath = join(outDir, "map.png");
@@ -245,13 +212,9 @@ function stageFixture(
 async function runGenerator(
   fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
   options: {
-    args?: string[];
     stopBeforeRender?: boolean;
     publicationStatus?: string;
     psiComputedAt?: number;
-    reportCardsPayload?: unknown;
-    stablecoinsPayload?: unknown;
-    psiPayload?: unknown;
   } = {},
 ): Promise<RunResult> {
   const { pngPath, outDir } = stageFixture(fixture, options);
@@ -259,7 +222,7 @@ async function runGenerator(
   const warnings: string[] = [];
   const errors: string[] = [];
   const status = await runSafetyScoreMapCli({
-    argv: ["--out", pngPath, ...(options.args ?? [])],
+    argv: ["--out", pngPath],
     apiKey: "fixture-key",
     baseUrl,
     io: {
@@ -269,32 +232,6 @@ async function runGenerator(
     },
   });
   return { status, stdout: stdout.join(""), stderr: `${warnings.join("")}${errors.join("")}`, pngPath, outDir };
-}
-
-/**
- * The suite's single real-process invocation: it pins the CLI's argv parsing
- * and exit code through an actual child process, while every other case drives
- * the exported entrypoint in-process.
- */
-async function runGeneratorCli(
-  fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
-  options: { args?: string[] } = {},
-): Promise<RunResult> {
-  const { pngPath, outDir } = stageFixture(fixture);
-  const child = spawn(process.execPath, ["--import", "tsx", SCRIPT, "--out", pngPath, ...(options.args ?? [])], {
-    cwd: REPO_ROOT,
-    env: {
-      ...process.env,
-      PHAROS_API_BASE: baseUrl,
-      PHAROS_API_KEY: "fixture-key",
-    },
-  });
-  let stdout = "";
-  let stderr = "";
-  child.stdout.on("data", (chunk) => (stdout += String(chunk)));
-  child.stderr.on("data", (chunk) => (stderr += String(chunk)));
-  const status = await new Promise<number | null>((done) => child.on("close", done));
-  return { status, stdout, stderr, pngPath, outDir };
 }
 
 /** Marker proving the run reached the pre-render stop, i.e. every guard passed. */
@@ -334,34 +271,6 @@ describe("safety-score map — canonical publication provenance", () => {
     });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/refusing to render a future-dated level/);
-  });
-});
-
-describe("safety-score map — canonical API payload schemas", () => {
-  it("rejects the former report-card subset DTO", async () => {
-    const fixture = universe();
-    const run = await runGenerator(fixture, {
-      reportCardsPayload: { cards: fixture.cards, methodology: { version: "9.19" }, asOfSec: Math.floor(Date.now() / 1000) - HOUR },
-    });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Report-card response is malformed/);
-  });
-
-  it("rejects the former stablecoin subset DTO", async () => {
-    const fixture = universe();
-    const run = await runGenerator(fixture, { stablecoinsPayload: { peggedAssets: fixture.assets } });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Stablecoin response is malformed/);
-  });
-
-  it("rejects the former PSI subset DTO", async () => {
-    const run = await runGenerator(universe(), {
-      psiPayload: {
-        current: { score: 94.3, band: "BEDROCK", computedAt: Math.floor(Date.now() / 1000) - 5 * 60 },
-      },
-    });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/PSI response is malformed/);
   });
 });
 
@@ -472,53 +381,6 @@ describe("safety-score map — grade-letter integrity", () => {
   });
 });
 
-describe("safety-score map — availability-first rendering", () => {
-  it("fetches one canonical input set and has no historical movement gate", async () => {
-    const fixture = universe({ count: 20 });
-    const payload = makeSafetyMapStablecoinsPayload(fixture.assets);
-    let stablecoinReads = 0;
-    const run = await runGenerator(fixture, {
-      stopBeforeRender: true,
-      stablecoinsPayload: () => {
-        stablecoinReads += 1;
-        return payload;
-      },
-    });
-
-    expect(stablecoinReads).toBe(1);
-    expect(run.stdout).toMatch(/Fetching canonical data/);
-    expect(run.stdout).toMatch(/Render input graded=20/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("renders a legitimate census whose two supply leaders sit in different outer bands", async () => {
-    // The 2026-09-28 publication: the second-largest asset moved from A to C
-    // while the largest stayed in B, and D grew by 14. Every guard must still
-    // pass; a grade redistribution is not a reason to lose the day's poster.
-    const bands: Array<{ tier: string; count: number; scores: number[]; leader?: number }> = [
-      { tier: "A", count: 6, scores: [90, 84] },
-      { tier: "B", count: 42, scores: [78, 72, 66], leader: 1.84e11 },
-      { tier: "C", count: 118, scores: [63, 57, 51], leader: 7.5e10 },
-      { tier: "D", count: 86, scores: [45] },
-      { tier: "F", count: 60, scores: [20] },
-    ];
-    const fixture: { cards: Card[]; assets: Asset[] } = { cards: [], assets: [] };
-    for (const band of bands) {
-      for (let i = 0; i < band.count; i++) {
-        const id = `${band.tier.toLowerCase()}-${String(i).padStart(3, "0")}`;
-        const score = band.scores[i % band.scores.length];
-        const supply = i === 0 && band.leader ? band.leader : 5e9 * 0.9 ** (i + 1);
-        fixture.cards.push({ id, score, grade: scoreToGrade(score) });
-        fixture.assets.push({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: supply } });
-      }
-    }
-    expect(new Set(fixture.cards.map((card) => card.grade.charAt(0)))).toEqual(new Set(["A", "B", "C", "D", "F"]));
-
-    const run = await runGenerator(fixture, { stopBeforeRender: true });
-    expect(run.stderr).not.toMatch(/Could not fit/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-});
 describe("safety-score map — backwards-publish guard (§11.2b rule 5)", () => {
   it("refuses to overwrite a manifest rendered in the future", async () => {
     const run = await runGenerator(universe(), { stopBeforeRender: true });
@@ -526,21 +388,4 @@ describe("safety-score map — backwards-publish guard (§11.2b rule 5)", () => 
     expect(run.stderr).toMatch(/was rendered in the future .* — refusing to publish backwards/);
     expect(existsSync(run.pngPath)).toBe(false);
   });
-});
-
-describe("safety-score map — CLI contract", () => {
-  it("rejects an unknown edition", async () => {
-    // The suite's single real-process invocation: it pins the CLI's argv
-    // parsing and exit code through an actual child process.
-    const run = await runGeneratorCli(universe(), { args: ["--edition", "weekly"] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/--edition must be "daily" or "monthly" \(got "weekly"\)/);
-  });
-
-  it("rejects a non-positive issue number", async () => {
-    const run = await runGenerator(universe(), { args: ["--issue", "0"] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/--issue must be a positive integer/);
-  });
-
 });

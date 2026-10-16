@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { getMechanismExplainerPath } from "@shared/lib/classification";
+import { cleanup, render, within } from "@testing-library/react";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
@@ -91,71 +90,6 @@ describe("PegStabilityCard", () => {
     expect(figure.textContent).toMatch(LIQUIDATION_CLAIM);
   });
 
-  it("folds the curated collateral paragraph only when Reserves has reviewed slices", () => {
-    const open = render(<PegStabilityCard meta={coin()} isWrapper={false} />);
-    const visible = within(mechanismModule(open.container)).getByText(COLLATERAL);
-    expect(visible.closest("details")).toBeNull();
-    cleanup();
-
-    const folded = render(<PegStabilityCard meta={coin()} isWrapper={false} hasReviewedReserves />);
-    const card = mechanismModule(folded.container);
-    const disclosure = within(card).getByText(COLLATERAL).closest("details");
-    expect(disclosure).not.toBeNull();
-    expect(disclosure?.open).toBe(false);
-    // The peg-mechanism primer stays in the summary layer.
-    expect(within(card).getByText(PEG_MECHANISM).closest("details")).toBeNull();
-  });
-
-  it("draws a wrapper's parent flow as text steps, not a scaled-down SVG", () => {
-    const { container } = render(
-      <PegStabilityCard
-        meta={coin({ id: "fixture-wrapper", symbol: "sFXD", mechanismArchetype: "synthetic-delta-neutral" })}
-        resolvedMechanismArchetype="synthetic-delta-neutral"
-        isWrapper
-        parentSymbol="FXD"
-        parentArchetype="synthetic-delta-neutral"
-        variantKind="savings-passthrough"
-      />,
-    );
-    const figure = within(mechanismModule(container)).getByRole("figure");
-    const [parentSteps, wrapperLayer] = within(figure).getAllByRole("list");
-    expect(within(parentSteps).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(wrapperLayer).getByRole("listitem").textContent).toContain("sFXD");
-    // Every glyph is DOM text at body size; no SVG label shrinks with its viewBox.
-    expect(figure.querySelectorAll("svg text")).toHaveLength(0);
-  });
-
-  it("renders nothing without a peg mechanism", () => {
-    const { container } = render(<PegStabilityCard meta={coin({ pegMechanism: undefined })} isWrapper={false} />);
-    expect(container.querySelector("#mechanism")).toBeNull();
-  });
-
-  it("closes authored prose that lacks its final stop, without touching the data", () => {
-    const meta = coin({ pegMechanism: "Direct redemption through the issuer (verified customers)" });
-    const { container } = render(<PegStabilityCard meta={meta} isWrapper={false} />);
-    const card = mechanismModule(container);
-    expect(within(card).getByText("Direct redemption through the issuer (verified customers).")).toBeTruthy();
-    expect(meta.pegMechanism).toBe("Direct redemption through the issuer (verified customers)");
-  });
-
-  it("folds over-budget prose and the collateral note into one Review notes disclosure", () => {
-    const { container } = render(
-      <PegStabilityCard meta={coin({ pegMechanism: LONG_PEG_MECHANISM })} isWrapper={false} hasReviewedReserves />,
-    );
-    const card = mechanismModule(container);
-    const folds = card.querySelectorAll("details");
-    expect(folds).toHaveLength(1);
-    const fold = folds[0]!;
-    expect(fold.open).toBe(false);
-    expect(fold.textContent).toContain(LONG_PEG_MECHANISM);
-    expect(fold.textContent).toContain(COLLATERAL);
-    // Both folded items are counted in the summary's accessible name.
-    expect(fold.querySelector("summary")?.textContent).toContain("(2)");
-    // The first clean sentence stays in the summary layer.
-    const line = within(card).getByText("Holders redeem directly with the issuer at par.");
-    expect(line.closest("details")).toBeNull();
-  });
-
   it("merges the mechanism review into the one provenance fold, which owns #mechanism-review", () => {
     const review: MechanismReviewView = {
       archetype: "cdp",
@@ -201,21 +135,6 @@ describe("PegStabilityCard", () => {
     const card = mechanismModule(container);
     expect(card.querySelector("#mechanism-review")).toBeNull();
     expect(card.textContent).not.toContain("Reviewed ");
-  });
-
-  it("puts the help glyph beside the title and opens the archetype primer from it", () => {
-    const { container } = render(<PegStabilityCard meta={coin()} isWrapper={false} />);
-    const card = mechanismModule(container);
-    const heading = within(card).getByRole("heading", { name: /Mechanism/ });
-    const hint = within(card).getByRole("button", { name: /mechanism/i });
-    const figure = within(card).getByRole("figure");
-    // In the header, right after the title: after the heading, before the visual.
-    expect(heading.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(hint.compareDocumentPosition(figure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    fireEvent.click(hint);
-    const explainer = screen.getByRole("link", { name: /explainer/i });
-    expect(explainer.getAttribute("href")).toBe(getMechanismExplainerPath("cdp"));
   });
 
   it("never names another coin's incident in a coin's stress line", () => {

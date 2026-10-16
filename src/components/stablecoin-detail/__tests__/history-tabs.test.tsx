@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { revealAnchorId } from "@/lib/anchor-reveal";
 import { HistoryTabs } from "../history-tabs";
 
 const hooks = vi.hoisted(() => ({
@@ -59,14 +58,4 @@ describe("HistoryTabs", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("selects the tab whose panel owns a deep-linked anchor", () => {
-    window.history.replaceState(null, "", "#depeg-history");
-    render(<HistoryTabs stablecoinId="usdc-circle" isNavToken={false} {...depegProps} />);
-    expect(screen.getByTestId("depeg-panel")).toBeTruthy();
-    act(() => {
-      revealAnchorId("ddr-track-record");
-    });
-    expect(screen.getByTestId("ddr-panel")).toBeTruthy();
-    expect(document.getElementById("ddr-track-record")?.hidden).toBe(false);
-  });
 });

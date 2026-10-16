@@ -20,7 +20,6 @@
 import {
   SCENE_DIMETRIC,
   SCENE_UNIT,
-  SCENE_Z_SCALE,
   bbox,
   formatPath,
   hull,
@@ -43,7 +42,7 @@ import type { CauseOfDeath } from "@shared/lib/cause-of-death";
 import type { DesktopPlotMap, PlotGrave, PortraitPlotMap } from "@/lib/cemetery-plot-map";
 
 // The projection core, marks and solids live in the scene kit (`shared/lib/scene/`); the Cemetery keeps its names.
-export { bbox, faceMatrixE, fnv1a, hull, lighthouseGeometry, project, round1, roundBox, roundPoint, seededStream };
+export { bbox, fnv1a, hull, lighthouseGeometry, project, round1, roundBox, roundPoint, seededStream };
 export type PlotPoint = ScenePoint;
 /** Screen-space bounding box (SVG user units unless stated otherwise). */
 export type PlotBox = SceneBox;
@@ -54,8 +53,6 @@ export type PlotObjectGeometry = SceneObjectGeometry;
 
 /** SVG units per world unit along a horizontal axis. */
 export const PLOT_UNIT = SCENE_UNIT;
-/** Vertical foreshortening of the 30° dimetric camera. */
-export const PLOT_Z_SCALE = SCENE_Z_SCALE;
 const DEG = Math.PI / 180;
 
 export type PlotProjectionName = "dimetric" | "portrait";
@@ -90,7 +87,7 @@ export interface PlotMedallionMark {
 export type PlotMark = SceneMark | PlotMedallionMark;
 
 /** The kit's vertical cylinder; the cap defaults to the stone top (`st-t`) and the rim to flat. */
-export function cylinder(
+function cylinder(
   p: PlotProjection,
   ic: number,
   jc: number,
@@ -108,7 +105,7 @@ export function cylinder(
  * The single clean planar break of a snapped column, as a z offset of the top rim at angle θ: the rim drops `drop`
  * plus up to `amp` toward direction `phase` (the low side), and stays whole opposite it.
  */
-export function columnFractureTop(opts: { phase: number; amp: number; drop?: number }): (theta: number) => number {
+function columnFractureTop(opts: { phase: number; amp: number; drop?: number }): (theta: number) => number {
   const { phase, amp, drop = 0 } = opts;
   return (th) => -drop - amp * (0.5 + 0.5 * Math.cos(th - phase));
 }

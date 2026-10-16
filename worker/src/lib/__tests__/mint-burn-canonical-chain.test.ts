@@ -32,7 +32,4 @@ describe("isCanonicalMintBurnPair", () => {
     expect(isCanonicalMintBurnPair("usdc-circle", "arbitrum")).toBe(false);
   });
 
-  it("handles unknown stablecoin ID gracefully", () => {
-    expect(isCanonicalMintBurnPair("nonexistent", "ethereum")).toBe(true);
-  });
 });

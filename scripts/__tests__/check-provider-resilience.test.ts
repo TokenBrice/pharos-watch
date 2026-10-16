@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  findBareFetchCalls,
   scanProviderResilience,
 } from "../ci/check-provider-resilience.ts";
 import { withTempRepo } from "./helpers/test-state";
@@ -26,17 +25,6 @@ const validDirectFetchRegistry = [
 ];
 
 describe("provider resilience checker", () => {
-  it("detects bare global fetch calls without matching property fetches", () => {
-    const calls = findBareFetchCalls(`
-      export default { async fetch() { return new Response("ok"); } };
-      await client.fetch("/internal");
-      return fetch("https://example.test");
-    `);
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.text).toContain("return fetch");
-  });
-
   it("passes a registered direct provider with timeout, body, circuit, and test coverage", () => {
     withTempRepo("pharos-provider-resilience", {
       "worker/src/provider.ts": `

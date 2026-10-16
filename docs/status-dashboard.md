@@ -1002,7 +1002,6 @@ Producer behavior, budgets and recovery are documented in [Mint/Burn Flows: Raw 
 - Collapsed disclosures mount content only while open, keeping healthy diagnostic tables and verbose evidence out of the hidden DOM.
 - Triage auto-expansion runs once on the first render with definite evidence. Later issues update the collapsed summary without moving the operator mid-task.
 - Refetches retain the last successful payload and surface background failures through `WorkspaceStatusBoundary`.
-- Initial healthy Triage render budgets are enforced by `src/app/admin/__tests__/triage-budgets.test.tsx`.
 
 ## Source Owners
 

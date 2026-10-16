@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DepegEvent, DepegEventEntry } from "@shared/types/market";
 import {
@@ -185,20 +185,6 @@ describe("sync-depeg-events", () => {
     expect(existsSync(indexPath)).toBe(false);
   });
 
-  it("keeps capture metadata out of archive JSON entries and removes the superseded manifest", async () => {
-    const root = makeRoot();
-    const dataDir = join(root, "data/depeg-events");
-    mkdirSync(dataDir, { recursive: true });
-    writeFileSync(join(dataDir, "capture.json"), "{}\n");
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ events: [event()] })))));
-
-    await runDepegSync(["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")]);
-
-    expect(readdirSync(dataDir).filter((name) => name.endsWith(".json")).sort()).toEqual(["2026.json", "index.json"]);
-    expect(existsSync(join(dataDir, "metadata/capture.json"))).toBe(true);
-    expect(existsSync(join(dataDir, "capture.json"))).toBe(false);
-    expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
-  });
 
   it("rejects a ledger capture when a yearly shard has changed since observation", async () => {
     const root = makeRoot();

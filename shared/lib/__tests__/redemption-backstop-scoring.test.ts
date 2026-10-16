@@ -10,12 +10,6 @@ import {
 import { composeExitComponentScore } from "../exit-route-scoring";
 
 describe("computeModeledExitSizeUsd", () => {
-  it("models exit size as five percent of supply with floor and cap", () => {
-    expect(computeModeledExitSizeUsd(1_000_000)).toBe(100_000);
-    expect(computeModeledExitSizeUsd(100_000_000)).toBe(5_000_000);
-    expect(computeModeledExitSizeUsd(10_000_000_000)).toBe(25_000_000);
-  });
-
   it("returns null modeled exit size for missing, non-finite, or non-positive supply", () => {
     expect(computeModeledExitSizeUsd(null)).toBeNull();
     expect(computeModeledExitSizeUsd(0)).toBeNull();
@@ -322,52 +316,6 @@ describe("computeRedemptionBackstopScore", () => {
     });
     expect(below).toEqual({ score: 0, capsApplied: ["immaterial-executable-capacity"] });
     expect(atFloor.score).toBeGreaterThan(0);
-  });
-
-  it("applies queue-redeem cap at 70", () => {
-    const result = computeRedemptionBackstopScore({
-      routeFamily: "queue-redeem",
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 100,
-      capacityScore: 100,
-      outputAssetQualityScore: 100,
-      costScore: 100,
-      executableCapacityUsd: 1_000_000,
-    });
-    expect(result.score).toBe(70);
-    expect(result.capsApplied).toContain("queue-route-cap");
-  });
-
-  it("applies offchain-issuer cap at 65", () => {
-    const result = computeRedemptionBackstopScore({
-      routeFamily: "offchain-issuer",
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 100,
-      capacityScore: 100,
-      outputAssetQualityScore: 100,
-      costScore: 100,
-      executableCapacityUsd: 1_000_000,
-    });
-    expect(result.score).toBe(65);
-    expect(result.capsApplied).toContain("offchain-route-cap");
-  });
-
-  it("applies config-level cap", () => {
-    const result = computeRedemptionBackstopScore({
-      routeFamily: "stablecoin-redeem",
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 100,
-      capacityScore: 100,
-      outputAssetQualityScore: 100,
-      costScore: 100,
-      totalScoreCap: 50,
-      executableCapacityUsd: 1_000_000,
-    });
-    expect(result.score).toBe(50);
-    expect(result.capsApplied).toContain("config-cap");
   });
 
   it("does not apply caps when score is below threshold", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addNonceToInlineScripts, buildContentSecurityPolicy, buildStaticContentSecurityPolicy, isTelegramMiniAppPath } from "../site-csp";
+import { addNonceToInlineScripts, buildContentSecurityPolicy, isTelegramMiniAppPath } from "../site-csp";
 
 describe("site CSP helpers", () => {
   it("adds a nonce to inline script tags", () => {
@@ -93,24 +93,4 @@ describe("buildStaticContentSecurityPolicy", () => {
     );
   });
 
-  it("standard path sets frame-ancestors to none", () => {
-    const csp = buildStaticContentSecurityPolicy();
-    expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).not.toContain("telegram.org");
-  });
-
-  it("Telegram Mini App path allows telegram.org frame-ancestors", () => {
-    const csp = buildStaticContentSecurityPolicy({ telegramMiniApp: true });
-    expect(csp).toContain("frame-ancestors https://telegram.org");
-    expect(csp).toContain("https://telegram.org");
-    expect(csp).not.toContain("google-analytics.com");
-    expect(csp).not.toContain("analytics.google.com");
-    expect(csp).not.toContain("googletagmanager.com");
-  });
-
-  it("keeps Google Analytics origins on standard public pages", () => {
-    const csp = buildStaticContentSecurityPolicy();
-    expect(csp).toContain("https://www.google-analytics.com");
-    expect(csp).toContain("https://www.googletagmanager.com");
-  });
 });

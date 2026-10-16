@@ -1,28 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildProxyResponse, buildUpstreamHeaders, isHtmlResponse, jsonError, summarizeFetchError } from "../proxy-utils";
-
-describe("summarizeFetchError", () => {
-  it("preserves Error and DOMException names while using shared messages", () => {
-    expect(summarizeFetchError(new Error("network down"))).toEqual({
-      kind: "Error",
-      message: "network down",
-    });
-    expect(summarizeFetchError(new DOMException("request timed out", "TimeoutError"))).toEqual({
-      kind: "TimeoutError",
-      message: "request timed out",
-    });
-  });
-
-  it("describes non-Error values using error-shaped fields when available", () => {
-    expect(summarizeFetchError("network down")).toEqual({ kind: "string", message: "network down" });
-    expect(summarizeFetchError(null)).toEqual({ kind: "object", message: "null" });
-    expect(summarizeFetchError({ message: "network down" })).toEqual({
-      kind: "object",
-      message: "network down",
-    });
-    expect(summarizeFetchError({})).toEqual({ kind: "object", message: "Non-error value thrown" });
-  });
-});
+import { buildProxyResponse, buildUpstreamHeaders, isHtmlResponse, jsonError } from "../proxy-utils";
 
 describe("proxy HTTP contracts", () => {
   it("allowlists client headers and gives service credentials precedence", () => {

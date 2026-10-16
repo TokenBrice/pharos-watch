@@ -267,25 +267,6 @@ describe("native Safety Score V9 input", () => {
   });
 
   describe("lender collateral backing admission", () => {
-    it.each([null, [], "not-a-map"])("rejects malformed accepted row maps: %j", (byAssetId) => {
-      expect(() => nativeInput({
-        lenderCollateralBacking: { ...lenderCollateralBacking(), byAssetId },
-      })).toThrow(/Malformed native V9 input at lenderCollateralBacking.byAssetId/);
-    });
-
-    it.each([null, "gap:a", ["gap:a", 1]])("rejects malformed source gap attribution: %j", (sourceGapIds) => {
-      const backing = lenderCollateralBacking();
-      expect(() => nativeInput({
-        lenderCollateralBacking: {
-          ...backing,
-          byAssetId: {
-            ...backing.byAssetId,
-            "usdc-circle": { ...backing.byAssetId["usdc-circle"], sourceGapIds },
-          },
-        },
-      })).toThrow(/Malformed native V9 input at lenderCollateralBacking.byAssetId.usdc-circle.sourceGapIds/);
-    });
-
     it("rejects duplicate source gap IDs rather than silently deduplicating evidence", () => {
       const backing = lenderCollateralBacking();
       backing.byAssetId["usdc-circle"]!.sourceGapIds = ["gap:a", "gap:a"];
@@ -432,13 +413,6 @@ describe("native Safety Score V9 input", () => {
       },
     });
     expect(result.success).toBe(false);
-    if (result.success) throw new Error("Expected inconsistent coverage rejection");
-    const path = ["exitRouteObservationCoverage", "scoreEligibleObservationCount"];
-    expect(result.error.issues).toEqual([
-      { code: "custom", path, message: "score-eligible observations cannot exceed total observations" },
-      { code: "custom", path, message: "score-eligible observations cannot exceed total observations" },
-      { code: "custom", path, message: "coverage eligible-observation count does not match DEX observations" },
-    ]);
   });
 
   it("derives one generation id per payload regardless of field order", () => {

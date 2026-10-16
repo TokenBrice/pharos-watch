@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import type { StatusResponse } from "@shared/types/status";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload, type StablecoinsCacheLoadResult } from "../../stablecoins-cache";
 
@@ -114,18 +113,6 @@ describe("loadStatusSupplements", () => {
       fetchMock.mockRestore();
       vi.mocked(hasUsableStablecoinsPayload).mockReturnValue(false);
     }
-  });
-
-  it("preserves absent operational dispatch flags as null", () => {
-    expect(parseTelegramDispatchCronMetadata({})).toMatchObject({
-      cappedAtLimit: null,
-      snapshotSeeded: null,
-      eventlessFastPath: null,
-      pendingRateLimited: null,
-      safetyAlertsSuppressed: null,
-      reserveAlertsSuppressed: null,
-      presetFailure: null,
-    });
   });
 
   it("publishes null suppression flags when dispatch metadata omits them", async () => {

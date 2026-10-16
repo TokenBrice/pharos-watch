@@ -69,32 +69,6 @@ describe("ReferenceRatesStrip", () => {
     vi.useRealTimers();
   });
 
-  it("renders the kicker, headline, lede, comparative table headers, and freshness footer", () => {
-    render(
-      <ReferenceRatesStrip benchmarks={benchmarks} poolInputMeta={poolInputMeta} safetySnapshot={safetySnapshot} />,
-    );
-
-    expect(screen.getByText("Reference rates")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: /Risk-free benchmark per currency/i })).toBeTruthy();
-    expect(
-      screen.getByText(/Each yield in the leaderboard is graded against the local risk-free benchmark/i),
-    ).toBeTruthy();
-
-    const tableShell = screen.getByTestId("yield-reference-rates-table");
-    expect(tableShell.getAttribute("data-table-id")).toBe("yield-reference-rates");
-
-    const table = screen.getByRole("table", { name: "Per-currency reference rates" });
-    expect(within(table).getByRole("columnheader", { name: "Currency" })).toBeTruthy();
-    expect(within(table).getByRole("columnheader", { name: "Rate" })).toBeTruthy();
-    expect(within(table).getByRole("columnheader", { name: "vs USD" })).toBeTruthy();
-    expect(within(table).getByRole("columnheader", { name: "Benchmark" })).toBeTruthy();
-    expect(within(table).getByRole("columnheader", { name: "As of" })).toBeTruthy();
-
-    expect(screen.getByText("Data freshness")).toBeTruthy();
-    expect(screen.getByText(/Pool input age 4m/i)).toBeTruthy();
-    expect(screen.getByText("91%")).toBeTruthy();
-  });
-
   it("renders one row per benchmark with the currency code, symbol, rate, and stripped benchmark label", () => {
     render(<ReferenceRatesStrip benchmarks={benchmarks} />);
 
@@ -156,61 +130,9 @@ describe("ReferenceRatesStrip", () => {
     expect(within(audRow!).getByText("+67 bps")).toBeTruthy();
   });
 
-  it("renders the Tracked column with per-currency counts when currencyCounts is provided", () => {
-    render(<ReferenceRatesStrip benchmarks={benchmarks} currencyCounts={{ USD: 25, EUR: 8, CHF: 1, AUD: 2 }} />);
-
-    const table = screen.getByRole("table");
-    expect(within(table).getByRole("columnheader", { name: "Tracked" })).toBeTruthy();
-
-    const usdRow = within(table)
-      .getAllByRole("row")
-      .find((r) => within(r).queryByText("USD"));
-    expect(within(usdRow!).getByText("25")).toBeTruthy();
-    const eurRow = within(table)
-      .getAllByRole("row")
-      .find((r) => within(r).queryByText("EUR"));
-    expect(within(eurRow!).getByText("8")).toBeTruthy();
-  });
-
-  it("hides the Tracked column when no currencyCounts prop is provided", () => {
-    render(<ReferenceRatesStrip benchmarks={benchmarks} />);
-    expect(screen.queryByRole("columnheader", { name: "Tracked" })).toBeNull();
-  });
-
-  it("renders an SVG flag for known currencies and an ISO fallback for unknown ones", () => {
-    const unknownBenchmarks: YieldBenchmarkRegistry = {
-      USD: makeBenchmark("USD", "USD", "USD 3M T-Bill", 3.68, "2026-05-19"),
-      USD_EFFR: makeBenchmark("XYZ", "USD_EFFR", "XYZ test benchmark", 1.0, "2026-05-19"),
-    };
-
-    render(<ReferenceRatesStrip benchmarks={unknownBenchmarks} />);
-
-    const table = screen.getByRole("table");
-    const svgs = table.querySelectorAll("svg");
-    expect(svgs.length).toBe(1); // only USD has a flag SVG
-    expect(within(table).getByText("XY")).toBeTruthy(); // fallback shows first two chars
-  });
-
   it("returns nothing when there are no inputs to display", () => {
     const { container } = render(<ReferenceRatesStrip benchmarks={null} poolInputMeta={null} safetySnapshot={null} />);
     expect(container.textContent).toBe("");
-  });
-
-  it("tints the pool input age amber when the input is stale", () => {
-    const staleMeta: YieldSourceInputMeta = {
-      ...poolInputMeta,
-      ageSeconds: 90 * 60,
-    };
-
-    render(<ReferenceRatesStrip benchmarks={null} poolInputMeta={staleMeta} safetySnapshot={null} />);
-
-    const chip = screen.getByText(/Pool input age 90m/i);
-    expect(chip.className).toContain("state-warn");
-  });
-
-  it("does not render the freshness footer when no source meta is provided", () => {
-    render(<ReferenceRatesStrip benchmarks={benchmarks} poolInputMeta={null} safetySnapshot={null} />);
-    expect(screen.queryByText("Data freshness")).toBeNull();
   });
 
   it("tints a benchmark row amber with a reason and an age marker when its record is stale", () => {

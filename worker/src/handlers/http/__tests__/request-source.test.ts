@@ -75,12 +75,4 @@ describe("createRequestSourceRecorder", () => {
     expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 
-  it("gives the API-key traffic class precedence over browser classification", () => {
-    const options = recorderOptions({ apiKeyId: 7, apiKeyTrafficClass: "site" });
-    createRequestSourceRecorder(options)();
-    expect(options.execCtx.waitUntil).toHaveBeenCalledOnce();
-    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, "public-api", "site");
-    expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledWith(db, 7);
-  });
 });

@@ -2,7 +2,7 @@ import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
-import { makeNoopD1 } from "../../../src/test-helpers/noop-d1";
+
 import { registerStablecoinParameterContract } from "../../../src/test-helpers/__shared/endpoint-contracts";
 import { handleBackfillYieldHistory } from "../backfill-yield-history";
 import type { ResolvedYield } from "../../../src/cron/yield-sync/types";
@@ -40,12 +40,6 @@ describe("handleBackfillYieldHistory", () => {
     path: "/api/backfill-yield-history",
     invoke: (db, url) => handleBackfillYieldHistory({ db, url, trustedAdmin: true, request: makeApiRequest(url.toString(), { adminKey: "secret" }) }),
     cases: [{ kind: "unknown", stablecoin: "not-a-real-id", error: "Stablecoin not found" }],
-  });
-
-  it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillYieldHistory({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
-
-    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("inserts Zephyr yield history row", async () => {

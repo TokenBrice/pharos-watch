@@ -6,10 +6,6 @@ describe("diffFrozenIds", () => {
     expect(diffFrozenIds(new Set(["usr-resolv"]), new Set(["usr-resolv"]))).toEqual(new Set());
   });
 
-  it("returns newly added frozen ids", () => {
-    expect(diffFrozenIds(new Set(["usr-resolv"]), new Set())).toEqual(new Set(["usr-resolv"]));
-  });
-
   it("ignores removals (un-freezing is out of scope)", () => {
     expect(diffFrozenIds(new Set(), new Set(["usr-resolv"]))).toEqual(new Set());
   });

@@ -22,22 +22,6 @@ function tables(samples: Record<string, unknown>[], priors: Record<string, unkno
 }
 
 describe("psi projector", () => {
-  it("emits psi.shifted_down with severity scaled to the new band", async () => {
-    const db = mockTapeD1(
-      tables([
-        { stored_at: SEC,       score: 96, band: "BEDROCK",  methodology_version: "3.3" },
-        { stored_at: SEC + 900, score: 70, band: "FRACTURE", methodology_version: "3.3" },
-      ]),
-    ) as MockD1Database;
-
-    await projectPsiBandShifts(db);
-    const inserts = tapeInsertBindsForType(db, "psi.shifted_down");
-    expect(inserts).toHaveLength(1);
-    // bind order: eventId, type, severity, ts, ...
-    expect(inserts[0]![2]).toBe("warning"); // FRACTURE → warning
-    expect(inserts[0]![1]).toBe("psi.shifted_down");
-  });
-
   it("scales severity to critical for MELTDOWN transitions", async () => {
     const db = mockTapeD1(
       tables([

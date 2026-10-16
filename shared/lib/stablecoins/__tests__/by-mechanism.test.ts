@@ -4,19 +4,11 @@ import {
   countActiveByArchetype,
   getActiveByArchetype,
   getCoinsByLifecycleStatus,
-  nestVariants,
 } from "../by-mechanism";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../../types/core";
 import { makeCatalogCoin, NON_RWA_STABLECOIN_FLAGS } from "./test-support";
 
 describe("countActiveByArchetype", () => {
-  it("returns a count for every mechanism archetype", () => {
-    const counts = countActiveByArchetype([], new Map());
-    for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
-      expect(counts[archetype]).toBe(0);
-    }
-  });
-
   it("keeps commodity pegs excluded from non-commodity archetypes", () => {
     const goldCoin = makeCatalogCoin({
       id: "gold-fixture",
@@ -79,22 +71,6 @@ describe("countActiveByArchetype", () => {
         expect(coin.flags.pegCurrency).not.toBe("SILVER");
       }
     }
-  });
-
-});
-
-describe("getActiveByArchetype", () => {
-  it("sorts unsorted supplies with missing supply last without mutating the input", () => {
-    const coins = ["missing", "small", "large"].map((id) =>
-      makeCatalogCoin({ id, flags: NON_RWA_STABLECOIN_FLAGS, mechanismArchetype: "fiat-cash" }),
-    );
-    const registry = new Map(coins.map((coin) => [coin.id, coin]));
-    const supplyById = new Map([["small", 10], ["large", 100]]);
-    expect(getActiveByArchetype("fiat-cash", supplyById, coins, registry).map((coin) => coin.id))
-      .toEqual(["large", "small", "missing"]);
-    expect(coins.map((coin) => coin.id)).toEqual(["missing", "small", "large"]);
-    expect(getActiveByArchetype("fiat-cash", undefined, coins, registry).map((coin) => coin.id))
-      .toEqual(["missing", "small", "large"]);
   });
 
 });
@@ -175,32 +151,3 @@ describe("getCoinsByLifecycleStatus", () => {
   });
 });
 
-describe("nestVariants", () => {
-  function makeCoin(id: string, variantOf?: string): StablecoinMeta {
-    return makeCatalogCoin({
-      id,
-      flags: NON_RWA_STABLECOIN_FLAGS,
-      ...(variantOf ? { variantOf, variantKind: "savings-passthrough" as const } : {}),
-    });
-  }
-
-  it("separates top-level parents from children", () => {
-    const parent = makeCoin("parent-a");
-    const child = makeCoin("child-a", "parent-a");
-    const orphan = makeCoin("parent-b");
-
-    const { parents, childrenByParentId } = nestVariants([parent, child, orphan]);
-
-    expect(parents.map((c) => c.id)).toEqual(["parent-a", "parent-b"]);
-    expect(childrenByParentId["parent-a"]?.map((c) => c.id)).toEqual(["child-a"]);
-    expect(childrenByParentId["parent-b"]).toBeUndefined();
-  });
-
-  it("treats a variant whose parent is not in the list as a parent", () => {
-    const child = makeCoin("child-a", "missing-parent");
-    const { parents, childrenByParentId } = nestVariants([child]);
-
-    expect(parents.map((c) => c.id)).toEqual(["child-a"]);
-    expect(Object.keys(childrenByParentId)).toHaveLength(0);
-  });
-});

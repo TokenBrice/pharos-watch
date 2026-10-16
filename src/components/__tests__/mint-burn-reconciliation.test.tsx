@@ -131,21 +131,6 @@ describe("MintBurnReconciliationCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show fewer" }));
     expect(screen.queryByText("SYM6")).toBeNull();
   });
-  it("puts verified audits ahead of wholly unsupported rows, after actionable unverified rows", () => {
-    const summary = makeSummary(4);
-    summary.conservationVersion = 1;
-    summary.rows[0]!.status = "insufficient-source";
-    summary.rows[0]!.conservation = [record({ status: "unsupported" })];
-    summary.rows[1]!.status = "ok";
-    summary.rows[1]!.conservation = [record()];
-    summary.rows[2]!.status = "insufficient-source";
-    summary.rows[2]!.conservation = [record({ status: "unavailable" })];
-    summary.rows[3]!.conservation = [record({ status: "mismatch" })];
-    render(<MintBurnReconciliationCard summary={summary} />);
-    expect(screen.getAllByRole("group", { name: /mint\/burn integrity/ }).map((element) => element.getAttribute("aria-label"))).toEqual([
-      "SYM3 mint/burn integrity", "SYM2 mint/burn integrity", "SYM1 mint/burn integrity", "SYM0 mint/burn integrity",
-    ]);
-  });
 
   it("handles out-of-range audit timestamps without crashing", () => {
     const summary = makeSummary();

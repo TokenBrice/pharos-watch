@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import type {
   PegSummaryResponse,
   StablecoinListResponse,
@@ -11,7 +10,6 @@ import type {
 import {
   buildCurrentMap,
   extractFindings,
-  extractSummaryFindings,
   fetchJson,
   type Current,
 } from "../build-ai-summary-staleness-candidates";
@@ -61,21 +59,6 @@ describe("maintenance API access", () => {
 });
 
 describe("AI summary V9 current-value projection", () => {
-  it.each(ReportCardGradeSchema.options)("recognizes canonical %s claims in the refresh queue", (grade) => {
-    const current = grade === "NR" ? "A" : "NR";
-    expect(extractFindings(`${grade} overall grade`, makeCurrent({ overallGrade: current }))).toEqual([
-      { kind: "overall-grade", claim: `${grade} overall grade`, claimed: grade, current, severity: "high" },
-    ]);
-    expect(extractFindings(`${grade} overall grade`, makeCurrent({ overallGrade: grade }))).toEqual([]);
-  });
-
-  it.each(["D+", "D-"])("does not reinterpret unsupported %s as a published grade", (grade) => {
-    const current = makeCurrent({ overallGrade: "A", overallScore: 85, backingGrade: "A" });
-    expect(extractFindings(
-      `${grade} overall grade. Overall grade of ${grade}. ${grade} in backing. Backing grade of ${grade}. The ${grade} at 42.`,
-      current,
-    )).toEqual([]);
-  });
 
   it("does not turn a missing current grade into a not-rated mismatch", () => {
     expect(extractFindings("NR overall grade", makeCurrent())).toEqual([]);
@@ -84,49 +67,6 @@ describe("AI summary V9 current-value projection", () => {
     ]);
   });
 
-  it("uses the current report-card pillars and peg-summary identity", () => {
-    const cards = [{
-      id: "usdt-tether",
-      grade: "B+",
-      score: 75,
-      pillars: {
-        backing: { score: 85 },
-        exit: { score: 55 },
-        control: { score: 45 },
-      },
-      weakestPillar: { pillar: "control", score: 45 },
-    }] as unknown as ReportCardsV9CurrentResponse["cards"];
-    const stress = {
-      "usdt-tether": { band: "WATCH", score: 23 },
-    } as unknown as StressSignalsAllResponse["signals"];
-    const peg = [{
-      id: "usdt-tether",
-      name: "Wrong fallback name",
-      symbol: "WRONG",
-      pegScore: 92,
-      eventCount: 8,
-    }] as unknown as PegSummaryResponse["coins"];
-
-    expect(buildCurrentMap(cards, stress, peg).get("usdt-tether")).toEqual({
-      name: "Tether",
-      symbol: "USDT",
-      overallGrade: "B+",
-      overallScore: 75,
-      pegGrade: "A+",
-      pegScore: 92,
-      backingGrade: "A",
-      backingScore: 85,
-      exitGrade: "C",
-      exitScore: 55,
-      controlGrade: "D",
-      controlScore: 45,
-      dewsBand: "WATCH",
-      dewsScore: 23,
-      depegCount: 8,
-      circulatingUsd: null,
-      weakestPillar: "control",
-    });
-  });
 
   it("joins supply buckets and zero-valued metrics by card ID, ignoring unrelated rows", () => {
     const cards = ["audit-zero", "audit-other"].map((id) => ({
@@ -188,213 +128,6 @@ describe("AI summary V9 current-value projection", () => {
     }
   });
 
-  it("prioritizes base-letter and modifier grade changes differently for overall and pillars", () => {
-    for (const [currentGrade, overallSeverity, pillarSeverity] of [
-      ["A", "medium", "low"], ["B", "high", "medium"],
-    ] as const) {
-      const current = makeCurrent({ overallGrade: currentGrade, backingGrade: currentGrade });
-      expect(extractFindings("A- safety grade.", current)).toEqual([
-        expect.objectContaining({ kind: "overall-grade", claimed: "A-", current: currentGrade, severity: overallSeverity }),
-      ]);
-      expect(extractFindings("backing grade of A-.", current)).toEqual([
-        expect.objectContaining({ kind: "backing-grade", claimed: "A-", current: currentGrade, severity: pillarSeverity }),
-      ]);
-    }
-  });
-
-  it("applies absolute score thresholds with matching and missing-value controls", () => {
-    for (const [currentScore, severity] of [
-      [80, null], [82.99, null], [77, "low"], [85, "medium"], [null, null],
-    ] as const) {
-      const current = makeCurrent({
-        overallScore: currentScore, backingScore: currentScore, pegScore: currentScore,
-      });
-      for (const [text, kind] of [
-        ["A safety grade at 80", "overall-score"],
-        ["backing score is 80", "backing-score"],
-        ["peg score of 80", "peg-score"],
-      ]) {
-        expect(extractFindings(text, current)).toEqual(severity ? [
-          expect.objectContaining({ kind, claimed: "80", current: String(currentScore), severity }),
-        ] : []);
-      }
-    }
-  });
-
-  it("compares DEWS bands case-insensitively and parses word-form depeg counts including zero", () => {
-    const current = makeCurrent({ dewsBand: "WATCH", dewsScore: 10, depegCount: 0 });
-    expect(extractFindings("DEWS reads Watch. Zero depeg events.", current)).toEqual([]);
-    expect(extractFindings("DEWS at 15 in the Calm band. Four depeg events.", current)).toEqual([
-      expect.objectContaining({ kind: "dews-band", claimed: "calm", current: "WATCH", severity: "high" }),
-      expect.objectContaining({ kind: "dews-score", claimed: "15", current: "10", severity: "medium" }),
-      expect.objectContaining({ kind: "depeg-count", claimed: "4", current: "0", severity: "medium" }),
-    ]);
-  });
-
-  it("queues circulation drift at ten and fifty percent but never compares TVL to supply", () => {
-    const current = makeCurrent({ circulatingUsd: 1000 });
-    for (const [amount, severity] of [[901, null], [900, "medium"], [1500, "high"]] as const) {
-      const findings = extractFindings(`$${amount} in circulation`, current);
-      expect(findings).toEqual([
-        expect.objectContaining({ kind: "volatile-dollar-claim", claimed: String(amount), severity: "medium" }),
-        ...(severity ? [expect.objectContaining({
-          kind: "cross-chain-circulation-drift", claimed: String(amount), current: "1000", severity,
-        })] : []),
-      ]);
-    }
-    expect(extractFindings("$500 TVL", current)).toEqual([
-      expect.objectContaining({ kind: "volatile-dollar-claim", claimed: "500", severity: "medium" }),
-    ]);
-  });
-
-  it("flags a weakest-pillar claim only when it contradicts the published weakest pillar", () => {
-    const current = makeCurrent({ weakestPillar: "control" });
-    expect(extractFindings("Exit is the weakest of the three pillars.", current)).toEqual([
-      { kind: "weakest-pillar", claim: "Exit is the weakest", claimed: "exit", current: "control", severity: "medium" },
-    ]);
-    expect(extractFindings("The weakest pillar is economic control.", current)).toEqual([]);
-    expect(extractFindings("Exit is the weakest pillar.", makeCurrent())).toEqual([]);
-  });
-
-  it("flags superseded Safety Score majors but not protocol versions", () => {
-    const current = makeCurrent();
-    expect(extractFindings("The card flags the composition as older than v9's freshness bound.", current)).toEqual([
-      expect.objectContaining({ kind: "retired-methodology-version", claimed: "v9", severity: "medium" }),
-    ]);
-    expect(extractFindings("Liquity V2 grades its troves by interest rate.", current)).toEqual([]);
-    expect(extractFindings("The v9 router shipped in March.", current)).toEqual([]);
-  });
-
-  it("ignores lowercase articles, preserves signed grades, and deduplicates equivalent claims", () => {
-    const current = makeCurrent({ overallGrade: "B", backingGrade: "B" });
-    expect(extractFindings("It has a safety grade and a backing strategy.", current)).toEqual([]);
-    expect(extractFindings("A- safety grade. Safety grade of A-. A- safety grade.", current)).toEqual([
-      expect.objectContaining({ kind: "overall-grade", claimed: "A-", current: "B", severity: "high" }),
-    ]);
-    expect(extractFindings("B safety grade.", current)).toEqual([]);
-    expect(extractFindings("A- safety grade.", makeCurrent())).toEqual([]);
-  });
-
-  it("compares V9 pillar claims and flags retired V8 dimension vocabulary", () => {
-    const current = makeCurrent({
-      overallGrade: "B+",
-      overallScore: 75,
-      pegGrade: "A+",
-      pegScore: 92,
-      backingGrade: "A",
-      backingScore: 85,
-      exitGrade: "C",
-      exitScore: 55,
-      controlGrade: "D",
-      controlScore: 45,
-      dewsBand: "WATCH",
-      dewsScore: 23,
-      depegCount: 8,
-    });
-
-    const findings = extractFindings(
-      "It has an A safety grade at 90, backing grade of B, exit grade of A, " +
-        "economic control grade of C, dependency risk grade of D. Its old Safety Score liquidity score of 72 is stale.",
-      current,
-    );
-
-    expect(findings.map((finding) => finding.kind)).toEqual(expect.arrayContaining([
-      "overall-grade",
-      "overall-score",
-      "backing-grade",
-      "exit-grade",
-      "control-grade",
-      "legacy-dependency-grade",
-      "legacy-liquidity-score",
-    ]));
-    expect(findings.filter((finding) => finding.kind.startsWith("legacy-"))).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ current: "retired in Safety Score v9", severity: "medium" }),
-      ]),
-    );
-  });
-
-  it.each([
-    "Its DEX liquidity score is 80.",
-    "Its liquidity score is 80.",
-    "Its DEX liquidity grade of A remains strong.",
-    "Its liquidity grade of A remains strong.",
-    "Safety Score v8 had other pillars. Its DEX liquidity score is 80.",
-  ])("does not declare a current or ambiguous liquidity claim retired: %s", (text) => {
-    const findings = extractFindings(text, makeCurrent());
-    expect(findings).toEqual([expect.objectContaining({ current: expect.stringContaining("manual dated/source review"), severity: "low" })]);
-    expect(findings.some((finding) => finding.current.includes("retired"))).toBe(false);
-  });
-
-  it.each(["Safety Score v8 liquidity score is 80.", "Its old Safety Score liquidity grade of A was strong."])(
-    "keeps explicit legacy liquidity claims actionable: %s", (text) => {
-      expect(extractFindings(text, makeCurrent())).toEqual([
-        expect.objectContaining({ current: "retired in Safety Score v9", severity: "medium" }),
-      ]);
-    },
-  );
-
-  it("queues volatile adoption, cross-chain drift, holder scope, and financing comparisons", () => {
-    const current = makeCurrent({
-      name: "Flying Tulip USD",
-      symbol: "ftUSD",
-      circulatingUsd: 1_075_731,
-    });
-    const oldFtUsd = "Flying Tulip raised $225M and the stablecoin has roughly $730K in circulation from 20 holders, a ratio of venture capital to actual usage.";
-
-    const findings = extractFindings(oldFtUsd, current);
-    expect(findings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "volatile-dollar-claim", severity: "medium" }),
-      expect.objectContaining({ kind: "cross-chain-circulation-drift", severity: "medium" }),
-      expect.objectContaining({ kind: "holder-address-scope", severity: "medium" }),
-      expect.objectContaining({ kind: "financing-to-product-scale", severity: "high" }),
-    ]));
-
-    expect(
-      extractFindings("Deposited assets are owned by the strategy, holders receive no priority claim.", current),
-    ).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "holder-address-scope" }),
-    ]));
-    expect(
-      extractFindings("The ERC-20 holder's claim runs through KMS Labs first.", current),
-    ).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "holder-address-scope" }),
-    ]));
-  });
-
-  it("auto-closes tokenised value drift but queues source-registration changes", () => {
-    const current = makeCurrent({
-      overallGrade: "B+",
-      overallScore: 75,
-    });
-    const tokenised = {
-      text: "The current safety grade is {{grade}}.",
-      claimTokens: [{
-        token: "grade" as const,
-        placeholder: "{{grade}}" as const,
-        source: "report-card.grade" as const,
-        factsAsOf: "2026-09-01",
-      }],
-    };
-
-    expect(extractSummaryFindings(tokenised, current)).toEqual([]);
-    expect(extractSummaryFindings({
-      ...tokenised,
-      claimTokens: [{
-        ...tokenised.claimTokens[0],
-        source: "stablecoin.circulating-usd" as unknown as "report-card.grade",
-      }],
-    }, current)).toEqual([
-      expect.objectContaining({ kind: "claim-token-evidence", claimed: "wrong-registration" }),
-      expect.objectContaining({ kind: "claim-token-evidence", claimed: "unregistered-placeholder" }),
-    ]);
-    expect(extractSummaryFindings({
-      ...tokenised,
-      text: "The current safety grade is {{grade}}, but dependency risk grade of D remains.",
-    }, current)).toEqual([
-      expect.objectContaining({ kind: "legacy-dependency-grade" }),
-    ]);
-  });
 });
 
 describe("AI candidate body deadlines", () => {

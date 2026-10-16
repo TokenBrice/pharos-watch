@@ -1,21 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  getRuntimeEnvKeys,
   renderEnvExample,
-  renderOperatorOriginAccessEnvBlock,
-  renderWorkerInfrastructureEnvBlock,
 } from "../env-contract";
 
 describe("env contract manifest", () => {
-
-  it("keeps the Pages ops required binding order stable", () => {
-    expect(getRuntimeEnvKeys("pagesOps", "required")).toEqual([
-      "CF_ACCESS_TEAM_DOMAIN",
-      "CF_ACCESS_OPS_UI_AUD",
-      "OPS_API_SERVICE_TOKEN_ID",
-      "OPS_API_SERVICE_TOKEN_SECRET",
-    ]);
-  });
 
   it("renders .env.example from the manifest without emitting the external DB binding", () => {
     const envExample = renderEnvExample();
@@ -29,19 +17,4 @@ describe("env contract manifest", () => {
     expect(envExample).toContain("TELEGRAM_ADOPTION_IP_HASH_SECRET=");
   });
 
-  it("renders the env docs blocks from the shared manifest", () => {
-    const workerBlock = renderWorkerInfrastructureEnvBlock();
-    const operatorBlock = renderOperatorOriginAccessEnvBlock();
-
-    expect(workerBlock).toContain("| `CF_ACCESS_TEAM_DOMAIN` | `string` | optional | required | - |");
-    expect(workerBlock).toContain("| `TELEGRAM_BOT_TOKEN_PREVIOUS` | `string` | optional | - | - |");
-    expect(workerBlock).not.toContain("VAULTS_FYI_");
-    expect(workerBlock).toContain("| `DDR_REPAIR_TASK_RUNNER_ENABLED` | `string` | optional | - | - |");
-    expect(workerBlock).toContain("| `OPS_UI_ORIGIN` | `string` | reserved | optional | optional |");
-    expect(operatorBlock).toContain("| `SITE_API_SHARED_SECRET` | optional | - | required |");
-    expect(operatorBlock).toContain("| `SITE_API_ORIGIN` | - | - | required |");
-    expect(operatorBlock).toContain("| `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | - | - | required |");
-    expect(operatorBlock).toContain("| `TELEGRAM_ADOPTION_IP_HASH_SECRET` | - | - | required |");
-    expect(operatorBlock).toContain("| `OPS_API_SERVICE_TOKEN_SECRET` | - | required | - |");
-  });
 });

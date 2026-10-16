@@ -15,7 +15,7 @@ export type StructuredCronResult<TMetadata extends CronMetadataRecord = CronMeta
     | { status: Exclude<NonNullable<CronResult["status"]>, "ok">; metadata: TMetadata & { reason: string } }
   );
 
-export function serializeCronMetadata<TMetadata extends CronMetadataRecord>(
+function serializeCronMetadata<TMetadata extends CronMetadataRecord>(
   metadata: TMetadata | null | undefined,
 ): string | undefined {
   if (!metadata) return undefined;

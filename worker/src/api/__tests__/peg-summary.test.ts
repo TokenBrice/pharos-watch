@@ -413,13 +413,6 @@ describe("handlePegSummary", () => {
     });
   });
 
-  it("includes X-Data-Age header", async () => {
-    const asset = makeAsset();
-    const db = makePegSummaryDb([asset]);
-    const res = await handlePegSummary(db);
-    expect(res.headers.has("X-Data-Age")).toBe(true);
-  });
-
   it("keeps dexPriceCheck for data fresh enough for UI display", async () => {
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800);

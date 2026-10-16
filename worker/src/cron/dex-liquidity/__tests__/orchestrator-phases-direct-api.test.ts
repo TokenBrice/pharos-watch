@@ -276,45 +276,6 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(compacted.pools[0]).toMatchObject({ source: "fluid", poolAddress });
   });
 
-  it("reports pre-compaction exclusion counts after receiving only retained direct pools", async () => {
-    const trackedPool: DexApiPool = {
-      source: "raydium",
-      chain: "solana",
-      poolAddress: "pool-tracked",
-      poolType: "raydium-amm",
-      tokens: [
-        { address: "tracked-mint", symbol: "TRACKED", decimals: 6 },
-        { address: "quote-mint", symbol: "QUOTE", decimals: 6 },
-      ],
-      price: 1,
-      tvlUsd: 9_999,
-      volume24hUsd: 500,
-      feeRate: null,
-      balances: [5_000, 5_000],
-    };
-
-    const result = await runDirectApiScenario({
-      directApiPools: [trackedPool],
-      preprocessedPoolCounts: {
-        rawPoolCount: 5_233,
-        retainedPoolCount: 1,
-        skippedInvalidUnitCount: 1,
-        skippedUntrackedCount: 5_231,
-      },
-      chainAddressToId: new Map([[buildChainAddressKey("solana", "tracked-mint"), "tracked-stablecoin"]]),
-      stablecoinPriceById: new Map(),
-    });
-
-    expect(result.directApiSkippedInvalidUnits).toBe(1);
-    expect(result.directApiSkippedUntracked).toBe(5_231);
-    expect(result.directApiSkippedBelowTvlThreshold).toBe(1);
-    expect(result.excludedByReason).toEqual({
-      invalid_units: 1,
-      untracked_token: 5_231,
-      below_tvl_threshold: 1,
-    });
-  });
-
   it("counts invalid direct API units before tracking and identity processing", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const directApiPools: DexApiPool[] = [

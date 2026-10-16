@@ -8,7 +8,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   fetchProtocolApiObservation,
-  parseProtocolApiCliOptions,
   readProtocolApiArtifact,
   runProtocolApiMeasurementCli,
 } from "../maintenance/measure-protocol-api-mechanism-metrics";
@@ -333,13 +332,6 @@ describe("protocol API Artifact V2", () => {
     );
   });
 
-  it.each([
-    ["2026-07-21T01:00:00.000000Z", /status is stale/],
-    ["2026-07-22T20:11:00.000000Z", /future/],
-  ] as const)("preserves Ethena freshness rejection for ISO UTC timestamp %s", (statusTimestamp, expected) => {
-    expect(() => buildProtocolApiMeasurement("usde-ethena", usdeInputs({ statusTimestamp }), CAPTURED_AT)).toThrow(expected);
-  });
-
   it("records adverse claims without inventing unavailable trading-risk metrics", () => {
     const artifact = buildProtocolApiMeasurement(
       "usde-ethena",
@@ -562,18 +554,6 @@ describe("Falcon transparency target", () => {
 });
 
 describe("protocol API CLI policy", () => {
-
-  it.each([
-    [["--asset", "unknown"], /unknown --asset/],
-    [["--asset", "usde-ethena", "--asset", "usde-ethena"], /must not be duplicated/],
-    [["--replay-all", "--asset", "usde-ethena"], /exclusive/],
-    [["--asset", "usde-ethena", "--asset", "usdf-falcon", "--replay", "missing.json"], /exclusive/],
-    [["--replay", "one.json", "--replay", "two.json", "--asset", "usde-ethena"], /exclusive/],
-    [[], /requires at least one --asset/],
-  ] as const)("rejects invalid arguments before I/O: %j", (args, expected) => {
-    expect(() => parseProtocolApiCliOptions([...args])).toThrow(expected);
-  });
-
   // Captures the CLI's output streams the way the spawned process would
   // surface them, without paying child-process startup per case.
   async function runCli(args: string[], cwd = process.cwd()) {

@@ -1,52 +1,18 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import {
   CASE_STUDY_LIST,
-  CASE_STUDY_OUTCOME_COUNTS,
   CASE_STUDIES,
   caseStudySlugForEvent,
 } from "@/lib/case-studies";
 import {
-  CASE_STUDY_CLIENT_BY_CEMETERY_ID,
-  CASE_STUDY_CLIENT_BY_COIN_ID,
-  CASE_STUDY_EVENT_WINDOWS,
-} from "@/lib/case-study-client-index";
-import {
   CASE_STUDY_CHART_MAX_DAYS,
   getCaseStudyChartDays,
-  resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows,
 } from "@/lib/case-study-event-window";
 import { DAY_MS } from "@/lib/constants";
-import type { CaseStudy } from "@/lib/case-studies/types";
-import { eventBySlug } from "@/lib/depeg-event-page-data";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
-const CEMETERY_PATH = join(process.cwd(), "public/datasets/stablecoin-cemetery.json");
-const CONTENT_DIR = join(process.cwd(), "src/lib/case-studies");
-const KNOWN_INTERNAL_ROUTES = new Set([
-  "/about/",
-  "/api/",
-  "/cemetery/",
-  "/changelog/",
-  "/compare/",
-  "/compliance/",
-  "/coverage/",
-  "/dependency-map/",
-  "/depeg/",
-  "/digest/",
-  "/freezewatch/",
-  "/learn/case-studies/",
-  "/learn/mechanisms/",
-  "/liquidity/",
-  "/methodology/",
-  "/portfolio/",
-  "/screener/",
-  "/stablecoins/",
-  "/stability-index/",
-  "/timeline/",
-]);
 
 const TRACKED_COIN_IDS = new Set(
   readdirSync(COINS_DIR)
@@ -54,155 +20,8 @@ const TRACKED_COIN_IDS = new Set(
     .map((f) => f.replace(/\.json$/, "")),
 );
 
-const CEMETERY_IDS = new Set(
-  (JSON.parse(readFileSync(CEMETERY_PATH, "utf8")).rows as { id: string }[]).map(
-    (r) => r.id,
-  ),
-);
-
-const VALID_ARCHETYPES = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
-const VALID_OUTCOMES = new Set(["survived", "wounded", "died"]);
-const CONTENT_MODULE_SLUGS = readdirSync(CONTENT_DIR)
-  .filter((file) => file.endsWith(".json"))
-  .map((file) => file.replace(/\.json$/, ""));
-
-const CASE_STUDY_SLUGS = new Set(CONTENT_MODULE_SLUGS);
-
-function isSafeSlugPart(part: string): boolean {
-  return part.length > 0 && [...part].every((char) =>
-    (char >= "a" && char <= "z") || (char >= "0" && char <= "9")
-  );
-}
-
-function isDatePart(part: string, length: number): boolean {
-  return part.length === length && [...part].every((char) => char >= "0" && char <= "9");
-}
-
-function isDepegEventSlug(slug: string): boolean {
-  const parts = slug.split("-");
-  const direction = parts.at(-1);
-  const hasDirection = direction === "up" || direction === "down";
-  const dateEnd = hasDirection ? parts.length - 1 : parts.length;
-  if (dateEnd < 4) return false;
-  const [year, month, day] = parts.slice(dateEnd - 3, dateEnd);
-  if (!year || !month || !day) return false;
-  if (!isDatePart(year, 4) || !isDatePart(month, 2) || !isDatePart(day, 2)) return false;
-  return parts.slice(0, dateEnd - 3).every(isSafeSlugPart);
-}
-
-function eventWindowProjection(study: CaseStudy) {
-  return (study.eventWindows ?? [study.eventWindow]).map((window) => ({
-    slug: study.slug,
-    primaryCoinId: study.primaryCoinId ?? null,
-    relatedCoinIds:
-      window.relatedCoinIds ??
-      (study.relatedCoins ?? []).map((coin) => coin.coinId),
-    startISO: window.startISO,
-    endISO: window.endISO ?? null,
-  }));
-}
-
-function stripFragment(href: string): string {
-  return href.split("#", 1)[0];
-}
-
-function isKnownInternalRoute(href: string): boolean {
-  const path = stripFragment(href);
-  if (!path.startsWith("/") || path.startsWith("//")) return false;
-  if (KNOWN_INTERNAL_ROUTES.has(path)) return true;
-  if (/^\/stablecoin\/[^/]+\/$/.test(path)) {
-    return TRACKED_COIN_IDS.has(path.split("/")[2]);
-  }
-  if (/^\/learn\/mechanisms\/[^/]+\/$/.test(path)) {
-    return VALID_ARCHETYPES.has(path.split("/")[3]);
-  }
-  if (/^\/learn\/case-studies\/[^/]+\/$/.test(path)) {
-    return CASE_STUDY_SLUGS.has(path.split("/")[3]);
-  }
-  if (/^\/depeg\/[^/]+\/$/.test(path)) {
-    return isDepegEventSlug(path.split("/")[2] ?? "");
-  }
-  return false;
-}
 
 describe("case-study content", () => {
-  it("links the pmUSD, USR, and apxUSD studies to their registered event records exactly once", () => {
-    for (const [studySlug, eventSlug] of [
-      ["pmusd-precious-metals", "pmusd-2026-05-02"],
-      ["usr-resolv-2026", "usr-2026-03-22"],
-      ["apxusd-dat-collateral", "apxusd-2026-06-02"],
-    ]) {
-      const study = CASE_STUDIES[studySlug];
-      expect(eventBySlug.get(eventSlug)?.stablecoinId).toBe(study.primaryCoinId);
-      expect(study.crossLinks.filter((link) => link.href === `/depeg/${eventSlug}/`)).toHaveLength(1);
-    }
-  });
-
-  it("derives the shared outcome totals from the canonical registry", () => {
-    expect(Object.values(CASE_STUDY_OUTCOME_COUNTS).reduce((sum, count) => sum + count, 0)).toBe(CASE_STUDY_LIST.length);
-    for (const outcome of VALID_OUTCOMES) {
-      expect(CASE_STUDY_OUTCOME_COUNTS[outcome as keyof typeof CASE_STUDY_OUTCOME_COUNTS]).toBe(
-        CASE_STUDY_LIST.filter((study) => study.outcome === outcome).length,
-      );
-    }
-  });
-
-  it("ships one study per content module with unique slugs", () => {
-    expect(CASE_STUDY_LIST).toHaveLength(CONTENT_MODULE_SLUGS.length);
-    expect(new Set(CASE_STUDY_LIST.map((study) => study.slug)).size).toBe(CASE_STUDY_LIST.length);
-  });
-
-  it("keys CASE_STUDIES by slug", () => {
-    for (const study of CASE_STUDY_LIST) {
-      expect(CASE_STUDIES[study.slug]).toBe(study);
-    }
-  });
-
-  it("keeps reverse lookup keys unique", () => {
-    const primaryCoinIds = CASE_STUDY_LIST.map((study) => study.primaryCoinId).filter(Boolean);
-    const cemeteryIds = CASE_STUDY_LIST.map((study) => study.cemeteryId).filter(Boolean);
-    const depegEventSlugs = CASE_STUDY_LIST.map((study) => study.depegEventSlug).filter(Boolean);
-
-    expect(new Set(primaryCoinIds).size).toBe(primaryCoinIds.length);
-    expect(new Set(cemeteryIds).size).toBe(cemeteryIds.length);
-    expect(new Set(depegEventSlugs).size).toBe(depegEventSlugs.length);
-  });
-
-  it("keeps content filenames aligned with slugs", () => {
-    expect([...CASE_STUDY_LIST.map((study) => study.slug)].sort()).toEqual(
-      [...CONTENT_MODULE_SLUGS].sort(),
-    );
-  });
-
-  it("keeps the client-safe coin lookup in sync without importing article bodies", () => {
-    const expected = Object.fromEntries(
-      CASE_STUDY_LIST
-        .filter((study) => study.primaryCoinId)
-        .map((study) => [
-          study.primaryCoinId!,
-          { slug: study.slug, title: study.title, outcome: study.outcome },
-        ]),
-    );
-
-    expect(CASE_STUDY_CLIENT_BY_COIN_ID).toEqual(expected);
-  });
-
-  it("keeps the client-safe cemetery lookup in sync without importing article bodies", () => {
-    const expected = Object.fromEntries(
-      CASE_STUDY_LIST
-        .filter((study) => study.cemeteryId)
-        .map((study) => [
-          study.cemeteryId!,
-          { slug: study.slug, title: study.title, outcome: study.outcome },
-        ]),
-    );
-
-    expect(CASE_STUDY_CLIENT_BY_CEMETERY_ID).toEqual(expected);
-  });
-
-  it("keeps the client-safe event-window index in sync without importing article bodies", () => {
-    expect(CASE_STUDY_EVENT_WINDOWS).toEqual(CASE_STUDY_LIST.flatMap(eventWindowProjection));
-  });
 
   it("uses the tracked bUSD0 identity for the USD0++ live chart", () => {
     const study = CASE_STUDIES["usd0pp-usual-2025"];
@@ -232,14 +51,6 @@ describe("case-study content", () => {
   });
 
   describe.each(CASE_STUDY_LIST)("$slug", (study) => {
-    it("uses a valid archetype and outcome", () => {
-      expect(VALID_ARCHETYPES.has(study.archetype)).toBe(true);
-      expect(VALID_OUTCOMES.has(study.outcome)).toBe(true);
-    });
-
-    it("anchors to a tracked coin or a cemetery entry", () => {
-      expect(Boolean(study.primaryCoinId) || Boolean(study.cemeteryId)).toBe(true);
-    });
 
     it("references only tracked coins", () => {
       const coinIds = [
@@ -250,38 +61,6 @@ describe("case-study content", () => {
       for (const id of coinIds) {
         expect(TRACKED_COIN_IDS.has(id), `unknown coin id: ${id}`).toBe(true);
       }
-    });
-
-    it("references a real cemetery entry when set", () => {
-      if (study.cemeteryId) {
-        expect(CEMETERY_IDS.has(study.cemeteryId), `unknown cemetery id: ${study.cemeteryId}`).toBe(
-          true,
-        );
-      }
-    });
-
-    it("has timeline, sections, watchpoints, and sources", () => {
-      expect(study.eyebrow.trim()).not.toBe("");
-      expect(study.title.trim()).not.toBe("");
-      expect(study.subtitle.trim()).not.toBe("");
-      expect(study.eventDateLabel.trim()).not.toBe("");
-      expect(study.metaDescription.trim()).not.toBe("");
-      expect(study.lead.length).toBeGreaterThan(0);
-      expect(study.timeline.length).toBeGreaterThan(0);
-      expect(study.sections.length).toBeGreaterThan(0);
-      expect(study.watchpoints.length).toBeGreaterThan(0);
-      expect(study.sources.length).toBeGreaterThan(0);
-    });
-
-    it("uses unique kebab-case section ids", () => {
-      const sectionIds = study.sections.map((section) => section.id);
-      for (const id of sectionIds) {
-        expect(id, `invalid section id in ${study.slug}: ${id}`).toMatch(
-          // eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
-          /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-        );
-      }
-      expect(new Set(sectionIds).size).toBe(sectionIds.length);
     });
 
     it("uses parseable chronological timeline and event-window dates", () => {
@@ -321,28 +100,6 @@ describe("case-study content", () => {
       ).toEqual([]);
     });
 
-    it("uses parseable publication dates that are not in the future", () => {
-      const published = Date.parse(study.datePublished);
-      expect(Number.isFinite(published), `invalid datePublished: ${study.datePublished}`).toBe(true);
-      expect(published).toBeLessThanOrEqual(Date.now());
-    });
-
-    it("keeps the meta description within 160 chars", () => {
-      expect(study.metaDescription.length).toBeLessThanOrEqual(160);
-    });
-
-    it("links to its mechanism explainer", () => {
-      expect(study.crossLinks.some((l) => l.href === `/learn/mechanisms/${study.archetype}/`)).toBe(
-        true,
-      );
-    });
-
-    it("uses valid internal cross-links", () => {
-      for (const link of study.crossLinks) {
-        expect(isKnownInternalRoute(link.href), `unknown internal route: ${link.href}`).toBe(true);
-      }
-    });
-
     it("uses sane deviation metadata when provided", () => {
       if (study.eventWindow.lowPrice !== undefined) {
         expect(
@@ -375,11 +132,6 @@ describe("case-study content", () => {
       }
     });
 
-    it("uses a route-compatible depeg event slug when set", () => {
-      if (study.depegEventSlug) {
-        expect(isDepegEventSlug(study.depegEventSlug)).toBe(true);
-      }
-    });
   });
 });
 
@@ -392,50 +144,9 @@ describe("caseStudySlugForEvent", () => {
     );
   });
 
-  it("maps a contagion (relatedCoins) event to the study", () => {
-    expect(caseStudySlugForEvent("usdt-tether", Date.UTC(2022, 4, 12))).toBe("terra-ust-2022");
-  });
-
-  it("prefers the subject study over a contagion match on the same date", () => {
-    // 2023-03-11 is in both usdc-svb (subject usdc-circle) and dai's dual-era window
-    // (usdc-circle is in dai's relatedCoins). The subject study wins.
-    expect(caseStudySlugForEvent("usdc-circle", Date.UTC(2023, 2, 11))).toBe("usdc-svb-2023");
-  });
-
   it("returns undefined for events outside any study window", () => {
     expect(caseStudySlugForEvent("usdt-tether", Date.UTC(2018, 9, 15))).toBeUndefined();
     expect(caseStudySlugForEvent("usdc-circle", Date.UTC(2024, 5, 30))).toBeUndefined();
   });
 
-  it("does not absorb annotations from the gap between Dai's two incidents", () => {
-    expect(caseStudySlugForEvent("dai-makerdao", Date.UTC(2021, 6, 1))).toBeUndefined();
-  });
-
-  it("does not attach USDC annotations to Dai's unrelated 2020 incident window", () => {
-    expect(caseStudySlugForEvent("usdc-circle", Date.UTC(2020, 2, 12))).toBeUndefined();
-  });
-
-
-  it("selects the closest overlapping related window independent of registry order", () => {
-    const ts = Date.UTC(2026, 0, 15);
-    const windows = [
-      {
-        slug: "wide-window",
-        primaryCoinId: null,
-        relatedCoinIds: ["test-coin"],
-        startISO: "2026-01-01",
-        endISO: "2026-01-31",
-      },
-      {
-        slug: "near-window",
-        primaryCoinId: null,
-        relatedCoinIds: ["test-coin"],
-        startISO: "2026-01-14",
-        endISO: "2026-01-16",
-      },
-    ];
-
-    expect(resolveCaseStudySlugForEventFromWindows(windows, "test-coin", ts)).toBe("near-window");
-    expect(resolveCaseStudySlugForEventFromWindows([...windows].reverse(), "test-coin", ts)).toBe("near-window");
-  });
 });

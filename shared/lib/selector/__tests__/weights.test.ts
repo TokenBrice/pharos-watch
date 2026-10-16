@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SELECTOR_PROFILES } from "../types";
-import { SELECTOR_VERSION } from "../version";
 import {
-  WEIGHTS_VERSION,
   WEIGHT_VECTORS,
   assertWeightsSumTo100,
   getWeightVectorForInput,
@@ -22,10 +20,6 @@ describe("weights", () => {
   it("assertWeightsSumTo100 throws on mutation", () => {
     const bad = { ...WEIGHT_VECTORS.treasury, safetyOverall: 31 };
     expect(() => assertWeightsSumTo100("treasury", bad)).toThrow();
-  });
-
-  it("WEIGHTS_VERSION matches the central selector version", () => {
-    expect(WEIGHTS_VERSION).toBe(SELECTOR_VERSION);
   });
 
   it("Treasury weights match the design", () => {

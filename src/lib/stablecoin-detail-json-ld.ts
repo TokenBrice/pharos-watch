@@ -6,7 +6,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 
-export const CONTRACT_IDENTIFIER_JSON_LD_LIMIT = 8;
+const CONTRACT_IDENTIFIER_JSON_LD_LIMIT = 8;
 const STABLECOIN_IDENTIFIER_FIELD_KEYS = [
   "llamaId",
   "geckoId",

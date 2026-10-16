@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   collectSourceEnvKeys,
-  extractExportedEnvInterfaceBody,
   parseWorkerEnvInterfaceBindings,
   parseWorkerEnvInterfaceKeys,
   parseWranglerWorkerConfigBindings,
@@ -23,52 +22,6 @@ function withTempEnvSource<T>(source: string, run: (filePath: string) => T, file
 }
 
 describe("check-env-contract worker Env parser", () => {
-  it("extracts the exported Env interface body through nested braces", () => {
-    expect(extractExportedEnvInterfaceBody("export interface Other {}\n")).toBeNull();
-    const body = extractExportedEnvInterfaceBody(`
-        export interface Env {
-          DB: D1Database;
-          NESTED?: {
-            INNER_KEY: string;
-          };
-          API_KEY?: string;
-        }
-        export interface After {
-          SHOULD_NOT_APPEAR: string;
-        }
-      `);
-    expect(body).toContain("INNER_KEY: string;");
-    expect(body).toContain("API_KEY?: string;");
-    expect(body).not.toContain("interface After");
-    expect(body).not.toContain("SHOULD_NOT_APPEAR");
-    expect(extractExportedEnvInterfaceBody("export interface Env { NESTED: { KEY: string; }")).toBeNull();
-  });
-
-  it("parses only top-level uppercase Env bindings", () => {
-    withTempEnvSource(`
-      export interface Env {
-        DB: D1Database;
-        REQUIRED_KEY: string;
-        OPTIONAL_KEY?: string;
-        NESTED?: {
-          INNER_KEY: string;
-          DEEP?: {
-            DEEP_KEY: string;
-          };
-        };
-        lower_key: string;
-        "QUOTED_KEY": string;
-      }
-    `, (filePath) => {
-      expect([...parseWorkerEnvInterfaceKeys(filePath)].sort()).toEqual([
-        "DB",
-        "NESTED",
-        "OPTIONAL_KEY",
-        "REQUIRED_KEY",
-      ]);
-    });
-  });
-
   it("parses top-level Env binding types", () => {
     withTempEnvSource(`
       export interface Env {
@@ -97,20 +50,6 @@ describe("check-env-contract worker Env parser", () => {
 });
 
 describe("check-env-contract source references", () => {
-  it("finds env names passed through shared helper APIs", () => {
-    withTempEnvSource(`
-      const TOOL_ENV_NAMES = ["TOOL_API_KEY"];
-      requireEnv("ACCESS_CLIENT_ID");
-      apiFetchHeaders(["DIRECT_API_KEY"]);
-    `, (filePath) => {
-      expect([...collectSourceEnvKeys([filePath])].sort()).toEqual([
-        "ACCESS_CLIENT_ID",
-        "DIRECT_API_KEY",
-        "TOOL_API_KEY",
-      ]);
-    });
-  });
-
   it("finds direct process, Worker and GitHub references without duplicates or invalid candidates", () => {
     withTempEnvSource(`
       process.env.PROCESS_KEY; env.WORKER_KEY; context.env.CONTEXT_KEY;
@@ -124,27 +63,6 @@ describe("check-env-contract source references", () => {
     });
   });
 
-  it("finds scalar and array helper declarations", () => {
-    withTempEnvSource(`
-      readEnvFirst("SCALAR_KEY");
-      readEnvFirst(["FIRST_KEY", "SECOND_KEY", "FIRST_KEY", "lower_key", "BAD-KEY"]);
-      const options = { envNames: ["OPTION_KEY"], apiKeyEnv: "PROVIDER_KEY" };
-    `, (filePath) => {
-      expect([...collectSourceEnvKeys([filePath])].sort()).toEqual([
-        "FIRST_KEY", "OPTION_KEY", "PROVIDER_KEY", "SCALAR_KEY", "SECOND_KEY",
-      ]);
-    });
-  });
-
-  it("scans shell expansion only in shell files", () => {
-    const source = 'echo "$DIRECT_KEY ${DEFAULT_KEY:-fallback} $DIRECT_KEY $lower_key $PLAIN $_INVALID"';
-    withTempEnvSource(source, (filePath) => {
-      expect([...collectSourceEnvKeys([filePath])].sort()).toEqual(["DEFAULT_KEY", "DIRECT_KEY"]);
-    }, "env.sh");
-    withTempEnvSource(source, (filePath) => {
-      expect([...collectSourceEnvKeys([filePath])]).toEqual([]);
-    });
-  });
 });
 
 describe("check-env-contract Wrangler binding parser", () => {

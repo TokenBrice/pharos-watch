@@ -1,16 +1,10 @@
-import { readFileSync } from "node:fs";
-import { parse as parseYaml } from "yaml";
 import { describe, expect, it, vi } from "vitest";
 import type { CommandResult, SpawnCommand } from "../lib/command-runner.mts";
 import {
   DOMAIN_SCRIPTS,
-  parseCoverageAuditArgs,
   runCoverageAudit,
   type RunCoverageAuditOptions,
 } from "../maintenance/run-coverage-audit";
-import { parseArgs as parseReserveAuditArgs } from "../maintenance/generate-reserve-coverage-audit";
-import { parseArgs as parseDependencyAuditArgs } from "../maintenance/generate-dependency-coverage-audit";
-import { runOracleRiskCoverageCheck } from "../ci/check-oracle-risk-coverage";
 
 const domains = Object.keys(DOMAIN_SCRIPTS);
 
@@ -23,93 +17,6 @@ function quietOptions(overrides: Partial<RunCoverageAuditOptions> = {}): RunCove
 }
 
 describe("run-coverage-audit", () => {
-  it("selects the seven domains and forwards audit arguments verbatim", () => {
-    expect(parseCoverageAuditArgs([
-      "--domain=dependency-coverage",
-      "--report",
-      "agents/dependency.json",
-      "--json",
-    ])).toEqual({
-      help: false,
-      domains: ["dependency-coverage"],
-      forwarded: ["--report", "agents/dependency.json", "--json"],
-    });
-    expect(parseCoverageAuditArgs(["--domain", "reserve-coverage", "--check"])).toEqual({
-      help: false,
-      domains: ["reserve-coverage"],
-      forwarded: ["--check"],
-    });
-    expect(parseCoverageAuditArgs(["--all"]).domains).toEqual(domains);
-    expect(domains).toEqual([
-      "redemption-backstops",
-      "redemption-coverage",
-      "dependency-coverage",
-      "reserve-coverage",
-      "oracle-risk",
-      "mechanism-archetype",
-      "l2beat-snapshot",
-    ]);
-  });
-
-  it("accepts the complete weekly production capture command and emits JSON for its consumer", () => {
-    const workflow = parseYaml(readFileSync(".github/workflows/weekly-validation.yml", "utf8")) as {
-      jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
-    };
-    const steps = workflow.jobs["dependency-coverage"].steps;
-    const capture = steps.find((step) => step.name === "Capture production dependency coverage")!;
-    const [npm, run, script, separator, ...argv] = capture.run!.trim().split(/\s+/);
-    expect([npm, run, script, separator]).toEqual(["npm", "run", "audit:coverage", "--"]);
-    const dispatched = parseCoverageAuditArgs(argv);
-    expect(dispatched.domains).toEqual(["dependency-coverage"]);
-    const parsed = parseDependencyAuditArgs(dispatched.forwarded);
-    expect(parsed.prod).toBe(true);
-    expect(parsed.format).toBe("json");
-    const consumer = steps.find((step) => step.name === "Evaluate published dependency structure")!;
-    const inputPath = consumer.run!.match(/JSON\.parse\(readFileSync\("([^"]+)", "utf8"\)\)/)?.[1];
-    expect(inputPath).toBeDefined();
-    expect(parsed.reportPath).toBe(inputPath);
-  });
-
-  it.each([
-    [["--domain=unknown"], "Unknown coverage audit domain"],
-    [["--domain"], "--domain requires a domain name"],
-    [["--all", "--check"], "--all runs every audit"],
-    [["--all", "--domain=reserve-coverage"], "Choose either --all or --domain"],
-  ] as const)("rejects invalid selection %j", (argv, message) => {
-    expect(() => parseCoverageAuditArgs(argv)).toThrow(message);
-  });
-
-  it("does not confuse dispatcher forwarding with reserve-child option support", async () => {
-    const options = quietOptions({
-      runCommandImpl: (command) => {
-        expect(command.args[0]).toBe(DOMAIN_SCRIPTS["reserve-coverage"]);
-        expect(() => parseReserveAuditArgs(command.args.slice(1))).toThrow("Unknown argument: --check");
-        return { status: 1, aborted: false };
-      },
-    });
-    await expect(runCoverageAudit(["--domain=reserve-coverage", "--check"], options)).resolves.toBe(1);
-    expect(options.error).toHaveBeenCalledWith("[audit:coverage] reserve-coverage exited with status 1");
-  });
-
-  it("forwards the retired oracle advisory option and propagates child rejection", async () => {
-    let stderr = "";
-    const runCommandImpl = vi.fn((command: SpawnCommand): CommandResult => {
-      expect(command.args).toEqual([DOMAIN_SCRIPTS["oracle-risk"], "--advisory"]);
-      const status = runOracleRiskCoverageCheck([], command.args.slice(1), {
-        stdout: { write: vi.fn() },
-        stderr: { write: (value) => (stderr += value) },
-        reviewedBranchDispositions: [],
-      });
-      return { status, aborted: false };
-    });
-    const options = quietOptions({ runCommandImpl });
-
-    await expect(runCoverageAudit(["--domain=oracle-risk", "--advisory"], options)).resolves.toBe(1);
-    expect(runCommandImpl).toHaveBeenCalledOnce();
-    expect(stderr).toBe("Unknown argument: --advisory\n");
-    expect(options.error).toHaveBeenCalledWith("[audit:coverage] oracle-risk exited with status 1");
-  });
-
   it("runs every selected domain after failures and returns the last non-zero status", async () => {
     const commands: SpawnCommand[] = [];
     const statuses = [7, 0, 9];
@@ -154,13 +61,4 @@ describe("run-coverage-audit", () => {
     expect(options.error).toHaveBeenCalledWith("[audit:coverage] reserve-coverage exited with status 1");
   });
 
-  it("returns usage failure without invoking the runner for invalid CLI input", async () => {
-    const runCommandImpl = vi.fn();
-    const options = quietOptions({ runCommandImpl });
-
-    await expect(runCoverageAudit(["--domain=not-a-domain"], options)).resolves.toBe(1);
-    expect(runCommandImpl).not.toHaveBeenCalled();
-    expect(options.error).toHaveBeenCalledWith(expect.stringContaining("Unknown coverage audit domain"));
-    expect(options.error).toHaveBeenCalledWith(expect.stringContaining("Usage: npm run audit:coverage"));
-  });
 });

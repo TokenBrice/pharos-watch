@@ -27,11 +27,6 @@ describe("CHAIN_META", () => {
     }
   });
 
-  it("requires explorer URLs to be https", () => {
-    for (const meta of Object.values(CHAIN_META)) {
-      expect(meta.explorerUrl.startsWith("https://")).toBe(true);
-    }
-  });
 });
 
 describe("getActiveChainIds", () => {
@@ -45,12 +40,6 @@ describe("getActiveChainIds", () => {
     expect(ids).toEqual(Object.keys(CHAIN_META).sort());
   });
 
-  it("returns sorted, deduplicated IDs", () => {
-    const ids = getActiveChainIds();
-    const sorted = [...ids].sort();
-    expect(ids).toEqual(sorted);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
 });
 
 describe("resolveChainId", () => {

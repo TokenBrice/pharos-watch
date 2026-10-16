@@ -25,18 +25,6 @@ describe("useCompareSelection", () => {
     expect(result.current.selectedIds).toEqual(["usdc-circle"]);
   });
 
-  it("removes compare params when only legacy ids remain", async () => {
-    window.history.replaceState(null, "", "/compare/?coins=1,2&range=30d");
-
-    const { result } = renderHook(() => useCompareSelection());
-
-    await waitFor(() => {
-      expect(window.location.search).toBe("?range=30d");
-    });
-
-    expect(result.current.selectedIds).toEqual([]);
-  });
-
   it("leaves canonical params unchanged", async () => {
     window.history.replaceState(null, "", "/compare/?coins=usdc-circle,usdt-tether&range=90d");
 

@@ -3,9 +3,7 @@ import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { DexLiquidityCronMetadataSchema } from "../../../lib/schemas";
 import { makeDexRouteHoldFixture, makeDexRouteObservation } from "../../__tests__/dex-liquidity-persistence.test-support";
 import { selectStillFreshDexRouteSetHold } from "../persistence";
-import { collectDexRoutePackingOmissions, selectDexRouteObservations } from "../dex-route-observation-selection";
-import { makePool } from "./scoring-test-builders";
-import { addDexRouteTurnover, boundMeasuredTargetFunnelGroups, boundTelemetryEntries, buildDexRouteTurnover, getMeasuredTargetFunnelGroup, measuredPoolProfileIds, projectDexRecoveryStageResult, summarizeMeasuredTargetFunnel, type ExitRouteSelection, type MeasuredTargetFunnelGroup } from "../route-telemetry";
+import { addDexRouteTurnover, boundMeasuredTargetFunnelGroups, boundTelemetryEntries, buildDexRouteTurnover, getMeasuredTargetFunnelGroup, projectDexRecoveryStageResult, summarizeMeasuredTargetFunnel, type ExitRouteSelection, type MeasuredTargetFunnelGroup } from "../route-telemetry";
 
 function summary(): ExitRouteSelection {
   return { baselineAvailable: true, baselineUnavailableReason: null, comparedCoins: 0, unavailableCoins: 0, changedCoins: 0, routesAdded: 0, routesRemoved: 0, removalReasons: {}, topCoins: [], topCoinsOmitted: 0 };
@@ -42,11 +40,6 @@ describe("telemetry byte bounds", () => {
 });
 
 describe("measured target funnel", () => {
-  it("names descriptor-free V4 candidates from the real protocol, not discovery pool type", () => {
-    expect(measuredPoolProfileIds(makePool({ project: "uniswap-v4", poolType: "cg-concentrated" }))).toHaveLength(1);
-    expect(measuredPoolProfileIds(makePool({ project: "curve", poolType: "curve-stableswap" }))).toEqual([]);
-  });
-
   it("aggregates adapter-chain populations without silently dropping omitted groups", () => {
     const groups = new Map<string, MeasuredTargetFunnelGroup>();
     for (let i = 0; i < 70; i++) getMeasuredTargetFunnelGroup(groups, "uniswap-v3-quoter-v2", `chain-${i}`).candidates = i + 1;
@@ -80,15 +73,6 @@ describe("route turnover attribution", () => {
       "quote-stale": 1, "representative-change": 1, unknown: 1,
     } });
     expect(buildDexRouteTurnover("usdt-tether", [previous[1]!], []).removalReasons).toEqual({ unknown: 1 });
-  });
-
-  it("records final packing omissions including concentration limits", () => {
-    const routes = Array.from({ length: 10 }, (_, i) => makeDexRouteObservation(`route-${i}`, 1_000_000 - i, 100));
-    const selected = selectDexRouteObservations(routes).observations;
-    const omitted = collectDexRoutePackingOmissions(routes, selected);
-    expect(selected).toHaveLength(7);
-    expect(omitted.size).toBe(3);
-    expect(buildDexRouteTurnover("usdc-circle", routes, selected, { omittedRouteIds: omitted, poolReasons: new Map() }).removalReasons).toEqual({ "payload-overflow": 3 });
   });
 
   it("bounds top coins while preserving population totals and omitted counts", () => {

@@ -35,7 +35,7 @@ import { scanForNewVariants } from "./variant-scanner";
 import { resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 
-export const CHAIN_LENDING_TVL_FLOOR_USD: Record<string, number> = {
+const CHAIN_LENDING_TVL_FLOOR_USD: Record<string, number> = {
   aptos: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   berachain: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   cardano: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,

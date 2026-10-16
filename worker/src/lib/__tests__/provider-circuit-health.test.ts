@@ -88,34 +88,6 @@ describe("provider-circuit-health", () => {
     expect(health.halfOpenCount).toBe(1);
   });
 
-  it("reads authoritative rows without an aggregate-index query", async () => {
-    const now = 2_000;
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key IN",
-        rows: [
-          {
-            key: `circuit:${CIRCUIT_SOURCE.BALANCER_API}`,
-            value: JSON.stringify(circuit({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: 1_950,
-              openedAt: 1_940,
-            })),
-          },
-        ],
-      },
-    ]);
-
-    const health = await loadProviderCircuitHealth(db, now);
-
-    expect(health.status).toBe("degraded");
-    expect(health.openCount).toBe(1);
-    expect(health.openProviders.map((entry) => entry.providerId)).toContain(CIRCUIT_SOURCE.BALANCER_API);
-    expect(db.getHistory().some((entry) => entry.binds.includes("provider:circuit:index"))).toBe(false);
-  });
-
-
   it("distinguishes malformed stored evidence from absent initial closed state", async () => {
     const health = await loadProviderCircuitHealth(mockD1([{
       match: "FROM cache WHERE key IN",

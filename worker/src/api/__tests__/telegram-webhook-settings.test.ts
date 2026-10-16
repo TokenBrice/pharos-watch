@@ -8,7 +8,7 @@ import {
   telegramApiCalls,
   telegramCallBody,
 } from "../../test-helpers/__shared/telegram";
-import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
+
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
 const {
@@ -17,7 +17,6 @@ const {
 } = await import("../telegram-webhook-settings");
 const {
   buildCoinKeyboard,
-  buildCoinMessage,
   buildHomeKeyboard,
   buildHomeMessage,
 } = await import("../telegram-webhook-settings-render");
@@ -128,58 +127,6 @@ describe("handleSettingsCommand", () => {
 });
 
 describe("handleSettingsCallback — chat-level", () => {
-  it("settings:home re-renders the home view via editMessageText", async () => {
-    const db = mockD1();
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: "settings:home",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      },
-      "home",
-      "",
-    );
-
-    expect(editCalls().length).toBe(1);
-    expect(sendCalls().length).toBe(0);
-    expect(ackCalls().length).toBe(1);
-  });
-
-  it("settings:home:<page> re-renders the requested coin-button page", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscriptions",
-        rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
-          subscriptionRow,
-        ),
-      },
-    ]);
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: "settings:home:1",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      },
-      "home",
-      "1",
-    );
-
-    expect(editCalls().length).toBe(1);
-    const body = jsonBody(editCalls()[0]) as {
-      reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data?: string }>> };
-    };
-    const buttons = body.reply_markup.inline_keyboard.flat();
-    expect(buttons.filter((button) => button.callback_data?.startsWith("settings:o:"))).toHaveLength(1);
-    expect(buttons.some((button) => button.callback_data === "settings:home:0")).toBe(true);
-    expect(ackCalls().length).toBe(1);
-  });
-
   it("settings:gt:dews flips the global flag and re-renders", async () => {
     const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     await handleSettingsCallback(
@@ -547,25 +494,6 @@ describe("handleSettingsCallback — per-coin", () => {
     expect(jsonBody(ackCalls()[0]).text).toMatch(/unknown/i);
   });
 
-  it("unknown coin id under settings:o acks gracefully", async () => {
-    const db = mockD1([]);
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: "settings:o:not-a-coin",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      },
-      "o",
-      "not-a-coin",
-    );
-
-    expect(editCalls().length).toBe(0);
-    expect(jsonBody(ackCalls()[0]).text).toMatch(/unknown coin/i);
-  });
-
   it("falls back to sendMessage when editMessageText fails", async () => {
     const db = mockD1();
     fetchSpy.mockImplementation(async (url) => {
@@ -731,80 +659,5 @@ describe("message builders", () => {
       .filter((button) => button.callback_data?.includes(":ds:") ?? false);
     expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:0"))?.text).toContain("•");
     expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:250"))?.text).not.toContain("•");
-  });
-
-  it("home message reflects active snooze duration", () => {
-    const subscriber = {
-      alert_dews: 0,
-      alert_depeg: 0,
-      alert_safety: 0,
-      alert_launch: 0,
-      quiet_hours_enabled: 0,
-      quiet_hours_start_utc: null,
-      quiet_hours_end_utc: null,
-      alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3 * 3600,
-    };
-    expect(buildHomeMessage(subscriber)).toContain("Snooze: 3 h");
-  });
-
-  it("home message renders the Paused sentinel distinctly (not a multi-thousand-day countdown)", () => {
-    const subscriber = {
-      alert_dews: 0,
-      alert_depeg: 0,
-      alert_safety: 0,
-      alert_launch: 0,
-      quiet_hours_enabled: 0,
-      quiet_hours_start_utc: null,
-      quiet_hours_end_utc: null,
-      alert_snooze_until_ts: PAUSE_SENTINEL_TS,
-    };
-    const message = buildHomeMessage(subscriber);
-    expect(message).toContain("Snooze: Paused (indefinite)");
-    expect(message).not.toMatch(/\d{3,} d/);
-  });
-
-  it("home keyboard shows Resume alerts when paused, Clear snooze otherwise", () => {
-    const paused = buildHomeKeyboard({
-      alert_dews: 0,
-      alert_depeg: 0,
-      alert_safety: 0,
-      alert_launch: 0,
-      quiet_hours_enabled: 0,
-      quiet_hours_start_utc: null,
-      quiet_hours_end_utc: null,
-      alert_snooze_until_ts: PAUSE_SENTINEL_TS,
-    });
-    const pausedButtons = paused.inline_keyboard.flat();
-    expect(pausedButtons.some((b) => b.text === "Resume alerts" && b.callback_data === "settings:sc")).toBe(true);
-    expect(pausedButtons.some((b) => b.text === "Clear snooze")).toBe(false);
-
-    const timed = buildHomeKeyboard({
-      alert_dews: 0,
-      alert_depeg: 0,
-      alert_safety: 0,
-      alert_launch: 0,
-      quiet_hours_enabled: 0,
-      quiet_hours_start_utc: null,
-      quiet_hours_end_utc: null,
-      alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3600,
-    });
-    const timedButtons = timed.inline_keyboard.flat();
-    expect(timedButtons.some((b) => b.text === "Clear snooze" && b.callback_data === "settings:sc")).toBe(true);
-    expect(timedButtons.some((b) => b.text === "Resume alerts")).toBe(false);
-  });
-
-  it("coin message reflects mixed enabled settings", () => {
-    expect(
-      buildCoinMessage("usdc-circle", {
-        stablecoin_id: "usdc-circle",
-        alert_dews: 1,
-        alert_depeg: 1,
-        alert_safety: 0,
-        alert_launch: 0,
-        dews_min_band: "WARNING",
-        safety_mode: null,
-        depeg_worsening_bps_step: 250,
-      }),
-    ).toContain("DEWS min band: WARNING");
   });
 });

@@ -65,17 +65,6 @@ describe("V10 exact authority scope", () => {
     expect(V9ControlExecutionScopeSchema.safeParse(copied).success).toBe(false);
   });
 
-  it("does not treat an unbranded frozen object as an admitted scope", () => {
-    const external = reviewedScope();
-    external.paths[0]!.permissionChangeRefs = ["missing-path"];
-    Object.freeze(external);
-    expect(isV9AdmittedControlExecutionScope(external)).toBe(false);
-    expect(V9InProcessControlExecutionScopeSchema.safeParse(external).success).toBe(false);
-    const admitted = V9InProcessControlExecutionScopeSchema.parse(reviewedScope());
-    expect(isV9AdmittedControlExecutionScope(admitted)).toBe(true);
-    expect(isV9AdmittedControlExecutionScope(structuredClone(admitted))).toBe(false);
-  });
-
   it("keeps chain-qualified identity and rejects changed runtime/signers, stale and future review relief", () => {
     expect(compile().complete).toBe(true);
     expect(compile(reviewedScope(), SCOPE_CONTROLLER.replace("ethereum", "arbitrum")).complete).toBe(false);

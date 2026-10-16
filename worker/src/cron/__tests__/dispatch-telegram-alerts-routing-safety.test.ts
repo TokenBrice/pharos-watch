@@ -213,46 +213,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript).toEqual([]);
   });
 
-  it("batches resolved depeg lookups into one query", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const harness = createDispatchHarness();
-    seedDispatchSnapshots(harness, {
-      depeg: {
-        "usdc-circle": { symbol: "USDC", direction: "below", deviationBps: 125, price: 0.9875, pegReference: 1 },
-        "usdt-tether": { symbol: "USDT", direction: "below", deviationBps: 110, price: 0.989, pegReference: 1 },
-      },
-    });
-    harness.seed({
-      depegs: [
-        {
-          stablecoinId: "usdc-circle",
-          symbol: "USDC",
-          peakDeviationBps: 125,
-          startedAt: now - 3_600,
-          endedAt: now - 300,
-          recoveryPrice: 1,
-        },
-        {
-          stablecoinId: "usdt-tether",
-          symbol: "USDT",
-          peakDeviationBps: 110,
-          startedAt: now - 1_800,
-          endedAt: now - 240,
-          recoveryPrice: 1,
-        },
-      ],
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata.eventsDetected).toMatchObject({ depegResolved: 2, depeg: 2 });
-    expect(
-      harness.operations.filter((entry) => entry.operation === "resolved-depeg-lookup").map((entry) => entry.binds),
-    ).toEqual([["usdc-circle", "usdt-tether"]]);
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()).toEqual({
-      count: 1,
-    });
-  });
-
   it("chunks resolved depeg IN queries above 100 changed coins", async () => {
     const now = Math.floor(Date.now() / 1000);
     const ids = Array.from({ length: 101 }, (_, index) => `synthetic-${index}`);

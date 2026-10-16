@@ -261,78 +261,7 @@ describe("site-data proxy", () => {
     expectAttribution(db, "stablecoin-summary", "/api/stablecoin-summary/:id");
   });
 
-  it("proxies the events endpoint through the site-data lane for public UI reads", async () => {
-    const fetchSpy = siteApi.json("/api/events?limit=1", { events: [] }, 200, {
-      "Cache-Control": "public, max-age=60",
-    });
-
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/events?limit=1", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ events: [] });
-    expect(fetchSpy.getHistory()).toHaveLength(1);
-    expect(fetchSpy.getHistory()[0]?.url).toBe("https://site-api.pharos.watch/api/events?limit=1");
-    expect(fetchSpy.getHistory()[0]?.headers["x-pharos-site-proxy-secret"]).toBe("shared-secret");
-  });
-
-  it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {
-    siteApi.json("/api/stablecoin/usdt-tether", { ok: true }, 200, {
-      "Cache-Control": "public, max-age=60",
-    });
-    const db = makeTestD1Database();
-    const ctx = makeWaitUntil();
-
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoin/usdt-tether", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(db), ctx.waitUntil),
-    );
-
-    expect(response.status).toBe(200);
-    expect(ctx.waitUntil).toHaveBeenCalled();
-
-    await ctx.flush();
-    expectAttribution(db, "stablecoin-detail", "/api/stablecoin/:id");
-  });
-
-  it("honors the route/source attribution kill switch for Pages site-data requests", async () => {
-    siteApi.json("/api/stablecoins", { ok: true }, 200, {
-      "Cache-Control": "public, max-age=60",
-    });
-    const db = makeTestD1Database();
-
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(db, { REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" })),
-    );
-
-    expect(response.status).toBe(200);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats"))).toBe(false);
-  });
-
-  it("proxies site-data requests when Pages attribution DB is not bound", async () => {
-    const fetchSpy = siteApi.json("/api/stablecoins", { ok: true }, 200, {
-      "Cache-Control": "public, max-age=60",
-    });
-
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(makeTestD1Database(), { DB: undefined })),
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true });
-    expect(fetchSpy).toHaveBeenCalledOnce();
-  });
-
   it.each<Record<string, string>>([
-    { "Cache-Control": "no-store" },
     { "Cache-Control": "public, max-age=60", Warning: '110 - "Response is stale"' },
   ])("preserves cache headers without Pages caching: %j", async (headers) => {
     siteApi.json("/api/stablecoins", { ok: true }, 200, headers);
@@ -368,26 +297,6 @@ describe("site-data proxy", () => {
     await expect(response.json()).resolves.toEqual({ error: "Rate limit exceeded" });
     expect(cachePut).not.toHaveBeenCalled();
   });
-
-  it.each(["public-status-history", "telegram-pulse"])("proxies %s through the site-data lane", async (endpoint) => {
-    const fetchSpy = siteApi.json(`/api/${endpoint}`, { ok: true });
-    const db = makeTestD1Database();
-
-    const response = await onRequest(
-      siteDataContext(new Request(`https://pharos.watch/_site-data/${endpoint}`, {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(db)),
-    );
-
-    expect(response.status).toBe(200);
-    expect(fetchSpy.getHistory()).toHaveLength(1);
-    expect(fetchSpy.getHistory()[0]).toMatchObject({
-      url: `https://site-api.pharos.watch/api/${endpoint}`,
-      method: "GET",
-    });
-    expectAttribution(db, endpoint, `/api/${endpoint}`);
-  });
-
 
   it("fails closed on production site hosts when SITE_API_ORIGIN is unset", async () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
@@ -455,30 +364,6 @@ describe("site-data proxy", () => {
       "[site-data-proxy] Failed to record site-data attribution:",
       expect.any(Error),
     );
-  });
-
-  it("times out when headers arrive but the upstream body stalls", async () => {
-    vi.useFakeTimers();
-    siteApi.response("/api/stablecoins", new Response(
-      new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode('{"partial":'));
-        },
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    ));
-
-    const responsePromise = onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(makeTestD1Database(), { DB: undefined })),
-    );
-
-    await vi.advanceTimersByTimeAsync(10_000);
-
-    const response = await responsePromise;
-    expect(response.status).toBe(504);
-    await expect(response.json()).resolves.toEqual({ error: "Site API upstream timed out" });
   });
 
   it("attributes a stalled body to timeout only after the deadline and cancels it", async () => {

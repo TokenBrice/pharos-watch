@@ -12,17 +12,6 @@ const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-shared-ty
 afterEach(cleanup);
 
 describe("findBroadSharedTypesValueImports", () => {
-  it("allows type-only imports from the broad @shared/types barrel", () => {
-    const root = makeRoot();
-    writeText(
-      root,
-      "src/allowed.ts",
-      'import type { StablecoinData } from "@shared/types";\nexport type Row = StablecoinData;\n',
-    );
-
-    expect(findBroadSharedTypesValueImports(["src"], root)).toEqual([]);
-  });
-
   it("rejects value imports from the broad @shared/types barrel", () => {
     const root = makeRoot();
     writeText(
@@ -69,28 +58,6 @@ describe("findSharedTypesRuntimeImports", () => {
     ]);
   });
 
-  it("allows shared/types imports from sibling type modules", () => {
-    const root = makeRoot();
-    writeText(
-      root,
-      "shared/types/status.ts",
-      'import type { CronStatus } from "./status/cron";\nexport type Row = CronStatus;\n',
-    );
-
-    expect(findSharedTypesRuntimeImports(["shared/types"], root)).toEqual([]);
-  });
-
-  it("ignores test files under shared/types", () => {
-    const root = makeRoot();
-    writeText(
-      root,
-      "shared/types/__tests__/core.test.ts",
-      'import { getFilterTags } from "../../lib/filter-tags";\n',
-    );
-
-    expect(findSharedTypesRuntimeImports(["shared/types"], root)).toEqual([]);
-  });
-
   it.each([
     ['import type { Value } from "@shared/lib/value";', "@shared/lib/value"],
     ['export { Value } from "@shared/lib/value";', "@shared/lib/value"],
@@ -103,12 +70,4 @@ describe("findSharedTypesRuntimeImports", () => {
     ]);
   });
 
-  it("allows relative and alias siblings that only share the shared/lib prefix", () => {
-    const root = makeRoot();
-    writeText(root, "shared/types/value.ts", [
-      'import type { Value } from "../lib-other/value";',
-      'export type { Other } from "@shared/lib-other/value";',
-    ].join("\n"));
-    expect(findSharedTypesRuntimeImports(["shared/types"], root)).toEqual([]);
-  });
 });

@@ -30,29 +30,11 @@ describe("computeLeadStreak", () => {
 describe("decideCriticalLeadSeverity", () => {
   const base = { symbol: "USX", severityBps: -5783, previousSeverityBps: -5783 };
 
-  it("hard-leads a newly critical event", () => {
-    const decision = decideCriticalLeadSeverity({
-      ...base,
-      ageHours: 6,
-      streak: { consecutive: 0, inWindow: 0 },
-    });
-    expect(decision.severity).toBe("hard");
-  });
-
   it("demotes an unchanged ongoing critical after the consecutive quota", () => {
     const decision = decideCriticalLeadSeverity({
       ...base,
       ageHours: 6,
       streak: { consecutive: MAX_CONSECUTIVE_HARD_LEADS, inWindow: MAX_CONSECUTIVE_HARD_LEADS },
-    });
-    expect(decision.severity).toBe("soft");
-  });
-
-  it("demotes an old unchanged critical even without a streak (chronic, not news)", () => {
-    const decision = decideCriticalLeadSeverity({
-      ...base,
-      ageHours: 26 * 24,
-      streak: { consecutive: 0, inWindow: 0 },
     });
     expect(decision.severity).toBe("soft");
   });

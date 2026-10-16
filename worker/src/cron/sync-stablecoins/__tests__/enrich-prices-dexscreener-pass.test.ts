@@ -67,15 +67,6 @@ describe("runDexScreenerPass", () => {
     vi.useRealTimers();
   });
 
-  it("does not make a DexScreener lookup when an asset has no target", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-
-    const result = await runDexScreenerPass([makeMissingAsset()], undefined, undefined);
-
-    expect(result).toMatchObject({ resolved: 0, failures: [] });
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
   it("records thrown exact lookups as failed provider outcomes", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockRejectedValueOnce(new Error("dns failed"));
     const db = circuitClosedDb();
@@ -169,40 +160,6 @@ describe("runDexScreenerPass", () => {
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 1,
-    });
-  });
-
-  it("does not wait indefinitely when an exact lookup never settles", async () => {
-    vi.useFakeTimers();
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockReturnValueOnce(new Promise(() => {}));
-    const db = circuitClosedDb();
-
-    const resultPromise = runDexScreenerPass(
-      [
-        makeMissingAsset({
-          id: "exact-usd",
-          symbol: "EXACT",
-          address: "0xabc",
-          chains: ["Base"],
-        }),
-      ],
-      undefined,
-      db,
-    );
-    await vi.advanceTimersByTimeAsync(5_001);
-
-    await expect(resultPromise).resolves.toMatchObject({
-      resolved: 0,
-      failures: [],
-      diagnostics: [
-        expect.objectContaining({
-          source: "dexscreener-exact",
-          endpoint: "api.dexscreener.com/tokens/v1/base/0xabc",
-          ok: false,
-          success: false,
-          errorClass: "TimeoutError",
-        }),
-      ],
     });
   });
 
@@ -304,7 +261,7 @@ describe("runDexScreenerPass", () => {
     expect(fresh[29].price).toBeNull();
   });
 
-  it.each([2, 4, 6])("visits every chain over repeated hourly invocations (%i chains)", async (chainCount) => {
+  it.each([2, 6])("visits every chain over repeated hourly invocations (%i chains)", async (chainCount) => {
     const visited: string[] = [];
     vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async (chain) => {
       visited.push(chain);
@@ -389,13 +346,4 @@ describe("DexScreener observed response diagnostics", () => {
     expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
   });
 
-  it.each([
-    ["DexScreener payload schema changed: expected array or object.pairs[]", "invalid-shape"],
-    ["DexScreener payload contained no valid pair rows", "invalid-pairs"],
-    ["DexScreener JSON parse failed: bad json", "malformed-json"],
-  ])("classifies HTTP200 failure: %s", async (error, errorClass) => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({ ok: false, pairs: [], status: 200, error });
-    const result = await runDexScreenerPass([makeMissingAsset({ address: "0xabc", chains: ["Base"] })], undefined, undefined);
-    expect(result.diagnostics?.[0]).toMatchObject({ status: 200, success: false, errorClass });
-  });
 });

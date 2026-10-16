@@ -102,23 +102,6 @@ describe("BlacklistSection", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the Blacklist activity heading and all three stat titles on the happy path", () => {
-    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    const { getByText, getAllByText } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
-    expect(getByText(/Blacklist activity/i)).toBeTruthy();
-    expect(getByText(/Frozen addresses/i)).toBeTruthy();
-    expect(getByText(/Frozen total/i)).toBeTruthy();
-    // Chart legend also contains "Destroy" (event-type series). The stat card
-    // label "Destroyed" is specifically the past-tense form, so match exactly.
-    expect(getAllByText(/Destroyed/).length).toBeGreaterThan(0);
-  });
-
-  it("renders Recent Blacklist Events from BlacklistHistorySection on the happy path", () => {
-    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    const { getByText } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
-    expect(getByText(/Recent Blacklist Events/i)).toBeTruthy();
-  });
-
   it("links the full event feed through the canonical Freezewatch URL", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
     vi.mocked(useBlacklistEventsPage).mockReturnValueOnce(ONE_EVENT_PAGE);

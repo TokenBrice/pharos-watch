@@ -61,24 +61,6 @@ describe("buildCommsWorkbenchModel", () => {
     });
   });
 
-  it("keeps the operator priority order stable", () => {
-    const model = buildCommsWorkbenchModel({
-      telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(makeDispatchMetadata()),
-      nowSeconds: NOW_SECONDS,
-    });
-
-    expect(model.priorityMetrics.map((metric) => metric.id)).toEqual([
-      "delivery-health",
-      "pending-backlog",
-      "oldest-backlog",
-      "permanent-failures",
-      "rate-limiting",
-      "latest-dispatch",
-    ]);
-    expect(model.delivery.health).toBe("healthy");
-  });
-
   it("preserves measured zeroes but marks missing Telegram and dispatch evidence unknown", () => {
     const missing = buildCommsWorkbenchModel({ telegramBot: null, nowSeconds: NOW_SECONDS });
     expect(missing.delivery.health).toBe("unknown");

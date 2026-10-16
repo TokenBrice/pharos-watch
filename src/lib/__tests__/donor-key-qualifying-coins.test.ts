@@ -50,15 +50,4 @@ describe("donor key qualifying coins", () => {
     expect(coins[2]).toMatchObject({ stablecoinId: "missing-issuer", score: null });
     expect(summarizeCountingCoinNames(coins)).toBe("zeta, mid, bee, and aye");
   });
-
-  it("lists every counting coin up to five, then the first three and the remainder", () => {
-    const six = ["one", "two", "three", "four", "five", "six"];
-    const gradedA = lookupFrom(Object.fromEntries(six.map((label): [string, ReportCardGrade] => [label, "A"])));
-
-    const withFiveCounting = buildDonorKeyQualifyingCoins(allowlist([...six.slice(0, 5), "gap"]), gradedA);
-    expect(summarizeCountingCoinNames(withFiveCounting)).toBe("one, two, three, four, and five");
-
-    const withSixCounting = buildDonorKeyQualifyingCoins(allowlist(six), gradedA);
-    expect(summarizeCountingCoinNames(withSixCounting)).toBe("one, two, three, and 3 more");
-  });
 });

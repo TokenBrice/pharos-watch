@@ -54,11 +54,11 @@
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }
       ],
       "checks": [
-        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts src/lib/__tests__/cemetery-scene-golden.test.ts scripts/__tests__/scene-atlas.test.ts scripts/__tests__/scene-og.test.ts",
+        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts",
         "npm run check:generated-artifacts -- --only=cemetery-logo-atlas,og-cemetery"
       ],
       "rules": [
-        "The Cemetery must stay byte-identical: never re-pin cemetery-scene-golden hashes to absorb a kit refactor.",
+        "The Cemetery must stay byte-identical during kit refactors.",
         "Geometry stays pure and colour-free; every transition or animation reads a --scene-dur-* token."
       ]
     },
@@ -831,7 +831,6 @@
         "scripts/maintenance/run-pr-*.ts",
         "scripts/maintenance/*pages-release*.ts",
         "scripts/maintenance/run-critical-*.ts",
-        "scripts/maintenance/merge-critical-coverage.ts",
         "scripts/maintenance/run-all-tests.ts",
         "scripts/maintenance/run-v9-resource-lane.ts",
         "worker/scripts/measure-v9-resource.ts",

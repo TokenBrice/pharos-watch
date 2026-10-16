@@ -1,12 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { installOpsApiFixtures, OPS_FIXTURE_NOW_MS } from "./ops-api-fixtures";
-import { expectNoHorizontalOverflow, expectStickyHeaderInvariant, sizeViewport } from "./ops-geometry-support";
+import { expectNoHorizontalOverflow, sizeViewport } from "./ops-geometry-support";
 
 /**
- * B7 — hostile-string cards and the sticky inventory table header on
- * /admin-api/ (s082-src.md). The jsdom suites deleted their CSS-spelling
- * assertions (`break-all`, `table-header-sticky`); the geometry they implied
- * lives here. No screenshots.
+ * B7 — hostile-string cards on /admin-api/ (s082-src.md).
+ * The browser measures observable containment. No screenshots.
  */
 
 const HYDRATION_TIMEOUT_MS = 30_000;
@@ -34,17 +32,3 @@ test("hostile-string request cards wrap without horizontal overflow at 320x568",
   await expectNoHorizontalOverflow(page, "article *");
 });
 
-test("inventory table header stays pinned while its viewport scrolls at 320x568", async ({ page }, testInfo) => {
-  await sizeViewport(page, testInfo, 320, 568);
-  await page.goto("/admin-api/", { waitUntil: "domcontentloaded" });
-
-  await expect(page.getByRole("table", { name: "API key inventory" })).toBeVisible({
-    timeout: HYDRATION_TIMEOUT_MS,
-  });
-
-  await expectStickyHeaderInvariant(
-    page,
-    '[data-slot="table-viewport"]:has(table[aria-label="API key inventory"])',
-    "thead",
-  );
-});

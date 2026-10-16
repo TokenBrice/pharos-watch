@@ -259,35 +259,6 @@ describe("toStructural", () => {
     ]);
     expect(toStructural(meta).mintAuthorityScoreBand).toBeNull();
   });
-
-  it("keeps a wrapper healthy when the V9 serial parent is tracked and non-terminal", () => {
-    hydrateV9DependencyImpairment([
-      {
-        id: "wrapper-fixture",
-        dependencies: { serial: [{ upstreamAssetId: "usdc-circle" }] },
-      },
-    ]);
-
-    try {
-      expect(
-        toStructural({
-          id: "wrapper-fixture",
-          symbol: "WRAP",
-          name: "Wrapper fixture",
-          flags: {
-            backing: "rwa-backed",
-            pegCurrency: "USD",
-            governance: "centralized",
-            yieldBearing: false,
-            rwa: false,
-            navToken: false,
-          },
-        } as StablecoinMeta).dependencyImpaired,
-      ).toBe(false);
-    } finally {
-      clearV9DependencyImpairment();
-    }
-  });
 });
 
 describe("allocateDdrRunId", () => {

@@ -31,17 +31,6 @@ describe("depeg tracker attention sort", () => {
     expect(attentionScore(danger)).toBeGreaterThan(attentionScore(warning));
   });
 
-  it("uses deviation as tiebreaker within same band", () => {
-    const high = mockRow({ activeDepeg: false, band: "ALERT", absDev: 300 });
-    const low = mockRow({ activeDepeg: false, band: "ALERT", absDev: 100 });
-    expect(attentionScore(high)).toBeGreaterThan(attentionScore(low));
-  });
-
-  it("CALM coins with zero deviation score lowest", () => {
-    const calm = mockRow({ activeDepeg: false, band: "CALM", absDev: 0 });
-    expect(attentionScore(calm)).toBe(0);
-  });
-
   it("ranks pending confirmation between active incidents and ordinary danger", () => {
     const active = mockRow({ activeDepeg: true, band: "CALM", absDev: 10 });
     const pending = mockRow({ activeDepeg: false, band: "CALM", absDev: 20 });
@@ -51,17 +40,4 @@ describe("depeg tracker attention sort", () => {
     expect(attentionScore(pending)).toBeGreaterThan(attentionScore(danger));
   });
 
-  it("ranks equal positive and negative deviations equally", () => {
-    const positive = mockRow({ activeDepeg: false, band: "ALERT", absDev: 300 });
-    const negative = mockRow({ activeDepeg: false, band: "ALERT", absDev: -300 });
-    expect(attentionScore(negative)).toBe(attentionScore(positive));
-  });
-
-  it("assigns no priority to missing deviation and absent or unrecognized DEWS", () => {
-    const row = mockRow({ activeDepeg: false, band: "unknown", absDev: 0 });
-    row.coin.currentDeviationBps = null;
-    expect(attentionScore(row)).toBe(0);
-    row.dews = null;
-    expect(attentionScore(row)).toBe(0);
-  });
 });

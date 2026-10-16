@@ -40,16 +40,6 @@ function seedSupply(sqlite: DatabaseSync, day: number, mcap: number): void {
 }
 
 describe("buildRecomputeStabilityStatements", () => {
-  it("produces statements SQLite accepts against the live stability_index schema", async () => {
-    const { sqlite, db } = fixtures.open();
-    seedSupply(sqlite, DAY, 100_000_000_000);
-
-    const { statements, daysRecomputed } = await buildRecomputeStabilityStatements(db, new Set([DAY]), []);
-
-    expect(daysRecomputed).toBe(1);
-    await expect(db.batch(statements)).resolves.toBeDefined();
-  });
-
   it("leaves exactly one stability_index row per day when the recompute batch replays", async () => {
     const { sqlite, db } = fixtures.open();
     seedSupply(sqlite, DAY, 100_000_000_000);

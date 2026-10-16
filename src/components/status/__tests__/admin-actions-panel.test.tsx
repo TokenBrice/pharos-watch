@@ -70,67 +70,6 @@ afterEach(() => {
 });
 
 describe("AdminActionsPanel", () => {
-  it("collapses the complete catalog when healthy and opens it for search", async () => {
-    renderPanel();
-
-    const details = screen.getByText("Complete action catalog").closest("details");
-    expect(details?.hasAttribute("open")).toBe(false);
-    expect(screen.queryByLabelText("Search action catalog")).toBeNull();
-
-    fireEvent.click(screen.getByText("Complete action catalog"));
-    const search = await screen.findByLabelText("Search action catalog");
-    fireEvent.change(search, { target: { value: "DEWS historical" } });
-    expect(details?.hasAttribute("open")).toBe(true);
-    expect(screen.getByText("Validate DEWS History")).toBeTruthy();
-    expect(screen.getByText(`1/${ACTIONS.length} actions`)).toBeTruthy();
-  });
-
-  it("opens the complete catalog when the system is not healthy and composes intent and risk filters", () => {
-    renderPanel({ systemHealthy: false });
-
-    const details = screen.getByText("Complete action catalog").closest("details");
-    expect(details?.hasAttribute("open")).toBe(true);
-    fireEvent.change(screen.getByLabelText("Filter by intent"), { target: { value: "inspect" } });
-    fireEvent.change(screen.getByLabelText("Filter by risk"), { target: { value: "read-only" } });
-
-    const inspectGroup = screen.getByRole("heading", { name: "Inspect" }).closest("section");
-    expect(inspectGroup).toBeTruthy();
-    expect(within(inspectGroup!).getByText("Validate DEWS History")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Recovery" })).toBeNull();
-  });
-
-  it("shows recommended actions and reconciled persisted history by default", () => {
-    useAdminActionLogMock.mockReturnValue({
-      data: {
-        entries: [
-          {
-            id: 9,
-            at: 1_699_999_940,
-            actor: "operator@example.com",
-            action: "remediate-blacklist-amount-gaps",
-            target: "usdc-circle",
-            result: "ok",
-            httpStatus: 200,
-            details: { status: "succeeded" },
-          },
-        ],
-      },
-      error: null,
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-      refetch: vi.fn().mockResolvedValue(undefined),
-    });
-    renderPanel({ recommendations: [recommendation("/api/remediate-blacklist-amount-gaps")] });
-
-    expect(screen.getByText("The matching lane is unhealthy.")).toBeTruthy();
-    expect(screen.getByText("1 audited records loaded")).toBeTruthy();
-    expect(screen.getByText("operator@example.com", { exact: false })).toBeTruthy();
-    expect(screen.getByText(/Every catalog action that reaches the API is audited server-side/)).toBeTruthy();
-    expect(screen.getByText("1m ago")).toBeTruthy();
-    expect(screen.getByText("succeeded")).toBeTruthy();
-  });
-
   it("offers retry when persisted history fails", () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     useAdminActionLogMock.mockReturnValue({

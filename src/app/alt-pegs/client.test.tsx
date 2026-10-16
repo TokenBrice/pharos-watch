@@ -212,19 +212,6 @@ describe("AltPegsClient", () => {
     expect(refetchMock).toHaveBeenCalledOnce();
   });
 
-  it("renders the core current-state sections and history block", () => {
-    render(<AltPegsClient />);
-
-    expect(screen.getByRole("heading", { name: "Which non-USD pegs matter now" })).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "How much of the stablecoin market sits outside USD?" }),
-    ).toBeTruthy();
-    expect(screen.getByTestId("non-usd-share-chart")).toBeTruthy();
-    expect(screen.getByTestId("alt-peg-cohort-chart")).toBeTruthy();
-    expect(screen.getByText(/share-chart default 1y/i)).toBeTruthy();
-    expect(screen.getByText(/cohort-chart default 1y/i)).toBeTruthy();
-  });
-
   it("qualifies annual historical comparisons when the reference cohort was partial", () => {
     const saved = useNonUsdShareMock();
     useNonUsdShareMock.mockReturnValue({
@@ -263,51 +250,6 @@ describe("AltPegsClient", () => {
     expect(screen.getByText(/1\/2 assets observed/)).toBeTruthy();
     expect(screen.getByText(/known alt-peg subtotal/)).toBeTruthy();
     expect(screen.getByRole("region", { name: "All alt-peg mix" }).textContent).toContain("mix shares unavailable");
-  });
-
-  it("places the distribution table below the alt-peg chart tabs", () => {
-    const { container } = render(<AltPegsClient />);
-
-    const pageText = container.textContent ?? "";
-    const shareChartIndex = pageText.indexOf("How much of the stablecoin market sits outside USD?");
-    const cohortChartIndex = pageText.indexOf("cohort-chart default 1y");
-    const tableIndex = pageText.indexOf("Which non-USD pegs matter now");
-    expect(shareChartIndex).toBeGreaterThanOrEqual(0);
-    expect(cohortChartIndex).toBeGreaterThanOrEqual(0);
-    expect(tableIndex).toBeGreaterThanOrEqual(0);
-    expect(shareChartIndex).toBeLessThan(tableIndex);
-    expect(cohortChartIndex).toBeLessThan(tableIndex);
-  });
-
-  it("leads with the atlas hero, then the workbench table, then cohort details", () => {
-    const { container } = render(<AltPegsClient />);
-
-    const pageText = container.textContent ?? "";
-    const atlasIndex = pageText.indexOf("Peg Diversity Atlas");
-    const cohortChartIndex = pageText.indexOf("cohort-chart default 1y");
-    const directoryIndex = pageText.indexOf("Drill into each alt-peg cohort");
-    const tableIndex = pageText.indexOf("Which non-USD pegs matter now");
-    expect(atlasIndex).toBeGreaterThanOrEqual(0);
-    expect(cohortChartIndex).toBeGreaterThanOrEqual(0);
-    expect(directoryIndex).toBeGreaterThanOrEqual(0);
-    expect(tableIndex).toBeGreaterThanOrEqual(0);
-    expect(atlasIndex).toBeLessThan(directoryIndex);
-    expect(directoryIndex).toBeLessThan(cohortChartIndex);
-    expect(directoryIndex).toBeLessThan(tableIndex);
-  });
-
-  it("renders peg drill-down links from the distribution card", () => {
-    render(<AltPegsClient />);
-
-    expect(screen.getByRole("link", { name: "Compliance Tracker" }).getAttribute("href")).toBe(
-      "/compliance?regime=mica",
-    );
-    expect(
-      screen.getAllByRole("link", { name: "Euro" }).some((link) => link.getAttribute("href") === "/stablecoins/eur"),
-    ).toBe(true);
-    expect(
-      screen.getAllByRole("link", { name: "Gold" }).some((link) => link.getAttribute("href") === "/stablecoins/gold"),
-    ).toBe(true);
   });
 
   it("restores a focused share chart from the URL", () => {

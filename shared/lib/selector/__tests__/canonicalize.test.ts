@@ -1,20 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalizeForSid } from "../canonicalize";
 
-describe("canonicalizeForSid — top-level strip-list", () => {
-  it("strips top-level `timestamp`", () => {
-    const a = canonicalizeForSid({ profile: "treasury", timestamp: 1000 });
-    const b = canonicalizeForSid({ profile: "treasury", timestamp: 9999999 });
-    expect(a).toBe(b);
-  });
-
-  it("strips top-level `perInputStaleness`", () => {
-    const a = canonicalizeForSid({ x: 1, perInputStaleness: { dews: 30 } });
-    const b = canonicalizeForSid({ x: 1, perInputStaleness: { dews: 999 } });
-    expect(a).toBe(b);
-  });
-});
-
 describe("canonicalizeForSid — name-pattern strip", () => {
   it("strips fields named *ageSeconds at any depth", () => {
     const a = canonicalizeForSid({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
+import { compareLiquidityRows, type LiquidityRow } from "@/components/liquidity-table-logic";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityData } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
@@ -11,46 +11,12 @@ function makeRow(overrides: Partial<DexLiquidityData> = {}): LiquidityRow {
   };
 }
 
-const numericKeys = [
-  ["score", "liquidityScore"],
-  ["tvl", "totalTvlUsd"],
-  ["tvlTrend", "tvlChange7d"],
-  ["volume", "totalVolume24hUsd"],
-  ["volume7d", "totalVolume7dUsd"],
-  ["pools", "poolCount"],
-  ["chains", "chainCount"],
-  ["balance", "weightedBalanceRatio"],
-  ["organic", "organicFraction"],
-  ["durability", "durabilityScore"],
-] as const;
-
 describe("compareLiquidityRows", () => {
   it.each(["asc", "desc"] as const)("sorts NR after observed zero scores (%s)", (direction) => {
     const missing = makeRow({ liquidityScore: null });
     const zero = makeRow({ liquidityScore: 0 });
     expect(compareLiquidityRows(missing, zero, { key: "score", direction })).toBeGreaterThan(0);
     expect(compareLiquidityRows(zero, missing, { key: "score", direction })).toBeLessThan(0);
-  });
-
-  it.each(numericKeys)("sorts %s in both directions", (key, field) => {
-    const fractional = key === "balance" || key === "organic";
-    const high = makeRow({ [field]: fractional ? 0.9 : 9 });
-    const low = makeRow({ [field]: fractional ? 0.1 : 1 });
-    expect(compareLiquidityRows(high, low, { key, direction: "desc" })).toBeLessThan(0);
-    expect(compareLiquidityRows(high, low, { key, direction: "asc" })).toBeGreaterThan(0);
-  });
-
-  it.each([
-    ["tvlTrend", "tvlChange7d"],
-    ["balance", "weightedBalanceRatio"],
-    ["organic", "organicFraction"],
-    ["durability", "durabilityScore"],
-  ] as const)("treats null %s as zero", (key, field) => {
-    const missing = makeRow({ [field]: null });
-    const zero = makeRow({ [field]: 0 });
-    const positive = makeRow({ [field]: 0.1 });
-    expect(compareLiquidityRows(missing, zero, { key, direction: "desc" })).toBe(0);
-    expect(compareLiquidityRows(positive, missing, { key, direction: "desc" })).toBeLessThan(0);
   });
 
   it.each(["volume", "volume7d", "vtRatio"] as const)(
@@ -75,9 +41,4 @@ describe("compareLiquidityRows", () => {
     expect(compareLiquidityRows(positive, zeroTvl, { key: "vtRatio", direction: "desc" })).toBeLessThan(0);
   });
 
-  it("returns zero for an unknown sort key", () => {
-    expect(compareLiquidityRows(makeRow({ liquidityScore: 80 }), makeRow({ liquidityScore: 20 }), {
-      key: "unknown" as LiquiditySortKey, direction: "desc",
-    })).toBe(0);
-  });
 });

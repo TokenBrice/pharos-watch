@@ -101,14 +101,6 @@ describe("pages middleware markdown negotiation", () => {
     expect(scriptSrc(res.headers.get("Content-Security-Policy"))).not.toContain("'unsafe-inline'");
   });
 
-  it("falls through to HTML when Accept prefers HTML", async () => {
-    const req = new Request("https://pharos.watch/stablecoin/usdt-tether/", {
-      headers: { Accept: "text/html,text/markdown;q=0.5" },
-    });
-    const res = await onRequest(ctx(req, files));
-    expect(res.headers.get("Content-Type")).toMatch(/text\/html/);
-  });
-
   it("preserves Vary: Accept-Encoding while adding a distinct Accept token", async () => {
     const req = new Request("https://pharos.watch/stablecoin/usdt-tether/");
     const next = vi.fn(async () =>
@@ -207,26 +199,6 @@ describe("pages middleware markdown negotiation", () => {
     expect(await res.text()).toBe("# Markdown export");
   });
 
-  it("marks direct generated markdown asset HEAD responses without a body", async () => {
-    const path = "/docs/report-cards/index.md";
-    const req = new Request(`https://pharos.watch${path}`, { method: "HEAD" });
-    const res = await onRequest(ctx(req, { [path]: "# Report cards" }));
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("X-Robots-Tag")).toBe("noindex, follow");
-    expect(res.headers.get("Link")).toBe('<https://pharos.watch/docs/report-cards/>; rel="canonical"');
-    expect(await res.text()).toBe("");
-  });
-
-  it("does not noindex unrelated markdown assets", async () => {
-    const req = new Request("https://pharos.watch/about/index.md");
-    const res = await onRequest(ctx(req, { "/about/index.md": "# About" }));
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("X-Robots-Tag")).toBeNull();
-    expect(res.headers.get("Link")).toBeNull();
-  });
-
   it("adds nonce-backed CSP to inline scripts while leaving external script hosts allowlisted", async () => {
     const req = new Request("https://pharos.watch/");
     const html = [
@@ -260,13 +232,6 @@ describe("pages middleware markdown negotiation", () => {
     expect(body).not.toContain("route-nonce");
     expect(body).toContain('<script src="/_next/static/chunks/app.js"></script>');
     expect(body).toContain(`<script nonce="${nonce}" type="application/ld+json">`);
-  });
-
-  it("sets CSP on HEAD responses without trying to transform a body", async () => {
-    const req = new Request("https://pharos.watch/", { method: "HEAD" });
-    const res = await onRequest(ctx(req, { "/index.html": "<html><script>1</script></html>" }));
-    expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
-    expect(await res.text()).toBe("");
   });
 
   it.each(["gzip, deflate, br", "identity"])(

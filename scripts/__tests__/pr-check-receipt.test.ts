@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { computeReceiptOutcome, explainPrCheckReceipt, firstActionableError, writePrCheckReceipt, type PrCheckReceipt, type PrCheckReceiptLeaf, type PrReceiptCheckout } from "../lib/pr-check-receipt.mts";
+import { computeReceiptOutcome, explainPrCheckReceipt, writePrCheckReceipt, type PrCheckReceipt, type PrCheckReceiptLeaf, type PrReceiptCheckout } from "../lib/pr-check-receipt.mts";
 
 const passed: PrCheckReceiptLeaf = { id: "tests", command: "npm run test:pr", status: "passed", durationMs: 12 };
 
@@ -18,12 +18,6 @@ describe("PR verification receipts", () => {
     for (const weakened of [false, true]) {
       expect(computeReceiptOutcome([passed, { ...passed, status: "failed", firstError: "Type error" }], weakened)).toBe("failed");
     }
-  });
-
-  it("extracts actionable output rather than npm banners and lifecycle wrappers", () => {
-    expect(firstActionableError("> pharos-watch test\n\u001b[31mError: missing fixture\u001b[0m\nnpm error Lifecycle script failed", "exit 1"))
-      .toBe("Error: missing fixture");
-    expect(firstActionableError("", "spawn ENOENT")).toBe("spawn ENOENT");
   });
 
   it("writes a commit-bound receipt and replaces a previous passing proof on failure", () => {

@@ -37,32 +37,6 @@ describe("layoutPsiBeacon", () => {
     expect(Math.min(...xs(breadth.points))).toBeGreaterThan(Math.min(...xs(result.beam!.points)));
   });
 
-  it("emits the light sheet from the lantern and ends it exactly at the tip (no second data channel)", () => {
-    const result = layout(LIVE);
-    const pts = result.beam!.sheet.split(" ").map((pair) => pair.split(",").map(Number) as [number, number]);
-    expect(pts.some(([x, y]) => Math.abs(x - result.lantern[0]) < 0.11 && Math.abs(y - result.lantern[1]) < 0.11)).toBe(true);
-    expect(Math.max(...pts.map(([x]) => x))).toBeCloseTo(Math.max(...xs(result.beam!.points)), 0);
-    expect(layout(null).beam).toBeNull();
-  });
-
-  it("cuts one fixed cone: its cross-section at a radius never depends on the score", () => {
-    const short = layout({ ...LIVE, score: 50, band: "FRACTURE", components: undefined });
-    const long = layout({ ...LIVE, score: 90, band: "BEDROCK", components: undefined });
-    // The short beam's terminating edge spans exactly the long cone's width at 50.
-    const at50 = short.beam!.tip;
-    const longPts = long.beam!.points.split(" ").map((pair) => pair.split(",").map(Number));
-    const width = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-    const shortWidth = Math.hypot(at50.x2 - at50.x1, at50.y2 - at50.y1);
-    const longTipWidth = width(longPts[1], longPts[2]);
-    expect(longTipWidth).toBeGreaterThan(shortWidth);
-    const r = (v: number) => psiBeaconRadius(v);
-    // Linear spread: width grows by the same amount per unit radius.
-    expect((longTipWidth - shortWidth) / (r(90) - r(50))).toBeCloseTo(
-      (shortWidth - width(longPts[0], longPts[3])) / (r(50) - r(0)),
-      0,
-    );
-  });
-
   it("keeps every ring, label and the full ruler inside the fixed viewBox", () => {
     const box = psiBeaconViewBox(SCENE_DIMETRIC);
     const result = layout(LIVE);

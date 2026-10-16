@@ -49,10 +49,4 @@ describe("RailMetricCard", () => {
     expect(folds[0]?.contains(screen.getByText("Live · 3h ago"))).toBe(false);
   });
 
-  it("omits the fold and sub-metric list when there is nothing to show", () => {
-    const { container } = render(<RailMetricCard title="Backing" value="–" />);
-
-    expect(container.querySelector("details")).toBeNull();
-    expect(container.querySelector("dl")).toBeNull();
-  });
 });

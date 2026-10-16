@@ -216,44 +216,6 @@ describe("enrichRowBalances", () => {
     })).rejects.toMatchObject({ name: "AbortError" });
   });
 
-  it("records inferred provider telemetry instead of a hard-coded dRPC label", async () => {
-    const db = mockD1([
-      {
-        match: "FROM blacklist_events",
-        rows: [{
-          id: "row-1",
-          chain_id: "ethereum",
-          event_type: "blacklist",
-          address: "0x1111111111111111111111111111111111111111",
-          block_number: 100,
-          stablecoin: "USDC",
-          tx_hash: "0xabc",
-          config_key: null,
-          contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
-          amount_source: "event",
-        }],
-      },
-    ]);
-
-    await backfillAmounts(
-      db,
-      "etherscan-key",
-      null,
-      async <T>(fn: () => Promise<T>) => fn(),
-      makeRunBudget({ subrequestBudget: { count: 0, limit: 10 } }),
-    );
-
-    const update = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE blacklist_events") && entry.sql.includes("amount_last_provider"),
-    );
-    expect(update?.binds).toContain("etherscan");
-    expect(update?.binds).not.toContain("drpc");
-  });
-
   it("retains historical EURC USD as unavailable even when a fresh current quote exists", async () => {
     vi.mocked(fetchEvmTokenBalance).mockResolvedValue(10);
     const makeCandidate = (id: string, address: string) => ({

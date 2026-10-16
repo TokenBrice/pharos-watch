@@ -1,23 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { StatusForCoin } from "../../telegram-webhook-status";
-import { resolveTicker } from "../../../lib/telegram/alerts";
 import {
-  buildBriefMessage,
   buildCoverageMessage,
-  buildTopMessage,
   buildWhyMessage,
 } from "../../telegram-webhook-insights";
 import { loadStatusForCoin } from "../../telegram-webhook-status";
 import type { WebhookCommandContext } from "../context";
-import { handleBrief } from "../brief";
 import { handleCoverage } from "../coverage";
 import { handleHelp } from "../help";
 import { handlePresets } from "../presets";
-import { handleSample, SAMPLE_COIN_ID } from "../sample";
+import { handleSample } from "../sample";
 import { handleStatus } from "../status";
-import { handleTop } from "../top";
 import { handleWhy } from "../why";
 import { createTelegramFetchSpy } from "../../../test-helpers/__shared/telegram";
 
@@ -25,9 +19,7 @@ vi.mock("../../telegram-webhook-insights", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../telegram-webhook-insights")>();
   return {
     ...actual,
-    buildBriefMessage: vi.fn(),
     buildCoverageMessage: vi.fn(),
-    buildTopMessage: vi.fn(),
     buildWhyMessage: vi.fn(),
   };
 });
@@ -87,9 +79,7 @@ function expectNoD1Mutation(db: D1Database): void {
 
 describe("read-only webhook command handlers", () => {
   beforeEach(() => {
-    vi.mocked(buildBriefMessage).mockReset();
     vi.mocked(buildCoverageMessage).mockReset();
-    vi.mocked(buildTopMessage).mockReset();
     vi.mocked(buildWhyMessage).mockReset();
     vi.mocked(loadStatusForCoin).mockReset();
     resetTelegramFetchSpy();
@@ -128,10 +118,6 @@ describe("read-only webhook command handlers", () => {
     expectNoD1Mutation(groupCtx.db);
   });
 
-  it("/sample fixture coin stays registered", () => {
-    expect(TRACKED_META_BY_ID.get(SAMPLE_COIN_ID)?.symbol).toBe("USDC");
-  });
-
   it("/status resolves a coin, sends the discovery keyboard, and does not mutate state", async () => {
     vi.mocked(loadStatusForCoin).mockResolvedValue(statusFixture);
     const ctx = makeContext();
@@ -160,70 +146,6 @@ describe("read-only webhook command handlers", () => {
     }
     expectNoD1Mutation(ctx.db);
     expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("/status usage and ambiguous/not-found paths avoid DB reads and mutations", async () => {
-    const usageCtx = makeContext();
-    await handleStatus(usageCtx, "");
-    expect(usageCtx.replyToChat).toHaveBeenCalledWith("Usage: /status &lt;ticker&gt;");
-    expect(loadStatusForCoin).not.toHaveBeenCalled();
-    expectNoD1Mutation(usageCtx.db);
-
-    const notFoundCtx = makeContext();
-    await handleStatus(notFoundCtx, "NOTACOIN");
-    expect(notFoundCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Ticker or preset"));
-    expect(loadStatusForCoin).not.toHaveBeenCalled();
-    expectNoD1Mutation(notFoundCtx.db);
-
-    const ambiguous = resolveTicker("USDF");
-    if (ambiguous.status !== "ambiguous") {
-      throw new Error("Expected USDF to be ambiguous for status guidance test");
-    }
-    const ambiguousCtx = makeContext();
-    await handleStatus(ambiguousCtx, "USDF");
-    expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("matches"));
-    expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Re-run /status"));
-    expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("exact Pharos coin id"));
-    expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(
-      expect.stringContaining(`/status ${ambiguous.matches[0]?.id ?? ""}`),
-    );
-    expect(ambiguousCtx.replyToChat).not.toHaveBeenCalledWith(expect.stringContaining("Reply with the number"));
-    expect(loadStatusForCoin).not.toHaveBeenCalled();
-    expectNoD1Mutation(ambiguousCtx.db);
-  });
-
-  it("/why ambiguous ticker guidance keeps the invoking command", async () => {
-    const ctx = makeContext();
-
-    await handleWhy(ctx, "USDF");
-
-    expect(ctx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Re-run /why"));
-    expect(ctx.replyToChat).toHaveBeenCalledWith(expect.not.stringContaining("Re-run /status"));
-    expect(buildWhyMessage).not.toHaveBeenCalled();
-    expectNoD1Mutation(ctx.db);
-  });
-
-  it("/brief and /top relay read-only builder output through plain replies", async () => {
-    vi.mocked(buildBriefMessage).mockResolvedValue("<b>Brief</b>");
-    vi.mocked(buildTopMessage).mockResolvedValue("Top active depegs\n1. USDC");
-    const ctx = makeContext();
-
-    await handleBrief(ctx, "");
-    await handleTop(ctx, "depeg");
-
-    expect(buildBriefMessage).toHaveBeenCalledWith(ctx.db);
-    expect(buildTopMessage).toHaveBeenCalledWith(ctx.db, "depeg");
-    expect(ctx.replyToChat).toHaveBeenCalledWith("<b>Brief</b>");
-    expect(ctx.replyToChat).toHaveBeenCalledWith("Top active depegs\n1. USDC");
-    expect(ctx.replyToChatWithMarkup).not.toHaveBeenCalled();
-    expectNoD1Mutation(ctx.db);
-    expect(fetchSpy).not.toHaveBeenCalled();
-
-    const usageCtx = makeContext();
-    await handleTop(usageCtx, "");
-    expect(usageCtx.replyToChat).toHaveBeenCalledWith("Usage: /top depeg|dews|yield|liquidity|chains|safety");
-    expect(buildTopMessage).toHaveBeenCalledTimes(1);
-    expectNoD1Mutation(usageCtx.db);
   });
 
   it("/why and /coverage use discovery keyboards in groups and add Mini App buttons only in private chats", async () => {

@@ -49,7 +49,7 @@ has been completed.
 
 | Flag | Owner | Evidence reviewed 2026-07-29 | Reason retained | Next review |
 | --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | tokenbrice | CLI WCAG review passes AA for all flag-selected text tokens (minimum 4.78:1 light, 7.23:1 dark); `src/lib/__tests__/severity-colors.test.ts` passes. | A human must visually review USDC, USDe, and a coin with an active depeg before the default-off path can be removed. | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | tokenbrice | CLI WCAG review passes AA for all flag-selected text tokens (minimum 4.78:1 light, 7.23:1 dark); retained `src/lib/__tests__/severity-colors.test.ts` coverage checks the default thresholds, not the flag-enabled palette. | A human must visually review USDC, USDe, and a coin with an active depeg before the default-off path can be removed. | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | tokenbrice | `src/components/stablecoin-detail/__tests__/mobile-sticky-summary.test.tsx` verifies height publication; `src/components/__tests__/longform-scrollspy-nav.test.tsx` verifies the reactive `scroll-margin-top` calculation. | A real device must verify mounted-summary scrollspy behavior in iOS Safari and Android Chrome. | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | tokenbrice | Historical rendering/suppression and aggregation tests were retired with the unmounted banner and hook. | Configuration retirement is a separate owner decision; there is no current render site. | 2026-09-01 |
 
@@ -57,7 +57,7 @@ has been completed.
 
 - [x] Hero verdict surface (the archetype verdict chip in `HeroChipRail`, `hero-card-sections.tsx`, at every width, plus the `HeroIdentityHeader` heading's `aria-describedby` in `hero-card.tsx`) lands behind the flag via `isHeroVerdictEnabled()`; the hoisted `<AiSummary>` renders unconditionally and is not gated by the flag.
 - [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
-- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current one-liner coverage is owned by `scripts/__tests__/weekly-curation-digest.test.ts`; `src/lib/__tests__/term-markup.test.ts` owns summary term wiring. TL;DR-first top-60 editorial QA remains in flight.**
+- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **`src/lib/__tests__/term-markup.test.ts` owns summary term wiring: known glossary slugs and no raw opening/closing markers. One-liner coverage and TL;DR-first top-60 editorial QA require editorial review; the retained curation-digest tests do not enforce authored-catalog coverage.**
 
 ### Retired chart annotation overlay
 

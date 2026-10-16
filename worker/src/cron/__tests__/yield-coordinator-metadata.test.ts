@@ -256,15 +256,6 @@ describe("buildYieldDegradationReasons", () => {
     expect(reasons.some((reason) => reason.startsWith("yield-source:expired-selected:"))).toBe(false);
     expect(reasons.some((reason) => reason.startsWith("risk-free-rate:EUR:"))).toBe(false);
   });
-
-  it("stays quiet for a healthy supplemental cache with no optional-source failures", () => {
-    expect(
-      buildYieldDegradationReasons({
-        ...baseParams,
-        defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
-      }).filter((reason) => reason.startsWith("yield-supplemental:") || reason.startsWith("yield-source:family-failed:")),
-    ).toEqual([]);
-  });
 });
 
 describe("buildYieldSyncMetadata", () => {

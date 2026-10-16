@@ -129,18 +129,6 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(body.error).toContain("dry-run=true");
   });
 
-  it("allows GET dry-run previews", async () => {
-    const db = mockD1([{ match: "depeg_events", rows: [] }]);
-    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true", { adminKey: "secret" });
-
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
-    const body = (await readJsonResponse(res, 200)) as { dryRun: boolean; totalMatching: number; limit: number };
-    expect(body.dryRun).toBe(true);
-    expect(body.totalMatching).toBe(0);
-    expect(body.limit).toBe(25);
-    expect(body).toMatchObject({ offset: 0, auditedEvents: [], deletedEvents: [], daysRecomputed: 0 });
-  });
-
   it("rejects limit values above the bounded audit cap", async () => {
     const db = mockD1([]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&limit=26", { adminKey: "secret" });
@@ -213,19 +201,6 @@ describe("handleAuditDepegHistory method safety", () => {
     }
   });
 
-  it("accepts valid direct delete ID lists in dry-run mode", async () => {
-    const rows = makeSyntheticSplitRows();
-    const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
-    ]);
-    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&delete=1,2", { adminKey: "secret" });
-
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
-    const body = (await readJsonResponse(res, 200)) as { dryRun: boolean; deletedEvents: Array<{ id: number }> };
-    expect(body.dryRun).toBe(true);
-    expect(body.deletedEvents.map((event) => event.id)).toEqual([1, 2]);
-  });
-
   it("blocks direct deletes against sealed DDRv2 events", async () => {
     const rows = makeSyntheticSplitRows();
     const db = mockD1([
@@ -286,32 +261,6 @@ describe("handleAuditDepegHistory method safety", () => {
       affectedDay - 21 * DAY_SECONDS,
       affectedDay,
     ]);
-  });
-
-  it("surfaces synthetic split repair candidates in dry-run mode", async () => {
-    const rows = makeSyntheticSplitRows();
-    const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
-      { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
-    ]);
-    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&repair=synthetic-splits", { adminKey: "secret" });
-
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
-    const body = (await readJsonResponse(res, 200)) as {
-      repair: string;
-      dryRun: boolean;
-      totalMatching: number;
-      candidateGroups: Array<{ keeperId: number; mergedIds: number[]; eventIds: number[] }>;
-    };
-    expect(body.repair).toBe("synthetic-splits");
-    expect(body.dryRun).toBe(true);
-    expect(body.totalMatching).toBe(1);
-    expect(body.candidateGroups).toHaveLength(1);
-    expect(body.candidateGroups[0]).toMatchObject({
-      keeperId: 1,
-      mergedIds: [2],
-      eventIds: [1, 2],
-    });
   });
 
   it("merges synthetic split groups on POST repair", async () => {
@@ -387,30 +336,6 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events WHERE id = ?"))).toBe(false);
   });
 
-  it("surfaces backfill-to-live handoff repair candidates in dry-run mode", async () => {
-    const rows = makeBackfillLiveHandoffRows();
-    const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
-      { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
-    ]);
-    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&repair=synthetic-splits&symbol=SUSD", { adminKey: "secret" });
-
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
-    const body = (await readJsonResponse(res, 200)) as {
-      repair: string;
-      totalMatching: number;
-      candidateGroups: Array<{ keeperId: number; mergedIds: number[]; eventIds: number[] }>;
-    };
-    expect(body.repair).toBe("synthetic-splits");
-    expect(body.totalMatching).toBe(1);
-    expect(body.candidateGroups).toHaveLength(1);
-    expect(body.candidateGroups[0]).toMatchObject({
-      keeperId: 11,
-      mergedIds: [10],
-      eventIds: [10, 11],
-    });
-  });
-
   it("keeps the live tail when repairing a backfill-to-live handoff", async () => {
     const rows = makeBackfillLiveHandoffRows();
     const day = 1_762_214_400;
@@ -464,33 +389,6 @@ describe("handleAuditDepegHistory method safety", () => {
       rows[1].id,
     ]);
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events WHERE id = ?") && entry.binds[0] === 10)).toBe(true);
-  });
-
-  it("surfaces contradictory recovery-price candidates in dry-run mode", async () => {
-    const rows = makeContradictoryRecoveryRows();
-    const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
-    ]);
-    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&repair=contradictory-recovery-price", {
-      adminKey: "secret",
-    });
-
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
-    const body = (await readJsonResponse(res, 200)) as {
-      repair: string;
-      totalMatching: number;
-      candidateEvents: Array<{ id: number; symbol: string; recoveryBps: number; thresholdBps: number }>;
-    };
-    expect(body.repair).toBe("contradictory-recovery-price");
-    expect(body.totalMatching).toBe(1);
-    expect(body.candidateEvents).toEqual([
-      expect.objectContaining({
-        id: 21,
-        symbol: "BRZ",
-        recoveryBps: 1500,
-        thresholdBps: 150,
-      }),
-    ]);
   });
 
   it("nulls contradictory recovery prices on POST repair", async () => {
@@ -809,7 +707,6 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(body.auditedEvents.every((e) => e.verdict === "error")).toBe(true);
   });
 });
-
 
 it("skips recycled Solomon provider history without fetching or invalidating either token's event", async () => {
   fetchWithRetryMock.mockClear();

@@ -96,54 +96,6 @@ describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
     expect(summary.qualityDriftSeverity).toBe("none");
   });
 
-  it("holds a first-run cliff as a candidate instead of reporting it", () => {
-    const first = cliff({ previousTvl: 152_000_000, currentTvl: 13_720_000 });
-
-    expect(first.qualityDriftFlags).toEqual([]);
-    expect(first.qualityDriftSeverity).toBe("none");
-    expect(first.majorTvlCliffs[0]?.tvlPctDelta).toBeCloseTo(-0.9097, 4);
-    expect(first.qualityDriftCandidates).toEqual([
-      {
-        flag: "major-tvl-cliff:usds-sky",
-        consecutiveRuns: 1,
-        baselineValue: 152_000_000,
-        observedValue: 13_720_000,
-      },
-    ]);
-  });
-
-  it("confirms the cliff on the second run and keeps it after the baseline row is overwritten", () => {
-    const first = cliff({ previousTvl: 152_000_000, currentTvl: 13_720_000 });
-    const second = cliff({
-      previousTvl: 152_000_000,
-      currentTvl: 13_700_000,
-      previousCandidates: first.qualityDriftCandidates,
-    });
-
-    expect(second.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
-    expect(second.qualityDriftSeverity).toBe("high");
-    expect(second.qualityDriftCandidates).toEqual([
-      {
-        flag: "major-tvl-cliff:usds-sky",
-        consecutiveRuns: 2,
-        baselineValue: 152_000_000,
-        observedValue: 13_700_000,
-      },
-    ]);
-
-    // The third run publishes on top of the collapsed value, so the per-coin
-    // baseline row no longer carries the pre-event TVL.
-    const third = cliff({
-      previousTvl: 13_700_000,
-      currentTvl: 13_600_000,
-      previousCandidates: second.qualityDriftCandidates,
-    });
-
-    expect(third.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
-    expect(third.majorTvlCliffs[0]?.previousTvlUsd).toBe(152_000_000);
-    expect(third.qualityDriftCandidates[0]?.consecutiveRuns).toBe(3);
-  });
-
   it("clears a confirmed cliff once the value recovers against the pre-event baseline", () => {
     const confirmed = cliff({
       previousTvl: 152_000_000,

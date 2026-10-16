@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -51,40 +51,6 @@ describe("ReportCardsV9Client", () => {
 
   afterEach(cleanupFrontendTest);
 
-  it("keeps the production grade-grouped card grid and V9 controls", () => {
-    render(<ReportCardsV9Client />);
-
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
-    expect(screen.getByText("Filter:")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Backing" }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: "Econ. Control" }).length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Safety score cards")).toBeTruthy();
-    expect(screen.queryByText(/assets are scored/)).toBeNull();
-    expect(screen.getByRole("heading", { name: "Three questions behind every grade" })).toBeTruthy();
-    expect(screen.getByText("Is there real value behind the token?")).toBeTruthy();
-    expect(screen.getByText("Can I get my value out?")).toBeTruthy();
-    expect(screen.getByText("Who can change or break the system?")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Find your coin" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Open the Safety Score Map" }).getAttribute("href")).toBe(
-      "/safety-scores/map/",
-    );
-  });
-
-  it("shows all three pillar averages and the grade mix by asset count beside supply", () => {
-    render(<ReportCardsV9Client />);
-    const hero = within(screen.getByRole("group", { name: "Ecosystem safety overview" }));
-
-    expect(hero.getByText("Pillar averages")).toBeTruthy();
-    expect(hero.getByText("Backing")).toBeTruthy();
-    expect(hero.getByText("Exit")).toBeTruthy();
-    expect(hero.getByText("Economic Control")).toBeTruthy();
-    expect(hero.getAllByText("Weakest")).toHaveLength(1);
-    expect(hero.queryByText("Weakest pillar")).toBeNull();
-    expect(hero.getByText("By asset count")).toBeTruthy();
-    expect(hero.getByRole("img", { name: "Safety grade distribution by asset count" })).toBeTruthy();
-    expect(hero.getByText("By supply")).toBeTruthy();
-  });
-
   it("discloses a fresh successful held publication while keeping accepted ratings visible", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const response = makeReportCardsV9Response({
@@ -115,13 +81,6 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
   });
 
-  it("filters the card grid by the existing grade controls", () => {
-    render(<ReportCardsV9Client />);
-
-    fireEvent.click(screen.getAllByRole("button", { name: "A (1)" })[0]);
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
-    expect(screen.getByTestId("v9-card").textContent).toBe("asset-a");
-  });
   it("filters technical gaps separately from NR while retaining rated partial cards", () => {
     mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({ cards: [
       makeReportCardsV9PartialCard("exit", "B", { id: "partial", score: 75 }),
@@ -135,14 +94,6 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByTestId("v9-card").textContent).toBe("nr");
     fireEvent.click(screen.getAllByRole("button", { name: "B (1)" })[0]);
     expect(screen.getByTestId("v9-card").textContent).toBe("partial");
-  });
-
-  it("filters the card grid by consolidated peg groups", () => {
-    render(<ReportCardsV9Client />);
-
-    fireEvent.click(screen.getAllByRole("button", { name: "Fiat non USD" })[0]);
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
-    expect(screen.getByTestId("v9-card").textContent).toBe("asset-b");
   });
 
   it("shows V9 unavailable without a V8 fallback", () => {

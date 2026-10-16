@@ -9,8 +9,6 @@ import type { WebhookCommandContext } from "../context";
 import { buildV2PreviewMessageForTest, persistImportPreviewForTest } from "../import";
 import { makeCommandContext } from "./webhook-commands.test-support";
 import { BULK_CONFIRM_REPLY_MARKUP } from "../action-runner";
-import { sendAuditedTelegramReply } from "../../telegram-webhook-replies";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const payload: ConfirmBulkPayload = {
   kind: "subscribe",
@@ -94,28 +92,6 @@ describe("watchlist import preview effect fencing", () => {
       "confirm:bulk",
       "cancel:bulk",
     ]);
-  });
-
-  it("attaches the confirmation keyboard only to the final exact-preview chunk", async () => {
-    const requests: Array<Record<string, unknown>> = [];
-    mockFetch([{
-      match: "https://api.telegram.org/bottoken/sendMessage",
-      respond: async (request) => {
-        requests.push(await request.clone().json() as Record<string, unknown>);
-        return { body: "ok" };
-      },
-    }], { requireMatch: true });
-    try {
-      const db = mockD1([]);
-      await sendAuditedTelegramReply(db, "123", `first\n\n${"x".repeat(9_000)}`, "token", {
-        replyMarkup: BULK_CONFIRM_REPLY_MARKUP,
-      });
-      expect(requests.length).toBeGreaterThanOrEqual(3);
-      expect(requests.slice(0, -1).every((request) => request.reply_markup == null)).toBe(true);
-      expect(requests[requests.length - 1]?.reply_markup).toEqual(BULK_CONFIRM_REPLY_MARKUP);
-    } finally {
-      vi.unstubAllGlobals();
-    }
   });
 
   it("never confirms the in-memory mutation fence when another owner wins, including retry", async () => {

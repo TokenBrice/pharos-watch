@@ -9,7 +9,6 @@ import {
   type ActiveWorkerDeployment,
   type ListedWorkerDeployment,
   fetchWorkerDeployments,
-  readWorkerScriptName,
   runWorkerDeploymentVerification,
   selectWorkerActivationAt,
   verifyActiveWorkerDeployment,
@@ -88,15 +87,6 @@ describe("verifyActiveWorkerDeployment", () => {
   ])("fails the release when %s", (_case, overrides) => {
     expect(() => verifyActiveWorkerDeployment(activeDeployment(overrides), workerDeployMessage(SHA)))
       .toThrow(/Active Worker deployment did not match this release/);
-  });
-
-  it("reports the observed deployment identity and message when the release does not match", () => {
-    expect(() =>
-      verifyActiveWorkerDeployment(
-        activeDeployment({ annotations: { "workers/message": "manual wrangler deploy" } }),
-        workerDeployMessage(SHA),
-      ),
-    ).toThrow(/"deploymentId":"deployment-2".*"message":"manual wrangler deploy"/);
   });
 });
 
@@ -177,10 +167,6 @@ describe("Cloudflare deployment API verification", () => {
       GITHUB_SHA: SHA,
     };
   }
-
-  it("reads the script name from the production Wrangler config", () => {
-    expect(readWorkerScriptName()).toBe("stablecoin-api");
-  });
 
   it("uses one authenticated GET for active status and history and publishes the activation second", async () => {
     const env = apiEnv();

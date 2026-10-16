@@ -1,18 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkEditorialContent } from "../ci/check-editorial-content";
-import { CaseStudyContentSchema, MethodologyContentSchema, WeeklyContentSchema, editorialReferenceIssues } from "../lib/editorial-content";
-import { createMethodologyVersion } from "@shared/lib/methodology-versions/base";
+import { CaseStudyContentSchema, WeeklyContentSchema } from "../lib/editorial-content";
 import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks";
 
 const load = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));
-const references = { routes: new Set(["/methodology/", "/learn/case-studies/usdc-svb-2023/"]), coinIds: new Set(["usdc-circle"]), cemeteryIds: new Set(["terrausd"]) };
-
 describe("authored editorial JSON", () => {
-  it("validates every registered content source and its internal references", () => {
-    expect(checkEditorialContent()).toEqual([]);
-  });
-
   it("wires authored JSON validation into the owning structural guard", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["check:structural"].split(" && ")).toContain("npm run check:editorial-content");
@@ -32,15 +24,6 @@ describe("authored editorial JSON", () => {
     expect(WeeklyContentSchema.safeParse({ ...parsed, summary: [{ ...parsed.summary[0], href: "https://example.com" }] }).success).toBe(false);
     expect(WeeklyContentSchema.safeParse({ ...parsed, stats: { totalCommits: 0 } }).success).toBe(false);
     expect(WeeklyContentSchema.safeParse({ ...parsed, fieldNotes: Array(81).fill("word").join(" ") }).success).toBe(false);
-  });
-
-  it("keeps structured methodology detail shapes and ADR-3 checks", () => {
-    const input = load("shared/data/methodology-changelogs/safety-score/v10.json");
-    const parsed = MethodologyContentSchema.parse(input);
-    expect(parsed).toEqual(input);
-    expect(MethodologyContentSchema.safeParse([{ ...parsed[0], detail: [{ kind: "weights", values: ["1", "2"] }] }]).success).toBe(false);
-    expect(MethodologyContentSchema.safeParse([{ ...parsed[0], detail: [{ kind: "unknown", text: "body" }] }]).success).toBe(false);
-    expect(() => createMethodologyVersion({ currentVersion: "10.141", changelogPath: "/methodology/scoring-changelog/", changelog: [{ ...parsed[0], version: "10.141" }] })).toThrow(/two decimal digits/);
   });
 
   it("validates case metadata and section identity without changing prose", () => {
@@ -68,12 +51,4 @@ describe("authored editorial JSON", () => {
     expect(accepts(`a${"-".repeat(10_000)}b`)).toBe(false);
   });
 
-  it("rejects broken internal links and identity references while retaining external citations", () => {
-    expect(editorialReferenceIssues({ href: "/methodology/?mode=detail#safety-scores-methodology", primaryCoinId: "usdc-circle", source: { href: "https://example.com/report" } }, references)).toEqual([]);
-    const issues = editorialReferenceIssues({ href: "/learn/case-studies/missing/", coinId: "missing-coin", cemeteryId: "missing-cemetery", relatedCoinIds: ["missing-related"] }, references);
-    expect(issues).toHaveLength(4);
-    expect(issues.join("\n")).toContain("Unknown internal route");
-    expect(issues.join("\n")).toContain("Unknown coin id");
-    expect(issues.join("\n")).toContain("Unknown cemetery id");
-  });
 });

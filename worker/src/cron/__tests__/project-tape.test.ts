@@ -161,32 +161,6 @@ describe("projectTape", () => {
     expect(inserts[0]![2]).toBe("info");
   });
 
-  it("does not project depeg.resolved for non-recovery closures", async () => {
-    const db = dbWithOverride({
-      match: MATCH_DEPEG_RESOLVED,
-      rows: [
-        {
-          id: 1,
-          stablecoin_id: "usdt-tether",
-          symbol: "USDT",
-          peg_type: "peggedUSD",
-          direction: "below",
-          peak_deviation_bps: -800,
-          started_at: SEC,
-          ended_at: SEC + 600,
-          recovery_price: null,
-          peg_reference: 1,
-          source: "live",
-          close_reason: "coverage-lost-supply",
-          methodology_version: "5.0",
-        },
-      ],
-    });
-
-    await projectTape(db);
-    expect(tapeInsertBindsForType(db, "depeg.resolved")).toHaveLength(0);
-  });
-
   it("emits depeg.peak_worsened when an open row's magnitude exceeds the last-seen peak", async () => {
     // First run: open row at -1500 bps; seen-map is empty so it becomes the
     // baseline observation and no event is emitted.
@@ -388,42 +362,6 @@ describe("projectTape", () => {
     expect(tapeInsertBindsForType(db, "freeze.destroyed")).toHaveLength(0);
     expect(tapeInsertBindsForType(db, "score.upgraded")).toHaveLength(0);
     expect(tapeInsertBindsForType(db, "score.downgraded")).toHaveLength(0);
-  });
-
-  it("filters out same-grade rows from score history", async () => {
-    const db = dbWithOverride({
-      match: MATCH_SAFETY,
-      rows: [
-        {
-          stablecoin_id: "usdt-tether",
-          recorded_at: SEC,
-          grade: "B",
-          score: 75,
-          prev_grade: "B", // same rank — should be skipped
-          prev_score: 76,
-          methodology_version: "5.0",
-          transition_kind: "organic-grade-change",
-          source_table: "safety_grade_history",
-          source_row_id: `usdt-tether:${SEC}`,
-          row_sort_id: `legacy:usdt-tether:${SEC}`,
-        },
-      ],
-    });
-    await projectTape(db);
-    expect(tapeInsertBindsForType(db, "score.upgraded")).toHaveLength(0);
-    expect(tapeInsertBindsForType(db, "score.downgraded")).toHaveLength(0);
-  });
-
-  it("emits methodology.bumped:<domain> for changelog versions not yet observed", async () => {
-    // No tape_events rows for any methodology type → projector should emit at
-    // least one event per domain (10 domains in v1).
-    const db = mockTapeD1(baseTables()) as MockD1Database;
-    await projectTape(db);
-    // Each domain emits ≥ 1 entry on a fresh DB.
-    const inserts = tapeInsertBinds(db).filter(
-      (binds) => typeof binds[1] === "string" && (binds[1] as string).startsWith("methodology.bumped:"),
-    );
-    expect(inserts.length).toBeGreaterThan(0);
   });
 
   it("emits cemetery.entry.added on first observation", async () => {

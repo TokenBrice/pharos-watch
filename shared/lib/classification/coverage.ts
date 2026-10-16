@@ -29,7 +29,7 @@ export type FeatureIdentityKey =
   | "pegscoreDews"
   | "depegResolver";
 
-export const FEATURE_IDENTITY_CLASSES = {
+const FEATURE_IDENTITY_CLASSES = {
   price: { hue: "sky", changelogHover: "hover:text-sky-700 dark:hover:text-sky-400" },
   safety: { hue: "emerald", changelogHover: "hover:text-emerald-700 dark:hover:text-emerald-400" },
   dex: { hue: "cyan", changelogHover: "hover:text-cyan-700 dark:hover:text-cyan-400" },
@@ -107,7 +107,7 @@ export const COVERAGE_GAP_BAR_CLASS =
   "bg-muted-foreground/35 bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.08)_5px_10px)]";
 
 /** Bar label colour used whenever the bar fill is light enough for dark text. */
-export const COVERAGE_BAR_TEXT_ON_LIGHT_CLASS = "text-slate-950";
+const COVERAGE_BAR_TEXT_ON_LIGHT_CLASS = "text-slate-950";
 
 export interface CoverageBreakdownToneClasses {
   chip: string;

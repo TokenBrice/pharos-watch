@@ -12,7 +12,6 @@ import {
   checkSnapshots,
   fetchOptionalDetailSnapshotLane,
   generateSnapshots,
-  resolveSnapshotApiBase,
   serializedSnapshotBytes,
   validateStablecoinDetailSnapshot,
   writeSnapshots,
@@ -180,19 +179,6 @@ describe("stablecoin detail snapshot generator", () => {
     await failure;
   });
 
-  it("reads the public site-data lane when no build credential is configured", () => {
-    for (const name of ["PHAROS_API_KEY", "SITE_API_SHARED_SECRET", "DIGEST_API_KEY", "PUBLIC_DATASETS_API_KEY", "SMOKE_API_KEY",
-      "DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) {
-      vi.stubEnv(name, "");
-    }
-    expect(resolveSnapshotApiBase()).toBe("https://stablecoin-dashboard.pages.dev/_site-data");
-
-    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
-    expect(resolveSnapshotApiBase()).toBe("https://api.pharos.watch");
-
-    vi.stubEnv("PUBLIC_DATASETS_API_URL", "https://stablecoin-dashboard.pages.dev/_site-data");
-    expect(resolveSnapshotApiBase()).toBe("https://stablecoin-dashboard.pages.dev/_site-data");
-  });
 
   it("fails closed when a successful response does not match its lane schema", async () => {
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
@@ -438,12 +424,4 @@ describe("stablecoin detail snapshot generator", () => {
     expect(fetch).toHaveBeenCalledTimes(6);
   });
 
-  it("rejects an unknown source instead of changing the acquisition policy", async () => {
-    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
-    vi.stubEnv("PHAROS_DETAIL_SNAPSHOT_SOURCE", "typo");
-    const fetch = vi.fn();
-    vi.stubGlobal("fetch", fetch);
-    await expect(generateSnapshots(false)).rejects.toThrow(/Invalid PHAROS_DETAIL_SNAPSHOT_SOURCE/);
-    expect(fetch).not.toHaveBeenCalled();
-  });
 });

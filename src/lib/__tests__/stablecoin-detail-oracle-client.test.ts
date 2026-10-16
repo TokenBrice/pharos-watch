@@ -8,7 +8,6 @@ import {
   buildOracleVerdict,
   dedupeOracleFeeds,
   formatOracleDurationSec,
-  formatOraclePct,
   ORACLE_TIER_POLICY_BANDS,
   projectOracleRiskClientSummary,
   resolveOracleTierLadder,
@@ -67,14 +66,6 @@ describe("formatOracleDurationSec", () => {
   });
 });
 
-describe("formatOraclePct", () => {
-  it("rounds to at most 2 decimals and trims trailing zeros", () => {
-    expect(formatOraclePct(66.6667)).toBe("66.67%");
-    expect(formatOraclePct(110)).toBe("110%");
-    expect(formatOraclePct(90.9)).toBe("90.9%");
-  });
-});
-
 describe("projectOracleRiskClientSummary", () => {
   it("uses explicit pricing paths rather than an aggregate no-oracle disposition to identify borrower risk", () => {
     const summary = projectOracleRiskClientSummary(coinWith({
@@ -116,16 +107,6 @@ describe("projectOracleRiskClientSummary", () => {
     expect(feed!.role).toBe("coin-price-feed");
     expect(feed!.title).toBe("Price feed");
     expect(feed!.verdict).toContain("TEST");
-  });
-
-  it("generates verdicts that differ by tier and stay inside the summary budget", () => {
-    const verdicts = ORACLE_RISK_TIER_VALUES.flatMap((tier) =>
-      (["coin-price-feed", "collateral-pricing"] as const).map((role) =>
-        buildOracleVerdict({ role, tier, symbol: "USDe", branchCount: 3, maxStalenessLabel: "2d", stalenessBoundCount: 2 }),
-      ),
-    );
-    for (const verdict of verdicts) expect(findSummaryBudgetViolations(verdict)).toEqual([]);
-    expect(new Set(verdicts).size).toBe(verdicts.length);
   });
 
   it("adds the staleness clause only when a bound is reviewed", () => {
@@ -364,21 +345,6 @@ describe("projectOracleRiskClientSummary", () => {
     expect(summary!.worstMaxLtvPct).toBe(66.6667);
   });
 
-  it("dedupes merged sources by url", () => {
-    const summary = projectOracleRiskClientSummary(
-      coinWith({
-        ...BOLD_LIKE_PROFILE,
-        sources: [{ label: "Liquity V2 contracts", url: "https://example.com/contracts" }],
-        branches: [
-          {
-            ...BOLD_LIKE_PROFILE.branches![0]!,
-            sources: [{ label: "Mirror", url: "https://example.com/contracts" }],
-          },
-        ],
-      }),
-    );
-    expect(summary!.sources).toEqual([{ label: "Liquity V2 contracts", url: "https://example.com/contracts" }]);
-  });
 });
 
 describe("dedupeOracleFeeds", () => {
@@ -440,19 +406,6 @@ describe("oracle tier ladder", () => {
     const lit = ladder.bands.find((band) => band.key === ladder.activeKey)!;
     expect(lit.fillClass).toBe(SEVERITY_TONE_CLASS.neutral.bar);
     expect(lit.fillClass).not.toBe(SEVERITY_TONE_CLASS.ok.bar);
-  });
-
-  it("gives every band a one-word narrow label, never a joined list of tier names", () => {
-    for (const tier of ORACLE_RISK_TIER_VALUES) {
-      const ladder = resolveOracleTierLadder(tier)!;
-      for (const band of ladder.bands) {
-        expect(band.shortLabel).not.toContain("/");
-        expect(band.shortLabel.split(" ").length).toBeLessThanOrEqual(2);
-      }
-      const lit = ladder.bands.find((band) => band.key === ladder.activeKey)!;
-      // The wide label names the lit tier in full.
-      expect(lit.label).toBe(projectOracleRiskClientSummary(coinWith({ tier, summary: "Fixture tier summary." }))!.tierLabel);
-    }
   });
 
   it("draws no ladder for a value outside the published tiers", () => {

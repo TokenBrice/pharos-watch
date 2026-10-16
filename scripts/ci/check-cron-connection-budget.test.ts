@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { CRON_CONNECTION_BUDGET_ENTRIES } from "@shared/lib/cron-jobs";
 import { evaluateCronConnectionBudget } from "./check-cron-connection-budget";
 
 describe("check-cron-connection-budget", () => {
@@ -9,11 +8,6 @@ describe("check-cron-connection-budget", () => {
     expect(reviewedReport.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
     expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "halfHourlyOffset")?.totalConnections).toBe(5);
     expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly")?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
-  });
-
-  it("preserves the four-connection status trigger after the D1 two-request correction", () => {
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "status-self-check")?.maxConnections).toBe(2);
-    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "statusSelfCheckOffset")?.totalConnections).toBe(4);
   });
 
   it.each([
@@ -29,15 +23,6 @@ describe("check-cron-connection-budget", () => {
     const trigger = reviewedReport.triggerReports.find((entry) => entry.scheduleKey === scheduleKey);
     expect(trigger?.chains).toEqual([{ chainKey: "chain-1", jobs, peak }]);
     expect(trigger?.totalConnections).toBe(peak);
-  });
-
-  it.each([
-    ["sync-stablecoins", 4], ["compute-depeg-resolver", 0], ["compute-safety-score-v9", 0],
-    ["sync-dex-liquidity-stage", 5],
-    ["sync-dex-liquidity", 5],
-    ["prepare-safety-score-v9-input", 3],
-  ] as const)("preserves reviewed %s job pressure", (job, peak) => {
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === job)?.maxConnections).toBe(peak);
   });
 
   it("sums independent parallel chains even when they share a connection group", () => {

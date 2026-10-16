@@ -2,9 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC,
-  getYieldBenchmarkDisplayLabel,
-  getYieldBenchmarkGapReferenceText,
-  getYieldBenchmarkGapUnavailableText,
   getYieldRankingBenchmarkKey,
   resolveYieldBenchmarkAge,
   resolveYieldDisplayRebaseReferenceRate,
@@ -106,27 +103,7 @@ function buildRanking(id: string, benchmarkKey: "USD" | "EUR" | "CHF"): YieldRan
   });
 }
 
-describe("getYieldBenchmarkDisplayLabel", () => {
-  it("adds the fallback suffix when a row is using a fallback benchmark", () => {
-    expect(
-      getYieldBenchmarkDisplayLabel({
-        benchmarkLabel: "USD 3M T-Bill",
-        benchmarkIsFallback: true,
-      }),
-    ).toBe("USD 3M T-Bill (fallback)");
-  });
 
-  it("combines the fallback marker with an age marker for a stale proxy selection", () => {
-    expect(
-      getYieldBenchmarkDisplayLabel({
-        benchmarkLabel: "USD 3M T-Bill",
-        benchmarkIsFallback: true,
-        ageSeconds: 60,
-        recordDate: "2026-08-01",
-      }),
-    ).toBe("USD 3M T-Bill (fallback · 42d old)");
-  });
-});
 
 describe("resolveYieldBenchmarkAge", () => {
   const NOW = Date.parse("2026-09-12T00:00:00Z");
@@ -250,24 +227,7 @@ describe("resolveYieldRowBenchmark", () => {
   });
 });
 
-describe("yield benchmark gap copy", () => {
-  it("builds a shared 30d benchmark subtitle for excess yield callouts", () => {
-    expect(
-      getYieldBenchmarkGapReferenceText({
-        benchmarkLabel: "USD 3M T-Bill",
-      }),
-    ).toBe("30d vs USD 3M T-Bill");
-    expect(
-      getYieldBenchmarkGapReferenceText({
-        benchmarkLabel: "USD 3M T-Bill",
-      }, { includePeriod: false }),
-    ).toBe("vs USD 3M T-Bill");
-  });
 
-  it("builds the shared no-gap fallback copy", () => {
-    expect(getYieldBenchmarkGapUnavailableText()).toBe("No 30d benchmark gap");
-  });
-});
 
 describe("resolveYieldScatterBenchmarkFrame", () => {
   it("uses the provenance benchmark key when the top-level key is absent", () => {

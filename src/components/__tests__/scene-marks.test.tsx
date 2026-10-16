@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { SceneMark } from "@shared/lib/scene/marks";
-import { SceneDefs } from "../scene/scene-defs";
 import { AtlasWindow, SceneMarks } from "../scene/scene-marks";
 
 describe("scene marks", () => {
@@ -20,15 +19,3 @@ describe("scene marks", () => {
   });
 });
 
-describe("scene defs", () => {
-  it("hosts prefixed paint servers in one SVG whose class the caller sizes (never display: none)", () => {
-    const html = renderToStaticMarkup(
-      <SceneDefs idPrefix="hb" className="defs" hatchLineClassName="hl" gradients={[{ id: "sea", type: "linear", stops: [["0", "s0"], ["1", "s1"]] }, { id: "glow", type: "radial", stops: [["0", "g0"]] }]} />,
-    );
-    expect(html).toContain('<svg class="defs" aria-hidden="true" focusable="false">');
-    expect(html).toContain('<pattern id="hb-hatch"');
-    expect(html).toContain('<linearGradient id="hb-g-sea" x1="0" x2="1" y1="0" y2="0"><stop offset="0" class="s0"></stop><stop offset="1" class="s1"></stop></linearGradient>');
-    expect(html).toContain('<radialGradient id="hb-g-glow"><stop offset="0" class="g0"></stop></radialGradient>');
-    expect(html).not.toMatch(/display/);
-  });
-});

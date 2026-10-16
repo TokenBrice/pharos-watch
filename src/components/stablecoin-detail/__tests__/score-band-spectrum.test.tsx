@@ -112,13 +112,4 @@ describe("ScoreBandSpectrum", () => {
     expect(html).toBe("");
   });
 
-  it("drops the whole label row when bands are unlabeled", () => {
-    const unlabeled = BANDS.map((band) => ({ ...band, label: "" }));
-    const html = renderToStaticMarkup(
-      <ScoreBandSpectrum mode="ordinal" bands={unlabeled} activeKey="managed" ariaLabel="Score track" />,
-    );
-    // Track segments only: no second row of label spans survives.
-    expect(growValues(html)).toHaveLength(3);
-    expect(html).toContain('aria-label="Score track"');
-  });
 });

@@ -1,61 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { withEnv } from "./helpers/test-state";
 import { ACCESS_HEADERS, jsonResponse, textResponse } from "./smoke-ops.test-support";
 
 import {
   assertNonceProtectedHtml,
-  extractCookiePairs,
   fetchJsonWithRetry,
   fetchOpsUiProxyStatus,
   fetchOpsUiProxyStatusWithRetry,
-  getSmokeOpsScope,
-  hasOpsUiAccessSessionCookie,
-  mergeCookieHeader,
   shouldSkipCanaryOpsUiProxyAssertion,
   shouldRetryDirectOpsJson,
   shouldSkipOpsUiProxyAssertion,
   shouldRetryOpsUiProxyStatus,
 } from "../maintenance/smoke-ops.mjs";
-
-describe("getSmokeOpsScope", () => {
-  it("defaults to full and accepts canary", () => {
-    withEnv("SMOKE_OPS_SCOPE", undefined, () => {
-      expect(getSmokeOpsScope()).toBe("full");
-    });
-    withEnv("SMOKE_OPS_SCOPE", "canary", () => {
-      expect(getSmokeOpsScope()).toBe("canary");
-    });
-    expect(getSmokeOpsScope("canary")).toBe("canary");
-    expect(getSmokeOpsScope("FULL")).toBe("full");
-  });
-
-  it("rejects unknown scopes", () => {
-    expect(() => getSmokeOpsScope("quick")).toThrow('Invalid SMOKE_OPS_SCOPE "quick"');
-  });
-});
-
-describe("extractCookiePairs", () => {
-  it("extracts cookie name-value pairs from a combined Set-Cookie header", () => {
-    const response = new Response(null, {
-      headers: {
-        "set-cookie": [
-          "CF_Authorization=ui-session; Expires=Sun, 05 Apr 2026 12:51:17 GMT; Path=/; Secure; SameSite=none",
-          "other=value; Path=/; Secure",
-        ].join(", "),
-      },
-    });
-
-    expect(extractCookiePairs(response)).toEqual(["CF_Authorization=ui-session", "other=value"]);
-  });
-});
-
-describe("mergeCookieHeader", () => {
-  it("deduplicates cookies by name and keeps the latest value", () => {
-    expect(mergeCookieHeader("CF_Authorization=old", ["other=value", "CF_Authorization=new"])).toBe(
-      "CF_Authorization=new; other=value",
-    );
-  });
-});
 
 describe("assertNonceProtectedHtml", () => {
   it("accepts inline scripts that carry the CSP nonce", () => {
@@ -313,13 +268,6 @@ describe("fetchJsonWithRetry", () => {
     expect(result.response.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(sleepMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("hasOpsUiAccessSessionCookie", () => {
-  it("only treats CF_Authorization as a bootstrapped Access session", () => {
-    expect(hasOpsUiAccessSessionCookie("cf_clearance=bot-cookie")).toBe(false);
-    expect(hasOpsUiAccessSessionCookie("cf_clearance=bot-cookie; CF_Authorization=ui-session")).toBe(true);
   });
 });
 

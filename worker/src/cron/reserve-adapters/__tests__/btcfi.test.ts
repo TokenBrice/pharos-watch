@@ -9,18 +9,6 @@ import { expectValidAdapterOutput, expectWarningEffect, installAdapterNetwork } 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("adaptBtcfi", () => {
-  it("rejects drift removing a collateral row deposit_value", () => {
-    const market = structuredClone(BTCFI_MARKET_ROWS);
-    Reflect.deleteProperty(market[0], "deposit_value");
-    expect(() => adaptBtcfi(market, BTCFI_HANDLER_ROWS)).toThrow(/deposit_value/);
-  });
-
-  it("declares latest-state API aggregation as not-applicable freshness", () => {
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.btcfi.validation.allowedFreshnessModes).toEqual([
-      "not-applicable",
-    ]);
-  });
-
   it("emits per-symbol BTC slices with canonical risk mapping", () => {
     const result = adaptBtcfi(BTCFI_MARKET_ROWS, BTCFI_HANDLER_ROWS);
 

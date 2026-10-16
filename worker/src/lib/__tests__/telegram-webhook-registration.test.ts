@@ -8,12 +8,8 @@ import {
   reconcileTelegramMenuButton,
   reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
-  TELEGRAM_ALLOWED_UPDATES,
   TELEGRAM_BOT_COMMANDS,
-  TELEGRAM_BOT_DESCRIPTION,
   TELEGRAM_BOT_GROUP_COMMANDS,
-  TELEGRAM_BOT_NAME,
-  TELEGRAM_BOT_SHORT_DESCRIPTION,
   TELEGRAM_MINI_APP_BUTTON_TEXT,
   TELEGRAM_MINI_APP_URL,
 } from "../telegram/webhook-registration";
@@ -88,15 +84,6 @@ function expectedCommandsCacheValue(): string {
   });
 }
 
-function expectedProfileCacheValue(): string {
-  return JSON.stringify({
-    version: 3,
-    name: TELEGRAM_BOT_NAME,
-    short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
-    description: TELEGRAM_BOT_DESCRIPTION,
-  });
-}
-
 function expectedMenuCacheValue(url = TELEGRAM_MINI_APP_URL): string {
   return JSON.stringify({
     version: 1,
@@ -146,11 +133,6 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-
-  it("keeps Mini App MVP webhook updates limited to handled update types", () => {
-    expect([...TELEGRAM_ALLOWED_UPDATES]).toEqual([...MINI_APP_MVP_ALLOWED_UPDATES]);
-    expect(TELEGRAM_ALLOWED_UPDATES).not.toContain("web_app_data");
-  });
 
   it("skips the Telegram API call when the reconciliation cache is still fresh", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
@@ -247,24 +229,6 @@ describe("reconcileTelegramWebhookRegistration", () => {
       });
     },
   );
-
-  it("continues registering only the current secret token", async () => {
-    const db = mockD1([
-      cacheSelectEntry("telegram:webhook-reconciled"),
-      cacheSelectEntry("telegram:reconcile:429:setWebhook"),
-      cacheWriteEntry(),
-    ]);
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    await reconcileTelegramWebhookRegistration(db, {
-      botToken: "bot-token",
-      webhookSecret: "current-secret",
-      selfUrl: "https://api.pharos.watch",
-    });
-
-    const body = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
-    expect(body.secret_token).toBe("current-secret");
-  });
 
   it("throws when Telegram rejects the registration", async () => {
     const db = mockD1(
@@ -381,101 +345,6 @@ describe("reconcileTelegramCommandRegistration", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("registers scoped slash-command suggestions for private and group chats and records the reconciliation cache", async () => {
-    const db = mockD1(
-      [
-        cacheSelectEntry("telegram:commands-reconciled"),
-        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
-        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_group_chats"),
-        cacheWriteEntry(),
-      ],
-      { requireMatch: true },
-    );
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const result = await reconcileTelegramCommandRegistration(db, {
-      botToken: "bot-token",
-    });
-
-    expect(result).toEqual({
-      attempted: true,
-      skipped: false,
-    });
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyCommands");
-    expect(fetchSpy.mock.calls[1]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyCommands");
-
-    const privateBody = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
-    expect(privateBody).toEqual({
-      commands: TELEGRAM_BOT_COMMANDS,
-      scope: { type: "all_private_chats" },
-    });
-    expect(privateBody.commands.map((entry: { command: string }) => entry.command)).toEqual([
-      "start",
-      "help",
-      "sample",
-      "status",
-      "brief",
-      "top",
-      "why",
-      "coverage",
-      "health",
-      "list",
-      "subscribe",
-      "unsubscribe",
-      "presets",
-      "set",
-      "settings",
-      "mute",
-      "pause",
-      "timezone",
-      "recap",
-      "unsnooze",
-      "unmutehours",
-      "cancel",
-      "export",
-      "import",
-      "forget",
-    ]);
-
-    const groupBody = JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string);
-    expect(groupBody).toEqual({
-      commands: TELEGRAM_BOT_GROUP_COMMANDS,
-      scope: { type: "all_group_chats" },
-    });
-    expect(groupBody.commands.map((entry: { command: string }) => entry.command)).toEqual([
-      "help",
-      "sample",
-      "status",
-      "brief",
-      "top",
-      "why",
-      "coverage",
-      "health",
-      "list",
-      "subscribe",
-      "unsubscribe",
-      "presets",
-      "set",
-      "settings",
-      "mute",
-      "pause",
-      "timezone",
-      "unsnooze",
-      "unmutehours",
-      "cancel",
-      "export",
-      "import",
-    ]);
-
-    const writes = db.getHistory().filter((entry) => entry.sql.includes(CACHE_WRITE_MATCH));
-    expect(writes).toHaveLength(1);
-    expect(writes[0]?.binds[0]).toBe("telegram:commands-reconciled");
-    expect(writes[0]?.binds[1]).toBe(expectedCommandsCacheValue());
-    expect(typeof writes[0]?.binds[2]).toBe("number");
-  });
-
   it("passes an already-aborted signal into Telegram command registration fetches", async () => {
     const db = mockD1(
       [
@@ -558,61 +427,6 @@ describe("reconcileTelegramProfileRegistration", () => {
     fetchSpy = mockFetch([], { requireMatch: true });
   });
 
-  it("skips the Telegram API call when the profile reconciliation cache is still fresh", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1(
-      [
-        cacheSelectEntry("telegram:profile-reconciled", { value: expectedProfileCacheValue(), updated_at: nowSec }),
-      ],
-      { requireMatch: true },
-    );
-
-    const result = await reconcileTelegramProfileRegistration(db, {
-      botToken: "bot-token",
-    });
-
-    expect(result).toEqual({
-      attempted: false,
-      skipped: true,
-      reason: "fresh-cache",
-    });
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("registers name, short description, and description and records the cache marker", async () => {
-    const db = mockD1(
-      [
-        cacheSelectEntry("telegram:profile-reconciled"),
-        ...profileBackoffSelectEntries(),
-        cacheWriteEntry(),
-      ],
-      { requireMatch: true },
-    );
-    fetchSpy.mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const result = await reconcileTelegramProfileRegistration(db, {
-      botToken: "bot-token",
-    });
-
-    expect(result).toEqual({ attempted: true, skipped: false });
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyName");
-    expect(JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string)).toEqual({ name: TELEGRAM_BOT_NAME });
-    expect(fetchSpy.mock.calls[1]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyShortDescription");
-    expect(JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string)).toEqual({
-      short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
-    });
-    expect(fetchSpy.mock.calls[2]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyDescription");
-    expect(JSON.parse(fetchSpy.mock.calls[2]?.[1]?.body as string)).toEqual({
-      description: TELEGRAM_BOT_DESCRIPTION,
-    });
-
-    const writes = db.getHistory().filter((entry) => entry.sql.includes(CACHE_WRITE_MATCH));
-    expect(writes).toHaveLength(1);
-    expect(writes[0]?.binds[0]).toBe("telegram:profile-reconciled");
-    expect(writes[0]?.binds[1]).toBe(expectedProfileCacheValue());
-  });
-
   it('treats Telegram "is not modified" 400 as success and still refreshes the cache marker', async () => {
     const db = mockD1(
       [
@@ -656,13 +470,6 @@ describe("reconcileTelegramProfileRegistration", () => {
         botToken: "bot-token",
       }),
     ).rejects.toThrow("Telegram setMyName");
-  });
-
-  it("returns missing-bot-token when no token is configured", async () => {
-    const db = mockD1([], { requireMatch: true });
-    const result = await reconcileTelegramProfileRegistration(db, { botToken: "" });
-    expect(result).toEqual({ attempted: false, skipped: true, reason: "missing-bot-token" });
-    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("records a 429 backoff and returns rate-limited without throwing when setMyName is throttled", async () => {

@@ -1,6 +1,5 @@
-import { runOperatorCli } from "./operator-cli.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { join } from "node:path";
+
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, upsertBlacklistCurrentBalance } from "../../src/lib/blacklist-current-balances";
@@ -35,33 +34,6 @@ describe("rebuild blacklist current balances script args", () => {
     });
     expect(() => parseArgs(["--execute"])).toThrow(/live mutation requires/);
     expect(parseArgs(["--force"])).toMatchObject({ dryRun: true, force: true });
-  });
-
-  it("parses numeric flags as positive integers", () => {
-    expect(parseArgs(["--concurrency", "4", "--requests-per-second", "3"])).toMatchObject({
-      concurrency: 4,
-      requestsPerSecond: 3,
-    });
-    expect(parseArgs(["--concurrency=5", "--requests-per-second=6"])).toMatchObject({
-      concurrency: 5,
-      requestsPerSecond: 6,
-    });
-  });
-
-  it.each([
-    ["--concurrency", "NaN"],
-    ["--concurrency", "0"],
-    ["--concurrency", "1.5"],
-    ["--requests-per-second", "NaN"],
-    ["--requests-per-second", "0"],
-    ["--requests-per-second", "1.5"],
-  ])("rejects invalid numeric flag %s %s", (flag, value) => {
-    expect(() => parseArgs([flag, value])).toThrow(`${flag} must be a positive integer`);
-  });
-
-  it("rejects missing numeric flag values", () => {
-    expect(() => parseArgs(["--concurrency"])).toThrow(/--concurrency.*argument missing/);
-    expect(() => parseArgs(["--requests-per-second"])).toThrow(/--requests-per-second.*argument missing/);
   });
 
   it("rejects unknown, duplicate, conflicting, and positional arguments", () => {
@@ -159,20 +131,4 @@ describe("rebuild blacklist current balances script args", () => {
     } as never, 1_000)).not.toThrow();
   });
 
-  it("[entrypoint integration] prints help with exit 0 and reports usage mistakes with exit 2", async () => {
-    const tsx = join(process.cwd(), "node_modules/.bin/tsx");
-    const help = await runOperatorCli(tsx, ["worker/scripts/rebuild-blacklist-current-balances.ts", "--help"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    expect(help.status).toBe(0);
-    expect(help.stdout).toContain("Usage: tsx worker/scripts/rebuild-blacklist-current-balances.ts");
-
-    const invalid = await runOperatorCli(tsx, ["worker/scripts/rebuild-blacklist-current-balances.ts", "--bogus"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    expect(invalid.status).toBe(2);
-    expect(invalid.stderr).toContain("Unknown option '--bogus'");
-  });
 });

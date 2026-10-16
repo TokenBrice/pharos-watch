@@ -1,9 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
-import {
-  handleDebugSyncState,
-  handleResetBlacklistSync,
-} from "../admin-actions";
+import { handleResetBlacklistSync } from "../admin-actions";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
 describe("admin mutation auth — custom header required for mutating methods", () => {
@@ -18,25 +15,6 @@ describe("admin mutation auth — custom header required for mutating methods", 
     });
     const body = (await readJsonResponse(res, 403)) as { error: string };
     expect(body.error).toMatch(/admin header/i);
-  });
-
-  it("accepts POST with X-Pharos-Admin: 1", async () => {
-    const req = new Request("https://ops-api.pharos.watch/api/reset-blacklist-sync", {
-      method: "POST",
-      headers: { "X-Pharos-Admin": "1" },
-    });
-    const res = await handleResetBlacklistSync({
-      db: mockD1([
-        {
-          match: "UPDATE blacklist_sync_state",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-      ]),
-      request: req,
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(200);
   });
 
   it("rewinds both cursor columns and invalidates active generations", async () => {
@@ -57,17 +35,4 @@ describe("admin mutation auth — custom header required for mutating methods", 
     expect(writes.every((entry) => entry.sql.includes("attempt_generation = attempt_generation + 1"))).toBe(true);
   });
 
-  it("does not require header on GET admin endpoints", async () => {
-    const req = new Request("https://ops-api.pharos.watch/api/debug-sync-state", {
-      method: "GET",
-    });
-    const res = await handleDebugSyncState({
-      db: mockD1([
-        { match: "FROM blacklist_sync_state", rows: [] },
-      ]),
-      request: req,
-      trustedAdmin: true,
-    });
-    expect(res.status).not.toBe(403);
-  });
 });

@@ -147,13 +147,6 @@ describe("fetchDataSources", () => {
     expect(result!.dlYieldsAvailable).toBe(true);
   });
 
-  it("records success when at least 1 Curve chain succeeds", async () => {
-    mockDlYieldsSuccess();
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
-    expect(result).not.toBeNull();
-    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "curve-liquidity-api", true);
-  });
-
   it("caps Curve API fetch concurrency below the DEX job peak", async () => {
     const firstWave = makeDeferred();
     const release = makeDeferred();

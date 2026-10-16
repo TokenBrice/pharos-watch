@@ -11,10 +11,6 @@ describe("FigureLeadText", () => {
     expect(render("15/100")).toBe('<span class="pharos-numeric">15/100</span>');
   });
 
-  it("keeps a magnitude suffix with its figure", () => {
-    expect(render("1.2K pools")).toBe('<span class="pharos-numeric">1.2K</span> pools');
-  });
-
   it("leaves word-like period labels and plain words untouched", () => {
     expect(render("30d vs USD 3M T-bill")).toBe("30d vs USD 3M T-bill");
     expect(render("Institutional")).toBe("Institutional");

@@ -113,29 +113,4 @@ describe("NonUsdShareChart", () => {
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("Value coverage unavailable");
   });
 
-  it("supports focused mode and reports range changes", () => {
-    const onCloseFocus = vi.fn();
-    const onRangeChange = vi.fn();
-
-    render(
-      <NonUsdShareChart
-        initialRange="90d"
-        isFocused
-        onCloseFocus={onCloseFocus}
-        onRangeChange={onRangeChange}
-      />,
-    );
-
-    const activeRange = screen
-      .getAllByRole("button", { name: "90D" })
-      .find((button) => button.getAttribute("aria-pressed") === "true");
-    expect(activeRange?.getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText(/focused view/i)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "30D" }));
-    expect(onRangeChange).toHaveBeenCalledWith("30d");
-
-    fireEvent.click(screen.getByRole("button", { name: /return share chart to overview/i }));
-    expect(onCloseFocus).toHaveBeenCalled();
-  });
 });

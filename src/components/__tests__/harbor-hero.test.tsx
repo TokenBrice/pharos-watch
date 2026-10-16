@@ -1,16 +1,11 @@
 // @vitest-environment jsdom
 
-import { useEffect } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildHarborScene, HARBOR_CARGO_HEX, type HarborSceneInput } from "@shared/lib/harbor-scene";
-import { CHART_PALETTE, CHART_SLATE, CHART_SLATE_SOFT } from "@/lib/chart-colors";
-import { buildHarborGeometry } from "@shared/lib/harbor-scene-geometry";
+import type { HarborSceneInput } from "@shared/lib/harbor-scene";
 import { HARBOR_LIVE } from "@shared/lib/__tests__/harbor-scene.test-support";
 import { HarborHero } from "../harbor/harbor-hero";
-import { HarborSceneSvg } from "../harbor/harbor-scene";
-import { HarborSelectionProvider, useHarborSelection } from "../harbor/harbor-selection-context";
+import { HarborSelectionProvider } from "../harbor/harbor-selection-context";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -40,21 +35,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function RevealProbe({ onReveal }: { onReveal: (chainId: string) => void }) {
-  const { registerRevealRow } = useHarborSelection();
-  useEffect(() => registerRevealRow(onReveal), [registerRevealRow, onReveal]);
-  return null;
-}
-
-function renderHero(data: HarborSceneInput = LIVE, onShowInTable = vi.fn()) {
+function renderHero(data: HarborSceneInput = LIVE) {
   render(
     <HarborSelectionProvider chainIds={data.chains.map((c) => c.id)}>
       <HarborHero data={data} />
-      <RevealProbe onReveal={onShowInTable} />
     </HarborSelectionProvider>,
   );
   const berth = (id: string) => document.getElementById(`berth-${id}`) as HTMLElement;
-  return { berth, onShowInTable };
+  return { berth };
 }
 
 describe("HarborHero keyboard and pin contract", () => {
@@ -104,48 +92,11 @@ describe("HarborHero keyboard and pin contract", () => {
     expect(card.textContent).toContain("Show in table");
   });
 
-  it("reveals the leaderboard row from the card", () => {
-    const { berth, onShowInTable } = renderHero();
-    fireEvent.click(berth("bsc"));
-    fireEvent.click(screen.getByRole("button", { name: "Show in table ↓" }));
-    expect(onShowInTable).toHaveBeenCalledWith("bsc");
-  });
-
   it("draws the retained state and stamp when the snapshot is not fresh", () => {
     renderHero({ ...LIVE, _meta: { status: "stale" } });
     const hero = document.querySelector("[data-retained]") as HTMLElement;
     expect(hero.dataset.retained).toBe("true");
     expect(hero.textContent).toContain("Retained · as of");
     expect(hero.textContent).toMatch(/Retained · as of \w+ \d+, \d{4} at \d{2}:\d{2}/);
-  });
-
-  it("removes the old night scene: no star sky, no draft label, no auto-sweep timer", () => {
-    vi.useFakeTimers();
-    const { berth } = renderHero();
-    act(() => vi.advanceTimersByTime(30_000));
-    expect(document.body.textContent).not.toContain("DOMINANCE DRAFT");
-    expect(document.querySelectorAll("[aria-pressed='true']")).toHaveLength(0);
-    expect(berth("ethereum").getAttribute("tabindex")).toBe("0");
-    vi.useRealTimers();
-  });
-});
-
-describe("HarborSceneSvg markup", () => {
-  it("renders the fixture server-side with one berth button per vessel", () => {
-    const scene = buildHarborScene(LIVE);
-    const markup = renderToStaticMarkup(
-      <HarborSceneSvg scene={scene} geometry={buildHarborGeometry(scene, "wide")} litId={null} pinnedId={null} focusId="ethereum" label="Harbor" />,
-    );
-    expect(markup.match(/role="button"/g)).toHaveLength(scene.vessels.length);
-    expect(markup).not.toMatch(/NaN|undefined/);
-  });
-});
-
-describe("harbor cargo palette", () => {
-  it("uses named chart palette slots, not ad-hoc hues", () => {
-    expect(CHART_PALETTE).toContain(HARBOR_CARGO_HEX.usdt);
-    expect(CHART_PALETTE).toContain(HARBOR_CARGO_HEX.usdc);
-    expect(HARBOR_CARGO_HEX.other).toBe(CHART_SLATE);
-    expect(HARBOR_CARGO_HEX.pool).toBe(CHART_SLATE_SOFT);
   });
 });

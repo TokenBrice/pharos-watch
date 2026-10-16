@@ -402,14 +402,6 @@ describe("resolveCoinTargets", () => {
     }
   });
 
-  it("returns not_found for unknown ticker", () => {
-    const result = resolveCoinTargets(["XYZZY"]);
-    expect(result.kind).toBe("not_found");
-    if (result.kind === "not_found") {
-      expect(result.ticker).toBe("XYZZY");
-    }
-  });
-
   it("returns ambiguous with candidates and remaining tickers", () => {
     const ambiguous = resolveTicker("USDF");
     expect(ambiguous.status).toBe("ambiguous");

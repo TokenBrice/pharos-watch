@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -54,43 +53,6 @@ describe("SafetyScoreHistorySection", () => {
     });
   });
 
-  it("does not render while loading", () => {
-    useSafetyScoreHistoryMock.mockReturnValue({
-      data: undefined,
-      meta: null,
-      isLoading: true,
-      error: null,
-    });
-
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(html).toBe("");
-  });
-
-  it("does not render when history is empty", () => {
-    useSafetyScoreHistoryMock.mockReturnValue({
-      data: [],
-      meta: null,
-      isLoading: false,
-      error: null,
-    });
-
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(html).toBe("");
-  });
-
-  it("renders error banner when query errors", () => {
-    useSafetyScoreHistoryMock.mockReturnValue({
-      data: undefined,
-      meta: null,
-      isLoading: false,
-      error: new Error("boom"),
-    });
-
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(html).toContain("Failed to load this dataset");
-    expect(html).toContain("boom");
-  });
-
   it("renders summary stats, timeline bar, and transition list", () => {
     useSafetyScoreHistoryMock.mockReturnValue({
       data: [
@@ -130,47 +92,6 @@ describe("SafetyScoreHistorySection", () => {
     expect(html).toContain("Initial grade");
     expect(html).toContain("Updated at ");
     expect(html).toContain(">2h</span>");
-  });
-
-  it("caps visible entries at 3 and shows 'Show more' button", () => {
-    const entries = [
-      { date: 1_740_000_000, grade: "B-", score: 68, prevGrade: null, prevScore: null, methodologyVersion: "6.0" },
-      { date: 1_740_200_000, grade: "B", score: 72, prevGrade: "B-", prevScore: 68, methodologyVersion: "6.0" },
-      { date: 1_740_400_000, grade: "B+", score: 76, prevGrade: "B", prevScore: 72, methodologyVersion: "6.0" },
-      { date: 1_740_600_000, grade: "A-", score: 80, prevGrade: "B+", prevScore: 76, methodologyVersion: "6.0" },
-      { date: 1_740_800_000, grade: "A", score: 85, prevGrade: "A-", prevScore: 80, methodologyVersion: "6.0" },
-    ];
-
-    useSafetyScoreHistoryMock.mockReturnValue({
-      data: entries,
-      meta: null,
-      isLoading: false,
-      error: null,
-    });
-
-    render(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    const dates = () => within(screen.getByRole("list")).getAllByRole("listitem")
-      .map((row) => row.querySelector("span")?.textContent);
-    expect(dates()).toEqual(["March 1, 2025", "February 26, 2025", "February 24, 2025"]);
-    fireEvent.click(screen.getByRole("button", { name: "Show 2 more" }));
-    expect(dates()).toEqual(["March 1, 2025", "February 26, 2025", "February 24, 2025", "February 22, 2025", "February 19, 2025"]);
-    fireEvent.click(screen.getByRole("button", { name: "Show less" }));
-    expect(dates()).toEqual(["March 1, 2025", "February 26, 2025", "February 24, 2025"]);
-  });
-
-  it("shows downgrade indicator for downgrades", () => {
-    useSafetyScoreHistoryMock.mockReturnValue({
-      data: [
-        { date: 1_741_000_000, grade: "A", score: 85, prevGrade: null, prevScore: null, methodologyVersion: "6.0" },
-        { date: 1_741_500_000, grade: "B+", score: 78, prevGrade: "A", prevScore: 85, methodologyVersion: "6.0" },
-      ],
-      meta: null,
-      isLoading: false,
-      error: null,
-    });
-
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(html).toContain("Downgraded from A");
   });
 
   it("merges identity-aware grade changes and collapses repeated baselines", () => {

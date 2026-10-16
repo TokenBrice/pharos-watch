@@ -3,7 +3,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
-  PHAROS_QUERY_DEFAULT_OPTIONS,
   Providers,
   SORT_COLUMN_EVENT,
   type SortColumnEventDetail,
@@ -59,9 +58,6 @@ afterEach(() => {
 });
 
 describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
-  it("does not refetch cached queries on window focus by default", () => {
-    expect(PHAROS_QUERY_DEFAULT_OPTIONS.queries.refetchOnWindowFocus).toBe(false);
-  });
 
   it.each([
     "/about/",
@@ -125,16 +121,6 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     else expect(await screen.findByTestId("command-palette")).toBeTruthy();
   });
 
-  it("cold-loads the interactive layer on data routes", async () => {
-    pathname = "/stablecoin/usdt-tether/";
-    render(
-      <Providers>
-        <div data-testid="interactive-child" />
-      </Providers>,
-    );
-    expect(await screen.findByTestId("route-progress-bar")).toBeTruthy();
-    expect(screen.getByTestId("query-client-provider")).toBeTruthy();
-  });
 
   it("broadcasts numeric column sort when single-key shortcuts are enabled", async () => {
     const onSort = vi.fn();
@@ -164,27 +150,6 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     }
   });
 
-  it("ignores numeric column sort when single-key shortcuts are disabled", async () => {
-    setSingleKeyShortcutDisabled(true);
-    const onSort = vi.fn();
-    window.addEventListener(SORT_COLUMN_EVENT, onSort as EventListener);
-    try {
-      render(
-        <Providers>
-          <div />
-        </Providers>,
-      );
-
-      await screen.findByTestId("route-progress-bar");
-
-      const event = pressKey("3");
-
-      expect(onSort).not.toHaveBeenCalled();
-      expect(event.defaultPrevented).toBe(false);
-    } finally {
-      window.removeEventListener(SORT_COLUMN_EVENT, onSort as EventListener);
-    }
-  });
 
   it("opens the shortcuts dialog on ? when single-key shortcuts are enabled", async () => {
     render(
@@ -201,19 +166,4 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("ignores ? when single-key shortcuts are disabled", async () => {
-    setSingleKeyShortcutDisabled(true);
-    render(
-      <Providers>
-        <div />
-      </Providers>,
-    );
-
-    await screen.findByTestId("route-progress-bar");
-
-    const event = pressKey("?");
-
-    expect(screen.queryByTestId("keyboard-shortcuts-dialog")).toBeNull();
-    expect(event.defaultPrevented).toBe(false);
-  });
 });

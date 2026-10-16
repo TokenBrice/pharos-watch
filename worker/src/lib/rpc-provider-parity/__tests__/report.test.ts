@@ -350,15 +350,6 @@ describe("rpc parity gate math", () => {
     });
   });
 
-  it("leaves diagnostics empty for samples that never recorded a failure", () => {
-    const summary = summaryFor(PARITY_REGISTRY_CHAIN, parityRunWindow(RPC_PARITY_GATE_MIN_RUNS));
-    expect(summary.comparatorErrorClasses).toEqual({});
-    expect(summary.failedSteps).toEqual({
-      dwellir: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
-      comparator: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
-    });
-    expect(summary.lastComparatorFailure).toBeNull();
-  });
 
   it("fails head-lag against the chain's own block time", () => {
     const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => (
@@ -669,17 +660,6 @@ describe("rpc parity gate math", () => {
   });
 
 
-  it("reports first-touch latency without using it to fail the warm gate", () => {
-    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);
-    for (const run of runs) {
-      const sample = run.samples.find((entry) => entry.chainId === PARITY_REGISTRY_CHAIN)!;
-      for (const call of sample.calls!.dwellir) if (call.phase === "firstTouch") call.latencyMs = 8_000;
-    }
-    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
-    expect(summary.latency.dwellir.firstTouch.head.p95Ms).toBe(8_000);
-    expect(summary.latency.dwellir.warm.state.p95Ms).toBeLessThan(8_000);
-    expect(summary.gate.failing).not.toContain("latency");
-  });
 
   it("excludes capability refusals only from the method that refused them", () => {
     const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { adaptOnReSchedule, parseCsvRows, parseOnReSchedule } from "../onre-holdings-csv";
+import { adaptOnReSchedule, parseOnReSchedule } from "../onre-holdings-csv";
 import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 import capturedSchedule from "./fixtures/onre-holdings-2026-09-30.json";
 
@@ -36,11 +36,6 @@ describe("parseOnReSchedule", () => {
       amountUsd: 142_768_536.03,
       allocationPct: 49.20807683,
     });
-  });
-
-  it("returns null snapshot date when the header has no date", () => {
-    const schedule = parseOnReSchedule(CSV.replace(",Snapshot date,14/08/2026", ""));
-    expect(schedule.snapshotDateUnixSec).toBeNull();
   });
 
   it("accepts reviewed numeric snapshot dates in the first half of the month", () => {
@@ -162,12 +157,5 @@ describe("fetchOnreHoldingsCsvReserves", () => {
   it("rejects a renamed reconciliation row instead of publishing a plausible snapshot", async () => {
     const drifted = CSV.replace("Total,\"290,132,322.20\"", "GrandTotal,\"290,132,322.20\"");
     await expect(runOnre(drifted, false)).rejects.toThrow("Total and/or AUM");
-  });
-});
-
-describe("parseCsvRows", () => {
-  it("handles quoted commas and doubled quotes", () => {
-    const rows = parseCsvRows('a,"1,2","""quoted""",x\nb,c,"d",y');
-    expect(rows).toEqual([["a", "1,2", "\"quoted\"", "x"], ["b", "c", "d", "y"]]);
   });
 });

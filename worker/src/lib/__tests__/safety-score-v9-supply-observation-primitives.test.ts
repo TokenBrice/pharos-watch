@@ -14,7 +14,6 @@ import {
   MULTICALL3_ADDRESS,
 } from "../evm-rpc";
 import {
-  decodeEvmAddress,
   decodeEvmAddressHex,
   decodeEvmHexBytes,
   decodeEvmUint256,
@@ -29,33 +28,6 @@ describe("Safety Score V9 supply observation primitives", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-
-  it("decodes EVM supply and identity words", () => {
-      const address = "0x1234567890abcdef1234567890abcdef12345678";
-      const addressWord =
-        `0x${address.slice(2).padStart(64, "0")}` as `0x${string}`;
-      const uintWord = `0x${"2a".padStart(64, "0")}` as `0x${string}`;
-
-      expect(
-        decodeEvmUint256({
-          label: "supply",
-          success: true,
-          returnData: uintWord,
-        }),
-      ).toBe(42n);
-      expect(
-        decodeEvmAddress({
-          label: "identity",
-          success: true,
-          returnData: addressWord,
-        }),
-      ).toBe(address);
-      expect(decodeEvmAddressHex(addressWord)).toBe(address);
-      expect(decodeEvmHexBytes("0x00ff")).toEqual(
-        new Uint8Array([0, 255]),
-      );
-  });
-
 
   it("preserves fail-closed decoding", () => {
     expect(

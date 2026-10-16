@@ -54,7 +54,7 @@ export const StatusStalenessSchema = z.object({
 });
 export type StatusStaleness = z.output<typeof StatusStalenessSchema>;
 
-export const StatusProbePlaneSummarySchema = z.object({
+const StatusProbePlaneSummarySchema = z.object({
   status: StatusHealthOrUnknownSchema,
   sampleCount: z.number(),
   passCount: z.number(),
@@ -64,16 +64,15 @@ export const StatusProbePlaneSummarySchema = z.object({
 });
 export type StatusProbePlaneSummary = z.output<typeof StatusProbePlaneSummarySchema>;
 
-export const STATUS_PROBE_COMPARISON_REASON_VALUES = [
+const STATUS_PROBE_COMPARISON_REASON_VALUES = [
   "in-sync",
   "internal-missing",
   "external-missing",
   "external-worse",
   "internal-worse",
 ] as const;
-export type StatusProbeComparisonReason = (typeof STATUS_PROBE_COMPARISON_REASON_VALUES)[number];
 
-export const StatusProbeComparisonSchema = z.object({
+const StatusProbeComparisonSchema = z.object({
   hasDivergence: z.boolean(),
   severityDelta: z.number(),
   internalStatus: StatusHealthOrUnknownSchema,
@@ -83,7 +82,7 @@ export const StatusProbeComparisonSchema = z.object({
 });
 export type StatusProbeComparison = z.output<typeof StatusProbeComparisonSchema>;
 
-export const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing", "probe-invalid-timestamp", "status-missing", "status-unreadable"] as const;
+const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing", "probe-invalid-timestamp", "status-missing", "status-unreadable"] as const;
 export type StatusDiscrepancyReason = (typeof STATUS_DISCREPANCY_REASON_VALUES)[number];
 
 export const StatusDiscrepancySchema = z.object({
@@ -131,7 +130,7 @@ export const StatusProbeSummarySchema = z.object({
 });
 export type StatusProbeSummary = z.output<typeof StatusProbeSummarySchema>;
 
-export const BlacklistReconciliationStatusSchema = z.object({
+const BlacklistReconciliationStatusSchema = z.object({
   status: z.enum(["not-run", "running", "verified", "failed", "unknown"]),
   runId: z.string().nullable(),
   manifestId: z.string().nullable(),
@@ -159,7 +158,7 @@ const RepairDebtKindSummarySchema = z.object({
   nextRunnerDueAt: z.number().nullable(),
 });
 
-export const RepairDebtSummarySchema = z.object({
+const RepairDebtSummarySchema = z.object({
   status: z.enum(["ok", "present", "unknown"]),
   openCount: z.number(),
   oldestAgeSec: z.number().nullable(),
@@ -238,7 +237,7 @@ export type DataQuality = z.output<typeof DataQualitySchema>;
  * simply stops being alert-eligible until the review expires, after which it
  * alerts again until renewed or resolved. Never applies to depegs or to assets
  * that have a price. */
-export const ActivePriceCoverageGapAcknowledgementSchema = z.object({
+const ActivePriceCoverageGapAcknowledgementSchema = z.object({
   owner: z.string(),
   reason: z.string(),
   sources: z.array(z.string()),
@@ -247,7 +246,7 @@ export const ActivePriceCoverageGapAcknowledgementSchema = z.object({
 });
 export type ActivePriceCoverageGapAcknowledgement = z.output<typeof ActivePriceCoverageGapAcknowledgementSchema>;
 
-export const ActivePriceCoverageGapSchema = z.object({
+const ActivePriceCoverageGapSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
   marketCapUsd: z.number().nullable(),
@@ -335,4 +334,3 @@ export const DatasetFreshnessSchema = z.object({
   dews: z.number().nullable(),
   digest: z.number().nullable(),
 });
-export type DatasetFreshness = z.output<typeof DatasetFreshnessSchema>;

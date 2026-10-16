@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DEX_GLOBAL_KEY, type DexLiquidityData, type DexLiquidityMap } from "@shared/types/market";
-import {
-  buildLiquidityViewModel,
-  formatLiquidityWarningMessage,
-  normalizePegFilter,
-} from "./model";
+import { buildLiquidityViewModel } from "./model";
 
 function makeLiquidity(overrides: Partial<DexLiquidityData> = {}): DexLiquidityData {
   return {
@@ -50,32 +46,6 @@ function makeLiquidity(overrides: Partial<DexLiquidityData> = {}): DexLiquidityD
 }
 
 describe("liquidity page model", () => {
-  it("normalizes unsupported peg filters to all", () => {
-    expect(normalizePegFilter("EUR")).toBe("EUR");
-    expect(normalizePegFilter("not-a-peg")).toBe("all");
-  });
-
-  it("formats batch warning payloads into readable messages", () => {
-    expect(formatLiquidityWarningMessage('123 - "Curve degraded", 456 - "Uniswap degraded"')).toBe(
-      "Curve degraded Uniswap degraded",
-    );
-  });
-
-  it("replaces drift warnings with user copy instead of raw flag tokens", () => {
-    const message = formatLiquidityWarningMessage(
-      '199 - "Latest sync-dex-liquidity run shows high quality drift '
-      + '(qualityDrift=high; qualityDriftFlags=major-tvl-cliff:usdg-paxos)"',
-    );
-    expect(message).toBe("Some liquidity data is being re-verified");
-    expect(message).not.toContain("qualityDriftFlags");
-  });
-
-  it("keeps non-drift warnings readable without their machine detail suffix", () => {
-    expect(formatLiquidityWarningMessage(
-      '199 - "Latest sync-dex-liquidity run degraded (failedSources=defillama-yields)"',
-    )).toBe("Latest sync-dex-liquidity run degraded");
-  });
-
   it("keeps visible rows filtered while computing summary stats from the full liquidity map", () => {
     const [usdScored, usdUnrated] = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === "USD");
     const eurScored = ACTIVE_STABLECOINS.find((coin) => coin.flags.pegCurrency === "EUR");

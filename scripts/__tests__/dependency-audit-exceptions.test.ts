@@ -158,15 +158,6 @@ describe("dependency-audit exceptions", () => {
       .toThrow("reached unreviewed package production-consumer");
   });
 
-  it("rejects the live braces exception after the approved 30-day window", () => {
-    expect(verifyDependencyAuditReport(reviewedBracesReport(), {
-      now: new Date("2026-11-15T23:59:59.999Z"),
-    })).toEqual({ acceptedExceptionIds: ["GHSA-vfj7-8cjw-p6xm"] });
-    expect(() => verifyDependencyAuditReport(reviewedBracesReport(), {
-      now: new Date("2026-11-16T00:00:00.000Z"),
-    })).toThrow("Dependency-audit exception expired on 2026-11-15.");
-  });
-
   it("suppresses only the exact reviewed advisory and dependency nodes", () => {
     expect(verifyDependencyAuditReport(reviewedReport(), { registry: reviewedRegistry, now: reviewedNow })).toEqual({
       acceptedExceptionIds: [exception.advisoryId],

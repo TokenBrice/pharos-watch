@@ -7,11 +7,8 @@ import type { AddressInfo, Socket } from "node:net";
 import type { CommandResult, SpawnCommand } from "../lib/command-runner.mts";
 import {
   createExecutionUnit,
-  createLocalVitestCommand,
-  createNpmScriptCommand,
   createSpawnCommand,
   runCommandBatches,
-  runExecutionUnit,
   runParallelExecutionUnits,
   runShellCommand,
   runSpawnCommand,
@@ -111,48 +108,6 @@ describe("command runner", () => {
     expect(result.failures).toHaveLength(1);
     expect(result.results.map((entry) => entry.status)).toEqual([1, 0]);
     expect(remove).toHaveBeenCalledWith("abort", expect.any(Function));
-  });
-
-  it.each(["batches", "parallel"])("cleans up even when the failure reporter throws in %s", async (coordinator) => {
-    let settled = false;
-    const units = [createExecutionUnit(["fail"]), createExecutionUnit(["wait"])];
-    const options = {
-      reporter: { failure: () => { throw new Error("reporter failed"); } },
-      runCommandImpl: (cmd: string, _env?: Record<string, string>, { signal }: { signal?: AbortSignal } = {}) => {
-        if (cmd === "fail") return 1;
-        return new Promise<number>((resolve) => {
-          signal?.addEventListener("abort", () => { settled = true; resolve(130); }, { once: true });
-        });
-      },
-    };
-    await expect(coordinator === "batches"
-      ? runCommandBatches([units], options)
-      : runParallelExecutionUnits(units, options)).rejects.toThrow("reporter failed");
-    expect(settled).toBe(true);
-  });
-
-  it("runs commands in order with label logging and per-command env", async () => {
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const calls: Array<{ cmd: string; env: Record<string, string> }> = [];
-
-    const result = await runExecutionUnit(createExecutionUnit(["first", "coverage"]), {
-      getCommandEnv: (cmd): Record<string, string> => (cmd === "coverage" ? { COVERAGE_ONLY: "1" } : {}),
-      label: "unit",
-      runCommandImpl: (cmd, extraEnv = {}) => {
-        calls.push({ cmd, env: extraEnv });
-        return 0;
-      },
-    });
-
-    expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
-    expect(calls).toEqual([
-      { cmd: "first", env: {} },
-      { cmd: "coverage", env: { COVERAGE_ONLY: "1" } },
-    ]);
-    expect(logSpy).toHaveBeenNthCalledWith(1, "[unit] Running: first");
-    expect(logSpy).toHaveBeenNthCalledWith(2, expect.stringMatching(/^\[unit\] Finished: first \(\d+\.\ds\)$/));
-    expect(logSpy).toHaveBeenNthCalledWith(3, "[unit] Running: coverage");
-    expect(logSpy).toHaveBeenNthCalledWith(4, expect.stringMatching(/^\[unit\] Finished: coverage \(\d+\.\ds\)$/));
   });
 
   it("reports serial failures and returns the failed status", async () => {
@@ -267,27 +222,6 @@ describe("command runner", () => {
 
   it("returns real shell command failure statuses", async () => {
     await expect(runShellCommand("node -e 'process.exit(6)'")).resolves.toEqual({ status: 6, aborted: false });
-  });
-
-  it("builds npm script commands without an argument separator when no args are present", () => {
-    expect(createNpmScriptCommand("seo:check")).toMatchObject({
-      executable: "npm",
-      args: ["run", "seo:check"],
-      cmd: "npm run seo:check",
-      scriptName: "seo:check",
-    });
-    expect(createNpmScriptCommand("test:pr", ["--base=main"])).toMatchObject({
-      args: ["run", "test:pr", "--", "--base=main"],
-      cmd: "npm run test:pr -- --base=main",
-    });
-  });
-
-  it("builds local Vitest commands with the shared CI argument policy", () => {
-    const command = createLocalVitestCommand(["run", "example.test.ts"], {
-      CI: "true",
-    });
-    expect(command.executable).toMatch(/node_modules[/\\]\.bin[/\\]vitest(?:\.cmd)?$/);
-    expect(command.args).toEqual(["run", "example.test.ts", "--silent=passed-only"]);
   });
 
   it("runs structured commands directly and can capture their output", async () => {

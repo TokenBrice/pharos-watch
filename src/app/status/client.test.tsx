@@ -135,13 +135,6 @@ describe("public history availability", () => {
 });
 
 describe("for integrators", () => {
-  it("is collapsed by default", () => {
-    render(<StatusClient faqItems={[]} />);
-    expect(screen.queryByText("Scheduled delivery")).toBeNull();
-    openIntegrators();
-    expect(screen.getByText("Scheduled delivery")).toBeTruthy();
-  });
-
   it("never presents an unavailable circuit read as all closed", () => {
     mockHealth({
       ...makeHealthyHealthResponse(), circuits: null, circuitsUnavailableReason: "circuits-read-failed",

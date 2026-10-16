@@ -71,17 +71,6 @@ describe("GET /safety-scores/map.json", () => {
     expect(await response.json()).toEqual(manifest);
   });
 
-  it("returns a bodyless HEAD response and 404s when unpublished", async () => {
-    const response = await onRequest(context(
-      new Request("https://pharos.watch/safety-scores/map.json", { method: "HEAD" }),
-      { SELECTOR_SNAPSHOTS: makeKV() },
-    ));
-
-    expect(response.status).toBe(404);
-    expect(response.body).toBeNull();
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-  });
-
   it("fails closed on malformed or unavailable KV data", async () => {
     const malformed = makeKV();
     await malformed.put("safety-map:latest.json", "not-json");

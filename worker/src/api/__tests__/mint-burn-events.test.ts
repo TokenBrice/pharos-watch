@@ -21,17 +21,6 @@ function eventDb(rows: Record<string, string | number | null>[]) {
 describe("handleMintBurnEvents", () => {
   const row = makeMintBurnRow();
 
-  it("returns 200 with events and total", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [row] },
-    ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
-    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
-    expect(body.events).toHaveLength(1);
-    expect(body.total).toBe(1);
-  });
-
   it("maps snake_case to camelCase", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },

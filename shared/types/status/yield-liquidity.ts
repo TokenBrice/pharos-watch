@@ -34,7 +34,7 @@ export type LiquidityHealth = z.output<typeof LiquidityHealthSchema>;
 
 export type YieldHealthFieldStatus = StatusHealthOrUnknown;
 
-export const YIELD_SOURCE_RISK_COVERAGE_FIELDS = [
+const YIELD_SOURCE_RISK_COVERAGE_FIELDS = [
   "sourceRiskScore",
   "sourceRiskPenalty",
   "sourceDepthRatio",
@@ -51,7 +51,7 @@ export type YieldSourceRiskCoverageField = (typeof YIELD_SOURCE_RISK_COVERAGE_FI
 
 const YieldSourceRiskCoverageFieldSchema = z.enum(YIELD_SOURCE_RISK_COVERAGE_FIELDS);
 
-export const YieldSourceRiskFieldCoverageSchema = z.object({
+const YieldSourceRiskFieldCoverageSchema = z.object({
   /** Rows on which this field can exist at all (A7 per-field eligibility). */
   eligibleCount: z.number(),
   populatedCount: z.number(),
@@ -70,7 +70,7 @@ export const YieldSourceRiskFieldCoverageSchema = z.object({
 });
 export type YieldSourceRiskFieldCoverage = z.output<typeof YieldSourceRiskFieldCoverageSchema>;
 
-export const YieldSourceRiskCoverageSummarySchema = z.object({
+const YieldSourceRiskCoverageSummarySchema = z.object({
   status: StatusHealthOrUnknownSchema,
   threshold: z.number(),
   totalRows: z.number(),
@@ -147,7 +147,7 @@ const YieldBenchmarkRegistryHealthSummarySchema = z.object({
   unknownKeyRowCount: z.number().optional(),
 });
 
-export const YIELD_COVERAGE_AUDIT_QUEUE_ACTIONS = [
+const YIELD_COVERAGE_AUDIT_QUEUE_ACTIONS = [
   "accept",
   "dismiss",
   "intentional-gap",
@@ -155,7 +155,7 @@ export const YIELD_COVERAGE_AUDIT_QUEUE_ACTIONS = [
 ] as const;
 export type YieldCoverageAuditQueueAction = (typeof YIELD_COVERAGE_AUDIT_QUEUE_ACTIONS)[number];
 
-export const YIELD_COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
+const YIELD_COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
   "manifest-missing",
   "ranking-missing",
   "unmatched-high-tvl-pool",
@@ -170,7 +170,7 @@ export const YIELD_COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
 ] as const;
 export type YieldCoverageAuditQueueItemKind = (typeof YIELD_COVERAGE_AUDIT_QUEUE_ITEM_KINDS)[number];
 
-export const YieldCoverageAuditQueueItemSchema = z.object({
+const YieldCoverageAuditQueueItemSchema = z.object({
   id: z.string(),
   kind: z.enum(YIELD_COVERAGE_AUDIT_QUEUE_ITEM_KINDS),
   title: z.string(),
@@ -348,7 +348,7 @@ export const MintBurnConservationRecordSchema = z.object({
 });
 export type MintBurnConservationRecord = z.output<typeof MintBurnConservationRecordSchema>;
 
-export const MintBurnReconciliationRowSchema = z.object({
+const MintBurnReconciliationRowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
   status: z.enum(["ok", "critical", "insufficient-source"]),

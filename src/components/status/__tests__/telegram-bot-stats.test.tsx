@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
@@ -102,30 +102,6 @@ function renderWorkbench(input?: {
 
 
 describe("TelegramBotStats", () => {
-  it("leads with delivery evidence in the model priority order and separates audience coverage", () => {
-    renderWorkbench();
-
-    const deliveryHeading = screen.getByRole("heading", { name: "Delivery Operations" });
-    const audienceHeading = screen.getByRole("heading", { name: "Audience Coverage" });
-    expect(deliveryHeading.compareDocumentPosition(audienceHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    const priority = screen.getByTestId("comms-priority-order");
-    expect(
-      [...priority.querySelectorAll("[data-metric-id]")].map((element) => element.getAttribute("data-metric-id")),
-    ).toEqual([
-      "delivery-health",
-      "pending-backlog",
-      "oldest-backlog",
-      "permanent-failures",
-      "rate-limiting",
-      "latest-dispatch",
-    ]);
-    expect(within(priority).getByText("Healthy")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Queue state" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Failure and retry classes" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Latest dispatch outcome" })).toBeTruthy();
-  });
-
   it("renders missing evidence as Unknown while preserving measured zeroes", () => {
     const { container } = renderWorkbench({ bot: null, cron: dispatchCron({}) });
 

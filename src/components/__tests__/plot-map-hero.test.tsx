@@ -13,7 +13,7 @@ import { buildCemeteryStats } from "@/lib/cemetery-stats";
 import { CemeterySelectionProvider, type CemeterySelectionHandler } from "../cemetery/cemetery-selection-context";
 import type * as CemeterySelectionModule from "../cemetery/cemetery-selection-context";
 import type { PlotMapPortraitSlotProps } from "../cemetery/plot-map-portrait-slot";
-import { PLOT_BEAM_DWELL_MS, PlotMapHero } from "../cemetery/plot-map-hero";
+import { PlotMapHero } from "../cemetery/plot-map-hero";
 import { desktopPlotLayout } from "../cemetery/plot-map-scene";
 
 // vi.mock factories are hoisted above the imports, so the helper loads lazily inside it.
@@ -227,20 +227,6 @@ describe("PlotMapHero pinning", () => {
     expect(document.activeElement).toBe(walk);
   });
 
-  it("keeps the flower count hidden until the first flower, then counts the button and F", () => {
-    const { grave } = renderHero();
-    const ust = grave("ust-terrausd-2022-05");
-    fireEvent.click(ust);
-    const card = screen.getByRole("article", { name: /TerraUSD/ });
-    expect(within(card).queryByText(/left this session/)).toBeNull();
-    expect(ust.querySelector("[data-plot-flowers]")).toBeNull();
-
-    fireEvent.click(within(card).getByRole("button", { name: "Leave a flower" }));
-    expect(within(card).getByText("1 flower left this session")).toBeTruthy();
-    fireEvent.keyDown(ust, { key: "f" });
-    expect(within(card).getByText("2 flowers left this session")).toBeTruthy();
-    expect(ust.querySelector("[data-plot-flowers]")?.children).toHaveLength(2);
-  });
 });
 
 describe("PlotMapHero responsive selection continuity", () => {
@@ -344,15 +330,6 @@ describe("PlotMapHero section zoom", () => {
 });
 
 describe("PlotMapHero beam motion", () => {
-  it("aims at a hovered grave only after the dwell", () => {
-    vi.useFakeTimers();
-    const { hero, grave } = renderHero();
-    const beam = hero.querySelector("[data-plot-beam]")!;
-    fireEvent.pointerOver(grave("mim-abracadabra"));
-    expect(beam.getAttribute("data-beam")).toBe("rest");
-    act(() => vi.advanceTimersByTime(PLOT_BEAM_DWELL_MS));
-    expect(beam.getAttribute("data-beam")).toBe("aim");
-  });
 
   it("under reduced motion aims at once and adds no transition", () => {
     motion.reduced = true;

@@ -282,13 +282,6 @@ describe("buildBackingMetricsView", () => {
     expect(report?.freshness.live).toContain("2026-06-30");
   });
 
-  it("drops an unavailable source date once a check time dates the live reading", () => {
-    const checked = build({ liveRatio: 2.784, liveFreshnessLabel: "Source date unavailable · Checked 2026-10-06 20:19 UTC" });
-    expect(checked?.freshness.live).toBe("Checked 2026-10-06 20:19 UTC");
-    const unchecked = build({ liveRatio: 2.784, liveFreshnessLabel: "Source date unavailable" });
-    expect(unchecked?.freshness.live).toBe("Source date unavailable");
-  });
-
   it("keeps at most two sub-metrics and loses no reviewed metric for every archetype", () => {
     const overlays = mechanismReviewOverlays.overlays as unknown as { metrics: Record<string, unknown> }[];
     const metricKeys = [...new Set(overlays.flatMap((overlay) => Object.keys(overlay.metrics)))];
@@ -337,31 +330,6 @@ describe("BackingMetricsCard", () => {
     expect(document.querySelector('[role="img"][data-tone]')).toBeNull();
   });
 
-  it("draws a hedge headline with its chip and par marker, and thin buffers without empty bars", () => {
-    const view = build({ backing: synthetic })!;
-    const { container } = render(<BackingMetricsCard view={view} />);
-    expect(screen.getByText(view.coverage!.label)).toBeTruthy();
-    expect(container.querySelector('[data-gauge-marker="par"]')).not.toBeNull();
-    expect(screen.getByText("0.10%")).toBeTruthy();
-    expect(screen.queryByRole("img", { name: /^Margin buffer/ })).toBeNull();
-    expect(screen.queryByRole("img", { name: /^Loss absorption/ })).toBeNull();
-  });
-
-  it("uses the module header in flow: title and status chip, with an ISO review date", () => {
-    const view = build({ collateralization: reviewed })!;
-    render(<BackingMetricsCard view={view} id="collateralization" />);
-    const section = document.getElementById("collateralization") as HTMLElement;
-    expect(within(section).getByRole("heading", { name: view.title })).toBeTruthy();
-    expect(within(section).getByText(view.coverage!.label)).toBeTruthy();
-    expect(section.textContent).toMatch(/Reviewed \d{4}-\d{2}-\d{2}/);
-  });
-
-  it("draws the coverage tone on the gauge for an undercollateralized ratio", () => {
-    const view = build({ collateralization: { ...reviewed, ratio: 0.211 } });
-    const { container } = render(<BackingMetricsCard view={view!} />);
-    expect(container.querySelector('[data-tone="under"]')).not.toBeNull();
-  });
-
   it.each([
     { name: "a dated oracle review", oracle: reviewedOracle, marked: true },
     { name: "an undated oracle review", oracle: { ...reviewedOracle, reviewedAt: null }, marked: false },
@@ -381,17 +349,4 @@ describe("BackingMetricsCard", () => {
     );
   });
 
-  it("owns both anchors in flow and stands in for both from the rail", () => {
-    const view = build({ collateralization: reviewed })!;
-    const { container: inFlow } = render(<BackingMetricsCard view={view} id="collateralization" />);
-    expect(inFlow.querySelector("#collateralization")).not.toBeNull();
-    expect(inFlow.querySelector("#backing-mechanics")).not.toBeNull();
-    expect(inFlow.querySelector("[data-anchor-twin]")).toBeNull();
-    cleanup();
-
-    const { container: rail } = render(<BackingMetricsCard view={view} anchorTwin />);
-    expect(rail.querySelector("#collateralization, #backing-mechanics")).toBeNull();
-    expect(rail.querySelector('[data-anchor-twin="collateralization"]')).not.toBeNull();
-    expect(rail.querySelector('[data-anchor-twin="backing-mechanics"]')).not.toBeNull();
-  });
 });

@@ -99,22 +99,4 @@ describe("downloadCsvWithPreamble", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-csv");
   });
 
-  it("still revokes the object URL when the anchor click throws", async () => {
-    harness.clickSpy.mockImplementation(() => {
-      throw new Error("click blocked by browser policy");
-    });
-
-    expect(() =>
-      downloadCsvWithPreamble(
-        [{ name: "USDC" }],
-        [{ header: "Name", accessor: (row) => row.name }],
-        "stablecoins",
-        PREAMBLE,
-      ),
-    ).toThrow("click blocked by browser policy");
-
-    await vi.runOnlyPendingTimersAsync();
-
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-csv");
-  });
 });

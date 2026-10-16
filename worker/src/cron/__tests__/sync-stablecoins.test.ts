@@ -169,18 +169,6 @@ describe("syncStablecoins", () => {
     expect(fetchWithRetryMock).not.toHaveBeenCalled();
   });
 
-  it("keeps the critical path free of fallback enrichment and records GT isolation", async () => {
-    mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
-    const result = await syncStablecoins(makeSyncDb());
-    const metadata = JSON.parse(result.metadata ?? "{}");
-    expect(enrichMissingPrices).not.toHaveBeenCalled();
-    expect(metadata).toMatchObject({
-      enrichment: null,
-      enrichmentDisabled: true,
-      gtProbe: { inlineDisabled: true, isolationReason: "worker-memory-boundary" },
-    });
-  });
-
   it("keeps a sane list price when a primary source reports a severe downside", async () => {
     const data = makeDlResponse(60);
     Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1, priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });

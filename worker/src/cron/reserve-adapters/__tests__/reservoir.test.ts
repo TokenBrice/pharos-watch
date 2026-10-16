@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { toFunctionSelector } from "viem/utils";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
@@ -85,10 +84,6 @@ describe("adaptReservoirReserves", () => {
     expect(result.slices[0].coinId).toBeUndefined();
     expect(result.slices[0].depType).toBeUndefined();
   });
-  it("declares the timestamp-less balance-sheet API as unverified freshness", () => {
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation.allowedFreshnessModes).toContain("unverified");
-  });
-
   it("groups live balance-sheet assets into reserve slices", () => {
     const {
       slices,
@@ -255,24 +250,6 @@ describe("adaptReservoirReserves", () => {
     expect(unknownAssets).toContain("Unmapped Reservoir balance-sheet total-assets gap");
     expect(sourceTotalGapPct).toBe(20);
     expect(slices).toEqual(expect.arrayContaining([{ sourceKey: "reservoir:unknown", name: "Unmapped reserve positions", pct: 20, risk: "high" }]));
-  });
-
-  it("handles non-integer percentages correctly via normalizeSlices", () => {
-    const { slices } = adaptReservoirReserves({
-      assets: [
-        { label: "USDC", totalBalanceValue: "33.33" },
-        { label: "Euler - Sentora PYUSD", totalBalanceValue: "33.33" },
-        { label: "Euler - Sentora RLUSD", totalBalanceValue: "33.34" },
-      ],
-      liabilities: [],
-      totalAssets: "100",
-      totalLiabilities: "0",
-      equity: "0",
-    });
-
-    const total = slices.reduce((acc, s) => acc + s.pct, 0);
-    expect(total).toBeCloseTo(100, 10);
-    expect(slices).toHaveLength(3);
   });
 
   it("emits unverified freshness for timestamp-less protocol API telemetry", async () => {

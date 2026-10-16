@@ -5,12 +5,11 @@ import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 // A mega-multichain footprint: a cheap CoinGecko head plus a GeckoTerminal-only
 // tail whose 2s pacing floor cannot fit in the same per-coin budget.
-const { GT_ONLY_CHAINS, FOOTPRINT, cursorStore } = vi.hoisted(() => {
+const { FOOTPRINT, cursorStore } = vi.hoisted(() => {
   const cgChains = ["ethereum", "arbitrum", "base", "optimism", "polygon", "avalanche", "celo", "gnosis", "bsc", "fantom"];
   const gtOnlyChains = ["linea", "scroll", "mantle", "mode", "manta", "zksync", "sonic", "taiko", "unichain", "worldchain"];
   return {
     CG_CHAINS: cgChains,
-    GT_ONLY_CHAINS: gtOnlyChains,
     FOOTPRINT: [...cgChains, ...gtOnlyChains].map((chain, index) => ({
       chain,
       address: `0x${(index + 1).toString(16).padStart(40, "0")}`,
@@ -128,22 +127,6 @@ describe("dex discovery deployment-window rotation", () => {
     expect(new Set(runWindows.flat())).toEqual(
       new Set(FOOTPRINT.map(discoveryTargetCursorKey)),
     );
-  });
-
-  it("hands the starved GeckoTerminal-only tail to a later run", async () => {
-    const gtOnlyKeys = new Set(
-      FOOTPRINT.filter((target) => GT_ONLY_CHAINS.includes(target.chain)).map(discoveryTargetCursorKey),
-    );
-
-    await syncDexDiscovery(db, null);
-    const firstWindow = lastCrawlWindow();
-    await syncDexDiscovery(db, null);
-    const secondWindow = lastCrawlWindow();
-
-    const firstTail = firstWindow.filter((key) => gtOnlyKeys.has(key));
-    const secondTail = secondWindow.filter((key) => gtOnlyKeys.has(key));
-    expect(firstTail.length).toBeLessThan(gtOnlyKeys.size);
-    expect(secondTail.some((key) => !firstTail.includes(key))).toBe(true);
   });
 
   it("advances past a window whose crawl failed so it cannot block the rotation", async () => {

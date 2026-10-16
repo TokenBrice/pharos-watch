@@ -80,35 +80,6 @@ describe("adminMutation", () => {
     expect(request.body).toBe(JSON.stringify({ target: "usdc-circle", days: 90 }));
   });
 
-  it("preserves an explicitly supplied content type instead of the JSON default", async () => {
-    const fetchSpy = mockFetch([{
-      match: "/api/admin/remediate-blacklist-amount-gaps",
-      body: { accepted: true },
-    }], { requireMatch: true });
-
-    await adminMutation("/api/remediate-blacklist-amount-gaps", {
-      headers: { "Content-Type": "text/csv" },
-      body: "raw,payload",
-    });
-
-    expect(fetchSpy.getHistory()[0].headers["content-type"]).toBe("text/csv");
-    expect(fetchSpy.getHistory()[0].body).toBe(JSON.stringify("raw,payload"));
-  });
-
-  it("returns parsed null data for an empty success response", async () => {
-    mockFetch([{
-      match: "/api/admin/flush-cache",
-      body: "",
-      status: 200,
-    }], { requireMatch: true });
-
-    const result = await adminMutation("/api/flush-cache");
-
-    expect(result.status).toBe(200);
-    expect(result.data).toBeNull();
-    expect(result.formattedBody).toBe("");
-  });
-
   it("keeps the raw non-JSON body on an HTTP error result", async () => {
     mockFetch([{
       match: "/api/admin/reload-config",

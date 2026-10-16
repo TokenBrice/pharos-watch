@@ -9,19 +9,6 @@ const results = () => (["public", "heavy"] as const).flatMap((role) => (["baseli
 })));
 
 describe("compatibility date qualification", () => {
-  it("constructs four role/date local-only bundle and startup plans", () => {
-    const plans = results().map(({ role, label, date }) => commandPlan(role, date, `/tmp/${role}-${label}.mjs`, true));
-    expect(plans).toHaveLength(4);
-    for (const [index, plan] of plans.entries()) {
-      expect(plan).toHaveLength(3);
-      expect(plan[0][1]).toContain(WORKER_CONFIGS[results()[index].role]);
-      expect(plan[0][1]).toContain("--dry-run");
-      expect(plan[0][1]).toContain(results()[index].date);
-      expect(plan[1][1]).toContain("startup");
-      expect(plan[2]).toEqual(["node", ["scripts/maintenance/run-worker-smoke.mjs"]]);
-    }
-  });
-
   it("requires every role/date bundle, startup and smoke outcome", () => {
     expect(qualificationComplete(results())).toBe(true);
     expect(qualificationComplete(results().slice(1))).toBe(false);

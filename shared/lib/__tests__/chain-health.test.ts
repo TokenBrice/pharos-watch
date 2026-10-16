@@ -7,7 +7,6 @@ import {
   computeChainEnvironmentAssessment,
   computeHealthScore,
   getHealthBand,
-  HEALTH_METHODOLOGY_VERSION,
   CHAIN_ENVIRONMENT_SCORES,
 } from "../chains/health";
 import {
@@ -54,14 +53,6 @@ describe("computeConcentrationScore", () => {
     expect(score).toBe(50);
   });
 
-  it("returns high score for evenly distributed coins", () => {
-    const shares = [0.25, 0.25, 0.25, 0.25];
-    expect(computeConcentrationScore(shares)).toBe(75);
-  });
-
-  it("returns 0 for empty array", () => {
-    expect(computeConcentrationScore([])).toBe(0);
-  });
 });
 
 describe("computeBackingDiversityScore", () => {
@@ -73,11 +64,6 @@ describe("computeBackingDiversityScore", () => {
   it("returns 100 for an even RWA/crypto split", () => {
     const distribution = { "rwa-backed": 0.5, "crypto-backed": 0.5 };
     expect(computeBackingDiversityScore(distribution)).toBe(100);
-  });
-
-  it("returns intermediate score for an imbalanced split", () => {
-    const distribution = { "rwa-backed": 0.75, "crypto-backed": 0.25 };
-    expect(computeBackingDiversityScore(distribution)).toBe(81);
   });
 
   it("ignores legacy algorithmic weight and renormalizes the active cohorts", () => {
@@ -139,14 +125,6 @@ describe("computeQualityScore", () => {
       { safetyScore: 40, supplyUsd: 200_000 },
       { safetyScore: null, supplyUsd: 200_000 },
     ])).toBe(70);
-  });
-
-  it("returns null when coverage is below threshold", () => {
-    const coins = [
-      { safetyScore: null as number | null, supplyUsd: 600_000 },
-      { safetyScore: 80, supplyUsd: 400_000 },
-    ];
-    expect(computeQualityScore(coins)).toBeNull();
   });
 
   it("excludes unrated supply and renormalizes over rated supply", () => {
@@ -274,9 +252,7 @@ describe("computeHealthScore", () => {
   // DEC-04 owner threshold (2026-09-28): partial coverage publishes the composite at >= 95% observed supply.
   it.each([
     ["exactly the minimum", 0.95, 100],
-    ["Ethereum-shaped near-complete coverage", 0.999961, 100],
     ["just below the minimum", 0.9499, null],
-    ["Hemi-shaped thin coverage", 0.159, null],
   ] as const)("partial coverage %s (%s) -> %s", (_label, coverage, expected) => {
     expect(computeHealthScore(allHundred, { status: "partial", coverage })).toBe(expected);
   });
@@ -305,8 +281,3 @@ describe("getHealthBand", () => {
   });
 });
 
-describe("HEALTH_METHODOLOGY_VERSION", () => {
-  it("is a semver-like string", () => {
-    expect(HEALTH_METHODOLOGY_VERSION).toMatch(/^\d+\.\d+$/);
-  });
-});

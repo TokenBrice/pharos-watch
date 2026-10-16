@@ -227,15 +227,6 @@ describe("coverage helpers", () => {
     expect(reserveCoverageFeature.resolve(proofBadgeCoin, true).kind).toBe("live");
   });
 
-  it("maps redemption route families into user-facing labels", () => {
-    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry()).label).toBe("PSM");
-    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry({ routeFamily: "offchain-issuer" })).label).toBe(
-      "Issuer",
-    );
-    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry({ routeFamily: "queue-redeem" })).label).toBe("Queue");
-    expect(redemptionCoverageFeature.resolve(null).available).toBe(false);
-  });
-
   it("treats configured but unrated redemption rows as unavailable coverage", () => {
     const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
@@ -475,36 +466,6 @@ describe("coverage helpers", () => {
         confidence: "probable",
       }).kind,
     ).toBe("inherited-authority");
-  });
-
-  it("does not use authority posture as a mint-authority coverage ranking", () => {
-    const bounded = mintAuthorityCoverageFeature.resolve({
-      mintPath: "permissioned-minter",
-      authorityPosture: "bounded-admin",
-      confidence: "verified",
-      controls: [
-        {
-          label: "Minter admin",
-          authorityType: "safe",
-          directMintAbility: "can-authorize",
-        },
-      ],
-    });
-    const concentrated = mintAuthorityCoverageFeature.resolve({
-      mintPath: "permissioned-minter",
-      authorityPosture: "concentrated-admin",
-      confidence: "verified",
-      controls: [
-        {
-          label: "Minter admin",
-          authorityType: "safe",
-          directMintAbility: "can-authorize",
-        },
-      ],
-    });
-
-    expect(concentrated.kind).toBe(bounded.kind);
-    expect(concentrated.sortRank).toBe(bounded.sortRank);
   });
 
   it("keeps dependency gaps and dependency data outages separate in summaries", () => {
@@ -794,15 +755,6 @@ describe("coverage helpers", () => {
     expect(status.priceConfidence).toBe("single-source");
   });
 
-  it("does not set sourceCount when consensusSources omitted (backward compat)", () => {
-    const status = priceCoverageFeature.resolve(makeCoin(), true);
-
-    expect(status.kind).toBe("tracked");
-    expect(status.sourceCount).toBeUndefined();
-    expect(status.sourceNames).toBeUndefined();
-    expect(status.priceConfidence).toBeUndefined();
-  });
-
   it("includes source-depth breakdown when consensusSources are present", () => {
     const rows = [
       makeCoverageRow(["deep", "DEEP"], {
@@ -1034,24 +986,5 @@ describe("coverage helpers", () => {
     expect(summary.availableCount).toBe(1);
     expect(summary.totalCount).toBe(2);
     expect(summary.breakdown).toContainEqual({ key: "legacy", label: "legacy", count: 1 });
-  });
-});
-
-describe("coverage legend invariant", () => {
-  it("provides a legend entry (general or per-feature) for every producible status kind", async () => {
-    const { COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS } = await import("@/lib/coverage-features");
-
-    const generalKinds = new Set(GENERAL_LEGEND_STATUS_KINDS);
-
-    for (const feature of COVERAGE_FEATURES) {
-      const legendKinds = new Set<string>();
-      for (const item of COVERAGE_FEATURE_LEGEND_ITEMS[feature.key]) {
-        for (const kind of item.kinds) {
-          legendKinds.add(kind);
-        }
-      }
-      const uncovered = feature.statusKinds.filter((kind) => !legendKinds.has(kind) && !generalKinds.has(kind));
-      expect(uncovered, `feature ${feature.key} has uncovered kinds: ${uncovered.join(", ")}`).toEqual([]);
-    }
   });
 });

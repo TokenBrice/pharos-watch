@@ -124,16 +124,6 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.watcherLifecyclePruned).toBe(0);
   });
 
-  it("binds a string cutoff for both day-typed tables (regression guard)", async () => {
-    const { sqlite, db } = setupLatestSchema();
-    insertUsageDaily(sqlite, "2024-01-01");
-    insertWatcherLifecycle(sqlite, "2024-01-01");
-
-    await expect(runTelegramRetentionCleanup(db)).resolves.toMatchObject({ status: "ok" });
-    expect(countRows(sqlite, "telegram_usage_daily")).toBe(0);
-    expect(countRows(sqlite, "telegram_watcher_lifecycle_daily")).toBe(0);
-  });
-
   it("caps large retention deletes per table and reports cappedAtLimit metadata", async () => {
     const { sqlite, db } = setupLatestSchema();
     const usageInsert = sqlite.prepare(

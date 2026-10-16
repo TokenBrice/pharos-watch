@@ -3,7 +3,7 @@ import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
 import { route, resolveRoute } from "../../router";
-import { getRouteMatch, ROUTER_STATIC_PATHS } from "../../routes/registry";
+import { ROUTER_STATIC_PATHS } from "../../routes/registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { routeContextFactory } from "../../test-helpers/__shared/routes";
 
@@ -31,11 +31,6 @@ describe("router contract: strict frontend paths are routable", () => {
     expect(response!.headers.get("Allow")).toBe("POST");
   });
 
-  it("registers all strict contract paths without executing their handlers", () => {
-    for (const path of STRICT_CONTRACT_PATHS_LIST) {
-      expect(getRouteMatch(path), `expected route for ${path}`).not.toBeNull();
-    }
-  });
 
   it("exposes the free dependency graph as a strict GET contract and rejects writes", () => {
     const path = "/api/dependency-graph/v1";

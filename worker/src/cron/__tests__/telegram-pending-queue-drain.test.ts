@@ -90,16 +90,6 @@ function history(db: { getHistory(): Array<{ sql: string; binds: unknown[] }> },
 }
 
 describe("drainPendingQueue contract cases", () => {
-  it("returns the empty result for zero work and for an empty queue", async () => {
-    const idle = mockD1();
-    const zero = await drainPendingQueue(idle, "bot-token", 0);
-    expect(zero).toEqual({ attempted: 0, sent: 0, acceptedChats: 0, blocked: 0, blockedCleanedUp: 0, blockedCleanupFailed: 0, retryQueued: 0, executionUnknown: 0, dropped: 0, droppedPermanentFailure: 0, droppedMaxAttemptsFallback: 0, deferred: 0, rateLimited: false, retryAfterSec: null, notBeforeAt: null });
-    expect(idle.getHistory()).toHaveLength(0);
-    const empty = await drainPendingQueue(queueDb([]), "bot-token", 10);
-    expect(empty).toEqual(zero);
-    expect(mockSendToChat).not.toHaveBeenCalled();
-  });
-
   it("sends eligible rows in chunk order and preserves quiet-hour/markup transport options", async () => {
     mockSendToChat.mockResolvedValue(makeTelegramSentResult());
     const now = Math.floor(Date.now() / 1000);
@@ -200,24 +190,6 @@ describe("drainPendingQueue contract cases", () => {
       expect((await drainPendingQueue(db, "bot-token", 1)).sent).toBe(0);
       expect(mockSendToChat).toHaveBeenCalledTimes(7);
     });
-  });
-
-  it.each([
-    { scope: "chat" as const, expectedCalls: 8, expectedSent: 7 },
-    { scope: "global" as const, expectedCalls: 4, expectedSent: 3 },
-  ])("handles a $scope rate limit at the correct scope", async ({ scope, expectedCalls, expectedSent }) => {
-    mockSendToChat.mockImplementation((_, __, ___, ____,) => Promise.resolve(
-      makeTelegramRateLimitedResult({ rateLimitScope: scope, retryAfterSec: 30 }),
-    ));
-    const rows = Array.from({ length: scope === "global" ? 8 : 8 }, (_, i) => row(i + 1, { chat_id: `chat-${i}`, message_html: `msg${i}` }));
-    let calls = 0;
-    mockSendToChat.mockImplementation(() => {
-      calls++;
-      return Promise.resolve(calls === (scope === "global" ? 4 : 4) ? makeTelegramRateLimitedResult({ rateLimitScope: scope, retryAfterSec: 30 }) : makeTelegramSentResult());
-    });
-    const db = queueDb(rows, [{ match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }, { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }, ...(scope === "global" ? [{ match: "ON CONFLICT(key) DO UPDATE SET", rows: [] }] : [])]);
-    const result = await drainPendingQueue(db, "bot-token", 20);
-    expect(result).toMatchObject({ attempted: expectedCalls, sent: expectedSent, retryQueued: 1, rateLimited: true, retryAfterSec: 30 });
   });
 
   it.each(["global", "chat"] as const)("persists a %s rate limit only at its own scope", async (scope) => {

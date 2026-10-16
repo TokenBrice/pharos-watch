@@ -4,7 +4,6 @@ import { RESERVE_FEED_REVIEWS, matchReserveFeedReview, resolveReserveFeedReviews
 import type { ReserveSyncStateRecord } from "../live-reserves/store-shared";
 import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
-import { RESERVE_FEED_REVIEW_MAX_AGE_SEC } from "@shared/lib/status-thresholds";
 
 const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
 const now = review.reviewedAt + 1;
@@ -18,27 +17,6 @@ function state(overrides: Partial<ReserveSyncStateRecord> = {}): ReserveSyncStat
 }
 
 describe("reserve feed review policy", () => {
-  it("retains unrelated reviews and removes the fabricated attestation redemption failures", () => {
-    const resolved = resolveReserveFeedReviews(now);
-    expect(resolved.invalidIds).toEqual([]);
-    expect(resolved.activeById.size).toBe(2);
-    expect(resolved.activeById.has("wars-argentine-peso")).toBe(false);
-    expect(resolved.activeById.has("bnusd-balanced")).toBe(false);
-    expect(resolved.activeById.has("yzusd-yuzu")).toBe(false);
-  });
-  it("retains the two still-matching October 7 reviews without invalid or expired entries", () => {
-    expect(RESERVE_FEED_REVIEWS.map((item) => item.stablecoinId).sort()).toEqual([
-      "gusd-gemini", "mtbill-midas",
-    ]);
-    for (const item of RESERVE_FEED_REVIEWS) {
-      expect(item.reviewedAt).toBe(Date.UTC(2026, 9, 7, 14, 19, 23) / 1000);
-      expect(item.expiresAt - item.reviewedAt).toBe(RESERVE_FEED_REVIEW_MAX_AGE_SEC);
-    }
-    const resolved = resolveReserveFeedReviews(Date.UTC(2026, 9, 13) / 1000);
-    expect(resolved.activeById.size).toBe(2);
-    expect(resolved.expiredIds).toEqual([]);
-    expect(resolved.invalidIds).toEqual([]);
-  });
   it.each(RESERVE_FEED_REVIEWS)("matches only the observed October 7 failure for $stablecoinId", async (item) => {
     const errorPrefix = item.stablecoinId === "gusd-gemini"
       ? "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index"

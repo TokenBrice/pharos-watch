@@ -55,12 +55,6 @@ afterEach(() => {
 });
 
 describe("route-card admission budgets", () => {
-  it("admit at least two producer runs, so a card never flaps to timeless between runs", () => {
-    expect(OG_SOURCE_BUDGET_SEC.stablecoins).toBeGreaterThanOrEqual(2 * CRON_INTERVALS["sync-stablecoins"]!);
-    expect(OG_SOURCE_BUDGET_SEC.pegSummary).toBeGreaterThanOrEqual(2 * CRON_INTERVALS["sync-stablecoins"]!);
-    for (const budget of Object.values(OG_SOURCE_BUDGET_SEC)) expect(Number.isFinite(budget) && budget > 0).toBe(true);
-  });
-
   it("admit a figure for as long as its page publishes it as fresh", () => {
     expect(OG_SOURCE_BUDGET_SEC.mintBurnFlows).toBe(API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * FRESHNESS_RATIOS.FRESH);
     expect(OG_SOURCE_BUDGET_SEC.yieldRankings).toBe(

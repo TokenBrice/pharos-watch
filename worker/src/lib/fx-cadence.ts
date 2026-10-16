@@ -3,11 +3,11 @@ import { PRIMARY_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "./fx-conf
 export type FxSourceCadence = "intraday" | "calendar-daily" | "business-daily";
 type NaturalFxSourceCadence = Exclude<FxSourceCadence, "intraday">;
 
-export const BUSINESS_DAILY_FX_PEGS: ReadonlySet<string> = new Set(
+const BUSINESS_DAILY_FX_PEGS: ReadonlySet<string> = new Set(
   Object.values(PRIMARY_CURRENCY_TO_PEG),
 );
 
-export const CALENDAR_DAILY_FX_PEGS: ReadonlySet<string> = new Set(
+const CALENDAR_DAILY_FX_PEGS: ReadonlySet<string> = new Set(
   Object.values(SECONDARY_FX_CURRENCY_TO_PEG),
 );
 

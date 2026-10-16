@@ -40,9 +40,9 @@ export function buildCemeteryCaseStudyLinks(
 }
 
 /** The rules the methodology prints for the archive as a whole; new records meet the stricter source bar in docs/cemetery-and-compare.md#curating-a-record. */
-export const CEMETERY_INCLUSION_RULE =
+const CEMETERY_INCLUSION_RULE =
   "A stablecoin is included when it had a public market and public sources show it failed or was discontinued: an announcement, filing, governance record or press report, or, for a coin that faded without one, market data showing its collapse. There is no size floor; peak market cap is recorded when known.";
-export const CEMETERY_PRIMARY_CAUSE_RULE =
+const CEMETERY_PRIMARY_CAUSE_RULE =
   "Each record carries one primary cause: the root reason the coin failed or its issuance and operation ended, whether or not it lost its peg. Triggers such as runs, exploits or orders are described in the obituary.";
 
 /**

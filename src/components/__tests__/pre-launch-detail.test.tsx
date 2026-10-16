@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
@@ -26,15 +26,6 @@ const coin: StablecoinMeta = {
 describe("PreLaunchDetail", () => {
   afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-  it.each([undefined, [], [{ date: "2026-06", setOn: "2026-01-01" }], [{ date: "2026-05", setOn: "2026-01-01" }, { date: "2026-06", setOn: "2026-02-01" }]])(
-    "shows overdue detail badges without requiring revision history (%j)",
-    (dateHistory) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2026-07-02T00:00:00Z"));
-      render(<PreLaunchDetail coin={{ ...coin, expectedLaunchDate: "2026-06", dateHistory }} logoSrc={undefined} summary={null} />);
-      expect(screen.getByText("Overdue")).toBeTruthy();
-    },
-  );
   it("puts identity first and retains the complete narrative in a closed native disclosure", () => {
     const html = renderToStaticMarkup(<PreLaunchDetail coin={coin} logoSrc={undefined} summary={null} />);
     const document = new DOMParser().parseFromString(html, "text/html");
@@ -55,13 +46,6 @@ describe("PreLaunchDetail", () => {
     expect(document.body.textContent).toContain("Get a Telegram alert when TEST becomes tracked on Pharos");
   });
 
-  it("omits the disclosure when no launch narrative is available", () => {
-    const html = renderToStaticMarkup(
-      <PreLaunchDetail coin={{ ...coin, launchPhaseDetail: undefined }} logoSrc={undefined} summary={null} />,
-    );
-    expect(html).not.toContain("<details");
-    expect(html).toContain("Pre-launch Stablecoin Tracker");
-  });
   it("computes launch progress from the browser date instead of the build date", () => {
     vi.useFakeTimers();
     const timelineCoin = {

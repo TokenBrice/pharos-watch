@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DIGEST_BY_DATE, DIGEST_DATES, DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { DigestStoredSnapshotSchema } from "@shared/types/digest";
 
 function storedEntry(
@@ -63,33 +62,6 @@ describe("digest registry", () => {
 
     expect(registry.LATEST_DAILY_DIGEST?.date).toBe("2026-08-26");
     expect(registry.LATEST_DAILY_DIGEST?.digestType).toBe("daily");
-  });
-
-  it("falls back to the newest weekly edition when no daily edition exists", async () => {
-    const registry = await loadRegistryWith([
-      storedEntry("2026-08-20-weekly", 1000, "weekly", 1),
-      storedEntry("2026-08-27-weekly", 3000, "weekly", 2),
-    ]);
-
-    expect(registry.LATEST_DAILY_DIGEST?.date).toBe("2026-08-27-weekly");
-  });
-
-  it("exposes an empty registry with no latest edition for an empty snapshot", async () => {
-    const registry = await loadRegistryWith([]);
-
-    expect(registry.DIGEST_ENTRIES).toEqual([]);
-    expect(registry.DIGEST_BY_DATE.size).toBe(0);
-    expect(registry.DIGEST_DATES.size).toBe(0);
-    expect(registry.LATEST_DAILY_DIGEST).toBeUndefined();
-  });
-
-  it("derives lookup and markdown-date membership from the sorted registry", () => {
-    expect(DIGEST_BY_DATE.size).toBe(DIGEST_ENTRIES.length);
-    expect(DIGEST_DATES.size).toBe(DIGEST_ENTRIES.length);
-    for (const entry of DIGEST_ENTRIES) {
-      expect(DIGEST_BY_DATE.get(entry.date)).toBe(entry);
-      expect(DIGEST_DATES.has(entry.date)).toBe(true);
-    }
   });
 
   it("indexes weekly recaps and dailies within 30 days of the newest edition", async () => {

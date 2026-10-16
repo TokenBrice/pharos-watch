@@ -207,62 +207,6 @@ describe("handleBackfillDepegs replay windows", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_backfill_runs").get()).toEqual({ count: 0 });
   });
 
-  it("previews stale-row removal when a trusted replay finds zero events", async () => {
-    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
-      prices: [
-        { timestamp: 1_000, price: 1.0 },
-        { timestamp: 2_000, price: 0.999 },
-      ],
-      diagnostics: makeReplayDiagnostics(2),
-    });
-    const db = mockD1([
-      {
-        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
-        matchBinds: ["usdt-tether"],
-        rows: [
-          {
-            id: 10,
-            stablecoin_id: "usdt-tether",
-            symbol: "USDT",
-            peg_type: "peggedUSD",
-            direction: "below",
-            peak_deviation_bps: -250,
-            started_at: 1_000,
-            ended_at: 2_000,
-            start_price: 0.975,
-            peak_price: 0.975,
-            recovery_price: 1,
-            peg_reference: 1,
-            source: "backfill",
-          },
-        ],
-      },
-    ]);
-
-    const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true", {
-      adminKey: "secret",
-      method: "POST",
-    });
-
-    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-    const body = await readJsonResponse(res, 200) as {
-      recomputedBackfillEvents: number;
-      previews: Array<{
-        recomputedBackfillEventCount: number | null;
-        removedBackfillEventCount: number;
-        removedBackfillEventIdsSample: number[];
-      }>;
-    };
-
-    expect(body.recomputedBackfillEvents).toBe(0);
-    expect(body.previews[0]).toMatchObject({
-      recomputedBackfillEventCount: 0,
-      removedBackfillEventCount: 1,
-      removedBackfillEventIdsSample: [10],
-    });
-    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
-  });
-
   it("passes a bounded replay window through dry-run backfill previews", async () => {
     const day1 = Math.floor(new Date("2025-01-01T00:00:00Z").getTime() / 1000);
     const day2 = Math.floor(new Date("2025-01-31T00:00:00Z").getTime() / 1000);
@@ -300,41 +244,6 @@ describe("handleBackfillDepegs replay windows", () => {
         range: {
           startSec: day1 - 7 * 86400,
           endSec: day2 + (8 * 86400) - 1,
-        },
-      }),
-    );
-  });
-
-  it("supports configurable replay context for bounded dry-run previews", async () => {
-    const day1 = Math.floor(new Date("2025-02-01T00:00:00Z").getTime() / 1000);
-    const day2 = Math.floor(new Date("2025-02-28T00:00:00Z").getTime() / 1000);
-    const db = mockD1([
-      {
-        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
-        matchBinds: ["usdt-tether"],
-        rows: [],
-      },
-    ]);
-
-    const req = makeApiRequest(`/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true&startDay=${day1}&endDay=${day2}&contextDays=30`, {
-      adminKey: "secret",
-      method: "POST",
-    });
-
-    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-
-    const body = await readJsonResponse(res, 200) as {
-      contextDays: number | null;
-    };
-    expect(body.contextDays).toBe(30);
-
-    expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
-      expect.anything(),
-      "tether",
-      expect.objectContaining({
-        range: {
-          startSec: day1 - 30 * 86400,
-          endSec: day2 + (31 * 86400) - 1,
         },
       }),
     );

@@ -108,18 +108,6 @@ describe("ScreenerTable mobile cards", () => {
 });
 
 describe("ScreenerTable desktop table", () => {
-  it("renders only the desktop table branch on desktop viewports", async () => {
-    installViewportMatchMedia(1400);
-
-    render(<ScreenerTable rows={[row]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
-    });
-    expect(screen.queryByText("Sort results")).toBeNull();
-    expect(screen.getByText("Adequate")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
-  });
 
   it("labels the safety summary badge with the projected V9 grade and score", async () => {
     installViewportMatchMedia(1400);

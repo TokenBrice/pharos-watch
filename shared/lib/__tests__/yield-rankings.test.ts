@@ -41,11 +41,6 @@ describe("dedupeYieldRankings", () => {
     expect(dedupeYieldRankings([first, second])).toEqual([first]);
   });
 
-  it("returns a single row unchanged", () => {
-    const row = makeRanking({ id: "solo", currentApy: 5.0 });
-    expect(dedupeYieldRankings([row])).toEqual([row]);
-  });
-
   it("prefers PYS over TVL when current APY matches", () => {
     const rankings = dedupeYieldRankings([
       makeRanking({

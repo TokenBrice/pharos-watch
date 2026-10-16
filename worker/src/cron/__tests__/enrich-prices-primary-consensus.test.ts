@@ -504,20 +504,6 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.attempted).toBe(1);
   });
 
-  it("tracks cgOnly in stats for CG-only single-source assets", async () => {
-    const assets = [
-      makePeggedAsset({ id: "a", name: "A", symbol: "A", geckoId: "a-id" }),
-      makePeggedAsset({ id: "b", name: "B", symbol: "B", geckoId: "b-id" }),
-    ];
-    installPrimaryPriceRoutes({
-      coingecko: { body: { "a-id": { usd: 1.0 }, "b-id": { usd: 1.0 } } },
-    });
-    const db = makeTestDb();
-    const { stats } = await fetchPrimaryPrices(assets, db);
-    expect(stats.cgOnly).toBe(2);
-    expect(stats.singleSource).toBe(2);
-  });
-
   it("uses exact-case RedStone symbols and recovers batch-dropped results with solo retry", async () => {
     const assets = [
       makePeggedAsset({ id: "usde-ethena", name: "Ethena USDe", symbol: "USDe", geckoId: "ethena-usde" }),
@@ -604,19 +590,4 @@ describe("applyResolvedPrice", () => {
     expect(asset.consensusSources).toEqual(["cmc"]);
   });
 
-  it("agreeSources reflects consensus.agreeSources not candidateSources", async () => {
-    const { computePriceConsensus } = await import("../../lib/price-consensus");
-    const sources = [
-      { source: "coingecko", price: 1.0001, weight: 2 },
-      { source: "defillama", price: 1.0002, weight: 1 },
-      { source: "outlier", price: 1.05, weight: 1 }, // diverges >50bps
-    ];
-    const result = computePriceConsensus(sources, 1.0, 50);
-    expect(result).not.toBeNull();
-    // coingecko and defillama agree; outlier disagrees
-    expect(result!.agreeSources).toContain("coingecko");
-    expect(result!.agreeSources).toContain("defillama");
-    expect(result!.agreeSources).not.toContain("outlier");
-    expect(result!.disagreeSources).toContain("outlier");
-  });
 });

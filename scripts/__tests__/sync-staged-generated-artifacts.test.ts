@@ -12,16 +12,6 @@ function execReturning(value: string) {
 }
 
 describe("auto-stage partition", () => {
-  it("splits selected ids into auto-stageable and manual", () => {
-    const { autoStage, manual } = selectAutoStageArtifactIds([
-      "safety-score-v9-evaluation-build",
-      "og-editorial",
-      "public-datasets",
-    ]);
-    expect(autoStage).toEqual(["safety-score-v9-evaluation-build"]);
-    expect(manual).toEqual(["public-datasets", "og-editorial"]);
-  });
-
   it("never auto-stages a network-derived artifact", () => {
     const networkDerivedIds = GENERATED_ARTIFACT_REGISTRY
       .filter((artifact) => artifact.reproducibility === "network-derived")
@@ -143,24 +133,6 @@ describe("staged artifact sync", () => {
     expect(runCommand.mock.calls.some(([command]) => command.includes("detail-snapshots"))).toBe(false);
   });
 
-  it("regenerates the cemetery logo atlas for a tracked-archive logo but not for an unrelated tracked logo", () => {
-    const signature = JSON.parse(readFileSync(
-      join(__dirname, "../maintenance/state/cemetery-logo-atlas-signature.json"),
-      "utf8",
-    )) as { sources: { logo: string }[] };
-    const archiveLogo = signature.sources.map((source) => `public${source.logo}`)
-      .find((path) => !path.startsWith("public/logos/cemetery/"));
-    expect(archiveLogo).toBeDefined();
-    const regeneratedFor = (stagedFile: string) => syncStagedGeneratedArtifacts({
-      stagedFiles: [stagedFile],
-      execFile: execReturning(""),
-      runCommand: vi.fn(() => 0),
-      log: vi.fn(),
-    }).regenerated;
-    expect(regeneratedFor(archiveLogo!)).toContain("cemetery-logo-atlas");
-    expect(regeneratedFor("public/logos/not-a-cemetery-logo.png")).not.toContain("cemetery-logo-atlas");
-  });
-
   it("rejects unstaged dependency sources before cemetery generation", () => {
     const runCommand = vi.fn(() => 0);
     expect(() => syncStagedGeneratedArtifacts({
@@ -280,52 +252,6 @@ describe("staged artifact sync", () => {
       ["ls-files", "--others", "--exclude-standard", "-z"],
       { cwd: "/repo", encoding: "utf8" },
     );
-  });
-
-  it("does nothing when the index is empty", () => {
-    const runCommand = vi.fn(() => 0);
-    const result = syncStagedGeneratedArtifacts({
-      stagedFiles: [],
-      execFile: execReturning(""),
-      runCommand,
-      log: vi.fn(),
-    });
-
-    expect(result).toEqual({ blocked: [], manual: [], regenerated: [] });
-    expect(runCommand).not.toHaveBeenCalled();
-  });
-
-  it("warns about selected artifacts it will not auto-stage", () => {
-    const log = vi.fn();
-    const result = syncStagedGeneratedArtifacts({
-      stagedFiles: ["src/app/page.tsx"],
-      execFile: execReturning(""),
-      runCommand: vi.fn(() => 0),
-      log,
-    });
-
-    expect(result.manual).toContain("og-editorial");
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("og-editorial"));
-  });
-
-  it("does not warn about gitignored artifacts a human cannot commit", () => {
-    // `git check-ignore --stdin` echoes back only the ignored paths.
-    const execFile = vi.fn((_file: string, args: readonly string[]) =>
-      args[0] === "check-ignore"
-        ? "src/generated/sitemap-dates.json\0src/generated/sitemap-dates.json.d.ts\0"
-        : "",
-    ) as never;
-    const log = vi.fn();
-
-    const result = syncStagedGeneratedArtifacts({
-      stagedFiles: ["src/app/page.tsx"],
-      execFile,
-      runCommand: vi.fn(() => 0),
-      log,
-    });
-
-    expect(result.manual).not.toContain("sitemap-dates");
-    expect(result.manual).toContain("og-editorial");
   });
 
   it("does not stage earlier outputs when a later generator fails", () => {

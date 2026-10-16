@@ -36,7 +36,7 @@ Isometric metaphor scenes are assembled from the scene kit, extracted from the C
 | Rendering (React) | `src/components/scene/` | `SceneMarks` / `AtlasWindow` (`scene-marks.tsx`), `SceneDefs` / `SceneKitDefs` (`scene-defs.tsx`), `useSceneLayout` (`use-scene-layout.ts`), `scene-tokens.module.css` |
 | Build tooling | `scripts/lib/` | `scene-atlas.ts` (logo atlas WebP, manifest, input signature), `scene-og.ts` (CSS-module document, token closure, Firefox render, document-hash signature) |
 
-The Cemetery is the first consumer: `src/lib/cemetery-plot-geometry.ts`, `src/lib/cemetery-plot-map.ts`, `plot-map-shapes.tsx` and the two cemetery build scripts (`build-cemetery-logo-atlas.ts`, `build-og-cemetery.ts`, now configurations over `scene-atlas.ts` / `scene-og.ts` with unchanged commands and outputs) import the kit and keep their `Plot*` names; `plot-map.module.css` composes the kit's `tokens` and `scene` classes, and the OG document inlines the kit sheet before it. `src/lib/__tests__/cemetery-scene-golden.test.ts` pins the Cemetery's geometry and markup hashes, so a kit change that would alter the drawing fails there.
+The Cemetery is the first consumer: `src/lib/cemetery-plot-geometry.ts`, `src/lib/cemetery-plot-map.ts`, `plot-map-shapes.tsx` and the two cemetery build scripts (`build-cemetery-logo-atlas.ts`, `build-og-cemetery.ts`, now configurations over `scene-atlas.ts` / `scene-og.ts` with unchanged commands and outputs) import the kit and keep their `Plot*` names; `plot-map.module.css` composes the kit's `tokens` and `scene` classes, and the OG document inlines the kit sheet before it.
 
 Kit rules:
 

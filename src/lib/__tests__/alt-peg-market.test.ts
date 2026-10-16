@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { NonUsdShareResponseSchema } from "@shared/types/market";
-import { buildAltPegLinkHubGroups, buildAltPegSnapshot, buildAltPegTrendStats } from "@/lib/alt-peg-market";
+import { buildAltPegSnapshot, buildAltPegTrendStats } from "@/lib/alt-peg-market";
 
 function makeCoin(id: string, marketCap: number) {
   return makeStablecoin({
@@ -173,14 +173,4 @@ describe("alt-peg-market", () => {
     },
   );
 
-  it("builds taxonomy-backed non-USD link hub groups", () => {
-    const groups = buildAltPegLinkHubGroups();
-
-    const fiatGroup = groups.find((group) => group.label === "Fiat");
-    const commodityGroup = groups.find((group) => group.label === "Commodity");
-
-    expect(fiatGroup?.items.some((item) => item.href === "/stablecoins/eur/")).toBe(true);
-    expect(commodityGroup?.items.some((item) => item.href === "/stablecoins/gold/")).toBe(true);
-    expect(groups.some((group) => group.items.some((item) => item.href === "/stablecoins/usd/"))).toBe(false);
-  });
 });

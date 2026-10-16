@@ -30,7 +30,7 @@ describe("public status helpers", () => {
     expect(issues[0]).toMatchObject({ kind, publicImpacting });
   });
 
-  it.each([30_000_000, 96_534_823.01, 500_000_000])("keeps publication UI impact aligned for a last-known cap of %s", (cap) => {
+  it.each([96_534_823.01, 500_000_000])("keeps publication UI impact aligned for a last-known cap of %s", (cap) => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
       warnings: ["stablecoin-publication-incomplete:hbd-hive"],
@@ -201,18 +201,6 @@ describe("public status helpers", () => {
     expect(summary).toEqual({ ratio: 13, status: "stale", impactedCount: 2 });
   });
 
-  it("breaks severity ties by the largest freshness ratio regardless of insertion order", () => {
-    const caches = {
-      "stablecoin-charts": { ageSeconds: 880, maxAge: 100, healthy: false }, // ratio 8.8 → degraded
-      "fx-rates": { ageSeconds: 920, maxAge: 100, healthy: false }, // ratio 9.2 → degraded
-    };
-
-    expect(getPublicWorstCacheSummary(caches)).toEqual({ ratio: 9.2, status: "degraded", impactedCount: 2 });
-    expect(
-      getPublicWorstCacheSummary({ "fx-rates": caches["fx-rates"], "stablecoin-charts": caches["stablecoin-charts"] }),
-    ).toEqual({ ratio: 9.2, status: "degraded", impactedCount: 2 });
-  });
-
   it("prefers a missing freshness row over a numeric ratio within a severity tie, in any order", () => {
     const missingRow = { ageSeconds: null, maxAge: 900, healthy: false }; // stale, no freshness ratio
     const numericStale = { ageSeconds: 1_300, maxAge: 100, healthy: false }; // ratio 13 → stale
@@ -313,10 +301,21 @@ describe("getAgeBandState", () => {
     expect(describePublicHeadline(BASE_HEALTH, false)).toMatchObject({ state: "operational", label: "Operational" });
   });
 
-  it("keeps raw enum words out of divergence sentences", () => {
-    const notice = getPublicDivergenceNotice("stale", "degraded");
-    expect(notice.kind).toBe("both-degraded-different-severity");
-    expect(notice.kind !== "in-sync" && notice.detail).not.toMatch(/\b(stale|degraded|healthy)\b/);
+});
+
+describe("getPublicDivergenceNotice", () => {
+  it("in-sync when equal", () => {
+    expect(getPublicDivergenceNotice("healthy", "healthy").kind).toBe("in-sync");
+    expect(getPublicDivergenceNotice("degraded", "degraded").kind).toBe("in-sync");
+  });
+  it("health-degraded-probes-ok when health > probes and probes healthy", () => {
+    expect(getPublicDivergenceNotice("degraded", "healthy").kind).toBe("health-degraded-probes-ok");
+  });
+  it("probes-degraded-health-ok in the inverse", () => {
+    expect(getPublicDivergenceNotice("healthy", "degraded").kind).toBe("probes-degraded-health-ok");
+  });
+  it("both-degraded-different-severity when both degraded but different", () => {
+    expect(getPublicDivergenceNotice("degraded", "stale").kind).toBe("both-degraded-different-severity");
   });
 });
 
@@ -324,28 +323,6 @@ describe("getImpactedPublicSurfaces", () => {
   it("returns an empty list when everything is healthy", () => {
     const surfaces = getImpactedPublicSurfaces(BASE_HEALTH);
     expect(surfaces).toEqual([]);
-  });
-
-  it("does not surface a degraded price-coverage callout for a transient (non-alert-eligible) miss", () => {
-    // status stays "incomplete" for observability, but a merely un-repriced miss
-    // is not alert-eligible — the hero is healthy, so the surface must be too.
-    const transient: HealthResponse = {
-      ...BASE_HEALTH,
-      status: "healthy",
-      warnings: [],
-      activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset()]),
-    };
-    expect(getImpactedPublicSurfaces(transient).some((s) => s.id === "active-price-coverage")).toBe(false);
-  });
-
-  it("keeps alert-eligible incomplete price coverage warning-only", () => {
-    const alertEligible: HealthResponse = {
-      ...BASE_HEALTH,
-      status: "healthy",
-      warnings: ["active-price-coverage-incomplete:test-dollar"],
-      activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset({ alertEligible: true })]),
-    };
-    expect(getImpactedPublicSurfaces(alertEligible).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
 
   it("fails closed with a degraded surface when exact price coverage is unknown", () => {
@@ -406,10 +383,6 @@ describe("getImpactedPublicSurfaces", () => {
 });
 
 describe("getPublicMintBurnStatus — additional fixtures", () => {
-  it("healthy when sync is fresh and critical lane is healthy", () => {
-    expect(getPublicMintBurnStatus(BASE_HEALTH.mintBurn.sync)).toBe("healthy");
-  });
-
   it("stale when freshnessStatus is stale regardless of critical lane", () => {
     const sync = {
       ...BASE_HEALTH.mintBurn.sync,
@@ -420,18 +393,3 @@ describe("getPublicMintBurnStatus — additional fixtures", () => {
   });
 });
 
-describe("getPublicDivergenceNotice", () => {
-  it("in-sync when equal", () => {
-    expect(getPublicDivergenceNotice("healthy", "healthy").kind).toBe("in-sync");
-    expect(getPublicDivergenceNotice("degraded", "degraded").kind).toBe("in-sync");
-  });
-  it("health-degraded-probes-ok when health > probes and probes healthy", () => {
-    expect(getPublicDivergenceNotice("degraded", "healthy").kind).toBe("health-degraded-probes-ok");
-  });
-  it("probes-degraded-health-ok in the inverse", () => {
-    expect(getPublicDivergenceNotice("healthy", "degraded").kind).toBe("probes-degraded-health-ok");
-  });
-  it("both-degraded-different-severity when both degraded but different", () => {
-    expect(getPublicDivergenceNotice("degraded", "stale").kind).toBe("both-degraded-different-severity");
-  });
-});

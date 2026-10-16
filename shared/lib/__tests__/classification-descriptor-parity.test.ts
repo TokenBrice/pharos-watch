@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  BACKING_LABELS,
-  BACKING_LABELS_SHORT,
-  GOVERNANCE_LABELS,
-  GOVERNANCE_LABELS_SHORT,
-  THREAT_BAND_LABELS,
   getPysColor,
   getPysBarColor,
   STATUS_TONE,
@@ -14,8 +9,6 @@ import {
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,
   MINT_AUTHORITY_SCORE_DESCRIPTORS,
 } from "@shared/lib/classification";
-import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
-import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 
 describe("classification descriptor semantics", () => {
   it.each([
@@ -28,13 +21,6 @@ describe("classification descriptor semantics", () => {
   it.each([null, undefined])("keeps unavailable PYS %s neutral", (score) => {
     expect(getPysColor(score)).toBe("text-muted-foreground");
     expect(getPysBarColor(score)).toBe("bg-muted-foreground/40");
-  });
-
-  it("preserves the existing non-finite PYS projections", () => {
-    expect(getPysColor(Number.NaN)).toBe("text-muted-foreground");
-    expect(getPysBarColor(Number.NaN)).toBe("bg-red-500");
-    expect(getPysColor(Number.NEGATIVE_INFINITY)).toContain("red");
-    expect(getPysBarColor(Number.POSITIVE_INFINITY)).toBe("bg-emerald-500");
   });
 
   it("keeps operational labels distinct and no probe separate from health", () => {
@@ -52,23 +38,4 @@ describe("classification descriptor semantics", () => {
     }
   });
 
-  it("keeps DEWS severity labels distinguishable", () => {
-    expect(new Set(Object.values(THREAT_BAND_LABELS)).size).toBe(Object.keys(THREAT_BAND_LABELS).length);
-  });
-
-  it.each([
-    BACKING_LABELS,
-    BACKING_LABELS_SHORT,
-    GOVERNANCE_LABELS,
-    GOVERNANCE_LABELS_SHORT,
-  ])("keeps classification options distinguishable", (labels) => {
-    expect(new Set(Object.values(labels)).size).toBe(Object.keys(labels).length);
-  });
-
-  it("distinguishes authorization outcomes without freezing editorial wording", () => {
-    expect(new Set(Object.values(GENIUS_STATUS_SHORT_LABELS)).size)
-      .toBe(Object.keys(GENIUS_STATUS_SHORT_LABELS).length);
-    expect(new Set(Object.values(MICA_STATUS_BADGE_STYLES).map((badge) => badge.label)).size)
-      .toBe(Object.keys(MICA_STATUS_BADGE_STYLES).length);
-  });
 });

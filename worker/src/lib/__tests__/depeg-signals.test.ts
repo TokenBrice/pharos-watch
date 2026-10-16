@@ -22,11 +22,6 @@ describe("deriveDepegSignal", () => {
       direction: "below",
     });
   });
-
-  it("returns null for unusable inputs", () => {
-    expect(deriveDepegSignal(0, 1)).toBeNull();
-    expect(deriveDepegSignal(1, 0)).toBeNull();
-  });
 });
 
 describe("direction helpers", () => {

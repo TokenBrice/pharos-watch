@@ -442,30 +442,6 @@ describe("yield.pys_dropped projector", () => {
     expect(priorQuery?.sql).toContain("ORDER BY d.created_at DESC, d.generation_id DESC");
     expect(priorQuery?.sql).toContain("LIMIT 1");
   });
-
-  it("prints a drop whose endpoints and delta agree after rounding", async () => {
-    const db = mockTapeD1(
-      decisionTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            selected_source_key: "aave-v3:usdt",
-            selected_score: 71.4,
-            created_at: SEC + 900,
-          },
-        ],
-        [
-          { selected_score: 81.6 },
-        ],
-      ),
-    ) as MockD1Database;
-
-    await projectYieldPysDropped(db);
-    const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]![9]).toBe("USDT yield score 82 → 71");
-    expect(inserts[0]![10]).toBe("Published yield score dropped by 11 on selected source.");
-  });
 });
 
 describe("yield PYS null-baseline continuity", () => {

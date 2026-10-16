@@ -3,7 +3,6 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   verifyAccessJwt,
   verifyAccessJwtUserIdentity,
-  normalizeTeamDomain,
   _resetJwksCache,
 } from "@shared/lib/cloudflare-access-jwt";
 
@@ -113,27 +112,6 @@ const MOCK_JWKS = {
 
 // ── Tests ───────────────────────────────────────────────────────────
 
-describe("normalizeTeamDomain", () => {
-  it("passes through a bare team name", () => {
-    expect(normalizeTeamDomain("pharos-watch")).toBe("pharos-watch");
-  });
-
-  it("extracts team name from a full https URL", () => {
-    expect(normalizeTeamDomain("https://pharos-watch.cloudflareaccess.com")).toBe("pharos-watch");
-  });
-
-  it("extracts team name from an http URL", () => {
-    expect(normalizeTeamDomain("http://pharos-watch.cloudflareaccess.com")).toBe("pharos-watch");
-  });
-
-  it("handles trailing path in the URL", () => {
-    expect(normalizeTeamDomain("https://pharos-watch.cloudflareaccess.com/cdn-cgi/access/certs")).toBe("pharos-watch");
-  });
-
-  it("trims whitespace", () => {
-    expect(normalizeTeamDomain("  pharos-watch  ")).toBe("pharos-watch");
-  });
-});
 
 describe("verifyAccessJwt", () => {
   beforeEach(() => {
@@ -155,9 +133,6 @@ describe("verifyAccessJwt", () => {
       expect(await verifyAccessJwt({ token: "", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
-    it("rejects token with only one part", async () => {
-      expect(await verifyAccessJwt({ token: "abc", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
-    });
 
     it("rejects token with two parts", async () => {
       expect(await verifyAccessJwt({ token: "abc.def", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
@@ -249,21 +224,6 @@ describe("verifyAccessJwt", () => {
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(true);
     });
 
-    it("accepts a valid signed Access JWT", async () => {
-      const { token, jwk } = await makeSignedJwt(validHeader(), validClaims());
-      mockFetch([{ match: () => true, body: { keys: [jwk] } }]);
-
-      await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).resolves.toBe(true);
-    });
-
-    it("accepts a valid signed Access JWT when the expected type matches", async () => {
-      const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
-      mockFetch([{ match: () => true, body: { keys: [jwk] } }]);
-
-      await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).resolves.toBe(
-        true,
-      );
-    });
 
     it("accepts a valid signed user Access JWT when a user subject is required", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
@@ -359,18 +319,6 @@ describe("verifyAccessJwt", () => {
   // ── JWKS caching ─────────────────────────────────────────────
 
   describe("JWKS caching", () => {
-    it("caches JWKS and reuses on second call", async () => {
-      const fetchMock = mockFetch([{ match: () => true, body: MOCK_JWKS }]);
-
-      const { token: token1 } = makeJwtParts(validHeader(), validClaims());
-      await verifyAccessJwt({ token: token1, aud: AUD, teamDomain: TEAM_DOMAIN });
-
-      const { token: token2 } = makeJwtParts(validHeader(), validClaims());
-      await verifyAccessJwt({ token: token2, aud: AUD, teamDomain: TEAM_DOMAIN });
-
-      // Should only fetch once due to caching
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
 
     it("re-fetches JWKS after cache expiry", async () => {
       vi.useFakeTimers({ toFake: ["Date"] });

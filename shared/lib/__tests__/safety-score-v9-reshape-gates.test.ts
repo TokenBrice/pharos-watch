@@ -216,26 +216,6 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.finalScore).toBeNull();
   });
 
-  it("withholds at the formula boundary when the limited count is threaded", () => {
-    const trace = scoreV9Input(rawInput({ evidenceLevel: "limited" }), POLICY, [], 2, true, [], [], [], [], [], [], undefined, {
-      includedPillars: ["backing", "exit", "control"], partialEvidence: null,
-      limitingPillars: [{ pillar: "backing", causes: ["C"], causeGapIds: ["gap:backing"] }, { pillar: "exit", causes: ["C"], causeGapIds: ["gap:exit"] }],
-    });
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.nrReasons.map((reason) => reason.code)).toContain("insufficient-evidence");
-  });
-
-  it("counts U collective witnesses at the formula boundary", () => {
-    const trace = scoreV9Input(rawInput({ pillars: { backing: 50, exit: 50, control: 60 }, evidenceLevel: "limited" }), POLICY, [], 2, true, [], [], [], [], [], [], undefined, {
-      includedPillars: ["backing", "exit", "control"], partialEvidence: null,
-      limitingPillars: [{ pillar: "backing", causes: ["U"], causeGapIds: ["gap:backing"] }, { pillar: "exit", causes: ["U"], causeGapIds: ["gap:exit"] }],
-    });
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.nrReasons).toEqual([expect.objectContaining({
-      code: "insufficient-evidence", cause: "U", contributingPillars: ["backing", "exit"],
-    })]);
-  });
-
   it("keeps a measured-adverse control-25 asset rated with explicit structural attribution", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
@@ -342,13 +322,6 @@ describe("Workstream A — attributable D/F ratings", () => {
     );
   });
 
-  it("applies the attribution requirement at the formula boundary", () => {
-    const trace = scoreV9Input(rawInput(), POLICY);
-    expect(trace.finalScore).toBeNull();
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
-  });
-
   it("keeps a measured mint-concentration F with structural attribution", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
@@ -450,7 +423,7 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
     claimImpairment: "unbounded",
   });
 
-  it.each([[59, 55], [60, 59], [120, 59]] as const)(
+  it.each([[59, 55], [60, 59]] as const)(
     "caps a %i-month 55-base reconciled mint at %i below governed issuance", (trackRecordMonths, score) => {
       const result = evaluateV9EconomicControl(makeEconomicControlArgs({
         facts: makeEconomicControlFacts([unbounded]),

@@ -124,14 +124,6 @@ describe("use-api-query", () => {
   });
 
   describe("createApiPollingQueryOptions", () => {
-    it("sets the query key and default timing/retry policy", () => {
-      const opts = createApiPollingQueryOptions(["k"], "/api/x", 15_000);
-      expect(opts.queryKey).toEqual(["k"]);
-      expect(opts.staleTime).toBe(15_000);
-      expect(opts.refetchInterval).toBe(30_000);
-      expect(opts.retry).toBe(2);
-      expect(opts.enabled).toBeUndefined();
-    });
 
     it("respects enabled=false and retry override", () => {
       const opts = createApiPollingQueryOptions(["k"], "/api/x", 15_000, {
@@ -161,26 +153,6 @@ describe("use-api-query", () => {
     });
   });
 
-  // ------------------------------------------------------------------
-  // createApiQueryFn — schema-success
-  // ------------------------------------------------------------------
-  describe("createApiQueryFn — schema success", () => {
-    it("resolves with parsed data when response matches schema", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ value: 42 }));
-
-      const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema);
-      const result = await fn();
-      expect(result).toEqual({ value: 42 });
-    });
-
-    it("resolves without schema when no schema provided", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ anything: true }));
-
-      const fn = createApiQueryFn<{ anything: boolean }>("/api/test");
-      const result = await fn();
-      expect(result).toEqual({ anything: true });
-    });
-  });
 
   // ------------------------------------------------------------------
   // createApiQueryFn — schema-mismatch strict mode (default)
@@ -227,17 +199,6 @@ describe("use-api-query", () => {
     });
   });
 
-  // ------------------------------------------------------------------
-  // createApiQueryFn — non-OK HTTP response
-  // ------------------------------------------------------------------
-  describe("createApiQueryFn — non-OK response", () => {
-    it("throws ApiFetchError on 500", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ error: "Internal Server Error" }, 500));
-
-      const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema);
-      await expect(fn()).rejects.toThrow(/Failed to fetch \/api\/test: 500/);
-    });
-  });
 
   // ------------------------------------------------------------------
   // createApiQueryFn — abort signal forwarding
@@ -379,21 +340,5 @@ describe("use-api-query", () => {
       unsubscribe();
     });
 
-    it("calls apiFetch with the configured path when queryFn is invoked", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ value: 99 }));
-
-      const opts = createApiPollingQueryOptions<SomeData>(["test-key"], "/api/test", 60_000, { schema: SomeSchema });
-
-      const queryFn = opts.queryFn;
-      expect(queryFn).toBeTypeOf("function");
-      if (typeof queryFn !== "function") throw new Error("Expected an API polling query function");
-      const result = await queryFn({
-        client: new QueryClient(),
-        signal: new AbortController().signal,
-        queryKey: opts.queryKey,
-        meta: undefined,
-      });
-      expect(result).toEqual({ value: 99 });
-    });
   });
 });

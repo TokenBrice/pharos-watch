@@ -251,17 +251,4 @@ describe("djed-cardano", () => {
     expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
   });
 
-  it("stays clean when the on-chain liability matches the list supply", async () => {
-    const { result } = await runAdapter("djed-cardano", "djed-coti", {
-      network: djedNetwork(),
-      nowSec: TIP.block_time,
-      ctx: { db: djedCacheDb(DJED_CIRCULATING) },
-    });
-
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata?.details).toMatchObject({
-      listCirculatingUsd: DJED_CIRCULATING,
-      supplyDivergencePct: 0,
-    });
-  });
 });

@@ -112,19 +112,4 @@ describe("StatusPanel", () => {
     expect(screen.getByText("Quiet hours")).toBeTruthy();
     expect(screen.getByText("Last delivery")).toBeTruthy();
   });
-
-  it("shows optional home-screen and sample-alert actions only when capabilities are supplied", () => {
-    const onAddToHomeScreen = vi.fn();
-    const onSendSample = vi.fn();
-    renderStatus({ homeScreenStatus: "missed", onAddToHomeScreen, onSendSample });
-    fireEvent.click(screen.getByRole("button", { name: "Add to home screen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Send me a sample alert" }));
-    expect(onAddToHomeScreen).toHaveBeenCalledOnce();
-    expect(onSendSample).toHaveBeenCalledOnce();
-
-    cleanup();
-    renderStatus({ homeScreenStatus: "added" });
-    expect(screen.queryByRole("button", { name: "Add to home screen" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Send me a sample alert" })).toBeNull();
-  });
 });

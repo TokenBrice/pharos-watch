@@ -49,12 +49,6 @@ describe("adaptDgldGoldMapperState", () => {
     expect(result.warnings).toBeUndefined();
   });
 
-  it("excludes redeemed bars from the reserve", () => {
-    const onlyLive = BARS.filter((bar) => bar.status === "live");
-    const result = adaptDgldGoldMapperState({ networks: NETWORKS, bars: onlyLive }, PARAMS);
-    expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2411.955, 3);
-  });
-
   it("degrades with unknown exposure when supply diverges from live-bar oz", () => {
     const drifted = NETWORKS.map((network) => ({
       ...network,

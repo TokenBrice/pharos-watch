@@ -1,10 +1,4 @@
 import { describe, expect, it } from "vitest";
-import brlvMetaSource from "@shared/data/stablecoins/coins/brlv-crown.json";
-import xsgdMetaSource from "@shared/data/stablecoins/coins/xsgd-straitsx.json";
-import brlvReserveSource from "@shared/data/stablecoins/domains/reserves/brlv-crown.json";
-import xsgdReserveSource from "@shared/data/stablecoins/domains/reserves/xsgd-straitsx.json";
-import brlvMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/brlv-crown.json";
-import xsgdMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/xsgd-straitsx.json";
 import ceurComplianceSource from "@shared/data/stablecoins/domains/compliance/ceur-celo.json";
 import cusdComplianceSource from "@shared/data/stablecoins/domains/compliance/cusd-celo.json";
 import gbpmComplianceSource from "@shared/data/stablecoins/domains/compliance/gbpm-mento.json";
@@ -34,8 +28,6 @@ import {
 } from "./safety-score-v9-reserve-admission.test-support";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
-const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
-const XSGD_CURATED_CLOCK_SEC = Date.UTC(2026, 9, 3) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
 
 function eligibleReserveMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
@@ -301,12 +293,6 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     });
   });
 
-  it("admits a signed independent report for a prudential issuer at the owner-ratify 0.8 confidence", () => {
-    const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(eligibleReserveMeta(), CLOCK_SEC);
-    expect(admitted).toMatchObject({ evidenceClass: "issuer-attested" });
-    expect(admitted?.rows).toHaveLength(2);
-  });
-
   it("rejects an independent audit reviewed before its composition date", () => {
     const base = eligibleReserveMeta();
     const metadata = eligibleReserveMeta({
@@ -423,22 +409,6 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(compiled.componentEvidence).toContainEqual(
       expect.objectContaining({ componentKey: "reviewed-static-reserves" }),
     );
-  });
-
-  it("retains full confidence when the verified examination directly reconciles the reviewed composition", () => {
-    const base = eligibleReserveMeta();
-    const reportSource = base.proofOfReserves!.latestReport!.sources[0]!;
-    const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(
-      eligibleReserveMeta({
-        reserveReview: {
-          ...base.reserveReview!,
-          sources: [reportSource],
-        },
-      }),
-      CLOCK_SEC,
-    );
-
-    expect(admitted).toMatchObject({ evidenceClass: "independent" });
   });
 
   it("keeps partial, probable, attestation, and separately sourced reviews at issuer-attested confidence", () => {
@@ -635,57 +605,9 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(staleReport, CLOCK_SEC)).toBeNull();
   });
 
-  it("admits the curated XSGD composition through the independent-static path", () => {
-    const xsgdMeta = {
-      ...xsgdMetaSource,
-      reserves: xsgdReserveSource.reserves,
-      reserveReview: xsgdReserveSource.reserveReview,
-      mintAuthority: xsgdMintAuthoritySource.mintAuthority,
-    } as unknown as V9ExtensionRegistryMeta;
-
-    expect(xsgdMeta.mintAuthority).toMatchObject({
-      reconciliation: "periodic",
-      supervision: "prudential",
-    });
-    expect(xsgdMeta.proofOfReserves?.cadence).toBe("semi-monthly");
-    expect(xsgdMeta.reserves?.[1]).toMatchObject({
-      assetClass: "other",
-      liquidityHorizon: "unknown",
-    });
-    expect(buildSafetyScoreV9ReviewedStaticReserveRows(xsgdMeta, XSGD_CURATED_CLOCK_SEC)).toMatchObject({
-      evidenceClass: "independent",
-      provenance: "curated",
-      rows: xsgdReserveSource.reserves,
-    });
-  });
-
-  it("keeps BRLV excluded while issuer supervision remains attestation-only", () => {
-    const brlvMeta = {
-      ...brlvMetaSource,
-      reserves: brlvReserveSource.reserves,
-      reserveReview: brlvReserveSource.reserveReview,
-      mintAuthority: brlvMintAuthoritySource.mintAuthority,
-    } as unknown as V9ExtensionRegistryMeta;
-
-    expect(brlvMeta.mintAuthority?.supervision).toBe("attestation-only");
-    expect(buildSafetyScoreV9ReviewedStaticReserveRows(brlvMeta, CURATION_CLOCK_SEC)).toBeNull();
-  });
 });
 
 describe("Phase 1 D6 reviewed curated fallback admission", () => {
-  it("admits a current verified full composition at static-validated confidence", () => {
-    const admitted = buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
-      eligibleReserveMeta({ proofOfReserves: undefined, liveReservesConfig: LIVE_RESERVES_CONFIG }),
-      CLOCK_SEC,
-    );
-
-    expect(admitted).toMatchObject({
-      evidenceClass: "static-validated",
-      provenance: "curated-fallback",
-    });
-    expect(admitted?.rows).toHaveLength(2);
-  });
-
   it("fails closed for stale, probable, partial, unsourced, or incomplete compositions", () => {
     const base = eligibleReserveMeta({
       proofOfReserves: undefined,

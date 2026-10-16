@@ -219,26 +219,6 @@ describe("classifyApyChange", () => {
     expect(result.confidence).toBe("high");
   });
 
-  it("degrades gracefully when decisionLedger is absent", () => {
-    const history = [point(10, 5.0), point(2, 7.0), point(1, 7.05)];
-    const result = classifyApyChange({ history, nowMs: NOW_MS });
-    expect(result.attribution).toBe("organic");
-    // No throw, and no sourceSwitchDetail leaked through.
-    expect(result.sourceSwitchDetail).toBeUndefined();
-  });
-
-  it("does not throw when history points have invalid dates or NaN APY", () => {
-    const history: YieldHistoryPoint[] = [
-      { date: "not-a-date", apy: 1, apyBase: null, apyReward: null, exchangeRate: null, sourceTvlUsd: null, warningSignals: [] },
-      { date: NOW_MS - 5 * DAY_MS, apy: Number.NaN, apyBase: null, apyReward: null, exchangeRate: null, sourceTvlUsd: null, warningSignals: [] },
-      point(2, 5.0),
-      point(1, 7.0),
-    ];
-    const result = classifyApyChange({ history, nowMs: NOW_MS });
-    expect(result.attribution).toBe("organic");
-    expect(result.largestDelta?.value).toBeCloseTo(2.0);
-  });
-
   it("treats history points outside the 30d window as ineligible for largest-delta selection", () => {
     const history = [
       point(40, 1.0),

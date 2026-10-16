@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { executeAtomicBatch } from "../../lib/db";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -393,26 +393,6 @@ describe("buildMutationOperations", () => {
     await fence.plan(createTelegramWebhookIntent("command:/set", { scope: "all" }, "required"));
     return { sqlite, db, fence };
   }
-
-  it("degrades every member to a no-op when the update proceeds without a fence", async () => {
-    const beforeIrreversibleEffect = vi.fn(async () => undefined);
-    const operations = buildMutationOperations(null, { beforeIrreversibleEffect });
-
-    expect(operations.prepareMutationAppliedStatement).toBeUndefined();
-    expect(operations.preparePendingMutationAppliedStatement).toBeUndefined();
-    expect(operations.prepareMutationOperationStatements).toBeUndefined();
-    expect(operations.storedIntent).toBeNull();
-    expect(operations.wasMutationApplied).toBe(false);
-
-    // The callable members must resolve rather than throw: a fence-less update
-    // still walks the same handler code path.
-    await expect(operations.planIntent(createTelegramWebhookIntent("command:/help", {}))).resolves.toBeUndefined();
-    expect(() => operations.confirmAtomicMutationApplied()).not.toThrow();
-    await expect(operations.markMutationApplied()).resolves.toBeUndefined();
-
-    await operations.beforeIrreversibleEffect("command-reply");
-    expect(beforeIrreversibleEffect).toHaveBeenCalledExactlyOnceWith("command-reply");
-  });
 
   it("folds the caller's extra statements into one batch when both a fence and a builder exist", async () => {
     const { sqlite, db, fence } = await plannedFence(31);

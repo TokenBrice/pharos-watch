@@ -153,17 +153,6 @@ describe("PYS source-risk golden rows", () => {
     })).toBe(PYS_MAX_SOURCE_RISK_PENALTY);
   });
 
-  it("keeps zero and negative APY at PYS 0 even with source-risk penalties", () => {
-    for (const apy30d of [0, -1]) {
-      expect(computePYS({
-        apy30d,
-        safetyScore: 80,
-        apyVarianceScore: 0,
-        scalingFactor: 8,
-        sourceRiskPenalty: PYS_MAX_SOURCE_RISK_PENALTY,
-      })).toBe(0);
-    }
-  });
 });
 
 describe("venue-risk rubric (yield v8.3)", () => {
@@ -429,19 +418,6 @@ describe("computePYS", () => {
         expect(computePYSFromComponents(8.4, 8, { ...components, effectiveYield })).toBe(0);
       }
     });
-  });
-
-  it("handles non-USD benchmark rows and missing safety with neutral source risk", () => {
-    const result = computePYS({
-      apy30d: 3,
-      safetyScore: null,
-      apyVarianceScore: 0.2,
-      scalingFactor: 8,
-      benchmarkRate: 0.5,
-    });
-
-    expect(result).toBeGreaterThan(0);
-    expect(result).toBeLessThanOrEqual(100);
   });
 
   it("returns 0 for non-positive or invalid scaling", () => {

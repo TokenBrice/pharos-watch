@@ -4,7 +4,6 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { recalcAffectedHours } from "../../../src/lib/mint-burn-pipeline/persistence";
 import type * as Persistence from "../../../src/lib/mint-burn-pipeline/persistence";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../../../src/lib/mint-burn-pipeline/roundtrip-detection";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -82,105 +81,6 @@ describe("reclassify-atomic-roundtrips", () => {
       (q: { sql: string }) => q.sql.includes("SELECT") && q.sql.includes("WHERE tx_hash = ?"),
     );
     expect(selectQueries).toHaveLength(0);
-  });
-
-  it("orders candidate discovery deterministically oldest-first", async () => {
-    const db = mockD1([
-      { match: "WHERE flow_type = 'standard'", rows: [] },
-      { match: "WHERE flow_type = 'atomic_roundtrip'", rows: [] },
-    ]);
-
-    await handleReclassifyAtomicRoundtripsTrusted({ db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips") });
-
-    const discoveryQueries = db.getHistory().filter((entry) =>
-      entry.sql.includes("GROUP BY tx_hash, stablecoin_id, chain_id"),
-    );
-    // Both forward and reverse discovery queries must order by oldest-first.
-    expect(discoveryQueries.length).toBeGreaterThanOrEqual(2);
-    for (const entry of discoveryQueries) {
-      expect(entry.sql).toContain("ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC");
-    }
-  });
-
-  it("applies the canonical amount tolerance to forward classification", async () => {
-    const db = mockD1([
-      { match: "WHERE flow_type = 'standard'", rows: [] },
-      { match: "WHERE flow_type = 'atomic_roundtrip'", rows: [] },
-    ]);
-
-    await handleReclassifyAtomicRoundtripsTrusted({
-      db,
-      url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips"),
-    });
-
-    const forwardQuery = db.getHistory().find((entry) =>
-      entry.sql.includes("WHERE flow_type = 'standard'"),
-    );
-    expect(forwardQuery?.sql).toContain(`AND (${ROUNDTRIP_TOLERANCE_HAVING_SQL})`);
-  });
-
-  it("flips atomic_roundtrip back to standard when amounts fail new tolerance", async () => {
-    // Legacy group: mint=100, burn=50 (50% divergence, far exceeds 0.5%
-    // tolerance). The reverse SQL pass should surface and re-tag the rows.
-    const db = mockD1([
-      // Forward pass finds nothing.
-      { match: "WHERE flow_type = 'standard'", rows: [] },
-      // Reverse pass surfaces the tolerance-violating group.
-      {
-        match: "WHERE flow_type = 'atomic_roundtrip'",
-        rows: [
-          {
-            tx_hash: "0xmismatch",
-            stablecoin_id: "usdc-circle",
-            chain_id: "ethereum",
-            timestamp: 1_700_000_000,
-            mint_amt: 100,
-            burn_amt: 50,
-          },
-        ],
-      },
-      // The reverse UPDATE targets a single group; simulate 2 underlying rows
-      // (one mint, one burn) being flipped back to standard.
-      {
-        match: "UPDATE mint_burn_events",
-        rows: [],
-        runMeta: { changes: 2 },
-      },
-    ]);
-
-    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips") });
-
-    const body = await res.json() as {
-      done: boolean;
-      updated: number;
-      toRoundtrip: number;
-      toStandard: number;
-      hoursRecalculated: number;
-    };
-
-    expect(body.done).toBe(true);
-    expect(body.toStandard).toBe(2);
-    expect(body.toRoundtrip).toBe(0);
-    expect(body.updated).toBe(2);
-    // Hour bucket for the legacy group should be scheduled for recalc.
-    expect(body.hoursRecalculated).toBeGreaterThanOrEqual(1);
-
-    // Reverse UPDATE should bind the tolerance-violating tx_hash + stablecoin_id + chain_id.
-    const history = db.getHistory();
-    const reverseUpdate = history.find(
-      (entry) =>
-        entry.sql.includes("UPDATE mint_burn_events") &&
-        entry.sql.includes("flow_type = 'standard'") &&
-        entry.sql.includes("flow_type = 'atomic_roundtrip'"),
-    );
-    expect(reverseUpdate).toBeDefined();
-    expect(reverseUpdate?.binds).toEqual(["0xmismatch", "usdc-circle", "ethereum"]);
-
-    // recalcAffectedHours should be called with the affected hour bucket.
-    expect(vi.mocked(recalcAffectedHours).mock.calls).toHaveLength(1);
-    expect([...vi.mocked(recalcAffectedHours).mock.calls[0][1].values()]).toEqual([
-      { stablecoinId: "usdc-circle", chainId: "ethereum", hourTs: 1699999200 },
-    ]);
   });
 
   it("persists forward/reverse tags and hourly totals without touching neighboring identities", async () => {

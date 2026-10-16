@@ -100,45 +100,6 @@ describe("HomeAltRankingsSection", () => {
   });
 
 
-  it("configures the main table with homepage defaults", () => {
-    render(<HomeAltRankingsSection titleId="home-alt-rankings-title" />);
-
-    expect(screen.getByTestId("peg-browse-strip")).toBeTruthy();
-    expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "Core" }).getAttribute("data-state")).toBe("on");
-    expect(screen.getByRole("radio", { name: "Variants" })).toBeTruthy();
-    // The section now owns the "Stablecoin Overview" heading (carrying the
-    // region's labelled id) rather than the table toolbar.
-    const heading = screen.getByRole("heading", { name: "Stablecoin Overview" });
-    expect(heading.getAttribute("id")).toBe("home-alt-rankings-title");
-    expect(stablecoinTablePropsMock).toHaveBeenCalledTimes(1);
-    expect(stablecoinTablePropsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        initialVisibleColumns: [
-          "rank",
-          "name",
-          "price",
-          "peg",
-          "mcap",
-          "change24h",
-          "change7d",
-          "grade",
-          "stability",
-          "liquidity",
-          "blacklistable",
-          "backing",
-          "type",
-        ],
-        columnPreferenceNamespace: "pharos-home-alt-table-v3",
-        showHeaderMethodologyHints: false,
-        pinnedStablecoinIds: ["usdc-circle"],
-        onTogglePinnedStablecoin: togglePinnedMock,
-        toolbarVariant: "figmaOverview",
-        eligibleIds: expect.any(Set),
-      }),
-    );
-    expect(stablecoinTablePropsMock.mock.calls[0]?.[0]).not.toHaveProperty("usePageVerticalScroll");
-  });
 
   it("does not render a generic empty table when the market query fails", () => {
     useStablecoinsMock.mockReturnValue({

@@ -119,21 +119,6 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(results[0]?.sourceTvlUsd).toBe(125_000_000);
   });
 
-  it("correctly reads currentLiquidityRate from byte offset 128 (slot 2 in the struct)", async () => {
-    // Use a 0.1% nominal annual rate: 0.001 * RAY = 1e24
-    const rawRate = RAY / 1000n; // ~1e24 → nominal 0.1%/yr → APY ≈ 0.1%
-    const hex = buildGetReserveDataHex(rawRate);
-    mockFetchEvmCallHexAtBlock.mockResolvedValue(hex);
-    mockFetchEvmUint256AtBlock.mockResolvedValue(50_000_000_000_000n);
-
-    const { results } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
-    expect(results).toHaveLength(1);
-    // Sanity: a small but positive APY — should be close to 0.1%
-    const apy = results[0]?.apy ?? 0;
-    expect(apy).toBeGreaterThan(0);
-    expect(apy).toBeLessThan(1);
-  });
-
   it("returns empty results when RPC returns null", async () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
 

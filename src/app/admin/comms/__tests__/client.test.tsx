@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
@@ -58,10 +58,4 @@ describe("CommsClient", () => {
     expect(commsSectionPropsMock).toHaveBeenCalledWith({ data: status });
   });
 
-  it("retains an explicit status refresh path", () => {
-    render(<CommsClient />);
-    fireEvent.click(screen.getByRole("button", { name: "Retry status" }));
-
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
 });

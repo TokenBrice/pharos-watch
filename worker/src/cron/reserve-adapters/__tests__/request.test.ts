@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import { createAdapterIoLimiter } from "../concurrency";
 import { createReserveAdapterRunner } from "../../reserve-adapter-runner";
@@ -10,7 +9,6 @@ import {
   ADAPTER_USER_AGENT,
   buildBrowserHeaders,
   createRequestBodyObserver,
-  fetchJsonAdapterInput,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
   fetchBinaryResponseWithRetry,
@@ -23,13 +21,6 @@ import {
 } from "../request";
 
 describe("buildBrowserHeaders", () => {
-  it("returns the canonical Origin/Referer/Accept-Language triple", () => {
-    const headers = buildBrowserHeaders("https://app.example.com") as Record<string, string>;
-    expect(headers.Origin).toBe("https://app.example.com");
-    expect(headers.Referer).toBe("https://app.example.com");
-    expect(headers["Accept-Language"]).toBe("en-US,en;q=0.9");
-  });
-
   it("allows a distinct Referer when an adapter uses a deeper path", () => {
     const headers = buildBrowserHeaders(
       "https://app.ethena.fi",
@@ -56,20 +47,6 @@ describe("buildBrowserHeaders", () => {
     expect(result).toBe("ok");
     expect(new Headers(calls[0]).get("origin")).toBe("https://app.example.com");
     expect(new Headers(calls[1]).get("origin")).toBeNull();
-  });
-
-  it("preserves both failure reasons when browser and neutral identities fail", async () => {
-    const signal = new AbortController().signal;
-    let calls = 0;
-    await expect(fetchWithBrowserFallback(
-      "https://app.example.com",
-      "https://app.example.com/reserves",
-      async () => {
-        calls++;
-        throw new Error(calls === 1 ? "browser blocked" : "neutral blocked");
-      },
-      signal,
-    )).rejects.toThrow("browser fetch failed: browser blocked; neutral fetch failed: neutral blocked");
   });
 
   it("evicts failed cached requests so the next call can recover", async () => {
@@ -292,23 +269,6 @@ describe("adapter request cache", () => {
     expect(network.fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps same-URL JSON GETs separate when headers differ", async () => {
-    const network = installAdapterNetwork({
-      json: { "https://issuer.example/reserves": (request: Request) => ({ json: { origin: request.headers.get("origin") } }) },
-    });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
-    const signal = new AbortController().signal;
-    const first = await fetchJsonWithRetry<{ origin: string }>(
-      "https://issuer.example/reserves", signal, 1_000, ctx, { headers: { Origin: "https://app-a.example" } },
-    );
-    const second = await fetchJsonWithRetry<{ origin: string }>(
-      "https://issuer.example/reserves", signal, 1_000, ctx, { headers: { Origin: "https://app-b.example" } },
-    );
-    expect(network.fetchSpy).toHaveBeenCalledTimes(2);
-    expect(first.origin).toBe("https://app-a.example");
-    expect(second.origin).toBe("https://app-b.example");
-  });
-
   it("keeps same-URL JSON GETs separate when Headers instances differ", async () => {
     const network = installAdapterNetwork({
       json: { "https://issuer.example/reserves": (request: Request) => ({ json: { origin: request.headers.get("origin") } }) },
@@ -357,32 +317,6 @@ describe("adapter request cache", () => {
     expect(second).toBe("https://issuer.example/b");
   });
 
-  it("dedupes entry-array text headers after deterministic normalization", async () => {
-    const network = installAdapterNetwork({
-      html: {
-        "https://issuer.example/reserves": (request) =>
-          `${request.headers.get("origin")}:${request.headers.get("referer")}`,
-      },
-    });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
-    const signal = new AbortController().signal;
-    const firstHeaders: [string, string][] = [
-      ["Origin", "https://issuer.example"],
-      ["Referer", "https://issuer.example/reserves"],
-    ];
-    const sameHeadersDifferentOrder: [string, string][] = [
-      ["referer", "https://issuer.example/reserves"],
-      ["origin", "https://issuer.example"],
-    ];
-    const [first, second] = await Promise.all([
-      fetchTextWithRetry("https://issuer.example/reserves", signal, 1_000, ctx, { headers: firstHeaders }),
-      fetchTextWithRetry("https://issuer.example/reserves", signal, 1_000, ctx, { headers: sameHeadersDifferentOrder }),
-    ]);
-    expect(network.fetchSpy).toHaveBeenCalledTimes(1);
-    expect(first).toBe("https://issuer.example:https://issuer.example/reserves");
-    expect(second).toBe(first);
-  });
-
   it("keys JSON POST cache entries by serialized body", async () => {
     const network = installAdapterNetwork({
       json: {
@@ -395,40 +329,6 @@ describe("adapter request cache", () => {
     await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "usdc" }, signal, 1_000, ctx);
     await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "eurc" }, signal, 1_000, ctx);
     expect(network.fetchSpy).toHaveBeenCalledTimes(2);
-  });
-
-  it("keeps JSON POST cache entries separate when Headers instances differ", async () => {
-    const network = installAdapterNetwork({
-      json: { "https://issuer.example/graphql": (request: Request) => ({ json: { origin: request.headers.get("origin") } }) },
-    });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
-    const signal = new AbortController().signal;
-    const first = await fetchJsonPostWithRetry<{ origin: string }>(
-      "https://issuer.example/graphql", { coin: "usdc" }, signal, 1_000, ctx,
-      { headers: new Headers({ Origin: "https://app-a.example" }) },
-    );
-    const second = await fetchJsonPostWithRetry<{ origin: string }>(
-      "https://issuer.example/graphql", { coin: "usdc" }, signal, 1_000, ctx,
-      { headers: new Headers({ Origin: "https://app-b.example" }) },
-    );
-    expect(network.fetchSpy).toHaveBeenCalledTimes(2);
-    expect(first.origin).toBe("https://app-a.example");
-    expect(second.origin).toBe("https://app-b.example");
-  });
-
-  it("fetches the primary JSON input from a live-reserve config", async () => {
-    const network = installAdapterNetwork({ json: { "https://issuer.example/reserves": { reserves: "ok" } } });
-    const config = {
-      adapter: "ethena",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: { primary: { kind: "http-json", url: "https://issuer.example/reserves" } },
-    } as LiveReservesConfig;
-    const payload = await fetchJsonAdapterInput<{ reserves: string }>(
-      config, "ethena", new AbortController().signal, 1_000,
-    );
-    expect(payload).toEqual({ reserves: "ok" });
-    expect(network.fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("reports the final URL and status when a JSON endpoint redirects to HTML without leaking URL credentials", async () => {

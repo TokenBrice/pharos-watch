@@ -146,7 +146,7 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason ?? new Error("repair-task executor aborted");
 }
 
-export function buildDdrRepairTaskId(subjectId: string): string {
+function buildDdrRepairTaskId(subjectId: string): string {
   return `repair:${DDR_REPAIR_TASK_KIND}:${subjectId}`;
 }
 

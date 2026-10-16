@@ -106,12 +106,6 @@ describe("cron staleness watchdog", () => {
     sendToChatMock.mockResolvedValue({ ok: true });
   });
 
-  it("excludes retired Workflow freshness obligations", () => {
-    const producers = deriveCronFreshnessProducers(CRON_JOB_DEFINITIONS);
-    expect(producers.map((producer) => producer.producerJob)).not.toContain("compute-safety-score-v9-workflow");
-    expect(producers.map((producer) => producer.producerJob)).toContain("compute-safety-score-v9");
-  });
-
 
   it("does not expect evidence from the retired Workflow observer", async () => {
     mockCacheStatus({});

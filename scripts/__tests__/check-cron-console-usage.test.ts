@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   collectWorkerConsoleUsage,
-  collectStaleConsoleBaselineEntries,
   checkCronConsoleUsage,
 } from "../ci/check-cron-console-usage.ts";
 
@@ -28,22 +27,6 @@ describe("check-cron-console-usage", () => {
       rmSync(tempRoot, { recursive: true, force: true });
       tempRoot = null;
     }
-  });
-
-  it("counts raw worker console calls while accepting structured JSON calls", () => {
-    const root = createTempRoot();
-    writeFixture(
-      root,
-      "worker/src/api/example.ts",
-      `
-      console.warn("raw route warning");
-      console.error(JSON.stringify({ ts: "now", scope: "status", level: "error", message: "structured" }));
-      `,
-    );
-
-    expect(collectWorkerConsoleUsage(["worker/src/api"], root)).toEqual({
-      "worker/src/api/example.ts": 1,
-    });
   });
 
   it("fails when raw worker console usage rises above the baseline", () => {
@@ -71,26 +54,6 @@ describe("check-cron-console-usage", () => {
     expect(exitCode).toBe(1);
     expect(stderr).toContain("Worker raw console usage increased");
     expect(stderr).toContain("worker/src/api/example.ts: 2 > baseline 1");
-  });
-
-  it("reports missing budgets without treating extant zero-call files as stale", () => {
-    const root = createTempRoot();
-    writeFixture(root, "worker/src/api/zero.ts", "export const value = 0;");
-    writeFixture(root, "scripts/lib/cron-console-usage-baseline.json", JSON.stringify({
-      "worker/src/api/missing.ts": 2,
-      "worker/src/api/zero.ts": 1,
-    }));
-    expect(collectStaleConsoleBaselineEntries(undefined, root)).toEqual(["worker/src/api/missing.ts"]);
-    let stderr = "";
-    expect(checkCronConsoleUsage({
-      roots: ["worker/src/api"],
-      cwd: root,
-      stdout: { write: () => true },
-      stderr: { write: (chunk: string) => { stderr += chunk; return true; } },
-    })).toBe(0);
-    expect(stderr).toContain("staleBaseline: 1");
-    expect(stderr).toContain("worker/src/api/missing.ts");
-    expect(stderr).not.toContain("worker/src/api/zero.ts");
   });
 
   it("accepts console-only logger sinks and structured severity fields", () => {

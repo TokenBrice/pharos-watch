@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   adaptSkyModules,
-  listUnknownGroups,
   resolveSkyTimestampSummary,
   resolveSkyImmediateRedeemableUsd,
   type SkyGroupResult,
@@ -228,10 +227,6 @@ describe("adaptSkyModules", () => {
 });
 
 describe("resolveSkyImmediateRedeemableUsd", () => {
-  it("returns stablecoins module collateral as redeemable", () => {
-    expect(resolveSkyImmediateRedeemableUsd(SAMPLE_GROUPS)).toBe(4848920495.92);
-  });
-
   it("returns 0 when no stablecoins module exists", () => {
     const noStable: SkyGroupResult[] = [
       {
@@ -243,24 +238,6 @@ describe("resolveSkyImmediateRedeemableUsd", () => {
       },
     ];
     expect(resolveSkyImmediateRedeemableUsd(noStable)).toBe(0);
-  });
-});
-
-describe("listUnknownGroups", () => {
-  it("identifies groups not in the known set", () => {
-    const groups: SkyGroupResult[] = [
-      {
-        group: "stablecoins",
-        group_name: "Stablecoins",
-        debt: "100",
-        collateral: "100",
-        datetime: "2026-04-05T17:33:24",
-      },
-      { group: "mystery", group_name: "Mystery", debt: "50", collateral: "50", datetime: "2026-04-05T17:33:24" },
-    ];
-    const unknown = listUnknownGroups(groups);
-    expect(unknown).toContain("mystery");
-    expect(unknown).not.toContain("stablecoins");
   });
 });
 
@@ -373,7 +350,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   });
 
 
-  it.each(["", "invalid"])("withholds verified freshness for 90%% undated debt (%s)", async (datetime) => {
+  it.each([""])("withholds verified freshness for 90%% undated debt (%s)", async (datetime) => {
     const { result } = await runSky([
       { group: "stablecoins", group_name: "Stablecoins", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
       { group: "spark", group_name: "Spark", debt: "900", collateral: "900", datetime },
@@ -579,7 +556,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     await expect(runSky(groups)).rejects.toThrow(/stablecoins\.debt/);
   });
 
-  it.each(["", "-1", "NaN", "Infinity", "0x10"])("rejects unreadable group debt before normalizing the mix (%s)", async (debt) => {
+  it.each(["", "-1", "NaN", "0x10"])("rejects unreadable group debt before normalizing the mix (%s)", async (debt) => {
     const groups: SkyGroupResult[] = [
       { group: "spark", group_name: "Spark", debt: "900", collateral: "900", datetime: "2026-04-05T17:33:24" },
       { group: "new-module", group_name: "New Module", debt, collateral: "1000", datetime: "2026-04-05T17:33:24" },

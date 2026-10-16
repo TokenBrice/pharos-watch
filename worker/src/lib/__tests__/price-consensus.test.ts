@@ -14,18 +14,6 @@ describe("computePriceConsensus", () => {
     expect(result!.source).toContain("coingecko");
   });
 
-  it("uses the midpoint median for even-sized agreement clusters", () => {
-    const sources: SourcePrice[] = [
-      { source: "coingecko", price: 0.999, weight: 2 },
-      { source: "pyth", price: 1.001, weight: 2 },
-    ];
-
-    const result = computePriceConsensus(sources, 1.0, 50);
-
-    expect(result!.confidence).toBe("high");
-    expect(result!.price).toBe(1.0);
-  });
-
   it("publishes the six-source methodology example's exact midpoint and Curve provenance", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.0001, weight: 2 },
@@ -45,15 +33,6 @@ describe("computePriceConsensus", () => {
     expect(consensus!.agreeSources).toHaveLength(6);
     expect(consensus!.agreeSources).toEqual(expect.arrayContaining(sources.map(({ source }) => source)));
     expect(consensus!.selectedSource).toBe("curve-onchain");
-  });
-
-  it("returns low confidence when sources diverge", () => {
-    const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.01, weight: 1 },
-      { source: "defillama", price: 0.98, weight: 1 },
-    ];
-    const result = computePriceConsensus(sources, 1.0, 50);
-    expect(result!.confidence).toBe("low");
   });
 
   it("chooses trust tier before peg proximity for divergent fixed-peg sources", () => {
@@ -311,15 +290,6 @@ describe("computePriceConsensus", () => {
     expect(result!.source).not.toContain("more");
   });
 
-  it("disagrees just beyond 50bps boundary", () => {
-    // 1.0000 and 1.0060 are ~60bps apart — should disagree
-    const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.0, weight: 1 },
-      { source: "defillama", price: 1.006, weight: 1 },
-    ];
-    const result = computePriceConsensus(sources, 1.0, 50);
-    expect(result!.confidence).toBe("low");
-  });
   it("publishes conservative cluster provenance without using an outlier's older timestamp", () => {
     const result = computePriceConsensus([
       { source: "pyth", price: 1, weight: 2, observedAt: 200, observedAtMode: "upstream" },

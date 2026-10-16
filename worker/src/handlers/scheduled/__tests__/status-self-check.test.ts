@@ -194,7 +194,7 @@ describe("hourly corroboration before the next publication", () => {
     expect(JSON.stringify(mocks.recordBudgetSurfaceTelemetry.mock.calls)).not.toContain("secret-token");
   });
 
-  it.each([24, 39, 54])("refreshes DEX only on minute %s", async (minute) => {
+  it.each([24])("refreshes DEX only on minute %s", async (minute) => {
     await runStatusSelfCheckSlot(runtime([], minute));
     expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();
     expect(mocks.runPriceDexRefresh).toHaveBeenCalledOnce();

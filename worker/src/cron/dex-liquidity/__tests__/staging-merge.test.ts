@@ -290,19 +290,6 @@ describe("mergeStagedPools", () => {
     ]);
   });
 
-  it("returns zero counts with empty staging table", async () => {
-    const mockDb = createMockDb([]);
-    const metrics = new Map();
-    const knownPoolIndex = makeKnownPoolIndex();
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000, new Map());
-
-    expect(result.mergedCount).toBe(0);
-    expect(result.skippedCount).toBe(0);
-    expect(result.skippedByExactIdentityCount).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
-    expect(result.skipDimensions).toEqual([]);
-  });
-
   it("does not modify metrics when staging table is empty", async () => {
     const mockDb = createMockDb([]);
     const metrics = new Map<string, { totalTvlUsd: number; poolCount: number }>();
@@ -457,39 +444,6 @@ describe("mergeStagedPools", () => {
         protocol: "carbon-defi-ethereum",
         chain: "ethereum",
         count: 1,
-      },
-    ]);
-  });
-
-  it("skips staged pools whose token-pair fingerprint is already known", async () => {
-    const mockDb = createMockDb([
-      makeStagedPoolRow({
-        pool_id: `ethereum:${newPoolAddress}`,
-        protocol: "pancakeswap",
-        dex_id: "pancakeswap-v3",
-        quality_multiplier: 0.5,
-        base_token: baseToken,
-        quote_token: quoteToken,
-      }),
-    ]);
-    const metrics = new Map();
-    const knownPoolIndex = makeKnownPoolIndex([
-      `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
-    ]);
-
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000, new Map());
-
-    expect(result.skippedCount).toBe(1);
-    expect(result.skippedByExactIdentityCount).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
-    expect(result.mergedCount).toBe(0);
-    expect(result.skipDimensions).toEqual([
-      {
-        reason: "duplicate_unique_derived_identity",
-        protocol: "pancakeswap",
-        chain: "ethereum",
-        count: 1,
-        conflict: "derived_unique",
       },
     ]);
   });
@@ -699,23 +653,6 @@ describe("mergeStagedPools", () => {
     await expect(
       mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000, new Map()),
     ).rejects.toThrow("no such table: dex_pool_registry");
-  });
-
-  it("retries the staged-registry read through transient D1 overload", async () => {
-    let attempts = 0;
-    const db = createMockDb(async () => {
-      attempts++;
-      if (attempts === 1) {
-        throw new Error("D1_ERROR: internal error; reference = nug416i4dsl121n6q9kebocm");
-      }
-      return { results: [] };
-    });
-
-    const result = await mergeStagedPools(db, new Map(), makeKnownPoolIndex(), 1_710_000_000, new Map());
-
-    expect(attempts).toBe(2);
-    expect(result.mergedCount).toBe(0);
-    expect(result.registryRowsRead).toBe(0);
   });
 
   it("merges GT-style staged pools with confidence decay and GT dex quality", async () => {

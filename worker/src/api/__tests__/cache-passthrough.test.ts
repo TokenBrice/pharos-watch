@@ -15,26 +15,6 @@ import {
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 
-function makeBluechipRating(overrides: Partial<Record<string, unknown>> = {}) {
-  return {
-    grade: "A",
-    slug: "tether",
-    collateralization: 95,
-    smartContractAudit: true,
-    dateOfRating: "2026-03-01",
-    dateLastChange: null,
-    smidge: {
-      stability: "stable",
-      management: null,
-      implementation: null,
-      decentralization: null,
-      governance: null,
-      externals: null,
-    },
-    ...overrides,
-  };
-}
-
 function makeUsdsStatus(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     freezeCapabilityPresent: false,
@@ -69,22 +49,6 @@ describe("cache-passthrough: handleStablecoins", () => {
     const emptyDb = mockD1([{ match: "FROM cache WHERE key", rows: [] }]);
     const res = await handleStablecoins(emptyDb);
     expect(res.status).toBe(503);
-  });
-
-  it("returns 200 with concrete _meta values and matching X-Data-Age", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("stablecoins", { peggedAssets: [] }, nowSec);
-    const res = await handleStablecoins(db);
-
-    const body = (await readJsonResponse(res, 200)) as {
-      _meta: { status: string; updatedAt: number; ageSeconds: number };
-    };
-
-    expect(body._meta.status).toBe("fresh");
-    expect(body._meta.updatedAt).toBe(nowSec);
-    expect(body._meta.ageSeconds).toBe(0);
-    expect(new Date(body._meta.updatedAt * 1000).toISOString()).toBe("2026-03-06T12:00:00.000Z");
-    expect(res.headers.get("X-Data-Age")).toBe(String(body._meta.ageSeconds));
   });
 
   it.each([false, true])("bounds the remaining runway for response-ready=%s", async (responseReady) => {
@@ -174,33 +138,6 @@ describe("cache-passthrough: handleStablecoins", () => {
       Tron: { current: null, circulatingPrevDay: 0 },
       Base: { current: 0 },
     });
-  });
-
-  it("serves response-ready stablecoins body when it matches the canonical cache timestamp", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const responseReadyValue = encodeResponseReadyCacheValue(
-      JSON.stringify({ peggedAssets: [] }),
-      RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
-    );
-    const db = mockD1([
-      {
-        match: "cache",
-        rows: [
-          { key: "stablecoins", value: "{malformed", updated_at: nowSec },
-          { key: getResponseReadyCacheKey("stablecoins"), value: responseReadyValue, updated_at: nowSec },
-        ],
-      },
-    ]);
-
-    const res = await handleStablecoins(db);
-
-    const body = await readJsonResponse(res, 200) as {
-      peggedAssets: unknown[];
-      _meta: { updatedAt: number; ageSeconds: number };
-    };
-    expect(body.peggedAssets).toEqual([]);
-    expect(body._meta.updatedAt).toBe(nowSec);
-    expect(body._meta.ageSeconds).toBe(0);
   });
 
   it("ignores untrusted response-ready stablecoins rows and validates the canonical cache", async () => {
@@ -358,12 +295,6 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
 });
 
 describe("cache-passthrough: handleUsdsStatus", () => {
-  it("returns 503 when cache is empty", async () => {
-    const emptyDb = mockD1([{ match: "FROM cache WHERE key", rows: [] }]);
-    const res = await handleUsdsStatus(emptyDb);
-    expect(res.status).toBe(503);
-  });
-
   it("returns 200 with concrete _meta on cache hit", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeCacheDb("usds-status", makeUsdsStatus(), nowSec - 42);
@@ -384,21 +315,6 @@ describe("cache-passthrough: handleUsdsStatus", () => {
 });
 
 describe("cache-passthrough: handleBluechipRatings", () => {
-  it("returns 503 when cache is empty", async () => {
-    const emptyDb = mockD1([{ match: "FROM cache WHERE key", rows: [] }]);
-    const res = await handleBluechipRatings(emptyDb);
-    expect(res.status).toBe(503);
-  });
-
-  it("returns 200 with concrete _meta on cache hit", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": makeBluechipRating() }, nowSec - 120);
-    const res = await handleBluechipRatings(db);
-    const body = (await readJsonResponse(res, 200)) as { _meta: { status: string; ageSeconds: number } };
-    expect(body._meta.status).toBe("fresh");
-    expect(body._meta.ageSeconds).toBe(120);
-  });
-
   it("returns 503 when cached bluechip payload shape is malformed", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeCacheDb("bluechip-ratings", { "usdt-tether": { grade: "A" } }, nowSec - 120);

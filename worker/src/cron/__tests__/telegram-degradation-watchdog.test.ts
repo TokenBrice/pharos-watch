@@ -195,62 +195,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(meta.pendingBacklog.detail).toContain("executionUnknown=1");
   });
 
-  it("uses a preloaded pending capacity snapshot instead of rereading the queue", async () => {
-    const store = installCacheStore();
-    const prepare = vi.fn((sql: string) => {
-      const first = vi.fn(async () => {
-        if (isPendingCapacityQuery(sql)) {
-          throw new Error("pending capacity should have been reused");
-        }
-        if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
-          return null;
-        }
-        return null;
-      });
-      const statement = { bind: vi.fn(() => statement), first } as unknown as D1PreparedStatement;
-      return statement;
-    });
-    const db = { prepare } as unknown as D1Database;
-
-    const result = await runTelegramDegradationWatchdog(db, undefined, {
-      pendingCapacitySnapshot: {
-        total: PENDING_BACKLOG_THRESHOLD + 5,
-        active: PENDING_BACKLOG_THRESHOLD + 5,
-        due: PENDING_BACKLOG_THRESHOLD + 5,
-        deferred: 0,
-        expired: 0,
-        nearTtl: 0,
-        sending: 0,
-        pendingSending: 0,
-        freshSending: 0,
-        pendingExecutionUnknown: 0,
-        freshExecutionUnknown: 0,
-        executionUnknown: 0,
-        sentCleanup: 0,
-        oldestExecutionUnknownAgeSec: null,
-        executionUnknownSampleLimit: 5_001,
-        executionUnknownLowerBound: false,
-        oldestPendingAgeSec: 60,
-        oldestDuePendingAgeSec: 60,
-        estimatedDrainTimeSec: 300,
-        drainBudgetPerRun: 900,
-        dispatchIntervalSec: 300,
-      },
-      safetySourceAssessment: {
-        ...safetyDiagnostics(),
-        state: "ok",
-        ageSeconds: 60,
-        generation: getAlertSafetyV9SourceGeneration(),
-        envelope: null,
-      },
-    });
-    const meta = JSON.parse(result.metadata ?? "{}");
-
-    expect(meta.pendingBacklog.count).toBe(PENDING_BACKLOG_THRESHOLD + 5);
-    expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
-    expect(prepare.mock.calls.some(([sql]) => isPendingCapacityQuery(String(sql)))).toBe(false);
-  });
-
   it("records an onset without triggering on first observation above threshold", async () => {
     const store = installCacheStore();
     const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 5 });

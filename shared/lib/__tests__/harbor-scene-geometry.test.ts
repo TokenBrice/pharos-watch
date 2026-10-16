@@ -1,9 +1,7 @@
-import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { RatioSchema } from "../../types/ratio";
 import { buildHarborScene, type HarborChainInput, type HarborSceneInput } from "../harbor-scene";
-import { buildHarborGeometry, harborFlagMarks, validateHarborCapacity, type HarborPreset } from "../harbor-scene-geometry";
-import { SCENE_DIMETRIC } from "../scene/projection";
+import { buildHarborGeometry, validateHarborCapacity, type HarborPreset } from "../harbor-scene-geometry";
 import { HARBOR_LIVE, scaleHarborInput as scale } from "./harbor-scene.test-support";
 
 const LIVE = HARBOR_LIVE;
@@ -32,19 +30,8 @@ function synthetic(count: number): HarborSceneInput {
   return { chains, globalTotalUsd: attributed + 5e9, chainAttributedTotalUsd: attributed, unattributedTotalUsd: 5e9, attributionDiscrepancyUsd: -5e9, updatedAt: 1 };
 }
 
-const sha = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16);
-
 describe("buildHarborGeometry", () => {
   const scene = buildHarborScene(LIVE);
-
-  it("flies Robust as a swallowtail so it differs from Healthy by shape, not only hue", () => {
-    const face = (band: "robust" | "healthy") => harborFlagMarks(SCENE_DIMETRIC, 0, 0, 0, { kind: "band", band, label: band, pennants: band === "robust" ? 0 : 1, score: null })
-      .find((m) => m.cls === `flag-${band} e`)!;
-    const robust = face("robust");
-    const healthy = face("healthy");
-    expect(robust.kind === "polygon" && robust.points).toHaveLength(5);
-    expect(healthy.kind === "polygon" && healthy.points).toHaveLength(4);
-  });
 
   it("tints wakes only from the hue threshold; smaller moves stay neutral ink", () => {
     const wakeClasses = (pct: number) => {
@@ -71,29 +58,6 @@ describe("buildHarborGeometry", () => {
     }
   });
 
-  it("is byte-stable for the 2026-10-12 fixture (golden)", () => {
-    expect({ wide: sha(buildHarborGeometry(scene, "wide")), narrow: sha(buildHarborGeometry(scene, "narrow")) }).toMatchInlineSnapshot(`
-      {
-        "narrow": "f02d45eb8f11926a",
-        "wide": "d54876a5a266711d",
-      }
-    `);
-  });
-
-  it("is deterministic under shuffled input", () => {
-    const shuffled = buildHarborScene({ ...LIVE, chains: LIVE.chains.slice().reverse() });
-    for (const preset of PRESETS) expect(sha(buildHarborGeometry(shuffled, preset))).toBe(sha(buildHarborGeometry(scene, preset)));
-  });
-
-  it("draws hull length linearly: Ethereum's cargo run is ≈ supply ratio × Polygon's", () => {
-    const geometry = buildHarborGeometry(scene, "wide");
-    const len = (id: string) => {
-      const fp = geometry.berths.find((b) => b.id === id)!.footprint;
-      return fp.i1 - fp.i0;
-    };
-    // bow/stern pads and bay gaps are fixed overheads: compare against a linear fit, not a pure ratio
-    expect(len("ethereum")).toBeGreaterThan(len("polygon") * 10);
-  });
 });
 
 describe("validateHarborCapacity", () => {

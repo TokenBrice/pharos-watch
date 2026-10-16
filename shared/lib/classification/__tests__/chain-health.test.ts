@@ -18,9 +18,4 @@ describe("chain health band descriptors", () => {
     }
   });
 
-  it("repeats the band ordinally as pennants and keeps hexes distinct", () => {
-    expect(CHAIN_HEALTH_BAND_ORDER.map((band) => CHAIN_HEALTH_PENNANTS[band])).toEqual([0, 1, 2, 3, 4]);
-    expect(new Set(Object.values(CHAIN_HEALTH_HEX)).size).toBe(CHAIN_HEALTH_BAND_ORDER.length);
-    expect(CHAIN_HEALTH_HEX.robust).toBe("#059669");
-  });
 });

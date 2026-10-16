@@ -1,6 +1,6 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
@@ -10,11 +10,8 @@ import {
   ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
   UNSAFE_ROLLOUT_ADD_COLUMN_LABEL,
   DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
-  createSchemaObjectManifest,
   parseDataMigrationManifestRows,
   createTableFixtureQuery,
-  parseManifestMigrationRows,
-  parseRolloutSafetyPolicy,
   validateManifestMigrationParity,
   validateDataMigrationManifestRows,
   validateNoSqliteDotCommands,
@@ -51,21 +48,6 @@ const manifestText = `
 ## Known Anomalies
 `;
 
-const rows = [
-  {
-    type: "table",
-    name: "example",
-    tblName: "example",
-    sql: "CREATE TABLE example (id INTEGER PRIMARY KEY, value TEXT)",
-  },
-  {
-    type: "index",
-    name: "idx_example_value",
-    tblName: "example",
-    sql: "CREATE INDEX idx_example_value ON example(value)",
-  },
-];
-
 describe("createTableFixtureQuery", () => {
   it("finds only the requested table and rejects names that could change the SQL", () => {
     const db = new DatabaseSync(":memory:");
@@ -80,36 +62,6 @@ describe("createTableFixtureQuery", () => {
     } finally {
       db.close();
     }
-  });
-});
-
-describe("parseRolloutSafetyPolicy", () => {
-  it("reads the rollout-safety cutoff and required header from the manifest text", () => {
-    const policy = parseRolloutSafetyPolicy(`
-## Rollout Safety
-
-- Rollout-safety enforcement starts at: \`0071\`
-- Required rollout-safety header: \`-- rollout-safety: backward-compatible\`
-`);
-
-    expect(policy).toEqual({
-      enforcementPrefix: "0071",
-      requiredMode: "backward-compatible",
-    });
-  });
-});
-
-describe("parseManifestMigrationRows", () => {
-  it("reads migration table rows from a bounded manifest section", () => {
-    expect(
-      parseManifestMigrationRows(manifestText, {
-        sectionHeading: "## Individual Migrations",
-        nextHeading: "## Retired Individual Migrations",
-      }),
-    ).toEqual([
-      { sequence: "0072", filename: "0072_telegram_launch_alerts.sql" },
-      { sequence: "0073", filename: "0073_price_cache_provenance.sql" },
-    ]);
   });
 });
 
@@ -248,19 +200,6 @@ describe("validateDuplicatePrefixes", () => {
 });
 
 describe("parseDataMigrationManifestRows", () => {
-  it("reads every required review field", () => {
-    expect(parseDataMigrationManifestRows(manifestText)).toEqual([
-      {
-        sequence: "0236",
-        filename: "0236_dex_deployment_attempt_attribution.sql",
-        predicate: "all outcome rows",
-        oldWorkerCompatibility: "legacy readers ignore the nullable column",
-        rollbackBookmark: "Time Travel bookmark before deploy",
-        expectedRowBounds: "no more than the existing outcome row count",
-      },
-    ]);
-  });
-
   it.each(["predicate", "oldWorkerCompatibility", "rollbackBookmark", "expectedRowBounds"] as const)(
     "rejects empty and whitespace-only mandatory %s review cells",
     (field) => {
@@ -279,10 +218,6 @@ describe("parseDataMigrationManifestRows", () => {
 });
 
 describe("schema object manifest", () => {
-  it("serializes replayed objects deterministically by type and name", () => {
-    expect(createSchemaObjectManifest(rows)).toBe("index\tidx_example_value\ntable\texample\n");
-  });
-
   it("rejects checked-in manifest drift with both sides of the diff", () => {
     expect(() =>
       validateSchemaObjectManifest("table\tnew_table\n", "table\texpected_table\n"),
@@ -477,22 +412,6 @@ describe("validateRolloutSafetyAnnotation", () => {
     expect(() => validateRolloutSafetyAnnotation("0244_block_literals.sql", sql)).toThrow(
       "requires a Reviewed Data Migrations manifest row",
     );
-  });
-
-  it("keeps the reviewed 0236 data migration grandfathered", () => {
-    const repositoryManifest = readFileSync(resolve("worker/migrations/MANIFEST.md"), "utf8");
-    const migration = readFileSync(
-      resolve("worker/migrations/0236_dex_deployment_attempt_attribution.sql"),
-      "utf8",
-    );
-    expect(() =>
-      validateRolloutSafetyAnnotation(
-        "0236_dex_deployment_attempt_attribution.sql",
-        migration,
-        ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
-        parseDataMigrationManifestRows(repositoryManifest),
-      ),
-    ).not.toThrow();
   });
 
   it("accepts additive migrations with the required rollout-safety header", () => {

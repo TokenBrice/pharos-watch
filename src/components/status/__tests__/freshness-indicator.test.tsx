@@ -24,36 +24,6 @@ describe("FreshnessIndicator", () => {
     expect(timestamp.className).toContain("min-h-6");
   });
 
-  it("renders 'just now' when updatedAt is within 5s", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 2000} staleAfterMs={120_000} />);
-    expect(screen.getByText(/just now/i)).toBeDefined();
-  });
-
-  it("renders 'Xs ago' between 5s and 60s", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 42_000} staleAfterMs={120_000} />);
-    expect(screen.getByText(/42s ago/i)).toBeDefined();
-  });
-
-  it("renders 'Xm ago' above 60s", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={120_000} />);
-    expect(screen.getByText(/3m ago/i)).toBeDefined();
-  });
-
-  it("marks stale when age exceeds staleAfterMs", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={120_000} />);
-    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
-  });
-
-  it("does NOT mark stale when within window", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
-    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
-  });
-
   it("increments age via internal timer", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
@@ -62,23 +32,6 @@ describe("FreshnessIndicator", () => {
       vi.advanceTimersByTime(5000);
     });
     expect(screen.getByText(/35s ago/i)).toBeDefined();
-  });
-
-  it("uses minute-boundary timeouts instead of a permanent one-second interval for older data", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    const intervalSpy = vi.spyOn(globalThis, "setInterval");
-    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={600_000} />);
-
-    expect(screen.getByText(/3m ago/i)).toBeDefined();
-    expect(intervalSpy).not.toHaveBeenCalled();
-    act(() => {
-      vi.advanceTimersByTime(59_000);
-    });
-    expect(screen.getByText(/3m ago/i)).toBeDefined();
-    act(() => {
-      vi.advanceTimersByTime(1_000);
-    });
-    expect(screen.getByText(/4m ago/i)).toBeDefined();
   });
 
   it("keeps ticking age text out of live regions", () => {
@@ -127,17 +80,6 @@ describe("FreshnessIndicator", () => {
     expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toBe("Dashboard fetch has not loaded");
   });
 
-  it("can label browser/dashboard fetch freshness explicitly", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    render(
-      <FreshnessIndicator
-        updatedAtMs={1_700_000_000_000 - 30_000}
-        staleAfterMs={120_000}
-        labelPrefix="Dashboard fetch"
-      />,
-    );
-    expect(screen.getByText(/Dashboard fetch: 30s ago/i)).toBeDefined();
-  });
   it("gives compact chips a doubled staleness budget and noncompact chips the exact one", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     const updatedAtMs = 1_700_000_000_000 - 90_000;

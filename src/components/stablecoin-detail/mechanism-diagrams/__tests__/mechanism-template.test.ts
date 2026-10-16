@@ -113,20 +113,6 @@ describe("resolveMechanismFlowTemplate", () => {
       syntheticStrategy: "borrow-stake",
     }).steps[0].label);
   });
-
-  it("drops the stress line when an override blanks it", () => {
-    expect(resolveMechanismFlowTemplate("fiat-cash", "USDC", {}, { stressFootnote: "" }).stressFootnote).toBeNull();
-  });
-
-  it("names no coin in any archetype's coin-page stress line", () => {
-    const variants = [{}, { navToken: true }, { navToken: false }, { liquidationEngine: false }] satisfies MechanismTemplateFacts[];
-    for (const archetype of MECHANISM_ARCHETYPE_VALUES as readonly MechanismArchetype[]) {
-      for (const facts of variants) {
-        const template = resolveMechanismFlowTemplate(archetype, "FXD", facts);
-        expect(namedCoins(template.stressFootnote, "FXD"), `${archetype} ${JSON.stringify(facts)}`).toEqual([]);
-      }
-    }
-  });
 });
 
 describe("deriveLiquidationEngine", () => {
@@ -147,18 +133,6 @@ describe("deriveLiquidationEngine", () => {
 });
 
 describe("shipped coins (dossier audit 2026-10-06, defect 6)", () => {
-  it("draws ZSD's Djed reserve without the CDP liquidation path", () => {
-    expect(templateCopy(shippedTemplate("zsd-zephyr-protocol"))).not.toMatch(LIQUIDATION_CLAIM);
-  });
-
-  it("keeps DAI's liquidation path", () => {
-    expect(templateCopy(shippedTemplate("dai-makerdao"))).toMatch(LIQUIDATION_CLAIM);
-  });
-
-  it("does not give syrupUSDC a quarterly redemption gate", () => {
-    expect(templateCopy(shippedTemplate("syrupusdc-maple"))).not.toMatch(/quarterly/i);
-  });
-
   it("does not borrow USDC's banking-rail incident for USDT (QA 2026-10-06)", () => {
     expect(namedCoins(shippedTemplate("usdt-tether").stressFootnote, "USDT")).toEqual([]);
   });

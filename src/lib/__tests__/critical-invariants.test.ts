@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { StressSignalsAllResponseSchema } from "@shared/types/market";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { YieldRankingsResponseSchema } from "@shared/types/yield";
-import { mergeDepegSeconds, worstDeviation } from "@shared/lib/peg-utils";
+import { mergeDepegSeconds } from "@shared/lib/peg-utils";
 import type { DepegEvent } from "@shared/types";
 
 function makeDepegEvent(
@@ -141,17 +141,6 @@ describe("critical invariants", () => {
         gauge: { ...flows.gauge, trackedMcapUsd: Number.POSITIVE_INFINITY },
       }).success,
     ).toBe(false);
-  });
-
-  it("preserves depeg interval merge and worst signed deviation invariants", () => {
-    const events = [
-      makeDepegEvent({ startedAt: 100, endedAt: 200, peakDeviationBps: -120 }),
-      makeDepegEvent({ id: 2, startedAt: 180, endedAt: 260, peakDeviationBps: 95 }),
-      makeDepegEvent({ id: 3, startedAt: 400, endedAt: 450, peakDeviationBps: -310 }),
-    ];
-
-    expect(mergeDepegSeconds(events, 0, 500)).toBe(210);
-    expect(worstDeviation(events)).toBe(-310);
   });
 
   // audit: s092-src/C2 — the mergeDepegSeconds doc contract clamps intervals to

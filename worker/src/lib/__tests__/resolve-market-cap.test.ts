@@ -41,7 +41,4 @@ describe("resolveMarketCap", () => {
     expect(resolveMarketCap(cgMcap, supply, price, 0.05)).toBeCloseTo(108_000, -3);
   });
 
-  it("returns 0 when cgMcap is zero and no supply provided", () => {
-    expect(resolveMarketCap(0, undefined, 97.95)).toBe(0);
-  });
 });

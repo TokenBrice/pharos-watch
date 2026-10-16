@@ -58,21 +58,6 @@ describe("bounded canonical gzip", () => {
     expect(new TextDecoder().decode(output)).toBe(text);
   });
 
-  it("round-trips text without a declared length", async () => {
-    const text = JSON.stringify({ value: "unsized" });
-    const compressed = await gzipCanonicalJson(text, {
-      label: "fixture",
-      maximumCompressedBytes: 1_024,
-      maximumUncompressedBytes: 1_024,
-    });
-
-    await expect(gunzipTextBounded(compressed.compressed, {
-      label: "fixture",
-      maximumCompressedBytes: 1_024,
-      maximumUncompressedBytes: 1_024,
-    })).resolves.toBe(text);
-  });
-
   it("rejects payloads over the uncompressed limit when no length is declared", async () => {
     const text = JSON.stringify({ value: "z".repeat(64 * 1_024) });
     const compressed = await gzipCanonicalJson(text, {

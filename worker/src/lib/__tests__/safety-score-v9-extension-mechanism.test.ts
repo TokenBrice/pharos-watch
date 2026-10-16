@@ -291,27 +291,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), boldMeta, "fiat-cash")).toBeNull();
   });
 
-  it("compiles Base Dollar's five-branch review after the date-only admission gate", () => {
-    const admittedClockSec = Date.parse("2026-08-22T00:00:00Z") / 1_000;
-    const review = buildSafetyScoreV9MechanismReview(
-      fixedInputStub({}, admittedClockSec),
-      { id: "bd-basedollar" } as MechanismMeta,
-      "cdp",
-    );
-    if (review?.archetype !== "cdp") throw new Error("expected the curated Base Dollar CDP overlay");
-    expect(review.collateralizationRatio).toBe(2.209);
-    expect(review.liquidationCapacityRatio).toBe(0.278);
-    expect(review.collateralizationParameters).toMatchObject({
-      quality: "adequate",
-      status: { observationState: "known" },
-    });
-    expect(review.liquidationMechanics.quality).toBe("adequate");
-    expect(review.backstop.quality).toBe("adequate");
-    expect(review.branchIsolation.quality).toBe("adequate");
-    expect(review.shutdownAndBadDebt.quality).toBe("limited");
-    expect(review.structuralRedemption.quality).toBe("adequate");
-  });
-
   it("keeps LUSD's measured liquidation capacity and unsafe-backing ceiling outside control changes", () => {
     const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "lusd-liquity" } as MechanismMeta, "cdp");
     if (review?.archetype !== "cdp") throw new Error("expected the curated LUSD CDP overlay");
@@ -752,23 +731,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(result.contributions.find(row => row.componentKey === "mechanism:shutdown-and-bad-debt")).toMatchObject({
       observationState: "known", score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.failed,
     });
-  });
-
-  it("publishes CHFm conversion inventory only as a structural analogue", () => {
-    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "chfm-mento" } as MechanismMeta, "cdp");
-    if (review?.archetype !== "cdp") throw new Error("expected the curated CHFm CDP overlay");
-    expect(review.collateralizationRatio).toBeNull();
-    expect(review.liquidationCapacityRatio).toBeNull();
-    expect(review.metricApplicability.collateralizationRatio.state).toBe("not-applicable");
-    expect(review.metricApplicability.liquidationCapacityRatio.state).toBe("not-applicable");
-    expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
-    expect(review.structuralRedemption.quality).toBe("limited");
-  });
-
-  it("does not publish a CDP review for AUDm's shared crypto reserve", () => {
-    expect(
-      buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "audm-mento" } as MechanismMeta, "cdp"),
-    ).toBeNull();
   });
 
   describe("commodity-claim (v9.14)", () => {

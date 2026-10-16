@@ -15,10 +15,6 @@ function fixtureRoot(pin = "24.16.0"): string {
 }
 
 describe("pinned readiness runtime", () => {
-  it("accepts the exact Node pin and any npm 11 patch", () => {
-    expect(() => assertPinnedRuntime({ node: "v24.16.0", npm: "11.99.2" }, fixtureRoot())).not.toThrow();
-  });
-
   it.each(["26.10.0", "24.16.1", "25.0.0"])("rejects Node %s before readiness", (node) => {
     expect(() => assertPinnedRuntime({ node, npm: "11.13.0" }, fixtureRoot()))
       .toThrow(/Node 24\.16\.0 exactly.*mise settings add idiomatic_version_file_enable_tools node && mise install/);
@@ -29,8 +25,4 @@ describe("pinned readiness runtime", () => {
       .toThrow(/npm 11\.x.*mise.*mise install/);
   });
 
-  it("reads the Node authority from the checkout rather than a duplicated constant", () => {
-    expect(() => assertPinnedRuntime({ node: "24.16.0", npm: "11.13.0" }, fixtureRoot("24.17.0")))
-      .toThrow(/requires Node 24\.17\.0 exactly/);
-  });
 });

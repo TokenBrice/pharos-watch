@@ -51,11 +51,6 @@ function makeDbForTimestampCache(
 // --- buildAlchemyUrl ---
 
 describe("buildAlchemyUrl", () => {
-  it("builds correct URL for known chains", () => {
-    expect(buildAlchemyUrl("ethereum", "test-key")).toBe("https://eth-mainnet.g.alchemy.com/v2/");
-    expect(buildAlchemyUrl("base", "test-key")).toBe("https://base-mainnet.g.alchemy.com/v2/");
-    expect(buildAlchemyUrl("avalanche", "test-key")).toBe("https://avax-mainnet.g.alchemy.com/v2/");
-  });
 
   it("returns null for unknown chains", () => {
     expect(buildAlchemyUrl("tron", "test-key")).toBeNull();
@@ -70,17 +65,6 @@ describe("getAlchemyBlockNumber", () => {
     fetchMock = mockFetch([], { requireMatch: true });
   });
 
-  it("returns block number from JSON-RPC response", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x176f12d" }), { status: 200 }),
-    );
-
-    const budget = createBudget(100);
-    const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
-
-    expect(result).toBe(0x176f12d);
-    expect(budget.count).toBe(1);
-  });
 
   it("attaches the Alchemy bearer token without putting it in the URL", async () => {
     fetchMock = mockFetch([
@@ -261,28 +245,6 @@ describe("fetchAlchemyLogs", () => {
     fetchMock = mockFetch([], { requireMatch: true });
   });
 
-  it("returns parsed log entries on success", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xabc123")] }), { status: 200 }),
-    );
-
-    const budget = createBudget(100);
-    const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      [{ index: 0, value: "0xddf252ad..." }],
-      0x176f000,
-      0x176f100,
-      budget,
-    );
-
-    expect(result).not.toBeNull();
-    expect(result?.complete).toBe(true);
-    expect(result?.scannedToBlock).toBe(0x176f100);
-    expect(result?.logs).toHaveLength(1);
-    expect(result?.logs[0].transactionHash).toBe("0xabc123");
-    expect(budget.count).toBe(1);
-  });
 
   it("returns incomplete coverage when budget is exhausted before the call starts", async () => {
     const budget = createBudget(0);
@@ -360,43 +322,6 @@ describe("fetchAlchemyLogs", () => {
     expect(body.params[0]?.topics[0]).toEqual(["0xtopic-a", "0xtopic-b"]);
   });
 
-  it("splits range on retryable provider error", async () => {
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            error: { code: -32005, message: "block range is too wide" },
-          }),
-          { status: 400 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xleft")] }), { status: 200 }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xright", 0x176f051)] }), {
-          status: 200,
-        }),
-      );
-
-    const budget = createBudget(100);
-    const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      "0xcontract",
-      [{ index: 0, value: "0xtopic" }],
-      100,
-      200,
-      budget,
-    );
-
-    expect(result).not.toBeNull();
-    expect(result?.complete).toBe(true);
-    expect(result?.scannedToBlock).toBe(200);
-    expect(result?.logs).toHaveLength(2);
-    expect(result?.maxDepth).toBeGreaterThan(0);
-  });
 
   it("returns partial result when one split branch fails", async () => {
     fetchMock

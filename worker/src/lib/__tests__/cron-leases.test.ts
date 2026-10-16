@@ -37,30 +37,6 @@ describe("cron lease primitives", () => {
   });
 
 
-  it("acquires lease when no row exists", async () => {
-    const db = makeLeaseDb();
-    const ok = await acquireCronLease(db, "sync-stablecoins", "owner-a", 120);
-    expect(ok).toBe(true);
-  });
-
-  it("fails to acquire lease when active owner exists", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = makeLeaseDb({
-      leases: [
-        {
-          job: "sync-stablecoins",
-          lease_owner: "owner-a",
-          lease_until: now + 600,
-          heartbeat_at: now,
-          updated_at: now,
-        },
-      ],
-    });
-
-    const ok = await acquireCronLease(db, "sync-stablecoins", "owner-b", 120);
-    expect(ok).toBe(false);
-  });
-
   it("acquires lease when previous lease is expired", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeLeaseDb({

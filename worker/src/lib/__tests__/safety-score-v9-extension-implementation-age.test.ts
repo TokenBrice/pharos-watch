@@ -41,13 +41,6 @@ describe("production implementation-age compilation", () => {
     },
   );
 
-  it("uses a newer required parent implementation layer rather than the older child", () => {
-    expect(compileLaunchDate(
-      { implementationLaunchDate: "2021-02-01", variantOf: "beta", variantKind: "pure-wrapper" },
-      { implementationLaunchDate: "2025-08-19" },
-    )).toBe(Date.UTC(2025, 7, 19) / 1_000);
-  });
-
   it("walks the full variant chain and retains the newest layer rather than the final parent", () => {
     expect(compileLaunchDate(
       { variantOf: "beta", variantKind: "pure-wrapper" },

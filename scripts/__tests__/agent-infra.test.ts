@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildCodexHookConfig, renderCodexHookConfig, runAgentHookSetup } from "../maintenance/setup-agent-hooks.ts";
+import { renderCodexHookConfig, runAgentHookSetup } from "../maintenance/setup-agent-hooks.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -15,16 +15,6 @@ afterEach(() => {
 });
 
 describe("agent hook setup", () => {
-  it("keeps the Codex hook surface stateless and deterministic", () => {
-    expect(Object.keys(buildCodexHookConfig().hooks).sort()).toEqual([
-      "PermissionRequest",
-      "PreToolUse",
-      "SessionStart",
-    ]);
-    expect(renderCodexHookConfig()).toContain("pharos-change-contract.ts");
-    expect(renderCodexHookConfig()).not.toContain("PostToolUse");
-    expect(renderCodexHookConfig()).not.toContain("Stop");
-  });
 
   it("requires opt-in, then detects the installed config without rewriting it", () => {
     const directory = mkdtempSync(resolve(tmpdir(), "pharos-agent-hooks-"));

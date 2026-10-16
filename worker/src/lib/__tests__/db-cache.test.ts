@@ -136,20 +136,6 @@ describe("getPriceCache", () => {
     });
   });
 
-  it("does not fallback when the full-schema query fails unexpectedly", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const error = new Error("network connection reset");
-    const { db, queries } = makeDb({ fullError: error });
-
-    await expect(getPriceCache(db)).rejects.toThrow("network connection reset");
-
-    expect(queries).toHaveLength(1);
-    expect(queries[0]).toContain("source, confidence, observed_at");
-    expect(JSON.parse(String(warn.mock.calls[0]?.[0]))).toMatchObject({
-      event: "price_cache_full_column_query_failed",
-      errorMessage: "network connection reset",
-    });
-  });
 });
 
 describe("readCacheWithPolicy", () => {
@@ -219,33 +205,6 @@ describe("readCacheWithPolicy", () => {
     expect(decode).not.toHaveBeenCalled();
   });
 
-  it("returns a stale fallback value without presenting it as fresh", async () => {
-    const db = makeNoopD1({
-      prepare: () => ({
-        bind: () => ({
-          first: async () => ({ value: JSON.stringify({ count: 4 }), updated_at: 100 }),
-        }),
-      }),
-    });
-
-    const result = await readCacheWithPolicy(db, {
-      key: "test:stale-seed",
-      storage: "d1-kv",
-      schemaId: "test:count:v1",
-      ttlSec: 30,
-      stale: "fallback-only",
-      invalid: "retain",
-      decode: (value) => JSON.parse(value) as { count: number },
-      encode: JSON.stringify,
-    }, 200);
-
-    expect(result).toEqual({
-      state: "stale",
-      value: { count: 4 },
-      updatedAt: 100,
-      usable: false,
-    });
-  });
 });
 
 describe("savePriceCache", () => {

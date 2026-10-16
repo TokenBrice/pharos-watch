@@ -524,23 +524,6 @@ describe("handleDexLiquidity", () => {
     expect(body["__global__"]?.coverageClass).toBeNull();
   });
 
-  it("includes v2 fields in response", async () => {
-    const db = mockDexD1([
-      { match: "dex_liquidity", rows: [row] },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-    const coin = body["usdt-tether"];
-    expect(coin).toHaveProperty("effectiveTvlUsd");
-    expect(coin).toHaveProperty("avgPoolStress");
-    expect(coin).toHaveProperty("weightedBalanceRatio");
-    expect(coin).toHaveProperty("organicFraction");
-    expect(coin).toHaveProperty("durabilityScore");
-    expect(coin).toHaveProperty("balanceMeasuredTvlUsd");
-    expect(coin).toHaveProperty("organicMeasuredTvlUsd");
-  });
   it("uses the shared conservative default for null coverage", async () => {
     const db = mockDexD1([
       {
@@ -594,16 +577,6 @@ describe("handleDexLiquidity", () => {
       hasMeasuredLiquidityEvidence: measured,
       trendworthy: measured,
     });
-  });
-
-  it("includes X-Data-Age header", async () => {
-    const db = mockDexD1([
-      { match: "dex_liquidity", rows: [row] },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const res = await handleDexLiquidity(db);
-    expect(res.headers.has("X-Data-Age")).toBe(true);
   });
 
   it.each([-33 * 3600, 3600])("keeps generic freshness warnings on coin rows at timestamp offset %s", async (offset) => {

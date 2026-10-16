@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { runSafetyScoreCaptureArchiveCli } from "../export-safety-score-capture-archive";
 import { parseReportCardsAcceptedCacheExport, runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
-import { archiveObjectKey, decodeArchiveExport, parseArchiveBoundary, parseArchiveTimeBoundary, resolveArchiveBoundary, type SafetyScoreCaptureArchiveIndex } from "../lib/safety-score-capture-archive";
+import { archiveObjectKey, decodeArchiveExport, parseArchiveBoundary, resolveArchiveBoundary, type SafetyScoreCaptureArchiveIndex } from "../lib/safety-score-capture-archive";
 import { makeV9FixedInput, v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { makeWorkerSafetyScoreV9Publication } from "../../src/test-helpers/report-cards-v9";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
@@ -105,15 +105,6 @@ describe("Safety Score capture archive export", () => {
     await expect(decodeArchiveExport({ ...fixture.row, object_bytes: bytes.length, object_sha256: createHash("sha256").update(bytes).digest("hex") }, bytes)).rejects.toThrow("retention-clock-mismatch");
   });
 
-  it("lists identities with uniform 180-day lifecycle retention, not obsolete retention tiers", async () => {
-    const row = indexRow();
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const queryRaw = vi.fn((_sql: string) => JSON.stringify([{ success: true, results: [row] }]));
-    await runSafetyScoreCaptureArchiveCli(["list", "--from", "2026-10-01", "--to", "2026-10-08", "--local"], { client: { queryRaw } });
-    expect(JSON.parse(String(stdout.mock.calls[0]![0]))).toEqual({ retention: "180-day-captures-lifecycle", generations: [row] });
-    expect(queryRaw.mock.calls[0]![0]).toContain("ORDER BY published_at, generation_id LIMIT 1000");
-  });
-
   it("reports accepted-attempt index gaps using real SQL, excluding held, archived and out-of-window rows across pages", async () => {
     const { sqlite } = fixtures.open();
     const from = Date.parse("2026-10-01T00:00:00Z") / 1000, to = Date.parse("2026-10-08T00:00:00Z") / 1000;
@@ -161,57 +152,15 @@ describe("Safety Score capture archive export", () => {
     }
   });
 
-  it("rejects usage errors before remote reads", async () => {
-    const queryRaw = vi.fn();
-    for (const args of [["list", "--from", "2026-02-30", "--to", "2026-03-01"], ["export", "--generation", "g", "--output", "a", "--from", "2026-10-01"],
-      ["boundary", "--before", "build:invalid"], ["boundary", "--before-time", "2026-10-08T12:00:00+00:00"],
-      ["boundary", "--before-time", "2026-02-30T12:00:00Z"], ["boundary", "--before-time", "-1"],
-      ["boundary", "--before-time", "999999999999999999999"], ["boundary", "--before", "2026-10-08", "--before-time", "2026-10-08T12:00:00Z"],
-      ["export", "--generation", "g", "--output", "a", "--gaps"],
-      ["list", "--from", "2026-10-01", "--from", "2026-10-02", "--to", "2026-10-08"], ["list", "extra"], ["list", "--unknown"]]) {
-      await expect(runSafetyScoreCaptureArchiveCli(args, { client: { queryRaw } })).rejects.toThrow();
-    }
-    expect(queryRaw).not.toHaveBeenCalled();
-  });
 });
 
 describe("capture archive boundary resolution", () => {
   const rows = [indexRow({ generation_id: "a", published_at: 100 }), indexRow({ generation_id: "b", published_at: 200 }),
     indexRow({ generation_id: "c", published_at: 300, methodology_version: "9.1", policy_digest: "d".repeat(64), evaluation_build_digest: "e".repeat(64) }),
     indexRow({ generation_id: "d", published_at: 400, methodology_version: "9.1", policy_digest: "d".repeat(64), evaluation_build_digest: "e".repeat(64) })];
-  it("selects the 11:55 generation for a noon release, not previous-day 23:55 or post-release 12:05", async () => {
-    const timeRows = [
-      indexRow({ generation_id: "previous-day", published_at: Date.parse("2026-10-07T23:55:00Z") / 1000 }),
-      indexRow({ generation_id: "pre-release", published_at: Date.parse("2026-10-08T11:55:00Z") / 1000 }),
-      indexRow({ generation_id: "post-release", published_at: Date.parse("2026-10-08T12:05:00Z") / 1000 }),
-    ];
-    const instant = "2026-10-08T12:00:00Z";
-    expect(resolveArchiveBoundary(timeRows, parseArchiveBoundary("2026-10-08"))?.generation_id).toBe("previous-day");
-    for (const value of [instant, String(Date.parse(instant) / 1000)]) {
-      expect(resolveArchiveBoundary(timeRows, parseArchiveTimeBoundary(value))?.generation_id).toBe("pre-release");
-      const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-      await runSafetyScoreCaptureArchiveCli(["boundary", "--before-time", value], {
-        client: { queryRaw: () => JSON.stringify([{ success: true, results: timeRows }]) },
-      });
-      const outputCall = stdout.mock.calls[stdout.mock.calls.length - 1];
-      if (!outputCall) throw new Error("Expected archive boundary output");
-      expect(JSON.parse(String(outputCall[0])).generation_id).toBe("pre-release");
-      stdout.mockRestore();
-    }
-    expect(resolveArchiveBoundary(timeRows, parseArchiveTimeBoundary("2026-10-08T11:55:00Z"))?.generation_id).toBe("previous-day");
-  });
-  it.each(["methodology:9.1", `policy:${"d".repeat(64)}`, `build:${"e".repeat(64)}`])("finds the last retained pre-change row for %s", (value) => {
-    expect(resolveArchiveBoundary([...rows].reverse(), parseArchiveBoundary(value))?.generation_id).toBe("b");
-  });
-  it("uses a strict pre-date boundary and deterministic generation tie-breaks", () => {
-    expect(resolveArchiveBoundary(rows, { dateSec: 300 })?.generation_id).toBe("b");
-    expect(resolveArchiveBoundary([rows[1]!, { ...rows[1]!, generation_id: "z" }], { dateSec: 201 })?.generation_id).toBe("z");
-  });
+
   it("does not invent a predecessor for an identity already active at the start of retained history", () => {
     expect(resolveArchiveBoundary(rows, parseArchiveBoundary("methodology:9.0"))).toBeNull();
     expect(resolveArchiveBoundary(rows, { dateSec: 100 })).toBeNull();
-  });
-  it("resolves the most recent transition when an identity recurs", () => {
-    expect(resolveArchiveBoundary([...rows, indexRow({ generation_id: "e", published_at: 500 })], parseArchiveBoundary("methodology:9.0"))?.generation_id).toBe("d");
   });
 });

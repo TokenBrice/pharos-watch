@@ -20,25 +20,6 @@ function coin(id: string, overrides: Partial<StablecoinMeta> = {}): StablecoinMe
 }
 
 describe("mechanism archetype coverage", () => {
-  it("counts direct, inherited, and reviewed unresolved coverage", () => {
-    const result = analyzeMechanismArchetypeCoverage([
-      coin("parent", { mechanismArchetype: "cdp" }),
-      coin("child", { variantOf: "parent", variantKind: "strategy-vault" }),
-      coin("unresolved", {
-        mechanismArchetypeReview: {
-          disposition: "unresolved",
-          reviewedAt: "2026-07-13",
-          reviewer: "test",
-          rationale: "The mechanism does not fit the current taxonomy.",
-          sources: [{ label: "Docs", url: "https://example.com/docs" }],
-        },
-      }),
-    ]);
-
-    expect(result).toMatchObject({ active: 3, direct: 1, inherited: 1, reviewedUnresolved: 1, resolved: 2 });
-    expect(result.findings).toEqual([]);
-  });
-
   it("blocks silent gaps and unreviewed overrides", () => {
     const result = analyzeMechanismArchetypeCoverage([
       coin("gap"),

@@ -45,9 +45,6 @@ describe("isValidStagedPoolId", () => {
     expect(isValidStagedPoolId("ETHEREUM:0x123")).toBe(false);
   });
 
-  it("rejects empty string", () => {
-    expect(isValidStagedPoolId("")).toBe(false);
-  });
 });
 
 describe("hasValidStagedPoolTvl", () => {

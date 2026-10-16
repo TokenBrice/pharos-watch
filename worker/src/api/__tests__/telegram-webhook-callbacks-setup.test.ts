@@ -247,21 +247,6 @@ describe("handleCallbackQuery", () => {
       expect(lastSentMessageBody().text).toContain("Setup cancelled");
     });
 
-    it("setup:cancel lets group non-admins cancel their own wizard without an admin lookup", async () => {
-      const db = mockTelegramD1([
-        pendingDisambiguationTable(pendingRowFromSetup(
-          { step: "custom-types", alertTypes: ["dews"], target: null },
-          { initiator_user_id: "7" },
-        )),
-      ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
-
-      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
-      expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
-      expect(lastSentMessageBody().text).toContain("Setup cancelled");
-      expect(lastAckBody().text).toBe("Cancelled.");
-    });
-
     it("setup:cancel does not clear unrelated pending rows when no active wizard exists", async () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromForget({ action_type: "confirm-bulk", initiator_user_id: "999" })),

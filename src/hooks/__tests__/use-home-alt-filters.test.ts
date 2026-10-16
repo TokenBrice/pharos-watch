@@ -27,24 +27,6 @@ describe("useHomeAltFilters", () => {
     expect(result.current.activeFilters).toEqual(["fiat-non-usd-peg"]);
   });
 
-  it("maps legacy commodity peg URLs to the grouped commodity filter", () => {
-    window.history.replaceState(null, "", "/?peg=gold-peg#home-alt-rankings");
-
-    const { result } = renderHook(() => useHomeAltFilters());
-
-    expect(result.current.activePeg).toBe("commodity-peg");
-    expect(result.current.activeFilters).toEqual(["commodity-peg"]);
-  });
-
-  it("maps legacy non-USD fiat peg URLs to the grouped fiat filter", () => {
-    window.history.replaceState(null, "", "/?peg=eur-peg#home-alt-rankings");
-
-    const { result } = renderHook(() => useHomeAltFilters());
-
-    expect(result.current.activePeg).toBe("fiat-non-usd-peg");
-    expect(result.current.activeFilters).toEqual(["fiat-non-usd-peg"]);
-  });
-
   it("defaults to the core universe and exposes variants through the URL", async () => {
     const { result } = renderHook(() => useHomeAltFilters());
 

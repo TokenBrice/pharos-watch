@@ -8,11 +8,6 @@ import {
 } from "../evm-selectors";
 
 describe("evm selector ABI encoders", () => {
-  it("encodes a 20-byte address as a left-padded ABI word", () => {
-    expect(encodeAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")).toBe(
-      "000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-    );
-  });
 
   it("rejects non-20-byte or non-hex addresses", () => {
     expect(() => encodeAddress("0x1111")).toThrow(/expected 20-byte hex address/);

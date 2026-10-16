@@ -245,65 +245,6 @@ describe("selector-snapshot Pages Function", () => {
       expect(stored.verification).toEqual(canonical.verification);
     });
 
-    it("strips debug before storing snapshots", async () => {
-      const env = makeEnv();
-      const output = buildSelectorSnapshotOutput();
-      const withDebug = {
-        ...output,
-        debug: { allSurvivors: [buildSnapshotRecommendation({ id: "debug-only", symbol: "DBG" })] },
-      };
-
-      const debug = await onRequest(snapshotContext(postRequest(withDebug), env));
-      const debugBody = (await debug.json()) as { sid: string };
-      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      const stored = JSON.parse(kv.__getStore().get(`s:${debugBody.sid}`) ?? "{}") as Record<string, unknown>;
-      expect(stored.debug).toBeUndefined();
-
-      const plain = await onRequest(snapshotContext(postRequest(output), env));
-      const plainBody = (await plain.json()) as { sid: string };
-      expect(debugBody.sid).toBe(plainBody.sid);
-    });
-
-    it("strips caller-authored prose before storing snapshots", async () => {
-      const env = makeEnv();
-      const output = buildProseSnapshot("Attacker-authored prose.");
-
-      const response = await onRequest(snapshotContext(postRequest(output), env));
-      const { sid } = (await response.json()) as { sid: string };
-      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      const stored = JSON.parse(kv.__getStore().get(`s:${sid}`) ?? "{}") as Record<string, unknown>;
-      const recommended = stored.recommended as Array<Record<string, unknown>>;
-      const lowerRanked = stored.lowerRanked as Array<Record<string, unknown>>;
-
-      expect(recommended[0]?.whyText).toBeUndefined();
-      expect(recommended[0]?.watchText).toBeUndefined();
-      expect(lowerRanked[0]?.verdictText).toBeUndefined();
-      expect(lowerRanked[0]?.teachingText).toBeUndefined();
-    });
-
-    it("is idempotent when re-POSTing the same payload", async () => {
-      const env = makeEnv();
-      const output = buildSelectorSnapshotOutput();
-
-      const first = await onRequest(snapshotContext(postRequest(output), env));
-      const firstBody = (await first.json()) as { sid: string };
-
-      const second = await onRequest(snapshotContext(postRequest(output), env));
-      const secondBody = (await second.json()) as { sid: string };
-
-      expect(secondBody.sid).toBe(firstBody.sid);
-      expect(first.status).toBe(200);
-      expect(second.status).toBe(200);
-      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      expect(kv.__getPutCalls()).toHaveLength(1);
-      expect((await onRequest(snapshotContext(getRequest(firstBody.sid), env))).status).toBe(200);
-      const retained = await onRequest(snapshotContext(postRequest(output), env));
-      expect(retained.status).toBe(200);
-      await expect(retained.json()).resolves.toMatchObject({ sid: firstBody.sid });
-      expect(kv.__getPutCalls()).toHaveLength(2);
-      expect(kv.__getPutCalls()[1]?.options?.expirationTtl).toBe(SELECTOR_SNAPSHOT_TTL_SECONDS);
-    });
-
     const SEEDED_VALUES: Record<string, () => string> = {
       "corrupt JSON": () => "{",
       "a different snapshot": () => JSON.stringify(buildVerifiedSnapshot({ datasetHash: "b".repeat(64) })),

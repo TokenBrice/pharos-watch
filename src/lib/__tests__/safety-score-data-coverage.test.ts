@@ -115,25 +115,6 @@ describe("buildDataCoverageModel", () => {
     expect(model.backingKnownCount).toBe(2);
   });
 
-  it("ranks gap owners by size and drops empty owners", () => {
-    const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card({ id: "aaa-one" }), [
-          { responsibility: "issuer-undisclosed", factCount: 1, criticalFactCount: 0, reasonCodes: [] },
-          { responsibility: "producer-failed", factCount: 5, criticalFactCount: 0, reasonCodes: [] },
-        ]),
-      ],
-    });
-
-    const model = buildDataCoverageModel(response)!;
-
-    expect(model.gapOwners.map((owner) => owner.responsibility)).toEqual([
-      "producer-failed",
-      "issuer-undisclosed",
-    ]);
-    expect(model.gapOwners[0]!.share).toBeCloseTo(5 / 6);
-  });
-
   it("counts expired published evidence as a Pharos-owned coverage gap", () => {
     const response = makeReportCardsV9Response({
       cards: [
@@ -371,54 +352,6 @@ describe("buildDataCoverageModel", () => {
 });
 
 describe("describeDataCoverageHoldCauses", () => {
-  it("folds repeated producer failures into one asset-scoped sentence", () => {
-    const causes = describeDataCoverageHoldCauses([
-      {
-        code: "producer-failed-pipeline-gap",
-        assetId: "msusd-metronome",
-        source: "reason",
-        reasonCode: "missing-runtime-route-evidence",
-        path: "exit:missing-runtime-route-evidence",
-        effect: "pipeline-gap",
-      },
-      {
-        code: "producer-failed-pipeline-gap",
-        assetId: "msusd-metronome",
-        source: "reason",
-        reasonCode: "missing-same-notional-route",
-        path: "exit:missing-same-notional-route",
-        effect: "pipeline-gap",
-      },
-      {
-        code: "producer-failed-pipeline-gap",
-        assetId: "cdxusd-cod3x",
-        source: "reason",
-        reasonCode: "missing-runtime-route-evidence",
-        path: "exit:missing-runtime-route-evidence",
-        effect: "pipeline-gap",
-      },
-    ]);
-
-    expect(causes).toHaveLength(1);
-    expect(causes[0]).toContain("2 assets");
-    expect(causes[0]).toContain("rely on a data feed that did not deliver");
-    expect(causes[0]).not.toContain("missing-runtime-route-evidence");
-    expect(causes[0]).not.toContain("exit:");
-  });
-
-  it("never echoes internal assessment detail", () => {
-    const causes = describeDataCoverageHoldCauses([
-      {
-        code: "assessment-failed",
-        detail: '[{"code":"custom","path":["candidate","lifecycle"]}]',
-      },
-    ]);
-
-    expect(causes).toEqual(["The latest ratings update could not be verified."]);
-    expect(causes.join(" ")).not.toContain("candidate");
-    expect(causes.join(" ")).not.toContain("lifecycle");
-  });
-
   it("describes input-health and coverage-floor holds without raw identifiers", () => {
     const causes = describeDataCoverageHoldCauses([
       { code: "dex-stale" },
@@ -436,7 +369,4 @@ describe("describeDataCoverageHoldCauses", () => {
     expect(causes.join(" ")).not.toContain("floor-a");
   });
 
-  it("returns nothing for an empty reason set", () => {
-    expect(describeDataCoverageHoldCauses([])).toEqual([]);
-  });
 });

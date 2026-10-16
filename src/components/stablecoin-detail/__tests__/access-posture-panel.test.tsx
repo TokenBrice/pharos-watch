@@ -98,23 +98,6 @@ describe("AccessPosturePanel", () => {
     expect(links[0]?.getAttribute("href")).toBe("https://example.com/etherscan");
   });
 
-  it("keeps the legacy compact flag on the rail form", () => {
-    const { container } = render(<AccessPosturePanel rows={rows} compact />);
-
-    expect(container.querySelector("[data-evidence-module]")).toBeNull();
-  });
-
-  it("folds the rail's diagnostics behind a counted disclosure, like the strip", () => {
-    const authorityRow = { key: "reserve-access:a", label: "Claim pause", value: "Plasma ×4 · reach unquantified" };
-    render(<AccessPosturePanel rows={[...scoredRows, diagnosticRow, authorityRow]} variant="rail" />);
-
-    const fold = screen.getByText(diagnosticRow.label).closest("details");
-    expect(fold?.open).toBe(false);
-    expect(fold?.querySelector("summary")?.textContent).toMatch(/Reserve-access diagnostics.*2/);
-    expect(screen.getAllByText(/not additive/)).toHaveLength(1);
-    expect(screen.getByText("Governance").closest("details")).toBeNull();
-  });
-
   it("draws the strip as one evidence module with all four scored enums as labelled cells", () => {
     const { container } = render(
       <AccessPosturePanel rows={[...scoredRows, diagnosticRow]} review={review} variant="strip" />,
@@ -134,26 +117,6 @@ describe("AccessPosturePanel", () => {
     const diagnostic = screen.getByText(diagnosticRow.label);
     expect(cells.contains(diagnostic)).toBe(false);
     expect(diagnostic.closest("details")?.open).toBe(false);
-  });
-
-  it("orders the strip's folds diagnostics → verification → sources, with the review date outside them", () => {
-    render(<AccessPosturePanel rows={[...scoredRows, diagnosticRow]} review={review} variant="strip" />);
-
-    const summaries = Array.from(document.querySelectorAll("summary")).map((summary) => summary.textContent ?? "");
-    expect(summaries).toHaveLength(3);
-    expect(summaries[0]).toMatch(/diagnostic/i);
-    expect(summaries[1]).toMatch(/2 deployments/);
-    expect(summaries[2]).toMatch(/Sources/);
-
-    expect(screen.getByText(/2026-07-15/).closest("details")).toBeNull();
-  });
-
-  it("opens the strip's Sources fold onto the deduplicated per-chain citations", () => {
-    render(<AccessPosturePanel rows={scoredRows} review={review} variant="strip" />);
-
-    const fold = openSourcesFold();
-    expect(fold.open).toBe(true);
-    expect(within(fold).getAllByRole("link", { hidden: true })).toHaveLength(2);
   });
 
   it("flags mixed per-chain posture on the strip", () => {

@@ -4,9 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertMonotonicPolicyVersion,
-  canonicalize,
   extractPolicyBlock,
-  policyHash,
   validatePolicy,
 } from "../maintenance/generate-editorial-style.ts";
 
@@ -33,15 +31,6 @@ function bumpedVersion(policy: ReturnType<typeof validatePolicy>): string {
 }
 
 describe("editorial policy generator", () => {
-  it("extracts and validates the single authored policy fence", () => {
-    const policy = readPolicy();
-    // eslint-disable-next-line security/detect-unsafe-regex -- anchored finite version shape over the checked-in policy fence.
-    expect(policy.version).toMatch(/^(?:0|[1-9]\d*)\.(?:0|[1-9](?:\d*[1-9])?)$/);
-    expect(policy.registers.length).toBeGreaterThan(0);
-    expect(policy.rules.length).toBeGreaterThan(0);
-    expect(policyHash(policy)).toMatch(/^[0-9a-f]{16}$/);
-  });
-
   it("requires a monotonic version bump for semantic changes", () => {
     const current = readPolicy();
     const changed = clonePolicy(current);
@@ -83,23 +72,6 @@ describe("editorial policy generator", () => {
     expect(() =>
       assertMonotonicPolicyVersion(current, validatePolicy(JSON.stringify(next))),
     ).toThrow(/must keep introducedIn/);
-  });
-
-  it("hashes policy meaning independently of object key order", () => {
-    const policy = readPolicy();
-    const reorder = (value: unknown): unknown => {
-      if (Array.isArray(value)) return value.map(reorder);
-      if (!value || typeof value !== "object") return value;
-      return Object.fromEntries(Object.entries(value).reverse().map(([key, child]) => [key, reorder(child)]));
-    };
-    const reordered = reorder(policy) as ReturnType<typeof validatePolicy>;
-    expect(canonicalize(policy)).toBe(canonicalize(reordered));
-    expect(policyHash(policy)).toBe(policyHash(reordered));
-
-    const changed = clonePolicy(policy);
-    const firstPattern = (changed.rules[0]!.patterns as Array<Record<string, unknown>>)[0]!;
-    firstPattern.source = `${String(firstPattern.source)}(?:)`;
-    expect(policyHash(policy)).not.toBe(policyHash(changed as unknown as ReturnType<typeof validatePolicy>));
   });
 
   it.each([

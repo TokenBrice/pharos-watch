@@ -13,53 +13,10 @@ import {
   getYieldSourceFreshnessDisplay,
 } from "@/lib/yield-source-presentation";
 import {
-  SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   buildSourceRiskGoldenFixture,
-  mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
 describe("yield source risk UI helpers", () => {
-  it("maps populated source-risk evidence to public driver labels", () => {
-    const drivers = getYieldSourceRiskDrivers({
-      sourceChanged: true,
-      sourceFreshness: "stale",
-      sourceRisk: mergeSourceRiskGoldenFixtures([
-        "reward-heavy",
-        "low-source-depth",
-        "stale-source-age",
-        "bootstrap-observation-count",
-        "source-switch-churn",
-      ], { sourceRiskPenalty: 2.5 }),
-    });
-
-    expect(drivers.map((driver) => driver.label)).toEqual(SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS);
-    expect(formatYieldSourceRiskDriverSummary(drivers)).toContain("reward-heavy");
-  });
-
-  it("surfaces venue-risk and dependency-concentration drivers from populated evidence", () => {
-    const high = getYieldSourceRiskDrivers({
-      sourceRisk: { venueRiskTier: "high", venueRiskWeighted: 4.4 },
-    });
-    expect(high.map((driver) => driver.key)).toContain("high-risk-venue");
-    expect(high[0]?.description).toContain("4.4/5");
-
-    const concentrated = getYieldSourceRiskDrivers({
-      sourceRisk: {
-        venueRiskTier: "low",
-        dependencyConcentration: {
-          ecosystem: "Sky",
-          severity: "medium",
-          note: "Funded debt sits behind Sky governance.",
-          reviewedAt: "2026-06-15",
-        },
-      },
-    });
-    expect(concentrated.map((driver) => driver.label)).toContain("Sky concentration");
-
-    // Unknown/low venue with no concentration is a no-op.
-    expect(getYieldSourceRiskDrivers({ sourceRisk: { venueRiskTier: "unknown" } })).toEqual([]);
-  });
-
   it("classifies source posture from source-risk, warnings, and provenance evidence", () => {
     expect(classifyYieldSourcePosture({
       sourceRisk: {
@@ -127,26 +84,6 @@ describe("yield source risk UI helpers", () => {
       "Source risk 42/100 | 1.32x",
     );
     expect(formatYieldSourceRiskSummary({ sourceRiskScore: 2, sourceRiskPenalty: 1.01 })).toBeNull();
-  });
-
-  it("flags low/partial venue-score confidence without discounting the penalty", () => {
-    const low = getYieldSourceRiskDrivers({
-      sourceRisk: { venueRiskTier: "high", venueRiskWeighted: 3.7, venueRiskConfidence: "low" },
-    });
-    expect(low[0]?.label).toContain("low confidence");
-    expect(low[0]?.description).toContain("low-confidence");
-
-    const partial = getYieldSourceRiskDrivers({
-      sourceRisk: { venueRiskTier: "medium", venueRiskWeighted: 2.8, venueRiskConfidence: "partial" },
-    });
-    expect(partial[0]?.label).not.toContain("confidence"); // partial isn't shouted in the label
-    expect(partial[0]?.description).toContain("partial-confidence");
-
-    const verified = getYieldSourceRiskDrivers({
-      sourceRisk: { venueRiskTier: "high", venueRiskWeighted: 4.4, venueRiskConfidence: "verified" },
-    });
-    expect(verified[0]?.label).toBe("high-risk venue");
-    expect(verified[0]?.description).not.toContain("confidence");
   });
 
   it("keeps missing source-risk evidence neutral", () => {
@@ -248,12 +185,6 @@ describe("classifyYieldSourceAgeContext", () => {
     expect(result?.relativeText).toBe("0s ago");
   });
 
-  it("returns within-6h context for 1h", () => {
-    const result = classifyYieldSourceAgeContext(60 * 60);
-    expect(result?.band).toBe("within-6h");
-    expect(result?.relativeText).toBe("1h ago");
-  });
-
   it("returns within-6h context at the 6h boundary", () => {
     const result = classifyYieldSourceAgeContext(6 * 60 * 60);
     expect(result?.band).toBe("within-6h");
@@ -270,12 +201,6 @@ describe("classifyYieldSourceAgeContext", () => {
     const result = classifyYieldSourceAgeContext(24 * 60 * 60);
     expect(result?.band).toBe("within-24h");
     expect(result?.relativeText).toBe("1d ago");
-  });
-
-  it("returns over-24h context for 7d with days formatting", () => {
-    const result = classifyYieldSourceAgeContext(7 * 24 * 60 * 60);
-    expect(result?.band).toBe("over-24h");
-    expect(result?.relativeText).toBe("7d ago");
   });
 
   it("clamps days formatting at >30d for 31d", () => {

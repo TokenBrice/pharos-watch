@@ -96,10 +96,6 @@ describe("sbc-independent-assurance (MCCPA SBC examination)", () => {
     expect(definition.redemptionTelemetry).toEqual({ capacity: "none", fee: "none" });
   });
 
-  it("parses the real index shape and reaches the PDF byte-verification gate", async () => {
-    await expect(runSbc(indexFixture())).rejects.toThrow("PDF byte length");
-  });
-
   it("fails closed when a newer unreviewed report appears on the index", async () => {
     const html = indexFixture() +
       '<a href="/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-10-2026.pdf">Oct</a>';

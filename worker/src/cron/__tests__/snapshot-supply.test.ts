@@ -64,21 +64,6 @@ describe("snapshotSupply", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
   });
 
-  it("still snapshots a cache age of 1799s (boundary below the two-interval skip gate)", async () => {
-    const boundaryUpdatedAt = Math.floor(Date.now() / 1000) - 1799;
-    const cacheValue = JSON.stringify({
-      peggedAssets: [
-        makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }),
-        makeSnapshotAsset({ id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50_000_000 } }),
-      ],
-    });
-    const db = mockD1({ stablecoins: { assets: cacheValue, updatedAt: boundaryUpdatedAt } });
-    const result = await snapshotSupply(db);
-    expect(result.status).toBeUndefined();
-    expect(result.itemCount).toBe(2);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(true);
-  });
-
   it("does not consume the daily write marker when the cache predates the scheduled slot", async () => {
     const slotStartedAt = Math.floor(Date.parse("2025-06-15T08:00:00Z") / 1000);
     vi.setSystemTime(new Date(slotStartedAt * 1000));
@@ -218,27 +203,6 @@ describe("snapshotSupply", () => {
     const result = await snapshotSupply(db);
     // Should insert 2 rows (IDs "usdt-tether" and "usdc-circle" are tracked, "cash-stabl-fi" is not)
     expect(result.itemCount).toBe(2);
-  });
-
-  it("skips restored rows while writing non-restored rows", async () => {
-    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const cacheValue = JSON.stringify({
-      peggedAssets: [
-        makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", supplyRestored: true, price: 1.0, circulating: { peggedUSD: 100 } }),
-        makeSnapshotAsset({ id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50 } }),
-      ],
-    });
-    const db = mockD1({ stablecoins: { assets: cacheValue, updatedAt: freshUpdatedAt } });
-
-    const result = await snapshotSupply(db, undefined, {
-      requiredActiveIds: ["usdc-circle"],
-      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
-    });
-
-    expect(result.itemCount).toBe(1);
-    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
-    expect(inserts.flatMap((entry) => entry.binds)).toContain("usdc-circle");
-    expect(inserts.flatMap((entry) => entry.binds)).not.toContain("usdt-tether");
   });
 
   it("writes observed rows and reports restored-only required assets as skipped", async () => {

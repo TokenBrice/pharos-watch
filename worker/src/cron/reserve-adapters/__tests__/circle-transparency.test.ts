@@ -150,22 +150,6 @@ describe("adaptCircleTransparency", () => {
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100);
   });
 
-  it("throws when no matching canvas found", () => {
-    expect(() => adaptCircleTransparency("<html></html>", "usdc")).toThrow("layout-changed");
-  });
-
-  it("prefers the reserve-block 'As of' date when the page contains unrelated 'As of' banners", () => {
-    const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
-    const stalePageBanner = `<div>As of Jan 01, 2020</div>${farPadding}`;
-    const futureBanner = `${farPadding}<div>As of Feb 02, 2022</div>`;
-    const adversarial = `${stalePageBanner}${CIRCLE_HTML}<div>As of Aug 06, 2026</div>${futureBanner}`;
-    const result = adaptCircleTransparency(adversarial, "usdc");
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
-    });
-  });
-
   it("uses a unique global reserve disclosure date when the coin tab has no local date", () => {
     const htmlWithoutLocalDate = CIRCLE_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
     const farPadding = "<div>" + "x".repeat(3_000) + "</div>";

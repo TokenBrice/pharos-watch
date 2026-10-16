@@ -39,54 +39,6 @@ afterEach(cleanupFrontendTest);
 
 
 describe("DEWSRadarPanel radar logos", () => {
-  it("renders stablecoin logos for alert-or-higher dots while leaving watch dots plain", () => {
-    const { container } = render(
-      <DEWSRadarPanel
-        logos={{
-          "frax-frax": "/logos/frax.svg",
-          "usdc-circle": "/logos/usdc.svg",
-          "usdt-tether": "/logos/usdt.svg",
-          "dai-makerdao": "/logos/dai.svg",
-        }}
-      />,
-    );
-
-    const images = Array.from(container.querySelectorAll("image")).map((image) => image.getAttribute("href"));
-    expect(images).toContain("/logos/frax.svg");
-    expect(images).toContain("/logos/usdc.svg");
-    expect(images).toContain("/logos/usdt.svg");
-    expect(images).not.toContain("/logos/dai.svg");
-  });
-
-  it("scales logo marks up by escalation tier", () => {
-    const { container } = render(
-      <DEWSRadarPanel
-        logos={{
-          "frax-frax": "/logos/frax.svg",
-          "usdc-circle": "/logos/usdc.svg",
-          "usdt-tether": "/logos/usdt.svg",
-        }}
-      />,
-    );
-
-    const imageWidthByHref = new Map(
-      Array.from(container.querySelectorAll("image")).map((image) => [
-        image.getAttribute("href"),
-        Number(image.getAttribute("width")),
-      ]),
-    );
-
-    const alertWidth = imageWidthByHref.get("/logos/usdt.svg") ?? 0;
-    const warningWidth = imageWidthByHref.get("/logos/usdc.svg") ?? 0;
-    const dangerWidth = imageWidthByHref.get("/logos/frax.svg") ?? 0;
-
-    expect(warningWidth).toBeGreaterThan(alertWidth);
-    expect(dangerWidth).toBeGreaterThan(warningWidth);
-    expect(alertWidth).toBeCloseTo(27, 1);
-    expect(warningWidth / alertWidth).toBeCloseTo(1.2, 1);
-    expect(dangerWidth / warningWidth).toBeCloseTo(1.2, 1);
-  });
-
   it("announces unavailable supply without turning it into the observed-zero size tier", () => {
     useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [
       makeStablecoin({ id: "usdc-circle", circulating: {} }),

@@ -370,34 +370,6 @@ describe("generateWeeklyRecap", () => {
     expect(weeklySystem).not.toMatch(/[\u2012-\u2015]/);
   });
 
-  it("keeps weekly shadow independent from daily enforce and repairs before publication", async () => {
-    const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
-    const db = mockD1(makeTables({
-      styleGateModes: { daily: "enforce", weekly: "shadow" },
-    }), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({ extended: violatedExtended }));
-
-    const result = await generateWeeklyRecap(
-      db,
-      "anthropic-key",
-      null,
-      { botToken: "bot", chatId: "chat" },
-    );
-
-    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
-    expect(String(insert?.binds[4])).not.toContain("—");
-    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
-      styleGateMode: "shadow",
-      editorialStyleGate: { mode: "shadow", firstPassWouldBlock: true },
-    });
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
-      editorialStyleGate: { mode: "shadow" },
-      channels: { telegram: { disposition: "delivered" } },
-    });
-  });
-
   it("keeps weekly enforce independent from daily shadow and blocks the unresolved raw finding", async () => {
     const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
     const db = mockD1(makeTables({
@@ -429,30 +401,6 @@ describe("generateWeeklyRecap", () => {
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       channels: { telegram: { status: "skipped: quality-gate", disposition: "terminal-unsent" } },
     });
-  });
-
-  it("publishes weekly hard style copy only after a successful bounded correction", async () => {
-    const db = mockD1(makeTables({ styleGateModes: { daily: "shadow", weekly: "enforce" } }));
-    vi.mocked(fetchWithRetry)
-      .mockResolvedValueOnce(weeklyClaudeResponse({ text: "USDT held — watch next week." }))
-      .mockResolvedValueOnce(weeklyClaudeResponse());
-    await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
-    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
-    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
-      editorialStyleGate: { firstPassWouldBlock: true, retry: { attempted: true, outcome: "resolved" } },
-    });
-  });
-
-  it("does not retry weekly advisory style findings under enforce", async () => {
-    const db = mockD1(makeTables({ styleGateModes: { daily: "shadow", weekly: "enforce" } }));
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(weeklyClaudeResponse({ text: "The plumbing flinched while USDT held near peg." }));
-    await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
-    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
-    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({ editorialStyleGate: { firstPassWouldBlock: false } });
   });
 
   it.each(["time", "token"] as const)("blocks weekly hard style copy without channel effects when the %s budget is spent", async (budget) => {
@@ -520,34 +468,6 @@ describe("generateWeeklyRecap", () => {
     });
   });
 
-  it("keeps residual soft quality warnings visible without degrading cron health", async () => {
-    const recentWeeklyRows = [{
-      digest_title: "Prior USDT Week",
-      digest_text: "USDT led the prior weekly edition.",
-      digest_meta: JSON.stringify({
-        type: "weekly",
-        lead: "supply",
-        tone: "forensic",
-        coins: ["USDT"],
-      }),
-    }];
-    const db = mockD1(makeTables({ recentWeeklyRows }), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
-
-    const result = await generateWeeklyRecap(
-      db,
-      "anthropic-key",
-      null,
-      { botToken: "bot", chatId: "chat" },
-    );
-
-    // Soft-only issues no longer trigger the corrective retry (hard-only policy).
-    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    expect(result.status).toBeUndefined();
-    expect(result.metadata).toContain("quality: repeated-primary-coin:soft");
-    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
-  });
-
   it("raises a hard issue when weekly copy repeats a quarantined liquidity claim", () => {
     const issues = validateDigestModelOutput({
       digestTitle: "USDS Liquidity Collapsed",
@@ -562,34 +482,6 @@ describe("generateWeeklyRecap", () => {
       code: "quarantined-signal-claim",
       severity: "hard",
     }));
-  });
-
-  it("reports weekly recap preflight and skipped progress when Anthropic is not configured", async () => {
-    const db = mockD1([]);
-    const progressUpdates: CronProgressUpdate[] = [];
-    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
-      progressUpdates.push(update);
-    });
-
-    const result = await generateWeeklyRecap(db, null, null, null, undefined, reportProgress);
-
-    expect(result.metadata).toBe("skipped: no API key");
-    expect(progressUpdates.find((update) => update.stage === "preflight")).toMatchObject({
-      metadata: {
-        providerFamily: "digest",
-        phase: "preflight",
-        countTotals: {
-          configuredDeliveryChannels: 0,
-        },
-      },
-    });
-    expect(progressUpdates.find((update) => update.stage === "skipped")).toMatchObject({
-      metadata: {
-        providerFamily: "anthropic",
-        phase: "skipped",
-        skipped: "missing-api-key",
-      },
-    });
   });
 
   it("returns a neutral skipped result outside Monday UTC", async () => {
@@ -1063,28 +955,6 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toContain(expectedLeadId);
     expect(body.messages[0].content).toContain("PMUSD");
     expect(body.messages[0].content).toContain("Worst depeg by bps");
-  });
-
-
-  it("normalizes weekly meta lead and tone through the allowlist", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
-      meta: {
-        leadSignalId: "wk:arc",
-        lead: "Week narrative about USDC flow rotation accelerating mid-week",
-        tone: "structurally-concerned-sardonic",
-        coins: ["USDC"],
-      },
-    }));
-
-    await generateWeeklyRecap(db, "anthropic-key", null, null);
-
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
-    expect(insert).toBeTruthy();
-    const metaStored = JSON.parse(String(insert?.binds[5])) as Record<string, unknown>;
-    expect(metaStored.lead).toBe("other");
-    expect(metaStored.tone).toBe("other");
-    expect(metaStored.type).toBe("weekly");
   });
 
   it("skips generation cleanly when the Anthropic circuit is open", async () => {

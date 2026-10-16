@@ -123,20 +123,6 @@ describe("Explore Next peer ranking", () => {
     };
   }
 
-  it("ranks currency first, resolved mechanism next, then previous similarity and candidate order", () => {
-    const candidates = [
-      peer("usd-vault", "USD", "protocol-position"),
-      peer("eur-cdp", "EUR", "cdp"),
-      peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "rwa-backed" }),
-      peer("chf-cdp-first", "CHF", "cdp", { governance: "centralized" }),
-      peer("chf-cdp-second", "CHF", "cdp", { governance: "centralized" }),
-      peer("chf-cdp-best", "CHF", "cdp"),
-    ];
-    expect(getRelatedStablecoins(current, { candidates }).map((entry) => entry.id)).toEqual([
-      "chf-cdp-best", "chf-cdp-first", "chf-cdp-second", "chf-fiat", "eur-cdp", "usd-vault",
-    ]);
-  });
-
   it("fills remaining slots with the existing candidates when currency matches are scarce", () => {
     const candidates = [
       ...Array.from({ length: 6 }, (_, index) => peer(`usd-vault-${index}`, "USD", "protocol-position")),

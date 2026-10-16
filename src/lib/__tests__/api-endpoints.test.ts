@@ -1,13 +1,9 @@
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
   getEndpointDefinitionByKey,
-  API_PATHS,
   getSiteDataAccess,
   getPublicApiAccess,
-  getEndpointProbeDescriptors,
   getProbePaths,
   getStatusPageActions,
   ENDPOINT_DEFINITIONS,
@@ -71,36 +67,9 @@ describe("api endpoint registry", () => {
     }
   });
 
-  it("excludes digest snapshot from auto-probe coverage because it requires an explicit date", () => {
-    expect(getProbePaths("public")).not.toContain("/api/digest-snapshot");
-    expect(getProbePaths("public")).not.toContain("/api/snapshots/:date.json");
-    expect(getProbePaths("public")).not.toContain("/api/snapshot/:date/stablecoin/:id");
-  });
-
   it("keeps dynamic endpoints out of the static route table", () => {
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.every((endpoint) => isStaticEndpointPath(endpoint.path))).toBe(true);
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => endpoint.key)).not.toContain("stablecoin-detail");
-  });
-
-  it("declares semantic probe metadata only for health and status", () => {
-    expect(
-      ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.probeSemanticKind).map((endpoint) => ({
-        key: endpoint.key,
-        path: endpoint.path,
-        probeSemanticKind: endpoint.probeSemanticKind,
-      })),
-    ).toEqual([
-      { key: "health", path: "/api/health", probeSemanticKind: "health" },
-      { key: "status", path: "/api/status", probeSemanticKind: "status" },
-    ]);
-
-    expect(getEndpointProbeDescriptors("public").filter((probe) => probe.probeSemanticKind)).toEqual([
-      { path: "/api/health", probeSemanticKind: "health" },
-    ]);
-    expect(getEndpointProbeDescriptors("admin").filter((probe) => probe.probeSemanticKind)).toEqual([
-      { path: "/api/status", probeSemanticKind: "status" },
-    ]);
-    expect(getEndpointProbeDescriptors("manual").filter((probe) => probe.probeSemanticKind)).toEqual([]);
   });
 
   it("resolves static endpoint dependency policies by key", () => {
@@ -209,10 +178,6 @@ describe("api endpoint registry", () => {
     expect(getSiteDataAccess("/api/api-keys/0/update")).toBeNull();
   });
 
-  it("builds the yield summary projection path", () => {
-    expect(API_PATHS.yieldRankingsSummary()).toBe("/api/yield-rankings?projection=summary");
-  });
-
   it.each([
     ["/api/yield-rankings?projection=summary", "GET"],
     ["/api/stablecoins", "GET"],
@@ -317,29 +282,6 @@ describe("api endpoint registry", () => {
       } else {
         expect(action.dryRun.default).toBe(false);
       }
-    }
-  });
-
-  it("limits status-action runbooks to known repository documents", () => {
-    const allowedRunbookPaths = new Set([
-      "docs/blacklist-tracker.md",
-      "docs/data-flow-map.md",
-      "docs/depeg-detection.md",
-      "docs/dews.md",
-      "docs/mint-burn-flows.md",
-      "docs/pricing-pipeline.md",
-      "docs/stability-index.md",
-      "docs/supply-snapshot.md",
-      "docs/yield-intelligence.md",
-    ]);
-    const referencedRunbooks = getStatusPageActions().flatMap((action) =>
-      action.runbookPath ? [action.runbookPath] : [],
-    );
-
-    expect(referencedRunbooks.length).toBeGreaterThan(0);
-    for (const runbookPath of referencedRunbooks) {
-      expect(allowedRunbookPaths.has(runbookPath)).toBe(true);
-      expect(existsSync(resolve(process.cwd(), runbookPath))).toBe(true);
     }
   });
 

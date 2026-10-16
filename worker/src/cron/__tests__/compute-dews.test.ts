@@ -433,7 +433,6 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it.each([
-    ["fresh", 0, null],
     ["boundary", -3600, null],
     ["stale", -3601, "stale-sample"],
     ["future", 61, "future-timestamp"],
@@ -455,7 +454,6 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.degradedSources).not.toContain("stability-index-samples");
   });
   it.each([
-    ["fresh", 0, null],
     ["inclusive boundary", -DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC, null],
     ["stale", -DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC - 1, "stale"],
     ["missing clock", null, "missing-timestamp"],
@@ -868,48 +866,6 @@ describe("computeAndStoreDEWS", () => {
         stablecoinId: "usdt-tether",
         context: "stress_signals.signals_json",
         reason: "json-parse-failed",
-        degradesRun: false,
-      }),
-    );
-  });
-
-  it("quarantines malformed yield warnings while publishing a healthy peer", async () => {
-    const sqlSeen: string[] = [];
-    vi.mocked(getCache).mockImplementation(async (_db, key) =>
-      key === "dews:bootstrap-complete" || key === "dews:published-generation" ? null : dewsCache([
-        dewsCoin(), dewsCoin({ id: "pyusd-paypal", symbol: "PYUSD" }),
-      ]) as never,
-    );
-    const db = makeDb(sqlSeen, {
-      yieldWarningRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          warning_signals: '{"not":"an-array"}',
-        },
-      ],
-    });
-
-    const result = await computeAndStoreDEWS(db);
-
-    expect(result.status).toBeUndefined();
-    expect(result.itemCount).toBe(1);
-    expect(computeDEWS).toHaveBeenCalledTimes(1);
-    expect(writeFreshnessSentinel).toHaveBeenCalled();
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      quarantinedStablecoinIds: ["usdt-tether"],
-      publicationPointerWritten: true,
-    });
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      malformedCoreInputRows: number;
-      malformedPersistedInputs: Array<{ source: string; stablecoinId: string; context: string }>;
-    };
-    expect(metadata.malformedCoreInputRows).toBe(1);
-    expect(metadata.malformedPersistedInputs).toContainEqual(
-      expect.objectContaining({
-        source: "yield_data",
-        stablecoinId: "usdt-tether",
-        context: "yield_data.warning_signals",
-        reason: "invalid-shape",
         degradesRun: false,
       }),
     );

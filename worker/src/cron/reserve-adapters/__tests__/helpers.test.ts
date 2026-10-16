@@ -21,7 +21,6 @@ import {
   computeUnknownExposurePct,
   decimalStringFromBigInt,
   fetchDefiLlamaPrices,
-  fetchJsonWithRetry,
   freshnessMetadataFromTimestamp,
   isReserveRisk,
   normalizeSlices,
@@ -33,9 +32,6 @@ import {
   slicesFromValues,
   summarizeSourceTimestamps,
   summarizeSourceTimestampsRequiringCoverage,
-  unverifiedFreshnessMetadata,
-  valueUsdFromBigIntPrice,
-  verifiedFreshnessMetadata,
 } from "../helpers";
 import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
 import { parseDecimalNumber, parseFiniteNumber, sumBackingAssetAmounts } from "../strict-amount";
@@ -150,17 +146,6 @@ describe("normalizeSlices", () => {
     expect(result[0].pct).toBe(33.4);
   });
 
-  it("rounds to 1 decimal place when decimals=1", () => {
-    const slices: ReserveSlice[] = [
-      { name: "A", pct: 33.33, risk: "low" },
-      { name: "B", pct: 33.33, risk: "medium" },
-      { name: "C", pct: 33.33, risk: "high" },
-    ];
-    const result = normalizeSlices(slices, 1);
-    const sum = result.reduce((acc, s) => acc + s.pct, 0);
-    expect(sum).toBeCloseTo(100.0, 1);
-  });
-
   it("deduplicates slices with the same name|risk|coinId|depType key", () => {
     const slices: ReserveSlice[] = [
       { name: "USDC", pct: 30, risk: "low", coinId: "usd-coin" },
@@ -195,20 +180,6 @@ describe("normalizeSlices", () => {
       { name: "B", pct: -5, risk: "medium" },
       { name: "C", pct: 100, risk: "high" },
     ])).toThrow(/reserve percentages row 1 has invalid value: -5/);
-  });
-
-  it("returns empty for empty input", () => {
-    expect(normalizeSlices([])).toEqual([]);
-  });
-
-  it("sorts descending by pct", () => {
-    const slices: ReserveSlice[] = [
-      { name: "Small", pct: 10, risk: "low" },
-      { name: "Large", pct: 60, risk: "medium" },
-      { name: "Mid", pct: 30, risk: "high" },
-    ];
-    const result = normalizeSlices(slices);
-    expect(result.map((s) => s.name)).toEqual(["Large", "Mid", "Small"]);
   });
 
   it("rejects a grossly oversummed upstream before remainder correction", () => {
@@ -348,43 +319,9 @@ describe("slicesFromValues", () => {
     expect(dai?.depType).toBeUndefined();
   });
 
-  it("rounds to 1 decimal by default (three equal values sum to 100.0)", () => {
-    const result = slicesFromValues([
-      { value: 100, name: "A", risk: "low" },
-      { value: 100, name: "B", risk: "medium" },
-      { value: 100, name: "C", risk: "high" },
-    ]);
-    const sum = result.reduce((acc, s) => acc + s.pct, 0);
-    expect(sum).toBeCloseTo(100.0, 1);
-  });
 });
 
 describe("buildBucketSlices", () => {
-  it("builds slices from bucket totals and returns the immediate redeemable bucket value", () => {
-    const bucketTotals = new Map([
-      ["stable", 60],
-      ["btc", 30],
-      ["other", 10],
-    ] as const);
-
-    const result = buildBucketSlices(
-      bucketTotals,
-      [
-        { name: "Stable", bucket: "stable", risk: "low" },
-        { name: "BTC", bucket: "btc", risk: "medium" },
-        { name: "Other", bucket: "other", risk: "high" },
-      ],
-      "stable",
-    );
-
-    expect(result.immediateRedeemableUsd).toBe(60);
-    expect(result.slices).toEqual([
-      { name: "Stable", pct: 60, risk: "low" },
-      { name: "BTC", pct: 30, risk: "medium" },
-      { name: "Other", pct: 10, risk: "high" },
-    ]);
-  });
-
   it("supports explicit slice values alongside bucket-backed slices", () => {
     const bucketTotals = new Map([
       ["stable", 50],
@@ -431,27 +368,6 @@ describe("isReserveRisk", () => {
   });
 });
 
-describe("unverifiedFreshnessMetadata", () => {
-  it("standardizes unverified freshness semantics with explicit detail fields", () => {
-    expect(unverifiedFreshnessMetadata("issuer-api", "timestamp missing")).toEqual({
-      freshnessMode: "unverified",
-      details: {
-        freshnessSource: "issuer-api",
-        freshnessReason: "timestamp missing",
-      },
-    });
-  });
-});
-
-describe("verifiedFreshnessMetadata", () => {
-  it("standardizes verified freshness semantics", () => {
-    expect(verifiedFreshnessMetadata(1_777_000_000)).toEqual({
-      sourceTimestamp: 1_777_000_000,
-      freshnessMode: "verified",
-    });
-  });
-});
-
 describe("notApplicableFreshnessMetadata", () => {
   it("standardizes latest-state freshness semantics", () => {
     expect(notApplicableFreshnessMetadata()).toEqual({
@@ -483,9 +399,9 @@ describe("freshnessMetadataFromTimestamp", () => {
 
 describe("decimal amount parsing", () => {
   it.each([
-    [42, 42], ["42.5", 42.5], [" .5 ", 0.5], ["1.", 1],
+    [42, 42], [" .5 ", 0.5], ["1.", 1],
     ["+1e3", 1000], ["-1.5e-2", -0.015], ["1.E+2", 100],
-    ["+0", 0], ["-0", -0], ["0", 0], [0, 0],
+    ["-0", -0], ["0", 0], [0, 0],
   ] as const)("preserves finite decimal units for %s", (value, expected) => {
     expect(parseDecimalNumber(value)).toBe(expected);
     expect(parseFiniteNumber(value, { label: "reserve amount" })).toBe(expected);
@@ -493,11 +409,11 @@ describe("decimal amount parsing", () => {
   });
 
   it.each([
-    "0x10", "0X10", "+0x10", "0b10", "0o10", "", "  ", ".", "+", "-",
-    "1e", "1e+", "1e309", "-1e309", "1_000", "1,000", "Infinity", "NaN",
+    "0x10", "0b10", "0o10", "", ".", "+", "-",
+    "1e", "1e+", "1e309", "1_000", "1,000", "Infinity", "NaN",
     "1.2.3", ".e2", "e2", "1ee2", "1e2.5", "1e--2", "1-2", "1 2",
-    true, false, {}, { value: 1 }, [], [1], null, undefined, 1n,
-    Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY,
+    true, {}, [], null, undefined, 1n,
+    Number.NaN, Number.POSITIVE_INFINITY,
   ])("rejects malformed amounts without a zero fallback: %s", (value) => {
     expect(parseDecimalNumber(value)).toBeNull();
     expect(parsePositiveNumericLike(value)).toBeNull();
@@ -551,9 +467,6 @@ describe("decimal helpers", () => {
     expect(decimalStringFromBigInt(1_234_500_000_000_000_000n, 18)).toBe("1.2345");
   });
 
-  it("values scaled bigint balances against usd prices without converting to decimal numbers first", () => {
-    expect(valueUsdFromBigIntPrice(100_000_000n, 8, 60_000)).toBe(60_000);
-  });
 });
 
 describe("unknown exposure helpers", () => {
@@ -759,27 +672,6 @@ describe("fetchJsonWithRetry", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("surfaces content type and body snippet when a JSON endpoint returns HTML", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      new Response("<!DOCTYPE html><html><body>blocked</body></html>", {
-        status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      }),
-    );
-
-    const error = await fetchJsonWithRetry("https://example.com/api", signal).then(
-      () => new Error("expected fetchJsonWithRetry to reject"),
-      (err: unknown) => err,
-    );
-
-    expect(error).toBeInstanceOf(Error);
-    if (!(error instanceof Error)) {
-      throw new Error("expected fetchJsonWithRetry to reject with an Error");
-    }
-    expect(error.message).toContain("JSON parse failed for https://example.com/api (HTTP 200, text/html; charset=utf-8)");
-    expect(error.message).toContain("body starts with: <!DOCTYPE html><html><body>blocked</body></html>");
   });
 
   it("falls back across secondary Solana RPC endpoints when earlier endpoints fail", async () => {

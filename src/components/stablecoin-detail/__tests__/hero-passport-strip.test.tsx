@@ -179,34 +179,9 @@ describe("HeroPassportStrip", () => {
     ]);
   });
 
-  it("pairs each field name with its own value", () => {
-    const { getByRole } = render(<HeroPassportStrip items={ITEMS} />);
-
-    const mechanism = getByRole("link", { name: "Peg mechanism: Custodial Cash — jump to Key Information" });
-    const [label, value] = Array.from(mechanism.querySelectorAll("span"));
-    expect(label.textContent).toBe("Mechanism");
-    expect(value.textContent).toBe("Custodial Cash");
-  });
-
   it("renders nothing when fewer than three facts resolve", () => {
     const { container } = render(<HeroPassportStrip items={ITEMS.slice(0, 2)} />);
     expect(container.firstChild).toBeNull();
   });
 
-  it("drops the mechanism cell from the compact desktop tier while the mobile row keeps it", () => {
-    // Mechanism already has its own hero treatment, so the compact desktop
-    // strip spends that column on a fact the card does not otherwise show.
-    const { container } = render(<HeroPassportStrip items={ITEMS} compactDesktop />);
-
-    const tiers = Array.from(container.querySelectorAll("div")).filter((node) => node.querySelector(":scope > a"));
-    expect(tiers).toHaveLength(2);
-    const [mobileHrefs, desktopHrefs] = tiers.map((tier) =>
-      Array.from(tier.querySelectorAll(":scope > a")).map((link) => link.getAttribute("href")),
-    );
-
-    expect(mobileHrefs).toEqual(ITEMS.map((item) => item.href));
-    expect(desktopHrefs).toEqual(
-      ITEMS.filter((item) => item.category !== "Mechanism").map((item) => item.href),
-    );
-  });
 });

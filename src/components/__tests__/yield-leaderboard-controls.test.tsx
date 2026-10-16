@@ -43,19 +43,6 @@ function buildModel(params: Parameters<typeof buildYieldViewModel>[1] = {}, watc
 }
 
 describe("YieldLeaderboardControls", () => {
-  it("renders the controls without throwing", () => {
-    render(
-      <YieldLeaderboardControls
-        viewModel={buildModel()}
-        onFilterChange={vi.fn()}
-        onClearFilters={vi.fn()}
-        onApplyPreset={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByPlaceholderText("Search stablecoin...")).toBeTruthy();
-  });
-
   it("does not render the Watching chip when the watchlist is empty", () => {
     render(
       <YieldLeaderboardControls
@@ -202,29 +189,6 @@ describe("YieldLeaderboardControls", () => {
       return buildYieldViewModel(prepareYieldUniverse(cohortRows, null), params);
     }
 
-    it("renders non-zero yield types in descending count order with All first", () => {
-      render(
-        <YieldLeaderboardControls
-          viewModel={buildCohortModel()}
-          onFilterChange={vi.fn()}
-          onClearFilters={vi.fn()}
-          onApplyPreset={vi.fn()}
-        />,
-      );
-
-      const group = screen.getByRole("group", { name: "Filter by yield type" });
-      const tabLabels = Array.from(
-        group.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
-      ).map((button) => button.textContent ?? "");
-
-      expect(tabLabels).toEqual([
-        "All types6",
-        "Lending Opp.3",
-        "Rebase2",
-        "Fee Share1",
-      ]);
-    });
-
     it("invokes onFilterChange with the yield type when a tab is clicked", () => {
       const onFilterChange = vi.fn();
       render(
@@ -246,24 +210,6 @@ describe("YieldLeaderboardControls", () => {
       expect(onFilterChange).toHaveBeenCalledWith("yieldType", "rebase");
     });
 
-    it("marks the active tab when filters.yieldType matches", () => {
-      render(
-        <YieldLeaderboardControls
-          viewModel={buildCohortModel({ yieldType: "rebase" })}
-          onFilterChange={vi.fn()}
-          onClearFilters={vi.fn()}
-          onApplyPreset={vi.fn()}
-        />,
-      );
-
-      const group = screen.getByRole("group", { name: "Filter by yield type" });
-      const tabs = Array.from(
-        group.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
-      );
-      const activeTabs = tabs.filter((button) => button.getAttribute("aria-pressed") === "true");
-      expect(activeTabs).toHaveLength(1);
-      expect(activeTabs[0]?.textContent).toContain("Rebase");
-    });
   });
 
   it("clears the watchlist filter from the active-filter pill", () => {

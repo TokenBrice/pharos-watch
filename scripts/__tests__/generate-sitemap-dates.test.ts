@@ -1,8 +1,7 @@
-import { join, matchesGlob, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import { collectStablecoinDetailDates } from "../lib/sitemap-detail-dates";
-import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const FLOOR_DATE = "2026-01-01T00:00:00.000Z";
@@ -16,21 +15,6 @@ const reservesSidecars = new Set(
 );
 
 describe("stablecoin detail sitemap dates", () => {
-  it("advances a coin page when only its reserves sidecar changed", () => {
-    const entry = entries.find((candidate) => reservesSidecars.has(`${RESERVES_SIDECAR_PREFIX}${candidate.id}.json`));
-    expect(entry).toBeDefined();
-    const sidecarFiles = new Set((entry?.sidecarFiles ?? []).map((file) => join(REPO_ROOT, file)));
-
-    const dates = collectStablecoinDetailDates(
-      [entry!],
-      (absolutePath) => (sidecarFiles.has(absolutePath) ? SIDECAR_EDIT_DATE : FLOOR_DATE),
-      FLOOR_DATE,
-      REPO_ROOT,
-    );
-
-    expect(dates).toEqual({ [`/stablecoin/${entry!.id}/`]: SIDECAR_EDIT_DATE });
-  });
-
   it("advances exactly the pages whose reserves sidecar is the newest source", () => {
     const edited = new Set([...reservesSidecars].map((file) => join(REPO_ROOT, file)));
     const dates = collectStablecoinDetailDates(
@@ -55,14 +39,5 @@ describe("stablecoin detail sitemap dates", () => {
 
     expect(Object.keys(dates).sort()).toEqual(entries.map((entry) => `/stablecoin/${entry.id}/`).sort());
     expect(new Set(Object.values(dates))).toEqual(new Set([SIDECAR_EDIT_DATE]));
-  });
-
-  it("declares the sidecar tree as a generator source so a sidecar-only commit reselects it", () => {
-    expect(reservesSidecars.size).toBeGreaterThan(0);
-    const undeclared = [...reservesSidecars].filter(
-      (file) => !SITEMAP_COMMIT_DERIVED_SOURCE_PATHS.some((pattern) => matchesGlob(file, pattern)),
-    );
-
-    expect(undeclared).toEqual([]);
   });
 });

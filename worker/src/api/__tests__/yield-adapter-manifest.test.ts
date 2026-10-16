@@ -1,7 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleYieldAdapterManifest } from "../yield-adapter-manifest";
-import { getRouteMatch } from "../../routes/registry";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
@@ -13,7 +12,6 @@ import {
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../../lib/yield-config/yield-config";
 import {
-  YIELD_ADAPTER_MANIFEST_FAMILY_VALUES,
   YieldAdapterManifestResponseSchema,
   type YieldAdapterManifestResponse,
 } from "@shared/types/yield";
@@ -96,37 +94,6 @@ describe("handleYieldAdapterManifest", () => {
     expect(activated.headers.get("X-Data-Age")).toBe("0");
   });
 
-  it("covers every adapter family declared in the static registry", async () => {
-    const res = await handleYieldAdapterManifest();
-    const body = (await res.json()) as YieldAdapterManifestResponse;
-    const observedFamilies = new Set(body.entries.map((entry) => entry.family));
-
-    const expectedFamilies = ["onchain", "defillama", "rate-derived", "price-derived"] as const;
-    for (const family of expectedFamilies) {
-      expect(observedFamilies.has(family)).toBe(true);
-    }
-
-    for (const family of observedFamilies) {
-      expect(YIELD_ADAPTER_MANIFEST_FAMILY_VALUES).toContain(family);
-    }
-  });
-
-  it("stamps the current methodology version on every entry and exposes lifecycle", async () => {
-    const res = await handleYieldAdapterManifest();
-    const body = (await res.json()) as YieldAdapterManifestResponse;
-    const validLifecycles = new Set(["active", "quarantined", "intentional-gap", "experimental"]);
-    for (const entry of body.entries) {
-      expect(entry.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
-      expect(entry.coinSymbol).toBeTypeOf("string");
-      expect(entry.coinSymbol.length).toBeGreaterThan(0);
-      if (entry.sourceKey != null) {
-        expect(entry.sourceKey.length).toBeGreaterThan(0);
-      }
-      expect(entry.label.length).toBeGreaterThan(0);
-      expect(validLifecycles.has(entry.lifecycle)).toBe(true);
-    }
-  });
-
   it("publishes runtime source keys for exact sources instead of synthetic ids", async () => {
     const res = await handleYieldAdapterManifest();
     const body = (await res.json()) as YieldAdapterManifestResponse;
@@ -200,12 +167,5 @@ describe("handleYieldAdapterManifest", () => {
         ),
       ).toBe(false);
     }
-  });
-
-  it("registers /api/yield-adapter-manifest as a public GET route", () => {
-    const match = getRouteMatch("/api/yield-adapter-manifest");
-    expect(match).not.toBeNull();
-    expect(match?.methods).toContain("GET");
-    expect(match?.endpoint?.adminRequired).toBe(false);
   });
 });

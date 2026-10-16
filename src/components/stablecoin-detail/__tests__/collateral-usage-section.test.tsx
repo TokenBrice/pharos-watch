@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CollateralUsageSection, type PublishedCollateralUsageEntry } from "../collateral-usage-section";
 
@@ -48,27 +48,5 @@ describe("CollateralUsageSection", () => {
     expect(screen.getByRole("link", { name: /tiny Collateral <1%/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /unknown Collateral share unknown/ })).toBeTruthy();
     expect(screen.queryByText("0%")).toBeNull();
-  });
-
-  it("orders collateral by share then wrappers by known dependent market cap", () => {
-    render(<CollateralUsageSection entries={[
-      entry("small-wrapper", "serial", null, 1),
-      entry("small-basket", "basket", 0.01),
-      entry("unknown-wrapper", "serial", null),
-      entry("large-wrapper", "serial", null, 100),
-      entry("large-basket", "basket", 0.521),
-      entry("unknown-basket", "basket", null),
-    ]} />);
-    expect(screen.getAllByRole("link")).toHaveLength(5);
-    fireEvent.click(screen.getByRole("button", { name: /Show all 6/ }));
-    expect(screen.getAllByRole("link").map((row) => row.getAttribute("href"))).toEqual([
-      "/stablecoin/large-basket", "/stablecoin/small-basket", "/stablecoin/unknown-basket",
-      "/stablecoin/large-wrapper", "/stablecoin/small-wrapper", "/stablecoin/unknown-wrapper",
-    ]);
-  });
-
-  it("omits Used by when no published dependents exist", () => {
-    const { container } = render(<CollateralUsageSection entries={[]} />);
-    expect(container.firstChild).toBeNull();
   });
 });

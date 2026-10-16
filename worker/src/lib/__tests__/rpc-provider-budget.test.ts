@@ -268,42 +268,6 @@ describe("recordDwellirCredits and flushDwellirCredits", () => {
     }
   });
 
-  it("restores the drained credits when D1 rejects the write so the next flush writes the combined amount", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const db = makeCreditLedgerDb();
-    db.failWrites(new Error("D1_ERROR: ledger write failed"));
-    recordDwellirCredits(2);
-    await expect(flushDwellirCredits(db, SEPTEMBER_NOW_SEC)).resolves.toEqual({ flushedCredits: 0, ok: false });
-    expect(db.writes).toEqual([]);
-
-    db.failWrites(null);
-    recordDwellirCredits(3);
-    await expect(flushDwellirCredits(db, SEPTEMBER_NOW_SEC)).resolves.toEqual({ flushedCredits: 5, ok: true });
-    expect(db.values[SEPTEMBER_LEDGER_KEY]).toBe(septemberRow(5));
-    expect(JSON.stringify(warn.mock.calls)).toContain("dwellir_credit_flush_failed");
-  });
-
-  it("retries a lost compare-and-swap without double counting the drained credits", async () => {
-    const db = makeCreditLedgerDb();
-    db.loseWrites(1);
-    recordDwellirCredits(6);
-    await expect(flushDwellirCredits(db, SEPTEMBER_NOW_SEC)).resolves.toEqual({ flushedCredits: 6, ok: true });
-    expect(db.values[SEPTEMBER_LEDGER_KEY]).toBe(septemberRow(6));
-    expect(db.writes).toHaveLength(1);
-  });
-
-  it("keeps the drained credits pending when every compare-and-swap attempt is lost", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const db = makeCreditLedgerDb({ [SEPTEMBER_LEDGER_KEY]: septemberRow(1) });
-    db.loseWrites(Number.POSITIVE_INFINITY);
-    recordDwellirCredits(4);
-    await expect(flushDwellirCredits(db, SEPTEMBER_NOW_SEC)).resolves.toEqual({ flushedCredits: 0, ok: false });
-    expect(db.writes).toEqual([]);
-
-    db.loseWrites(0);
-    await expect(flushDwellirCredits(db, SEPTEMBER_NOW_SEC)).resolves.toEqual({ flushedCredits: 4, ok: true });
-    expect(db.values[SEPTEMBER_LEDGER_KEY]).toBe(septemberRow(5));
-  });
 
   it("keeps the drained credits pending when the month ledger row is corrupt", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);

@@ -124,37 +124,6 @@ describe("subgraph helpers", () => {
     }
   });
 
-  it("maps entities into observations and stops on short final page", async () => {
-    fetchJsonWithRetryMock.mockResolvedValueOnce({
-      response: new Response("", { status: 200 }),
-      body: {
-        data: {
-          rows: [{ id: "pool-a" }],
-        },
-      },
-    });
-
-    const result = await fetchSubgraphEntities<{ id: string }>({
-      subgraphUrl: "https://subgraph.example",
-      sourceLabel: "test subgraph",
-      chain: "ethereum",
-      pageSize: 10,
-      maxPages: 2,
-      buildQuery: (skip) => `{ rows(skip: ${skip}) { id } }`,
-      extractEntities: (data) => (data as { rows?: Array<{ id: string }> } | undefined)?.rows,
-      mapEntity: () => [{
-        stablecoinId: "usdc-circle",
-        obs: { price: 1, tvl: 100_000, chain: "ethereum", protocol: "test" },
-      }],
-    });
-
-    expect(result.entityCount).toBe(1);
-    expect(result.observationCount).toBe(1);
-    expect(result.shouldLogIndex).toBe(true);
-    expect(result.failed).toBe(false);
-    expect(result.observations.get("usdc-circle")).toHaveLength(1);
-  });
-
   it.each(["short-page", "http-failure", "graphql-partial"] as const)(
     "retains ordered observations across pagination: %s", async (ending) => {
       fetchJsonWithRetryMock.mockResolvedValueOnce({

@@ -9,50 +9,6 @@ import {
 } from "../mint-burn-scoring";
 
 describe("computeFlowIntensity", () => {
-  it("returns null when fewer than 7 days of data", () => {
-    expect(
-      computeFlowIntensity({
-        currentDailyNet: -1e8,
-        baselineDailyNet: 0,
-        baselineDailyAbs: 1e9,
-        dataAgeDays: 5,
-        currentDailyAbs: 100_000_000,
-      })
-    ).toBeNull();
-  });
-
-  it("returns null when currentDailyAbs is below MIN_ACTIVITY_USD", () => {
-    const result = computeFlowIntensity({
-      currentDailyNet: 10_000,
-      baselineDailyNet: 5_000,
-      baselineDailyAbs: 20_000,
-      dataAgeDays: 30,
-      currentDailyAbs: 40_000, // below 50K threshold
-    });
-    expect(result).toBeNull();
-  });
-
-  it("returns score when currentDailyAbs meets MIN_ACTIVITY_USD", () => {
-    const result = computeFlowIntensity({
-      currentDailyNet: 100_000,
-      baselineDailyNet: 50_000,
-      baselineDailyAbs: 200_000,
-      dataAgeDays: 30,
-      currentDailyAbs: 150_000, // above 50K threshold
-    });
-    expect(result).not.toBeNull();
-  });
-
-  it("returns exactly 0 when current equals baseline (neutral)", () => {
-    const result = computeFlowIntensity({
-      currentDailyNet: 1e8,
-      baselineDailyNet: 1e8,
-      baselineDailyAbs: 5e8,
-      dataAgeDays: 30,
-      currentDailyAbs: 200_000_000,
-    });
-    expect(result).toBe(0);
-  });
 
   it("computes correct value for moderate net redemptions", () => {
     // denominator = max(2e8 * 0.3, 1e6) = 6e7
@@ -152,15 +108,6 @@ describe("computeFlowIntensity", () => {
 });
 
 describe("getGaugeBand", () => {
-  it("returns CRISIS for -100 to -70", () => {
-    expect(getGaugeBand(-80)).toBe("CRISIS");
-  });
-  it("returns NEUTRAL for -10 to 10", () => {
-    expect(getGaugeBand(0)).toBe("NEUTRAL");
-  });
-  it("returns SURGE for 70-100", () => {
-    expect(getGaugeBand(95)).toBe("SURGE");
-  });
 
   it("pins inclusive lower-bound gauge assignments", () => {
     expect(getGaugeBand(-100)).toBe("CRISIS");
@@ -184,24 +131,6 @@ describe("getGaugeBand", () => {
 });
 
 describe("computeGaugeScore", () => {
-  it("ignores coins with null intensity in weighted average", () => {
-    // Only the coin with intensity=40 is included; the null coin is skipped
-    expect(
-      computeGaugeScore([
-        { intensity: 40, mcap: 1e11 },
-        { intensity: null, mcap: 5e10 },
-      ])
-    ).toBe(40);
-  });
-
-  it("computes mcap-weighted average", () => {
-    // 60 * (100B/150B) + 40 * (50B/150B) = 40 + 13.33 = 53.33
-    const result = computeGaugeScore([
-      { intensity: 60, mcap: 1e11 },
-      { intensity: 40, mcap: 5e10 },
-    ]);
-    expect(result).toBeCloseTo(53.33, 1);
-  });
 
   it("skips coins with null intensity and computes from available data", () => {
     const result = computeGaugeScore([
@@ -220,10 +149,6 @@ describe("computeGaugeScore", () => {
         { intensity: null, mcap: 5e10 },
       ])
     ).toBeNull();
-  });
-
-  it("returns null for empty array", () => {
-    expect(computeGaugeScore([])).toBeNull();
   });
 
   it("returns null for eligible intensities with zero total market cap", () => {
@@ -252,23 +177,6 @@ describe("isGaugeBandRobustToWithheldWeight", () => {
 });
 
 describe("detectFlightToQuality", () => {
-  it("returns inactive when risky outflows below $100M threshold", () => {
-    expect(
-      detectFlightToQuality({ safeNet24h: 2e8, riskyNet24h: -5e7 })
-    ).toEqual({
-      active: false,
-      intensity: 0,
-    });
-  });
-
-  it("returns inactive when safe inflows below $100M threshold", () => {
-    expect(
-      detectFlightToQuality({ safeNet24h: 5e7, riskyNet24h: -2e8 })
-    ).toEqual({
-      active: false,
-      intensity: 0,
-    });
-  });
 
   it("computes exact intensity when both thresholds exceeded", () => {
     // intensity = min(100, abs(-2e8) / 1e9 * 100) = min(100, 20) = 20

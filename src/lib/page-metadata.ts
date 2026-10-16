@@ -93,7 +93,7 @@ function hasGeneratedMarkdownAsset(pathname: string): boolean {
   return false;
 }
 
-export function getMarkdownAlternateForCanonical(canonical: string): string | null {
+function getMarkdownAlternateForCanonical(canonical: string): string | null {
   const pathname = canonicalPathname(canonical);
   if (!pathname) return null;
 
@@ -278,7 +278,7 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
   ]);
 }
 
-export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
+function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
   const governancePhrase = GOVERNANCE_PROSE_LABELS[coin.flags.governance];
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const profilePegLabel = getProfilePegLabel(

@@ -40,12 +40,6 @@ export const BACKING_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descripto
 /** Short labels used in table badge text. */
 export const BACKING_LABELS_SHORT = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.shortLabel);
 
-/** Sentence-case labels used in inline classification prose. */
-export const BACKING_SENTENCE_LABELS = projectDescriptors(
-  BACKING_DESCRIPTORS,
-  (descriptor) => descriptor.sentenceLabel,
-);
-
 /** Prose phrases used inline in metadata descriptions. */
 export const BACKING_PROSE_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.proseLabel);
 

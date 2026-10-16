@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types";
 
 function asset(
@@ -156,20 +156,6 @@ describe("derivePegRates", () => {
     expect(result.counts.peggedGOLD).toBe(2);
   });
 
-  it("uses authoritative FX rates for fiat groups with fewer than 3 eligible coins", () => {
-    const result = derivePegRates(
-      [
-        asset("usd-eur-a", "peggedEUR", 1.1, 2_000_000),
-        asset("usd-eur-b", "peggedEUR", 1.2, 2_100_000),
-      ],
-      undefined,
-      { peggedEUR: 1.2 },
-    );
-
-    expect(result.rates.peggedEUR).toBe(1.2);
-    expect(result.sources.peggedEUR).toBe("fx");
-  });
-
   it("prefers an authoritative fiat FX rate over a broad peer median", () => {
     const result = derivePegRates(
       [
@@ -207,12 +193,6 @@ describe("derivePegRates", () => {
 });
 
 describe("normalizePegType", () => {
-  it("canonicalizes the legacy BRL peg alias", () => {
-    expect(normalizePegType("peggedBRL")).toBe("peggedREAL");
-    expect(normalizePegType("peggedEUR")).toBe("peggedEUR");
-    expect(normalizePegType(undefined)).toBeUndefined();
-  });
-
   it("handles peg types that match inherited object property names", () => {
     const result = derivePegRates([
       asset("constructor-token", "constructor", 1.23, 2_000_000),

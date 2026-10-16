@@ -190,32 +190,6 @@ describe("useInfiniteDepegEvents", () => {
     expect(result.current.loadedCount).toBe(DEFAULT_MAX_AUTO_PAGES);
   });
 
-  it("keeps derived data references stable when query pages are unchanged", () => {
-    const page = {
-      data: {
-        events: [{ id: 1 }],
-        total: 1,
-        totalExact: true,
-        nextCursor: null,
-        pending: [{ stablecoinId: "coin-a" }],
-      },
-      meta: { status: "fresh" },
-    };
-    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([page]));
-
-    const { result, rerender } = renderHook(() => useInfiniteDepegEvents());
-    const firstData = result.current.data;
-    const firstEvents = result.current.data?.events;
-    const firstPending = result.current.data?.pending;
-
-    rerender();
-
-    expect(result.current.data).toBe(firstData);
-    expect(result.current.data?.events).toBe(firstEvents);
-    expect(result.current.data?.pending).toBe(firstPending);
-    expect(result.current.meta).toBe(page.meta);
-  });
-
   it("builds active-only cursor queries", async () => {
     useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([]));
 

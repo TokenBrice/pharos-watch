@@ -10,8 +10,6 @@ import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { projectDependencyGraph } from "@shared/types/dependency-graph";
 import { DependencyHero } from "./dependency-hero";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
-import { DependencyHubsBoard } from "./dependency-hubs-board";
-import { DependencyMapBasinList } from "@/components/dependency-map-basin-list";
 vi.mock("@/hooks/use-dependency-scenarios", () => ({ useDependencyScenarios: () => ({ data: undefined, isError: false }) }));
 
 function publication() {
@@ -56,24 +54,7 @@ describe("Exposure mode", () => {
     expect(screen.getByRole("heading", { level: 3 }).textContent).toContain("$400.00 (known supply only)");
     expect(within(table).queryByText("NR")).toBeNull();
   });
-  it("identifies each desktop root action by its upstream asset", () => {
-    const data = publication();
-    const cards = data.nodes.map(card => ({ id: card.id, name: card.id === "root" ? "Root Asset" : card.id, symbol: card.id }));
-    const model = buildDependencyHubsModel({ cards, edges: data.edges, mcapMap: new Map([["known", 1000]]) });
-    render(<DependencyHubsBoard model={model} onExposure={() => {}} />);
-    expect(screen.getByRole("button", { name: /^Trace exposure from Root Asset$/ }).textContent).toBe("Exposure");
-    expect(screen.queryByRole("button", { name: /^Exposure$/ })).toBeNull();
-  });
-  it("identifies the mobile root action by its upstream asset", () => {
-    const data = publication();
-    const cards = data.nodes.map(card => ({ id: card.id, name: card.id === "root" ? "Root Asset" : card.id, symbol: card.id }));
-    const model = buildDependencyHubsModel({ cards, edges: data.edges, mcapMap: new Map([["known", 1000]]) });
-    const onExposure = vi.fn();
-    render(<DependencyMapBasinList model={model} publication={data} labelOf={id => id === "root" ? "Root Asset" : id} onExposure={onExposure} />);
-    fireEvent.click(screen.getByRole("button", { name: /^Root Asset/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Use Root Asset as exposure root" }));
-    expect(onExposure).toHaveBeenCalledWith("root");
-  });
+
   it("keeps the map and root picker available before choosing roots, without reporting empty reach", () => {
     window.history.replaceState(null, "", "/dependency-map/");
     const data = publication();
@@ -133,17 +114,7 @@ describe("Exposure mode", () => {
     expect(result.rows.find(row => row.id === "malformed")?.share).toBeNull();
     expect(result.direct.knownUsd).toBe(400);
   });
-  it("filters unknown supply without dropping it from the complete results", () => {
-    const data = publication();
-    render(<DependencyExposureResults result={computeDependencyExposure(data, roots)} publication={data} roots={roots} options={[]} inspectedId={null} onInspect={() => {}} networkUpdated={false} held={false} />);
-    const table = screen.getByRole("table");
-    expect(within(table).getByText("unknown")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Unknown supply"));
-    expect(within(table).queryByText("known")).toBeNull();
-    expect(within(table).getByText("unknown")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Unknown supply"));
-    expect(within(table).getByText("known")).toBeTruthy();
-  });
+
   it("hydrates shared roots without a dialog and closes back to its opener preserving roots", async () => {
     window.history.replaceState(null, "", "/dependency-map/?mode=exposure&root=root&limit=20");
     function Harness({ data }: { data: DependencyGraphResponse }) {

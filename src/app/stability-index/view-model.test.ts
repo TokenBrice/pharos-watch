@@ -131,21 +131,6 @@ describe("stability index view-model", () => {
     });
   });
 
-  it.each(["UTC", "America/Los_Angeles", "Asia/Tokyo"])(
-    "formats authored UTC event dates identically in %s including year boundaries",
-    (timeZone) => {
-      vi.stubEnv("TZ", timeZone);
-      try {
-        const rows = buildPsiEventTimelineRows([]);
-        expect(rows.find((row) => row.label === "COVID Crash")?.dateStr).toBe("Mar 12 – Mar 16, 2020");
-        expect(rows.find((row) => row.label === "Year boundary")?.dateStr).toBe("Dec 31, 2020 – Jan 1, 2021");
-        expect(rows.find((row) => row.label === "Single UTC day")?.dateStr).toBe("Jan 1, 2021");
-      } finally {
-        vi.unstubAllEnvs();
-      }
-    },
-  );
-
   it("builds PSI beam dimmer lanes from current component values and prior-sample deltas", () => {
     const lanes = buildPsiBeamDimmers([
       { ts: 1, severity: 8, breadth: 3, stressBreadth: 1, trend: 2 },

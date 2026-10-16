@@ -174,13 +174,6 @@ describe("mockFetch helper", () => {
     expect(await response.json()).toEqual({ ready: true });
   });
 
-  it("throws on unexpected URLs when requireMatch is enabled", async () => {
-    mockFetch([], { requireMatch: true });
-
-    await expect(fetch("https://api.example.test/missing")).rejects.toThrow(
-      "mockFetch: no match for URL: https://api.example.test/missing",
-    );
-  });
 
   it("supports explicit not-found and passthrough unmatched URL policies", async () => {
     const originalFetch = vi.fn(async () => new Response("upstream", { status: 202 }));

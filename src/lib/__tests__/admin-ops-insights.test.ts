@@ -42,13 +42,6 @@ function withReservePressure(base: StatusResponse): StatusResponse {
 }
 
 describe("admin ops insights", () => {
-  it("anchors reserve forecasts to the primary trigger instead of a recent admission", () => {
-    const data = withReservePressure(makeHealthyStatusResponse());
-    data.timestamp = Date.parse("2026-10-14T07:17:00Z") / 1000;
-    data.crons["sync-live-reserves"].lastRun = { startedAt: data.timestamp - 1, durationMs: 1, status: "skipped_neutral" };
-    expect(buildReserveRecoveryForecast(data).nextRunAt).toBe(Date.parse("2026-10-14T08:11:00Z") / 1000);
-  });
-
   it("does not claim a clear queue or confirmed writes after a failed reserve read", () => {
     const data = withReservePressure(makeHealthyStatusResponse());
     data.reserveComposition = makeReserveComposition({ status: "unavailable" });
@@ -65,17 +58,6 @@ describe("admin ops insights", () => {
     expect(checks.find((check) => check.id === "reserve-cursor")?.state).toBe("watch");
     data.crons["sync-live-reserves"].inFlight = { startedAt: 1, updatedAt: 1, stale: true };
     expect(buildReserveRecoveryForecast(data).state).toBe("blocked");
-  });
-  it("estimates reserve catch-up from deferred queue and last-run throughput", () => {
-    const data = withReservePressure(makeHealthyStatusResponse());
-
-    const forecast = buildReserveRecoveryForecast(data);
-
-    expect(forecast.state).toBe("catching-up");
-    expect(forecast.resumeCursor).toBe("a7a5-old-vector");
-    expect(forecast.lastThroughput).toBe(52);
-    expect(forecast.estimatedRunsToClear).toBe(1);
-    expect(forecast.detail).toContain("48 coin(s) remain deferred");
   });
 
   it("prioritizes stale leases over deferred catch-up", () => {

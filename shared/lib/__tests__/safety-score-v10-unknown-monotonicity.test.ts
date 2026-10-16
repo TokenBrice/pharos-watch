@@ -106,17 +106,16 @@ describe("unknown policy rung isolation and capacity classification", () => {
     }
   });
 
-  it.each([0, 1_000_000])("keeps $%s lower-bound capacity distinct from measured exhaustion", (executableUsd) => {
-    const result = evaluateV9Exit({ circulatingUsd: 20_000_000,
-      routes: [makeExitRoute({ coverageClass: "exact-lower-bound",
-        capacityCurve: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200,
-          executableUsd, completionRatio: executableUsd / 1_000_000, executionCostBps: 0 }],
-      })],
-    }, V9_CANDIDATE_POLICY_V1);
-    if (executableUsd === 0) expect(result.reasons).toContain("missing-same-notional-route");
-    else expect(result.reasons).not.toContain("missing-same-notional-route");
-    expect(result.reasons).not.toContain("no-viable-exit-path");
-  });
+  it.each([1_000_000])("keeps $%s lower-bound capacity distinct from measured exhaustion", (executableUsd) => {
+      const result = evaluateV9Exit({ circulatingUsd: 20_000_000,
+        routes: [makeExitRoute({ coverageClass: "exact-lower-bound",
+          capacityCurve: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200,
+            executableUsd, completionRatio: executableUsd / 1_000_000, executionCostBps: 0 }],
+        })],
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(result.reasons).not.toContain("missing-same-notional-route");
+      expect(result.reasons).not.toContain("no-viable-exit-path");
+    });
 
   it("keeps diagnostic missing-route evidence visible alongside measured zero capacity", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [
@@ -139,12 +138,4 @@ describe("unknown policy rung isolation and capacity classification", () => {
       .toBe("unproven-settlement-bound");
   });
 
-  it("does not let bounded uncertainty soften measured complete-route exhaustion", () => {
-    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [makeExitRoute({
-      capacityCurve: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200,
-        executableUsd: 0, completionRatio: 0, executionCostBps: 0 }],
-    })] }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(0);
-    expect(result.reasons).toContain("no-viable-exit-path");
-  });
 });

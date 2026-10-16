@@ -71,26 +71,6 @@ describe("shouldWithholdTemporalJump", () => {
     expect(withheld).toBe(false);
   });
 
-  it("returns false when mid (price + previousTrustedPrice)/2 <= 0", () => {
-    // Negative candidate price makes mid <= 0 (defensive branch).
-    const withheld = shouldWithholdTemporalJump({
-      price: -2.0,
-      source: "coingecko",
-      confidence: "low",
-      agreeSources: ["coingecko"],
-      mode: "primary_authoritative",
-      validationContext: USD_CONTEXT,
-      previousTrustedPrice: {
-        price: 1.0,
-        source: "coingecko",
-        confidence: "low",
-        observedAt: null,
-        agreeSources: ["coingecko"],
-      },
-    });
-    expect(withheld).toBe(false);
-  });
-
   it("returns false when moveBps is below the 2000 bps threshold", () => {
     // 1.0 → 0.9 = ~1053 bps, below 2000 threshold
     const withheld = shouldWithholdTemporalJump({

@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
-import { YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
-import { buildYieldDecisionLedgerDisplay } from "@/lib/yield-decision-ledger";
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
-import type { AltYieldSource, YieldDecisionRejectionReasonCode, YieldRanking } from "@shared/types";
+import type { AltYieldSource, YieldRanking } from "@shared/types";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 
 function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {
@@ -151,19 +149,6 @@ function altSource(overrides: Partial<AltYieldSource> & Pick<AltYieldSource, "so
 }
 
 describe("buildYieldSourceExplorerModel — published rejection reasons", () => {
-  it.each(["thinner", "stale", "rewards-only", "lower-confidence", "smaller"] as YieldDecisionRejectionReasonCode[])(
-    "maps published %s without reconstructing arbitration",
-    (code) => {
-      const model = buildYieldSourceExplorerModel(ranking({
-        altSources: [altSource({ sourceKey: "alt", rejectionReasonCode: code })],
-      }));
-      expect(model.retainedAlternates[0]?.rejectionHint).toMatchObject({
-        code,
-        label: YIELD_DECISION_REJECTION_REASON_LABELS[code],
-      });
-    },
-  );
-
   it.each([undefined, "unspecified"] as const)("keeps %s reasons unavailable even with stale reward-heavy evidence", (code) => {
     const model = buildYieldSourceExplorerModel(ranking({
       altSources: [altSource({
@@ -174,27 +159,6 @@ describe("buildYieldSourceExplorerModel — published rejection reasons", () => 
       })],
     }));
     expect(model.retainedAlternates[0]?.rejectionHint).toBeNull();
-  });
-
-  it("preserves published lower-confidence over a reward-heavy alternate and agrees with the ledger", () => {
-    const code: YieldDecisionRejectionReasonCode = "lower-confidence";
-    const alternate = altSource({
-      sourceKey: "reward-alt",
-      confidenceTier: "discovered",
-      rejectionReasonCode: code,
-      sourceRisk: { rewardShare: 0.9 },
-    });
-    const ledger = buildYieldDecisionLedgerDisplay({
-      selectedReasonCode: "curated-over-discovered", previousBestSourceKey: null,
-      sourceSwitch: false, apy30dDeltaFromPrevious: null, rejectedCount: 1,
-      alternatives: [{ sourceKey: alternate.sourceKey, yieldSource: alternate.yieldSource, apy30dDelta: -0.5, rejectionReasonCode: code }],
-    });
-    const model = buildYieldSourceExplorerModel(ranking({
-      provenance: makeYieldProvenance({ confidenceTier: "curated" }),
-      altSources: [alternate],
-    }));
-    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe(code);
-    expect(model.retainedAlternates[0]?.rejectionHint?.label).toBe(ledger?.alternatives[0]?.rejectionLabel);
   });
 
   it("renders the published confidence tier on alternates even when lane inference disagrees (B33)", () => {

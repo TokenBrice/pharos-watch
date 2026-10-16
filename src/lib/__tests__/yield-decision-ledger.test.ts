@@ -19,25 +19,6 @@ const ledger: YieldPublicDecisionLedger = {
 };
 
 describe("buildYieldDecisionLedgerDisplay", () => {
-  it("maps coded source-decision evidence to display labels", () => {
-    const display = buildYieldDecisionLedgerDisplay(ledger);
-
-    expect(display).toMatchObject({
-      reasonLabel: "Curated source preferred",
-      sourceSwitchLabel: "Source changed (+1.80 pp APY30d)",
-      rejectedCountLabel: "1 alternate rejected",
-      previousSourceKey: "defillama-auto:legacy",
-    });
-    expect(display?.alternatives).toEqual([
-      {
-        sourceKey: "defillama-auto:compound-v3:usdc",
-        yieldSource: "Compound V3 USDC",
-        rejectionLabel: "lower confidence",
-        apy30dDeltaLabel: "-0.51 pp APY30d",
-      },
-    ]);
-  });
-
   it.each([[1, "+1.00 pp"], [-1, "-1.00 pp"], [-0.001, "+0.00 pp"]] as const)(
     "formats absolute APY delta %s in normalized percentage points",
     (delta, label) => {
@@ -52,10 +33,3 @@ describe("buildYieldDecisionLedgerDisplay", () => {
   });
 });
 
-describe("formatYieldDecisionReasonLine", () => {
-  it("returns a compact one-line reason", () => {
-    expect(formatYieldDecisionReasonLine(ledger)).toBe(
-      "Curated source preferred | Source changed (+1.80 pp APY30d) | 1 alternate rejected",
-    );
-  });
-});

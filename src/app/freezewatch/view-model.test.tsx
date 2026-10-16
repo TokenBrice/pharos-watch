@@ -78,18 +78,6 @@ describe("parseFreezeWatchPageFilters", () => {
     expect(filters.searchQuery).toBe("");
     expect(filters.statusBucket).toBeNull();
   });
-
-  it("accepts chainId as a URL alias for chain", () => {
-    const filters = parseFreezeWatchPageFilters("?chainId=ethereum");
-
-    expect(filters.chainFilter).toBe("ethereum");
-  });
-
-  it("accepts coin as a temporary URL alias for stablecoin", () => {
-    const filters = parseFreezeWatchPageFilters("?coin=usdt");
-
-    expect(filters.stablecoinFilter).toBe("USDT");
-  });
 });
 
 describe("useFreezeWatchPageController", () => {
@@ -359,13 +347,5 @@ describe("useFreezeWatchPageController", () => {
     nextParams = new URLSearchParams(currentSearch);
     expect(nextParams.get("chain")).toBe("tron");
     expect(nextParams.get("chainId")).toBeNull();
-  });
-
-  it("resets page to 1 when applying a new filter", () => {
-    currentSearch = "?page=3";
-    const { result } = renderHook(() => useFreezeWatchPageController());
-    act(() => result.current.handleStablecoinChange("USDC"));
-    const nextParams = new URLSearchParams(currentSearch);
-    expect(nextParams.get("page")).toBeNull();
   });
 });

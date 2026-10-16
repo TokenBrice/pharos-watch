@@ -138,10 +138,6 @@ describe("hasReserveScoreInputHold", () => {
     };
   }
 
-  it("treats a healthy lane with partially conservative coverage as clean (live 73.7% shape)", () => {
-    expect(hasReserveScoreInputHold(makeReserve({ authoritativeFreshCoverageRatio: 0.7374 }))).toBe(false);
-  });
-
   it("holds only below the documented authoritative coverage threshold", () => {
     expect(hasReserveScoreInputHold(makeReserve({
       authoritativeFreshCoverageRatio: STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio,

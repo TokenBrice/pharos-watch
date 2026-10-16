@@ -33,9 +33,6 @@ function replaySimulation(capture: typeof pinned.snapshots[number]): RaydiumSnap
 afterEach(() => vi.unstubAllGlobals());
 
 describe("native Raydium CLMM exact-in", () => {
-  it("reproduces the same-slot JUPUSD/Jupiter reference byte-for-byte", () => {
-    expect(quoteRaydiumExactIn(replay(), fixture.tokenMintIn, BigInt(fixture.amountIn))).toEqual({ amountOut: 999152114n, slot: 449058549 });
-  });
   it("derives captured negative and positive tick-array PDAs with BE seeds", async () => {
     for (const array of replay().tickArrays) expect(await raydiumTickArrayAddress(fixture.poolAddress, array.startTickIndex)).toBe(array.address);
   });

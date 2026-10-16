@@ -23,7 +23,6 @@ import {
   fetchKrakenPrices,
 } from "../cex-tickers";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createDeferredPromise } from "./deferred.test-support";
 
@@ -96,23 +95,6 @@ describe("fetchBinancePricesDetailed", () => {
       success: false,
       responseRowCount: 2,
       matchedCount: 0,
-    });
-  });
-
-  it("captures Binance non-OK snippets for diagnostics", async () => {
-    mockFetch([{ match: () => true, body: "blocked by upstream", status: 403 }]);
-
-    const {
-      value: { prices, diagnostics },
-    } = await fetchBinancePricesDetailed();
-
-    expect(prices.size).toBe(0);
-    expect(diagnostics[0]).toMatchObject({
-      source: "binance",
-      status: 403,
-      ok: false,
-      success: false,
-      snippet: "blocked by upstream",
     });
   });
 
@@ -416,20 +398,6 @@ describe("fetchCoinbasePrices", () => {
     expect(maxInFlight).toBe(1);
   });
 
-  it("parses a real Coinbase USDT-USD ticker response (fixture)", async () => {
-    // Fixture captured from https://api.exchange.coinbase.com/products/USDT-USD/ticker
-    // Verifies our parser survives the live response shape (bid/ask present;
-    // midpoint preferred over last-trade price).
-    mockFetch([
-      { match: "/products/USDT-USD/ticker", body: coinbaseTickerFixture },
-      { match: () => true, body: {}, status: 404 },
-    ], { requireMatch: true });
-    const outcome = await fetchCoinbasePrices(["USDT"]);
-    expect(outcome.kind).toBe("ok");
-    const bid = Number(coinbaseTickerFixture.bid);
-    const ask = Number(coinbaseTickerFixture.ask);
-    expect(outcome.value.prices.get("USDT")).toBeCloseTo((bid + ask) / 2, 6);
-  });
 });
 
 describe("fetchKrakenPrices", () => {

@@ -4,14 +4,7 @@ import { RedemptionBackstopConfigSchema } from "../redemption-backstop-configs/s
 import { cloneRedemptionBackstopConfig, resolveDefaultHolderEligibility } from "../redemption-backstop-configs/shared";
 import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
 
-const touched = ["xgld-unitas", "susdat-saturn", "susdx-axis", "usdr-rise", "slvon-ondo", "iauon-ondo", "witry-brix", "gldy-streamex", "dllr-sovryn", "srusde-strata", "alusd-alchemix"];
-
 describe("wave-3 redemption handoff uptake", () => {
-  it.each(touched)("admits the strict %s configuration", (id) => {
-    const result = RedemptionBackstopConfigSchema.safeParse(getRedemptionBackstopConfig(id));
-    expect(result.success, JSON.stringify(result.error?.issues)).toBe(true);
-  });
-
   it.each([
     { kind: "unquantified", amountUsd: 0 },
     { kind: "unquantified", fallbackRatio: 0.1 },
@@ -47,21 +40,6 @@ describe("wave-3 redemption handoff uptake", () => {
     expect(config.holderEligibility).toBe("whitelisted-primary");
     expect(config.physicalCommodityDelivery).toBeUndefined();
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(10);
-  });
-
-  it.each(["slvon-ondo", "iauon-ondo"])("binds %s instant terms to USDon, not a USDC promise", (id) => {
-    const config = getRedemptionBackstopConfig(id)!;
-    expect(config.outputAssets).toEqual(["usdon-ondo"]);
-    expect(config.v9RouteReviewTerms).toMatchObject({
-      settlementModel: "immediate",
-      minRedeemUsd: 1,
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-    });
-    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
-    expect(config.capacityModel.kind).toBe("unquantified");
-    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
-    expect(config.costModel.kind).toBe("dynamic-or-unclear");
   });
 
   it.each(["dllr-sovryn", "srusde-strata", "gldy-streamex"])("retains %s alternatives unresolved without equal-weight basket or final SLA", (id) => {

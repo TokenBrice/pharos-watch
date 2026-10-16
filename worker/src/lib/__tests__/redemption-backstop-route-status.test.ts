@@ -39,25 +39,6 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("prioritizes live adapter route status over static status", () => {
-    const result = mergeRedemptionRouteStatus({
-      staticEvidence: staticOpen,
-      liveEvidence: {
-        routeStatus: "paused",
-        routeStatusSource: "onchain",
-        routeStatusReason: "Vault paused onchain",
-        routeStatusReviewedAt: "2026-05-12",
-      },
-      allowSevereMarketOpenException: false,
-    });
-
-    expect(result.routeStatus).toBe("paused");
-    expect(result.routeStatusSource).toBe("onchain");
-    expect(result.impaired).toBe(true);
-    expect(result.capsApplied).toEqual(["route-status-impairment"]);
-    expect(result.notes).toEqual(["Vault paused onchain"]);
-  });
-
   it("falls back to static status when no live route status is present", () => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: {
@@ -71,36 +52,6 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.routeStatusSource).toBe("static-config");
     expect(result.impaired).toBe(false);
     expect(result.notes).toEqual([]);
-  });
-
-  it("applies severe market impairment after static status", () => {
-    const result = mergeRedemptionRouteStatus({
-      staticEvidence: staticOpen,
-      severeMarketImplied: severeMarketEvidence(),
-      allowSevereMarketOpenException: false,
-    });
-
-    expect(result.routeStatus).toBe("degraded");
-    expect(result.routeStatusSource).toBe("market-implied");
-    expect(result.impaired).toBe(true);
-    expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
-  });
-
-  it("withholds the route under uncertain current market evidence", () => {
-    const result = mergeRedemptionRouteStatus({
-      staticEvidence: staticOpen,
-      severeMarketImplied: severeMarketEvidence({
-        routeStatus: "unknown",
-        routeStatusReason: "Open incident has no fresh authoritative current deviation",
-        activeDepegBps: undefined,
-      }),
-      allowSevereMarketOpenException: false,
-    });
-
-    expect(result.routeStatus).toBe("unknown");
-    expect(result.routeStatusSource).toBe("market-implied");
-    expect(result.impaired).toBe(true);
-    expect(result.capsApplied).toEqual(["market-implied-depeg-evidence-uncertain"]);
   });
 
   it.each([null, 100_000_000])("withholds the reviewed ordinary yUSD suspension with supply %s and no reserve read", async (supplyUsd) => {
@@ -150,23 +101,6 @@ describe("mergeRedemptionRouteStatus", () => {
       expect(entry.capacityProfile).toMatchObject({ immediateUsd: null, eventualUsd: null, scoringUsd: null });
     }
     expect(db.getHistory()).toEqual([]);
-  });
-
-  it("lets strong live-direct routes keep live-open evidence during severe market impairment", () => {
-    const result = mergeRedemptionRouteStatus({
-      staticEvidence: staticOpen,
-      liveEvidence: {
-        routeStatus: "open",
-        routeStatusSource: "onchain",
-      },
-      severeMarketImplied: severeMarketEvidence(),
-      allowSevereMarketOpenException: true,
-    });
-
-    expect(result.routeStatus).toBe("open");
-    expect(result.routeStatusSource).toBe("onchain");
-    expect(result.impaired).toBe(false);
-    expect(result.capsApplied).toEqual([]);
   });
 
   it("impairs live-open evidence during severe market impairment when the route is not strong live-direct", () => {

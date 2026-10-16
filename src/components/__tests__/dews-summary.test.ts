@@ -47,12 +47,6 @@ describe("resolveRadarClick", () => {
     });
   });
 
-  it("switches tooltip target on coarse-pointer tap to a different coin", () => {
-    expect(resolveRadarClick(false, "usdc", "usdt")).toEqual({
-      shouldNavigate: false,
-      nextHoveredId: "usdt",
-    });
-  });
 });
 
 

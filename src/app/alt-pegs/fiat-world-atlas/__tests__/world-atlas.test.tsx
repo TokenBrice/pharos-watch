@@ -14,13 +14,6 @@ vi.mock("@/app/alt-pegs/fiat-world-atlas/world-map", () => ({
 
 describe("FiatWorldAtlas", () => {
 
-  it("uses Alt-Peg Atlas as the single visible title", () => {
-    render(<FiatWorldAtlas />);
-
-    expect(screen.getByRole("heading", { name: "Peg Diversity Atlas" })).toBeTruthy();
-    expect(screen.queryByText("Peg Diversity Map")).toBeNull();
-  });
-
   it("renders an Expand atlas trigger button", () => {
     render(<FiatWorldAtlas />);
     const trigger = screen.getByRole("button", { name: /expand atlas/i });

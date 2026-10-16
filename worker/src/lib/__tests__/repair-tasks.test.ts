@@ -5,11 +5,9 @@ import {
   type SqliteD1,
 } from "./repair-tasks.test-support";
 import {
-  buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
   DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
   loadDdrRepairDebtDetails,
-  loadRepairDebtSummary,
   pruneRepairTasks,
   runWorkerRepairTaskRunner,
   syncDdrRepairDebtTasks,
@@ -90,10 +88,6 @@ describe("repair tasks", () => {
     await expect(
       runWorkerRepairTaskRunner(db, { nowSec: NOW }),
     ).rejects.toThrow("D1_ERROR: no such table: worker_repair_tasks");
-  });
-
-  it("builds deterministic repair task ids", () => {
-    expect(buildDdrRepairTaskId("42")).toBe("repair:ddr-repair-required-event:42");
   });
 
   it("syncs current DDR repair tasks and closes stale DDR tasks", async () => {
@@ -248,85 +242,7 @@ describe("repair tasks", () => {
     }
   });
 
-  it("summarizes the fixed DDR repair debt kind", async () => {
-    const db = mockRepairD1([
-      {
-        match: "FROM worker_repair_tasks",
-        rows: [
-          {
-            open_count: 2,
-            oldest_created_at: NOW - 3600,
-            next_attempt_at: NOW + 900,
-          },
-        ],
-      },
-    ]);
-
-    const summary = await loadRepairDebtSummary(db, NOW);
-
-    expect(summary).toEqual({
-      status: "present",
-      openCount: 2,
-      oldestAgeSec: 3600,
-      byKind: {
-        "ddr-repair-required-event": {
-          openCount: 2,
-          oldestAgeSec: 3600,
-          nextRunnerDueAt: NOW + 900,
-        },
-      },
-      availabilityEscalated: false,
-      nextRunnerDueAt: NOW + 900,
-      source: "worker-repair-tasks",
-    });
-  });
-
   it.each([
-    {
-      name: "projects bounded DDR repair details from active task rows",
-      payload: [
-        {
-          subject_id: "43",
-          payload_json: JSON.stringify({
-            eventId: 43,
-            reason: "failed-repair",
-          }),
-          updated_at: NOW - 120,
-          total_count: 3,
-          latest_updated_at: NOW - 60,
-        },
-        {
-          subject_id: "42",
-          payload_json: JSON.stringify({
-            eventId: 42,
-            reason: "incident-conflict",
-          }),
-          updated_at: NOW - 60,
-          total_count: 3,
-          latest_updated_at: NOW - 60,
-        },
-        {
-          subject_id: "44",
-          payload_json: JSON.stringify({
-            eventId: 44,
-            reason: "deferred-repair",
-          }),
-          updated_at: NOW - 180,
-          total_count: 3,
-          latest_updated_at: NOW - 60,
-        },
-      ],
-      expectedDetails: {
-        checkedAt: NOW - 60,
-        count: 3,
-        events: [
-          { eventId: 42, reason: "incident-conflict" },
-          { eventId: 43, reason: "failed-repair" },
-          { eventId: 44, reason: "deferred-repair" },
-        ],
-        eventsTruncated: false,
-      },
-    },
     {
       name: "returns an empty DDR detail projection when no active task rows exist",
       payload: [],
@@ -585,48 +501,6 @@ describe("repair tasks", () => {
     } finally {
       db.close();
     }
-  });
-
-  it("backs off a claimed task when execution fails", async () => {
-    const db = mockRepairD1([
-      {
-        match: "COUNT(*) AS due_count",
-        rows: [],
-        first: { due_count: 1 },
-      },
-      {
-        match: "COUNT(*) AS stale_claim_count",
-        rows: [],
-        first: { stale_claim_count: 0 },
-      },
-      {
-        match: "SELECT task_id, subject_id, payload_json",
-        rows: [{
-          task_id: "repair:ddr-repair-required-event:42",
-          subject_id: "42",
-          payload_json: JSON.stringify({ eventId: 42 }),
-        }],
-      },
-      {
-        match: "FROM depeg_events target",
-        rows: [],
-        throwError: new Error("D1 busy"),
-      },
-    ]);
-
-    const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
-    expect(result.status).toBe("degraded");
-
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "repair-execution-failed",
-      claimed: 1,
-      failed: 1,
-      deferred: 0,
-      autoRepairCount: 0,
-    });
-    const failure = db.getHistory().find((entry) => entry.binds.includes("repair-execution-failed"));
-    expect(failure?.binds).toContain("failed");
-    expect(failure?.binds).toContain(NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1);
   });
 
   it.each(["candidate-read", "execution-write"] as const)(

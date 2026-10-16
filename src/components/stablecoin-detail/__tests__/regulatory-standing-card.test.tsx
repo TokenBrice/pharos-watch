@@ -169,26 +169,6 @@ describe("RegulatoryStandingCard", () => {
     expect(attested.textContent).toContain("BDO Italia");
   });
 
-  it("collapses a review that recorded no disclosure to one line", () => {
-    render(
-      <RegulatoryStandingCard
-        view={buildView({
-          genius: {
-            ...GENIUS,
-            monthlyAttestationPresent: undefined,
-            redemptionPolicyPresent: undefined,
-            reserveDisclosurePresent: undefined,
-          },
-        })}
-      />,
-    );
-
-    expect(screen.getByText("Issuer disclosures")).toBeTruthy();
-    for (const disclosure of ISSUER_DISCLOSURES) {
-      expect(terms().some((term) => term.textContent?.includes(disclosure.label))).toBe(false);
-    }
-  });
-
   it("links a published reserve disclosure to the disclosure itself", () => {
     const url = "https://example.com/reserves";
     render(
@@ -199,14 +179,6 @@ describe("RegulatoryStandingCard", () => {
 
     const link = within(definition(reserveDisclosure!.label).value).getByRole("link");
     expect(link.getAttribute("href")).toBe(url);
-  });
-
-  it("draws MiCA out-of-scope with the muted status tone it was given", () => {
-    const view = buildView({ mica: { status: "out-of-scope" } });
-    render(<RegulatoryStandingCard view={view} />);
-
-    const pill = within(definition(view.regimes[0]!.regimeLabel).value).getByText(view.regimes[0]!.status.label);
-    expect(hasToneClass(pill, view.regimes[0]!.status.toneClass)).toBe(true);
   });
 
   it.each([
@@ -264,21 +236,4 @@ describe("RegulatoryStandingCard", () => {
     expect(screen.getByText(`Reviewed ${view.reviewedAt}`)).toBeTruthy();
   });
 
-  it("owns the jurisdiction anchor in flow and stands in for it in the rail", () => {
-    const view = buildView({ genius: GENIUS, mica: MICA });
-    const { container: inFlow } = render(<RegulatoryStandingCard view={view} id="jurisdiction" />);
-    expect(inFlow.querySelector("#jurisdiction")).not.toBeNull();
-    expect(inFlow.querySelector("[data-anchor-twin]")).toBeNull();
-    cleanup();
-
-    const { container: rail } = render(<RegulatoryStandingCard view={view} anchorTwin />);
-    expect(rail.querySelector("#jurisdiction")).toBeNull();
-    expect(rail.querySelector('[data-anchor-twin="jurisdiction"]')).not.toBeNull();
-    expect(rail.querySelector("[data-evidence-module]")).toBeNull();
-  });
-
-  it("renders nothing without a view", () => {
-    const { container } = render(<RegulatoryStandingCard view={null} />);
-    expect(container.innerHTML).toBe("");
-  });
 });

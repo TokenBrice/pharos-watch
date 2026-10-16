@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it, vi } from "vitest";
-import { collectWorkerMemory, evaluateMemoryObservation, joinScheduledMemory, parseWorkerMemoryArgs, renderWorkerMemoryMarkdown, resolveWorkerMemoryWindow, writeWorkerMemoryReport } from "../monitor-worker-memory";
+import { collectWorkerMemory, evaluateMemoryObservation, joinScheduledMemory, parseWorkerMemoryArgs, renderWorkerMemoryMarkdown, writeWorkerMemoryReport } from "../monitor-worker-memory";
 import fixtures from "./fixtures/worker-memory/october-kills.json";
 
 const from = "2026-10-14T00:00:00Z";
@@ -229,13 +229,6 @@ describe("bounded Analytics collection and unavailable evidence", () => {
 });
 
 describe("memory operator and evidence-retaining workflow", () => {
-  it("validates paired bounded timezone-qualified arguments before effects", () => {
-    expect(parseWorkerMemoryArgs(["--help"], now)).toEqual({ help: true });
-    expect(resolveWorkerMemoryWindow(undefined, undefined, now)).toEqual({ from: "2026-10-14T00:00:00.000Z", to: "2026-10-15T00:00:00.000Z" });
-    expect(parseWorkerMemoryArgs([], now)).toMatchObject({ help: false, from: undefined, to: undefined });
-    expect(parseWorkerMemoryArgs(["--from", from, "--to", to], now)).toMatchObject({ from, to });
-    for (const argv of [["--account-id", "x"], ["--from", from], ["--from", from, "--from", from, "--to", to], ["--from", "2026-10-14", "--to", to], ["--from", to, "--to", from], ["--from", "2026-10-12T00:00:00Z", "--to", to]]) expect(() => parseWorkerMemoryArgs(argv, now)).toThrow();
-  });
   it("exits 1 after retaining reports on runtime unavailability and exits 2 for usage", async () => {
     const dir = await mkdtemp(join(tmpdir(), "worker-memory-cli-"));
     const env = { ...process.env };
@@ -247,26 +240,6 @@ describe("memory operator and evidence-retaining workflow", () => {
       expect(JSON.parse(await readFile(join(dir, "report.json"), "utf8")).verdict.collectionIncomplete).toBe(true);
       const invalid = spawnSync(process.execPath, ["--import", "tsx", resolve("scripts/maintenance/monitor-worker-memory.ts"), "--unknown"], { env, encoding: "utf8" });
       expect(invalid.status).toBe(2);
-    } finally { await rm(dir, { recursive: true, force: true }); }
-  });
-  it("stores lane descriptors once in report.json, not per NDJSON row", async () => {
-    const report = await capture([adaptive()], [scheduled], true);
-    expect(report.samples).toHaveLength(1);
-    const scheduleKey = report.samples[0]!.lane!.scheduleKey;
-    expect(report.laneDescriptors[scheduleKey]?.map((descriptor) => descriptor.job)).toContain("prepare-safety-score-v9-input");
-    const dir = await mkdtemp(join(tmpdir(), "worker-memory-dictionary-"));
-    try {
-      await writeWorkerMemoryReport(report, dir);
-      const saved = JSON.parse(await readFile(join(dir, "report.json"), "utf8"));
-      expect(saved.laneDescriptors[scheduleKey]).toEqual(report.laneDescriptors[scheduleKey]);
-      for (const file of ["samples.ndjson", "exceeded-memory.ndjson"]) {
-        const rows = (await readFile(join(dir, file), "utf8")).trim().split("\n").map((line) => JSON.parse(line));
-        expect(rows).toHaveLength(1);
-        expect(rows[0].lane).toMatchObject({ cron: "16 * * * *", scheduleKey });
-        expect(rows[0].lane).not.toHaveProperty("descriptors");
-        expect(rows[0].lane.candidateJobChains.flat()).toContain("prepare-safety-score-v9-input");
-      }
-      expect(renderWorkerMemoryMarkdown(report)).toContain("16 * * * * / halfHourlyChartsOffset");
     } finally { await rm(dir, { recursive: true, force: true }); }
   });
   it.each(["default", "explicit"] as const)("gates stale %s coverage in the workflow without calling it incomplete", async (mode) => {

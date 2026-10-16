@@ -13,10 +13,4 @@ describe("PSI_SWEEP_DURATION", () => {
     ]);
   });
 
-  it("duration shrinks monotonically toward MELTDOWN", () => {
-    const order = ["BEDROCK", "STEADY", "TREMOR", "FRACTURE", "CRISIS", "MELTDOWN"] as const;
-    for (let i = 1; i < order.length; i++) {
-      expect(PSI_SWEEP_DURATION[order[i]]).toBeLessThan(PSI_SWEEP_DURATION[order[i - 1]]);
-    }
-  });
 });

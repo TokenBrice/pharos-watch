@@ -25,24 +25,6 @@ describe("createTimeoutSignal", () => {
     }
   });
 
-  it("propagates parent aborts without marking the timeout flag", () => {
-    const parent = new AbortController();
-    const handle = createTimeoutSignal({
-      timeoutMs: 5_000,
-      timeoutReason: "timed out",
-      parentSignal: parent.signal,
-    });
-
-    try {
-      parent.abort(new Error("parent-abort"));
-
-      expect(handle.signal.aborted).toBe(true);
-      expect(handle.isTimedOut()).toBe(false);
-    } finally {
-      handle.dispose();
-    }
-  });
-
   it.each([false, true])("keeps parent cancellation after the deadline (pre-aborted: %s)", async (preAborted) => {
     vi.useFakeTimers();
     const parent = new AbortController();

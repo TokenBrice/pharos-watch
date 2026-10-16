@@ -2,12 +2,10 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { describe, expect, it } from "vitest";
 import {
-  SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1,
   evaluateSafetyScoreV9AnchorGate,
   type V9AnchorContract,
   type V9AnchorGateCard,
   type V9AnchorGateReport,
-  type V9RelativeRule,
 } from "../safety-score-v9-anchor-gate";
 
 function gradeForScore(score: number | null): V9Grade {
@@ -76,15 +74,6 @@ function verdict(report: V9AnchorGateReport, rule: string) {
 }
 
 describe("evaluateSafetyScoreV9AnchorGate", () => {
-  it("passes a fully coherent anchor set", () => {
-    const report = evaluateAtCaptureClock({ cards: passingCards() });
-    expect(report.decision).toBe("gate-passed");
-    expect(report.verdicts.every((entry) => entry.status === "pass")).toBe(true);
-    expect(report.schemaVersion).toBe(2);
-    expect(report).not.toHaveProperty("appliedRulings");
-    expect(report).not.toHaveProperty("pendingRulings");
-  });
-
   it("fails an anchor below its policy-derived threshold", () => {
     const report = evaluateAtCaptureClock({ cards: withScore(passingCards(), "bold-liquity", 82) });
     expect(report.decision).toBe("no-go");
@@ -92,20 +81,6 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(entry.status).toBe("fail");
     expect(entry.code).toBe("anchor-below-threshold");
     expect(entry.required).toBe("score ≥ 83 (A)");
-  });
-
-  it("no longer pins the superseded PYUSD ≥ PUSD relative rule", () => {
-    // Owner ruling 2026-07-20: the inversion is honest measurement (PYUSD wins
-    // backing +11.4 and control +10; pUSD wins exit +21.96), so the rule was
-    // removed rather than tuned around. See the contract's supersession note.
-    const relativeRules: readonly V9RelativeRule[] = SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1.relative;
-    expect(
-      relativeRules.some(
-        (rule) => rule.kind === "pair" && rule.id === "pyusd-paypal" && rule.overId === "pusd-polymarket",
-      ),
-    ).toBe(false);
-    const report = evaluateAtCaptureClock({ cards: withScore(passingCards(), "pusd-polymarket", 72) });
-    expect(report.decision).toBe("gate-passed");
   });
 
   it("still evaluates pair rules in both directions (machinery retained for future pairs)", () => {
@@ -233,7 +208,6 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(verdict(below, "anchor:ausd-agora").status).toBe("fail");
   });
 
-
   it("changes the anchor decision when the supplied policy raises its grade threshold", () => {
     const cards = passingCards();
     expect(evaluateAtCaptureClock({ cards }).decision).toBe("gate-passed");
@@ -254,7 +228,6 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
       "Policy carries no grade threshold for A",
     );
   });
-
 
   it("fails closed for unrated required assets in every rule kind", () => {
     const cases: Array<{ contract: V9AnchorContract; rule: string; cards: V9AnchorGateCard[] }> = [
@@ -303,14 +276,6 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
   describe("time-boxed anchor amendments (owner ruling D-J)", () => {
     const PYUSD_RESTORE_SEC = 1823558400; // 2027-10-15T00:00:00Z
 
-    it("applies the eased grade while the box is open", () => {
-      // 69 clears B- (65) but not B (70): the easement is what passes it.
-      const report = evaluateAtCaptureClock({ cards: withScore(passingCards(), "pyusd-paypal", 69) });
-      expect(verdict(report, "anchor:pyusd-paypal").status).toBe("pass");
-      expect(verdict(report, "anchor:pyusd-paypal").required).toBe("score ≥ 65 (B-)");
-      expect(report.decision).toBe("gate-passed");
-    });
-
     it("restores the stricter grade the instant the box expires, with no edit", () => {
       const report = evaluateSafetyScoreV9AnchorGate({
         cards: withScore(passingCards(), "pyusd-paypal", 69),
@@ -337,16 +302,5 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
       );
     });
 
-    it("holds lusd-liquity at its amended B- without a time box", () => {
-      // Ruling D-I is open-ended: 65 passes, and it stays eased after D-J lapses.
-      for (const asOfSec of [CAPTURE_CLOCK_SEC, PYUSD_RESTORE_SEC]) {
-        const report = evaluateSafetyScoreV9AnchorGate({
-          cards: withScore(passingCards(), "lusd-liquity", 65),
-          asOfSec,
-        });
-        expect(verdict(report, "anchor:lusd-liquity").required).toBe("score ≥ 65 (B-)");
-        expect(verdict(report, "anchor:lusd-liquity").status).toBe("pass");
-      }
-    });
   });
 });

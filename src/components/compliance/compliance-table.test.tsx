@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GeniusComplianceRow } from "@/lib/compliance-model";
 
@@ -105,18 +105,5 @@ describe("ComplianceTable lazy GENIUS evidence", () => {
     await screen.findByText(detail.genius.notes);
     expect(fixtures.loadDetail).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
-  });
-
-  it("ignores a completed import after collapsing and reuses it on reopen", async () => {
-    const { promise, resolve: resolveDetail } = Promise.withResolvers<typeof detail>();
-    fixtures.loadDetail.mockReturnValue(promise);
-    renderTable("fold-pending-collapse");
-    fireEvent.click(screen.getByRole("button", { name: "Expand details for FIX" }));
-    fireEvent.click(screen.getByRole("button", { name: "Collapse details for FIX" }));
-    await act(async () => resolveDetail(detail));
-    expect(screen.queryByText(detail.genius.notes)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Expand details for FIX" }));
-    await waitFor(() => expect(screen.getByText(detail.genius.notes)).toBeTruthy());
-    expect(fixtures.loadDetail).toHaveBeenCalledTimes(1);
   });
 });

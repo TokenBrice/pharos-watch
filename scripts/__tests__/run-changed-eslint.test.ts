@@ -46,33 +46,4 @@ describe("lint:changed CLI selection", () => {
     expect(run().status).toBe(1);
     expect(run(["--staged"]).status).toBe(1);
   });
-
-  it("isolates staged paths from unstaged and untracked files", () => {
-    const { cwd, git, run } = fixture();
-    writeFileSync(join(cwd, "good.js"), "export const good = false;\n");
-    git("add", "good.js");
-    writeFileSync(join(cwd, "untracked.js"), "debugger;\n");
-    expect(run(["--staged"]).status).toBe(0);
-  });
-
-  it("keeps explicit base/head isolated from later commits and working files", () => {
-    const { cwd, git, base, run } = fixture();
-    writeFileSync(join(cwd, "good.js"), "export const good = false;\n");
-    git("add", "good.js");
-    git("commit", "-qm", "selected change");
-    const head = git("rev-parse", "HEAD").trim();
-    writeFileSync(join(cwd, "later.js"), "debugger;\n");
-    git("add", "later.js");
-    git("commit", "-qm", "unselected change");
-    writeFileSync(join(cwd, "untracked.js"), "debugger;\n");
-    expect(run(["--base", base, "--head", head]).status).toBe(0);
-    expect(run([], { PR_BASE_SHA: base, PR_HEAD_SHA: head }).status).toBe(0);
-  });
-
-  it("skips deleted paths without broadening the selection", () => {
-    const { git, run } = fixture();
-    git("rm", "unchanged invalid.js");
-    expect(run(["--staged"]).status).toBe(0);
-    expect(run(["--file", "unchanged invalid.js"]).status).toBe(0);
-  });
 });

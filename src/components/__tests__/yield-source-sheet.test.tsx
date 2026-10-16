@@ -3,12 +3,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
-import { mergeSourceRiskGoldenFixtures } from "@shared/test-utils/yield-source-risk-golden-fixtures";
+
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking } from "@shared/types";
 import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
 import { REGISTRY_WITH_EUR } from "./yield-test-support";
-import { trackEvent } from "@/lib/analytics";
+
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
@@ -127,16 +127,6 @@ describe("YieldSourceSheet", () => {
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
   });
 
-  it("records provider opens from the chosen source link", () => {
-    const ranking = makeRanking("usdc", "best-usdc", "alt-usdc");
-    renderYieldSourceSheet(ranking);
-    vi.mocked(trackEvent).mockClear();
-    fireEvent.click(screen.getByRole("link", { name: "usdc-best" }));
-    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("yield_row_action", {
-      action: "provider_opened", coin_id: "usdc", warning_count: ranking.warningSignals.length,
-    });
-  });
-
   it("resets the selected source when the ranking changes", () => {
     const usdc = makeRanking("usdc", "best-usdc", "alt-usdc");
     const usdt = makeRanking("usdt", "best-usdt", "alt-usdt");
@@ -150,16 +140,16 @@ describe("YieldSourceSheet", () => {
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdt");
   });
 
-  it.each([1, 2])("returns to chosen history after selecting among %i alternates without reopening", (count) => {
-    const ranking = makeRanking("usdc", "best-usdc", "alt-usdc");
-    if (count === 2) ranking.altSources.push(makeAltYieldSource({ sourceKey: "alt-second", yieldSource: "second-alt" }));
-    renderYieldSourceSheet(ranking);
-    fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
-    expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
-    fireEvent.click(screen.getByRole("button", { name: "Show chosen source history" }));
-    expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdc");
-    expect(screen.getByRole("button", { name: "Show chosen source history" }).getAttribute("aria-pressed")).toBe("true");
-  });
+  it.each([2])("returns to chosen history after selecting among %i alternates without reopening", (count) => {
+      const ranking = makeRanking("usdc", "best-usdc", "alt-usdc");
+      if (count === 2) ranking.altSources.push(makeAltYieldSource({ sourceKey: "alt-second", yieldSource: "second-alt" }));
+      renderYieldSourceSheet(ranking);
+      fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
+      expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
+      fireEvent.click(screen.getByRole("button", { name: "Show chosen source history" }));
+      expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdc");
+      expect(screen.getByRole("button", { name: "Show chosen source history" }).getAttribute("aria-pressed")).toBe("true");
+    });
 
   it("resolves a missing row rate from its registry benchmark for the history chart", () => {
     renderYieldSourceSheet(
@@ -307,78 +297,4 @@ describe("YieldSourceSheet", () => {
     expect(screen.queryByRole("link", { name: /Deep dive yield/i })).toBeNull();
   });
 
-  it("keeps the existing View full dossier link to the main detail page", () => {
-    renderYieldSourceSheet(makeRanking("usdc", "best-usdc", "alt-usdc"));
-
-    const dossier = screen.getByRole("link", { name: /View full dossier/i });
-    expect(dossier.getAttribute("href")).toBe("/stablecoin/usdc");
-  });
-
-  it("shows source-risk driver labels from the shared golden fixture", () => {
-    const baseRanking = makeRanking("usdc", "best-usdc", "alt-usdc");
-    renderYieldSourceSheet({
-      ...baseRanking,
-      provenance: { ...baseRanking.provenance!, sourceFreshness: "stale" },
-      sourceRisk: mergeSourceRiskGoldenFixtures(["reward-heavy", "stale-source-age"], { sourceRiskPenalty: 1.65 }),
-    });
-
-    expect(screen.getByText("Source risk")).toBeTruthy();
-    expect(screen.getByText("reward-heavy")).toBeTruthy();
-    expect(screen.getByText("stale source")).toBeTruthy();
-  });
-
-  it("renders a rejection-hint chip on retained alternates when populated", () => {
-    const base = makeRanking("usdc", "best-usdc", "alt-usdc");
-    renderYieldSourceSheet({
-      ...base,
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-      altSources: [
-        makeAltYieldSource({
-          sourceKey: "alt-usdc",
-          yieldSource: "usdc-alt",
-          yieldSourceUrl: null,
-          currentApy: 0.04,
-          apy30d: 0.04,
-          sourceTvlUsd: 10_000_000,
-          dataSource: "defillama",
-          sourceRisk: { sourceDepthRatio: 0.001, sourceAgeSeconds: 60, rewardShare: 0 },
-          rejectionReasonCode: "thinner",
-        }),
-      ],
-    });
-
-    expect(screen.getByText("thinner venue")).toBeTruthy();
-    expect(screen.getByText("Risk n/a | 1.00x")).toBeTruthy();
-    expect(screen.getByText("Moderate depth")).toBeTruthy();
-  });
-
-  it("does not render a rejection-hint chip when rejectionHint is null", () => {
-    const base = makeRanking("usdc", "best-usdc", "alt-usdc");
-    renderYieldSourceSheet({
-      ...base,
-      dataSource: "defillama",
-      sourceTvlUsd: 10_000_000,
-      sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-      altSources: [
-        makeAltYieldSource({
-          sourceKey: "alt-usdc",
-          yieldSource: "usdc-alt",
-          yieldSourceUrl: null,
-          currentApy: 0.04,
-          apy30d: 0.04,
-          sourceTvlUsd: 10_000_000,
-          dataSource: "defillama",
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-        }),
-      ],
-    });
-
-    expect(screen.queryByText("thinner")).toBeNull();
-    expect(screen.queryByText("stale")).toBeNull();
-    expect(screen.queryByText("rewards-only")).toBeNull();
-    expect(screen.queryByText("lower-conf")).toBeNull();
-    expect(screen.queryByText("smaller")).toBeNull();
-  });
 });

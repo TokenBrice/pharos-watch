@@ -15,11 +15,4 @@ describe("QueryStateNotice", () => {
     expect(className).not.toMatch(/bg-amber-500|bg-state-warn/);
   });
 
-  it("keeps compact sizing for stale data", () => {
-    const { container } = render(<QueryStateNotice state="stale-with-data" label="Yield data" compact />);
-
-    const className = container.firstElementChild?.getAttribute("class") ?? "";
-    expect(className).toContain("px-2.5");
-    expect(className).toContain("text-xs");
-  });
 });

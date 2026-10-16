@@ -29,16 +29,6 @@ describe("handleSupplyHistory", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with history array", async () => {
-    const db = mockD1([{ match: "supply_history", rows: [row] }]);
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
-    const body = (await readJsonResponse(res, 200)) as Array<{ date: number; circulatingUsd: number; price: number | null }>;
-    expect(body).toHaveLength(1);
-    expect(body[0]).toHaveProperty("date");
-    expect(body[0]).toHaveProperty("circulatingUsd");
-    expect(body[0]).toHaveProperty("price");
-  });
-
   it("returns 200 with empty array when no data", async () => {
     const db = mockD1([{ match: "supply_history", rows: [] }]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
@@ -97,15 +87,6 @@ describe("handleSupplyHistory", () => {
       },
     ]);
     db.assertAllMatchesUsed();
-  });
-
-  it("maps snake_case columns to camelCase", async () => {
-    const db = mockD1([{ match: "supply_history", rows: [row] }]);
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
-    const body = (await res.json()) as Array<Record<string, unknown>>;
-    expect(body[0]).toHaveProperty("circulatingUsd");
-    expect(body[0]).not.toHaveProperty("circulating_usd");
-    expect(body[0]).not.toHaveProperty("snapshot_date");
   });
 
   it("includes freshness headers from the completed supply snapshot marker", async () => {

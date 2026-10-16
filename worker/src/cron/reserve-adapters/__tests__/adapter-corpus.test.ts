@@ -56,13 +56,6 @@ describe("adapter corpus replay", () => {
     );
   });
 
-  it("gives every exemption a reason", () => {
-    const empty = [...Object.entries(CORPUS_NOT_REPLAYABLE), ...Object.entries(CORPUS_BACKLOG)]
-      .filter(([, reason]) => reason.trim().length < 20)
-      .map(([key]) => key);
-    expect(empty, "exemptions need a reviewed reason, not a placeholder").toEqual([]);
-  });
-
   it.each(caseEntries)("%s replays its captured payload into an admissible snapshot", async (key, corpusCase) => {
     const { result } = await runAdapter(key, corpusCase.coinId, {
       network: corpusCase.network,

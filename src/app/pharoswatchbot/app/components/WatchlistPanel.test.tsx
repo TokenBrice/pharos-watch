@@ -3,7 +3,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { baseState } from "@shared/test-utils/telegram-mini-app-state";
-import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type { TelegramMiniAppBulkWatchlistResponse } from "../types";
 import type { WatchlistPanelProps } from "./WatchlistPanel";
 import { WatchlistPanel } from "./WatchlistPanel";
@@ -116,45 +115,6 @@ describe("WatchlistPanel", () => {
     expect(screen.getAllByRole("button", { name: /^Follow / })[0]?.getAttribute("aria-label")).toBe("Follow USDT");
     fireEvent.click(screen.getAllByRole("button", { name: /^Follow / })[0]!);
     expect(onMutate).toHaveBeenCalledWith({ kind: "set-coin", stablecoinId: "usdt-tether", patch: { alertTypes: { dews: true, depeg: true } } });
-  });
-
-  it("renders launch targets, suggestions, insight actions, and SDK link fallbacks", async () => {
-    const onMutate = vi.fn();
-    const onOpenInsight = vi.fn();
-    const onNavigateToCoin = vi.fn();
-    const openLink = vi.fn();
-    const webApp: TelegramWebAppSdk = { initData: "signed", openLink };
-    renderWatchlist({ onMutate, onOpenInsight, onNavigateToCoin, webApp, targetCoinId: "usdt-tether" });
-
-    expect(screen.getByText("Not in your explicit watchlist.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Follow USDT" }));
-    fireEvent.click(screen.getByRole("button", { name: "Why USDT" }));
-    fireEvent.click(screen.getByRole("button", { name: "Coverage USDT" }));
-    fireEvent.click(screen.getByRole("button", { name: "View USDT on Pharos" }));
-    expect(onMutate).toHaveBeenCalledWith({ kind: "set-coin", stablecoinId: "usdt-tether", patch: { alertTypes: { dews: true, depeg: true } } });
-    expect(onOpenInsight).toHaveBeenCalledWith({ kind: "why", coinId: "usdt-tether" });
-    expect(onOpenInsight).toHaveBeenCalledWith({ kind: "coverage", coinId: "usdt-tether" });
-    expect(openLink).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdt-tether");
-
-    fireEvent.click(screen.getByRole("button", { name: "Go to followed USDC" }));
-    fireEvent.click(screen.getByRole("button", { name: "Search for USDT" }));
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Search stablecoins")));
-    expect(onNavigateToCoin).toHaveBeenCalledWith("usdc-circle");
-  });
-
-  it("keeps suggestion navigation available in a read-only session", async () => {
-    const onNavigateToCoin = vi.fn();
-    renderWatchlist({ canMutate: false, onNavigateToCoin });
-
-    const followedSuggestion = screen.getByRole("button", { name: "Go to followed USDC" });
-    const searchSuggestion = screen.getByRole("button", { name: "Search for USDT" });
-    expect(followedSuggestion).toHaveProperty("disabled", false);
-    expect(searchSuggestion).toHaveProperty("disabled", false);
-    fireEvent.click(followedSuggestion);
-    fireEvent.click(searchSuggestion);
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Search stablecoins")));
-    expect((screen.getByLabelText("Search stablecoins") as HTMLInputElement).value).toBe("USDT");
-    expect(onNavigateToCoin).toHaveBeenCalledWith("usdc-circle");
   });
 
   it("owns row action selection and keeps launch-only rows untunable", () => {

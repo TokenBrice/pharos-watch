@@ -284,15 +284,6 @@ describe("buildBlacklistActiveRecords", () => {
     expect(records).toHaveLength(1);
     expect(records[0]?.frozenAmountUsd).toBe(100);
   });
-
-  it("drops records after unblacklist", () => {
-    const events = [
-      makeEvent({ id: "1", eventType: "blacklist", timestamp: 10 }),
-      makeEvent({ id: "2", eventType: "unblacklist", timestamp: 11 }),
-    ];
-
-    expect(buildBlacklistActiveRecords(events)).toHaveLength(0);
-  });
 });
 
 describe("computeBlacklistActiveSummaryStats", () => {

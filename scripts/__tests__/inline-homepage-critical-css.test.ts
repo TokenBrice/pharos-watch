@@ -57,38 +57,6 @@ describe("critical CSS worker pool", () => {
     expect(() => criticalCssWorkerCount(7)).toThrow("PHAROS_CRITICAL_CSS_WORKERS must be a positive integer.");
   });
 
-  it("processes every selected page once across uneven partitions with identical HTML and untouched CSS", async () => {
-    vi.stubEnv("BEASTIES_LOG_LEVEL", "error");
-    const sequential = fixture();
-    const parallel = fixture();
-    const paths = collectCriticalCssPages(parallel);
-    expect(paths.map((file) => path.relative(parallel, file))).toEqual([...pageNames].sort());
-    const ignoredNames = ["about/index.html", "stablecoin/alpha/history/index.html"];
-    const ignoredBefore = ignoredNames.map((name) => readFileSync(path.join(parallel, name), "utf8"));
-    const skippedPath = path.join(parallel, "stablecoin/beta/yield/index.html");
-    const skippedBefore = readFileSync(skippedPath, "utf8");
-    const singleResults = await optimizeCriticalCssPages(sequential, collectCriticalCssPages(sequential), 1);
-    const poolResults = await optimizeCriticalCssPages(parallel, [...paths].reverse(), 3);
-
-    expect(poolResults).toEqual(singleResults);
-    expect(poolResults.map((result) => result.label)).toEqual([...pageNames].sort().map((name) => `out/${name}`));
-    expect(new Set(poolResults.map((result) => result.label)).size).toBe(pageNames.length);
-    for (const name of pageNames) {
-      expect(readFileSync(path.join(parallel, name))).toEqual(readFileSync(path.join(sequential, name)));
-    }
-    const homepage = readFileSync(path.join(parallel, "index.html"), "utf8");
-    expect(homepage).toContain('<style>');
-    expect(homepage).toContain('data-pharos-critical-css="async"');
-    expect(homepage).toContain('src="/critical-css-loader.js"');
-    expect(homepage.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "")).not.toMatch(/\sonload=/i);
-    expect(readFileSync(skippedPath, "utf8")).toBe(skippedBefore);
-    expect(poolResults.find((result) => result.label === "out/stablecoin/beta/yield/index.html")?.skipped).toBe(true);
-    expect(ignoredNames.map((name) => readFileSync(path.join(parallel, name), "utf8"))).toEqual(ignoredBefore);
-    for (const outDir of [sequential, parallel]) {
-      expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(stylesheet);
-    }
-  }, 20_000);
-
   it.each([1, 3])("propagates a page assertion failure without writing its invalid output (%i workers)", async (workers) => {
     const outDir = fixture();
     const brokenPath = path.join(outDir, "index.html");

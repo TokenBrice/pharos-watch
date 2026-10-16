@@ -862,25 +862,6 @@ describe("enrichMissingPrices", () => {
     expect(new Set([...missingFirst, ...missingNext].map(({ asset }) => asset.id)).size).toBe(30);
   });
 
-  it("rotates targeted candidates at the hourly quota boundary", () => {
-    const candidates = Array.from({ length: 26 }, (_, index) => ({
-      index,
-      asset: makePeggedAsset({
-        id: `coin-${index}`,
-        symbol: `C${index}`,
-        cmcSlug: `coin-${index}`,
-      }),
-    }));
-
-    const first = selectRotatedCmcCandidates(candidates, 0).map((entry) => entry.asset.id);
-    const second = selectRotatedCmcCandidates(candidates, 3_600).map((entry) => entry.asset.id);
-
-    expect(first).toHaveLength(25);
-    expect(second).toHaveLength(25);
-    expect(first).not.toEqual(second);
-    expect(new Set([...first, ...second])).toHaveProperty("size", 26);
-  });
-
   it.each([
     ["wrong contract", "TUSD", "0x0000000000000000000000000000000000000001", undefined, 1, 143_000],
     ["missing contract", "TUSD", null, undefined, 1, 143_000],

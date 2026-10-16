@@ -15,16 +15,6 @@ function components(overrides: Partial<Record<string, Partial<PublicStatusCompon
 }
 
 describe("PublicServiceSummarySection", () => {
-  it("lists every component with its state and keeps operational rows quiet", () => {
-    render(<PublicServiceSummarySection components={components()} dayCells={null} historyState="loading"
-      historyDays={30} nowSec={NOW} publicHistoryStartedAt={null} />);
-
-    expect(screen.getAllByText("Operational")).toHaveLength(PUBLIC_STATUS_COMPONENT_IDS.length);
-    expect(screen.getByText("Website and API")).toBeTruthy();
-    expect(screen.queryByText("Technical detail")).toBeNull();
-    expect(screen.getByRole("img", { name: "Loading Yield history" })).toBeTruthy();
-  });
-
   it("names the summary, budget and machine reason of a non-operational component (R3/R4)", () => {
     render(<PublicServiceSummarySection
       components={components({

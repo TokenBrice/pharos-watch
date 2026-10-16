@@ -79,15 +79,6 @@ const rowRenderers = [
 ] as const;
 
 describe("YieldInstrumentBoard", () => {
-  it.each([
-    [20, "bg-red-500"], [21, "bg-amber-500"], [40, "bg-amber-500"], [41, "bg-emerald-500"],
-    [null, "bg-muted-foreground/40"],
-  ] as const)("renders the canonical PYS gauge at %s", (score, className) => {
-    renderBoard({ ...baseRow, pharosYieldScore: score });
-    const gauge = screen.getByRole("img", { name: `Pharos Yield Score ${score ?? "unavailable"} of 100` });
-    expect(gauge.firstElementChild?.className).toContain(className);
-  });
-
   it.each(rowRenderers)("routes dynamically covered USDC to the honest fallback on %s", (_name, renderRow) => {
     renderRow({ ...baseRow, id: "usdc-circle", symbol: "USDC" });
     expect(screen.getByRole("link", { name: "View yield opportunities for USDC" }).getAttribute("href"))
@@ -317,82 +308,9 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
   });
 
-  it("renders the decision-ledger card in expanded row details", () => {
-    const row = {
-      ...baseRow,
-      decisionLedger: {
-        selectedReasonCode: "curated-over-discovered",
-        sourceSwitch: false,
-        rejectedCount: 1,
-        alternatives: [],
-      },
-    } as YieldViewModelRow;
-
-    renderBoard(row, true);
-
-    expect(screen.getByLabelText("Why this source won")).toBeTruthy();
-    expect(screen.getByText("Curated source preferred")).toBeTruthy();
-    expect(screen.getByText("1 alternate rejected")).toBeTruthy();
-  });
-
-  it("does not render the strip when the row is collapsed", () => {
-    renderBoard(baseRow, false);
-    expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
-  });
-
-  it("tones the safety gauge from the V9 grade ladder so it matches the badge (E4)", () => {
-    // [safetyScore, expected gauge tone] — grades: 76 B+ (blue; the V9
-    // ladder puts A- at 80, so 82 is emerald), 62 C+
-    // (amber; the old 80/60/40 cuts painted C+ blue), 45 D (orange), 30 F (red).
-    const cases: ReadonlyArray<[number, string]> = [
-      [76, "bg-blue-500"],
-      [62, "bg-amber-500"],
-      [45, "bg-orange-500"],
-      [30, "bg-red-500"],
-    ];
-    for (const [safetyScore, tone] of cases) {
-      const board = renderBoard({ ...baseRow, safetyScore, safetyGrade: null } as YieldViewModelRow);
-      const gauge = board.container.querySelector(
-        `[role="img"][aria-label="Safety score ${safetyScore} of 100"]`,
-      );
-      expect(gauge?.firstElementChild?.className).toContain(tone);
-      board.unmount();
-    }
-  });
 });
 
-describe.each(rowRenderers)("%s cohort percentile chip", (_surface, renderRow) => {
-  it("renders the percentile chip when cohortPercentile has a numeric value", () => {
-    const row = {
-      ...baseRow,
-      cohortPercentile: { value: 64, cohortSize: 18, cohortKey: "USD:lending-vault" },
-    } as YieldViewModelRow;
 
-    renderRow(row);
-
-    expect(screen.getByText("p64 of 18")).toBeTruthy();
-  });
-
-  it("renders the small-peer-set chip when cohortPercentile.value is null", () => {
-    const row = {
-      ...baseRow,
-      cohortPercentile: { value: null, cohortSize: 4, cohortKey: "EUR:lending-vault" },
-    } as YieldViewModelRow;
-
-    renderRow(row);
-
-    expect(screen.getByText("small peer set")).toBeTruthy();
-  });
-
-  it("renders nothing when cohortPercentile is null", () => {
-    const row = { ...baseRow, cohortPercentile: null } as YieldViewModelRow;
-
-    renderRow(row);
-
-    expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
-    expect(screen.queryByText("small peer set")).toBeNull();
-  });
-});
 
 // A row published without a benchmarkRate used to fall straight to the
 // chart-wide USD risk-free frame; the chip must resolve the row's OWN

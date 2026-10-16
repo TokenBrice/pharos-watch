@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { SCAN_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import {
   decodeAddress,
   decodeAddressWord,
@@ -17,15 +16,6 @@ import {
 // --- decodeAddress ---
 
 describe("decodeAddress", () => {
-  it("extracts 20-byte address from standard 32-byte topic", () => {
-    const topic = "0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7";
-    expect(decodeAddress(topic)).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
-  });
-
-  it("handles topic without 0x prefix", () => {
-    const topic = "000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7";
-    expect(decodeAddress(topic)).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
-  });
 
   it("returns lowercase address", () => {
     const topic = "0x000000000000000000000000DAC17F958D2EE523A2206206994597C13D831EC7";
@@ -59,9 +49,6 @@ describe("readDataWord", () => {
   const TOKEN = "000000000000000000000000bbbb1111bbbb2222bbbb3333bbbb4444bbbb5555";
   const AMOUNT = "0000000000000000000000000000000000000000000000000de0b6b3a7640000";
 
-  it("returns the slot-0 word with 0x prefix", () => {
-    expect(readDataWord("0x" + USER + TOKEN + AMOUNT, 0)).toBe("0x" + USER);
-  });
   it("returns slot-1 when composed correctly", () => {
     expect(readDataWord("0x" + USER + TOKEN + AMOUNT, 1)).toBe("0x" + TOKEN);
   });
@@ -123,21 +110,8 @@ describe("decodeUint256Word", () => {
   });
 });
 
-// --- createBudget & budgetExhausted ---
+// --- budgetExhausted ---
 
-describe("createBudget", () => {
-  it("creates budget with default limit of 900", () => {
-    const budget = createBudget();
-    expect(budget.limit).toBe(900);
-    expect(budget.count).toBe(0);
-  });
-
-  it("creates budget with custom limit", () => {
-    const budget = createBudget(50);
-    expect(budget.limit).toBe(50);
-    expect(budget.count).toBe(0);
-  });
-});
 
 describe("budgetExhausted", () => {
   it("returns false when under limit", () => {
@@ -148,9 +122,6 @@ describe("budgetExhausted", () => {
     expect(budgetExhausted({ count: 10, limit: 10 })).toBe(true);
   });
 
-  it("returns true when over limit", () => {
-    expect(budgetExhausted({ count: 15, limit: 10 })).toBe(true);
-  });
 });
 
 // --- createRateLimiter ---
@@ -164,17 +135,6 @@ describe("createRateLimiter", () => {
     vi.useRealTimers();
   });
 
-  it("exposes the configured requests-per-second so callers can report it", () => {
-    expect(createRateLimiter(4).requestsPerSecond).toBe(4);
-  });
-
-  it("executes function and returns result", async () => {
-    const limiter = createRateLimiter(10); // 10 req/s = 100ms interval
-    const promise = limiter(() => Promise.resolve(42));
-    await vi.advanceTimersByTimeAsync(200);
-    const result = await promise;
-    expect(result).toBe(42);
-  });
 
   it("enforces timing between sequential calls", async () => {
     const limiter = createRateLimiter(5); // 5 req/s = 200ms interval
@@ -395,31 +355,6 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     };
   }
 
-  it.each(SCAN_INPUT_STATES)("preserves the independently reviewed %s scan frontier", async (state) => {
-    const valid = logAt(1);
-    const rejected = { ...valid, topics: ["not-a-topic"] };
-    if (state === "capped") mockFetch([range(0, 0, cappedLogs)]);
-    if (state === "failed") mockFetch([range(0, 100, [], "NOTOK")]);
-    if (state === "decode-gap") mockFetch([{ match: () => true, body: { status: "1", message: "OK", result: [valid, rejected] } }]);
-    if (state === "complete-empty") mockFetch([range(0, 100, [], "No records found")]);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      const result = await fetchEvmLogsForTopicWithCompleteness(
-        1, "0x123", "0xabc", null, 0, state === "capped" ? 0 : 100, 0, noopLimiter,
-        createBudget(state === "exhausted" ? 0 : 10),
-      );
-      const expectedFrontier = { exhausted: -1, capped: -1, failed: -1, "decode-gap": 0, "complete-empty": 100 };
-      expect(result.complete).toBe(state === "complete-empty");
-      expect(result.scannedToBlock).toBe(expectedFrontier[state]);
-      if (state === "decode-gap") {
-        expect(result.logs).toEqual([valid]);
-        expect(result.rejectedLogs).toEqual([rejected]);
-      }
-      if (state === "exhausted") expect(fetch).not.toHaveBeenCalled();
-    } finally {
-      warn.mockRestore();
-    }
-  });
 
   it("recursively splits into disjoint contiguous ranges", async () => {
     const first = [logAt(1), logAt(50)];

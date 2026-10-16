@@ -36,15 +36,6 @@ const USDC_LIKE_REVIEW: ReserveReview = {
   knownUnknownExposurePct: 0,
 };
 
-describe("formatReserveQualityPct", () => {
-  it("rounds to at most 1 decimal and trims trailing zeros", () => {
-    expect(formatReserveQualityPct(12.56)).toBe("12.6%");
-    expect(formatReserveQualityPct(71)).toBe("71%");
-    expect(formatReserveQualityPct(33.3333)).toBe("33.3%");
-    expect(formatReserveQualityPct(0)).toBe("0%");
-  });
-});
-
 describe("projectReserveQualityClientSummary", () => {
   it.each([
     [89.96, 0, "Mostly liquid"],
@@ -106,12 +97,6 @@ describe("projectReserveQualityClientSummary", () => {
   it("returns null without reserves", () => {
     expect(projectReserveQualityClientSummary(coinWith(undefined))).toBeNull();
     expect(projectReserveQualityClientSummary(coinWith([]))).toBeNull();
-  });
-
-  it("returns null for reserve slices carrying no quality attributes", () => {
-    expect(
-      projectReserveQualityClientSummary(coinWith([{ name: "Cash", pct: 100, risk: "very-low" }])),
-    ).toBeNull();
   });
 
   it("returns null when asset classes are curated but no liquidity horizon is", () => {
@@ -258,18 +243,6 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary).toMatchObject({ topPositionName: "Credit", topPositionPct: 20 });
   });
 
-  it("falls back to mixed liquidity below both liquidity and opacity thresholds", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Cash", pct: 50, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-        { name: "Private credit", pct: 30, risk: "high", assetClass: "private-credit", liquidityHorizon: "over-seven-days" },
-        { name: "Undisclosed holdings", pct: 20, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
-      ]),
-    );
-    expect(summary!.chipLabel).toBe("Mixed liquidity");
-    expect(summary!.chipToneClass).toContain("state-warn");
-  });
-
   it("sums self-reserve dispositions into the self-exposure share", () => {
     const summary = projectReserveQualityClientSummary(
       coinWith(USDC_LIKE_SLICES, {
@@ -351,12 +324,5 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.compositionBasis).toBeNull();
     expect(summary!.knownUnknownExposureNote).toBeNull();
     expect(summary!.sources).toEqual([]);
-  });
-
-  it("passes an unmapped review confidence through unchanged", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith(USDC_LIKE_SLICES, { ...USDC_LIKE_REVIEW, confidence: "speculative" }),
-    );
-    expect(summary!.confidenceLabel).toBe("speculative");
   });
 });

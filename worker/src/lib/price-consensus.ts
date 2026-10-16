@@ -103,7 +103,7 @@ function pickIndependentFamilyRepresentative(sources: readonly SourcePrice[], pe
   });
 }
 
-export function collapsePriceSourcesByIndependentFamily(
+function collapsePriceSourcesByIndependentFamily(
   sources: readonly SourcePrice[],
   pegRef: number | null,
 ): SourcePrice[] {

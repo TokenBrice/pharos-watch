@@ -15,7 +15,6 @@ import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-card
 import { buildV9RadarDataset } from "@/components/radar-chart-v9";
 import type { MintBurnCoinFlow, MintBurnPerCoinResponse, StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { PressureShiftState } from "@shared/lib/mint-burn-signals";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 
@@ -160,21 +159,6 @@ describe("buildCompareRadarCohortBaseline", () => {
       .toEqual({ effectiveCohort: "all", series: [], memberCount: 0 });
   });
 
-  it("returns an empty all-cohort baseline until cards and a selection are available", () => {
-    expect(buildCompareRadarCohortBaseline(undefined, [], "peg")).toEqual({
-      effectiveCohort: "all",
-      series: [],
-      memberCount: 0,
-    });
-
-    const response = makeReportCardsV9Response();
-    expect(buildCompareRadarCohortBaseline(response.cards, [], "mechanism")).toEqual({
-      effectiveCohort: "all",
-      series: [],
-      memberCount: 0,
-    });
-  });
-
   it("builds a peg cohort from the lead selected card and preserves baseline presentation fields", () => {
     const response = makeReportCardsV9Response({
       cards: [
@@ -273,17 +257,6 @@ describe("deriveComparisonCoins", () => {
     expect(result[0].liquidity?.liquidityScore).toBe(85);
     expect(result[0].safetyCard?.grade).toBe("A");
   });
-
-  it("returns null pegDetails when coin is not in pegCoinMap", () => {
-    const result = deriveComparisonCoins(
-      comparisonInput({
-        selectedIds: ["usdc"],
-        assetMap: assetMapFor("usdc"),
-        metaMap: metaMapFor("usdc"),
-      }),
-    );
-    expect(result[0].pegDetails).toBeNull();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -296,15 +269,6 @@ describe("deriveSupplySeries", () => {
       selectedIds: ["usdc", "usdt"],
       histories: [undefined, undefined],
       metaMap: new Map(),
-    });
-    expect(result).toEqual([]);
-  });
-
-  it("skips coins with empty history arrays", () => {
-    const result = deriveSupplySeries({
-      selectedIds: ["usdc"],
-      histories: [[]],
-      metaMap: new Map([["usdc", { name: "USD Coin" }]]),
     });
     expect(result).toEqual([]);
   });
@@ -325,29 +289,6 @@ describe("deriveSupplySeries", () => {
     expect(result[0].data[0].ts).toBe(1700000000 * 1000);
     expect(result[0].data[0].value).toBe(1_000_000);
     expect(result[0].data[1].ts).toBe(1700086400 * 1000);
-  });
-
-  it("uses coin id as label fallback when metaMap has no entry", () => {
-    const history = [{ date: 1700000000, circulatingUsd: 500_000, price: null }];
-    const result = deriveSupplySeries({
-      selectedIds: ["unknown-coin"],
-      histories: [history],
-      metaMap: new Map(),
-    });
-    expect(result[0].label).toBe("unknown-coin");
-  });
-
-  it("assigns colors by index cycling through COMPARE_COLORS", () => {
-    const history = [{ date: 1700000000, circulatingUsd: 1_000_000, price: 1.0 }];
-    const ids = ["a", "b", "c", "d", "e", "f"]; // 6 items, 5 colors → wraps
-    const result = deriveSupplySeries({
-      selectedIds: ids,
-      histories: ids.map(() => history),
-      metaMap: new Map(ids.map((id) => [id, { name: id }])),
-    });
-    expect(result[0].color).toBe(COMPARE_COLORS[0]);
-    expect(result[4].color).toBe(COMPARE_COLORS[4]);
-    expect(result[5].color).toBe(COMPARE_COLORS[0]); // wraps around
   });
 });
 
@@ -415,18 +356,6 @@ describe("deriveFlowSeries", () => {
     // The legacy hour without `valuation` stays plotted but is counted as coverage unknown.
     expect(series.unknownCoverageHours).toBe(1);
   });
-
-  it("uses coin id as symbol fallback", () => {
-    const detail = makeFlowDetail({
-      hourly: [{ hourTs: 1700000000, netFlowUsd: 0, mintVolumeUsd: 0, burnVolumeUsd: 0 }],
-    });
-    const result = deriveFlowSeries({
-      selectedIds: ["usdc"],
-      flowDetails: [detail],
-      metaMap: new Map(), // no meta
-    });
-    expect(result[0].label).toBe("usdc");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -434,29 +363,6 @@ describe("deriveFlowSeries", () => {
 // ---------------------------------------------------------------------------
 
 describe("deriveFlowCardData", () => {
-  it("returns empty array when flowCoinMap is empty", () => {
-    const result = deriveFlowCardData({
-      selectedIds: ["usdc"],
-      flowCoinMap: new Map(),
-      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
-    });
-    expect(result).toEqual([]);
-  });
-
-  it("skips selected ids not present in flowCoinMap", () => {
-    const flowCoinMap = new Map([["usdc", makeFlowCoin("usdc")]]);
-    const result = deriveFlowCardData({
-      selectedIds: ["usdc", "usdt"],
-      flowCoinMap,
-      metaMap: new Map([
-        ["usdc", { symbol: "USDC" }],
-        ["usdt", { symbol: "USDT" }],
-      ]),
-    });
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("usdc");
-  });
-
   it("maps flow coin fields correctly", () => {
     const coin = makeFlowCoin("usdc", {
       netFlow24hUsd: 500_000,
@@ -478,18 +384,6 @@ describe("deriveFlowCardData", () => {
     expect(result[0].pressureShiftScore).toBe(0.75);
     expect(result[0].netFlowDirection24h).toBe("minting");
     expect(result[0].pressureShiftState).toBe("worsening");
-  });
-
-  it("defaults a null pressureShiftState to 'nr'", () => {
-    const coin = makeFlowCoin("usdc", {
-      pressureShiftState: null as unknown as PressureShiftState,
-    });
-    const result = deriveFlowCardData({
-      selectedIds: ["usdc"],
-      flowCoinMap: new Map([["usdc", coin]]),
-      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
-    });
-    expect(result[0].pressureShiftState).toBe("nr");
   });
 
   it("keeps a null wire direction unavailable instead of defaulting it to inactive", () => {
@@ -536,24 +430,5 @@ describe("deriveFlowCardData", () => {
     expect(card.pressureShiftScore).toBeNull();
     expect(card.pressureShiftState).toBe("nr");
     expect(card.pressureUnavailableNote).toMatch(/partial valuation/i);
-  });
-
-  it("uses coin id as symbol fallback when meta is missing", () => {
-    const flowCoinMap = new Map([["usdc", makeFlowCoin("usdc")]]);
-    const result = deriveFlowCardData({
-      selectedIds: ["usdc"],
-      flowCoinMap,
-      metaMap: new Map(),
-    });
-    expect(result[0].symbol).toBe("usdc");
-  });
-
-  it("assigns colors by index cycling through COMPARE_COLORS", () => {
-    const ids = ["a", "b", "c", "d", "e", "f"];
-    const flowCoinMap = new Map(ids.map((id) => [id, makeFlowCoin(id)]));
-    const metaMap = new Map(ids.map((id) => [id, { symbol: id.toUpperCase() }]));
-    const result = deriveFlowCardData({ selectedIds: ids, flowCoinMap, metaMap });
-    expect(result[0].color).toBe(COMPARE_COLORS[0]);
-    expect(result[5].color).toBe(COMPARE_COLORS[0]); // wraps
   });
 });

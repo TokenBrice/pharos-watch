@@ -51,14 +51,6 @@ function fundingChainEntries(coin: CoinSource): Array<[FundingChain, string]> {
 }
 
 describe("donor key qualifying stablecoins", () => {
-  it("uses unique ledger symbols and labels", () => {
-    const symbols = DONOR_KEY_QUALIFYING_STABLECOINS.map((coin) => coin.symbol);
-    const labels = DONOR_KEY_QUALIFYING_STABLECOINS.map((coin) => coin.label);
-    expect(new Set(symbols).size).toBe(symbols.length);
-    expect(new Set(labels).size).toBe(labels.length);
-    for (const symbol of symbols) expect(symbol).toBe(symbol.toUpperCase());
-  });
-
   it.each(DONOR_KEY_QUALIFYING_STABLECOINS.map((coin) => [coin.stablecoinId, coin] as const))(
     "%s matches its catalog funding-chain contracts minus reviewed exclusions",
     (stablecoinId, coin) => {

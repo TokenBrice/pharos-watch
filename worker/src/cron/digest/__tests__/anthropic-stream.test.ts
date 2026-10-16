@@ -196,15 +196,6 @@ describe("accumulateAnthropicStream", () => {
     expect(canceled).toBe(true);
   });
 
-  it("throws when the stream ends with no text content", async () => {
-    const response = sseResponse([
-      { event: "message_start", data: { type: "message_start", message: { id: "msg_empty" } } },
-      { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn" } } },
-      { event: "message_stop", data: { type: "message_stop" } },
-    ]);
-    await expect(accumulateAnthropicStream(response)).rejects.toThrow(/empty/i);
-  });
-
   it("returns a pre-output refusal with structured category and usage", async () => {
     const response = sseResponse([
       {

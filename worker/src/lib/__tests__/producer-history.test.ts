@@ -146,34 +146,6 @@ describe("producer history", () => {
     expect(await loadProducerHeads(db)).toHaveLength(2);
   });
 
-  it("keeps both scheduled snapshot-supply paths queryable", async () => {
-    const { db } = createMigratedDb();
-    for (const [scheduleKey, producerPath, invocationId] of [
-      ["quarterHourly", "quarterHourly", "quarter"],
-      ["daily0800Utc", "daily0800Utc", "fallback"],
-    ] as const) {
-      await recordProducerOutcome(db, {
-        scheduleKey,
-        job: "snapshot-supply",
-        producerPath,
-        producerKind: "scheduled-job",
-        invocationId,
-        idempotencyKey: `snapshot-${invocationId}`,
-        invokedAt: 1_772_000_000,
-        completedAt: 1_772_000_010,
-        outcome: "ok",
-        itemCount: 364,
-        productivity: { productive: true },
-      });
-    }
-
-    const heads = await loadProducerHeads(db);
-    expect(heads.map((head) => [head.scheduleKey, head.job, head.producerPath])).toEqual([
-      ["daily0800Utc", "snapshot-supply", "daily0800Utc"],
-      ["quarterHourly", "snapshot-supply", "quarterHourly"],
-    ]);
-  });
-
   it("derives calendar identity across a real UTC month boundary", () => {
     const januaryEnd = Date.UTC(2026, 0, 31, 23, 59, 59) / 1_000;
     expect(utcCalendarMonth(januaryEnd)).toBe("2026-01");

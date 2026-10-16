@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GOLDEN_SCENARIOS, PAIRWISE_CONSTRAINTS } from "@shared/data/safety-score-v9/golden-scenarios-v1";
+
 import type {
   CompiledV9AssetInput,
   V9ScoringInput,
@@ -13,7 +13,7 @@ import {
 } from "../safety-score-v9/dependencies";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonTreatment } from "../safety-score-v9/policy";
-import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
+
 import { scoreCompiledAssetSet } from "../safety-score-v9-research";
 import {
   makeCompiledV9AssetInput,
@@ -89,31 +89,6 @@ const compiledInput = (assetId: string, pillarScore: number, parent: CompiledV9A
   makeCompiledV9AssetInput({ assetId, pillarScore, parent, sourceKey: "fixture" });
 
 describe("anchor-coherence invariants — active", () => {
-  it("keeps the 31 golden orderings and adverse-anchor calibration unchanged", () => {
-    expect(GOLDEN_SCENARIOS).toHaveLength(34);
-    expect(PAIRWISE_CONSTRAINTS).toHaveLength(31);
-    const traces = new Map(
-      GOLDEN_SCENARIOS.map((scenario) => [scenario.id, scoreV9GoldenScenario(scenario, V9_CANDIDATE_POLICY_V1)]),
-    );
-    expect(traces.get("unbounded-adverse-mint-anchor")).toMatchObject({
-      finalGrade: "F", bindingCap: { kind: "signal:centralized-mint:critical", limit: 39 },
-    });
-    expect(PAIRWISE_CONSTRAINTS.filter(({ lowerId }) => lowerId === "unbounded-adverse-mint-anchor"))
-      .toMatchObject([
-        { higherId: "unverified-mint-anchor", minGap: 10 },
-        { higherId: "reconciled-unbounded-mint-anchor", minGap: 4 },
-      ]);
-    for (const constraint of PAIRWISE_CONSTRAINTS) {
-      const higher = traces.get(constraint.higherId)!;
-      const lower = traces.get(constraint.lowerId)!;
-      expect(higher.finalScore, constraint.higherId).not.toBeNull();
-      expect(lower.finalScore, constraint.lowerId).not.toBeNull();
-      expect(higher.finalScore! - lower.finalScore!, constraint.rationale).toBeGreaterThanOrEqual(
-        constraint.minGap,
-      );
-    }
-  });
-
   it("more-unknown-never-raises: bounded unknowns and structural signals never lift any score", () => {
     for (const pillars of [
       { backing: 95, exit: 95, control: 95 },

@@ -56,16 +56,6 @@ describe("adaptSolsticeAttestation", () => {
     });
   });
 
-  it("fails closed on malformed amounts in the newest date-only point", () => {
-    expect(() => adaptSolsticeAttestation({
-      res: "ok",
-      data: { reserves: { timeline: [
-        { date: "2026-10-07", reserves: 200, supply: 100 },
-        { date: "2026-10-08", supply: 100 },
-      ] } },
-    })).toThrow(/missing reserve\/supply/);
-  });
-
   it("binds aggregate freshness to the older selected point timestamp", () => {
     const result = adaptSolsticeAttestation({
       res: "ok",

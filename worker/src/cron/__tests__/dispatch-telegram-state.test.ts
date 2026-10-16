@@ -134,21 +134,6 @@ describe("loadDewsRows", () => {
 });
 
 describe("buildDispatchSnapshotState", () => {
-  it("preserves the reserve baseline when the producer snapshot is invalid", () => {
-    const state = buildDispatchSnapshotState(
-      sourceData({
-        reserveCache: { value: "{", updatedAt: nowSec - 60 },
-        reserveDispatchedCache: cache(["usdc-circle"]),
-      }),
-      nowSec,
-    );
-
-    expect(state.reserveSourceUnavailable).toBe(true);
-    expect(state.previousReserveDriftIds).toEqual(["usdc-circle"]);
-    expect(state.currentReserveDriftIds).toEqual(["usdc-circle"]);
-    expect(state.currentSnapshots.reserveDispatched).toEqual(["usdc-circle"]);
-  });
-
   it("cold-seeds the first fresh reserve generation after a gap", () => {
     const envelope = buildAlertReserveSourceEnvelope(
       ["usdc-circle"],

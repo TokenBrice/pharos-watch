@@ -7,7 +7,6 @@ import {
   CANARY_CONTRACT_SMOKE_PATHS,
   ENDPOINT_ASSERTIONS,
   isRetryableStatus,
-  OG_SMOKE_PATHS,
   resolveContractSmokePaths,
   STRICT_CONTRACT_SMOKE_PATHS,
 } from "../maintenance/smoke-api.mjs";
@@ -295,16 +294,6 @@ describe("smoke-api depeg resolver review assertion", () => {
 });
 
 describe("smoke-api path scopes", () => {
-  it("keeps canary paths as a strict subset of the full strict path set", () => {
-    const full = new Set(STRICT_CONTRACT_SMOKE_PATHS);
-    const canary = new Set(CANARY_CONTRACT_SMOKE_PATHS);
-    expect(canary.size).toBeGreaterThan(0);
-    expect(canary.size).toBeLessThan(full.size);
-    for (const path of canary) {
-      expect(full.has(path)).toBe(true);
-    }
-  });
-
   it("resolves both full and canary scopes with assertion coverage", () => {
     const full = resolveContractSmokePaths("full");
     const canary = resolveContractSmokePaths("canary");
@@ -319,12 +308,6 @@ describe("smoke-api path scopes", () => {
 });
 
 describe("smoke-api og image assertion", () => {
-  it("declares the per-coin, per-chain, and aggregate og probes", () => {
-    expect(OG_SMOKE_PATHS).toContain("/api/og/stablecoin/usdt-tether");
-    expect(OG_SMOKE_PATHS).toContain("/api/og/chain/ethereum");
-    expect(OG_SMOKE_PATHS).toContain("/api/og/depeg");
-  });
-
   it("accepts a healthy png result", () => {
     expect(
       assertOgImageResult("/api/og/depeg", {

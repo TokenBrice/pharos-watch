@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, renderHook } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainsResponse } from "@shared/types/chains";
 import { RatioSchema } from "@shared/types/ratio";
@@ -141,16 +141,4 @@ describe("useChainProfileData", () => {
     expect(result.current.coins).toEqual([]);
   });
 
-  it("refetches the single authoritative query through refetchAll", async () => {
-    const refetch = vi.fn().mockResolvedValue({ status: "success", error: null });
-    useRegisteredApiQueryMock.mockReturnValue(makeQuery(makeResponse(), { refetch }));
-
-    const { result } = renderHook(() => useChainProfileData("ethereum"));
-
-    await act(async () => {
-      await result.current.refetchAll();
-    });
-
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
 });

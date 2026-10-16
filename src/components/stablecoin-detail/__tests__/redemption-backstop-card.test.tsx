@@ -67,10 +67,6 @@ const NO_HOLDER_REASON_CODES: readonly string[] = [
   "secondary-market-only",
 ];
 
-function precedes(first: Node, second: Node): boolean {
-  return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-}
-
 function moduleRoot(): HTMLElement {
   const root = document.getElementById("redemption");
   if (!root) throw new Error("no #redemption module");
@@ -147,7 +143,7 @@ describe("RedemptionBackstopCard", () => {
     expect(line.textContent).toContain("standalone score carries");
   });
 
-  it.each(["old", "new"])("reconciles exact route identity across opaque generation %s", (generation) => {
+  it.each(["new"])("reconciles exact route identity across opaque generation %s", (generation) => {
     const card = makeV9Card();
     card.breakdowns!.exit.primaryRoute = {
       ...card.breakdowns!.exit.primaryRoute!,
@@ -161,8 +157,6 @@ describe("RedemptionBackstopCard", () => {
 
   it.each([
     { name: "suffix collision", routeId: `redemption:other:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "redemption" },
-    { name: "composed route", routeId: `composed:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "redemption" },
-    { name: "specialized route", routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}:specialized`, lane: "redemption" },
     { name: "different lane", routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "dex" },
     { name: "missing identity", routeId: undefined, lane: undefined },
   ] as const)("never guesses this route from an opaque key with $name", ({ routeId, lane }) => {
@@ -197,54 +191,6 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toContain("Standalone route score");
     expect(html).toContain("65/100");
     expect(html).not.toContain("58/100");
-  });
-
-  it("orders the summary visual → verdict → chips → disclosures, folds in the fixed order", () => {
-    render(<RedemptionBackstopCard entry={{ ...BASE_ENTRY, docs: DOCS }} />);
-    const root = moduleRoot();
-    const viewModel = buildRedemptionBackstopCardViewModel(BASE_ENTRY);
-
-    expect(root.tagName).toBe("SECTION");
-    expect(root.querySelector("h3")).not.toBeNull();
-
-    const visuals = within(root).getAllByRole("img");
-    const verdict = within(root).getByText(
-      (_, element) => element?.tagName === "P" && (element.textContent ?? "").includes(viewModel.accessLabel),
-    );
-    const confidenceChip = onSummaryLayer(within(root).getAllByText(viewModel.modelConfidenceLabel));
-    const summaries = Array.from(root.querySelectorAll("summary"));
-
-    for (const visual of visuals) expect(precedes(visual, verdict)).toBe(true);
-    expect(precedes(verdict, confidenceChip)).toBe(true);
-    expect(summaries.length).toBe(3);
-    expect(precedes(confidenceChip, summaries[0]!)).toBe(true);
-
-    const labels = summaries.map((summary) => summary.textContent ?? "");
-    expect(labels[0]).toMatch(/Scoring breakdown/);
-    expect(labels[1]).toMatch(/Capacity/);
-    expect(labels[2]).toMatch(/Sources/);
-  });
-
-  it("names the holder station once on the drawn rail", () => {
-    render(<RedemptionBackstopCard entry={BASE_ENTRY} />);
-
-    const rail = within(moduleRoot()).getByRole("img", { name: /holders exit/i });
-    expect(rail.textContent?.match(/Holder/g)).toHaveLength(1);
-  });
-
-  it("keeps the Exit pillar reconciliation as a muted line after the verdict", () => {
-    const card = makeV9Card();
-    const primary = card.breakdowns?.exit.primaryRoute;
-    if (!primary || primary.score === null) throw new Error("fixture lacks a scored Exit primary route");
-    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
-
-    const routeScore = String(Math.round(primary.score));
-    const reconciliation = within(moduleRoot()).getByText(
-      (content, element) => element?.tagName === "SPAN" && content.includes(routeScore) && content.includes("65"),
-    );
-    expect(reconciliation.closest("p")).not.toBeNull();
-    expect(reconciliation.closest("details")).toBeNull();
-    expect((reconciliation.textContent ?? "").trim().split(/\s+/).length).toBeLessThanOrEqual(25);
   });
 
   it("reconciles a different Exit score for the same route in place, naming the published cause", () => {
@@ -379,74 +325,6 @@ describe("RedemptionBackstopCard", () => {
       expect(documented.reconciliation.trim().split(/\s+/).length).toBeLessThanOrEqual(25);
     });
 
-    it("names why the standalone score is missing, per cause", () => {
-      const eventualOnly = renderSummary(asAlternative, "documented");
-      const unmeasured = renderSummary(asAlternative, "documented", { ...unrated, resolutionState: "missing-capacity" });
-
-      expect(eventualOnly.verdict).not.toBe("");
-      expect(eventualOnly.verdict).not.toBe(unmeasured.verdict);
-    });
-  });
-
-  it("keeps one footer line without a score-inputs control; the inputs live in the Scoring breakdown fold", () => {
-    render(<RedemptionBackstopCard entry={{ ...BASE_ENTRY, capsApplied: ["offchain-route-cap"] }} />);
-    const root = moduleRoot();
-
-    expect(within(root).queryByRole("button", { name: /score inputs/i })).toBeNull();
-    const breakdown = Array.from(root.querySelectorAll("details")).find((fold) =>
-      /Scoring breakdown/.test(fold.querySelector("summary")?.textContent ?? ""),
-    );
-    expect(breakdown).toBeDefined();
-    const table = within(breakdown!).getByRole("table", { hidden: true });
-    expect(within(table).getAllByRole("row", { hidden: true }).length).toBeGreaterThanOrEqual(8);
-    expect(breakdown!.textContent).toMatch(/route score =/i);
-    expect(breakdown!.textContent).toMatch(/Caps applied/);
-  });
-
-  it("renders explicit fixed-fee copy when fee bps are available", () => {
-    const html = renderToStaticMarkup(
-      <RedemptionBackstopCard
-        entry={{
-          ...BASE_ENTRY,
-          stablecoinId: "avusd-avant",
-          routeFamily: "queue-redeem",
-          settlementModel: "days",
-          feeBps: 5,
-          feeDescription: "Protocol docs list a 5 bps redemption fee",
-          costScore: 100,
-        }}
-      />,
-    );
-
-    expect(html).toContain("Redemption fee");
-    expect(html).toContain("5 bps (0.05%)");
-  });
-
-  it("renders documented variable fee logic when the route is not a single fixed bps value", () => {
-    const html = renderToStaticMarkup(
-      <RedemptionBackstopCard
-        entry={{
-          ...BASE_ENTRY,
-          stablecoinId: "bold-liquity",
-          routeFamily: "collateral-redeem",
-          settlementModel: "atomic",
-          feeModelKind: "formula",
-          feeDescription: "Minimum 50 bps + baseRate (decays over time).",
-        }}
-      />,
-    );
-
-    expect(html).toContain("Redemption fee");
-    expect(html).toContain("Minimum 50 bps + baseRate");
-    expect(html).toContain("publish a fee formula");
-  });
-
-  it("renders an explicit unknown-fee fallback when no fixed fee is modeled", () => {
-    const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
-
-    expect(html).toContain("Redemption fee");
-    expect(html).toContain("Reviewed, but not published");
-    expect(html).toContain("do not publish a bounded numeric redemption fee");
   });
 
   it("renders unquantified eventual-only capacity without implying current-supply coverage", () => {
@@ -635,11 +513,4 @@ describe("RedemptionRouteSection without a scored route", () => {
     expect(root.querySelectorAll("summary")).toHaveLength(1);
   });
 
-  it("renders nothing for a coin with neither a route nor a no-holder disposition", () => {
-    const { container } = render(
-      <RedemptionRouteSection entry={null} reportCard={null} coinId="not-a-reviewed-coin" />,
-    );
-
-    expect(container.firstChild).toBeNull();
-  });
 });

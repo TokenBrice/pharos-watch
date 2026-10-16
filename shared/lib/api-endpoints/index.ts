@@ -22,11 +22,8 @@ export {
   type EndpointMethod,
   type EndpointMethodValidationError,
   type EndpointProbeGroup,
-  type EndpointPublicApiAccess,
-  type EndpointSiteDataAccess,
   type StatusPageAction,
   type StatusPageActionAuditMode,
-  type StatusPageActionDryRun,
   type StatusPageActionRisk,
   type StatusPageActionScope,
 } from "./definitions";

@@ -6,8 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildCodexHookConfig,
   getCodexHookStates,
-  isLinkedWorktree,
-  parseCodexHookStates,
   renderCodexHookConfig,
   runAgentHookSetup,
 } from "../maintenance/setup-agent-hooks.ts";
@@ -31,25 +29,6 @@ describe("agent hook setup", () => {
     expect(config.hooks.PreToolUse[0].hooks[0].timeout).toBe(5);
     expect(config.hooks.SessionStart[0].matcher).toBe("startup|resume|clear|compact");
     expect(renderCodexHookConfig()).not.toContain('"matcher": ".*"');
-  });
-
-  it("parses enabled state from matching tables and ignores absent tables", () => {
-    const enabledKey = "/repo/.codex/hooks.json:pre_tool_use:0:0";
-    const disabledKey = "/repo/.codex/hooks.json:permission_request:0:0";
-    const missingKey = "/repo/.codex/hooks.json:session_start:0:0";
-    const configText = [
-      `[hooks.state."${enabledKey}"]`,
-      "enabled = true",
-      `[hooks.state."${disabledKey}"]`,
-      "enabled = false",
-      "",
-    ].join("\n");
-
-    const states = parseCodexHookStates(configText);
-
-    expect(states.get(enabledKey)).toBe(true);
-    expect(states.get(disabledKey)).toBe(false);
-    expect(states.has(missingKey)).toBe(false);
   });
 
   it("reports per-hook state and keeps disabled hooks non-fatal", () => {
@@ -82,15 +61,6 @@ describe("agent hook setup", () => {
     expect(output).toContain("session_start[0]: installed, unknown (no state recorded)");
     expect(output).toContain("Review disabled hooks in Codex /hooks; installation alone does not prove invocation.");
   });
-
-  it("detects linked worktrees from injected Git paths", () => {
-    expect(isLinkedWorktree({ checkoutRoot: "/repo", commonDir: ".git" })).toBe(false);
-    expect(isLinkedWorktree({ checkoutRoot: "/repo/worktrees/feature", commonDir: "/repo/.git" })).toBe(true);
-    expect(isLinkedWorktree({ checkoutRoot: "/repo/worktrees/feature", commonDir: "../../.git" })).toBe(true);
-  });
 });
 
-it("preserves hashes inside quoted hook keys and ignores trailing comments", () => {
-  const key = "/repo#checkout/.codex/hooks.json:pre_tool_use:0:0";
-  expect(parseCodexHookStates(`[hooks.state."${key}"] # table comment\nenabled = false # state comment`).get(key)).toBe(false);
-});
+

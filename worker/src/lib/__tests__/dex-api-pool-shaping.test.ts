@@ -137,22 +137,6 @@ describe("Balancer stableswap execution model", () => {
     expect(model!.tokens[1]!.referencePriceUsd).toBeCloseTo(1, 12);
   });
 
-  it("fails closed without amp, without a price rate, and without balances", () => {
-    expect(modelFor(stablePool({ amp: undefined }))).toBeNull();
-    expect(
-      modelFor(
-        stablePool({
-          tokens: [
-            { address: POOL_ADDRESS, symbol: "BPT", decimals: 18, priceUsd: null, weight: null, priceRate: 1.0 },
-            { address: USDC, symbol: "USDC", decimals: 6, priceUsd: 1, weight: null, priceRate: 1.0 },
-            { address: WUSDX, symbol: "wUSDX", decimals: 18, priceUsd: 1.02, weight: null, priceRate: null },
-          ],
-        }),
-      ),
-    ).toBeNull();
-    expect(modelFor(stablePool({ balances: null }))).toBeNull();
-  });
-
   it("emits a P4-compatible gate for every reviewed Balancer model failure", () => {
     const cases: Array<{
       label: string;

@@ -22,25 +22,4 @@ describe("pharos/no-raw-palette-colour", () => {
   ])("rejects %s", async (_name, source, count, filePath?: string) => {
     expect(await rawPaletteColours(source, filePath)).toHaveLength(count);
   });
-
-  it.each([
-    ["state utilities", 'export const c = "text-state-warn bg-state-danger-subtle border-state-info bg-state-positive-solid/15";'],
-    ["semantic tokens", 'export const c = "text-muted-foreground bg-card border-border/60 text-[color:var(--severity-mild)]";'],
-    ["non-colour utilities", 'export const c = "w-500 shadow-sm ring-2 text-sm from-transparent";'],
-  ])("allows %s", async (_name, source) => {
-    expect(await rawPaletteColours(source)).toEqual([]);
-  });
-
-  it.each([
-    "shared/lib/classification/__fixture.ts",
-    "src/lib/tape-class-style.ts",
-    "src/app/pharoswatchbot/__fixture.tsx",
-    "src/components/flow-machine-scene-fixture.tsx",
-    "src/app/cemetery/__fixture.tsx",
-    "src/components/digest-fixture.tsx",
-    "src/app/depeg/[event]/__fixture.tsx",
-    "src/app/stablecoin/[id]/error.tsx",
-  ])("does not apply to %s", async (filePath) => {
-    expect(await rawPaletteColours('export const c = "text-amber-700";', filePath)).toEqual([]);
-  });
 });

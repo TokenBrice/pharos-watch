@@ -5,7 +5,6 @@ import type { MintAuthorityProcessDiagnosticViewModel } from "../stablecoin-deta
 import {
   groupMintIssuanceDiagnostics,
   humanizeDiagnosticField,
-  processReasonLabel,
 } from "../mint-issuance-diagnostics";
 
 const GOVERNOR_REF = `ethereum:0x${"a".repeat(40)}`;
@@ -104,19 +103,4 @@ describe("diagnostic reader labels", () => {
     expect(label).not.toMatch(/[.\-]|0x|\d/);
   });
 
-  it("merges sibling paths that differ only by id", () => {
-    expect(humanizeDiagnosticField("routes.aave-l1-unopposed-1.residualUpperRaw"))
-      .toBe(humanizeDiagnosticField("routes.aave-l1-unopposed-5.residualUpperRaw"));
-  });
-
-  it("keeps plain keys that follow a collection name", () => {
-    expect(humanizeDiagnosticField("routes.controllerPowers.threshold"))
-      .not.toBe(humanizeDiagnosticField("routes.threshold"));
-  });
-
-  it("reads reason codes newer than the label map as words, not slugs", () => {
-    const label = processReasonLabel("execution-inventory-incomplete");
-    expect(label).not.toContain("-");
-    expect(processReasonLabel("voting-control-unproved")).not.toContain("-");
-  });
 });

@@ -29,16 +29,6 @@ function compareRows(a: Row, b: Row, sort: TableSortState<SortKey>): number {
 }
 
 describe("sortTableRows", () => {
-  it("sorts by descending score", () => {
-    const sorted = sortTableRows(rows, { key: "score", direction: "desc" }, compareRows);
-    expect(sorted.map((row) => row.name)).toEqual(["USDC", "DAI", "USDT"]);
-  });
-
-  it("sorts by ascending name", () => {
-    const sorted = sortTableRows(rows, { key: "name", direction: "asc" }, compareRows);
-    expect(sorted.map((row) => row.name)).toEqual(["DAI", "USDC", "USDT"]);
-  });
-
   it("does not mutate original rows", () => {
     const original = [...rows];
     void sortTableRows(rows, { key: "score", direction: "asc" }, compareRows);

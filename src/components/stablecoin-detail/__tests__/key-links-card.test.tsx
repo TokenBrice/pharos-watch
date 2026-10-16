@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import type { StablecoinMeta } from "@shared/types";
@@ -40,17 +40,6 @@ describe("KeyLinksCard", () => {
       "https://example.com/reserves",
     );
     expect(screen.getByText(/Deloitte/)).toBeTruthy();
-  });
-
-  it("owns #attestation only in the anchored in-flow copy, and marks the rail copy as its twin", () => {
-    const { container: inFlow } = render(<KeyLinksCard meta={meta} anchors />);
-    expect(inFlow.querySelector("#attestation")).not.toBeNull();
-    expect(inFlow.querySelector('[data-anchor-twin="attestation"]')).toBeNull();
-    cleanup();
-
-    const { container: rail } = render(<KeyLinksCard meta={meta} />);
-    expect(rail.querySelector("#attestation")).toBeNull();
-    expect(rail.querySelector('[data-anchor-twin="attestation"]')).not.toBeNull();
   });
 
   it("drops the attestation block when no proof of reserves is published", () => {

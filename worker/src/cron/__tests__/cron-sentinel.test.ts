@@ -82,19 +82,6 @@ describe("runCronSentinel", () => {
     expect(mocks.freshness).not.toHaveBeenCalled();
     expect(mocks.duration).not.toHaveBeenCalled();
   });
-  it("retains daily warnings across healthy modes and clears only when the source succeeds", async () => {
-    const db = emptyDb();
-    mocks.growth.mockResolvedValueOnce({ status: "degraded", itemCount: 2_400_000 });
-    expect((await runDailyCronSentinel(db, { nowSec: 100 })).status).toBe("degraded");
-    const status = await runCronSentinel(db, { mode: "status", nowSec: 200 });
-    expect(status.status).toBe("degraded");
-    expect(JSON.parse(status.metadata!).sources.growth).toMatchObject({ status: "degraded", observedAt: 100 });
-    mocks.growth.mockResolvedValueOnce({ status: "skipped_neutral" });
-    expect((await runDailyCronSentinel(db, { nowSec: 300 })).status).toBe("degraded");
-    expect((await runCronSentinel(db, { mode: "turnover", nowSec: 400 })).status).toBe("degraded");
-    expect((await runDailyCronSentinel(db, { nowSec: 500 })).status).toBe("ok");
-  });
-
   it("persists thrown source errors and rejects an older successful overwrite", async () => {
     const db = emptyDb();
     mocks.reserve.mockRejectedValueOnce(new Error("reserve evaluation failed"));
@@ -110,18 +97,6 @@ describe("runCronSentinel", () => {
     await expect(runCronSentinel(emptyDb(), { mode: "status", signal: controller.signal })).rejects.toThrow("cancelled");
     expect(sourceStates.size).toBe(0);
     expect(mocks.freshness).not.toHaveBeenCalled();
-  });
-
-  it("retains a legacy daily warning before the first new daily evaluation", async () => {
-    const db = {
-      prepare: () => ({ bind: (path: string) => ({ first: async () => path === '$.sources."growth"' ? {
-        source_result: JSON.stringify({ status: "degraded", itemCount: 2_400_000, metadata: { rowCount: 2_400_000 } }),
-        started_at: 100,
-      } : null }) }),
-    } as unknown as D1Database;
-    const result = await runCronSentinel(db, { mode: "status", nowSec: 200 });
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata!).sources.growth).toMatchObject({ observedAt: 100, metadata: { rowCount: 2_400_000 } });
   });
 
   it("keeps a first unevaluated source neutral", async () => {

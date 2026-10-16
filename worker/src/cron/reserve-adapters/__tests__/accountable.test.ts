@@ -593,6 +593,39 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
+  it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    const result = await runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "2026-08-07T05:13:55.000Z",
+      reserves: {
+        exposure_split: {
+          "[Fasanara]_mGLOBAL_Loop": { "": 60 },
+          "[Fasanara]_mGLO_Loop": { "": 40 },
+        },
+      },
+    });
+
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "Fasanara mGLOBAL loop",
+      pct: 60,
+      risk: "high",
+      coinId: "mglobal-midas-fasanara",
+      depType: "collateral",
+    }));
+    expect(result.slices).toContainEqual({
+      sourceKey: "accountable:yuzu:deployment:fasanara-mglo-loop",
+      name: "Fasanara mGLO loop",
+      pct: 40,
+      risk: "high",
+    });
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 7, 7, 6) / 1000,
+    }).valid).toBe(true);
+  });
+
   it("maps new Yuzu USDG positions without inventing token links and keeps the dust signed bucket informational", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const result = await runAccountablePayload(config, makeTimestampedYuzuPayload({
@@ -875,39 +908,6 @@ describe("adaptAccountableDashboard", () => {
     }))).rejects.toThrow(/no contemporaneous timeline reserve total/);
   });
 
-  it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
-
-    const result = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "2026-08-07T05:13:55.000Z",
-      reserves: {
-        exposure_split: {
-          "[Fasanara]_mGLOBAL_Loop": { "": 60 },
-          "[Fasanara]_mGLO_Loop": { "": 40 },
-        },
-      },
-    });
-
-    expect(result.slices).toContainEqual(expect.objectContaining({
-      name: "Fasanara mGLOBAL loop",
-      pct: 60,
-      risk: "high",
-      coinId: "mglobal-midas-fasanara",
-      depType: "collateral",
-    }));
-    expect(result.slices).toContainEqual({
-      sourceKey: "accountable:yuzu:deployment:fasanara-mglo-loop",
-      name: "Fasanara mGLO loop",
-      pct: 40,
-      risk: "high",
-    });
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 7, 7, 6) / 1000,
-    }).valid).toBe(true);
-  });
-
   it("rejects the partial signed Yuzu exposure split when it does not reconcile to total reserves", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
     expect(config.params).not.toHaveProperty("skipTotalReservesValidation");
@@ -970,40 +970,6 @@ describe("adaptAccountableDashboard", () => {
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 7, 13, 12) / 1000,
-    }).valid).toBe(true);
-  });
-
-  it("maps the new Yuzu Accountable [Agora]_PT_AUSD Pendle PT bucket into a mapped reserve slice", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
-
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.101272,
-      ts: "1781945117382",
-      reserves: {
-        exposure_split: {
-          "[Ethena]_USDe_Loop": { value: 80 },
-          "[Agora]_PT_AUSD": { value: 20 },
-        },
-      },
-    });
-
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({
-      bucket: "exposure_split",
-      breakdownCount: 2,
-      mappedBucketCount: 2,
-    });
-    expect(result.metadata?.unknownBucketCount).toBeUndefined();
-    expect(result.slices).toContainEqual(expect.objectContaining({
-      name: "Agora AUSD Pendle PT",
-      pct: 20,
-      risk: "high",
-      coinId: "ausd-agora",
-      depType: "collateral",
-    }));
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 5, 20, 10) / 1000,
     }).valid).toBe(true);
   });
 

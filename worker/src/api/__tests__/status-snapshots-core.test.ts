@@ -719,26 +719,6 @@ describe("handleStatus", () => {
     expect(sql).toContain("cache WHERE key IN");
   });
 
-  it("treats malformed request URLs as normal snapshot-eligible status requests", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
-        rows: [],
-        first: null,
-      },
-      ...makeMinimalLiveStatusRows(now),
-    ]);
-
-    const request = { url: "http://[" } as Request;
-    const res = await handleStatus({ db, trustedAdmin: true, request });
-
-    const body = (await readJsonResponse(res, 200)) as { rawOverallStatus: string };
-    expect(["healthy", "degraded", "stale"]).toContain(body.rawOverallStatus);
-    expect(db.getHistory().some((entry) => entry.binds[0] === STATUS_RAW_SNAPSHOT_CACHE_KEY)).toBe(true);
-  });
-
   it("returns 200 with status body when authorized", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({

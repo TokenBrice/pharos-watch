@@ -43,15 +43,6 @@ describe("depeg event indexing policy", () => {
     ]);
   });
 
-  it("breaks same-second ties by slug", () => {
-    const selected = selectIndexableDepegEvents([
-      { slug: "z-last", startedAt: EPOCH + 1 },
-      { slug: "a-first", startedAt: EPOCH + 1 },
-    ]);
-
-    expect(selected.map((event) => event.slug)).toEqual(["a-first", "z-last"]);
-  });
-
   it("uses absolute deviation magnitude for dedicated page eligibility", () => {
     expect(hasDedicatedDepegEventPage({ peakDeviationBps: 500 })).toBe(true);
     expect(hasDedicatedDepegEventPage({ peakDeviationBps: -500 })).toBe(true);

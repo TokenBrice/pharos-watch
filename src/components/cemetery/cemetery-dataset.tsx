@@ -21,7 +21,7 @@ function formatLatestRecordAdded(date: string): string {
   return formatUtcDayLabel(new Date(Date.UTC(year, month - 1, day)));
 }
 
-export function buildCemeteryDatasetCitation(meta: CemeteryDatasetMeta = CEMETERY_DATASET_META): string {
+function buildCemeteryDatasetCitation(meta: CemeteryDatasetMeta = CEMETERY_DATASET_META): string {
   const latest = meta.updatedAt ? `, latest record added ${formatLatestRecordAdded(meta.updatedAt)}` : "";
   return `Pharos, "Stablecoin Cemetery Dataset," schema ${meta.schemaVersion}, ${meta.rowCount} records${latest}. ${SITE_ORIGIN}${meta.jsonUrl} (${meta.license}).`;
 }

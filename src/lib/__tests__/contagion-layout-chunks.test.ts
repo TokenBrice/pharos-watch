@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildGraphData, buildSupernodeState, runSimulation, runSimulationInChunks } from "@/lib/contagion-layout";
+import { buildGraphData, buildSupernodeState, runSimulationInChunks } from "@/lib/contagion-layout";
 
 const cards = [
   { id: "a", symbol: "A", grade: "A" as const },
@@ -13,15 +13,6 @@ const state = buildSupernodeState(graph.nodes, graph.links);
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("chunked layout", () => {
-  it("publishes exactly the synchronous solver coordinates after deferred work", async () => {
-    vi.useFakeTimers();
-    const complete = vi.fn();
-    runSimulationInChunks(graph.nodes, graph.links, state, complete);
-    expect(complete).not.toHaveBeenCalled();
-    await vi.runAllTimersAsync();
-    expect(complete).toHaveBeenCalledExactlyOnceWith(runSimulation(graph.nodes, graph.links, state));
-  });
-
   it("does not publish a superseded layout even if an idle callback is already queued", () => {
     let pending: (() => void) | undefined;
     vi.stubGlobal("requestIdleCallback", (callback: () => void) => { pending = callback; return 1; });

@@ -271,34 +271,6 @@ describe("analyzeDexLiquidityPostScoring", () => {
       { stablecoinId: "upper-bound", previousTvlUsd: 100, currentTvlUsd: 125, ratio: 1.25, protocol: "curve", protocolDeltaUsd: 25 },
     ]);
   });
-  it("caps stepped IDs by absolute delta and reports every omitted step", async () => {
-    const coins = Array.from({ length: 55 }, (_, index) => ({
-      id: `coin-${index}`,
-      previous: index + 1,
-      current: (index + 1) * 2,
-    }));
-    const db = mockD1([{
-      match: "FROM dex_liquidity_run_rows r",
-      rows: coins.map((coin) => ({
-        stablecoin_id: coin.id, total_tvl_usd: coin.previous, protocol_tvl_json: null,
-      })),
-    }]);
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
-      db,
-      scoreResults: new Map(coins.map((coin) => [coin.id, { ...BASE_SCORE_RESULT, tvl: coin.current }])),
-    }));
-    const expectedIds = coins.slice(5).reverse().map((coin) => coin.id);
-    expect(analysis.sourceCoverage).toMatchObject({
-      coinTvlStepCount150: 55,
-      coinTvlStepCount25: 55,
-      coinTvlStepIds150: expectedIds,
-      coinTvlStepIds150Omitted: 5,
-      coinTvlStepIds25: expectedIds,
-      coinTvlStepIds25Omitted: 5,
-      coinTvlStepComparisons: 55,
-    });
-  });
-
   it("distinguishes absent current coins and missing positive baselines from valid comparisons", async () => {
     const db = mockD1([{
       match: "FROM dex_liquidity_run_rows r",

@@ -11,7 +11,7 @@ import { getFreshnessSentinelCacheKey, getFreshnessSentinelProducerJob } from ".
  * which under-counts multi-byte characters by a few percent and still leaves
  * >600 KB of headroom before the hard cap.
  */
-export const YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS = 1_200_000;
+const YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS = 1_200_000;
 
 export interface YieldRowsWriteStats {
   cacheValueChars: number;

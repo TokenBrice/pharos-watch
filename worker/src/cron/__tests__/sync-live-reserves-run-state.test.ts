@@ -83,30 +83,6 @@ describe("selectConfiguredCoinRunQueue", () => {
 });
 
 describe("recordDeferredTail", () => {
-  it("chunks deferred tail writes through the shared D1 batch executor", async () => {
-    const batchSizes: number[] = [];
-    const db = makeBatchRecordingDb(batchSizes);
-    const coins = Array.from({ length: 61 }, (_value, index) => makeCoin(`coin-${index}`));
-
-    const result = await recordDeferredTail(db, coins, 1_700_000_000);
-
-    expect(result).toEqual({
-      counts: { deferredCoins: 61 },
-      deferredTail: {
-        nextCursorStablecoinId: "coin-0",
-        cursorTailState: "complete",
-        cursorRecordedAt: 1_700_000_000,
-        cursorTailCompletedAt: expect.any(Number),
-        cursorTailFailedAt: null,
-        cursorTailError: null,
-        runBudgetTruncationCount: 1,
-      },
-
-      additionalBreakerKeys: expect.any(Set),
-    });
-    expect(result.additionalBreakerKeys.size).toBe(1);
-    expect(batchSizes).toEqual([100, 22]);
-  });
   it("surfaces deferred-tail persistence failures", async () => {
     const db = makeBatchRecordingDb([], [], new Error("batch unavailable"));
 

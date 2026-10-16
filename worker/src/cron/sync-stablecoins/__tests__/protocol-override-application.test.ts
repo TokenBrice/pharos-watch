@@ -69,25 +69,6 @@ describe("applyProtocolPriceOverrides", () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it("applies accepted override with >100 bps divergence from current asset price and warns", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    // Current consensus 1.0, override 1.02 → 200 bps divergence.
-    const assets = [makeAsset({ price: 1.0 })];
-    const overrides = new Map([["mkusd-prisma", makeOverride({ price: 1.02 })]]);
-
-    const applied = applyProtocolPriceOverrides({
-      assets,
-      overrides,
-      validationContexts: createValidationContextResolver(),
-      syncStartSec: 1_800_000_000,
-    });
-
-    expect(applied).toBe(1);
-    expect(assets[0].price).toBe(1.02);
-    expect(assets[0].priceSource).toBe("protocol-redeem");
-    expect(warnSpy).toHaveBeenCalled();
-  });
-
   it("leaves the asset untouched when the candidate validation rejects the override", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     validatePrimaryPriceCandidateMock.mockReturnValue({ accepted: false, reason: "bounds_exceeded" });

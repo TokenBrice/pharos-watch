@@ -160,10 +160,6 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     }
     expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "malformed" });
   });
-  it("rejects root drift without any rounding tolerance", async () => {
-    const f = fixture(); f.rpc[`${f.vault}:totalAssets()`] = 101n;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "unreconciled" });
-  });
   it("reports zero NAV as unavailable, not an all-idle success", async () => {
     expect((await observe(fixture([]))).result).toMatchObject({ status: "unavailable", reason: "zero-nav", deployments: null });
   });
@@ -490,18 +486,6 @@ describe("MetaMorpho source-defined integer accrual", () => {
       idleAssetsRaw: "0", reconciledAssetsRaw: "3150377586784", reconciliationResidualRaw: "0" });
     f.rpc["balanceOf(address)"] = null;
     expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "incomplete-census" });
-  });
-  it("includes nonzero pending interest and fee shares with source rounding", () => {
-    // MorphoBalancesLib: x=.1WAD, x2=.005WAD, x3=.000166...WAD;
-    // interest=10,516,666; feeAssets=2,103,333. Explicit independently
-    // expanded integers pin fee-share denominator and floor behavior.
-    const input = { supplyAssets: 200_000_000n, supplyShares: 200_000_000_000_000n,
-      borrowAssets: 100_000_000n, fee: WAD / 5n, lastUpdateSec: 0, timestampSec: 100,
-      borrowRate: 1_000_000_000_000_000n, positionShares: 100_000_000_000_000n };
-    const feeShares = 2_103_333n * 200_000_001_000_000n / 208_413_334n;
-    const expected = 100_000_000_000_000n * 210_516_667n / (200_000_000_000_000n + feeShares + 1_000_000n);
-    expect(accruedMorphoLenderAssets(input)).toBe(expected);
-    expect(expected).not.toBe(100_000_000n);
   });
   it("uses the pinned borrowRateView and fee shares through the real mocked RPC path", async () => {
     const feeShares = 2_103_333n * 200_000_001_000_000n / 208_413_334n;

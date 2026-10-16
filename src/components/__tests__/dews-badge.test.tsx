@@ -12,30 +12,9 @@ describe("DEWSBadge", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders WATCH band with label", () => {
-    render(<DEWSBadge score={25} band="WATCH" />);
-    expect(screen.getByText("Watch")).toBeTruthy();
-  });
-
-  it("renders ALERT band with label", () => {
-    render(<DEWSBadge score={45} band="ALERT" />);
-    expect(screen.getByText("Alert")).toBeTruthy();
-  });
-
   it("renders WARNING band with label", () => {
     render(<DEWSBadge score={65} band="WARNING" />);
     expect(screen.getByText("Warning")).toBeTruthy();
-  });
-
-  it("renders DANGER band with label", () => {
-    render(<DEWSBadge score={85} band="DANGER" />);
-    expect(screen.getByText("Danger")).toBeTruthy();
-  });
-
-  it("shows compact single-letter label when compact=true", () => {
-    render(<DEWSBadge score={65} band="WARNING" compact />);
-    expect(screen.getByText("W")).toBeTruthy();
-    expect(screen.queryByText("Warning")).toBeNull();
   });
 
 

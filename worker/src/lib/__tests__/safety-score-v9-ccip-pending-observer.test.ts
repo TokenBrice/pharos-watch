@@ -210,12 +210,6 @@ describe("authenticated CCIP pending quantities", () => {
     await observeCcipPending({ ...input(source(), complete.checkpoint), db: {} as D1Database, onDiagnostic });
     expect(onDiagnostic.mock.calls.every(([value]) => !value.authenticatedCursorAdvanced)).toBe(true);
   });
-  it("exposes the rejected pin clock and finalized deficit", async () => {
-    finalized = 100;
-    const onDiagnostic = vi.fn();
-    expect(await observeCcipPending({ ...input(), onDiagnostic })).toEqual({ status: "rejected", reason: "pin-not-finalized" });
-    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ chainId: "ethereum", pinObservedAtSec: 1000, finalizedLagBlocks: 5, hardEvidenceFailure: true, operands: expect.objectContaining({ pinNumber: 105, finalizedNumber: 100 }) }));
-  });
   it("completes an indexer omission through consecutive source logs", async () => {
     const result = await observeCcipPending(input());
     expect(result.status).toBe("accepted");

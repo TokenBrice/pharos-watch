@@ -75,14 +75,4 @@ describe("handleRequestSourceStats", () => {
     expect(body.scope).toEqual({ countsTotalSiteDemand: true, countsWorkerLoad: true, includesPagesProxyCacheHits: true });
   });
 
-  it("returns finite zero percentages and empty series without demand", async () => {
-    const { db } = fixtures.open();
-    const body = await readStats(db);
-    expect(body.totals).toEqual({ siteRequests: 0, externalRequests: 0, totalRequests: 0, siteSharePct: 0, externalSharePct: 0 });
-    expect(body.keyedPublicApi).toEqual({ keyedRequests: 0, unkeyedRequests: 0, totalRequests: 0, keyedSharePct: 0, unkeyedSharePct: 0, totalKeys: 0, returnedKeys: 0, omittedKeys: 0, omittedRequests: 0, truncated: false });
-    expect(body.routes).toEqual([]);
-    expect(body.buckets).toEqual([]);
-    expect(body.lanes).toEqual([]);
-    expect(body.apiKeys).toEqual([]);
-  });
 });

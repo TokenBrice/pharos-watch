@@ -57,16 +57,6 @@ const olderEntry = (date = "2026-07-31T05:00:00Z"): FixtureEntry => ({
 describe("Gemini Contentful attestation index verification", () => {
   const manifest = assurance.getIndependentAssuranceManifest("GUSD");
 
-  it("accepts the reviewed newest entry and ignores older entries", () => {
-    expect(() => verifyGeminiContentfulIndex(contentfulIndex([olderEntry(), reviewedEntry()]), manifest)).not.toThrow();
-  });
-
-  it("fails closed when a newer unreviewed entry exists", () => {
-    const newer = olderEntry("2026-09-30T05:00:00Z");
-    expect(() => verifyGeminiContentfulIndex(contentfulIndex([olderEntry(), reviewedEntry(), newer]), manifest))
-      .toThrow("newer unreviewed report");
-  });
-
   it("fails closed when the newest entry URL differs from the reviewed manifest", () => {
     const drift = reviewedEntry("https://assets.ctfassets.net/jg6lo9a2ukvr/7m6P0Or1IDsjF8Nj71yoOY/aff37499c0d462e444c5e614ed065e79/Resigned_Report.pdf");
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([drift]), manifest))

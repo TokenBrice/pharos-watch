@@ -1,14 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   HOWEY_UNCERTAIN_ASSETS,
-  activeDepegThresholdBps,
   applyInputDrivenExclusions,
   evaluateExclusions,
   hasRequiredSignals,
-  treasuryPegScoreFloor,
-  tradingDewsCeiling,
-  tradingPegScoreFloor,
-  yieldPegScoreFloor,
 } from "../exclusions";
 import type { MergedRow } from "../types";
 import { makeInput, makeMergedRowWithIdentity } from "./fixture";
@@ -33,38 +28,6 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
     ...overrides,
   });
 }
-
-describe("threshold helpers", () => {
-  it("activeDepegThresholdBps scales with tolerance", () => {
-    expect(activeDepegThresholdBps("zero")).toBe(50);
-    expect(activeDepegThresholdBps("tight")).toBe(100);
-    expect(activeDepegThresholdBps("moderate")).toBe(200);
-  });
-
-  it("tradingDewsCeiling scales with exit speed", () => {
-    expect(tradingDewsCeiling("1h")).toBe(35);
-    expect(tradingDewsCeiling("24h")).toBe(45);
-    expect(tradingDewsCeiling("any")).toBe(55);
-  });
-
-  it("treasuryPegScoreFloor scales with depeg tolerance", () => {
-    expect(treasuryPegScoreFloor("zero")).toBe(80);
-    expect(treasuryPegScoreFloor("tight")).toBe(70);
-    expect(treasuryPegScoreFloor("moderate")).toBe(60);
-  });
-
-  it("yieldPegScoreFloor scales with depeg tolerance", () => {
-    expect(yieldPegScoreFloor("zero")).toBe(65);
-    expect(yieldPegScoreFloor("tight")).toBe(55);
-    expect(yieldPegScoreFloor("moderate")).toBe(45);
-  });
-
-  it("tradingPegScoreFloor scales with depeg tolerance", () => {
-    expect(tradingPegScoreFloor("zero")).toBe(85);
-    expect(tradingPegScoreFloor("tight")).toBe(80);
-    expect(tradingPegScoreFloor("moderate")).toBe(70);
-  });
-});
 
 describe("universal exclusions", () => {
   it("below-supply-floor: $4.5M excluded, $5.5M passes", () => {
@@ -456,13 +419,6 @@ describe("input-driven exclusions", () => {
 });
 
 describe("hasRequiredSignals", () => {
-  it("Treasury coverage all-present", () => {
-    expect(hasRequiredSignals(makeRow(), "treasury")).toEqual({
-      ok: true,
-      missing: [],
-    });
-  });
-
   it("PegScore coverage does not require peg-stability history", () => {
     const row = makeRow({ pegScore: 95 });
     expect(hasRequiredSignals(row, "treasury")).toEqual({ ok: true, missing: [] });

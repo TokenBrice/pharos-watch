@@ -89,7 +89,7 @@ export function renderRss20(feed: RssFeed): string {
   return [...header, ...items, ...footer].join("\n");
 }
 
-export function rssResponse(feed: RssResponseFeed): Response {
+function rssResponse(feed: RssResponseFeed): Response {
   const xml = renderRss20({
     ...feed,
     lastBuildDate: feed.lastBuildDate ?? feed.items[0]?.pubDate ?? toRfc822(new Date()),

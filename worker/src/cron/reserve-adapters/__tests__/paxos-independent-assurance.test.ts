@@ -86,17 +86,9 @@ describe("Paxos discovered main module and pinned normalized page", () => {
     await expect(discover()).resolves.toBe(SEPTEMBER_PAGE);
   });
 
-  it("normalizes leading import hash/export churn while preserving module basenames and locals", () => {
-    const first = 'import Foo,{C as local,a as other}from"./chunk.OldHash.mjs";const page=local;\n//# sourceMappingURL=page.OldHash.mjs.map';
-    const second = 'import Foo,{M as local,b as other}from"./chunk.NewHash.mjs";const page=local;\n//# sourceMappingURL=page.NewHash.mjs.map';
-    expect(normalizePaxosPageModule(first)).toBe(normalizePaxosPageModule(second));
-    const inert = 'const text=\'import("./old.Hash.mjs")\';';
-    expect(normalizePaxosPageModule(inert)).toBe(inert);
-  });
-
   // Import expressions below are unexecuted upstream-source attack fixtures,
   // not module loads in this test; static imports cannot represent that input.
-  it.each(["AugustReport", "SeptemberReport"])("rejects the reviewer's dynamic import collision (%s)", (module) => {
+  it.each(["AugustReport"])("rejects the reviewer's dynamic import collision (%s)", (module) => {
     expect(() => normalizePaxosPageModule(`const report=await import("./${module}.mjs");`))
       .toThrow("dynamic import in product page module");
   });

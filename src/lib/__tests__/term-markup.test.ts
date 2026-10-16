@@ -39,10 +39,6 @@ describe("term markup", () => {
     ).toBe("overcollateralized minting with CDP vaults.");
   });
 
-  it("leaves malformed markers untouched", () => {
-    expect(stripTermMarkup("Broken {{term:cdp}}CDP marker")).toBe("Broken {{term:cdp}}CDP marker");
-  });
-
   it("validates the AI-summary corpus through the runtime parser", () => {
     expect(() => assertSummaryTermMarkup(aiSummaries as Record<string, { text?: unknown }>)).not.toThrow();
   });

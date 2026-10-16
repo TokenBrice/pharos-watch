@@ -8,7 +8,7 @@ vi.mock("node:child_process", () => ({
   execFileSync: execFileSyncMock,
 }));
 
-const { createRemoteD1Client, sqlString } = await import("../lib/remote-d1");
+const { createRemoteD1Client } = await import("../lib/remote-d1");
 
 describe("worker remote D1 script helpers", () => {
   beforeEach(() => {
@@ -64,8 +64,4 @@ describe("worker remote D1 script helpers", () => {
     expect(sqlFileContents).toBe("SELECT 1;");
   });
 
-  it("escapes SQL string literals", () => {
-    expect(sqlString("O'Hara")).toBe("'O''Hara'");
-    expect(sqlString(null)).toBe("NULL");
-  });
 });

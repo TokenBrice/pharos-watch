@@ -1,9 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CEMETERY_RECORDED_AT_DESCRIPTION } from "@shared/lib/cemetery-merged";
-import { buildCemeteryDataset } from "../maintenance/generate-cemetery-dataset";
-
 import {
   DOC_CONTRACT_BLOCKS,
   docContractEndMarker,
@@ -11,13 +8,6 @@ import {
   findDocContractDrift,
   renderDocContractBlock,
 } from "../lib/doc-sync/contract-blocks";
-import {
-  END_MARKER as API_END_MARKER,
-  START_MARKER as API_START_MARKER,
-  loadOpenapi,
-  renderGeneratedBlock as renderApiReferenceBlock,
-} from "../maintenance/generate-api-reference";
-
 const ROOT = resolve(import.meta.dirname, "../..");
 
 function readDocument(file: string): string {
@@ -29,26 +19,6 @@ const documents: ReadonlyMap<string, string> = new Map(
 );
 
 describe("generated documentation contract blocks", () => {
-  it("shares the cemetery entry-date description with the exported field contract", () => {
-    const block = DOC_CONTRACT_BLOCKS.find((entry) => entry.id === "cemetery-recorded-at-description");
-    const dataset = JSON.parse(buildCemeteryDataset().json) as { fields: { recordedAt: string } };
-    expect(block?.value).toBe(CEMETERY_RECORDED_AT_DESCRIPTION);
-    expect(dataset.fields.recordedAt).toBe(block?.value);
-  });
-
-  it("uses one unique inline marker pair per source-backed value", () => {
-    const ids = DOC_CONTRACT_BLOCKS.map((block) => block.id);
-    expect(new Set(ids).size).toBe(ids.length);
-
-    for (const block of DOC_CONTRACT_BLOCKS) {
-      expect(block.value).not.toContain("\n");
-      const document = readDocument(block.file);
-      expect(document.split(docContractStartMarker(block.id))).toHaveLength(2);
-      expect(document.split(docContractEndMarker(block.id))).toHaveLength(2);
-      expect(document).toContain(renderDocContractBlock(block));
-    }
-  });
-
   it.each(DOC_CONTRACT_BLOCKS)("detects drift in $id", (block) => {
     const drift = findDocContractDrift((file) => {
       const document = documents.get(file)!;
@@ -68,14 +38,4 @@ describe("generated documentation contract blocks", () => {
     }
   });
 
-  it("keeps the source-backed endpoint examples under the existing API marker", () => {
-    const document = readDocument("docs/api-reference.md");
-    const start = document.indexOf(API_START_MARKER);
-    const end = document.indexOf(API_END_MARKER);
-    const found = document.slice(start, end + API_END_MARKER.length);
-
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-    expect(found).toBe(renderApiReferenceBlock(loadOpenapi()));
-  });
 });

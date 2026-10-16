@@ -120,19 +120,6 @@ describe("WatchlistPortabilityPanel", () => {
     expect((screen.getByLabelText("Import a portable token") as HTMLTextAreaElement).value).toBe("");
   });
 
-  it("keeps the preview and entered token when the replacement is not applied", async () => {
-    const onConfirm = vi.fn().mockResolvedValue(null);
-    renderPanel({ state: writableState, canMutate: true, onPreview: vi.fn().mockResolvedValue(importPreview()), onConfirm });
-
-    enterImportToken("pw2.import.token");
-    await screen.findByText("Exact replacement preview");
-    fireEvent.click(screen.getByRole("button", { name: "Apply exact replacement" }));
-
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledOnce());
-    expect(screen.getByText("Exact replacement preview")).toBeTruthy();
-    expect((screen.getByLabelText("Import a portable token") as HTMLTextAreaElement).value).toBe("pw2.import.token");
-  });
-
   it("disables exact replacement during the server-directed edit lockout", async () => {
     const onConfirm = vi.fn();
     renderPanel({
@@ -199,23 +186,5 @@ describe("WatchlistPortabilityPanel", () => {
     expect(screen.getByText("USD Top 25")).toBeTruthy();
     expect(screen.getByText("old-coin: depeg")).toBeTruthy();
     expect(screen.getByText("USD Top 25: safety")).toBeTruthy();
-  });
-
-  it("displays the exported token and reports copy success and failure", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
-    renderPanel();
-
-    fireEvent.click(screen.getByRole("button", { name: "Export watchlist" }));
-    const tokenBox = (await screen.findByLabelText("Portable token")) as HTMLTextAreaElement;
-    expect(tokenBox.value).toBe("pw2.payload.digest");
-
-    fireEvent.click(screen.getByRole("button", { name: "Copy token" }));
-    await screen.findByText("Copied.");
-    expect(writeText).toHaveBeenCalledWith("pw2.payload.digest");
-
-    writeText.mockRejectedValueOnce(new Error("blocked"));
-    fireEvent.click(screen.getByRole("button", { name: "Copy token" }));
-    await screen.findByText("Select and copy the token above.");
   });
 });

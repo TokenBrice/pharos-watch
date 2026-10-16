@@ -281,13 +281,6 @@ describe("makina-strategy adapter", () => {
     expect(result.metadata?.details?.onchainMachineAccountingTimestamp).toBe(1785310740);
   });
 
-  it("passes shared adapter output validation", () => {
-    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS);
-
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined }).valid)
-      .toBe(true);
-  });
-
   it("does not hide stale allocations behind a fresh strategy timestamp", () => {
     const strategy = structuredClone(STRATEGY_FIXTURE);
     const allocations = structuredClone(ALLOCATIONS_FIXTURE);

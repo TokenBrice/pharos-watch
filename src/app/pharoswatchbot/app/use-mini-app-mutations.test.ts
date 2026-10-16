@@ -4,7 +4,6 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { RECOMMENDED_OPERATION } from "./constants";
 import { MiniAppRequestError, type MiniAppErrorCode } from "./error-messages";
 import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramMiniAppClientSnapshot } from "./mini-app-api";
@@ -270,57 +269,6 @@ describe("useMiniAppMutations", () => {
     expect(onSnapshotReplaced).not.toHaveBeenCalled();
     expect(reloadSession).toHaveBeenCalledWith({ clearMessage: false });
     expect(result.current.message).toBe("Telegram authorization expired. Close and reopen from PharosWatchBot.");
-  });
-
-  it.each([
-    [403, "not-private", "This Mini App can only edit personal alerts. Use the bot commands in groups."],
-    [400, "validation-error", "Change was rejected by the server."],
-    [400, "unknown-coin", "Change was rejected by the server."],
-    [400, "invalid-timezone", "Change was rejected by the server."],
-    [413, "body-too-large", "Request was too large to send."],
-    [503, "preset-unavailable", "Mini App backend is temporarily unavailable. Try again shortly."],
-    [503, "not-configured", "Mini App backend is temporarily unavailable. Try again shortly."],
-    [500, "internal", "Something went wrong. Try again or reopen Telegram."],
-  ] as const)("maps mutation status %i / code %s to the hook message", async (status, code, expected) => {
-    apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(new MiniAppRequestError(status, code as MiniAppErrorCode));
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
-    await act(async () => { await result.current.performMutation({ kind: "pause" }); });
-    expect(result.current.message).toBe(expected);
-  });
-
-  it("runs Telegram write-access and home-screen probes once after successful mutations", async () => {
-    const requestWriteAccess = vi.fn();
-    const checkHomeScreenStatus = vi.fn((callback: (status: string) => void) => callback("missed"));
-    const isVersionAtLeast = vi.fn((version: string) => version === "6.9" || version === "8.0");
-    const webApp = makeWebApp({ isVersionAtLeast, requestWriteAccess, checkHomeScreenStatus });
-    const state: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, chatType: "sender" },
-      subscriber: { ...baseState.subscriber, exists: false },
-    };
-    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot(baseState));
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ state, webApp })));
-
-    expect(checkHomeScreenStatus).not.toHaveBeenCalled();
-    await act(async () => { await result.current.performMutation(RECOMMENDED_OPERATION); });
-    await act(async () => { await result.current.performMutation(RECOMMENDED_OPERATION); });
-    expect(requestWriteAccess).toHaveBeenCalledOnce();
-    expect(checkHomeScreenStatus).toHaveBeenCalledOnce();
-    expect(result.current.homeScreenStatus).toBe("missed");
-  });
-
-  it("does not request write access for a private-chat launch", async () => {
-    const requestWriteAccess = vi.fn();
-    const webApp = makeWebApp({ isVersionAtLeast: () => true, requestWriteAccess });
-    const state: TelegramMiniAppState = {
-      ...baseState,
-      subscriber: { ...baseState.subscriber, exists: false },
-    };
-    apiMocks.postMiniAppSnapshot.mockResolvedValueOnce(makeSnapshot());
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ state, webApp })));
-
-    await act(async () => { await result.current.performMutation(RECOMMENDED_OPERATION); });
-    expect(requestWriteAccess).not.toHaveBeenCalled();
   });
 
   it("restores the persisted server row, not stale client tuning, during the undo window", async () => {

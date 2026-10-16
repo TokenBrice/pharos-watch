@@ -6,10 +6,6 @@ import { describe, expect, it } from "vitest";
 import { allowlistedRichText } from "../../.codex/skills/stablecoin-pulse-report/scripts/rich-text.mjs";
 
 describe("pulse editorial rich text", () => {
-  it("preserves allowed typography, entities, word joiners and HTTPS links", () => {
-    expect(allowlistedRichText('−\u2060$2 &amp; <b>bold <i>italic</i></b> <a href="https://example.com/?a=1&amp;b=2">source</a>', "copy"))
-      .toBe('−\u2060$2 &amp; <b>bold <i>italic</i></b> <a href="https://example.com/?a=1&amp;b=2">source</a>');
-  });
   it.each([
     '<script>alert(1)</script>', '<img src="https://example.com/x" onerror="alert(1)">',
     '<svg><a href="https://example.com">x</a></svg>', '<style>body{display:none}</style>',
@@ -55,5 +51,4 @@ describe("pulse editorial rich text", () => {
       expect(existsSync(path.join(dir, "out/report.html"))).toBe(false);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
-
 });

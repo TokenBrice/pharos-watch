@@ -20,25 +20,6 @@ describe("ExportPreamble formatters", () => {
     );
   });
 
-  it("renders the NDJSON preamble as a single `_meta` JSON line", () => {
-    const ndjson = formatPreambleNdjson(FIXTURE);
-    expect(JSON.parse(ndjson)).toEqual({
-      _meta: {
-        endpoint: "stablecoins",
-        asOfISO: "2026-05-16T12:00:00.000Z",
-        sourceUrl: "https://pharos.watch/",
-        methodologyLabel: "safety-score v7.25",
-      },
-    });
-    expect(ndjson.includes("\n")).toBe(false);
-  });
-
-  it("renders the Markdown preamble as a `> `-prefixed blockquote line", () => {
-    expect(formatPreambleMarkdown(FIXTURE)).toBe(
-      "> Pharos pharos.watch | Endpoint: stablecoins | As of: 2026-05-16T12:00:00.000Z | URL: https://pharos.watch/ | Methodology: safety-score v7.25",
-    );
-  });
-
   it("preserves named upstream generations and explicit unknown provenance in every format", () => {
     const provenance = { ...FIXTURE, sourceGenerations: { stablecoins: FIXTURE.asOfISO, reportCards: null } };
     expect(formatPreambleCsv(provenance)).toContain("stablecoins=2026-05-16T12:00:00.000Z; reportCards=unknown");

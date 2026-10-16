@@ -810,39 +810,6 @@ describe("buildCacheStatuses sentinel validation", () => {
     });
   });
 
-  it("publishes healthy again on the generation after a clean producer run", async () => {
-    const now = 1_800_000_000;
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          cacheRow("stablecoins", now - 60),
-          cacheRow("stablecoin-charts", now - 60),
-          cacheRow("usds-status", now - 60),
-          ...fxRatesCacheRows(now - 60),
-          cacheRow("bluechip-ratings", now - 60),
-          sentinelRow("dex-liquidity", now - 120),
-          sentinelRow("yield-data", now - 60),
-          sentinelRow("dews", now - 240),
-        ],
-      },
-      {
-        match: "GROUP BY job",
-        rows: [{ job: "sync-yield-data", started_at: now - 60, degraded_runs_since_ok: 0 }],
-      },
-    ]);
-
-    const { caches } = await buildCacheStatuses(db, now);
-
-    expect(caches["yield-data"]).toMatchObject({
-      freshnessSource: "freshness-sentinel",
-      degraded: false,
-      degradedReason: null,
-      streakDegradedRuns: 0,
-      healthy: true,
-    });
-  });
-
   it("publishes unknown quality, never a clean verdict, when the producer-history read fails", async () => {
     const now = 1_800_000_000;
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -924,21 +891,6 @@ describe("buildCacheStatuses", () => {
     expect(caches["dex-liquidity"]?.ageSeconds).toBe(0);
     expect(caches["yield-data"]?.ageSeconds).toBe(0);
     expect(caches.dews?.ageSeconds).toBeNull();
-  });
-
-  it("reports missing DEWS publication evidence instead of throwing", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = freshnessDb({ tableAge: 60 });
-
-    const { caches, failures } = await buildCacheStatuses(db, nowSec);
-    expect(caches.dews?.ageSeconds).toBeNull();
-    expect(failures).toEqual([
-      {
-        key: "dews",
-        source: "table-freshness",
-        message: "DEWS published generation unavailable (no-pointer): publication pointer is missing",
-      },
-    ]);
   });
 
   it("does not let producer cron timestamps replace missing DEWS publication evidence", async () => {

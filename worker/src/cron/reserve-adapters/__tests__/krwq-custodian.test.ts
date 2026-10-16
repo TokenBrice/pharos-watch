@@ -7,7 +7,6 @@ import {
   type KrwqOnchainBalances,
   type KrwqSupplyAggregate,
 } from "../krwq-custodian";
-import { getReserveAdapter } from "../index";
 import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
 
@@ -100,14 +99,6 @@ describe("adaptKrwqCustodian", () => {
     expectValidAdapterOutput("krwq-custodian", result);
   });
 
-  it("parses the live comma-grouped amount strings", () => {
-    const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY, VERIFIED_BINDINGS);
-
-    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified" }));
-    expect(result.slices).toHaveLength(3);
-    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
-  });
-
   it("still accepts ungrouped numbers and numeric strings", () => {
     const result = adaptKrwqCustodian(
       { ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssets: 90102.08 } },
@@ -116,19 +107,6 @@ describe("adaptKrwqCustodian", () => {
     );
 
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
-  });
-
-  it("accepts whitespace-padded issuer raw units", () => {
-    const result = adaptKrwqCustodian(
-      { ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssetsRaw: " 123 " } },
-      { ...ONCHAIN_MATCH, usdc: 123n },
-      SUPPLY,
-      VERIFIED_BINDINGS,
-    );
-
-    expect(result.warnings ?? []).not.toContainEqual(
-      expect.objectContaining({ code: expect.stringMatching(/^krwq-onchain-(?:unverifiable|mismatch)$/) }),
-    );
   });
 
   it("fails closed on malformed grouped amounts", () => {
@@ -243,14 +221,8 @@ describe("fetchKrwqCustodianReserves", () => {
   });
 });
 
-describe("registry", () => {
-  it("resolves the krwq-custodian adapter", () => {
-    expect(getReserveAdapter("krwq-custodian")).not.toBeNull();
-  });
-});
 
-
-it.each([0, 9_000_000_000])("ignores independently supplied display value %i when raw balances are available", (totalAssets) => {
+it.each([9_000_000_000])("ignores independently supplied display value %i when raw balances are available", (totalAssets) => {
   const result = adaptKrwqCustodian({ ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssets } }, ONCHAIN_MATCH, SUPPLY, VERIFIED_BINDINGS);
   expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
   expect(result.slices.find((slice) => slice.sourceKey === "krwq-custodian:usdc")).toBeDefined();

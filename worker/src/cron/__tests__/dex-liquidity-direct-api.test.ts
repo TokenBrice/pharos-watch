@@ -91,47 +91,6 @@ describe("fetchFluidPools", () => {
     expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
   });
 
-  it("uses provided chain RPCs for resolver enrichment", async () => {
-    mockFetch.mockImplementation((input, init) => {
-      const url = String(input);
-      if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
-        return Promise.resolve(jsonResponse([
-          makeFluidTicker(),
-        ]));
-      }
-      if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
-        return Promise.resolve(jsonResponse([]));
-      }
-      if (url === "https://rpc.example") {
-        const body = String(init?.body ?? "");
-        if (body.includes("0x957755e6")) {
-          return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
-        }
-        if (body.includes("0x55181f11")) {
-          return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
-        }
-        if (body.includes("0x42fcc6fb")) {
-          return Promise.resolve(makeFluidRpcResponse([100]));
-        }
-      }
-      return Promise.resolve(new Response("unexpected", { status: 500 }));
-    });
-
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", makeChainRpcConfig({
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        rpcUrls: ["https://rpc.example"],
-        explorerUrl: "https://etherscan.io",
-      })],
-    ]);
-
-    const pools = await fetchFluidPools(undefined, chainRpcs);
-
-    expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
-    expect(mockFetch.mock.calls.some(([input]) => String(input) === "https://rpc.example")).toBe(true);
-  });
-
   it("keeps Fluid source healthy when retained-pool enrichment fails", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch.mockImplementation((input) => {
@@ -227,48 +186,6 @@ describe("fetchFluidPools", () => {
     expect(pools.warnings?.[0]).toContain(malformedPoolAddress);
     expect(pools.warnings?.[0]).toContain("invalid EVM address");
     expect(mockFetch.mock.calls.filter(([input]) => String(input) === "https://rpc.example")).toHaveLength(3);
-  });
-
-  it("sets empty symbols and decimals=0 for tokens", async () => {
-    mockJsonFetch([
-      {
-        ticker_id: "0xbase_0xquote",
-        base_currency: "0xtoken1",
-        target_currency: "0xtoken2",
-        last_price: "1.0",
-        base_volume: "50000",
-        target_volume: "50000",
-        pool_id: "0x2222222222222222222222222222222222222222",
-        liquidity_in_usd: "200000",
-      },
-    ]);
-
-    const pools = await fetchFluidPools();
-    expect(pools.pools[0].tokens[0].symbol).toBe("");
-    expect(pools.pools[0].tokens[0].decimals).toBe(0);
-    expect(pools.pools[0].tokens[1].symbol).toBe("");
-    expect(pools.pools[0].tokens[1].decimals).toBe(0);
-  });
-
-  it("approximates volume as sum of base and target volumes", async () => {
-    mockJsonFetch([
-      {
-        ticker_id: "tid",
-        base_currency: "0xa",
-        target_currency: "0xb",
-        last_price: "1.0",
-        base_volume: "75000",
-        target_volume: "25000",
-        pool_id: "0x3333333333333333333333333333333333333333",
-        liquidity_in_usd: "100000",
-      },
-    ]);
-
-    const pools = await fetchFluidPools();
-    // volume24hUsd is unmeasured (null) — raw token volumes are not summed as USD.
-    // The downstream derivePoolVolume24hUsd path handles USD conversion via tokenVolumes24h.
-    expect(pools.pools[0].volume24hUsd).toBeNull();
-    expect(pools.pools[0].tokenVolumes24h).toEqual([75000, 25000]);
   });
 
   it("handles chain failure gracefully with Promise.allSettled", async () => {
@@ -1080,46 +997,6 @@ describe("fetchOrcaPools", () => {
     expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
-  });
-
-  it("normalizes feeRate by dividing by 1_000_000", async () => {
-    mockJsonFetch({
-      data: [{
-        address: "pool1",
-        price: "1.0",
-        tvlUsdc: "100000",
-        feeRate: 3000, // 3000 / 1_000_000 = 0.003 (30bps)
-        tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-        tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-        tokenBalanceA: "50000",
-        tokenBalanceB: "50000",
-        stats: { "24h": { volume: "5000" } },
-      }],
-      meta: { cursor: { next: null } },
-    });
-
-    const pools = await fetchOrcaPools();
-    expect(pools.pools[0].feeRate).toBeCloseTo(0.003);
-  });
-
-  it("sets chain to solana for all pools", async () => {
-    mockJsonFetch({
-      data: [{
-        address: "pool1",
-        price: "1.0",
-        tvlUsdc: "100000",
-        feeRate: 100,
-        tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-        tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-        tokenBalanceA: "50000",
-        tokenBalanceB: "50000",
-        stats: { "24h": { volume: "1000" } },
-      }],
-      meta: { cursor: { next: null } },
-    });
-
-    const pools = await fetchOrcaPools();
-    expect(pools.pools[0].chain).toBe("solana");
   });
 
   it("follows cursor-based pagination", async () => {

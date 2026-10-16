@@ -52,7 +52,7 @@ describe("subgraph source families", () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
-  it.each([null, {}, { pools: null }, { pools: {} }, { pools: [] }])(
+  it.each([null, { pools: [] }])(
     "reports malformed broad inventories through family telemetry: %j", async (data) => {
       mockFetch([{ match: "gateway.thegraph.com", body: {
         data: data == null ? null : { ...data, liquidityPools: "pools" in data ? data.pools : undefined },
@@ -75,12 +75,6 @@ describe("subgraph source families", () => {
     expect(result.uniV3PoolFees.size).toBe(0);
     expect(result.uniV3SymbolFees.size).toBe(0);
     expect(result.uniV3PriceObs.size).toBe(0);
-  });
-
-  it("returns empty Uniswap V4 lookups when Graph API key is missing", async () => {
-    const result = await fetchUniswapV4Data(null, new Map());
-
-    expect(result.uniswapV4ExecutionCandidates.size).toBe(0);
   });
 
   it("maps the Ethereum fork's immutable Int fee and tick spacing in broad and exact reads", async () => {

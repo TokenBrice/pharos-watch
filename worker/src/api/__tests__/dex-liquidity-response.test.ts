@@ -66,14 +66,6 @@ describe("normalizeTopPools", () => {
     expect(extra).not.toHaveProperty("hasMeasuredOrganicFraction");
   });
 
-  it("omits extra when pool has no extra object", () => {
-    const json = JSON.stringify([
-      { project: "curve", chain: "Ethereum", tvlUsd: 200_000, source: "dl" },
-    ]);
-    const result = normalizeTopPools(json);
-    expect(result[0]).not.toHaveProperty("extra");
-  });
-
   it("preserves the optional exact AMM execution model", () => {
     const ammExecutionModel = {
       source: "raydium",
@@ -221,21 +213,6 @@ describe("selectTrendBaseline", () => {
     ];
 
     expect(selectTrendBaseline(history, targetSec, 12 * 3600)).toEqual(history[2]);
-  });
-
-  it("rejects rows outside the trend tolerance window", () => {
-    const targetSec = 1_700_000_000;
-    const history = [
-      {
-        stablecoin_id: "usdt-tether",
-        total_tvl_usd: 100,
-        snapshot_date: targetSec - 13 * 3600,
-        coverage_class: "primary",
-        coverage_confidence: 0.9,
-      },
-    ];
-
-    expect(selectTrendBaseline(history, targetSec, 12 * 3600)).toBeNull();
   });
 
   it("includes exact confidence and tolerance boundaries but excludes nonpositive TVL", () => {

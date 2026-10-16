@@ -12,7 +12,6 @@ vi.mock("../safety-score-active-source", () => ({
 }));
 
 import { checkSafetyScoreV9Publication } from "../canary-checks";
-const { loadPublicationHealth } = await import("../publication-contract");
 
 const NOW = 1_775_900_000;
 
@@ -45,15 +44,4 @@ describe("canonical V9 Safety Score consumers", () => {
     });
   });
 
-  it("reports canonical cache ownership in publication health", async () => {
-    const health = await loadPublicationHealth(mockD1(), NOW);
-
-    expect(health.surfaces["safety-score-v9"]).toMatchObject({
-      sourceOfTruth:
-        "cache[report-cards:v9]+cache[report-cards:v9:publication-health]",
-      lastPublishedGeneration: {
-        state: "published",
-      },
-    });
-  });
 });

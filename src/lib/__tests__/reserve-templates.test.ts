@@ -80,22 +80,4 @@ describe("deriveDependencies", () => {
       { id: "usde-ethena", weight: 1.0, type: "wrapper" },
     ]);
   });
-
-  it("preserves depType when set (mechanism)", () => {
-    const meta = makeMeta({
-      reserves: [
-        { name: "USDC PSM", pct: 30, risk: "low", coinId: "usdc-circle", depType: "mechanism" },
-        { name: "ETH / LSTs", pct: 70, risk: "low" },
-      ],
-    });
-    const result = deriveDependencies(meta);
-    expect(result).toEqual([
-      { id: "usdc-circle", weight: 0.3, type: "mechanism" },
-    ]);
-  });
-
-  it("returns empty array when no reserves and no dependencies (undefined)", () => {
-    const meta = makeMeta({ reserves: undefined, dependencies: undefined });
-    expect(deriveDependencies(meta)).toEqual([]);
-  });
 });

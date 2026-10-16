@@ -121,8 +121,8 @@ This process index is curated, not a complete inventory. Start with [Agent Start
 | --- | --- | --- | --- | --- |
 | [Adding a Stablecoin](./process/adding-a-stablecoin.md) | runbook | `stablecoin-addition-orchestrator`, `resilience-classify`, `pre-launch-update`, `write-ai-summaries` | `npm run bootstrap:generated` | `npm run check:stablecoin-data` |
 | [Agent Artifacts](./process/agent-artifacts.md) | convention | `pharos-docs-sync-audit`, `pharos-release-runner` | none | `npm run check:agent-skills` |
-| [Blog Publishing](./process/blog-publishing.md) | runbook | `changelog-collect` | edit the post body and registry | `npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts` |
-| [Worker Import Boundary Waivers](./process/boundary-waivers.md) | policy | none | none; review and document the waiver | `npx vitest run scripts/__tests__/eslint-import-boundaries.test.ts` |
+| [Blog Publishing](./process/blog-publishing.md) | runbook | `changelog-collect` | edit the post body and registry | `npx vitest run src/app/feed src/app/__tests__/sitemap-frozen.test.ts` |
+| [Worker Import Boundary Waivers](./process/boundary-waivers.md) | policy | none | none; review and document the waiver | `npm run lint` |
 | [Cron Trigger Budget Policy](./process/cron-trigger-policy.md) | policy | `worker-cron-change` | `npm run check:cron-connections` | `npm run check:cron-sync` |
 | [D1 Baseline Squash Policy](./process/d1-baseline-squash-plan.md) | runbook | `d1-migration-rollout` | rehearse against two fresh D1 databases | `npm run check:migrations` |
 | [D1 Migration Authoring](./process/d1-migrations.md) | policy | `d1-migration-rollout` | add migration SQL and manifest evidence | `npm run check:migrations` |

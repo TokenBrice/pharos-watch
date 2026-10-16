@@ -39,20 +39,6 @@ describe("Sui CLMM actual pinned state and independent exact-in outputs", () => 
     }
   });
 
-  it("covers in-range execution and real multi-tick crossings rather than a marginal-only model", () => {
-    let inRange = 0;
-    let multiTick = 0;
-    for (const { fixture, snapshot } of pinned) for (let i = 0; i < fixture.requests.length; i++) {
-      if (fixture.expected[i].remote.exceeded) continue;
-      const request = fixture.requests[i];
-      const quote = quoteSuiClmmExactIn(snapshot, request.aToB ? snapshot.pool.coinA : snapshot.pool.coinB, BigInt(request.amountIn));
-      if (quote.crossedTicks === 0) inRange++;
-      if (quote.crossedTicks >= 2) multiTick++;
-    }
-    expect(inRange).toBeGreaterThan(0);
-    expect(multiTick).toBeGreaterThan(0);
-  });
-
   it.each(inspections)("decodes the actual pool Move return without treating epoch inspection as a checkpoint pin: $poolId", (receipt) => {
     const source = pinned.find((row) => row.fixture.poolId === receipt.poolId)!;
     const quote = decodeSuiClmmInspectResults(receipt.response, source.snapshot, [{ ...receipt.request, amountIn: BigInt(receipt.request.amountIn) }])[0];

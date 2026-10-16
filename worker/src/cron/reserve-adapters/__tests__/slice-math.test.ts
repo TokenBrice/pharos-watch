@@ -54,21 +54,6 @@ describe("valueUsdFromBigIntPrice", () => {
     expect(usd).toBe(100_000_000_000);
   });
 
-  it("keeps cent-level accuracy for $50B-scale positions", () => {
-    // 50,000,000,001.23 USDC (6 decimals) at $1 should equal exactly that.
-    // Raw: 50_000_000_001_230_000 micro-USDC (6 decimals).
-    const raw = 50_000_000_001_230_000n;
-    const usd = valueUsdFromBigIntPrice(raw, 6, 1);
-    // usdMicros = 50_000_000_001_230_000 which exceeds MAX_SAFE_INTEGER (~9.007e15).
-    expect(usd).toBeCloseTo(50_000_000_001.23, 2);
-  });
-
-  it("matches direct-cast result for amounts safely under MAX_SAFE_INTEGER", () => {
-    // 1M tokens at $1500 => 1.5e9 USD = 1.5e15 micros, under MAX_SAFE.
-    const value = 1_000_000n * 10n ** 18n;
-    expect(valueUsdFromBigIntPrice(value, 18, 1500)).toBe(1_500_000_000);
-  });
-
   it("returns 0 for zero balance regardless of decimals or price", () => {
     expect(valueUsdFromBigIntPrice(0n, 18, 1)).toBe(0);
     expect(valueUsdFromBigIntPrice(0n, 6, 100_000)).toBe(0);

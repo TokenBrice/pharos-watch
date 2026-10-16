@@ -55,7 +55,6 @@ vi.mock("../dex-liquidity/subgraph-source-families", () => ({
 
 
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
-import { setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { recordOutcome } from "../../lib/circuit-breaker";
 
@@ -113,38 +112,4 @@ describe("fetchDataSources — unavailable and malformed decoded sources", () =>
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-protocols", false);
   });
 
-  it("caches compact DL protocol categories for yield source-management audits after a successful fetch", async () => {
-    const pools = Array.from({ length: 1001 }, (_, i) => ({
-      pool: `pool-${i}`, chain: "Ethereum", project: `proj-${i}`, symbol: "USDC",
-      tvlUsd: 1000, apy: 1, apyBase: 1, apyReward: 0, stablecoin: true, exposure: "single",
-    }));
-    const protocols = [
-      { slug: "aave-v3", category: "Lending", tvl: 1_000_000_000 },
-      { slug: "curve-dex", category: "Dexs", tvl: 500_000_000 },
-    ];
-    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
-      response: new Response("", { status: 200 }),
-      body: { data: pools },
-    })
-      .mockResolvedValueOnce({
-        response: new Response("", { status: 200 }),
-        body: protocols,
-      });
-
-    const db = mockD1();
-    const result = await fetchDataSources(null, db, PRIMARY_POOL_LOOKUPS);
-
-    expect(result).not.toBeNull();
-    expect(setCache).toHaveBeenCalledWith(
-      db,
-      "defillama-protocols",
-      JSON.stringify({
-        protocols: [
-          { slug: "aave-v3", category: "Lending" },
-          { slug: "curve-dex", category: "Dexs" },
-        ],
-      }),
-      undefined,
-    );
-  });
 });

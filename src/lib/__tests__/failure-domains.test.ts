@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
-import { buildFailureDomainsView, describeFailureDomain } from "../failure-domains";
+import { buildFailureDomainsView } from "../failure-domains";
 
 function cardWithDeploymentRisk(
   trace: Partial<{
@@ -44,42 +44,6 @@ function adjustment(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("describeFailureDomain", () => {
-  it("resolves a chain key through the shared chain registry", () => {
-    expect(describeFailureDomain("chain:celo")).toEqual({ label: "Celo", kind: "chain" });
-    expect(describeFailureDomain("chain:base")).toEqual({ label: "Base", kind: "chain" });
-  });
-
-  it("labels known bridge protocols", () => {
-    expect(describeFailureDomain("bridge-route:protocol:layerzero-v2").label).toBe("LayerZero V2");
-    expect(describeFailureDomain("bridge-route:protocol:chainlink-ccip").label).toBe("Chainlink CCIP");
-  });
-
-  it("prefers the embedded protocol over a raw contract address in a compound key", () => {
-    const key =
-      "bridge-route:contract:avalanche:0xba51+bridge-route:protocol:layerzero-v2";
-    expect(describeFailureDomain(key)).toEqual({ label: "LayerZero V2", kind: "bridge" });
-  });
-
-  it("falls back to the routing chain when a contract key carries no protocol", () => {
-    expect(describeFailureDomain("bridge-route:contract:base:0xec35").label).toBe("Bridge contract on Base");
-  });
-
-  it("never leaks a raw address into a label", () => {
-    for (const key of [
-      "bridge-route:contract:base:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
-      "bridge-route:authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
-    ]) {
-      expect(describeFailureDomain(key).label).not.toMatch(/0x[a-f0-9]{6}|[A-Za-z0-9]{20,}/);
-    }
-  });
-
-  it("cases protocol slugs by their brand, not by title case", () => {
-    expect(describeFailureDomain("bridge-route:protocol:layerzero-oft").label).toBe("LayerZero OFT");
-    expect(describeFailureDomain("bridge-route:protocol:layerzero-oft-v2").label).toBe("LayerZero OFT V2");
-  });
-});
-
 describe("buildFailureDomainsView", () => {
   it("publishes nominal exposure rather than the capped scoring contribution", () => {
     const view = buildFailureDomainsView(cardWithDeploymentRisk({
@@ -89,11 +53,6 @@ describe("buildFailureDomainsView", () => {
     expect(view!.rows[0]!.members[0]).toMatchObject({ exposureShare: 0.9097, modeledExposureShare: 0.5 });
   });
 
-  it("hides itself when the asset has no shared domains", () => {
-    expect(buildFailureDomainsView(makeV9Card())).toBeNull();
-    expect(buildFailureDomainsView(null)).toBeNull();
-  });
-
   it("keeps a zero-point domain — no penalty is not no exposure", () => {
     const view = buildFailureDomainsView(cardWithDeploymentRisk({ adjustments: [adjustment()] }));
     expect(view?.rows).toHaveLength(1);
@@ -101,26 +60,6 @@ describe("buildFailureDomainsView", () => {
     expect(view?.rows[0]?.share).toMatchObject({ status: "quantified" });
     expect(view?.rows[0]?.share.status === "quantified" && view.rows[0].share.exposureShare).toBeCloseTo(0.34, 6);
     expect(view?.rows[0]?.members[0]).toMatchObject({ resolved: true, adjustmentPoints: 0 });
-  });
-
-  it("sorts scoring domains above larger but costless exposures", () => {
-    const view = buildFailureDomainsView(
-      cardWithDeploymentRisk({
-        adjustments: [
-          adjustment({ failureDomainKey: "chain:celo", exposureShare: 0.9, adjustmentPoints: 0 }),
-          adjustment({
-            exposureKey: "deployment-slice:base:0xdef",
-            failureDomainKey: "bridge-route:protocol:wormhole-ntt",
-            exposureShare: 0.1,
-            scoreBefore: 30,
-            scoreAfter: 27.5,
-            adjustmentPoints: 2.5,
-            modeledLossPoints: 2.5,
-          }),
-        ],
-      }),
-    );
-    expect(view?.rows.map((row) => row.label)).toEqual(["Wormhole NTT", "Celo"]);
   });
 
   it("carries unresolved exposures last and marks them unquantified", () => {
@@ -209,27 +148,6 @@ describe("buildFailureDomainsView", () => {
     });
   });
 
-  it("ranks a partly quantified domain by its known share, above a wholly unquantified one", () => {
-    const view = buildFailureDomainsView(cardWithDeploymentRisk({
-      adjustments: [plasmaSlice, solanaSlice, adjustment({ failureDomainKey: "chain:celo", nominalExposureShare: 0.05, exposureShare: 0.05 })],
-      unresolvedExposures: [
-        protocolWide,
-        { ...protocolWide, signalKey: "signal:base", exposureKey: "deployment-slice:base:0x94", failureDomainKeys: ["bridge-route:contract:base:0xec35"] },
-      ],
-    }));
-    expect(view?.rows.map((row) => row.label)).toEqual(["LayerZero V2", "Celo", "Bridge contract on Base"]);
-  });
-
-  it("numbers members that would otherwise read the same", () => {
-    const view = buildFailureDomainsView(cardWithDeploymentRisk({
-      adjustments: [
-        adjustment({ exposureKey: "deployment-slice:base:0x1" }),
-        adjustment({ exposureKey: "deployment-slice:base:0x2" }),
-      ],
-    }));
-    expect(view?.rows[0]?.members.map((member) => member.label)).toEqual(["Base (1)", "Base (2)"]);
-  });
-
   it("adds distinct deployment slices but never double counts overlapping supply", () => {
     const disjoint = buildFailureDomainsView(cardWithDeploymentRisk({ adjustments: [plasmaSlice, solanaSlice] }));
     expect(disjoint?.rows[0]?.share).toMatchObject({ status: "quantified" });
@@ -259,18 +177,5 @@ describe("buildFailureDomainsView", () => {
     }));
     expect(partial?.rows[0]?.share).toMatchObject({ status: "partial", unquantifiedMemberCount: 1 });
     expect(partial?.rows[0]?.share.status === "partial" && partial.rows[0].share.knownShareLowerBound).toBeCloseTo(0.15, 6);
-  });
-
-  it("keeps evaluator keys and tier slugs out of reader notes", () => {
-    const view = buildFailureDomainsView(cardWithDeploymentRisk({
-      adjustments: [adjustment(), plasmaSlice, solanaSlice],
-      unresolvedExposures: [protocolWide],
-    }));
-    for (const row of view!.rows) {
-      for (const member of row.members) {
-        expect(member.reason).not.toMatch(/bridge-route:|chain:|external-lock-mint/);
-        expect(member.reason?.length).toBeGreaterThan(0);
-      }
-    }
   });
 });

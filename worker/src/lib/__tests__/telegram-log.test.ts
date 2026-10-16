@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  classifyTelegramLogError,
-  logTelegramEvent,
-  normalizeTelegramLogErrorClass,
-} from "../telegram/log";
+import { logTelegramEvent } from "../telegram/log";
 
 describe("logTelegramEvent", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
@@ -27,35 +23,6 @@ describe("logTelegramEvent", () => {
     expect(typeof last).toBe("string");
     return JSON.parse(last as string) as Record<string, unknown>;
   }
-
-  it("emits only the canonical low-cardinality shape", () => {
-    logTelegramEvent({
-      level: "warn",
-      message: "pending send failed",
-      action: "pending-send",
-      module: "telegram-pending",
-      errorClass: "rate_limit",
-      statusCode: 429,
-      retryAfterSec: 30,
-      rowCount: 2,
-    });
-
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).not.toHaveBeenCalled();
-    const record = parseLast(warnSpy);
-    expect(record).toMatchObject({
-      scope: "telegram",
-      level: "warn",
-      message: "pending send failed",
-      action: "pending-send",
-      module: "telegram-pending",
-      errorClass: "rate_limit",
-      statusCode: 429,
-      retryAfterSec: 30,
-      rowCount: 2,
-    });
-    expect(Number.isFinite(Date.parse(String(record.ts)))).toBe(true);
-  });
 
   it("drops identifier, secret, URL, callback, and nested metadata keys at runtime", () => {
     logTelegramEvent({
@@ -131,13 +98,4 @@ describe("logTelegramEvent", () => {
     expect(record.errorClass).toBe("unknown");
   });
 
-  it("defaults level to error and normalizes error classes to a fixed vocabulary", () => {
-    logTelegramEvent({ message: "callback acknowledgement failed" });
-    expect(parseLast(errorSpy).level).toBe("error");
-    expect(normalizeTelegramLogErrorClass("rate_limit")).toBe("rate_limit");
-    expect(normalizeTelegramLogErrorClass("DatabaseError: secret")).toBe("unknown");
-    expect(classifyTelegramLogError(new DOMException("cancelled", "AbortError"))).toBe("abort");
-    expect(classifyTelegramLogError(new Error("D1 database unavailable"))).toBe("d1");
-    expect(classifyTelegramLogError(new Error("opaque"))).toBe("unknown");
-  });
 });

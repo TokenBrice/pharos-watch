@@ -7,10 +7,8 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import * as activeSafetyScoreSource from "../safety-score-active-source";
 import {
-  WORKER_CANARY_RUN_RETENTION_SEC,
   loadCanaryStatus,
   normalizeWorkerCanaryMode,
-  pruneWorkerCanaryRuns,
   runAndPersistCanaryChecks,
   runCanaryChecks,
 } from "../canary-checks";
@@ -867,29 +865,6 @@ describe("worker data invariant canaries", () => {
     },
   );
 
-
-  it("prunes canary run rows older than the 14-day retention cutoff", async () => {
-    const db = mockD1([
-      {
-        match: "DELETE FROM worker_canary_runs",
-        rows: [],
-        runMeta: { changes: 4 },
-      },
-    ]);
-    const cutoff = NOW - WORKER_CANARY_RUN_RETENTION_SEC;
-
-    expect(WORKER_CANARY_RUN_RETENTION_SEC).toBe(14 * 24 * 3600);
-    await expect(pruneWorkerCanaryRuns(db, cutoff)).resolves.toEqual({
-      deleted: 4,
-      truncated: false,
-    });
-    expect(db.getHistory()).toEqual([
-      expect.objectContaining({
-        sql: expect.stringContaining("DELETE FROM worker_canary_runs"),
-        binds: [cutoff, 5_000],
-      }),
-    ]);
-  });
 
   it("reports missing mandatory tables as canary errors without aborting sibling checks", async () => {
     vi.useFakeTimers();

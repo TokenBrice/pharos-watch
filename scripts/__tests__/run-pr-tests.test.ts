@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPrTestPlan, readPrTestPlan } from "../lib/pr-test-plan.mts";
+import { createPrTestPlan } from "../lib/pr-test-plan.mts";
 import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mts";
 import { runPrTests } from "../maintenance/run-pr-tests";
 
@@ -21,24 +21,7 @@ function selectingSpawn() {
 }
 
 describe("PR test runner prepared plans", () => {
-  it.each(["inline", "separate"])("writes exact selected files once without spawning Vitest run (%s flag)", (form) => {
-    const path = planPath();
-    const spawn = selectingSpawn();
-    const planArgs = form === "inline" ? [`--plan-out=${path}`] : ["--plan-out", path];
-    expect(runPrTests({ argv: ["--base=base", ...planArgs], env, spawn: spawn as never })).toBe(0);
-    expect(spawn.mock.calls.filter(([, args]) => args[0] === "list")).toHaveLength(1);
-    expect(spawn.mock.calls.some(([, args]) => args[0] === "run")).toBe(false);
-    const plan = readPrTestPlan(path);
-    expect(plan.base).toBe("base");
-    expect(plan.shardCount).toBe(4);
-    expect(plan.shards.flat()).toEqual(expect.arrayContaining(["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"]));
-    const localSpawn = selectingSpawn();
-    runPrTests({ argv: ["--base=base"], env, spawn: localSpawn as never });
-    const localFiles = localSpawn.mock.calls.find(([, args]) => args[0] === "run")![1].filter((arg) => arg.endsWith(".test.ts"));
-    expect(plan.shards.flat().sort()).toEqual(localFiles.sort());
-  });
-
-  it("drops exactly the critical-owner files when the coverage leaf owns them", () => {
+  it("retains critical-owner files despite a retired coverage-deferral environment flag", () => {
     const plain = selectingSpawn();
     runPrTests({ argv: ["--base=base"], env, spawn: plain as never });
     const deferred = selectingSpawn();
@@ -46,7 +29,7 @@ describe("PR test runner prepared plans", () => {
     const selected = plain.mock.calls.find(([, args]) => args[0] === "run")![1].slice(1);
     const remaining = deferred.mock.calls.find(([, args]) => args[0] === "run")?.[1].slice(1) ?? [];
     expect(selected.some((file) => CRITICAL_TEST_FILES.includes(file))).toBe(true);
-    expect(remaining).toEqual(selected.filter((file) => !CRITICAL_TEST_FILES.includes(file)));
+    expect(remaining).toEqual(selected);
   });
 
   it("executes only the requested prepared files without rerunning selection or native Vitest sharding", () => {
@@ -80,23 +63,5 @@ describe("PR test runner prepared plans", () => {
     const spawn = selectingSpawn();
     expect(runPrTests({ argv: ["--shard=4/4"], env: { ...env, PR_TEST_PLAN_FILE: path }, spawn: spawn as never })).toBe(0);
     expect(spawn).not.toHaveBeenCalled();
-  });
-
-  it("attaches the import-aware reporter and retains original shard coordinates in timings", () => {
-    const path = planPath();
-    const timingPath = join(path, "..", "timings.json");
-    const summaryPath = join(path, "..", "summary.md");
-    const plan = createPrTestPlan("base", ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"], {});
-    writeFileSync(path, JSON.stringify(plan));
-    const spawn = vi.fn((_file: string, args: string[]) => {
-      expect(args).toContain("--reporter=./scripts/lib/shard-timing-reporter.mts");
-      writeFileSync(timingPath.replace(/\.json$/, ".vitest.json"), JSON.stringify({ success: true, testResults: [] }));
-      return { status: 0, stdout: "", stderr: "" };
-    });
-    expect(runPrTests({ argv: ["--shard=2/4"], env: {
-      ...env, PR_TEST_PLAN_FILE: path, PR_SHARD_TIMINGS_FILE: timingPath, GITHUB_STEP_SUMMARY: summaryPath,
-    }, spawn: spawn as never })).toBe(0);
-    expect(JSON.parse(readFileSync(timingPath, "utf8"))).toMatchObject({ shard: 2, shardCount: 4, success: true });
-    expect(readFileSync(summaryPath, "utf8")).toContain("### PR tests shard 2/4");
   });
 });

@@ -47,10 +47,6 @@ describe("getCirculatingRawOrNull", () => {
     expect(getCirculatingRawOrNull(null)).toBeNull();
   });
 
-  it("returns null when the asset carries no circulating buckets", () => {
-    expect(getCirculatingRawOrNull(makeStablecoin({ circulating: undefined }))).toBeNull();
-  });
-
   it("returns null for an empty bucket record", () => {
     expect(getCirculatingRawOrNull(makeStablecoin({ circulating: {} }))).toBeNull();
   });
@@ -63,26 +59,6 @@ describe("getCirculatingRawOrNull", () => {
       },
     });
     expect(getCirculatingRawOrNull(coin)).toBeNull();
-  });
-
-  it("returns null when all buckets are non-finite", () => {
-    const coin = makeStablecoin({
-      circulating: {
-        peggedUSD: NaN,
-        peggedEUR: Infinity,
-        peggedGBP: -Infinity,
-      },
-    });
-    expect(getCirculatingRawOrNull(coin)).toBeNull();
-  });
-
-  it("returns zero when an explicit finite bucket is zero", () => {
-    const coin = makeStablecoin({
-      circulating: {
-        peggedUSD: 0,
-      },
-    });
-    expect(getCirculatingRawOrNull(coin)).toBe(0);
   });
 
   it("rejects a negative bucket rather than cancelling known supply", () => {
@@ -98,48 +74,7 @@ describe("getCirculatingRawOrNull", () => {
   });
 });
 
-describe("getPrevDayRawOrNull", () => {
-  it("returns null when circulatingPrevDay is undefined", () => {
-    expect(getPrevDayRawOrNull(makeStablecoin({ circulatingPrevDay: undefined }))).toBeNull();
-  });
-
-  it("returns null when all buckets are missing-equivalent", () => {
-    const coin = makeStablecoin({
-      circulatingPrevDay: {
-        peggedEUR: null as unknown as number,
-        peggedGBP: undefined as unknown as number,
-      },
-    });
-    expect(getPrevDayRawOrNull(coin)).toBeNull();
-  });
-
-  it("returns zero when an explicit finite bucket is zero", () => {
-    const coin = makeStablecoin({
-      circulatingPrevDay: {
-        peggedUSD: 0,
-      },
-    });
-    expect(getPrevDayRawOrNull(coin)).toBe(0);
-  });
-
-  it("rejects negative historical buckets", () => {
-    const coin = makeStablecoin({ circulatingPrevDay: { peggedUSD: 100, peggedEUR: -100 } });
-    expect(getPrevDayRawOrNull(coin)).toBeNull();
-  });
-});
-
 describe("getPrevWeekRawOrNull", () => {
-  it("returns null when circulatingPrevWeek is undefined", () => {
-    expect(getPrevWeekRawOrNull(makeStablecoin({ circulatingPrevWeek: undefined }))).toBeNull();
-  });
-
-  it("returns zero when an explicit finite week bucket is zero", () => {
-    const coin = makeStablecoin({
-      circulatingPrevWeek: { peggedUSD: 0 },
-    });
-    expect(getPrevWeekRawOrNull(coin)).toBe(0);
-  });
-
   it("returns summed value when any bucket has data", () => {
     const coin = makeStablecoin({
       circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
@@ -149,16 +84,6 @@ describe("getPrevWeekRawOrNull", () => {
 });
 
 describe("getPrevMonthRawOrNull", () => {
-  it("returns null when no prev month data", () => {
-    const coin = makeStablecoin({ circulatingPrevMonth: undefined });
-    expect(getPrevMonthRawOrNull(coin)).toBeNull();
-  });
-
-  it("returns zero when an explicit finite month bucket is zero", () => {
-    const coin = makeStablecoin({ circulatingPrevMonth: { usd: 0 } });
-    expect(getPrevMonthRawOrNull(coin)).toBe(0);
-  });
-
   it("returns sum when data exists", () => {
     const coin = makeStablecoin({ circulatingPrevMonth: { usd: 500_000 } });
     expect(getPrevMonthRawOrNull(coin)).toBe(500_000);

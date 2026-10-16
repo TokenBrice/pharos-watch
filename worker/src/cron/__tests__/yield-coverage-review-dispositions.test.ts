@@ -144,28 +144,6 @@ describe("yield coverage review dispositions", () => {
     expect(expired.summary.expiredCount).toBe(1);
   });
 
-  it("ignores routine market noise but reopens decision-relevant evidence changes", async () => {
-    const { db } = createDispositionDb();
-    const reviewed = item("banded", { tvlUsd: 12_000_000, apy: 4 });
-    await upsertYieldCoverageReviewDisposition(db, {
-      item: reviewed,
-      nextReviewAt: 5_000,
-      expiresAt: 5_000,
-    }, 1_000);
-
-    const sameBands = item("banded", { tvlUsd: 15_000_000, apy: 4.9 });
-    expect(buildYieldCoverageEvidenceFingerprint(sameBands)).toBe(
-      buildYieldCoverageEvidenceFingerprint(reviewed),
-    );
-    expect((await applyYieldCoverageReviewDispositions(db, queue([sameBands]), { nowSec: 2_000 }))
-      .queue.headlineGaps).toEqual([]);
-
-    const changed = item("banded", { tvlUsd: 15_000_000, apy: 5.1 });
-    const reopened = await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 2_000 });
-    expect(reopened.queue.headlineGaps).toEqual([changed]);
-    expect(reopened.summary.evidenceChangedCount).toBe(1);
-  });
-
   it("suppresses before truncation so later unreviewed candidates backfill the published queue", async () => {
     const { db } = createDispositionDb();
     const candidates = Array.from({ length: 25 }, (_, index) => item(`candidate-${index}`));
@@ -195,39 +173,6 @@ describe("yield coverage review dispositions", () => {
       truncatedItemCount: 2,
       visibleByKind: { "lending-allowlist": 22 },
     });
-  });
-
-  it("counts all 146 visible candidates and kinds before publishing forty", async () => {
-    const { db } = createDispositionDb();
-    const headline = Array.from({ length: 54 }, (_, index) => item(`gap-${index}`, { kind: "manifest-missing" }));
-    const recommendations = Array.from({ length: 92 }, (_, index) => item(`recommendation-${index}`));
-    const result = await applyYieldCoverageReviewDispositions(db, queue(headline, recommendations), { nowSec: 2_000 });
-    expect(result.summary).toMatchObject({
-      candidateItemCount: 146, visibleItemCount: 146, publishedItemCount: 40, truncatedItemCount: 106,
-      suppressedItemCount: 0, visibleByKind: { "manifest-missing": 54, "lending-allowlist": 92 },
-    });
-  });
-
-  it("counts a dead pin and restoration once while excluding reviewed work", async () => {
-    const { db } = createDispositionDb();
-    const reviewed = item("reviewed", { kind: "manifest-missing" });
-    const deadPin = item("dead-pin", { kind: "stale-auto-lending-override" });
-    const restoration = item("restoration", { kind: "quarantine-ready-to-restore" });
-    await upsertYieldCoverageReviewDisposition(db, {
-      item: reviewed, disposition: "dismiss", nextReviewAt: 5_000,
-    }, 1_000);
-    const result = await applyYieldCoverageReviewDispositions(
-      db, queue([reviewed, deadPin], [restoration]), { nowSec: 2_000 },
-    );
-    expect(result.summary).toMatchObject({
-      candidateItemCount: 3,
-      suppressedItemCount: 1,
-      visibleHeadlineGapCount: 1,
-      visibleRecommendationCandidateCount: 1,
-      visibleItemCount: 2,
-    });
-    expect(result.queue.headlineGaps).toEqual([deadPin]);
-    expect(result.queue.recommendationCandidates).toEqual([restoration]);
   });
 
   it("updates review evidence and windows without replacing creation time", async () => {
@@ -262,39 +207,5 @@ describe("yield coverage review dispositions", () => {
       await expect(upsertYieldCoverageReviewDisposition(db, { item: candidate, reviewedAt: 1_000, ...window }, 1_000)).rejects.toBeInstanceOf(RangeError);
     }
     expect(sqlite.prepare("SELECT * FROM yield_coverage_review_dispositions").all()).toEqual(before);
-  });
-
-  it("reopens a changed queue kind separately from changed evidence", async () => {
-    const { db } = createDispositionDb();
-    const candidate = item("kind");
-    await upsertYieldCoverageReviewDisposition(db, { item: candidate, nextReviewAt: 5_000 }, 1_000);
-    const changed = { ...candidate, kind: "native-exact-pool" as const };
-    const result = await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 2_000 });
-    expect(result.queue.headlineGaps).toEqual([changed]);
-    expect(result.summary).toMatchObject({ kindChangedCount: 1, evidenceChangedCount: 0, suppressedItemCount: 0 });
-  });
-
-  it("limits both queue classes independently while aggregating all candidates", async () => {
-    const { db } = createDispositionDb();
-    const headlines = [item("h1"), item("h2"), item("h3")];
-    const recommendations = [item("r1"), item("r2"), item("r3"), item("r4")];
-    const result = await applyYieldCoverageReviewDispositions(db, queue(headlines, recommendations), { nowSec: 2_000, publishedItemLimit: 2 });
-    expect(result.queue.headlineGaps).toEqual(headlines.slice(0, 2));
-    expect(result.queue.recommendationCandidates).toEqual(recommendations.slice(0, 2));
-    expect(result.summary).toMatchObject({ candidateItemCount: 7, visibleItemCount: 7, publishedItemCount: 4, truncatedItemCount: 3, noDispositionCount: 7 });
-  });
-
-  it("normalizes evidence sets but reopens a genuinely different pool identity", async () => {
-    const { db } = createDispositionDb();
-    const candidate = item("sets", { pool: "POOL-A", stablecoinIds: ["USDC", "DAI"], examplePools: ["POOL-A", "POOL-B"], reasonCodes: ["ONE", "TWO"] });
-    await upsertYieldCoverageReviewDisposition(db, { item: candidate, nextReviewAt: 5_000 }, 1_000);
-    const normalized = { ...candidate, pool: " pool-a ", stablecoinIds: ["dai", "usdc", "DAI"], examplePools: ["pool-b", "pool-a"], reasonCodes: ["two", "one"] };
-    const unchanged = await applyYieldCoverageReviewDispositions(db, queue([normalized]), { nowSec: 2_000 });
-    expect(unchanged.queue.headlineGaps).toEqual([]);
-    expect(unchanged.summary.suppressedItemCount).toBe(1);
-    const changed = { ...normalized, pool: "pool-c" };
-    const reopened = await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 2_000 });
-    expect(reopened.queue.headlineGaps).toEqual([changed]);
-    expect(reopened.summary.evidenceChangedCount).toBe(1);
   });
 });

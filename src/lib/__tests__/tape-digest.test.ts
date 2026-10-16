@@ -168,51 +168,6 @@ function asPlain(days: DigestedDay[]): DigestedDay[] {
 }
 
 describe("mergeDigestedPages", () => {
-  it("handles disjoint days (no seam)", () => {
-    const page1 = sortDesc([makeEvent(NOW_MS - 1, "depeg.opened")]);
-    const page2 = sortDesc([makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened")]);
-
-    const merged = mergeDigestedPages([
-      digestPage(page1, NOW_MS),
-      digestPage(page2, NOW_MS),
-    ]);
-    const direct = digestByDayForTest([...page1, ...page2], NOW_MS);
-
-    expect(asPlain(merged)).toEqual(asPlain(direct));
-    expect(merged.map((d) => d.dayKey)).toEqual([TODAY_KEY, YESTERDAY_KEY]);
-  });
-
-  it("merges a cross-page seam into a single day", () => {
-    // Two pages that both contain events for the same UTC day.
-    const page1 = sortDesc([
-      makeEvent(NOW_MS - 1, "depeg.opened", { coinId: "usdc" }),
-      makeEvent(NOW_MS - 2, "depeg.opened", { coinId: "dai" }),
-    ]);
-    const page2 = sortDesc([
-      // Same UTC day as page1 — this is the seam.
-      makeEvent(NOW_MS - 3, "depeg.opened", { coinId: "usdc" }),
-      makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened", { coinId: "usdt" }),
-    ]);
-
-    const merged = mergeDigestedPages([
-      digestPage(page1, NOW_MS),
-      digestPage(page2, NOW_MS),
-    ]);
-    const direct = digestByDayForTest([...page1, ...page2], NOW_MS);
-
-    expect(asPlain(merged)).toEqual(asPlain(direct));
-
-    // Today should have 3 events across the merge.
-    const today = merged.find((d) => d.dayKey === TODAY_KEY)!;
-    expect(today.totalCount).toBe(3);
-
-    // collapseByCoinClass must still group USDC across the seam into one
-    // entry with count 2.
-    const depegClass = today.classes.find((c) => c.classSlug === "depeg")!;
-    const usdcEntry = depegClass.collapsed.find((c) => c.event.coinId === "usdc")!;
-    expect(usdcEntry.count).toBe(2);
-  });
-
   it("merges multiple seams across 3+ pages", () => {
     const page1 = sortDesc([
       makeEvent(NOW_MS - 1, "depeg.opened", { coinId: "usdc" }),

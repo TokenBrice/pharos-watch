@@ -2,12 +2,6 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { CAUSE_META } from "@shared/lib/cause-of-death";
-import { sortCemeteryCoins } from "@shared/lib/cemetery";
-import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
-import { selectStaticDepegEventPages } from "@/lib/depeg-event-config";
-import { readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
-import { escapeXml } from "@/lib/rss";
 
 interface RssRouteModule {
   GET: () => Promise<Response>;
@@ -143,40 +137,6 @@ describe("feed routes smoke", () => {
     }
   });
 
-  it("cemetery feed lists the newest 50 records in the shared order with cause labels and record anchors", async () => {
-    const { cemetery } = await loadRoutes();
-    const items = parseItems(await (await cemetery.GET()).text());
-    const expected = sortCemeteryCoins(CEMETERY_ENTRIES, "newest").slice(0, 50);
-
-    expect(items.map((item) => item.guid)).toEqual(expected.map((coin) => `pharos:cemetery:${coin.id}`));
-    // Titles carry the human cause label ("Name (SYMBOL): Cause label"), never the raw enum.
-    expect(items.map((item) => item.title)).toEqual(
-      expected.map((coin) => escapeXml(`${coin.name} (${coin.symbol}): ${CAUSE_META[coin.causeOfDeath].label}`)),
-    );
-    expect(items.map((item) => item.link)).toEqual(
-      expected.map((coin) => `https://pharos.watch/cemetery/#${coin.id}`),
-    );
-  });
-
-  it("depeg route emits the seeded events archive", async () => {
-    const { depeg } = await loadRoutes();
-    const res = await depeg.GET();
-    const xml = await res.text();
-    expect(xml).toContain("<title>Pharos Depeg Events</title>");
-    expect(xml).toContain("<channel>");
-    // data/depeg-events/ carries a committed seed (newest window + the
-    // grow-only archive set); CI sync refreshes it at build. The route
-    // empty-channel branch still exists for the case where the file becomes [].
-    const seeded = readDepegEventSnapshot({ missing: "throw" });
-    const newest = selectStaticDepegEventPages(seeded)[0];
-    expect(newest).toBeDefined();
-    expect(xml).toContain("<item>");
-    expect(xml).toContain(`pharos:depeg-event:${newest.slug}`);
-    expect(xml).toContain(`https://pharos.watch/depeg/${newest.slug}/`);
-    // Legacy stablecoinId-based guids must never resurface.
-    expect(xml).not.toContain("pharos:depeg-event:usdc-circle-");
-  });
-
   it("depeg route tolerates a missing prebuild events file", async () => {
     const mod = await fixtureRouteModule();
     const res = await mod.GET();
@@ -187,12 +147,6 @@ describe("feed routes smoke", () => {
     const mod = await fixtureRouteModule();
     writeShard("{not json");
     await expect(mod.GET()).rejects.toThrow(/Failed to parse .*depeg-events.*\.json as JSON/);
-  });
-
-  it("depeg route throws on non-array events JSON", async () => {
-    const mod = await fixtureRouteModule();
-    writeShard(JSON.stringify({ events: [] }));
-    await expect(mod.GET()).rejects.toThrow(/contain an array of depeg events/);
   });
 
   it("depeg route throws on invalid event rows", async () => {

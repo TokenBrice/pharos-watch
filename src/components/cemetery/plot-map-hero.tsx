@@ -58,7 +58,7 @@ import { usePlotLayout } from "./use-plot-layout";
 import styles from "./plot-map.module.css";
 
 /** A pointer must rest this long on a grave before the beam swings to it (focus aims at once). */
-export const PLOT_BEAM_DWELL_MS = 180;
+const PLOT_BEAM_DWELL_MS = 180;
 /** The inspector docks beside its grave at this width and up; below it sits in flow under the plan. */
 const DOCKED_QUERY = "(min-width: 1280px)";
 /** Top of the visible band under the sticky chrome (CSS px). */

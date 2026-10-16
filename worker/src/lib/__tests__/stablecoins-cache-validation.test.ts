@@ -17,11 +17,6 @@ describe("validateStablecoinEntry", () => {
     expect(validateStablecoinEntry(entry)).toBeNull();
   });
 
-  it("rejects entry missing symbol", () => {
-    const entry = { id: "1", price: 1.0, pegType: "peggedUSD" };
-    expect(validateStablecoinEntry(entry)).toBeNull();
-  });
-
   it("allows null price (some coins lack price data)", () => {
     const entry = { id: "1", symbol: "USDT", name: "Tether", price: null, pegType: "peggedUSD", circulating: {} };
     const result = validateStablecoinEntry(entry);

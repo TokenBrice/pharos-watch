@@ -163,15 +163,6 @@ describe("fetchCgTickerPricesDetailed", () => {
     expect(results.size).toBe(0);
   });
 
-  it("includes exchange_ids filter in URL", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(makeTickerResult([makeTicker()]));
-
-    await fetchCgTickerPricesDetailed([KAU_CONFIG], null);
-
-    const [url] = vi.mocked(fetchJsonWithRetry).mock.calls[0]!;
-    expect(url).toContain("exchange_ids=kinesis_money");
-  });
-
   it("rethrows on abort", async () => {
     const controller = new AbortController();
     controller.abort(new Error("cancelled"));
@@ -180,21 +171,5 @@ describe("fetchCgTickerPricesDetailed", () => {
     await expect(
       fetchCgTickerPricesDetailed([KAU_CONFIG], null, controller.signal),
     ).rejects.toThrow("aborted");
-  });
-});
-
-describe("fetchCgTickerPricesDetailed result metadata", () => {
-  afterEach(() => vi.clearAllMocks());
-
-  it("counts successful responses even when no fresh ticker is usable", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(
-      makeTickerResult([makeTicker({ is_stale: true })]),
-    );
-
-    const result = await fetchCgTickerPricesDetailed([KAU_CONFIG], null);
-
-    expect(result.successfulResponses).toBe(1);
-    expect(result.prices.size).toBe(0);
   });
 });

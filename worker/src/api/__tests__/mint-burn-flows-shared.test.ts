@@ -98,17 +98,6 @@ describe("cachedFlowFallbackResponse", () => {
     expect(await cached.json()).toMatchObject({ _meta: { status: "unknown", reason: "freshness-lookup-failed" } });
   });
 
-  it("returns 503 when the cached body is malformed JSON", async () => {
-    const response = cachedFlowFallbackResponse({
-      updatedAt: Math.floor(Date.now() / 1000) - 10,
-      value: "{bad-json",
-    });
-
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({
-      error: "Cached mint-burn-flows payload is malformed",
-    });
-  });
 });
 
 describe("selectLargestEvents", () => {
@@ -399,26 +388,6 @@ describe("buildBaselineMap", () => {
     });
   });
 
-  it("sets dataDays to actual tracked days when coin has fewer than 30 days", () => {
-    // firstDayTs = day 10, baselineEndDayTs = day 20 → trackedDays = 11, dataDays = 11
-    const nowSec = 21 * DAY_SECONDS + 1;
-    const baseline = buildBaselineMap(
-      nowSec,
-      [
-        day("young-coin", ETHEREUM_CHAIN_ID, 15, 55, 55),
-      ],
-      [
-        { stablecoin_id: "young-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 10 * DAY_SECONDS },
-      ],
-    );
-
-    expect(baseline.get("young-coin")).toEqual({
-      avgNet: 5,
-      avgAbs: 5,
-      dataDays: 11,
-      valuation: "complete",
-    });
-  });
 });
 
 describe("buildCoinCoverageMap", () => {

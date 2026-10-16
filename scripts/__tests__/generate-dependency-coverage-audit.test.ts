@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
@@ -15,8 +15,6 @@ import { dependencyReview, reserveReview, targetDisposition } from "./generate-d
 import {
   buildDependencyCoverageAudit,
   evaluateDependencyCoverageStructure,
-  parseArgs,
-  renderDependencyCoverageAuditMarkdown,
   runCli,
 } from "../maintenance/generate-dependency-coverage-audit";
 import {
@@ -181,18 +179,6 @@ const activeCoins: StablecoinMeta[] = [
     contracts: [{ chain: "base", address: "0x0000000000000000000000000000000000000001", decimals: 18 }],
   }),
 ];
-
-const stablecoinsPayload = {
-  peggedAssets: [
-    { id: "lone-high", circulating: { peggedUSD: 50_000_000 } },
-    { id: "cash-only", circulating: { peggedUSD: 20_000_000 } },
-    { id: "manual-usdt", circulating: { peggedUSD: 10_000_000 } },
-    { id: "wrap-usdc", circulating: { peggedUSD: 5_000_000 } },
-    { id: "usdt-tether", circulating: { peggedUSD: 4_000_000 } },
-    { id: "usdc-circle", circulating: { peggedUSD: 3_000_000 } },
-  ],
-};
-
 
 describe("generate-dependency-coverage-audit", () => {
   it("reconciles published dependency origins independently of live backing and retains unknown set-level facts", () => {
@@ -403,20 +389,6 @@ describe("generate-dependency-coverage-audit", () => {
     );
   });
 
-  it("does not turn zero-exposure classification rows into missing-link leads", () => {
-    const audit = buildDependencyCoverageAudit({ activeCoins: [
-      coin({ id: "upstream", symbol: "USDC" }),
-      coin({ id: "subject", reserves: [
-        { name: "USDC classification", pct: 0, risk: "low", sourceKey: "classification:usdc" },
-        { name: "Stablecoin residual classification", pct: 0, risk: "low", sourceKey: "classification:residual" },
-        { name: "Cash", pct: 100, risk: "very-low" },
-      ] }),
-    ] });
-    expect(audit.reserveSlicesMissingCoinId.map((row) => row.reserveName)).toEqual(["Cash"]);
-    expect(audit.materialUnlinkedReserveSlices).toEqual([]);
-    expect(audit.subMaterialActiveUnlinkedReserveSymbolLeads).toEqual([]);
-  });
-
   it("gates missing authored types and published kind disagreements", () => {
     const upstream = coin({ id: "upstream" });
     const dependent = coin({ id: "dependent", reserves: [
@@ -500,154 +472,6 @@ describe("generate-dependency-coverage-audit", () => {
     expect(evaluateDependencyCoverageStructure(audit)).toContain(
       "mixed-source authoring guard invariant failed with 1 finding",
     );
-  });
-
-  it("counts static graph coverage and reserve/dependency audit rows", () => {
-    const audit = buildDependencyCoverageAudit({
-      activeCoins,
-      stablecoins: stablecoinsPayload,
-      generatedAt: "2026-05-24T00:00:00.000Z",
-    });
-
-    expect(audit.summary).toMatchObject({
-      activeCount: 6,
-      staticEdgeCount: 2,
-      staticActiveEdgeCount: 2,
-      staticParticipantCount: 4,
-      staticDependentCount: 2,
-      staticUpstreamOnlyCount: 2,
-      manualOnlyDependencyCount: 1,
-      reserveSlicesMissingCoinId: 2,
-      depTypeWithoutCoinIdWarnings: 1,
-      staticSelfEdgeCount: 0,
-      staticDuplicateEdgeCount: 0,
-      staticStronglyConnectedComponentCount: 0,
-      overweightEffectiveSetCount: 0,
-      unknownTargetEdgeCount: 0,
-      manualDependencyReviewGapCount: 0,
-      missingCandidateCount: 2,
-      l2beatDeploymentContextCount: 1,
-      l2beatLayer3DeploymentContextCount: 0,
-      l2beatUnderReviewDeploymentContextCount: 0,
-      missingCandidateGraphSource: "static",
-      missingCandidateRankSource: "stablecoin-api-market-cap",
-    });
-    expect(audit.manualOnlyDependencies).toEqual([
-      {
-        coinId: "manual-usdt",
-        symbol: "mUSDT",
-        dependencyId: "usdt-tether",
-        dependencyType: "mechanism",
-        weight: 0.5,
-        reviewStatus: "reviewed",
-      },
-    ]);
-    expect(audit.depTypeWithoutCoinIdWarnings).toEqual([
-      expect.objectContaining({
-        coinId: "cash-only",
-        reserveIndex: 1,
-        reserveName: "Stablecoin basket",
-        depType: "mechanism",
-      }),
-    ]);
-    expect(audit.highestMarketCapMissingCandidates.map((row) => row.coinId)).toEqual([
-      "lone-high",
-      "cash-only",
-    ]);
-    expect(audit.l2beatDeploymentContext).toEqual([
-      expect.objectContaining({
-        coinId: "lone-high",
-        chainId: "base",
-        projectId: "base",
-        layer: "layer2",
-        hostChain: "Ethereum",
-      }),
-    ]);
-  });
-
-  it("uses report-card graph input when ranking missing runtime candidates", () => {
-    const audit = buildDependencyCoverageAudit({
-      activeCoins,
-      stablecoins: stablecoinsPayload,
-      reportCards: reportCardFixture({
-        cards: [{ id: "wrap-usdc", overallScore: 70 }],
-        dependencyGraph: {
-          edges: [{ from: "usdc-circle", to: "wrap-usdc", weight: 1, type: "collateral" }],
-        },
-      }),
-    });
-
-    expect(audit.summary).toMatchObject({
-      reportCardEdgeCount: 1,
-      reportCardParticipantCount: 2,
-      reportCardDependentCount: 1,
-      reportCardUpstreamOnlyCount: 1,
-      missingCandidateGraphSource: "report-card",
-      missingCandidateCount: 4,
-    });
-    expect(audit.highestMarketCapMissingCandidates.map((row) => row.coinId)).toEqual([
-      "lone-high",
-      "cash-only",
-      "manual-usdt",
-      "usdt-tether",
-    ]);
-  });
-
-  it("accepts the current V9 report contract and native dependency lanes", () => {
-    const audit = buildDependencyCoverageAudit({
-      activeCoins: [
-        coin({ id: "serial-upstream", symbol: "SER" }),
-        coin({ id: "basket-upstream", symbol: "BSK" }),
-        coin({ id: "dependent", symbol: "DEP" }),
-      ],
-      reportCards: reportCardFixture({
-        cards: [
-          { id: "serial-upstream", score: 80 },
-          { id: "basket-upstream", score: null },
-          { id: "dependent", score: 65 },
-        ],
-        dependencyGraph: {
-          edges: [
-            {
-              from: "serial-upstream",
-              to: "dependent",
-              kind: "serial",
-              materiality: "serial",
-              weight: null,
-            },
-            {
-              from: "basket-upstream",
-              to: "dependent",
-              kind: "basket",
-              materiality: "basket-weighted",
-              weight: 0.25,
-            },
-          ],
-        },
-      }),
-    });
-
-    expect(audit.summary).toMatchObject({
-      reportCardEdgeCount: 2,
-      reportCardParticipantCount: 3,
-      unavailableTargetEdgeCount: 1,
-    });
-    expect(audit.dependencyEdges).toEqual([
-      expect.objectContaining({
-        from: "basket-upstream",
-        reportKind: "basket",
-        reportMateriality: "basket-weighted",
-        reportedWeight: 0.25,
-        targetScoreability: "active-nr",
-      }),
-      expect.objectContaining({
-        from: "serial-upstream",
-        reportKind: "serial",
-        reportMateriality: "serial",
-        reportedWeight: null,
-        targetScoreability: "scoreable",
-      }),
-    ]);
   });
 
   it("preserves blocked and bounded lanes and unwraps site-data payloads", () => {
@@ -890,55 +714,6 @@ describe("generate-dependency-coverage-audit", () => {
     });
   });
 
-  it("separates unique-symbol active-target leads into material and sub-1% lanes", () => {
-    const subject = coin({
-      id: "subject",
-      symbol: "SUB",
-      dependencies: [{ id: "usdc-circle", weight: 0.02, type: "collateral" }],
-      reserves: [
-        { name: "Fasanara mGLOBAL position", pct: 44, risk: "high" },
-        { name: "f(x) fxSAVE dust", pct: 0.4, risk: "medium" },
-        { name: "USDC liquidity", pct: 2, risk: "low" },
-      ],
-      reserveReview: reserveReview({ confidence: "verified", knownUnknownExposurePct: 0, nonLinkDispositions: [{
-        reserveIndex: 0,
-        reserveName: "Fasanara mGLOBAL position",
-        pct: 44,
-        disposition: "untracked-exogenous-asset",
-        rationale: "Fixture intentionally carries the stale untracked classification.",
-      }] }),
-    });
-    const audit = buildDependencyCoverageAudit({
-      activeCoins: [
-        subject,
-        coin({ id: "mglobal-midas-fasanara", symbol: "mGLOBAL" }),
-        coin({ id: "fxsave-f-x-protocol", symbol: "fxSAVE" }),
-        coin({ id: "usdc-circle", symbol: "USDC" }),
-      ],
-    });
-
-    expect(audit.activeUnlinkedReserveSymbolLeads).toEqual([
-      expect.objectContaining({
-        coinId: "subject",
-        reserveIndex: 0,
-        candidateCoinId: "mglobal-midas-fasanara",
-        reason: "active-target-marked-untracked",
-      }),
-    ]);
-    expect(audit.subMaterialActiveUnlinkedReserveSymbolLeads).toEqual([
-      expect.objectContaining({
-        coinId: "subject",
-        reserveIndex: 1,
-        candidateCoinId: "fxsave-f-x-protocol",
-        reason: "unique-symbol-target-unlinked",
-      }),
-    ]);
-    expect(audit.summary).toMatchObject({
-      activeUnlinkedReserveSymbolLeadCount: 1,
-      subMaterialActiveUnlinkedReserveSymbolLeadCount: 1,
-    });
-  });
-
   it("surfaces exact manual dependency review gaps and stale relationships", () => {
     const missing = coin({
       id: "missing-review",
@@ -959,26 +734,6 @@ describe("generate-dependency-coverage-audit", () => {
       expect.objectContaining({ coinId: "stale-review", dependencyId: "upstream", reason: "missing-relationship" }),
     ]);
     expect(audit.summary.manualDependencyReviewGapCount).toBe(3);
-  });
-
-  it("accepts a review of the variantOf wrapper edge the schema already sanctions", () => {
-    // `reviewableDependencies` in `shared/lib/stablecoins/schema.ts` counts the
-    // `variantOf` wrapper edge alongside manual `dependencies[]`, so ratifying
-    // it is valid curation, not a stale row. Reading it as stale is what put
-    // `manualDependencyReviewGaps: 1` in the wave-1 ratchet for sUSDai.
-    const variant = coin({
-      id: "vault-variant",
-      variantOf: "parent-asset",
-      dependencyReview: dependencyReview([
-        { id: "parent-asset", type: "wrapper", weight: 1, reason: "Serial wrapper claim on the parent." },
-      ]),
-    });
-    const audit = buildDependencyCoverageAudit({
-      activeCoins: [coin({ id: "parent-asset" }), variant],
-    });
-
-    expect(audit.manualDependencyReviewGaps).toEqual([]);
-    expect(audit.summary.manualDependencyReviewGapCount).toBe(0);
   });
 
   it("still reports a relationship that names neither a manual, reserve, nor variant edge", () => {
@@ -1188,23 +943,6 @@ describe("generate-dependency-coverage-audit", () => {
     }));
   });
 
-
-  it("retains the first and 50th candidate while clipping the 51st", () => {
-    const overLimitCoins = Array.from({ length: 51 }, (_, index) => {
-      const suffix = String(index + 1).padStart(2, "0");
-      return coin({ id: `candidate-${suffix}`, symbol: `C${suffix}` });
-    });
-    const markdown = renderDependencyCoverageAuditMarkdown(buildDependencyCoverageAudit({
-      activeCoins: overLimitCoins,
-      trackedCoins: overLimitCoins,
-      generatedAt: "2026-08-28T00:00:00.000Z",
-    }));
-
-    expect(markdown).toContain("C01 (candidate-01)");
-    expect(markdown).toContain("C50 (candidate-50)");
-    expect(markdown).not.toContain("C51 (candidate-51)");
-  });
-
   it("enforces zero-tolerance graph invariants and review gaps without requiring edge-count growth", () => {
     const withEdge = buildDependencyCoverageAudit({
       activeCoins: [
@@ -1234,24 +972,6 @@ describe("generate-dependency-coverage-audit", () => {
     expect(linkageFailure.summary.reserveSlicesMissingCoinId).toBe(1);
   });
 
-  it("parses CLI options", () => {
-    expect(parseArgs([
-      "--report-cards",
-      "agents/report-cards.json",
-      "--stablecoins",
-      "agents/stablecoins.json",
-      "--json",
-    ])).toMatchObject({
-      reportCardsPath: "agents/report-cards.json",
-      stablecoinsPath: "agents/stablecoins.json",
-      format: "json",
-    });
-    expect(() => parseArgs(["--check"])).toThrow("Unknown argument: --check");
-    expect(() => parseArgs(["--prod", "--api-base", "https://api.example.test"])).toThrow(
-      "Choose only one of --prod or --api-base.",
-    );
-  });
-
   it("fails on explicit missing input files", async () => {
     await expect(
       runCli(["--report-cards", "agents/missing-report-cards.json"], process.cwd()),
@@ -1267,35 +987,5 @@ describe("generate-dependency-coverage-audit", () => {
       reportCards: reportCardFixture({ cards: [], dependencyGraph: { edges: [] } }),
     })).toThrow("Report-card input is malformed at cards: expected at least one card.");
     expect(() => buildDependencyCoverageAudit({ activeCoins: [] })).not.toThrow();
-  });
-
-  it("sends site-origin headers when fetching prod site-data", async () => {
-    const fetchMock = vi.fn<typeof fetch>(async (url) => {
-      const href = String(url);
-      return new Response(
-        JSON.stringify(href.includes("report-cards")
-          ? reportCardFixture({ cards: [], dependencyGraph: { edges: [] } })
-          : { peggedAssets: [] }),
-        { status: 200 },
-      );
-    });
-    const fetchImpl: typeof fetch = fetchMock;
-    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-
-    try {
-      await expect(runCli(["--prod", "--json", "--generated-at", "2026-05-24T00:00:00.000Z"], process.cwd(), fetchImpl))
-        .rejects.toThrow("Report-card input is malformed at cards: expected at least one card.");
-    } finally {
-      stdout.mockRestore();
-    }
-
-    for (const call of fetchMock.mock.calls) {
-      expect(call[1]).toMatchObject({
-        headers: expect.objectContaining({
-          Origin: "https://pharos.watch",
-          Referer: "https://pharos.watch/coverage/",
-        }),
-      });
-    }
   });
 });

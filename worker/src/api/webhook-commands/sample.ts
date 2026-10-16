@@ -13,7 +13,7 @@ import type { WebhookCommandHandler } from "./context";
  */
 const SAMPLE_FOOTER =
   "\n\nThis was a sample alert — your real alerts will appear here. Use /unsubscribe to disable.";
-export const SAMPLE_COIN_ID = "usdc-circle";
+const SAMPLE_COIN_ID = "usdc-circle";
 
 function buildSampleAlerts(): ConsolidatedAlerts {
   return {

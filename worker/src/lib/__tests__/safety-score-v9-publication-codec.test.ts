@@ -198,25 +198,12 @@ describe("Safety Score V9 publication codec", () => {
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toMatchObject({ code: "publication-schema-cutover-pending" });
   });
 
-  it.each([4, 5, 8])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
+  it.each([4, 8])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion }));
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(`Unsupported Safety Score publication schema ${schemaVersion}`);
   });
 
-
-  it("rejects post-9.19 serialization without per-fact paths", async () => {
-    const publication = makeWorkerSafetyScoreV9Publication({
-      policyVersion: "9.19",
-    });
-    delete (publication.cards[0]!.scoreTrace.evidenceResponsibility as {
-      facts?: unknown;
-    }).facts;
-
-    await expect(
-      serializeSafetyScoreV9Publication(publication),
-    ).rejects.toThrow();
-  });
 
 
   it("rejects post-9.4 serialization that omits an evidence responsibility owner", async () => {

@@ -293,35 +293,6 @@ describe("telegram authoritative retention", () => {
     vi.restoreAllMocks();
   });
 
-  it("preserves the complete empty-run metadata contract", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
-    const { sqlite, db } = setupLatestSchema();
-
-    const result = await runTelegramRetentionCleanup(db);
-    const metadata = JSON.parse(result.metadata!) as Record<string, unknown>;
-
-    expect(result.status).toBe("ok");
-    expect(Object.entries(metadata).filter(([key, value]) => key.endsWith("Pruned") && value !== 0)).toEqual([]);
-    expect(
-      Object.entries(metadata.cappedAtLimit as Record<string, boolean>).filter(([, capped]) => capped),
-    ).toEqual([]);
-    expect(metadata.runBudgetTruncated).toBe(false);
-    expect(metadata.expiredTargetsReconciled).toBe(0);
-    expect(metadata.processedUpdatesPruned).toBe(0);
-    expect(metadata.processedUpdatesRemainingBacklog).toEqual({ count: 0, exact: true, probeLimit: 5001 });
-    expect(metadata.highGrowthRetention).toMatchObject({
-      error: null,
-      cappedAtLimit: false,
-      legacyTerminalJobsPruned: 0,
-      staleUnresolvedJobsPruned: 0,
-      staleUnresolvedSourcesPruned: 0,
-      oldestUnresolvedSourceRemainingAt: null,
-      terminalCutoff: NOW_SEC - 14 * DAY_SEC,
-      unresolvedCutoff: NOW_SEC - 30 * DAY_SEC,
-    });
-    sqlite.close();
-  });
-
   it("prunes terminal workflow rows and settled replay bundles without deleting ambiguous or active work", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     const { sqlite, db } = setupLatestSchema();

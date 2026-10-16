@@ -2,18 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildHistoricalDewsMap,
   computeHistoricalDewsStressBreadth,
-  usesHistoricalStressBreadth,
 } from "../psi-replay";
 import { buildSupplySnapshotMap } from "../psi-recompute";
 import { psiDepegRow, psiSupplyPair, replayPsiDay, DAY } from "./psi.test-support";
 
 describe("psi-replay", () => {
-  it("enables historical stress breadth for v3.x only", () => {
-    expect(usesHistoricalStressBreadth("2.1")).toBe(false);
-    expect(usesHistoricalStressBreadth("3.0")).toBe(true);
-    expect(usesHistoricalStressBreadth("3.2")).toBe(true);
-  });
-
   it("distinguishes missing DEWS archive from an observed all-CALM day", () => {
     const day = 1_746_384_000;
     const supplyRows = psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 100e9, priorMcap: 100e9 });

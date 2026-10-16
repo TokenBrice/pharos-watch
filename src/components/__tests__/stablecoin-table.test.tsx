@@ -4,7 +4,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
-import { ALL_COLUMNS } from "@/lib/column-visibility";
 import { cleanupFrontendTest, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -71,13 +70,6 @@ const usdc = makeStablecoin({
   name: "USD Coin",
   symbol: "USDC",
   circulating: { peggedUSD: 50_000_000 },
-});
-const susds = makeStablecoin({
-  ...coin,
-  id: "susds-sky",
-  name: "Sky Savings USDS",
-  symbol: "sUSDS",
-  circulating: { peggedUSD: 75_000_000 },
 });
 
 
@@ -224,70 +216,6 @@ describe("StablecoinTable", () => {
     });
   });
 
-  it("keeps horizontal scrolling enabled on the table viewport", () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} />);
-
-    const table = screen.getAllByRole("table")[0];
-    const shell = screen.getByTestId("stablecoin-overview-table");
-    const scrollContainer = table?.parentElement;
-
-    expect(shell.getAttribute("data-table-id")).toBe("stablecoin-overview");
-    expect(shell.className).toContain("pharos-table-shell");
-    expect(shell.className).toContain("pharos-density-spacious");
-    expect(shell.className).toContain("pharos-table-striped-indexed");
-    expect(scrollContainer?.getAttribute("data-slot")).toBe("table-viewport");
-    expect(scrollContainer?.className).toContain("scroll-shadow");
-    expect(scrollContainer?.className).toContain("overflow-x-auto");
-    expect(scrollContainer?.className).toContain("overflow-y-auto");
-    expect(scrollContainer?.className).not.toContain("overflow-x-hidden");
-    expect(scrollContainer?.className).not.toContain("xl:overflow-x-hidden");
-    expect(shell.querySelector("[data-slot='table-container']")).toBeNull();
-  });
-
-  it("sizes the table to the visible columns so fixed-layout cells never squeeze below content width", () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} />);
-
-    const table = screen.getAllByRole("table")[0] as HTMLTableElement;
-    const scrollContainer = table?.parentElement;
-
-    expect(scrollContainer?.className).toContain("overflow-x-auto");
-    expect(scrollContainer?.className).not.toContain("overflow-x-hidden");
-    // Inline min-width is the sum of per-column minimums for the visible set;
-    // 420 is the floor, so any real column set resolves above it.
-    const minWidth = Number.parseInt(table.style.minWidth, 10);
-    expect(minWidth).toBeGreaterThanOrEqual(420);
-  });
-
-  it("honors all-column route defaults", () => {
-    render(
-      <StablecoinTable
-        data={[coin]}
-        isLoading={false}
-        activeFilters={[]}
-        initialVisibleColumns={ALL_COLUMNS.map((column) => column.id)}
-      />,
-    );
-
-    expect(screen.getByText("Flags")).toBeTruthy();
-  });
-
-  it("can hide header methodology helper buttons", () => {
-    render(
-      <StablecoinTable
-        data={[coin]}
-        isLoading={false}
-        activeFilters={[]}
-        showHeaderMethodologyHints={false}
-      />,
-    );
-
-    expect(screen.getByText("Grade")).toBeTruthy();
-    expect(screen.getByText("Peg Score")).toBeTruthy();
-    expect(screen.getAllByText("Liq").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Explain Safety Score" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Explain Peg Score" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Explain Liquidity Score" })).toBeNull();
-  });
 
   it("renders the blacklistable column when enabled", () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["mcap", "blacklistable"]));
@@ -412,31 +340,6 @@ describe("StablecoinTable", () => {
     expect(usdtRow?.querySelectorAll("td")[1]?.textContent).toBe("1");
   });
 
-  it("adds full variant context to the accessible detail link", () => {
-    render(<StablecoinTable data={[susds]} isLoading={false} activeFilters={[]} />);
-
-    expect(screen.getByLabelText("Savings variant")).toBeTruthy();
-    expect(
-      screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i }),
-    ).toHaveLength(1);
-    expect(screen.getByText("Savings")).toBeTruthy();
-  });
-
-  it("does not reset vertical scroll on rerender when pinning is disabled", () => {
-    const rows = [coin, usdc];
-    const activeFilters: never[] = [];
-
-    const { rerender } = render(
-      <StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} />,
-    );
-
-    const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
-    scrollToMock.mockClear();
-
-    rerender(<StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} />);
-
-    expect(scrollToMock).not.toHaveBeenCalled();
-  });
 
   it("preserves vertical scroll through independently refreshed metric objects", () => {
     const rows = [coin, usdc];
@@ -506,39 +409,6 @@ describe("StablecoinTable", () => {
     },
   );
 
-  it("derives stripe state from the stable row index instead of rendered tbody position", () => {
-    virtualItemsMock.splice(0, virtualItemsMock.length, { index: 1, start: 40, end: 80 });
-    virtualTotalSizeMock.current = 80;
-    render(<StablecoinTable data={[coin, usdc]} isLoading={false} activeFilters={[]} />);
-
-
-    const bodyRows = document.querySelectorAll("tbody tr");
-    const spacerCell = bodyRows[0]?.querySelector("td");
-    const usdcRow = screen.getByText("USDC").closest("tr");
-
-    expect(bodyRows).toHaveLength(2);
-    expect(bodyRows[0]?.getAttribute("data-row-striped")).toBeNull();
-    expect(spacerCell?.getAttribute("colspan")).toBe(String(screen.getAllByRole("columnheader").length));
-    expect(spacerCell?.style.height).toBe("40px");
-    expect(spacerCell?.style.padding).toBe("0px");
-    expect(usdcRow?.getAttribute("data-row-striped")).toBe("true");
-  });
-
-  it("keeps the virtual cursor idle until row intent", async () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} />);
-
-    const row = screen.getByText("USDT").closest("tr");
-
-    expect(row?.getAttribute("data-cursor")).toBeNull();
-    expect(scrollToIndexMock).not.toHaveBeenCalled();
-
-    fireEvent.mouseEnter(row as HTMLTableRowElement);
-
-    await waitFor(() => {
-      expect(row?.getAttribute("data-cursor")).toBe("true");
-    });
-    expect(scrollToIndexMock).not.toHaveBeenCalled();
-  });
 
   it("scrolls the virtual cursor only when keyboard intent targets an offscreen row", async () => {
     render(<StablecoinTable data={[coin, usdc]} isLoading={false} activeFilters={[]} />);

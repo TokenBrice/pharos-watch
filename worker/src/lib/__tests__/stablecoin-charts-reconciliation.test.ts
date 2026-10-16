@@ -5,20 +5,8 @@ import {
   mergeStructuralSupplementalHistoryIntoCharts,
   STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
 } from "../stablecoin-charts-reconciliation";
-import octoberFixture from "@shared/test-utils/fixtures/hero-chart-oct10.json";
-import { normalizeStablecoinChartPoints } from "../stablecoin-charts-payload";
-import { StablecoinChartResponseSchema } from "@shared/types/market";
 
 describe("stablecoin-charts reconciliation", () => {
-  it("preserves real provider history when supplemental archives have not started", () => {
-    const merged = mergeStructuralSupplementalHistoryIntoCharts(StablecoinChartResponseSchema.parse(octoberFixture.chartPoints), [], [
-      { id: "usd-overlay", pegType: "peggedUSD" },
-      { id: "gold-overlay", pegType: "peggedGOLD" },
-      { id: "chf-overlay", pegType: "peggedCHF" },
-      { id: "zar-overlay", pegType: "peggedZAR" },
-    ]);
-    expect(normalizeStablecoinChartPoints(merged)).toEqual(octoberFixture.chartPoints);
-  });
   it("excludes llama-backed charts while preserving the audited empty BRZ legacy chart", () => {
     const llamaBacked = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(
       ({ id }) => ACTIVE_META_BY_ID.get(id)?.llamaId != null,

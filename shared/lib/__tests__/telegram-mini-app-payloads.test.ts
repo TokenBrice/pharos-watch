@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  MINI_APP_PAYLOAD_NAMES,
-  formatCoinPayload,
-  formatCoveragePayload,
-  formatWhyPayload,
   miniAppPayloadIntent,
   parseMiniAppPayload,
 } from "../telegram-mini-app-payloads";
@@ -16,12 +12,6 @@ describe("telegram mini app payloads", () => {
     expect(miniAppPayloadIntent({ kind: "coverage", coinId: "usdc-circle" })).toBe("coverage");
   });
 
-  it("formats parametric payloads", () => {
-    expect(formatCoinPayload("usdc-circle")).toBe("coin_usdc-circle");
-    expect(formatWhyPayload("usdc-circle")).toBe("why_usdc-circle");
-    expect(formatCoveragePayload("usdc-circle")).toBe("coverage_usdc-circle");
-  });
-
   it("maps only catalog-issued adoption tokens to their Mini App destinations", () => {
     expect(parseMiniAppPayload("pw1_landing_miniapp_home")).toEqual({
       kind: "adoption",
@@ -30,11 +20,6 @@ describe("telegram mini app payloads", () => {
     expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_watchlist")!)).toBe("watchlist");
     expect(parseMiniAppPayload("pw1_landing_unknown")).toBeNull();
     expect(parseMiniAppPayload("pw1_landing_hero")).toBeNull();
-  });
-
-  it("maps recap action tokens to their existing panels", () => {
-    expect(miniAppPayloadIntent(parseMiniAppPayload(MINI_APP_PAYLOAD_NAMES.recapWatchlist)!)).toBe("watchlist");
-    expect(miniAppPayloadIntent(parseMiniAppPayload(MINI_APP_PAYLOAD_NAMES.recapSettings)!)).toBe("settings");
   });
 
   it("rejects empty insight ids and malformed payloads", () => {

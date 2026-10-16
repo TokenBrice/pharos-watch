@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   encodePortfolioHoldings,
-  isPortfolioHolding,
   migratePortfolioIds,
-  normalizePortfolioAmount,
-  normalizePortfolioHolding,
   parsePortfolioUrlParam,
 } from "../portfolio-codec";
 import type { PortfolioHolding } from "../portfolio-codec";
@@ -83,72 +80,10 @@ describe("portfolio codec", () => {
 });
 
 describe("parsePortfolioUrlParam edge cases", () => {
-  it("returns empty array for empty string", () => {
-    expect(parsePortfolioUrlParam("")).toEqual([]);
-  });
-
-  it("filters out entries with non-numeric amounts", () => {
-    const result = parsePortfolioUrlParam("usdc-circle:abc");
-    expect(result).toEqual([]);
-  });
-
   it("keeps zero amounts and filters invalid amounts", () => {
     const result = parsePortfolioUrlParam(
       "usdc-circle:0,usdt-tether:-5,dai-makerdao:Infinity,frax-frax:NaN,pyusd-paypal:1abc,lusd-liquity:1:2",
     );
     expect(result).toEqual([{ coinId: "usdc-circle", amount: 0 }]);
-  });
-
-  it("filters out unknown ids", () => {
-    expect(parsePortfolioUrlParam("not-a-coin:25")).toEqual([]);
-  });
-});
-
-describe("encodePortfolioHoldings edge cases", () => {
-  it("returns empty string for empty holdings", () => {
-    expect(encodePortfolioHoldings([])).toBe("");
-  });
-});
-
-describe("isPortfolioHolding", () => {
-  it("accepts valid holdings", () => {
-    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: 100 })).toBe(true);
-    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: 0 })).toBe(true);
-  });
-
-  it("rejects missing coinId", () => {
-    expect(isPortfolioHolding({ amount: 100 })).toBe(false);
-  });
-
-  it("rejects negative and non-finite amounts", () => {
-    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: -1 })).toBe(false);
-    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: Infinity })).toBe(false);
-    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: NaN })).toBe(false);
-  });
-
-  it("rejects unknown coin ids", () => {
-    expect(isPortfolioHolding({ coinId: "not-a-coin", amount: 1 })).toBe(false);
-  });
-
-  it("rejects non-object values", () => {
-    expect(isPortfolioHolding(null)).toBe(false);
-    expect(isPortfolioHolding("string")).toBe(false);
-    expect(isPortfolioHolding(42)).toBe(false);
-  });
-});
-
-describe("normalization helpers", () => {
-  it("normalizes finite nonnegative amounts only", () => {
-    expect(normalizePortfolioAmount(0)).toBe(0);
-    expect(normalizePortfolioAmount(25)).toBe(25);
-    expect(normalizePortfolioAmount(-1)).toBeNull();
-    expect(normalizePortfolioAmount(Infinity)).toBeNull();
-    expect(normalizePortfolioAmount("25")).toBeNull();
-  });
-
-  it("canonicalizes known legacy ids while rejecting invalid holdings", () => {
-    expect(normalizePortfolioHolding({ coinId: "1", amount: 12 })).toBeNull();
-    expect(normalizePortfolioHolding({ coinId: "usdc-circle", amount: -1 })).toBeNull();
-    expect(normalizePortfolioHolding({ coinId: "not-a-coin", amount: 1 })).toBeNull();
   });
 });

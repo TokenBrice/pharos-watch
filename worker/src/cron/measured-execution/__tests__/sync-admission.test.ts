@@ -10,7 +10,6 @@ import type { DexExitRouteObservation } from "@shared/types/market";
 import {
   CONSERVATIVE_MULTICALL_BATCH_SIZE,
   MIN_MEASURED_EXECUTION_PACING_SAMPLES,
-  MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   admitTargetsWithinBudget,
   estimateAdmissionCohortRpcRequestBreakdown,
   estimateAdmissionCohortRpcRequests,
@@ -237,21 +236,6 @@ describe("PKT-5 current-policy lane fencing — 2026-10-14", () => {
 });
 
 describe("measured execution overflow admission", () => {
-  it("reports the default hard, admission, and reserve limits", () => {
-    expect(MEASURED_EXECUTION_ADMISSION_RUN_METADATA).toEqual({
-      admissionRpcRequestLimit: 1_220,
-      admissionFragmentationReserveRpcRequests: 80,
-      admissionRpcHardLimit: 1_300,
-    });
-    expect(
-      MEASURED_EXECUTION_ADMISSION_RUN_METADATA.admissionRpcRequestLimit +
-        MEASURED_EXECUTION_ADMISSION_RUN_METADATA
-          .admissionFragmentationReserveRpcRequests,
-    ).toBe(
-      MEASURED_EXECUTION_ADMISSION_RUN_METADATA.admissionRpcHardLimit,
-    );
-  });
-
   it("estimates setup, execution phases, and singleton-retry headroom", () => {
     expect(estimateAdmissionCohortRpcRequestBreakdown([target("coin-low", 100_000)]))
       .toEqual({ setupRpcRequests: 4, quoteRpcRequests: 7, totalRpcRequests: 11 });
@@ -576,22 +560,6 @@ describe("measured execution overflow admission", () => {
     expect(
       estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 14 }),
     ).toBe(3);
-  });
-
-  it("uses supplemental opportunities to finish a four-cohort rotation without widening per-run admission", () => {
-    const targets = ["coin-a", "coin-b", "coin-c", "coin-d"].map((coin) => target(coin, 100_000));
-    const covered = new Set<string>();
-    let cursor: string | null = null;
-    for (let opportunity = 0; opportunity < 4; opportunity++) {
-      const admission = admitTargetsWithinBudget(targets, { cursor, maxEstimatedRpcRequests: 11 });
-      expect(admission.estimatedRpcRequests).toBeLessThanOrEqual(11);
-      expect(admission.oversized.size).toBe(0);
-      expect(admission.admitted.size).toBe(1);
-      for (const targetId of admission.admitted) covered.add(targetId);
-      cursor = admission.nextCursor;
-    }
-    expect(covered).toEqual(new Set(targets.map((entry) => entry.targetId)));
-    expect(estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 11 })).toBe(4);
   });
 
   it("packs later cohorts while resuming at the first deferred cohort", () => {

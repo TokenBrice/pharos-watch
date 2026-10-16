@@ -570,27 +570,6 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it("names window exhaustion for every unattemptable asset", async () => {
-    vi.useFakeTimers();
-    try {
-      const pending = runBudgetedSupplyAttributionAssets([0, 1, 2, 3], async (_asset, signal) => {
-        await sleepWithSignal(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs, signal);
-        return 1;
-      }, { executionWindow: {
-        slotStartedAtSec: Math.floor(Date.now() / 1_000),
-        deadlineMs: Date.now() + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + 100,
-        minimumRemainingMs: 0,
-      } });
-      await vi.runAllTimersAsync();
-      expect(await pending).toEqual([
-        { status: "rejected", reason: "asset-timeout" },
-        { status: "rejected", reason: "capture-window-exhausted" },
-        { status: "rejected", reason: "capture-window-exhausted" },
-        { status: "rejected", reason: "capture-window-exhausted" },
-      ]);
-    } finally { vi.useRealTimers(); }
-  });
-
   it("does not turn parent cancellation into a published per-asset rejection", async () => {
     const controller = new AbortController();
     const error = new Error("lease-lost");

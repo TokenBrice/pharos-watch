@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   evaluateCronScheduleSync,
   parseWranglerCronTriggers,
-  printCronScheduleSyncReport,
 } from "../ci/check-cron-schedule-sync";
 
 describe("check-cron-schedule-sync", () => {
@@ -187,20 +186,6 @@ describe("check-cron-schedule-sync", () => {
     }
   });
 
-  it("prints the offending job identifier", () => {
-    const errors: string[] = [];
-    vi.spyOn(console, "error").mockImplementation((message?: unknown) => {
-      errors.push(String(message));
-    });
-    printCronScheduleSyncReport(evaluateCronScheduleSync({
-      cronSchedules: {},
-      scheduledSlotPlans: {},
-      cronJobDefinitions: [{ job: "missing-runtime-sentinel" }],
-      cronConnectionBudgetEntries: [],
-      wranglerCronTriggers: { public: [], heavy: [] },
-    }));
-    expect(errors.join("\n")).toContain("missing-runtime-sentinel");
-  });
   it.each([
     [{ public: [], heavy: [] }, ["1 * * * *"], []],
     [{ public: [], heavy: ["1 * * * *"] }, [], ["heavy:1 * * * *"]],

@@ -27,7 +27,7 @@ export function groupCostsByCategory(items: readonly CostLineItem[]): CostCatego
 }
 
 /** YYYY-MM in UTC. */
-export function monthKey(timestampSec: number): string {
+function monthKey(timestampSec: number): string {
   requireFinite(timestampSec, "timestamp");
   const d = new Date(timestampSec * 1000);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;

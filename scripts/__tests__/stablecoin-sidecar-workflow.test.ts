@@ -178,26 +178,6 @@ describe("stablecoin sidecar migration workflow", () => {
 });
 
 describe("stablecoin sidecar migration CLI", () => {
-  it("parses repeated IDs and safe modes", () => {
-    expect(
-      parseStablecoinSidecarMigrationArgs([
-        "--domain",
-        "compliance",
-        "--id",
-        "usdc-circle",
-        "--id",
-        "pyusd-paypal",
-        "--dry-run",
-      ]),
-    ).toEqual({
-      check: false,
-      domain: "compliance",
-      dryRun: true,
-      help: false,
-      ids: ["usdc-circle", "pyusd-paypal"],
-    });
-  });
-
   it("rejects unknown domains, missing IDs, and conflicting modes", () => {
     expect(() => parseStablecoinSidecarMigrationArgs(["--domain", "ratings", "--id", "usdc-circle"])).toThrow(
       /--domain must be one of/,

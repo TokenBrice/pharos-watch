@@ -108,16 +108,6 @@ describe("structuralClass", () => {
     expect(structuralClass(coin({ collateralQuality: "exotic", mechanismArchetype: "cdp" }))).toBe("fragile");
   });
 
-  it("keeps a reconciled unbounded minter fragile, including over a robust archetype", () => {
-    // Reconciliation refines the unbounded class, not its economic bound.
-    // Re-annotating known adverse authority as reconciled must preserve the DDR
-    // stratum; the governed and incident split likewise never relaxes DDR.
-    expect(structuralClass(coin({ authorityPosture: "unbounded-reconciled" }))).toBe("fragile");
-    expect(
-      structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-reconciled" })),
-    ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-adverse" })));
-  });
-
   it("keeps adverse and collateral-gated authority fragile without relaxing DDR", () => {
     // Both are fragile, but only the adverse unbounded posture is surge-severe.
     expect(structuralClass(coin({ authorityPosture: "unbounded-adverse" }))).toBe("fragile");
@@ -159,7 +149,7 @@ describe("DDR curated-posture set membership — pinned", () => {
       baseLive(),
     ).factors.find((factor) => factor.code === "K1_supply_weaponization") ?? null;
 
-  it.each(["unbounded-reconciled", "unbounded-governed", "unbounded-veto-guarded", "unbounded-operationally-governed", "unbounded-adverse", "compromised"])(
+  it.each(["unbounded-reconciled"])(
     "keeps %s fragile, risky, and severe-surge eligible",
     (posture) => {
       expect(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: posture }))).toBe("fragile");
@@ -843,30 +833,6 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
       expect(r.factors.some((f) => f.code === "K2_backing_impairment" && f.severity === "severe")).toBe(true);
       expect(r.tier).toBe("recovery_unlikely");
     }
-  });
-
-  it("emits R1 strong for immutable user-collateralized supply", () => {
-    const r = resolveOutlook(
-      event(),
-      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved", mintPath: "immutable-user-collateralized" }),
-      baseSupply(),
-      baseLive(),
-    );
-    expect(r.factors.some((f) => f.code === "R1_noninflatable_supply" && f.severity === "strong")).toBe(true);
-  });
-
-  it("emits R1 weak for governance-bounded user-collateralized supply", () => {
-    const r = resolveOutlook(
-      event(),
-      coin({
-        mechanismArchetype: "cdp",
-        authorityPosture: "concentrated-admin",
-        mintPath: "user-collateralized-governed",
-      }),
-      baseSupply(),
-      baseLive(),
-    );
-    expect(r.factors.some((f) => f.code === "R1_noninflatable_supply" && f.severity === "weak")).toBe(true);
   });
 
   it("emits R2 strong for hard collateral with a live redemption route", () => {

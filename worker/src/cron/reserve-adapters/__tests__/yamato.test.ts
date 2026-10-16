@@ -147,17 +147,6 @@ async function fetchFixture(
 
 
 describe("decodeYamatoGetStates", () => {
-  it("decodes Yamato getStates() output into raw collateral, debt, and thresholds", () => {
-    expect(decodeYamatoGetStates(encodeStates())).toEqual({
-      totalCollateralRaw: 100n * ONE,
-      totalDebtRaw: 20_000_000n * ONE,
-      mcrPct: 130,
-      rrrPct: 80,
-      srrPct: 20,
-      grrPct: 1,
-    });
-  });
-
   it("rejects malformed raw call data", () => {
     expect(() => decodeYamatoGetStates("0x1234")).toThrow();
   });
@@ -250,55 +239,6 @@ describe("adaptYamatoStates", () => {
       routeStatusSource: "onchain",
       routeStatusReason: expect.stringContaining("below MCR"),
     });
-  });
-
-  it("withholds route status when the redemption probe is null", () => {
-    const result = adaptYamatoStates(
-      {
-        totalCollateralRaw: 100n * ONE,
-        totalDebtRaw: 20_000_000n * ONE,
-        mcrPct: 130,
-        rrrPct: 80,
-        srrPct: 20,
-        grrPct: 1,
-      },
-      {
-        ethJpyPriceRaw: 400_000n * ONE,
-      },
-    );
-
-    expect(result.metadata?.redemption).toBeDefined();
-    expect(result.metadata?.redemption).toMatchObject({
-      freshnessKind: "same-run-onchain",
-      holderEligibility: "any-holder",
-      settlementDelaySec: 0,
-    });
-    expect(result.metadata?.redemption).not.toHaveProperty("routeStatus");
-    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
-    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusReason");
-  });
-
-  it("allows the ETH slice metadata to be supplied by adapter params", () => {
-    const result = adaptYamatoStates(
-      {
-        totalCollateralRaw: 1n * ONE,
-        totalDebtRaw: 100_000n * ONE,
-        mcrPct: 130,
-        rrrPct: 80,
-        srrPct: 20,
-        grrPct: 1,
-      },
-      {
-        ethJpyPriceRaw: 200_000n * ONE,
-        slice: {
-          name: "ETH",
-          risk: "very-low",
-          depType: "collateral",
-        },
-      },
-    );
-
-    expect(result.slices).toEqual([{ sourceKey: "yamato:eth", name: "ETH", pct: 100, risk: "very-low", depType: "collateral" }]);
   });
 
   it("floors the redeemable cap at the collateral getStates() actually measured", () => {

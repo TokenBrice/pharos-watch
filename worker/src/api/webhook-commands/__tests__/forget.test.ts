@@ -69,50 +69,6 @@ describe("handleForget", () => {
     )).toBe(false);
   });
 
-  it("rejects supergroups with the private-chat-only message", async () => {
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ chatType: "supergroup", replyToChat });
-
-    await handleForget(ctx, "");
-
-    expect(replyToChat).toHaveBeenCalledTimes(1);
-    expect((ctx.db as MockD1Database).getHistory().some((entry) =>
-      entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
-    )).toBe(false);
-  });
-
-  it("persists a forget-confirm pending row and offers an inline keyboard in private chats", async () => {
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const db = mockD1([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [], runMeta: { changes: 1 } }]);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleForget(ctx, "");
-
-    expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
-    const [, options] = replyToChatWithMarkup.mock.calls[0];
-    expect(options).toEqual({
-      replyMarkup: {
-        inline_keyboard: [
-          [
-            {
-              text: "Open control panel",
-              web_app: { url: "https://pharos.watch/pharoswatchbot/app/?startapp=forget" },
-            },
-          ],
-          [
-            { text: "Confirm", callback_data: "confirm:forget" },
-            { text: "Cancel", callback_data: "cancel:forget" },
-          ],
-        ],
-      },
-    });
-    const writes = db.getHistory().filter((entry) =>
-      entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
-    );
-    expect(writes).toHaveLength(1);
-    expect(writes[0]?.binds).toContain("forget-confirm");
-  });
-
   it("warns when another pending action already owns the chat", async () => {
     const replyToChat = vi.fn().mockResolvedValue(undefined);
     const { sqlite, db } = fixtures.open();

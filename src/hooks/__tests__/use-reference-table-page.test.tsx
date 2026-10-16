@@ -65,11 +65,4 @@ describe("useReferenceTablePage", () => {
     expect(window.location.search).toBe("");
     expect(result.current.page).toBe(1);
   });
-
-  it("uses a custom param so two tables on one route page independently", () => {
-    window.history.replaceState(null, "", "/compliance/?page=2&watchPage=4");
-    const { result } = renderHook(() => useReferenceTablePage({ totalRows: 200, pageSize: 25, param: "watchPage" }));
-
-    expect(result.current.page).toBe(4);
-  });
 });

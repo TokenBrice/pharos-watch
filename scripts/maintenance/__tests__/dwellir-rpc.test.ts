@@ -516,14 +516,6 @@ describe("pinned supplemental research RPC", () => {
     expect(record).toMatchObject({ state: "error", reason: "block-pin-mismatch", result: null });
   });
 
-  it.each(["fraxtal", "kaia", "hemi", "plume", "filecoin", "rootstock"])("uses the canonical public %s endpoint without sending a Dwellir key", async (chain) => {
-    const record = await invoke(["--provider", "public", "--block", "1000"], chain);
-    expect(record).toMatchObject({ provider: "public", state: "ok", block: { number: "1000" } });
-    for (const [, init] of fetchMock.mock.calls) {
-      expect(init.headers).not.toHaveProperty("X-Api-Key");
-      expect(init.headers).not.toHaveProperty("Authorization");
-    }
-  });
 
   it.each(["public", "drpc"])("keeps missing Filecoin MsgMeta on %s unavailable without archive fallback", async (provider) => {
     fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {

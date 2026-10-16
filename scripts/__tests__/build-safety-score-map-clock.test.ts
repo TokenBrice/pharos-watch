@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { createServer, type Server } from "node:http";
+import type { Server } from "node:http";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -10,6 +10,7 @@ import {
   makeSafetyMapRatedCard,
   makeSafetyMapReportCardsResponse,
   makeSafetyMapStablecoinsPayload,
+  startSafetyMapFixtureServer,
   withSafetyMapAdverseAttribution,
 } from "./build-safety-score-map.test-support";
 
@@ -104,28 +105,12 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
   }
 
   beforeAll(async () => {
-    server = createServer((req, res) => {
-      const path = (req.url ?? "").split("?")[0];
-      const body =
-        path === "/api/report-cards/v9"
-          ? reportCardsPayload()
-          : path === "/api/stablecoins"
-            ? stablecoinsPayload()
-            : path === "/api/stability-index"
-              ? psiPayload()
-              : null;
-      if (!body) {
-        res.writeHead(404).end("{}");
-        return;
-      }
-      if (path === "/api/report-cards/v9") res.setHeader("X-Safety-Score-Status", "held");
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify(body));
-    });
-    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-    const address = server.address();
-    if (typeof address === "string" || address == null) throw new Error("fixture server did not bind a port");
-    baseUrl = `http://127.0.0.1:${address.port}`;
+    ({ server, baseUrl } = await startSafetyMapFixtureServer({
+      reportCardsPayload,
+      stablecoinsPayload,
+      psiPayload,
+      publicationStatus: () => "held",
+    }));
   });
 
   afterAll(async () => {

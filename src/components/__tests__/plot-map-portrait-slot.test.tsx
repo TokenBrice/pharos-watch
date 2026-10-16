@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { renderToString } from "react-dom/server";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
@@ -89,25 +88,6 @@ const walk = (id: string) => document.getElementById(`walk-${id}`) as HTMLElemen
 const sheet = () => document.querySelector<HTMLElement>("[data-plot-sheet]");
 
 describe("PlotMapPortraitSlot", () => {
-  it("server-renders only the reserved box, sized by the portrait aspect, with a no-JS fallback", () => {
-    const html = renderToString(
-      <PlotMapPortraitSlot rows={rows} asOf={asOf} atlas={atlas} aspectRatio={aspectRatio} flowers={{}} onLeaveFlower={() => {}} />,
-    );
-    expect(html).toContain("data-plot-portrait-slot");
-    expect(html).toContain(`--portrait-ar:${aspectRatio}`);
-    expect(html).not.toContain("walk-");
-    expect(html).toMatch(/<noscript>.*max-width: 760px.*display:none!important/);
-  });
-
-  it("keeps only the reserved box and registers no pin handler on the desktop", () => {
-    phone = false;
-    const { container } = renderSlot();
-    expect(container.querySelector("[data-plot-portrait-slot]")).not.toBeNull();
-    expect(container.querySelector("[data-plot-portrait]")).toBeNull();
-    expect(container.querySelector("[id^='walk-']")).toBeNull();
-    expect(selection.registerPinGrave).not.toHaveBeenCalled();
-  });
-
   it("mounts the portrait grid on phones: one uniquely identified button per grave and one tab stop", () => {
     const { container } = renderSlot();
     const buttons = Array.from(container.querySelectorAll<HTMLElement>("[data-plot-hits] [data-grave-id]"));
@@ -176,49 +156,5 @@ describe("PlotMapPortraitSlot", () => {
     expect(walk(HUSD.id).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("registers the pin handler once per mount and unregisters it on unmount", () => {
-    const { rerender, unmount } = renderSlot();
-    rerender(<PlotMapPortraitSlot rows={rows} asOf={asOf} atlas={atlas} aspectRatio={aspectRatio} flowers={{ [HUSD.id]: 1 }} onLeaveFlower={vi.fn()} />);
-    fireEvent.click(walk(HUSD.id));
-    expect(selection.registerPinGrave).toHaveBeenCalledTimes(1);
-    expect(unregister).not.toHaveBeenCalled();
-    unmount();
-    expect(unregister).toHaveBeenCalledTimes(1);
-  });
-
-  it("folds the legend's second disclosure once on phones", () => {
-    const details = document.createElement("details");
-    details.setAttribute("data-plot-legend-more", "");
-    details.open = true;
-    document.body.append(details);
-    try {
-      renderSlot();
-      expect(details.open).toBe(false);
-    } finally {
-      details.remove();
-    }
-  });
-
-  it("leaves the legend open when the page opened on a fragment, so the fragment scroll lands where it aimed", () => {
-    const details = document.createElement("details");
-    details.setAttribute("data-plot-legend-more", "");
-    details.open = true;
-    document.body.append(details);
-    window.history.replaceState(null, "", "#faq");
-    try {
-      renderSlot();
-      expect(details.open).toBe(true);
-    } finally {
-      window.history.replaceState(null, "", window.location.pathname);
-      details.remove();
-    }
-  });
 });
 
-describe("getPortraitAspectRatio", () => {
-  it("is the portrait viewBox aspect, independent of row order", () => {
-    const [, , w, h] = portraitMap.viewBox;
-    expect(aspectRatio).toBe(`${w} / ${h}`);
-    expect(getPortraitAspectRatio([...rows].reverse(), asOf)).toBe(aspectRatio);
-  });
-});

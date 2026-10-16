@@ -7,7 +7,6 @@ import {
   parseBoundedNumberSearchParam,
   parseEnumSearchParam,
   parseStablecoinIdSearchParam,
-  parseStringSearchParam,
   readJsonStorageValue,
   writeJsonStorageValue,
 } from "../url-storage-codecs";
@@ -38,10 +37,6 @@ describe("URL search codecs", () => {
     })).toBeNull();
   });
 
-  it("parses non-empty string params", () => {
-    expect(parseStringSearchParam("?p=%20usdc:10%20", "p")).toBe("usdc:10");
-    expect(parseStringSearchParam("?p=", "p", { fallback: "fallback" })).toBe("fallback");
-  });
 });
 
 describe("JSON storage codecs", () => {

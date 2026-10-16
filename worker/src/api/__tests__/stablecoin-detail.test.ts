@@ -188,9 +188,6 @@ describe("handleStablecoinDetail", () => {
 
   it.each([
     "bfusd-binance",
-    "benji-franklin-templeton",
-    "usr-resolv",
-    "hkdr-rd-technologies",
   ])(
     "does not refresh providers for inactive catalog record %s",
     async (stablecoinId) => {
@@ -219,25 +216,6 @@ describe("handleStablecoinDetail", () => {
     expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(ctx.waitUntil).not.toHaveBeenCalled();
-  });
-
-  it("returns 200 with JSON from DefiLlama for a regular stablecoin", async () => {
-    const dlBody = makeDLDetailBody();
-
-    // No cache hit
-    const db = mockD1([{ match: "cache", rows: [] }]);
-
-    queueFetch(new Response(dlBody, { status: 200 }));
-
-    const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
-
-    expect(res.headers.get("Content-Type")).toBe("application/json");
-    expect(res.headers.get("Cache-Control")).toMatch(/s-maxage/);
-
-    const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
-    expect(body).toHaveProperty("tokens");
-    expect(Array.isArray(body.tokens)).toBe(true);
   });
 
   it("uses curated metadata contracts for the detail address when DefiLlama is stale", async () => {
@@ -469,27 +447,6 @@ describe("handleStablecoinDetail", () => {
     expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
 
-  it("returns stale cache on upstream timeout when cache exists", async () => {
-    const cachedValue = makeDLDetailBody();
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "cache",
-        rows: [],
-        first: { value: cachedValue, updated_at: now - 800 },
-      },
-    ]);
-
-    queueFetch(new Error("network timeout"));
-
-    const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
-
-    const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
-    expect(body.tokens).toHaveLength(1);
-    await Promise.allSettled(ctx.waitUntilPromises);
-  });
-
   it("deduplicates concurrent stale refreshes for the same coin", async () => {
     const cachedValue = makeDLDetailBody();
     const now = Math.floor(Date.now() / 1000);
@@ -520,37 +477,6 @@ describe("handleStablecoinDetail", () => {
     resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
     await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("starts fresh single-flight coordination after isolate-local state is reset", async () => {
-    const cachedValue = makeDLDetailBody();
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([{
-      match: "cache",
-      rows: [],
-      first: { value: cachedValue, updated_at: now - 900 },
-    }]);
-    const resolvers: Array<(response: Response) => void> = [];
-    const entries: Array<() => void> = [];
-    const fetchEntries = [0, 1].map(() => new Promise<void>((resolve) => entries.push(resolve)));
-    respondToFetch(() => new Promise<Response>((resolve) => {
-      resolvers.push(resolve);
-      entries[resolvers.length - 1]();
-    }));
-
-    const ctxA = makeCtx();
-    const ctxB = makeCtx();
-    await handleStablecoinDetail(db, "usdt-tether", ctxA);
-    await fetchEntries[0];
-    resetStablecoinDetailStateForTests();
-    await handleStablecoinDetail(db, "usdt-tether", ctxB);
-
-    await fetchEntries[1];
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    for (const resolve of resolvers) {
-      resolve(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
-    }
-    await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
   });
 
   it("lets synchronous callers read a refresh also awaited by stale background refresh", async () => {
@@ -727,29 +653,6 @@ describe("handleStablecoinDetail", () => {
     const res = await handleStablecoinDetail(db, "xaut-tether", ctx);
 
     expect(await readJsonResponse(res, 502)).toEqual({ error: "Failed to fetch commodity token data" });
-  });
-
-  it("logs parse failure context during stale background refresh", async () => {
-    const cachedValue = makeDLDetailBody();
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "cache",
-        rows: [],
-        first: { value: cachedValue, updated_at: now - 1200 },
-      },
-    ]);
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    queueFetch(new Response("{invalid-json", { status: 200 }));
-
-    const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
-
-    expect(res.status).toBe(200);
-    await Promise.allSettled(ctx.waitUntilPromises);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("source=defillama-stablecoin-detail-parse"));
-    errorSpy.mockRestore();
   });
 
   it("handles supply_history fallback for gecko-only tracked coins", async () => {

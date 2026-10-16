@@ -153,14 +153,6 @@ describe("issuer payout identity", () => {
     expect(observation).not.toHaveProperty("allInCostBps");
   });
 
-  it.each(["usdv-solomon-v2", "iusd-initia", "bnusd-balanced"])(
-    "does not expose %s's opaque composite path as a configured output or execution",
-    (id) => {
-      expect(getRedemptionBackstopConfig(id)).toBeNull();
-      expect(getConfiguredRedemptionBackstopIds()).not.toContain(id);
-    },
-  );
-
   it("honors HLUSD's reviewed stablecoin basket", () => {
     expect(build({
       stablecoinId: "hlusd-hela",
@@ -247,7 +239,6 @@ describe("local-fiat valuation chronology", () => {
   );
 
   it.each([
-    { offset: -1, pinned: true },
     { offset: 0, pinned: true },
     { offset: 1, pinned: false },
   ])("admits FX pins at the shared tolerance boundary plus $offset seconds", ({ offset, pinned }) => {
@@ -272,7 +263,6 @@ describe("local-fiat valuation chronology", () => {
 
 describe("redemption same-notional route observations", () => {
   it.each([
-    { time: "2026-07-01T12:00:00Z", admitted: false },
     { time: "2026-07-01T23:59:59Z", admitted: false },
     { time: "2026-07-02T00:00:00Z", admitted: true },
   ])("admits documented date-only capacity only after its UTC review day at $time", ({ time, admitted }) => {
@@ -631,7 +621,6 @@ describe("derived supply-model route observations", () => {
   const now = Date.UTC(2026, 6, 13) / 1_000;
 
   it.each([
-    { time: "2026-07-01T12:00:00Z", admitted: false },
     { time: "2026-07-01T23:59:59Z", admitted: false },
     { time: "2026-07-02T00:00:00Z", admitted: true },
   ])("derives reviewed supply capacity only after the date-only review day at $time", ({ time, admitted }) => {

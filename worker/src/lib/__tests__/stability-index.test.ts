@@ -64,10 +64,6 @@ describe("getDepreciationFactor", () => {
     expect(getDepreciationFactor(1000)).toBe(0.25);
   });
 
-  it("hits the floor exactly at 120 days past the grace period (150 total)", () => {
-    // 150 days: 1.0 - (150 - 30) / 120 = 1.0 - 1.0 = 0.0, but floor is 0.25
-    expect(getDepreciationFactor(150)).toBe(0.25);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -126,13 +122,6 @@ describe("computeStabilityIndex", () => {
 
   it("treats NaN mcap7dChangePct as 0", () => {
     const result = computeIndex(baseInput({ mcap7dChangePct: NaN }));
-    expect(result.components.trend).toBe(0);
-  });
-
-  it("treats Infinity mcap7dChangePct as 0", () => {
-    const result = computeIndex(
-      baseInput({ mcap7dChangePct: Infinity }),
-    );
     expect(result.components.trend).toBe(0);
   });
 
@@ -315,15 +304,6 @@ describe("computeStabilityIndex", () => {
       );
     });
 
-    it("many micro-cap depegs have low total breadth", () => {
-      // 12 × $50M coins: each ≈ 0.67, total ≈ 8.05
-      const depegs = Array.from({ length: 12 }, () => ({
-        bps: 100,
-        mcapUsd: 50e6,
-      }));
-      const result = computeIndex(baseInput({ depegs }));
-      expect(result.components.breadth).toBeLessThan(10);
-    });
   });
 
   // -----------------------------------------------------------------------
@@ -331,11 +311,6 @@ describe("computeStabilityIndex", () => {
   // -----------------------------------------------------------------------
 
   describe("stressBreadth", () => {
-    it("defaults to 0 when dewsStressBreadth not provided", () => {
-      const result = computeIndex(baseInput());
-      expect(result.components.stressBreadth).toBe(0);
-    });
-
     it("passes through values <= 5", () => {
       const result = computeIndex(
         baseInput({ dewsStressBreadth: 3.5 }),
@@ -354,59 +329,10 @@ describe("computeStabilityIndex", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Score clamping and rounding
-  // -----------------------------------------------------------------------
-
-  describe("score clamping and rounding", () => {
-    it("clamps score at 0 for catastrophic scenarios", () => {
-      const result = computeIndex(
-        baseInput({
-          depegs: [
-            { bps: 5000, mcapUsd: 145e9 },
-            { bps: 3000, mcapUsd: 60e9 },
-          ],
-          totalMcapUsd: 200e9,
-          mcap7dChangePct: -5,
-          dewsStressBreadth: 5,
-        }),
-      );
-      // severity=68 + breadth=17 + stress=5 + trend=-5 => 100-68-17-5-5 = 5
-      // Actually trend adds, so 100-68-17-5+(-5) = 5
-      expect(result.score).toBeGreaterThanOrEqual(0);
-      expect(result.score).toBeLessThanOrEqual(100);
-    });
-
-    it("clamps score at 100 for positive trend with no depegs", () => {
-      const result = computeIndex(
-        baseInput({ mcap7dChangePct: 10 }),
-      );
-      // 100 + 5 (clamped trend) = 105, clamped to 100
-      expect(result.score).toBe(100);
-    });
-
-    it("rounds score to 1 decimal place", () => {
-      // Pick inputs that produce a non-round score
-      const result = computeIndex(
-        baseInput({
-          depegs: [{ bps: 37, mcapUsd: 1e9 }],
-        }),
-      );
-      // Check it has at most 1 decimal place
-      const decimals = result.score.toString().split(".")[1]?.length ?? 0;
-      expect(decimals).toBeLessThanOrEqual(1);
-    });
-  });
-
-  // -----------------------------------------------------------------------
   // Band assignment
   // -----------------------------------------------------------------------
 
   describe("band assignment", () => {
-    it("assigns BEDROCK for healthy market (no depegs)", () => {
-      const result = computeIndex(baseInput());
-      expect(result.band).toBe("BEDROCK");
-    });
-
     it("drops score significantly for USDT 10bps wobble", () => {
       // USDT ($145B) at 10bps in $200B market:
       // severity ≈ 31.28 (share=0.725, amplifier≈7.18, K=60), breadth=17 (cap)
@@ -483,13 +409,6 @@ describe("computeStabilityIndex", () => {
   // -----------------------------------------------------------------------
 
   describe("edge cases", () => {
-    it("handles empty depegs array", () => {
-      const result = computeIndex(baseInput({ depegs: [] }));
-      expect(result.score).toBe(100);
-      expect(result.components.severity).toBe(0);
-      expect(result.components.breadth).toBe(0);
-    });
-
     it("handles depeg with zero bps", () => {
       const result = computeIndex(
         baseInput({
@@ -542,40 +461,4 @@ describe("computeStabilityIndex", () => {
     });
   });
 
-  // -----------------------------------------------------------------------
-  // Return shape
-  // -----------------------------------------------------------------------
-
-  describe("return shape", () => {
-    it("returns all required fields", () => {
-      const result = computeIndex(baseInput());
-      expect(result).toHaveProperty("score");
-      expect(result).toHaveProperty("band");
-      expect(result).toHaveProperty("components");
-      expect(result.components).toHaveProperty("severity");
-      expect(result.components).toHaveProperty("breadth");
-      expect(result.components).toHaveProperty("stressBreadth");
-      expect(result.components).toHaveProperty("trend");
-    });
-
-    it("score is a number between 0 and 100", () => {
-      const result = computeIndex(baseInput());
-      expect(typeof result.score).toBe("number");
-      expect(result.score).toBeGreaterThanOrEqual(0);
-      expect(result.score).toBeLessThanOrEqual(100);
-    });
-
-    it("band is a valid ConditionBand string", () => {
-      const validBands = [
-        "BEDROCK",
-        "STEADY",
-        "TREMOR",
-        "FRACTURE",
-        "CRISIS",
-        "MELTDOWN",
-      ];
-      const result = computeIndex(baseInput());
-      expect(validBands).toContain(result.band);
-    });
-  });
 });

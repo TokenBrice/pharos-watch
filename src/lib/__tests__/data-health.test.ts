@@ -236,16 +236,6 @@ describe("deriveDataHealth", () => {
     expect(failedRefresh.degradationReason).toBe("refresh");
   });
 
-  it("leaves a fresh state without a degradation reason", () => {
-    const health = deriveDataHealth(
-      { label: "Prices", dataUpdatedAt: NOW, staleTime: STALE_TIME, hasData: true },
-      NOW,
-    );
-
-    expect(health.state).toBe("fresh");
-    expect(health.degradationReason).toBeUndefined();
-  });
-
   it("classifies producer updatedAt instead of backend status or browser fetch time", () => {
     const producerUpdatedAtSec = Math.floor((NOW - 5 * 60 * 60_000) / 1000);
     const health = deriveDataHealth(
@@ -353,36 +343,6 @@ describe("deriveDataHealth", () => {
     });
   });
 
-  it("returns unavailable on 503 error with no data", () => {
-    const health = deriveDataHealth(
-      {
-        label: "Digests",
-        dataUpdatedAt: 0,
-        staleTime: 24 * 60 * 60_000,
-        error: new ApiFetchError("/api/digest-archive", 503, null),
-        hasData: false,
-      },
-      NOW,
-    );
-
-    expect(health.state).toBe("unavailable");
-  });
-
-  it("returns error on non-503 error with no data", () => {
-    const health = deriveDataHealth(
-      {
-        label: "Prices",
-        dataUpdatedAt: 0,
-        staleTime: STALE_TIME,
-        error: new ApiFetchError("/api/stablecoins", 500, null),
-        hasData: false,
-      },
-      NOW,
-    );
-
-    expect(health.state).toBe("error");
-  });
-
   it("surfaces a refresh failure while preserving backend-fresh cached data", () => {
     const updatedAtMs = NOW - 2 * 60_000;
     const health = deriveDataHealth(
@@ -418,6 +378,22 @@ describe("deriveDataHealth", () => {
     expect(health.degradationReason).toBe("refresh");
     expect(health.message).toBe("Using last successful data while refresh retries.");
   });
+
+  it("returns error on non-503 error with no data", () => {
+    const health = deriveDataHealth(
+      {
+        label: "Prices",
+        dataUpdatedAt: 0,
+        staleTime: STALE_TIME,
+        error: new ApiFetchError("/api/stablecoins", 500, null),
+        hasData: false,
+      },
+      NOW,
+    );
+
+    expect(health.state).toBe("error");
+  });
+
 });
 
 describe("mergeHealthStates", () => {

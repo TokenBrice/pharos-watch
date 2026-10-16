@@ -76,7 +76,7 @@ function sentenceCase(words: readonly string[]): string {
  * code newer than this client's label map, so an unmapped code reads as its
  * own words rather than as a slug.
  */
-export function processReasonLabel(code: string): string {
+function processReasonLabel(code: string): string {
   return Object.hasOwn(PROCESS_REASON_LABELS, code)
     ? PROCESS_REASON_LABELS[code as ProcessReasonCode]
     : sentenceCase(code.split(/[-_]+/).filter(Boolean));

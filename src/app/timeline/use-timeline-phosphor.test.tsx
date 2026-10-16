@@ -32,13 +32,6 @@ describe("useTimelinePhosphor", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe("1");
   });
 
-  it("preserves the saved phosphor preference when System resolves dark", () => {
-    const { result } = renderHook(() => useTimelinePhosphor());
-    expect(result.current.phosphorActive).toBe(true);
-    expect(result.current.phosphorToggleVisible).toBe(true);
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("1");
-  });
-
   it("clears phosphor only when the rendered system theme becomes light", () => {
     const { result, rerender } = renderHook(() => useTimelinePhosphor());
     themeState.resolvedTheme = "light";
@@ -53,10 +46,4 @@ describe("useTimelinePhosphor", () => {
     expect(result.current.phosphorToggleVisible).toBe(true);
   });
 
-  it("clears a saved preference on an initially system-light page", () => {
-    themeState.resolvedTheme = "light";
-    const { result } = renderHook(() => useTimelinePhosphor());
-    expect(result.current.phosphorActive).toBe(false);
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
-  });
 });

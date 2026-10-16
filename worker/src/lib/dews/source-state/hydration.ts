@@ -61,7 +61,7 @@ import { classifyFreshness } from "../../status/freshness-oracle";
 
 import { DEWS_PSI_FRESHNESS_BUDGET_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC } from "./budgets";
 import { assessFreshnessTimestamp } from "../../api-freshness-age";
-export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
+const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
 const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
 // DEWS can overlap the next hourly producer while it is still publishing.
 const DEWS_STALE_YIELD_RANKINGS_SEC = CRON_INTERVALS["sync-yield-data"]

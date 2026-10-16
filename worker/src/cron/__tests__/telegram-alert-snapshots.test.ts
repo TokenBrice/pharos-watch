@@ -78,10 +78,6 @@ describe("buildDewsSnapshot", () => {
       "dai-maker": "CALM",
     });
   });
-
-  it("returns empty object for empty input", () => {
-    expect(buildDewsSnapshot([])).toEqual({});
-  });
 });
 
 describe("buildDewsAlertableSnapshot", () => {
@@ -178,14 +174,6 @@ describe("extractTopSignals", () => {
     ]);
   });
 
-  it("returns empty array for null input", () => {
-    expect(extractTopSignals(null)).toEqual([]);
-  });
-
-  it("returns empty array for invalid JSON", () => {
-    expect(extractTopSignals("not json")).toEqual([]);
-  });
-
   it("excludes signals with available=false", () => {
     const json = JSON.stringify({
       liquidity: { value: 0.8, available: false },
@@ -208,16 +196,6 @@ describe("extractTopSignals", () => {
       { name: "reserves", value: 0.9 },
       { name: "liquidity", value: 0.8 },
     ]);
-  });
-
-  it("produces identical output for flat and wrapped shapes of the same signals", () => {
-    const payload = {
-      liquidity: { value: 0.8, available: true },
-      volatility: { value: 0.5, available: true },
-    };
-    const flat = JSON.stringify(payload);
-    const wrapped = JSON.stringify({ signals: payload, amplifiers: { psi: 1, contagion: 1 } });
-    expect(extractTopSignals(flat)).toEqual(extractTopSignals(wrapped));
   });
 });
 

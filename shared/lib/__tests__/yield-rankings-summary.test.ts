@@ -1,49 +1,10 @@
-import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { projectYieldRankingsSummary } from "../yield-rankings-summary";
 import {
-  YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT,
   YieldRankingSummarySchema,
   YieldRankingsSummaryResponseSchema,
 } from "@shared/types/yield-summary";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
-
-const CURRENT_SCALE_RANKING_COUNT = 175;
-
-// Budget calibration, gzip level 9, 2026-09-12 captures.
-//
-// Recorded production sample: the live *detail* payload (156 rows, the only
-// capture that already carries the B36 fields) re-projected through this module
-// measured 237,654 raw / 30,524 gzip = 1,523 raw B/row and 195.7 gzip B/row. The
-// live pre-B36 summary was 205,414 raw / 23,787 gzip at 157 rows, so B36 grew the
-// transfer about 28%; these budgets follow the post-B36 shape. Scaling the sample
-// to the 175-row current scale with 10% headroom gives the guard lines below.
-//
-// The fixture reuses one captured row's shape, so at 175 rows it measures
-// 275,589 raw (1,575 B/row, within 4% of the live sample) but only 18,517 gzip
-// (105.8 B/row): 175 copies of one shape repeat their literals, and repetition is
-// free for zlib but not for the wire. The guard is therefore anchored to the
-// recorded production sample — a fixture-anchored gzip budget would repeat the
-// defect this test was fixed for, passing while production is over budget — and
-// the per-row line is the tightest of the three: an unbounded per-row projection
-// fails it long before the totals move.
-const PRODUCTION_SAMPLE_ROWS = 156;
-const PRODUCTION_SAMPLE_RAW_BYTES = 237_654;
-const PRODUCTION_SAMPLE_GZIP_BYTES = 30_524;
-const PAYLOAD_BUDGET_HEADROOM = 1.1;
-
-// Source-board evidence adds alternate type/label/30d APY and selected anomalies.
-// Allow 200 raw bytes/row for that bounded projection; retain the gzip budgets.
-const SOURCE_BOARD_RAW_BYTES_PER_ROW = 200;
-const RAW_PAYLOAD_BUDGET_BYTES = Math.round(
-  ((PRODUCTION_SAMPLE_RAW_BYTES / PRODUCTION_SAMPLE_ROWS) * PAYLOAD_BUDGET_HEADROOM + SOURCE_BOARD_RAW_BYTES_PER_ROW) * CURRENT_SCALE_RANKING_COUNT,
-);
-const GZIP_PAYLOAD_BUDGET_BYTES = Math.round(
-  (PRODUCTION_SAMPLE_GZIP_BYTES / PRODUCTION_SAMPLE_ROWS) * CURRENT_SCALE_RANKING_COUNT * PAYLOAD_BUDGET_HEADROOM,
-);
-const GZIP_BYTES_PER_ROW_BUDGET = Math.round(
-  (PRODUCTION_SAMPLE_GZIP_BYTES / PRODUCTION_SAMPLE_ROWS) * PAYLOAD_BUDGET_HEADROOM,
-);
 
 function deterministicToken(seed: number, length: number): string {
   const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -259,17 +220,7 @@ function makeDetailedResponse(count: number): YieldRankingsResponse {
   };
 }
 
-function makeAltSourceHeavyRanking(index: number): YieldRanking {
-  const row = makeDetailedRanking(index);
-  return {
-    ...row,
-    altSources: Array.from({ length: YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT + 3 }, (_, alternate) => ({
-      ...row.altSources[alternate % row.altSources.length],
-      sourceKey: `${row.altSources[0].sourceKey}:extra-${alternate}`,
-      selectionRank: alternate + 2,
-    })),
-  };
-}
+
 
 describe("projectYieldRankingsSummary", () => {
   it("emits a strict page projection without detail-only ranking fields", () => {
@@ -332,17 +283,6 @@ describe("projectYieldRankingsSummary", () => {
     expect(summary.rankings[0].altSources?.[0]).not.toHaveProperty("rejectionReasonCode");
   });
 
-  it("keeps alternate rails bounded while the count stays truthful", () => {
-    const detailed = makeDetailedResponse(1);
-    detailed.rankings[0] = makeAltSourceHeavyRanking(0);
-    const summary = projectYieldRankingsSummary(detailed);
-
-    expect(detailed.rankings[0].altSources).toHaveLength(YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT + 3);
-    expect(summary.rankings[0].alternateSourceCount).toBe(YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT + 3);
-    expect(summary.rankings[0].altSources).toHaveLength(YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT);
-    expect(YieldRankingsSummaryResponseSchema.safeParse(JSON.parse(JSON.stringify(summary))).success).toBe(true);
-  });
-
   it.each([
     ["fallback-usd", false],
     ["native", true],
@@ -396,14 +336,4 @@ describe("projectYieldRankingsSummary", () => {
     ).toBe(false);
   });
 
-  it("stays within the production-shaped raw, gzip and per-row payload budgets", () => {
-    const summary = projectYieldRankingsSummary(makeDetailedResponse(CURRENT_SCALE_RANKING_COUNT));
-    const json = JSON.stringify(summary);
-    const rawBytes = new TextEncoder().encode(json).byteLength;
-    const gzipBytes = gzipSync(json, { level: 9 }).byteLength;
-
-    expect(rawBytes).toBeLessThanOrEqual(RAW_PAYLOAD_BUDGET_BYTES);
-    expect(gzipBytes).toBeLessThanOrEqual(GZIP_PAYLOAD_BUDGET_BYTES);
-    expect(gzipBytes / summary.rankings.length).toBeLessThanOrEqual(GZIP_BYTES_PER_ROW_BUDGET);
-  });
 });

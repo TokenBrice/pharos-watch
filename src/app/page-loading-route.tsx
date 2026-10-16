@@ -11,7 +11,7 @@ interface PageLoadingRouteProps {
 
 type PageLoadingHeaderProps = Omit<PageLoadingRouteProps, "children">;
 
-export function PageLoadingRoute({
+function PageLoadingRoute({
   children,
   sectionWidth,
   titleWidth,

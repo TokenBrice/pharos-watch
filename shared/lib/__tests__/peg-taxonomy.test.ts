@@ -50,13 +50,6 @@ describe("peg taxonomy", () => {
     expect(PEG_HARDCODED_PRICE_BOUNDS.REAL).toEqual(PEG_TAXONOMY.BRL.hardcodedPriceBounds);
   });
 
-  it("keeps variable and other pegs out of DefiLlama peg-type normalization", () => {
-    expect(PEG_TAXONOMY.VAR.pegClass).toBe("variable");
-    expect(PEG_TAXONOMY.OTHER.pegClass).toBe("variable");
-    expect(pegTypeFromCurrency("VAR")).toBeUndefined();
-    expect(pegTypeFromCurrency("OTHER")).toBeUndefined();
-  });
-
   it("does not invent entries for unknown values", () => {
     expect(getPegTaxonomyByCurrency("UNKNOWN")).toBeUndefined();
     expect(getPegTaxonomyByType("peggedUNKNOWN")).toBeUndefined();

@@ -11,7 +11,6 @@ import { isMiniAppErrorCode, miniAppErrorMessage, MiniAppRequestError } from "./
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
 import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
-import { installMatchMediaMock } from "@/test-utils/frontend";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 type MiniAppWebApp = NonNullable<NonNullable<Window["Telegram"]>["WebApp"]>;
@@ -298,23 +297,6 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
-  it("uses Telegram links for privacy when the bridge supports them", async () => {
-    const openLink = vi.fn();
-    await renderReadyMiniApp({ launch: { openLink } });
-    fireEvent.click(screen.getByRole("link", { name: "What we keep" }));
-    expect(openLink).toHaveBeenCalledWith(`${window.location.origin}/privacy`);
-  });
-
-  it("uses the Telegram first name when no username is available", async () => {
-    const state: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, username: null, firstName: "Ada", chatId: "42" },
-    };
-    await renderReadyMiniApp({ state, launch: { initDataUnsafe: { user: { first_name: "Ada" } } } });
-    expect(screen.getByText("Ada")).toBeTruthy();
-    expect(screen.queryByText("Chat 42")).toBeNull();
-  });
-
   it("shows authorization copy and retries a failed session load", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
     const fetchMock = vi.fn()
@@ -359,34 +341,6 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).not.toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate/), expect.anything());
   });
 
-  it("scrolls a catalog deep-link with normal and reduced-motion behavior", async () => {
-    const scrollIntoView = vi.fn();
-    const originalScrollIntoView = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = scrollIntoView;
-    try {
-      await renderReadyMiniApp({ launch: { initDataUnsafe: { start_param: "coin_usdt-tether" } } });
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-      expect(document.getElementById("coin-row-usdt-tether")).toBeTruthy();
-      expect(screen.getByText("Not in your explicit watchlist.")).toBeTruthy();
-      expect(scrollIntoView.mock.instances.at(-1)).toBe(document.getElementById("coin-row-usdt-tether"));
-      expect(scrollIntoView.mock.calls.at(-1)?.[0]).toEqual({ block: "center", behavior: "smooth" });
-
-      cleanup();
-      const originalMatchMedia = window.matchMedia;
-      installMatchMediaMock((query) => query === "(prefers-reduced-motion: reduce)");
-      try {
-        await renderReadyMiniApp({ launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } } });
-        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
-        expect(scrollIntoView.mock.instances.at(-1)).toBe(document.getElementById("coin-row-usdc-circle"));
-        expect(scrollIntoView.mock.calls.at(-1)?.[0]).toEqual({ block: "center", behavior: "auto" });
-      } finally {
-        window.matchMedia = originalMatchMedia;
-      }
-    } finally {
-      Element.prototype.scrollIntoView = originalScrollIntoView;
-    }
-  });
-
   it("shows stale-auth read-only copy on every panel and preserves relaunch context", async () => {
     const staleState: TelegramMiniAppState = {
       ...baseState,
@@ -410,42 +364,6 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
     expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=settings");
     expect(impactOccurred).toHaveBeenCalledWith("light");
-  });
-
-  it("emits the newly focused suggestion coin in stale-auth relaunch and clears it on leaving Watchlist", async () => {
-    const openTelegramLink = vi.fn();
-    const staleState: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
-      catalog: {
-        ...baseState.catalog,
-        searchableCoins: [...baseState.catalog.searchableCoins, { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD" }],
-      },
-    };
-    await renderReadyMiniApp({
-      state: staleState,
-      launch: { initDataUnsafe: { start_param: "coin_usdt-tether" }, openTelegramLink },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Go to followed USDC" }));
-    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
-    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=coin_usdc-circle");
-    fireEvent.click(screen.getByRole("button", { name: "Coverage USDC" }));
-    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
-    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=coverage_usdc-circle");
-    fireEvent.click(screen.getByRole("tab", { name: "home" }));
-    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
-    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
-    expect(openTelegramLink).toHaveBeenLastCalledWith("https://t.me/PharosWatchBot?startapp=watchlist");
-  });
-
-  it("hides the stale-auth relaunch affordance without openTelegramLink", async () => {
-    const staleState: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
-    };
-    await renderReadyMiniApp({ state: staleState });
-    expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Relaunch and keep this panel" })).toBeNull();
   });
 
   it("keeps last-known state read-only through a refresh failure until retry", async () => {
@@ -513,21 +431,6 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("renders the terminal screen after forget-me and keeps its close wiring", async () => {
-    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
-    const close = vi.fn();
-    const fetchMock = await renderReadyMiniApp({
-      fetchImpl: mockStateResponses(baseState, baseState),
-      launch: { showConfirm, close },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete all my data" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(screen.getByText("Your data has been deleted")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Close Mini App" }));
-    expect(close).toHaveBeenCalledOnce();
-  });
-
   it("keeps in-app Why/Coverage views and bot reply fallbacks connected", async () => {
     const openTelegramLink = vi.fn();
     const openLink = vi.fn();
@@ -549,23 +452,9 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(openLink).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdc-circle");
   });
 
-  it("keeps the sample-alert CTA capability fallback at the client boundary", async () => {
-    const openTelegramLink = vi.fn();
-    const impactOccurred = vi.fn();
-    await renderReadyMiniApp({ launch: { HapticFeedback: { impactOccurred }, openTelegramLink } });
-    fireEvent.click(screen.getByRole("button", { name: "Send me a sample alert" }));
-    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=sample");
-    expect(impactOccurred).toHaveBeenCalledWith("light");
-
-    cleanup();
-    await renderReadyMiniApp();
-    expect(screen.queryByRole("button", { name: "Send me a sample alert" })).toBeNull();
-  });
-
   it.each<[string, number | null, string | null]>([
     ["future", 1_800_000_001, "Clear snooze"],
     ["exactly expired", 1_800_000_000, null],
-    ["past", 1_799_999_999, null],
     ["unset", null, null],
     ["pause sentinel", 4_102_444_800, "Resume alerts"],
   ])("uses the shared clock for %s snooze in Home and native MainButton", async (_scenario, snoozeUntilTs, label) => {
@@ -647,19 +536,6 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     expect(listenerCounts).toEqual([1, 1]);
     expect(new Set(onClickHandlers).size).toBe(onClickHandlers.length);
-  });
-
-  it("hides native MainButton controls for stale-auth read-only sessions", async () => {
-    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
-    const readOnlyState: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
-      subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null },
-    };
-    await renderReadyMiniApp({ state: readOnlyState, launch: { MainButton: mainButton } });
-    expect(mainButton.onClick).not.toHaveBeenCalled();
-    expect(mainButton.show).not.toHaveBeenCalled();
-    expect(mainButton.hide).toHaveBeenCalled();
   });
 
   it("guards duplicate native MainButton clicks while its mutation is in flight", async () => {

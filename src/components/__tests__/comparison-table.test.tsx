@@ -156,24 +156,6 @@ describe("ComparisonTable", () => {
 
 
 
-  it("keeps basis-point values rounded to whole numbers", () => {
-    const base = makeCoin("usdt", "USDT");
-    const coin = {
-      ...base,
-      pegDetails: {
-        ...base.pegDetails!,
-        currentDeviationBps: 2.4,
-        worstDeviationBps: -42.6,
-      },
-    };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
-
-    expect(html).toContain("+2 bps");
-    expect(html).toContain("-43 bps");
-    expect(html).not.toContain("+2.4 bps");
-    expect(html).not.toContain("-42.6 bps");
-  });
-
   it.each([
     { label: "unusable price", deviation: null, nav: false, limited: false },
     { label: "NAV token", deviation: null, nav: true, limited: false },

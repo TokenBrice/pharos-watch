@@ -91,25 +91,6 @@ describe("decodeJsonString", () => {
       updatedAt: null,
     });
   });
-  it("lets throwing normalizers surface without reporting a parse failure", () => {
-    let parseFailureReported = false;
-
-    expect(() => decodeJsonString(
-      JSON.stringify({ value: 42 }),
-      {
-        parseErrorReason: "json-parse-failed",
-        normalize: () => {
-          throw new Error("normalizer failed");
-        },
-        onParseFailure: () => {
-          parseFailureReported = true;
-        },
-      },
-    )).toThrow("normalizer failed");
-
-    expect(parseFailureReported).toBe(false);
-  });
-
 });
 
 describe("decodeCachedJson", () => {

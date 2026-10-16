@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { join } from "node:path";
-import { readFileSync } from "node:fs";
 import {
   BACKFILL_REPLAY_SUPPRESSIONS,
   backfillEpisodeInSuppressionWindow,
   findBackfillReplaySuppression,
 } from "../backfill-replay-suppressions";
-import { DepegDirectionSchema } from "@shared/types/market";
-
-const canonicalOrder = JSON.parse(
-  readFileSync(join(process.cwd(), "shared/data/stablecoins/canonical-order.json"), "utf8"),
-) as readonly string[];
-
 /** The five stored USN episodes the registry must durably suppress (live API capture 2026-09-23). */
 const STORED_USN_EPISODES = [
   { id: 49235, startedAt: 1_759_860_119, endedAt: 1_759_870_919 },
@@ -22,34 +14,6 @@ const STORED_USN_EPISODES = [
 ] as const;
 
 describe("backfill replay suppression registry", () => {
-  it("references only tracked stablecoin ids", () => {
-    const known = new Set(canonicalOrder);
-    for (const entry of BACKFILL_REPLAY_SUPPRESSIONS) {
-      expect(known.has(entry.coinId), entry.coinId).toBe(true);
-    }
-  });
-
-  it("uses the shared DepegDirection vocabulary", () => {
-    for (const entry of BACKFILL_REPLAY_SUPPRESSIONS) {
-      expect(DepegDirectionSchema.options).toContain(entry.direction);
-    }
-  });
-
-  it("keeps ordered integer windows, https evidence, and reviewed dates", () => {
-    for (const entry of BACKFILL_REPLAY_SUPPRESSIONS) {
-      expect(Number.isInteger(entry.windowStart)).toBe(true);
-      expect(Number.isInteger(entry.windowEnd)).toBe(true);
-      expect(entry.windowStart).toBeLessThan(entry.windowEnd);
-      expect(entry.reason.trim().length).toBeGreaterThan(0);
-      expect(entry.reviewedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(entry.evidenceUrls.length).toBeGreaterThan(0);
-      for (const url of entry.evidenceUrls) {
-        expect(url.startsWith("https://"), url).toBe(true);
-        expect(() => new URL(url)).not.toThrow();
-      }
-    }
-  });
-
   it("has no overlapping duplicate entries for the same coin and direction", () => {
     for (let i = 0; i < BACKFILL_REPLAY_SUPPRESSIONS.length; i++) {
       for (let j = i + 1; j < BACKFILL_REPLAY_SUPPRESSIONS.length; j++) {

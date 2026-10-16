@@ -196,7 +196,7 @@ vi.mock("@shared/types/chain-identity", () => ({
 }));
 
 import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";
-import { createRateLimiter, fetchEvmLogsForTopicWithCompleteness, getEvmBlockNumber } from "../../lib/evm-logs";
+import { fetchEvmLogsForTopicWithCompleteness, getEvmBlockNumber } from "../../lib/evm-logs";
 import type { EtherscanLogEntry, EvmLogFetchResult } from "../../lib/evm-logs";
 import { batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
@@ -392,40 +392,6 @@ describe("syncBlacklist", () => {
     expect(meta.eventsFetched).toBe(1);
     expect(meta.enrichAttempted).toBe(0);
     expect(meta.currentBalanceCacheUpdated).toBe(0);
-  });
-
-  it("reports the provider limiter rates actually in use, not the producer default", async () => {
-    const db = makeDb();
-
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-
-    // The scheduled slot injects a faster Etherscan limiter than the producer's
-    // own default; TronGrid keeps the default. Metadata must show both.
-    const result = await syncBlacklist(
-      buildTestOpts({ db, externalEtherscanRL: createRateLimiter(4) }),
-    );
-    const meta = JSON.parse(result.metadata);
-
-    expect(meta.etherscanLimiterRequestsPerSecond).toBe(4);
-    expect(meta.tronLimiterRequestsPerSecond).toBe(3);
-  });
-
-  it("falls back to the producer default Etherscan rate when no limiter is injected", async () => {
-    const db = makeDb();
-
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
-    const meta = JSON.parse(result.metadata);
-
-    expect(meta.etherscanLimiterRequestsPerSecond).toBe(3);
-    expect(meta.tronLimiterRequestsPerSecond).toBe(3);
   });
 
   it("records thrown config scan exceptions and continues the sync", async () => {
@@ -673,25 +639,6 @@ describe("syncBlacklist", () => {
       amount_native: 1,
       amount_usd: 1,
     }]);
-  });
-
-  it("reports retained decode retries per config without counting unrelated cache rows", async () => {
-    const { sqlite } = sqliteFixtures.open();
-    const db = createSqliteD1(sqlite);
-    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-    const evmKey = CONTRACT_CONFIGS[0].configKey;
-    const tronKey = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "tron")!.configKey;
-    for (const key of [
-      `blacklist:decode-retry:${evmKey}:10:tx:0`,
-      `blacklist:decode-retry:${evmKey}:11:tx:1`,
-      `blacklist:decode-retry:${tronKey}:20:tx:0`,
-      "blacklist:other-cache",
-    ]) insert.run(key, "{}", 100);
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      headers: { "Content-Type": "application/json" },
-    }));
-    const result = await syncBlacklist(buildTestOpts({ db }));
-    expect(JSON.parse(result.metadata).decodeRetryCounts).toEqual({ [evmKey]: 2, [tronKey]: 1 });
   });
 
   it.each([

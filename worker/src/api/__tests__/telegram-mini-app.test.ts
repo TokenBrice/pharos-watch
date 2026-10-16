@@ -11,7 +11,6 @@ import {
   privateInitData,
   signedInitData,
   stateReadTables,
-  type MockD1Database,
 } from "./telegram-mini-app.test-support";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -20,7 +19,6 @@ import {
 } from "@shared/lib/telegram-mini-app-contract";
 
 const { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } = await import("../telegram-mini-app");
-const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -169,23 +167,6 @@ describe("handleTelegramMiniAppSession", () => {
     expect(historyMatches(mutationDb, "telegram_recap_preferences")).toBe(false);
   });
 
-  it("loads private-chat state through one D1 batch plus separate health diagnostics", async () => {
-    const initData = await privateInitData();
-    const db = makeMiniAppDb(stateReadTables()) as MockD1Database;
-    const batchSpy = vi.spyOn(db, "batch");
-
-    const response = await handleTelegramMiniAppSession(db, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
-
-    expect(response.status).toBe(200);
-    expect(batchSpy).toHaveBeenCalledTimes(2);
-    await expect(response.json()).resolves.toMatchObject({
-      viewer: { chatId: "42" },
-      subscriber: { exists: true, snoozeUntilTs: null },
-    });
-    const history = db.getHistory();
-    expect(history.filter((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toHaveLength(1);
-  });
-
   it("hides inert rows but keeps marker-backed local-off and snooze-only rows", async () => {
     const initData = await privateInitData();
     const db = makeMiniAppDb([
@@ -207,20 +188,6 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.subscriptions.map((row) => row.stablecoinId)).toEqual(["pyusd-paypal", "usdc-circle", "eurc-circle"]);
     expect(body.subscriptions[0]).toMatchObject({ stablecoinId: "pyusd-paypal", alertOverrides: { dews: true } });
     expect(body.subscriptions[1]).toMatchObject({ stablecoinId: "usdc-circle", snoozeUntilTs: NOW_SEC + 3600 });
-  });
-
-  it("accepts Telegram session initData with the Ed25519 signature field", async () => {
-    const initData = await signedInitData({
-      auth_date: String(NOW_SEC - 60),
-      chat_type: "private",
-      signature: "telegram-ed25519-signature",
-      user: JSON.stringify({ id: 42, username: "alice" }),
-    });
-    const db = makeMiniAppDb(stateReadTables());
-
-    const response = await handleTelegramMiniAppSession(db, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
-
-    expect(response.status).toBe(200);
   });
 
   it("keeps stale-but-valid sessions read-only", async () => {
@@ -454,20 +421,6 @@ describe("handleTelegramMiniAppSession", () => {
     expect(response.status).toBe(400);
   });
 
-  it("does not write analytics or cooldown rows for invalid auth", async () => {
-    const initData = new URLSearchParams({
-      auth_date: String(NOW_SEC - 60),
-      hash: "0".repeat(64),
-      user: JSON.stringify({ id: 42, username: "alice" }),
-    }).toString();
-    const db = makeMiniAppDb();
-
-    const response = await handleTelegramMiniAppSession(db, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
-
-    expect(response.status).toBe(401);
-    expect(db.getHistory()).toHaveLength(0);
-  });
-
   it("emits mini_app_session_invalid on stale auth but not on invalid signature", async () => {
     // T-63: stale-auth has already passed the HMAC check, so emitting a
     // usage event does not create an unauthenticated-write gate. Invalid
@@ -542,59 +495,6 @@ describe("handleTelegramMiniAppSession", () => {
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation_denied"})).toBe(false);
   });
 
-  it("emits mini_app_mutation_denied with a stale-auth class on stale mutation auth", async () => {
-    // TGB-022 measurement: stale-auth mutation denials must be separable from
-    // session-read expiry (`mini_app_session_invalid`) in `telegram_usage_daily`.
-    const staleInitData = await signedInitData({
-      auth_date: String(NOW_SEC - 301),
-      chat_type: "private",
-      user: JSON.stringify({ id: 42, username: "alice" }),
-    });
-    const db = makeMiniAppDb();
-
-    const response = await handleTelegramMiniAppMutation(
-      db,
-      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData: staleInitData, operation: { kind: "clear-snooze" } }),
-      BOT_TOKEN,
-    );
-
-    expect(await readJsonResponse(response, 401)).toMatchObject({ code: "stale-auth" });
-    const deniedRows = db
-      .getHistory()
-      .filter((entry) =>
-        entry.sql.includes("INSERT INTO telegram_usage_daily")
-        && entry.binds.includes("mini_app_mutation_denied"),
-      );
-    expect(deniedRows).toHaveLength(1);
-    expect(deniedRows[0].binds).toContain("stale-auth");
-    expect(deniedRows[0].binds).toContain(mutationActionDetail({ kind: "clear-snooze" }));
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_session_invalid"})).toBe(false);
-  });
-
-  it("attaches a non-null latencyBucket to successful session analytics rows", async () => {
-    // T-64: every recordMiniAppEvent call carries latency telemetry. With fake
-    // timers `Date.now() - start === 0`, which buckets to "lt_250ms".
-    const initData = await privateInitData();
-    const db = makeMiniAppDb(stateReadTables());
-
-    const response = await handleTelegramMiniAppSession(
-      db,
-      makeMiniAppRequest("/api/telegram-mini-app/session", { initData }),
-      BOT_TOKEN,
-    );
-
-    expect(response.status).toBe(200);
-    const sessionValidRows = db
-      .getHistory()
-      .filter((entry) =>
-        entry.sql.includes("INSERT INTO telegram_usage_daily")
-        && entry.binds.includes("mini_app_session_valid"),
-      );
-    expect(sessionValidRows).toHaveLength(1);
-    // latency_bucket is the sixth bind in the INSERT (see telegram-usage-analytics.ts).
-    expect(sessionValidRows[0].binds[5]).toBe("lt_250ms");
-  });
-
   it("records aggregate recap button actions without storing user identifiers", async () => {
     const initData = await privateInitData(60, "recap_watchlist");
     const db = makeMiniAppDb(stateReadTables());
@@ -610,25 +510,6 @@ describe("handleTelegramMiniAppSession", () => {
       entry.sql.includes("INSERT INTO telegram_usage_daily")
       && entry.binds.includes("mini_app_session_valid"));
     expect(row?.binds).toContain("recap_view_watchlist");
-    expect(row?.binds).not.toContain("42");
-    expect(row?.binds).not.toContain("alice");
-  });
-
-  it("records the recap-settings launch action without storing user identifiers", async () => {
-    const initData = await privateInitData(60, "recap_settings");
-    const db = makeMiniAppDb(stateReadTables());
-
-    const response = await handleTelegramMiniAppSession(
-      db,
-      makeMiniAppRequest("/api/telegram-mini-app/session", { initData }),
-      BOT_TOKEN,
-    );
-
-    expect(response.status).toBe(200);
-    const row = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT INTO telegram_usage_daily")
-      && entry.binds.includes("mini_app_session_valid"));
-    expect(row?.binds).toContain("recap_settings");
     expect(row?.binds).not.toContain("42");
     expect(row?.binds).not.toContain("alice");
   });

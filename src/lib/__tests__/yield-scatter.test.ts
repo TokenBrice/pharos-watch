@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeApyAxis, computeSafetyDomain, declutterScatterMarkers, resolveYieldZone } from "@/lib/yield-scatter";
+import { computeApyAxis, declutterScatterMarkers, resolveYieldZone } from "@/lib/yield-scatter";
 
 describe("resolveYieldZone", () => {
   it("returns null only when no benchmark resolves at all or the row is unscored", () => {
@@ -20,19 +20,7 @@ describe("resolveYieldZone", () => {
   });
 });
 
-describe("computeSafetyDomain", () => {
-  it("falls back to the full safety range when no scores are available", () => {
-    expect(computeSafetyDomain([], false)).toEqual([0, 100]);
-  });
 
-  it("focuses the chart on the occupied desktop score range", () => {
-    expect(computeSafetyDomain([41, 52, 82], false)).toEqual([35, 85]);
-  });
-
-  it("keeps the safety threshold visible when all scores are high", () => {
-    expect(computeSafetyDomain([71, 77, 84], false)).toEqual([55, 90]);
-  });
-});
 
 describe("declutterScatterMarkers", () => {
   const xDomain: [number, number] = [35, 90];
@@ -54,39 +42,6 @@ describe("declutterScatterMarkers", () => {
     }
   });
 
-  it("keeps the logo for the larger market and draws colliding points as dots", () => {
-    const points = [
-      { id: "small", plotX: 66, plotY: 5.22, tvl: 5 },
-      { id: "large", plotX: 66, plotY: 5.22, tvl: 500 },
-      { id: "unknown", plotX: 66.2, plotY: 5.25, tvl: null },
-    ];
-    const result = declutterScatterMarkers(points, xDomain, yDomain, w, h, false);
-    const marker = (id: string) => result.find((r) => r.id === id)!.marker;
-    expect(marker("large")).toBe("logo");
-    expect(marker("small")).toBe("dot");
-    expect(marker("unknown")).toBe("dot");
-    // Dots paint first so logos sit on top.
-    expect(result.at(-1)!.id).toBe("large");
-  });
-
-  it("keeps logos for points that do not collide", () => {
-    const points = [
-      { id: "a", plotX: 40, plotY: 3, tvl: 1 },
-      { id: "b", plotX: 70, plotY: 8, tvl: 2 },
-    ];
-    expect(declutterScatterMarkers(points, xDomain, yDomain, w, h, false).every((p) => p.marker === "logo")).toBe(true);
-  });
-
-  it("is deterministic regardless of input order", () => {
-    const points = [
-      { id: "a", plotX: 60, plotY: 4, tvl: null },
-      { id: "b", plotX: 60, plotY: 4, tvl: null },
-    ];
-    const forward = declutterScatterMarkers(points, xDomain, yDomain, w, h, false);
-    const reversed = declutterScatterMarkers([...points].reverse(), xDomain, yDomain, w, h, false);
-    expect(forward.find((p) => p.id === "a")!.marker).toBe("logo");
-    expect(reversed.find((p) => p.id === "a")!.marker).toBe("logo");
-  });
 });
 
 describe("computeApyAxis", () => {

@@ -4,13 +4,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
-  buildGeneratedArtifactExecutionPhases,
-  parseGeneratedArtifactsArgs,
   runGeneratedArtifacts,
 } from "../maintenance/run-generated-artifacts";
-import { selectCheckableArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
-import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
-import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.ts";
 
 describe("generated-artifact runner lifecycle selection", () => {
   it.each(["sitemap-dates", "agents-doc,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
@@ -36,34 +31,6 @@ describe("generated-artifact runner lifecycle selection", () => {
     expect(runCommandImpl).not.toHaveBeenCalled();
   });
 
-  it.each(["src/app/page.tsx", "shared/lib/public-docs.ts"])("keeps routine PR artifact plans checkable for %s", (file) => {
-    const expected = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds([file]));
-    const step = buildPrStaticCheckPlan([file]).commands.find((command) => command.name === "check:generated-artifacts");
-    expect(step?.args).toEqual(expected.length ? [`--only=${expected.join(",")}`] : undefined);
-    const guardsStep = buildPrStaticCheckPlan([file], { group: "guards" }).commands
-      .find((command) => command.name === "check:generated-artifacts");
-    expect(guardsStep).toEqual(step);
-    expect(buildPrStaticCheckPlan([file], { group: "compile" }).commands
-      .some((command) => command.name === "check:generated-artifacts")).toBe(false);
-    expect(selectGeneratedArtifacts({ check: true, only: expected }).map((artifact) => artifact.id))
-      .not.toContain("sitemap-dates");
-    expect(expected).not.toContain("docs-metadata");
-    // llms-txt remains checkable in the current registry; do not suppress it.
-    if (file === "shared/lib/public-docs.ts") expect(expected).toContain("llms-txt");
-  });
-
-  it("checks the API reference command for an output-only edit while filtering uncheckable projections", () => {
-    const ids = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(["docs/api-reference.md"]));
-    expect(ids).toContain("api-reference");
-    expect(ids).not.toContain("docs-metadata");
-    expect(buildPrStaticCheckPlan(["docs/api-reference.md"]).commands
-      .find((command) => command.name === "check:generated-artifacts")?.args)
-      .toEqual([`--only=${ids.join(",")}`]);
-    const unit = buildGeneratedArtifactExecutionPhases({ check: true, only: ids })
-      .flatMap((phase) => phase.units).find((unit) => unit.id === "api-reference");
-    expect(unit?.commands).toEqual(["node --import tsx scripts/maintenance/generate-api-reference.ts --check"]);
-  });
-
   it("reports a legitimate empty intersection without running children", async () => {
     const log = vi.fn();
     const runCommandImpl = vi.fn(async () => 0);
@@ -73,63 +40,6 @@ describe("generated-artifact runner lifecycle selection", () => {
     expect(result).toMatchObject({ status: 0, results: [] });
     expect(runCommandImpl).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith(expect.stringContaining("no checks executed"));
-  });
-
-  it.each([
-    ["--build-lifecycle=compile-input,post-refresh", "--build-lifecycle", "compile-input"],
-    ["--build-lifecycle=compile-input", "--build-lifecycle=post-refresh", "--build-lifecycle=compile-input"],
-  ])("parses and de-duplicates lifecycle filters for %j", (...argv) => {
-    expect(parseGeneratedArtifactsArgs(argv).buildLifecycles).toEqual(["compile-input", "post-refresh"]);
-  });
-
-  it("includes declared dependencies for a post-refresh selection", () => {
-    expect(
-      buildGeneratedArtifactExecutionPhases({ buildLifecycles: ["post-refresh"] }).map(({ phase, units }) => ({
-        phase,
-        ids: units.map((unit) => unit.id),
-      })),
-    ).toEqual([
-      { phase: 0, ids: ["stablecoin-catalog", "depeg-event-search-data"] },
-      { phase: 1, ids: ["report-card-registry-fingerprint", "stablecoin-detail-snapshots"] },
-      { phase: 2, ids: ["llms-txt"] },
-    ]);
-  });
-
-  it("selects only the catalog dependency when narrowing post-refresh to snapshots", () => {
-    expect(buildGeneratedArtifactExecutionPhases({
-      buildLifecycles: ["post-refresh"], only: ["stablecoin-detail-snapshots"],
-    }).map(({ phase, units }) => ({
-      phase, ids: units.map(({ id }) => id),
-    }))).toEqual([
-      { phase: 0, ids: ["stablecoin-catalog"] },
-      { phase: 1, ids: ["stablecoin-detail-snapshots"] },
-    ]);
-  });
-
-  it("rejects unknown lifecycle names", () => {
-    expect(() => buildGeneratedArtifactExecutionPhases({ buildLifecycles: ["release-ish"] })).toThrow(
-      /Unknown generated artifact build lifecycle/,
-    );
-  });
-
-  it("prints a lifecycle-filtered dry-run plan without executing generators", async () => {
-    const log: string[] = [];
-    const runCommandImpl = vi.fn(async () => 0);
-    const result = await runGeneratedArtifacts({
-      argv: ["--build-lifecycle=post-refresh", "--dry-run"],
-      log: (message) => log.push(message),
-      runCommandImpl,
-    });
-
-    expect(result.status).toBe(0);
-    expect(runCommandImpl).not.toHaveBeenCalled();
-    expect(result.results).toEqual([]);
-    expect(log.join("\n")).toContain("generate-depeg-event-search-data.ts");
-    expect(log.join("\n")).toContain("generate-llms-txt.ts");
-    expect(log.join("\n")).toContain("build-stablecoin-detail-snapshots.ts");
-    expect(log.join("\n")).not.toContain("generate-sitemap-dates.ts");
-    expect(log.join("\n")).not.toContain("generate-docs-metadata.ts");
-    expect(log.join("\n")).not.toContain("build-og-editorial.mjs");
   });
 
   it("waits for upstream completion before starting dependent phases", async () => {

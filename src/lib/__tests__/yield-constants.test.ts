@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatYieldWarningSignal,
   formatYieldWarningSignalDescription,
   formatYieldRatioPercent,
   resolveYieldScoreQualification,
@@ -8,17 +7,7 @@ import {
 } from "@/lib/yield-constants";
 import { computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 
-describe("formatYieldWarningSignal", () => {
-  it("returns the mapped label for known signals", () => {
-    expect(formatYieldWarningSignal("yield-spike")).toBe("Yield spike");
-    expect(formatYieldWarningSignal("tvl-outflow")).toBe("TVL outflow");
-    expect(formatYieldWarningSignal("opportunity-evidence-missing")).toBe("Opportunity evidence incomplete");
-  });
 
-  it("converts unknown signals from kebab-case to space-separated", () => {
-    expect(formatYieldWarningSignal("some-new-signal")).toBe("some new signal");
-  });
-});
 
 describe("missing-evidence warning descriptions", () => {
   it.each(["safety-unrated", "opportunity-evidence-missing"])(

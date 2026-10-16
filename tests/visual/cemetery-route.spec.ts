@@ -43,20 +43,7 @@ async function expectRecordOnScreen(page: Page, id: string): Promise<void> {
 test.describe("cemetery without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test(`cemetery: /cemetery/#<row ${DEEP_ROW_POSITION} id> shows that row and its obituary on screen`, async ({ page }) => {
-    // Known failure on every route: `Providers` wraps the body in `<Suspense fallback={null}>` around the lazy
-    // `InteractiveProviders` (src/components/providers.tsx), so the prerendered body streams into a hidden
-    // `<div hidden id="S:0">` that only JS swaps in. Without JS the page shows just the skip link. Fixing that flips this.
-    test.fail();
-    await page.setViewportSize({ width: 1440, height: 800 });
-    const id = (await registerRowIds(page))[DEEP_ROW_POSITION - 1];
-
-    await page.goto("about:blank");
-    await page.goto(`/cemetery/#${id}`);
-    await expectRecordOnScreen(page, id);
-  });
-
-  // The register's own CSS contract, independent of the page-level wrapper above: computed styles, not visibility.
+  // The register's own no-JS CSS contract: computed styles, not visibility.
   test(`cemetery: the :target fold unfolds /cemetery/#<row ${DEEP_ROW_POSITION} id> and keeps its neighbours folded`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 800 });
     const ids = await registerRowIds(page);

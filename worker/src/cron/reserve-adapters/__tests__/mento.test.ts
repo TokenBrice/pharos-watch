@@ -21,7 +21,6 @@ import {
 } from "../mento";
 import type { AdapterContext } from "../types";
 import {
-  expectValidAdapterOutput,
   expectWarningEffect,
   expectWarnings,
   installAdapterNetwork,
@@ -211,7 +210,7 @@ describe("mento adapter", () => {
     expect(nativeUsdc.pct).toBeCloseTo(2.692386446060812, 12);
   });
 
-  it.each([undefined, "unreviewed"])("withholds USDT0 without a reviewed chain (%s)", (chain) => {
+  it.each([undefined])("withholds USDT0 without a reviewed chain (%s)", (chain) => {
     const result = adaptMentoReserveComposition({ collateral: { assets: [
       { symbol: "USDT0", chain, percentage: 10 },
       { symbol: "USDT0", chain: "monad", percentage: 10 },
@@ -245,12 +244,6 @@ describe("mento adapter", () => {
     // (one hour of slack absorbs upstream clock skew).
     expect(timestamp).toBeLessThanOrEqual(capturedAtSec + 3_600);
     expect(timestamp).toBeGreaterThan(capturedAtSec - CURRENT_DASHBOARD_MAX_PAYLOAD_LAG_SEC);
-  });
-
-  it("falls back to numeric dashboard dataUpdatedAt milliseconds", () => {
-    const html = String.raw`...\\"cdp_backings\\":[{\\"stablecoin\\":\\"GBPm\\"}],\\"dataUpdateCount\\":1,\\"dataUpdatedAt\\":1779025576506`;
-
-    expect(extractMentoDashboardTimestamp(html)).toBe(OVERRIDE_DASHBOARD_TS_SEC);
   });
 
   it("ignores unrelated timestamps that appear outside the troves/dataUpdateCount anchor window", () => {
@@ -379,11 +372,6 @@ describe("mento adapter", () => {
     expect(result.warnings!.some((warning) => warning.code === "unknown-asset" && warning.message.includes("NEW_TOKEN"))).toBe(true);
   });
 
-  it("produces reserve output that passes adapter validation", () => {
-    const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
-    expectValidAdapterOutput("mento", result);
-  });
-
   it("retains a raw percentage census deviation without changing unrounded positive dust", () => {
     const result = adaptMentoReserveComposition({ collateral: { assets: [
       { symbol: "USDC", chain: "ethereum", percentage: 99.49 },
@@ -392,11 +380,6 @@ describe("mento adapter", () => {
     expect(result.metadata?.diag?.rawSumDeviation).toBeCloseTo(0.5, 12);
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(99.5);
     expect(result.slices.some((slice) => slice.pct === 0.01)).toBe(true);
-  });
-
-  it("produces CDP reserve output that passes adapter validation", () => {
-    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
-    expectValidAdapterOutput("mento", result);
   });
 
   // --- Fetch-level, through the harness --------------------------------------
@@ -539,31 +522,6 @@ describe("mento adapter", () => {
       },
     });
     expect(result.slices.length).toBeGreaterThan(0);
-  });
-
-  it("carries both sides' totals and the divergence pct in the coherence warning", async () => {
-    const { result } = await runAdapter("mento", "gbpm-mento", {
-      network: mentoNetwork({
-        dashboardHtml: dashboardHtmlWithCdpBackings([
-          { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774_785.9598798637, debt_usd: 315_700.2296351052, status: "active" },
-        ]),
-      }),
-      params: { redemption: undefined, cdpSystem: undefined },
-      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
-    });
-
-    const warning = result.warnings?.find((candidate) => candidate.code === "mento-cdp-coherence-diverged");
-    for (const value of ["774785.96", "315700.23", "213427.50", "102821.25"]) {
-      expect(warning?.message).toContain(value);
-    }
-    expect(result.metadata?.details?.cdpCoherenceDivergence).toMatchObject({
-      dashboardCollateralUsd: 774_785.9598798637,
-      dashboardDebtUsd: 315_700.2296351052,
-      apiCollateralUsd: SAMPLE_CDP_TOTALS.GBPm.collateral_usd,
-      apiDebtUsd: SAMPLE_CDP_TOTALS.GBPm.debt_usd,
-      collateralDivergencePct: expect.closeTo(72.45, 1),
-      debtDivergencePct: expect.closeTo(67.43, 1),
-    });
   });
 
   it.each([

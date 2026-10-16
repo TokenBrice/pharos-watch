@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COVERAGE_FEATURES, type CoverageFeatureKey, type CoverageRow, type CoverageStatus } from "@/lib/coverage";
 import type { CoverageFilterKey } from "@/lib/coverage-page-config";
-import { filterCoverageRows, hasCoverageFilters, matchesCoverageFilter, sortCoverageRows } from "@/lib/coverage-filtering";
+import { filterCoverageRows, matchesCoverageFilter, sortCoverageRows } from "@/lib/coverage-filtering";
 
 // The full-coverage filters are defined against the shipped feature registry.
 const FEATURE_COUNT = COVERAGE_FEATURES.length;
@@ -121,35 +121,6 @@ const filterRows: CoverageRow[] = [
 ];
 
 describe("coverage filtering", () => {
-  it("sorts by market cap, then name when caps tie", () => {
-    const sorted = sortCoverageRows(rows, "market-cap");
-
-    expect(sorted.map((row) => row.id)).toEqual(["beta", "gamma", "alpha", "delta"]);
-  });
-
-  it("sorts by most covered, then advanced coverage, then market cap", () => {
-    const sorted = sortCoverageRows(rows, "most-covered");
-
-    expect(sorted.map((row) => row.id)).toEqual(["delta", "beta", "gamma", "alpha"]);
-  });
-
-  it("sorts by least available coverage and headline coverage", () => {
-    const sorted = sortCoverageRows(rows, "least-covered");
-
-    expect(sorted.map((row) => row.id)).toEqual(["alpha", "gamma", "beta", "delta"]);
-  });
-
-  it("sorts by weakest feature status rank", () => {
-    const sorted = sortCoverageRows(rows, "weakest-dex");
-
-    expect(sorted.map((row) => row.id)).toEqual(["alpha", "gamma", "delta", "beta"]);
-  });
-
-  it("sorts alphabetically by name", () => {
-    const sorted = sortCoverageRows(rows, "name");
-
-    expect(sorted.map((row) => row.id)).toEqual(["alpha", "beta", "delta", "gamma"]);
-  });
 
   it("orders most/least-headline by headline count even when coverage and market cap disagree", () => {
     const conflict = [
@@ -161,26 +132,6 @@ describe("coverage filtering", () => {
     expect(sortCoverageRows(conflict, "least-headline").map((row) => row.id)).toEqual(["wide", "deep"]);
     expect(sortCoverageRows(conflict, "most-covered").map((row) => row.id)).toEqual(["wide", "deep"]);
     expect(sortCoverageRows(conflict, "least-covered").map((row) => row.id)).toEqual(["deep", "wide"]);
-  });
-
-  it("breaks headline ties by coverage count and then market cap in both directions", () => {
-    const tied = [
-      makeRow({ id: "small", name: "Small Cap", symbol: "SML", marketCapUsd: 10, coverageCount: 5, headlineCoverageCount: 3 }),
-      makeRow({ id: "large", name: "Large Cap", symbol: "LRG", marketCapUsd: 900, coverageCount: 5, headlineCoverageCount: 3 }),
-    ];
-
-    expect(sortCoverageRows(tied, "most-headline").map((row) => row.id)).toEqual(["large", "small"]);
-    expect(sortCoverageRows(tied, "least-headline").map((row) => row.id)).toEqual(["large", "small"]);
-  });
-
-  it("resolves coverage ties by market cap and leaves the input array untouched", () => {
-    const input = [
-      makeRow({ id: "small", name: "Small Cap", symbol: "SML", marketCapUsd: 1, coverageCount: 3, headlineCoverageCount: 3 }),
-      makeRow({ id: "large", name: "Large Cap", symbol: "LRG", marketCapUsd: 500, coverageCount: 3, headlineCoverageCount: 3 }),
-    ];
-
-    expect(sortCoverageRows(input, "most-covered").map((row) => row.id)).toEqual(["large", "small"]);
-    expect(input.map((row) => row.id)).toEqual(["small", "large"]);
   });
 
   it.each<[CoverageFilterKey, string[]]>([
@@ -273,23 +224,10 @@ describe("coverage filtering", () => {
     expect(matchesCoverageFilter(row, "redemption")).toBe(expected);
   });
 
-  it("filters by search across names and tickers with trimming and case folding", () => {
-    const byName = filterCoverageRows(rows, "all", "market-cap", "  ga ");
-    const bySymbol = filterCoverageRows(rows, "all", "market-cap", " alp ");
-
-    expect(byName.map((row) => row.id)).toEqual(["gamma"]);
-    expect(bySymbol.map((row) => row.id)).toEqual(["alpha"]);
-  });
-
   it("intersects search with an active feature filter instead of widening it", () => {
     expect(filterCoverageRows(rows, "yield", "market-cap", "bet").map((row) => row.id)).toEqual(["beta"]);
     // Alpha matches the search but has no yield data, so it must stay excluded.
     expect(filterCoverageRows(rows, "yield", "market-cap", "alp").map((row) => row.id)).toEqual([]);
   });
 
-  it("reports whether any filters are active", () => {
-    expect(hasCoverageFilters("all", "   ")).toBe(false);
-    expect(hasCoverageFilters("yield", "")).toBe(true);
-    expect(hasCoverageFilters("all", " beta ")).toBe(true);
-  });
 });

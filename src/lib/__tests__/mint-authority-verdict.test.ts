@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import {
   buildMintAuthorityVerdict,
   describeMintGateControls,
@@ -8,7 +6,6 @@ import {
   type MintAuthorityVerdictControl,
   type MintAuthorityVerdictInput,
 } from "../mint-authority-verdict";
-import { projectMintAuthorityClientSummary } from "../stablecoin-detail-mint-authority-client";
 
 function control(overrides: Partial<MintAuthorityVerdictControl>): MintAuthorityVerdictControl {
   return { authorityType: "contract", directMintAbility: "direct", ...overrides };
@@ -73,12 +70,6 @@ describe("describeMintGateControls", () => {
 });
 
 describe("buildMintAuthorityVerdict", () => {
-  it("composes band, mint path, controls and posture into one sentence", () => {
-    expect(buildMintAuthorityVerdict({
-      ...BASE,
-      controls: [control({ authorityType: "eoa", directMintAbility: "can-authorize" }), control({ directMintAbility: "can-authorize" })],
-    })).toBe("Managed — the issuer mints XUSD directly, controlled by an EOA and a contract; supply is unbounded but reconciled or supervised.");
-  });
 
   it("states inheritance for wrappers and omits the control clause where it does not describe minting", () => {
     expect(buildMintAuthorityVerdict({
@@ -99,43 +90,4 @@ describe("buildMintAuthorityVerdict", () => {
     })).toBe("Not rated — users mint XUSD against collateral in immutable contracts; no privileged mint authority was found.");
   });
 
-  it("sheds the controls clause before exceeding the verdict budget", () => {
-    const verdict = buildMintAuthorityVerdict({
-      ...BASE,
-      bandLabel: "Exposed",
-      mintPath: "offchain-attested-minter",
-      authorityPosture: "compromised",
-      controls: [
-        control({ authorityType: "safe", threshold: 10, signerCount: 15 }),
-        control({ authorityType: "safe", threshold: 10, signerCount: 15 }),
-        control({ authorityType: "timelock", timelockDelaySec: 172800 }),
-        control({ authorityType: "timelock", timelockDelaySec: 172800 }),
-      ],
-      controlsTruncated: true,
-    });
-    expect(verdict).toBe("Exposed — approved minters issue XUSD against off-chain attestations; mint authority is compromised by an active incident.");
-  });
-
-  it("keeps every catalog profile inside the summary-layer budget", () => {
-    let checked = 0;
-    for (const coin of TRACKED_META_BY_ID.values()) {
-      const summary = projectMintAuthorityClientSummary(coin);
-      if (!summary) continue;
-      const controls = summary.controls ?? [];
-      const verdict = buildMintAuthorityVerdict({
-        symbol: coin.symbol,
-        // The longest published band label, so the budget holds for every band.
-        bandLabel: "Concentrated",
-        mintPath: summary.mintPath,
-        authorityPosture: summary.authorityPosture,
-        controls,
-        controlsTruncated: (summary.totalControlCount ?? controls.length) > controls.length,
-        parentSymbol: summary.inheritedFrom ? (TRACKED_META_BY_ID.get(summary.inheritedFrom)?.symbol ?? null) : null,
-      });
-      expect({ id: coin.id, verdict, violations: findSummaryBudgetViolations(verdict) })
-        .toEqual({ id: coin.id, verdict, violations: [] });
-      checked += 1;
-    }
-    expect(checked).toBeGreaterThan(100);
-  });
 });

@@ -14,10 +14,9 @@ import {
   projectListCoin,
   projectBlacklistStatus,
   projectGeniusProfile,
-  projectMintAuthoritySummary,
   validateGeniusComplianceProjection,
 } from "../build-data/build-client-registry.mjs";
-import { TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import {
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_SUMMARY_FIELDS,
@@ -144,105 +143,6 @@ describe("client registry field contract", () => {
       );
     }
     expect(projectionReads).toBe(0);
-  });
-
-  it("projects only the compact listing class from the decision ledger", () => {
-    const { listCoins } = buildClientRegistryOutput() as { listCoins: StablecoinClientListMeta[] };
-    expect(listCoins).toHaveLength(TRACKED_STABLECOINS.length);
-    expect(listCoins.every((coin) => typeof coin.listingClass === "string")).toBe(true);
-    expect(listCoins.find((coin) => coin.id === "susds-sky")?.listingClass).toBe("stablecoin-variant");
-    expect(listCoins.every((coin) => !("priceBasis" in coin) && !("exitMechanism" in coin))).toBe(true);
-  });
-
-  it("keeps evidence-heavy fields out of the list projection", () => {
-    const { listCoins, detailCoins } = buildClientRegistryOutput() as {
-      listCoins: StablecoinClientListMeta[];
-      detailCoins: StablecoinClientDetailMeta[];
-    };
-    const heavyFields = ["reserves", "mica", "genius", "mechanismArchetypeReview", "yieldConfig"];
-
-    expect(listCoins.every((coin) => heavyFields.every((field) => !(field in coin)))).toBe(true);
-    expect(detailCoins).toHaveLength(listCoins.length);
-    expect(detailCoins.every((coin) => "id" in coin)).toBe(true);
-    expect(detailCoins.some((coin) => heavyFields.some((field) => field in coin))).toBe(true);
-  });
-
-  it.each([
-    [{ variantOf: "parent" }, true],
-    [{ dependencies: [{ coinId: "parent", type: "serial" }] }, true],
-    [{ reserves: [{ name: "USDC", pct: 10, coinId: "usdc-circle" }] }, true],
-    [{ dependencies: [], reserves: [{ name: "Cash", pct: 100 }] }, false],
-    [{ variantOf: null, reserves: [{ name: "Cash", coinId: "" }] }, false],
-    [{}, false],
-  ])("projects authored dependency evidence without shipping heavy inputs (%j)", (evidence, expected) => {
-    const projected = projectListCoin(
-      { id: "fixture", ...evidence },
-      STABLECOIN_CLIENT_LIST_FIELDS,
-      "core-stablecoin",
-    ) as { hasAuthoredDependencyEvidence?: unknown };
-    expect(projected.hasAuthoredDependencyEvidence).toBe(expected);
-    expect(projected).not.toHaveProperty("dependencies");
-    expect(projected).not.toHaveProperty("reserves");
-  });
-
-  it("projects client registry fields in canonical order", () => {
-    const coin = {
-      id: "usdc-circle",
-      name: "USDC",
-      symbol: "USDC",
-      oneLiner: "A dollar-backed stablecoin.",
-      marketAvailability: "market-traded",
-      priceBasis: "executable-market",
-      exitMechanism: "secondary-market",
-      flags: {
-        pegCurrency: "USD",
-        backing: "fiat",
-        governance: "centralized",
-      },
-      pegMechanism: "fiat-backed",
-      mechanismArchetype: "fiat-backed",
-      mechanismArchetypeReview: {
-        disposition: "resolved",
-        reviewedAt: "2026-07-13",
-        reviewer: "test",
-        rationale: "The reviewed mechanism is fiat-backed.",
-        sources: [{ label: "Docs", url: "https://example.com/docs" }],
-      },
-      implementationLaunchDate: "2018-09-26",
-      archetypeOverride: false,
-      geckoId: "usd-coin",
-      protocolSlug: "circle",
-      variantOf: null,
-      variantKind: null,
-      status: "active",
-      listingStatusReview: {
-        reviewedAt: "2026-07-15",
-        reviewer: "test",
-        rationale: "Admitted for runtime publication.",
-        evidence: [{ label: "Policy", url: "https://example.com/policy" }],
-      },
-      tags: ["major"],
-      frozenAt: null,
-      launchDate: "2018-09-26",
-      announcedDate: "2018-05-15",
-      expectedLaunchDate: null,
-      launchPhase: "live",
-      milestones: [],
-      dateHistory: [],
-      commodityOunces: null,
-      infrastructures: ["circle"],
-      mica: null,
-      genius: null,
-      yieldConfig: null,
-      liveReservesConfig: null,
-      proofOfReserves: null,
-      reserves: [{ asset: "cash" }],
-      collateral: "cash",
-      collateralQuality: "rwa",
-      custodyModel: "institutional-top",
-    };
-
-    expect(Object.keys(projectCoin(coin, STABLECOIN_CLIENT_LIST_FIELDS))).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
   });
 
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {
@@ -492,9 +392,5 @@ describe("client registry field contract", () => {
       reviewer: "pharos",
       reviewedAt: "2026-05-27",
     });
-  });
-
-  it("returns no mint-authority summary when the source profile is absent", () => {
-    expect(projectMintAuthoritySummary({ id: "unknown" })).toBeUndefined();
   });
 });

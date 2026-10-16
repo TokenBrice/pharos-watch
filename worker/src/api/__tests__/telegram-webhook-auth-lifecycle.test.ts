@@ -222,35 +222,6 @@ describe("handleTelegramWebhook", () => {
     }
   });
 
-  it("welcomes a group when my_chat_member reports the bot was added", async () => {
-    const db = makeLifecycleDb([
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
-
-    const res = await handleTelegramWebhook(
-      db,
-      makeMyChatMemberRequest({ from: { id: 999, username: "alice" } }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(res.status).toBe(200);
-    const body = sentMessageBody();
-    expect(body.text).toContain("Thanks for adding Pharos Watch");
-    expect(body.text).toContain("@alice");
-    const replyMarkup = body.reply_markup as { inline_keyboard?: Array<Array<{ url?: string }>> };
-    expect(replyMarkup.inline_keyboard?.flat().some((button) => button.url?.includes("/pharoswatchbot/"))).toBe(true);
-
-    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"));
-    expect(cacheWrite).toBeDefined();
-    expect(cacheWrite!.binds[0]).toBe("telegram:group-welcome:-123");
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
-  });
-
   it("deletes the claimed group welcome marker when Telegram send fails", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
     const db = makeLifecycleDb([

@@ -1,12 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
-  bucketTelegramCommandLatency,
-  classifyTelegramStartSource,
   computeTelegramCurrentLifecycleSnapshot,
   loadTelegramLifecycleHistory,
   loadTelegramTopFollowedCoins,
-  recordTelegramDeliveryOutcomes,
   recordTelegramUsageEvent,
   refreshTelegramLifecycleSnapshotIfStale,
 } from "../telegram/usage-analytics";
@@ -210,26 +207,6 @@ describe("telegram usage analytics", () => {
     );
   });
 
-  it("classifies deep-link payloads without storing raw payloads", () => {
-    expect(classifyTelegramStartSource("")).toBe("none");
-    expect(classifyTelegramStartSource("setup")).toBe("setup");
-    expect(classifyTelegramStartSource("sample")).toBe("sample");
-    expect(classifyTelegramStartSource("sub_dews-depeg_usd-top25")).toBe("subscribe");
-    expect(classifyTelegramStartSource("status_usdc-circle")).toBe("status");
-    expect(classifyTelegramStartSource("why_usdc-circle")).toBe("why");
-    expect(classifyTelegramStartSource("coverage_usdc-circle")).toBe("coverage");
-    expect(classifyTelegramStartSource("unexpected_payload")).toBe("unknown");
-  });
-
-  it("buckets command latency for aggregate telemetry", () => {
-    expect(bucketTelegramCommandLatency(null)).toBe("unknown");
-    expect(bucketTelegramCommandLatency(120)).toBe("lt_250ms");
-    expect(bucketTelegramCommandLatency(900)).toBe("250ms_1s");
-    expect(bucketTelegramCommandLatency(2_500)).toBe("1s_3s");
-    expect(bucketTelegramCommandLatency(8_000)).toBe("3s_10s");
-    expect(bucketTelegramCommandLatency(12_000)).toBe("gte_10s");
-  });
-
   it("upserts usage events by incrementing daily aggregate counters", async () => {
     const { sqlite, db } = fixtures.open();
     for (const nowSec of [1_771_833_600, 1_771_833_700]) {
@@ -268,35 +245,6 @@ describe("telegram usage analytics", () => {
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
     expect(insert?.binds[3]).toBe("unknown");
-  });
-
-  it("coalesces delivery diagnostics by chat before writing", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] }]);
-
-    await recordTelegramDeliveryOutcomes(db, [
-      { chatId: "42", ok: false, errorClass: "timeout", nowSec: 100 },
-      { chatId: "42", ok: true, nowSec: 101 },
-      { chatId: "43", ok: false, errorClass: "rate_limit", nowSec: 102 },
-      { chatId: "43", ok: false, errorClass: "network", nowSec: 103 },
-    ]);
-
-    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
-    expect(inserts).toHaveLength(2);
-    expect(inserts[0]?.binds).toEqual(["42", 101, null, 101, null, 101]);
-    expect(inserts[1]?.binds).toEqual(["43", null, null, 103, "network", 103]);
-  });
-
-  it("keeps a later failure's error class and the earlier success timestamp", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] }]);
-
-    await recordTelegramDeliveryOutcomes(db, [
-      { chatId: "42", ok: true, nowSec: 200 },
-      { chatId: "42", ok: false, errorClass: "blocked", nowSec: 201 },
-    ]);
-
-    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]?.binds).toEqual(["42", 200, null, 201, "blocked", 201]);
   });
 
   it("merges explicit top-coin follows with the preset-aware shape", async () => {

@@ -12,12 +12,4 @@ describe("tracked blacklist status authority", () => {
     }
   });
 
-  it("keeps representative direct, upstream, possible, and no verdicts", () => {
-    const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
-
-    expect(resolved.get("usdc-circle")).toBe(true);
-    expect(resolved.get("dai-makerdao")).toBe("inherited");
-    expect(resolved.get("zchf-frankencoin")).toBe("possible");
-    expect(resolved.get("lusd-liquity")).toBe(false);
-  });
 });

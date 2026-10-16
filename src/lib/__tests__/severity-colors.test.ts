@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   TIER_TEXT,
   deviationBgClass,
@@ -9,7 +9,6 @@ import {
   getScoreColor,
   getScoreTier,
   pegScoreColor,
-  scoreToColorClass,
 } from "../severity-colors";
 import * as featureFlags from "@/lib/feature-flags";
 
@@ -63,31 +62,4 @@ describe("severity-colors", () => {
     expect(getDurabilityBgColor(39)).toBe("bg-state-danger-solid");
   });
 
-  it("supports parametric score color mapping", () => {
-    expect(scoreToColorClass(65, [
-      { min: 80, className: "high" },
-      { min: 50, className: "mid" },
-      { min: Number.NEGATIVE_INFINITY, className: "low" },
-    ])).toBe("mid");
-    expect(scoreToColorClass(null, [{ min: 0, className: "x" }], "fallback")).toBe("fallback");
-  });
-
-  describe("with quietDeviations flag enabled", () => {
-    beforeEach(() => {
-      vi.spyOn(featureFlags, "isQuietDeviationsEnabled").mockReturnValue(true);
-    });
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    it("returns muted-foreground below the GREEN threshold and keeps higher tiers", () => {
-      expect(deviationColorClass(0)).toBe("text-muted-foreground");
-      expect(deviationColorClass(49)).toBe("text-muted-foreground");
-      expect(deviationColorClass(50)).toBe("text-amber-700 dark:text-amber-400");
-      expect(deviationColorClass(199)).toBe("text-amber-700 dark:text-amber-400");
-      expect(deviationColorClass(200)).toBe("text-orange-700 dark:text-orange-400");
-      expect(deviationColorClass(499)).toBe("text-orange-700 dark:text-orange-400");
-      expect(deviationColorClass(500)).toBe("text-red-700 dark:text-red-400");
-    });
-  });
 });

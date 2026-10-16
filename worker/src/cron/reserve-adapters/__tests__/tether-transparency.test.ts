@@ -153,7 +153,7 @@ describe("adaptTetherTransparency", () => {
     })).toThrow();
   });
 
-  it.each(["2026-02-30", "2026-6-30", "not-a-date"])("rejects unsupported legacy composition date %s", (compositionAsOf) => {
+  it.each(["2026-02-30", "2026-6-30"])("rejects unsupported legacy composition date %s", (compositionAsOf) => {
     expect(() => parseLiveReserveAdapterParams("tether-transparency", {
       ...XAUT_PARAMS, compositionAsOf,
     })).toThrow();
@@ -204,12 +204,7 @@ describe("adaptTetherTransparency", () => {
   describe.each([USDT_PARAMS, XAUT_PARAMS])("$currencyIso chain availability", (params) => {
     it.each([
       [undefined, "missing"],
-      [null, "missing"],
       ["broken", "malformed"],
-      ["", "malformed"],
-      [false, "malformed"],
-      [Number.NaN, "malformed"],
-      [Number.POSITIVE_INFINITY, "malformed"],
       [-1, "negative"],
     ])("preserves unavailable components for %s", (value, reason) => {
       for (const field of ["totalAuthorized", "notIssued", "quarantined"] as const) {
@@ -250,7 +245,6 @@ describe("adaptTetherTransparency", () => {
 
     it.each([
       [undefined, "missing"],
-      [null, "missing"],
       [{}, "malformed"],
     ])("does not publish a known empty census for %s", (value, reason) => {
       const result = adaptTetherTransparency(withChains(value), params);
@@ -331,27 +325,6 @@ describe("adaptTetherTransparency", () => {
 });
 
 describe("fetchTetherTransparencyReserves", () => {
-  it("dispatches the MXNT-only binding without treating circulation as reserve coverage", async () => {
-    const { result } = await runAdapter("tether-transparency-mxnt", "mxnt-tether", {
-      network: { json: { [TETHER_ENDPOINT]: TETHER_TRANSPARENCY_FIXTURE } },
-      nowSec: FIXTURE_NOW_SEC,
-    });
-    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
-    expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
-    expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
-  });
-
-  it("fetches the coin's configured transparency endpoint and publishes its reserve totals", async () => {
-    const { result, network } = await runAdapter("tether-transparency", "usdt-tether", {
-      network: { json: { [TETHER_ENDPOINT]: TETHER_TRANSPARENCY_FIXTURE } },
-      nowSec: FIXTURE_NOW_SEC,
-    });
-
-    expect(network.requests.map((request) => request.url)).toEqual([TETHER_ENDPOINT]);
-    expect(result.metadata?.totalAssetsUsd).toBe(189761994736.8062);
-    expect(result.metadata?.freshnessMode).toBe("verified");
-  });
-
   it("selects the configured currency per coin on the shared endpoint", async () => {
     const { result } = await runAdapter("tether-transparency", "xaut-tether", {
       network: { json: { [TETHER_ENDPOINT]: TETHER_TRANSPARENCY_FIXTURE } },

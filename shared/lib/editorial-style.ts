@@ -194,17 +194,3 @@ export function buildEditorialPrompt(registerId: string): string {
   }
   return lines.join("\n");
 }
-
-export function formatEditorialFindings(findings: readonly EditorialFinding[]): string {
-  return findings
-    .map((finding) => {
-      const where = finding.field ? `${finding.field}: ` : "";
-      const advice = finding.advice ? ` ${finding.advice}` : "";
-      return `- [${finding.ruleId}] ${where}"${finding.excerpt}" at ${finding.index}.${advice}`;
-    })
-    .join("\n");
-}
-
-export function hasBlockingEditorialFindings(findings: readonly EditorialFinding[]): boolean {
-  return findings.some((finding) => finding.severity === "hard");
-}

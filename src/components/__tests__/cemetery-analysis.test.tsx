@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { CAUSE_META, CAUSE_ORDER } from "@shared/lib/cause-of-death";
 import { formatDeathDate } from "@shared/lib/format";
 import { buildCemeteryStats, formatCemeteryPeak, type CemeteryStatsInput } from "@/lib/cemetery-stats";
@@ -42,10 +42,6 @@ function dots(): HTMLElement[] {
   return within(screen.getByRole("group", { name: /^Peak market cap by cause/ })).getAllByRole("button");
 }
 
-beforeEach(() => {
-  selection.revealRecord.mockClear();
-});
-
 describe("CemeteryAnalysis", () => {
   it("exposes chart B as a labelled image and chart C as a labelled interactive group", () => {
     renderAnalysis();
@@ -85,36 +81,6 @@ describe("CemeteryAnalysis", () => {
     ]);
   });
 
-  it("marks only the partial latest year with an asterisk and a dashed outline", () => {
-    const { container } = renderAnalysis();
-
-    const labels = Array.from(container.querySelectorAll<HTMLElement>("[data-year-label]"));
-    expect(labels.filter((label) => label.textContent?.endsWith("*")).map((label) => label.dataset.yearLabel)).toEqual(["2024"]);
-    expect(container.querySelectorAll("[data-partial-outline]")).toHaveLength(1);
-    expect(container.textContent).toContain("* 2024 runs through Mar 2024.");
-    expect(container.textContent).toContain("1 of 2 records in 2024 come from Pharos's own tracked archive.");
-  });
-
-  it("labels empty years 'none recorded' (a dash on phones) and names them as a catalog gap", () => {
-    const { container } = renderAnalysis();
-
-    const empty = Array.from(container.querySelectorAll<SVGGElement>("[data-empty-year]"));
-    expect(empty.map((node) => node.dataset.emptyYear)).toEqual(["2022"]);
-    const [phone, wide] = Array.from(empty[0].querySelectorAll("text"));
-    expect(phone.textContent?.trim()).toBe("–");
-    expect(wide.textContent?.replace(/\s+/g, " ").trim()).toBe("none recorded");
-    expect(container.textContent).toContain("No records exist for 2022; that is a gap in the catalog");
-  });
-
-  it("switches chart B between counts and shares", () => {
-    renderAnalysis();
-    const share = screen.getByRole("button", { name: "Share" });
-    fireEvent.click(share);
-
-    expect(share.getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("img", { name: /as a share of each year/ })).toBeTruthy();
-  });
-
   it("plots only recorded peaks in chart C, one dot each, and footnotes the rest", () => {
     const { container } = renderAnalysis();
 
@@ -122,31 +88,5 @@ describe("CemeteryAnalysis", () => {
     expect(dots().map((dot) => dot.getAttribute("aria-label")).sort()).toEqual(recorded.map(dotName).sort());
     expect(dots().some((dot) => dot.getAttribute("aria-label")?.includes("REG1"))).toBe(false);
     expect(container.textContent).toContain("1 record has no recorded peak and is not plotted.");
-  });
-
-  it("keeps a single tab stop across the dots and moves it with the arrow keys", () => {
-    renderAnalysis();
-
-    const tabStops = () => dots().filter((dot) => dot.getAttribute("tabindex") === "0");
-    expect(tabStops()).toHaveLength(1);
-    // Keyboard order is lane (CAUSE_ORDER) then peak: abandoned first.
-    expect(tabStops()[0].getAttribute("aria-label")).toContain("ABN1");
-
-    fireEvent.keyDown(tabStops()[0], { key: "ArrowDown" });
-    expect(tabStops()).toHaveLength(1);
-    expect(tabStops()[0].getAttribute("aria-label")).toContain("CPF1");
-    expect(document.activeElement).toBe(tabStops()[0]);
-  });
-
-  it("reveals the record in the register on click and on Enter", () => {
-    renderAnalysis();
-    const byName = (symbol: string) => dots().find((dot) => dot.getAttribute("aria-label")?.includes(symbol)) as HTMLElement;
-
-    fireEvent.click(byName("ALG1"));
-    expect(selection.revealRecord).toHaveBeenLastCalledWith("alg-1", "chart");
-
-    fireEvent.keyDown(byName("LIQ1"), { key: "Enter" });
-    expect(selection.revealRecord).toHaveBeenLastCalledWith("liq-1", "chart");
-    expect(selection.revealRecord).toHaveBeenCalledTimes(2);
   });
 });

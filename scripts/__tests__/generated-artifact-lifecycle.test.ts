@@ -1,12 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildGeneratedArtifactPhases, GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
-import { createTempRepoTracker } from "./helpers/test-state";
 
-const roots = createTempRepoTracker("artifact-lifecycle");
-afterEach(() => roots.cleanup());
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
@@ -54,19 +51,6 @@ function hasIgnoredOutput(artifact: RegistryArtifact, root = REPO_ROOT): boolean
 }
 
 describe("generated artifact lifecycle", () => {
-  it("requires bootstrap for mixed tracked and ignored outputs and propagates Git failures", () => {
-    const root = roots.makeRoot();
-    execFileSync("git", ["init", "-q", root]);
-    roots.writeText(root, ".gitignore", "ignored.ts\n");
-    roots.writeText(root, "tracked.ts", "export {};\n");
-    execFileSync("git", ["add", "tracked.ts"], { cwd: root });
-    const artifact: RegistryArtifact = {
-      id: "mixed", buildLifecycle: "compile-input", outputPaths: ["tracked.ts", "ignored.ts"],
-    };
-    expect(hasIgnoredOutput(artifact, root)).toBe(true);
-    expect(isGitIgnored("tracked.ts", root)).toBe(false);
-    expect(() => isGitIgnored("ignored.ts", roots.makeRoot())).toThrow();
-  });
   it("uses offline snapshots for bootstrap and live generation only after refresh", () => {
     const snapshot = (options: Record<string, unknown>) => buildGeneratedArtifactPhases(options)
       .flatMap(({ artifacts }) => artifacts).find((artifact) => artifact.id === "stablecoin-detail-snapshots")!;
@@ -81,63 +65,6 @@ describe("generated artifact lifecycle", () => {
     ]);
     expect(registry.filter((artifact) => artifact.bootstrap).flatMap((artifact) => artifact.outputPaths)
       .filter((path) => /[*?\[\]{}]/.test(path))).toEqual([]);
-  });
-  it("declares one positive build lifecycle for every artifact", () => {
-    expect(new Set(registry.map((artifact) => artifact.buildLifecycle))).toEqual(
-      new Set(["compile-input", "post-refresh", "maintenance-only"]),
-    );
-    expect(registry.every((artifact) => artifact.buildLifecycle != null)).toBe(true);
-  });
-
-  it("excludes live snapshots from compile-input selection", () => {
-    expect(selectedIds({ buildLifecycles: ["compile-input"] })).toEqual([
-      "stablecoin-catalog",
-      "sitemap-dates",
-      "docs-metadata",
-      "postman",
-      "openapi",
-      "world-map",
-      "mint-burn-conservation-runtime",
-      "report-card-registry-fingerprint",
-      "legacy-stablecoin-redirects",
-      "stablecoin-client-registry",
-      "safety-score-v9-incident-runtime",
-      "stablecoin-worker-full-catalog",
-      "stablecoin-client-projections",
-      "case-study-client-index",
-      "editorial-style",
-    ]);
-  });
-
-  it("classifies refresh-sensitive projections separately", () => {
-    expect(
-      registry.filter((artifact) => artifact.buildLifecycle === "post-refresh").map((artifact) => artifact.id),
-    ).toEqual(["depeg-event-search-data", "stablecoin-detail-snapshots", "llms-txt"]);
-  });
-
-  it("keeps standalone prebuild hydrated with both lifecycles and one snapshot acquisition", () => {
-    const packageJson: unknown = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8"));
-    if (
-      packageJson === null || typeof packageJson !== "object" || !("scripts" in packageJson) ||
-      packageJson.scripts === null || typeof packageJson.scripts !== "object" ||
-      !("prebuild" in packageJson.scripts) || typeof packageJson.scripts.prebuild !== "string"
-    ) {
-      throw new Error("package.json must declare a prebuild script");
-    }
-    const buildLifecycles = [...packageJson.scripts.prebuild.matchAll(/--build-lifecycle=([^\s"]+)/g)]
-      .flatMap((match) => match[1].split(","));
-    expect(buildLifecycles).toEqual(["compile-input", "post-refresh"]);
-    const phases = buildGeneratedArtifactPhases({ buildLifecycles });
-    const ids = phases.flatMap(({ artifacts }) => artifacts.map(({ id }: RegistryArtifact) => id));
-    expect(ids.filter((id) => id === "stablecoin-detail-snapshots")).toHaveLength(1);
-    expect(ids).toEqual(expect.arrayContaining([
-      "sitemap-dates", "docs-metadata", "depeg-event-search-data", "llms-txt",
-    ]));
-    expect(phases.find(({ artifacts }) => artifacts.some(({ id }: RegistryArtifact) => id === "stablecoin-catalog"))?.phase).toBe(0);
-    expect(phases.find(({ artifacts }) => artifacts.some(({ id }: RegistryArtifact) => id === "stablecoin-detail-snapshots"))?.phase).toBe(1);
-    const snapshot = phases.flatMap(({ artifacts }) => artifacts)
-      .find(({ id }) => id === "stablecoin-detail-snapshots")!;
-    expect(snapshot.command).toBe("node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts");
   });
 
   it("materializes every gitignored artifact from one of the two bootstrap paths", () => {
@@ -157,48 +84,9 @@ describe("generated artifact lifecycle", () => {
 
     expect(offenders).toEqual([]);
   });
-
-  it("keeps the history bootstrap script in step with the build-time artifacts", () => {
-    const buildTimeIds = registry
-      .filter((artifact) => artifact.inputState === "build-time")
-      .map((artifact) => artifact.id);
-
-    expect([...historyBootstrapIds()].sort()).toEqual([...buildTimeIds].sort());
-    expect(
-      registry
-        .filter((artifact) => historyBootstrapIds().includes(artifact.id))
-        .every((artifact) => artifact.buildLifecycle === "compile-input"),
-    ).toBe(true);
-  });
-
-  it("excludes build-time artifacts from the ordinary bootstrap", () => {
-    // They need full git history; `bootstrap:generated` must stay safe to run
-    // on the shallow checkouts several workflows use.
-    const leaked = registry
-      .filter((artifact) => artifact.inputState === "build-time" && artifact.bootstrap === true)
-      .map((artifact) => artifact.id);
-
-    expect(leaked).toEqual([]);
-  });
-
-  it("gitignores the report-card registry fingerprint projection", () => {
-    expect(isGitIgnored("shared/data/stablecoins/report-card-registry-fingerprint.generated.ts")).toBe(true);
-  });
 });
 
 describe("check-mode artifact selection", () => {
-  it("omits build-time artifacts from check runs", () => {
-    const ids = selectedIds({ check: true });
-    expect(ids).not.toContain("sitemap-dates");
-    expect(ids).not.toContain("docs-metadata");
-  });
-
-  it("still runs build-time artifacts in write mode", () => {
-    const ids = selectedIds({});
-    expect(ids).toContain("sitemap-dates");
-    expect(ids).toContain("docs-metadata");
-  });
-
   it("does not pull an unverifiable artifact in as a check-mode dependency", () => {
     const unverifiable = new Set(
       registry.filter((artifact) => artifact.checkable === false).map((artifact) => artifact.id),

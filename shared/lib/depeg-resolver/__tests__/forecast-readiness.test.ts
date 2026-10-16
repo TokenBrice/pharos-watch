@@ -237,18 +237,4 @@ describe("forecast readiness lock helpers", () => {
     });
   });
 
-  it("builds the 72h backstop and separates strict readiness from backstop locking", () => {
-    const backstop = buildForecastReadinessBackstop({
-      startedAt: 100,
-      nowSec: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
-    });
-
-    expect(backstop).toEqual({
-      version: DDR_FORECAST_READINESS_VERSION,
-      delaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
-      backstopAt: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
-      reached: true,
-    });
-  });
-
 });

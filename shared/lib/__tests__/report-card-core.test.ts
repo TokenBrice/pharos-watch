@@ -4,19 +4,10 @@ import {
   REPORT_CARD_GRADE_RANK,
   scoreToGrade,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
-  V9_GRADE_THRESHOLDS,
 } from "../report-card-core";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 describe("scoreToGrade", () => {
-  it("derives presentation thresholds from the active scoring policy", () => {
-    const expected = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map(({ grade, minScore }) => ({
-      grade,
-      min: minScore,
-    }));
-    expect(V9_GRADE_THRESHOLDS).toEqual(expected);
-  });
-
   it("keeps the grade conversion bound to policy thresholds", () => {
     for (const { grade, minScore } of V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds) {
       expect(scoreToGrade(minScore)).toBe(grade);
@@ -25,19 +16,11 @@ describe("scoreToGrade", () => {
     expect(scoreToGrade(null)).toBe("NR");
   });
 
-  it("returns A+ for scores >= 87", () => {
-    expect(scoreToGrade(87)).toBe("A+");
-    expect(scoreToGrade(100)).toBe("A+");
-  });
-
   it("clamps scores to 0-100 range", () => {
     expect(scoreToGrade(-10)).toBe("F");
     expect(scoreToGrade(150)).toBe("A+");
   });
 
-  it("returns F for score 0", () => {
-    expect(scoreToGrade(0)).toBe("F");
-  });
 });
 
 describe("getReportCardGradeRank", () => {

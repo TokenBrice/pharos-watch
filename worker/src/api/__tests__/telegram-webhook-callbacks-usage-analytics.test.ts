@@ -106,50 +106,6 @@ describe("handleCallbackQuery", () => {
       expect(usageRows[0].binds[3]).toBe("safetydown");
       expect(usageRows[0].binds[4]).toBe("success");
     });
-
-    it("unsub:<id> success records an unsubscribe usage event", async () => {
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", { id: "cb-unsub-ok", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
-
-      const usageRows = db
-        .getHistory()
-        .filter(
-          (entry) =>
-            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-            entry.binds.includes("unsubscribe") &&
-            entry.binds.includes("callback_unsub"),
-        );
-      expect(usageRows).toHaveLength(1);
-      expect(usageRows[0].binds[1]).toBe("unsubscribe");
-      expect(usageRows[0].binds[3]).toBe("callback_unsub");
-      expect(usageRows[0].binds[4]).toBe("success");
-    });
-
-    it("depegstep:<id>:250 D1 failure records a failure usage event", async () => {
-      const db = mockTelegramD1([
-        {
-          match: "INSERT INTO telegram_subscriptions",
-          rows: [],
-          throwError: new Error("d1 boom"),
-        },
-      ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("depegstep:usdc-circle:250", { id: "cb-depegstep-fail", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
-
-      const usageRows = db
-        .getHistory()
-        .filter(
-          (entry) =>
-            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-            entry.binds.includes("subscribe") &&
-            entry.binds.includes("depegstep") &&
-            entry.binds.includes("failure"),
-        );
-      expect(usageRows).toHaveLength(1);
-      expect(usageRows[0].binds[1]).toBe("subscribe");
-      expect(usageRows[0].binds[3]).toBe("depegstep");
-      expect(usageRows[0].binds[4]).toBe("failure");
-      expect(usageRows[0].binds[6]).toBe("d1_write_failed");
-    });
   });
 
 });

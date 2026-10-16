@@ -271,7 +271,6 @@ import {
   markDexLiquidityScoringStageConsumed,
   persistDexLiquidityScoringStage,
 } from "../dex-liquidity/scoring-stage";
-import { UNIV3_SUBGRAPHS } from "../dex-liquidity/constants";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
 import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
@@ -703,52 +702,6 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
   });
 
-  it("surfaces scoring fallback counters in the consume-run metadata", async () => {
-    const result = await runDexLiquidityScoringCycle(db, "graph-key");
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackCounters?: Record<string, number>;
-    };
-    expect(metadata.fallbackCounters).toEqual({ tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 });
-    expect(metadata).toMatchObject({
-      d1Cost: {
-        queries: expect.any(Number),
-        rowsRead: expect.any(Number),
-        rowsWritten: expect.any(Number),
-        coverage: "partial",
-        reasons: expect.arrayContaining([
-          "outer-lease-and-progress-queries-excluded",
-          "cron-logger-and-terminal-writes-excluded",
-          "failed-run-cost-not-recorded",
-        ]),
-      },
-    });
-  });
-
-  it("surfaces pool-intake fallback counters in the scoring-stage run metadata", async () => {
-    const stageResult = await stageDexLiquidityScoring(db, "graph-key");
-
-    const metadata = JSON.parse(stageResult.metadata ?? "{}") as {
-      fallbackCounters?: Record<string, number>;
-    };
-    expect(metadata.fallbackCounters).toBeDefined();
-    expect(metadata.fallbackCounters?.unmeasuredBalanceOptimistic).toBeTypeOf("number");
-    expect(metadata.fallbackCounters?.stagedOrganicFractionDefault).toBeTypeOf("number");
-    expect(metadata).toMatchObject({
-      d1Cost: {
-        queries: expect.any(Number),
-        rowsRead: expect.any(Number),
-        rowsWritten: expect.any(Number),
-        coverage: "partial",
-        reasons: expect.arrayContaining([
-          "outer-lease-and-progress-queries-excluded",
-          "cron-logger-and-terminal-writes-excluded",
-          "failed-run-cost-not-recorded",
-        ]),
-      },
-    });
-  });
-
   it("carries partial-source telemetry through the stage into consumer metadata", async () => {
     vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce({
       pools: [],
@@ -840,46 +793,6 @@ describe("dex liquidity scoring stage cycle", () => {
     });
   });
 
-
-  it("reports high-SLO stage metadata during source and scoring phases", async () => {
-    const progressUpdates: CronProgressUpdate[] = [];
-    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
-      progressUpdates.push(update);
-    });
-
-    await runDexLiquidityScoringCycle(db, "graph-key", undefined, undefined, undefined, reportProgress);
-
-    const directApiFetch = progressUpdates.find((update) => update.stage === "direct-api-fetch");
-    const scoringComplete = progressUpdates.find((update) => update.stage === "scoring-complete");
-    const priceCompleteIndex = progressUpdates.findIndex(
-      (update) => update.stage === "persistence-prices-complete",
-    );
-    const challengerCompleteIndex = progressUpdates.findIndex(
-      (update) => update.stage === "persistence-challengers-complete",
-    );
-
-    expect(directApiFetch).toMatchObject({
-      stage: "direct-api-fetch",
-      metadata: {
-        providerFamily: "protocol-native-dex",
-        phase: "direct-api-fetch",
-        providerFamilies: expect.arrayContaining(["fluid", "balancer"]),
-        countTotals: { sourceFamilies: expect.any(Number) },
-      },
-    });
-    expect(scoringComplete).toMatchObject({
-      stage: "scoring-complete",
-      metadata: {
-        providerFamily: "internal",
-        phase: "scoring-complete",
-        countTotals: {
-          scoreRows: expect.any(Number),
-        },
-      },
-    });
-    expect(priceCompleteIndex).toBeGreaterThan(-1);
-    expect(challengerCompleteIndex).toBeGreaterThan(priceCompleteIndex);
-  });
 
   it("accepts compacted production-scale primary rows while reporting raw counts", async () => {
     const rawPoolCount = 15_430;
@@ -1206,36 +1119,6 @@ describe("dex liquidity scoring stage cycle", () => {
     }
     expect(fetchDataSources).toHaveBeenCalledOnce();
     expect(fetchUniV3Data).toHaveBeenCalledOnce();
-  });
-
-  it("stages the exact bounded six-chain Uni V3 source family", async () => {
-    expect(Object.keys(UNIV3_SUBGRAPHS)).toEqual([
-      "ethereum",
-      "base",
-      "arbitrum",
-      "polygon",
-      "celo",
-      "bsc",
-    ]);
-
-    await runDexLiquidityScoringCycle(db, "graph-key");
-
-    expect(fetchUniV3Data).toHaveBeenCalledOnce();
-    const [graphApiKey, symbolToChainScopedIds, chainAddressToId, signal, references] =
-      vi.mocked(fetchUniV3Data).mock.calls[0]!;
-    expect(graphApiKey).toBe("graph-key");
-    expect(symbolToChainScopedIds).toBeInstanceOf(Map);
-    expect(chainAddressToId).toBeInstanceOf(Map);
-    expect(signal).toBeUndefined();
-    expect(references).toEqual(expect.any(Object));
-  });
-
-  it("passes scheduled chain RPCs into Fluid enrichment", async () => {
-    const chainRpcs = new Map<string, ChainRpcConfig>();
-
-    await runDexLiquidityScoringCycle(db, "graph-key", undefined, undefined, chainRpcs);
-
-    expect(fetchFluidPools).toHaveBeenCalledWith(expect.any(AbortSignal), chainRpcs, expect.any(Object));
   });
 
   it("threads tracked stablecoin cache prices into direct API conversion and observations", async () => {

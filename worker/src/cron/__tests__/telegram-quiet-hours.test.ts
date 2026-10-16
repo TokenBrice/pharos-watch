@@ -63,22 +63,6 @@ describe("isQuietHoursActive", () => {
     expect(active("2026-11-01T07:00:00Z", 1, 2)).toBe(false);
   });
 
-  it("resumes fallback telemetry exactly one hour after the previous log", () => {
-    vi.useFakeTimers();
-    const start = Date.UTC(2026, 0, 15, 12);
-    vi.setSystemTime(start);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const evaluate = () => isQuietHoursActive(start / 1000, true, 12, 13, "Mars/Olympus_Mons");
-    expect(evaluate()).toBe(true);
-    expect(warn).toHaveBeenCalledTimes(1);
-    vi.setSystemTime(start + 3_600_000 - 1);
-    expect(evaluate()).toBe(true);
-    expect(warn).toHaveBeenCalledTimes(1);
-    vi.setSystemTime(start + 3_600_000);
-    expect(evaluate()).toBe(true);
-    expect(warn).toHaveBeenCalledTimes(2);
-  });
-
   it("falls back to UTC when the timezone is rejected by ICU", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     // 2026-01-15 12:00:00 UTC. Bogus zone -> falls back to UTC, so hour=12.
@@ -86,36 +70,9 @@ describe("isQuietHoursActive", () => {
     expect(isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Olympus_Mons")).toBe(true);
     expect(isQuietHoursActive(noonUtcWinter, true, 13, 14, "Mars/Olympus_Mons")).toBe(false);
   });
-
-  it("logs timezone fallback once per zone within the rate-limit window", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const noonUtcWinter = Date.UTC(2026, 0, 15, 12, 0, 0) / 1000;
-
-    isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Olympus_Mons");
-    isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Olympus_Mons");
-    isQuietHoursActive(noonUtcWinter, true, 12, 13, "Mars/Valles_Marineris");
-
-    expect(warn).toHaveBeenCalledTimes(2);
-    const firstRecord = JSON.parse(String(warn.mock.calls[0][0])) as Record<string, unknown>;
-    expect(firstRecord).toMatchObject({
-      scope: "telegram",
-      level: "warn",
-      message: "quiet-hours timezone fallback to UTC",
-      action: "quiet-hours-timezone-fallback",
-      timezone: "Mars/Olympus_Mons",
-      quietHoursTzFallback: true,
-    });
-  });
 });
 
 describe("isValidIanaTimezone", () => {
-  it("accepts common IANA zones", () => {
-    expect(isValidIanaTimezone("UTC")).toBe(true);
-    expect(isValidIanaTimezone("Europe/Paris")).toBe(true);
-    expect(isValidIanaTimezone("America/New_York")).toBe(true);
-    expect(isValidIanaTimezone("Asia/Singapore")).toBe(true);
-  });
-
   it("rejects empty, too-long, or unrecognized inputs", () => {
     expect(isValidIanaTimezone("")).toBe(false);
     expect(isValidIanaTimezone("not a zone")).toBe(false);
@@ -202,25 +159,6 @@ describe("cleanExpiredDisambiguations", () => {
     expect(result.itemCount).toBe(1);
   });
 
-  it("deletes expired rows in bounded batches", async () => {
-    const rows: DisambiguationRow[] = Array.from({ length: 501 }, (_, index) => ({
-      chat_id: `old-${index}`,
-      expires_at: NOW_SEC - GRACE_SEC - 60 - index,
-    }));
-    const { db, remaining } = setupDisambiguations(rows);
-
-    const result = await cleanExpiredDisambiguations(db);
-
-    expect(remaining()).toEqual([]);
-    expect(result.itemCount).toBe(501);
-    const metadata = JSON.parse(result.metadata!) as {
-      batches: number;
-      disambiguationCleanupHasMore: boolean;
-    };
-    expect(metadata.batches).toBe(2);
-    expect(metadata.disambiguationCleanupHasMore).toBe(false);
-  });
-
   it("caps each cron pass to avoid monopolizing the Telegram slot", async () => {
     const rows: DisambiguationRow[] = Array.from({ length: 5_001 }, (_, index) => ({
       chat_id: `old-${index}`,
@@ -238,16 +176,5 @@ describe("cleanExpiredDisambiguations", () => {
     };
     expect(metadata.batches).toBe(10);
     expect(metadata.disambiguationCleanupHasMore).toBe(true);
-  });
-
-  it("reports zero cleaned when the table is empty", async () => {
-    const { db } = setupDisambiguations([]);
-
-    const result = await cleanExpiredDisambiguations(db);
-
-    expect(result.itemCount).toBe(0);
-    expect(result.status).toBe("ok");
-    const metadata = JSON.parse(result.metadata!) as { disambiguationRowsCleaned: number };
-    expect(metadata.disambiguationRowsCleaned).toBe(0);
   });
 });

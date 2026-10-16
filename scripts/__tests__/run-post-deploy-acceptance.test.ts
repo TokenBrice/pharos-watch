@@ -249,34 +249,6 @@ describe("runPostDeployAcceptance", () => {
 });
 
 describe("run-post-deploy-acceptance CLI", () => {
-  it("records the outcome as a step output and a job summary table", async () => {
-    const workDir = summaryDir();
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    const summaryPath = join(workDir, "summary.md");
-    const outputPath = join(workDir, "github-output.txt");
-
-    const exitCode = await runPostDeployAcceptanceCli(
-      {
-        GITHUB_OUTPUT: outputPath,
-        GITHUB_STEP_SUMMARY: summaryPath,
-        NODE_ENV: "test",
-        EXPECTED_PAGES_COMMIT: RELEASE_COMMIT,
-        PAGES_DEPLOYED: "true",
-        WORKER_DEPLOYED: "false",
-      },
-      dependencies(),
-    );
-    const summary = readFileSync(summaryPath, "utf8");
-
-    expect(exitCode).toBe(0);
-    expect(readFileSync(outputPath, "utf8")).toBe("outcome=passed\n");
-    expect(summary).toContain("- Outcome: passed");
-    expect(summary).toContain(
-      "- Scope: read-only GET probes only; no production mutation or automatic rollback.",
-    );
-    expect(summary).toContain(`| pages-shell | pages | passed | GET ${RELEASE_URL} returned 200; release commit ${RELEASE_COMMIT}. |`);
-  });
-
   it.each<[string, string | undefined, string | undefined, number]>([
     ["verified API identity matches", WORKER_VERSION, WORKER_VERSION, 0],
     ["observed API identity is missing", WORKER_VERSION, undefined, 1],

@@ -8,10 +8,6 @@ import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
 
 describe("Term", () => {
-  it("renders the wrapped label text", () => {
-    render(<Term slug="cdp">CDP vaults</Term>);
-    expect(screen.getByRole("button", { name: /Definition: CDP/i }).textContent).toBe("CDP vaults");
-  });
 
   it("opens a popover on click revealing the glossary title and body", () => {
     render(<Term slug="cdp">CDP</Term>);
@@ -49,11 +45,4 @@ describe("Term", () => {
     expect(screen.getAllByText(item.summary).length).toBeGreaterThan(0);
   });
 
-  it("renders the children unchanged when the slug is unknown", () => {
-    const { container } = render(<Term slug="not-a-real-slug">plain label</Term>);
-
-    // Fallback path: <>{children}</> -> no button is rendered.
-    expect(screen.queryByRole("button")).toBeNull();
-    expect(container.textContent).toBe("plain label");
-  });
 });

@@ -364,15 +364,6 @@ function formatYearMonthWithStyle(value: string, monthStyle: "long" | "short"): 
   return new Date(y, m - 1).toLocaleDateString("en-US", { month: monthStyle, year: "numeric" });
 }
 
-/**
- * Format a "YYYY-MM" partial date as the long-form prose month and year
- * (e.g. "2022-05" → "May 2022"). Locale-correct via Intl.DateTimeFormat.
- * Returns the raw value if the input does not match the expected pattern.
- */
-export function formatYearMonth(yearMonth: string): string {
-  return formatYearMonthWithStyle(yearMonth, "long") ?? yearMonth;
-}
-
 /** Format "YYYY-MM" death date as "Jan 2023" */
 export function formatDeathDate(d: string): string {
   const [year, month] = d.split("-");

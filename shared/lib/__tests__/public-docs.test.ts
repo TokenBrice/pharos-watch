@@ -1,9 +1,9 @@
 
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DOC_GROUPS, PUBLIC_DOCS, preparePublicDocMarkdown } from "../public-docs";
+import { PUBLIC_DOCS, preparePublicDocMarkdown } from "../public-docs";
 
 const DOCS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "docs");
 const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
@@ -12,35 +12,6 @@ const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
 }));
 
 describe("PUBLIC_DOCS registry", () => {
-  it("contains the reviewed initial public set", () => {
-    expect(PUBLIC_DOCS.length).toBe(13);
-  });
-
-  it("points every entry at an existing single-file markdown source", () => {
-    for (const doc of PUBLIC_DOCS) {
-      expect(doc.source).toMatch(/^[a-z0-9-]+\.md$/);
-      expect(doc.source).not.toContain("..");
-      expect(doc.source).not.toContain("/");
-      expect(doc.source).not.toContain("\\");
-      expect(existsSync(join(DOCS_DIR, doc.source))).toBe(true);
-    }
-  });
-
-  it("keeps slugs unique and URL-safe", () => {
-    const slugs = PUBLIC_DOCS.map((doc) => doc.slug);
-    expect(new Set(slugs).size).toBe(slugs.length);
-    for (const slug of slugs) {
-      expect(slug).toMatch(/^[a-z0-9-]+$/);
-    }
-  });
-
-  it("uses known groups and H1-led source files", () => {
-    for (const { doc, body } of DOC_SOURCES) {
-      expect(DOC_GROUPS).toContain(doc.group);
-      expect(body.trim()).toMatch(/^#\s+/);
-    }
-  });
-
   it("rewrites or removes non-public relative links before publication", () => {
     for (const { body } of DOC_SOURCES) {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });

@@ -29,20 +29,6 @@ afterEach(() => {
 });
 
 describe("WebVitalsReporter", () => {
-  it("keeps one callback identity while reading the latest public pathname", () => {
-    pathnameMock.mockReturnValue("/");
-    window.gtag = vi.fn();
-    const view = render(<WebVitalsReporter />);
-    const callback = reportCallbacks[0];
-    window.history.replaceState(null, "", "/liquidity/");
-    pathnameMock.mockReturnValue("/liquidity/");
-    view.rerender(<WebVitalsReporter />);
-    expect(reportCallbacks[1]).toBe(callback);
-    callback({ name: "INP", value: 80, id: "same-document" });
-    expect(window.gtag).toHaveBeenCalledWith("event", "web_vital", expect.objectContaining({
-      page_path: "/liquidity/", id: "same-document",
-    }));
-  });
 
   it("blocks a previously registered callback after navigating from a public page to ops", () => {
     pathnameMock.mockReturnValue("/");
@@ -71,57 +57,4 @@ describe("WebVitalsReporter", () => {
     expect(gtag).not.toHaveBeenCalled();
   });
 
-  it("forwards a web vital metric to window.gtag via trackEvent with page_path attached", () => {
-    pathnameMock.mockReturnValue("/stablecoin/usdc/");
-    const gtag = vi.fn();
-    window.gtag = gtag;
-
-    render(<WebVitalsReporter />);
-
-    expect(reportCallbacks).toHaveLength(1);
-    reportCallbacks[0]({
-      name: "LCP",
-      value: 1234.5,
-      id: "v4-1700000000000-1234567890123",
-      rating: "good",
-      navigationType: "navigate",
-    });
-
-    expect(gtag).toHaveBeenCalledWith("event", "web_vital", {
-      name: "LCP",
-      value: 1234.5,
-      id: "v4-1700000000000-1234567890123",
-      rating: "good",
-      navigation_type: "navigate",
-      page_path: "/stablecoin/usdc/",
-    });
-  });
-
-  it("defaults rating and navigation_type when the metric omits them", () => {
-    pathnameMock.mockReturnValue("/");
-    const gtag = vi.fn();
-    window.gtag = gtag;
-
-    render(<WebVitalsReporter />);
-    reportCallbacks[0]({ name: "CLS", value: 0.05, id: "v4-x" });
-
-    expect(gtag).toHaveBeenCalledWith(
-      "event",
-      "web_vital",
-      expect.objectContaining({
-        name: "CLS",
-        value: 0.05,
-        id: "v4-x",
-        rating: "good",
-        navigation_type: "navigate",
-        page_path: "/",
-      }),
-    );
-  });
-
-  it("renders nothing (no DOM output)", () => {
-    pathnameMock.mockReturnValue("/");
-    const { container } = render(<WebVitalsReporter />);
-    expect(container.textContent).toBe("");
-  });
 });

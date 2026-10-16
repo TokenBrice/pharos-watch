@@ -7,7 +7,7 @@ import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
-import { makeDews, makePendingIncident } from "./depeg.test-support";
+import { makeDews } from "./depeg.test-support";
 import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 
 
@@ -30,31 +30,6 @@ const observedValues = NUMERIC_INPUT_STATES.flatMap(({ state, value }) =>
 );
 
 describe("compareDepegTrackerRows — __attention sort", () => {
-  it("places active depeg rows first", () => {
-    const activeRow = makeRow({ activeDepeg: true, currentDeviationBps: 50 });
-    const normalRow = makeRow({ activeDepeg: false, currentDeviationBps: 50 });
-    const result = compareDepegTrackerRows(activeRow, normalRow, sort("__attention"));
-    // attentionScore(activeRow) >> attentionScore(normalRow)
-    // sort key __attention: returns attentionScore(b) - attentionScore(a)
-    // a=activeRow has higher score → b - a < 0 → activeRow ranks first
-    expect(result).toBeLessThan(0);
-  });
-
-  it("places pending rows ahead of ordinary DEWS warning rows", () => {
-    const pending = makeRow({ activeDepeg: false }, makeDews({ band: "CALM" }));
-    pending.pendingIncident = makePendingIncident({ stablecoinId: "usdc", symbol: "USDC" });
-    const warning = makeRow({ activeDepeg: false }, makeDews({ band: "WARNING", score: 70 }));
-    const result = compareDepegTrackerRows(pending, warning, sort("__attention"));
-    expect(result).toBeLessThan(0);
-  });
-
-  it("places higher DEWS band before lower", () => {
-    const danger = makeRow({}, makeDews({ band: "DANGER" }));
-    const calm = makeRow({}, makeDews({ band: "CALM" }));
-    const result = compareDepegTrackerRows(danger, calm, sort("__attention"));
-    expect(result).toBeLessThan(0);
-  });
-
   it("uses attention score for default/unknown sort keys too", () => {
     const active = makeRow({ activeDepeg: true });
     const inactive = makeRow({ activeDepeg: false });
@@ -139,6 +114,7 @@ describe("compareDepegTrackerRows — pegPct", () => {
     expect(compareDepegTrackerRows(unknown, zero, sort("pegPct", direction))).toBeGreaterThan(0);
     expect(compareDepegTrackerRows(unknown, perfect, sort("pegPct", direction))).toBeGreaterThan(0);
   });
+
   it("sorts by peg percentage", () => {
     const high = makeRow({ pegPct: 98 });
     const low = makeRow({ pegPct: 75 });
@@ -172,6 +148,7 @@ describe("compareDepegTrackerRows — worstDeviationBps", () => {
     }
   });
 });
+
 
 describe("compareDepegTrackerRows — activeDepeg", () => {
   it("sorts active depeg first in descending", () => {

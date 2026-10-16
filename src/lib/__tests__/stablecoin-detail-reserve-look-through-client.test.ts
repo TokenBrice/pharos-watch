@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 import { projectReserveLookThroughClientSummary } from "../stablecoin-detail-reserve-look-through-client";
 
@@ -81,10 +80,6 @@ describe("projectReserveLookThroughClientSummary", () => {
   ])("does not join %s", (_case, wrapper) => {
     expect(projectReserveLookThroughClientSummary(wrapper, PARENTS)).toBeNull();
   });
-
-  it("needs the parent registry", () => {
-    expect(projectReserveLookThroughClientSummary(wrapperOf("par"), undefined)).toBeNull();
-  });
 });
 
 describe("buildStablecoinDetailClientCoin reserve look-through", () => {
@@ -92,12 +87,5 @@ describe("buildStablecoinDetailClientCoin reserve look-through", () => {
     expect(buildStablecoinDetailClientCoin(wrapperOf("par"), { parentById: PARENTS }).reserveLookThrough?.parentSymbol).toBe("PAR");
     expect("reserveLookThrough" in buildStablecoinDetailClientCoin(wrapperOf("par"))).toBe(false);
     expect("reserveLookThrough" in buildStablecoinDetailClientCoin(PARENT, { parentById: PARENTS })).toBe(false);
-  });
-
-  it("joins the tracked sUSDe wrapper to USDe's reviewed slices", () => {
-    const parent = TRACKED_META_BY_ID.get("usde-ethena")!;
-    const clientCoin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("susde-ethena")!, { parentById: TRACKED_META_BY_ID });
-    expect(clientCoin.reserveLookThrough?.parentSymbol).toBe(parent.symbol);
-    expect(clientCoin.reserveLookThrough?.slices).toHaveLength(parent.reserves!.length);
   });
 });

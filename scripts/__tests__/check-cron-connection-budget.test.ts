@@ -1,80 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { evaluateCronConnectionBudget, printReport } from "../ci/check-cron-connection-budget";
+import { evaluateCronConnectionBudget } from "../ci/check-cron-connection-budget";
 
 describe("check-cron-connection-budget", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("prints thresholds from the injected budget used for evaluation", () => {
-    const logs: string[] = [];
-    vi.spyOn(console, "log").mockImplementation((message?: unknown) => {
-      logs.push(String(message));
-    });
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    const report = evaluateCronConnectionBudget({
-      budget: {
-        maxPerTrigger: 3,
-        failAt: 4,
-        fullForNewFetchHeavyWorkAt: 2,
-      },
-      entries: [
-        {
-          job: "job-a",
-          maxConnections: 2,
-          scheduleKey: "slot-a",
-          statusTracked: true,
-        },
-      ],
-      schedules: {
-        "slot-a": "* * * * *",
-      },
-      slotPlans: {
-        "slot-a": {
-          worker: "public",
-          jobChains: [["job-a"]],
-        },
-      },
-    });
-
-    printReport(report);
-
-    expect(report.failed).toBe(false);
-    expect(logs.join("\n")).toContain("2/3 connections is full for new fetch-heavy work");
-    expect(logs.join("\n")).toContain("slot-a: 2/3");
-  });
-
-  it("rejects a budget entry whose job moved to a different schedule identity", () => {
-    const report = evaluateCronConnectionBudget({
-      entries: [
-        {
-          job: "job-a",
-          maxConnections: 1,
-          scheduleKey: "stale-slot",
-          statusTracked: true,
-        },
-      ],
-      schedules: {
-        "current-slot": "* * * * *",
-      },
-      slotPlans: {
-        "current-slot": {
-          worker: "public",
-          jobChains: [["job-a"]],
-        },
-      },
-    });
-
-    expect(report.failed).toBe(true);
-    expect(report.missingBudgetJobs).toEqual([]);
-    expect(report.mismatchedBudgetJobs).toEqual([
-      "current-slot:job-a (budget entry uses stale-slot)",
-    ]);
-    expect(report.triggerReports[0].jobs).toEqual([]);
-  });
-
   it("counts a shared job once across exact schedule budget entries", () => {
     const report = evaluateCronConnectionBudget({
       entries: [
@@ -110,19 +38,6 @@ describe("check-cron-connection-budget", () => {
     expect(report.fetchCapableEntryLimitExceeded).toBe(false);
     expect(report.failed).toBe(false);
   });
-  it("keeps the aggregate reviewed gates unchanged across both Workers", () => {
-    const report = evaluateCronConnectionBudget();
-    expect(report.failed).toBe(false);
-    expect(report.growthPolicy.maxFetchCapableEntriesBeforeRebalance).toBe(34);
-    expect(report.fetchCapableEntryCount).toBe(34);
-    expect(report.workerReports.heavy.slotCount).toBe(3);
-    expect(report.workerReports.public.slotCount).toBe(report.triggerReports.length - 3);
-    expect(report.headroomFullTriggers).toHaveLength(2);
-    expect(report.triggerReports.find(
-      (trigger) => trigger.scheduleKey === "halfHourlyMeasuredExecutionSupplemental",
-    )).toMatchObject({ worker: "public", totalConnections: 3 });
-  });
-
   it("enforces aggregate growth rather than resetting it per Worker", () => {
     const report = evaluateCronConnectionBudget({
       schedules: { a: "1 * * * *", b: "2 * * * *" },

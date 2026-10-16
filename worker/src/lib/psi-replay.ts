@@ -23,7 +23,7 @@ export function buildHistoricalDewsMap(rows: PsiHistoricalDewsRow[]): PsiHistori
   return byDay;
 }
 
-export function usesHistoricalStressBreadth(methodologyVersion: string): boolean {
+function usesHistoricalStressBreadth(methodologyVersion: string): boolean {
   return methodologyVersion.startsWith("3.");
 }
 

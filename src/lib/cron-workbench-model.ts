@@ -570,7 +570,7 @@ function formatExactSeconds(durationMs: number): string {
  * ("750ms"), keep the seconds component inside composites ("43m 2s"), and carry
  * an exact-value tooltip label. The shared ladders drop all three.
  */
-export function formatCronDuration(durationMs: number): FormattedCronDuration {
+function formatCronDuration(durationMs: number): FormattedCronDuration {
   const safeDurationMs = Math.max(0, Math.round(durationMs));
   if (safeDurationMs < 1000) {
     return { label: `${safeDurationMs}ms`, exactLabel: formatExactSeconds(safeDurationMs) };

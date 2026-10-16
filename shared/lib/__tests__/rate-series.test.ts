@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  bucketTimestampToUtcDay,
   enumerateDates,
   interpolateRateAtTimestamp,
   mergeDateRates,
@@ -70,11 +69,5 @@ describe("mergeDateRates", () => {
     mergeDateRates(target, "2026-01-01", { eur: 0.91 });
     mergeDateRates(target, "2026-01-01", null);
     expect(target).toEqual({ "2026-01-01": { eur: 0.91 } });
-  });
-});
-
-describe("bucketTimestampToUtcDay", () => {
-  it("rounds down to the UTC day start", () => {
-    expect(bucketTimestampToUtcDay(86_401)).toBe(86_400);
   });
 });

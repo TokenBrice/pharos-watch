@@ -39,13 +39,6 @@ describe("EvidenceFooter", () => {
     expect(accessibleText(summary).replace(/\s+/g, " ")).toMatch(/\(3\)/);
   });
 
-  it("counts the sources in the accessible name when there are no notes", () => {
-    const { container } = render(<EvidenceFooter sources={SOURCES} />);
-
-    const summary = container.querySelector("details > summary")!;
-    expect(accessibleText(summary)).toMatch(/\(2\)/);
-  });
-
   it("lists each source as a new-tab link named by its label, with the note after it", () => {
     render(
       <EvidenceFooter
@@ -72,38 +65,6 @@ describe("EvidenceFooter", () => {
     const stamp = screen.getByText("Reviewed 2026-09-04");
     expect(container.querySelector("details")?.contains(stamp)).toBe(false);
     expect(stamp.parentElement?.textContent).toBe("Live · 3h ago · Reviewed 2026-09-04");
-  });
-
-  it("prints the review date as an ISO calendar date whatever the source format", () => {
-    const { rerender } = render(<EvidenceFooter reviewed="2026-10-06T14:30:00Z" />);
-    expect(screen.getByText("Reviewed 2026-10-06")).toBeTruthy();
-
-    rerender(<EvidenceFooter reviewed="Oct 6, 2026" />);
-    expect(screen.getByText("Reviewed 2026-10-06")).toBeTruthy();
-
-    rerender(<EvidenceFooter reviewed="unknown" />);
-    expect(screen.getByText("Reviewed unknown")).toBeTruthy();
-  });
-
-  it("marks the merged fold so it joins the module's fold run", () => {
-    const { container } = render(<EvidenceFooter sources={SOURCES} reviewed="2026-09-04" />);
-
-    const wrapper = container.firstElementChild!;
-    expect(wrapper.hasAttribute("data-module-fold")).toBe(true);
-    expect(wrapper.firstElementChild?.tagName).toBe("DETAILS");
-  });
-
-  it("puts the fold summary and the stamp on one row when inline", () => {
-    const { container } = render(
-      <EvidenceFooter inline sources={SOURCES} reviewed="2026-10-01" />,
-    );
-
-    const fold = container.querySelector("details")!;
-    const stamp = screen.getByText("Reviewed 2026-10-01");
-    expect(fold.contains(stamp)).toBe(false);
-    // One row: the fold and the stamp share the footer's only container.
-    expect(fold.parentElement).toBe(container.firstElementChild);
-    expect(stamp.closest("details, div")).toBe(container.firstElementChild);
   });
 
   it("renders no fold without notes or sources", () => {

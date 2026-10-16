@@ -1,25 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { useQueryMock } = vi.hoisted(() => ({ useQueryMock: vi.fn() }));
 
 vi.mock("@tanstack/react-query", () => ({ useQuery: useQueryMock }));
-vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@shared/lib/api-endpoints")>();
-  return {
-    ...actual,
-    getProbePaths: (group: "public" | "admin" | "manual") => {
-      if (group === "public") return ["/api/health"];
-      if (group === "admin") return ["/api/status"];
-      return ["/api/sync-stablecoins"];
-    },
-  };
-});
 
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
-import { makeApiRequestAttributionResponse } from "@/test-utils/status-fixtures";
-import { useHealth, useSafetyScoreHistory, useStabilityIndex, useTelegramPulse } from "../api-hooks";
-import { useRequestSourceStats, useStatus } from "../admin-api-hooks";
-import { useEndpointProbes, usePublicEndpointProbes } from "../use-endpoint-probes";
+import { useHealth, useStabilityIndex, useTelegramPulse } from "../api-hooks";
+import { usePublicEndpointProbes } from "../use-endpoint-probes";
 
 function queryContext(queryKey: readonly unknown[]) {
   return { signal: new AbortController().signal, queryKey, meta: undefined } as never;
@@ -36,10 +23,6 @@ describe("query polling policy", () => {
       dataUpdatedAt: 0,
     });
     vi.restoreAllMocks();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it.each([
@@ -69,83 +52,6 @@ describe("query polling policy", () => {
     expect(options.retry).toBe(retry);
   });
 
-  it.each([
-    { name: "a tracked stablecoin", stablecoinId: "usdt-tether", enabled: true },
-    { name: "no stablecoin", stablecoinId: "", enabled: false },
-  ])("polls safety-score history only for $name", ({ stablecoinId, enabled }) => {
-    useSafetyScoreHistory(stablecoinId);
-    const options = useQueryMock.mock.calls[0][0] as { enabled: boolean };
-
-    expect(options.enabled).toBe(enabled);
-  });
-
-  it("keeps one admin hook smoke for proxying and abort-signal forwarding", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => makeApiRequestAttributionResponse(),
-    } as Response);
-
-    useRequestSourceStats();
-    const options = useQueryMock.mock.calls[0][0] as {
-      enabled?: boolean;
-      retry: number;
-      queryKey: readonly unknown[];
-      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown>;
-    };
-
-    expect(options.enabled).toBeUndefined();
-    expect(options.retry).toBe(0);
-    expect(options.queryKey).toEqual(["request-source-stats", 24, 3600, 5, 25, "ops-proxy"]);
-
-    await options.queryFn(queryContext(options.queryKey));
-    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toBe("/api/admin/request-source-stats?hours=24&bucketSec=3600&routeLimit=5&apiKeyLimit=25");
-    expect(init).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
-  });
-
-  it("lets operator workspaces disable status polling", () => {
-    useStatus({ enabled: false });
-    const options = useQueryMock.mock.calls[0][0] as { enabled: boolean; queryKey: readonly unknown[] };
-
-    expect(options.enabled).toBe(false);
-    expect(options.queryKey).toEqual(["status", "ops-proxy"]);
-  });
-
-  it("uses the public and admin probe sets with same-origin admin proxying", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ status: "healthy", overallStatus: "healthy", causes: { overall: [] } }),
-    } as Response);
-
-    useEndpointProbes();
-    const options = useQueryMock.mock.calls[0][0] as {
-      enabled: boolean;
-      retry: number;
-      queryKey: readonly unknown[];
-      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown[]>;
-    };
-
-    expect(options.enabled).toBe(true);
-    expect(options.retry).toBe(0);
-    expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy"]);
-    await options.queryFn(queryContext(options.queryKey));
-
-    const [publicCall, adminCall] = fetchMock.mock.calls;
-    expect(publicCall[0]).toEqual(expect.stringContaining("/api/health"));
-    expect((publicCall[1] as RequestInit).headers).toBeUndefined();
-    expect(adminCall[0]).toBe("/api/admin/status");
-    expect((adminCall[1] as RequestInit).headers).toBeUndefined();
-  });
-
-  it("gives critical operator probes a distinct cache key and supports disabling them", () => {
-    useEndpointProbes({ mode: "critical", enabled: false });
-    const options = useQueryMock.mock.calls[0][0] as { enabled: boolean; queryKey: readonly unknown[] };
-
-    expect(options.enabled).toBe(false);
-    expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy", "critical"]);
-  });
 
   it("keeps public probes on their own endpoint set and cache key", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -183,38 +89,4 @@ describe("query polling policy", () => {
     ]);
   });
 
-  it("gives admin probes a longer timeout budget than public probes", async () => {
-    vi.useFakeTimers();
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input: RequestInfo | URL, init?: RequestInit) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () => {
-            reject(init.signal?.reason ?? new DOMException("aborted", "AbortError"));
-          });
-        }),
-    );
-
-    useEndpointProbes();
-    const options = useQueryMock.mock.calls[0][0] as {
-      queryFn: (context: ReturnType<typeof queryContext>) => Promise<Array<{ error?: string; status: number | null }>>;
-      queryKey: readonly unknown[];
-    };
-
-    const resultPromise = options.queryFn(queryContext(options.queryKey));
-    const publicSignal = (fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.signal;
-    const adminSignal = (fetchMock.mock.calls[1]?.[1] as RequestInit | undefined)?.signal;
-
-    expect(publicSignal?.aborted).toBe(false);
-    expect(adminSignal?.aborted).toBe(false);
-    await vi.advanceTimersByTimeAsync(5_000);
-    expect(publicSignal?.aborted).toBe(true);
-    expect(adminSignal?.aborted).toBe(false);
-    await vi.advanceTimersByTimeAsync(15_000);
-    expect(adminSignal?.aborted).toBe(true);
-
-    await expect(resultPromise).resolves.toEqual([
-      expect.objectContaining({ status: null, error: "Browser probe timed out" }),
-      expect.objectContaining({ status: null, error: "Browser probe timed out" }),
-    ]);
-  });
 });

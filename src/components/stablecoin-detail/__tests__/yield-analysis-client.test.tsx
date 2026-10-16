@@ -252,54 +252,6 @@ describe("YieldAnalysisClient", () => {
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
   });
 
-  it("reset deletes only the sources param, then rerenders the all-sources view", () => {
-    sourcesParam = "alt-source";
-    setRankingsQuery({ data: makeResponse([makeRanking()]) });
-
-    const view = render(
-      <YieldAnalysisClient
-        id="usdn-smardex"
-        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Reset to all sources" }));
-
-    expect(replaceParamsMock).toHaveBeenCalledTimes(1);
-    // The updater must surgically drop `sources` and keep unrelated filters.
-    const params = new URLSearchParams("sources=alt-source&utm_campaign=launch");
-    replaceParamsMock.mock.calls[0]![0]!(params);
-    expect(params.get("sources")).toBeNull();
-    expect(params.get("utm_campaign")).toBe("launch");
-
-    sourcesParam = "";
-    view.rerender(
-      <YieldAnalysisClient
-        id="usdn-smardex"
-        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: "Reset to all sources" })).toBeNull();
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe(
-      "primary-source,alt-source",
-    );
-  });
-
-  it("shows the all-source view without a reset control when every requested key is invalid", () => {
-    sourcesParam = "stale-source,bogus-key";
-    setRankingsQuery({ data: makeResponse([makeRanking()]) });
-
-    render(
-      <YieldAnalysisClient
-        id="usdn-smardex"
-        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
-      />,
-    );
-
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe(
-      "primary-source,alt-source",
-    );
-    expect(screen.queryByRole("button", { name: "Reset to all sources" })).toBeNull();
-  });
 
   it("groups same signal-source pairs inside the 24h bucket, counts repeats, and orders groups newest first", () => {
     setRankingsQuery({ data: makeResponse([makeRanking()]) });

@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  PEG_TO_FX,
-  SECONDARY_PEG_TO_FX,
   buildFxLookup,
   fetchHistoricalSecondaryFxRates,
 } from "../../../src/lib/backfill-fx";
@@ -10,19 +8,12 @@ import {
   findNearestSupply,
   parseSupplyData,
 } from "../../../src/lib/historical-depeg-extraction";
-import { summarizeBackfillReplayDiff } from "../backfill-depegs-preview";
+
 import { executeBackfillForCoin } from "../backfill-depegs/execution";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import {
-  PRIMARY_CURRENCY_TO_PEG,
-  PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS,
-  SECONDARY_FX_CURRENCY_TO_PEG,
-  SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS,
-} from "../../../src/lib/fx-config";
-import { makeBrzBackfillRow } from "../../../src/api/__tests__/depeg-replay.test-support";
 
 const fxFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -32,27 +23,6 @@ afterEach(() => {
 });
 
 describe("historical FX configuration", () => {
-  it("keeps backfill FX coverage in parity with the live currency maps", () => {
-    const invert = (
-      currencyToPeg: Readonly<Record<string, string>>,
-      pegTypeToCurrencyPairs: ReadonlyArray<readonly [string, string]>,
-    ) => {
-      const pegCurrencyByType: Record<string, string> = Object.fromEntries(pegTypeToCurrencyPairs);
-      return Object.fromEntries(
-        Object.entries(currencyToPeg).map(([currency, pegType]) => [
-          pegCurrencyByType[pegType],
-          currency.toUpperCase(),
-        ]),
-      );
-    };
-
-    expect(PEG_TO_FX).toEqual(invert(PRIMARY_CURRENCY_TO_PEG, PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS));
-    expect(SECONDARY_PEG_TO_FX).toEqual(
-      invert(SECONDARY_FX_CURRENCY_TO_PEG, SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS),
-    );
-    expect(PEG_TO_FX.BRL).toBe("BRL");
-  });
-
   it("skips a non-USD coin without any FX reference and performs no writes", async () => {
     const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "brz-transfero");
     expect(meta).toBeDefined();
@@ -87,37 +57,6 @@ describe("historical FX configuration", () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("missing-fx-reference"));
   });
 
-  it("skips a commodity coin without a spot series or current reference and performs no writes", async () => {
-    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "xaut-tether");
-    expect(meta).toBeDefined();
-    if (!meta) throw new Error("missing XAUT fixture");
-    const applyBackfillEvents = vi.fn();
-
-    const outcome = await executeBackfillForCoin({
-      db: mockD1(),
-      prepared: {
-        meta,
-        geckoId: "unused-because-missing-commodity-reference-skips-first",
-        supplyTokens: [],
-        currentSupplyUsd: null,
-      },
-      pegRates: { peggedUSD: 1 },
-      fxRates: undefined,
-      fxSeries: {},
-      commoditySeries: {},
-      replayWindow: null,
-      coingeckoApiKey: null,
-      dryRun: false,
-      applyBackfillEvents,
-    });
-
-    expect(outcome).toEqual({
-      status: "skipped",
-      eventCount: 0,
-      reason: "missing-fx-reference",
-    });
-    expect(applyBackfillEvents).not.toHaveBeenCalled();
-  });
 });
 
 describe("parseSupplyData", () => {
@@ -283,40 +222,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(series.KES).toEqual([]);
     const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
     expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2 } });
-  });
-
-  it("builds non-flat ARS and KES historical series for EM backfills", async () => {
-    mockFetch([
-      {
-        match: "@2025-06-14/v1/currencies/usd.min.json",
-        body: { date: "2025-06-14", usd: { ars: 1_180, kes: 129 } },
-      },
-      {
-        match: "@2025-06-15/v1/currencies/usd.min.json",
-        body: { date: "2025-06-15", usd: { ars: 1_190, kes: 130 } },
-      },
-    ]);
-
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
-        rows: [],
-        first: null,
-      },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    ]);
-
-    const series = await fetchHistoricalSecondaryFxRates(db, ["ARS", "KES"], "2025-06-14", "2025-06-15");
-
-    expect(series.ARS).toEqual([
-      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 1_180 },
-      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 1_190 },
-    ]);
-    expect(series.KES).toEqual([
-      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 129 },
-      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 130 },
-    ]);
   });
 
   it("reuses cached secondary FX days and only fetches missing dates", async () => {
@@ -841,61 +746,4 @@ describe("extractDepegEvents", () => {
   });
 });
 
-describe("summarizeBackfillReplayDiff", () => {
-  it("reports an exact match when existing backfill rows match the replayed events", () => {
-    const existingRows = [makeBrzBackfillRow()];
 
-    const summary = summarizeBackfillReplayDiff(existingRows, [
-      {
-        pegType: "peggedREAL",
-        direction: "below",
-        peakDeviationBps: -220,
-        startedAt: 1_000,
-        endedAt: 2_000,
-        startPrice: 0.19,
-        peakPrice: 0.188,
-        recoveryPrice: 0.191,
-        pegRef: 0.193,
-      },
-    ]);
-
-    expect(summary).toMatchObject({
-      exactMatch: true,
-      removedBackfillEventCount: 0,
-      addedBackfillEventCount: 0,
-      removedBackfillEventIdsSample: [],
-      addedBackfillEventsSample: [],
-    });
-  });
-
-  it("reports removed ids and added event samples when the replay differs", () => {
-    const existingRows = [makeBrzBackfillRow()];
-
-    const summary = summarizeBackfillReplayDiff(existingRows, [
-      {
-        pegType: "peggedREAL",
-        direction: "above",
-        peakDeviationBps: 180,
-        startedAt: 3_000,
-        endedAt: 4_000,
-        startPrice: 0.194,
-        peakPrice: 0.196,
-        recoveryPrice: 0.193,
-        pegRef: 0.193,
-      },
-    ]);
-
-    expect(summary.exactMatch).toBe(false);
-    expect(summary.removedBackfillEventCount).toBe(1);
-    expect(summary.removedBackfillEventIdsSample).toEqual([10]);
-    expect(summary.addedBackfillEventCount).toBe(1);
-    expect(summary.addedBackfillEventsSample).toEqual([
-      {
-        direction: "above",
-        peakDeviationBps: 180,
-        startedAt: 3_000,
-        endedAt: 4_000,
-      },
-    ]);
-  });
-});

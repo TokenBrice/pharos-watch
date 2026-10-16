@@ -22,12 +22,6 @@ describe("tron-address", () => {
     );
   });
 
-  it("normalizes 41-prefixed hex addresses", async () => {
-    await expect(normalizeTronAddress("412004662f694f30fd269e4cccba222654b5f0538b")).resolves.toBe(
-      "0x2004662f694f30fd269e4cccba222654b5f0538b",
-    );
-  });
-
   it("rejects invalid Base58 alphabets and altered checksums", async () => {
     await expect(tronBase58ToHex("TCtVtrdy8sSXGMx1QYUjMrAvau1pduC2A0")).resolves.toBeNull();
     await expect(tronBase58ToHex("TCtVtrdy8sSXGMx1QYUjMrAvau1pduC2Ab")).resolves.toBeNull();

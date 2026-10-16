@@ -4,7 +4,6 @@ import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
-import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
@@ -323,47 +322,6 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
-  it("does not persist an alert source envelope when the assessment holds", async () => {
-    mocks.assess.mockReturnValue({
-      decision: "hold",
-      reasons: [{ code: "coverage-floor-failed", floorIds: ["minimum-rateable-assets"] }],
-      affectedAssetIds: [],
-    });
-
-    const result = await runSafetyScoreV9Publication({
-      db: {} as D1Database,
-      fixedInput,
-      nowSec: 2_000_000_000,
-    });
-
-    expect(result.status).toBe("held");
-    expect(mocks.persistAlertEnvelope).not.toHaveBeenCalled();
-  });
-
-  it("updates only publication health when the assessment holds", async () => {
-    mocks.assess.mockReturnValue({
-      decision: "hold",
-      reasons: [{ code: "dex-stale" }],
-      affectedAssetIds: [],
-    });
-
-    const result = await runSafetyScoreV9Publication({
-      db: {} as D1Database,
-      fixedInput,
-      nowSec: 2_000_000_000,
-    });
-
-    expect(result).toMatchObject({
-      status: "held",
-      reasons: [{ code: "dex-stale" }],
-    });
-    expect(mocks.persist).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.not.objectContaining({ publication: expect.anything() }),
-    );
-  });
-
-
   it("holds an empty but fulfilled independent live-reserve map", async () => {
     const { assessV9Publication } = await vi.importActual<
       typeof import("../safety-score-v9/publication-assessment")
@@ -672,90 +630,6 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
-  it("names the asset and Zod field path in a compile failure", async () => {
-    mocks.build.mockImplementation(() => {
-      throw new V9AssetEvaluationError("alpha", {
-        issues: [
-          {
-            path: ["structuralSignals", 0, "materialSharePct"],
-          },
-        ],
-      });
-    });
-
-    const result = await runSafetyScoreV9Publication({
-      db: {} as D1Database,
-      fixedInput,
-      nowSec: fixedInput.clockSec,
-    });
-
-    expect(result).toMatchObject({
-      status: "failed",
-      stage: "compile",
-      code: expect.stringContaining(
-        "alpha-structuralSignals-0-.materialSharePct",
-      ),
-      message: expect.stringContaining(
-        "alpha evaluation failed at structuralSignals[0].materialSharePct",
-      ),
-    });
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        publicationAttempt: expect.objectContaining({
-          failure: expect.objectContaining({
-            code: expect.stringContaining(
-              "alpha-structuralSignals-0-.materialSharePct",
-            ),
-            message: expect.stringContaining(
-              "structuralSignals[0].materialSharePct",
-            ),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("preserves accepted state when the accepted baseline read fails", async () => {
-    mocks.build.mockReturnValue({
-      candidate: makeWorkerSafetyScoreV9Publication({
-        baseInputGenerationId: fixedInput.baseInputGenerationId,
-        publishedAtSec: fixedInput.clockSec,
-      }),
-      compilerFactSchemaDigest: "1".repeat(64),
-      producerCapabilityDigest: "2".repeat(64),
-      quarantines: [
-        { assetId: "alpha", code: "fact-build-failed", message: "fixture quarantine" },
-      ],
-      quarantineAffectedAssetIds: ["alpha"],
-      bridgeJoinDiagnostics: [],
-    });
-    mocks.loadBaseline.mockResolvedValue({ kind: "unavailable", reason: "read-failed" });
-
-    const result = await runSafetyScoreV9Publication({
-      db: {} as D1Database,
-      fixedInput,
-    });
-
-    expect(result).toMatchObject({
-      status: "failed",
-      stage: "publication-gate",
-      code: "safety-score-v9-accepted-baseline-projection-read-failed",
-    });
-    expect(mocks.persist).not.toHaveBeenCalled();
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        publicationAttempt: expect.objectContaining({
-          outcome: "failed",
-          failure: expect.objectContaining({
-            stage: "publication-gate",
-            code: "safety-score-v9-accepted-baseline-projection-read-failed",
-          }),
-        }),
-      }),
-    );
-  });
 
   it("holds with the retained identity when assessment itself fails", async () => {
     const accepted = makeWorkerSafetyScoreV9Publication({

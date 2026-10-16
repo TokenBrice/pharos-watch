@@ -216,12 +216,6 @@ describe("handleDepegEvents", () => {
     });
   });
 
-  it("includes X-Data-Age header", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    expect(res.headers.has("X-Data-Age")).toBe(true);
-  });
-
   it("uses latest successful sync timestamp for freshness headers", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));

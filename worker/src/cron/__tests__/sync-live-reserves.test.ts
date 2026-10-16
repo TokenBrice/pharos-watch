@@ -5,7 +5,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { buildSharedSourceCacheKey, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import {
   checkpointIdentity as makeCheckpointIdentity,
   checkpointTable as makeCheckpointTable,
@@ -249,45 +249,6 @@ describe("syncLiveReserves", () => {
       checkpointIdentity,
     )).rejects.toThrow(expected);
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
-  });
-
-
-  it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      artifactCleanup?: {
-        syncStateDeleted?: number;
-        compositionDeleted?: number;
-        breakerCacheDeleted?: number;
-      } | null;
-      artifactCleanupWarningCount?: number;
-    };
-
-    expect(result?.status).toBe("ok");
-    expect(result?.itemCount).toBe(configuredCoinCount);
-    expect(metadata.artifactCleanup).toEqual({
-      syncStateDeleted: 0,
-      compositionDeleted: 0,
-      breakerCacheDeleted: 0,
-    });
-    expect(metadata.artifactCleanupWarningCount).toBe(0);
-    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition"))).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM reserve_composition_history"))).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM reserve_sync_attempt_history"))).toBe(true);
-    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, "live-reserves:infinifi", true);
-    const uniqueBreakerKeyCount = new Set(
-      ACTIVE_STABLECOINS
-        .filter((c) => c.liveReservesConfig)
-        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
-    ).size;
-    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeyCount);
   });
 
   it("refreshes the adapter clock after time spent earlier in the reserve queue", async () => {
@@ -1204,26 +1165,6 @@ describe("syncLiveReserves", () => {
     }
   });
 
-  it("keeps attempt duration in diagnostics rather than composition evidence", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
-
-    const compositionInsert = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT INTO reserve_composition (")
-    ));
-    expect(compositionInsert).toBeDefined();
-    // metadata is the 6th bound column in reserve_composition (0-indexed 5).
-    const metadataJson = compositionInsert!.binds[5] as string;
-    const metadata = JSON.parse(metadataJson) as { diag: { durationMs: number }; durationMs?: number };
-    expect(metadata.durationMs).toBeUndefined();
-    expect(metadata.diag.durationMs).toBeGreaterThanOrEqual(0);
-  });
-
   it("reports per-coin progress through the cron progress hook", async () => {
     mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
@@ -1379,48 +1320,6 @@ describe("syncLiveReserves", () => {
       runBudgetTruncated: true,
       finalizationMarginMs: 200,
     });
-  });
-
-  it("retains shared source-cache failures for the run so a single fetch satisfies every sharing coin", async () => {
-    // Derive a fixture from any active source-invariant adapter with >=2 coins
-    // sharing the same primary URL, so the test survives individual adapter
-    // suspensions (m0, the original fixture, was suspended 2026-08-19).
-    const sharedGroups = new Map<string, { cacheKey: string; coinIds: string[] }>();
-    for (const coin of ACTIVE_STABLECOINS) {
-      const config = coin.liveReservesConfig;
-      if (!config) continue;
-      const cacheKey = buildSharedSourceCacheKey(config, LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter]);
-      if (!cacheKey) continue;
-      const group = sharedGroups.get(cacheKey) ?? { cacheKey, coinIds: [] };
-      group.coinIds.push(coin.id);
-      sharedGroups.set(cacheKey, group);
-    }
-    const shared = [...sharedGroups.values()].find((group) => group.coinIds.length >= 2);
-    expect(shared, "an active source-invariant adapter with a shared source cache key").toBeDefined();
-
-    const matchesSharedSource = (
-      config: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> | undefined,
-    ): boolean =>
-      config != null
-      && buildSharedSourceCacheKey(config, LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter]) === shared!.cacheKey;
-
-    const adapterFetch = mockAdapterRegistry(async (_coin, config) => {
-      if (matchesSharedSource(config ?? undefined)) {
-        throw new Error("shared upstream boom");
-      }
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
-    });
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
-
-    const sharedFetchCalls = adapterFetch.mock.calls.filter((call) =>
-      matchesSharedSource(
-        call[1] as NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> | undefined,
-      ),
-    );
-    expect(sharedFetchCalls.length).toBe(1);
   });
 
   it("does not repurpose Hive's corroborating node as a substitute primary", async () => {

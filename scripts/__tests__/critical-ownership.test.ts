@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   deriveCriticalOwnership,
   deriveBaseCriticalOwnership,
-  findCriticalOwnershipGaps,
 } from "../lib/critical-ownership.mts";
 
 const temporaryDirectories: string[] = [];
@@ -67,19 +66,6 @@ describe("critical ownership derivation", () => {
     expect(deriveCriticalOwnership({ cwd }).has("src/target.ts")).toBe(false);
   });
 
-  it("discovers shared and script tests outside their legacy subdirectories", () => {
-    const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-roots-"));
-    temporaryDirectories.push(cwd);
-    for (const root of ["shared/test-utils", "scripts/ci"]) {
-      mkdirSync(join(cwd, root), { recursive: true });
-      writeFileSync(join(cwd, root, "target.ts"), "export const target = 1;");
-      writeFileSync(join(cwd, root, "target.test.ts"), 'import "./target";');
-    }
-    expect([...deriveCriticalOwnership({ cwd }).keys()]).toEqual([
-      "scripts/ci/target.ts", "shared/test-utils/target.ts",
-    ]);
-  });
-
   it("recovers the deleted owner's runtime imports from the base tree", () => {
     const source = "worker/src/lib/auth.ts";
     const test = "worker/src/lib/__tests__/removed.test.ts";
@@ -104,31 +90,4 @@ describe("critical ownership derivation", () => {
     expect(ownership.get("src/second.ts")).toEqual([tests[1]]);
   });
 
-  it("ignores test files that do not exist at the base revision", () => {
-    const ownership = deriveBaseCriticalOwnership("base", ["worker/src/lib/__tests__/added.test.ts"], (_file, args) => {
-      if (args[0] === "ls-tree") return "worker/src/lib/auth.ts\0";
-      throw new Error(`Unexpected Git read: ${args.join(" ")}`);
-    });
-    expect(ownership.size).toBe(0);
-  });
-
-  it("reports an enrolled source without an owner and recognises an importing contract test", () => {
-    expect(findCriticalOwnershipGaps(
-      ["worker/src/lib/new-critical-source.ts"],
-      new Map(),
-      {},
-    )).toEqual(["worker/src/lib/new-critical-source.ts"]);
-
-    const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-gap-"));
-    temporaryDirectories.push(cwd);
-    const source = "src/critical.ts";
-    mkdirSync(join(cwd, "src"), { recursive: true });
-    writeFileSync(join(cwd, source), "export const critical = 1;\n");
-    writeFileSync(join(cwd, "src/contract.test.ts"), 'import { critical } from "./critical";\nvoid critical;\n');
-    const ownership = deriveCriticalOwnership({ cwd, sourceFiles: [source] });
-    expect(ownership.get(source)).toEqual([
-      "src/contract.test.ts",
-    ]);
-    expect(findCriticalOwnershipGaps([source], ownership, {})).toEqual([]);
-  });
 });

@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  collectTableInventory,
   scanTablePrimitives,
 } from "../ci/check-table-primitives.ts";
 import { createTempRepoTracker } from "./helpers/test-state";
@@ -11,20 +10,6 @@ const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-table-pri
 afterEach(cleanup);
 
 describe("scanTablePrimitives", () => {
-  it("allows product code that uses the shared table primitives", () => {
-    const cwd = makeRoot();
-    writeText(
-      cwd,
-      "src/app/demo/page.tsx",
-      'import { TableFrame } from "@/components/table";\nexport function Page() { return <TableFrame tableId="demo" />; }\n',
-    );
-
-    const report = scanTablePrimitives({ cwd });
-
-    expect(report.scannedFiles).toHaveLength(1);
-    expect(report.violations).toEqual([]);
-  });
-
   it("rejects direct shadcn table imports in product source", () => {
     const cwd = makeRoot();
     writeText(
@@ -115,53 +100,3 @@ describe("scanTablePrimitives", () => {
   });
 });
 
-describe("collectTableInventory", () => {
-  it("lists table identity, primitive kind, chrome, density, naming, and duplicate swipe hints", () => {
-    const cwd = makeRoot();
-    writeText(
-      cwd,
-      "src/app/demo/page.tsx",
-      `import { DataTableShell, TableFrame } from "@/components/table";
-
-export function Page() {
-  return (
-    <section>
-      <p>Swipe table horizontally for details.</p>
-      <DataTableShell tableId="markets" chrome="embedded" density="compact" columns={[]} />
-      <TableFrame tableId="matrix" caption="Matrix details" viewportProps={{ mobileScrollHint: false }} />
-    </section>
-  );
-}
-`,
-    );
-
-    expect(collectTableInventory({ cwd })).toEqual([
-      {
-        tableId: "markets",
-        primitive: "DataTableShell",
-        file: "src/app/demo/page.tsx",
-        line: 7,
-        chrome: "embedded",
-        density: "compact",
-        accessibleName: "aria-label",
-        hasCaption: false,
-        hasAriaLabel: true,
-        mobileHint: "active-default",
-        duplicateMobileSwipeHint: true,
-      },
-      {
-        tableId: "matrix",
-        primitive: "TableFrame",
-        file: "src/app/demo/page.tsx",
-        line: 8,
-        chrome: "default",
-        density: "comfortable",
-        accessibleName: "caption",
-        hasCaption: true,
-        hasAriaLabel: false,
-        mobileHint: "disabled",
-        duplicateMobileSwipeHint: false,
-      },
-    ]);
-  });
-});

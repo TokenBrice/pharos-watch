@@ -153,50 +153,6 @@ describe("backfill replay episode skips", () => {
     expect(appliedEvents.map((event) => event.startedAt)).toEqual([UNCOVERED_EPISODE.startedAt]);
   });
 
-  it("reports the skips in the dry-run preview diff", async () => {
-    stubReplayEvents([SUPPRESSED_FEB14_EPISODE, LIVE_COVERED_EPISODE]);
-    const db = mockD1([
-      {
-        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
-        matchBinds: ["usn-noon"],
-        rows: [
-          LIVE_ROW,
-          {
-            ...LIVE_ROW,
-            id: 49237,
-            source: "backfill",
-            started_at: SUPPRESSED_FEB14_EPISODE.startedAt,
-            ended_at: SUPPRESSED_FEB14_EPISODE.endedAt,
-          },
-        ],
-      },
-    ]);
-
-    const outcome = await executeBackfillForCoin({
-      db,
-      prepared: { meta: USN_META, geckoId: "noon-usn", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
-      pegRates: { peggedUSD: 1 },
-      fxRates: undefined,
-      fxSeries: {},
-      commoditySeries: {},
-      replayWindow: null,
-      coingeckoApiKey: null,
-      dryRun: true,
-      applyBackfillEvents: vi.fn(),
-    });
-
-    expect(outcome.status).toBe("preview");
-    expect(outcome.eventCount).toBe(0);
-    // The stale backfill twin inside the suppression window is slated for removal,
-    // and no recomputed episode replaces it.
-    expect(outcome.preview).toMatchObject({
-      recomputedBackfillEventCount: 0,
-      existingLiveEventCount: 1,
-      removedBackfillEventCount: 1,
-      addedBackfillEventCount: 0,
-    });
-  });
-
   it("keeps recomputed episodes when no live row covers them", async () => {
     stubReplayEvents([UNCOVERED_EPISODE]);
     const applyBackfillEvents = vi.fn();

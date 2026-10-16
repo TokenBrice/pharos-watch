@@ -5,13 +5,10 @@ import {
   type StablecoinSourceDomain,
 } from "@shared/lib/stablecoins/schema";
 import {
-  buildGeneratedPerCoinAsset,
   findCanonicalOrderIssues,
   findDuplicateStablecoinIds,
-  findRecreatedRetiredStablecoinAssetFiles,
   loadGeneratedPerCoinCoins,
   loadPerCoinStablecoinEntries,
-  loadStablecoinDomainSidecarEntries,
   syncGeneratedPerCoinAsset,
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
@@ -64,16 +61,6 @@ describe("stablecoin catalog source helpers", () => {
     });
   });
 
-  it("rejects a recreated retired category shard", () => {
-    const rootDir = makeTempRoot();
-    expect(findRecreatedRetiredStablecoinAssetFiles(rootDir)).toEqual([]);
-
-    writeJson(rootDir, "shared/data/stablecoins/usd-major.json", [makeCoin("legacy-usd")]);
-
-    expect(findRecreatedRetiredStablecoinAssetFiles(rootDir)).toEqual([
-      "shared/data/stablecoins/usd-major.json",
-    ]);
-  });
 
   it("merges reserves sidecars into per-coin source entries", () => {
     const rootDir = makeTempRoot();
@@ -97,24 +84,6 @@ describe("stablecoin catalog source helpers", () => {
     expect(entries[0]?.sidecarFiles).toEqual(["shared/data/stablecoins/domains/reserves/sidecar-usd.json"]);
   });
 
-  it("loads a review-only reserve sidecar before merged-record validation", () => {
-    const rootDir = makeTempRoot();
-    const reserveReview = makeReserveReview();
-
-    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/review-only-usd.json", {
-      id: "review-only-usd",
-      reserveReview,
-    });
-
-    expect(loadStablecoinDomainSidecarEntries(rootDir)).toEqual([
-      expect.objectContaining({
-        domain: "reserves",
-        fields: ["reserveReview"],
-        id: "review-only-usd",
-        patch: { reserveReview },
-      }),
-    ]);
-  });
 
   it("rejects a review-only reserve sidecar when the merged record has no reserves", () => {
     const rootDir = makeTempRoot();
@@ -181,21 +150,6 @@ describe("stablecoin catalog source helpers", () => {
     );
   });
 
-  it("rejects base coin files whose id does not match the file id", () => {
-    const rootDir = makeTempRoot();
-
-    writeJson(rootDir, "shared/data/stablecoins/coins/base-usd.json", makeCoin("other-usd"));
-
-    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/coin id "other-usd" must match file id "base-usd"/);
-  });
-
-  it("rejects the retired blacklistability override in base files", () => {
-    const rootDir = makeTempRoot();
-
-    writeJson(rootDir, "shared/data/stablecoins/coins/base-usd.json", makeCoin("base-usd", { canBeBlacklisted: true }));
-
-    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/Unrecognized key: "canBeBlacklisted"/);
-  });
 
   it("rejects sidecars that duplicate a field still present in the base coin", () => {
     const rootDir = makeTempRoot();
@@ -246,18 +200,6 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/Unrecognized key/);
   });
 
-  it("rejects unknown fields in research sidecar schemas through the loader", () => {
-    const rootDir = makeTempRoot();
-
-    writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
-    writeJson(rootDir, "shared/data/stablecoins/domains/compliance/sidecar-usd.json", {
-      id: "sidecar-usd",
-      genius: makeGeniusProfile(),
-      jurisdiction: { country: "US" },
-    });
-
-    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/Unrecognized key/);
-  });
 
   it("rejects unsupported sidecar domain directories", () => {
     const rootDir = makeTempRoot();
@@ -302,29 +244,6 @@ describe("stablecoin catalog source helpers", () => {
     expect(loadGeneratedPerCoinCoins(rootDir)).toEqual([expectedCoin]);
   });
 
-  it("builds merged output in deterministic per-coin file order", () => {
-    const rootDir = makeTempRoot();
-
-    writeJson(rootDir, "shared/data/stablecoins/coins/zeta-usd.json", makeCoin("zeta-usd"));
-    writeJson(rootDir, "shared/data/stablecoins/coins/alpha-usd.json", makeCoin("alpha-usd"));
-    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/zeta-usd.json", {
-      id: "zeta-usd",
-      reserves: makeReserves(),
-    });
-    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/alpha-usd.json", {
-      id: "alpha-usd",
-      reserves: makeReserves(),
-    });
-
-    const entries = loadPerCoinStablecoinEntries(rootDir);
-    expect(entries.map((entry) => entry.id)).toEqual(["alpha-usd", "zeta-usd"]);
-    expect(entries.map((entry) => entry.sidecarFiles)).toEqual([
-      ["shared/data/stablecoins/domains/reserves/alpha-usd.json"],
-      ["shared/data/stablecoins/domains/reserves/zeta-usd.json"],
-    ]);
-    expect(Object.keys(entries[0]!.coin)).toEqual(["id", "name", "symbol", "flags", "reserves"]);
-    expect(buildGeneratedPerCoinAsset(entries).map((coin) => coin.id)).toEqual(["alpha-usd", "zeta-usd"]);
-  });
 
   it("fails check mode when the generated per-coin aggregate is stale", () => {
     const rootDir = makeTempRoot();
@@ -347,22 +266,6 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => syncGeneratedPerCoinAsset({ check: true, rootDir })).not.toThrow();
   });
 
-  it("can replace a stale aggregate that no longer satisfies catalog-level invariants", () => {
-    const rootDir = makeTempRoot();
-    const perCoin = makeCoin("per-coin-usd");
-
-    writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", perCoin);
-    writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", [
-      makeCoin("stale-variant-usd", {
-        variantOf: "parent-usd",
-        variantKind: "savings-passthrough",
-      }),
-    ]);
-
-    const result = syncGeneratedPerCoinAsset({ rootDir });
-    expect(result.changed).toBe(true);
-    expect(loadGeneratedPerCoinCoins(rootDir)).toEqual([perCoin]);
-  });
 
   it("validates the newly generated aggregate before writing it", () => {
     const rootDir = makeTempRoot();

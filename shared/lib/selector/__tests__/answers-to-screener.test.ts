@@ -22,11 +22,6 @@ describe("selectorAnswersToScreenerFilters", () => {
     expect(filters.safetyGrades).toContain("C-");
   });
 
-  it("Trading base filter allows down to C-", () => {
-    const { filters } = selectorAnswersToScreenerFilters(makeInput({ profile: "trading" }));
-    expect(filters.safetyGrades).toContain("C-");
-  });
-
   it("Treasury × depegTolerance=zero sets the V9-native and live score floors", () => {
     const { filters } = selectorAnswersToScreenerFilters(
       makeInput({ profile: "treasury", depegTolerance: "zero" }),
@@ -54,15 +49,6 @@ describe("selectorAnswersToScreenerFilters", () => {
     ]);
   });
 
-  it("does not emit retired resilience or dependency-risk keys", () => {
-    const { filters } = selectorAnswersToScreenerFilters(
-      makeInput({ profile: "treasury", horizon: "6mplus" }),
-    );
-    expect(filters).not.toHaveProperty("safetyResilienceMin");
-    expect(filters).not.toHaveProperty("safetyDependencyRiskMin");
-    expect(filters).not.toHaveProperty("safetyPegStabilityMin");
-  });
-
   it("Trading × exitSpeed=1h tightens dewsMax to 35", () => {
     const { filters } = selectorAnswersToScreenerFilters(
       makeInput({ profile: "trading", exitSpeed: "1h" }),
@@ -78,21 +64,6 @@ describe("selectorAnswersToScreenerFilters", () => {
     expect(slow.filters.dewsMax).toBeGreaterThan(fast.filters.dewsMax!);
     expect(fast.divergenceWarnings.map((warning) => warning.reason)).toContain("effective-tvl-floor-1h");
     expect(slow.divergenceWarnings.map((warning) => warning.reason)).not.toContain("effective-tvl-floor-1h");
-  });
-
-  it("Yield divergenceWarnings includes yield-warning-signals", () => {
-    const { divergenceWarnings } = selectorAnswersToScreenerFilters(
-      makeInput({ profile: "yield" }),
-    );
-    expect(divergenceWarnings.map((w) => w.reason)).toContain("yield-warning-signals");
-  });
-
-  it("Yield × minApy != null adds the minApy divergence", () => {
-    const { divergenceWarnings } = selectorAnswersToScreenerFilters(
-      makeInput({ profile: "yield", minApy: 6 }),
-    );
-    const reasons = divergenceWarnings.map((w) => w.reason);
-    expect(reasons).toContain("minApy");
   });
 
   it("decentralization=required + treasury → types includes 'decentralized'", () => {

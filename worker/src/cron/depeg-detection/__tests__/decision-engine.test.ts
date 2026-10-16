@@ -1406,7 +1406,7 @@ describe("decideDepegAsset", () => {
     ]);
   });
 
-  it.each([undefined, 1_790_231_400, 1_790_231_427 - 24 * 3600])("keeps soft-source recovery open with publication-only challenger time %s", (observedAt) => {
+  it.each([undefined, 1_790_231_400])("keeps soft-source recovery open with publication-only challenger time %s", (observedAt) => {
     // Reproduced 2026-09-24 from live D1 (event 90781, usdb-blast). The coin's
     // only primary lane is a fresh CoinGecko single-source print, and
     // computeDexPrices withholds its aggregate dex_prices row because

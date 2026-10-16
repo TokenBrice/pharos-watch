@@ -212,13 +212,6 @@ describe("collapseDuplicateObservations", () => {
     expect(duplicateObservations).toBe(0);
   });
 
-  it("returns empty output with zero counters for empty input", () => {
-    const { collapsed, duplicateGroups, duplicateObservations } = collapseDuplicateObservations([]);
-    expect(collapsed).toHaveLength(0);
-    expect(duplicateGroups).toBe(0);
-    expect(duplicateObservations).toBe(0);
-  });
-
   it("passes through observations with no identifiable key (no poolKey, not derived_unique)", () => {
     const obs = [
       makeObs({ identityConfidence: "none" }),

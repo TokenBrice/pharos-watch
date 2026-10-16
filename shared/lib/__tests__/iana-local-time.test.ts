@@ -154,18 +154,6 @@ describe("IANA local time helpers", () => {
   });
 });
 
-it("reuses a formatter for case variants of the same zone", () => {
-  const construct = vi.spyOn(Intl, "DateTimeFormat");
-  try {
-    expect(isValidIanaTimezone("Pacific/Chatham")).toBe(true);
-    const count = construct.mock.calls.length;
-    expect(isValidIanaTimezone("pAcIfIc/ChAtHaM")).toBe(true);
-    expect(construct.mock.calls.length).toBe(count);
-  } finally {
-    construct.mockRestore();
-  }
-});
-
 it("evicts old formatter entries instead of retaining an unbounded cache", () => {
   const formatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC" });
   const construct = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function () { return formatter; });

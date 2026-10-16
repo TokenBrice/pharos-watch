@@ -94,32 +94,6 @@ describe("AltPegCohortHistoryChart", () => {
     expect(onOpenFocus).toHaveBeenCalledWith("1y");
   });
 
-  it("supports focused mode and range updates", () => {
-    const onCloseFocus = vi.fn();
-    const onRangeChange = vi.fn();
-
-    render(
-      <AltPegCohortHistoryChart
-        initialRange="90d"
-        isFocused
-        onCloseFocus={onCloseFocus}
-        onRangeChange={onRangeChange}
-      />,
-    );
-
-    const activeRange = screen
-      .getAllByRole("button", { name: "90D" })
-      .find((button) => button.getAttribute("aria-pressed") === "true");
-    expect(activeRange?.getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText(/focused view/i)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "30D" }));
-    expect(onRangeChange).toHaveBeenCalledWith("30d");
-
-    fireEvent.click(screen.getByRole("button", { name: /return cohort chart to overview/i }));
-    expect(onCloseFocus).toHaveBeenCalled();
-  });
-
   it("excludes USD and preserves explicit-zero historical cohorts in Other at the $5m boundary", async () => {
     chartState.ready = true;
     useStablecoinChartsMock.mockReturnValue({

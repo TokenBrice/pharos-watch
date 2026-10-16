@@ -73,12 +73,6 @@ describe("CoinEmblem", () => {
     expect(link.hasAttribute("aria-describedby")).toBe(false);
   });
 
-  it("keeps requested ticker labels visible for small single-coin cohorts", () => {
-    renderAtlas(<><CoinEmblem coin={{ ...sample, sizePx: 34 }} variant="fiat" showTickerLabel /></>);
-
-    expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
-  });
-
   it("moves the tooltip and accessible description to the newly hovered coin", () => {
     renderAtlas(<><CoinEmblem coin={sample} variant="fiat" />
     <CoinEmblem coin={{ ...sample, id: "peer", symbol: "PEER" }} variant="fiat" /></>);

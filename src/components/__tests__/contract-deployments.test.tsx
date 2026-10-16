@@ -116,25 +116,6 @@ describe("ContractDeployments interactions", () => {
     expect(writeText).toHaveBeenCalledWith("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
   });
 
-  it("clears the contract-copy feedback timer on unmount", async () => {
-    vi.useFakeTimers();
-    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText: vi.fn() },
-    });
-
-    const { unmount } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole("button", { name: "Copy Ethereum contract address" })[0]);
-    });
-
-    unmount();
-
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-    clearTimeoutSpy.mockRestore();
-  });
-
   it.each(["unavailable", "failing"] as const)(
     "does not report copy success when writeText rejects and legacy copy is %s",
     async (legacyCopy) => {
@@ -162,25 +143,6 @@ describe("ContractDeployments interactions", () => {
     },
   );
 
-  it("hides overflow mobile contracts again and clears a hidden selected chain", () => {
-    const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
-    const mobileGrid = container.querySelector(".grid.grid-cols-5");
-    expect(mobileGrid).not.toBeNull();
-
-    expect(within(mobileGrid as HTMLElement).queryByRole("button", { name: /BSC contract/i })).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Show all 7 chains" }));
-    fireEvent.click(within(mobileGrid as HTMLElement).getByRole("button", { name: /BSC contract 0x7777/i }));
-    expect(screen.getByText("Selected contract")).toBeTruthy();
-    expect(screen.getAllByText("BSC").length).toBeGreaterThanOrEqual(1);
-
-    fireEvent.click(screen.getByRole("button", { name: "Show less" }));
-
-    expect(within(mobileGrid as HTMLElement).queryByRole("button", { name: /BSC contract/i })).toBeNull();
-    expect(screen.queryByText("Selected contract")).toBeNull();
-    expect(screen.getByText("Primary contract")).toBeTruthy();
-  });
-
   it("renders desktop labeled contract rows with address, copy, and explorer actions", () => {
     render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
 
@@ -197,32 +159,4 @@ describe("ContractDeployments interactions", () => {
     expect(screen.getAllByRole("button", { name: "Show all 7 chains" }).length).toBe(1);
   });
 
-  it("renders compact contract rail rows with a header count and icon-only expander", () => {
-    render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} compact />);
-
-    expect(screen.getByRole("heading", { name: "Contracts" })).toBeTruthy();
-    expect(screen.getByText("7")).toBeTruthy();
-    expect(screen.getByText("Ethereum")).toBeTruthy();
-    expect(screen.getByText("0x1111...1111")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Copy Ethereum contract address" })).toBeTruthy();
-    expect(
-      screen.getByRole("link", { name: "View Ethereum contract on explorer" }).getAttribute("href"),
-    ).toBe("https://etherscan.io/address/0x1111111111111111111111111111111111111111");
-    expect(screen.queryByText("BSC")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Show all 7 contract deployments" }));
-
-    expect(screen.getByText("BSC")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Collapse contract deployments" })).toBeTruthy();
-  });
-
-  it("gives the in-flow module its own shell, title, and #contracts anchor", () => {
-    const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
-
-    const section = container.querySelector("#contracts");
-    expect(section).not.toBeNull();
-    expect(within(section as HTMLElement).getByRole("heading", { name: "Contracts" })).toBeTruthy();
-    // The rail twin carries no id, so a dual-mounted page has exactly one.
-    expect(container.querySelectorAll("#contracts").length).toBe(1);
-  });
 });

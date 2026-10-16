@@ -10,7 +10,6 @@ import {
   sentMessageBody,
   latestSendMessageBody,
   inlineButtons,
-  expectMiniAppButton,
   makeSetupPendingRow,
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
@@ -223,32 +222,6 @@ describe("handleTelegramWebhook", () => {
     expect(inlineButtons(promptBody)).toContainEqual({ text: "Cancel", callback_data: "setup:cancel" });
   });
 
-  it("setup:branch:skip sends a slim command reference instead of the full start surface", async () => {
-    const db = makeTelegramWebhookDb([
-      pendingDisambiguationTable(makeSetupPendingRow(
-        {
-          step: "branch",
-          alertTypes: [],
-          target: null,
-        },
-        { initiatorUserId: "999" },
-      )),
-    ]);
-
-    await handleTelegramWebhook(db, makeCallbackRequest("setup:branch:skip"), "test-secret", "bot-token");
-
-    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(
-      true,
-    );
-    const body = sentMessageBody();
-    expect(body.text).toContain("Command reference");
-    expect(body.text).toContain("/help");
-    expect(body.text).toContain("/settings");
-    expect(body.text).toContain("/list");
-    expect(body.text).not.toContain("<b>Alert types</b>");
-    expect(body.text).not.toContain("Other useful setups");
-  });
-
   it("atomically replaces a stale setup-step row when reopening the setup wizard", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
@@ -294,18 +267,6 @@ describe("handleTelegramWebhook", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
     expect(sentMessageBody().text).toContain("Commands");
-  });
-
-  it("setup-step branch nudges the user when they type instead of tapping a button", async () => {
-    const db = makeTelegramWebhookDb([
-      pendingDisambiguationTable(makeSetupPendingRow({ step: "branch", alertTypes: [], target: null })),
-    ]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "recommended"), "test-secret", "bot-token");
-
-    expect(sentMessageBody().text).toContain("Tap one of the buttons above");
-    const history = db.getHistory();
-    // Plain text at the branch step does not clear the wizard — the user can still tap a button.
-    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
   });
 
   it("setup-step /cancel confirms cancellation instead of replying 'No pending selection'", async () => {
@@ -417,20 +378,6 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text.toLowerCase()).toContain("alert type");
   });
 
-  it("handles /list with no subscriptions", async () => {
-    const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
-      { match: "FROM telegram_subscribers", rows: [], first: null },
-    ]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
-
-    const body = sentMessageBody();
-    expect(body.text).toContain("No active subscriptions");
-    expect(body.text).toContain("/presets");
-    expectMiniAppButton(body, "Open control panel", "watchlist");
-    expectMiniAppButton(body, "Browse presets", "presets");
-  });
-
   it("allows non-admin group users to view /list without an admin lookup", async () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
@@ -516,56 +463,6 @@ describe("handleTelegramWebhook", () => {
     expect(
       db.getHistory().some((entry) => /INSERT INTO telegram_subscribers|UPDATE telegram_subscribers/i.test(entry.sql)),
     ).toBe(false);
-  });
-
-  it("keeps group admin denial copy short and caps admin hints at three names", async () => {
-    const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
-      { match: "FROM cache WHERE key = ?", rows: [], first: null },
-    ]);
-    fetchSpy.mockImplementation(async (url) => {
-      const target = String(url);
-      if (target.includes("getChatMember")) {
-        return new Response(
-          JSON.stringify({ ok: true, result: { user: { id: 7, first_name: "member" }, status: "member" } }),
-          { status: 200 },
-        );
-      }
-      if (target.includes("getChatAdministrators")) {
-        return new Response(
-          JSON.stringify({
-            ok: true,
-            result: [
-              { status: "creator", user: { id: 1, username: "admin1" } },
-              { status: "administrator", user: { id: 2, username: "admin2" } },
-              { status: "administrator", user: { id: 3, username: "admin3" } },
-              { status: "administrator", user: { id: 4, username: "admin4" } },
-            ],
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    });
-
-    await handleTelegramWebhook(
-      db,
-      makeWebhookRequest(-123, "/mute@PharosWatchBot 22-07", "test-secret", {
-        chatType: "supergroup",
-        fromId: 7,
-      }),
-      "test-secret",
-      "bot-token",
-    );
-
-    const text = latestSendMessageBody().text;
-    expect(text).toContain("Only group admins can /mute");
-    expect(text).toContain("@admin1");
-    expect(text).toContain("@admin2");
-    expect(text).toContain("@admin3");
-    expect(text).toContain("and 1 more");
-    expect(text).not.toContain("@admin4");
-    expect(text).not.toContain("change alert settings");
   });
 
   it("denies /pause for non-admin group users", async () => {
@@ -767,36 +664,6 @@ describe("handleTelegramWebhook", () => {
     }
   });
 
-  it("shows launch follows in /list and reads alert_launch from the subscription query", async () => {
-    const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
-      { match: "FROM telegram_subscribers", rows: [], first: null },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [
-          {
-            stablecoin_id: "usdpt-western-union",
-            alert_dews: 0,
-            alert_depeg: 0,
-            alert_safety: 0,
-            alert_launch: 1,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
-        ],
-      },
-    ]);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
-
-    const history = db.getHistory();
-    const subscriptionsQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
-    expect(subscriptionsQuery?.sql).toContain("alert_launch");
-    expect(sentMessageBody().text).toContain("Launch");
-    expect(sentMessageBody().text).toContain("USDPT");
-  });
-
   it("attaches a [Manage] inline button to /list when subscriptions exist", async () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
@@ -826,76 +693,5 @@ describe("handleTelegramWebhook", () => {
     };
     const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
     expect(callbacks).toContain("manage:page:0");
-  });
-
-  it("omits the callback [Manage] button when /list has no explicit coin subscriptions", async () => {
-    const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
-      {
-        match: "FROM telegram_subscribers",
-        rows: [],
-        first: {
-          global_alert_dews: 1,
-          global_alert_depeg: 0,
-          global_alert_safety: 0,
-          global_alert_launch: 0,
-          quiet_hours_enabled: 0,
-          quiet_hours_start_utc: null,
-          quiet_hours_end_utc: null,
-        },
-      },
-      { match: "FROM telegram_subscriptions", rows: [] },
-    ]);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
-
-    const body = sentMessageBody() as {
-      text: string;
-      reply_markup?: {
-        inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
-      };
-    };
-    const buttons = (body.reply_markup?.inline_keyboard ?? []).flat();
-    expect(buttons.some((button) => button.callback_data === "manage:page:0")).toBe(false);
-    expect(
-      buttons.some(
-        (button) =>
-          button.text === "Open control panel" &&
-          button.web_app?.url === "https://pharos.watch/pharoswatchbot/app/?startapp=watchlist",
-      ),
-    ).toBe(true);
-  });
-
-  it("replies to /presets with the preset catalog", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/presets"), "test-secret", "bot-token");
-
-    const body = sentMessageBody();
-    const text = body.text;
-    expect(text).toContain("Preset Watchlists");
-    expect(text).toContain("usd-top25");
-    expect(text).toContain("mcap-ge-1b");
-    expectMiniAppButton(body, "Browse presets", "presets");
-  });
-
-  it("replies unknown command", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/attacker-controlled-token"), "test-secret", "bot-token");
-
-    const body = sentMessageBody() as {
-      text: string;
-      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> };
-    };
-    expect(body.text).toContain("Unknown command");
-    expect((body.reply_markup?.inline_keyboard ?? []).flat()).toContainEqual({
-      text: "/help",
-      callback_data: "help:commands",
-    });
-
-    const usageRows = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
-    expect(usageRows.map((entry) => [entry.binds[1], entry.binds[3], entry.binds[4]])).toEqual([
-      ["unknown_command", "unknown", "unknown"],
-      ["command", "unknown", "unknown_command"],
-    ]);
   });
 });

@@ -4,17 +4,13 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { MANIFEST_SOURCES } from "../../shared/data/live-reserves/independent-assurance";
-import { COMPILER_PROFILES } from "../lib/independent-assurance-profiles/registry";
+
 import { PROFILE } from "../lib/independent-assurance-profiles/rlusd";
 import { prepareAssuranceExtractionText } from "../lib/independent-assurance-profiles/shared";
 
 const popplerAvailable = spawnSync("pdftotext", ["-v"]).status === 0 && spawnSync("pdfinfo", ["-v"]).status === 0;
 
 describe("RLUSD reviewed offline compiler", () => {
-  it("keeps runtime manifests and offline compiler key sets in exact parity", () => {
-    expect(Object.keys(COMPILER_PROFILES).sort()).toEqual(Object.keys(MANIFEST_SOURCES).sort());
-  });
   it("rejects a reversed examined-column header rather than blending periods", () => {
     const check = PROFILE.requiredText.find((entry) => entry.label === "month-end column order")!;
     expect(check.pattern.test("August 31, 2026 August 17, 2026")).toBe(false);

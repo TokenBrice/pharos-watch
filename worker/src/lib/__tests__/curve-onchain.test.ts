@@ -142,17 +142,6 @@ describe("fetchCurveOnchainPrices", () => {
     );
   });
 
-  it("computes correct implied price when pool is imbalanced (depeg scenario)", async () => {
-    // Depeg: USDT at $0.95 → get_dy returns ~1.053e6 USDT per 1e6 USDC
-    // Correct: inputFloat/outputFloat = 1.0/1.052632 ≈ 0.95
-    const mockHex = hexWord(1_052_632);
-    mockEvmCall.mockResolvedValue(mockHex);
-
-    const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config]);
-    expect(outcome.value.prices.get("usdt-tether")).toBeCloseTo(0.95, 2);
-  });
-
   it("computes correct implied price with different decimals (DAI 18 decimals)", async () => {
     // 1 USDC (1e6) → 1.001e18 DAI → price = 1.0/1.001 ≈ 0.999
     const daiOutput = BigInt("1001000000000000000");

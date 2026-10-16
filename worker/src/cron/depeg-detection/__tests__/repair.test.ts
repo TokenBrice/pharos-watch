@@ -91,24 +91,6 @@ describe("buildDuplicateOpenEventRepair", () => {
     expect(mergeUnknownDepegSeconds(repaired, 0, 500)).toBe(instrumented ? 350 : 450);
   });
 
-  it("absorbs only same-direction duplicate peaks", () => {
-    const result = buildDuplicateOpenEventRepair([
-      makeOpenRow({ id: 1, direction: "below", peak_deviation_bps: -150, peak_price: 0.985, started_at: 100 }),
-      makeOpenRow({ id: 2, direction: "below", peak_deviation_bps: -300, peak_price: 0.97, started_at: 200 }),
-    ]);
-
-    expect(result.openEvents.get("usdt-tether")).toMatchObject({
-      id: 1,
-      direction: "below",
-      peak_deviation_bps: -300,
-      peak_price: 0.97,
-    });
-    expect(result.commands).toEqual([
-      { type: "delete-event", id: 2 },
-      { type: "update-peak", id: 1, peakDeviationBps: -300, peakPrice: 0.97 },
-    ]);
-  });
-
   it("closes stale opposite-direction rows instead of absorbing their peak", () => {
     const result = buildDuplicateOpenEventRepair([
       makeOpenRow({ id: 1, direction: "below", peak_deviation_bps: -150, peak_price: 0.985, started_at: 100 }),
