@@ -481,7 +481,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [StoneYield USD (stUSD)](https://pharos.watch/stablecoin/stusd-stoneyield/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [KPK USDC Prime (KPK_USDC_Prime)](https://pharos.watch/stablecoin/kpkusdcprime-kpk/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Steakhouse High Yield USDC Edition (sirloinUSDC)](https://pharos.watch/stablecoin/sirloinusdc-steakhouse/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [KPK USDC Yield V2 (KPK_USDC_Yield)](https://pharos.watch/stablecoin/kpkusdcyield-kpk/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [KPK USDC Yield (KPK_USDC_Yield)](https://pharos.watch/stablecoin/kpkusdcyield-kpk/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Galaxy USDC Quality (gUSDCq)](https://pharos.watch/stablecoin/gusdcq-galaxy/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [LeverUp USD (LVUSD)](https://pharos.watch/stablecoin/lvusd-leverup/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Metal Dollar (XMD)](https://pharos.watch/stablecoin/xmd-metal-dollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

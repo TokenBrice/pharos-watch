@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "unknown",
-    "summary": "KPK USDC Yield V2 uses deposit-backed VaultV2 share issuance with configured fee-share accrual; parent USDC issuance remains inherited, while local admins control strategy parameters.",
+    "summary": "KPK USDC Yield uses deposit-backed VaultV2 share issuance with configured fee-share accrual; parent USDC issuance remains inherited, while local admins control strategy parameters.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
@@ -16,7 +16,7 @@
         "deploymentRefs": [
           "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
         ],
-        "label": "KPK USDC Yield V2 deposit-backed share accounting",
+        "label": "KPK USDC Yield deposit-backed share accounting",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
@@ -25,7 +25,7 @@
         "observedBlock": 26107704,
         "sources": [
           {
-            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
             "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
           },
           {
@@ -58,7 +58,7 @@
         "deploymentRefs": [
           "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
         ],
-        "label": "KPK USDC Yield V2 owner parameter authority",
+        "label": "KPK USDC Yield owner parameter authority",
         "role": "governor",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
@@ -67,7 +67,7 @@
         "observedBlock": 26197528,
         "sources": [
           {
-            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
             "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
           },
           {
@@ -146,7 +146,7 @@
         "deploymentRefs": [
           "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
         ],
-        "label": "KPK USDC Yield V2 curator parameter authority",
+        "label": "KPK USDC Yield curator parameter authority",
         "role": "other",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
@@ -155,7 +155,7 @@
         "observedBlock": 26197528,
         "sources": [
           {
-            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
             "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
           },
           {
@@ -595,12 +595,12 @@
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "controlRef": "KPK USDC Yield V2 deposit-backed share accounting",
+      "controlRef": "KPK USDC Yield deposit-backed share accounting",
       "observedAt": "2026-10-14",
       "observedBlock": 26191269,
       "sources": [
         {
-          "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+          "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
           "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
         },
         {
@@ -644,7 +644,7 @@
     "review": {
       "sources": [
         {
-          "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+          "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
           "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
         },
         {

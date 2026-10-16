@@ -4,7 +4,7 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "KPK USDC Yield V2 exact Ethereum Morpho Vault V2",
+        "label": "KPK USDC Yield exact Ethereum Morpho Vault V2",
         "url": "https://app.morpho.org/ethereum/vault/0xD5cCe260E7a755DDf0Fb9cdF06443d593AaeaA13/kpk-usdc-yield"
       },
       {
@@ -16,7 +16,7 @@
         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1114"
       },
       {
-        "label": "KPK USDC Yield V2 product page; issuer disclosure accessed 2026-10-14",
+        "label": "KPK USDC Yield product page; issuer disclosure accessed 2026-10-14",
         "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
       },
       {
@@ -28,10 +28,10 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "KPK USDC Yield V2 is a USDC-denominated ERC-4626-style Morpho Vault V2 receipt share, not USDC itself. Redemption returns a variable pro-rata amount of underlying USDC calculated from total assets and shares; interest, management fees and realized losses can change share value. No fixed-fiat issuer redemption obligation or separate payment-stablecoin issuance is established by the opened product/contract evidence.",
+      "summary": "KPK USDC Yield is a USDC-denominated ERC-4626-style Morpho Vault V2 receipt share, not USDC itself. Redemption returns a variable pro-rata amount of underlying USDC calculated from total assets and shares; interest, management fees and realized losses can change share value. No fixed-fiat issuer redemption obligation or separate payment-stablecoin issuance is established by the opened product/contract evidence.",
       "references": [
         {
-          "label": "KPK USDC Yield V2 exact Ethereum Morpho Vault V2",
+          "label": "KPK USDC Yield exact Ethereum Morpho Vault V2",
           "url": "https://app.morpho.org/ethereum/vault/0xD5cCe260E7a755DDf0Fb9cdF06443d593AaeaA13/kpk-usdc-yield",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07"
@@ -43,7 +43,7 @@
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "KPK USDC Yield V2 partially verified, explorer-hosted Morpho VaultV2 source and redemption formula",
+          "label": "KPK USDC Yield partially verified, explorer-hosted Morpho VaultV2 source and redemption formula",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07"
@@ -56,7 +56,7 @@
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "KPK USDC Yield V2 product page",
+          "label": "KPK USDC Yield product page",
           "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-14"
@@ -76,7 +76,7 @@
     "notes": "Strategy-vault shares are assessed separately from parent USDC. Circle's MiCA authorization or U.S. issuer intent does not authorize this vault share. KPK is identified as curator, not treated as a verified legal payment-stablecoin issuer. The assessment concerns the tracker's EMT/ART and GENIUS payment-stablecoin models; it does not decide whether the shares are securities/financial instruments or otherwise subject to financial-services rules. Explorer-hosted Morpho source is partially verified; the exact Morpho product page and protocol documentation independently corroborate the variable-share structure. KPK's Morpho disclaimer identifies KPK Digital Assets Inc. as curator and states that the vaults are not registered with or approved by a financial regulatory authority. Website terms separately name Karpatkey Foundation; neither disclosure establishes a payment-stablecoin authorization for these shares.",
     "references": [
       {
-        "label": "KPK USDC Yield V2 exact Ethereum Morpho Vault V2",
+        "label": "KPK USDC Yield exact Ethereum Morpho Vault V2",
         "url": "https://app.morpho.org/ethereum/vault/0xD5cCe260E7a755DDf0Fb9cdF06443d593AaeaA13/kpk-usdc-yield",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
@@ -88,7 +88,7 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "KPK USDC Yield V2 partially verified, explorer-hosted Morpho VaultV2 source and redemption formula",
+        "label": "KPK USDC Yield partially verified, explorer-hosted Morpho VaultV2 source and redemption formula",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
@@ -101,7 +101,7 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "KPK USDC Yield V2 product page",
+        "label": "KPK USDC Yield product page",
         "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-14"
