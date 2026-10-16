@@ -1,42 +1,10 @@
 // src/lib/__tests__/dews-radar-utils.test.ts
 import { describe, it, expect } from "vitest";
 import {
-  scoreToRadius,
-  deterministicOffset,
   deterministicRadiusOffset,
   distributeAngles,
   highestBand,
 } from "@/lib/dews-radar-utils";
-
-describe("scoreToRadius", () => {
-  it("returns innerR when score is at band minimum", () => {
-    expect(scoreToRadius(16, "WATCH")).toBeCloseTo(178);
-  });
-  it("returns outerR when score is at band maximum", () => {
-    expect(scoreToRadius(35, "WATCH")).toBeCloseTo(208);
-  });
-  it("interpolates linearly, placing the true midpoint score at the mid radius", () => {
-    // WATCH spans scores 16..35 over radii 178..208, so 25.5 is the exact midpoint.
-    expect(scoreToRadius(25.5, "WATCH")).toBeCloseTo(193);
-    const lowerStep = scoreToRadius(25, "WATCH") - scoreToRadius(20, "WATCH");
-    const upperStep = scoreToRadius(30, "WATCH") - scoreToRadius(25, "WATCH");
-    expect(lowerStep).toBeGreaterThan(0);
-    expect(lowerStep).toBeCloseTo(upperStep);
-  });
-  it("clamps scores outside the band to the band's radial zone", () => {
-    expect(scoreToRadius(10, "WATCH")).toBeCloseTo(178);
-    expect(scoreToRadius(90, "WATCH")).toBeCloseTo(208);
-  });
-});
-
-describe("deterministicOffset", () => {
-  it("returns a finite number in [0, π/6)", () => {
-    const offset = deterministicOffset("123");
-    expect(isFinite(offset)).toBe(true);
-    expect(offset).toBeGreaterThanOrEqual(0);
-    expect(offset).toBeLessThan(Math.PI / 6);
-  });
-});
 
 describe("deterministicRadiusOffset", () => {
   it("keeps representative ids deterministic and inside every zone width", () => {

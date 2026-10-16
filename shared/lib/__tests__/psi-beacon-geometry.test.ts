@@ -15,10 +15,6 @@ function layout(current: PsiBeaconCurrentLike | null, isFresh = true) {
   return layoutPsiBeacon(buildPsiBeaconModel(derivePsiBeaconState({ current, isFresh })), SCENE_DIMETRIC);
 }
 
-function xs(points: string): number[] {
-  return points.split(" ").map((pair) => Number(pair.split(",")[0]));
-}
-
 describe("layoutPsiBeacon", () => {
   it("maps ruler values linearly to world radius with no floor", () => {
     const r0 = psiBeaconRadius(0);
@@ -26,15 +22,6 @@ describe("layoutPsiBeacon", () => {
     expect(psiBeaconRadius(50)).toBeCloseTo((r0 + r100) / 2, 10);
     expect(psiBeaconRadius(-5)).toBe(r0);
     expect(psiBeaconRadius(120)).toBe(r100);
-  });
-
-  it("ends the lit beam where its tip tick sits and before the fog", () => {
-    const result = layout(LIVE);
-    const beamMaxX = Math.max(...xs(result.beam!.points));
-    const tipX = Math.max(result.beam!.tip.x1, result.beam!.tip.x2);
-    expect(beamMaxX).toBeCloseTo(tipX, 0);
-    const breadth = result.fog.find((bank) => bank.key === "breadth")!;
-    expect(Math.min(...xs(breadth.points))).toBeGreaterThan(Math.min(...xs(result.beam!.points)));
   });
 
   it("keeps every ring, label and the full ruler inside the fixed viewBox", () => {

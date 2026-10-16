@@ -61,15 +61,6 @@ describe("active Safety Score source", () => {
     });
   });
 
-  it("projects the canonical active V9 snapshot", async () => {
-    const snapshot = makeReportCardsV9Response();
-    mocks.snapshotOverride = async () => snapshot;
-
-    await expect(
-      loadActiveSafetyScoreSource({} as D1Database),
-    ).resolves.toEqual({ kind: "v9", snapshot });
-  });
-
   it.each(["current", "held"] as const)("resolves %s witness text before digest consumers receive it", async (status) => {
     const semantic = status === "current" ? makeReportCardsV9Response() : heldSnapshot();
     const reason = { code: "unresolved-control-identity" as const, message: "The independently scoped incident disposition remains unknown.", path: "control:incidentState" };

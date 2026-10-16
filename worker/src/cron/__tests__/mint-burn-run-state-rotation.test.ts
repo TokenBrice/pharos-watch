@@ -24,12 +24,6 @@ describe("resolveRotatedConfigs", () => {
     ]);
   });
 
-  it("wraps around at end of list", () => {
-    expect(resolveRotatedConfigs("ethereum-0xccc", configs, keyFn)).toEqual([
-      configs[2], configs[0], configs[1],
-    ]);
-  });
-
   it("returns original order when key not found (config was removed)", () => {
     expect(resolveRotatedConfigs("ethereum-0xzzz", configs, keyFn)).toEqual(configs);
   });

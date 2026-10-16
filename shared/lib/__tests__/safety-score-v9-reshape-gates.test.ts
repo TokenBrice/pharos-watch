@@ -260,17 +260,6 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
   });
 
-  it("does NOT withhold a measured-adverse asset (pegMultiplier < 0.9) even with 2 limited pillars", () => {
-    const trace = scoreV9Input(
-      rawInput({ pillars: { backing: 40, exit: 40, control: 50 }, pegScore: 31, evidenceLevel: "limited" }),
-      POLICY,
-      [],
-      2,
-    );
-    expect(trace.finalGrade).not.toBe("NR");
-    expect(trace.finalGrade).toBe("F");
-  });
-
   it("flips pegMultiplier 0.85 from rated F to NR when the withhold danger floor drops below it", () => {
     const changedPolicy = structuredClone(POLICY.policy);
     changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;

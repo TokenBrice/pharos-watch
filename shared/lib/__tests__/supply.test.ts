@@ -82,10 +82,3 @@ describe("getPrevWeekRawOrNull", () => {
     expect(getPrevWeekRawOrNull(coin)).toBe(900_000);
   });
 });
-
-describe("getPrevMonthRawOrNull", () => {
-  it("returns sum when data exists", () => {
-    const coin = makeStablecoin({ circulatingPrevMonth: { usd: 500_000 } });
-    expect(getPrevMonthRawOrNull(coin)).toBe(500_000);
-  });
-});

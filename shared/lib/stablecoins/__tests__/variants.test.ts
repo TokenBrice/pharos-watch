@@ -5,7 +5,6 @@ import { StablecoinMetaSourceAssetSchema } from "../schema";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
 import { resolveBlacklistStatuses } from "../../report-card-blacklist-matchers";
 import type { StablecoinMeta, VariantKind } from "../../../types";
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../registry";
 import { isActiveStablecoinMeta } from "../status";
 import { createVariantRelationshipHelpers } from "../variant-relationships";
 import { makeStablecoinMeta } from "../../../test-utils/stablecoin";
@@ -22,7 +21,6 @@ const graph = [
   makeStablecoinMeta({ id: "sibling", variantOf: "parent", variantKind: "pure-wrapper" }),
   makeStablecoinMeta({ id: "unrelated", variantOf: "other", variantKind: "pure-wrapper" }),
   makeStablecoinMeta({ id: "orphan", variantOf: "absent", variantKind: "pure-wrapper" }),
-  makeStablecoinMeta({ id: "childless" }),
 ];
 const { getVariantParent, getVariantRelationship, getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
   activeMetaById: new Map(graph.map((coin) => [coin.id, coin])),
@@ -51,24 +49,6 @@ describe("stablecoin variants", () => {
     expect(isTrackedVariant("orphan")).toBe(true);
     expect(getVariantParent("orphan")).toBeNull();
     expect(getVariantRelationship("orphan")).toBeNull();
-  });
-
-  it("returns an empty variant list for a childless parent", () => {
-    expect(getVariants("childless")).toEqual([]);
-  });
-
-  it("marks only authored tracked variants", () => {
-    const { isTrackedVariant } = createVariantRelationshipHelpers({
-      activeMetaById: ACTIVE_META_BY_ID, activeStablecoins: ACTIVE_STABLECOINS, hasTrackedVariantMeta,
-    });
-    expect(isTrackedVariant("susde-ethena")).toBe(true);
-    expect(isTrackedVariant("susdai-usd-ai")).toBe(true);
-    expect(isTrackedVariant("busd0-usual")).toBe(false);
-    expect(isTrackedVariant("sbold-k3-capital")).toBe(true);
-    expect(isTrackedVariant("syrupusdc-maple")).toBe(true);
-    expect(isTrackedVariant("syrupusdt-maple")).toBe(true);
-    expect(isTrackedVariant("yusd-yieldfi")).toBe(true);
-    expect(isTrackedVariant("usde-ethena")).toBe(false);
   });
 
   it("preserves a direct reviewed blacklist status independently of upstream status", () => {

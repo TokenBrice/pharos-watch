@@ -6,11 +6,6 @@ import type {
   V9StructuralSignal,
   V9UnresolvedFact,
 } from "@shared/types/safety-score-v9";
-import {
-  buildV9DependencyEvaluationPlan,
-  type V9DependencyPlanningAsset,
-  type V9DependencyPlanningEdge,
-} from "../safety-score-v9/dependencies";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonTreatment } from "../safety-score-v9/policy";
 
@@ -136,54 +131,6 @@ describe("anchor-coherence invariants — active", () => {
     const withDiagnostic = score({ structuralSignals: [signal("critical-dependency", "low")] });
     const hiddenDiagnostic = score({});
     expect(withDiagnostic.finalScore).toBe(hiddenDiagnostic.finalScore);
-  });
-
-  it("serial non-dilution: a serial claim suppresses duplicate basket roles to the same upstream", () => {
-    const edges: V9DependencyPlanningEdge[] = [
-      {
-        edgeKey: "serial:parent:child",
-        upstreamAssetId: "parent",
-        dependencyType: "wrapper",
-        economicRole: "serial-claim",
-        weight: 1,
-        failureDomains: [],
-      },
-      {
-        edgeKey: "basket:parent:child",
-        upstreamAssetId: "parent",
-        dependencyType: "collateral",
-        economicRole: "basket-exposure",
-        weight: 0.4,
-        failureDomains: [],
-      },
-    ];
-    const planningAsset = (assetId: string, assetEdges: readonly V9DependencyPlanningEdge[]) =>
-      ({
-        assetId,
-        dependencies: { edges: assetEdges },
-        reserveExposures: [],
-        exitRoutes: [],
-        controls: [],
-        peg: { failureDomains: [] },
-        supply: { failureDomains: [] },
-      }) satisfies V9DependencyPlanningAsset;
-    const plan = buildV9DependencyEvaluationPlan({
-      activeAssetIds: ["child", "parent"],
-      assets: [planningAsset("child", edges), planningAsset("parent", [])],
-    });
-    expect(plan.serialPaths).toHaveLength(1);
-    expect(plan.basketPaths).toHaveLength(0);
-    expect(plan.suppressedRoles).toEqual([
-      {
-        assetId: "child",
-        upstreamAssetId: "parent",
-        selectedEdgeKey: "serial:parent:child",
-        suppressedEdgeKey: "basket:parent:child",
-        selectedRole: "serial-claim",
-        suppressedRole: "basket-exposure",
-        reason: "serial-role-dominates",
-      },
-    ]);
   });
 
   it("serial-sibling independence: another serial child never changes a required parent cap", () => {

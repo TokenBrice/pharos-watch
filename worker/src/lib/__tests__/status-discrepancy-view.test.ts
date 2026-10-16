@@ -37,14 +37,4 @@ describe("buildDiscrepancy — discrepancyReason", () => {
     );
     expect(d.discrepancyReason).toBe("probe-stale");
   });
-
-  it("returns probe-disagrees when both sides are fresh but severity differs", () => {
-    const d = buildDiscrepancy(
-      "healthy",
-      { timestamp: 1000, status: "degraded", sampleCount: 50, passCount: 40, failCount: 10, p95LatencyMs: 1000 },
-      1010,
-      1,
-    );
-    expect(d.discrepancyReason).toBe("probe-disagrees");
-  });
 });

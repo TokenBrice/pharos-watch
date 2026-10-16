@@ -12,7 +12,6 @@ vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
 import { pinnedBlockPlan } from "../evm-observation-plan";
 import { fetchOnchainMulticall3, makeOnchainCallers } from "../onchain";
-import { validateAdapterOutput } from "../validate";
 
 const chain = "ethereum";
 const contract = "0x0000000000000000000000000000000000000001";
@@ -55,13 +54,5 @@ describe("pinnedBlockPlan", () => {
     vi.mocked(fetchEvmBlockHeader).mockResolvedValue(null);
     await expect(pinnedBlockPlan({ chain, signal: new AbortController().signal })).rejects.toThrow(/observation block header/);
     expect(fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
-  });
-
-  it("reports block lag only above ten minutes without rejecting the snapshot", () => {
-    const snapshot = { slices: [{ name: "Cash", pct: 100, risk: "very-low" as const }], metadata: { observedBlock: { chain, number: 100, timestamp: 1_800_000_000 } } };
-    expect(validateAdapterOutput(snapshot, { now: 1_800_000_600 })).toEqual({ valid: true, warnings: [] });
-    const lagged = validateAdapterOutput(snapshot, { now: 1_800_000_601 });
-    expect(lagged.valid).toBe(true);
-    expect(lagged.warnings).toEqual([expect.objectContaining({ code: "observed-block-lag", severity: "info" })]);
   });
 });

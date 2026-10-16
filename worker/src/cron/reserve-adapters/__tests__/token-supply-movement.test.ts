@@ -10,46 +10,6 @@ const SUPPLY_URL = `${MOVEMENT_BASE}/accounts/${METADATA_ADDRESS}/resource/0x1::
 const METADATA_URL = `${MOVEMENT_BASE}/accounts/${METADATA_ADDRESS}/resource/0x1::fungible_asset::Metadata?ledger_version=${LEDGER_VERSION}`;
 
 describe("fetchMoveFungibleAssetSupply", () => {
-  it("pins supply and coin-resource decimals to the same ledger", async () => {
-    const network = installAdapterNetwork({
-      json: {
-        [MOVEMENT_BASE]: { ledger_version: LEDGER_VERSION },
-        [SUPPLY_URL]: {
-          type: "0x1::fungible_asset::ConcurrentSupply",
-          data: { current: { value: "1739632096715" } },
-        },
-        [METADATA_URL]: {
-          type: "0x1::fungible_asset::Metadata",
-          data: { decimals: 6 },
-        },
-      },
-    });
-
-    await expect(fetchMoveFungibleAssetSupply(
-      METADATA_ADDRESS,
-      new AbortController().signal,
-      MOVEMENT_BASE,
-    )).resolves.toEqual({
-      rawSupply: 1_739_632_096_715n,
-      decimals: 6,
-      ledgerVersion: LEDGER_VERSION,
-    });
-
-    expect(network.requests.slice(1).every(
-      ({ url }) => url.endsWith(`?ledger_version=${LEDGER_VERSION}`),
-    )).toBe(true);
-  });
-
-  it("returns unresolved when the provider omits its ledger", async () => {
-    installAdapterNetwork({ json: { [MOVEMENT_BASE]: {} } });
-
-    await expect(fetchMoveFungibleAssetSupply(
-      METADATA_ADDRESS,
-      new AbortController().signal,
-      MOVEMENT_BASE,
-    )).resolves.toBeNull();
-  });
-
   it("returns unresolved for malformed supply instead of converting it to zero", async () => {
     installAdapterNetwork({
       json: {

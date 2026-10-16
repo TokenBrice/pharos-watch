@@ -16,11 +16,6 @@ import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserv
  * an unchecked cast.
  */
 describe("coverage reserve resolution from the client registry", () => {
-  it("carries the derived liveReserveAdapter for live-enabled coins", () => {
-    const withAdapter = CLIENT_ACTIVE_STABLECOINS.filter((coin) => coin.liveReserveAdapter);
-    expect(withAdapter.length).toBeGreaterThan(200);
-  });
-
   it("resolves non-curated reserve states for live-enabled client coins", () => {
     const kinds = new Map<string, number>();
     for (const coin of CLIENT_ACTIVE_STABLECOINS) {

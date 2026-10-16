@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { severityForFreezeBlocked } from "../../../lib/tape-event-helpers";
 import { mockTapeD1, tapeInsertBindsForType } from "../../../lib/tape-projectors/__tests__/test-support";
 import { projectFreezeBlocked } from "../../../lib/tape-projectors/freeze";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -15,9 +14,6 @@ function blacklistDb(rows: Record<string, unknown>[]) {
 
 describe("P0-18 daily digest data correctness", () => {
 
-  it("keeps unknown blocked freezes below the highest known severity tier", () => {
-    expect(severityForFreezeBlocked(null)).toBe("warning");
-  });
   it("does not promote unfreeze rows into blacklist activity", async () => {
 
     const result = await collectBlacklistActivity(

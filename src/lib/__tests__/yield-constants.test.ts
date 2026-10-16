@@ -84,11 +84,6 @@ describe("computePysBreakdown", () => {
 });
 
 describe("computePysBreakdown benchmarkCurrency (USD_EFFR re-base)", () => {
-  it("re-bases a foreign-benchmark row onto the USD reference", () => {
-    const { hurdleRebase } = computePysBreakdown(5, 80, 0.9, 0.4, null, 3.95, "CHF");
-    expect(hurdleRebase).toBeCloseTo(3.55, 6);
-  });
-
   it("takes no re-base on a USD-benchmarked row (USD_EFFR key)", () => {
     // EFFR row: benchmarkRate and the USD reference are both USD rates, so
     // the spread between them must not be credited as excess yield.

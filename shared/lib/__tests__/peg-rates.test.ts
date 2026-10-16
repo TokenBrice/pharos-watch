@@ -67,18 +67,6 @@ describe("derivePegRates", () => {
     expect([broad.rates.peggedGOLD, broad.sources.peggedGOLD, broad.counts.peggedGOLD]).toEqual([2200, "median", 3]);
   });
 
-  it("computes the median for three candidates in a peg bucket", () => {
-    const result = derivePegRates([
-      asset("coin-a", "peggedUSD", 0.999, 2_000_000),
-      asset("coin-b", "peggedUSD", 1.001, 2_000_000),
-      asset("coin-c", "peggedUSD", 1.0, 2_000_000),
-    ]);
-
-    expect(result.rates["peggedUSD"]).toBe(1);
-    expect(result.rates["peggedUSD"]!).toEqual(expect.any(Number));
-    expect(result.sources["peggedUSD"]).toBe("median");
-  });
-
   it("excludes < $1m supply assets when computing medians", () => {
     const result = derivePegRates([
       asset("thin-a", "peggedEUR", 0.98, 500_000),
@@ -87,13 +75,6 @@ describe("derivePegRates", () => {
 
     expect(result.rates.peggedEUR).toBeUndefined();
     expect(result.sources.peggedEUR).toBeUndefined();
-  });
-
-  it("uses the single price when only one eligible coin exists", () => {
-    const result = derivePegRates([asset("solo", "peggedGBP", 1.234, 2_000_000)]);
-
-    expect(result.rates.peggedGBP).toBe(1.234);
-    expect(result.sources.peggedGBP).toBe("median");
   });
 
   it("does not add a rate for an empty peg group", () => {

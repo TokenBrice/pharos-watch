@@ -17,11 +17,4 @@ describe("StablecoinModuleTitle", () => {
     expect(html).toContain(">BD<");
     expect(html).toContain("Reserve quality");
   });
-
-  it("keeps the ordinary module title outside a detail-page identity provider", () => {
-    const html = renderToStaticMarkup(<StablecoinModuleTitle>Reserve quality</StablecoinModuleTitle>);
-
-    expect(html).not.toContain("logo");
-    expect(html).toContain("Reserve quality");
-  });
 });

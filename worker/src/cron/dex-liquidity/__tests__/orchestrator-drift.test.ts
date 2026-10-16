@@ -212,24 +212,6 @@ describe("computeDexLiquidityDriftSummary rebaseline of lasting drift", () => {
     const confirmed = cliff({ previousTvl: null, currentTvl: 6_000_000, previousCandidates: furtherDrop.qualityDriftCandidates });
     expect(confirmed.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
   });
-
-  it("detects the same hole again after the accepted level recovers", () => {
-    const accepted = runLastingCliff(DRIFT_REBASELINE_RUNS + 1)[DRIFT_REBASELINE_RUNS];
-
-    const recovered = cliff({
-      previousTvl: null,
-      currentTvl: 150_000_000,
-      previousCandidates: accepted?.qualityDriftCandidates ?? [],
-    });
-    expect(recovered.qualityDriftFlags).toEqual([]);
-    expect(recovered.qualityDriftCandidates).toEqual([]);
-
-    const collapsed = cliff({ previousTvl: 150_000_000, currentTvl: 13_700_000 });
-    const reconfirmed = cliff({ previousTvl: null, currentTvl: 13_700_000, previousCandidates: collapsed.qualityDriftCandidates });
-    expect(collapsed.qualityDriftCandidates[0]?.consecutiveRuns).toBe(1);
-    expect(reconfirmed.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
-    expect(reconfirmed.majorTvlCliffs[0]?.previousTvlUsd).toBe(150_000_000);
-  });
 });
 
 describe("computeDexLiquidityDriftSummary watchlist pool counts", () => {

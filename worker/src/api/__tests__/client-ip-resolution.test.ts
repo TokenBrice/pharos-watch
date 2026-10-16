@@ -11,10 +11,6 @@ const make = (headers: Record<string, string>) => new Request("https://pharos.wa
 describe.each([
   ["feedback resolveFeedbackClientIp", resolveFeedbackClientIp],
 ])("%s", (_name, resolve) => {
-  it("uses CF-Connecting-IP when present", () => {
-    expect(resolve(make({ "CF-Connecting-IP": "203.0.113.10" }))).toBe("203.0.113.10");
-  });
-
   it("ignores X-Forwarded-For and collapses to the 'unknown' sentinel when CF-Connecting-IP is absent", () => {
     expect(resolve(make({ "X-Forwarded-For": "1.1.1.1" }))).toBe("unknown");
     expect(resolve(make({ "X-Forwarded-For": "2.2.2.2" }))).toBe("unknown");

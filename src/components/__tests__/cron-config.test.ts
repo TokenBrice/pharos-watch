@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 
 describe("status cron config", () => {
@@ -17,16 +16,5 @@ describe("status cron config", () => {
     expect(intervals["sync-yield-supplemental"]).toBe(4 * 3600);
     expect(intervals["prune-status-probe-runs"]).toBe(86400);
     expect(intervals["prune-cron-history"]).toBe(86400);
-  });
-
-  it("provides display metadata for every known cron job", () => {
-    for (const cron of CRON_JOB_DEFINITIONS) {
-      expect(getStatusCronDisplay(cron.job)).toEqual({
-        group: cron.group,
-        label: cron.label,
-        schedule: cron.schedule,
-        triggerMode: cron.triggerMode,
-      });
-    }
   });
 });

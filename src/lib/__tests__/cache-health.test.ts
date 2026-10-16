@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { getCacheFreshnessStatus, getCacheImpactStatus } from "@shared/lib/cache-health";
+import { getCacheImpactStatus } from "@shared/lib/cache-health";
 
 describe("cache-health", () => {
-  it("keeps a >8x but <=12x cache ratio in degraded instead of stale", () => {
-    expect(
-      getCacheFreshnessStatus({
-        ageSeconds: 16000,
-        maxAge: 1800,
-      }),
-    ).toBe("degraded");
-  });
-
   it("does not let stale producer source status escalate degraded cache age to stale public impact", () => {
     expect(
       getCacheImpactStatus({

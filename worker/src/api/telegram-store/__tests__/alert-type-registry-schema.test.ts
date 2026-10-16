@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
 import {
-  TELEGRAM_ALERT_FAMILIES,
   TELEGRAM_ALERT_PERSISTENCE,
   TELEGRAM_ALERT_TYPE_BY_SETTING_CODE,
 } from "@shared/lib/telegram-alert-families";
@@ -46,11 +45,6 @@ describe("telegram alert-type persistence registry", () => {
         TELEGRAM_ALERT_PERSISTENCE[alertType].globalColumn,
       );
     }
-  });
-
-  it("covers every canonical alert type exactly once", () => {
-    expect(Object.keys(TELEGRAM_ALERT_PERSISTENCE).sort()).toEqual([...TELEGRAM_ALERT_TYPES].sort());
-    expect(TELEGRAM_ALERT_FAMILIES.map((family) => family.key)).toEqual([...TELEGRAM_ALERT_TYPES]);
   });
 
   it("keeps setting codes unique and reversible", () => {

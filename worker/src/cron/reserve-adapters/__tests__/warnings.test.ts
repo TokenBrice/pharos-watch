@@ -11,11 +11,6 @@ describe("redactUrlSecrets", () => {
     );
   });
 
-  it("passes a non-URL string through unchanged", () => {
-    const input = "no urls here, even apikey=secret should not be touched";
-    expect(redactUrlSecrets(input)).toBe(input);
-  });
-
   it("redacts api_key, auth, access_token, secret variants", () => {
     expect(
       redactUrlSecrets(

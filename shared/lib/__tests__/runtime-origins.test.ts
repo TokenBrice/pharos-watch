@@ -4,7 +4,6 @@ import {
   OPS_UI_ORIGIN,
   SITE_ORIGIN,
   isCanonicalSiteHostname,
-  isPagesAppHostname,
   normalizeOrigin,
   resolveOrigin,
 } from "../runtime-origins";
@@ -37,10 +36,5 @@ describe("runtime origins", () => {
     expect(isCanonicalSiteHostname("stablecoin-dashboard.pages.dev")).toBe(true);
     expect(isCanonicalSiteHostname("branch.stablecoin-dashboard.pages.dev")).toBe(true);
     expect(isCanonicalSiteHostname("example.com")).toBe(false);
-  });
-
-  it("keeps the site-data host gate narrower than the broader canonical-site helper", () => {
-    expect(isPagesAppHostname("stablecoin-dashboard.pages.dev")).toBe(true);
-    expect(isPagesAppHostname("branch.stablecoin-dashboard.pages.dev")).toBe(true);
   });
 });

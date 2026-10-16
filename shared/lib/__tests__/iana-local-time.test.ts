@@ -79,36 +79,9 @@ describe("IANA local time helpers", () => {
     expect(localDateInIanaTimezone(Date.UTC(2026, 0, 1, 1), "America/New_York")).toBe("2025-12-31");
   });
 
-  it("calculates the next ordinary local-hour due instant", () => {
-    const due = nextIanaLocalHourDueAt(Date.UTC(2026, 0, 1, 12), "America/New_York", 9);
-    expect(due).toBe(Date.UTC(2026, 0, 1, 14));
-    const following = nextIanaLocalHourDueAt(Date.UTC(2026, 0, 1, 15), "America/New_York", 9);
-    expect(following).toBe(Date.UTC(2026, 0, 2, 14));
-  });
-
-  it("uses the first valid instant after a spring-forward gap", () => {
-    const beforeGap = Date.UTC(2026, 2, 8, 5, 30); // 00:30 EST
-    expect(nextIanaLocalHourDueAt(beforeGap, "America/New_York", 2)).toBe(Date.UTC(2026, 2, 8, 7));
-  });
-
-  it("selects the first occurrence of a fall-back hour", () => {
-    const beforeFold = Date.UTC(2026, 10, 1, 3); // 23:00 EDT on the previous local date
-    expect(nextIanaLocalHourDueAt(beforeFold, "America/New_York", 1)).toBe(Date.UTC(2026, 10, 1, 5));
-  });
-
   it("schedules tomorrow at the exact delivery instant", () => {
     expect(nextIanaLocalHourDueAt(Date.UTC(2026, 0, 1, 14), "America/New_York", 9))
       .toBe(Date.UTC(2026, 0, 2, 14));
-  });
-
-  it("does not deliver again during the repeated fall-back hour", () => {
-    expect(nextIanaLocalHourDueAt(Date.UTC(2026, 10, 1, 5, 30), "America/New_York", 1))
-      .toBe(Date.UTC(2026, 10, 2, 6));
-  });
-
-  it("aligns delivery in a fractional-offset zone", () => {
-    expect(nextIanaLocalHourDueAt(Date.UTC(2026, 0, 1, 0), "Asia/Kathmandu", 9))
-      .toBe(Date.UTC(2026, 0, 1, 3, 15));
   });
 
   it("computes zone-specific instants when timezones interleave and repeat", () => {

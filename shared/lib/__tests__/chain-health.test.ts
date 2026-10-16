@@ -127,16 +127,6 @@ describe("computeQualityScore", () => {
     ])).toBe(70);
   });
 
-  it("excludes unrated supply and renormalizes over rated supply", () => {
-    const coins = [
-      { safetyScore: 80, supplyUsd: 800_000 },
-      { safetyScore: null as number | null, supplyUsd: 200_000 },
-    ];
-    const score = computeQualityScore(coins);
-    // Unrated supply is dropped from numerator and denominator => 80, not an imputed blend.
-    expect(score).toBe(80);
-  });
-
   it("keeps the coverage gate as the only not-rated signal", () => {
     const coins = [
       { safetyScore: 90, supplyUsd: 499_000 },

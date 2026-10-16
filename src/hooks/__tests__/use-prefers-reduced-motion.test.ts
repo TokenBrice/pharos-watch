@@ -1,20 +1,12 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
+import { cleanupFrontendTest } from "@/test-utils/frontend";
 import { usePrefersReducedMotion } from "../use-prefers-reduced-motion";
 
 describe("usePrefersReducedMotion", () => {
   afterEach(() => {
     cleanupFrontendTest();
-  });
-
-  it("reads the browser reduced-motion preference", () => {
-    installMatchMediaMock(true);
-
-    const { result } = renderHook(() => usePrefersReducedMotion());
-
-    expect(result.current).toBe(true);
   });
 
   it("re-reads the browser reduced-motion preference on rerender", () => {

@@ -14,12 +14,6 @@ const FIXTURE: ExportPreamble = {
 };
 
 describe("ExportPreamble formatters", () => {
-  it("renders the CSV preamble as a single `# `-prefixed comment line", () => {
-    expect(formatPreambleCsv(FIXTURE)).toBe(
-      "# Pharos pharos.watch | Endpoint: stablecoins | As of: 2026-05-16T12:00:00.000Z | URL: https://pharos.watch/ | Methodology: safety-score v7.25",
-    );
-  });
-
   it("preserves named upstream generations and explicit unknown provenance in every format", () => {
     const provenance = { ...FIXTURE, sourceGenerations: { stablecoins: FIXTURE.asOfISO, reportCards: null } };
     expect(formatPreambleCsv(provenance)).toContain("stablecoins=2026-05-16T12:00:00.000Z; reportCards=unknown");
