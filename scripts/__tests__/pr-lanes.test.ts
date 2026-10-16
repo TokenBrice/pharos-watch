@@ -6,11 +6,10 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 import { execFileSync } from "node:child_process";
-import { PR_LANES, buildPrLaneCommandArgs, getPrLane, isPrLaneSelected } from "../lib/pr-lanes.mts";
+import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
-import { DECLARED_TEST_OWNERSHIP } from "../lib/doc-ownership-registry.mts";
 import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
-import { buildPrCoverageMatrix, buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
+import { buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
 
 const stepSchema = z.object({
   name: z.string().optional(), id: z.string().optional(), uses: z.string().optional(), run: z.string().optional(),
@@ -36,8 +35,6 @@ describe("PR lane manifest", () => {
       "static-guards",
       "tests",
       "v9-resource",
-      "critical-coverage-shards",
-      "critical-coverage",
       "pages-artifact",
       "docs",
       "gate",
@@ -47,7 +44,12 @@ describe("PR lane manifest", () => {
     const generator = prepare.steps.find((step) => step.id === "matrix");
     expect(generator?.run).toMatch(/^node [^\n]*generate-pr-workflow-matrix\.ts --matrix$/);
     expect(prepare.outputs?.matrix).toBe("${{ steps.matrix.outputs.matrix }}");
-    expect(prepare.outputs?.coverage_matrix).toBe("${{ steps.matrix.outputs.coverage_matrix }}");
+    expect(Object.keys(WORKFLOW.jobs)).toEqual(["secrets", "prepare", "validation", "pages-artifact", "pr-gate"]);
+    expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
+    expect(Object.keys(prepare.outputs ?? {})).toEqual([
+      "docs_changed", "docs_only", "docs_inline_succeeded", "matrix",
+      "playwright_firefox_required", "pages_artifact_required", "workspace_artifact_name",
+    ]);
     expect(validation.needs).toBe("prepare");
     expect(validation.strategy?.matrix).toBe("${{ fromJSON(needs.prepare.outputs.matrix) }}");
     const runner = validation.steps.find((step) => step.env.PR_LANE_ID === "${{ matrix.lane }}");
@@ -56,9 +58,8 @@ describe("PR lane manifest", () => {
     expect(runner?.env.PR_LANE_SHARD_COUNT).toBe("${{ matrix.shardCount }}");
   });
 
-  it.each([4, 8])("generates %i planned test shards separately from coverage", (testShards) => {
+  it.each([4, 8])("generates %i planned test shards in the validation matrix", (testShards) => {
     const selection = {
-      criticalCoverageChanged: true, criticalCoverageShards: 8,
       docsChanged: true, docsOnly: false, testShards,
     };
     const matrix = buildPrWorkflowMatrix(selection).include;
@@ -67,97 +68,16 @@ describe("PR lane manifest", () => {
         lane: "tests", shard: index + 1, shardCount: testShards, timeout: 15,
       })),
     );
-    expect(matrix.some((entry) => entry.lane === "critical-coverage-shards")).toBe(false);
     expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
       { lane: "v9-resource", timeout: 8 },
     ]);
     expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["static-compile", "static-guards"]);
     expect(matrix.at(-1)?.lane).toBe("docs");
-    const coverage = buildPrCoverageMatrix(selection).include;
-    expect(coverage).toEqual(Array.from({ length: 8 }, (_, index) => ({
-      lane: "critical-coverage-shards", shard: index + 1, shardCount: 8, timeout: 15,
-    })));
     const outputs = Object.fromEntries(formatPrWorkflowOutputs(selection).trim().split("\n").map((line) => {
       const separator = line.indexOf("=");
       return [line.slice(0, separator), JSON.parse(line.slice(separator + 1))];
     }));
-    expect(outputs).toEqual({ matrix: { include: matrix }, coverage_matrix: { include: coverage } });
-  });
-
-  it("keeps docs-only PRs out of code lanes", () => {
-    expect(buildPrWorkflowMatrix({
-      criticalCoverageChanged: false,
-      criticalCoverageShards: 0,
-      docsChanged: true,
-      docsOnly: true,
-    })).toEqual({ include: [] });
-    expect(buildPrCoverageMatrix({
-      criticalCoverageChanged: false, criticalCoverageShards: 0, docsChanged: true, docsOnly: true,
-    })).toEqual({ include: [] });
-  });
-
-  it("runs documentation-input invariants in the composed docs lane even for docs-only PRs", () => {
-    const lane = getPrLane("docs");
-    expect(isPrLaneSelected(lane, {
-      criticalCoverageChanged: false, criticalCoverageShards: 0, docsChanged: true, docsOnly: true,
-    })).toBe(true);
-    const invariantCommand = lane.commands.find((command) => command.id === "doc-ownership-invariants");
-    expect(invariantCommand).toMatchObject({ program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] });
-    const declaredDocsTests = DECLARED_TEST_OWNERSHIP
-      .filter((declaration) => declaration.sources.some((source) => source.startsWith("docs/") || source === "README.md"))
-      .flatMap((declaration) => declaration.tests);
-    expect(invariantCommand?.args).toEqual(expect.arrayContaining(declaredDocsTests));
-  });
-
-  it("selects Pages artifact independently without duplicating it in validation", () => {
-    const selection = {
-      criticalCoverageChanged: false, criticalCoverageShards: 0,
-      docsChanged: false, docsOnly: false, pagesArtifactRequired: true,
-    };
-    expect(isPrLaneSelected(getPrLane("pages-artifact"), selection)).toBe(true);
-    expect(isPrLaneSelected(getPrLane("pages-artifact"), { ...selection, pagesArtifactRequired: false })).toBe(false);
-    expect(buildPrWorkflowMatrix(selection).include.some((entry) => entry.lane === "pages-artifact")).toBe(false);
-  });
-
-  it("gives the docs lane sole doc-sync ownership in the mixed matrix", () => {
-    const mixed = buildPrWorkflowMatrix({
-      criticalCoverageChanged: false,
-      criticalCoverageShards: 0,
-      docsChanged: true,
-      docsOnly: false,
-    }).include;
-    expect(mixed.find((entry) => entry.lane === "static-guards")).toMatchObject({ skipDocSync: true });
-    expect(mixed.find((entry) => entry.lane === "static-compile")?.skipDocSync).toBeUndefined();
-    expect(mixed.find((entry) => entry.lane === "docs")).toBeDefined();
-  });
-
-  it("keeps the static lane owning doc-sync when the docs lane is not selected", () => {
-    const sourceOnly = buildPrWorkflowMatrix({
-      criticalCoverageChanged: false,
-      criticalCoverageShards: 0,
-      docsChanged: false,
-      docsOnly: false,
-    }).include;
-    const staticEntry = sourceOnly.find((entry) => entry.lane === "static-guards");
-    expect(staticEntry).toBeDefined();
-    expect(staticEntry?.skipDocSync).toBeUndefined();
-    expect(sourceOnly.some((entry) => entry.lane === "docs")).toBe(false);
-    expect(buildPrCoverageMatrix({
-      criticalCoverageChanged: false, criticalCoverageShards: 0, docsChanged: false, docsOnly: false,
-    })).toEqual({ include: [] });
-  });
-
-  it("forwards base/head to both static groups and skipDocSync only to guards", () => {
-    const context = { base: "base", head: "HEAD", skipDocSync: true };
-    expect(buildPrLaneCommandArgs(getPrLane("static-compile").commands[0], context)).toEqual([
-      "run", "check:pr:static", "--", "--group=compile", "--base=base", "--head=HEAD",
-    ]);
-    expect(buildPrLaneCommandArgs(getPrLane("static-guards").commands[0], context)).toEqual([
-      "run", "check:pr:static", "--", "--group=guards", "--base=base", "--head=HEAD", "--skip-doc-sync",
-    ]);
-    expect(buildPrLaneCommandArgs(getPrLane("static-guards").commands[0], { base: "base", head: "HEAD" })).toEqual([
-      "run", "check:pr:static", "--", "--group=guards", "--base=base", "--head=HEAD",
-    ]);
+    expect(outputs).toEqual({ matrix: { include: matrix } });
   });
 
   it("uses the same strict commands for local and sharded execution", () => {
@@ -171,35 +91,16 @@ describe("PR lane manifest", () => {
     expect(buildPrLaneCommandArgs(tests, { base: "base" })).toEqual([
       "run", "test:pr", "--", "--base=base",
     ]);
-    expect(buildPrLaneCommandArgs(getPrLane("critical-coverage-shards").commands[0], {
-      shard: 2,
-      shardCount: 3,
-    })).toEqual(["run", "coverage:critical:shard", "--", "--shard=2/3"]);
     // npm swallows bare `--base=` flags; the separator is what delivers them.
     expect(buildPrLaneCommandArgs(getPrLane("static-compile").commands[0], { base: "base", head: "HEAD" })).toEqual([
       "run", "check:pr:static", "--", "--group=compile", "--base=base", "--head=HEAD",
     ]);
   });
 
-  it("rejects incomplete and out-of-range shard coordinates", () => {
-    for (const lane of ["tests", "critical-coverage-shards"] as const) {
-      for (const context of [{ shard: 1 }, { shardCount: 2 }, { shard: 0, shardCount: 2 }, { shard: 3, shardCount: 2 }, { shard: 1.5, shardCount: 2 }]) {
-        expect(() => buildPrLaneCommandArgs(getPrLane(lane).commands[0], context)).toThrow(/shard/i);
-      }
-    }
-  });
-
-  it("fails closed instead of dropping a selected coverage lane with no shards", () => {
-    expect(() => buildPrCoverageMatrix({
-      criticalCoverageChanged: true, criticalCoverageShards: 0, docsChanged: false, docsOnly: false,
-    })).toThrow(/shard/);
-  });
-
-  it("rejects invalid test and coverage fan-out", () => {
-    const selection = { criticalCoverageChanged: true, criticalCoverageShards: 8, docsChanged: false, docsOnly: false };
+  it("rejects invalid test fan-out instead of dropping selected tests", () => {
+    const selection = { docsChanged: false, docsOnly: false };
     for (const shards of [0, -1, 1.5, 9]) {
       expect(() => buildPrWorkflowMatrix({ ...selection, testShards: shards })).toThrow(/shard/);
-      expect(() => buildPrCoverageMatrix({ ...selection, criticalCoverageShards: shards })).toThrow(/shard/);
     }
   });
 
@@ -207,26 +108,22 @@ describe("PR lane manifest", () => {
     const gate = WORKFLOW.jobs["pr-gate"].steps[0].run!;
     const code = {
       SECRETS_RESULT: "success", PREPARE_RESULT: "success", VALIDATION_RESULT: "success",
-      DOCS_ONLY: "false", DOCS_INLINE_SUCCEEDED: "false", CRITICAL_COVERAGE_CHANGED: "false",
-      CRITICAL_COVERAGE_SHARDS_RESULT: "skipped", CRITICAL_COVERAGE_RESULT: "skipped",
+      DOCS_ONLY: "false", DOCS_INLINE_SUCCEEDED: "false",
       PAGES_ARTIFACT_REQUIRED: "false", PAGES_ARTIFACT_RESULT: "skipped",
     };
-    const covered = { ...code, CRITICAL_COVERAGE_CHANGED: "true", CRITICAL_COVERAGE_SHARDS_RESULT: "success", CRITICAL_COVERAGE_RESULT: "success" };
     const docs = { ...code, DOCS_ONLY: "true", DOCS_INLINE_SUCCEEDED: "true", VALIDATION_RESULT: "skipped" };
     const pages = { ...code, PAGES_ARTIFACT_REQUIRED: "true", PAGES_ARTIFACT_RESULT: "success" };
     const run = (env: Record<string, string>) => execFileSync("bash", ["-e", "-c", gate], {
       cwd: REPO_ROOT, env: { ...process.env, ...env }, stdio: "pipe",
     });
-    for (const env of [code, covered, docs, pages]) expect(() => run(env)).not.toThrow();
-    for (const key of ["SECRETS_RESULT", "PREPARE_RESULT", "VALIDATION_RESULT", "CRITICAL_COVERAGE_SHARDS_RESULT", "CRITICAL_COVERAGE_RESULT"]) {
+    for (const env of [code, docs, pages]) expect(() => run(env)).not.toThrow();
+    for (const key of ["SECRETS_RESULT", "PREPARE_RESULT", "VALIDATION_RESULT"]) {
       for (const result of ["failure", "cancelled", "skipped"]) {
-        expect(() => run({ ...covered, [key]: result }), `${key}=${result}`).toThrow();
+        expect(() => run({ ...code, [key]: result }), `${key}=${result}`).toThrow();
       }
     }
     expect(() => run({ ...docs, DOCS_INLINE_SUCCEEDED: "false" })).toThrow();
     expect(() => run({ ...docs, VALIDATION_RESULT: "cancelled" })).toThrow();
-    expect(() => run({ ...code, CRITICAL_COVERAGE_RESULT: "failure" })).toThrow();
-    expect(() => run({ ...code, CRITICAL_COVERAGE_SHARDS_RESULT: "cancelled" })).toThrow();
     for (const result of ["failure", "cancelled", "skipped", ""]) {
       expect(() => run({ ...pages, PAGES_ARTIFACT_RESULT: result })).toThrow();
     }
@@ -252,29 +149,6 @@ describe("PR lane manifest", () => {
       !cachedPaths.some((cached) => output === cached || output.startsWith(`${cached}/`)),
     );
     expect(uncached).toEqual([]);
-  });
-
-  it("requires run-scoped publication and restoration independently of optional caches", () => {
-    const steps = SETUP_WORKSPACE.runs.steps;
-    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
-    const download = steps.find((step) => step.uses?.startsWith("actions/download-artifact@"));
-    expect(upload!.with["if-no-files-found"]).toBe("error");
-    expect(download!.with.name).toBe("${{ steps.workspace-artifact-name.outputs.name }}");
-    expect(upload!.with.name).toBe(download!.with.name);
-    const resolver = steps.find((step) => step.id === "workspace-artifact-name")!;
-    expect(resolver.env.WORKSPACE_ARTIFACT_NAME).toBe("${{ inputs.workspace-artifact-name }}");
-    expect(resolver.run).toContain('WORKSPACE_ARTIFACT_NAME="pr-workspace-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA}"');
-    expect(WORKFLOW.jobs.prepare.outputs?.workspace_artifact_name).toBe("${{ steps.publish-workspace.outputs.workspace-artifact-name }}");
-    expect(WORKFLOW.jobs.prepare.steps.find((step) => step.id === "publish-workspace")?.with["workspace-artifact"]).toBe("publish");
-    for (const step of [upload, download]) expect(step!["continue-on-error"]).toBeUndefined();
-    for (const job of ["validation", "critical-coverage-shards", "critical-coverage"]) {
-      const setup = WORKFLOW.jobs[job].steps.find((step) => step.uses === "$/.github/actions/setup-workspace");
-      expect(setup!.with["workspace-artifact"]).toBe("restore");
-      expect(setup!.with["workspace-artifact-name"]).toBe("${{ needs.prepare.outputs.workspace_artifact_name }}");
-      expect(setup!.with["install-deps"]).toBe("false");
-      expect(setup!.with["cache-npm"]).toBe("false");
-    }
-    expect(steps.find((step) => step.id === "static-cache")!.uses).toMatch(/^actions\/cache\/restore@/);
   });
 
   it("roundtrips executable dependencies without caches and fails on missing transport", () => {

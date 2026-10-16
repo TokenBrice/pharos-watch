@@ -301,7 +301,7 @@ export async function runPrStaticChecks({
       run: (command) => {
         if (signal.aborted) return { status: 130, aborted: true };
         if (reportStarts) reporter.start(command.cmd);
-        return runCommandImpl(command, env as Record<string, string>, { signal });
+        return runCommandImpl(command, { ...env, PR_BASE_SHA: base, PR_HEAD_SHA: head } as Record<string, string>, { signal });
       },
       status: (result) => result.status === 0 ? "passed" : result.aborted ? "skipped" : "failed",
     });

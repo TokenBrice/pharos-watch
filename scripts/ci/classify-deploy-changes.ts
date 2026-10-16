@@ -12,39 +12,16 @@ import {
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
 import { collectGitPaths, splitNullDelimited } from "../lib/changed-files.mts";
-import { CRITICAL_FILES, selectChangedCriticalSources } from "../lib/critical-coverage.mjs";
-import { deriveBaseCriticalOwnership, type BaseBlobExec, type CriticalOwnership } from "../lib/critical-ownership.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 
 const ZERO_SHA: RegExp = /^0+$/;
-const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
-  ".github/actions/setup-workspace/action.yml",
-  ".github/workflows/pull-request-checks.yml",
-  ".ci/critical-coverage-baseline.json",
-  "scripts/ci/check-critical-coverage.ts",
-  "scripts/lib/critical-coverage.mjs",
-  "scripts/lib/critical-test-files.mts",
-  "scripts/lib/critical-ownership.mts",
-  "scripts/lib/pr-lanes.mts",
-  "scripts/lib/pr-test-plan.mts",
-  "scripts/data/pr-test-timings.json",
-  "scripts/lib/pr-test-selection.mts",
-  "scripts/maintenance/generate-pr-workflow-matrix.ts",
-  "scripts/maintenance/run-pr-tests.ts",
-  "scripts/maintenance/refresh-pr-test-timings.ts",
-  "scripts/maintenance/merge-critical-coverage.ts",
-  "scripts/maintenance/run-critical-coverage-shard.ts",
-  "scripts/maintenance/run-critical-coverage.ts",
-  "vitest.config.ts",
-]);
 
-type GitExec = BaseBlobExec;
+type GitExec = (file: string, args: readonly string[], options: { encoding: "utf8" }) => string;
 
 interface DeployClassification {
   changedFiles: string[];
-  criticalCoverageChanged: boolean;
   deployRequired: boolean;
   docsChanged: boolean;
   docsOnly: boolean;
@@ -85,7 +62,7 @@ export function normalizeChangedFiles(rawOutput: string): string[] {
 
 export function classifyChangedFiles(
   changedFiles: readonly string[],
-  { reason, baseOwnership }: { reason?: string; baseOwnership?: CriticalOwnership } = {},
+  { reason }: { reason?: string } = {},
 ): DeployClassification {
   const normalizedFiles = [...new Set(changedFiles.map((file) => normalizeRepoPath(file)))].sort();
   const pagesChanged = hasPagesDeployImpact(normalizedFiles);
@@ -95,9 +72,6 @@ export function classifyChangedFiles(
   const generatedArtifactIds = selectChangedGeneratedArtifactIds(normalizedFiles);
   return {
     changedFiles: normalizedFiles,
-    criticalCoverageChanged: normalizedFiles.some(
-      (file) => CRITICAL_FILES.includes(file) || CRITICAL_COVERAGE_INFRA_PATHS.has(file),
-    ) || selectChangedCriticalSources(normalizedFiles, baseOwnership).length > 0,
     deployRequired: hasDeployImpact(normalizedFiles),
     docsChanged: normalizedFiles.some((file) => hasOnlyInternalDocsImpact([file])),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
@@ -125,7 +99,6 @@ export function classifyDeployChanges({
 }: ClassifyDeployChangesOptions = {}): DeployClassification {
   const fullDeploy = (reason: string): DeployClassification => ({
     changedFiles: [],
-    criticalCoverageChanged: true,
     deployRequired: true,
     docsChanged: false,
     docsOnly: false,
@@ -156,7 +129,6 @@ export function classifyDeployChanges({
   }
 
   return classifyChangedFiles(changedFiles, {
-    baseOwnership: deriveBaseCriticalOwnership(baseSha, changedFiles, execFile),
     reason:
       changedFiles.length > 0
         ? `Detected ${changedFiles.length} changed file(s) in push range`
@@ -169,7 +141,6 @@ function writeGithubOutputLine(key: string, value: string): void {
 }
 
 export function emitGithubOutputs(classification: DeployClassification): void {
-  writeGithubOutputLine("critical_coverage_changed", classification.criticalCoverageChanged ? "true" : "false");
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
   writeGithubOutputLine("docs_changed", classification.docsChanged ? "true" : "false");
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
@@ -197,7 +168,6 @@ export function runCli(env: NodeJS.ProcessEnv = process.env): void {
       console.error(`  - ${file}`);
     }
   }
-  console.error(`[deploy-changes] critical_coverage_changed=${classification.criticalCoverageChanged}`);
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
   console.error(`[deploy-changes] pages_deploy_required=${classification.pagesDeployRequired}`);
   console.error(`[deploy-changes] playwright_firefox_required=${classification.playwrightFirefoxRequired}`);

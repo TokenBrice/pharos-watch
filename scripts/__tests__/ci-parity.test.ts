@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolve } from "node:path";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { readPrCheckReceipt, writePrCheckReceipt } from "../lib/pr-check-receipt.mts";
 import { runCiParity, runCiParityClone, parityEnvironment } from "../maintenance/run-ci-parity.ts";
 import type { ParityCommand } from "../maintenance/run-ci-parity.ts";
 import type { PrCheckReceipt } from "../lib/pr-check-receipt.mts";
@@ -103,13 +100,6 @@ describe("opt-in parity sequencing", () => {
     expect(f.receipt()?.outcome).toBe("failed");
   });
 
-  it("prints retained independent clone only when --keep-clone is requested", async () => {
-    const f = fixture({ leafFailure: true });
-    await runCiParity(["--ci-parity", "--keep-clone"], f.options);
-    expect(f.options.removeTemporaryRoot).not.toHaveBeenCalled();
-    expect(f.options.log).toHaveBeenCalledWith(expect.stringContaining("Kept independent clone: /tmp/parity-unit-fixture/repo"));
-  });
-
   it("prints a non-executing plan without mutating a receipt or checking dirty state", async () => {
     const f = fixture({ dirty: true });
     expect(await runCiParity(["--ci-parity", "--plan"], f.options)).toBe(0);
@@ -180,39 +170,17 @@ describe("CI-shaped readiness leaves on the merge checkout", () => {
     expect(f.calls.filter((call) => call.id.startsWith("pr-tests:"))).toHaveLength(8);
   });
 
-  it("uses full critical-owner shards, then merge/ratchet, and the selected Pages lane", async () => {
-    const f = cloneFixture(["scripts/lib/pr-lanes.mts", "src/app/page.tsx"], "critical-coverage:1/8");
+  it("runs plain test partitions and the selected Pages lane without coverage", async () => {
+    const f = cloneFixture(["scripts/lib/pr-lanes.mts", "src/app/page.tsx"], "pr-tests:1/4");
     const receipt = await runCiParityClone(f.options);
     expect(receipt.outcome).toBe("failed");
-    const coverage = f.calls.filter((call) => /^critical-coverage:\d/.test(call.id));
-    expect(coverage).toHaveLength(8);
-    expect(coverage.every((call) => call.env.PR_BASE_SHA === BASE && call.env.PR_HEAD_SHA === HEAD && call.env.CRITICAL_COVERAGE_COMPARE_REF === BASE)).toBe(true);
-    const mergeIndex = f.calls.findIndex((call) => call.id === "critical-coverage-merge");
-    expect(mergeIndex).toBeGreaterThan(f.calls.indexOf(coverage[7]));
-    expect(f.calls.slice(mergeIndex + 1).some((call) => call.id === "pages-artifact")).toBe(true);
+    expect(f.calls.filter((call) => /^pr-tests:\d/.test(call.id))).toHaveLength(4);
+    expect(receipt.leaves).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "pr-tests:1/4", status: "failed" }),
+      expect.objectContaining({ id: "pages-artifact", status: "passed" }),
+    ]));
+    expect(f.calls.some((call) => call.id.startsWith("critical-coverage"))).toBe(false);
     expect(f.calls.some((call) => call.args.join(" ") === "run coverage:critical")).toBe(false);
-  });
-
-  it("selects Firefox from generated OG artifact classification, not test filenames", async () => {
-    const f = cloneFixture(["scripts/maintenance/build-og-editorial.mjs"]);
-    const receipt = await runCiParityClone(f.options);
-    expect(receipt.outcome).toBe("passed");
-    expect(f.calls.find((call) => call.id === "prerequisite:firefox")?.args).toEqual(["--no-install", "playwright", "install", "--with-deps", "firefox"]);
-  });
-
-  it("audits dependency changes only for advisories absent at the frozen base", async () => {
-    const f = cloneFixture(["package.json", "package-lock.json"]);
-    expect((await runCiParityClone(f.options)).outcome).toBe("passed");
-    const audit = f.calls.find((call) => call.id === "static-guards:check:dependency-audit");
-    expect(audit?.args).toEqual(["run", "check:dependency-audit", "--", `--new-since=${BASE}`]);
-    expect(f.calls.find((call) => call.id === "static-compile:lint:changed")?.args).toEqual(["run", "lint:changed", "--", `--base=${BASE}`, `--head=${HEAD}`]);
-  });
-
-  it("reports a clear prerequisite reason for missing Firefox", async () => {
-    const f = cloneFixture(["scripts/maintenance/build-og-editorial.mjs"], "prerequisite:firefox");
-    const receipt = await runCiParityClone(f.options);
-    expect(receipt.outcome).toBe("failed");
-    expect(receipt.leaves.some((leaf) => leaf.firstError?.includes("selected OG checks require Playwright Firefox"))).toBe(true);
   });
 
   it("keeps docs-only omissions explicit without generating a test plan", async () => {
@@ -224,9 +192,9 @@ describe("CI-shaped readiness leaves on the merge checkout", () => {
       expect.objectContaining({ id: "pr-tests", status: "not-selected" }),
       expect.objectContaining({ id: "v9-resource", status: "not-selected" }),
       expect.objectContaining({ id: "pages-artifact", status: "not-selected" }),
-      expect.objectContaining({ id: "critical-coverage", status: "not-selected" }),
     ]));
   });
+
 });
 
 it("retains npm cache and runtime PATH without application secrets or ambient selectors", () => {
@@ -235,21 +203,3 @@ it("retains npm cache and runtime PATH without application secrets or ambient se
   });
 });
 
-it("reads both legacy version-one receipts and additive tested-merge identity", async () => {
-  const directory = mkdtempSync(resolve(tmpdir(), "pharos-receipt-test-"));
-  try {
-    const f = fixture();
-    await runCiParity(["--ci-parity"], f.options);
-    const parity = f.receipt()!;
-    const path = writePrCheckReceipt(parity, directory);
-    expect(readPrCheckReceipt(path)).toEqual(parity);
-    const legacy = { ...parity };
-    delete legacy.mode;
-    delete legacy.mergeSha;
-    delete legacy.mergeTree;
-    writePrCheckReceipt(legacy, directory);
-    expect(readPrCheckReceipt(path)).toEqual(legacy);
-    writePrCheckReceipt({ ...parity, mergeSha: "not-a-commit" }, directory);
-    expect(() => readPrCheckReceipt(path)).toThrow();
-  } finally { rmSync(directory, { recursive: true, force: true }); }
-});

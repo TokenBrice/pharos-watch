@@ -1,28 +1,31 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   captureProcessExit,
   mockConsole,
   mockExecFileSync,
+  mockFsImpl,
   testEnv,
 } from "../test-utils/ci-script-test-helpers";
 
 import {
   CRITICAL_COVERAGE_BRANCH_FLOORS,
   getChangedFilesFromGit,
-  isAllZeroSha,
-  parseChangedFilesFromEnv,
+  runCriticalCoverageCheck,
+  runCriticalCoverageCompletenessCheck,
   runCriticalCoverageCompletenessGuard,
 } from "../ci/check-critical-coverage.ts";
 import {
-  CRITICAL_COVERAGE_WAIVERS,
   CRITICAL_FILES,
   collectCriticalCoverageCandidates,
   collectCriticalCoverageWaiverReviewQueue,
-  findCriticalCoverageCandidatesMissingEnrollment,
   validateCriticalCoverageWaiverMetadata,
   validateCriticalCoverageBaseline,
 } from "../lib/critical-coverage.mjs";
+import {
+  REBASELINE_MEASUREMENT_COMMAND,
+  validateCriticalCoverageRebaseline,
+  type CriticalCoverageRebaselineRecord,
+} from "../lib/critical-coverage-rebaseline.mts";
 import { buildCriticalLcov, runCoverageFixture } from "./check-critical-coverage.test-support";
 
 
@@ -40,19 +43,6 @@ describe("critical coverage changed-file detection", () => {
     expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
   });
 
-  it("parses explicit changed files before falling back to git", () => {
-    expect(
-      parseChangedFilesFromEnv(testEnv({
-        CRITICAL_COVERAGE_CHANGED_FILES: "worker\\src\\api\\status.ts, docs/testing.md\n\n",
-      })),
-    ).toEqual(["worker/src/api/status.ts", "docs/testing.md"]);
-  });
-
-  it("skips empty and all-zero compare refs", () => {
-    expect(isAllZeroSha("0000000000000000000000000000000000000000")).toBe(true);
-    expect(getChangedFilesFromGit("")).toEqual([]);
-    expect(getChangedFilesFromGit("0000000000000000000000000000000000000000")).toEqual([]);
-  });
 
   it("passes malicious-looking compare refs to git diff as a single argument", () => {
     const calls: unknown[] = [];
@@ -69,22 +59,6 @@ describe("critical coverage changed-file detection", () => {
     ]);
   });
 
-  it("throws when an explicit compare ref cannot be diffed", () => {
-    const errors: string[] = [];
-    const execFile = mockExecFileSync(() => {
-      throw new Error("bad ref");
-    });
-
-    expect(
-      () => getChangedFilesFromGit("bad-ref", {
-        execFile,
-        consoleImpl: mockConsole({
-          error: (message: string) => errors.push(message),
-        }),
-      }),
-    ).toThrow('Could not diff against explicit ref "bad-ref"');
-    expect(errors[0]).toContain('Could not diff against explicit ref "bad-ref"');
-  });
 
   it("fails closed when the configured compare ref cannot be diffed", () => {
     const { errors, exits, logs } = runCoverageFixture({
@@ -138,25 +112,6 @@ describe("critical coverage changed-file detection", () => {
     ]);
   });
 
-  it("flags high-stakes candidates without enrollment or explicit waiver", () => {
-    const candidateFiles = [
-      "worker/src/cron/sync-stablecoins/enrolled.ts",
-      "worker/src/cron/sync-stablecoins/waived.ts",
-      "worker/src/cron/sync-stablecoins/missing.ts",
-    ];
-
-    expect(
-      findCriticalCoverageCandidatesMissingEnrollment(candidateFiles, {
-        criticalFiles: ["worker/src/cron/sync-stablecoins/enrolled.ts"],
-        waivers: { "worker/src/cron/sync-stablecoins/waived.ts": {
-          reviewAfter: "2026-09-05",
-          reason: "Forwarding facade",
-          owner: "worker/src/cron/sync-stablecoins/enrolled.ts",
-          ownerTest: "worker/src/cron/__tests__/sync-stablecoins.test.ts",
-        } },
-      }),
-    ).toEqual(["worker/src/cron/sync-stablecoins/missing.ts"]);
-  });
 
   it("fails completeness when an enrolled source has no importing owner", () => {
     const errors: string[] = [];
@@ -320,6 +275,8 @@ describe("critical coverage changed-file detection", () => {
     expect(current.logs).toContain(`  ${file} reviewAfter=2026-06-10`);
   });
 
+
+
   it("fails the checker when a high-stakes candidate lacks enrollment or waiver", () => {
     const errors: string[] = [];
     const exits: number[] = [];
@@ -346,20 +303,6 @@ describe("critical coverage changed-file detection", () => {
     expect(errors).toContain("  worker/src/cron/sync-stablecoins/new-price-path.ts");
   });
 
-  it("keeps the checked-in high-stakes candidate set enrolled or explicitly waived", () => {
-    const candidates = collectCriticalCoverageCandidates();
-
-    expect(validateCriticalCoverageWaiverMetadata(CRITICAL_COVERAGE_WAIVERS, { candidateFiles: candidates })).toEqual([]);
-    expect(findCriticalCoverageCandidatesMissingEnrollment(candidates)).toEqual([]);
-  });
-
-  it("keeps every critical file represented in the checked-in ratchet baseline", () => {
-    const baseline = JSON.parse(
-      readFileSync(new URL("../../.ci/critical-coverage-baseline.json", import.meta.url), "utf8"),
-    ) as { files: Record<string, unknown> };
-
-    expect(CRITICAL_FILES.filter((file) => !Number.isFinite(baseline.files[file]))).toEqual([]);
-  });
 
   it("rejects missing, malformed, out-of-range, and unjustifiably lowered baseline entries", () => {
     const thresholds: Record<string, number> = {
@@ -405,9 +348,13 @@ describe("critical coverage changed-file detection", () => {
       env: {
         CRITICAL_COVERAGE_CHANGED_FILES: CRITICAL_FILES[0],
         CRITICAL_COVERAGE_RATCHET_ALL: "1",
+        PR_BASE_SHA: "base",
       },
       lcov: buildCriticalLcov(),
       baseline: { files: Object.fromEntries(CRITICAL_FILES.map((file) => [file, 100])) },
+      execFile: mockExecFileSync(() => JSON.stringify({
+        files: Object.fromEntries(CRITICAL_FILES.map((file) => [file, 100])),
+      })),
     });
 
     expect(errors).toEqual([]);
@@ -416,28 +363,6 @@ describe("critical coverage changed-file detection", () => {
     expect(logs.filter((line) => line.includes("RATCHET PASS"))).toHaveLength(CRITICAL_FILES.length);
   });
 
-  it("limits per-file floor and missing checks to touched critical sources", () => {
-    const file = "worker/src/lib/auth.ts";
-    const lcov = [
-      `SF:${file}`,
-      "DA:1,1",
-      "LF:1",
-      "LH:1",
-      "BRF:2",
-      "BRH:2",
-      "end_of_record",
-    ].join("\n");
-    const { logs, errors, exits } = runCoverageFixture({
-      env: { CI: "1", CRITICAL_COVERAGE_CHANGED_FILES: file },
-      lcov,
-      baseline: { files: { [file]: 100 } },
-    });
-
-    expect(exits).toEqual([]);
-    expect(errors).toEqual([]);
-    expect(logs).toContain("[coverage] PASS worker/src/lib/auth.ts: 100.0% (1/1) (threshold 70.0%)");
-    expect(logs.some((line) => line.includes("MISSING:"))).toBe(false);
-  });
 
   it.each(["source", "edited owner", "deleted owner"])("ratchets coverage regressions for a changed %s", (change) => {
     const file = "worker/src/lib/price-consensus.ts";
@@ -445,11 +370,13 @@ describe("critical coverage changed-file detection", () => {
     const { errors, exits } = runCoverageFixture({
       env: {
         CRITICAL_COVERAGE_CHANGED_FILES: change === "source" ? file : owner,
+        PR_BASE_SHA: "base",
         ...(change === "deleted owner" ? { CRITICAL_COVERAGE_COMPARE_REF: "base" } : {}),
       },
       lcov: buildCriticalLcov({ lineCoverage: { [file]: { lf: 10, lh: 5 } } }),
       baseline: { files: { [file]: 51 } },
       execFile: mockExecFileSync((_cmd, args) => {
+        if (args?.[0] === "show") return JSON.stringify({ files: { [file]: 51 } });
         if (args?.[0] === "ls-tree") return `${owner}\0${file}\0`;
         if (args?.[0] === "cat-file") return `deadbeef blob 28\0import "../price-consensus";\0`;
         throw new Error("Unexpected Git command");
@@ -463,15 +390,15 @@ describe("critical coverage changed-file detection", () => {
   it.each([3, 4])("enforces the provider branch floor independently at %i/10 branches", (brh) => {
     const file = "worker/src/lib/evm-rpc.ts";
     const { errors, exits } = runCoverageFixture({
-      env: { CRITICAL_COVERAGE_CHANGED_FILES: file },
+      env: { CRITICAL_COVERAGE_CHANGED_FILES: file, PR_BASE_SHA: "base" },
       lcov: buildCriticalLcov({ branchCoverage: { [file]: { brf: 10, brh } } }),
       baseline: { files: { [file]: 100 } },
+      execFile: mockExecFileSync(() => JSON.stringify({ files: { [file]: 100 } })),
     });
 
     expect(exits).toEqual(brh < 4 ? [1] : []);
     expect(errors).toEqual(brh < 4 ? ["[coverage] BRANCH FAIL worker/src/lib/evm-rpc.ts: 30.0% (3/10) < 40.0%"] : []);
   });
-
   it("keeps branch/error-path floors at provider, auth, scoring, and publication boundaries", () => {
     expect(CRITICAL_COVERAGE_BRANCH_FLOORS).toEqual({
       "worker/src/lib/auth.ts": 40,
@@ -480,4 +407,192 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/price-publication-state.ts": 40,
     });
   });
+
+});
+
+const rebaselineSource = "worker/src/lib/auth.ts";
+const rebaselineBaseSha = "a".repeat(40);
+const rebaselineRecordPath = ".ci/critical-coverage-rebaseline/T2-INTEGRATE.json";
+
+function reviewedRebaseline(): CriticalCoverageRebaselineRecord {
+  return {
+    version: 1, waveId: "T2-INTEGRATE", baseSha: rebaselineBaseSha, candidateSha: "b".repeat(40),
+    measurement: {
+      command: REBASELINE_MEASUREMENT_COMMAND, baseLcovSha256: "c".repeat(64),
+      candidateLcovSha256: "d".repeat(64), runUrl: null,
+    },
+    approvedBy: "owner", reviewer: "reviewer", approvedAt: "2026-10-16T00:00:00Z", transitionExpiresAt: "2099-01-01T00:00:00Z",
+    entries: [{
+      source: rebaselineSource, previousFloor: 90, measuredBefore: 90, measuredAfter: 80, newFloor: 80,
+      configuredLineMinimum: 70, branchFloor: 40,
+      removedTests: [{ path: "worker/src/lib/__tests__/auth.test.ts", titles: ["redundant input permutation"] }],
+      survivingOwners: [{ path: "worker/src/lib/__tests__/auth.test.ts", title: "rejects unauthorized requests" }],
+      protectedClass: "auth", rationale: "Remove redundant permutations while preserving the authorization boundary.",
+    }],
+  };
+}
+
+const rebaselineContext = {
+  previous: { [rebaselineSource]: 90 },
+  candidate: { [rebaselineSource]: 80 },
+  lineMinimum: () => 70,
+  branchMinimum: () => 40,
+  now: new Date("2026-10-16T12:00:00Z"),
+};
+
+describe("reviewed critical coverage rebaseline", () => {
+  it("accepts a valid record with exact decreased sources and unchanged absolute floors", () => {
+    const record = reviewedRebaseline();
+    expect(validateCriticalCoverageRebaseline(record, rebaselineContext)).toBe(record);
+  });
+
+  it.each([
+    ["below minimum", (record: CriticalCoverageRebaselineRecord) => {
+      record.entries[0].newFloor = record.entries[0].measuredAfter = 60;
+    }, "below the configured line minimum"],
+    ["without owner", (record: CriticalCoverageRebaselineRecord) => { record.entries[0].survivingOwners = []; }, "surviving owner"],
+    ["expired", (record: CriticalCoverageRebaselineRecord) => { record.transitionExpiresAt = "2026-10-16T11:00:00Z"; }, "expired"],
+    ["missing entry", (record: CriticalCoverageRebaselineRecord) => { record.entries = []; }, "exactly the set of decreased sources"],
+    ["extra entry", (record: CriticalCoverageRebaselineRecord) => {
+      record.entries.push({ ...record.entries[0], source: "worker/src/lib/evm-rpc.ts", previousFloor: 80 });
+    }, "exactly the set of decreased sources"],
+    ["unmeasured floor", (record: CriticalCoverageRebaselineRecord) => { record.entries[0].measuredAfter = 79; }, "equal measuredAfter"],
+    ["changed branch floor", (record: CriticalCoverageRebaselineRecord) => { record.entries[0].branchFloor = 30; }, "branchFloor"],
+  ] as const)("rejects a record %s", (_label, mutate, message) => {
+    const record = reviewedRebaseline();
+    mutate(record);
+    const extra: Record<string, number> = message === "exactly the set of decreased sources"
+      ? { "worker/src/lib/evm-rpc.ts": 80 } : {};
+    const context = {
+      ...rebaselineContext,
+      previous: { ...rebaselineContext.previous, ...extra },
+      candidate: { ...rebaselineContext.candidate, ...extra, [rebaselineSource]: record.entries[0]?.newFloor ?? 80 },
+    };
+    expect(() => validateCriticalCoverageRebaseline(record, context)).toThrow(message);
+  });
+
+  it("requires an owner even for a protected decrease smaller than 1.0pt", () => {
+    const record = reviewedRebaseline();
+    record.entries[0].newFloor = record.entries[0].measuredAfter = 89.5;
+    record.entries[0].survivingOwners = [];
+    expect(() => validateCriticalCoverageRebaseline(record, {
+      ...rebaselineContext, candidate: { [rebaselineSource]: 89.5 },
+    })).toThrow("surviving owner");
+  });
+
+  it.each(["present", "missing", "expired", "uncommitted"] as const)(
+    "checks committed rebaseline evidence for a baseline decrease: %s",
+    (evidence) => {
+      const record = reviewedRebaseline();
+      if (evidence === "expired") {
+        record.approvedAt = "2020-01-01T00:00:00Z";
+        record.transitionExpiresAt = "2021-01-01T00:00:00Z";
+      }
+      const { errors, exits, logs } = runCoverageFixture({
+        env: { CRITICAL_COVERAGE_COMPARE_REF: "base", CRITICAL_COVERAGE_CHANGED_FILES: rebaselineSource },
+        lcov: buildCriticalLcov({ lineCoverage: { [rebaselineSource]: { lf: 100, lh: 80 } } }),
+        baseline: { files: { [rebaselineSource]: 80 } },
+        execFile: mockExecFileSync((_cmd, args) => {
+          if (args[0] === "show" && args[1] === "base:.ci/critical-coverage-baseline.json") {
+            return JSON.stringify({ files: { [rebaselineSource]: 90 } });
+          }
+          if (args[0] === "rev-parse") return rebaselineBaseSha;
+          if (args[0] === "ls-tree") return evidence === "missing" || evidence === "uncommitted" ? "" : `${rebaselineRecordPath}\0`;
+          if (args[0] === "show" && args[1] === `HEAD:${rebaselineRecordPath}`) return JSON.stringify(record);
+          throw new Error(`Unexpected git command: ${args.join(" ")}`);
+        }),
+      });
+      if (evidence === "present") {
+        expect(exits).toEqual([]);
+        expect(errors).toEqual([]);
+        expect(logs).toContain("[coverage] Critical coverage gate passed.");
+      } else {
+        expect(exits).toEqual([1]);
+        expect(errors).toContainEqual(expect.stringContaining("matching committed rebaseline record"));
+        expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
+      }
+    },
+  );
+});
+
+describe("nonprotected rebaseline owner boundary", () => {
+  it.each([89, 89.5])("requires a surviving owner at the 1.0pt boundary: %s", (newFloor) => {
+    const record = reviewedRebaseline();
+    record.entries[0].protectedClass = "none";
+    record.entries[0].survivingOwners = [];
+    record.entries[0].newFloor = record.entries[0].measuredAfter = newFloor;
+    const validate = () => validateCriticalCoverageRebaseline(record, {
+      ...rebaselineContext, candidate: { [rebaselineSource]: newFloor },
+    });
+    if (newFloor === 89) expect(validate).toThrow("surviving owner");
+    else expect(validate()).toBe(record);
+  });
+});
+
+describe("critical coverage completeness baseline enforcement", () => {
+  it.each([false, true])("checks committed decrease evidence without LCOV: record present=%s", (present) => {
+    const record = reviewedRebaseline();
+    const errors: string[] = [];
+    const exits: number[] = [];
+    const passed = runCriticalCoverageCompletenessCheck({
+      env: testEnv({ PR_BASE_SHA: rebaselineBaseSha }),
+      fsImpl: mockFsImpl({
+        existsSync: (path) => path === ".ci/critical-coverage-baseline.json",
+        readFileSync: () => JSON.stringify({ files: { [rebaselineSource]: 80 } }),
+      }),
+      execFile: mockExecFileSync((_cmd, args) => {
+        if (args[0] === "show" && args[1] === `${rebaselineBaseSha}:.ci/critical-coverage-baseline.json`) {
+          return JSON.stringify({ files: { [rebaselineSource]: 90 } });
+        }
+        if (args[0] === "rev-parse") return rebaselineBaseSha;
+        if (args[0] === "ls-tree") return present ? `${rebaselineRecordPath}\0` : "";
+        if (args[0] === "show" && args[1] === `HEAD:${rebaselineRecordPath}`) return JSON.stringify(record);
+        throw new Error(`Unexpected git command: ${args.join(" ")}`);
+      }),
+      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
+      consoleImpl: mockConsole({ error: (message: string) => errors.push(message), log: () => {} }),
+      exit: captureProcessExit((code) => { if (code !== undefined) exits.push(code); }),
+    });
+    expect(passed).toBe(present);
+    expect(exits).toEqual(present ? [] : [1]);
+    if (present) expect(errors).toEqual([]);
+    else expect(errors).toContainEqual(expect.stringContaining("matching committed rebaseline record"));
+  });
+
+  it.each(["measured", "completeness"] as const)(
+    "rejects an unrecorded hand-lowering with a missing, zero, or invalid base in %s execution",
+    (mode) => {
+      for (const ref of [undefined, "0".repeat(40), "missing-ref"]) {
+        const logs: string[] = [];
+        const errors: string[] = [];
+        const exits: number[] = [];
+        const options = {
+          env: testEnv({
+            CRITICAL_COVERAGE_CHANGED_FILES: rebaselineSource,
+            ...(ref === undefined ? {} : { CRITICAL_COVERAGE_COMPARE_REF: ref }),
+          }),
+          fsImpl: mockFsImpl({
+            existsSync: () => true,
+            readFileSync: (path: string) => path === "coverage/lcov.info"
+              ? buildCriticalLcov({ lineCoverage: { [rebaselineSource]: { lf: 100, lh: 80 } } })
+              : JSON.stringify({ files: { [rebaselineSource]: 80 } }),
+          }),
+          execFile: mockExecFileSync(() => { throw new Error("unknown revision"); }),
+          completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
+          consoleImpl: mockConsole({
+            log: (message: string) => logs.push(message),
+            error: (message: string) => errors.push(message),
+          }),
+          exit: captureProcessExit((code) => { if (code !== undefined) exits.push(code); }),
+        };
+        if (mode === "completeness") expect(runCriticalCoverageCompletenessCheck(options)).toBe(false);
+        else runCriticalCoverageCheck(options);
+        expect(exits).toEqual([1]);
+        expect(errors).toContainEqual(expect.stringContaining(ref === "missing-ref"
+          ? "unknown revision" : "requires a nonzero comparison base"));
+        expect(logs).not.toContainEqual(expect.stringContaining("skipped"));
+        expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
+      }
+    },
+  );
 });

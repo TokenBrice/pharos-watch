@@ -5,7 +5,6 @@ import {
   type CriticalOwnership,
 } from "./critical-ownership.mts";
 import { CRITICAL_FILES, CRITICAL_OWNERSHIP, criticalCoverageFilesForChanges, selectChangedCriticalSources } from "./critical-coverage.mjs";
-import { partitionTestFiles, readPrTestTimings, takeTestShard } from "./pr-test-plan.mts";
 
 export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
   "src/lib/__tests__/reserve-coinid-validation.test.ts",
@@ -79,7 +78,6 @@ export interface CriticalCoverageBuildOptions {
   ownership?: CriticalOwnership;
   exists?: (path: string) => boolean;
   baseRef?: string;
-  durations?: Readonly<Record<string, number>>;
   /** Vitest file-worker cap; defaults to the CI-calibrated 4. */
   maxWorkers?: number;
 }
@@ -132,32 +130,11 @@ export function buildCriticalCoverageArgs(
   // other critical owners can exercise a touched source through indirect imports.
   const ownerTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
   assertExecutableTestFiles(ownerTests, { exists: options.exists });
-  const { args, shard } = takeTestShard(extraArgs);
-  const selectedTests = shard
-    ? partitionTestFiles(ownerTests, shard.shardCount, options.durations ?? readPrTestTimings().coverage)[shard.shard - 1]
-    : ownerTests;
-  if (selectedTests.length === 0) throw new Error("Empty critical coverage shard selection");
+  if (ownerTests.length === 0) throw new Error("Empty critical coverage test selection");
   return [
     "run",
     ...buildCriticalCoverageOptions(selectedSources, options.maxWorkers),
-    ...selectedTests,
-    ...args,
+    ...ownerTests,
+    ...extraArgs,
   ];
-}
-
-export function countCriticalCoverageShards(
-  options: CriticalCoverageBuildOptions = {},
-  maxShards = 8,
-): number {
-  const ownership = options.ownership ?? CRITICAL_OWNERSHIP;
-  const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
-  if (selectedTests.length === 0) throw new Error("Empty critical coverage test selection");
-  return Math.max(1, Math.min(maxShards, selectedTests.length));
-}
-
-export function buildCriticalCoverageMergeArgs(
-  reportsDirectory = ".vitest-reports",
-  options: CriticalCoverageBuildOptions = {},
-): string[] {
-  return [...buildCriticalCoverageOptions(selectCriticalCoverageFiles(options)), `--merge-reports=${reportsDirectory}`];
 }

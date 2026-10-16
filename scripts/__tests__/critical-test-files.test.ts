@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
-import { buildCriticalCoverageArgs, buildCriticalCoverageMergeArgs, countCriticalCoverageShards } from "../lib/critical-test-files.mts";
+import { buildCriticalCoverageArgs } from "../lib/critical-test-files.mts";
 
 describe("critical execution contracts", () => {
   it("rejects missing, non-test and multiply-owned mandatory files", () => {
@@ -11,21 +11,10 @@ describe("critical execution contracts", () => {
     expect(() => assertExecutableTestFiles(["src/owner.test.ts"], { exists: () => true, projects: [project, project] })).toThrow("found 2");
   });
 
-  it("accepts executable spec files and isolated project exceptions", () => {
-    expect(() => assertExecutableTestFiles(["src/owner.spec.ts", "scripts/__tests__/remote-d1.test.ts"], { exists: () => true })).not.toThrow();
-  });
-
   it("never turns an empty ownership selection into unrestricted Vitest execution", () => {
     const options = { criticalFiles: ["src/source.ts"], ownership: new Map() };
     expect(() => buildCriticalCoverageArgs([], options)).toThrow(/Empty/);
-    expect(() => countCriticalCoverageShards(options)).toThrow(/Empty/);
-    expect(() => buildCriticalCoverageMergeArgs(".vitest-reports", { criticalFiles: [] })).toThrow(/Empty/);
-  });
-
-  it("rejects an empty explicit shard rather than running unrestricted tests", () => {
-    const options = { criticalFiles: ["src/source.ts"], ownership: new Map([["src/source.ts", ["src/source.test.ts"]]]), exists: () => true };
-    expect(() => buildCriticalCoverageArgs(["--shard=2/2"], options)).toThrow("Empty critical coverage shard");
-    expect(() => buildCriticalCoverageArgs(["--shard=0/8"], options)).toThrow("Invalid test shard");
+    expect(() => buildCriticalCoverageArgs([], { criticalFiles: [] })).toThrow(/Empty/);
   });
 
   it("retains all critical owners while narrowing measured sources", () => {

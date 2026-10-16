@@ -63,8 +63,6 @@
     "test:critical-contracts": "node --import tsx scripts/maintenance/run-critical-contracts.ts",
     "audit:eurostablecoins-coverage": "node --import tsx scripts/maintenance/audit-eurostablecoins-coverage.ts",
     "coverage:critical": "node --import tsx scripts/maintenance/run-critical-coverage.ts",
-    "coverage:critical:shard": "node --import tsx scripts/maintenance/run-critical-coverage-shard.ts",
-    "coverage:critical:merge": "node --import tsx scripts/maintenance/merge-critical-coverage.ts",
     "coverage:critical:update-baseline": "node --import tsx scripts/maintenance/update-critical-coverage-baseline.ts",
     "check:critical-coverage-completeness": "node --import tsx scripts/ci/check-critical-coverage.ts --completeness",
     "check:pr": "node --import tsx scripts/maintenance/run-pr-checks.ts",

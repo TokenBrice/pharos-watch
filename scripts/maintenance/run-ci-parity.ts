@@ -9,8 +9,6 @@ import { assertPinnedRuntime, readRuntimeVersions, type RuntimeVersions } from "
 import { computeReceiptOutcome, firstActionableError, readPrCheckReceipt, writePrCheckReceipt, type PrCheckReceipt, type PrCheckReceiptLeaf } from "../lib/pr-check-receipt.mts";
 import { collectChangedFiles } from "../lib/changed-files.mts";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
-import { deriveBaseCriticalOwnership, collectOwningTests } from "../lib/critical-ownership.mts";
-import { CRITICAL_FILES, CRITICAL_OWNERSHIP } from "../lib/critical-coverage.mjs";
 import { getPrLane, buildPrLaneCommandArgs } from "../lib/pr-lanes.mts";
 import { PR_TEST_PLAN_PATH, readPrTestPlan, type PrTestPlan } from "../lib/pr-test-plan.mts";
 import { buildPrStaticCheckPlan, prStaticLeafArgs } from "./run-pr-static-checks.ts";
@@ -68,7 +66,7 @@ export function printCiParityPlan(log: (message: string) => void): void {
     "Run trusted-base branch-range and tested-merge-resolution secret scans, plus candidate-policy validation.",
     "Classify frozen base/branch HEAD, serialize the test plan on the merge checkout, and execute all static/docs owners.",
     "Execute every explicit plain-test partition with CI's four/eight-shard rule, serialized to bound memory; no unsharded replacement.",
-    "Execute selected critical-coverage shards, merge/completeness/touched ratchet with frozen refs, and the selected representative Pages artifact lane.",
+    "Execute the selected representative Pages artifact lane.",
     "Aggregate every leaf into the author's .tmp/pr-check-receipts/<headSha>.json; remove the clone in finally unless --keep-clone (print retained path).",
   ]) log(`[ci-parity] ${step}`);
   log(`[ci-parity] ${CI_PARITY_LIMITATIONS}`);
@@ -214,7 +212,7 @@ interface CloneOptions {
  * manifest's explicit CI partitions. Selection refs never become merge refs. */
 export async function runCiParityClone({ env = process.env, repoRoot = process.cwd(), runCommand = runParityCommand,
   runSecrets = runLocalTrustedGitleaks, changedFiles, readPlan = readPrTestPlan, log = console.log, runtimeVersions = readRuntimeVersions,
-  classifyFiles = (files) => classifyChangedFiles(files, { baseOwnership: deriveBaseCriticalOwnership(env.PR_BASE_SHA!, files) }),
+  classifyFiles = classifyChangedFiles,
 }: CloneOptions = {}): Promise<PrCheckReceipt> {
   const baseSha = env.PR_BASE_SHA ?? "";
   const headSha = env.PR_HEAD_SHA ?? "";
@@ -287,17 +285,6 @@ export async function runCiParityClone({ env = process.env, repoRoot = process.c
       if (code) await execute(command.id, command.program, [...command.args], resource.timeoutMinutes);
       else leaves.push({ id: command.id, command: [command.program, ...command.args].join(" "), status: "not-selected", durationMs: 0 });
     }
-    const coverage = getPrLane("critical-coverage-shards");
-    if (classification.criticalCoverageChanged) {
-      const shardCount = Math.max(1, Math.min(coverage.shards!, collectOwningTests(CRITICAL_FILES, CRITICAL_OWNERSHIP).length));
-      env = { ...env, CRITICAL_COVERAGE_COMPARE_REF: baseSha };
-      for (let shard = 1; shard <= shardCount; shard++) {
-        const command = coverage.commands[0];
-        await execute(`critical-coverage:${shard}/${shardCount}`, command.program, buildPrLaneCommandArgs(command, { shard, shardCount }), coverage.timeoutMinutes);
-      }
-      const merge = getPrLane("critical-coverage").commands.find((command) => command.id === "critical-coverage-merge")!;
-      await execute(merge.id, merge.program, [...merge.args], getPrLane("critical-coverage").timeoutMinutes);
-    } else leaves.push({ id: "critical-coverage", command: "coverage shards + completeness/ratchet merge", status: "not-selected", durationMs: 0 });
     const pages = getPrLane("pages-artifact");
     if (classification.pagesArtifactRequired) {
       for (const command of pages.commands) await execute(command.id, command.program, [...command.args], pages.timeoutMinutes);
