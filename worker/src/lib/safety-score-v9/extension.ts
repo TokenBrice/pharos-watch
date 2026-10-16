@@ -121,8 +121,8 @@ import {
 } from "./extension-reserves";
 import { collateralExposureMappingIssues } from "./fact-set-context";
 import { ReviewEvidenceBuilder, parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
+import { sha256HexFromUtf8Chunks } from "../hash";
 import {
-  nativeReviewEvidenceDigest,
   accessEvidenceObservationState,
   projectControlAuthority,
   boundedObservedAt,
@@ -2482,7 +2482,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
         const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
-        const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec, nativeReviewEvidenceDigest);
+        const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec, sha256HexFromUtf8Chunks);
         admissionPath = "reserveScopeAdmissions";
         const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
         addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput, reviewEvidence);

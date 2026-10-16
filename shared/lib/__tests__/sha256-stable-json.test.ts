@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { sha256Hex, sha256HexFromBytes, sha256HexFromUtf8Chunks } from "../sha256";
 import {
+  stableJsonStringifyBatchChunksV1,
   stableJsonStringifyChunksV1,
   stableJsonStringifyV1,
 } from "../stable-json";
@@ -88,5 +89,27 @@ describe("streamed stable JSON", () => {
     expect(() => stableJsonStringifyChunksV1(invalid)).toThrow(
       "Cannot serialize undefined array entry at $.values[1]",
     );
+  });
+
+  it("reuses a large shared payload without changing canonical envelope bytes", () => {
+    const shared = { "10": "ten", "2": "two", rows: Array.from({ length: 3_000 }, (_, id) => ({ id, text: "\"\\😀\ud800".repeat(12) })) };
+    const values = [
+      { z: shared, a: { nested: shared }, source: null },
+      { source: { url: "https://example.com/é" }, a: [], z: shared },
+      shared,
+    ];
+    const batches = stableJsonStringifyBatchChunksV1(values, shared);
+    for (const [index, chunks] of batches.entries()) {
+      const canonical = stableJsonStringifyV1(values[index]);
+      const actual = [...chunks];
+      expect(actual.join("")).toBe(canonical);
+      expect(sha256HexFromUtf8Chunks(actual)).toBe(nodeSha256(canonical));
+    }
+  });
+
+  it("admits both shared payloads and nonshared envelope fields strictly", () => {
+    expect(() => stableJsonStringifyBatchChunksV1([{ payload: {} }], { bad: NaN })).toThrow("Cannot serialize non-finite or unsafe number");
+    const shared = { valid: true };
+    expect(() => stableJsonStringifyBatchChunksV1([{ shared, bad: [undefined] }], shared)).toThrow("Cannot serialize undefined array entry");
   });
 });

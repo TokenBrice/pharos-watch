@@ -649,7 +649,7 @@
   },
   "kpkusdcyield-kpk": {
     "title": "Broader collateral, more layered credit exposure",
-    "text": "KPK USDC Yield V2 is the higher-yield sibling of Prime: a Morpho Vault V2 share over USDC that lends against structured and yield-bearing collateral instead of blue-chip assets. Its largest markets take Avant's savUSD and 3Jane's USD3, alongside InfiniFi's siUSD and its principal tokens, so liquidation recoveries depend on the value of other protocols' dollar claims. USD3 adds an unsecured-credit layer beneath the {{term:overcollateralization}}overcollateralized{{/term}} Morpho loans that accept it. Several branches value collateral through issuer conversion rates or strategy accounting rather than market sale prices, and Pharos cannot yet establish the vault's full oracle topology. That gap, plus the owner Safe and allocator keys it shares with Prime, makes economic control the weakest pillar behind the {{grade}} overall grade. Backing also trails Prime because of the layered credit in the book. Borrower interest raises assets per share, and realized losses lower it for all holders. At the mid-October review, far less of the vault could be withdrawn instantly than Prime. Exits depend on the cash the selected market can return, not on the strategy's published liquidity target.",
+    "text": "KPK USDC Yield is the higher-yield sibling of Prime: a Morpho Vault V2 share over USDC that lends against structured and yield-bearing collateral instead of blue-chip assets. Its largest markets take Avant's savUSD and 3Jane's USD3, alongside InfiniFi's siUSD and its principal tokens, so liquidation recoveries depend on the value of other protocols' dollar claims. USD3 adds an unsecured-credit layer beneath the {{term:overcollateralization}}overcollateralized{{/term}} Morpho loans that accept it. Several branches value collateral through issuer conversion rates or strategy accounting rather than market sale prices, and Pharos cannot yet establish the vault's full oracle topology. That gap, plus the owner Safe and allocator keys it shares with Prime, makes economic control the weakest pillar behind the {{grade}} overall grade. Backing also trails Prime because of the layered credit in the book. Borrower interest raises assets per share, and realized losses lower it for all holders. At the mid-October review, far less of the vault could be withdrawn instantly than Prime. Exits depend on the cash the selected market can return, not on the strategy's published liquidity target.",
     "updatedAt": "2026-10-16",
     "authoredBy": "ai",
     "model": "anthropic/claude-opus-5-5",
@@ -664,7 +664,7 @@
     ],
     "sources": [
       {
-        "label": "KPK USDC Yield V2: collateral mandate and Ethereum vault",
+        "label": "KPK USDC Yield: collateral mandate and Ethereum vault",
         "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield"
       }
     ]

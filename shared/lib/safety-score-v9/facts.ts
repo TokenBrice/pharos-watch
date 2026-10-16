@@ -114,8 +114,11 @@ function projectValidatedV9FactSetDigestPayload(input: V9FactSetCore | CompiledV
 }
 
 /** Hash a schema-validated fact set without cloning its full object graph. */
-export function computeValidatedV9FactSetDigest(input: V9FactSetCore | CompiledV9FactSet): string {
-  return sha256HexFromUtf8Chunks(
+export function computeValidatedV9FactSetDigest(
+  input: V9FactSetCore | CompiledV9FactSet,
+  digest: (chunks: Iterable<string>) => string = sha256HexFromUtf8Chunks,
+): string {
+  return digest(
     stableJsonStringifyChunksV1({
       domain: V9_FACT_SET_DIGEST_DOMAINS[input.schemaVersion],
       factSet: projectValidatedV9FactSetDigestPayload(input),

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   AS_OF_SEC,
@@ -74,6 +75,17 @@ function classifiedCore(cause: "B" | "C"): V9FactSetCoreV3 {
 }
 
 describe("current cause admission", () => {
+  it("preserves the full compiled fact set with a native streaming digest", () => {
+    const core = currentCore();
+    const portable = compileV9FactSetV3(core);
+    const native = compileV9FactSetV3(core, (chunks) => {
+      const hash = createHash("sha256");
+      for (const chunk of chunks) hash.update(chunk);
+      return hash.digest("hex");
+    });
+    expect(native).toEqual(portable);
+  });
+
   it.each(["B", "C"] as const)("binds authored %s research bytes through compile and evaluation admission", (cause) => {
     const compiled = compileV9FactSetV3(classifiedCore(cause));
     const admitted = readCompiledV9FactSetForEvaluation(compiled).factSet.assets[0]!;
