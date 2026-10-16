@@ -221,9 +221,9 @@ async function readCloudflareResult(fetchImpl, apiToken, path, operation, { allo
     throw new Error(`${operation} returned an unparseable response (HTTP ${response.status})`);
   }
   if (allowWorkflowNotFound && response.status === 404 && payload?.success === false
-    && Array.isArray(payload.errors) && payload.errors.length > 0
-    && payload.errors.every((error) => isRecord(error) && Number.isFinite(error.code)
-      && typeof error.message === "string" && /workflow.*(?:not found|does not exist)/i.test(error.message))) {
+    && Array.isArray(payload.errors)
+    && payload.errors.some((error) => isRecord(error) && error.code === 10200
+      && error.message === "workflows.api.error.workflow.not_found")) {
     return null;
   }
   const errors = asArray(payload?.errors)
