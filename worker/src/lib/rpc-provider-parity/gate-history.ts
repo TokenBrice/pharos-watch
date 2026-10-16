@@ -1,3 +1,4 @@
+import { isRecord } from "@shared/lib/type-guards";
 import {
   combineRpcParityLatestFreshness,
   RPC_PARITY_LATEST_FRESHNESS_REASONS,
@@ -60,29 +61,39 @@ export function isRpcParityGateRun(raw: unknown): raw is RpcParityGateRun {
   const chains = new Set<string>();
   return raw[1].every((sample: unknown) => {
     if (!Array.isArray(sample) || sample.length !== 9) return false;
-    const [chain, host, comparator, flags, block, methods, freshness, stale, logsComparator] = sample;
+    const fields: unknown[] = sample;
+    const [chain, host, comparator, flags, block, methods, freshness, stale, logsComparator] = fields;
     if (typeof chain !== "string" || chains.has(chain) || comparator === null) return false;
     chains.add(chain);
     for (const ref of [comparator, logsComparator]) {
       if (ref === null && ref === logsComparator) continue;
-      if (!ref || typeof ref !== "object" || !isRpcParityComparatorOperator(ref.operator)
+      if (!isRecord(ref) || !isRpcParityComparatorOperator(ref.operator)
         || typeof ref.host !== "string" || !isRpcParityComparatorSource(ref.source)) return false;
     }
-    if (typeof chain !== "string" || typeof host !== "string" || !Number.isInteger(flags) || flags < 0 || flags > 15
+    if (typeof chain !== "string" || typeof host !== "string" || typeof flags !== "number" || !Number.isInteger(flags) || flags < 0 || flags > 15
       || !(block === null || Number.isSafeInteger(block)) || ((flags & 2) !== 0 && (flags & 1) === 0)
       || ((flags & 8) !== 0 && (flags & 4) === 0)) return false;
     if (!Array.isArray(methods) || methods.length !== RPC_PARITY_PROBE_STEPS.length * 2
-      || !methods.every((counts: unknown) => Array.isArray(counts) && counts.length === 4
-        && counts.every((count: unknown) => Number.isSafeInteger(count) && Number(count) >= 0)
-        && counts[1] + counts[2] + counts[3] <= counts[0])) return false;
-    if (!Array.isArray(freshness) || freshness.length !== 3 || !freshness.every((check: unknown) => Array.isArray(check)
-      && check.length === 3 && Number.isInteger(check[0]) && check[0] >= -1 && check[0] < RPC_PARITY_LATEST_FRESHNESS_VERDICTS.length
-      && (check[1] === 0 || check[1] === 1) && Number.isInteger(check[2]) && check[2] >= -1
-      && check[2] < RPC_PARITY_LATEST_FRESHNESS_REASONS.length && (check[0] === -1) === (check[2] === -1))) return false;
-    if (stale !== null && (!stale || typeof stale !== "object" || stale.verdict !== "stale"
-      || !RPC_PARITY_LATEST_FRESHNESS_REASONS.includes(stale.reason)
+      || !methods.every((counts: unknown): counts is MethodCounts => {
+        if (!Array.isArray(counts) || counts.length !== 4) return false;
+        const values: unknown[] = counts;
+        return values.every((count): count is number => typeof count === "number" && Number.isSafeInteger(count) && count >= 0)
+          && values[1] + values[2] + values[3] <= values[0];
+      })) return false;
+    if (!Array.isArray(freshness) || freshness.length !== 3) return false;
+    const freshnessCounts: unknown[] = freshness;
+    if (!freshnessCounts.every((check): check is FreshnessCount => {
+      if (!Array.isArray(check) || check.length !== 3) return false;
+      const values: unknown[] = check;
+      const [verdict, discriminating, reason] = values;
+      return typeof verdict === "number" && Number.isInteger(verdict) && verdict >= -1 && verdict < RPC_PARITY_LATEST_FRESHNESS_VERDICTS.length
+        && (discriminating === 0 || discriminating === 1) && typeof reason === "number" && Number.isInteger(reason) && reason >= -1
+        && reason < RPC_PARITY_LATEST_FRESHNESS_REASONS.length && (verdict === -1) === (reason === -1);
+    })) return false;
+    if (stale !== null && (!isRecord(stale) || stale.verdict !== "stale"
+      || !RPC_PARITY_LATEST_FRESHNESS_REASONS.some((reason) => reason === stale.reason)
       || ![stale.headBefore, stale.headAfter, stale.matchedBlock].every((value) => value === null || Number.isSafeInteger(value)))) return false;
-    return (freshness[0][0] === RPC_PARITY_LATEST_FRESHNESS_VERDICTS.indexOf("stale")) === (stale !== null);
+    return (freshnessCounts[0][0] === RPC_PARITY_LATEST_FRESHNESS_VERDICTS.indexOf("stale")) === (stale !== null);
   });
 }
 

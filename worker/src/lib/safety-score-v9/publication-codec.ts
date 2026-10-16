@@ -182,17 +182,21 @@ function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): S
     throw new Error(`Unsupported Safety Score publication schema ${version}; active reader requires schema 7 and never infers route identity from legacy keys`);
   }
   if (!("cards" in value) || !Array.isArray(value.cards)) return SafetyScoreV9CurrentResponseSchema.parse(value);
+  const cards: unknown[] = value.cards;
   // JSON.parse transferred these rows to this decoder. Admit and replace each
   // owned row before moving on, rather than retaining two complete card graphs.
   // The envelope still runs every response refinement, including parent and
   // gap reconciliation; only already-admitted object identities bypass reparsing.
   const admittedCards = new WeakSet<object>();
   const decodedStrings = reuseUnchangedCards ? undefined : new Map<string, string>();
-  for (let index = 0; index < value.cards.length; index++) {
+  for (let index = 0; index < cards.length; index++) {
     try {
-      const original = value.cards[index];
+      const original = cards[index];
       const parsed = SafetyScoreV9CurrentCardSchema.parse(original);
-      value.cards[index] = reuseUnchangedCards && sameJsonValue(original, parsed) ? original : parsed;
+      const admitted = reuseUnchangedCards && original !== null && typeof original === "object" && sameJsonValue(original, parsed)
+        ? original : parsed;
+      cards[index] = admitted;
+      admittedCards.add(admitted);
       if (decodedStrings) internPublicationStrings(parsed, decodedStrings);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -200,7 +204,6 @@ function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): S
       }
       throw error;
     }
-    admittedCards.add(value.cards[index]);
   }
   return SafetyScoreV9CurrentResponseSchema.safeExtend({
     cards: z.array(z.custom<SafetyScoreV9CurrentCard>((card) =>

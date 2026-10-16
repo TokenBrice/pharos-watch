@@ -8,7 +8,7 @@ describe("DigestIntelligencePanel", () => {
       <DigestIntelligencePanel
         riskTape={[{ id: "depegs", label: "Depegs", value: "MSUSD 5070bps", tone: "critical", detail: "" }]}
         standingConditions={[{ stablecoinId: "pmusd", symbol: "pmUSD", ageDays: 124, currentBps: -4953 }]}
-        forwardLookOutcomes={[{ id: "o1", label: "USTB weekly supply move", status: "missed", detail: "" }]}
+        forwardLookOutcomes={[{ id: "o1", triggerId: "trigger-o1", label: "USTB weekly supply move", status: "missed", detail: "" }]}
       />,
     );
 

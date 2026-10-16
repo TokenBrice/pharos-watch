@@ -39,9 +39,9 @@ describe("DataHealthBanner", () => {
   it("names the lagging source instead of a stall when totals were rebuilt within budget", () => {
     const nowMs = Date.UTC(2026, 9, 12, 20, 0);
     const nowSec = nowMs / 1000;
-    const input = {
+    const input: Parameters<typeof deriveDataHealth>[0] = {
       label: "Freeze totals", dataUpdatedAt: nowMs, staleTime: 6 * 3600_000, hasData: true,
-      meta: { updatedAt: nowSec - 56 * 3600, freshBudgetSec: 48 * 3600, warning: '110 - "Response is stale"' },
+      meta: { updatedAt: nowSec - 56 * 3600, ageSeconds: 56 * 3600, status: "stale", freshBudgetSec: 48 * 3600, warning: '110 - "Response is stale"' },
     };
     const sources = [
       { label: "BRZ on Gnosis", lastSucceededAt: nowSec - 56 * 3600 },

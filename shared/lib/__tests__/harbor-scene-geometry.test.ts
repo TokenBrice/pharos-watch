@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { RatioSchema } from "../../types/ratio";
 import { buildHarborScene, type HarborChainInput, type HarborSceneInput } from "../harbor-scene";
 import { buildHarborGeometry, harborFlagMarks, validateHarborCapacity, type HarborPreset } from "../harbor-scene-geometry";
 import { SCENE_DIMETRIC } from "../scene/projection";
@@ -18,7 +19,7 @@ function synthetic(count: number): HarborSceneInput {
       logoPath: "/chains/ethereum.png",
       totalUsd,
       change7d: totalUsd * 0.01,
-      change7dPct: ((k % 7) - 3) / 100,
+      change7dPct: RatioSchema.parse(((k % 7) - 3) / 100),
       stablecoinCount: 1,
       topStablecoins: [{ id: "usdc-circle", symbol: "USDC", share: 1, supplyUsd: totalUsd }],
       dominanceShare: 0,
@@ -39,14 +40,17 @@ describe("buildHarborGeometry", () => {
   it("flies Robust as a swallowtail so it differs from Healthy by shape, not only hue", () => {
     const face = (band: "robust" | "healthy") => harborFlagMarks(SCENE_DIMETRIC, 0, 0, 0, { kind: "band", band, label: band, pennants: band === "robust" ? 0 : 1, score: null })
       .find((m) => m.cls === `flag-${band} e`)!;
-    expect(face("robust").kind === "polygon" && face("robust").points).toHaveLength(5);
-    expect(face("healthy").kind === "polygon" && face("healthy").points).toHaveLength(4);
+    const robust = face("robust");
+    const healthy = face("healthy");
+    expect(robust.kind === "polygon" && robust.points).toHaveLength(5);
+    expect(healthy.kind === "polygon" && healthy.points).toHaveLength(4);
   });
 
   it("tints wakes only from the hue threshold; smaller moves stay neutral ink", () => {
     const wakeClasses = (pct: number) => {
       const input = synthetic(3);
-      input.chains[0] = { ...input.chains[0]!, change7dPct: pct / 100 };
+      input.chains = input.chains.map((chain, index) =>
+        index === 0 ? { ...chain, change7dPct: RatioSchema.parse(pct / 100) } : chain);
       const g = buildHarborGeometry(buildHarborScene(input), "wide");
       return [...new Set(g.berths[0]!.wake.map((m) => m.cls))];
     };

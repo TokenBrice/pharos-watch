@@ -25,7 +25,7 @@ function assertPlainStableJsonValue(value: unknown, path: string): void {
   }
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index += 1) {
-      const entry = value[index];
+      const entry: unknown = value[index];
       if (entry === undefined) {
         throw new TypeError(`Cannot serialize undefined array entry at ${path}[${index}]`);
       }

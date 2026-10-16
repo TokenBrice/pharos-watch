@@ -634,7 +634,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
     asset.assetId, asset.allocationScopeIdentityReview?.registeredDeploymentKeys ?? [],
   ] as const));
   if (consumeExtensionAssets) materializedExtensions.delete(extension);
-  const outcomes: { facts: V9AssetFactsV3; quarantine: V9AssetQuarantine | null }[] = new Array(extension.assets.length);
+  const outcomes = new Array<{ facts: V9AssetFactsV3; quarantine: V9AssetQuarantine | null }>(extension.assets.length);
   for (let index = 0; index < extension.assets.length; index++) {
     const asset = extension.assets[index]!;
     const evaluationFailure = evaluationFailures.get(asset.assetId);

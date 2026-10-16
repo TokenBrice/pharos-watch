@@ -1,5 +1,6 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { isRecord } from "@shared/lib/type-guards";
 import {
   decodeLiveReserveRedemptionTelemetry,
   LiveReserveDiagnosticsSchema,
@@ -157,17 +158,19 @@ export function parseWarningsStrict(
     catch { return invalid("stored reserve warnings contain invalid JSON"); }
   }
   if (!Array.isArray(parsed)) return invalid("stored reserve warnings are not an array");
+  const items: unknown[] = parsed;
   const warnings: LiveReserveWarning[] = [];
-  for (const item of parsed) {
-    if (!item || typeof item !== "object" || Array.isArray(item) ||
-      typeof item.code !== "string" || !item.code.trim() ||
+  for (const item of items) {
+    if (!isRecord(item)) return invalid("stored reserve warnings contain an invalid member");
+    const storedEffect = LIVE_RESERVE_WARNING_EFFECT_VALUES.find((effect) => effect === item.effect);
+    if (typeof item.code !== "string" || !item.code.trim() ||
       typeof item.message !== "string" || !item.message.trim() ||
       ("severity" in item && item.severity !== "info" && item.severity !== "warning") ||
-      ("effect" in item && !LIVE_RESERVE_WARNING_EFFECT_VALUES.includes(item.effect))) {
+      ("effect" in item && storedEffect === undefined)) {
       return invalid("stored reserve warnings contain an invalid member");
     }
     const severity = item.severity === "info" ? "info" : "warning";
-    const effect = item.effect ?? (severity === "info" ? "info" : "degraded");
+    const effect = storedEffect ?? (severity === "info" ? "info" : "degraded");
     warnings.push({ code: item.code, message: item.message, severity, effect });
   }
   if (warningCount != null && (!Number.isSafeInteger(warningCount) || warningCount !== warnings.length)) {
