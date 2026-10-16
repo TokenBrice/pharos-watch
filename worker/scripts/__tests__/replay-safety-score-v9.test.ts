@@ -141,7 +141,8 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  }, 60_000);
+  // Repeated full-catalog snapshot verification reached 73s in all-critical V8 coverage.
+  }, 180_000);
 
   it("refuses lossy or ambiguous accepted-capture CLI modes", async () => {
     await expect(runReportCardsFixedInputCaptureCli(["--output", "unused"])).rejects.toThrow("Exactly one");

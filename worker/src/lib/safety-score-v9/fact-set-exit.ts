@@ -23,7 +23,8 @@ import { resolveChainId } from "@shared/types/chain-identity";
 import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSec } from "./supply-attribution";
 import { evaluateV9Exit, isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitCirculatingUsd, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
-import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { loadV9CandidateMethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
@@ -41,6 +42,7 @@ import type {
 import type {
   ExitRouteObservation,
   ExitRouteObservationCoverage,
+  ExitExecutionModelReview,
 } from "@shared/types/exit-route";
 import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
 import {
@@ -59,6 +61,32 @@ import {
   createRuntimeGapVerdict,
   type AssetBuildContext,
 } from "./fact-set-context";
+
+// Every asset and route in one compiler input uses the same evidence clock.
+// Reuse its immutable policy instead of parsing, hashing and freezing it again
+// for each route; the weak key cannot retain a completed publication's input.
+const executionPolicies = new WeakMap<AssetBuildContext["fixedInput"], {
+  clockSec: number;
+  policy: V9ValidatedPolicyEnvelope;
+}>();
+const executionReviews = new WeakMap<V9ValidatedPolicyEnvelope, readonly ExitExecutionModelReview[]>();
+
+function executionReviewsForPolicy(policy: V9ValidatedPolicyEnvelope) {
+  const cached = executionReviews.get(policy);
+  if (cached) return cached;
+  const reviews = validateExitExecutionModelReviews(reviewedExecutionModels, policy);
+  executionReviews.set(policy, reviews);
+  return reviews;
+}
+
+function executionPolicyForInput(context: AssetBuildContext): V9ValidatedPolicyEnvelope {
+  const { fixedInput } = context;
+  const cached = executionPolicies.get(fixedInput);
+  if (cached?.clockSec === fixedInput.clockSec) return cached.policy;
+  const policy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
+  executionPolicies.set(fixedInput, { clockSec: fixedInput.clockSec, policy });
+  return policy;
+}
 
 function scopeFailureDomains(
   observation: ExitRouteObservation,
@@ -304,7 +332,7 @@ function buildRoute(
   const routeKey = canonicalV9RouteKey(args.lane, generationId, args.observation.routeId);
   const certificate = args.observation.executionCertificate;
   const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
-  const executionPolicy = args.observation.executionModelId ? loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec) : null;
+  const executionPolicy = args.observation.executionModelId ? executionPolicyForInput(context) : null;
   const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
   const executionAdmission = args.observation.executionModelId
     ? certificate && executionPolicy && executionRequest
@@ -313,6 +341,7 @@ function buildRoute(
           inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, executionRequest, certificate.inputReference),
           observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
           request: executionRequest,
+          reviews: executionReviewsForPolicy(executionPolicy),
         })
       : { state: "unavailable" as const, reason: "execution-certificate-missing", responsibility: "method-unsupported" as const }
     : null;
@@ -853,7 +882,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       `Route reviews do not match captured observations for ${context.asset.assetId}: ${unconsumedReviews}`,
     );
   }
-  const policy = loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec);
+  const policy = executionPolicyForInput(context);
   const eligibleCount = routes.filter((route) => {
     const projected = projectV9ExitEvaluationRoute(route);
     return !projected.settlementBoundUnproven && (route.scoreEligible || isV9CreditableNonAtomicRedemption({
@@ -1116,8 +1145,8 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     }).gapId);
   }
   if (reviewedExecutionModels.reviews.length > 0) {
-    const executionPolicy = loadV9CandidateMethodologyPolicy();
-    for (const review of validateExitExecutionModelReviews(reviewedExecutionModels, executionPolicy)) {
+    const executionPolicy = V9_CANDIDATE_POLICY_V1;
+    for (const review of executionReviewsForPolicy(executionPolicy)) {
       if (review.identity.assetId !== context.asset.assetId || Date.parse(review.reviewedAt) > context.fixedInput.clockSec * 1000 ||
           Date.parse(review.expiresAt) < context.fixedInput.clockSec * 1000 ||
           routes.some((route) => route.routeId === `execution:${exitExecutionReviewDigest(review)}`)) continue;

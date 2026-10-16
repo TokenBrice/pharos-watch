@@ -102,7 +102,10 @@ function createFixtureFetch(
       const overridden = override?.(url.pathname, result);
       if (overridden) return overridden;
       if (heavy.workflowAbsent && url.pathname.endsWith("/workflows/safety-score-v9-publication")) {
-        return Response.json({ success: false, errors: [{ code: 1, message: "Workflow not found" }] }, { status: 404 });
+        return Response.json({
+          success: false, messages: [],
+          errors: [{ code: 10200, message: "workflows.api.error.workflow.not_found" }], result: null,
+        }, { status: 404 });
       }
       return Response.json({ success: true, result });
     }
@@ -232,10 +235,32 @@ describe("Cloudflare account-state drift comparison", () => {
     expect(compareCloudflareAccountState(manifest, state)).toContain("heavyWorker.workflowAbsent: expected true, found false");
   });
 
+  it.each([true, false])("observes exact named not-found as absence when workflowAbsent is %s", async (workflowAbsent) => {
+    const expectedManifest = { ...manifest, heavyWorker: { ...manifest.heavyWorker, workflowAbsent } };
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"));
+    const report = await runCloudflareAccountStateDriftCheck({
+      manifest: expectedManifest,
+      env: { CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token" },
+      fetchImpl: fetchMock,
+      consoleImpl: mockConsole(),
+    });
+    expect(report).toEqual({
+      ok: workflowAbsent,
+      drift: workflowAbsent ? [] : ["heavyWorker.workflowAbsent: expected false, found true"],
+    });
+  });
+
   it.each([
     [404, "not JSON"],
     [404, JSON.stringify({ success: false, errors: [] })],
     [404, JSON.stringify({ success: false, errors: [{ code: 1, message: "Unauthorized" }] })],
+    [404, JSON.stringify({ success: false, errors: [{ code: 1, message: "Workflow not found" }] })],
+    [404, JSON.stringify({ success: false, errors: [{ code: 1, message: "workflows.api.error.workflow.not_found" }] })],
+    [404, JSON.stringify({ success: false, errors: [{ code: 10200, message: "Workflow not found" }] })],
+    [404, JSON.stringify({ success: false, errors: [{ code: "10200", message: "workflows.api.error.workflow.not_found" }] })],
+    [404, JSON.stringify({ success: true, errors: [{ code: 10200, message: "workflows.api.error.workflow.not_found" }] })],
+    [404, JSON.stringify({ errors: [{ code: 10200, message: "workflows.api.error.workflow.not_found" }] })],
+    [403, JSON.stringify({ success: false, errors: [{ code: 10200, message: "workflows.api.error.workflow.not_found" }] })],
     [403, JSON.stringify({ success: false, errors: [{ code: 1, message: "Workflow not found" }] })],
     [200, JSON.stringify({ success: true, result: null })],
     [200, JSON.stringify({ success: true, result: {} })],
@@ -245,6 +270,15 @@ describe("Cloudflare account-state drift comparison", () => {
       path.endsWith("/workflows/safety-score-v9-publication") ? new Response(body, { status }) : undefined);
     await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
       .rejects.toThrow("Cloudflare Workflow lookup");
+  });
+
+  it("propagates Workflow network failures instead of observing absence", async () => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) => {
+      if (path.endsWith("/workflows/safety-score-v9-publication")) throw new Error("Workflow connection failed");
+      return undefined;
+    });
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow("Workflow connection failed");
   });
 
   it("fetches live state with GET only and removes account IDs and secret values before comparison", async () => {
