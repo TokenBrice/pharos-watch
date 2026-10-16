@@ -73,12 +73,98 @@ function reviewedReport(): AuditReport {
   };
 }
 
+function reviewedBracesReport(): AuditReport {
+  return {
+    auditReportVersion: 2,
+    vulnerabilities: {
+      braces: {
+        name: "braces",
+        severity: "high",
+        nodes: ["node_modules/braces"],
+        via: [{
+          source: 1240992,
+          name: "braces",
+          dependency: "braces",
+          severity: "high",
+          range: "<=3.0.3",
+          url: "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+        }],
+        effects: ["micromatch"],
+      },
+      micromatch: {
+        name: "micromatch", severity: "high", nodes: ["node_modules/micromatch"],
+        via: ["braces"], effects: ["fast-glob"],
+      },
+      "fast-glob": {
+        name: "fast-glob", severity: "high", nodes: ["node_modules/fast-glob"],
+        via: ["micromatch"], effects: ["@next/eslint-plugin-next"],
+      },
+      "@next/eslint-plugin-next": {
+        name: "@next/eslint-plugin-next", severity: "high", nodes: ["node_modules/@next/eslint-plugin-next"],
+        via: ["fast-glob"], effects: ["eslint-config-next"],
+      },
+      "eslint-config-next": {
+        name: "eslint-config-next", severity: "high", nodes: ["node_modules/eslint-config-next"],
+        via: ["@next/eslint-plugin-next"], effects: [],
+      },
+    },
+  };
+}
+
 describe("dependency-audit exceptions", () => {
-  it("keeps the live registry empty after the reviewed advisories are patched", () => {
-    expect(DEPENDENCY_AUDIT_EXCEPTION_REGISTRY).toEqual({ version: 1, exceptions: [] });
-    expect(verifyDependencyAuditReport({ auditReportVersion: 2, vulnerabilities: {} }, { now: reviewedNow })).toEqual({
-      acceptedExceptionIds: [],
+  it("accepts the user-reviewed braces lint-tooling graph until its expiry", () => {
+    expect(DEPENDENCY_AUDIT_EXCEPTION_REGISTRY).toMatchObject({
+      version: 1,
+      exceptions: [{
+        advisoryId: "GHSA-vfj7-8cjw-p6xm",
+        reviewedAt: "2026-10-16",
+        expiresOn: "2026-11-15",
+        dependencyPath: [
+          "eslint-config-next@16.3.8 (dev)",
+          "@next/eslint-plugin-next@16.3.8",
+          "fast-glob@3.3.1",
+          "micromatch@4.0.8",
+          "braces@3.0.3",
+        ],
+      }],
     });
+    expect(verifyDependencyAuditReport(reviewedBracesReport(), {
+      now: new Date("2026-10-16T12:00:00.000Z"),
+    })).toEqual({ acceptedExceptionIds: ["GHSA-vfj7-8cjw-p6xm"] });
+  });
+
+  it("rejects another advisory or a production dependency path under the live braces exception", () => {
+    const now = new Date("2026-10-16T12:00:00.000Z");
+    const otherAdvisory = reviewedBracesReport();
+    Object.assign(otherAdvisory.vulnerabilities.braces.via[0] as object, {
+      source: 9999999,
+      url: "https://github.com/advisories/GHSA-unreviewed",
+    });
+    expect(() => verifyDependencyAuditReport(otherAdvisory, { now }))
+      .toThrow("Unreviewed high/critical advisory affects braces.");
+
+    const productionPath = reviewedBracesReport();
+    productionPath.vulnerabilities.braces.nodes = ["node_modules/production-consumer/node_modules/braces"];
+    expect(() => verifyDependencyAuditReport(productionPath, { now }))
+      .toThrow("Unreviewed high/critical advisory affects braces.");
+
+    const productionConsumer = reviewedBracesReport();
+    productionConsumer.vulnerabilities.braces.effects.push("production-consumer");
+    productionConsumer.vulnerabilities["production-consumer"] = {
+      name: "production-consumer", severity: "high", nodes: ["node_modules/production-consumer"],
+      via: ["braces"], effects: [],
+    };
+    expect(() => verifyDependencyAuditReport(productionConsumer, { now }))
+      .toThrow("reached unreviewed package production-consumer");
+  });
+
+  it("rejects the live braces exception after the approved 30-day window", () => {
+    expect(verifyDependencyAuditReport(reviewedBracesReport(), {
+      now: new Date("2026-11-15T23:59:59.999Z"),
+    })).toEqual({ acceptedExceptionIds: ["GHSA-vfj7-8cjw-p6xm"] });
+    expect(() => verifyDependencyAuditReport(reviewedBracesReport(), {
+      now: new Date("2026-11-16T00:00:00.000Z"),
+    })).toThrow("Dependency-audit exception expired on 2026-11-15.");
   });
 
   it("suppresses only the exact reviewed advisory and dependency nodes", () => {
