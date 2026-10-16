@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "waveId": "F-COVERAGE",
+  "baseSha": "abe02a7478a6b32b8cb5e4d202ed09a29ac07b85",
+  "candidateSha": "8dac25ff8a087bbc6703975ca90f758b201cd66b",
+  "measurement": {
+    "command": "CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical",
+    "baseLcovSha256": "1e11ededcd5a96ab0fad8cf4d0d4e4cde196ffcfd1f67336e4a41a3ba273c670",
+    "candidateLcovSha256": "4b8b19f2782a4992513a3ba99d79192132008b4baab4140db0a3956409f031fb",
+    "runUrl": null
+  },
+  "approvedBy": "repository owner (plan §10.1 decision 2, 2026-10-16)",
+  "reviewer": "great-test-cleanup orchestrator",
+  "approvedAt": "2026-10-16T21:55:21.220Z",
+  "transitionExpiresAt": "2026-11-15T21:55:21.220Z",
+  "entries": [
+    {
+      "source": "functions/lib/proxy-utils.ts",
+      "previousFloor": 100,
+      "measuredBefore": 100,
+      "measuredAfter": 96.2,
+      "newFloor": 96.2,
+      "configuredLineMinimum": 40,
+      "branchFloor": null,
+      "removedTests": [
+        {
+          "path": "functions/lib/__tests__/proxy-utils.test.ts",
+          "titles": [
+            "summarizeFetchError > describes non-Error values using error-shaped fields when available"
+          ]
+        }
+      ],
+      "survivingOwners": [
+        {
+          "path": "functions/lib/__tests__/proxy-utils.test.ts",
+          "title": "proxy HTTP contracts > allowlists client headers and gives service credentials precedence"
+        },
+        {
+          "path": "functions/lib/__tests__/proxy-utils.test.ts",
+          "title": "proxy HTTP contracts > returns JSON errors with no-store unless explicitly overridden"
+        }
+      ],
+      "protectedClass": "none",
+      "rationale": "DA 27 (4 -> 0) only classifies non-Error log values, not authorization, credential forwarding, or failure responses; retained HTTP owners assert those contracts. Measured with reviewed, uncommitted test restores atop candidateSha."
+    },
+    {
+      "source": "worker/src/cron/sync-stablecoins/metadata.ts",
+      "previousFloor": 93.6,
+      "measuredBefore": 93.6,
+      "measuredAfter": 93,
+      "newFloor": 93,
+      "configuredLineMinimum": 40,
+      "branchFloor": null,
+      "removedTests": [
+        {
+          "path": "worker/src/cron/sync-stablecoins/__tests__/metadata.test.ts",
+          "titles": [
+            "stablecoins pricing metadata > summarizes weak source coverage and provider rejection counts"
+          ]
+        }
+      ],
+      "survivingOwners": [
+        {
+          "path": "worker/src/cron/sync-stablecoins/__tests__/metadata.test.ts",
+          "title": "stablecoins pricing metadata > retains missing-asset source attempts when the metadata size guard compacts diagnostics"
+        },
+        {
+          "path": "worker/src/cron/sync-stablecoins/__tests__/metadata.test.ts",
+          "title": "stablecoins pricing metadata > retains %s fallback observations in source health"
+        }
+      ],
+      "protectedClass": "none",
+      "rationale": "DA 276 (2 -> 0) aggregates cron audit rejection counts, not published prices or status health buckets. Retained attempts preserve failure reasons; the restored health row protects bucket counts. Measured with reviewed, uncommitted test restores atop candidateSha."
+    }
+  ]
+}

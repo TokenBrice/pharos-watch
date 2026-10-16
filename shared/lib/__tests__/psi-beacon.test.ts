@@ -199,6 +199,19 @@ describe("buildPsiBeaconModel (hero)", () => {
     expect(model.ariaLabel).toContain("severity 0.0 (lower bound)");
   });
 
+  it("reads rings and zones from psi-policy (R5)", () => {
+    const model = hero(LIVE);
+    expect(model.rings.map((ring) => ring.value)).toEqual([20, 40, 60, 75, 90, 100]);
+    expect(model.zones.map((zone) => [zone.band, zone.from, zone.to])).toEqual([
+      ["MELTDOWN", 0, 20],
+      ["CRISIS", 20, 40],
+      ["FRACTURE", 40, 60],
+      ["TREMOR", 60, 75],
+      ["STEADY", 75, 90],
+      ["BEDROCK", 90, 100],
+    ]);
+  });
+
 });
 
 describe("buildPsiBeaconModel states", () => {
@@ -219,6 +232,11 @@ describe("buildPsiBeaconModel states", () => {
     expect(model.paint).toEqual({ mode: "dark" });
     expect(model.ariaLabel).toContain("PSI unavailable");
     expect(model.rings).toHaveLength(6);
+  });
+
+  it("draws only the skeleton while loading", () => {
+    const model = buildPsiBeaconModel({ kind: "loading" });
+    expect(model).toMatchObject({ state: "loading", beam: null, paint: { mode: "dark" } });
   });
 
 });

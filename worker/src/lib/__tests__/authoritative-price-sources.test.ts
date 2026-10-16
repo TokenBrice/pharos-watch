@@ -351,6 +351,43 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("records null live RPC protocol-redeem overrides as grouped circuit failures", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
+        rows: [],
+        first: null,
+      },
+    ], { assertMatchesUsed: true });
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchLiveOverrides(
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }), freshParent("usdc-circle", 1, "coingecko+pyth")],
+      { db, stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      emptyCount: 1,
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
+    warnSpy.mockRestore();
+  });
+
   it("records thrown live RPC protocol-redeem overrides as grouped circuit failures", async () => {
     fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
     const db = mockD1([
