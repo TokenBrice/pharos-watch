@@ -627,89 +627,45 @@
   },
   "kpkusdcprime-kpk": {
     "title": "Blue-chip collateral, variable lending shares",
-    "text": "KPK USDC Prime is a KPK-curated Morpho V2 vault lending USDC against blue-chip BTC, ETH and liquid-staking collateral. At Ethereum block 26191269 on 2026-10-14, roughly 68% of its USDC-denominated lender claims were in cbBTC and WBTC markets. These weights describe lending allocations, not collateral held outright by the vault. The narrower mandate retains wrapped-BTC custody exposure and liquidation risk. Most reviewed market branches use external feeds, but rETH pricing relies on issuer exchange-rate accounting. Holders own proportional, variable-value shares rather than direct claims on Circle's reserves. Borrower interest raises assets per share, while recognized lending losses are socialized through lower share value. At the same pin, ordinary instant withdrawal capacity was about 43% of Prime's USDC-denominated net asset value, versus about 6% for Yield; both had no idle USDC. These are liquidity-resource measurements, not guarantees of executed holder withdrawals. Independent vault financial assurance, legal segregation, insolvency priority and controller key custody remain unestablished. Complete module-authorization closure is also unresolved. Redemptions depend on cash recoverable through the selected market, and force-deallocation cannot make fully borrowed funds liquid.",
-    "updatedAt": "2026-10-14",
+    "text": "KPK USDC Prime is a Morpho Vault V2 share over USDC, curated by KPK to lend against blue-chip collateral: wrapped bitcoin, ETH and liquid-staking tokens. Most of the book sits in cbBTC and WBTC markets, and KPK's allocation targets are enforced by its rebalancer rather than by onchain caps. Borrower interest raises assets per share, while realized lending losses lower it for every holder. Ordinary redemptions pay out of idle USDC and whatever the selected market can return; force-deallocation cannot make fully borrowed funds liquid. Economic control is the weakest pillar behind the {{grade}} overall grade. An owner Safe and a two-of-five curator Safe sit above allocator keys and automation agents whose custody rests on KPK's statements rather than address-bound evidence. Most market branches price collateral through external feeds, but rETH relies on its issuer's exchange rate. Holders keep Circle's USDC risk and add KPK's allocation discretion and Morpho market liquidity on top of it.",
+    "updatedAt": "2026-10-16",
     "authoredBy": "ai",
-    "model": "openai-codex/gpt-6.1-sol",
-    "factsAsOf": "2026-10-14",
+    "model": "anthropic/claude-opus-5-5",
+    "factsAsOf": "2026-10-16",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-10-16"
+      }
+    ],
     "sources": [
       {
-        "label": "KPK USDC Prime: blue-chip collateral mandate and exact Ethereum vault; accessed 2026-10-14",
-        "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
-      },
-      {
-        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z: complete Prime lender census and pricing topology; selected-market liquidity/NAV observed 2026-10-14T14:35:03.341Z and 2026-10-14T14:36:22.563Z",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
-      },
-      {
-        "label": "Exact Prime adapter: USDC lender positions and market withdrawal accounting",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
-      },
-      {
-        "label": "Morpho liquidation: collateral recovery and lender bad-debt allocation",
-        "url": "https://docs.morpho.org/learn/concepts/liquidation/"
-      },
-      {
-        "label": "VaultV2 pinned source: proportional share accounting, loss realization and selected-adapter exits",
-        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-      },
-      {
-        "label": "KPK signer architecture: disclosed automation custody does not establish exact controller independence or recovery authority; accessed 2026-10-14",
-        "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
-      },
-      {
-        "label": "Exact Prime Zodiac permission history; current grants re-read at block 26191269, complete authorization closure unresolved",
-        "url": "https://eth.blockscout.com/api/v2/addresses/0xd5b66fd462b46b9a08c427ddaf7dc50c05a8df7d/logs"
-      },
-      {
-        "label": "KPK Morpho disclaimer: curator role, absence of guarantees and legal-claim limitations; accessed 2026-10-14",
-        "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
+        "label": "KPK USDC Prime: collateral mandate and Ethereum vault",
+        "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime"
       }
     ]
   },
   "kpkusdcyield-kpk": {
     "title": "Broader collateral, more layered credit exposure",
-    "text": "KPK USDC Yield V2 seeks higher lending yield through a KPK-curated Morpho V2 USDC vault with broader structured and yield-bearing collateral than Prime. At Ethereum block 26191269 on 2026-10-14, savUSD markets accounted for roughly 47% of USDC-denominated lender claims and 3Jane USD3 for roughly 26%. Other material allocations included InfiniFi siUSD and PT-siUSD, srRoyUSDC and ftUSD. These are loan-allocation weights, not collateral holdings. USD3 collateral introduces an unsecured-credit dependency beneath the overcollateralized Morpho loan. Several material branches value collateral through issuer conversion or strategy accounting rather than external sale prices. Unresolved pricing topology in one-unit srNUSD and matured PT-cUSD residuals prevents a complete oracle-control conclusion, without establishing material exposure to those residuals. Holders own proportional, variable-value shares rather than direct Circle reserve claims. Interest increases assets per share; recognized lending losses are socialized through share-price depreciation. At the same pin, ordinary instant withdrawal capacity was about 6% of Yield's USDC-denominated net asset value, versus about 43% for Prime, with no idle USDC in either vault. This measures available resources, not executed holder withdrawals. Independent vault financial assurance, legal segregation, insolvency priority, controller key custody and complete module-authorization closure remain unestablished. Exits depend on available market cash and borrower repayments, not the strategy's published liquidity target.",
-    "updatedAt": "2026-10-14",
+    "text": "KPK USDC Yield V2 is the higher-yield sibling of Prime: a Morpho Vault V2 share over USDC that lends against structured and yield-bearing collateral instead of blue-chip assets. Its largest markets take Avant's savUSD and 3Jane's USD3, alongside InfiniFi's siUSD and its principal tokens, so liquidation recoveries depend on the value of other protocols' dollar claims. USD3 adds an unsecured-credit layer beneath the {{term:overcollateralization}}overcollateralized{{/term}} Morpho loans that accept it. Several branches value collateral through issuer conversion rates or strategy accounting rather than market sale prices, and Pharos cannot yet establish the vault's full oracle topology. That gap, plus the owner Safe and allocator keys it shares with Prime, makes economic control the weakest pillar behind the {{grade}} overall grade. Backing also trails Prime because of the layered credit in the book. Borrower interest raises assets per share, and realized losses lower it for all holders. At the mid-October review, far less of the vault could be withdrawn instantly than Prime. Exits depend on the cash the selected market can return, not on the strategy's published liquidity target.",
+    "updatedAt": "2026-10-16",
     "authoredBy": "ai",
-    "model": "openai-codex/gpt-6.1-sol",
-    "factsAsOf": "2026-10-14",
+    "model": "anthropic/claude-opus-5-5",
+    "factsAsOf": "2026-10-16",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-10-16"
+      }
+    ],
     "sources": [
       {
-        "label": "KPK USDC Yield: collateral mandate, USD3 unsecured-credit dependency and exact Ethereum vault; accessed 2026-10-14",
-        "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
-      },
-      {
-        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z: complete Yield lender census, pricing topology and residual positions",
-        "url": "https://api-ethereum-mainnet.n.dwellir.com"
-      },
-      {
-        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z: both vaults' NAV, idle USDC and selected-market liquidity; observed 2026-10-14T14:35:03.341Z and 2026-10-14T14:36:22.563Z",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
-      },
-      {
-        "label": "Exact Yield adapter: USDC lender positions and market withdrawal accounting",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
-      },
-      {
-        "label": "Morpho liquidation: collateral recovery and lender bad-debt allocation",
-        "url": "https://docs.morpho.org/learn/concepts/liquidation/"
-      },
-      {
-        "label": "VaultV2 pinned source: proportional share accounting, loss realization and selected-adapter exits",
-        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-      },
-      {
-        "label": "KPK signer architecture: disclosed automation custody does not establish exact controller independence or recovery authority; accessed 2026-10-14",
-        "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
-      },
-      {
-        "label": "Exact Yield Zodiac permission history; current grants re-read at block 26191269, complete authorization closure unresolved",
-        "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
-      },
-      {
-        "label": "KPK Morpho disclaimer: curator role, absence of guarantees and legal-claim limitations; accessed 2026-10-14",
-        "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
+        "label": "KPK USDC Yield V2: collateral mandate and Ethereum vault",
+        "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield"
       }
     ]
   },
