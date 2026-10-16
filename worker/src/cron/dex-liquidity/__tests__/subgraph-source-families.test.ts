@@ -5,7 +5,7 @@ import {
 } from "../subgraph-source-families";
 import {
   UNISWAP_V4_SUBGRAPHS,
-  UNISWAP_V4_ETHEREUM_SOURCE,
+  UNISWAP_V4_SOURCE_PROVENANCE,
   buildUniswapV4PoolQuery,
   buildUniswapV4ExactPoolQuery,
   UNIV3_BASE_POOL_MAX_PAGES,
@@ -92,7 +92,7 @@ describe("subgraph source families", () => {
     mockFetch([{
       match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
       respond: async (request) => {
-        const ethereum = request.url.endsWith(UNISWAP_V4_ETHEREUM_SOURCE.subgraphId);
+        const ethereum = request.url.endsWith(UNISWAP_V4_SOURCE_PROVENANCE.ethereum.subgraphId);
         const { query } = await request.json() as { query: string };
         if (ethereum) expect(query).toContain("feeTier: fee");
         return { body: { data: { pools: ethereum ? [{
@@ -110,8 +110,52 @@ describe("subgraph source families", () => {
     }
     const provenance = infos.mock.calls.map(([message]) => JSON.parse(String(message)))
       .find((event) => event.event === "uniswap-v4-subgraph-source");
-    expect(provenance?.metadata).toMatchObject(UNISWAP_V4_ETHEREUM_SOURCE);
+    expect(provenance?.metadata).toMatchObject(UNISWAP_V4_SOURCE_PROVENANCE.ethereum);
     expect(provenance?.metadata.repository).toBe("doryoku/copypools-subgraph");
+  });
+
+  it("uses the reviewed native-schema Arbitrum source without weakening exact PoolKey verification", async () => {
+    // Captured Graph block 515322340; Initialize block 331196680 independently
+    // confirms fee 8, tick spacing 1, ordered USDC/USDT and the zero hook.
+    const pool = {
+      id: "0xab05003a63d2f34ac7eec4670bca3319f0e3d2f62af5c2b9cbd69d03fd804fd2",
+      token0: { id: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", symbol: "USDC", decimals: "6" },
+      token1: { id: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", symbol: "USDT", decimals: "6" },
+      feeTier: "8", tickSpacing: "1", hooks: UNISWAP_V4_HOOK_FREE_ADDRESS,
+      liquidity: "1788596712129290", totalValueLockedUSD: "454125.536771",
+      token0Price: "0.9988602471074316", token1Price: "1.001141053411495",
+    };
+    const changedId = computeUniswapV4PoolId({
+      currency0: pool.token0.id as `0x${string}`,
+      currency1: pool.token1.id as `0x${string}`,
+      feePips: 9, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    });
+    const source = UNISWAP_V4_SOURCE_PROVENANCE.arbitrum;
+    expect(UNISWAP_V4_SUBGRAPHS.arbitrum).toBe(source.subgraphId);
+    expect(buildUniswapV4PoolQuery(0, "arbitrum")).not.toContain("feeTier: fee");
+    expect(buildUniswapV4ExactPoolQuery([pool.id], "arbitrum")).not.toContain("feeTier: fee");
+    const infos = vi.spyOn(console, "info");
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: async (request) => {
+        const arbitrum = request.url.endsWith(source.subgraphId);
+        const { query } = await request.json() as { query: string };
+        if (arbitrum) expect(query).not.toContain("feeTier: fee");
+        return { body: { data: { pools: arbitrum ? [
+          pool, { ...pool, id: changedId },
+        ] : [] } } };
+      },
+    }], { requireMatch: true });
+    const result = await fetchUniswapV4Data("graph-key", new Map([["arbitrum", [pool.id, changedId]]]));
+    expect(result.failedChains).toEqual([]);
+    expect([...result.uniswapV4ExecutionCandidates.values()].flat()).toEqual([
+      expect.objectContaining({ chain: "arbitrum", poolId: pool.id, feePips: 8, tickSpacing: 1 }),
+    ]);
+    const provenance = infos.mock.calls.map(([message]) => JSON.parse(String(message)))
+      .find((event) => event.event === "uniswap-v4-subgraph-source" && event.metadata.chain === "arbitrum");
+    expect(provenance?.metadata).toMatchObject({
+      ...source, chain: "arbitrum", broadScanFailed: false,
+    });
   });
 
   it.each([100.5, Number.MAX_SAFE_INTEGER + 1])("rejects a non-integer Ethereum fee scalar %s", async (feeTier) => {

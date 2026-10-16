@@ -19,7 +19,7 @@ import {
   UNISWAP_V4_POOL_MAX_PAGES,
   UNISWAP_V4_POOL_PAGE_SIZE,
   UNISWAP_V4_SUBGRAPHS,
-  UNISWAP_V4_ETHEREUM_SOURCE,
+  UNISWAP_V4_SOURCE_PROVENANCE,
   UNIV3_POOL_MIN_TVL_USD,
   buildUniswapV4PoolQuery,
   buildUniswapV4ExactPoolQuery,
@@ -391,15 +391,17 @@ export async function fetchUniswapV4Data(
       `[dex-liquidity] Collected ${lookups.uniswapV4ExecutionCandidates.size} Uniswap V4 execution candidate keys`,
   });
   if (!graphApiKey) return result;
-  logWorkerEvent({
-    scope: "handler", level: "info", event: "uniswap-v4-subgraph-source",
-    message: "Ethereum Uniswap V4 identity source read",
-    job: "sync-dex-liquidity", source: "uniswap-v4-subgraph",
-    metadata: {
-      chain: "ethereum", ...UNISWAP_V4_ETHEREUM_SOURCE,
-      broadScanFailed: result.failedChains.includes("ethereum"),
-    },
-  });
+  for (const [chain, source] of Object.entries(UNISWAP_V4_SOURCE_PROVENANCE)) {
+    logWorkerEvent({
+      scope: "handler", level: "info", event: "uniswap-v4-subgraph-source",
+      message: "Uniswap V4 identity source read",
+      job: "sync-dex-liquidity", source: "uniswap-v4-subgraph",
+      metadata: {
+        chain, ...source,
+        broadScanFailed: result.failedChains.includes(chain),
+      },
+    });
+  }
 
   // Exact requests start only after the broad family has drained. Every batch
   // uses the existing bounded, body-consuming transport before the next opens.

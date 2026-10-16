@@ -197,19 +197,27 @@ export const buildUniV3MessariPoolQuery = (skip: number, trackedCurrencies?: rea
 }`;
 
 /**
- * Ethereum's identity-only source is a reviewed Uniswap V4 indexer fork.
- * Its immutable `fee: Int` is PoolKey material, unlike deployments whose
- * `feeTier` tracks the latest swap's protocol-inclusive fee.
+ * Identity-only sources reviewed against immutable PoolKey/on-chain evidence.
+ * Ethereum's fork exposes immutable `fee: Int`; Arbitrum's Uniswap-source deployment
+ * retains the native `feeTier: BigInt` schema. Neither supplies scored TVL.
+ * Repository slugs survive structured-log URL redaction.
  */
-export const UNISWAP_V4_ETHEREUM_SOURCE = {
-  subgraphId: "8B2wKxnkciCTc5HSgsAojF6vhKn6wxQ1nVecYzMge1hA",
-  deploymentId: "QmZFHYDCAMMaguzaCWk4nyaUSooL36RhiciW4HFLZDNGgX",
-  repository: "doryoku/copypools-subgraph",
+export const UNISWAP_V4_SOURCE_PROVENANCE = {
+  ethereum: {
+    subgraphId: "8B2wKxnkciCTc5HSgsAojF6vhKn6wxQ1nVecYzMge1hA",
+    deploymentId: "QmZFHYDCAMMaguzaCWk4nyaUSooL36RhiciW4HFLZDNGgX",
+    repository: "doryoku/copypools-subgraph",
+  },
+  arbitrum: {
+    subgraphId: "G5TsTKNi8yhPSV7kycaE23oWbqv9zzNqR49FoEQjzq1r",
+    deploymentId: "QmbuTwBPUPbLpSyMezCC6VV2dpf2qWumPJnCP6pVxZegDi",
+    repository: "Uniswap/v4-subgraph",
+  },
 } as const;
 
 /** Non-Ethereum sources retain their existing shadow-only admission. */
 export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
-  ethereum: UNISWAP_V4_ETHEREUM_SOURCE.subgraphId,
+  ethereum: UNISWAP_V4_SOURCE_PROVENANCE.ethereum.subgraphId,
   // 2026-09-27: replaced CHz2jQ8g… (deployment QmaoSfxT45Q3tKnQEcmCACRFKpv8SogxEcZ4kAvRDmgnrU),
   // whose only serving indexer (0xf92f430d…) answers non-JSON after ~15s, so
   // every run since 2026-09-22 recorded `uniswap-v4-subgraph:base`. The pinned
@@ -218,7 +226,7 @@ export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
   // Uniswap V4 deployment): identical pool set (same pool ids/hook/liquidity
   // rows probed side by side) at 1.5-2.7s per 1000-pool page instead of 15s.
   base: "Gqm2b5J85n1bhCyDMpGbtbVn4935EvvdyHdHrx3dibyj",
-  arbitrum: "EpEZyTnADuwvqpMh7vcTPFHDN3MwqiUN9QHapCBPbRWW",
+  arbitrum: UNISWAP_V4_SOURCE_PROVENANCE.arbitrum.subgraphId,
   polygon: "2CB2uQxcDKWDenagn2z17KQVCtfwSx5eXYuvqTciRTJu",
   bsc: "EAq1nJKgjnuKH6Gj4RFjCW7LcL7E2uipbncdwV7TTWkX",
 };
