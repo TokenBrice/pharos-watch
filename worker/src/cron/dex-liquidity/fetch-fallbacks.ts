@@ -1,4 +1,4 @@
-import { WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityMetrics, DexPriceObs } from "./types";
 import { getTrackedContracts } from "./pool-helpers";
 

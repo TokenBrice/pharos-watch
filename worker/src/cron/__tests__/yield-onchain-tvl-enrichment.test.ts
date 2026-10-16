@@ -49,11 +49,6 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     trackedMetaById: new Map(stablecoins.map((coin) => [coin.id, coin])),
   });
 });
-/* Vitest hoists mock factories: load the full-registry fixture only after its mock is registered. */
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async () => {
-  const { mockWorkerRuntimeRegistryFromFullRegistry } = await import("../../test-helpers/cron/mock-registry");
-  return mockWorkerRuntimeRegistryFromFullRegistry(await import("@shared/lib/stablecoins/registry"));
-});
 
 vi.mock("../../lib/yield-config/yield-config", () => ({
   YIELD_VARIANT_MAP: {},

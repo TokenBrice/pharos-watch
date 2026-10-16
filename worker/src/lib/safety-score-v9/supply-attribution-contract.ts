@@ -4,12 +4,11 @@ import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
-import type { BridgeRouteRiskProfile } from "@shared/types/core";
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
+import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
 import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, ReviewedProviderChainPartitionSchema, type ReviewedProviderChainPartition, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
@@ -400,7 +399,7 @@ function routeAddress(routeId: string): string | null {
 export function buildReviewedDeploymentRouteInventory(
   assetId: string,
 ): ReviewedDeploymentRouteInventory | null {
-  const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId);
+  const meta = ACTIVE_META_BY_ID.get(assetId);
   const routes = meta?.bridgeRouteRisk?.routes ?? [];
   const contracts = meta?.contracts ?? [];
   if (routes.length === 0 || routes.length !== contracts.length) return null;
@@ -527,7 +526,7 @@ function reviewedDeploymentInventoryValidationError(
 ): string | null {
   if (assetId === "wm-m0") return null;
   const identities = CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId];
-  const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId);
+  const meta = ACTIVE_META_BY_ID.get(assetId);
   const routes = meta?.bridgeRouteRisk?.routes ?? [];
   if (!identities || routes.length !== inventory.routes.length) {
     return `unsupported reviewed deployment attribution asset ${assetId}`;
@@ -934,7 +933,7 @@ export const REVIEWED_PROVIDER_CHAIN_PARTITIONS = createReviewedAssetRegistry({
 /** Preserves a provider row, splitting only a reviewed disjoint same-unit chain census. */
 export function deriveReviewedProviderChainPartition(input: {
   review: ReviewedProviderChainPartition;
-  meta: Pick<SafetyScoreV9ScoringMeta, "contracts" | "bridgeRouteRisk">;
+  meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk">;
   clockSec: number; supplyUsd: number;
   observations: readonly {
     deploymentKey: string; rawTokenUnits: string | null; decimals: number | null;
@@ -1007,7 +1006,7 @@ export function reviewedSupplyRouteKind(route: NonNullable<BridgeRouteRiskProfil
 export function buildReviewedEconomicDeploymentInventory(
   assetId: string,
   plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId),
-  meta: Pick<SafetyScoreV9ScoringMeta, "contracts" | "bridgeRouteRisk"> | undefined = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId),
+  meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk"> | undefined = ACTIVE_META_BY_ID.get(assetId),
 ): { plan: ReviewedEconomicSupplyPlan; planDigest: string; digest: string } | null {
   if (!plan || !meta || plan.assetId !== assetId || !ReviewedEconomicSupplyPlanSchema.safeParse(plan).success) return null;
   const keys = new Set(plan.deployments.map(row => row.deploymentKey));
@@ -1108,7 +1107,7 @@ export function economicSupplyInputDeploymentObservation(input: {
 
 /** Recomputes every USD row; a conserved caller-supplied array alone is never proof. */
 export function deriveReviewedEconomicDeploymentPartition(input: {
-  plan: ReviewedEconomicSupplyPlan; meta?: Pick<SafetyScoreV9ScoringMeta, "contracts" | "bridgeRouteRisk">;
+  plan: ReviewedEconomicSupplyPlan; meta?: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk">;
   baseInputGenerationId: string; sourceGeneration: string; registryFingerprint: string; clockSec: number;
   aggregate: ReviewedEconomicDeploymentPartition["aggregate"];
   referencePrice: EconomicSupplyReference; conversions: EconomicSupplyReference[];
@@ -1434,7 +1433,7 @@ export function reviewedEconomicDeploymentAttributionValidationError(input: {
 export function hasCompleteEligibleProviderSupply(input: {
   clockSec: number; aggregateCirculatingById: Record<string, { circulating: Record<string, number>; observedAtSec: number | null }>;
   chainCirculatingById: Record<string, Record<string, { current: number }>>;
-}, assetId: string, meta: Pick<SafetyScoreV9ScoringMeta, "contracts" | "bridgeRouteRisk"> | undefined = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId)): boolean {
+}, assetId: string, meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk"> | undefined = ACTIVE_META_BY_ID.get(assetId)): boolean {
   const aggregate = input.aggregateCirculatingById[assetId];
   const amount = getCirculatingRawOrNull(aggregate ?? {});
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;

@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import brlvMetaSource from "@shared/data/stablecoins/coins/brlv-crown.json";
 import xsgdMetaSource from "@shared/data/stablecoins/coins/xsgd-straitsx.json";
@@ -17,6 +16,7 @@ import {
   buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
   resolveSafetyScoreV9AssetIssuerKey,
+  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { deriveSafetyScoreV9PegScore } from "../safety-score-v9/fact-set";
 import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9/extension";
@@ -38,7 +38,7 @@ const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
 const XSGD_CURATED_CLOCK_SEC = Date.UTC(2026, 9, 3) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
 
-function eligibleReserveMeta(overrides: Partial<SafetyScoreV9ScoringMeta> = {}): SafetyScoreV9ScoringMeta {
+function eligibleReserveMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
   const base = reserveMetaFixture();
   return {
     ...base,
@@ -114,13 +114,13 @@ function usdgReserveRows(): ReserveSlice[] {
 
 describe("Phase 1 D2 issuer identity adapter", () => {
   it("matches the accepted V8 matrix normalization, inheritance, and slug fallback", () => {
-    const byId = new Map<string, SafetyScoreV9ScoringMeta>([
+    const byId = new Map<string, V9ExtensionRegistryMeta>([
       [
         "usdp-paxos",
         mintMeta("usdp-paxos", {
           genius: {
             issuerEntity: "Paxos Trust Company, N.A.",
-          } as SafetyScoreV9ScoringMeta["genius"],
+          } as V9ExtensionRegistryMeta["genius"],
         }),
       ],
       ["pyusd-paypal", mintMeta("pyusd-paypal", { variantOf: "usdp-paxos" })],
@@ -133,7 +133,7 @@ describe("Phase 1 D2 issuer identity adapter", () => {
   });
 
   it("fails closed on missing records, cycles, and inheritance deeper than five hops", () => {
-    const byId = new Map<string, SafetyScoreV9ScoringMeta>([
+    const byId = new Map<string, V9ExtensionRegistryMeta>([
       ["a-one", mintMeta("a-one", { variantOf: "b-two" })],
       ["b-two", mintMeta("b-two", { variantOf: "a-one" })],
       ["d0-zero", mintMeta("d0-zero", { variantOf: "d1-one" })],
@@ -156,11 +156,11 @@ describe("Phase 1 D2 issuer identity adapter", () => {
       gbpmComplianceSource,
       jpymComplianceSource,
     ];
-    const byId = new Map<string, SafetyScoreV9ScoringMeta>(
+    const byId = new Map<string, V9ExtensionRegistryMeta>(
       reviewedMentoAssets.map((source) => [
         source.id,
         mintMeta(source.id, {
-          genius: source.genius as SafetyScoreV9ScoringMeta["genius"],
+          genius: source.genius as V9ExtensionRegistryMeta["genius"],
         }),
       ]),
     );
@@ -189,12 +189,12 @@ describe("Phase 1 D2 curated issuer-identity alias (MakerDAO / Sky)", () => {
   // "MakerDAO / Sky Protocol governance"; USDS/sUSDS declare "Sky Protocol
   // governance". Without the curated alias these normalize to different keys
   // ("makerdao" vs "sky"), so the PauseProxy same-issuer group fails closed.
-  const skyById = new Map<string, SafetyScoreV9ScoringMeta>([
+  const skyById = new Map<string, V9ExtensionRegistryMeta>([
     ["dai-makerdao", mintMeta("dai-makerdao", {
-      genius: { issuerEntity: "MakerDAO / Sky Protocol governance" } as SafetyScoreV9ScoringMeta["genius"],
+      genius: { issuerEntity: "MakerDAO / Sky Protocol governance" } as V9ExtensionRegistryMeta["genius"],
     })],
     ["usds-sky", mintMeta("usds-sky", {
-      genius: { issuerEntity: "Sky Protocol governance" } as SafetyScoreV9ScoringMeta["genius"],
+      genius: { issuerEntity: "Sky Protocol governance" } as V9ExtensionRegistryMeta["genius"],
     })],
     // No genius entity: the issuer key resolves by walking variantOf to usds-sky.
     ["susds-sky", mintMeta("susds-sky", { variantOf: "usds-sky" })],
@@ -228,12 +228,12 @@ describe("Phase 1 D2 curated issuer-identity alias (MakerDAO / Sky)", () => {
     // "Sky Mavis" (Ronin/Axie) normalizes to first token "sky" but its full
     // phrase is not the aliased "sky protocol governance"; exact-phrase matching
     // keeps it distinct from the MakerDAO / Sky identity.
-    const byId = new Map<string, SafetyScoreV9ScoringMeta>([
+    const byId = new Map<string, V9ExtensionRegistryMeta>([
       ["skygold-mavis", mintMeta("skygold-mavis", {
-        genius: { issuerEntity: "Sky Mavis" } as SafetyScoreV9ScoringMeta["genius"],
+        genius: { issuerEntity: "Sky Mavis" } as V9ExtensionRegistryMeta["genius"],
       })],
       ["usds-sky", mintMeta("usds-sky", {
-        genius: { issuerEntity: "Sky Protocol governance" } as SafetyScoreV9ScoringMeta["genius"],
+        genius: { issuerEntity: "Sky Protocol governance" } as V9ExtensionRegistryMeta["genius"],
       })],
     ]);
     const unrelated = resolveSafetyScoreV9AssetIssuerKey("skygold-mavis", byId);
@@ -641,7 +641,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       reserves: xsgdReserveSource.reserves,
       reserveReview: xsgdReserveSource.reserveReview,
       mintAuthority: xsgdMintAuthoritySource.mintAuthority,
-    } as unknown as SafetyScoreV9ScoringMeta;
+    } as unknown as V9ExtensionRegistryMeta;
 
     expect(xsgdMeta.mintAuthority).toMatchObject({
       reconciliation: "periodic",
@@ -665,7 +665,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       reserves: brlvReserveSource.reserves,
       reserveReview: brlvReserveSource.reserveReview,
       mintAuthority: brlvMintAuthoritySource.mintAuthority,
-    } as unknown as SafetyScoreV9ScoringMeta;
+    } as unknown as V9ExtensionRegistryMeta;
 
     expect(brlvMeta.mintAuthority?.supervision).toBe("attestation-only");
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(brlvMeta, CURATION_CLOCK_SEC)).toBeNull();

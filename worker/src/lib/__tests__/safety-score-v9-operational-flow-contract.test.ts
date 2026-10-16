@@ -20,7 +20,7 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extensio
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import { admitSafetyScoreV9ExtensionAsset, admitSafetyScoreV9FactSetExtension, SafetyScoreV9FactSetExtensionV2Schema } from "../safety-score-v9/fact-set-schema";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 import { alphaMeta, metaMap } from "./safety-score-v9-fact-set.test-support";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
@@ -120,7 +120,7 @@ function restamp(profile: MintAuthorityProfile): void {
   const hash = computeV1005AuthorityStateHash(profile.authorityGraph!);
   for (const control of profile.controls ?? []) if (control.executionScope) control.executionScope.authorityBinding = { graphId: profile.authorityGraph!.id, authorityStateHash: hash, observedAuthorityStateHash: hash };
 }
-function compile(profile = modeledProfile(), assetId = "alpha", sharedProfiles: readonly SafetyScoreV9ScoringMeta[] = [], registryFields: Partial<SafetyScoreV9ScoringMeta> = {}) {
+function compile(profile = modeledProfile(), assetId = "alpha", sharedProfiles: readonly V9ExtensionRegistryMeta[] = [], registryFields: Partial<V9ExtensionRegistryMeta> = {}) {
   const fixed = makeV9FixedInput({ assetId, clockSec: CLOCK });
   const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta({ ...registryFields, id: assetId, mintAuthority: profile }), ...sharedProfiles) });
   if (extension.assets[0]!.admissionQuarantine) throw new Error(JSON.stringify(extension.assets[0]!.admissionQuarantine));
@@ -175,7 +175,7 @@ function modeledClassProfile(): MintAuthorityProfile {
   return profile;
 }
 
-function nativeRegistryFields(address: string): Pick<SafetyScoreV9ScoringMeta, "contracts" | "bridgeRouteRisk"> {
+function nativeRegistryFields(address: string): Pick<V9ExtensionRegistryMeta, "contracts" | "bridgeRouteRisk"> {
   const deployment = `ethereum:${address}`;
   return { contracts: [{ chain: "ethereum", address, decimals: 18 }], bridgeRouteRisk: {
     tier: "single-chain-or-native", summary: "Modeled reviewed native token deployment for shared-book selection.",

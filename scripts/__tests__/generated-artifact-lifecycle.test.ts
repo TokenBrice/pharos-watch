@@ -98,7 +98,6 @@ describe("generated artifact lifecycle", () => {
       "openapi",
       "world-map",
       "mint-burn-conservation-runtime",
-      "safety-score-v9-scoring-catalog",
       "report-card-registry-fingerprint",
       "legacy-stablecoin-redirects",
       "stablecoin-client-registry",

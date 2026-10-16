@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import { evaluateV9Backing } from "@shared/lib/safety-score-v9/archetypes";
 import { asset, exposure } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
@@ -7,7 +6,7 @@ import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
 import type { ProofOfReservesLatestReport } from "@shared/types/core";
 import type { ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
-import { resolveReviewedReserveRows } from "../safety-score-v9/extension";
+import { resolveReviewedReserveRows, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import { addScopedReserveEvidence, buildSafetyScoreV9ReviewedAuditedFallbackReserveRows, buildSafetyScoreV9ReviewedStaticReserveRows, buildSafetyScoreV10ScopedReserveAdmissions } from "../safety-score-v9/extension-reserves";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { ReserveObservationEnvelope } from "@shared/types/safety-score-v9-reserve-scope";
@@ -35,7 +34,7 @@ function scopedReport(): ProofOfReservesLatestReport {
     reconciliationWithinScope: "full", assetsAsOfSec: asOfSec, reviewedAtSec: clockSec - 60, confidence: "verified",
   } };
 }
-function meta(latestReport = report, id = "scope-fixture"): SafetyScoreV9ScoringMeta {
+function meta(latestReport = report, id = "scope-fixture"): V9ExtensionRegistryMeta {
   return { id, contracts: [{ chain: "ethereum", address: deploymentRef.split(":")[1], decimals: 18 }],
     reserves: [{ name: "Cash", pct: 100, risk: "very-low", assetClass: "cash", issuerOrObligor: "issuer:trust", liquidityHorizon: "immediate" }],
     reserveReview: { reviewedAt: "2026-09-30", reviewer: "Fixture reviewer", confidence: "verified", sources: report.sources,
@@ -88,7 +87,7 @@ describe("diagnostic report scope monotonicity", () => {
     const scoped = meta(scopedReport());
     for (const value of [unscoped, scoped]) value.liveReservesConfig = { adapter: "curated-validated", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "onchain-solana" } } };
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(scoped, clockSec)).toEqual(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unscoped, clockSec));
-    const prudential = { supervision: "prudential" } as NonNullable<SafetyScoreV9ScoringMeta["mintAuthority"]>;
+    const prudential = { supervision: "prudential" } as NonNullable<V9ExtensionRegistryMeta["mintAuthority"]>;
     unscoped.mintAuthority = prudential; scoped.mintAuthority = prudential;
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(scoped, clockSec)).toEqual(buildSafetyScoreV9ReviewedStaticReserveRows(unscoped, clockSec));
     for (const value of [unscoped, scoped]) { delete value.liveReservesConfig; delete value.mintAuthority; }

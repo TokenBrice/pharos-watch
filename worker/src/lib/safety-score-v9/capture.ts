@@ -1,4 +1,4 @@
-import { WORKER_ACTIVE_META_BY_ID, WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   computeReportCardsRegistryFingerprint,
@@ -120,7 +120,7 @@ export async function captureLenderCollateralBacking(
   registryFingerprint: string,
   clockSec: number,
 ): Promise<LenderCollateralBacking> {
-  const tokenIds = resolveLenderTokenIds(WORKER_ACTIVE_STABLECOINS.flatMap((coin) =>
+  const tokenIds = resolveLenderTokenIds(ACTIVE_STABLECOINS.flatMap((coin) =>
     (coin.contracts ?? []).map((contract) => ({ assetId: coin.id, chain: contract.chain, address: contract.address })),
   ));
   const requiredTokens = new Set<string>();
@@ -249,7 +249,7 @@ export async function buildNativeSafetyScoreV9Capture(
   const capturedReserveProvenanceMap = captureLenderBookOutcomes(liveReserveProvenanceMap, clockSec);
   const lenderCollateralBacking = await captureLenderCollateralBacking(db, capturedReserveProvenanceMap, registryFingerprint, clockSec);
   const nonNavPegDataById = new Map(
-    [...pegAnalytics.pegDataById].filter(([id]) => WORKER_ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
+    [...pegAnalytics.pegDataById].filter(([id]) => ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
   );
   const scoringInputFreshness: ReportCardsInputFreshness = {
     dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, clockSec, "DEX liquidity"),
@@ -298,7 +298,7 @@ export async function buildNativeSafetyScoreV9Capture(
   const dexLiqMap: Record<string, NativeDexLiquidityRow> = {};
   const dexDeploymentSupplyCoverageById: NativeSafetyScoreV9Input["dexDeploymentSupplyCoverageById"] = {};
   const dexMethodologyVersions = new Set<string>();
-  for (const coin of WORKER_ACTIVE_STABLECOINS) {
+  for (const coin of ACTIVE_STABLECOINS) {
     const row = dexLiquiditySnapshot.map[coin.id];
     if (!row) throw new Error(`Native V9 capture has no in-memory DEX row for ${coin.id}`);
     const methodologyVersion = (row as typeof row & { methodologyVersion?: string }).methodologyVersion?.trim();
@@ -332,9 +332,7 @@ export async function buildNativeSafetyScoreV9Capture(
     methodologyVersion: redemptionSnapshotProvenance.methodologyVersion,
   });
 
-  // worker-runtime-registry owns both the metadata rows consumed above and
-  // this active census, so capture does not load a second full-registry owner.
-  const activeAssetIds = WORKER_ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
+  const activeAssetIds = ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
   const reserveJournal = await loadReportCardEvidenceJournalByIdV1(db, activeAssetIds, clockSec);
   const pipelineGapByAssetId = captureReservePipelineGaps(reserveJournal, liveReserveMap, clockSec);
   if (!redemptionStale) {
@@ -416,7 +414,7 @@ export async function buildNativeSafetyScoreV9Capture(
     inputMethodologyVersions: projectReportCardsFixedInputMethodologyVersions({
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       dexLiqMap: Object.fromEntries(
-        WORKER_ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: [...dexMethodologyVersions][0] }]),
+        ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: [...dexMethodologyVersions][0] }]),
       ),
       pegDataById,
       redemptionBackstopMap,

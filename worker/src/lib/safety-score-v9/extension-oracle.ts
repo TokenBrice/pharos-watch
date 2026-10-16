@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 /** Compiles reviewed oracle inventory without assigning borrower risk to allocations. */
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -14,6 +13,7 @@ import {
   reviewedObservationState,
   notApplicableStatus,
   type ExtensionAsset,
+  type V9ExtensionRegistryMeta,
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
@@ -158,7 +158,7 @@ export function deriveMorphoOracleBranchMateriality(
 }
 
 export function adaptOracleReview(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   archetype: string,
   evidence: ReviewEvidenceBuilder,
   clockSec: number,

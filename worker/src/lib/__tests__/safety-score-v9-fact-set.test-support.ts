@@ -1,8 +1,8 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9/extension-transfer";
 import {
   buildSafetyScoreV9BaselineExtension,
+  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
@@ -37,20 +37,20 @@ export type FixedInput = ReturnType<typeof exactFixedInput>;
 export const WM_FACT_SET_CLOCK_SEC = v9CoinMaxReviewedAtSec("wm-m0") + 9 * 3_600;
 export const XAUT_FACT_SET_CLOCK_SEC = v9CoinMaxReviewedAtSec("xaut-tether") + 9 * 3_600;
 
-export function wmFactSetMeta(): SafetyScoreV9ScoringMeta {
+export function wmFactSetMeta(): V9ExtensionRegistryMeta {
   return {
     ...structuredClone(wrappedMSource),
     bridgeRouteRisk: structuredClone(wrappedMRiskReview.bridgeRouteRisk),
     mintAuthority: structuredClone(wrappedMMintAuthority.mintAuthority),
-  } as unknown as SafetyScoreV9ScoringMeta;
+  } as unknown as V9ExtensionRegistryMeta;
 }
 
-export function xautFactSetMeta(): SafetyScoreV9ScoringMeta {
+export function xautFactSetMeta(): V9ExtensionRegistryMeta {
   return {
     ...structuredClone(xautMetaSource),
     bridgeRouteRisk: structuredClone(xautRiskReview.bridgeRouteRisk),
     mintAuthority: structuredClone(xautMintAuthority.mintAuthority),
-  } as unknown as SafetyScoreV9ScoringMeta;
+  } as unknown as V9ExtensionRegistryMeta;
 }
 
 export function wmFactSetFixedInput(options: V9FixedInputOptions = {}): FixedInput {
@@ -71,13 +71,13 @@ export function xautFactSetFixedInput(options: V9FixedInputOptions = {}): FixedI
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type ControlOverlay = NonNullable<Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>>["controls"][number];
-type BridgeRoute = NonNullable<NonNullable<SafetyScoreV9ScoringMeta["bridgeRouteRisk"]>["routes"]>[number];
+type BridgeRoute = NonNullable<NonNullable<V9ExtensionRegistryMeta["bridgeRouteRisk"]>["routes"]>[number];
 
-export function metaMap(...metas: SafetyScoreV9ScoringMeta[]): Map<string, SafetyScoreV9ScoringMeta> {
+export function metaMap(...metas: V9ExtensionRegistryMeta[]): Map<string, V9ExtensionRegistryMeta> {
   return new Map(metas.map((meta) => [meta.id, meta]));
 }
 
-export function alphaMeta(overrides: Partial<SafetyScoreV9ScoringMeta> = {}): SafetyScoreV9ScoringMeta {
+export function alphaMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
   return {
     id: "alpha",
     mechanismArchetype: "fiat-cash",
@@ -86,13 +86,13 @@ export function alphaMeta(overrides: Partial<SafetyScoreV9ScoringMeta> = {}): Sa
   };
 }
 
-export function pinnedUusdMeta(): Map<string, SafetyScoreV9ScoringMeta> {
+export function pinnedUusdMeta(): Map<string, V9ExtensionRegistryMeta> {
   const meta = structuredClone(ACTIVE_META_BY_ID.get("uusd-anything-labs")!);
   meta.mintAuthority!.review.reviewedAt = "2026-08-08";
-  return new Map([["uusd-anything-labs", meta as SafetyScoreV9ScoringMeta]]);
+  return new Map([["uusd-anything-labs", meta as V9ExtensionRegistryMeta]]);
 }
 
-export function commodityOracleMeta(): SafetyScoreV9ScoringMeta {
+export function commodityOracleMeta(): V9ExtensionRegistryMeta {
   return alphaMeta({
     mechanismArchetype: "commodity-claim",
     mintAuthority: {
@@ -111,7 +111,7 @@ export function commodityOracleMeta(): SafetyScoreV9ScoringMeta {
   });
 }
 
-function reviewedBranch(): NonNullable<NonNullable<SafetyScoreV9ScoringMeta["oracleRisk"]>["branches"]>[number] {
+function reviewedBranch(): NonNullable<NonNullable<V9ExtensionRegistryMeta["oracleRisk"]>["branches"]>[number] {
   return {
     id: "eth",
     label: "ETH branch",
@@ -127,7 +127,7 @@ function reviewedBranch(): NonNullable<NonNullable<SafetyScoreV9ScoringMeta["ora
   };
 }
 
-export function reviewedOracleMeta(reviewedAt = "1970-01-01"): SafetyScoreV9ScoringMeta {
+export function reviewedOracleMeta(reviewedAt = "1970-01-01"): V9ExtensionRegistryMeta {
   return alphaMeta({
     mechanismArchetype: "cdp",
     oracleRisk: {
@@ -150,7 +150,7 @@ export function reviewedOracleMeta(reviewedAt = "1970-01-01"): SafetyScoreV9Scor
   });
 }
 
-export function internalPriceMeta(): SafetyScoreV9ScoringMeta {
+export function internalPriceMeta(): V9ExtensionRegistryMeta {
   return alphaMeta({
     mechanismArchetype: "synthetic-delta-neutral",
     oracleRisk: {
@@ -172,7 +172,7 @@ export function internalPriceMeta(): SafetyScoreV9ScoringMeta {
   });
 }
 
-export function immutableMintMeta(): SafetyScoreV9ScoringMeta {
+export function immutableMintMeta(): V9ExtensionRegistryMeta {
   return alphaMeta({
     mechanismArchetype: "cdp",
     mintAuthority: {
@@ -186,7 +186,7 @@ export function immutableMintMeta(): SafetyScoreV9ScoringMeta {
   });
 }
 
-export function cappedMinterMeta(governorChain: "ethereum" | "arbitrum" = "ethereum"): SafetyScoreV9ScoringMeta {
+export function cappedMinterMeta(governorChain: "ethereum" | "arbitrum" = "ethereum"): V9ExtensionRegistryMeta {
   return alphaMeta({
     mechanismArchetype: "cdp",
     mintAuthority: {
@@ -204,7 +204,7 @@ export function cappedMinterMeta(governorChain: "ethereum" | "arbitrum" = "ether
   });
 }
 
-export function accessOnlyMeta(): SafetyScoreV9ScoringMeta {
+export function accessOnlyMeta(): V9ExtensionRegistryMeta {
   return alphaMeta({
     mechanismArchetype: "cdp",
     mintAuthority: {
@@ -244,7 +244,7 @@ export function reviewedUpgradeExtension(): SafetyScoreV9FactSetExtensionV2 {
   return reviewed;
 }
 
-export function unresolvedMintMeta(): SafetyScoreV9ScoringMeta {
+export function unresolvedMintMeta(): V9ExtensionRegistryMeta {
   return alphaMeta({
     mechanismArchetype: "cdp",
     mintAuthority: {
@@ -363,8 +363,8 @@ export function bridgeRoute(
 
 export function bridgeMeta(
   routes: BridgeRoute[],
-  overrides: Partial<NonNullable<SafetyScoreV9ScoringMeta["bridgeRouteRisk"]>> = {},
-): SafetyScoreV9ScoringMeta {
+  overrides: Partial<NonNullable<V9ExtensionRegistryMeta["bridgeRouteRisk"]>> = {},
+): V9ExtensionRegistryMeta {
   return alphaMeta({
     bridgeRouteRisk: {
       tier: "canonical-rollup-bridge",
@@ -459,21 +459,21 @@ export function unmatchedFixture(
   return { fixed, extension, asset: extension.assets[0]! };
 }
 
-export function usdtMeta(): SafetyScoreV9ScoringMeta {
+export function usdtMeta(): V9ExtensionRegistryMeta {
   return {
     ...usdtMetaSource,
     ...withoutId(usdtComplianceSource),
     ...withoutId(usdtMintAuthoritySource),
     ...withoutId(usdtReserveSource),
     ...withoutId(usdtRiskReviewSource),
-  } as unknown as SafetyScoreV9ScoringMeta;
+  } as unknown as V9ExtensionRegistryMeta;
 }
 
 function withoutId<T extends { id: string }>({ id: _id, ...fields }: T): Omit<T, "id"> {
   return fields;
 }
 
-export function attestedReserveMeta(): SafetyScoreV9ScoringMeta {
+export function attestedReserveMeta(): V9ExtensionRegistryMeta {
   return alphaMeta({
     reserves: [
       {
@@ -541,7 +541,7 @@ export function attestedReserveMeta(): SafetyScoreV9ScoringMeta {
   });
 }
 
-export function dependencyMeta(): Map<string, SafetyScoreV9ScoringMeta> {
+export function dependencyMeta(): Map<string, V9ExtensionRegistryMeta> {
   const dependencyReview = {
     reviewedAt: "1970-01-01",
     reviewer: "Fixture reviewer",
@@ -642,7 +642,7 @@ export function nativeSavingsFixedAndMeta() {
   return { fixed, meta };
 }
 
-export function reviewedResearchMeta(reviewedAt: string): SafetyScoreV9ScoringMeta {
+export function reviewedResearchMeta(reviewedAt: string): V9ExtensionRegistryMeta {
   return {
     ...reviewedOracleMeta(reviewedAt),
     mintAuthority: {
@@ -674,7 +674,7 @@ export function reviewedResearchMeta(reviewedAt: string): SafetyScoreV9ScoringMe
   };
 }
 
-export function reviewedDependencyMeta(): SafetyScoreV9ScoringMeta {
+export function reviewedDependencyMeta(): V9ExtensionRegistryMeta {
   return alphaMeta({
     dependencies: [{ id: "beta", weight: 0.5, type: "collateral" }],
     dependencyReview: {

@@ -1,8 +1,7 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import { ReserveBoundedFactSchema, type ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
 import { makeV9FixedInput, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -62,7 +61,7 @@ const ousdRows: ReserveSlice[] = [{
   })],
 }];
 const clock = 1790849876;
-const metaById = new Map<string, SafetyScoreV9ScoringMeta>([["alpha", { id: "alpha", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }], ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }]]);
+const metaById = new Map<string, V9ExtensionRegistryMeta>([["alpha", { id: "alpha", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }], ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }]]);
 function research(overrides: Record<string, unknown> = {}): ReserveBoundedFact {
   return ReserveBoundedFactSchema.parse({ factKey: "envelope", kind: "eligibility-envelope", scope: { kind: "reserve-envelope" }, asOfSec: clock - 86400, publisher: "issuer", sourceUrls: ["https://example.com/terms"], assertion: "Exhaustive governing terms", contentDigest: "a".repeat(64), provenance: { kind: "reviewed-research", reviewer: "fixture", reviewedAt: "2026-09-30", confidence: "high" }, legallyBinding: true, exhaustive: true, allocations: [{ assetClass: "cash", minShare: 0, maxShare: 1, maximumTerm: null }], ...overrides });
 }

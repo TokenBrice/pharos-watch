@@ -7,7 +7,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
+import type { V9ExtensionRegistryMeta } from "./extension-shared";
 import type { SafetyScoreV9TransferMaterialScope } from "./extension-transfer";
 import { reviewedDeploymentObservationTimingIssue } from "./supply-attribution-contract";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -93,7 +93,7 @@ export const createSafetyScoreV9TransferMaterialityGeneration = generationCodec.
 export const parseSafetyScoreV9TransferMaterialityGeneration = generationCodec.parse;
 export const serializeSafetyScoreV9TransferMaterialityGeneration = generationCodec.serialize;
 
-function authoritativeDeployments(meta: SafetyScoreV9ScoringMeta): Array<{ deployment: ContractDeployment; key: string }> | null {
+function authoritativeDeployments(meta: V9ExtensionRegistryMeta): Array<{ deployment: ContractDeployment; key: string }> | null {
   const rows = (meta.contracts ?? []).map((deployment) => {
     const chainId = resolveChainId(deployment.chain);
     return chainId === null ? null : { deployment, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) };
@@ -122,7 +122,7 @@ export interface SafetyScoreV9ExactTransferMaterialityPacket {
  */
 export function exactInputBoundTransferMaterialityPacket(input: {
   assetId: string;
-  meta: SafetyScoreV9ScoringMeta;
+  meta: V9ExtensionRegistryMeta;
   generation: SafetyScoreV9TransferMaterialityGeneration | null;
   registryFingerprint: string;
   baseInputGenerationId: string;
@@ -179,7 +179,7 @@ export function exactInputBoundTransferMaterialityPacket(input: {
 
 export function transferMaterialScopeFromOnchainGeneration(input: {
   assetId: string;
-  meta: SafetyScoreV9ScoringMeta;
+  meta: V9ExtensionRegistryMeta;
   baseScope: SafetyScoreV9TransferMaterialScope;
   generation: SafetyScoreV9TransferMaterialityGeneration | null;
   registryFingerprint: string;
@@ -214,7 +214,7 @@ export function transferMaterialScopeFromOnchainGeneration(input: {
 
 /** Transfer-only reviewed attribution; never produces chain supply numbers. */
 export function transferMaterialScopeFromSingleDeploymentAttribution(input: {
-  meta: SafetyScoreV9ScoringMeta;
+  meta: V9ExtensionRegistryMeta;
   review: SafetyScoreV9ReviewedTransferFact | undefined;
   aggregateCirculating: Parameters<typeof getCirculatingRawOrNull>[0];
   baseScope: SafetyScoreV9TransferMaterialScope;

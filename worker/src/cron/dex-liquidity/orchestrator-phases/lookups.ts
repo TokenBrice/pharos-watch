@@ -3,7 +3,7 @@ import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
-import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DexAmmExecutionToken, StablecoinData } from "@shared/types/market";
 import {
   classifyPrimaryDepegTrust,

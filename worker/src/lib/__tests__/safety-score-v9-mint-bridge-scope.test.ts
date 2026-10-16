@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { projectNegativeIncidentReview } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
@@ -28,6 +27,9 @@ import {
   type StructuredBridgeOverlayEntry,
 } from "../safety-score-v9/extension-bridge";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
+import {
+  type V9ExtensionRegistryMeta,
+} from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
   makeV9FixedInput,
@@ -147,8 +149,8 @@ function bridgeProfile(
 
 function meta(
   id: string,
-  overrides: Partial<SafetyScoreV9ScoringMeta> = {},
-): SafetyScoreV9ScoringMeta {
+  overrides: Partial<V9ExtensionRegistryMeta> = {},
+): V9ExtensionRegistryMeta {
   return {
     id,
     mechanismArchetype: "fiat-cash",
@@ -171,7 +173,7 @@ function supplyByRoute(routes: readonly BridgeRouteDeployment[]) {
 }
 
 function compileFixture(
-  metadata: SafetyScoreV9ScoringMeta,
+  metadata: V9ExtensionRegistryMeta,
   options: { clockSec?: number; chainSupplyByChain?: ReturnType<typeof supplyByRoute> } = {},
 ) {
   const routes = metadata.bridgeRouteRisk?.routes ?? [];
@@ -192,7 +194,7 @@ function compileFixture(
 }
 
 function compileFixtureWithScopedBridgeIncidentReview(
-  metadata: SafetyScoreV9ScoringMeta,
+  metadata: V9ExtensionRegistryMeta,
   options: Parameters<typeof compileFixture>[1] = {},
 ) {
   const clockSec = options.clockSec ?? 10_000;
@@ -287,7 +289,7 @@ function representationSupplyReview(
 }
 
 function adaptBridgeFixture(
-  metadata: SafetyScoreV9ScoringMeta,
+  metadata: V9ExtensionRegistryMeta,
   supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> | null,
   chainRows?: Readonly<Record<string, { current: number }>>,
   clockSec = 10_000,
@@ -2383,7 +2385,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
 describe("native external-validation transfer tiers", () => {
   const clockSec = Date.parse("2026-10-11T00:00:00Z") / 1_000;
-  function transferMeta(): SafetyScoreV9ScoringMeta {
+  function transferMeta(): V9ExtensionRegistryMeta {
     return meta("fixture-native-external", {
       bridgeRouteRisk: bridgeProfile([route(ETHEREUM_ROUTE, { observedAt: "2026-10-01" })], {
         reviewedAt: "2026-10-01",

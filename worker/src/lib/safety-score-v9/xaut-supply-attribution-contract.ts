@@ -2,7 +2,7 @@ import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   BridgeRouteRiskTierSchema,
   type BridgeRouteRiskTier,
@@ -207,7 +207,7 @@ function exactStrings(left: readonly string[], right: readonly string[]): boolea
 }
 
 export function buildXautTransparencySource(): XautTransparencySource | null {
-  const config = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(XAUT_ASSET_ID)?.liveReservesConfig;
+  const config = ACTIVE_META_BY_ID.get(XAUT_ASSET_ID)?.liveReservesConfig;
   const primary = config?.inputs.primary;
   if (
     config?.adapter !== "tether-transparency" ||
@@ -255,7 +255,7 @@ export function buildXautTransparencySource(): XautTransparencySource | null {
 export function buildXautRepresentationGroupInventory():
   | XautRepresentationGroupInventory
   | null {
-  const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(XAUT_ASSET_ID);
+  const meta = ACTIVE_META_BY_ID.get(XAUT_ASSET_ID);
   const routes = meta?.bridgeRouteRisk?.routes ?? [];
   const canonical = routes.filter(
     (route) =>

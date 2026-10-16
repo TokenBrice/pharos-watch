@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
@@ -125,7 +124,7 @@ describe("reviewed economic supply accounting", () => {
     expect(packet).not.toBeNull();
     vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
     vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "has").mockImplementation(assetId => assetId === "alpha");
-    vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockReturnValue({ id: "alpha", ...input.meta });
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
     const attributedFixed = {
       ...fixed, safetyScoreV9SupplyAttributionById: { alpha: packet },
     };
@@ -205,7 +204,7 @@ describe("reviewed economic supply accounting", () => {
     expect(packet.deployments[0]!.currentSupplyUsd).toBeCloseTo(100 * 125 / 165);
     expect(packet.deployments[1]!.currentSupplyUsd).toBeCloseTo(100 * 40 / 165);
     vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
-    vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockReturnValue({ id: "alpha", ...input.meta });
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
     const fixed = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
     Object.assign(fixed, { baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration, registryFingerprint: input.registryFingerprint,
       aggregateCirculatingById: { alpha: { circulating: { peggedUSD: 100 }, observedAtSec: CLOCK - 60 } }, chainCirculatingById: {}, navPriceById: { alpha: { sourceId: "reference", priceUsd: 1, observedAtSec: CLOCK - 60, confidence: "high" } }, safetyScoreV9SupplyAttributionById: { alpha: packet } });
@@ -342,7 +341,7 @@ describe("reviewed economic supply accounting", () => {
   it("validates provider alias totals rather than individual label fragments", () => {
     const input = fixture(), attribution = deriveReviewedEconomicDeploymentPartition(input)!;
     vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
-    vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockReturnValue({ id: "alpha", ...input.meta });
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
     const validate = (chainRows: Record<string, { current: number }>) => reviewedEconomicDeploymentAttributionValidationError({
       assetId: "alpha", attribution, aggregateSupplyUsd: 100, registryFingerprint: input.registryFingerprint, clockSec: CLOCK, chainRows,
     });
@@ -412,7 +411,7 @@ describe("reviewed economic supply accounting", () => {
     fixed.aggregateCirculatingById = { alpha: { circulating: { peggedUSD: 120 }, observedAtSec: CLOCK - 60 } };
     const chainTemplate = fixed.chainCirculatingById.alpha!.ethereum!;
     fixed.chainCirculatingById = { alpha: { ethereum: { ...chainTemplate, current: 80 }, base: { ...chainTemplate, current: 20 } } };
-    vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockReturnValue({ id: "alpha", ...input.meta });
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
 
     // Without new reviewed data, captured rows keep their established base.
     const legacy = buildSafetyScoreV9SupplyReview(fixed, "alpha", input.meta.bridgeRouteRisk)!;
@@ -433,7 +432,7 @@ describe("reviewed economic supply accounting", () => {
     expect(ReviewedEconomicSupplyPlanSchema.safeParse(plan).success).toBe(false);
   });
   it("keeps native liabilities controlled when an exact NTT/OFT acceptance path applies", () => {
-    const profile = structuredClone(SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get("xdai-gnosis")!.bridgeRouteRisk!);
+    const profile = structuredClone(ACTIVE_META_BY_ID.get("xdai-gnosis")!.bridgeRouteRisk!);
     const route = { ...profile.routes![0]!, routeClass: "native" as const, semantics: "native-mint" as const, issuanceModel: "native-issuance" as const };
     expect(reviewedSupplyRouteKind(route, profile)).toBe("controlled");
     expect(reviewedSupplyRouteKind(route, { controls: [] })).toBe("native");
@@ -449,7 +448,7 @@ describe("economic materiality consumers", () => {
       input.inFlight[0]!.amount = "1000000";
       const packet = deriveReviewedEconomicDeploymentPartition(input)!;
       vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
-      vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockReturnValue({ id: "alpha", ...input.meta });
+      vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
       const fixed = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
       Object.assign(fixed, {
         baseInputGenerationId: input.baseInputGenerationId,
@@ -532,7 +531,7 @@ describe("economic materiality consumers", () => {
     const input = fixture(); input.observations[1]!.amount = "5000000000000000000"; input.observations[2]!.amount = "5000000";
     const packet = deriveReviewedEconomicDeploymentPartition(input)!;
     vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
-    vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockReturnValue({ id: "alpha", ...input.meta });
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
     const fixed = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
     Object.assign(fixed, { baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration, registryFingerprint: input.registryFingerprint,
       aggregateCirculatingById: { alpha: { circulating: { peggedUSD: 100 }, observedAtSec: CLOCK - 60 } }, chainCirculatingById: {}, navPriceById: { alpha: { sourceId: "reference", priceUsd: 1, observedAtSec: CLOCK - 60, confidence: "high" } }, safetyScoreV9SupplyAttributionById: { alpha: packet } });
@@ -555,7 +554,7 @@ describe("economic materiality consumers", () => {
   });
   it("guards existing independent-liability eligibility against registry and route drift", () => {
     for (const assetId of ReviewedEconomicSupplyPlanFileSchema.parse(reviewRegistry).independentLiabilityAssetIds) {
-      const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId)!;
+      const meta = ACTIVE_META_BY_ID.get(assetId)!;
       expect(meta).toBeDefined();
       const routes = meta.bridgeRouteRisk!.routes!;
       expect(routes.every(route => route.reviewDisposition === "reviewed" && route.representationId === undefined &&
@@ -614,16 +613,14 @@ async function withEconomicHandoff(
     const original = await importOriginal<typeof SupplyAttributionContract>();
     const plans = new Map([[input.plan.assetId, input.plan]]);
     vi.spyOn(original.REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockImplementation(id => plans.get(id));
-    const scoringRegistry = await import("@shared/lib/stablecoins/safety-score-v9-registry");
-    const get = scoringRegistry.SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get.bind(scoringRegistry.SAFETY_SCORE_V9_ACTIVE_META_BY_ID);
-    vi.spyOn(scoringRegistry.SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get")
-      .mockImplementation(id => id === "alpha" ? { id, ...input.meta } : get(id));
-    const registry = await import("@shared/lib/stablecoins/worker-runtime-registry");
-    const find = registry.WORKER_ACTIVE_STABLECOINS.find.bind(registry.WORKER_ACTIVE_STABLECOINS);
-    const meta = { ...registry.WORKER_ACTIVE_STABLECOINS[0]!, ...input.meta, id: "alpha",
-      flags: { ...registry.WORKER_ACTIVE_STABLECOINS[0]!.flags, navToken: true } };
-    vi.spyOn(registry.WORKER_ACTIVE_STABLECOINS, "find").mockImplementation(predicate =>
-      predicate(meta, 0, registry.WORKER_ACTIVE_STABLECOINS) ? meta : find(predicate));
+    const registry = await import("@shared/lib/stablecoins/registry");
+    const get = registry.ACTIVE_META_BY_ID.get.bind(registry.ACTIVE_META_BY_ID);
+    vi.spyOn(registry.ACTIVE_META_BY_ID, "get").mockImplementation(id => id === "alpha" ? input.meta as StablecoinMeta : get(id));
+    const find = registry.ACTIVE_STABLECOINS.find.bind(registry.ACTIVE_STABLECOINS);
+    const meta = { ...registry.ACTIVE_STABLECOINS[0]!, ...input.meta, id: "alpha",
+      flags: { ...registry.ACTIVE_STABLECOINS[0]!.flags, navToken: true } };
+    vi.spyOn(registry.ACTIVE_STABLECOINS, "find").mockImplementation(predicate =>
+      predicate(meta, 0, registry.ACTIVE_STABLECOINS) ? meta : find(predicate));
     return { ...original, REVIEWED_ECONOMIC_SUPPLY_PLANS: plans };
   });
   try {
@@ -761,7 +758,7 @@ describe("reviewed same-chain provider partition", () => {
   const assetId = "usdc-circle";
   function chainFixture() {
     const review = structuredClone(REVIEWED_PROVIDER_CHAIN_PARTITIONS.get(assetId)!);
-    const meta = structuredClone(SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId)!);
+    const meta = structuredClone(ACTIVE_META_BY_ID.get(assetId)!);
     const fixedInput = makeV9FixedInput({ assetId, clockSec: chainClock });
     const history = { circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 };
     fixedInput.chainCirculatingById = { [assetId]: { "X Layer": { ...history, current: 100 }, Ethereum: { ...history, current: 900 } } };
@@ -877,7 +874,7 @@ describe("reviewed CCIP vault-share plans", () => {
     const source = escrow.inFlightSource;
     if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") throw new Error("Expected a reviewed CCIP vault plan");
     const clockSec = plan.reviewedAtSec + 60;
-    const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId)!;
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const canonical = plan.deployments.find(row => row.deploymentKey === escrow.canonicalDeploymentKey)!;
     const raw = (units: number, decimals: number) => (BigInt(units) * 10n ** BigInt(decimals)).toString();
     const observations: EconomicSupplyObservation[] = plan.deployments.map(row => ({
@@ -949,7 +946,7 @@ describe("reviewed CCIP vault-share plans", () => {
 describe("reviewed XGLD, srUSD and wiTRY OFT supply plans", () => {
   function cohortFixture(assetId: "xgld-unitas" | "srusd-reservoir" | "witry-brix"): EconomicFixture {
     const plan = structuredClone(REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!);
-    const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId)!;
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const clockSec = plan.reviewedAtSec + 60;
     const source = plan.liabilityInFlightSource ?? plan.escrows[0]!.inFlightSource!;
     if (!("kind" in source) || source.kind !== "evm-layerzero-oft-pending") throw new Error("Expected reviewed OFT pending source");

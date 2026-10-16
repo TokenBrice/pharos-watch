@@ -17,7 +17,7 @@ import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-eviden
 import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
 import type { LenderBookObservation } from "@shared/types/safety-score-v9-lender-book";
 import { adaptOracleReview } from "../safety-score-v9/extension-oracle";
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 
 type Path = NonNullable<OracleRiskProfile["paths"]>[number];
 const sources = [{ label: "Verified deployed source", url: "https://example.com/deployed-source" }];
@@ -320,7 +320,7 @@ function morphoFixture(weakAssets = "999", clockSec = lenderClock) {
   return { meta, profile, book };
 }
 
-function compileMorphoOracle(meta: SafetyScoreV9ScoringMeta, book?: LenderBookObservation) {
+function compileMorphoOracle(meta: V9ExtensionRegistryMeta, book?: LenderBookObservation) {
   return adaptOracleReview(meta, "cdp", new ReviewEvidenceBuilder(meta.id, lenderClock), lenderClock, book);
 }
 

@@ -49,7 +49,7 @@ import {
 } from "../lib/safety-score-v9/capture-control";
 import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-capture-control";
 import type { V9ExecutionWindow } from "../lib/v9-slot-window";
-import { SAFETY_SCORE_V9_CATALOG_COUNT } from "@shared/lib/stablecoins/safety-score-v9-registry";
+import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { assessSafetyScoreV9ResourceBudget } from "../lib/safety-score-v9/resource-budget";
 
 /**
@@ -153,7 +153,7 @@ export async function computeSafetyScoreV9(
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const catalogAdmission = assessSafetyScoreV9ResourceBudget({
-    catalogAssets: SAFETY_SCORE_V9_CATALOG_COUNT, activeAssets: 0, inputBytes: null,
+    catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: 0, inputBytes: null,
   });
   if (!catalogAdmission.admitted) return unavailable("resource-budget-exceeded", {
     stage: "compile-admission", resourcePressure: catalogAdmission.resourcePressure,
@@ -183,7 +183,7 @@ export async function computeSafetyScoreV9(
   const byteHeader = caches.get(NATIVE_V9_INPUT_CACHE_KEY)!.value.match(/"uncompressedBytes"\s*:\s*(\d+)/);
   const inputBytes = byteHeader ? Number(byteHeader[1]) : null;
   const byteAdmission = assessSafetyScoreV9ResourceBudget({
-    catalogAssets: SAFETY_SCORE_V9_CATALOG_COUNT, activeAssets: 0, inputBytes,
+    catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: 0, inputBytes,
   });
   if (!byteAdmission.admitted) return unavailable("resource-budget-exceeded", {
     stage: "compile-admission", resourcePressure: byteAdmission.resourcePressure,
@@ -216,7 +216,7 @@ export async function computeSafetyScoreV9(
 
   const fixedInput = baseArtifact.input;
   const resourceAdmission = assessSafetyScoreV9ResourceBudget({
-    catalogAssets: SAFETY_SCORE_V9_CATALOG_COUNT, activeAssets: fixedInput.activeAssetIds.length, inputBytes,
+    catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: fixedInput.activeAssetIds.length, inputBytes,
   });
   if (!resourceAdmission.admitted) return unavailable("resource-budget-exceeded", {
     stage: "compile-admission", activeAssets: fixedInput.activeAssetIds.length,

@@ -6,7 +6,7 @@
  * (`safety-score-v9-capture.ts`) and the compute cron rely on to prove that the
  * DEX and redemption lanes each contribute exactly one published generation.
  */
-import { WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS, WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types/market";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";

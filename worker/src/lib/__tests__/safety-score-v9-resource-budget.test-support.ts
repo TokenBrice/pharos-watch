@@ -10,7 +10,6 @@ import { z } from "zod";
 import type * as Esbuild from "esbuild";
 import type { BuildOptions, Plugin } from "esbuild";
 import { parseAssignments, unquote } from "../../../../scripts/lib/wrangler-toml.mjs";
-import { RUNTIME_REACHABILITY_POLICIES } from "../../../../scripts/lib/runtime-reachability-policies.mts";
 import { resourceChildEnvironment } from "./safety-score-v9-resource-env.test-support";
 
 export type ResourceProfile = "compute" | "heavy-warm";
@@ -131,23 +130,13 @@ globalThis.__pharosResourcePhase = (phase) => {
   const before = process.memoryUsage(); globalThis.gc(); const after = process.memoryUsage();
   __resourceAppend(process.env.PHAROS_RESOURCE_OUTPUT, JSON.stringify({type:'phase',phase,cycle:globalThis.__pharosResourceCycle ?? 0,before,after})+'\\n');
 };`;
-export function assertResourceProbeCatalog(metafile: Esbuild.Metafile, packedLoader: string, measured: boolean) {
+export function assertResourceProbeCatalog(metafile: Esbuild.Metafile, packedLoader: string) {
   const loader = packedLoader.replaceAll("\\", "/");
   const inputs = Object.keys(metafile.inputs).map((input) => input.replaceAll("\\", "/"));
-  for (const input of Object.values(metafile.inputs)) {
-    for (const edge of input.imports) {
-      if (edge.original === "#pharos-full-catalog" && (edge.external || edge.path.replaceAll("\\", "/") !== loader || !inputs.includes(loader))) {
-        throw new Error("catalog-alias-not-packed-worker-loader");
-      }
-    }
+  if (!inputs.includes(loader) || !Object.values(metafile.inputs).some((input) =>
+    input.imports.some((edge) => edge.original === "#pharos-full-catalog" && !edge.external && edge.path.replaceAll("\\", "/") === loader))) {
+    throw new Error("catalog-alias-not-packed-worker-loader");
   }
-  if (!measured) return;
-  const policy = RUNTIME_REACHABILITY_POLICIES.find((entry) => entry.id === "safety-score-v9-publication");
-  if (!policy || policy.forbidden.kind !== "paths") throw new Error("missing-publication-reachability-policy");
-  for (const input of inputs) {
-    if (input === loader || policy.forbidden.paths.some((path) => path === input)) throw new Error(`forbidden-catalog-in-measured-graph:${input}`);
-  }
-  if (!inputs.includes("shared/lib/stablecoins/safety-score-v9-registry.ts")) throw new Error("scoring-catalog-missing-from-measured-graph");
 }
 
 export async function buildResourceProbe(root: string, directory: string, mode: "live" | "hard-cap" | "setup") {
@@ -166,7 +155,7 @@ export async function buildResourceProbe(root: string, directory: string, mode: 
   } as BuildOptions);
   const metafile = result.metafile!;
   const loader = relative(root, settings.alias["#pharos-full-catalog"]);
-  assertResourceProbeCatalog(metafile, loader, mode !== "setup");
+  assertResourceProbeCatalog(metafile, loader);
   if (mode !== "setup") {
     for (const input of Object.keys(metafile.inputs)) {
       if (/resource-fixture|full-registry-input|latest-schema-sqlite/.test(input)) throw new Error(`setup-import-in-measured-graph:${input}`);

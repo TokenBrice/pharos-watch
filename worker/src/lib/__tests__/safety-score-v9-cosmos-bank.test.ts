@@ -3,8 +3,8 @@ import { CosmosBankSupplyReadSchema, ReviewedEconomicSupplyPlanSchema, type Cosm
 import { observeEconomicCosmosBank, pinEconomicCosmosBank } from "../safety-score-v9/cosmos-bank-observer";
 import { deriveReviewedEconomicDeploymentPartition, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
 import { observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/core";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK = 1791184659;
@@ -136,7 +136,7 @@ function fixture() {
     excludedRegistryDeploymentKeys: [], exclusions: [], conversionSources: [], referencePriceSource: null, liabilityInFlightSource: null,
     escrows: [{ id: "channel-1-escrow", canonicalDeploymentKey: "kava:usdx", account: ESCROW, receiptDeploymentKeys: [`osmosis:${RECEIPT}`], independentReceiptLiability: false, receiptClaimSources: [], inFlightSource: pending }],
   };
-  const meta: SafetyScoreV9ScoringMeta = { id: "fixture", contracts: [{ kind: "native-denom", chain: "kava", address: "usdx", decimals: 6 }, { chain: "osmosis", address: RECEIPT, decimals: 6 }] };
+  const meta = { contracts: [{ kind: "native-denom", chain: "kava", address: "usdx", decimals: 6 }, { chain: "osmosis", address: RECEIPT, decimals: 6 }] } as StablecoinMeta;
   const observation = (id: string, deploymentKey: string, amount: string) => ({ id, deploymentKey, amount, observedAtSec: CLOCK - 60, anchor: "100", anchorHash: HASH, responseSha256: "b".repeat(64) });
   return { plan, meta, baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`, sourceGeneration: "source", registryFingerprint: "d".repeat(64), clockSec: CLOCK,
     aggregate: { supplyUsd: 100, sourceGeneration: "source", observedAtSec: CLOCK - 60 },
@@ -187,7 +187,7 @@ describe("native-plus-escrow conservation", () => {
     f.plan.exclusions = [{ id: "escrow-exclusion", deploymentKey: "kava:usdx", account: ESCROW }];
     f.meta.contracts!.pop();
     vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockImplementation(id => id === "fixture" ? f.plan : undefined);
-    vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockImplementation(id => id === "fixture" ? f.meta : undefined);
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockImplementation(id => id === "fixture" ? f.meta : undefined);
     const fixedInput = makeV9FixedInput({ assetId: "fixture", clockSec: CLOCK });
     Object.assign(fixedInput, { baseInputGenerationId: f.baseInputGenerationId, sourceGeneration: "source", registryFingerprint: f.registryFingerprint,
       aggregateCirculatingById: { fixture: { circulating: { peggedUSD: 80 }, observedAtSec: CLOCK - 60 } },

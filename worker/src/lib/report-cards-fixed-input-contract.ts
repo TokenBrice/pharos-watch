@@ -8,7 +8,7 @@ import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9
 import { sortedRecord } from "@shared/lib/compare";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
 import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { ReviewedEconomicDeploymentPartitionSchema } from "@shared/types/safety-score-v9-supply-attribution";

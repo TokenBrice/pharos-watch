@@ -111,7 +111,9 @@ Reserve recovery: `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`; checked-in c
 
 ## Module Initialization
 
-The heavy-owned V9 invocation closure uses scoring-only metadata plus the existing Worker runtime projection, not the full catalog. `safety-score-v9-publication` reachability derives heavy slot roots from the schedule registry and requires role rejection before a lazy runner loads; it does not claim that the generic dispatcher's physical bundle excludes non-owner catalog code. See the [memory appendix](./process/worker-infrastructure-appendix.md#module-initialization-memory-evidence) for the exact boundary, evidence requirements and unqualified resource guard.
+Zod history and the unqualified V9 guard are detailed in the [memory appendix](./process/worker-infrastructure-appendix.md#module-initialization-memory-evidence).
+
+Worker scripts must be Latin-1-only: escape source code units above U+00FF as `\uXXXX`, including regex literals. One such raw character doubles V8's retained bundle source. `npm run check:worker-package` rejects these and warns on other non-ASCII; escape first-party Latin-1 too, since UTF-8 loading can retain two-byte source.
 
 Runtime configuration is derived from `Env` bindings in the scheduled context factory (`worker/src/handlers/scheduled/context.ts`) and the HTTP route-context factory (`worker/src/handlers/http/context.ts`), which runs the per-endpoint hydrators in `worker/src/routes/dependency-hydrators.ts`, with results passed as parameters rather than stored in module-level state:
 

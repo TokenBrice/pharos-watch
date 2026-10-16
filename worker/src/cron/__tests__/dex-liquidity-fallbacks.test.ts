@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron/mock-registry";
+import { mockRegistry } from "../../test-helpers/cron/mock-registry";
 
 import { getFallbackTargets } from "../dex-liquidity/fetch-fallbacks";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
@@ -34,7 +34,7 @@ function metricWithPools(
   return metric;
 }
 
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRuntimeRegistry({
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   stablecoins: [
     { id: "usdt-tether", symbol: "USDT", geckoId: "tether", contracts: [{ chain: "ethereum", address: "0x1", decimals: 6 }] },
     { id: "usdc-circle", symbol: "USDC", geckoId: "usd-coin", contracts: [{ chain: "ethereum", address: "0x2", decimals: 6 }] },
