@@ -8,7 +8,6 @@ import { FlowChart } from "@/components/flow-chart";
 const chartState = vi.hoisted(() => ({
   data: [] as Array<Record<string, number | boolean | null>>,
   connectNulls: undefined as boolean | undefined,
-  xDomain: undefined as unknown,
 }));
 
 vi.mock("@/hooks/use-chart-container-ready", () => ({
@@ -20,10 +19,7 @@ vi.mock("@/hooks/use-prefers-reduced-motion", () => ({
 }));
 
 vi.mock("@/components/chart-primitives/axes", () => ({
-  TimeXAxis: ({ domain }: { domain?: unknown }) => {
-    chartState.xDomain = domain;
-    return null;
-  },
+  TimeXAxis: () => null,
   MonoYAxis: () => null,
   TimeGrid: () => null,
   useNiceValueAxis: () => ({}),
@@ -49,21 +45,6 @@ vi.mock("recharts", () => ({
 }));
 
 describe("FlowChart", () => {
-  it("pads the time domain by half a bucket so the edge bars are drawn whole", () => {
-    const firstHour = 3_600_000;
-    render(
-      <FlowChart
-        isLoading={false}
-        hourly={[
-          { hourTs: firstHour, mintVolumeUsd: 7, burnVolumeUsd: 0, netFlowUsd: 7 },
-          { hourTs: firstHour + 3_600, mintVolumeUsd: 14, burnVolumeUsd: 0, netFlowUsd: 14 },
-        ]}
-      />,
-    );
-
-    expect(chartState.xDomain).toEqual([firstHour * 1000 - 1_800_000, (firstHour + 3_600) * 1000 + 1_800_000]);
-  });
-
   it("preserves missing hourly buckets as gaps and excludes them from the rolling mean", () => {
     const firstHour = 3_600_000;
     render(

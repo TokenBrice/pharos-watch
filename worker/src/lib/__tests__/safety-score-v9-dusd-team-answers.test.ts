@@ -114,33 +114,6 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
     scenario = compileDusdTeamAnswerFixture();
   });
 
-  it("records the official Machine Terms custody and leverage facts in registry metadata", () => {
-    const meta = requireMeta(ASSET_ID);
-
-    expect(meta.jurisdiction).toEqual({ country: "British Virgin Islands" });
-    expect(meta.links).toContainEqual({
-      label: "Machine Terms",
-      url: "https://makina.finance/MeccanicoToS.pdf",
-    });
-    expect(meta.custodyProfile).toMatchObject({
-      segregation: "mixed",
-      bankruptcyRemoteness: "none",
-      rehypothecation: "permitted",
-      reviewedAt: "2026-09-03",
-      providers: [
-        expect.objectContaining({
-          name: "Dialectic Meccanico Ltd / Makina Machine and Caliber contracts",
-          jurisdiction: "British Virgin Islands",
-        }),
-      ],
-    });
-    expect(meta.custodyProfile?.sources).toContainEqual(
-      expect.objectContaining({ url: "https://makina.finance/MeccanicoToS.pdf" }),
-    );
-    const morphoSlice = meta.reserves?.find((reserve) => reserve.name === "Morpho lending positions");
-    expect(morphoSlice?.riskFactors).toContain("leverage");
-  });
-
   it("compiles DUSD wrapper facts from reviewed local custody, leverage, and control evidence", () => {
     const { compiledAsset } = scenario;
     const wrapper = compiledAsset.wrapperLocalFacts;

@@ -49,11 +49,6 @@ describe("mapWithConcurrency", () => {
     expect(results).toEqual(["A", "B", "C", "D", "E"]);
   });
 
-  it("returns an empty array when there are no items", async () => {
-    const results = await mapWithConcurrency([], 4, async () => "unused");
-    expect(results).toEqual([]);
-  });
-
   it.each([
     [new Error("boom"), "boom"],
     [undefined, "mapWithConcurrency task rejected"],

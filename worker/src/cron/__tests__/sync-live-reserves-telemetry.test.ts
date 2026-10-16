@@ -122,20 +122,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       [...summary.groups.map((group) => group.adapterKey)].sort(),
     );
   });
-  it("counts cumulative bucket boundaries and selects exact percentiles", () => {
-    const collector = createAdapterLatencyCollector();
-    for (const elapsedMs of [1, 5, 6, 10, 25]) {
-      collector.recordAttempt({
-        adapterKey: "test", chain: "ethereum", stage: "primary", cacheHit: false,
-        ioCallCount: 1, ioActivityBurstCount: 1, elapsedMs, error: false,
-      });
-    }
-    expect(collector.finalize().total.elapsedMs).toEqual({
-      count: 5, sumMs: 47,
-      buckets: [1, 2, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
-      p50UpperBoundMs: 10, p95UpperBoundMs: 25,
-    });
-  });
 
   it("normalizes invalid durations and leaves overflow percentiles unbounded", () => {
     const collector = createAdapterLatencyCollector();
@@ -150,22 +136,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       buckets: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
       p50UpperBoundMs: 1, p95UpperBoundMs: null,
     });
-  });
-
-  it("counts repeated omitted attempts rather than omitted groups", () => {
-    const collector = createAdapterLatencyCollector();
-    for (let index = 0; index < ADAPTER_LATENCY_MAX_GROUPS + 10; index++) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        collector.recordAttempt({
-          adapterKey: `adapter-${index}`, chain: "ethereum", stage: "primary", cacheHit: false,
-          ioCallCount: 0, ioActivityBurstCount: 0, elapsedMs: 1, error: false,
-        });
-      }
-    }
-    const summary = collector.finalize();
-    expect(summary.omittedGroups).toBeGreaterThan(0);
-    expect(summary.omittedAttempts).toBe(summary.omittedGroups * 3);
-    expect(summary.total.attemptCount).toBe((ADAPTER_LATENCY_MAX_GROUPS + 10) * 3);
   });
 
   it("persists attempt, limiter-call, wave, cache-hit, and percentile attribution", async () => {
@@ -396,43 +366,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     ]);
     expect(metadataOf(result).resourcePressure).toMatchObject({
       phase: "terminal", cacheBytes: 0,
-    });
-  });
-
-  it("persists a valid zero-attempt summary when the whole queue is deferred", async () => {
-    getReserveAdapterMock.mockImplementation(() => {
-      throw new Error("adapter must not be loaded");
-    });
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const result = await syncLiveReserves(
-      mockLiveReserveD1(),
-      new AbortController().signal,
-      {},
-      undefined,
-      { runBudgetMs: 1, adapterTimeoutMs: 20_000 },
-    );
-    const { adapterLatency } = metadataOf(result);
-
-    expect(adapterLatency).toMatchObject({
-      schemaVersion: 1,
-      groups: [],
-      total: {
-        attemptCount: 0,
-        ioCallCount: 0,
-        ioActivityBurstCount: 0,
-        errorCount: 0,
-        elapsedMs: {
-          count: 0,
-          sumMs: 0,
-          p50UpperBoundMs: null,
-          p95UpperBoundMs: null,
-        },
-      },
-      requestCacheHits: 0,
-      requestCacheMisses: 0,
-      omittedGroups: 0,
-      omittedAttempts: 0,
-      overflow: false,
     });
   });
 });

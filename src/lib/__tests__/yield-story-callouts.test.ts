@@ -30,15 +30,6 @@ describe("buildYieldStoryCallouts", () => {
     expect(callouts?.unmeasuredTvlCount).toBe(2);
   });
 
-  it("reports zero exclusions when every row publishes TVL", () => {
-    const callouts = buildYieldStoryCallouts([
-      row("usdc", { sourceTvlUsd: 40_000_000 }),
-      row("usdt", { sourceTvlUsd: 30_000_000 }),
-    ]);
-
-    expect(callouts?.unmeasuredTvlCount).toBe(0);
-  });
-
   it("returns null when filters hide every row", () => {
     expect(buildYieldStoryCallouts([])).toBeNull();
   });

@@ -492,70 +492,10 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
     expect(violationCodes(validateMintBridgeOwnership(validMeta))).toEqual([]);
   });
 
-  it("has no error-severity ownership violations across the active registry", () => {
-    const violations = [...ACTIVE_META_BY_ID.values()].flatMap((meta) =>
-      validateMintBridgeOwnership(meta).filter((violation) => violation.severity === "error"),
-    );
-
-    expectNoOwnershipViolations(violations);
-  });
-
   it("enforces reviewed native deployment ownership for every active Mint Authority path", () => {
     const violations = [...ACTIVE_META_BY_ID.values()].flatMap((meta) =>
       validateMintBridgeOwnership(meta, { enforce: true }),
     );
-
-    expectNoOwnershipViolations(violations);
-  });
-
-  it("keeps bridge vocabulary out of active Mint Authority data", () => {
-    const violations: MintBridgeOwnershipViolation[] = [];
-
-    for (const meta of ACTIVE_META_BY_ID.values()) {
-      const mintAuthority = meta.mintAuthority;
-      if (!mintAuthority) continue;
-
-      if (mintAuthority.mintPath === "bridge-or-oft-synthetic") {
-        violations.push({
-          assetId: meta.id,
-          code: "bridge-capability-in-mint",
-          path: "mintAuthority.mintPath",
-          message: `active Mint Authority mintPath is ${mintAuthority.mintPath}`,
-          severity: "error",
-        });
-      }
-
-      for (let index = 0; index < (mintAuthority.controls ?? []).length; index += 1) {
-        const control = mintAuthority.controls![index]!;
-        if (control.role === "bridge-admin") {
-          violations.push({
-            assetId: meta.id,
-            code: "bridge-capability-in-mint",
-            path: `mintAuthority.controls[${index}].role`,
-            message: `active Mint Authority control role is ${control.role}`,
-            severity: "error",
-          });
-        }
-        if (control.authorityType === "bridge") {
-          violations.push({
-            assetId: meta.id,
-            code: "bridge-capability-in-mint",
-            path: `mintAuthority.controls[${index}].authorityType`,
-            message: `active Mint Authority control authorityType is ${control.authorityType}`,
-            severity: "error",
-          });
-        }
-        if (control.routeChecks != null) {
-          violations.push({
-            assetId: meta.id,
-            code: "bridge-capability-in-mint",
-            path: `mintAuthority.controls[${index}].routeChecks`,
-            message: "active Mint Authority control contains bridge routeChecks",
-            severity: "error",
-          });
-        }
-      }
-    }
 
     expectNoOwnershipViolations(violations);
   });

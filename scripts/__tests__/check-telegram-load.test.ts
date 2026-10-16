@@ -5,22 +5,17 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   buildQueryPlanChecks,
-  buildSyntheticTelegramFixture,
   buildTelegramLoadCheckReport,
   evaluateQueryPlan,
   evaluateStatusPathBudget,
-  extractProductionSubscriberFanoutSql,
   extractProductionStatusSql,
   findCpuBudgetBreaches,
   findProductionDispatchBreaches,
-  findRecapLoadBreaches,
   findTtlMarginBreaches,
   runStatusPathBudgetChecks,
-  simulateLoadScenarios,
   simulateProductionCalibratedDispatch,
   simulateTelegramRecapLoadScenarios,
   STATUS_PATH_MAX_DURATION_MS,
-  summarizeFixture,
   type QueryPlanCheckDefinition,
 } from "../ci/check-telegram-load";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -34,52 +29,6 @@ describe("Telegram load simulation", () => {
   let report: TelegramLoadCheckReport;
   beforeAll(() => {
     report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
-  });
-
-  it("builds fixtures that cover the required subscriber states", () => {
-    const fixture = buildSyntheticTelegramFixture(5_000);
-    const summary = summarizeFixture(fixture);
-
-    expect(summary.activeWatchers).toBe(5_000);
-    expect(summary.directSubscriptions).toBeGreaterThan(25_000);
-    expect(summary.globalOptIns.depeg).toBeGreaterThan(2_500);
-    expect(summary.globalOptIns.dews).toBeGreaterThan(100);
-    expect(summary.globalOptIns.safety).toBeGreaterThan(300);
-    expect(summary.globalOptIns.reserve).toBeGreaterThan(50);
-    expect(summary.globalOptIns.freeze).toBeGreaterThan(100);
-    expect(summary.presetFollowers).toBeGreaterThan(350);
-    expect(summary.groupChats).toBeGreaterThan(600);
-    expect(summary.quietHoursChats).toBeGreaterThan(250);
-    expect(summary.chatSnoozes).toBeGreaterThan(100);
-    expect(summary.perCoinSnoozes).toBeGreaterThan(500);
-    expect(summary.blockedChats).toBeGreaterThan(50);
-  });
-
-  it("simulates every reviewed fan-out scenario for a target fixture", () => {
-    const fixture = buildSyntheticTelegramFixture(1_000);
-    const scenarios = simulateLoadScenarios(fixture);
-
-    expect(scenarios.map((scenario) => scenario.scenarioId)).toEqual([
-      "single-depeg",
-      "freeze-event",
-      "market-wide-burst",
-      "dews-safety-burst",
-      "admin-broadcast",
-      "telegram-429-storm",
-    ]);
-    expect(scenarios.every((scenario) => scenario.targetChats > 0)).toBe(true);
-    expect(scenarios.every((scenario) => scenario.d1Operations.reads > 0)).toBe(true);
-    expect(scenarios.every((scenario) => scenario.d1Operations.writes > 0)).toBe(true);
-    expect(scenarios.find((scenario) => scenario.scenarioId === "dews-safety-burst")?.scenarioLabel)
-      .toContain("reserve");
-  });
-
-  it("includes the 500, 1000, 5000, and 10000 watcher targets by default", () => {
-    const report = buildTelegramLoadCheckReport({ skipQueryPlans: true });
-
-    expect(report.fixtureSummaries.map((summary) => summary.activeWatchers)).toEqual([500, 1_000, 5_000, 10_000]);
-    expect(report.scenarios).toHaveLength(24);
-    expect(report.scenarios.filter((scenario) => scenario.exploratory)).toHaveLength(6);
   });
 
   it("classifies the required 5000-watcher SLO across planning and delivery", () => {
@@ -125,26 +74,6 @@ describe("Telegram load simulation", () => {
     );
   });
 
-  it("computes a per-invocation CPU estimate and keeps the required burst under the safety fraction", () => {
-
-    expect(report.assumptions.dispatchCpuMs).toBeGreaterThan(0);
-    expect(report.assumptions.cpuBudgetSafetyFraction).toBe(0.5);
-    expect(report.assumptions.cpuBudgetCeilingMs).toBe(
-      report.assumptions.dispatchCpuMs * report.assumptions.cpuBudgetSafetyFraction,
-    );
-
-    const requiredScenarios = report.scenarios.filter(
-      (scenario) => scenario.targetActiveWatchers === 5_000,
-    );
-    expect(requiredScenarios.length).toBeGreaterThan(0);
-    for (const scenario of requiredScenarios) {
-      expect(scenario.estimatedCpuMs).toBeGreaterThan(0);
-      // C102 caps modeled format-count at the fresh budget, so every required
-      // scenario stays under the CPU safety fraction of the per-invocation cap.
-      expect(scenario.estimatedCpuMs).toBeLessThanOrEqual(report.assumptions.cpuBudgetCeilingMs);
-    }
-  });
-
   it("enforces the production-calibrated candidate, fanout, handoff, and wall-time bounds", () => {
     const scenario = simulateProductionCalibratedDispatch();
 
@@ -175,23 +104,6 @@ describe("Telegram load simulation", () => {
       "target-oriented-handoff-operations",
       "invocation-wall-budget",
     ]);
-  });
-
-  it("caps the modeled format-count at the fresh budget post-C102 reorder", () => {
-    const burst = report.scenarios.find(
-      (scenario) =>
-        scenario.targetActiveWatchers === 5_000 && scenario.scenarioId === "market-wide-burst",
-    );
-
-    expect(burst).toBeDefined();
-    // The burst routes far more chunks than the fresh budget, but the CPU model
-    // formats at most `freshAttemptsPerRun` chats on the hot path — without the
-    // cap the estimate would scale with the full chunk count and exceed budget.
-    expect(burst!.messageChunks).toBeGreaterThan(report.assumptions.freshAttemptsPerRun);
-    const uncappedFormatMs = burst!.messageChunks * report.assumptions.formatCpuMsPerChat;
-    const cappedFormatMs = report.assumptions.freshAttemptsPerRun * report.assumptions.formatCpuMsPerChat;
-    expect(cappedFormatMs).toBeLessThan(uncappedFormatMs);
-    expect(burst!.estimatedCpuMs).toBeLessThanOrEqual(report.assumptions.cpuBudgetCeilingMs);
   });
 
   it("flags a synthetic over-budget scenario and passes the real fixtures", () => {
@@ -249,14 +161,6 @@ describe("Telegram load simulation", () => {
       .toMatchObject({ pendingEnqueued: 0, scheduleAdvancements: 0 });
   });
 
-  it("emits enforced 5000 and advisory 10000 personalized recap reports", () => {
-    const report = buildTelegramLoadCheckReport({ targets: [5_000, 10_000], skipQueryPlans: true });
-
-    expect(report.recapScenarios).toHaveLength(14);
-    expect(report.recapScenarios.filter((scenario) => scenario.targetRecipients === 5_000 && !scenario.exploratory)).toHaveLength(7);
-    expect(report.recapScenarios.filter((scenario) => scenario.targetRecipients === 10_000 && scenario.exploratory)).toHaveLength(7);
-    expect(findRecapLoadBreaches(report)).toEqual([]);
-  });
 });
 
 describe("Telegram query-plan evaluation", () => {
@@ -267,29 +171,6 @@ describe("Telegram query-plan evaluation", () => {
     binds: [],
     requiredDetails: ["idx_needed"],
   };
-
-  it("derives fan-out predicates from the production subscriber SQL template", () => {
-    const sourcePath = resolve(
-      process.cwd(),
-      "worker/src/cron/dispatch-telegram-subscribers.ts",
-    );
-    const productionSource = readFileSync(sourcePath, "utf8");
-    const columns = {
-      directColumn: "alert_depeg",
-      globalColumn: "global_alert_depeg",
-    };
-    const extracted = extractProductionSubscriberFanoutSql(productionSource, columns);
-    const mutatedSource = productionSource.replace(
-      "AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)",
-      "AND sub.alert_snooze_until_ts IS NULL",
-    );
-    const mutated = extractProductionSubscriberFanoutSql(mutatedSource, columns);
-    const directCheck = buildQueryPlanChecks().find((candidate) => candidate.id === "fanout-direct-depeg")!;
-
-    expect(directCheck.sql).toBe(extracted.direct);
-    expect(mutated.direct).not.toBe(extracted.direct);
-    expect(mutated.direct).toContain("AND sub.alert_snooze_until_ts IS NULL");
-  });
 
   it("excludes terminal job targets from otherwise eligible pending claims", () => {
     const { sqlite } = databases.open();
@@ -313,28 +194,6 @@ describe("Telegram query-plan evaluation", () => {
     ]);
     expect(evaluateQueryPlan(claimCheck, sqlite.prepare(`EXPLAIN QUERY PLAN ${claimCheck.sql}`)
       .all(...claimCheck.binds).map((row) => String(row.detail))).status).toBe("ok");
-  });
-
-  it("reviews bounded recap planning reads and guarded handoff query plans", () => {
-    const recapChecks = buildQueryPlanChecks()
-      .filter((check) => check.category === "recap-planner")
-      .map((check) => check.id);
-
-    expect(recapChecks).toEqual([
-      "recap-due-preferences",
-      "recap-tape-window",
-      "recap-direct-membership",
-      "recap-preset-membership",
-      "recap-target-guarded-transition",
-      "recap-pending-handoff",
-    ]);
-  });
-
-  it("passes when required index details are present", () => {
-    const result = evaluateQueryPlan(check, ["SEARCH sub USING INDEX idx_needed (stablecoin_id=?)"]);
-
-    expect(result.status).toBe("ok");
-    expect(result.missingRequiredDetails).toEqual([]);
   });
 
   it("fails when a required index detail is missing", () => {

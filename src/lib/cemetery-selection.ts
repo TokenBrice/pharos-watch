@@ -12,7 +12,7 @@ import { MECHANISM_ARCHETYPE_VALUES, type MechanismArchetype } from "@shared/typ
 // Anchors
 // ---------------------------------------------------------------------------
 
-export const CEMETERY_SECTION_ANCHORS = [
+const CEMETERY_SECTION_ANCHORS = [
   "cemetery",
   "key-facts",
   "causes",
@@ -143,7 +143,7 @@ export type CemeteryRegisterSortKey = (typeof CEMETERY_REGISTER_SORT_KEYS)[numbe
 const CEMETERY_REGISTER_SORT_DIRECTIONS = ["asc", "desc"] as const;
 export type CemeteryRegisterSortDirection = (typeof CEMETERY_REGISTER_SORT_DIRECTIONS)[number];
 
-export const CEMETERY_REGISTER_QUERY_MAX_LENGTH = 80;
+const CEMETERY_REGISTER_QUERY_MAX_LENGTH = 80;
 
 export interface CemeteryRegisterFilters {
   cause?: CauseOfDeath;

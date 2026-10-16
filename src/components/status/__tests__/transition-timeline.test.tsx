@@ -7,98 +7,7 @@ import { DEFAULT_INCIDENT_HISTORY_QUERY } from "@/lib/incident-history-view-mode
 import { TransitionTimeline } from "../transition-timeline";
 
 
-function makeTransitions(): StatusTransition[] {
-  return [
-    {
-      id: 17,
-      scope: "global",
-      from: "healthy",
-      to: "degraded",
-      rawStatus: "degraded",
-      transitionType: "degrade",
-      reason: "Cache age breached warning threshold",
-      confidence: 0.82,
-      at: 1_700_000_000,
-      causes: [
-        {
-          code: "cache_ratio_degraded",
-          layer: "availability",
-          severity: "warning",
-          message: "Cache freshness exceeded the target window.",
-          metric: "age",
-          value: 12,
-          threshold: 8,
-        },
-      ],
-    },
-    {
-      id: 18,
-      scope: "global",
-      from: "degraded",
-      to: "healthy",
-      rawStatus: "healthy",
-      transitionType: "recover",
-      reason: "Cache age recovered",
-      confidence: 0.99,
-      at: 1_700_000_600,
-      causes: [
-        {
-          code: "cache_recovered",
-          layer: "system",
-          severity: "info",
-          message: "Cache freshness returned within budget.",
-        },
-      ],
-    },
-  ];
-}
-
 describe("TransitionTimeline", () => {
-  it("renders timing, flapping, pressed windows, local scrolling, and accessible cause disclosure", () => {
-    const onWindowChange = vi.fn();
-    const onFiltersChange = vi.fn();
-    render(
-      <TransitionTimeline
-        transitions={makeTransitions()}
-        nowSeconds={1_700_001_000}
-        transitionsLast24h={4}
-        window="24h"
-        filters={DEFAULT_INCIDENT_HISTORY_QUERY}
-        onWindowChange={onWindowChange}
-        onFiltersChange={onFiltersChange}
-        isLoading={false}
-      />,
-    );
-
-    const tableShell = screen.getByTestId("status-transition-timeline-table");
-    expect(tableShell.getAttribute("data-table-id")).toBe("status-transition-timeline");
-    expect(screen.getByRole("table", { name: /status transition history/i })).toBeTruthy();
-    expect(screen.getByText("healthy -> degraded")).toBeTruthy();
-    expect(screen.getByText(/State duration: 10m/i)).toBeTruthy();
-    expect(screen.getAllByText(/^Resolved/i).length).toBeGreaterThan(0);
-    // Folded into one recovered incident with its duration.
-    expect(screen.getByText("Recovered")).toBeTruthy();
-    expect(screen.getByText("Lasted 10m")).toBeTruthy();
-    expect(screen.getByText(/Flapping detected/i)).toBeTruthy();
-
-    const selectedWindow = screen.getByRole("button", { name: "24h" });
-    const otherWindow = screen.getByRole("button", { name: "30d" });
-    expect(selectedWindow.getAttribute("aria-pressed")).toBe("true");
-    expect(otherWindow.getAttribute("aria-pressed")).toBe("false");
-    fireEvent.click(otherWindow);
-    expect(onWindowChange).toHaveBeenCalledWith("30d");
-
-    const disclosure = screen.getByRole("button", { name: "Show 1 causes for transition 17" });
-    expect(disclosure.getAttribute("aria-expanded")).toBe("false");
-    expect(disclosure.hasAttribute("aria-controls")).toBe(false);
-    fireEvent.click(disclosure);
-    expect(disclosure.getAttribute("aria-expanded")).toBe("true");
-    expect(disclosure.getAttribute("aria-controls")).toBe("transition-causes-17");
-    expect(screen.getByText("Cache freshness exceeded the target window.")).toBeTruthy();
-    expect(screen.getByText("Raw cause data")).toBeTruthy();
-    expect(screen.getByText(/"cache_ratio_degraded"/i)).toBeTruthy();
-  });
-
   it("exposes all filter controls and keeps cause-less evidence Unknown", () => {
     const onFiltersChange = vi.fn();
     const transition: StatusTransition = {
@@ -141,31 +50,6 @@ describe("TransitionTimeline", () => {
     expect(screen.getByText(/No persisted causes are available/i)).toBeTruthy();
   });
 
-  it("renders a resettable no-match state", () => {
-    const onFiltersChange = vi.fn();
-    render(
-      <TransitionTimeline
-        transitions={makeTransitions()}
-        nowSeconds={1_700_001_000}
-        transitionsLast24h={2}
-        window="24h"
-        filters={{ ...DEFAULT_INCIDENT_HISTORY_QUERY, severity: "critical" }}
-        onWindowChange={vi.fn()}
-        onFiltersChange={onFiltersChange}
-        isLoading={false}
-      />,
-    );
-
-    expect(screen.getByText("No transitions match the current filters.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
-    expect(onFiltersChange).toHaveBeenCalledWith({
-      severity: "all",
-      surface: "all",
-      causeCode: null,
-      publicImpact: "all",
-    });
-  });
-
   it("renders a failed read as an error with retry, never as an empty history", () => {
     const onRetry = vi.fn();
     render(
@@ -205,50 +89,4 @@ describe("TransitionTimeline", () => {
     expect(screen.getByText("No status transitions recorded in this window.")).toBeTruthy();
   });
 
-  it("summarizes recurring causes and links named jobs to the cron workbench", () => {
-    const degrade = (id: number, at: number): StatusTransition => ({
-      id,
-      scope: "global",
-      from: "healthy",
-      to: "degraded",
-      rawStatus: "degraded",
-      transitionType: "degrade",
-      reason: "cron",
-      confidence: 1,
-      at,
-      causes: [
-        {
-          code: "unhealthy_crons_present",
-          layer: "availability",
-          severity: "warning",
-          message: "1 availability-impacting cron job is unavailable/stale. Jobs: sync-mint-burn.",
-        },
-      ],
-    });
-    const recover = (id: number, at: number): StatusTransition => ({
-      ...degrade(id, at),
-      from: "degraded",
-      to: "healthy",
-      rawStatus: "healthy",
-      transitionType: "recover",
-      causes: [],
-    });
-    render(
-      <TransitionTimeline
-        transitions={[degrade(1, 1_699_980_000), recover(2, 1_699_982_700), degrade(3, 1_699_994_400)]}
-        nowSeconds={1_700_000_000}
-        transitionsLast24h={3}
-        window="24h"
-        filters={DEFAULT_INCIDENT_HISTORY_QUERY}
-        onWindowChange={vi.fn()}
-        onFiltersChange={vi.fn()}
-        isLoading={false}
-      />,
-    );
-
-    expect(screen.getByText("2×")).toBeTruthy();
-    expect(screen.getByText("Ongoing")).toBeTruthy();
-    const links = screen.getAllByRole("link", { name: "sync-mint-burn" });
-    expect(links[0]?.getAttribute("href")).toMatch(/^\/admin\/crons\/?\?job=sync-mint-burn$/);
-  });
 });

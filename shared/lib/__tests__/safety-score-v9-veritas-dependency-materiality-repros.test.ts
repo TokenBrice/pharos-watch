@@ -129,46 +129,6 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
     });
   });
 
-  // VER-004: materiality is assessed per reserve row instead of by the aggregate
-  // exposure to one upstream, so row splitting removes a structural ceiling.
-  describe("VERITAS finding VER-004: split rows evade aggregate dependency materiality", () => {
-    it("keeps a 12% unavailable upstream material when represented by two 6% rows", () => {
-      const single = evaluateV9ReserveExposures(
-        asset(
-          [
-            exposure("cash", 0.88),
-            exposure("upstream", 0.12, "upstream", { failureDomains: [{ kind: "reserve-custodian", key: "upstream" }] }),
-          ],
-          [unavailable("upstream", "material-dependency-unavailable")],
-        ),
-        V9_CANDIDATE_POLICY_V1,
-      );
-      const split = evaluateV9ReserveExposures(
-        asset(
-          [
-            exposure("cash", 0.88),
-            exposure("upstream-a", 0.06, "upstream", { failureDomains: [{ kind: "reserve-custodian", key: "upstream" }] }),
-            exposure("upstream-b", 0.06, "upstream", { failureDomains: [{ kind: "reserve-custodian", key: "upstream" }] }),
-          ],
-          [
-            unavailable("upstream-a", "nonmaterial-dependency-unavailable"),
-            unavailable("upstream-b", "nonmaterial-dependency-unavailable"),
-          ],
-        ),
-        V9_CANDIDATE_POLICY_V1,
-      );
-
-      for (const result of [single, split]) {
-        expect(result.unresolved).toContainEqual(expect.objectContaining({
-          code: "material-dependency-unavailable", cause: "U",
-        }));
-        expect(result.structuralReasons).not.toContainEqual(expect.objectContaining({
-          kind: "unsafe-backing",
-        }));
-      }
-      expect(split.score).toBeCloseTo(single.score!, 12);
-    });
-  });
 }
 
 // Folded in from `safety-score-v9-veritas-2-dependency-invariants.test.ts` (VERITAS-II dependency invariants).

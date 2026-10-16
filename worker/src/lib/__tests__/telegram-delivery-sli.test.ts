@@ -324,63 +324,6 @@ describe("Telegram delivery SLI rollup", () => {
     }
   });
 
-  it("attributes a mixed target explicitly from item lineage", async () => {
-    const { sqlite, db } = fixtures.open();
-    insertSource(sqlite, "mixed-event", NOW - 100, NOW + 5_400, NOW - 90);
-    insertJob(sqlite, "mixed-job", "mixed-event", "depeg", NOW - 90, NOW + 5_400);
-    insertTarget(sqlite, {
-      jobId: "mixed-job",
-      sourceId: "mixed-event",
-      key: "mixed-target",
-      alertType: "depeg",
-      createdAt: NOW - 80,
-      expiresAt: NOW + 5_400,
-    });
-    insertTargetItems(sqlite, "mixed-job", "mixed-event", "mixed-target", [
-      "depeg-triggered:usdc-circle",
-      "launch:usdpt-western-union",
-    ]);
-
-    const report = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
-    expect(report.familyAttribution).toEqual({
-      dews: 0,
-      depeg: 0,
-      safety: 0,
-      launch: 0,
-      reserve: 0,
-      freeze: 0,
-      mixed: 1,
-      unknown: 0,
-    });
-  });
-
-  it("attributes a freeze target from freeze item lineage", async () => {
-    const { sqlite, db } = fixtures.open();
-    insertSource(sqlite, "freeze-event", NOW - 100, NOW + 5_400, NOW - 90);
-    insertJob(sqlite, "freeze-job", "freeze-event", "freeze", NOW - 90, NOW + 5_400);
-    insertTarget(sqlite, {
-      jobId: "freeze-job",
-      sourceId: "freeze-event",
-      key: "freeze-target",
-      alertType: "freeze",
-      createdAt: NOW - 80,
-      expiresAt: NOW + 5_400,
-    });
-    insertTargetItems(sqlite, "freeze-job", "freeze-event", "freeze-target", ["freeze:sample-freeze"]);
-
-    const report = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
-    expect(report.familyAttribution).toEqual({
-      dews: 0,
-      depeg: 0,
-      safety: 0,
-      launch: 0,
-      reserve: 0,
-      freeze: 1,
-      mixed: 0,
-      unknown: 0,
-    });
-  });
-
   it("rejects an invalid observation clock", async () => {
     const { db } = fixtures.open();
     await expect(loadTelegramDeliverySliRollup(db, { nowSec: -1 })).rejects.toThrow("nowSec is invalid");

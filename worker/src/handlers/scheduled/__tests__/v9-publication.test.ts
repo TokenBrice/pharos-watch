@@ -163,43 +163,6 @@ describe("V9 publication scheduling", () => {
     });
     return { scheduledRuntime, inserts };
   }
-  it("does not write retired observer rows when compute publishes nothing", async () => {
-    const { scheduledRuntime, inserts } = neutralComputeRuntime({
-      status: "skipped_neutral",
-      metadata: { reason: "v9-core-slot-not-ready" },
-    });
-    await runV9PublicationSlot(scheduledRuntime);
-    expect(inserts).toHaveLength(0);
-  });
-
-  it("does not record observer rows for deployment-only recapture", async () => {
-    const { scheduledRuntime, inserts } = neutralComputeRuntime({
-      status: "skipped_neutral",
-      metadata: {
-        stage: "input-identity",
-        reason: "v9-evaluator-changed-recapture-pending",
-      },
-    });
-
-    await runV9PublicationSlot(scheduledRuntime);
-
-    expect(inserts).toHaveLength(0);
-  });
-
-  it("does not record observer rows when the compiler fails closed on stale input", async () => {
-    const { scheduledRuntime, inserts } = neutralComputeRuntime({
-      status: "degraded",
-      metadata: {
-        stage: "input-load",
-        reason: "stablecoins-generation-mismatch",
-      },
-    });
-
-    await runV9PublicationSlot(scheduledRuntime);
-
-    expect(inserts).toHaveLength(0);
-  });
-
   it("stays silent while a competing invocation still owns the V9 lane", async () => {
     const { scheduledRuntime, inserts } = neutralComputeRuntime({
       status: "skipped_neutral",

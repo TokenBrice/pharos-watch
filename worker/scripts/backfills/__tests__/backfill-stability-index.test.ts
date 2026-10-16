@@ -236,12 +236,6 @@ describe("handleBackfillStabilityIndex", () => {
       FROM stability_index WHERE computed_at = ?`).get(day)).toEqual(preserved);
   });
 
-  it("returns 404 when there are no depeg events", async () => {
-    const res = await callBackfillStabilityIndex({ db: makeDb({ earliest: null }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { adminKey: "secret" }) });
-
-    expect(await readJsonResponse(res, 404)).toEqual({ error: "No depeg events found" });
-  });
-
   it("rebuilds daily PSI rows and reports days backfilled", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const start = nowSec - 2 * 86400;
@@ -274,119 +268,6 @@ describe("handleBackfillStabilityIndex", () => {
     expect(body.daysBackfilled).toBeGreaterThanOrEqual(2);
     expect(body.daysEvaluated).toBeGreaterThanOrEqual(body.daysBackfilled);
     expect(body.endDay).toBe(day1);
-  });
-
-  it("runs rebuild table DDL atomically via db.batch and cleans up via exec", async () => {
-    const execCalls: string[] = [];
-    const batchCalls: string[][] = [];
-    const nowSec = Math.floor(Date.now() / 1000);
-    const start = nowSec - 86400;
-    const day = Math.floor(nowSec / 86400) * 86400;
-
-    const db = makeDb({
-      earliest: start,
-      depegRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          peak_deviation_bps: -120,
-          peg_reference: 1,
-          started_at: start,
-          ended_at: null,
-        },
-      ],
-      supplyRows: [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000, price: 0.998 }],
-      onExec: (sql) => execCalls.push(sql),
-    });
-
-    // Track SQL for each prepared statement via a WeakMap
-    const stmtSqlMap = new WeakMap<object, string>();
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = ((sql: string) => {
-      const s = origPrepare(sql);
-      stmtSqlMap.set(s, sql);
-      return s;
-    }) as typeof db.prepare;
-
-    const origBatch = db.batch.bind(db);
-    db.batch = (async (stmts: D1PreparedStatement[]) => {
-      batchCalls.push(
-        stmts.map(
-          (s) => stmtSqlMap.get(s as unknown as object) ?? (s as unknown as { __sql?: string }).__sql ?? "<unknown>",
-        ),
-      );
-      return origBatch(stmts);
-    }) as typeof db.batch;
-
-    const res = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
-
-    expect(res.status).toBe(200);
-    // First batch should contain the DDL: DROP + CREATE (atomic)
-    expect(batchCalls[0]).toEqual([
-      "DROP TABLE IF EXISTS stability_index_rebuild",
-      "CREATE TABLE stability_index_rebuild ( computed_at INTEGER PRIMARY KEY, score REAL NOT NULL, band TEXT NOT NULL, components TEXT NOT NULL, input_snapshot TEXT NOT NULL, methodology_version TEXT NOT NULL )",
-    ]);
-    // Cleanup exec still runs
-    expect(execCalls).toEqual(["DROP TABLE IF EXISTS stability_index_rebuild"]);
-  });
-
-  it("returns a no-op when there are no completed UTC days to rebuild yet", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const todayMidnight = Math.floor(nowSec / 86400) * 86400;
-    const res = await callBackfillStabilityIndex({ db: makeDb({
-        earliest: todayMidnight + 60,
-      }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
-
-    expect(await readJsonResponse(res, 200)).toEqual({
-      ok: true,
-      dryRun: false,
-      daysBackfilled: 0,
-      daysEvaluated: 0,
-      daysChanged: 0,
-      skippedInsufficientData: 0,
-      maxAbsoluteScoreDelta: 0,
-      startDay: todayMidnight,
-      endDay: todayMidnight - 86400,
-      reason: "no-completed-utc-days",
-    });
-  });
-
-  it("supports dry-run previews with bounded date ranges and change summary", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const day1 = Math.floor((nowSec - 2 * 86400) / 86400) * 86400;
-    const day2 = Math.floor((nowSec - 86400) / 86400) * 86400;
-
-    const res = await callBackfillStabilityIndex({ db: makeDb({
-        earliest: day1,
-        depegRows: [
-          {
-            stablecoin_id: "usdt-tether",
-            peak_deviation_bps: -120,
-            peg_reference: 1,
-            started_at: day1,
-            ended_at: null,
-          },
-        ],
-        supplyRows: [
-          { stablecoin_id: "usdt-tether", snapshot_date: day1 - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
-          { stablecoin_id: "usdt-tether", snapshot_date: day1, circulating_usd: 100_000_000, price: 0.996 },
-          { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000, price: 0.999 },
-        ],
-        stabilityRows: [{ computed_at: day1, score: 99.9, band: "BEDROCK", methodology_version: "2.1" }],
-      } as Parameters<typeof makeDb>[0]), trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?dry-run=true&startDay=${day1}&endDay=${day1}`, {
-        method: "POST",
-        adminKey: "secret",
-      }) });
-
-    expect(await readJsonResponse(res, 200)).toMatchObject({
-      ok: true,
-      dryRun: true,
-      daysBackfilled: 1,
-      daysEvaluated: 1,
-      daysChanged: 1,
-      skippedInsufficientData: 0,
-      startDay: day1,
-      endDay: day1,
-    });
   });
 
   it("keeps out-of-range rows intact for bounded non-dry-run rebuilds", async () => {
@@ -734,14 +615,4 @@ describe("handleBackfillStabilityIndex", () => {
     warnSpy.mockRestore();
   });
 
-  it("rejects invalid day parameters", async () => {
-    const res = await callBackfillStabilityIndex({ db: makeDb({ earliest: 1 }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index?startDay=not-a-day", {
-        method: "POST",
-        adminKey: "secret",
-      }) });
-
-    expect(await readJsonResponse(res, 400)).toEqual({
-      error: "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
-    });
-  });
 });

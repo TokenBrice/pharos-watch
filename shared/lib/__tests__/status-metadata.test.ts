@@ -1,27 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   parseTelegramDispatchCronMetadata,
-  readMetadataBoolean,
-  readMetadataNumber,
-  readMetadataRecord,
 } from "@shared/lib/status-metadata";
 import { TELEGRAM_ALERT_TYPES } from "../../types/status";
 
 describe("status-metadata", () => {
-  it("coerces generic metadata primitives defensively", () => {
-    expect(readMetadataRecord({ ok: true })).toEqual({ ok: true });
-    expect(readMetadataRecord(["not-a-record"])).toBeNull();
-    expect(readMetadataNumber("42")).toBe(42);
-    expect(readMetadataNumber("bad")).toBeNull();
-    expect(readMetadataNumber(null)).toBeNull();
-    expect(readMetadataNumber("")).toBeNull();
-    expect(readMetadataNumber("   ")).toBeNull();
-    expect(readMetadataNumber(false)).toBeNull();
-    expect(readMetadataBoolean("true")).toBe(true);
-    expect(readMetadataBoolean("false")).toBe(false);
-    expect(readMetadataBoolean("nope")).toBeNull();
-  });
-
   it("preserves missing source ages and rejects unknown source states", () => {
     const metadata = parseTelegramDispatchCronMetadata({
       pendingRetryAfterSec: null,
@@ -128,11 +111,4 @@ describe("status-metadata", () => {
     });
   });
 
-  it("accepts skippedReason as the skip reason fallback for preflight rows", () => {
-    const metadata = parseTelegramDispatchCronMetadata({
-      skippedReason: "missing-telegram-bot-token",
-    });
-
-    expect(metadata?.skipped).toBe("missing-telegram-bot-token");
-  });
 });

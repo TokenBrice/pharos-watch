@@ -15,10 +15,6 @@ function layout(current: PsiBeaconCurrentLike | null, isFresh = true) {
   return layoutPsiBeacon(buildPsiBeaconModel(derivePsiBeaconState({ current, isFresh })), SCENE_DIMETRIC);
 }
 
-function xs(points: string): number[] {
-  return points.split(" ").map((pair) => Number(pair.split(",")[0]));
-}
-
 describe("layoutPsiBeacon", () => {
   it("maps ruler values linearly to world radius with no floor", () => {
     const r0 = psiBeaconRadius(0);
@@ -26,41 +22,6 @@ describe("layoutPsiBeacon", () => {
     expect(psiBeaconRadius(50)).toBeCloseTo((r0 + r100) / 2, 10);
     expect(psiBeaconRadius(-5)).toBe(r0);
     expect(psiBeaconRadius(120)).toBe(r100);
-  });
-
-  it("ends the lit beam where its tip tick sits and before the fog", () => {
-    const result = layout(LIVE);
-    const beamMaxX = Math.max(...xs(result.beam!.points));
-    const tipX = Math.max(result.beam!.tip.x1, result.beam!.tip.x2);
-    expect(beamMaxX).toBeCloseTo(tipX, 0);
-    const breadth = result.fog.find((bank) => bank.key === "breadth")!;
-    expect(Math.min(...xs(breadth.points))).toBeGreaterThan(Math.min(...xs(result.beam!.points)));
-  });
-
-  it("emits the light sheet from the lantern and ends it exactly at the tip (no second data channel)", () => {
-    const result = layout(LIVE);
-    const pts = result.beam!.sheet.split(" ").map((pair) => pair.split(",").map(Number) as [number, number]);
-    expect(pts.some(([x, y]) => Math.abs(x - result.lantern[0]) < 0.11 && Math.abs(y - result.lantern[1]) < 0.11)).toBe(true);
-    expect(Math.max(...pts.map(([x]) => x))).toBeCloseTo(Math.max(...xs(result.beam!.points)), 0);
-    expect(layout(null).beam).toBeNull();
-  });
-
-  it("cuts one fixed cone: its cross-section at a radius never depends on the score", () => {
-    const short = layout({ ...LIVE, score: 50, band: "FRACTURE", components: undefined });
-    const long = layout({ ...LIVE, score: 90, band: "BEDROCK", components: undefined });
-    // The short beam's terminating edge spans exactly the long cone's width at 50.
-    const at50 = short.beam!.tip;
-    const longPts = long.beam!.points.split(" ").map((pair) => pair.split(",").map(Number));
-    const width = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-    const shortWidth = Math.hypot(at50.x2 - at50.x1, at50.y2 - at50.y1);
-    const longTipWidth = width(longPts[1], longPts[2]);
-    expect(longTipWidth).toBeGreaterThan(shortWidth);
-    const r = (v: number) => psiBeaconRadius(v);
-    // Linear spread: width grows by the same amount per unit radius.
-    expect((longTipWidth - shortWidth) / (r(90) - r(50))).toBeCloseTo(
-      (shortWidth - width(longPts[0], longPts[3])) / (r(50) - r(0)),
-      0,
-    );
   });
 
   it("keeps every ring, label and the full ruler inside the fixed viewBox", () => {

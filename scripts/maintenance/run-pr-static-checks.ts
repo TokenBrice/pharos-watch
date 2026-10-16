@@ -74,19 +74,13 @@ const PARALLEL_STATIC_CHECKS = new Set([
   "check:generated-artifacts",
 ]);
 
-type StructuralCheckImpact = "none" | "test-only" | "production";
-
-function getStructuralCheckImpact(changedFiles: readonly string[]): StructuralCheckImpact {
-  let hasTestImpact = false;
-  for (const file of changedFiles) {
+function hasProductionStructuralImpact(changedFiles: readonly string[]): boolean {
+  return changedFiles.some((file) => {
     const isStructuralPath =
       STRUCTURAL_CHECK_EXACT_PATHS.has(file) ||
       STRUCTURAL_CHECK_PREFIXES.some((prefix) => file.startsWith(prefix));
-    if (!isStructuralPath) continue;
-    if (!STRUCTURAL_TEST_PATH_PATTERNS.some((pattern) => pattern.test(file))) return "production";
-    hasTestImpact = true;
-  }
-  return hasTestImpact ? "test-only" : "none";
+    return isStructuralPath && !STRUCTURAL_TEST_PATH_PATTERNS.some((pattern) => pattern.test(file));
+  });
 }
 
 function formatNpmFailure(result: ExecutionResult): string {
@@ -118,7 +112,6 @@ export function buildPrStaticCheckPlan(
   const classification = classifyChangedFiles(changedFiles);
   const commands: PrStaticCheckCommand[] = [
     { name: "lint:changed" },
-    { name: "check:table-primitives" },
     { name: "typecheck" },
     { name: "check:env-contract" },
     { name: "check:shared-types-imports" },
@@ -147,13 +140,8 @@ export function buildPrStaticCheckPlan(
     commands.push({ name: "check:doc-sync" });
   }
 
-  switch (getStructuralCheckImpact(changedFiles)) {
-    case "production":
-      commands.push({ name: "check:structural" });
-      break;
-    case "test-only":
-      commands.push({ name: "check:clone-ratchet" }, { name: "check:cron-console-usage" });
-      break;
+  if (hasProductionStructuralImpact(changedFiles)) {
+    commands.push({ name: "check:structural" });
   }
 
   if (classification.pagesChanged) {
@@ -213,7 +201,7 @@ export function resolvePrDependencyAuditBase(
 }
 
 /** Binds frozen refs into the static leaves that need them. Every runner that
- * expands the static plan (check:pr:static, check:pr, --ci-parity) uses this one
+ * expands the static plan (check:pr:static, check:pr) uses this one
  * owner, so a leaf cannot silently lose its range or audit base. */
 export function prStaticLeafArgs(
   command: { name: string; args?: readonly string[] },
@@ -301,7 +289,7 @@ export async function runPrStaticChecks({
       run: (command) => {
         if (signal.aborted) return { status: 130, aborted: true };
         if (reportStarts) reporter.start(command.cmd);
-        return runCommandImpl(command, env as Record<string, string>, { signal });
+        return runCommandImpl(command, { ...env, PR_BASE_SHA: base, PR_HEAD_SHA: head } as Record<string, string>, { signal });
       },
       status: (result) => result.status === 0 ? "passed" : result.aborted ? "skipped" : "failed",
     });

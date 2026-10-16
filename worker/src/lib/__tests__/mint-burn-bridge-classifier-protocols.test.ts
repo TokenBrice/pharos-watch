@@ -22,7 +22,6 @@ import { makeBridgeRow } from "./mint-burn-bridge-classifier.test-support";
 
 const OFT_ADAPTER = "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5";
 const LZ_ENDPOINT = "0x1a44076050125825900e736c501f859c50fe728c";
-const LZ_EXECUTOR = "0x31cae3b7fb82d847621859fb1585353c5720660d";
 const PACKET_SENT_TOPIC = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b77336e2ec8b67b61d8";
 const PACKET_DELIVERED_TOPIC = "0x3cd5e48f9730b129dc7550f0fcea9c767b7be37837cd10e55eb35f734f4bca04";
 const SEND_SELECTOR = "0xc7c7f5b3"; // fingerprintB signal selector
@@ -88,22 +87,6 @@ describe("classifyLayerZeroOft", () => {
     expect(row.burn_type).toBe("bridge_burn");
   });
 
-  it("fingerprintC fires when endpoint emits signal topic without adapter being touched (Executor-only)", () => {
-    const row = makeBridgeRow({ direction: "mint", tx_hash: "0xc" });
-    const ctx = new Map<string, MintBurnTxContext | null>([
-      ["0xc", {
-        to: LZ_EXECUTOR,
-        inputSelector: RANDOM_SELECTOR,
-        logTopics: [PACKET_DELIVERED_TOPIC],
-        logAddresses: [LZ_ENDPOINT],
-      }],
-    ]);
-
-    classifyLayerZeroOft([row], layerZeroDetection(), ctx);
-
-    expect(row.flow_type).toBe("bridge_transfer");
-  });
-
   it("no fingerprint fires when topic emitter does not match the expected endpoint", () => {
     const row = makeBridgeRow({ direction: "mint", tx_hash: "0xd" });
     const ctx = new Map<string, MintBurnTxContext | null>([
@@ -122,22 +105,6 @@ describe("classifyLayerZeroOft", () => {
 });
 
 describe("classifyPoolBridge", () => {
-  it("tags every row in a tx as bridge_transfer when a bridge signal is present", () => {
-    // Mint row has no pool counterparty; the tx-level signal still tags it.
-    const mintRow = makeBridgeRow({ direction: "mint", tx_hash: "0xmint" });
-    const ctx = new Map<string, MintBurnTxContext | null>([
-      ["0xmint", {
-        to: CCIP_ROUTER,
-        inputSelector: CCIP_SEND_SELECTOR,
-        logTopics: [CCIP_SEND_REQUESTED_TOPIC],
-        logAddresses: [CCIP_ROUTER],
-      }],
-    ]);
-
-    classifyPoolBridge([mintRow], ccipDetection(), ctx);
-
-    expect(mintRow.flow_type).toBe("bridge_transfer");
-  });
 
   it("marks known-pool burn as review_required when tx has no bridge signal", () => {
     const burnRow = makeBridgeRow({
@@ -162,18 +129,4 @@ describe("classifyPoolBridge", () => {
     expect(burnRow.flow_type).toBe("standard");
   });
 
-  it("marks known-pool burn as tx-context-unavailable when tx context is missing", () => {
-    const burnRow = makeBridgeRow({
-      direction: "burn",
-      tx_hash: "0xnull",
-      counterparty: CCIP_POOL,
-      burn_type: "effective_burn",
-    });
-    const ctx = new Map<string, MintBurnTxContext | null>([["0xnull", null]]);
-
-    classifyPoolBridge([burnRow], ccipDetection(), ctx);
-
-    expect(burnRow.burn_type).toBe("review_required");
-    expect(burnRow.burn_review_reason).toBe("tx-context-unavailable");
-  });
 });

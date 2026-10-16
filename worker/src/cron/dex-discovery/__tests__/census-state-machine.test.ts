@@ -102,17 +102,6 @@ describe("DEX census attempt state machine", () => {
 });
 
 describe("DEX census evidence state machine", () => {
-  it("accepts only a current, fenced verified-empty row as complete", () => {
-    const state = classifyStoredDexCensusState(storedRow());
-
-    expect(state).toEqual({
-      attemptResult: "verified_no_pools",
-      evidenceState: "current",
-      disposition: "verified-no-pools",
-    });
-    expect(isCurrentDexCensusStateComplete(state)).toBe(true);
-  });
-
   it("keeps stale empty evidence non-complete", () => {
     const state = classifyStoredDexCensusState(storedRow({
       observedAt: NOW_SEC - 86_401,

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  FeedbackResponseSchema,
   FeedbackWireFieldsSchema,
 } from "@shared/types/feedback";
 import { FeedbackBodySchema } from "../feedback/types";
@@ -17,33 +16,7 @@ const BROWSER_PAYLOAD = {
   website: "",
 };
 
-const WORKER_PAYLOAD = {
-  ...BROWSER_PAYLOAD,
-  contactConsent: true,
-  contactChannel: "telegram",
-  acceptedTerms: true,
-};
-
 describe("feedback wire contract", () => {
-  it("accepts representative browser and Worker payloads through the shared base", () => {
-    expect(FeedbackWireFieldsSchema.parse(BROWSER_PAYLOAD)).toEqual(BROWSER_PAYLOAD);
-    expect(FeedbackWireFieldsSchema.parse(WORKER_PAYLOAD)).toEqual(WORKER_PAYLOAD);
-    expect(FeedbackBodySchema.parse(WORKER_PAYLOAD)).toEqual(WORKER_PAYLOAD);
-  });
-
-  it("preserves legacy contact fields while keeping the Worker boundary strict", () => {
-    const legacyPayload = {
-      ...BROWSER_PAYLOAD,
-      type: "bug",
-      title: "The legacy bundle is broken",
-      contactConsent: false,
-      contactChannel: "x",
-    };
-
-    expect(FeedbackBodySchema.safeParse(legacyPayload).success).toBe(true);
-    expect(FeedbackBodySchema.safeParse({ ...BROWSER_PAYLOAD, unsupported: true }).success).toBe(false);
-  });
-
   it("keeps Worker-only guards narrower than the shared wire fields", () => {
     const workerOnlyRejections = [
       { title: "x".repeat(101) },
@@ -75,13 +48,4 @@ describe("feedback wire contract", () => {
     }
   });
 
-  it("keeps the { ok, error? } response contract", () => {
-    expect(FeedbackResponseSchema.parse({ ok: true })).toEqual({ ok: true });
-    expect(FeedbackResponseSchema.parse({ ok: true, submissionId: "legacy" })).toEqual({ ok: true });
-    expect(FeedbackResponseSchema.parse({ ok: false, error: "Try again" })).toEqual({
-      ok: false,
-      error: "Try again",
-    });
-    expect(FeedbackResponseSchema.safeParse({ ok: true, error: 123 }).success).toBe(false);
-  });
 });

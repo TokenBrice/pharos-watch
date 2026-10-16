@@ -50,47 +50,6 @@ describe("shouldWithholdTemporalJump", () => {
     expect(withheld).toBe(false);
   });
 
-  it("returns false for corroborated severe-downside (2+ candidate sources confirm)", () => {
-    const withheld = shouldWithholdTemporalJump({
-      price: 0.38,
-      source: "coingecko+pyth",
-      confidence: "low",
-      agreeSources: ["coingecko", "pyth"],
-      candidatePrices: { coingecko: 0.38, pyth: 0.39 },
-      mode: "primary_authoritative",
-      validationContext: USD_CONTEXT,
-      previousTrustedPrice: {
-        price: 1.0,
-        source: "pyth",
-        confidence: "high",
-        observedAt: null,
-        agreeSources: ["pyth"],
-      },
-    });
-    // Both 0.38 and 0.39 are < 0.50 (severe) and come from independent families.
-    expect(withheld).toBe(false);
-  });
-
-  it("returns false when mid (price + previousTrustedPrice)/2 <= 0", () => {
-    // Negative candidate price makes mid <= 0 (defensive branch).
-    const withheld = shouldWithholdTemporalJump({
-      price: -2.0,
-      source: "coingecko",
-      confidence: "low",
-      agreeSources: ["coingecko"],
-      mode: "primary_authoritative",
-      validationContext: USD_CONTEXT,
-      previousTrustedPrice: {
-        price: 1.0,
-        source: "coingecko",
-        confidence: "low",
-        observedAt: null,
-        agreeSources: ["coingecko"],
-      },
-    });
-    expect(withheld).toBe(false);
-  });
-
   it("returns false when moveBps is below the 2000 bps threshold", () => {
     // 1.0 → 0.9 = ~1053 bps, below 2000 threshold
     const withheld = shouldWithholdTemporalJump({

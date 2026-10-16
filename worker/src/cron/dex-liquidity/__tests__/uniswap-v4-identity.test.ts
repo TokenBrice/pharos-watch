@@ -65,10 +65,6 @@ function fixture(chain = "ethereum") {
 }
 
 describe("on-chain V4 PoolKey resolution", () => {
-  it("recovers a 5-pip key without interpreting the rounded discovery fee", () => {
-    expect(resolveUniswapV4InitializePoolKey({ logs: [initializeLog()], poolId: POOL_ID, poolManagerAddress: getUniswapV4Deployment("ethereum")!.poolManagerAddress, blockNumber: BLOCK })).toEqual(KEY);
-  });
-
   it("rejects hooked, ambiguous, removed, foreign-manager and hash-inconsistent events", () => {
     const log = initializeLog();
     const hooked: InitializePoolKey = { ...KEY, hookAddress: "0x0000000000000000000000000000000000000080" };

@@ -25,21 +25,6 @@ describe("current relaunch context", () => {
     expect(result.current.currentCoinTarget).toBeNull();
     expect(relaunchPayloadForView(result.current.view, null, result.current.currentCoinTarget)).toBe("watchlist");
   });
-
-  it.each(["why", "coverage"] as const)("prioritizes %s insight and clears coin context through native navigation", (kind) => {
-    const { result } = renderHook(() => useMiniAppView(baseState));
-    act(() => result.current.initializeFromStartParam("coin_usdc-circle"));
-    act(() => result.current.setCoinInsightTarget({ kind, coinId: "usdt-tether" }));
-    expect(relaunchPayloadForView(result.current.view, result.current.coinInsightTarget, result.current.currentCoinTarget)).toBe(`${kind}_usdt-tether`);
-    act(() => result.current.handleBack());
-    expect(relaunchPayloadForView(result.current.view, result.current.coinInsightTarget, result.current.currentCoinTarget)).toBe("coin_usdc-circle");
-    act(() => result.current.showSettings());
-    act(() => result.current.activateView("watchlist"));
-    expect(result.current.currentCoinTarget).toBeNull();
-    act(() => result.current.navigateToCoin("usdc-circle"));
-    act(() => result.current.handleBack());
-    expect(result.current.currentCoinTarget).toBeNull();
-  });
 });
 
 

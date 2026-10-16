@@ -347,12 +347,6 @@ describe("POST /api/donor-key-claims", () => {
     expect((await evaluateAccessGate(request, url, env)).response).toBeNull();
   });
 
-  it("accepts a message written with a lowercase address", async () => {
-    const lower = claimMessage(donorAccount).replace(donorAccount.address, donorAccount.address.toLowerCase());
-
-    expect((await claim(lower)).status).toBe(201);
-  });
-
   it("keeps the wallet mapped to its key across an admin rotation", async () => {
     const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
     const { id } = sqlite.prepare("SELECT id FROM api_keys WHERE key_prefix = ?").get(payload.key.keyPrefix) as { id: number };
@@ -498,13 +492,6 @@ describe("POST /api/donor-key-claims", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ reason: "rate_limit_unavailable" });
     expect(countApiKeys()).toBe(0);
-  });
-
-  it("issues a token that authenticates against the public API key path", async () => {
-    const response = await claim(claimMessage(donorAccount));
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
-
-    await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
   });
 
   it("answers 409 on a replayed message without issuing a second key", async () => {

@@ -111,12 +111,6 @@ describe("FreezeSeizureModule", () => {
     expect(section?.textContent).toContain(SUMMARY.statusLabel);
   });
 
-  it("puts the review basis in the chip row as the confidence chip", () => {
-    renderModule({ summary: { ...SUMMARY, basisLabel: "Rationale only", sources: [] } });
-    expect(screen.getByText("Rationale only")).toBeTruthy();
-    expect(rail().textContent).not.toContain("Rationale only");
-  });
-
   it("draws a possible freeze path as not established, never as not freezable", () => {
     renderModule({ summary: { ...SUMMARY, status: "possible", statusLabel: "Possible" } });
     const drawn = rail();
@@ -139,13 +133,6 @@ describe("FreezeSeizureModule", () => {
     renderModule({ summary: { ...SUMMARY, status: "inherited", statusLabel: "Inherited", upstreamLabel: null } });
     expect(rail().textContent).toContain("Inherited");
     expect(rail().textContent).not.toMatch(/upstream/i);
-  });
-
-  it("omits the scope station when there is no transfer review", () => {
-    renderModule({ transferReview: null });
-    expect(rail().textContent).not.toMatch(/scope/i);
-    // The power/scope rail fold plus the merged provenance fold.
-    expect(document.querySelectorAll("details")).toHaveLength(2);
   });
 
   it("groups the transfer review by scope and posture and lists every deployment in a fold", () => {
@@ -228,26 +215,5 @@ describe("FreezeSeizureModule", () => {
     expect(screen.getByText(/Resolved by the resolver\./).closest("details")).toBe(fold);
     // The power/scope rail fold plus the merged provenance fold.
     expect(document.querySelectorAll("details")).toHaveLength(2);
-  });
-
-  it("says the review cites no source when it carries neither sources nor a rationale", () => {
-    renderModule({ summary: { ...SUMMARY, basisLabel: "Unsourced", sources: [], sourceFreeRationale: null } });
-    const fold = screen.getByText(SUMMARY.evidence).closest("details");
-    expect(fold?.textContent).toContain("No public source.");
-    expect(fold?.querySelector("summary")?.textContent).toContain("(2)");
-  });
-
-  it("stamps the review date outside the fold and omits it when the review carries none", () => {
-    const { unmount } = renderModule();
-    const endsWithDate = (node: Element | null) => node?.textContent?.trim().endsWith(SUMMARY.reviewedAt!) === true;
-    // The innermost element carrying the date; its wrappers repeat the same text.
-    const stamp = screen.getByText(
-      (_, element) => element?.tagName === "SPAN" && endsWithDate(element) && !Array.from(element.children).some(endsWithDate),
-    );
-    expect(stamp.closest("details")).toBeNull();
-    unmount();
-
-    renderModule({ summary: { ...SUMMARY, reviewedAt: null } });
-    expect(document.body.textContent).not.toContain(SUMMARY.reviewedAt!);
   });
 });

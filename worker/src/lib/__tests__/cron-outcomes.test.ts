@@ -21,10 +21,4 @@ describe("canonical scheduler outcomes", () => {
     expect(foldScheduledOutcomes([projectCronResultOutcome("degraded"), projectCronResultOutcome("ok")])).toBe("degraded");
     expect(foldScheduledOutcomes([projectCronResultOutcome("degraded"), projectCronResultOutcome("error")])).toBe("error");
   });
-  it("keeps accounting failures and superseded child outcomes errors", () => {
-    for (const reason of ["cron-terminal-accounting-failed", "cron-child-terminal-superseded"]) {
-      const summary = { ...projectCronResultOutcome("error"), reason };
-      expect(foldScheduledOutcomes([projectCronResultOutcome("skipped_neutral"), summary])).toBe("error");
-    }
-  });
 });

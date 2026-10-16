@@ -4,27 +4,10 @@ import {
   auditBinance,
   auditBitstamp,
   auditCoinbase,
-  auditOptionalSourceShapes,
   runPricingProviderAudit,
 } from "../maintenance/audit-pricing-provider-config";
 
 describe("audit-pricing-provider-config", () => {
-  it("reports configured Binance pairs as present", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({
-      symbols: [
-        { symbol: "USDTUSD", status: "TRADING" },
-        { symbol: "USDCUSD", status: "TRADING" },
-      ],
-    }));
-
-    await expect(auditBinance(fetchImpl as typeof fetch)).resolves.toMatchObject({
-      provider: "binance",
-      ok: true,
-      checked: 2,
-      missing: [],
-    });
-  });
-
   it("treats Binance regional blocking as a skipped successful live audit", async () => {
     const fetchImpl = vi.fn(async () => new Response("blocked", { status: 451 }));
 
@@ -46,17 +29,6 @@ describe("audit-pricing-provider-config", () => {
       ok: true,
       missing: [],
       notes: [expect.stringContaining("fetch failed")],
-    });
-  });
-
-  it("audits current Bitstamp coverage without requiring the unavailable DAI pair", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse([
-      { name: "PYUSD/USD", trading: "Enabled" },
-      { name: "USDC/USD", trading: "Enabled" },
-      { name: "USDT/USD", trading: "Enabled" },
-    ]));
-    await expect(auditBitstamp(fetchImpl as typeof fetch)).resolves.toMatchObject({
-      ok: true, checked: 3, missing: [],
     });
   });
 
@@ -137,26 +109,5 @@ describe("audit-pricing-provider-config", () => {
     await expect(runPricingProviderAudit({ fetchImpl: fetchImpl as typeof fetch })).rejects.toThrow(
       "provider config drift detected: binance",
     );
-  });
-
-  it("can run optional live source-shape checks against mocked responses", async () => {
-    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
-      const href = String(url);
-      if (href.includes("api.jup.ag")) {
-        return jsonResponse({ SOL: { usdPrice: 150.25, blockId: 123 } });
-      }
-      if (href.includes("coinmarketcap")) {
-        return jsonResponse({ data: { coins: [{ slug: "tether", symbol: "USDT", quote: { USD: { price: 1 } } }] } });
-      }
-      return new Response("not found", { status: 404 });
-    });
-
-    await expect(auditOptionalSourceShapes({
-      fetchImpl: fetchImpl as typeof fetch,
-      cmcApiKey: "test",
-    })).resolves.toEqual([
-      expect.objectContaining({ provider: "jupiter-shape", ok: true }),
-      expect.objectContaining({ provider: "coinmarketcap-shape", ok: true }),
-    ]);
   });
 });

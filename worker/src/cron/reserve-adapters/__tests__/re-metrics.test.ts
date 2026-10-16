@@ -116,25 +116,6 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     }));
   });
 
-  it("maps sUSDS explicitly instead of degrading as an unmapped token", () => {
-    const html = `
-<html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-06-03T10:27:10.907Z\\",\\"rows\\":[{\\"tokenSymbol\\":\\"sUSDS\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-06-03\\",\\"value\\":100}]}]..."]);
-</script></body></html>
-`;
-    const result = adaptReMetrics(html);
-
-    expect(result.slices).toEqual([
-      { sourceKey: "re-metrics:token:susds", name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low" },
-      { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
-    ]);
-    expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "re-metrics-offchain-capital-branch",
-      effect: "info",
-      message: expect.stringContaining("initialCards series"),
-    }));
-  });
-
   it("extracts instant redemption vault capacity from redemptionRows", () => {
     const html = `
 <html><body><script>

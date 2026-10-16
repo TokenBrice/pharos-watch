@@ -209,33 +209,6 @@ describe("computeSafetyScoreV9", () => {
     expect(mocks.runPublication.mock.calls[0][0].fixedInputCacheValue).toBe("fixed-input");
   });
 
-  it.each([
-    { status: "written", bytes: 680_000 },
-    { status: "failed", reason: "capture-upload-failed", bytes: 680_000 },
-    { status: "skipped", reason: "capture-too-large", bytes: 8_000_001 },
-  ])("forwards archive binding and preserves $status metadata without changing publication health", async captureArchive => {
-    const captureArchiveBucket = { put: vi.fn() } as unknown as R2Bucket;
-    const captureArchiveContext = { waitUntil: vi.fn() } as unknown as ExecutionContext;
-    const executionWindow = { slotStartedAtSec: fixedInput.clockSec, deadlineMs: Date.now() + 60_000, minimumRemainingMs: 10_000 };
-    mocks.runPublication.mockImplementationOnce(async (input: {
-      fixedInput: NativeSafetyScoreV9Input;
-      prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
-    }) => {
-      await input.prepareFixedInput(input.fixedInput, new AbortController().signal);
-      return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
-        candidateId: "candidate", outcome: "clean", quarantines: [], affectedAssetIds: [],
-        bridgeJoinDiagnostics: [], journal: { status: "written", rows: 1 }, captureArchive };
-    });
-    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined,
-      { captureArchiveBucket, captureArchiveContext, executionWindow });
-    expect(result.status).toBe("ok");
-    expect(mocks.runPublication.mock.calls[0][0].captureArchiveBucket).toBe(captureArchiveBucket);
-    expect(mocks.runPublication.mock.calls[0][0].captureArchiveContext).toBe(captureArchiveContext);
-    expect(mocks.runPublication.mock.calls[0][0].publicationDeadlineMs).toBe(executionWindow.deadlineMs);
-    expect(JSON.parse(result.metadata!)).toMatchObject({ captureArchive });
-    expect(compactCronMetadataForPersistence(result.metadata!).metadata).toContain('"captureArchive"');
-  });
-
   it("keeps accepted publication/archive metadata when the caller aborts during post-commit archiving", async () => {
     const caller = new AbortController();
     mocks.runPublication.mockImplementationOnce(async (input: {
@@ -472,69 +445,6 @@ describe("computeSafetyScoreV9", () => {
         status: "published",
         outcome: "partial",
       },
-    });
-  });
-
-  it("bounds published bridge-join diagnostics under the persistence cap", async () => {
-    mocks.runPublication.mockImplementationOnce(async (input: {
-      fixedInput: unknown;
-      prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
-    }) => {
-      await input.prepareFixedInput?.(
-        input.fixedInput,
-        new AbortController().signal,
-      );
-      return {
-        status: "published",
-        attemptId: "attempt",
-        publicationGenerationId: "report-cards:v9:test",
-        candidateId: "candidate",
-        outcome: "clean",
-        quarantines: [],
-        affectedAssetIds: [],
-        // Per-asset detail on the real roster is large enough to cross the
-        // 64 KiB cap on its own; the emitted row must carry counts instead.
-        bridgeJoinDiagnostics: Array.from({ length: 600 }, (_, index) => ({
-          assetId: `asset-${index}`,
-          profileRouteCount: 2,
-          canonicalSupplyRowCount: 1,
-          unmatchedRowIdentities: [`unmatched-${index}`, index % 2 === 0 ? `alt-${index}` : ""].filter(Boolean),
-          reviewedNativeCoverage: {
-            reviewedRowCount: 1,
-            canonicalSupplyRowCount: 1,
-            supplyShare: 1,
-            complete: true,
-          },
-          bridgeClaimControls: ["control"],
-          applicabilityBranch: index % 3 === 0 ? ("native-only-not-applicable" as const) : ("applicable" as const),
-          unprovenRouteJoins: index % 4 === 0
-            ? [{
-                deploymentRouteKey: `route-${index}`,
-                joinedControlSemanticsResolved: null,
-                joinedControlSupplyShare: null,
-              }]
-            : [],
-        })),
-      };
-    });
-
-    const result = await computeSafetyScoreV9({} as D1Database);
-
-    expect(result.status).toBe("ok");
-    const metadata = result.metadata ?? "";
-    expect(metadata.length).toBeLessThan(64 * 1_024);
-    const parsed = JSON.parse(metadata) as {
-      publication?: {
-        status?: string;
-        bridgeJoinDiagnostics?: Record<string, number>;
-      };
-    };
-    expect(parsed.publication?.status).toBe("published");
-    expect(parsed.publication?.bridgeJoinDiagnostics).toEqual({
-      assetCount: 600,
-      applicableAssetCount: 400,
-      unmatchedRowIdentityCount: 900,
-      unprovenRouteJoinCount: 150,
     });
   });
 

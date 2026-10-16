@@ -223,7 +223,3 @@ export const DATA_DEPENDENCY_REGISTRY = [
     runbookPath: null,
   },
 ] as const satisfies readonly DataDependencyDefinition[];
-
-export const DATA_DEPENDENCY_BY_ID: ReadonlyMap<string, DataDependencyDefinition> = new Map(
-  DATA_DEPENDENCY_REGISTRY.map((definition) => [definition.id, definition]),
-);

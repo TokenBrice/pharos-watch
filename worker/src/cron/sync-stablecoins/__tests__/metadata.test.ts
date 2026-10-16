@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS, ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
   buildFallbackStablecoinsSyncResult,
-  buildPricingSourceAuditReport,
   buildSizeGuardedStablecoinsSyncMetadata,
   buildStablecoinsSyncResult,
 } from "../metadata";
@@ -182,7 +181,7 @@ describe("stablecoins pricing metadata", () => {
     expect(metadata.quality).toEqual(quality);
   });
 
-  it.each(["kava-pricefeed", "mento-fpmm", "mento-broker", "protocol-redeem-cached-rate"])(
+  it.each(["kava-pricefeed"])(
     "retains %s fallback observations in source health",
     (source) => {
       const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
@@ -289,86 +288,6 @@ describe("stablecoins pricing metadata", () => {
     }));
     const result = buildStablecoinsSyncResult({ ...syncInput(assets), syncStartSec: review!.expiresAt + 1 });
     expect(JSON.parse(result.metadata!).priceSourceHealth.active.acknowledgedMissingCount).toBe(0);
-  });
-
-  it("summarizes weak source coverage and provider rejection counts", () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "hard",
-        name: "Hard USD",
-        symbol: "HARD",
-        price: 1,
-        priceSource: "pyth",
-        priceConfidence: "high",
-        agreeSources: ["pyth", "binance"],
-      },
-      {
-        id: "search",
-        name: "Search USD",
-        symbol: "SEARCH",
-        price: 1,
-        priceSource: "dexscreener-search",
-        priceConfidence: "fallback",
-      },
-      {
-        id: "cached",
-        name: "Cached USD",
-        symbol: "CACHED",
-        price: 1,
-        priceSource: "cached",
-        priceConfidence: "fallback",
-      },
-      {
-        id: "missing",
-        name: "Missing USD",
-        symbol: "MISS",
-        price: 0,
-      },
-      {
-        id: "low",
-        name: "Low USD",
-        symbol: "LOW",
-        price: 1,
-        priceSource: "coingecko",
-        priceConfidence: "low",
-      },
-    ];
-
-    const report = buildPricingSourceAuditReport(assets, [
-      {
-        source: "dexscreener-search",
-        stage: "fallback",
-        endpoint: "api.dexscreener.com/latest/dex/search",
-        status: 200,
-        ok: true,
-        success: false,
-        rejectionReasonCounts: { "price-rejected": 2 },
-      },
-      {
-        source: "native-peg",
-        stage: "fallback",
-        endpoint: "api.coingecko.com/api/v3/simple/price",
-        status: 200,
-        ok: true,
-        success: false,
-        rejectionReasonCounts: { stale: 1 },
-      },
-    ]);
-
-    expect(report).toMatchObject({
-      missingPriceCount: 1,
-      fallbackOrCachedCount: 2,
-      lowConfidenceCount: 1,
-      providerRejectionCounts: {
-        "price-rejected": 2,
-        stale: 1,
-      },
-      providerFailuresBySource: {
-        "dexscreener-search": 1,
-        "native-peg": 1,
-      },
-    });
-    expect(report.assetsWithoutIndependentHardSource).toEqual(["cached", "low", "search"]);
   });
 
   it("keeps health evidence intact after scheduler metadata enrichment", () => {

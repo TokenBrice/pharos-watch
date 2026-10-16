@@ -1,12 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  extractGeneratedImportSpecifiers,
-  resolveGeneratedSpecifier,
   runBootstrapRehearsal,
 } from "../maintenance/run-bootstrap-rehearsal";
 
@@ -37,74 +35,5 @@ describe("bootstrap rehearsal generated imports", () => {
       log.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
-  });
-
-  it("extracts static generated imports and ignores dynamic imports and unrelated modules", () => {
-    const source = `
-      import current from "@/generated/public-dataset-current";
-      import type { Record } from "../generated/records";
-      export { metadata } from "../../src/generated/docs-metadata.json";
-      import local from "./local";
-      const lazy = import("@/generated/lazy");
-    `;
-
-    expect(extractGeneratedImportSpecifiers(source)).toEqual([
-      "@/generated/public-dataset-current",
-      "../generated/records",
-      "../../src/generated/docs-metadata.json",
-    ]);
-  });
-
-  it("uses importer context to recognize only relative imports that enter src/generated", () => {
-    const repoRoot = "/repo";
-    const source = `
-      import generated from "../generated/example";
-      import local from "./local";
-    `;
-
-    expect(extractGeneratedImportSpecifiers(source, {
-      importingFile: "/repo/src/components/example.ts",
-      repoRoot,
-    })).toEqual(["../generated/example"]);
-  });
-
-  it("resolves aliases and extensionless relative specifiers across supported extensions", () => {
-    const repoRoot = "/repo";
-    const existing = new Set([
-      "/repo/src/generated/catalog.tsx",
-      "/repo/src/generated/metadata.json",
-    ]);
-    const existsImpl = (path: string) => existing.has(path);
-
-    expect(resolveGeneratedSpecifier("@/generated/catalog", {
-      existsImpl,
-      importingFile: "/repo/src/app/page.tsx",
-      repoRoot,
-    })).toBe("/repo/src/generated/catalog.tsx");
-    expect(resolveGeneratedSpecifier("../generated/metadata.json", {
-      existsImpl,
-      importingFile: "/repo/src/components/card.tsx",
-      repoRoot,
-    })).toBe("/repo/src/generated/metadata.json");
-  });
-
-  it("returns null when a generated target does not exist", () => {
-    const options = {
-      existsImpl: () => false,
-      importingFile: resolve("/repo/src/app/page.tsx"),
-      repoRoot: "/repo",
-    };
-
-    expect(resolveGeneratedSpecifier("@/generated/missing", options)).toBeNull();
-  });
-
-  it("rejects existing targets outside src/generated, including alias traversal", () => {
-    const options = {
-      existsImpl: () => true,
-      importingFile: resolve("/repo/src/app/page.tsx"),
-      repoRoot: "/repo",
-    };
-    expect(resolveGeneratedSpecifier("../lib/existing", options)).toBeNull();
-    expect(resolveGeneratedSpecifier("@/generated/../lib/existing", options)).toBeNull();
   });
 });

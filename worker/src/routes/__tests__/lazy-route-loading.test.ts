@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { defineLazyStaticRoute, type FullRouteContext } from "../shared";
+import type { FullRouteContext } from "../shared";
 
 const loads = vi.hoisted(() => ({
   health: vi.fn(), requestDispatch: vi.fn(), scheduled: vi.fn(),
@@ -35,17 +35,6 @@ vi.mock("../../lib/api-keys", async (importOriginal) => {
 });
 
 describe("lazy route loading", () => {
-  it("does not load a static endpoint module until the route is invoked", async () => {
-    const response = new Response("ok");
-    const handler = vi.fn(async () => response);
-    const loadHandler = vi.fn(async () => handler);
-    const route = defineLazyStaticRoute("health", loadHandler);
-    expect(loadHandler).not.toHaveBeenCalled();
-    expect(handler).not.toHaveBeenCalled();
-    await expect(route.handler({} as FullRouteContext)).resolves.toBe(response);
-    expect(loadHandler).toHaveBeenCalledOnce();
-    expect(handler).toHaveBeenCalledOnce();
-  });
 
   it("cold-loads the Worker and route catalogs without loading handlers, then loads the selected endpoint", async () => {
     vi.resetModules();

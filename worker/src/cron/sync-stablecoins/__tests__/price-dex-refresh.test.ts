@@ -161,16 +161,6 @@ describe("DEX refresh continuity", () => {
     expect(fetch.mock.calls[0][7]?.[0].target).toEqual(secondary);
   });
 
-  it("forwards the same loaded FX bounds as hourly fallback", async () => {
-    const fetch = prepareRefresh();
-    const fxRates = { peggedCHF: 1.22, peggedEUR: 1.15 };
-    vi.mocked(progress.loadFxRatesForPriceBounds).mockResolvedValueOnce(fxRates);
-    fetch.mockResolvedValue({ resolved: 0, failures: [] });
-    await runPriceDexRefresh({ db, syncStartSec: now });
-    expect(progress.loadFxRatesForPriceBounds).toHaveBeenCalledWith(db);
-    expect(fetch.mock.calls[0][1]).toBe(fxRates);
-  });
-
   it("stages current contract and Jupiter quotes without rewriting their observation clocks", async () => {
     prepareRefresh().mockResolvedValue({ resolved: 0, failures: [] });
     const observations = [

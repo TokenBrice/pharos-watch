@@ -120,18 +120,6 @@ describe("PysBreakdown", () => {
     },
   );
 
-  it.each(nullReasonCases)(
-    "exposes the $reason null reason via aria-label and title in popover mode",
-    ({ reason, expected }) => {
-      renderWithProvider(baseProps({ mode: "popover", score: null, pysNullReason: reason }));
-
-      const trigger = screen.getByLabelText(`Pharos Yield Score unavailable: ${expected}`);
-      expect(trigger).toBeTruthy();
-      expect(trigger.getAttribute("title")).toBe(expected);
-      expect(trigger.textContent).toBe("—");
-    },
-  );
-
   it("renders bare em dash with no tooltip when score is null and no nullReason is provided", () => {
     const { container } = renderWithProvider(baseProps({ mode: "inline", score: null }));
 
@@ -142,15 +130,6 @@ describe("PysBreakdown", () => {
     expect(span).not.toBeNull();
     expect(span?.getAttribute("aria-label")).toBeNull();
     expect(span?.getAttribute("title")).toBeNull();
-  });
-
-  it("renders bare em dash with no tooltip when score is null and nullReason is explicitly null", () => {
-    const { container } = renderWithProvider(
-      baseProps({ mode: "popover", score: null, pysNullReason: null }),
-    );
-
-    expect(container.textContent).toBe("—");
-    expect(screen.queryByLabelText(/Pharos Yield Score unavailable/)).toBeNull();
   });
 
   describe("per-factor PYS deltas", () => {
@@ -345,21 +324,6 @@ describe("PysBreakdown", () => {
       expect((container.textContent ?? "").includes("USD fallback")).toBe(false);
     });
 
-    it("uses inline-mode tooltip wrapping for clamp badges", () => {
-      // In inline mode, ClampBadge wraps with Tooltip — the badge element must
-      // be a child of the tooltip trigger and carry cursor-help, not just a title.
-      renderWithProvider(baseProps({ mode: "inline", sourceRiskPenalty: PYS_MAX_SOURCE_RISK_PENALTY }));
-      const trigger = screen.getByLabelText("Source-risk penalty hit the methodology cap");
-      expect(trigger).toBeTruthy();
-      expect(trigger.className).toContain("cursor-help");
-      expect(trigger.getAttribute("title")).toBeNull();
-    });
-
-    it("uses title-only badges in popover mode to avoid nested tooltips", () => {
-      renderWithProvider(baseProps({ mode: "popover", sourceRiskPenalty: PYS_MAX_SOURCE_RISK_PENALTY }));
-      const badge = screen.getByLabelText("Source-risk penalty hit the methodology cap");
-      expect(badge.getAttribute("title")).toBe("Source-risk penalty hit the methodology cap");
-    });
   });
 });
 

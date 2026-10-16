@@ -159,17 +159,6 @@ describe("selector snapshot contract", () => {
     });
   });
 
-  it("keeps stored selector-v2.8 snapshots on the current component generation", () => {
-    const output = runSelector(
-      makeInput({ profile: "trading" }),
-      { rows: new Map([["usdc-circle", makeMergedRowWithIdentity({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" })]]) },
-      { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) },
-    );
-    output.engineVersion = "selector-v2.8";
-    output.methodologyVersions = { ...output.methodologyVersions, exclusionFilters: "selector-v2.8" };
-    expect(validateVerifiedSelectorSnapshot(createVerifiedSelectorSnapshot(output)).ok).toBe(true);
-  });
-
   it("accepts a complete selector snapshot and computes a 32-hex sid", () => {
     const snapshot = expectValid(buildSelectorSnapshotOutput());
     expect(snapshot.profile).toBe("treasury");

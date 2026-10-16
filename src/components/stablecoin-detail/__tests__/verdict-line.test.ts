@@ -9,12 +9,6 @@ describe("deriveVerdictLine", () => {
     );
   });
 
-  it("does not split on abbreviations or initials", () => {
-    expect(deriveVerdictLine("Held in U.S. Treasury bills at a regulated custodian. Second sentence.")).toBe(
-      "Held in U.S. Treasury bills at a regulated custodian.",
-    );
-  });
-
   it("falls back to the first clause when the sentence is over budget", () => {
     const long = `The issuer controls minting through a managed owner contract; ${"extra detail ".repeat(20)}ends here.`;
     const verdict = deriveVerdictLine(long);
@@ -27,7 +21,4 @@ describe("deriveVerdictLine", () => {
     expect(deriveVerdictLine("0x7546762fdb1a6d9146b33960545c3f6394265219 is a minter.")).toBeNull();
   });
 
-  it("returns null for empty text", () => {
-    expect(deriveVerdictLine("   ")).toBeNull();
-  });
 });

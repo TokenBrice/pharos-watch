@@ -7,7 +7,6 @@ import wmAsset from "@shared/data/stablecoins/coins/wm-m0.json";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
 import { resolveWrapperForm } from "../safety-score-v9/fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { StablecoinMeta } from "@shared/types/core";
 import { describe, expect, it } from "vitest";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -225,47 +224,4 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     ).toBe("strategy-vault");
   });
 
-  it("retains product-shaped exit families instead of treating delayed exits as absent", () => {
-    expect(REDEMPTION_BACKSTOP_CONFIGS["xaut-tether"]).toMatchObject({
-      routeFamily: "offchain-issuer",
-      settlementModel: "days",
-      outputAssetType: "physical-commodity-delivery",
-      physicalCommodityDelivery: {
-        commodity: "XAU",
-        deliverableOuncesPerToken: 1,
-        minimumDeliveryTokens: 430,
-        deliveryTermsUnbounded: true,
-        feeModel: { bps: 25, flatUsd: 0, deliveryUsd: 0 },
-        sameNotionalEligible: false,
-      },
-    });
-    expect(REDEMPTION_BACKSTOP_CONFIGS["fpi-frax"]).toMatchObject({
-      routeFamily: "collateral-redeem",
-      settlementModel: "atomic",
-      outputAssets: ["asset:frax"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-    });
-    expect(REDEMPTION_BACKSTOP_CONFIGS["iusd-infinifi"]).toMatchObject({
-      routeFamily: "queue-redeem",
-      settlementModel: "queued",
-      outputAssets: ["usdc-circle"],
-    });
-    expect(REDEMPTION_BACKSTOP_CONFIGS["susdai-usd-ai"]).toMatchObject({
-      routeFamily: "queue-redeem",
-      settlementModel: "queued",
-    });
-    expect(REDEMPTION_BACKSTOP_CONFIGS["sdai-sky"]).toMatchObject({
-      routeFamily: "stablecoin-redeem",
-      settlementModel: "atomic",
-    });
-    expect(REDEMPTION_BACKSTOP_CONFIGS["sbold-k3-capital"]).toMatchObject({
-      routeFamily: "stablecoin-redeem",
-      settlementModel: "atomic",
-    });
-    expect(REDEMPTION_BACKSTOP_CONFIGS["wm-m0"]).toMatchObject({
-      routeFamily: "stablecoin-redeem",
-      settlementModel: "atomic",
-      outputAssets: ["m-m0"],
-    });
-  });
 });

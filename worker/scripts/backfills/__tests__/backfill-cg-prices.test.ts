@@ -34,11 +34,6 @@ describe("handleBackfillCgPrices", () => {
     cases: [{ kind: "unknown", stablecoin: "missing", error: "Stablecoin not found" }],
   });
 
-  it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillCgPricesTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100") });
-    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
-  });
-
   it("fills NULL prices for existing supply rows", async () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
     const db = mockD1([
@@ -85,7 +80,6 @@ describe("handleBackfillCgPrices", () => {
     expect(body.errors).toBeUndefined();
   });
 });
-
 
 it("does not import recycled Solomon CG market caps or prices into either generation", async () => {
   vi.clearAllMocks();

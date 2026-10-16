@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeCostsTotal,
   computeMonthlyHistory,
-  formatCoveragePct,
-  groupCostsByCategory,
   summarizeDonations,
-  monthKey,
 } from "../helpers";
 import type { CostLineItem, Donation } from "../schema";
 import { makeDonation } from "./funding.test-support";
@@ -35,29 +32,6 @@ describe("computeCostsTotal", () => {
 
   it("rejects non-finite cost values before summing", () => {
     expect(() => computeCostsTotal([{ label: "bad", category: "team", usd_per_month: Number.NaN }])).toThrow();
-  });
-});
-
-describe("groupCostsByCategory", () => {
-  it("returns team then infra, each with a subtotal", () => {
-    const groups = groupCostsByCategory(COSTS);
-    expect(groups).toEqual([
-      { category: "team", items: [COSTS[0], COSTS[1]], subtotal: 1500 },
-      { category: "infra", items: [COSTS[2], COSTS[3], COSTS[4], COSTS[5]], subtotal: 176.85 },
-    ]);
-  });
-
-  it("omits categories with no items", () => {
-    const infraOnly = COSTS.filter((c) => c.category === "infra");
-    const groups = groupCostsByCategory(infraOnly);
-    expect(groups.map((g) => g.category)).toEqual(["infra"]);
-  });
-});
-
-describe("monthKey", () => {
-  it("returns YYYY-MM in UTC", () => {
-    const ts = Date.UTC(2026, 3, 18, 23, 59, 0) / 1000;
-    expect(monthKey(ts)).toBe("2026-04");
   });
 });
 
@@ -96,24 +70,6 @@ describe("summarizeDonations", () => {
   });
 });
 
-describe("formatCoveragePct", () => {
-  it("rounds normal values to whole percent", () => {
-    expect(formatCoveragePct(300, 1540)).toBe("19%");
-  });
-
-  it("returns 0% when there is no coverage at all", () => {
-    expect(formatCoveragePct(0, 1540)).toBe("0%");
-  });
-
-  it("returns <1% when raw is positive but rounds to zero", () => {
-    expect(formatCoveragePct(1.24, 1709)).toBe("<1%");
-  });
-
-  it("returns em dash when target is non-positive", () => {
-    expect(formatCoveragePct(100, 0)).toBe("—");
-  });
-});
-
 describe("computeMonthlyHistory", () => {
   const may = Date.UTC(2026, 4, 3) / 1000;
   const apr = Date.UTC(2026, 3, 15) / 1000;
@@ -137,18 +93,6 @@ describe("computeMonthlyHistory", () => {
   it("returns empty when there is no prior-month data", () => {
     const rows: Donation[] = [D(may, "community", 5, "a")];
     expect(computeMonthlyHistory(rows, may)).toEqual([]);
-  });
-
-  it("caps history at maxMonths", () => {
-    const rows: Donation[] = [];
-    for (let i = 0; i < 14; i++) {
-      const ts = Date.UTC(2025, i, 15) / 1000;
-      rows.push(D(ts, "community", 10, "a"));
-    }
-    const history = computeMonthlyHistory(rows, Date.UTC(2026, 4, 1) / 1000, 6);
-    expect(history).toHaveLength(6);
-    expect(history[0]?.monthKey).toBe("2026-04");
-    expect(history[5]?.monthKey).toBe("2025-11");
   });
 
   it("lists months with no donations as $0 instead of skipping them", () => {

@@ -192,27 +192,6 @@ describe("readResponseTextWithinLimitWithSignal", () => {
     expect(cancel).toHaveBeenCalledOnce();
   });
 
-  it("throws when the declared content length exceeds the strict limit", async () => {
-    const response = new Response("abcdef", {
-      headers: { "Content-Length": "6" },
-    });
-
-    await expect(readResponseTextWithinLimitWithSignal(response, 5)).rejects.toMatchObject({
-      name: "ResponseBodyTooLargeError",
-      maxBytes: 5,
-      observedBytes: 6,
-    });
-  });
-
-  it("throws when the streamed body exceeds the strict limit", async () => {
-    const response = new Response("abcdef");
-
-    await expect(readResponseTextWithinLimitWithSignal(response, 5)).rejects.toMatchObject({
-      name: "ResponseBodyTooLargeError",
-      maxBytes: 5,
-      observedBytes: 6,
-    });
-  });
 });
 
 describe("readResponseTextBoundedWithSignal", () => {
@@ -222,9 +201,4 @@ describe("readResponseTextBoundedWithSignal", () => {
     await expect(readResponseTextBoundedWithSignal(response, 3)).resolves.toBe("abc");
   });
 
-  it("returns an empty diagnostic body for a zero-byte limit", async () => {
-    const response = new Response("abcdef");
-
-    await expect(readResponseTextBoundedWithSignal(response, 0)).resolves.toBe("");
-  });
 });

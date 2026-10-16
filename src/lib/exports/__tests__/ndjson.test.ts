@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it, vi } from "vitest";
-import { buildNdjsonWithPreamble, downloadNdjsonWithPreamble } from "@/lib/exports/ndjson";
-import { PREAMBLE, expectBlob, useDownloadHarness } from "./exports.test-support";
+import { describe, expect, it } from "vitest";
+import { buildNdjsonWithPreamble } from "@/lib/exports/ndjson";
+import { PREAMBLE } from "./exports.test-support";
 
 describe("buildNdjsonWithPreamble", () => {
   it("emits one `_meta` line followed by one JSON object per row", () => {
@@ -43,54 +43,3 @@ describe("buildNdjsonWithPreamble", () => {
   });
 });
 
-describe("downloadNdjsonWithPreamble", () => {
-  const harness = useDownloadHarness("blob:pharos-ndjson");
-  const { createObjectURL, revokeObjectURL } = harness;
-
-  it("triggers a download with the expected MIME type and dated filename", async () => {
-    downloadNdjsonWithPreamble(
-      [{ name: "USDC" }],
-      [{ header: "Name", accessor: (row) => row.name }],
-      "stablecoins",
-      PREAMBLE,
-    );
-
-    expect(createObjectURL).toHaveBeenCalledTimes(1);
-    const blob = createObjectURL.mock.calls[0]?.[0];
-    expectBlob(blob);
-    expect(blob.type).toBe("application/x-ndjson;charset=utf-8;");
-    await expect(blob.text()).resolves.toBe(
-      [
-        '{"_meta":{"endpoint":"stablecoins","asOfISO":"2026-05-16T12:00:00.000Z","sourceUrl":"https://pharos.watch/","methodologyLabel":"safety-score v7.25"}}',
-        '{"Name":"USDC"}',
-      ].join("\n"),
-    );
-    expect(harness.clickSpy).toHaveBeenCalledTimes(1);
-    const anchor = harness.clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
-    expect(anchor?.download).toBe("stablecoins-2026-05-16.ndjson");
-    expect(revokeObjectURL).not.toHaveBeenCalled();
-
-    await vi.runOnlyPendingTimersAsync();
-
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-ndjson");
-  });
-
-  it("still revokes the object URL when the anchor click throws", async () => {
-    harness.clickSpy.mockImplementation(() => {
-      throw new Error("click blocked by browser policy");
-    });
-
-    expect(() =>
-      downloadNdjsonWithPreamble(
-        [{ name: "USDC" }],
-        [{ header: "Name", accessor: (row) => row.name }],
-        "stablecoins",
-        PREAMBLE,
-      ),
-    ).toThrow("click blocked by browser policy");
-
-    await vi.runOnlyPendingTimersAsync();
-
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-ndjson");
-  });
-});

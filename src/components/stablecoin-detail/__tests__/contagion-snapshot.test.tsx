@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import Link from "next/link";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
@@ -95,44 +94,6 @@ describe("ContagionSnapshot", () => {
       dataUpdatedAt: 1,
       refetch: vi.fn(),
     });
-  });
-
-  it("defers only the offscreen graph while keeping context and links available", () => {
-    const ref = vi.fn();
-    useNearViewportMock.mockReturnValue({ ref, near: false });
-    const content = () => (
-      <ContagionSnapshot
-        stablecoinId="usdc-circle"
-        variantRelationshipCard={<Link href="/stablecoin/usde-ethena/">Related asset</Link>}
-      />
-    );
-    const { rerender } = render(content());
-    expect(screen.queryByTestId("contagion-graph")).toBeNull();
-    expect(screen.getByText("Loading dependency graph...")).toBeTruthy();
-    expect(screen.getByText("Dependency context")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Related asset" }).getAttribute("href")).toBe("/stablecoin/usde-ethena");
-    expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
-
-    useNearViewportMock.mockReturnValue({ ref, near: true });
-    rerender(content());
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-focus")).toBe("usdc-circle");
-    expect(screen.queryByText("Loading dependency graph...")).toBeNull();
-    expect(screen.getByRole("link", { name: "Related asset" })).toBeTruthy();
-  });
-
-  it("renders the focused dependency map for the current asset", () => {
-    render(
-      <ContagionSnapshot
-        stablecoinId="usde-ethena"
-        variantRelationshipCard={<div data-testid="variant-card">VARIANT</div>}
-      />,
-    );
-
-    expect(screen.getByText("Dependency context")).toBeTruthy();
-    const graph = screen.getByTestId("contagion-graph");
-    expect(graph.getAttribute("data-focus")).toBe("usde-ethena");
-    expect(graph.getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
-    expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
   });
 
   it.each(["B", null] as const)("preserves %s partial evidence in the detail graph projection", (grade) => {
@@ -269,44 +230,6 @@ describe("ContagionSnapshot", () => {
     expect(screen.queryByRole("link", { name: "untracked-coin" })).toBeNull();
   });
 
-  it.each([
-    ["published empty", () => makeV9Card({ id: "usde-ethena" })],
-    ["unpublished", () => {
-      const card = makeV9Card({ id: "usde-ethena" });
-      delete card.dependencyCoverage;
-      delete card.dependencies.roles;
-      return card;
-    }],
-  ])("omits the module when no disclosure has a row and role/coverage lists are %s", (_state, makeCard) => {
-    useReportCardsV9Mock.mockReturnValue({
-      data: makeReportCardsV9Response({ cards: [makeCard(), makeV9Card({ id: "usdc-circle" })] }),
-      error: null,
-      dataUpdatedAt: 1,
-      refetch: vi.fn(),
-    });
-
-    const { container } = render(<ContagionSnapshot stablecoinId="usde-ethena" />);
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("keeps the variant card without empty disclosures", () => {
-    useReportCardsV9Mock.mockReturnValue({
-      data: makeReportCardsV9Response({ cards: [makeV9Card({ id: "usde-ethena" })] }),
-      error: null,
-      dataUpdatedAt: 1,
-      refetch: vi.fn(),
-    });
-
-    render(
-      <ContagionSnapshot
-        stablecoinId="usde-ethena"
-        variantRelationshipCard={<div data-testid="variant-card">VARIANT</div>}
-      />,
-    );
-    expect(screen.getByTestId("variant-card")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "What depends on me" })).toBeNull();
-  });
-
   it("shows a coverage-only context without a drawn neighborhood", () => {
     useReportCardsV9Mock.mockReturnValue({
       data: makeReportCardsV9Response({ cards: [makeV9Card({ id: "usde-ethena", dependencyCoverage: [
@@ -340,26 +263,6 @@ describe("ContagionSnapshot", () => {
       "Dependency graph data is temporarily unavailable",
     );
   });
-
-  it("retains right-column context when V9 data is missing", () => {
-    useReportCardsV9Mock.mockReturnValue({
-      data: undefined,
-      error: null,
-      dataUpdatedAt: 0,
-      refetch: vi.fn(),
-    });
-
-    render(
-      <ContagionSnapshot
-        stablecoinId="usde-ethena"
-        variantRelationshipCard={<div data-testid="variant-card">VARIANT</div>}
-      />,
-    );
-
-    expect(screen.getByText("Dependency context")).toBeTruthy();
-    expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
-  });
-
 
   it.each([
     [

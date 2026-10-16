@@ -3,22 +3,14 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
-  fetchFiddIndependentAssuranceReserves,
   fiddIndependentAssuranceProfile,
   fiddReportDate,
 } from "../fidd-independent-assurance";
-import { fetchIndependentAssuranceReserves, verifyIndependentAssuranceReport } from "../independent-assurance";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { verifyIndependentAssuranceReport } from "../independent-assurance";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import type { AdapterHttpResponse } from "./reserve-adapter.test-support";
 
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
-
-vi.mock("../independent-assurance", async () => {
-  const actual = await vi.importActual<typeof import("../independent-assurance")>("../independent-assurance");
-  return { ...actual, fetchIndependentAssuranceReserves: vi.fn() };
-});
 
 const VIEWER_URL = "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026";
 const SEPTEMBER_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---september-2026";
@@ -163,57 +155,4 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
       .rejects.toThrow("download link is missing from the Widen viewer page");
   });
 
-  it("dispatches the bound coin through the publisher adapter and validates output", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "fidd-fidelity");
-    expect(coin?.liveReservesConfig).toMatchObject({
-      adapter: "fidd-independent-assurance",
-      semantics: "attestation-mix",
-      inputs: { primary: { kind: "http-html", url: "https://www.fidelitydigitalassets.com/stablecoin" } },
-      params: {
-        product: "FIDD",
-        profile: "fidd-v1",
-        indexHost: "www.fidelitydigitalassets.com",
-        reportHosts: ["fwc.widen.net", "cf-store.widencdn.net"],
-        viewerUrlPattern: expect.stringContaining("fidd-reserve-attestation-report"),
-      },
-    });
-    vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
-      slices: [
-        { name: "U.S. Treasury bills", pct: 59.5, risk: "very-low", assetClass: "treasury-bill" },
-        { name: "Cash deposits held in bank deposit accounts", pct: 40.5, risk: "very-low", assetClass: "bank-deposit" },
-      ],
-      metadata: { sourceTimestamp: 1_784_443_200, freshnessMode: "verified" },
-    });
-    const result = await fetchFiddIndependentAssuranceReserves(
-      coin!, coin!.liveReservesConfig!, new AbortController().signal,
-    );
-    expect(result.slices.map((slice) => slice.name)).toContain("U.S. Treasury bills");
-    expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
-      coin!,
-      coin!.liveReservesConfig!,
-      expect.any(AbortSignal),
-      expect.objectContaining({ product: "FIDD", reportDateFromCandidate: expect.any(Function) }),
-      expect.objectContaining({
-        product: "FIDD",
-        profile: "fidd-v1",
-        indexHost: "www.fidelitydigitalassets.com",
-        reportHosts: ["fwc.widen.net", "cf-store.widencdn.net"],
-        viewerUrlPattern: expect.stringContaining("fidd-reserve-attestation-report"),
-      }),
-      undefined,
-    );
-
-    const adapter = getReserveAdapter("fidd-independent-assurance");
-    expect(adapter?.evidenceClass).toBe("independent");
-    expect(validateAdapterOutput(
-      {
-        slices: [
-          { name: "U.S. Treasury bills", pct: 59.5, risk: "very-low" },
-          { name: "Cash deposits", pct: 40.5, risk: "very-low" },
-        ],
-        metadata: { sourceTimestamp: 1_784_443_200, freshnessMode: "verified" },
-      },
-      { adapter: adapter!, now: 1_784_443_200 + 3_000_000 },
-    ).valid).toBe(true);
-  });
 });

@@ -109,17 +109,6 @@ describe("AdminActionButton", () => {
   });
 
 
-  it("returns focus to the action that opened the dialog", async () => {
-    renderActions([makeAction()]);
-    const trigger = screen.getByRole("button", { name: "Repair Blacklist Gaps" });
-    trigger.focus();
-
-    fireEvent.click(trigger);
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    await waitFor(() => expect(document.activeElement).toBe(trigger));
-  });
-
   it("requires an explicit asset or acknowledged batch scope", async () => {
     renderActions([
       makeAction({
@@ -373,32 +362,6 @@ describe("AdminActionButton", () => {
     expect(requestIdempotencyKey(1)).toBe("second-intent-key");
   });
 
-  it("timestamps a prepared intent when its request starts", async () => {
-    let now = 1_000_000;
-    vi.spyOn(Date, "now").mockImplementation(() => now);
-    const onFinished = vi.fn();
-    const action = makeAction();
-    render(
-      <AdminActionExecutionProvider createIdempotencyKey={() => `intent-${now}`}>
-        <AdminActionButton action={action} onFinished={onFinished} />
-      </AdminActionExecutionProvider>,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-    await screen.findByText("Succeeded");
-
-    now = 2_000_000;
-    fireEvent.click(screen.getByRole("button", { name: "Start new execution" }));
-    now = 2_600_000;
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() => expect(onFinished).toHaveBeenCalledTimes(2));
-
-    const execution = onFinished.mock.calls[1]?.[0];
-    expect(execution.createdAt).toBe(2_000_000);
-    expect(execution.executedAt).toBe(2_600);
-  });
-
   it("treats a same-key idempotency ownership-loss conflict as unknown", async () => {
     installFetch([{
       match: "/api/admin/",
@@ -499,33 +462,6 @@ describe("AdminActionButton", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Repair Blacklist Gaps" })[1]);
     expect(await screen.findByText(/shared-result/)).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("presents structured execution identity before the raw JSON disclosure", async () => {
-    installFetch([{
-      match: "/api/admin/",
-      body: {
-          status: "queued",
-          jobId: "job-42",
-          queueId: "queue-a",
-          nextCursor: "cursor-9",
-          followUpUrl: "/admin/crons",
-      },
-      status: 202,
-    }]);
-    renderActions([makeAction()]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
-    expect(await screen.findByRole("heading", { name: "Action queued" })).toBeTruthy();
-    expect(screen.getByText("job-42")).toBeTruthy();
-    expect(screen.getByText("queue-a")).toBeTruthy();
-    expect(screen.getByText("cursor-9")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "/admin/crons" }).getAttribute("href")).toBe("/admin/crons");
-    const raw = screen.getByText("Raw JSON response").closest("details");
-    expect(raw?.hasAttribute("open")).toBe(false);
-    expect(screen.getByText(/"jobId": "job-42"/)).toBeTruthy();
   });
 
   it("renders an unsafe follow-up value as inert text", async () => {

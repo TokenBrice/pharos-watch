@@ -17,19 +17,6 @@ export const API_CACHE_PROFILES = {
   reserveFallback: "public, s-maxage=300, max-age=60",
 } as const;
 
-export type ApiCacheProfileKey = keyof typeof API_CACHE_PROFILES;
-
-export const API_CACHE_PROFILE_DOCUMENTED_KEYS = [
-  "realtime",
-  "producerBacked",
-  "standard",
-  "custom",
-  "perCoin",
-  "slow",
-  "archive",
-  "noStore",
-] as const satisfies readonly ApiCacheProfileKey[];
-
 export const PER_COIN_CACHE_TTL_SECONDS = 5 * 60;
 
 /** Edge/browser lifetime of a rendered OG image (the `ogImage` profile). */

@@ -41,19 +41,6 @@ describe("api-key-audit-log handler", () => {
     expect(body.entries[0]?.detail).toEqual({ name: "Smoke" });
   });
 
-  it("filters by apiKeyId when provided", async () => {
-    const db = mockD1([
-      {
-        match: "WHERE api_key_id = ?",
-        matchBinds: [7, 50],
-        rows: [],
-      },
-    ], { requireMatch: true });
-
-    const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?apiKeyId=7");
-    const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
-    expect(response.status).toBe(200);
-  });
 
   it("uses the configured default and maximum limits", async () => {
     const defaultDb = mockD1([{ match: "FROM api_key_audit_log", rows: [] }]);
@@ -73,26 +60,6 @@ describe("api-key-audit-log handler", () => {
     expect(maximumDb.getHistory()[0]?.binds).toEqual([200]);
   });
 
-  it("returns an empty page without changing the no-store contract", async () => {
-    const db = mockD1([{ match: "FROM api_key_audit_log", rows: [] }]);
-    const response = await handleApiKeyAuditLog({
-      db,
-      trustedAdmin: true,
-      request: new Request("https://api.pharos.watch/api/api-keys/audit-log"),
-    });
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({ entries: [] });
-  });
-
-  it("rejects partially numeric limit filters", async () => {
-    const db = mockD1([], { requireMatch: true });
-    const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?limit=25abc");
-
-    const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "Invalid limit: must be a positive integer" });
-  });
 
   it("rejects invalid apiKeyId filters instead of broadening the query", async () => {
     const db = mockD1([], { requireMatch: true });

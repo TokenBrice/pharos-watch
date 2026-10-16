@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   coerceFiniteNumber,
   coerceNonNegativeNumber,
-  isFiniteNumber,
   isRecord,
   numberValue,
   stringValue,
@@ -59,14 +58,5 @@ describe("numberValue", () => {
     expect(numberValue(NaN)).toBeNull();
     expect(numberValue(Infinity)).toBeNull();
     expect(numberValue("42")).toBeNull();
-  });
-});
-
-describe("isFiniteNumber", () => {
-  it("narrows finite numbers only", () => {
-    expect(isFiniteNumber(42)).toBe(true);
-    expect(isFiniteNumber(NaN)).toBe(false);
-    expect(isFiniteNumber(Infinity)).toBe(false);
-    expect(isFiniteNumber("42")).toBe(false);
   });
 });

@@ -5,7 +5,7 @@ import { useUrlState } from "@/hooks/use-url-state";
 import { trackEvent } from "@/lib/analytics";
 import type { UrlStateSchema } from "@/lib/url-state";
 
-export const MAX_YIELD_COMPARE_IDS = 4;
+const MAX_YIELD_COMPARE_IDS = 4;
 
 interface YieldCompareUrlState {
   compare: string[];

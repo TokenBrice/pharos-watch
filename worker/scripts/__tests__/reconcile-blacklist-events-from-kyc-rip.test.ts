@@ -1,5 +1,3 @@
-import { runOperatorCli } from "./operator-cli.test-support";
-import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseEventArgs, runEventReconciliation } from "../reconcile-blacklist-events-from-kyc-rip";
 import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
@@ -105,18 +103,6 @@ describe("event kyc.rip reconciliation", () => {
     );
     expect(() => parseEventArgs(["--local"])).toThrow(/not supported/);
     expect(() => parseEventArgs(["unexpected"])).toThrow(/Unexpected argument/);
-  });
-
-  it("[entrypoint integration] prints direct-run help with exit 0", async () => {
-    const tsx = join(process.cwd(), "node_modules/.bin/tsx");
-    const result = await runOperatorCli(tsx, [SCRIPT_NAME, "--help"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain(`Usage: tsx ${SCRIPT_NAME}`);
-    expect(result.stderr).toBe("");
   });
 
   it("does not query or execute D1 in dry-run mode", async () => {

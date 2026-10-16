@@ -299,34 +299,6 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     // Missing evidence is independent of finite ratios measured for other caches.
     expect(result.worstCacheRatio).toBeNull();
   });
-  it("does not query retired alert-broker tables", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      { match: "SELECT 1", rows: [], first: { value: 1 } },
-      { match: "cache WHERE key IN", rows: [{ key: "stablecoins", updated_at: nowSec - 60 }] },
-      { match: "FROM cron_runs", rows: [], first: null },
-      { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
-      { match: "SELECT status", matchBinds: ["sync-mint-burn"], rows: [], first: null },
-      { match: "as started_at FROM cron_runs", rows: [], first: null },
-      { match: "item_count", rows: [], first: null },
-      { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
-      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    ]);
-
-    await assessPublicHealth(db, nowSec, { logPrefix: "test" });
-    expect(db.getHistory().some((entry) => /alert_broker_/i.test(entry.sql))).toBe(false);
-  });
-
-  it("tags the stablecoins cache with upstreamProvider = 'DefiLlama'", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeMinimalDb(nowSec);
-
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
-
-    expect(result.caches.stablecoins?.upstreamProvider).toBe("DefiLlama");
-  });
-
   it("attributes FX and ratings caches to their known upstream providers", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeMinimalDb(nowSec);

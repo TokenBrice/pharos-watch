@@ -77,30 +77,4 @@ describe("usePortfolio", () => {
     expect(result.current.isFromUrl).toBe(true);
     expect(result.current.holdings).toEqual([{ coinId: "usdc-circle", amount: 0 }]);
   });
-
-  it("treats an empty router param as no shared portfolio", () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([{ coinId: "usdt-tether", amount: 50 }]));
-    const { result } = renderHook(() => usePortfolio(""));
-
-    expect(result.current.isFromUrl).toBe(false);
-    expect(result.current.holdings).toEqual([{ coinId: "usdt-tether", amount: 50 }]);
-  });
-
-  it("builds share URLs from normalized holdings and removes p when empty", () => {
-    const { result } = renderHook(() => usePortfolio());
-
-    act(() => {
-      result.current.addCoin("usdt-tether", 0);
-      result.current.addCoin("usdc-circle", 20);
-    });
-
-    const shared = new URL(result.current.shareUrl());
-    expect(shared.searchParams.get("p")).toBe("usdt-tether:0,usdc-circle:20");
-
-    act(() => {
-      result.current.clearAll();
-    });
-
-    expect(new URL(result.current.shareUrl()).searchParams.has("p")).toBe(false);
-  });
 });

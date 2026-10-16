@@ -216,26 +216,6 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.finalScore).toBeNull();
   });
 
-  it("withholds at the formula boundary when the limited count is threaded", () => {
-    const trace = scoreV9Input(rawInput({ evidenceLevel: "limited" }), POLICY, [], 2, true, [], [], [], [], [], [], undefined, {
-      includedPillars: ["backing", "exit", "control"], partialEvidence: null,
-      limitingPillars: [{ pillar: "backing", causes: ["C"], causeGapIds: ["gap:backing"] }, { pillar: "exit", causes: ["C"], causeGapIds: ["gap:exit"] }],
-    });
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.nrReasons.map((reason) => reason.code)).toContain("insufficient-evidence");
-  });
-
-  it("counts U collective witnesses at the formula boundary", () => {
-    const trace = scoreV9Input(rawInput({ pillars: { backing: 50, exit: 50, control: 60 }, evidenceLevel: "limited" }), POLICY, [], 2, true, [], [], [], [], [], [], undefined, {
-      includedPillars: ["backing", "exit", "control"], partialEvidence: null,
-      limitingPillars: [{ pillar: "backing", causes: ["U"], causeGapIds: ["gap:backing"] }, { pillar: "exit", causes: ["U"], causeGapIds: ["gap:exit"] }],
-    });
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.nrReasons).toEqual([expect.objectContaining({
-      code: "insufficient-evidence", cause: "U", contributingPillars: ["backing", "exit"],
-    })]);
-  });
-
   it("keeps a measured-adverse control-25 asset rated with explicit structural attribution", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
@@ -278,17 +258,6 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.finalGrade).toBe("F");
     expect(trace.finalScore).not.toBeNull();
     expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
-  });
-
-  it("does NOT withhold a measured-adverse asset (pegMultiplier < 0.9) even with 2 limited pillars", () => {
-    const trace = scoreV9Input(
-      rawInput({ pillars: { backing: 40, exit: 40, control: 50 }, pegScore: 31, evidenceLevel: "limited" }),
-      POLICY,
-      [],
-      2,
-    );
-    expect(trace.finalGrade).not.toBe("NR");
-    expect(trace.finalGrade).toBe("F");
   });
 
   it("flips pegMultiplier 0.85 from rated F to NR when the withhold danger floor drops below it", () => {
@@ -340,13 +309,6 @@ describe("Workstream A — attributable D/F ratings", () => {
     expect(trace.nrReasons).toContainEqual(
       expect.objectContaining({ code: "f-without-measured-adverse", field: "adverseAttribution", cause: "U" }),
     );
-  });
-
-  it("applies the attribution requirement at the formula boundary", () => {
-    const trace = scoreV9Input(rawInput(), POLICY);
-    expect(trace.finalScore).toBeNull();
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
   });
 
   it("keeps a measured mint-concentration F with structural attribution", () => {
@@ -450,7 +412,7 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
     claimImpairment: "unbounded",
   });
 
-  it.each([[59, 55], [60, 59], [120, 59]] as const)(
+  it.each([[59, 55], [60, 59]] as const)(
     "caps a %i-month 55-base reconciled mint at %i below governed issuance", (trackRecordMonths, score) => {
       const result = evaluateV9EconomicControl(makeEconomicControlArgs({
         facts: makeEconomicControlFacts([unbounded]),

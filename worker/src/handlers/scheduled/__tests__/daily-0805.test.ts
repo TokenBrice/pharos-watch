@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
-import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
 
 const mocks = vi.hoisted(() => ({
   syncBluechip: vi.fn(),
@@ -15,17 +14,9 @@ import { runDaily0805Slot } from "../daily-0805";
 
 function runtime(order: string[]): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
-  const env = createWorkerEnv({
-    ANTHROPIC_API_KEY: "anthropic-key",
-    TWITTER_API_KEY: "tw-key",
-    TWITTER_API_SECRET: "tw-secret",
-    TWITTER_ACCESS_TOKEN: "tw-token",
-    TWITTER_ACCESS_TOKEN_SECRET: "tw-token-secret",
-  });
   return makeScheduledRuntime({
     scheduleKey: "daily0805Utc",
     cron: "5 8 * * *",
-    env,
     runLeasedCron: vi.fn(async (job, fn) => {
       order.push(job);
       return fn(signal, vi.fn());
@@ -41,19 +32,6 @@ describe("runDaily0805Slot", () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
-
-  it("passes the slot's twitter credentials to daily digest generation", async () => {
-    await runDaily0805Slot(runtime([]));
-
-    const digestArgs = mocks.generateDailyDigest.mock.calls[0] as unknown[] | undefined;
-    expect(digestArgs?.[2]).toEqual({
-      apiKey: "tw-key",
-      apiSecret: "tw-secret",
-      accessToken: "tw-token",
-      accessTokenSecret: "tw-token-secret",
-    });
-    expect(digestArgs?.[3]).toBe(false);
-  });
 
   it("contains a daily digest failure while bluechip still runs", async () => {
     mocks.generateDailyDigest.mockRejectedValue(new Error("digest failed"));

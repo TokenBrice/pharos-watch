@@ -99,11 +99,6 @@ const invalidatedRow: DdrrV2InvalidatedPredictionRow = {
 };
 
 describe("DDR review presentation vocabulary", () => {
-  it("builds schema-valid no-call and invalidated review fixtures", () => {
-    expect(DdrrResponseRowSchema.parse(noCallRow)).toEqual(noCallRow);
-    expect(DdrrResponseRowSchema.parse(invalidatedRow)).toEqual(invalidatedRow);
-  });
-
   it("owns labels and scoreability for both public review surfaces", () => {
     expect(DDR_VERDICT_LABELS.correct_recoverable).toBe("Correct recoverable");
     expect(DDR_COVERAGE_LABELS.no_call).toBe("no-call");

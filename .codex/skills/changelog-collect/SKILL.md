@@ -8,7 +8,7 @@ Read `docs/editorial-style.md`; its `release-note` register governs prose. Read 
 
 # Changelog Collection
 
-Every entry covers exactly one ISO week: `from` is a Monday, `to` is the following Sunday (`from + 6` days), both inclusive UTC calendar days. Never write a partial, multi-week, or off-weekday range, and never derive `to` as “today” on a non-Sunday; `check:editorial-content` and `src/data/changelogs/__tests__/index.test.ts` reject anything else.
+Every entry covers exactly one ISO week: `from` is a Monday, `to` is the following Sunday (`from + 6` days), both inclusive UTC calendar days. Never write a partial, multi-week, or off-weekday range, and never derive `to` as “today” on a non-Sunday; `check:editorial-content` rejects anything else.
 
 Accept an optional ISO `week` (any date inside the target week) and `--commit` only when the user authorized a commit. Without `week`, target the current week when today (UTC) is Sunday, otherwise the most recently completed Monday–Sunday week. If the target week already has an entry, revise that file instead of creating a second one. If one or more complete weeks lie between the newest entry and the target, report the gap and write one entry per missing week.
 
@@ -37,7 +37,7 @@ npm run check:generated-artifacts -- --only=changelog-registry
 npm run check:editorial-content
 npm run refresh:markdown-fixtures
 npm run typecheck
-npm test -- src/data/changelogs/
+npm test -- scripts/__tests__/generate-changelog-registry.test.ts
 npm test -- scripts/__tests__/generate-markdown-exports.test.ts
 ```
 

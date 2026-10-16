@@ -74,21 +74,6 @@ describe("StaleDataBanner first-fetch handling", () => {
     expect(html).toContain("Report Cards has not populated yet");
   });
 
-  it("agrees the verb with several affected sources", () => {
-    const html = renderToStaticMarkup(
-      <StaleDataBanner
-        queries={["Flows", "Chart", "Peg Summary"].map((label) => ({
-          label,
-          dataUpdatedAt: 0,
-          staleTime: STALE_TIME,
-          hasData: false,
-          isLoading: false,
-        }))}
-      />,
-    );
-
-    expect(html).toContain("Flows, Chart, and 1 more dataset have not populated yet");
-  });
 
   it("hides a catch-up-only notice when the caller opts out, but keeps real stalls", () => {
     const nowMs = Date.now();

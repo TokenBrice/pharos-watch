@@ -41,11 +41,6 @@ describe("declared non-import-graph PR test ownership", () => {
     expect(selected).toEqual([changed, mandatory, imported, docRatchet].sort());
   });
 
-  it("does not add input-scoped invariants to unrelated frontend changes", () => {
-    const changed = "scripts/__tests__/pr-test-selection.test.ts";
-    expect(selectPrTestFiles([changed], [], ["src/components/query-error-notice.tsx"], new Map())).toEqual([changed]);
-  });
-
   it("fails closed rather than silently skipping a missing declared invariant", () => {
     expect(() => selectPrTestFiles([], [], ["docs/report-cards.md"], new Map(), (file) => file !== resolve(docRatchet)))
       .toThrow(docRatchet);

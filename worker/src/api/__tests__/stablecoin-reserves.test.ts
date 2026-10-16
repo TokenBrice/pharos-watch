@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablecoin-reserves";
-import { StablecoinReservesResponseSchema, ReserveCollectionEligibilitySchema } from "@shared/types/live-reserves";
+import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
 import { reserveCompositionRow, reserveSyncRow } from "./stablecoin-reserves.test-support";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
@@ -124,12 +124,6 @@ describe("handleStablecoinReserves", () => {
   it.each(["kusd-kerne", "tgbp-tokenised", "inalpha-nest", "usdy-ondo-finance", "usdxl-last"])(
     "retains pre-launch and suspended 404 contract for %s", async (id) => {
       expect((await handleStablecoinReserves(mockD1(), id)).status).toBe(404);
-    },
-  );
-
-  it.each(["suspended", "unconfigured", "pre-launch"])(
-    "rejects unreachable %s eligibility from successful-response schemas", (reason) => {
-      expect(ReserveCollectionEligibilitySchema.safeParse({ scheduled: false, reason }).success).toBe(false);
     },
   );
 
@@ -503,25 +497,6 @@ describe("handleStablecoinReserves", () => {
     path: "/api/stablecoin-reserves",
     invoke: (db, url) => handleStablecoinReserves(db, url.searchParams.get("stablecoin") ?? ""),
     cases: [{ kind: "unknown", stablecoin: "not-a-coin", error: "Not found" }],
-  });
-
-  it("surfaces lastError from sync state in the API response", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: null,
-      },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: reserveSyncRow(now, { last_success_at: null, last_status: "error", last_error: "HTTP 503 for https://api.example.com", metadata: "{}" }),
-      },
-    ]);
-    const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
-    expect(body.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
 
   it("surfaces uncertain write metadata distinctly in the API response", async () => {

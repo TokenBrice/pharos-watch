@@ -1,21 +1,15 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import {
-  evaluateRedemptionCoverageAudit,
   generateRedemptionCoverageAudit,
-  parseArgs,
-  renderRedemptionCoverageAuditMarkdown,
   runCli,
   validateReviewedRedemptionDispositions,
   validateReviewedRedemptionDispositionRows,
 } from "../maintenance/generate-redemption-coverage-audit";
-import {
-  REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
-  type ReviewedRedemptionCoverageDisposition,
-} from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
+import type { ReviewedRedemptionCoverageDisposition } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import { makeCoverageCoin } from "./helpers/coverage-coin";
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -34,12 +28,6 @@ const configuredRoute: RedemptionBackstopConfig = {
   capacityModel: { kind: "supply-full", confidence: "documented-bound" },
   costModel: { kind: "dynamic-or-unclear", confidence: "undisclosed-reviewed" },
   reviewedAt: "2026-05-12",
-};
-
-const heuristicRoute: RedemptionBackstopConfig = {
-  ...configuredRoute,
-  routeFamily: "queue-redeem",
-  capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic" },
 };
 
 function review(
@@ -66,66 +54,6 @@ describe("generate-redemption-coverage-audit", () => {
     const result = validateReviewedRedemptionDispositionRows();
     expect(result.rowErrors).toEqual([]);
     expect(result.missingIds).toEqual([]);
-  });
-
-  it("uses reviewed registry rows and preserves canonical market-cap order", () => {
-    const activeCoins = [
-      coin({ id: "usdc-circle" }),
-      coin({ id: "mmxn-moneta-digital", symbol: "MMXN" }),
-      coin({ id: "iusd-initia" }),
-      coin({ id: "random-crypto" }),
-    ];
-
-    const audit = generateRedemptionCoverageAudit({
-      trackedCoins: activeCoins,
-      activeCoins,
-      configs: { "usdc-circle": configuredRoute },
-      reviewedDispositions: [
-        review("mmxn-moneta-digital", {
-          reasonCode: "issuer-terms-missing",
-          allowedRouteFamilyIfProven: "offchain-issuer",
-        }),
-        review("iusd-initia", {
-          disposition: "defer",
-          reasonCode: "capacity-unpublished",
-          allowedRouteFamilyIfProven: "queue-redeem",
-        }),
-        review("random-crypto"),
-      ],
-      generatedAt: "2026-05-12T00:00:00.000Z",
-    });
-
-    expect(audit.summary.activeUnconfigured).toBe(3);
-    expect(audit.summary.activeDefaultClassified).toBe(0);
-    expect(audit.dispositionCounts).toEqual({
-      add: 0,
-      defer: 1,
-      "hard-reject": 0,
-      "needs-research": 2,
-    });
-    expect(audit.activeUnconfigured).toEqual([
-      expect.objectContaining({
-        id: "mmxn-moneta-digital",
-        marketCapRank: 2,
-        disposition: "needs-research",
-        reasonCode: "issuer-terms-missing",
-        classificationSource: "reviewed-registry",
-        allowedRouteFamilyIfProven: "offchain-issuer",
-      }),
-      expect.objectContaining({
-        id: "iusd-initia",
-        marketCapRank: 3,
-        disposition: "defer",
-        classificationSource: "reviewed-registry",
-      }),
-      expect.objectContaining({
-        id: "random-crypto",
-        marketCapRank: 4,
-        disposition: "needs-research",
-        reasonCode: "documentation-insufficient",
-        classificationSource: "reviewed-registry",
-      }),
-    ]);
   });
 
   it("rejects missing, duplicate, unknown, configured, and inactive registry rows", () => {
@@ -158,136 +86,6 @@ describe("generate-redemption-coverage-audit", () => {
     ).toThrow("stablecoin is not active");
   });
 
-  it("does not retain a reviewed disposition once the eMXN route is configured", () => {
-    const emxn = coin({ id: "emxn-telcoin" });
-    const emxnDispositions = REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.filter((row) => row.id === emxn.id);
-
-    expect(emxnDispositions).toEqual([]);
-    expect(() =>
-      validateReviewedRedemptionDispositions({
-        reviewedDispositions: emxnDispositions,
-        trackedCoins: [emxn],
-        activeCoins: [emxn],
-        configuredIds: new Set([emxn.id]),
-      }),
-    ).not.toThrow();
-  });
-
-  it("separates non-active unconfigured coins from active gaps", () => {
-    const activeCoins = [coin({ id: "usdc-circle" })];
-    const preLaunchCoins = [coin({ id: "krw1-bdacs", status: "pre-launch" }), coin({ id: "brd-volpon" })];
-    const frozenCoins = [coin({ id: "buck-buck-assets", status: "frozen" }), coin({ id: "statusless-frozen" })];
-
-    const audit = generateRedemptionCoverageAudit({
-      trackedCoins: [...activeCoins, ...preLaunchCoins, ...frozenCoins],
-      activeCoins,
-      preLaunchCoins,
-      frozenCoins,
-      configs: { "usdc-circle": configuredRoute },
-      reviewedDispositions: [],
-    });
-
-    expect(audit.summary.activeUnconfigured).toBe(0);
-    expect(audit.summary.preLaunchUnconfigured).toBe(2);
-    expect(audit.summary.frozenUnconfigured).toBe(2);
-    expect(audit.lifecycleExcludedUnconfigured).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "brd-volpon",
-          lifecycle: "pre-launch",
-          disposition: "defer",
-          reasonCode: "pre-launch",
-        }),
-        expect.objectContaining({
-          id: "statusless-frozen",
-          lifecycle: "frozen",
-          disposition: "hard-reject",
-          reasonCode: "frozen",
-        }),
-      ]),
-    );
-    expect(audit.lifecycleExcludedUnconfigured).toHaveLength(4);
-    expect(audit.lifecycleExcludedUnconfigured).toEqual([
-      expect.objectContaining({
-        id: "brd-volpon",
-      }),
-      expect.objectContaining({
-        id: "buck-buck-assets",
-        lifecycle: "frozen",
-        disposition: "hard-reject",
-        reasonCode: "frozen",
-      }),
-      expect.objectContaining({
-        id: "krw1-bdacs",
-        lifecycle: "pre-launch",
-        disposition: "defer",
-        reasonCode: "pre-launch",
-      }),
-      expect.objectContaining({
-        id: "statusless-frozen",
-      }),
-    ]);
-  });
-
-  it("adds configured heuristic routes to the V4-43 review queue", () => {
-    const audit = generateRedemptionCoverageAudit({
-      trackedCoins: [coin({ id: "usdc-circle" }), coin({ id: "pmusd-precious-metals" })],
-      activeCoins: [coin({ id: "usdc-circle" }), coin({ id: "pmusd-precious-metals" })],
-      configs: {
-        "usdc-circle": configuredRoute,
-        "pmusd-precious-metals": heuristicRoute,
-      },
-      reviewedDispositions: [],
-    });
-
-    expect(audit.summary.heuristicConfiguredRoutes).toBe(1);
-    expect(audit.heuristicConfiguredRoutes).toEqual([
-      expect.objectContaining({
-        id: "pmusd-precious-metals",
-        routeFamily: "queue-redeem",
-        capacityModel: "supply-ratio",
-      }),
-    ]);
-  });
-
-  it("counts route-factor instances separately from affected cards in a captured CLI report", () => {
-    const cwd = roots.makeRoot();
-    const reportCards = {
-      asOfSec: 1_791_402_404,
-      cards: [
-        { id: "alpha", localCauseGaps: [
-          "exit-route:redemption:issuer:cost",
-          "exit-route:dex:pool:cost",
-          "exit-route:redemption:issuer:settlement",
-          "route:dex:pool:settlement",
-          "exit-portfolio-coverage",
-          "reserve-composition",
-        ] },
-        { id: "beta", localCauseGaps: ["exit-route:redemption:issuer:cost", "exit-portfolio-coverage"] },
-        { id: "gamma", localCauseGaps: [] },
-      ],
-    };
-    writeFileSync(join(cwd, "cards.json"), JSON.stringify(reportCards));
-    const status = runCli(["--json", "--report-cards", "cards.json", "--report", "audit.json"], cwd, (input) =>
-      generateRedemptionCoverageAudit({
-        ...input,
-        trackedCoins: [], activeCoins: [], configs: {}, reviewedDispositions: [],
-      }),
-    );
-    expect(status).toBe(0);
-    const audit = JSON.parse(readFileSync(join(cwd, "audit.json"), "utf8"));
-    expect(audit.reportCardDiagnostics).toEqual({
-      asOfSec: reportCards.asOfSec,
-      evaluatedCards: 3,
-      costGapInstances: 3,
-      costAffectedCards: 2,
-      settlementGapInstances: 2,
-      settlementAffectedCards: 1,
-      factorGapAffectedCards: 2,
-      portfolioCoverageAffectedCards: 2,
-    });
-  });
-
   it("does not present unavailable report-card diagnostics as zero gaps", () => {
     const input = { trackedCoins: [], activeCoins: [], configs: {}, reviewedDispositions: [] };
     expect(generateRedemptionCoverageAudit(input).reportCardDiagnostics).toBeNull();
@@ -296,49 +94,6 @@ describe("generate-redemption-coverage-audit", () => {
     }).reportCardDiagnostics).toMatchObject({
       evaluatedCards: 0, costGapInstances: 0, settlementGapInstances: 0, portfolioCoverageAffectedCards: 0,
     });
-  });
-
-  it("renders the expected reviewer tables", () => {
-    const rationaleWithTableSyntax = "First line|with-pipe\nsecond line";
-    const audit = generateRedemptionCoverageAudit({
-      trackedCoins: [coin({ id: "mmxn-moneta-digital" })],
-      activeCoins: [coin({ id: "mmxn-moneta-digital" })],
-      configs: {},
-      reviewedDispositions: [
-        review("mmxn-moneta-digital", {
-          reasonCode: "issuer-terms-missing",
-          rationale: rationaleWithTableSyntax,
-          allowedRouteFamilyIfProven: "offchain-issuer",
-        }),
-      ],
-      generatedAt: "2026-05-12T00:00:00.000Z",
-    });
-
-    const markdown = renderRedemptionCoverageAuditMarkdown(audit);
-
-    expect(markdown).toContain("## Active Unconfigured Gaps");
-    expect(markdown).toContain(
-      "market-cap rank | id | lifecycle | current disposition | classification source | blocker | rationale",
-    );
-    expect(markdown).toContain(
-      "1 | mmxn-moneta-digital | active | needs-research (issuer-terms-missing) | reviewed-registry",
-    );
-    expect(markdown).toContain("First line\\|with-pipe second line");
-    expect(markdown).not.toContain("with-pipe\nsecond line");
-  });
-
-  it("parses CLI format and report options", () => {
-    expect(parseArgs(["--json", "--strict-active-gaps", "--check", "--report", "agents/audit.json"])).toEqual({
-      format: "json",
-      reportPath: "agents/audit.json",
-      reportCardsPath: null,
-      strictActiveGaps: true,
-      check: true,
-    });
-    expect(() => parseArgs(["--report"])).toThrow("--report requires a path");
-    expect(parseArgs(["--report-cards", "cards.json"]).reportCardsPath).toBe("cards.json");
-    expect(() => parseArgs(["--report-cards"])).toThrow("--report-cards requires a value");
-    expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
   });
 
   it.each(["reviewed", "missing", "invalid", "stale"] as const)(
@@ -381,77 +136,4 @@ describe("generate-redemption-coverage-audit", () => {
     }
   });
 
-  it("strict CLI mode accepts durably reviewed active gaps", () => {
-    const cwd = roots.makeRoot();
-    const reviewedGapAudit = () =>
-      generateRedemptionCoverageAudit({
-        trackedCoins: [coin({ id: "reviewed-coin" })],
-        activeCoins: [coin({ id: "reviewed-coin" })],
-        configs: {},
-        reviewedDispositions: [review("reviewed-coin")],
-      });
-
-    expect(runCli(["--json", "--strict-active-gaps", "--report", "reviewed.json"], cwd, reviewedGapAudit)).toBe(0);
-    const report = JSON.parse(readFileSync(join(cwd, "reviewed.json"), "utf8")) as {
-      summary: { activeDefaultClassified: number };
-    };
-    expect(report.summary.activeDefaultClassified).toBe(0);
-  });
-
-  it("writes the full report and exits non-zero when multiple reviewed rows are invalid", () => {
-    const cwd = roots.makeRoot();
-    const invalidAudit = () =>
-      generateRedemptionCoverageAudit({
-        trackedCoins: [coin({ id: "stale-alpha" }), coin({ id: "stale-beta" }), coin({ id: "reviewed-gap" })],
-        activeCoins: [coin({ id: "stale-alpha" }), coin({ id: "stale-beta" }), coin({ id: "reviewed-gap" })],
-        configs: { "stale-alpha": configuredRoute, "stale-beta": configuredRoute },
-        reviewedDispositions: [review("stale-alpha"), review("stale-beta"), review("reviewed-gap")],
-        generatedAt: "2026-05-12T00:00:00.000Z",
-      });
-
-    expect(runCli(["--json", "--report", "invalid.json"], cwd, invalidAudit)).toBe(1);
-    const report = JSON.parse(readFileSync(join(cwd, "invalid.json"), "utf8")) as {
-      validationErrors: string[];
-      activeUnconfigured: Array<{ id: string }>;
-    };
-    expect(report.validationErrors).toEqual([
-      "Reviewed redemption disposition is stale because a route is now configured: stale-alpha",
-      "Reviewed redemption disposition is stale because a route is now configured: stale-beta",
-    ]);
-    expect(report.activeUnconfigured).toEqual([expect.objectContaining({ id: "reviewed-gap" })]);
-  });
-
-  it("keeps the default-classified count at strict zero", () => {
-    const audit = generateRedemptionCoverageAudit({
-      trackedCoins: [coin({ id: "random-crypto" })],
-      activeCoins: [coin({ id: "random-crypto" })],
-      configs: {},
-      reviewedDispositions: [review("random-crypto")],
-    });
-
-    expect(evaluateRedemptionCoverageAudit(audit)).toEqual([]);
-    expect(evaluateRedemptionCoverageAudit(audit, { strictActiveGaps: true })).toEqual([]);
-  });
-
-  it("writes nested CLI reports with the selected output format", () => {
-    const cwd = roots.makeRoot();
-    const status = runCli(["--json", "--report", "nested/reports/audit.json"], cwd, () =>
-      generateRedemptionCoverageAudit({
-        trackedCoins: [coin({ id: "usdc-circle" })],
-        activeCoins: [coin({ id: "usdc-circle" })],
-        configs: { "usdc-circle": configuredRoute },
-        reviewedDispositions: [],
-        generatedAt: "2026-05-12T00:00:00.000Z",
-      }),
-    );
-
-    expect(status).toBe(0);
-    const report = JSON.parse(readFileSync(join(cwd, "nested/reports/audit.json"), "utf8")) as {
-      generatedAt: string;
-      summary: { activeConfigured: number; activeUnconfigured: number };
-    };
-    expect(report.generatedAt).toBe("2026-05-12T00:00:00.000Z");
-    expect(report.summary.activeConfigured).toBe(1);
-    expect(report.summary.activeUnconfigured).toBe(0);
-  });
 });

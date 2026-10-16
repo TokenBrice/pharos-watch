@@ -16,13 +16,13 @@ export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ASSETS = 512;
 
 const JournalIdSchema = z.string().regex(/^report-card-evidence:v1:[a-f0-9]{64}$/);
 
-export const ReserveEvidenceAttemptCodeSchema = z.enum([
+const ReserveEvidenceAttemptCodeSchema = z.enum([
   "reserve.collector.attempted",
   "reserve.collector.not-configured",
   "reserve.collector.deferred",
 ]);
 
-export const ReserveEvidenceAdmissionCodeSchema = z.enum([
+const ReserveEvidenceAdmissionCodeSchema = z.enum([
   "reserve.admission.accepted",
   "reserve.admission.not-evaluated",
   "reserve.admission.rejected-upstream",
@@ -34,7 +34,7 @@ export const ReserveEvidenceAdmissionCodeSchema = z.enum([
   "reserve.admission.rejected-sidecar-mismatch",
 ]);
 
-export const ReserveEvidenceFallbackCodeSchema = z.enum([
+const ReserveEvidenceFallbackCodeSchema = z.enum([
   "reserve.fallback.not-used",
   "reserve.fallback.curated",
   "reserve.fallback.reviewed-sidecar",
@@ -42,7 +42,7 @@ export const ReserveEvidenceFallbackCodeSchema = z.enum([
   "reserve.fallback.unavailable",
 ]);
 
-export const ReserveEvidenceSourceOriginClassSchema = z.enum(
+const ReserveEvidenceSourceOriginClassSchema = z.enum(
   RESERVE_EVIDENCE_SOURCE_ORIGIN_CLASSES,
 );
 

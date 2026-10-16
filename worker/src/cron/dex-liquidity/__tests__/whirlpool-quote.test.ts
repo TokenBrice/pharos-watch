@@ -32,11 +32,6 @@ function replayPinned(capture: typeof pinned.snapshots[number]): WhirlpoolSnapsh
 afterEach(() => vi.unstubAllGlobals());
 
 describe("native Whirlpool exact-in quotes", () => {
-  it("replays the atomic slot 449058549 capture exactly against SDK/Jupiter", () => {
-    const result = quoteWhirlpoolExactIn(replay(), fixture.tokenMintIn, BigInt(fixture.amountIn));
-    expect(result).toEqual({ amountOut: 999660000n, slot: 449058549 });
-  });
-
   it("derives the recorded dynamic tick-array PDAs including negative indices", async () => {
     const snapshot = replay();
     expect(tickArrayStarts(snapshot.pool.tickCurrentIndex, snapshot.pool.tickSpacing, true)).toEqual([-88, -176, -264]);

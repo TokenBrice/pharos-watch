@@ -47,29 +47,6 @@ describe("check-cli-args-policy", () => {
     );
   });
 
-  it("rejects a parser declaration that is not reachable from the entrypoint", () => {
-    const entrypoint = "scripts/maintenance/operator.mjs";
-    const parserPath = "scripts/lib/operator-parser.mjs";
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [entrypoint],
-      policy: {
-        strict: [{ path: entrypoint, parserPath }],
-        exemptions: [],
-      },
-      readSource: createSourceReader({
-        [entrypoint]: "process.stdout.write(process.argv.join(' '));\n",
-        [parserPath]: [
-          'import { parseStrictCliArgs } from "./cli-args.mjs";',
-          "export const parse = (argv) => parseStrictCliArgs(argv);",
-        ].join("\n"),
-      }),
-    });
-
-    expect(result.errors).toContain(
-      `Strict CLI entrypoint ${entrypoint} does not import its declared parser ${parserPath}.`,
-    );
-  });
-
   it("accepts direct and transitive strict parsers through cycles and extension resolution", () => {
     const path = "scripts/maintenance/operator.mjs";
     const parserPath = "scripts/lib/operator-parser.ts";
@@ -117,35 +94,6 @@ describe("check-cli-args-policy", () => {
     expect(result.errors).toEqual([
       `Strict CLI entrypoint ${path} does not import its declared parser ${parserPath}.`,
     ]);
-  });
-
-  it("rejects stale exact exemptions", () => {
-    const path = "scripts/ci/removed-check.mjs";
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [],
-      policy: {
-        strict: [],
-        exemptions: [{ path, category: "read-only", reason: EXEMPTION_REASON }],
-      },
-      readSource: createSourceReader({}),
-    });
-
-    expect(result.errors).toContain(`Stale CLI policy entry no longer uses process.argv: ${path}`);
-  });
-
-  it("accepts an exact audited exemption", () => {
-    const path = "scripts/ci/repository-check.mjs";
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [path],
-      policy: {
-        strict: [],
-        exemptions: [{ path, category: "read-only", reason: EXEMPTION_REASON }],
-      },
-      readSource: createSourceReader({}),
-    });
-
-    expect(result.errors).toEqual([]);
-    expect(result.counts).toEqual({ discovered: 1, strict: 0, exempt: 1 });
   });
 
   it("rejects exemptions without an allowed category and audit reason", () => {

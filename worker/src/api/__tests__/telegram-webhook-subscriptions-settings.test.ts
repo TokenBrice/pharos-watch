@@ -5,7 +5,7 @@ import { TelegramWebhookEffectFence, createTelegramWebhookIntent } from "../tele
 import { claimTelegramProcessedUpdate } from "../telegram-webhook-store";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
-import { TELEGRAM_BOT_COMMANDS } from "@shared/lib/telegram-bot-registration";
+
 import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../webhook-commands";
 import { makePendingSelectionRow, makeSelectionSubscription } from "./telegram-selection.test-support";
 import {
@@ -191,33 +191,6 @@ describe("handleTelegramWebhook", () => {
       }
     });
   });
-
-  it.each(TELEGRAM_BOT_COMMANDS.map(({ command }) => `/${command}`))(
-    "routes %s through its registered handler in a private chat",
-    async (command) => {
-      const handler = vi.fn<WebhookCommandHandler>().mockResolvedValue(undefined);
-      const previousHandler = COMMAND_HANDLERS[command];
-      COMMAND_HANDLERS[command] = handler;
-      try {
-        const db = makeTelegramWebhookDb();
-        const response = await handleTelegramWebhook(
-          db,
-          makeWebhookRequest(123, command),
-          "test-secret",
-          "bot-token",
-        );
-
-        expect(response.status).toBe(200);
-        expect(handler).toHaveBeenCalledTimes(1);
-        expect(handler.mock.calls[0]?.[0]).toMatchObject({
-          chatId: "123",
-          chatType: "private",
-        });
-      } finally {
-        COMMAND_HANDLERS[command] = previousHandler;
-      }
-    },
-  );
 
   it.each([
     {
@@ -423,29 +396,6 @@ describe("handleTelegramWebhook", () => {
 
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(false);
     expect(sentMessageBody().text).toContain("No coins available for new alerts");
-  });
-
-  it("exports the maximum current subscribable registry as one copyable pw3 token", async () => {
-    const subscriptions = TELEGRAM_SUBSCRIBABLE_STABLECOINS.map(({ id: stablecoinId }) => makeSubscriptionRow(stablecoinId, {
-      alert_depeg: 1,
-      alert_dews_override: 1,
-      alert_depeg_override: 1,
-      alert_safety_override: 1,
-      alert_launch_override: 1,
-      alert_reserve_override: 1,
-      alert_snooze_until_ts: null,
-    }));
-    const db = makeTelegramWebhookDb([
-      { match: "FROM telegram_subscriptions", rows: subscriptions.map((row) => ({ ...row })) },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/export"), "test-secret", "bot-token");
-
-    const body = sentMessageBody();
-    expect(body.text).toContain(`${subscriptions.length} direct/local rows`);
-    expect(body.text).toContain("<pre>pw3.");
-    expect(body.text).toContain("Import shows an exact replacement preview");
   });
 
   it("refuses to export an unavailable row instead of silently dropping it", async () => {

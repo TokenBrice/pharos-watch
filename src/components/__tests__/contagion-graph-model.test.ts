@@ -1,53 +1,89 @@
 import { describe, expect, it } from "vitest";
 import {
-  compareDependencyTypes,
-  DEPENDENCY_TYPE_FILTERS,
-  DEPENDENCY_TYPE_ORDER,
   DEPENDENCY_TYPE_PRESENTATION,
-  gradeColor,
 } from "@/components/contagion-graph-model";
-import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
-import type { ContagionEdgeRelationship } from "@/lib/contagion-layout";
+import {
+  computeRippleState,
+  resolveGraphLinks,
+  type ResolvedLink,
+} from "@/components/contagion-graph-graph";
+import type { GraphLink } from "@/lib/contagion-layout";
 
 describe("contagion graph dependency type presentation", () => {
-  it("keeps graph filters in the shared dependency type order", () => {
-    expect(DEPENDENCY_TYPE_FILTERS.map((filter) => filter.value)).toEqual(["all", ...DEPENDENCY_TYPE_ORDER]);
-    expect(DEPENDENCY_TYPE_FILTERS.map((filter) => filter.label)).toEqual([
-      "All",
-      ...DEPENDENCY_TYPE_ORDER.map((type) => DEPENDENCY_TYPE_PRESENTATION[type].label),
-    ]);
-  });
-
-  it("draws exactly the two structural relationships", () => {
-    expect([...DEPENDENCY_TYPE_ORDER]).toEqual(["collateral", "wrapper"]);
-    expect(DEPENDENCY_TYPE_ORDER.map((type) => DEPENDENCY_TYPE_PRESENTATION[type].label)).toEqual([
-      "Collateral",
-      "Wrapper",
-    ]);
-    for (const type of DEPENDENCY_TYPE_ORDER) {
-      expect(DEPENDENCY_TYPE_PRESENTATION[type].description.length).toBeGreaterThan(0);
-    }
-  });
-
-  it("keeps the V8 stroke encoding readers already know", () => {
-    expect(DEPENDENCY_TYPE_PRESENTATION.collateral.dash).toBeUndefined();
-    expect(DEPENDENCY_TYPE_PRESENTATION.wrapper.dash).toBeDefined();
-    expect(DEPENDENCY_TYPE_PRESENTATION.collateral.color).not.toBe(DEPENDENCY_TYPE_PRESENTATION.wrapper.color);
-  });
-
   it("shows a percentage only for a weighted collateral share", () => {
     expect(DEPENDENCY_TYPE_PRESENTATION.collateral.showWeight).toBe(true);
     expect(DEPENDENCY_TYPE_PRESENTATION.wrapper.showWeight).toBeFalsy();
   });
+});
 
-  it("sorts dependency types by the shared presentation order", () => {
-    const types: ContagionEdgeRelationship[] = ["wrapper", "collateral"];
-    expect(types.sort(compareDependencyTypes)).toEqual([...DEPENDENCY_TYPE_ORDER]);
+const LINKS: GraphLink[] = [
+  { source: "usdt", target: "usdc", weight: 0.8, type: "collateral" },
+  { source: "usde", target: "usdt", weight: 0.6, type: "collateral" },
+  { source: "susde", target: "usde", weight: 1, type: "wrapper" },
+];
+
+function makeResolvedLinks(): ResolvedLink[] {
+  return resolveGraphLinks(
+    LINKS,
+    new Map([
+      ["usdc", 2],
+      ["usdt", 1],
+      ["usde", 0],
+      ["susde", 0],
+    ]),
+  );
+}
+
+describe("contagion graph helpers", () => {
+  it("retains score availability independently of a known share", () => {
+    const links = resolveGraphLinks([
+      { source: "usdt", target: "usdc", type: "collateral", weight: 0.25, scoreKnown: false },
+      { source: "susde", target: "usde", type: "wrapper", weight: 1, scoreKnown: true },
+    ], new Map());
+    expect(links[0]).toMatchObject({ weight: 0.25, scoreKnown: false });
+    expect(links[1]).toMatchObject({ weight: 1, scoreKnown: true });
   });
 
-  it("colors nodes by the V9 grade band", () => {
-    expect(gradeColor("A-")).toBe(GRADE_RADAR_COLORS.A);
-    expect(gradeColor("C+")).toBe(GRADE_RADAR_COLORS.C);
-    expect(gradeColor("NR")).toBe(GRADE_RADAR_COLORS.NR);
+  it("builds multi-hop upstream provider chain from the hovered node", () => {
+    const result = computeRippleState("usdc", makeResolvedLinks());
+
+    expect(result.nodeDistance).toEqual(
+      new Map([
+        ["usdc", 0],
+        ["usdt", 1],
+        ["usde", 2],
+        ["susde", 3],
+      ]),
+    );
+    expect(result.edgeDistance).toEqual(
+      new Map([
+        [0, 1],
+        [1, 2],
+        [2, 3],
+      ]),
+    );
+  });
+
+  it("stops at the hop boundary without including the next edge", () => {
+    const result = computeRippleState("usdc", makeResolvedLinks(), 2);
+    expect(result.nodeDistance).toEqual(new Map([["usdc", 0], ["usdt", 1], ["usde", 2]]));
+    expect(result.connectedEdges).toEqual(new Set([0, 1]));
+  });
+
+  it("terminates cycles and preserves shortest distances", () => {
+    const links = resolveGraphLinks([
+      ...LINKS,
+      { source: "usdc", target: "susde", weight: 1, type: "collateral" },
+      { source: "susde", target: "usdc", weight: 1, type: "collateral" },
+    ], new Map());
+    const result = computeRippleState("usdc", links);
+    expect(result.nodeDistance).toEqual(new Map([["usdc", 0], ["usdt", 1], ["susde", 1], ["usde", 2]]));
+    expect(result.connectedEdges).toEqual(new Set([0, 1, 2, 3, 4]));
+  });
+
+  it("includes direct outbound neighbors without walking further outbound", () => {
+    const result = computeRippleState("usde", makeResolvedLinks());
+    expect(result.nodeDistance).toEqual(new Map([["usde", 0], ["usdt", 1], ["susde", 1]]));
+    expect(result.connectedEdges).toEqual(new Set([1, 2]));
   });
 });

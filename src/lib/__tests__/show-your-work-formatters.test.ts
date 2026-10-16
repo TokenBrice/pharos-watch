@@ -8,18 +8,8 @@ import {
   formatReportCardV9,
 } from "@/lib/show-your-work-formatters";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
-import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
 describe("show-your-work formatters", () => {
-  it("distinguishes retired effective-exit guidance from the current route methodology", () => {
-    const historical = METHODOLOGY_CONTEXT.effectiveExit;
-    const current = METHODOLOGY_CONTEXT.redemptionBackstop;
-    expect(historical.title).toMatch(/historical|retired/i);
-    expect(historical.summary).toMatch(/retired|removed/i);
-    expect(current.title).not.toMatch(/historical|retired/i);
-    expect(historical.detail).not.toBe(current.detail);
-  });
-
   it("formats V9 score stages without routing through V8 raw inputs", () => {
     const card = makeV9Card({
       bindingCap: {

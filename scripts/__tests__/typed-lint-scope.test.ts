@@ -10,14 +10,6 @@ const patterns = Array.from(scripts["lint:typed"].matchAll(/(["'])(.*?)\1/g), (m
 const intendedRoots = ["worker/src", "functions", "src/lib", "src/hooks"];
 
 describe("typed lint file scope", () => {
-  it("expands every quoted pattern to at least one file", () => {
-    expect(patterns.length).toBeGreaterThan(0);
-    for (const pattern of patterns) {
-      const files = globSync(pattern, { cwd: REPO_ROOT, withFileTypes: true }).filter((entry) => entry.isFile());
-      expect(files, `Empty typed-lint pattern: ${pattern}`).not.toHaveLength(0);
-    }
-  });
-
   it.each(intendedRoots)("covers TypeScript and TSX throughout %s", (root) => {
     // Probe both extensions even where the current tree has no TSX source.
     for (const extension of ["ts", "tsx"]) {

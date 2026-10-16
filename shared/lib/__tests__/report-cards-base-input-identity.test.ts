@@ -158,25 +158,6 @@ describe("report-card base-input identity", () => {
     );
   });
 
-  it("projects a pre-field capture deterministically as an empty aggregate map", () => {
-    const absent = source();
-    delete absent.aggregateCirculatingById;
-    const explicitlyEmpty = { ...source(), aggregateCirculatingById: {} };
-
-    // A capture predating the field must land on exactly one identity, and it
-    // must be the identity of an empty map — matching the fixed-input schema
-    // default that fills the field in before this projection ever sees it.
-    expect(deriveReportCardsBaseInputGenerationId(absent)).toBe(
-      deriveReportCardsBaseInputGenerationId(explicitlyEmpty),
-    );
-    expect(deriveReportCardsBaseInputGenerationId(absent)).not.toBe(deriveReportCardsBaseInputGenerationId(source()));
-  });
-
-  it("computes the same generation from an already projected identity", () => {
-    const projected = projectReportCardsBaseInputIdentityV1(source());
-    expect(computeReportCardsBaseInputGenerationId(projected)).toBe(deriveReportCardsBaseInputGenerationId(source()));
-  });
-
   it("canonicalizes projected set-like arrays and pins their generation identity", () => {
     const projected = projectReportCardsBaseInputIdentity(projectedInput());
     expect(projected.registry.activeAssetIds).toEqual(["usdc-circle", "usdt-tether"]);
@@ -209,11 +190,7 @@ describe("report-card base-input identity", () => {
   );
 
   it.each([
-    ["safety methodology", { methodologyVersion: "8.17" }],
     ["V9 policy", { v9PolicyDigest: A }],
-    ["publication generation", { publicationGenerationId: "report-cards:8.17:1800000000" }],
-    ["operator capture time", { capturedAt: "2027-01-15T08:00:00.000Z" }],
-    ["operator revision", { registryRevision: "deadbeef" }],
   ])("rejects excluded %s metadata at the projected-input fence", (_label, extra) => {
     expect(() => projectReportCardsBaseInputIdentity({ ...projectedInput(), ...extra })).toThrow();
   });

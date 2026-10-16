@@ -194,20 +194,6 @@ describe("catalog action canonical audit", () => {
     expect(warning).toHaveBeenCalled();
   });
 
-  it("records an explicit repair live request as live despite the preview default", async () => {
-    const sqlite = fixtures.open().sqlite;
-    const db = createSqliteD1(sqlite);
-
-    await auditCatalogActionResponse({
-      db,
-      endpoint: endpoint("remediate-blacklist-amount-gaps"),
-      request: request("/api/remediate-blacklist-amount-gaps?dryRun=false", "repair-live"),
-      response: Response.json({ ok: true }),
-    });
-
-    expect(JSON.parse(rows(sqlite)[0]?.details_json ?? "null")).toMatchObject({ mode: "live" });
-  });
-
   it("does not let a pre-idempotency failure replace the original intent outcome", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);

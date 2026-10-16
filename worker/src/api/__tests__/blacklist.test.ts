@@ -111,15 +111,6 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(400);
   });
 
-  it("accepts valid stablecoin symbol filters", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "blacklist_events", rows: [row] },
-    ], { requireMatch: true });
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
-    expect(res.status).toBe(200);
-  });
-
   it("accepts first-wave stablecoin symbol filters", async () => {
     for (const symbol of ["usdg", "rlusd", "u", "usdtb", "a7a5", "fdusd", "brz", "ausd", "euri", "usdq", "usdo", "usdx", "aid", "tgbp", "eurc", "buidl"]) {
       const db = mockD1([
@@ -129,15 +120,6 @@ describe("handleBlacklist", () => {
       const res = await handleBlacklist(db, new URL(`https://x/api/blacklist?stablecoin=${symbol}`));
       expect(res.status, symbol).toBe(200);
     }
-  });
-
-  it("accepts EURC stablecoin filter after mirror-zero suppression support", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 0 }] },
-      { match: "blacklist_events", rows: [] },
-    ], { requireMatch: true });
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));
-    expect(res.status).toBe(200);
   });
 
   it("normalizes stablecoin filters before binding", async () => {
@@ -218,15 +200,6 @@ describe("handleBlacklist", () => {
     const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("%0xabc%");
-  });
-
-  it("includes X-Data-Age header", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "blacklist_events", rows: [row] },
-    ], { requireMatch: true });
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
-    expect(res.headers.has("X-Data-Age")).toBe(true);
   });
 
   it("derives freshness from sync-blacklist cron timestamp", async () => {

@@ -5,9 +5,10 @@ import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
   type MergedRow,
   type SelectorInput,
+  type SelectorData,
   type SelectorProfile,
 } from "../types";
-import { buildFixtureData, FIXTURE_DATASET, makeInput, makeMergedRowWithIdentity } from "./fixture";
+import { buildFixtureData, FIXTURE_DATASET, FIXTURE_ROWS, makeInput, makeMergedRowWithIdentity } from "./fixture";
 import { makeYieldRailRow } from "./engine.test-support";
 
 afterEach(() => vi.restoreAllMocks());
@@ -338,69 +339,6 @@ describe("runSelector — Yield happy path", () => {
         expect(rec.recommendedSource.protocol).toBeTypeOf("string");
         expect(rec.recommendedSource.chain).toBeTypeOf("string");
       }
-    }
-  });
-
-  it("selects a Yield altSource that matches venue preferences when available", () => {
-    const rows = new Map(buildFixtureData().rows);
-    const base = rows.get("usdc-circle");
-    expect(base).toBeDefined();
-    rows.set("usdc-circle", {
-      ...base!,
-      yieldSources: [
-        {
-          sourceKey: "primary-wrapper",
-          protocol: "Issuer wrapper",
-          chain: "Ethereum",
-          yieldType: "rebase",
-          apy30d: 4.8,
-          pharosYieldScore: 78,
-          sourceTvlUsd: 100_000_000,
-          dataSource: "test",
-          sourceRiskScore: 15,
-          venueRiskTier: "low",
-          deploymentPlace: "issuer-savings",
-          sourceDepthRatio: 0.8,
-          sourceSwitchCount30d: 0,
-          observationCount30d: 30,
-          freshness: { capturedAt: 1_700_000_000, ageSeconds: 120 },
-          isPrimary: true,
-        },
-        {
-          sourceKey: "dex-lp",
-          protocol: "Curve",
-          chain: "Ethereum",
-          yieldType: "lp-receipt",
-          apy30d: 4.5,
-          pharosYieldScore: 78,
-          sourceTvlUsd: 80_000_000,
-          dataSource: "test",
-          sourceRiskScore: 18,
-          venueRiskTier: "low",
-          deploymentPlace: "lp",
-          sourceDepthRatio: 0.7,
-          sourceSwitchCount30d: 0,
-          observationCount30d: 30,
-          freshness: { capturedAt: 1_700_000_000, ageSeconds: 90 },
-          isPrimary: false,
-        },
-      ],
-    });
-
-    const out = runSelector(
-      makeInput({
-        profile: "yield",
-        depegTolerance: "tight",
-        venuePreferences: ["dex"],
-      }),
-      { rows },
-      FIXTURE_DATASET,
-    );
-    const usdc = out.recommended.find((rec) => rec.id === "usdc-circle");
-    expect(usdc?.profile).toBe("yield");
-    if (usdc?.profile === "yield") {
-      expect(usdc.recommendedSource.sourceKey).toBe("dex-lp");
-      expect(usdc.recommendedSource.selectionReason).toBe("venue-preference");
     }
   });
 
@@ -852,36 +790,6 @@ describe("runSelector — universal properties", () => {
     expect(out.recommended[1]?.rankRobustness?.label).toBe("concentration-adjusted");
   });
 
-  it("every selectable peg/profile route has at least one recommendation in a covered universe", () => {
-    const base = buildFixtureData().rows.get("usdc-circle");
-    expect(base).toBeDefined();
-    const rows = new Map<string, MergedRow>();
-    for (const pegCurrency of SELECTOR_ELIGIBLE_PEG_CURRENCIES) {
-      const row: MergedRow = {
-        ...base!,
-        id: `${pegCurrency.toLowerCase()}-route-candidate`,
-        symbol: pegCurrency === "GOLD" ? "PAXG" : pegCurrency,
-        name: `${pegCurrency} route candidate`,
-        protocolSlug: `${pegCurrency.toLowerCase()}-route-candidate`,
-        variantOf: null,
-        pegCurrency,
-        activeDepeg: false,
-        currentDeviationBps: 0,
-        depegEventCount: 0,
-        supplyUsd: 100_000_000,
-      };
-      rows.set(row.id, row);
-    }
-
-    for (const input of routeInputs()) {
-      const out = runSelector(input, { rows }, FIXTURE_DATASET);
-      expect(
-        out.recommended.length,
-        `${input.pegCurrency}/${input.profile}/${input.horizon}/${input.depegTolerance}/${input.composability}/${input.exitSpeed}`,
-      ).toBeGreaterThan(0);
-    }
-  });
-
   it("never recommends an NR asset across the combinatorial route suite", () => {
     const data = buildFixtureData();
     for (const input of routeInputs()) {
@@ -1027,11 +935,6 @@ describe("runSelector — universal properties", () => {
 });
 
 describe("runSelector — purity", () => {
-  it("does not emit the removed ambient debug survivor payload", () => {
-    const output = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
-    expect(output).not.toHaveProperty("debug");
-  });
-
   it("does not mutate inputs or depend on ambient clocks and randomness", () => {
     const first = structuredClone(buildFixtureData());
     const before = structuredClone(first);
@@ -1046,4 +949,82 @@ describe("runSelector — purity", () => {
     expect(second).toEqual(before);
     expect(a).toEqual(b);
   });
+});
+
+/**
+ * Build a `SelectorData` over a transformed fixture. Used to construct
+ * adversarial scenarios where the data deliberately can't pass an exclusion
+ * gate (e.g. all coins carry a fresh active depeg).
+ */
+function harshFixture(transform: (row: MergedRow) => MergedRow): SelectorData {
+  const rows = new Map<string, MergedRow>();
+  for (const row of FIXTURE_ROWS) {
+    rows.set(row.id, transform(row));
+  }
+  return { rows };
+}
+
+const ADVERSARIAL_INPUTS: Array<{
+  name: string;
+  input: SelectorInput;
+  data: SelectorData;
+}> = [
+  {
+    // All universe coins carry a fresh 60 bps deviation → fails zero-tolerance.
+    name: "Treasury × zero tolerance × fixture-wide deviation",
+    input: makeInput({
+      profile: "treasury",
+      horizon: "6mplus",
+      depegTolerance: "zero",
+      composability: "none",
+      exitSpeed: "any",
+    }),
+    data: harshFixture((row) => ({
+      ...row,
+      activeDepeg: true,
+      currentDeviationBps: 60,
+    })),
+  },
+  {
+    name: "Yield × minApy=20 × yieldNativeOnly=true × zero tolerance",
+    input: makeInput({
+      profile: "yield",
+      horizon: "1to4w",
+      depegTolerance: "zero",
+      composability: "high",
+      exitSpeed: "any",
+      minApy: 20,
+      yieldNativeOnly: true,
+    }),
+    data: buildFixtureData(),
+  },
+  {
+    // All universe coins flagged with an active depeg > 50bps under zero tolerance.
+    name: "Trading × 1h × zero tolerance × fixture-wide deviation",
+    input: makeInput({
+      profile: "trading",
+      horizon: "lt24h",
+      depegTolerance: "zero",
+      composability: "high",
+      exitSpeed: "1h",
+    }),
+    data: harshFixture((row) => ({
+      ...row,
+      activeDepeg: true,
+      currentDeviationBps: 60,
+    })),
+  },
+];
+
+describe("empty-state reachable per profile", () => {
+  it.each(ADVERSARIAL_INPUTS)(
+    "$name → 0 survivors",
+    ({ input, data }) => {
+      const out = runSelector(input, data, FIXTURE_DATASET);
+      expect(out.recommended.length).toBe(0);
+      expect(out.lowConfidence).toBe(true);
+      if (input.profile === "treasury") expect(out.lowerRanked.length).toBeLessThanOrEqual(2);
+    },
+  );
+
 });

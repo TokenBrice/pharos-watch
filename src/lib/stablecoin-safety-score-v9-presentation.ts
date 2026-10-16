@@ -1,5 +1,4 @@
 export {
-  describeSafetyScoreV9Components,
   humanizeSafetyScoreV9Value,
 } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 export {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   parseJson,
@@ -9,10 +9,6 @@ import {
 } from "../json-parse";
 
 describe("json parse helpers", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("parses valid JSON and preserves JSON null values", () => {
     expect(parseJson(JSON.stringify({ ok: true }))).toEqual({ ok: true, value: { ok: true } });
     expect(tryParseJson("null")).toBeNull();
@@ -40,29 +36,4 @@ describe("json parse helpers", () => {
     expect(parseJsonObjectWithSchema("{bad-json", schema)).toBeNull();
   });
 
-  it("emits context-aware parse failures when requested", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    const parsed = parseJson("{bad-json", "test-context");
-
-    expect(parsed.ok).toBe(false);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[json-parse] Failed to parse JSON (test-context):"),
-    );
-  });
-
-  it("lets callers record parse failures without console warnings", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const failures: Array<{ context?: string; message: string }> = [];
-
-    const parsed = parseJson("{bad-json", {
-      context: "custom-recorder",
-      onFailure: (failure) => failures.push(failure),
-    });
-
-    expect(parsed.ok).toBe(false);
-    expect(failures).toHaveLength(1);
-    expect(failures[0]?.context).toBe("custom-recorder");
-    expect(warnSpy).not.toHaveBeenCalled();
-  });
 });

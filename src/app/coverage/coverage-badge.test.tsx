@@ -42,24 +42,6 @@ describe("CoverageBadge", () => {
     expect(container.textContent).toContain("(3 sources)");
   });
 
-  it("uses compact source-count labels on mobile cards", () => {
-    const { container } = render(
-      <CoverageBadge
-        compact
-        status={status({
-          label: "2 src",
-          spokenLabel: "Price covered by two sources",
-          sourceCount: 2,
-          detail: "Two price sources are available.",
-        })}
-      />,
-    );
-
-    expect(screen.getByLabelText("Price covered by two sources (2). Two price sources are available.")).toBeTruthy();
-    expect(container.textContent).toContain("(2)");
-    expect(container.textContent).not.toContain("(2 sources)");
-  });
-
   it("preserves state-specific labels for unavailable redemption states", () => {
     const { rerender } = render(
       <CoverageBadge

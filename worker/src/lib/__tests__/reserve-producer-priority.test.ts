@@ -6,7 +6,7 @@ import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { RESERVE_RECOVERY_HEAVY_SLOT_KEYS } from "@shared/lib/scheduled-runner-registry";
 import {
-  createReserveLeaseOwner, getReserveProducerPriority, getReserveRecoveryLookaheadSec,
+  getReserveProducerPriority,
   reserveRecoveryAdmissionSql,
 } from "../reserve-producer-priority";
 import { runCronWithLease } from "../cron-lease-primitives";
@@ -39,10 +39,6 @@ function seedBlocker(fixture: { sqlite: DatabaseSync; now: number }, owner = "le
 }
 
 describe("reserve recovery admission", () => {
-  it("derives the 24-minute producer protection budget", () => {
-    expect(getReserveRecoveryLookaheadSec()).toBe(1440);
-  });
-
   it.each(["2026-10-06T23:47:00Z", "2026-10-07T03:47:00Z"])("protects the exact next-slot boundary across rollover: %s", async (boundary) => {
     const fixture = admittedFixture();
     const target = Date.parse(boundary);
@@ -205,18 +201,6 @@ describe("bounded reserve producer lease waiting", () => {
     expect(work).not.toHaveBeenCalled();
   });
 
-  it("honors a smaller remaining head/slot admission cap", async () => {
-    const fixture = admittedFixture();
-    seedBlocker(fixture, "long-blocker", 900);
-    const work = vi.fn(async () => "published");
-    const pending = runCronWithLease(fixture.db, "sync-live-reserves", work, {
-      acquisitionWait: { deadlineMs: Date.now() + 10000 },
-    });
-    await vi.advanceTimersByTimeAsync(10000);
-    expect(await pending).toMatchObject({ status: "skipped_locked", leaseWaitDurationMs: 10000 });
-    expect(work).not.toHaveBeenCalled();
-  });
-
   it("aborts waiting without taking over or running the producer", async () => {
     const fixture = admittedFixture();
     seedBlocker(fixture);
@@ -231,19 +215,6 @@ describe("bounded reserve producer lease waiting", () => {
     await rejected;
     expect(work).not.toHaveBeenCalled();
     expect(fixture.sqlite.prepare("SELECT lease_owner FROM cron_leases").get()).toEqual({ lease_owner: "legacy-owner" });
-  });
-
-  it("attributes the actual structured holder separately from the requester", async () => {
-    const fixture = admittedFixture();
-    const owner = createReserveLeaseOwner("holder-id", "reserve-recovery", "reserve-config-recovery", {
-      invocationId: "holder-invocation", scheduleKey: "fiveMinuteReserveRecovery", slotStartedAt: fixture.now,
-    });
-    seedBlocker(fixture, owner);
-    expect(await runCronWithLease(fixture.db, "sync-live-reserves", async () => {}, { owner: "requester" }))
-      .toMatchObject({ status: "skipped_locked", leaseOwner: "requester", blockedBy: {
-        leaseJob: "sync-live-reserves", leaseOwner: owner, holderJob: "reserve-recovery", path: "reserve-config-recovery",
-        invocationId: "holder-invocation", scheduleKey: "fiveMinuteReserveRecovery", slotStartedAt: fixture.now,
-      } });
   });
 
   it("never infers a legacy holder from the lease key or another owner's progress", async () => {

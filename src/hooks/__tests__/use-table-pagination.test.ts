@@ -17,15 +17,6 @@ describe("reconcilePaginationStateOnTotalChange", () => {
     state = reconcilePaginationStateOnTotalChange(state, 60, true);
     expect(state).toEqual({ page: 0, totalRowsSnapshot: 60 });
   });
-
-  it("keeps state when reset-on-change is disabled", () => {
-    const state = reconcilePaginationStateOnTotalChange(
-      { page: 3, totalRowsSnapshot: 100 },
-      20,
-      false
-    );
-    expect(state).toEqual({ page: 3, totalRowsSnapshot: 100 });
-  });
 });
 
 describe("derivePagination", () => {

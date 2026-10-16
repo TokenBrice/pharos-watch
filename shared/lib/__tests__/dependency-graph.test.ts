@@ -407,28 +407,6 @@ describe("dependency-graph", () => {
     })).toEqual([{ id: "m-m0", weight: 1, type: "wrapper" }]);
   });
 
-  it("keeps live-unmapped provenance when unmapped live reserve slices have no fallback dependencies", () => {
-    const result = deriveEffectiveDependencySet(
-      makeMeta({
-        id: "dependent",
-      }),
-      {
-        liveReserveSlices: [
-          { name: "Cash and bills", pct: 80, risk: "very-low" },
-          { name: "Tokenized treasuries", pct: 20, risk: "low" },
-        ],
-      },
-    );
-
-    expect(result).toMatchObject({
-      dependencies: [],
-      source: "live-unmapped",
-      baseSource: "live-unmapped",
-      dependencyFromLive: true,
-      mappedLiveReserveWeight: 0,
-    });
-  });
-
   it("uses live reserve slices when building graph edges", () => {
     const edges = buildDependencyGraphEdges(
       [

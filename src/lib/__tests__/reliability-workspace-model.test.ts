@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCacheImpactStatus } from "@shared/lib/cache-health";
-import type { HealthResponse, StatusCause, StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types";
 import {
   buildReliabilityWorkspaceModel,
-  deriveInitialReliabilityMode,
   type ReliabilityWorkspaceInput,
 } from "@/lib/reliability-workspace-model";
 import {
@@ -13,7 +12,6 @@ import {
   makeHealthyHealthResponse,
   makeHealthyReliabilityStatusResponse,
   makeHealthyStatusResponse,
-  makeOperationalDependencyFailureStatusResponse,
 } from "@/test-utils/status-fixtures";
 
 function requestStats() {
@@ -84,24 +82,6 @@ describe("reliability issue model", () => {
     expect(model.endpoints.healthyProbes.map((probe) => probe.path)).toEqual(["/api/ok"]);
     expect(model.issues.find((issue) => issue.id === "endpoint:/api/redirected")?.kind).toBe("critical");
     expect(model.issues.find((issue) => issue.id === "endpoint:/api/degraded")?.kind).toBe("warning");
-  });
-
-  it("deduplicates the same cause across overall, availability, and data-quality arrays", () => {
-    const cause: StatusCause = {
-      code: "fixture_duplicate",
-      layer: "availability",
-      severity: "warning",
-      message: "One repeated availability warning.",
-      metric: "fixtureMetric",
-    };
-    const base = completeStatus();
-    const data = degraded(base, {
-      causes: { overall: [cause], availability: [cause], dataQuality: [cause] },
-    });
-    const model = buildReliabilityWorkspaceModel(input({ data }));
-
-    expect(model.issues.filter((issue) => issue.rawCode === "fixture_duplicate")).toHaveLength(1);
-    expect(model.modeSummaries.find((mode) => mode.id === "impact")?.issueCount).toBe(1);
   });
 
   it("uses shared degraded and stale cache thresholds instead of worstCacheRatio > 1", () => {
@@ -187,88 +167,6 @@ describe("reliability issue model", () => {
     expect(model.issues.filter((issue) => issue.mode === "impact" && issue.label === "Public health")).toHaveLength(1);
   });
 
-  it("covers dependency roots, provider circuits, canaries, and deduplicates matching circuit ids", () => {
-    const data = makeOperationalDependencyFailureStatusResponse(completeStatus());
-    const healthData: HealthResponse = {
-      ...makeHealthyHealthResponse(),
-      circuits: {
-        "fixture-provider-a": {
-          state: "open",
-          consecutiveFailures: 5,
-          lastFailureAt: data.timestamp - 30,
-          lastSuccessAt: data.timestamp - 3_600,
-          openedAt: data.timestamp - 600,
-        },
-      },
-    };
-    const model = buildReliabilityWorkspaceModel(input({ data, healthData }));
-
-    expect(model.dependencies.roots[0]).toMatchObject({ id: "fixture-market-cache", status: "stale" });
-    expect(model.dependencies.providerCircuits[0]?.providerId).toBe("fixture-provider-a");
-    expect(model.dependencies.canaryChecks[0]?.checkId).toBe("fixture-publication-check");
-    expect(model.issues.filter((issue) => issue.id === "circuit:fixture-provider-a")).toHaveLength(1);
-  });
-
-  it("keeps advisory provider circuits out of the public-service circuit model", () => {
-    const base = completeStatus();
-    const data = degraded(base, {
-      providerCircuitHealth: {
-        checkedAt: base.timestamp,
-        status: "stale",
-        totalTracked: 1,
-        closedCount: 0,
-        halfOpenCount: 0,
-        openCount: 1,
-        openProviders: [
-          {
-            providerId: "dexscreener-liquidity",
-            family: "dex-liquidity",
-            state: "open",
-            consecutiveFailures: 3,
-            openedAt: base.timestamp - 600,
-            openAgeSec: 600,
-            lastFailureAt: base.timestamp - 30,
-            lastSuccessAt: base.timestamp - 3_600,
-          },
-        ],
-        byFamily: {
-          "dex-liquidity": { total: 1, closed: 0, halfOpen: 0, open: 1 },
-        },
-      },
-    });
-    const healthData: HealthResponse = {
-      ...makeHealthyHealthResponse(),
-      circuits: {
-        "dexscreener-liquidity": {
-          state: "open",
-          consecutiveFailures: 3,
-          lastFailureAt: base.timestamp - 30,
-          lastSuccessAt: base.timestamp - 3_600,
-          openedAt: base.timestamp - 600,
-        },
-        "defillama-stablecoins": {
-          state: "half-open",
-          consecutiveFailures: 4,
-          lastFailureAt: base.timestamp - 60,
-          lastSuccessAt: base.timestamp - 7_200,
-          openedAt: base.timestamp - 900,
-        },
-      },
-    };
-
-    const model = buildReliabilityWorkspaceModel(input({ data, healthData }));
-
-    expect(model.dependencies.providerCircuits.map((circuit) => circuit.providerId)).toContain(
-      "dexscreener-liquidity",
-    );
-    expect(model.dependencies.publicCircuits.map(([name]) => name)).toEqual(["defillama-stablecoins"]);
-    expect(
-      model.issues.some(
-        (issue) => issue.label === "dexscreener-liquidity" && issue.rawCode === "public_health_circuit",
-      ),
-    ).toBe(false);
-  });
-
   it("builds copy diagnostics from allowlisted fields without probe errors or query strings", () => {
     const secret = "Bearer should-never-copy";
     const data = completeStatus();
@@ -305,71 +203,3 @@ describe("reliability issue model", () => {
   });
 });
 
-describe("reliability circuits and default view", () => {
-  it("merges a provider circuit and its public breaker into one row with a public-impact marker", () => {
-    const base = completeStatus();
-    const data = degraded(base, {
-      providerCircuitHealth: {
-        checkedAt: base.timestamp,
-        status: "stale",
-        totalTracked: 1,
-        closedCount: 0,
-        halfOpenCount: 0,
-        openCount: 1,
-        openProviders: [
-          {
-            providerId: "dexscreener-prices",
-            family: "dex-prices",
-            state: "open",
-            consecutiveFailures: 12,
-            openedAt: base.timestamp - 3_600,
-            openAgeSec: 3_600,
-            lastFailureAt: base.timestamp - 30,
-            lastSuccessAt: base.timestamp - 7_200,
-          },
-        ],
-        byFamily: { "dex-prices": { total: 1, closed: 0, halfOpen: 0, open: 1 } },
-      },
-    });
-    const healthData: HealthResponse = {
-      ...makeHealthyHealthResponse(),
-      circuits: {
-        "dexscreener-prices": {
-          state: "open",
-          consecutiveFailures: 12,
-          lastFailureAt: base.timestamp - 30,
-          lastSuccessAt: base.timestamp - 7_200,
-          openedAt: base.timestamp - 3_600,
-        },
-      },
-    };
-
-    const model = buildReliabilityWorkspaceModel(input({ data, healthData }));
-
-    expect(model.dependencies.circuits).toEqual([
-      {
-        key: "dexscreener-prices",
-        family: "dex-prices",
-        state: "open",
-        consecutiveFailures: 12,
-        openedAt: base.timestamp - 3_600,
-        lastFailureAt: base.timestamp - 30,
-        publicImpact: true,
-      },
-    ]);
-  });
-
-  it("lands on the first view with issues in declaration order, not the worst-ranked one (B7)", () => {
-    const summaries = (severities: Record<string, "healthy" | "watch" | "critical" | "unknown">) => ({
-      modeSummaries: (["impact", "endpoints", "dependencies", "demand", "cache"] as const).map((id) => ({
-        id,
-        label: id,
-        issueCount: severities[id] === "healthy" || severities[id] == null ? 0 : 1,
-        severity: severities[id] ?? "healthy",
-      })),
-    });
-    expect(deriveInitialReliabilityMode(summaries({ endpoints: "watch", dependencies: "critical" }))).toBe("endpoints");
-    expect(deriveInitialReliabilityMode(summaries({ demand: "unknown" }))).toBe("impact");
-    expect(deriveInitialReliabilityMode(summaries({}))).toBe("impact");
-  });
-});

@@ -1,27 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { serializeCronMetadata, type StructuredCronResult } from "../cron-result";
+import type { StructuredCronResult } from "../cron-result";
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import type { CronResultStatus, CronRunStatus } from "@shared/types/status/cron";
-
-describe("serializeCronMetadata", () => {
-  it("serializes structured metadata as a CronResult-compatible string", () => {
-    const metadata = serializeCronMetadata({
-      reason: "cache-fresh",
-      rowsWritten: 0,
-      flags: ["cooldown"],
-      nested: { ok: true },
-    });
-
-    expect(metadata).toBe(
-      '{"reason":"cache-fresh","rowsWritten":0,"flags":["cooldown"],"nested":{"ok":true}}',
-    );
-  });
-
-  it("omits metadata when no object is supplied", () => {
-    expect(serializeCronMetadata(null)).toBeUndefined();
-    expect(serializeCronMetadata(undefined)).toBeUndefined();
-  });
-});
 
 describe("cron result boundaries", () => {
   it("requires a string reason for every non-ok factory input", () => {

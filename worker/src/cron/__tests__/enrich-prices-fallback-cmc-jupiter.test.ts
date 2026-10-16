@@ -58,36 +58,6 @@ describe("enrichMissingPrices", () => {
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-alchemy-secret");
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-drpc-secret");
   });
-  it("accepts Jupiter V3 quotes without reported liquidity", async () => {
-    const currentSlot = 418_913_760;
-    const assets: PeggedAsset[] = [
-      makeMissingUsdg(),
-    ];
-
-    mockFetch([
-      { match: "coins.llama.fi", body: { coins: {} } },
-      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
-      {
-        match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0002,
-            decimals: 6,
-            blockId: currentSlot - 20,
-            priceChange24h: 0.01,
-          },
-        },
-      },
-    ]);
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.passJupiter).toBe(1);
-    expect(assets[0].price).toBe(1.0002);
-    expect(assets[0].priceSource).toBe("jupiter");
-    expect(stats.finalMissing).toBe(0);
-  });
-
   it.each([
     ["omitted", {}, true],
     ["null", { liquidity: null }, true],

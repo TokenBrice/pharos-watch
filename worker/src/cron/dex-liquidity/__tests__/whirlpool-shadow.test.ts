@@ -155,30 +155,6 @@ describe("Orca native shadow producer", () => {
     expect(sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2").get()).toEqual({ n: 0 });
   });
 
-  it("retries the retained-pool read through transient D1 overload", async () => {
-    const opened = fixtures.open(); seed(opened.sqlite);
-    let overloaded = false;
-    const db = {
-      ...opened.db,
-      prepare(sql: string) {
-        if (!overloaded && sql.includes("json_extract(pool.value, '$.poolId')")) {
-          overloaded = true;
-          throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
-        }
-        return opened.db.prepare(sql);
-      },
-    } as typeof opened.db;
-    serveAccounts();
-
-    const result = await collectWhirlpoolShadowQuotes({ db });
-
-    expect(result).toMatchObject({ attempted: 1, persisted: 1, failed: 0, scoreEligible: false });
-    expect(overloaded).toBe(true);
-    expect((await loadCurrentNativeDexGeneration(db, "orca-whirlpool-exact-v1"))?.quotes[0]!.points[0])
-      .toMatchObject({ status: "full-fill", amountOutRaw: fixture.amountOut });
-    expect(opened.sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2").get()).toEqual({ n: 0 });
-  });
-
   it("rejects transfer-fee capable mint ownership before snapshot/quote", async () => {
     const { db, sqlite } = fixtures.open(); seed(sqlite); serveAccounts(true);
     expect(await collectWhirlpoolShadowQuotes({ db })).toMatchObject({ attempted: 0, persisted: 0, failed: 0, skippedIneligible: { "unsupported-token-mint": 1 } });

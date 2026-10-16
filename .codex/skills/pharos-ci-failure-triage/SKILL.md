@@ -40,10 +40,10 @@ Start with narrow diagnosis, not broad release gates, retries, or timeout change
 
 ## Checks Owned By The Verifier
 
-The assigned verifier reruns focused reproductions after causal edits; these are authoring feedback, not readiness proof. Before **every authorized replacement push**, follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness), the sole ordered runtime/ref/artifact/plain-check procedure, including parity and coverage/Pages supplements when applicable. Require a fresh passing `.tmp/pr-check-receipts/<HEAD>.json` for final committed HEAD; edits/integration invalidate proof. Push once through protected main, never directly to `main`; release policy owns authorization. `check:release` is only a requested production rehearsal.
+The assigned verifier reruns focused reproductions after causal edits; these are authoring feedback, not readiness proof. Use `npm run check:pr` under [Pre-push readiness](../../../docs/testing.md#pre-push-readiness) before an authorized replacement push; hosted CI is the readiness authority and local receipts are optional diagnostics. Push once through the protected-main PR path, never directly to `main`; release policy owns authorization. `check:release` is only a requested production rehearsal.
 
 Use `npm run check:pr -- --explain-receipt` for read-only receipt diagnosis: local Git state only, no fetch/check execution/receipt rewrite/staging/push authorization. Exit success only means diagnosis completed, even for missing/failed/stale evidence; remote-base freshness remains unknown. It never replaces readiness.
 
 ## Completion Evidence
 
-Report every failed leaf/root cause, changed files, focused verifier results, full readiness/current-HEAD receipt before replacement push, retrigger/run/deploy proof, separate operational evidence, and unresolved external risks. Continue until clear when requested; stop only for a proven external blocker or missing authority.
+Report every failed leaf/root cause, changed files, focused verifier results, retrigger/run/deploy proof, separate operational evidence, and unresolved external risks. Continue until clear when requested; stop only for a proven external blocker or missing authority.

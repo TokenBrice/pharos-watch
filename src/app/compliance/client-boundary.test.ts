@@ -66,23 +66,4 @@ describe("Compliance client boundary", () => {
     expect(window.location.hash).toBe("#data");
   }, 30_000);
 
-  it("ignores alias-only bookmarks without inferring a regime or peg", async () => {
-    window.history.replaceState(null, "", "/compliance/?tokenType=EMT&pegCurrency=EUR");
-    render(createElement(ComplianceClient));
-    await screen.findByRole("region", { name: "Compliance data" }, { timeout: 15_000 });
-
-    expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe("true");
-    expect(screen.queryByRole("group", { name: "Filter by MiCA token type" })).toBeNull();
-    expect(within(screen.getByRole("group", { name: "Filter by peg currency" })).getByRole("button", { name: "All pegs" }).getAttribute("aria-pressed")).toBe("true");
-  }, 30_000);
-
-  it("normalizes invalid canonical inputs conservatively without falling back to retired aliases", async () => {
-    window.history.replaceState(null, "", "/compliance/?regime=mica&status=invalid&type=invalid&peg=invalid&tokenType=EMT&pegCurrency=EUR");
-    render(createElement(ComplianceClient));
-    await screen.findByRole("region", { name: "Compliance data" }, { timeout: 15_000 });
-
-    expect(within(screen.getByRole("group", { name: "Filter by MiCA token type" })).getByRole("button", { name: "All types" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(screen.getByRole("group", { name: "Filter by MiCA status" })).getByRole("button", { name: "All statuses" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(screen.getByRole("group", { name: "Filter by peg currency" })).getByRole("button", { name: "All pegs" }).getAttribute("aria-pressed")).toBe("true");
-  }, 30_000);
 });

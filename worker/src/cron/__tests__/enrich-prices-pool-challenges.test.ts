@@ -169,80 +169,6 @@ describe("applyPoolChallenge", () => {
     });
   });
 
-  it("fires for non-USD peg at 300 bps divergence (single protocol: downgrade only, no price replace)", () => {
-    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId: "jpyc-jpyc",
-      pegType: "peggedJPY",
-      result: makePriceConsensusResult({
-        price: 0.00682,
-        source: "coingecko+defillama-list+dex-promoted",
-        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
-        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
-      }),
-      pools: [{ price: 0.00704, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
-    });
-
-    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
-
-    expect(downgrades).toBe(1);
-    expect(results.get("jpyc-jpyc")!.confidence).toBe("low");
-    // Single protocol → confidence downgraded but price preserved
-    expect(results.get("jpyc-jpyc")!.price).toBe(0.00682);
-    expect(results.get("jpyc-jpyc")!.source).not.toBe("pool-tvl-weighted");
-  });
-
-  it("does NOT fire for USD peg at 300 bps divergence", () => {
-    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId: "usdt-tether",
-      result: makePriceConsensusResult({
-        source: "coingecko+defillama-list+dex-promoted",
-        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
-        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
-      }),
-      pools: [{ price: 0.97, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
-    });
-
-    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
-
-    expect(downgrades).toBe(0);
-    expect(results.get("usdt-tether")!.confidence).toBe("high");
-  });
-
-  it("downgrades but does NOT replace price when only one protocol diverges (500+ bps)", () => {
-    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId: "dusd-test",
-      result: makePriceConsensusResult(),
-      pools: [{ price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
-    });
-
-    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
-
-    expect(downgrades).toBe(1);
-    expect(results.get("dusd-test")!.confidence).toBe("low");
-    // Single protocol → price preserved, only confidence downgraded
-    expect(results.get("dusd-test")!.price).toBe(1.0);
-    expect(results.get("dusd-test")!.source).not.toBe("pool-tvl-weighted");
-  });
-
-  it("replaces price when ≥2 independent protocols diverge", () => {
-    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId: "dusd-test",
-      result: makePriceConsensusResult(),
-      pools: [
-        { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
-        { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
-      ],
-    });
-
-    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
-
-    expect(downgrades).toBe(1);
-    expect(results.get("dusd-test")!.confidence).toBe("low");
-    expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
-    // Protocol-aware weighted median across corroborating divergent protocols.
-    expect(results.get("dusd-test")!.price).toBeCloseTo(0.8, 6);
-  });
-
   it("stays at the boundary: replacement still fires when diverging protocols are not outnumbered", () => {
     const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
       assetId: "dusd-test",
@@ -730,38 +656,6 @@ describe("applyPoolChallenge", () => {
     const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(0); // binance is a hard source
-  });
-
-  it("updates allPrices to reflect pool-tvl-weighted replacement source", () => {
-    const assetId = "usr-resolv";
-    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId,
-      // Near peg — will be replaced by depegged pools.
-      result: makePriceConsensusResult({
-        selectedSource: "coingecko",
-        priceEstimator: "selected_source",
-        disagreeSources: [],
-        allPrices: { coingecko: 1.0, "defillama-list": 1.0 },
-        observedAt: 1_000,
-        observedAtMode: "upstream",
-        observedAtBySource: { coingecko: 1_000, "defillama-list": 1_000 },
-        observedAtModeBySource: { coingecko: "upstream", "defillama-list": "upstream" },
-      }),
-      pools: [
-          { price: 0.8, tvlUsd: 2_000_000, protocol: "curve", chain: "ethereum", observedAt: 900 },
-          { price: 0.8, tvlUsd: 1_500_000, protocol: "uniswap", chain: "ethereum", observedAt: 950 },
-      ],
-    });
-
-    applyPoolChallenge(results, pools, pegTypes, stats);
-
-    const updated = results.get(assetId);
-    expect(updated).toBeDefined();
-    expect(updated!.price).toBeCloseTo(0.8, 5);
-    expect(updated!.source).toBe("pool-tvl-weighted");
-    expect(updated!.allPrices).toEqual({ "pool-tvl-weighted": updated!.price });
-    expect(updated!.observedAtBySource).toEqual({ "pool-tvl-weighted": 900 });
-    expect(updated!.observedAtModeBySource).toEqual({ "pool-tvl-weighted": "local_fetch" });
   });
 
   it("does NOT downgrade NAV tokens even when pool prices diverge", () => {

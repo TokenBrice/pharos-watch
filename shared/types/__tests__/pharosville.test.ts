@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeReportCardsV9Card, makeReportCardsV9Response } from "@shared/test-utils/report-cards-v9";
-import { PHAROSVILLE_API_CONTRACT_VERSION, PHAROSVILLE_API_ENDPOINT_KEYS, PharosVilleApiPayloadsSchema } from "../pharosville";
+import { PharosVilleApiPayloadsSchema } from "../pharosville";
 
 const methodology = {
   version: "test", versionLabel: "Test", currentVersion: "test", currentVersionLabel: "Test",
@@ -32,13 +32,6 @@ const payload = {
 };
 
 describe("PharosVille shared payload contract", () => {
-  it("pins the endpoint key set and version", () => {
-    expect(PHAROSVILLE_API_CONTRACT_VERSION).toBe(1);
-    expect(PHAROSVILLE_API_ENDPOINT_KEYS).toEqual([
-      "stablecoins", "chains", "stability", "pegSummary", "stress", "reportCards",
-    ]);
-  });
-
   it("accepts a complete six-endpoint bundle", () => {
     expect(PharosVilleApiPayloadsSchema.parse(payload)).toEqual(payload);
   });

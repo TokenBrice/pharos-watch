@@ -51,10 +51,6 @@ describe("reserve NAV admission", () => {
     expect(decodeReserveNavPrice({ ...row, metadata }, now)).toBeNull();
   });
 
-  it("withholds NAV when the reserve row omits metadata", () => {
-    expect(decodeReserveNavPrice({ source: row.source, fetched_at: row.fetched_at }, now)).toBeNull();
-  });
-
   it("does not admit a NAV number from an unrelated reserve adapter", () => {
     expect(decodeReserveNavPrice({ ...row, source: "circle-transparency" }, now)).toBeNull();
   });

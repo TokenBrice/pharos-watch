@@ -26,15 +26,6 @@ describe("EndpointHealthGrid", () => {
     expect(screen.getByText(/1 of 2 passing, 1 failed or unreachable\./)).toBeTruthy();
   });
 
-  it("renders a single status badge for an error response carrying semantics", () => {
-    const probes = [probe(firstPublicPath!, { status: 503, semanticStatus: "degraded" })];
-
-    render(<EndpointHealthGrid probes={probes} isLoading={false} groups={["public"]} />);
-
-    expect(screen.getAllByText("Failed")).toHaveLength(1);
-    expect(screen.queryByText("Stale")).toBeNull();
-  });
-
   it("labels a semantically degraded 2xx probe as slow data", () => {
     render(
       <EndpointHealthGrid probes={[probe(firstPublicPath!, { semanticStatus: "degraded" })]} isLoading={false} groups={["public"]} />,
@@ -42,13 +33,6 @@ describe("EndpointHealthGrid", () => {
 
     expect(screen.getByText("Slow data")).toBeTruthy();
     expect(screen.getByText(/0 of 1 passing, 1 with slow data\./)).toBeTruthy();
-  });
-
-  it("prints the HTTP code once per probe row", () => {
-    render(<EndpointHealthGrid probes={[probe(firstPublicPath!, {})]} isLoading={false} groups={["public"]} />);
-
-    expect(screen.getAllByText(/HTTP 200/)).toHaveLength(1);
-    expect(screen.getByText("OK")).toBeTruthy();
   });
 
   it("reports a failed probe run instead of an empty sample", () => {

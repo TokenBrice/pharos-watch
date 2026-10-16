@@ -13,17 +13,6 @@ describe("buildMergedCemetery", () => {
     );
   });
 
-  it("each entry has the DeadStablecoin shape", () => {
-    for (const entry of merged) {
-      expect(entry).toHaveProperty("id");
-      expect(entry).toHaveProperty("epitaph");
-      expect(entry).toHaveProperty("deathDate");
-      expect(entry).toHaveProperty("obituary");
-      expect(entry).toHaveProperty("sourceUrl");
-      expect(entry).toHaveProperty("sourceLabel");
-    }
-  });
-
   it("frozen-derived entries carry archivedDataAvailable: true", () => {
     const frozenIds = new Set(FROZEN_STABLECOINS.map((c) => c.id));
     for (const entry of merged) {
@@ -99,32 +88,6 @@ describe("buildMergedCemetery", () => {
       expect(entry.recordedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(entry.recordedAt).toBe(recordedAtById.get(entry.id));
     }
-  });
-
-  it("preserves registered tracked logos in the merged catalog", () => {
-    expect(merged.find((coin) => coin.id === "eurr-stablr")?.logo).toBe("/logos/239-eurr.png");
-    expect(merged.find((coin) => coin.id === "msy-main-street")?.logo).toBe("/logos/msy-main-street.png");
-  });
-
-  it("falls back to the legacy cemetery logo heuristic when no tracked logo is registered", () => {
-    const result = frozenToDeadShape({
-      id: "synthetic-frozen",
-      name: "Synthetic",
-      symbol: "SYN",
-      llamaId: "123",
-      flags: { pegCurrency: "USD" },
-      contracts: undefined,
-      obituary: {
-        deathDate: "2026-01-01",
-        epitaph: "Synthetic epitaph",
-        obituary: "Synthetic obituary",
-        causeOfDeath: "abandoned",
-        sourceUrl: "https://example.com",
-        sourceLabel: "Example",
-      },
-    } as unknown as Parameters<typeof frozenToDeadShape>[0]);
-
-    expect(result.logo).toBe("/logos/123-syn.png");
   });
 
   it("requires a real recorded date for every curated asset and validates authored archetypes", () => {

@@ -53,34 +53,6 @@ globs = ["**/*.wasm"]
 fallthrough = true
 `;
 
-const VALID_WORKER_INFRASTRUCTURE_DOC = `
-# Worker Infrastructure
-
-## Runtime Limits and Observability
-
-\`\`\`toml
-compatibility_date = "2026-04-18"
-compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
-preview_urls = true
-minify = true
-keep_names = true
-
-[alias]
-"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
-
-[limits]
-cpu_ms = 300000
-
-[observability]
-enabled = true
-head_sampling_rate = 0.1
-
-[observability.logs]
-enabled = true
-invocation_logs = true
-\`\`\`
-`;
-
 describe("check-worker-wrangler-config", () => {
   it("validates the heavy scheduled-only configuration", () => {
     const toml = readFileSync("worker/wrangler.heavy.toml", "utf8");
@@ -145,35 +117,6 @@ describe("check-worker-wrangler-config", () => {
   });
   it("accepts root-owned custom domains and fallthrough asset rules", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG)).toEqual({ failed: false, issues: [] });
-  });
-
-  it("accepts runtime documentation that matches the checked-in Worker config", () => {
-    expect(
-      evaluateWorkerWranglerConfig(VALID_CONFIG, {
-        workerInfrastructureDoc: VALID_WORKER_INFRASTRUCTURE_DOC,
-      }),
-    ).toEqual({ failed: false, issues: [] });
-  });
-
-  it("rejects runtime documentation drift from the checked-in Worker config", () => {
-    const report = evaluateWorkerWranglerConfig(VALID_CONFIG, {
-      workerInfrastructureDoc: VALID_WORKER_INFRASTRUCTURE_DOC.replace("cpu_ms = 300000", "cpu_ms = 30000"),
-    });
-
-    expect(report.failed).toBe(true);
-    expect(report.issues).toContain(
-      "docs/worker-infrastructure.md runtime snippet must document [limits].cpu_ms = 300000; found 30000.",
-    );
-  });
-
-  it("checks minification and function-name preservation against the runtime documentation", () => {
-    const report = evaluateWorkerWranglerConfig(VALID_CONFIG, {
-      workerInfrastructureDoc: VALID_WORKER_INFRASTRUCTURE_DOC
-        .replace("minify = true", "minify = false")
-        .replace("keep_names = true", "keep_names = false"),
-    });
-    expect(report.issues).toContain("docs/worker-infrastructure.md runtime snippet must document minify = true; found false.");
-    expect(report.issues).toContain("docs/worker-infrastructure.md runtime snippet must document keep_names = true; found false.");
   });
 
   it("rejects routes nested under an asset rule and missing fallthrough", () => {

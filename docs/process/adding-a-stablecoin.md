@@ -369,12 +369,7 @@ Required fields and their conditions:
 
 Run this gate before saving the per-coin JSON, working manually or through `stablecoin-addition-orchestrator` — the skill routes back to this document rather than carrying its own copy of the rubric, so the check is re-reading the fields against the table above.
 
-Automated backstops:
-
-- The ordinary noncritical test `scripts/__tests__/weekly-curation-digest.test.ts` fails if any active/pre-launch coin lacks a nonblank `oneLiner`.
-- The same test checks the fixed archetype cohort in `scripts/lib/curation-baseline-caps.json`: after frozen and variant exclusions, no member may lack an authored archetype and no baseline ID may be unknown. Cohort size is derived, not a hardcoded total to bump.
-- The same test checks missing independent-audit attestor tiers against its explicitly reviewed exception list, not a hardcoded coverage count.
-- The ordinary noncritical runtime-parser test `src/lib/__tests__/term-markup.test.ts` fails if AI-summary term markup references unknown glossary slugs or leaves raw opening/closing markers.
+The ordinary noncritical runtime-parser test `src/lib/__tests__/term-markup.test.ts` fails if AI-summary term markup references unknown glossary slugs or leaves raw opening/closing markers.
 
 Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional for direct, non-variant assets. `npm run check:stablecoin-data` validates authored `mintAuthority` profiles against the schema and requires active variants to carry an explicit inherited/wrapper review, but it does not require every high-value direct coin to have one yet.
 
@@ -500,8 +495,6 @@ value; do not weaken the assertion.
 | File | What moves | Applies to |
 | --- | --- | --- |
 | `shared/lib/__tests__/stablecoins.test.ts` | `EXPECTED_TRACKED_STABLECOIN_COUNT`, lifecycle ID snapshots, and the implementation-scope variant ID list | Count on every addition; pre-launch snapshot on additions/promotions; variant list for `variantOf` children |
-| `src/components/__tests__/stablecoin-table-logic.test.ts` | `buildTrackedIdSet` variant-set size and the per-`variantKind` ID sets | Variants only |
-| `scripts/__tests__/weekly-curation-digest.test.ts` | Coverage assertions, not hardcoded totals; cohort membership lives in `scripts/lib/curation-baseline-caps.json` | Supply required editorial fields; do not change assertions merely because catalog size changes |
 | `scripts/__tests__/bridge-route-coverage-audit.test.ts` | Registry-derived equality of reviewed profiles and applicable multi-deployment coins | Supply reviewed route rows; no hardcoded count to bump |
 | `src/lib/__tests__/reserve-coinid-validation.test.ts` | A `REVIEWED_WARNING_IDS` entry with the reason | Only when a new `reserves[].name` contains a tracked ticker and the slice intentionally carries no `coinId`. Link the slice with `coinId` instead whenever that is honest. |
 
@@ -851,7 +844,7 @@ Base coin files feed the gitignored `sitemap-dates` projection, which is regener
 npm run check:generated-artifacts -- --only=stablecoin-client-projections
 ```
 
-Run `check:stablecoin-data` first, then focused artifact checks. Run `npm run build` only for rendering changes or an explicit rehearsal. Before every authorized push, follow [Pre-push readiness](../testing.md#pre-push-readiness): converge all generated artifacts and run full plain `npm run check:pr` on the final committed state, requiring a fresh passing HEAD receipt. Focused checks are not readiness proof; GitHub's protected `PR gate` remains authoritative.
+Run `check:stablecoin-data` first, then focused artifact checks. Run `npm run build` only for rendering changes or an explicit rehearsal. Before an authorized push, use `npm run check:pr` for focused authoring feedback under [Pre-push readiness](../testing.md#pre-push-readiness) and keep generated artifacts with their owning source changes. Local receipts are optional diagnostics; GitHub's protected `PR gate` is the readiness authority.
 
 You can also run the individual checks directly when iterating:
 

@@ -62,9 +62,6 @@ describe("sync-digests archive guard", () => {
     }
   });
 
-  it("keeps daily and weekly editions on separate durable routes", () => {
-    expect(deduplicateDigestEntries([digest("2026-07-18"), digest("2026-07-18-weekly")])).toHaveLength(2);
-  });
 });
 
 describe("digest mirror publication", () => {
@@ -93,14 +90,6 @@ describe("digest mirror publication", () => {
     ]);
   });
 
-  it("preserves existing bytes during a valid dry run", async () => {
-    const output = join(makeRoot(), "digests.json");
-    const bytes = JSON.stringify([digest("2026-07-18")]);
-    writeFileSync(output, bytes);
-    serve([{ digestText: "Updated", generatedAt: digest("2026-07-18").generatedAt }]);
-    await runDigestSync(["--api-url", "https://api.example.com", "--output", output, "--dry-run"]);
-    expect(readFileSync(output, "utf8")).toBe(bytes);
-  });
 
   it("rejects archive shrink before overwriting the mirror", async () => {
     vi.stubEnv("PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE", "");

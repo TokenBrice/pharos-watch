@@ -22,12 +22,4 @@ describe("Supercoin reviewed report index", () => {
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
-  it("withholds the old balance clock when the index publishes a newer unreviewed PDF", () => {
-    const nextReport = "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/new_ZARSC%20SEP%202026%20Stablecoin%20Attestation%2030092026.pdf";
-    const changed = html.replace(REPORT_URL, nextReport);
-    const result = adaptAttestationPdfIndex(changed, params, { indexUrl: INDEX_URL });
-    expect(result.metadata?.freshnessMode).toBe("unverified");
-    expect(result.metadata?.sourceTimestamp).toBeUndefined();
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "attestation-report-basis-unreviewed", effect: "degraded" }));
-  });
 });

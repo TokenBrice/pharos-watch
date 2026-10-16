@@ -231,39 +231,31 @@ describe("score projector", () => {
     });
   });
 
-  it("skips a V9 row whose policy identity is incomplete", async () => {
-    const db = mockTapeD1(
-      tables([
-        gradeRow({
-          source_table: "safety_score_history_v2",
-          source_row_id: "safety-score-history:v2:v9:123",
-          row_sort_id: "v2:safety-score-history:v2:v9:123",
-          model: "v9",
-          policy_id: null,
-          policy_digest: null,
-          evaluation_build_digest: "a".repeat(64),
-          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
-          model_publication_generation_id: "safety-score-v9:123",
-        }),
-      ]),
-    ) as MockD1Database;
-
-    const result = await projectScoreUpgraded(db);
-
-    expect(result).toEqual({ projected: 0, advanced: SEC });
-    expect(tapeInsertBinds(db)).toHaveLength(0);
-  });
-
-  it("does not project methodology-boundary baselines as organic movements", async () => {
-    const db = mockTapeD1(
-      tables([
-        gradeRow({
-          transition_kind: "methodology-boundary-baseline",
-          prev_grade: null,
-          prev_score: null,
-        }),
-      ]),
-    ) as MockD1Database;
+  it.each([
+    {
+      name: "skips a V9 row whose policy identity is incomplete",
+      overrides: {
+        source_table: "safety_score_history_v2",
+        source_row_id: "safety-score-history:v2:v9:123",
+        row_sort_id: "v2:safety-score-history:v2:v9:123",
+        model: "v9",
+        policy_id: null,
+        policy_digest: null,
+        evaluation_build_digest: "a".repeat(64),
+        base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+        model_publication_generation_id: "safety-score-v9:123",
+      },
+    },
+    {
+      name: "does not project methodology-boundary baselines as organic movements",
+      overrides: {
+        transition_kind: "methodology-boundary-baseline",
+        prev_grade: null,
+        prev_score: null,
+      },
+    },
+  ])("$name", async ({ overrides }) => {
+    const db = mockTapeD1(tables([gradeRow(overrides)])) as MockD1Database;
 
     const result = await projectScoreUpgraded(db);
 

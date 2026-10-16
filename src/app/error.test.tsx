@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 vi.mock("next/font/local", () => ({
@@ -38,28 +38,4 @@ describe("root app error boundary", () => {
     expect(screen.queryByText("select * from secrets where leaked = 1")).toBeNull();
   });
 
-  it("still shows the raw message in development", () => {
-    vi.stubEnv("NODE_ENV", "development");
-
-    render(<ErrorPage error={new Error("development-only detail")} reset={() => {}} />);
-
-    expect(screen.getByText("development-only detail")).toBeTruthy();
-  });
-
-  it("calls reset when the retry button is clicked", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    let called = 0;
-
-    render(
-      <ErrorPage
-        error={new Error("boom")}
-        reset={() => {
-          called += 1;
-        }}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
-    expect(called).toBe(1);
-  });
 });

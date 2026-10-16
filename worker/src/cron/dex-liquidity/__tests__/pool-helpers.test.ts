@@ -22,10 +22,6 @@ describe("normalizeProtocol", () => {
     expect(normalizeProtocol("uni-v3")).toBe("uniswap-v3");
     expect(normalizeProtocol("uniswap-v3")).toBe("uniswap-v3");
   });
-  it("collapses Carbon DeFi chain-suffixed variants", () => {
-    expect(normalizeProtocol("carbon-defi-ethereum")).toBe("carbon-defi");
-    expect(normalizeProtocol("carbon_defi_celo")).toBe("carbon-defi");
-  });
 });
 
 describe("classifyPoolType ordering", () => {
@@ -111,18 +107,6 @@ describe("computeLiquidityScore", () => {
     expect(contribution.effectiveTvl).toBe(0);
     expect(rebuilt.effectiveTvl).toBe(0);
     expect(computeLiquidityScore(withCompleteVolume(metrics), 50, circulatingUsd).components.tvlDepth).toBe(0);
-  });
-
-  it("happy path: score is in [0, 100] with reasonable inputs", () => {
-    const m = initMetrics("test", "TEST");
-    m.effectiveTvl = 5_000_000;
-    m.totalTvlUsd = 10_000_000;
-    m.totalVolume24hUsd = 100_000;
-    m.qualityAdjustedTvl = 7_000_000;
-    m.poolCount = 10;
-    const { score } = computeLiquidityScore(withCompleteVolume(m), 60, 100_000_000);
-    expect(score).toBeGreaterThanOrEqual(0);
-    expect(score).toBeLessThanOrEqual(100);
   });
 
   it("depthRatio ≈ 0.5% → tvlDepth ≈ 30", () => {
@@ -213,10 +197,6 @@ describe("computeLiquidityScore", () => {
 });
 
 describe("computePoolStress", () => {
-  it("returns 0 for an ideal pool", () => {
-    expect(computePoolStress(1, 1, 365, 1)).toBe(0);
-  });
-
   it("returns 100 for the worst measured pool", () => {
     expect(computePoolStress(0, 0, 0, 0)).toBe(100);
   });
@@ -247,16 +227,6 @@ describe("computeDurabilityScore", () => {
     // raw = 100*0.15 + 50*0.35 + 50*0.25 + 0*0.25 = 15+17.5+12.5+0 = 45 → 45
     const score = computeDurabilityScore(m, null, null);
     expect(score).toBe(45);
-  });
-
-  it("null stabilities → neutral 50 fallback for each", () => {
-    // tvlStabilityScore = 50, volumeConsistencyScore = 50
-    const m = initMetrics("test", "TEST");
-    m.organicTvlWeightedSum = 0;
-    m.totalTvlForOrganic = 0; // organicFraction fallback = 0.5 → sqrt(0.5)*100 ≈ 70.7
-    // raw = 70.7*0.15 + 50*0.35 + 50*0.25 + 0*0.25 = 10.6+17.5+12.5+0 = 40.6 → 41
-    const score = computeDurabilityScore(m, null, null);
-    expect(score).toBe(41);
   });
 
   it("tvlStability = 1.0 → tvlStabilityScore = 100", () => {

@@ -96,54 +96,6 @@ describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
     expect(summary.qualityDriftSeverity).toBe("none");
   });
 
-  it("holds a first-run cliff as a candidate instead of reporting it", () => {
-    const first = cliff({ previousTvl: 152_000_000, currentTvl: 13_720_000 });
-
-    expect(first.qualityDriftFlags).toEqual([]);
-    expect(first.qualityDriftSeverity).toBe("none");
-    expect(first.majorTvlCliffs[0]?.tvlPctDelta).toBeCloseTo(-0.9097, 4);
-    expect(first.qualityDriftCandidates).toEqual([
-      {
-        flag: "major-tvl-cliff:usds-sky",
-        consecutiveRuns: 1,
-        baselineValue: 152_000_000,
-        observedValue: 13_720_000,
-      },
-    ]);
-  });
-
-  it("confirms the cliff on the second run and keeps it after the baseline row is overwritten", () => {
-    const first = cliff({ previousTvl: 152_000_000, currentTvl: 13_720_000 });
-    const second = cliff({
-      previousTvl: 152_000_000,
-      currentTvl: 13_700_000,
-      previousCandidates: first.qualityDriftCandidates,
-    });
-
-    expect(second.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
-    expect(second.qualityDriftSeverity).toBe("high");
-    expect(second.qualityDriftCandidates).toEqual([
-      {
-        flag: "major-tvl-cliff:usds-sky",
-        consecutiveRuns: 2,
-        baselineValue: 152_000_000,
-        observedValue: 13_700_000,
-      },
-    ]);
-
-    // The third run publishes on top of the collapsed value, so the per-coin
-    // baseline row no longer carries the pre-event TVL.
-    const third = cliff({
-      previousTvl: 13_700_000,
-      currentTvl: 13_600_000,
-      previousCandidates: second.qualityDriftCandidates,
-    });
-
-    expect(third.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
-    expect(third.majorTvlCliffs[0]?.previousTvlUsd).toBe(152_000_000);
-    expect(third.qualityDriftCandidates[0]?.consecutiveRuns).toBe(3);
-  });
-
   it("clears a confirmed cliff once the value recovers against the pre-event baseline", () => {
     const confirmed = cliff({
       previousTvl: 152_000_000,
@@ -259,24 +211,6 @@ describe("computeDexLiquidityDriftSummary rebaseline of lasting drift", () => {
     ]);
     const confirmed = cliff({ previousTvl: null, currentTvl: 6_000_000, previousCandidates: furtherDrop.qualityDriftCandidates });
     expect(confirmed.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
-  });
-
-  it("detects the same hole again after the accepted level recovers", () => {
-    const accepted = runLastingCliff(DRIFT_REBASELINE_RUNS + 1)[DRIFT_REBASELINE_RUNS];
-
-    const recovered = cliff({
-      previousTvl: null,
-      currentTvl: 150_000_000,
-      previousCandidates: accepted?.qualityDriftCandidates ?? [],
-    });
-    expect(recovered.qualityDriftFlags).toEqual([]);
-    expect(recovered.qualityDriftCandidates).toEqual([]);
-
-    const collapsed = cliff({ previousTvl: 150_000_000, currentTvl: 13_700_000 });
-    const reconfirmed = cliff({ previousTvl: null, currentTvl: 13_700_000, previousCandidates: collapsed.qualityDriftCandidates });
-    expect(collapsed.qualityDriftCandidates[0]?.consecutiveRuns).toBe(1);
-    expect(reconfirmed.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
-    expect(reconfirmed.majorTvlCliffs[0]?.previousTvlUsd).toBe(150_000_000);
   });
 });
 

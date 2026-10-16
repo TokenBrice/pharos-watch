@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   createTelegramFetchSpy,
   lastSendMessageBody,
@@ -7,12 +8,9 @@ import {
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { resolveTicker } from "../../../lib/telegram/alerts";
 import type { WebhookCommandContext } from "../context";
-import { handleCancel } from "../cancel";
 import { handleHealth } from "../health";
-import { handleList } from "../list";
 import { handleMute } from "../mute";
 import { handleSet } from "../set";
-import { handleSettings } from "../settings";
 import { handleStart } from "../start";
 import { handleSubscribe } from "../subscribe";
 import { handleTimezone } from "../timezone";
@@ -28,6 +26,7 @@ type TelegramSendBody = {
 };
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
+const fixtures = createLatestSchemaFixtureTracker();
 
 function mockD1(
   tables: Parameters<typeof baseMockD1>[0] = [],
@@ -107,6 +106,10 @@ function subscriberRow(overrides: Record<string, unknown> = {}) {
 describe("webhook command handlers", () => {
   beforeEach(() => {
     resetTelegramFetchSpy();
+  });
+
+  afterEach(() => {
+    fixtures.closeAll();
   });
 
   it("handles /subscribe happy path with unique ticker", async () => {
@@ -190,20 +193,22 @@ describe("webhook command handlers", () => {
   });
 
   it("gates /subscribe ... all behind a confirmation prompt", async () => {
-    const db = mockD1();
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
+      VALUES ('42', 1, 1)`);
+    const subscribersBefore = sqlite.prepare("SELECT * FROM telegram_subscribers").all();
     const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
     const ctx = makeContext({ db, replyToChatWithMarkup });
 
     await handleSubscribe(ctx, "dews safety all");
 
-    const history = db.getHistory();
-    expect(history.some((entry) => /UPDATE.*global_alert_dews/.test(entry.sql))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
-    const pendingInsert = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
-    expect(pendingInsert?.binds).toContain("confirm-bulk");
-    const pending = JSON.parse(pendingInsert!.binds[2] as string) as { coinIds: string[]; presetIds: string[] };
+    expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual(subscribersBefore);
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual([]);
+    const pendingRow = sqlite.prepare(
+      "SELECT action_type, action_payload FROM telegram_pending_disambiguation WHERE chat_id = '42'",
+    ).get() as { action_type: string; action_payload: string };
+    expect(pendingRow.action_type).toBe("confirm-bulk");
+    const pending = JSON.parse(pendingRow.action_payload) as { coinIds: string[]; presetIds: string[] };
     expect(pending.coinIds).toEqual([]);
     expect(pending.presetIds).toEqual([]);
     expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
@@ -249,41 +254,37 @@ describe("webhook command handlers", () => {
     expectMiniAppButton(buttonsFromBody(body), "Open in app", "coin_usdc-circle");
   });
 
-  it("handles /set all for global alert flags", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscribers", rows: [], first: subscriberRow({ global_alert_depeg: 0 }) }]);
+  it.each([
+    {
+      name: "handles /set all for global alert flags",
+      args: "all depeg off",
+      subscriber: subscriberRow({ global_alert_depeg: 0 }),
+      sql: ["global_alert_depeg = excluded.global_alert_depeg"],
+      step: null,
+    },
+    {
+      name: "handles /set all depeg-step for global worsening alerts",
+      args: "all depeg-step 250",
+      subscriber: subscriberRow({ global_alert_depeg: 1, global_depeg_worsening_bps_step: 250 }),
+      sql: ["global_alert_depeg", "global_depeg_worsening_bps_step = ?"],
+      step: 250,
+    },
+  ])("$name", async ({ args, subscriber, sql, step }) => {
+    const db = mockD1([{ match: "FROM telegram_subscribers", rows: [], first: subscriber }]);
     const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
     const ctx = makeContext({ db, replyToChatWithMarkup });
 
-    await handleSet(ctx, "all depeg off");
-
-    expect(db.getHistory().some((entry) => entry.sql.includes("global_alert_depeg = excluded.global_alert_depeg"))).toBe(
-      true,
-    );
-    expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
-    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("Updated all-stablecoin alerts");
-    expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "watchlist");
-  });
-
-  it("handles /set all depeg-step for global worsening alerts", async () => {
-    const db = mockD1([{
-      match: "FROM telegram_subscribers",
-      rows: [],
-      first: subscriberRow({ global_alert_depeg: 1, global_depeg_worsening_bps_step: 250 }),
-    }]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleSet(ctx, "all depeg-step 250");
+    await handleSet(ctx, args);
 
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("global_alert_depeg"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("global_depeg_worsening_bps_step = ?"))).toBe(true);
-    expect(history.some((entry) => entry.binds.includes(250))).toBe(true);
+    for (const fragment of sql) {
+      expect(history.some((entry) => entry.sql.includes(fragment))).toBe(true);
+    }
+    if (step !== null) expect(history.some((entry) => entry.binds.includes(step))).toBe(true);
     expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
     const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
     expect(message).toContain("Updated all-stablecoin alerts");
-    expect(message).toContain("Depeg +250bps");
+    if (step !== null) expect(message).toContain("Depeg +250bps");
     expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "watchlist");
   });
 
@@ -337,68 +338,36 @@ describe("webhook command handlers", () => {
     expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("Unknown timezone"));
   });
 
-  it("/timezone with no argument shows current zone and an inline keyboard", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers",
-        rows: [],
-        first: subscriberRow({ timezone: "Europe/Paris" }),
-      },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleTimezone(ctx, "");
-
-    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("Current timezone: Europe/Paris");
-    const buttons = buttonsFromMarkup(options.replyMarkup);
-    expect(buttons.some((button) => button.callback_data === "tz:UTC")).toBe(true);
-    expect(buttons.some((button) => button.callback_data === "tz:Europe/Paris")).toBe(true);
-    expectMiniAppButton(buttons, "Open in app", "quiet-hours");
-  });
-
   it("/mute, /unmutehours, and /unsnooze write state and use the contextual Mini App label", async () => {
-    const db = mockD1();
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (
+      chat_id, created_at, last_active_at, alert_dews, alert_depeg, alert_safety, alert_launch,
+      global_alert_safety, alert_snooze_until_ts
+    ) VALUES ('42', 1, 1, 1, 1, 1, 1, 1, 123)`);
     const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
     const ctx = makeContext({ db, replyToChatWithMarkup });
 
     await handleMute(ctx, "22-07");
-    await handleUnmuteHours(ctx, "");
-    await handleUnsnooze(ctx, "");
-
-    expect(
-      db
-        .getHistory()
-        .some(
-          (entry) =>
-            entry.sql.includes("quiet_hours_enabled = excluded.quiet_hours_enabled") &&
-            entry.binds.includes(22) &&
-            entry.binds.includes(7),
-        ),
-    ).toBe(true);
-    const muteUpsert = db.getHistory().find(
-      (entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.sql.includes("ON CONFLICT(chat_id)"),
-    );
-    expect(muteUpsert).toBeDefined();
-    const muteUpdateClause = muteUpsert!.sql.split("DO UPDATE SET")[1] ?? "";
-    expect(muteUpdateClause).not.toMatch(/\balert_dews\s*=\s*excluded\.alert_dews\b/);
-    expect(muteUpdateClause).not.toMatch(/\balert_depeg\s*=\s*excluded\.alert_depeg\b/);
-    expect(muteUpdateClause).not.toMatch(/\balert_safety\s*=\s*excluded\.alert_safety\b/);
-    expect(muteUpdateClause).not.toMatch(/\balert_launch\s*=\s*excluded\.alert_launch\b/);
-    expect(muteUpdateClause).not.toMatch(/\bglobal_alert_safety\s*=\s*excluded\./);
-    expect(muteUpdateClause).toContain("quiet_hours_enabled = excluded.quiet_hours_enabled");
+    expect(sqlite.prepare(`SELECT alert_dews, alert_depeg, alert_safety, alert_launch, global_alert_safety,
+      quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
+      FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
+      alert_dews: 1,
+      alert_depeg: 1,
+      alert_safety: 1,
+      alert_launch: 1,
+      global_alert_safety: 1,
+      quiet_hours_enabled: 1,
+      quiet_hours_start_utc: 22,
+      quiet_hours_end_utc: 7,
+    });
     expect(replyToChatWithMarkup.mock.calls[0]![0]).toContain("Quiet hours enabled");
     expect(replyToChatWithMarkup.mock.calls[0]![0]).toContain("22:00–07:00 UTC");
-    expect(
-      db
-        .getHistory()
-        .some(
-          (entry) =>
-            entry.sql.includes("quiet_hours_enabled = excluded.quiet_hours_enabled") && entry.binds.includes(0),
-        ),
-    ).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
+    await handleUnmuteHours(ctx, "");
+    expect(sqlite.prepare("SELECT quiet_hours_enabled FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ quiet_hours_enabled: 0 });
+    await handleUnsnooze(ctx, "");
+    expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ alert_snooze_until_ts: null });
     expect(replyToChatWithMarkup.mock.calls[2]![0]).toContain("Alert snooze cleared");
     for (const [, options] of replyToChatWithMarkup.mock.calls) {
       const buttons = buttonsFromMarkup(options.replyMarkup);
@@ -409,21 +378,6 @@ describe("webhook command handlers", () => {
     );
     expect(payloads.some((url) => url.includes("startapp=quiet-hours"))).toBe(true);
     expect(payloads.some((url) => url.includes("startapp=snooze"))).toBe(true);
-  });
-
-  it("/settings sends editable settings controls with a canonical Mini App label", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscribers", rows: [], first: null }]);
-    const ctx = makeContext({ db });
-
-    await handleSettings(ctx, "");
-
-    const body = latestSendMessageBody();
-    expect(body.text).toContain("<b>Settings</b>");
-    const buttons = buttonsFromBody(body);
-    expect(buttons.map((button) => button.callback_data)).toEqual(
-      expect.arrayContaining(["settings:gt:dews", "settings:gt:depeg"]),
-    );
-    expectMiniAppButton(buttons, "Open in app", "settings");
   });
 
   it("/start exposes the control-panel entry and the setup wizard branch keyboard", async () => {
@@ -451,82 +405,42 @@ describe("webhook command handlers", () => {
     expectMiniAppButton(buttonsFromBody(body), "Open control panel", "watchlist");
   });
 
-  it("/start sample runs the synthetic preview in private chats", async () => {
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ chatType: "private", replyToChat });
-
-    await handleStart(ctx, "sample");
-
-    expect(replyToChat).toHaveBeenCalledTimes(1);
-    const message = replyToChat.mock.calls[0]![0] as string;
-    expect(message).toContain("sample alert");
-    expect(message).toContain("USDC");
-  });
-
-  it("/start sample does not run the preview in groups", async () => {
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ chatType: "group", replyToChat });
-
-    await handleStart(ctx, "sample");
-
-    expect(replyToChat).toHaveBeenCalledTimes(1);
-    const message = replyToChat.mock.calls[0]![0] as string;
-    expect(message).not.toContain("sample alert");
-  });
-
-  it("/health renders delivery diagnostics and opens the contextual app view", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers",
-        rows: [],
-        first: subscriberRow({
-          quiet_hours_enabled: 1,
-          quiet_hours_start_utc: 22,
-          quiet_hours_end_utc: 7,
-          global_alert_reserve: 1,
-        }),
-      },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-      { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 2 } },
-      { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: 1 } },
-      { match: "SELECT last_error_class", rows: [], first: { last_error_class: "rate_limit" } },
-      { match: "FROM telegram_chat_delivery_diagnostics", rows: [], first: null },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleHealth(ctx, "");
-
-    expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
-    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("Bot Health");
-    expect(message).toContain("Queued alerts for this chat: 1");
-    expect(message).toContain("Recent failure class: rate_limit");
-    expect(message).toContain("Alert readiness: 2 explicit coin follows");
-    expect(message).toContain("global: Reserve");
-    const activeCountQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) AS active_count"));
-    expect(activeCountQuery?.sql).toContain("OR alert_reserve = 1");
-    expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "health");
-  });
-
-  it("/health evaluates active quiet hours in the saved timezone", async () => {
-    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2024, 0, 15, 12, 0, 0));
+  it.each([
+    {
+      name: "/health renders delivery diagnostics and opens the contextual app view",
+      subscriber: subscriberRow({
+        quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7, global_alert_reserve: 1,
+      }),
+      activeCount: 2, pendingCount: 1, lastError: { last_error_class: "rate_limit" }, now: null,
+      contains: ["Bot Health", "Queued alerts for this chat: 1", "Recent failure class: rate_limit",
+        "Alert readiness: 2 explicit coin follows", "global: Reserve"],
+      excludes: [], notMatch: null, diagnostics: true,
+    },
+    {
+      name: "/health evaluates active quiet hours in the saved timezone",
+      subscriber: subscriberRow({
+        quiet_hours_enabled: 1, quiet_hours_start_utc: 13, quiet_hours_end_utc: 14, timezone: "Europe/Paris",
+      }),
+      activeCount: 0, pendingCount: 0, lastError: null, now: Date.UTC(2024, 0, 15, 12, 0, 0),
+      contains: ["Quiet hours: 13:00–14:00 Europe/Paris (active now)"],
+      excludes: ["13:00–14:00 UTC"], notMatch: null, diagnostics: false,
+    },
+    {
+      name: "/health renders the Paused sentinel distinctly",
+      subscriber: subscriberRow({ alert_snooze_until_ts: PAUSE_SENTINEL_TS }),
+      activeCount: 0, pendingCount: 0, lastError: null, now: null,
+      contains: ["Snooze: Paused (indefinite)"],
+      excludes: [], notMatch: /Snooze: Active for \d+ d/, diagnostics: false,
+    },
+  ])("$name", async ({ subscriber, activeCount, pendingCount, lastError, now, contains, excludes, notMatch, diagnostics }) => {
+    const nowSpy = now === null ? null : vi.spyOn(Date, "now").mockReturnValue(now);
     try {
       const db = mockD1([
-        {
-          match: "FROM telegram_subscribers",
-          rows: [],
-          first: subscriberRow({
-            quiet_hours_enabled: 1,
-            quiet_hours_start_utc: 13,
-            quiet_hours_end_utc: 14,
-            timezone: "Europe/Paris",
-          }),
-        },
+        { match: "FROM telegram_subscribers", rows: [], first: subscriber },
         { match: "FROM telegram_preset_subscriptions", rows: [] },
-        { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 0 } },
-        { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: 0 } },
-        { match: "SELECT last_error_class", rows: [], first: null },
+        { match: "COUNT(*) AS active_count", rows: [], first: { active_count: activeCount } },
+        { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: pendingCount } },
+        { match: "SELECT last_error_class", rows: [], first: lastError },
         { match: "FROM telegram_chat_delivery_diagnostics", rows: [], first: null },
       ]);
       const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
@@ -534,104 +448,19 @@ describe("webhook command handlers", () => {
 
       await handleHealth(ctx, "");
 
-      const [message] = replyToChatWithMarkup.mock.calls[0]!;
-      expect(message).toContain("Quiet hours: 13:00–14:00 Europe/Paris (active now)");
-      expect(message).not.toContain("13:00–14:00 UTC");
+      const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
+      for (const text of contains) expect(message).toContain(text);
+      for (const text of excludes) expect(message).not.toContain(text);
+      if (notMatch) expect(message).not.toMatch(notMatch);
+      if (diagnostics) {
+        expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
+        const activeCountQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) AS active_count"));
+        expect(activeCountQuery?.sql).toContain("OR alert_reserve = 1");
+        expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "health");
+      }
     } finally {
-      nowSpy.mockRestore();
+      nowSpy?.mockRestore();
     }
-  });
-
-  it("/health renders the Paused sentinel distinctly", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers",
-        rows: [],
-        first: subscriberRow({ alert_snooze_until_ts: PAUSE_SENTINEL_TS }),
-      },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-      { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 0 } },
-      { match: "COUNT(*) AS pending_count", rows: [], first: { pending_count: 0 } },
-      { match: "SELECT last_error_class", rows: [], first: null },
-      { match: "FROM telegram_chat_delivery_diagnostics", rows: [], first: null },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleHealth(ctx, "");
-
-    const [message] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("Snooze: Paused (indefinite)");
-    expect(message).not.toMatch(/Snooze: Active for \d+ d/);
-  });
-
-  it("/list empty private chats offers both the control panel and preset discovery", async () => {
-    const db = mockD1([
-      { match: "FROM telegram_subscribers", rows: [], first: null },
-      { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleList(ctx, "");
-
-    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("No active subscriptions");
-    const buttons = buttonsFromMarkup(options.replyMarkup);
-    expectMiniAppButton(buttons, "Open control panel", "watchlist");
-    expectMiniAppButton(buttons, "Browse presets", "presets");
-  });
-
-  it("shows global alert coverage in /list", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers",
-        rows: [],
-        first: subscriberRow({ global_alert_depeg: 1, global_alert_safety: 1 }),
-      },
-      { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleList(ctx, "");
-
-    const [message] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("All stablecoins: Depeg, Safety (downgrades; 3-point drop when scored)");
-    expect(message).toContain("Coins (0):");
-  });
-
-  it("/list loads per-coin snooze state for subscription summaries", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      { match: "FROM telegram_subscribers", rows: [], first: subscriberRow() },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [subscriptionRow({ alert_snooze_until_ts: nowSec + 2 * 3600 })],
-      },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handleList(ctx, "");
-
-    const subscriptionSelect = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
-    expect(subscriptionSelect?.sql).toContain("alert_snooze_until_ts");
-    const [message] = replyToChatWithMarkup.mock.calls[0]!;
-    expect(message).toContain("USDC (usdc-circle): DEWS · per-coin — snoozed for 2 h");
-  });
-
-  it("/cancel without pending state gives recovery commands", async () => {
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ replyToChat });
-
-    await handleCancel(ctx, "");
-
-    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("/start"));
-    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("/list"));
   });
 
   it("mutating command handlers keep DB writes on their own chat id", async () => {

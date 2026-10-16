@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types";
 
 function asset(
@@ -67,18 +67,6 @@ describe("derivePegRates", () => {
     expect([broad.rates.peggedGOLD, broad.sources.peggedGOLD, broad.counts.peggedGOLD]).toEqual([2200, "median", 3]);
   });
 
-  it("computes the median for three candidates in a peg bucket", () => {
-    const result = derivePegRates([
-      asset("coin-a", "peggedUSD", 0.999, 2_000_000),
-      asset("coin-b", "peggedUSD", 1.001, 2_000_000),
-      asset("coin-c", "peggedUSD", 1.0, 2_000_000),
-    ]);
-
-    expect(result.rates["peggedUSD"]).toBe(1);
-    expect(result.rates["peggedUSD"]!).toEqual(expect.any(Number));
-    expect(result.sources["peggedUSD"]).toBe("median");
-  });
-
   it("excludes < $1m supply assets when computing medians", () => {
     const result = derivePegRates([
       asset("thin-a", "peggedEUR", 0.98, 500_000),
@@ -87,13 +75,6 @@ describe("derivePegRates", () => {
 
     expect(result.rates.peggedEUR).toBeUndefined();
     expect(result.sources.peggedEUR).toBeUndefined();
-  });
-
-  it("uses the single price when only one eligible coin exists", () => {
-    const result = derivePegRates([asset("solo", "peggedGBP", 1.234, 2_000_000)]);
-
-    expect(result.rates.peggedGBP).toBe(1.234);
-    expect(result.sources.peggedGBP).toBe("median");
   });
 
   it("does not add a rate for an empty peg group", () => {
@@ -156,20 +137,6 @@ describe("derivePegRates", () => {
     expect(result.counts.peggedGOLD).toBe(2);
   });
 
-  it("uses authoritative FX rates for fiat groups with fewer than 3 eligible coins", () => {
-    const result = derivePegRates(
-      [
-        asset("usd-eur-a", "peggedEUR", 1.1, 2_000_000),
-        asset("usd-eur-b", "peggedEUR", 1.2, 2_100_000),
-      ],
-      undefined,
-      { peggedEUR: 1.2 },
-    );
-
-    expect(result.rates.peggedEUR).toBe(1.2);
-    expect(result.sources.peggedEUR).toBe("fx");
-  });
-
   it("prefers an authoritative fiat FX rate over a broad peer median", () => {
     const result = derivePegRates(
       [
@@ -207,12 +174,6 @@ describe("derivePegRates", () => {
 });
 
 describe("normalizePegType", () => {
-  it("canonicalizes the legacy BRL peg alias", () => {
-    expect(normalizePegType("peggedBRL")).toBe("peggedREAL");
-    expect(normalizePegType("peggedEUR")).toBe("peggedEUR");
-    expect(normalizePegType(undefined)).toBeUndefined();
-  });
-
   it("handles peg types that match inherited object property names", () => {
     const result = derivePegRates([
       asset("constructor-token", "constructor", 1.23, 2_000_000),

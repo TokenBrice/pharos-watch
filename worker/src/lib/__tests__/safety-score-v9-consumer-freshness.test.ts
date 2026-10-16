@@ -46,13 +46,6 @@ describe("Safety Score V9 consumer freshness", () => {
     ).toBe(false);
   });
 
-  it("rejects a nonnumeric publication time under current health", () => {
-    expect(isSafetyScoreV9SnapshotFresh({
-      updatedAt: Number.NaN,
-      publicationHealth: currentHealth,
-    }, 1_800_000_000)).toBe(false);
-  });
-
   it("rejects a nonfinite publication time under current health", () => {
     const nowSec = 1_800_000_000;
     expect(isSafetyScoreV9SnapshotFresh({

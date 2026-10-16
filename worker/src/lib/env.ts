@@ -126,8 +126,6 @@ export interface CloudflareD1StatusConfig {
 import { hasConfiguredValue, getConfiguredValue } from "@shared/lib/env-utils";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 
-export const WORKER_REQUIRED_ENV_KEYS = getRuntimeEnvKeys("worker", "required");
-export const WORKER_OPTIONAL_ENV_KEYS = getRuntimeEnvKeys("worker", "optional");
 export const WORKER_RESERVED_ENV_KEYS = getRuntimeEnvKeys("worker", "reserved");
 export const WORKER_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("worker");
 

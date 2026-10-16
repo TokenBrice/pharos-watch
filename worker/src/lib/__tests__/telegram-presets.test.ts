@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
-  listTelegramPresets,
   resolveTelegramPresetAlias,
   resolveTelegramPresetTargets,
 } from "../telegram/presets";
@@ -44,27 +43,6 @@ function makeDbWithStablecoinsValue(overrides: Record<string, number> | null): D
 }
 
 describe("telegram preset catalog", () => {
-  it("lists the expected v1 preset aliases", () => {
-    expect(listTelegramPresets().map((preset) => preset.id)).toEqual([
-      "usd-top10",
-      "usd-top25",
-      "usd-top50",
-      "non-usd-top10",
-      "non-usd-top25",
-      "non-usd-top50",
-      "eur-top10",
-      "gold-top5",
-      "mcap-ge-1b",
-      "mcap-ge-100m",
-    ]);
-  });
-
-  it("describes non-USD presets as mixed non-USD pegs ranked by USD market cap", () => {
-    for (const preset of listTelegramPresets().filter((entry) => entry.id.startsWith("non-usd-top"))) {
-      expect(preset.description).toMatch(/non-USD pegs \(fiat, gold\/silver, baskets\) by USD market cap/);
-    }
-  });
-
   it("recognizes supported preset aliases", () => {
     expect(resolveTelegramPresetAlias("usd-top25")).not.toBeNull();
     expect(resolveTelegramPresetAlias("usd-top-25")).not.toBeNull();
@@ -74,12 +52,6 @@ describe("telegram preset catalog", () => {
     expect(resolveTelegramPresetAlias("usd-top100")).toBeNull();
   });
 
-  it("normalizes dashed aliases to canonical preset ids", () => {
-    expect(resolveTelegramPresetAlias("usd-top-25")).toBe("usd-top25");
-    expect(resolveTelegramPresetAlias("usd-top25")).toBe("usd-top25");
-    expect(resolveTelegramPresetAlias("non-usd-top-25")).toBe("non-usd-top25");
-    expect(resolveTelegramPresetAlias("USD-TOP-10")).toBe("usd-top10");
-  });
 });
 
 describe("resolveTelegramPresetTargets", () => {

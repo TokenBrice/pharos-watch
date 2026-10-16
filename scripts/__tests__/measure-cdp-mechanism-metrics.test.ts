@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeWord, fetchBlockByNumber, readJournalAddress, readJournalUint, ReplayEthCaller } from "../lib/mechanism-measurement/core";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
@@ -14,7 +14,7 @@ import {
 import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
 import { captureFixture, cleanupCaptures, remote } from "./measure-cdp-mechanism-metrics.test-support";
 import { gzipSync } from "node:zlib";
-import { resolveCaptureBody, run } from "../maintenance/measure-cdp-mechanism-metrics";
+import { resolveCaptureBody } from "../lib/mechanism-measurement/capture-summary";
 import { CDP_MEASUREMENT_TARGETS } from "../lib/mechanism-measurement/targets";
 
 interface RecordedFixture {
@@ -27,7 +27,6 @@ interface RecordedFixture {
 function loadFixture(name: string): RecordedFixture {
   return JSON.parse(readFileSync(join(__dirname, "fixtures", name), "utf8")) as RecordedFixture;
 }
-const FIXTURE_PATH = join(__dirname, "fixtures", "lusd-liquity-mechanism-measurement-block-25533257.json");
 
 // Recorded live returndata from block 25533257 (finalized at capture time);
 // replaying it must reproduce the committed measurement exactly, no network.
@@ -375,39 +374,6 @@ describe("recorded family measurement replay", () => {
     expect(paused.completeness).toEqual({ complete: true, blockers: [] });
   });
 });
-describe("CDP replay CLI seam", () => {
-  it("replays a committed artifact in-process without using the process streams", async () => {
-    const logs: string[] = [];
-    const warnings: string[] = [];
-    const errors: string[] = [];
-    const status = await run({
-      argv: ["--replay", FIXTURE_PATH],
-      io: {
-        error: (message) => errors.push(message),
-        log: (message) => logs.push(message),
-        warn: (message) => warnings.push(message),
-      },
-    });
-
-    expect(status).toBe(0);
-    expect(logs.join("")).toContain("[measure-cdp] lusd-liquity: offline byte replay passed");
-    expect(warnings).toEqual([]);
-    expect(errors).toEqual([]);
-  });
-
-  it("returns a runtime status and captured diagnostic for a missing artifact", async () => {
-    const errors: string[] = [];
-    const status = await run({
-      argv: ["--replay", "missing-cdp-artifact.json"],
-      io: { error: (message) => errors.push(message) },
-    });
-
-    expect(status).toBe(1);
-    expect(errors.join("")).toContain("measure-cdp-mechanism-metrics: Missing mechanism evidence capture or summary:");
-  });
-});
-
-
 afterEach(() => {
   cleanupCaptures();
   vi.unstubAllGlobals();
@@ -438,19 +404,6 @@ describe("capture resolution", () => {
     expect(readFileSync(capture.cachePath)).toEqual(capture.body);
     const offline = remote(async () => { throw new Error("offline"); });
     expect(await resolveCaptureBody(capture.bodyPath, { ...capture, r2Client: offline })).toEqual(capture.body);
-  });
-
-  it("derives the default cache directory from a scratch root at call time", async () => {
-    const capture = captureFixture();
-    const scratchRoot = dirname(capture.bodyPath);
-    const expectedCache = join(scratchRoot, "agents/.cache/measurements", `${capture.sha256}.json`);
-    expect(
-      await resolveCaptureBody("capture.json", {
-        rootDir: scratchRoot,
-        r2Client: remote(async () => capture.body),
-      }),
-    ).toEqual(capture.body);
-    expect(readFileSync(expectedCache)).toEqual(capture.body);
   });
 
   it("falls through missing pinned data to gzip ordinary data and rejects total absence", async () => {

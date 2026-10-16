@@ -22,7 +22,7 @@ Requires `pyftsubset` (fontTools) on PATH; the command exits `127` with install 
 
 Two gaps follow from that, and both need operator discipline:
 
-- `--check` does not verify that the committed subset matches the current allowlist. `src/lib/fonts/__tests__/digest-glyph-allowlist.test.ts` guards the other direction — every glyph a digest headline can mount is inside the allowlist — so adding a codepoint keeps both checks green until the woff2 is regenerated. Editing the allowlist means re-running `npm run subset:fonts` and committing the output in the same change.
+- `--check` does not verify that the committed subset matches the current allowlist or that the allowlist covers every glyph a digest headline can mount. Review new headline codepoints against the allowlist; editing the allowlist means re-running `npm run subset:fonts` and committing the output in the same change.
 - Nothing runs `--check` automatically. It is not registered with `check:generated-artifacts` and no workflow calls it, so it catches drift only when an operator runs it deliberately.
 
 ## Licensed Whyte Webfonts (`npm run install:whyte-fonts`)

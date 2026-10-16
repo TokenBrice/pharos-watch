@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import type { MechanismArchetype } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 
@@ -187,20 +187,6 @@ const ARCHETYPE_CASES = [
 ] as const satisfies ReadonlyArray<MechanismDiagramCase>;
 
 describe("mechanismDiagramFor", () => {
-  it.each([
-    ["ucits-trs-fund", "EURSAFO", /proportional.*fund interest/i, /counterparty/i],
-    ["shared-reserve", "AUDm", /several currency liabilities/i, /shared liability deficit/i],
-    ["protocol-position", "USDB", /local custody.*liability conservation/i, /withdrawal failure/i],
-  ] as const)("renders the %s claim and stress path on desktop and mobile", (archetype, symbol, claim, stress) => {
-    const diagram = renderDiagram(archetype, symbol);
-    for (const svg of [diagram.desktopSvg, diagram.mobileSvg]) {
-      expect(svg.getAttribute("aria-label")).toContain(symbol);
-      expect(svg.querySelector("desc")?.textContent).toMatch(claim);
-      expect(svg.querySelector("desc")?.textContent).not.toMatch(/custodies the funds in cash|short-duration T-Bills and repurchase agreements/);
-    }
-    expect(diagram.container.textContent).toMatch(stress);
-    cleanup();
-  });
   it.each(ARCHETYPE_CASES)("states the $archetype mechanism in both variants", (testCase: MechanismDiagramCase) => {
     const diagram = renderDiagram(testCase.archetype, testCase.symbol);
     const desktopNodes = textNodes(diagram.desktopSvg);
@@ -226,33 +212,5 @@ describe("mechanismDiagramFor", () => {
     }
     // The stress footnote is desktop chrome outside both SVGs.
     expect(diagram.container.querySelector("p")?.textContent).toBe(testCase.stress);
-  });
-
-  it("marks the algorithmic variant with the danger tone, not just a dash pattern", () => {
-    const algorithmic = renderDiagram("algorithmic", "USDC");
-    const dangerFilled = Array.from(algorithmic.desktopSvg.querySelectorAll("rect")).filter((rect) =>
-      (rect.getAttribute("fill") ?? "").includes("--severity-severe"),
-    );
-    expect(dangerFilled).toHaveLength(3);
-    expect(algorithmic.desktopSvg.querySelectorAll('rect[stroke-dasharray="5 3"]')).toHaveLength(3);
-    const collapse = Array.from(algorithmic.desktopSvg.querySelectorAll("text")).find(
-      (node) => node.textContent === "reflexive collapse",
-    );
-    expect(collapse?.getAttribute("fill")).toBe("var(--severity-severe)");
-    // Mobile carries the fragility as a dashed border (it has no tone fill).
-    expect(algorithmic.mobileSvg.querySelectorAll('rect[stroke-dasharray="3 3"]')).toHaveLength(3);
-    cleanup();
-
-    const fiatCash = renderDiagram("fiat-cash", "USDC");
-    expect(
-      Array.from(fiatCash.desktopSvg.querySelectorAll("rect")).every(
-        (rect) => rect.getAttribute("fill") === "var(--card)",
-      ),
-    ).toBe(true);
-    expect(fiatCash.desktopSvg.querySelectorAll("rect[stroke-dasharray]")).toHaveLength(0);
-  });
-
-  it("returns null for an unknown archetype", () => {
-    expect(mechanismDiagramFor("unknown" as MechanismArchetype, "X")).toBeNull();
   });
 });

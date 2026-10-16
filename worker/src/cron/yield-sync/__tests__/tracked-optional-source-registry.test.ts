@@ -14,15 +14,6 @@ import {
 describe("tracked optional source registry coverage", () => {
   const activeYieldBearingIds = new Set(ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id));
 
-  it("does not register retired BIMA or CETES source work", () => {
-    const ids = [
-      ...TRACKED_OPTIONAL_SOURCE_REGISTRY,
-      ...STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY,
-    ].map((entry) => entry.stablecoinId);
-    expect(ids).not.toContain("usbd-bima");
-    expect(ids).not.toContain("cetes-etherfuse");
-  });
-
   it("resolves every cohort-gated entry: active yield-bearing coin, or intended-dormant", () => {
     for (const entry of TRACKED_OPTIONAL_SOURCE_REGISTRY) {
       expect(

@@ -190,13 +190,6 @@ describe("stored live reserve snapshot metadata normalization", () => {
     expect(decodeLiveReserveRedemptionTelemetry(measured)).toEqual({ status: "valid", telemetry: { capacityUsd: 0 } });
   });
 
-  it("does not rewrite retained valid source URLs on decode", () => {
-    const sourceUrls = ["https://issuer.example", "https://issuer.example/", "https://issuer.example"];
-    const metadata = parseSnapshotMetadata(JSON.stringify({ redemption: { capacityUsd: 100, sourceUrls } }));
-    expect(metadata.redemption?.sourceUrls).toEqual(sourceUrls);
-    expect(JSON.parse(JSON.stringify(metadata)).redemption.sourceUrls).toEqual(sourceUrls);
-  });
-
   it("lets a nested redemption block win over legacy flat fields", () => {
     const metadata = parseSnapshotMetadata(JSON.stringify({
       freshnessMode: "not-applicable",

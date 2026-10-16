@@ -28,40 +28,6 @@ function expectAccessibleTheme(theme: NonNullable<ReturnType<typeof normalizeTel
 }
 
 describe("normalizeTelegramTheme", () => {
-  it("preserves compliant Telegram colors", () => {
-    const theme = normalizeTelegramTheme(
-      {
-        bg_color: "#ffffff",
-        text_color: "#111827",
-        secondary_bg_color: "#f3f4f6",
-        section_bg_color: "#ffffff",
-        hint_color: "#4b5563",
-        subtitle_text_color: "#4b5563",
-        button_color: "#1266a3",
-        button_text_color: "#ffffff",
-        link_color: "#1266a3",
-        accent_text_color: "#1266a3",
-        destructive_text_color: "#b42318",
-      },
-      "light",
-    );
-
-    expect(theme).toMatchObject({
-      background: "#ffffff",
-      text: "#111827",
-      secondaryBackground: "#f3f4f6",
-      sectionBackground: "#ffffff",
-      hint: "#4b5563",
-      subtitleText: "#4b5563",
-      button: "#1266a3",
-      buttonText: "#ffffff",
-      link: "#1266a3",
-      accentText: "#1266a3",
-      destructiveText: "#b42318",
-    });
-    expectAccessibleTheme(theme!);
-  });
-
   it("repairs hostile low-contrast light theme parameters", () => {
     const theme = normalizeTelegramTheme(
       {

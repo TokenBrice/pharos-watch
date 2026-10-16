@@ -133,29 +133,6 @@ describe("ICON Balanced pool discovery", () => {
     });
   });
 
-  it("certifies a completed empty census only when all pool ids were queried", async () => {
-    const fetchMock = mockFetch([{
-      match: ICON_RPC_URL,
-      respond: rpcBatchResponder({ nonce: 3, stats: {} }),
-    }], { requireMatch: true, strictUrl: true });
-    const stageContext = context();
-
-    const result = await crawlIconBalancedPoolsStage({
-      coinTargets: [target()],
-      context: stageContext.value,
-    });
-
-    expect(result.providerChecks).toEqual([{
-      chain: "icon",
-      address: BNUSD_ADDRESS,
-      provider: "icon-balanced",
-      status: "success",
-      observedPoolCount: 0,
-    }]);
-    expect(stageContext.pools).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
   it("queries every nonce pool id serially before certifying an empty census", async () => {
     const fetchMock = mockFetch([{
       match: ICON_RPC_URL,

@@ -13,7 +13,7 @@ export interface SceneRect {
 }
 
 /** Whether two rects come within `m` px of each other. */
-export const rectsHit = (a: SceneRect, b: SceneRect, m: number) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m;
+const rectsHit = (a: SceneRect, b: SceneRect, m: number) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m;
 
 /** An SVG-unit box as frame px, for a frame showing `viewBox` at `scale` px per unit. */
 export function boxToFrameRect(box: SceneBox, viewBox: readonly number[], scale: number): SceneRect {

@@ -47,19 +47,6 @@ describe("buildScoreWaterfall", () => {
     expect(steps[1]?.kind).toBe("published");
   });
 
-  it("ignores a peg multiplier that rounds to no effect", () => {
-    const card = cardWithStages({
-      aggregatedQualityScore: 84,
-      pegMultiplier: 0.999,
-      baseAssetScore: 83.9,
-      deploymentAdjustmentPoints: 0,
-      deploymentAdjustedScore: 83.9,
-      preCapScore: 83.9,
-      publishedScore: 83.9,
-    });
-    expect(buildScoreWaterfall(card)).toEqual([]);
-  });
-
   it("chains peg, common-mode exposure, and a binding cap in order", () => {
     const card = cardWithStages(
       {

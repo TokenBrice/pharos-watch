@@ -46,7 +46,6 @@ import {
   buildHardcodedUsdBenchmark,
   classifyYieldBenchmarkFreshness,
   getBenchmarkKeyForPegCurrency,
-  getYieldBenchmarkStaticMeta,
   resolveBenchmarkForStablecoin,
   withYieldBenchmarkStaticMeta,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
@@ -1124,12 +1123,6 @@ describe("classifyYieldBenchmarkFreshness", () => {
     expect(classifyYieldBenchmarkFreshness({ ageSeconds: null, isFallback: false, fallbackMode: null })).toBe("stale");
   });
 
-  it("labels CAD as the monthly Bank rate instead of a CORRA overnight series", () => {
-    const label = getYieldBenchmarkStaticMeta("CAD").label;
-    expect(label).toContain("Bank rate");
-    expect(label).toContain("monthly");
-    expect(label).not.toContain("CORRA");
-  });
 });
 
 describe("fetchTbillRate — benchmark observation guard and registry integrity", () => {

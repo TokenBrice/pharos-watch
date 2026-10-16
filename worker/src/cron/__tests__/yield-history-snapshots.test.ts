@@ -8,7 +8,6 @@ import {
 } from "../../lib/yield-history-ownership-handoffs";
 import {
   loadYieldHistorySnapshots,
-  MAX_PREVIOUS_TVL_HISTORY_ROWS,
   purgeYieldHistoryOwnershipHandoffs,
 } from "../yield-sync/history";
 import {
@@ -272,10 +271,6 @@ describe("loadYieldHistorySnapshots", () => {
 
     expect(snapshots.prevTvlRows.map((row) => row.source_key)).toEqual(["source-a", "source-b"]);
     expect(snapshots.previousTvlRowsTruncated).toBe(true);
-  });
-
-  it("uses a default previous TVL cap large enough for normal history", () => {
-    expect(MAX_PREVIOUS_TVL_HISTORY_ROWS).toBeGreaterThan(1_000);
   });
 });
 

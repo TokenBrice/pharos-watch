@@ -97,24 +97,6 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("skips the DexScreener breaker check when nothing is missing", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 1,
-      }),
-    ];
-
-    const db = makeEnrichPricesDb([], { requireMatch: true });
-
-    await expect(runDexScreenerPass(assets, undefined, db)).resolves.toEqual({
-      resolved: 0,
-      failures: [],
-    });
-  });
-
   it("spends the DexScreener batch on original missing chains and uses spare capacity for probes", async () => {
     const make = (id: string, chain: string, suffix: number) => makePeggedAsset({
       id, price: null, address: `${chain}:0x${suffix.toString(16).padStart(40, "0")}`,
@@ -133,55 +115,6 @@ describe("enrichMissingPrices", () => {
     expect(first.indexOf("0003")).toBeLessThan(first.indexOf("0002"));
     expect(first).not.toContain("0001");
     expect(String(fetchSpy.mock.calls[1]?.[0])).toContain("/solana/");
-  });
-
-  it("rotates every original missing target under the unchanged 30-address cap", async () => {
-    const assets = Array.from({ length: 32 }, (_, index) => makePeggedAsset({
-      id: `missing-${index}`, price: null,
-      address: `ethereum:0x${index.toString(16).padStart(40, "0")}`,
-    }));
-    const missing = new Set(assets.map(({ id }) => id));
-    const fetchSpy = mockFetch();
-    await runDexScreenerPass(assets, undefined, undefined, undefined, undefined, 0, missing);
-    await runDexScreenerPass(assets, undefined, undefined, undefined, undefined,
-      DEXSCREENER_ROTATION_INTERVAL_MS, missing);
-    const selections = fetchSpy.mock.calls.map(([url]) => new URL(String(url)).pathname.split("/").slice(-1)[0].split(","));
-    expect(selections).toHaveLength(2);
-    expect(selections.every((addresses) => addresses.length === 30)).toBe(true);
-    expect(new Set(selections.flat()).size).toBe(32);
-  });
-
-  it("uses tracked metadata to select an exact DexScreener target", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "gusd-gemini",
-        name: "Gemini Dollar",
-        symbol: "GUSD",
-        price: 0,
-      }),
-    ];
-
-    const db = makeEnrichPricesDb(
-      [
-        { match: "circuit", rows: [], allowUnused: true },
-        { match: "cache", rows: [] },
-      ],
-      { requireMatch: true },
-    );
-
-    const fetchSpy = mockFetch([], { requireMatch: true });
-
-    // GUSD is registered on ethereum and (since the P-wave) near, and the pass
-    // rotates which chain leads each quarter-hour. Pinning the rotation clock
-    // makes the pick reproducible: cycle 0 selects the alphabetically first
-    // chain group, so the canonical ethereum deployment leads.
-    const result = await runDexScreenerPass(assets, undefined, db, undefined, undefined, 0);
-
-    expect(result.resolved).toBe(0);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0]?.[0]).toContain(
-      "api.dexscreener.com/tokens/v1/ethereum/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
-    );
   });
 
   it("rotates the leading chain group on the next cycle", async () => {

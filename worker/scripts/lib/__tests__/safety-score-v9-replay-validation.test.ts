@@ -10,7 +10,6 @@ import { localRegistrySnapshot } from "../safety-score-v9-registry";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { computeV9ResultDigest } from "@shared/lib/safety-score-v9/trace";
 import { validateSafetyScoreV9ReplayIntegrity, reproduceSafetyScoreV9Replay } from "../safety-score-v9-replay-validation";
-import { runSafetyScoreV9AnchorGateCli } from "../../check-safety-score-v9-anchor-gate";
 
 function fixture() {
   const fixedInput = createReplayFixedInput(v9TestClockSec());
@@ -88,7 +87,4 @@ describe("permanent replay integrity", () => {
     expect(() => reproduceSafetyScoreV9Replay(artifact, { ...context, publishedAtSec: context.publishedAtSec + 1 })).toThrow("intended policy/build/clock");
   });
 
-  it("rejects the retired anchor ruling option before reading a report", async () => {
-    await expect(runSafetyScoreV9AnchorGateCli(["--replay", "unused", "--apply-ruling", "D-test"])).rejects.toThrow();
-  });
 });

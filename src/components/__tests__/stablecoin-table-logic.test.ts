@@ -5,29 +5,21 @@ import {
   sortStablecoins,
   filterStablecoins,
   prioritizePinnedStablecoins,
-  resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
 import { buildV9SafetyTableMap, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
-import {
-  COMMODITY_PEG_TAGS,
-  NON_USD_NON_COMMODITY_PEG_TAGS,
-  getFilterTags,
-  OTHER_PEG_TAGS,
-} from "@shared/lib/filter-tags";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { DexLiquidityMap } from "@shared/types/market";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { ColumnId } from "@/hooks/use-preferences";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { buildCsvBody } from "@shared/lib/csv";
 import type { ExportPreamble } from "@/lib/exports/preamble";
 import { formatPreambleCsv } from "@/lib/exports/preamble";
+import { createTableComparator } from "@/lib/table-comparator";
 
 const { downloadCsvMock } = vi.hoisted(() => ({
   downloadCsvMock: vi.fn(),
@@ -145,10 +137,6 @@ describe("supply availability consumers", () => {
 
 
 describe("filterStablecoins", () => {
-  it("returns empty array for undefined data", () => {
-    const result = filterStablecoins(undefined, new Set(["a"]), "");
-    expect(result).toEqual([]);
-  });
 
   it("filters out coins not in trackedIds set", () => {
     const coins = [makeCoin("usdc", "USD Coin"), makeCoin("usdt", "Tether")];
@@ -183,175 +171,8 @@ describe("buildTrackedIdSet", () => {
     expect(buildTrackedIdSet(["variant-tracked"], undefined, eligible)).toEqual(new Set(["susds-sky"]));
   });
 
-  it("treats GBP and CHF pegs as part of the shared other-peg taxonomy", () => {
-    expect(OTHER_PEG_TAGS).toContain("gbp-peg");
-    expect(OTHER_PEG_TAGS).toContain("chf-peg");
-  });
-
-  it("returns active long-tail peg assets when filtering by other-peg", () => {
-    const trackedIds = buildTrackedIdSet(["other-peg"]);
-    const activeOtherPegIds = ACTIVE_STABLECOINS.filter((coin) =>
-      getFilterTags(coin).some((tag) => OTHER_PEG_TAGS.includes(tag)),
-    ).map((coin) => coin.id);
-
-    expect(activeOtherPegIds.length).toBeGreaterThan(0);
-    expect(activeOtherPegIds.every((id) => trackedIds.has(id))).toBe(true);
-  });
-
-  it("returns active gold and silver assets when filtering by commodity-peg", () => {
-    const trackedIds = buildTrackedIdSet(["commodity-peg"]);
-    const activeCommodityIds = ACTIVE_STABLECOINS.filter((coin) =>
-      getFilterTags(coin).some((tag) => COMMODITY_PEG_TAGS.includes(tag)),
-    ).map((coin) => coin.id);
-
-    expect(activeCommodityIds.length).toBeGreaterThan(0);
-    expect(activeCommodityIds.every((id) => trackedIds.has(id))).toBe(true);
-  });
-
-  it("returns active non-USD non-commodity assets when filtering by fiat-non-usd-peg", () => {
-    const trackedIds = buildTrackedIdSet(["fiat-non-usd-peg"]);
-    const activeFiatNonUsdIds = ACTIVE_STABLECOINS.filter((coin) =>
-      getFilterTags(coin).some((tag) => NON_USD_NON_COMMODITY_PEG_TAGS.includes(tag)),
-    ).map((coin) => coin.id);
-
-    expect(activeFiatNonUsdIds.length).toBeGreaterThan(0);
-    expect(activeFiatNonUsdIds.every((id) => trackedIds.has(id))).toBe(true);
-  });
-
-  it("returns Liquity v1 infrastructure cohort when filtering by infrastructure-liquity-v1", () => {
-    const trackedIds = buildTrackedIdSet(["infrastructure-liquity-v1"]);
-    expect(trackedIds.has("lusd-liquity")).toBe(true);
-    expect(trackedIds.has("satusd-river")).toBe(true);
-    expect(trackedIds.has("meusd-mezo")).toBe(true);
-    expect(trackedIds.has("btcusd-btcfi")).toBe(true);
-    expect(trackedIds.has("usbd-bima")).toBe(true);
-    expect(trackedIds.has("cjpy-yamato")).toBe(true);
-    expect(trackedIds.has("bold-liquity")).toBe(false);
-    expect(trackedIds.has("usdt-tether")).toBe(false);
-  });
-
-  it("returns Liquity v2 infrastructure cohort when filtering by infrastructure-liquity-v2", () => {
-    const trackedIds = buildTrackedIdSet(["infrastructure-liquity-v2"]);
-    expect(trackedIds.has("bold-liquity")).toBe(true);
-    expect(trackedIds.has("usdaf-asymmetry")).toBe(true);
-    expect(trackedIds.has("feusd-felix")).toBe(true);
-    expect(trackedIds.has("lusd-liquity")).toBe(false);
-  });
-
-  it("returns the M0 cohort when filtering by infrastructure-m0", () => {
-    const trackedIds = buildTrackedIdSet(["infrastructure-m0"]);
-    expect(trackedIds.has("usdsc-startale")).toBe(true);
-    expect(trackedIds.has("ctusd-citrea")).toBe(true);
-    expect(trackedIds.has("usdat-saturn")).toBe(true);
-    expect(trackedIds.has("usdn-noble")).toBe(true);
-    expect(trackedIds.has("musd-metamask")).toBe(true);
-    expect(trackedIds.has("wm-m0")).toBe(true);
-    expect(trackedIds.has("usdnr-nerona")).toBe(true);
-    expect(trackedIds.has("usdk-kast")).toBe(true);
-    expect(trackedIds.has("xo-exodus")).toBe(true);
-    expect(trackedIds.has("m-m0")).toBe(true);
-    expect(trackedIds.has("susdai-usd-ai")).toBe(false);
-  });
-
-  it("returns only tracked parent variants for the variant filters", () => {
-    const allVariants = buildTrackedIdSet(["variant-tracked"]);
-    expect(allVariants.has("susds-sky")).toBe(true);
-    expect(allVariants.has("susdai-usd-ai")).toBe(true);
-    expect(allVariants.has("stusds-sky")).toBe(true);
-    expect(allVariants.has("busd0-usual")).toBe(false);
-    expect(allVariants.has("srusd-reservoir")).toBe(true);
-    expect(allVariants.has("wm-m0")).toBe(true);
-    expect(allVariants.has("iusd-initia")).toBe(true);
-    expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.has("ctusd-citrea")).toBe(true);
-    expect(allVariants.size).toBe(98);
-
-    const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
-    expect(strategy).toEqual(
-      new Set([
-        "aa-falconx-mev-capital",
-        "autousd-auto-finance",
-        "apyusd-apyx",
-        "bbqusdc-steakhouse",
-        "dusd-dialectic",
-        "eearn-ember",
-        "fxsave-f-x-protocol",
-        "gtusdc-gauntlet",
-        "gtusdcp-gauntlet",
-        "hbusdt-hyperbeat",
-        "susd1plus-lorenzo",
-        "savusd-avant",
-        "susdai-usd-ai",
-        "steakusdc-steakhouse",
-        "steakusdt-steakhouse",
-        "stcusd-cap",
-        "syrupusdc-maple",
-        "syrupusdt-maple",
-        "yousd-yield-optimizer",
-        "syzusd-yuzu",
-        "said-gaib",
-        "sdusd-dtrinity",
-        "stusd-stoneyield",
-        "usd3-3jane",
-        "yvusdc-yearn",
-        "ybold-yearn",
-        "yusd-yieldfi",
-        "skymoneyusdtsavings-sky",
-        "sparkusdtbc-spark",
-        "krusdc-keyrock",
-        "arcusdc-galaxy",
-        "armusdcs-wintermute",
-        "pendleusdc-pendle",
-        "earnusd-lido",
-        "hyperusdca-hyperithm",
-        "bbqusdc-steakhouse-v2",
-        "cscbusdc-clearstar",
-        "steakcusdc-steakhouse",
-        "ethenausdc-steakhouse",
-        "sparkusdc-spark",
-        "skymoneyusdsflagship-sky",
-        "senpyusdmain-sentora",
-        "senpyusdprimev2-sentora",
-        "senpyusdpst-sentora",
-        "senpyusdmwin-sentora",
-        "steakusdg-steakhouse",
-        "syrupusdg-maple",
-        "senrlusdv2-sentora",
-        "sxsrlusd-sentora",
-        "steakeurcv-steakhouse",
-        "susdat-saturn",
-        "xgld-unitas",
-        "kpkusdcprime-kpk",
-        "sirloinusdc-steakhouse",
-        "kpkusdcyield-kpk",
-        "gusdcq-galaxy",
-        "senpathusd-sentora",
-        "gusdtq-galaxy",
-        "gtusdtp-gauntlet",
-      ]),
-    );
-
-    const riskAbsorption = buildTrackedIdSet(["variant-risk-absorption"]);
-    expect(riskAbsorption).toEqual(
-      new Set(["srusde-strata", "stusds-sky", "stkgho-umbrella-aave", "sbold-k3-capital"]),
-    );
-
-    const bond = buildTrackedIdSet(["variant-bond-maturity"]);
-    expect(bond).toEqual(new Set());
-  });
 });
 
-describe("resolveEffectiveSortKey", () => {
-  it("returns the given key when column is visible", () => {
-    const visible = new Set<ColumnId>(["mcap"]);
-    expect(resolveEffectiveSortKey("mcap", visible)).toBe("mcap");
-  });
-
-  it("falls back to mcap when column is not visible", () => {
-    const visible = new Set<ColumnId>(["name", "price"]);
-    expect(resolveEffectiveSortKey("stability", visible)).toBe("mcap");
-  });
-});
 
 describe("prioritizePinnedStablecoins", () => {
   it("moves pinned rows to the top in pinned order", () => {
@@ -563,34 +384,6 @@ describe("sortStablecoins", () => {
     expect(new Set(result.slice(1).map((coin) => coin.id))).toEqual(new Set(["missing", "invalid"]));
   });
 
-  it("reads the selected sort value once per row", () => {
-    let priceReads = 0;
-    const withCountedPrice = (id: string, name: string, price: number): StablecoinData => {
-      const coin = makeCoin(id, name);
-      Object.defineProperty(coin, "price", {
-        get() {
-          priceReads += 1;
-          return price;
-        },
-        configurable: true,
-      });
-      return coin;
-    };
-    const coins = [
-      withCountedPrice("a", "A", 1.05),
-      withCountedPrice("b", "B", 0.98),
-      withCountedPrice("c", "C", 1.01),
-    ];
-
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortAsc("price"),
-      effectiveSortKey: "price",
-    });
-
-    expect(result.map((coin) => coin.id)).toEqual(["b", "c", "a"]);
-    expect(priceReads).toBe(coins.length);
-  });
 });
 
 describe("blacklistable projection", () => {
@@ -660,5 +453,72 @@ describe("supply-change semantics", () => {
     ];
     const changeColumn = columns.find((column) => column.header === "24h Change (%)");
     expect(changeColumn?.accessor(missing, 0)).toBeNull();
+  });
+});
+
+interface ComparatorRow {
+  name: string;
+  value: number;
+  score: number | null;
+}
+
+describe("createTableComparator", () => {
+  it.each<{
+    name: string;
+    key: keyof ComparatorRow;
+    direction: "asc" | "desc";
+    nullPosition?: "first";
+    rows: ComparatorRow[];
+    expected: (number | string | null)[];
+  }>([
+    {
+      name: "sorts numbers ascending", key: "value", direction: "asc",
+      rows: [{ name: "B", value: 20, score: null }, { name: "A", value: 10, score: null }],
+      expected: [10, 20],
+    },
+    {
+      name: "sorts strings ascending", key: "name", direction: "asc",
+      rows: [{ name: "Banana", value: 1, score: null }, { name: "Apple", value: 2, score: null }],
+      expected: ["Apple", "Banana"],
+    },
+    {
+      name: "sorts null after non-null ascending by default", key: "score", direction: "asc",
+      rows: [{ name: "A", value: 1, score: null }, { name: "B", value: 2, score: 50 }],
+      expected: [50, null],
+    },
+    {
+      name: "sorts null before non-null ascending when configured", key: "score", direction: "asc", nullPosition: "first",
+      rows: [{ name: "B", value: 2, score: 50 }, { name: "A", value: 1, score: null }],
+      expected: [null, 50],
+    },
+    {
+      name: "sorts mixed null and non-null entries descending", key: "score", direction: "desc",
+      rows: [
+        { name: "A", value: 1, score: null }, { name: "B", value: 2, score: 80 },
+        { name: "C", value: 3, score: null }, { name: "D", value: 4, score: 30 },
+        { name: "E", value: 5, score: 60 },
+      ],
+      expected: [80, 60, 30, null, null],
+    },
+  ])("$name", ({ key, direction, nullPosition, rows, expected }) => {
+    const compare = createTableComparator<keyof ComparatorRow, ComparatorRow>({
+      name: (r) => r.name, value: (r) => r.value, score: (r) => r.score,
+    }, nullPosition ? { nullPosition } : undefined);
+    rows.sort((a, b) => compare(a, b, { key, direction }));
+    expected.forEach((value, index) => {
+      if (value === null) expect(rows[index][key]).toBeNull();
+      else expect(rows[index][key]).toBe(value);
+    });
+  });
+
+  it("returns 0 for an unrecognized key", () => {
+    const compare = createTableComparator<keyof ComparatorRow, ComparatorRow>({
+      name: (r) => r.name, value: (r) => r.value, score: (r) => r.score,
+    });
+    expect(compare(
+      { name: "A", value: 1, score: null },
+      { name: "B", value: 2, score: null },
+      { key: "unknown" as "name", direction: "asc" },
+    )).toBe(0);
   });
 });

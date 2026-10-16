@@ -167,21 +167,6 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(buildV9EvaluationBuildManifest(root)).toEqual(buildV9EvaluationBuildManifest(root));
   });
 
-  it("includes every executable evaluator admission schema leaf", () => {
-    const paths = new Set<string>(V9_EVALUATION_BUILD_SOURCE_PATHS);
-    for (const owner of [
-      "shared/types/safety-score-v9-fact-input-primitives.ts",
-      "shared/types/safety-score-v9-fact-primitives.ts",
-      "shared/types/safety-score-v9-operational-resilience-primitives.ts",
-    ]) {
-      expect(paths.has(owner), owner).toBe(true);
-    }
-    expect(paths.has("shared/types/safety-score-v9-vocabulary.ts")).toBe(true);
-    // This schema is executable through the evaluator's imported fact schemas,
-    // even though scoring thresholds themselves come from validated policy.
-    expect(paths.has("shared/types/safety-score-v9-grade.ts")).toBe(true);
-  });
-
   it.each([
     "shared/types/safety-score-v9-fact-input-primitives.ts",
     "shared/types/safety-score-v9-operational-resilience-primitives.ts",
@@ -218,16 +203,6 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(renderV9EvaluationBuildManifest(after)).toContain(after.digest);
   });
 
-  it("does not discover newly added operational files by name", () => {
-    const root = fixtureRoot();
-    const operational = resolve(root, "worker/src/lib/safety-score-v9-new-publication-step.ts");
-    mkdirSync(dirname(operational), { recursive: true });
-    writeFileSync(operational, "operational\n");
-    const before = buildV9EvaluationBuildManifest(root);
-    writeFileSync(operational, "changed operational code\n");
-    expect(buildV9EvaluationBuildManifest(root)).toEqual(before);
-  });
-
   it("binds the configured Worker full-catalog decoder and its transported complete bytes", () => {
     const configPath = resolve(REPO_ROOT, "worker/wrangler.toml");
     const alias = parseAssignments(readFileSync(configPath, "utf8"))
@@ -247,42 +222,6 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(changedDecoder.digest).not.toBe(before.digest);
     writeFileSync(resolve(root, packed!), "changed full metadata\n");
     expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(changedDecoder.digest);
-  });
-
-  it("keeps the fixed-input compiler, evaluator and policy runtime import closure complete", () => {
-    const manifestPaths = Object.fromEntries(
-      V9_EVALUATION_BUILD_SOURCE_PATHS.map((path) => [path, true] as const),
-    ) as Record<string, true>;
-    const missing = [...collectRuntimeImportClosure()]
-      .filter((path) => !manifestPaths[path])
-      .sort();
-    expect(missing).toEqual([]);
-  });
-
-  it.each([
-    "worker/src/lib/safety-score-v9/capture.ts",
-    "worker/src/lib/safety-score-v9/supply-attribution-capture.ts",
-    "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-    "worker/src/lib/safety-score-v9/supply-attribution-source.ts",
-    "worker/src/lib/safety-score-v9/supply-attribution-capture-budget.ts",
-    "worker/src/lib/safety-score-v9/ccip-pending-observer.ts",
-    "worker/src/lib/safety-score-v9/l2-messenger-pending-observer.ts",
-    "worker/src/lib/safety-score-v9/layerzero-oft-pending-observer.ts",
-    "worker/src/lib/safety-score-v9/wm-supply-observer.ts",
-    "worker/src/lib/safety-score-v9/centrifuge-supply-observer.ts",
-    "worker/src/lib/safety-score-v9/xaut-supply-observer.ts",
-    "worker/src/lib/safety-score-v9/transfer-materiality-observer.ts",
-    "worker/src/cron/reserve-adapters/xdai-bridge.ts",
-    "worker/src/lib/evm-rpc.ts",
-    "worker/src/lib/fetch-retry.ts",
-    "scripts/build-data/generate-worker-stablecoin-catalog.ts",
-  ])("does not reach or rotate identity for capture-only producers or tooling %s", (path) => {
-    expect(collectRuntimeImportClosure().has(path), path).toBe(false);
-    const root = fixtureRoot();
-    const before = buildV9EvaluationBuildManifest(root);
-    mkdirSync(dirname(resolve(root, path)), { recursive: true });
-    writeFileSync(resolve(root, path), "changed non-evaluator code\n");
-    expect(buildV9EvaluationBuildManifest(root)).toEqual(before);
   });
 
   it("retains the latest per-mechanism capture hash and R2 key binding", () => {

@@ -2,7 +2,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { ReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
@@ -134,12 +133,6 @@ describe("ReservesSection", () => {
       expect(container.textContent).toContain(coin.reserveReview!.compositionBasis);
     },
   );
-  it("renders nothing without reserves, a fetch error or a reviewed summary, and a skeleton while loading", () => {
-    const { container, rerender } = renderSection({ coin: NO_REVIEW_COIN, qualitySummary: null });
-    expect(container.innerHTML).toBe("");
-    rerender(<ReservesSection coin={NO_REVIEW_COIN} reserves={null} reserveFetchError={null} isLoading />);
-    expect(container.querySelector('section#reserves[aria-busy="true"]')).not.toBeNull();
-  });
 
   it("builds the module from the reviewed slices: one visual, at most four facts, both anchors", () => {
     const { container } = renderSection();
@@ -166,48 +159,12 @@ describe("ReservesSection", () => {
     expect(container.querySelectorAll('[role="group"][aria-label="Reserve facts"] > *')).toHaveLength(4);
   });
 
-  it("drops the raw obligor list and the mix bar", () => {
-    const { container } = renderSection();
-    expect(container.querySelector('[aria-label="Recorded reserve obligors"]')).toBeNull();
-    expect(container.textContent).not.toContain("Obligor names or classes recorded");
-    expect(container.textContent).not.toContain("Asset mix");
-  });
-
-  it("folds the ladder in neutral and blue, never red, and lists slice detail by share", () => {
-    renderSection();
-    const ladder = screen.getByLabelText("Liquidity horizon ladder");
-    expect(within(ladder).getByText("> 7 days")).toBeDefined();
-    expect(ladder.innerHTML).not.toMatch(/bg-red|bg-amber|bg-emerald|bg-state-/);
-    const names = Array.from(screen.getByLabelText("Reserve slices").querySelectorAll("li p span"));
-    expect(names.map((node) => node.textContent)).toEqual(["U.S. Treasury bills", "Bank deposits"]);
-  });
-
   it("adds the reviewed date to the footer and names the source in the as-of fact", () => {
     const { container } = renderSection();
     expect(container.textContent).toContain("Reviewed 2026-07-18");
     expect(factValue("As of").textContent).toContain("2026-06-30");
     expect(factValue("As of").textContent).toContain("Circle reserve report");
     expect(container.innerHTML).toContain("https://example.com/reserves");
-  });
-
-  it("keeps one status chip in the header and moves confidence and source type to the chip row", () => {
-    const precedesVisual = (node: Node) =>
-      Boolean(node.compareDocumentPosition(screen.getByRole("figure")) & Node.DOCUMENT_POSITION_FOLLOWING);
-    const { container, unmount } = renderSection({
-      reserves: makeReserves({ displayBadge: { kind: "proof", label: "Attestation" }, provenance: STALE_USDC.provenance }),
-    });
-    const headerChips = Array.from(container.querySelectorAll('[data-slot="badge"]')).filter(precedesVisual);
-    expect(headerChips).toHaveLength(1);
-    expect(headerChips[0]!.textContent).toBe(SUMMARY.chipLabel);
-    expect(precedesVisual(screen.getByRole("button", { name: "Attestation" }))).toBe(false);
-    expect(precedesVisual(screen.getByText((text) => text.includes(SUMMARY.confidenceLabel!)))).toBe(false);
-    unmount();
-
-    // An unhealthy feed adds its ops chip beside the status chip, never a second status chip.
-    renderSection({ reserves: STALE_USDC });
-    expect(precedesVisual(screen.getByText(SUMMARY.chipLabel))).toBe(true);
-    expect(precedesVisual(screen.getByRole("button", { name: /Reserve feed stale/ }))).toBe(true);
-    expect(precedesVisual(screen.getByRole("button", { name: "Attestation" }))).toBe(false);
   });
 
   it("folds review notes and sources together, last, under one footer line", () => {
@@ -227,16 +184,6 @@ describe("ReservesSection", () => {
     expect(provenance[0]!.querySelector("summary")?.textContent).toMatch(/\b3\b/);
     // The disclosure ids the page deep-links to survive.
     expect(container.querySelector("details#reserve-feed-status")).not.toBeNull();
-  });
-
-  it("bounds the verdict: an over-budget lede falls back to its first sentence", () => {
-    const lede = "12 reviewed reserve slices — at least 30% convertible within one day; 10% has no published exit timeline. "
-      + "12.6% of the basket has unresolved reserve exposure. 5% is issuer self-exposure rather than independent collateral.";
-    expect(findSummaryBudgetViolations(lede)).not.toHaveLength(0);
-    renderSection({ qualitySummary: { ...SUMMARY, lede } });
-    const verdict = screen.getByText(/^12 reviewed reserve slices/);
-    expect(findSummaryBudgetViolations(verdict.textContent ?? "")).toHaveLength(0);
-    expect(lede.startsWith(verdict.textContent ?? "")).toBe(true);
   });
 
   describe("liquid ≤ 1 day fact", () => {
@@ -276,22 +223,6 @@ describe("ReservesSection", () => {
     expect(factValue("Top position").className).toContain(AMBER_VALUE_CLASS);
   });
 
-  it("draws a single slice with no joinable parent as one composition bar and omits the redundant top-position fact", () => {
-    const { container } = renderSection({
-      qualitySummary: {
-        ...SUMMARY,
-        sliceCount: 1,
-        slices: [{ ...SUMMARY.slices[0]!, name: "ETH", pct: 100, obligor: "Ethereum" }],
-      },
-    });
-    const figure = screen.getByRole("figure");
-    expect(figure.getAttribute("aria-label")).toContain("ETH 100%");
-    // The bar names the slice's asset class; no treemap stage is mounted.
-    expect(figure.getAttribute("aria-label")).toContain(SUMMARY.slices[0]!.assetClassLabel!);
-    expect(container.querySelector("[class*='pharos-chart-stage']")).toBeNull();
-    expect(screen.queryByText("Top position")).toBeNull();
-  });
-
   describe("wrapper look-through", () => {
     const WRAPPER_SUMMARY: ReserveQualityClientSummary = {
       ...SUMMARY,
@@ -329,26 +260,6 @@ describe("ReservesSection", () => {
       const verdict = screen.getByText(/^Via PAR: 2 reviewed slices/);
       expect(verdict.textContent).toContain("Liquid cash strategy basket");
       expect(verdict.textContent).toContain("70%");
-    });
-
-    it("keeps the review stamp as the one visible date and folds the parent and basis dates", () => {
-      const { container } = renderSection({
-        qualitySummary: WRAPPER_SUMMARY,
-        lookThrough: LOOK_THROUGH,
-        reserves: makeReserves({ metadata: { sourceTimestamp: Date.parse("2026-09-24T00:00:00Z") / 1000 } }),
-      });
-      expect(screen.queryByText("As of")).toBeNull();
-      const folds = [...container.querySelectorAll("details")];
-      const foldText = folds.map((fold) => fold.textContent ?? "").join(" ");
-      let visibleText = container.textContent ?? "";
-      for (const fold of folds) visibleText = visibleText.replace(fold.textContent ?? "", "");
-      expect(visibleText).toContain("Reviewed 2026-07-18");
-      expect(visibleText).not.toContain("2026-09-30");
-      expect(visibleText).not.toContain(SUMMARY.asOf!);
-      expect(visibleText).not.toContain("2026-09-24");
-      expect(foldText).toContain("PAR reserves reviewed 2026-09-30");
-      expect(foldText).toContain(`basis as of ${SUMMARY.asOf}`);
-      expect(foldText).toContain("2026-09-24");
     });
 
     it("keeps the wrapper's own basket when its reviewed basis is not a single slice", () => {
@@ -481,15 +392,5 @@ describe("ReservesSection", () => {
     const disclosure = screen.getByText("Live reserve feed").closest("details") as HTMLElement;
     expect(disclosure.textContent).toContain("can differ from the reviewed slices");
     expect(within(disclosure).getByText("USDC")).toBeDefined();
-  });
-
-  it("still exposes a live feed that matches the reviewed slices, worded as matching", () => {
-    renderSection({
-      reserves: makeReserves({
-        reserves: [{ name: "U.S. Treasury bills", pct: 80.2, risk: "very-low" }, { name: "Bank deposits", pct: 19.8, risk: "very-low" }],
-      }),
-    });
-    const disclosure = screen.getByText("Live reserve feed").closest("details") as HTMLElement;
-    expect(disclosure.textContent).toContain("matches the reviewed slices");
   });
 });

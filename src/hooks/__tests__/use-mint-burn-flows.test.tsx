@@ -13,7 +13,7 @@ vi.mock("../api-hooks", () => ({
   useRegisteredApiQuery: useRegisteredApiQueryMock,
 }));
 
-import { useMintBurnEvents, useMintBurnFlows } from "../use-mint-burn-flows";
+import { useMintBurnEvents } from "../use-mint-burn-flows";
 
 const currentPayload = {
   gauge: {
@@ -45,17 +45,6 @@ const currentPayload = {
 describe("useMintBurnFlows", () => {
   beforeEach(() => {
     useRegisteredApiQueryMock.mockReset();
-  });
-
-  it("passes current signed flow values and states through unchanged", () => {
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: currentPayload,
-      meta: { status: "fresh" },
-    });
-
-    const { result } = renderHook(() => useMintBurnFlows());
-
-    expect(result.current.data).toBe(currentPayload);
   });
 
   it("rejects midpoint-v1 payloads at the live response schema boundary", () => {

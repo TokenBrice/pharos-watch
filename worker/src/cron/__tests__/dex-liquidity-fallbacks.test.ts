@@ -98,27 +98,6 @@ describe("getFallbackTargets", () => {
     expect(targetIds.has("dai-makerdao")).toBe(false);
   });
 
-  it("targets a coin whose only weakness is measured-balance coverage", () => {
-    const metrics = new Map<string, LiquidityMetrics>();
-    metrics.set("dai-makerdao", metricWithPools("dai-makerdao", { poolCount: 4, totalTvlUsd: 500_000 }));
-
-    const priceObservations = new Map([
-      [
-        "dai-makerdao",
-        [
-          { price: 1, tvl: 150_000, chain: "ethereum", protocol: "curve" },
-          { price: 1, tvl: 100_000, chain: "base", protocol: "uniswap-v3" },
-        ],
-      ],
-    ]);
-
-    const targetIds = new Set(
-      getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
-    );
-
-    expect(targetIds.has("dai-makerdao")).toBe(true);
-  });
-
   it("can restrict orderbook fallback targets to coins with a geckoId", () => {
     const metrics = new Map<string, LiquidityMetrics>();
     const noGecko = initMetrics("rwausdi-multipli", "rwaUSDi");

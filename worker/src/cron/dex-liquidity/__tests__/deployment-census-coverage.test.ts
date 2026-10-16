@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { isDexExitRouteCoverageComplete, isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
@@ -40,14 +39,6 @@ const OVERSIZED_FOOTPRINT: ContractDeployment[] = [
   address: `0x${(index + 1).toString(16).padStart(40, "0")}`,
   decimals: 18,
 }));
-
-/** Registry coins the discovery crawl can only sweep across several runs. */
-function windowedActiveCoins(): { id: string; deployments: ContractDeployment[] }[] {
-  return ACTIVE_STABLECOINS.map((meta) => ({
-    id: meta.id,
-    deployments: [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])],
-  })).filter(({ deployments }) => estimateDiscoverySweepWindowCount(deployments) > 1);
-}
 
 function deployment(
   chain = "ethereum",
@@ -700,14 +691,4 @@ describe("resolveDexDeploymentCensusMaxAgeSec", () => {
     }
   });
 
-  it("extends the bound for every tracked coin the crawl has to window", () => {
-    const windowed = windowedActiveCoins();
-    expect(windowed.length).toBeGreaterThan(0);
-
-    for (const coin of windowed) {
-      expect(resolveDexDeploymentCensusMaxAgeSec(coin.deployments)).toBeGreaterThan(
-        DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
-      );
-    }
-  });
 });

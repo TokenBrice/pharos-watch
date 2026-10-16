@@ -254,10 +254,6 @@ describe("direct API census scope declarations", () => {
     stablecoinPriceById: new Map(),
   });
 
-  it("enrolls every adapter exactly once in the census contract matrix", () => {
-    expect(fetchers.map(({ name }) => name).sort()).toEqual(contracts.map(({ name }) => name).sort());
-  });
-
   it.each(contracts)("$name declares its $stop census contract", ({ name, censusScope }) => {
     const fetcher = fetchers.find((adapter) => adapter.name === name)!;
     expect(fetcher.censusScope).toBe(censusScope);
@@ -279,28 +275,5 @@ describe("direct API census scope declarations", () => {
       expect(index.enforcedChainsByProtocol.get(fetcher.normalizedProtocol)?.has(chain) ?? false,
         `${name}: ${scan}`).toBe(censusScope === "exhaustive" && scan === "exhausted");
     }
-  });
-
-  it("withholds veto authority from every provider that returns a filtered extract", () => {
-    const fetchers = buildDexDirectApiFetchers({
-      db: makeNoopD1(),
-      graphApiKey: null,
-      chainAddressToId: new Map(),
-      symbolToChainScopedIds: new Map(),
-      stablecoinPriceById: new Map(),
-    });
-    const scopeByName = new Map(fetchers.map((fetcher) => [fetcher.name, fetcher.censusScope]));
-
-    // Meteora reads ~10 of the ~123k pools its own API advertises; Fluid and the
-    // two Sugar/Slipstream crawls only ever emit tracked, two-sided, priceable
-    // pools. None of them can certify that an unseen pool does not exist.
-    expect(scopeByName.get("Meteora")).toBe("bounded-sample");
-    expect(scopeByName.get("Fluid")).toBe("bounded-sample");
-    expect(scopeByName.get("Aerodrome Slipstream")).toBe("bounded-sample");
-    expect(scopeByName.get("Velodrome Slipstream")).toBe("bounded-sample");
-    // PancakeSwap refreshes the head page but rotates only two tail pages per
-    // run, so a pool absent from one response was usually just read on an
-    // earlier run; its per-run key set must never veto staged rows.
-    expect(scopeByName.get("PancakeSwap")).toBe("bounded-sample");
   });
 });

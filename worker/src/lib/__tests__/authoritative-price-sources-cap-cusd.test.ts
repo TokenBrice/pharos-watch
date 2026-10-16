@@ -41,21 +41,14 @@ describe("capCusdProvider", () => {
     { supply: 99_999_900, output: 979_999_020_000n },
     { supply: 100_000_000, output: 980_000_000_000n },
     { supply: 200_000_000, output: 980_000_000_000n },
+    { supply: undefined, output: 980_000_000_000n },
   ])("decodes a supply-sized redemption quote at supply $supply", async ({ supply, output }) => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(quote(output));
 
     await expect(capCusdProvider.fetchLivePrice!(
-      asset("cusd-cap", { circulating: { peggedUSD: supply } }),
+      asset("cusd-cap", supply === undefined ? {} : { circulating: { peggedUSD: supply } }),
       context,
     )).resolves.toMatchObject({ price: 0.98, source: "protocol-redeem", confidence: "high" });
-  });
-
-  it("uses the bounded maximum quote when current supply is unavailable", async () => {
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(quote(980_000_000_000n));
-
-    await expect(capCusdProvider.fetchLivePrice!(asset("cusd-cap"), context)).resolves.toMatchObject({
-      price: 0.98, source: "protocol-redeem", confidence: "high",
-    });
   });
 
   it("sizes historical redemption from the nearest historical supply, not the current maximum", async () => {

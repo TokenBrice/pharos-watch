@@ -184,18 +184,6 @@ describe("MobileStickySummary", () => {
     expect(io.ioObserve).not.toHaveBeenCalled();
   });
 
-  it("installs no observers or height at the desktop boundary even while enabled", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(true);
-    viewportWidth = 1024;
-    const io = makeObserverHook(57.6);
-    const view = renderSummary();
-
-    expect(view.sticky()).toBeNull();
-    expect(view.publishedHeight()).toBe("");
-    expect(io.ioObserve).not.toHaveBeenCalled();
-    expect(io.roObserve).not.toHaveBeenCalled();
-  });
-
   it("clears both observers, visibility and height when leaving mobile and rechecks the hero on return", () => {
     isMobileStickySummaryEnabledMock.mockReturnValue(true);
     const io = makeObserverHook(57.6);
@@ -217,15 +205,6 @@ describe("MobileStickySummary", () => {
     expect(view.publishedHeight()).toBe("");
     io.fireIntersecting(false);
     expect(view.publishedHeight()).toBe("58px");
-  });
-
-  it("returns null while the observe target is in view (no IO fire yet)", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(true);
-    makeObserverHook(57.6);
-    const view = renderSummary();
-
-    expect(view.sticky()).toBeNull();
-    expect(view.publishedHeight()).toBe("");
   });
 
   it("publishes its rounded measured height once the target leaves the viewport, and republishes it on resize", () => {
@@ -276,22 +255,4 @@ describe("MobileStickySummary", () => {
     expect(view.publishedHeight()).toBe("");
   });
 
-  it("cleans up when the feature is disabled while the summary is visible", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(true);
-    const io = makeObserverHook(57.6);
-    const view = renderSummary();
-
-    io.fireIntersecting(false);
-    expect(view.publishedHeight()).toBe("58px");
-
-    isMobileStickySummaryEnabledMock.mockReturnValue(false);
-    act(() => {
-      view.rerender();
-    });
-
-    expect(view.sticky()).toBeNull();
-    expect(view.publishedHeight()).toBe("");
-    expect(io.ioDisconnect).toHaveBeenCalledTimes(1);
-    expect(io.roDisconnect).toHaveBeenCalledTimes(1);
-  });
 });

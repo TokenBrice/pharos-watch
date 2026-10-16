@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
-  buildInsertDepegEventStmt,
   collectDexProtocolCorroborations,
   rowPriceCoverage,
   serializeDepegPriceCoverage,
@@ -51,36 +49,6 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
     expect(() => serializeDepegPriceCoverage({
       intervals: [[200, 100]], lastTrustedObservationAt: 200, gapStartedAt: null,
     })).toThrow();
-  });
-
-  it("buildInsertDepegEventStmt binds confirmation_sources and pending_reason", () => {
-    const bindCalls: unknown[][] = [];
-    const db = makeNoopD1({
-      prepare(_sql: string) {
-        return { bind(...args: unknown[]) { bindCalls.push(args); return this; } } as unknown as D1PreparedStatement;
-      },
-    });
-    buildInsertDepegEventStmt(db, {
-      id: 0,
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      pegType: "peggedUSD",
-      direction: "below",
-      peakDeviationBps: -200,
-      startedAt: 1000,
-      endedAt: null,
-      startPrice: 0.98,
-      peakPrice: 0.97,
-      recoveryPrice: null,
-      pegReference: 1,
-      source: "live",
-      confirmationSources: "DEX+CEX",
-      pendingReason: "large-cap",
-      closeReason: null,
-      provenance: null,
-    });
-    expect(bindCalls[0]).toContain("DEX+CEX");
-    expect(bindCalls[0]).toContain("large-cap");
   });
 
   it("rowToDepegEvent exposes confirmation_sources and pending_reason (null-safe)", () => {

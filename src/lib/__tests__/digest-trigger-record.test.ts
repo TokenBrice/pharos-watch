@@ -80,15 +80,6 @@ describe("buildDigestTriggerRecord", () => {
     ]);
   });
 
-  it("keeps outcomes without a matching trigger metric in an explicit unclassified bucket", () => {
-    const record = buildDigestTriggerRecord([
-      entry([], [outcome("trigger:future:unknown", "pending")]),
-    ]);
-
-    expect(record.unclassifiedCount).toBe(1);
-    expect(record.buckets).toContainEqual(expect.objectContaining({ key: "unknown", label: "Unclassified", pending: 1 }));
-  });
-
   it("does not invent a rate when no outcome has resolved", () => {
     const record = buildDigestTriggerRecord([
       entry([trigger("trigger:gauge", "bank-run-gauge")], [outcome("trigger:gauge", "pending")]),

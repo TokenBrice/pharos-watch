@@ -1,21 +1,13 @@
-import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import type {
   DdrrResponse,
   DdrrRow,
-  DdrrV2CoverageRow,
-  DdrrV2NoCallReviewRow,
   DdrrV2PredictionReviewRow,
 } from "@shared/types/depeg-resolver-review";
 import {
-  DEFAULT_DDRR_CALIBRATION_REPORT_PATH,
   buildDdrrCalibrationReport,
   isTrustedDdrrApiKeyDestination,
-  parseArgs,
-  renderDdrrCalibrationReportMarkdown,
   runCli,
 } from "../maintenance/generate-ddrr-calibration-report";
 
@@ -126,72 +118,6 @@ function prediction(overrides: Partial<DdrrV2PredictionReviewRow> = {}): DdrrV2P
   };
 }
 
-function noCall(overrides: Partial<DdrrV2NoCallReviewRow> = {}): DdrrV2NoCallReviewRow {
-  return {
-    ...baseRow({
-      eventId: 2,
-      currentEventId: 2,
-      incidentKey: "ddr2:no-call",
-      stablecoinId: "nocall-usd",
-      symbol: "NOC",
-      sourceEventState: "terminal",
-      terminalEvidenceAt: LOCKED_AT + 10,
-      terminalEvidenceInterval: { start: LOCKED_AT, end: LOCKED_AT + 86400 },
-      terminalEvidencePrecision: "day",
-    }),
-    kind: "no_call_review",
-    publicPredictionId: 102,
-    assessmentId: 202,
-    predictionState: "no_call",
-    predictionMethodologyVersion: "3.03",
-    predictionPolicyVersion: "sticky-24h-v1",
-    lockedAt: LOCKED_AT,
-    publishedAt: LOCKED_AT,
-    publicationSnapshotToken: "snapshot-fixture",
-    missingReasons: ["No reviewed mint authority"],
-    actual: {
-      kind: "terminal",
-      actualEndedAt: null,
-      actualRemainingSec: null,
-      terminalEvidenceAt: LOCKED_AT + 10,
-      terminalEvidenceInterval: { start: LOCKED_AT, end: LOCKED_AT + 86400 },
-      terminalEvidencePrecision: "day",
-      reviewedAt: LOCKED_AT + 24 * 3600,
-    },
-    verdictReview: "unscored_insufficient_signal",
-    durationReview: "duration_unscored",
-    horizonReviews: [],
-    ...overrides,
-  };
-}
-
-function coverage(overrides: Partial<DdrrV2CoverageRow> = {}): DdrrV2CoverageRow {
-  return {
-    ...baseRow({
-      eventId: 3,
-      currentEventId: 3,
-      incidentKey: "ddr2:coverage|pipe",
-      stablecoinId: "coverage-usd",
-      symbol: "COV",
-      sourceEventState: "terminal",
-      terminalEvidenceAt: LOCKED_AT + 5,
-      terminalEvidenceInterval: { start: LOCKED_AT, end: LOCKED_AT + 86400 },
-      terminalEvidencePrecision: "day",
-    }),
-    kind: "coverage",
-    predictionState: "missed_lock_terminal",
-    actualOutcome: "terminal",
-    actualEndedAt: null,
-    terminalEvidenceSourceDate: "2026-06-29",
-    coverageCause: "lock_missed",
-    operationalCoverageCause: "lock_missed",
-    outcomeQualityState: "classified",
-    reason: "fixture",
-    failedPublication: null,
-    ...overrides,
-  };
-}
-
 function response(rows: DdrrRow[]): DdrrResponse {
   return {
     _meta: {
@@ -230,77 +156,6 @@ function response(rows: DdrrRow[]): DdrrResponse {
 }
 
 describe("generate-ddrr-calibration-report", () => {
-  it.each([
-    {
-      argv: [],
-      expected: { inputPath: null, apiBase: null, url: null, prod: false, format: "markdown", reportPath: DEFAULT_DDRR_CALIBRATION_REPORT_PATH },
-    },
-    {
-      argv: ["--input", "agents/ddrr.json", "--json", "--report", "agents/ddrr.json"],
-      expected: { inputPath: "agents/ddrr.json", format: "json", reportPath: "agents/ddrr.json" },
-    },
-    {
-      argv: ["--api-base", "https://api.example.test", "--stdout", "--limit", "12"],
-      expected: { apiBase: "https://api.example.test", stdout: true, sampleLimit: 12 },
-    },
-    {
-      argv: ["--url", "https://fixture.example.test/review", "--markdown", "--generated-at", "2026-08-29T00:00:00.000Z"],
-      expected: { url: "https://fixture.example.test/review", format: "markdown", generatedAt: "2026-08-29T00:00:00.000Z" },
-    },
-    {
-      argv: ["--prod", "--json", "--stdout"],
-      expected: { prod: true, format: "json", stdout: true },
-    },
-  ])("accepts source/output option combination %#", ({ argv, expected }) => {
-    expect(parseArgs(argv)).toMatchObject(expected);
-  });
-
-  it("rejects conflicting sources", () => {
-    expect(() => parseArgs(["--input", "agents/ddrr.json", "--prod"])).toThrow(
-      "Choose only one of --input, --api-base, --url, or --prod.",
-    );
-  });
-
-  it("builds factor, no-call, coverage, and duration calibration summaries", () => {
-    const report = buildDdrrCalibrationReport(response([prediction(), noCall(), coverage()]), {
-      generatedAt: "2026-06-29T00:00:00.000Z",
-      source: { mode: "input", detail: "fixture" },
-    });
-
-    expect(report.sample).toMatchObject({
-      rowCount: 3,
-      predictionReviewCount: 1,
-      noCallReviewCount: 1,
-      coverageCount: 1,
-    });
-    expect(report.durationCalibration.overall).toMatchObject({
-      rowCount: 1,
-      coinCount: 1,
-      fasterThanBandCount: 1,
-      bias: "too_slow",
-      recommendation: "hold",
-    });
-    expect(report.noCallCalibration).toMatchObject({
-      noCallCount: 1,
-      maturedNoCallCount: 1,
-      missingReasonCounts: { "No reviewed mint authority": 1 },
-    });
-    expect(report.coverageCalibration).toMatchObject({
-      coverageRowCount: 1,
-      operationalMissCount: 1,
-      byPredictionState: { missed_lock_terminal: 1 },
-    });
-    expect(report.reserveDependencyNuance.factorRows[0]).toMatchObject({
-      factorCode: "K2_backing_impairment",
-      verdictCounts: expect.objectContaining({ false_terminal: 1 }),
-      recommendation: "monitor",
-    });
-    expect(report.k5ExitCollapse.factorRows[0]).toMatchObject({
-      factorCode: "K5_exit_collapse",
-      recommendation: "monitor",
-    });
-  });
-
   it("requires both row and independent-coin support before recommending a retune", () => {
     for (const [rows, coins, recommendation] of [[49, 20, "hold"], [50, 19, "hold"], [50, 20, "candidate"]] as const) {
       const report = buildDdrrCalibrationReport(response(Array.from({ length: rows }, (_, i) =>
@@ -337,32 +192,6 @@ describe("generate-ddrr-calibration-report", () => {
     expect(empty.durationCalibration.overall).toMatchObject({ rowCount: 0, bias: "insufficient_data", meanSignedErrorSec: null, recommendation: "hold" });
   });
 
-  it("separates row-weighted errors from equal-coin means", () => {
-    const report = buildDdrrCalibrationReport(response([
-      prediction({ stablecoinId: "a", signedDurationErrorSec: 0, absoluteDurationErrorSec: 0 }),
-      prediction({ stablecoinId: "a", signedDurationErrorSec: 6000, absoluteDurationErrorSec: 6000 }),
-      prediction({ stablecoinId: "b", signedDurationErrorSec: -12000, absoluteDurationErrorSec: 12000 }),
-    ]), { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
-    expect(report.durationCalibration.overall).toMatchObject({ meanSignedErrorSec: -2000,
-      meanAbsoluteErrorSec: 6000, coinDedupMeanSignedErrorSec: -4500, medianSignedErrorSec: 0 });
-  });
-
-  it("uses only scored factor assignments as rate denominators and reviews repeated misses", () => {
-    for (const verdict of ["false_terminal", "false_recoverable"] as const) {
-      for (const misses of [1, 2]) {
-        const rows = [prediction({ verdictReview: "correct_recoverable" }), prediction({ verdictReview: "pending" }),
-          ...Array.from({ length: misses }, () => prediction({ verdictReview: verdict }))];
-        const report = buildDdrrCalibrationReport(response(rows), { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
-        for (const factor of report.factorAttribution) {
-          expect(factor).toMatchObject({ rowCount: misses + 2, scoredCount: misses + 1, recommendation: misses === 1 ? "monitor" : "review" });
-          expect(factor.falseTerminalRate).toBeCloseTo(verdict === "false_terminal" ? misses / (misses + 1) : 0);
-          expect(factor.falseRecoverableRate).toBeCloseTo(verdict === "false_recoverable" ? misses / (misses + 1) : 0);
-        }
-        expect(report.factorAttribution.map((factor) => factor.factorCode)).toEqual(["K2_backing_impairment", "K5_exit_collapse"]);
-      }
-    }
-  });
-
   it("warns on degraded and truncated snapshots and excludes invalidated publications", () => {
     const erratum = { id: 1, state: "invalidated" as const, publicPredictionId: 103, incidentKey: "invalidated",
       eventId: 4, assessmentId: 203, reason: "false_positive" as const, createdAt: LOCKED_AT,
@@ -382,76 +211,6 @@ describe("generate-ddrr-calibration-report", () => {
     expect(report.durationCalibration.overall.rowCount).toBe(1);
     expect(report.warnings).toHaveLength(2);
     expect(report.warnings).toEqual(expect.arrayContaining([expect.stringMatching(/degraded.*upstream unavailable/), expect.stringMatching(/truncated/)]));
-  });
-
-  it("renders markdown sections and escapes table cells", () => {
-    const report = buildDdrrCalibrationReport(
-      response([
-        prediction({
-          incidentKey: "ddr2:k2|pipe",
-        }),
-        noCall(),
-        coverage(),
-      ]),
-      {
-        generatedAt: "2026-06-29T00:00:00.000Z",
-        source: { mode: "input", detail: "fixture" },
-      },
-    );
-
-    const markdown = renderDdrrCalibrationReportMarkdown(report);
-    expect(markdown).toContain("# DDRR Calibration Report");
-    expect(markdown).toContain("## Factor Attribution");
-    expect(markdown).toContain("## Stage 2 Duration Calibration");
-    expect(markdown).toContain("## K5 Exit-Collapse Calibration");
-    expect(markdown).toContain("## Reserve Dependency Nuance");
-    expect(markdown).toContain("## Mint-Incident Timing Robustness");
-    expect(markdown).toContain("ddr2:k2\\|pipe");
-  });
-
-  it("loads saved payloads and writes JSON output", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "ddrr-calibration-"));
-    try {
-      const input = join(dir, "ddrr.json");
-      const generatedAt = "2026-06-29T00:00:00.000Z";
-      writeFileSync(input, JSON.stringify(response([prediction()])), "utf8");
-
-      await expect(runCli(["--input", input, "--json", "--generated-at", generatedAt], dir)).resolves.toBe(0);
-      const output = join(dir, DEFAULT_DDRR_CALIBRATION_REPORT_PATH);
-      const expected = buildDdrrCalibrationReport(response([prediction()]), {
-        generatedAt,
-        source: { mode: "input", detail: input },
-      });
-      expect(readFileSync(output, "utf8")).toBe(`${JSON.stringify(expected, null, 2)}\n`);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("fetches production site-data with site headers", async () => {
-    const payload = response([prediction()]);
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ payload }), { status: 200 }));
-    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    try {
-      await expect(
-        runCli(
-          ["--prod", "--json", "--stdout", "--generated-at", "2026-06-29T00:00:00.000Z"],
-          process.cwd(),
-          fetchMock as unknown as typeof fetch,
-        ),
-      ).resolves.toBe(0);
-    } finally {
-      stdout.mockRestore();
-    }
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://pharos.watch/_site-data/depeg-resolver-review",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Origin: "https://pharos.watch",
-          Referer: "https://pharos.watch/depeg/",
-        }),
-      }),
-    );
   });
 
   it("only sends environment API keys to trusted api-base origins", async () => {

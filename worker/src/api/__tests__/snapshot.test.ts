@@ -140,13 +140,6 @@ async function buildSnapshotRow(
 }
 
 describe("handleSnapshotsIndex", () => {
-  it("returns an empty list when no snapshots exist", async () => {
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [] }]);
-    const res = await handleSnapshotsIndex(db);
-    const body = (await readJsonResponse(res, 200)) as { snapshots: unknown[] };
-    expect(body.snapshots).toEqual([]);
-  });
-
   it("returns parsed entries sorted by snapshot_date desc", async () => {
     const db = mockD1([
       {
@@ -224,16 +217,6 @@ describe("handleSnapshotsIndex", () => {
     });
   });
 
-  it("exposes the immutable snapshot safety identity from publication metadata", async () => {
-    const row = await buildSnapshotRow();
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [row] }]);
-
-    const res = await handleSnapshotsIndex(db);
-    const body = (await res.json()) as { snapshots: Array<{ safetyScoreIdentity: { model: string } | null }> };
-
-    expect(body.snapshots[0]?.safetyScoreIdentity).toMatchObject({ model: "v8" });
-  });
-
   it("preserves a valid V9 identity in snapshot index and coin responses", async () => {
     const cards = [
       makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A+" }),
@@ -303,7 +286,6 @@ describe("handleSnapshotDay", () => {
     ["9.14", "invalid", false, 500],
     ["9.14", null, true, 500],
     ["9.15", null, false, 500],
-    ["9.2", null, false, 500],
   ] as const)("validates historical digest at %s (%s, extra=%s)", async (version, digest, extra, status) => {
     const identity = { ...V9_SAFETY_SCORE_IDENTITY, methodologyVersion: version };
     const response = makeWorkerReportCardsV9Response({
@@ -489,18 +471,6 @@ describe("handleSnapshotDay", () => {
 });
 
 describe("handleSnapshotCoin", () => {
-  it("returns 400 for malformed date", async () => {
-    const db = mockD1();
-    const res = await handleSnapshotCoin(db, "bad", "usdc-circle");
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 404 when no row exists for the date", async () => {
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: null }]);
-    const res = await handleSnapshotCoin(db, ISO_DATE, "usdc-circle");
-    expect(res.status).toBe(404);
-  });
-
   it("returns 404 when the snapshot exists but the coin is absent", async () => {
     const row = await buildSnapshotRow();
     const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);

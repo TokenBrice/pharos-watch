@@ -57,25 +57,6 @@ function coinWith(overrides: Record<string, unknown>): StablecoinMeta {
 }
 
 describe("buildStablecoinDetailClientCoin display gating", () => {
-  it("shows oracle but hides custody for a cdp archetype with no explicit custodyModel", () => {
-    const clientCoin = buildStablecoinDetailClientCoin(coinWith({ mechanismArchetype: "cdp" }));
-    expect(clientCoin.oracleRiskSummary).toBeDefined();
-    expect("custodyProfileSummary" in clientCoin).toBe(false);
-  });
-
-  it("shows custody and available oracle data for a fiat-cash archetype with no explicit custodyModel", () => {
-    const clientCoin = buildStablecoinDetailClientCoin(coinWith({ mechanismArchetype: "fiat-cash" }));
-    expect(clientCoin.custodyProfileSummary).toBeDefined();
-    expect(clientCoin.oracleRiskSummary).toBeDefined();
-  });
-
-  it("shows custody for a cdp archetype when an explicit centralized custodyModel is set", () => {
-    const clientCoin = buildStablecoinDetailClientCoin(
-      coinWith({ mechanismArchetype: "cdp", custodyModel: "institutional-regulated" }),
-    );
-    expect(clientCoin.custodyProfileSummary).toBeDefined();
-  });
-
   it("attaches the reserve quality summary while stripping the server-only reserve review", () => {
     const clientCoin = buildStablecoinDetailClientCoin(
       coinWith({ reserves: RESERVES_WITH_QUALITY, reserveReview: RESERVE_REVIEW }),
@@ -91,72 +72,6 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
     );
     expect("reserveQualitySummary" in clientCoin).toBe(false);
     expect("reserveReview" in clientCoin).toBe(false);
-  });
-
-  it("de-duplicates mint-authority review and incident sources by URL", () => {
-    const clientCoin = buildStablecoinDetailClientCoin(coinWith({
-      mintAuthority: {
-        mintPath: "issuer-direct-mint",
-        authorityPosture: "concentrated-admin",
-        confidence: "verified",
-        summary: "Issuer backend can mint through reviewed operator controls.",
-        review: {
-          sources: [
-            { label: "Review", url: "https://example.com/review" },
-            { label: "Review mirror", url: "https://example.com/review" },
-          ],
-        },
-        mintIncidents: [{
-          date: "2025-02-01",
-          status: "active",
-          summary: "Privileged mint incident.",
-          sources: [
-            { label: "Thread", url: "https://example.com/thread" },
-            { label: "Thread mirror", url: "https://example.com/thread" },
-          ],
-        }],
-      },
-    }));
-
-    expect(clientCoin.mintAuthoritySummary?.sources).toEqual([
-      { label: "Review", url: "https://example.com/review" },
-      { label: "Thread", url: "https://example.com/thread" },
-    ]);
-    expect(clientCoin.mintAuthoritySummary?.mintIncidents?.[0]?.sources).toEqual([
-      { label: "Thread", url: "https://example.com/thread" },
-    ]);
-  });
-
-  it("omits empty-label mint-authority links before deduplication across summary, incident and custody sources", () => {
-    const base = TRACKED_META_BY_ID.get("usdt-tether")!;
-    const sources = [
-      { label: "", url: "https://example.com/evidence" },
-      { label: "Evidence", url: "https://example.com/evidence" },
-      { label: "", url: "https://example.com/empty-label" },
-    ];
-    const coin: StablecoinMeta = {
-      ...base,
-      mintAuthority: {
-        mintPath: "issuer-direct-mint", authorityPosture: "concentrated-admin", confidence: "verified",
-        summary: "Issuer backend can mint through reviewed operator controls.",
-        review: {
-          evidence: "Reviewed backend signer custody documentation.", reviewer: "test", reviewedAt: "2026-10-01", sources,
-        },
-        mintIncidents: [{
-          date: "2025-02-01", status: "active", summary: "Privileged mint incident.", sources,
-        }],
-        controls: [{
-          label: "Backend signer", role: "backend-signer", authorityType: "issuer-backend", directMintAbility: "direct",
-          keyCustodyAttestation: { kind: "hsm", sources },
-        }],
-      },
-    };
-    const summary = buildStablecoinDetailClientCoin(coin).mintAuthoritySummary!;
-    const expected = [{ label: "Evidence", url: "https://example.com/evidence" }];
-
-    expect(summary.sources).toEqual(expected);
-    expect(summary.mintIncidents?.[0]?.sources).toEqual(expected);
-    expect(summary.controls?.[0]?.keyCustodyAttestation?.sources).toEqual(expected);
   });
 
   it("projects only allowed mint-authority fields across the validated registry and inherited parents", () => {

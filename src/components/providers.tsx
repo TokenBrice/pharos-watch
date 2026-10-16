@@ -18,7 +18,7 @@ export interface SortColumnEventDetail {
   columnNumber: number;
 }
 
-export const PHAROS_QUERY_DEFAULT_OPTIONS = {
+const PHAROS_QUERY_DEFAULT_OPTIONS = {
   queries: {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,

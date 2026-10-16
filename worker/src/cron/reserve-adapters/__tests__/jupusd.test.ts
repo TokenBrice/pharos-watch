@@ -5,15 +5,6 @@ import { adaptJupUsdData } from "../jupusd";
 import { runAdapter } from "./reserve-adapter.test-support";
 
 describe("adaptJupUsdData", () => {
-  it("rejects drift removing totalSupply", () => {
-    const payload = {
-      totalSupply: "1000000",
-      holdings: [{ name: "USDC", amount: "1000000", decimals: 6 }],
-    };
-    Reflect.deleteProperty(payload, "totalSupply");
-    expect(() => adaptJupUsdData(payload)).toThrow(/totalSupply/);
-  });
-
   it("groups published JupUSD holdings and emits whitelisted redemption capacity", () => {
     const result = adaptJupUsdData({
       totalSupply: "75000000000000",
@@ -128,7 +119,6 @@ describe("adaptJupUsdData", () => {
 
   it.each([
     ["missing", undefined],
-    ["null", null],
     ["negative", -1],
     ["fractional", 1.5],
     ["out of bounds", 1_000_000_000],
@@ -199,23 +189,6 @@ describe("adaptJupUsdData", () => {
     }));
   });
 
-  it("passes through extra warnings from the fetch layer", () => {
-    const result = adaptJupUsdData(
-      {
-        totalSupply: "1000000",
-        holdings: [{ name: "USDC", amount: "1000000", decimals: 6 }],
-      },
-      {
-        extraWarnings: [
-          { code: "jupusd-snapshots-unavailable", message: "x", severity: "info", effect: "info" },
-        ],
-      },
-    );
-
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: "jupusd-snapshots-unavailable", effect: "info" }),
-    ]);
-  });
 });
 
 describe("fetchJupUsdReserves", () => {

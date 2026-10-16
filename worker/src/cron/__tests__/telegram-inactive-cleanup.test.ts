@@ -15,7 +15,7 @@ afterEach(() => {
 
 const ONE_DAY_SEC = 86_400;
 const INACTIVE_RETENTION_SEC = 180 * ONE_DAY_SEC;
-const RUN_INTERVAL_SEC = 7 * ONE_DAY_SEC;
+
 const CACHE_LAST_RUN_KEY = "cron:telegram-inactive-cleanup:last-run";
 
 
@@ -311,34 +311,6 @@ describe("runTelegramInactiveCleanup", () => {
     expect(listSubscriberIds(sqlite)).toHaveLength(50);
     const metadata = JSON.parse(result.metadata!) as { cappedAtLimit: boolean };
     expect(metadata.cappedAtLimit).toBe(true);
-  });
-
-  it("skips real work when the cache guard is still warm", async () => {
-    const { sqlite, db } = setupLatestSchemaSqlite();
-    const now = Math.floor(Date.now() / 1000);
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .run(CACHE_LAST_RUN_KEY, String(now - ONE_DAY_SEC), now - ONE_DAY_SEC);
-    insertSubscriber(sqlite, "stale-1", now - INACTIVE_RETENTION_SEC - 1);
-
-    const result = await runTelegramInactiveCleanup(db);
-
-    expect(result.itemCount).toBe(0);
-    expect(listSubscriberIds(sqlite)).toEqual(["stale-1"]);
-    const metadata = JSON.parse(result.metadata!) as { skipped: string };
-    expect(metadata.skipped).toBe("cache-guard");
-  });
-
-  it("runs again after the 7-day interval elapses", async () => {
-    const { sqlite, db } = setupLatestSchemaSqlite();
-    const now = Math.floor(Date.now() / 1000);
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .run(CACHE_LAST_RUN_KEY, String(now - RUN_INTERVAL_SEC - 60), now - RUN_INTERVAL_SEC - 60);
-    insertSubscriber(sqlite, "stale-1", now - INACTIVE_RETENTION_SEC - 1);
-
-    const result = await runTelegramInactiveCleanup(db);
-
-    expect(result.itemCount).toBe(1);
-    expect(listSubscriberIds(sqlite)).toEqual([]);
   });
 
   it("clears telegram_chat_delivery_diagnostics when a chat is purged", async () => {

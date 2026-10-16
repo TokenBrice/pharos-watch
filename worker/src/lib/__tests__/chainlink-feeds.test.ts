@@ -305,28 +305,4 @@ describe("fetchChainlinkReferenceQuoteSnapshot", () => {
     expect(snapshot.failingRuns.peggedGBP).toBe(1);
   });
 
-  it("logs a warning when a feed has been failing more than 3 consecutive runs", async () => {
-    mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    const priorFailingRuns: Record<string, number> = {
-      peggedEUR: 3,
-    };
-    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
-      undefined,
-      undefined,
-      1_763_888_000,
-      undefined,
-      undefined,
-      priorFailingRuns,
-    );
-
-    expect(snapshot.failingRuns.peggedEUR).toBe(4);
-    const warningLogged = warnSpy.mock.calls.some((args) => {
-      const msg = args.map((a) => String(a)).join(" ");
-      return msg.includes("peggedEUR") && msg.includes("4");
-    });
-    expect(warningLogged).toBe(true);
-    warnSpy.mockRestore();
-  });
 });

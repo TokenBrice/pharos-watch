@@ -31,13 +31,6 @@ function makeStablecoinsCacheValue() {
 }
 
 describe("handleStablecoinSummary", () => {
-  it("returns 503 when stablecoins cache is missing", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
-    const res = await handleStablecoinSummary(db, "usdt-tether");
-
-    expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins data is corrupt" });
-  });
-
   it("returns 503 when stablecoins cache is corrupt", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

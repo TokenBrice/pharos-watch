@@ -183,22 +183,6 @@ describe("adaptCollateralPositions", () => {
     expect(result.warnings?.some((warning) => warning.code === "unknown-asset")).not.toBe(true);
   });
 
-  it("identifies Herculis gold without assigning an unrelated tracked gold dependency", () => {
-    // xauh.gold links this Ethereum contract; one XAUH represents one gram of gold.
-    const address = "0xa9b17f572341219703bc951725bdb3ca756b1a65";
-    const result = adaptCollateralPositions({
-      [address]: {
-        address, name: "Herculis Gold Coin", symbol: "XAUH", decimals: 18,
-        positions: [{ collateralBalance: "100000000000000000000", minted: "0", zchfDecimals: 18 }],
-      },
-    }, { [address]: { price: { usd: 134.42 } } }, 0);
-    expect(result.slices).toContainEqual({
-      sourceKey: "collateral-positions-api:xauh", name: "XAUH (Herculis Gold Coin)", pct: 100, risk: "high",
-    });
-    expect(result.warnings?.some((warning) => warning.code === "unknown-asset")).not.toBe(true);
-    expect(result.metadata?.unknownExposurePct).toBe(0);
-  });
-
   it("maps tracked gold collateral to active dependency targets", () => {
     const result = adaptCollateralPositions(
       {

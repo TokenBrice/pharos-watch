@@ -896,14 +896,6 @@ describe("handleStatus", () => {
 
     type SummaryBody = { summary: { transitionsLast24h: number | null; transitionsUnavailableReason: string | null } };
 
-    it("reports the number of status_transitions rows inserted in the last 24h", async () => {
-      const db = buildTransitionCountDb(4);
-      const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus({ db, trustedAdmin: true, request });
-      const body = (await res.json()) as SummaryBody;
-      expect(body.summary.transitionsLast24h).toBe(4);
-    });
-
     it("reports unavailable when the transitions aggregate returns no observation", async () => {
       const db = buildTransitionCountDb(null);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });

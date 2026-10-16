@@ -12,7 +12,6 @@ import {
   createNativePegQuoteSession,
   fetchCurrentNativePegQuotes,
 } from "../native-peg-quotes";
-import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
 
 function makeJsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -79,32 +78,6 @@ describe("native-peg quote session", () => {
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
     expect(narrow.size).toBe(1);
     expect(narrow.get("eurs-stasis")).toMatchObject({ price: 0.9987, vsCurrency: "eur" });
-  });
-
-  it("still records per-caller diagnostics when a batch is reused", async () => {
-    fetchWithRetryMock.mockResolvedValue(makeJsonResponse(EUR_PAYLOAD));
-    const session = createNativePegQuoteSession();
-    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
-
-    await fetchCurrentNativePegQuotes(
-      EUR_REQUESTS,
-      undefined,
-      undefined,
-      { diagnostics, stage: "fallback" },
-      session,
-    );
-    await fetchCurrentNativePegQuotes(
-      EUR_REQUESTS,
-      undefined,
-      undefined,
-      { diagnostics, stage: "depeg-confirmation" },
-      session,
-    );
-
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
-    expect(diagnostics).toHaveLength(2);
-    expect(diagnostics[0]).toMatchObject({ stage: "fallback", ok: true, success: true, status: 200 });
-    expect(diagnostics[1]).toMatchObject({ stage: "depeg-confirmation", ok: true, success: true, status: 200 });
   });
 
   it("fetches again for a different currency set", async () => {

@@ -50,45 +50,30 @@ describe("fetchReProtocolReusdSource", () => {
     });
   });
 
-  it("does not substitute reUSDe when the reUSD series is absent", async () => {
+  it.each([
+    {
+      name: "does not substitute reUSDe when the reUSD series is absent",
+      data: { reUSDe: [{ apy: 15, date: "2026-07-15", price: 1.38 }] },
+    },
+    {
+      name: "fails closed when reUSD observations are stale",
+      data: { reUSD: [{ apy: 8, date: "2026-07-12", price: 1.09 }] },
+    },
+    {
+      name: "fails closed on malformed or out-of-envelope observations",
+      data: {
+        reUSD: [
+          { apy: 501, date: "2026-07-15", price: 1.09 },
+          { apy: 8, date: "not-a-date", price: 1.09 },
+          { apy: 8, date: "2026-07-15", price: 0 },
+        ],
+      },
+    },
+  ])("$name", async ({ data }) => {
     mockYieldSourceRoutes([{
       match: "api.re.xyz/price",
-      body: {
-        success: true,
-        data: { reUSDe: [{ apy: 15, date: "2026-07-15", price: 1.38 }] },
-      },
+      body: { success: true, data },
     }]);
-
-    await expect(fetchReProtocolReusdSource()).resolves.toBeNull();
-  });
-
-  it("fails closed when reUSD observations are stale", async () => {
-    mockYieldSourceRoutes([{
-      match: "api.re.xyz/price",
-      body: {
-        success: true,
-        data: { reUSD: [{ apy: 8, date: "2026-07-12", price: 1.09 }] },
-      },
-    }]);
-
-    await expect(fetchReProtocolReusdSource()).resolves.toBeNull();
-  });
-
-  it("fails closed on malformed or out-of-envelope observations", async () => {
-    mockYieldSourceRoutes([{
-      match: "api.re.xyz/price",
-      body: {
-        success: true,
-        data: {
-          reUSD: [
-            { apy: 501, date: "2026-07-15", price: 1.09 },
-            { apy: 8, date: "not-a-date", price: 1.09 },
-            { apy: 8, date: "2026-07-15", price: 0 },
-          ],
-        },
-      },
-    }]);
-
     await expect(fetchReProtocolReusdSource()).resolves.toBeNull();
   });
 });

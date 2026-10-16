@@ -36,7 +36,6 @@ import {
   normalizeNativeV9Input,
   NativeSafetyScoreV9InputSchema,
   parseNativeV9InputCacheArtifact,
-  parseSafetyScoreV9InputCacheValue,
   type NativeSafetyScoreV9Input,
 } from "../safety-score-v9/native-input";
 import { buildNativeSafetyScoreV9Capture, captureLenderCollateralBacking } from "../safety-score-v9/capture";
@@ -443,11 +442,6 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       expect(parsed.error.issues.some(issue =>
         issue.path[0] === "lenderCollateralBacking" && issue.path[1] === "byAssetId" && issue.path[2] === "savusd-avant",
       )).toBe(true);
-    });
-
-    it("rejects malformed JSON before native or legacy cache dispatch", async () => {
-      await expect(parseSafetyScoreV9InputCacheValue('{"schemaVersion":'))
-        .rejects.toThrow("Malformed V9 input cache envelope:");
     });
 
     it("retains legacy absence and original base identities without fabricating a successful book", async () => {

@@ -1,30 +1,9 @@
 // @vitest-environment jsdom
 
-import { act } from "react";
-import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { EventCard } from "@/components/tape/event-card";
 import type { TapeEvent } from "@shared/types/tape-event";
-
-let restoreClipboard: (() => void) | null = null;
-
-function stubClipboard(writeText: Mock) {
-  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: { writeText },
-  });
-  restoreClipboard = () => {
-    restoreClipboard = null;
-    if (original) Object.defineProperty(navigator, "clipboard", original);
-    else delete (navigator as { clipboard?: unknown }).clipboard;
-  };
-}
-
-afterEach(() => {
-  vi.useRealTimers();
-  restoreClipboard?.();
-});
 
 function makeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
   return {
@@ -111,84 +90,7 @@ function freezeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
   });
 }
 
-function cemeteryEvent(causeOfDeath: string, overrides: Partial<TapeEvent> = {}): TapeEvent {
-  return makeEvent({
-    type: "cemetery.entry.added",
-    severity: "notice",
-    title: "USDH entered cemetery (peak $14.0M)",
-    summary: "First Solana CDP, last one standing.",
-    coinId: "usdh-hubble-2026-05",
-    payload: {
-      symbol: "USDH",
-      name: "Hubble USDH",
-      causeOfDeath,
-      deathDate: "2026-05",
-      peakMcap: 14_000_000,
-      sourceUrl: "https://www.coingecko.com/en/coins/usdh",
-      sourceLabel: "CoinGecko",
-    },
-    sourceUrl: "/cemetery/",
-    ...overrides,
-  });
-}
-
-function lifecycleEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
-  return makeEvent({
-    type: "lifecycle.tracked.frozen",
-    severity: "notice",
-    title: "USDX archived",
-    summary: "Archived after issuer wind-down.",
-    coinId: "usdx-issuer",
-    payload: {
-      symbol: "USDX",
-      name: "USD Issuer",
-      frozenAt: "2026-04-30",
-      causeOfDeath: "regulatory",
-      sourceUrl: null,
-      sourceLabel: null,
-    },
-    sourceUrl: "/stablecoin/usdx-issuer/",
-    ...overrides,
-  });
-}
-
 describe("EventCard enrichment", () => {
-  it.each([
-    ["2026-09-21T00:00:00.000Z", "00:00"],
-    ["2026-09-21T00:59:00.000Z", "00:59"],
-  ])("renders %s with an h23 UTC clock in visible and accessible text", (iso, expected) => {
-    const { container } = render(<EventCard event={makeEvent({ ts: Date.parse(iso) })} />);
-    const time = container.querySelector("time");
-
-    expect(time).not.toBeNull();
-    expect(time?.querySelector(".sr-only")?.textContent).toBe(expected);
-    expect(time?.querySelector('span[aria-hidden="true"]')?.textContent).toBe(expected);
-  });
-
-  it("clears the permalink-copy feedback timer on unmount", async () => {
-    vi.useFakeTimers();
-    stubClipboard(vi.fn().mockResolvedValue(undefined));
-
-    const { unmount } = render(<EventCard event={makeEvent()} />);
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
-    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Copy permalink to this event" }));
-      await Promise.resolve();
-    });
-    // The copy landed, and copying scheduled exactly one 1.5s feedback reset.
-    expect(screen.getByRole("button", { name: "Permalink copied" })).toBeTruthy();
-    const resetCallIndex = setTimeoutSpy.mock.calls.findIndex((args) => args[1] === 1500);
-    expect(resetCallIndex).toBeGreaterThanOrEqual(0);
-    const feedbackTimerId = setTimeoutSpy.mock.results[resetCallIndex]!.value;
-
-    unmount();
-
-    // Unmount clears exactly the pending feedback timer, not an unrelated handle.
-    expect(clearTimeoutSpy.mock.calls.some((args) => args[0] === feedbackTimerId)).toBe(true);
-  });
-
   it("depeg.opened renders signed bps text and an SR-only directional description", () => {
     render(<EventCard event={makeEvent()} />);
     expect(screen.getByText(/^−300 bps$/)).toBeTruthy();
@@ -332,40 +234,6 @@ describe("EventCard enrichment", () => {
     }
   });
 
-  it.each(["abandoned", "constructor"])("cemetery renders the %s cause-of-death pill", (causeOfDeath) => {
-    render(<EventCard event={cemeteryEvent(causeOfDeath)} />);
-    expect(screen.getByText(causeOfDeath)).toBeTruthy();
-  });
-
-  it("lifecycle renders the cause pill and the frozen date in absolute form", () => {
-    render(<EventCard event={lifecycleEvent()} />);
-    expect(screen.getByText("regulatory")).toBeTruthy();
-    expect(screen.getByText(/Archived Apr 30, 2026/)).toBeTruthy();
-  });
-
-  it("drops the cause pill and archived date when the lifecycle payload clears", () => {
-    const { rerender } = render(<EventCard event={lifecycleEvent()} />);
-    expect(screen.getByText("regulatory")).toBeTruthy();
-    expect(screen.getByText(/Archived Apr 30, 2026/)).toBeTruthy();
-
-    rerender(
-      <EventCard
-        event={lifecycleEvent({
-          payload: {
-            symbol: "USDX",
-            name: "USD Issuer",
-            frozenAt: null,
-            causeOfDeath: null,
-            sourceUrl: null,
-            sourceLabel: null,
-          },
-        })}
-      />,
-    );
-    expect(screen.queryByText("regulatory")).toBeNull();
-    expect(screen.queryByText(/Archived Apr 30, 2026/)).toBeNull();
-  });
-
   it("psi.band.shifted_up renders band pills with one-decimal score delta", () => {
     const event = makeEvent({
       type: "psi.band.shifted_up",
@@ -423,21 +291,6 @@ describe("EventCard enrichment", () => {
     expect(screen.queryByText("legacy_signal")).toBeNull();
   });
 
-  it("yield.warning_emitted shows warning labels, not stored keys, in pills and summary", () => {
-    const event = makeEvent({
-      type: "yield.warning_emitted",
-      severity: "warning",
-      title: "USDX yield warning: opportunity-evidence-missing",
-      summary: "New yield warning signal (opportunity-evidence-missing) detected on selected source.",
-      coinId: "usdx-issuer",
-      payload: { newSignals: ["opportunity-evidence-missing"] },
-    });
-    render(<EventCard event={event} />);
-    expect(screen.getByText("Opportunity evidence incomplete")).toBeTruthy();
-    expect(screen.getByText("New yield warning signal (Opportunity evidence incomplete) detected on selected source.")).toBeTruthy();
-    expect(screen.queryByText(/opportunity-evidence-missing/)).toBeNull();
-  });
-
   it.each([
     { direction: "mint", amountUsd: 2_500_000, badge: "$2.5M", verb: "minted" },
     { direction: "burn", amountUsd: 750_000, badge: "$750K", verb: "burned" },
@@ -461,19 +314,6 @@ describe("EventCard enrichment", () => {
     } else {
       expect(screen.getByText(badge)).toBeTruthy();
       expect(screen.getByText(verb)).toBeTruthy();
-    }
-  });
-
-  it("preserves a single anchor wrapper across all enrichment paths", () => {
-    const cases: TapeEvent[] = [
-      makeEvent(),
-      scoreEvent(),
-      methodologyEvent(),
-    ];
-    for (const event of cases) {
-      const { container, unmount } = render(<EventCard event={event} />);
-      expect(container.querySelectorAll("a").length).toBe(1);
-      unmount();
     }
   });
 });

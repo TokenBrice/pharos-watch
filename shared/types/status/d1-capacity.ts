@@ -1,20 +1,19 @@
 import { z } from "zod";
 
-export const D1CapacityThresholdStateSchema = z.enum(["normal", "watch", "warning", "critical"]);
+const D1CapacityThresholdStateSchema = z.enum(["normal", "watch", "warning", "critical"]);
 export type D1CapacityThresholdState = z.infer<typeof D1CapacityThresholdStateSchema>;
 
-export const D1CapacityForecastBasisSchema = z.enum([
+const D1CapacityForecastBasisSchema = z.enum([
   "linear-30d",
   "linear-window",
   "insufficient-history",
   "non-growing",
 ]);
-export type D1CapacityForecastBasis = z.infer<typeof D1CapacityForecastBasisSchema>;
 
-export const D1CapacityGrowthWindowKeySchema = z.enum(["24h", "72h", "7d", "30d"]);
+const D1CapacityGrowthWindowKeySchema = z.enum(["24h", "72h", "7d", "30d"]);
 export type D1CapacityGrowthWindowKey = z.infer<typeof D1CapacityGrowthWindowKeySchema>;
 
-export const D1CapacityGrowthWindowSchema = z.object({
+const D1CapacityGrowthWindowSchema = z.object({
   window: D1CapacityGrowthWindowKeySchema,
   windowSeconds: z.number().int().positive(),
   sampleCount: z.number().int().nonnegative(),

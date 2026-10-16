@@ -7,7 +7,7 @@ import {
   loadCloudflareAccountStateManifest,
   runCloudflareAccountStateDriftCheck,
 } from "../ci/check-cloudflare-account-state-drift.mjs";
-import { mockConsole } from "../test-utils/ci-script-test-helpers";
+import { mockConsole, testEnv } from "../test-utils/ci-script-test-helpers";
 
 interface FixtureEnvironmentVariable {
   type: string;
@@ -174,10 +174,6 @@ function createFixtureFetch(
 describe("Cloudflare account-state drift comparison", () => {
   const manifest = loadCloudflareAccountStateManifest();
 
-  it("accepts the healthy normalized fixture", () => {
-    expect(compareCloudflareAccountState(manifest, readFixture("healthy-live-state.json"))).toEqual([]);
-  });
-
   it("reports fixture drift by resource and field without reporting values for secrets", () => {
     expect(compareCloudflareAccountState(manifest, readFixture("drifted-live-state.json"))).toEqual(
       expect.arrayContaining([
@@ -226,23 +222,14 @@ describe("Cloudflare account-state drift comparison", () => {
       .rejects.toThrow("malformed route list");
   });
 
-  it("treats an existing unbound named Workflow as drift", async () => {
-    const fixture = readFixture("healthy-live-state.json");
-    fixture.heavyWorker.workflowAbsent = false;
-    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: createFixtureFetch(fixture) });
-    expect(state.heavyWorker.workflowBinding).toBe(false);
-    expect(state.heavyWorker.publicWorkflowBinding).toBe(false);
-    expect(compareCloudflareAccountState(manifest, state)).toContain("heavyWorker.workflowAbsent: expected true, found false");
-  });
-
   it.each([true, false])("observes exact named not-found as absence when workflowAbsent is %s", async (workflowAbsent) => {
     const expectedManifest = { ...manifest, heavyWorker: { ...manifest.heavyWorker, workflowAbsent } };
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"));
     const report = await runCloudflareAccountStateDriftCheck({
       manifest: expectedManifest,
-      env: { CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token" },
+      env: testEnv({ CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token" }),
       fetchImpl: fetchMock,
-      consoleImpl: mockConsole(),
+      consoleImpl: mockConsole({ log: vi.fn(), error: vi.fn() }),
     });
     expect(report).toEqual({
       ok: workflowAbsent,

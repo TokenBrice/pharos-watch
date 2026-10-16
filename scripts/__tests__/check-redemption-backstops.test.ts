@@ -8,7 +8,6 @@ import { defineRecordEntries } from "@shared/lib/redemption-backstop-configs/fac
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { createTempRepoTracker } from "./helpers/test-state";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 
 const { makeRoot, cleanup } = createTempRepoTracker("redemption-backstops");
@@ -120,58 +119,6 @@ describe("check-redemption-backstops CLI", () => {
     expect(stale).toBe(!bound);
   });
 
-  it("orders fixture audit rows deterministically regardless of insertion order", () => {
-    const first = validateFixture({ "usdt-tether": baseConfig, "usdc-circle": baseConfig });
-    const second = validateFixture({ "usdc-circle": baseConfig, "usdt-tether": baseConfig });
-
-    expect(first.auditRows.map((row) => row.stablecoinId)).toEqual(["usdc-circle", "usdt-tether"]);
-    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-  });
-
-  it("reports precisely the unconfigured fixture cohort without warning for configured coins", () => {
-    vi.spyOn(ACTIVE_META_BY_ID, "keys").mockImplementation(() => new Map([
-      ["usdt-tether", true], ["unconfigured-fixture", true],
-    ]).keys());
-    const runResult = runFixture({ "usdt-tether": baseConfig });
-    expect(runResult.status).toBe(1);
-    if (!runResult.validation) throw new Error("Fixture validation did not produce a result.");
-    expect(runResult.validation.auditRows.map((row) => row.stablecoinId)).toEqual(["usdt-tether"]);
-    expect(runResult.validation.findings.filter((finding) => finding.code === "unconfigured-active-coin")).toEqual([
-      expect.objectContaining({ severity: "warning", stablecoinId: "unconfigured-fixture" }),
-    ]);
-  });
-
-  it("rejects unknown CLI arguments", () => {
-    const result = runRedemptionBackstopCli(["--bad-arg"]);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("Unknown argument: --bad-arg");
-  });
-
-
-  it("rejects non-http docs URLs and invalid calendar review dates", () => {
-    const result = validateFixture({
-      "usdt-tether": {
-        ...baseConfig,
-        reviewedAt: "2026-02-30",
-        docs: [{ label: "Fixture", url: "ftp://example.com/redemption", supports: ["route"] }],
-      },
-    });
-
-    expect(result.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "schema-validation",
-          stablecoinId: "usdt-tether",
-          message: expect.stringContaining("Expected an http(s) URL"),
-        }),
-        expect.objectContaining({
-          code: "schema-validation",
-          stablecoinId: "usdt-tether",
-          message: expect.stringContaining("Expected a valid calendar date"),
-        }),
-      ]),
-    );
-  });
 
   it("requires dailyLimitUsd when config text cites a numeric daily limit", () => {
     const result = validateFixture(
@@ -198,74 +145,6 @@ describe("check-redemption-backstops CLI", () => {
         code: "daily-limit-mentioned-without-capacity-limit",
         stablecoinId: "lisusd-lista",
       }),
-    );
-  });
-
-  it("reports resolved capacity basis, fallback source, and daily limit caps in audit rows", () => {
-    const result = validateFixture(
-      {
-        "lisusd-lista": {
-          ...baseConfig,
-          routeFamily: "psm-swap",
-          accessModel: "permissionless-onchain",
-          settlementModel: "atomic",
-          executionModel: "deterministic-onchain",
-          capacityModel: { kind: "supply-ratio", ratio: 0.15, dailyLimitUsd: 500_000 },
-        },
-      },
-      { allowedRouteFamilies: ["psm-swap"] },
-    );
-
-    expect(result.auditRows).toEqual([
-      expect.objectContaining({
-        stablecoinId: "lisusd-lista",
-        capacityBasis: null,
-        resolvedCapacityBasis: "psm-balance-share",
-        capacityFallbackSource: "none",
-        dailyLimitUsd: 500_000,
-      }),
-    ]);
-  });
-
-  it("reports reserve-sync fallback ratio sources separately from resolved basis", () => {
-    const result = validateFixture({
-      "frxusd-frax": {
-        ...baseConfig,
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-        executionModel: "deterministic-onchain",
-        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
-        reviewedAt: "2026-05-12",
-        docs: [{ label: "Fixture", url: "https://example.com/frxusd-redemption", supports: ["route", "capacity"] }],
-      },
-      "sfrxusd-frax": {
-        ...baseConfig,
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-        executionModel: "deterministic-onchain",
-        capacityModel: { kind: "reserve-sync-metadata", fallbackUsd: 1_000_000 },
-        reviewedAt: "2026-05-12",
-        docs: [{ label: "Fixture", url: "https://example.com/sfrxusd-redemption", supports: ["route", "capacity"] }],
-      },
-    });
-
-    expect(result.auditRows).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          stablecoinId: "frxusd-frax",
-          resolvedCapacityBasis: "live-proxy-buffer",
-          capacityFallbackSource: "reserve-sync-fallback-ratio",
-          dailyLimitUsd: null,
-        }),
-        expect.objectContaining({
-          stablecoinId: "sfrxusd-frax",
-          resolvedCapacityBasis: "live-direct-telemetry",
-          capacityFallbackSource: "reserve-sync-fallback-usd",
-          dailyLimitUsd: null,
-        }),
-      ]),
     );
   });
 

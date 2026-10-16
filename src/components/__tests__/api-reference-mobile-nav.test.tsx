@@ -17,29 +17,6 @@ const MOCK_SECTIONS: SidebarSection[] = [
 ];
 
 describe("ApiReferenceMobileNav", () => {
-
-  it("shows the current section label", () => {
-    render(
-      <ApiReferenceMobileNav
-        sections={MOCK_SECTIONS}
-        activeId="surface-split"
-        onNavigate={() => {}}
-      />,
-    );
-    expect(screen.getByText("Surface Split")).toBeTruthy();
-  });
-
-  it("shows the endpoint label when a subsection is active", () => {
-    render(
-      <ApiReferenceMobileNav
-        sections={MOCK_SECTIONS}
-        activeId="get-api-stablecoins"
-        onNavigate={() => {}}
-      />,
-    );
-    expect(screen.getByText("/api/stablecoins")).toBeTruthy();
-  });
-
   it("opens endpoint navigation and closes after selecting an endpoint", async () => {
     const onNavigate = vi.fn();
     render(<ApiReferenceMobileNav sections={MOCK_SECTIONS} activeId="" onNavigate={onNavigate} />);

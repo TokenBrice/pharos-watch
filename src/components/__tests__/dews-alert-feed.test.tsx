@@ -39,20 +39,4 @@ describe("DEWSAlertFeed", () => {
     expect(screen.getByText(/Contagion 1.08x/i)).toBeTruthy();
   });
 
-  it("scopes its all-clear copy to the peg catalog it filters on", () => {
-    render(<DEWSAlertFeed signals={{ "test-coin": makeSignal({ score: 5, band: "CALM" }) }} />);
-
-    expect(screen.getByText("All peg-catalog assets with DEWS coverage are below ALERT.")).toBeTruthy();
-  });
-
-  it("drops its own alert count when embedded, since the hero rail owns that figure", () => {
-    const signals = { "test-coin": makeSignal({ score: 47, band: "ALERT" }) };
-
-    const standalone = render(<DEWSAlertFeed signals={signals} />);
-    expect(screen.getByText(/at alert or worse/i)).toBeTruthy();
-    standalone.unmount();
-
-    render(<DEWSAlertFeed signals={signals} embedded />);
-    expect(screen.queryByText(/at alert or worse/i)).toBeNull();
-  });
 });

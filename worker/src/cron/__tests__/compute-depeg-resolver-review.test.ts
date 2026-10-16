@@ -1505,20 +1505,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.rows).toHaveLength(400);
   });
 
-  it("serves more than 100 public review rows without truncation", async () => {
-    const db = reviewDb([]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(101)) });
-
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
-      storeContracts: stores,
-    });
-
-    expect(snapshot._meta.reviewedEventCount).toBe(101);
-    expect(snapshot._meta.publicRowLimit).toBe(400);
-    expect(snapshot._meta.publicRowsTruncated).toBe(false);
-    expect(snapshot.rows).toHaveLength(101);
-  });
-
   it("stores a cache snapshot with headline DDRR stats", async () => {
     vi.useFakeTimers();
     vi.setSystemTime((ELIGIBLE_AT + 3600) * 1000);

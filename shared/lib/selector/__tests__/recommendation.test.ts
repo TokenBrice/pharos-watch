@@ -29,10 +29,4 @@ describe("why-key calibration", () => {
   ])("top-pys at pharosYieldScore %s -> %s", (pharosYieldScore, expected) => {
     expect(whyKeyTriggers("top-pys", makeYieldRow({ pharosYieldScore }))).toBe(expected);
   });
-
-  it("does not fire adjacent yield why-keys on the same reading", () => {
-    const row = makeYieldRow({ pharosYieldScore: 50 });
-    expect(whyKeyTriggers("yield-above-benchmark", row)).toBe(false);
-    expect(whyKeyTriggers("low-variance", row)).toBe(false);
-  });
 });

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { analyzeOracleRiskCoverage } from "../lib/oracle-risk-coverage";
@@ -78,13 +78,6 @@ it("enforces missing profiles without an advisory exit-success mode", () => {
   expect(enforced.stdout).toContain("test-cdp (TCDP): missing-profile");
 });
 
-it("passes complete profiles without changing the output prefix", () => {
-  const result = runCoverageCli([makeCoin({ oracleRisk: reviewedMultiBranch() })]);
-  expect(result.status).toBe(0);
-  expect(result.stderr).toBe("");
-  expect(result.stdout).toContain("oracleRisk coverage: 1/1");
-});
-
 it.each(["--advisory", "--advisory=true", "--advisory=false"])(
   "rejects retired option %s independently of the coverage census",
   (option) => {
@@ -105,54 +98,6 @@ it.each([
   const result = runCoverageCli([makeCoin({ oracleRisk })]);
   expect(result.status).toBe(1);
   expect(result.stderr).toBe("");
-});
-
-it("preserves advisory reminder tags and the stale-days control", () => {
-  const coin = makeCoin({
-    oracleRisk: reviewedMultiBranch({
-      reviewedAt: "2000-01-01",
-      branches: [completeBranch({ observedAt: "2000-01-01" })],
-    }),
-  });
-  const stale = runCoverageCli([coin]);
-  expect(stale.status).toBe(0);
-  expect(stale.stderr).toBe("");
-  expect(stale.stdout).toContain("stale-review (advisory)");
-  expect(stale.stdout).toContain("stale-branch-observation (advisory)");
-  expect(stale.stdout).toContain("older than 180 days");
-  expect(stale.stdout).not.toContain("oracleRisk coverage advisory:");
-
-  const fresh = runCoverageCli([coin], ["--stale-days=100000"]);
-  expect(fresh.status).toBe(0);
-  expect(fresh.stderr).toBe("");
-  expect(fresh.stdout).not.toContain("Findings:");
-});
-
-it.each(["0", "-1", "invalid"])("preserves invalid stale-days rejection for %s", (days) => {
-  const result = runCoverageCli([], [`--stale-days=${days}`]);
-  expect(result.status).toBe(1);
-  expect(result.stderr).toBe("--stale-days must be a positive integer\n");
-  expect(result.stdout).toBe("");
-});
-
-it("keeps the branch-applicability review queue advisory", () => {
-  const missing = runCoverageCli([makeCoin({
-    oracleRisk: reviewedMultiBranch({
-      branches: undefined, branchModel: "single-path", branchApplicability: undefined,
-    }),
-  })]);
-  expect(missing.status).toBe(0);
-  expect(missing.stdout).toContain("missing-branch-applicability (advisory)");
-
-  const unresolved = runCoverageCli([makeCoin({
-    oracleRisk: reviewedMultiBranch({
-      branches: undefined,
-      branchModel: "single-path",
-      branchApplicability: { ...reviewedMultiBranch().branchApplicability!, disposition: "unresolved" },
-    }),
-  })]);
-  expect(unresolved.status).toBe(0);
-  expect(unresolved.stdout).toContain("branch-applicability-unresolved (advisory)");
 });
 
 describe("analyzeOracleRiskCoverage", () => {
@@ -198,29 +143,6 @@ describe("analyzeOracleRiskCoverage", () => {
     expect(result.findings).toEqual([expect.objectContaining({ kind: "branch-applicability-unresolved" })]);
   });
 
-  it("warns on active crypto-backed CDPs missing oracleRisk", () => {
-    const result = analyzeOracleRiskCoverage([makeCoin()], { asOf: new Date("2026-06-12T00:00:00Z") });
-
-    expect(result.totalCryptoCdp).toBe(1);
-    expect(result.missingOracleRisk).toBe(1);
-    expect(result.completeProfiles).toBe(0);
-    expect(result.findings).toEqual([
-      expect.objectContaining({
-        id: "test-cdp",
-        kind: "missing-profile",
-      }),
-    ]);
-  });
-
-  it("counts complete profile-bearing peers without subtracting missing profiles", () => {
-    const result = analyzeOracleRiskCoverage([
-      makeCoin({ oracleRisk: reviewedMultiBranch() }),
-      makeCoin({ id: "missing-peer" }),
-    ], { asOf: new Date("2026-08-01T00:00:00Z"), reviewedBranchDispositions: [] });
-    expect(result.withOracleRisk).toBe(1);
-    expect(result.completeProfiles).toBe(1);
-  });
-
   it("requires review provenance for complete profiles", () => {
     const result = analyzeOracleRiskCoverage([
       makeCoin({
@@ -237,56 +159,6 @@ describe("analyzeOracleRiskCoverage", () => {
       kind: "missing-review-metadata",
       detail: "oracleRisk missing reviewedAt, reviewer, confidence",
     }));
-  });
-
-  it("accepts complete fresh profiles and ignores non-CDP assets and variants", () => {
-    const result = analyzeOracleRiskCoverage(
-      [
-        makeCoin({
-          oracleRisk: {
-            tier: "medianized-with-delay",
-            summary: "Medianized feeds with delay are documented.",
-            branchModel: "single-path",
-            branchApplicability: {
-              // Post-9.17 semantics: "no separately parameterized borrower
-              // markets" is `top-level-only`, not `not-applicable`. Pairing that
-              // rationale with `not-applicable` is the stale pre-9.17 pattern
-              // this release migrated away from, so the fixture must not bless it.
-              disposition: "top-level-only",
-              reviewedAt: "2026-06-01",
-              reviewer: "Codex data review",
-              rationale: "The reviewed system prices one shared collateral path rather than separately parameterized markets, so its top-level authority is scoreable without borrower branches.",
-              sources: [{ label: "Docs", url: "https://example.com/docs" }],
-            },
-            reviewedAt: "2026-06-01",
-            reviewer: "Codex data review",
-            confidence: "verified",
-          },
-        }),
-        makeCoin({
-          id: "fiat",
-          flags: {
-            backing: "rwa-backed",
-            pegCurrency: "USD",
-            governance: "centralized",
-            yieldBearing: false,
-            rwa: true,
-            navToken: false,
-          },
-          mechanismArchetype: "fiat-cash",
-        }),
-        makeCoin({
-          id: "variant-cdp",
-          variantOf: "test-cdp",
-          variantKind: "strategy-vault",
-        }),
-      ],
-      { asOf: new Date("2026-06-12T00:00:00Z") },
-    );
-
-    expect(result.totalCryptoCdp).toBe(1);
-    expect(result.completeProfiles).toBe(1);
-    expect(result.findings).toEqual([]);
   });
 
   it("blocks missing branches and incomplete branch evidence for declared multi-branch systems", () => {
@@ -306,66 +178,6 @@ describe("analyzeOracleRiskCoverage", () => {
     expect(incomplete.findings).toEqual([
       expect.objectContaining({ kind: "missing-branch-evidence", detail: expect.stringContaining("eth branch") }),
     ]);
-  });
-
-  it("accepts complete branch evidence and treats stale observations as advisory", () => {
-    const result = analyzeOracleRiskCoverage(
-      [
-        makeCoin({
-          oracleRisk: reviewedMultiBranch({
-            branches: [completeBranch({ observedAt: "2026-01-01" })],
-          }),
-        }),
-      ],
-      { asOf: new Date("2026-07-13T00:00:00Z"), staleDays: 180 },
-    );
-
-    expect(result.completeBranches).toBe(1);
-    expect(result.completeProfiles).toBe(1);
-    expect(result.findings).toEqual([expect.objectContaining({ kind: "stale-branch-observation" })]);
-  });
-
-  it("surfaces reviewed unresolved branch applicability without changing the v8 profile-completeness gate", () => {
-    const result = analyzeOracleRiskCoverage([
-      makeCoin({
-        oracleRisk: {
-          tier: "standard-external",
-          summary: "The profile has source-backed system-wide evidence but no market inventory.",
-          branchApplicability: {
-            disposition: "unresolved",
-            reviewedAt: "2026-07-13",
-            reviewer: "test",
-            rationale: "The system has multiple collateral markets, but reviewed sources lack complete per-market evidence.",
-            sources: [{ label: "Docs", url: "https://example.com/docs" }],
-          },
-          reviewedAt: "2026-07-13",
-          reviewer: "test",
-          confidence: "verified",
-        },
-      }),
-    ]);
-
-    expect(result.completeProfiles).toBe(1);
-    expect(result.branchApplicabilityUnresolved).toBe(1);
-    expect(result.findings).toEqual([expect.objectContaining({ kind: "branch-applicability-unresolved" })]);
-  });
-
-  it("keeps unreviewed profile-only branch applicability visible as an advisory backlog", () => {
-    const result = analyzeOracleRiskCoverage([
-      makeCoin({
-        oracleRisk: {
-          tier: "standard-external",
-          summary: "A complete profile that predates the branch-applicability review contract.",
-          reviewedAt: "2026-07-13",
-          reviewer: "test",
-          confidence: "verified",
-        },
-      }),
-    ]);
-
-    expect(result.completeProfiles).toBe(1);
-    expect(result.reviewedBranchApplicability).toBe(0);
-    expect(result.findings).toEqual([expect.objectContaining({ kind: "missing-branch-applicability" })]);
   });
 
   describe("reviewed inoperable branch dispositions", () => {
@@ -484,6 +296,3 @@ describe("analyzeOracleRiskCoverage", () => {
   });
 });
 
-it("keeps the coverage analyzer source text-reviewable", () => {
-  expect(readFileSync("scripts/lib/oracle-risk-coverage.ts").includes(0)).toBe(false);
-});

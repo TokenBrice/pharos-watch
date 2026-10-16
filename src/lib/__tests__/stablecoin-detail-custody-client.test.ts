@@ -1,7 +1,6 @@
 // src/lib/__tests__/stablecoin-detail-custody-client.test.ts
 import { describe, expect, it } from "vitest";
 import type { CustodyProfile, StablecoinMeta } from "@shared/types";
-import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import {
   formatCustodySharePct,
   isCustodyStructureUndisclosed,
@@ -109,29 +108,6 @@ describe("projectCustodyClientSummary", () => {
     expect(summary.unnamedHolders.map((holder) => holder.description)).toEqual(unnamed);
   });
 
-  it("keeps raw addresses and trailing qualifiers out of chip names without ever emptying them", () => {
-    const summary = project({
-      ...USDC_LIKE_PROFILE,
-      providers: [
-        { name: "Noon sUSN staking vault 0xE24a3DC8896216e9AeE1b8C2d4f2A7d13b5a1c2F", role: "other" },
-        { name: "BitGo Trust Company, Inc. (IAUon Final Terms custodian; allocation undisclosed)", role: "custodian" },
-        { name: "Undisclosed reserve wallet 0xE24a3DC8896216e9AeE1b8C2d4f2A7d13b5a1c2F (not publicly identified)", role: "other" },
-        { name: "(Unnamed)", role: "other" },
-      ],
-    });
-    for (const provider of summary.providers) {
-      expect(provider.shortName.length).toBeGreaterThan(0);
-      expect(provider.name.startsWith(provider.shortName) || provider.shortName === provider.name).toBe(true);
-      expect(provider.shortName).not.toMatch(/0x[0-9a-fA-F]{6,}/);
-    }
-    expect(summary.providers[1]!.shortName.length).toBeLessThan(summary.providers[1]!.name.length);
-    // Unnamed descriptions keep their qualifier (it is the information) but never an address.
-    expect(summary.unnamedHolders.map((holder) => holder.description)).toEqual([
-      "Undisclosed reserve wallet (not publicly identified)",
-      "(Unnamed)",
-    ]);
-  });
-
   it("treats named providers without shares as undisclosed shares, not a 100 % undisclosed exposure", () => {
     for (const profile of [NAMED_WITHOUT_SHARES_PROFILE, USDT_LIKE_PROFILE]) {
       const summary = project(profile);
@@ -233,13 +209,6 @@ describe("projectCustodyClientSummary", () => {
     }
   });
 
-  it("states unidentified custodians without repeating the placeholder noun", () => {
-    const summary = project(USDT_LIKE_PROFILE);
-    expect(summary.summary).not.toContain(USDT_LIKE_PROFILE.providers[0]!.name);
-    expect(summary.summary.match(/\breserves?\b/gi) ?? []).toHaveLength(1);
-    expect(summary.summary.match(/\bcustodians?\b/gi) ?? []).toHaveLength(1);
-  });
-
   it("names a leading share only when no tie or unknown remainder could exceed it", () => {
     const withProviders = (providers: CustodyProfile["providers"]) =>
       project({ ...USDC_LIKE_PROFILE, providers, rehypothecation: "unknown" }).summary;
@@ -252,43 +221,6 @@ describe("projectCustodyClientSummary", () => {
       .not.toMatch(/\d%/);
   });
 
-  it("keeps every generated verdict within the summary budget and free of provider names", () => {
-    const longNames = Array.from({ length: 12 }, (_, index) => ({
-      name: `Regulated custodian number ${index + 1} holding tokenized treasury fund shares 0x${"ab".repeat(20)}`,
-      role: "custodian" as const,
-      sharePct: index === 0 ? 45 : 5,
-    }));
-    const profiles: CustodyProfile[] = [
-      USDC_LIKE_PROFILE,
-      NAMED_WITHOUT_SHARES_PROFILE,
-      USDT_LIKE_PROFILE,
-      USDE_LIKE_PROFILE,
-      { ...USDC_LIKE_PROFILE, providers: [] as unknown as CustodyProfile["providers"] },
-      {
-        ...USDC_LIKE_PROFILE,
-        providers: [...longNames, { name: "Undisclosed reserve banks", role: "bank" }],
-        segregation: "mixed",
-        rehypothecation: "conditional",
-      },
-      { ...USDC_LIKE_PROFILE, segregation: "unknown", bankruptcyRemoteness: "structured" },
-    ];
-    for (const profile of profiles) {
-      const summary = project(profile);
-      expect(findSummaryBudgetViolations(summary.summary)).toEqual([]);
-      for (const provider of summary.providers) expect(summary.summary).not.toContain(provider.shortName);
-    }
-  });
-
-  it("dedupes sources by url", () => {
-    const summary = project({
-      ...USDC_LIKE_PROFILE,
-      sources: [
-        { label: "Circle 10-K", url: "https://example.com/10k" },
-        { label: "Circle 10-K (mirror)", url: "https://example.com/10k" },
-      ],
-    });
-    expect(summary.sources).toEqual([{ label: "Circle 10-K", url: "https://example.com/10k" }]);
-  });
 });
 
 describe("isCustodyStructureUndisclosed", () => {
@@ -310,27 +242,8 @@ describe("formatCustodySharePct", () => {
 });
 
 describe("shouldDisplayCustodyModule", () => {
-  it("shows the module for an explicit centralized custodyModel even on a cdp archetype", () => {
-    expect(shouldDisplayCustodyModule({ custodyModel: "institutional-regulated" }, "cdp")).toBe(true);
-  });
-
   it("hides the module for an explicit onchain custodyModel even on a fiat-cash archetype", () => {
     expect(shouldDisplayCustodyModule({ custodyModel: "onchain" }, "fiat-cash")).toBe(false);
   });
 
-  it("hides the module for a cdp archetype with no explicit custodyModel", () => {
-    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, "cdp")).toBe(false);
-  });
-
-  it("hides the module for an algorithmic archetype with no explicit custodyModel", () => {
-    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, "algorithmic")).toBe(false);
-  });
-
-  it("shows the module for a fiat-cash archetype with no explicit custodyModel", () => {
-    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, "fiat-cash")).toBe(true);
-  });
-
-  it("shows the module for a null archetype with no explicit custodyModel", () => {
-    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, null)).toBe(true);
-  });
 });

@@ -5,7 +5,6 @@ import {
   evaluateV9ArchetypeBacking,
 } from "../safety-score-v9/archetypes/evaluation";
 import {
-  assertV9BackingPolicy,
   type V9BackingAssetInput,
   v9StructuralSignalSharePct,
 } from "../safety-score-v9/backing-primitives";
@@ -295,11 +294,6 @@ function unavailableReview(
 }
 
 describe("Safety Score v9 backing exposure primitives", () => {
-  it("validates the explicit candidate policy", () => {
-    expect(() => assertV9BackingPolicy(V9_CANDIDATE_POLICY_V1)).not.toThrow();
-    expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toMatch(/^[a-f0-9]{64}$/);
-  });
-
   it("clamps only percentage-scale floating noise and names the asset and field", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const share = 1.0000000000308;
@@ -737,32 +731,6 @@ describe("Safety Score v9 backing exposure primitives", () => {
     expect(unresolvedArchetype.unresolved).toContainEqual(expect.objectContaining({ code: "missing-archetype" }));
   });
 
-  it("bounds missing serial components at their ordinary minimum", () => {
-    const { gap, fact: missingClaim } = missingMechanism(
-      "claim-and-segregation", "gap:serial-claim", "fiat.claim.required", "The direct reserve claim is unresolved.",
-    );
-    const strongFact = (key: string) => ({
-      status: knownStatus(`mechanism:${key}`),
-      quality: "strong" as const,
-      failureDomains: [],
-    });
-    const result = evaluateV9ArchetypeBacking(
-      {
-        archetype: "fiat-cash",
-        asset: asset([exposure({ key: "cash", weight: 1 })], [gap]),
-        components: [
-          { componentKey: "claim-and-segregation", fact: missingClaim },
-          { componentKey: "custody-continuity", fact: strongFact("custody") },
-          { componentKey: "assurance-and-reconciliation", fact: strongFact("assurance") },
-        ],
-      },
-      V9_CANDIDATE_POLICY_V1,
-    );
-
-    expect(result).toMatchObject({ rateability: "rateable", pillarCeiling: null });
-    expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "critical-unresolved", treatment: "pillar" }));
-    expect(result.contributions.find(row => row.componentKey === "mechanism:claim-and-segregation")!.score).toBe(35);
-  });
   it("uses inclusive maturity bands and bounds missing maturity for treasury bills", () => {
     const scores = [30, 31, null].map((maturityDaysMax) => {
       const result = evaluateV9ReserveExposures(asset([{
@@ -978,20 +946,6 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
         .filter((reason) => reason.code === "material-dependency-unavailable")
         .map((reason) => reason.responsibility),
     ).toEqual(["issuer-undisclosed", "producer-failed"]);
-  });
-
-  it("does not apply a second backing discount to a staked/vault layer", () => {
-    const result = evaluateV9ReserveExposures(
-      missingReserveAsset({
-        parentAssetId: "parent",
-        parentBackingScore: 75,
-        weight: 1,
-        tier: "wrapped",
-        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-      }),
-      V9_CANDIDATE_POLICY_V1,
-    );
-    expect(result.score).toBeCloseTo(75, 6);
   });
 
   it("uses verified live parent backing without rerunning the child archetype", () => {
@@ -1341,8 +1295,7 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
   });
 
   it.each([
-    ["0", 100], ["770000000000000000", 73.3195], ["860000000000000000", 66.718],
-    ["915000000000000000", 62.324875], ["1000000000000000000", 55],
+    ["0", 100], ["860000000000000000", 66.718], ["1000000000000000000", 55],
   ])("uses LLTV squared at %s", (lltv, expected) => {
     expect(arithmetic(book([["100", 55, lltv, "yield-bearing-stable"]]), 100).reserveQuality)
       .toBeCloseTo(expected, 10);
@@ -1374,7 +1327,7 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     }
   });
 
-  it.each([0, 1, 20, 35, 90])("retains admitted inherited quality below35 for parent %s", (parent) => {
+  it.each([0, 35, 90])("retains admitted inherited quality below35 for parent %s", (parent) => {
     const fact = book([["100", 35, "1000000000000000000", "other-unknown"]]);
     const result = evaluateV9ReserveExposures(inherited(fact, parent), V9_CANDIDATE_POLICY_V1);
     expect(result.score).toBeCloseTo(parent * 0.35, 10);

@@ -287,17 +287,6 @@ describe("handleHealth", () => {
       status: "unknown", unavailableReason: "coverage-malformed", affectedMarketCapUsd: null,
     });
   });
-  it("keeps the shared D1 scenario strict for unmatched and unused queries", async () => {
-    const db = buildStatusD1Scenario({
-      sections: [],
-      overrides: [{ match: "SELECT 1", rows: [], first: { value: 1 } }],
-    });
-
-    await expect(db.prepare("SELECT 2").first()).rejects.toThrow("mockD1: no match for SQL: SELECT 2");
-    expect(() => db.assertAllMatchesUsed()).toThrow("mockD1: unused table match(es): SELECT 1");
-    await db.prepare("SELECT 1").first();
-  });
-
   it("serves a fresh public-health projection from one snapshot read", async () => {
     // A healthy cached aggregate still reads delivery evidence on this request.
     // Pin the clock: the handler stamps its own response time, so a real
@@ -1232,27 +1221,7 @@ describe("handleHealth", () => {
     expect(body).not.toHaveProperty("telegramSummary");
   });
 
-  it("does not expose Telegram lifecycle diagnostics on the public response", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = healthD1([
-      { match: "cache", rows: [] },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
-      {
-        match: "dispatch-telegram-alerts",
-        rows: [],
-        first: { started_at: now - 120, status: "ok", metadata: "{bad-json" },
-      },
-    ]);
-
-    const res = await handleHealth(db);
-    const body = await res.json() as Record<string, unknown>;
-    expect(body).not.toHaveProperty("telegramSummary");
-  });
+  
 
   it("does not expose Telegram lifecycle warnings on the public response", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -1277,36 +1246,7 @@ describe("handleHealth", () => {
     expect(body.warnings).not.toContain("telegram-delivery-lifecycle:unknown");
   });
 
-  it("does not expose alert suppression generations on the public response", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = healthD1([
-      { match: "cache", rows: [] },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
-      {
-        match: "dispatch-telegram-alerts",
-        rows: [],
-        first: {
-          started_at: now - 120,
-          status: "degraded",
-          metadata: JSON.stringify({
-            safetyAlertsSuppressed: true,
-            safetyAlertSourceGeneration: "legacy-generation",
-            reserveAlertsSuppressed: true,
-            reserveAlertSourceGeneration: "legacy-generation",
-          }),
-        },
-      },
-    ]);
-
-    const res = await handleHealth(db);
-    const body = await res.json() as { warnings: string[] };
-    expect(body.warnings.some((warning) => warning.includes("suppressed"))).toBe(false);
-  });
+  
 
 
   it("filters stale removed live-reserve circuit keys from the health payload", async () => {

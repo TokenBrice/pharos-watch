@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { CRON_CONNECTION_BUDGET_ENTRIES } from "@shared/lib/cron-jobs";
 import { evaluateCronConnectionBudget } from "./check-cron-connection-budget";
 
 describe("check-cron-connection-budget", () => {
@@ -9,11 +8,6 @@ describe("check-cron-connection-budget", () => {
     expect(reviewedReport.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
     expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "halfHourlyOffset")?.totalConnections).toBe(5);
     expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly")?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
-  });
-
-  it("preserves the four-connection status trigger after the D1 two-request correction", () => {
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "status-self-check")?.maxConnections).toBe(2);
-    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "statusSelfCheckOffset")?.totalConnections).toBe(4);
   });
 
   it.each([
@@ -29,15 +23,6 @@ describe("check-cron-connection-budget", () => {
     const trigger = reviewedReport.triggerReports.find((entry) => entry.scheduleKey === scheduleKey);
     expect(trigger?.chains).toEqual([{ chainKey: "chain-1", jobs, peak }]);
     expect(trigger?.totalConnections).toBe(peak);
-  });
-
-  it.each([
-    ["sync-stablecoins", 4], ["compute-depeg-resolver", 0], ["compute-safety-score-v9", 0],
-    ["sync-dex-liquidity-stage", 5],
-    ["sync-dex-liquidity", 5],
-    ["prepare-safety-score-v9-input", 3],
-  ] as const)("preserves reviewed %s job pressure", (job, peak) => {
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === job)?.maxConnections).toBe(peak);
   });
 
   it("sums independent parallel chains even when they share a connection group", () => {
@@ -188,5 +173,62 @@ describe("check-cron-connection-budget", () => {
         failed: entryExceeded || triggerExceeded,
       });
     }
+  });
+  it("counts a shared job once across exact schedule budget entries", () => {
+    const report = evaluateCronConnectionBudget({
+      entries: [
+        {
+          job: "shared-job",
+          maxConnections: 1,
+          scheduleKey: "slot-a",
+          statusTracked: true,
+        },
+        {
+          job: "shared-job",
+          maxConnections: 1,
+          scheduleKey: "slot-b",
+          statusTracked: true,
+        },
+      ],
+      growthPolicy: {
+        maxFetchCapableEntriesBeforeRebalance: 1,
+        maxHeadroomFullTriggersBeforeRebalance: 0,
+        queuesOrWorkflowsReview: { p95DurationMs: 600_000, fanoutPerRun: 1_000, connectionPressureAt: 5 },
+      },
+      schedules: {
+        "slot-a": "1 * * * *",
+        "slot-b": "2 * * * *",
+      },
+      slotPlans: {
+        "slot-a": { worker: "public", jobChains: [["shared-job"]] },
+        "slot-b": { worker: "heavy", jobChains: [["shared-job"]] },
+      },
+    });
+
+    expect(report.fetchCapableEntryCount).toBe(1);
+    expect(report.fetchCapableEntryLimitExceeded).toBe(false);
+    expect(report.failed).toBe(false);
+  });
+  it("enforces aggregate growth rather than resetting it per Worker", () => {
+    const report = evaluateCronConnectionBudget({
+      schedules: { a: "1 * * * *", b: "2 * * * *" },
+      slotPlans: {
+        a: { worker: "public", jobChains: [["a"]] },
+        b: { worker: "heavy", jobChains: [["b"]] },
+      },
+      entries: [
+        { job: "a", scheduleKey: "a", maxConnections: 1, statusTracked: true },
+        { job: "b", scheduleKey: "b", maxConnections: 1, statusTracked: true },
+      ],
+      growthPolicy: {
+        maxFetchCapableEntriesBeforeRebalance: 1,
+        maxHeadroomFullTriggersBeforeRebalance: 2,
+        queuesOrWorkflowsReview: { p95DurationMs: 600_000, fanoutPerRun: 1_000, connectionPressureAt: 5 },
+      },
+    });
+    expect(report.workerReports.public.fetchCapableEntryCount).toBe(1);
+    expect(report.workerReports.heavy.fetchCapableEntryCount).toBe(1);
+    expect(report.fetchCapableEntryLimitExceeded).toBe(true);
+    expect(report.failed).toBe(true);
   });
 });

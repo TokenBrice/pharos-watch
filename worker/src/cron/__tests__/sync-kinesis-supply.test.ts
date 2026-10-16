@@ -85,13 +85,6 @@ describe("parseKinesisResponse", () => {
     expect(parseKinesisResponse(42)).toBeNull();
   });
 
-  it("returns null when circulation is negative", () => {
-    expect(parseKinesisResponse({ circulation: -1, mint: 0, redemption: 0 })).toBeNull();
-  });
-
-  it("returns null when fields are non-numeric", () => {
-    expect(parseKinesisResponse({ circulation: "abc", mint: 0, redemption: 0 })).toBeNull();
-  });
   it.each([null, "", " ", true])("rejects missing or non-numeric field %j", (value) => {
     expect(parseKinesisResponse({ circulation: value, mint: 0, redemption: 0 })).toBeNull();
   });

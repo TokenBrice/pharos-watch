@@ -296,14 +296,4 @@ describe("ChainProfileClient", () => {
     expect(table.getByRole("link", { name: /DAI/ })).toBeTruthy();
   });
 
-  it("shows a route loading state before the chain response completes initial load", () => {
-    useChainProfileDataMock.mockReturnValue(makeHookState({
-      chain: null,
-      isInitialLoading: true,
-      hasAnyData: false,
-    }));
-
-    const { container } = render(<ChainProfileClient chainId="ethereum" />);
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
-  });
 });

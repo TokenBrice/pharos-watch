@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
+import { type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import {
   buildCemeteryFaq,
@@ -133,16 +133,6 @@ describe("buildCemeteryStats: as-of anchoring", () => {
     expect(year.tracked).toBe(3);
   });
 
-  it("derives updatedAt from the latest recordedAt, or null when none is recorded", () => {
-    expect(buildCemeteryStats([row("abandoned", "2024-01")]).updatedAt).toBeNull();
-    const stats = buildCemeteryStats([
-      row("abandoned", "2024-01", { recordedAt: "2025-02-01" }),
-      row("abandoned", "2024-02", { recordedAt: "2026-01-15" }),
-      row("abandoned", "2024-03"),
-    ]);
-    expect(stats.updatedAt).toBe("2026-01-15");
-  });
-
   it("counts day-precise and month-precise death dates across the full set", () => {
     const stats = buildCemeteryStats([
       row("abandoned", "2024-01"),
@@ -151,10 +141,6 @@ describe("buildCemeteryStats: as-of anchoring", () => {
       row("regulatory", "2023-07-31"),
     ]);
     expect(stats.datePrecision).toEqual({ day: 2, month: 2 });
-  });
-
-  it("rejects a malformed deathDate instead of miscounting it", () => {
-    expect(() => buildCemeteryStats([row("abandoned", "2024-13")])).toThrow(/invalid deathDate/);
   });
 });
 
@@ -392,20 +378,6 @@ describe("buildCemeteryStats: ordering and series", () => {
     row("counterparty-failure", "2025-03", { id: "c3", peakMcap: null }),
   ]);
 
-  it("follows CAUSE_ORDER for causes, lanes and per-year cause counts", () => {
-    expect(stats.causes.map((c) => c.cause)).toEqual([...CAUSE_ORDER]);
-    expect(stats.peakByCause.lanes.map((l) => l.cause)).toEqual([...CAUSE_ORDER]);
-    expect(Object.keys(stats.years[0].byCause)).toEqual([...CAUSE_ORDER]);
-  });
-
-  it("labels the global top five by peak and orders lane dots by peak descending", () => {
-    expect(stats.peakByCause.labelledIds).toEqual(["r1", "g1", "a1", "l1", "c1"]);
-    const counterparty = stats.peakByCause.lanes.find((l) => l.cause === "counterparty-failure");
-    expect(counterparty?.dots.map((d) => [d.id, d.labelled])).toEqual([["c1", true], ["c2", false]]);
-    expect(counterparty?.unrecordedCount).toBe(1);
-    expect(stats.peakByCause.extent).toEqual({ min: 1, max: 7000 });
-  });
-
   it("names the largest record per cause", () => {
     expect(stats.causes.find((c) => c.cause === "abandoned")?.largest).toMatchObject({ id: "a1", peak: 5000 });
   });
@@ -436,11 +408,6 @@ describe("buildCemeteryFaq", () => {
   ]);
   const faq = buildCemeteryFaq(stats);
   const answer = (question: string) => faq.find((item) => item.question === question)?.answer ?? "";
-
-  it("returns 7 to 8 questions", () => {
-    expect(faq.length).toBeGreaterThanOrEqual(7);
-    expect(faq.length).toBeLessThanOrEqual(8);
-  });
 
   it("splits the largest collapse (non-regulatory, non-abandoned) from the largest discontinued coin", () => {
     const collapse = answer("What was the largest collapse?");

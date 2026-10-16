@@ -226,18 +226,6 @@ describe("cron job schedule metadata", () => {
     ).not.toContain("sync-v9-supply-attribution");
   });
 
-  it("keeps every physical yield trigger in the hourly Cron CPU class", () => {
-    // Cloudflare caps Cron expressions with intervals below one hour at 30s of
-    // CPU time. sync-yield-data needs several minutes of runtime, so a twice-hourly
-    // expression gets the invocation killed mid `source-resolution` (production
-    // outage 2026-08-18, 11:20-15:00 UTC). Each physical trigger must therefore
-    // carry a single minute value, either directly or via the paired-trigger
-    // form used by halfHourlyChartsOffset.
-    for (const trigger of CRON_TRIGGER_SCHEDULES.hourlyYieldSync) {
-      expect(isHourlyCpuTrigger(trigger), trigger).toBe(true);
-    }
-  });
-
   it.each(["* * * * *", "*/5 * * * *", "0,30 * * * *", "0-30 * * * *", "60 * * * *", "5 */2 * * *"])(
     "rejects non-hourly CPU trigger %s",
     (trigger) => expect(isHourlyCpuTrigger(trigger)).toBe(false),

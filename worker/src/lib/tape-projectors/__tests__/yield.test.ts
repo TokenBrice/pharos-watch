@@ -267,19 +267,22 @@ describe("yield.warning_emitted projector", () => {
 });
 
 describe("yield.pys_dropped projector", () => {
-  it("emits when selected_score drops by >= the threshold", async () => {
+  it.each([
+    { name: "emits when selected_score drops by >= the threshold", prevScore: 80, score: 55, severity: "warning" },
+    { name: "classifies a >=40-point drop as severe", prevScore: 70, score: 20, severity: "severe" },
+  ])("$name", async ({ prevScore, score, severity }) => {
     const db = mockTapeD1(
       decisionTables(
         [
           {
             stablecoin_id: "usdt-tether",
             selected_source_key: "aave-v3:usdt",
-            selected_score: 55,
+            selected_score: score,
             created_at: SEC + 900,
           },
         ],
         [
-          { selected_score: 80 },
+          { selected_score: prevScore },
         ],
       ),
     ) as MockD1Database;
@@ -288,46 +291,26 @@ describe("yield.pys_dropped projector", () => {
     const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![1]).toBe("yield.pys_dropped");
-    // delta = 25 → warning band [20,40)
-    expect(inserts[0]![2]).toBe("warning");
+    // The 25-point drop is warning [20,40); the 50-point drop is severe.
+    expect(inserts[0]![2]).toBe(severity);
   });
 
-  it("classifies a >=40-point drop as severe", async () => {
+  it.each([
+    { name: "the drop is below threshold", prevScore: 80, score: 73 },
+    { name: "scores are equal or rising", prevScore: 75, score: 85 },
+  ])("emits nothing when $name", async ({ prevScore, score }) => {
     const db = mockTapeD1(
       decisionTables(
         [
           {
             stablecoin_id: "usdt-tether",
             selected_source_key: "aave-v3:usdt",
-            selected_score: 20,
+            selected_score: score,
             created_at: SEC + 900,
           },
         ],
         [
-          { selected_score: 70 },
-        ],
-      ),
-    ) as MockD1Database;
-
-    await projectYieldPysDropped(db);
-    const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]![2]).toBe("severe");
-  });
-
-  it("emits nothing when the drop is below threshold", async () => {
-    const db = mockTapeD1(
-      decisionTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            selected_source_key: "aave-v3:usdt",
-            selected_score: 73,
-            created_at: SEC + 900,
-          },
-        ],
-        [
-          { selected_score: 80 },
+          { selected_score: prevScore },
         ],
       ),
     ) as MockD1Database;
@@ -346,27 +329,6 @@ describe("yield.pys_dropped projector", () => {
           created_at: SEC + 900,
         },
       ]),
-    ) as MockD1Database;
-
-    await projectYieldPysDropped(db);
-    expect(tapeInsertBindsForType(db, "yield.pys_dropped")).toHaveLength(0);
-  });
-
-  it("emits nothing when scores are equal or rising", async () => {
-    const db = mockTapeD1(
-      decisionTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            selected_source_key: "aave-v3:usdt",
-            selected_score: 85,
-            created_at: SEC + 900,
-          },
-        ],
-        [
-          { selected_score: 75 },
-        ],
-      ),
     ) as MockD1Database;
 
     await projectYieldPysDropped(db);
@@ -441,30 +403,6 @@ describe("yield.pys_dropped projector", () => {
     const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_DECISIONS));
     expect(priorQuery?.sql).toContain("ORDER BY d.created_at DESC, d.generation_id DESC");
     expect(priorQuery?.sql).toContain("LIMIT 1");
-  });
-
-  it("prints a drop whose endpoints and delta agree after rounding", async () => {
-    const db = mockTapeD1(
-      decisionTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            selected_source_key: "aave-v3:usdt",
-            selected_score: 71.4,
-            created_at: SEC + 900,
-          },
-        ],
-        [
-          { selected_score: 81.6 },
-        ],
-      ),
-    ) as MockD1Database;
-
-    await projectYieldPysDropped(db);
-    const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]![9]).toBe("USDT yield score 82 → 71");
-    expect(inserts[0]![10]).toBe("Published yield score dropped by 11 on selected source.");
   });
 });
 

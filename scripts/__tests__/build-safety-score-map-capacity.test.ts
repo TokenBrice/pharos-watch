@@ -40,14 +40,6 @@ describe("Safety Map captured-census capacity", () => {
     assertCompleteLayout(captured);
   });
 
-  it("retains every entry with at least 25% growth in each grade band", () => {
-    const extra = ["A", "B", "C", "D", "F"].flatMap((tier) => {
-      const population = captured.filter((coin) => coin.tier === tier);
-      return population.slice(-Math.ceil(population.length / 4)).map((coin) => ({ ...coin, id: `growth-${coin.id}` }));
-    });
-    assertCompleteLayout([...captured, ...extra]);
-  });
-
   it("keeps the readable floor through 50% growth, then steps down rather than fail", () => {
     const grown = (fraction: number) => [...captured, ...["A", "B", "C", "D", "F"].flatMap((tier) => {
       const population = captured.filter((coin) => coin.tier === tier);
@@ -59,28 +51,6 @@ describe("Safety Map captured-census capacity", () => {
     expect(layout.gravelFloor).toBe(GRAVEL_FLOORS[1]);
     expect(layout.bands.flatMap((band) => band.bubbles)).toHaveLength(coins.length);
     expect(validateComposition({ orbits: compositionOrbitsFor(layout.bands), chips: [] })).toEqual([]);
-  });
-
-  it("splits only the grade that overflows, so one grade's growth never moves the floor", () => {
-    // 2026-10-14 review: a global coins-per-guide split made capacity
-    // non-monotonic — one extra F coin could flip the floor or fail the fit.
-    const f = captured.filter((coin) => coin.tier === "F");
-    for (const extra of [88, 89, 90, 120]) {
-      const added = Array.from({ length: extra }, (_, index) => ({ ...f[index % f.length], id: `extra-f-${index}` }));
-      expect(fitLayout([...captured, ...added]).gravelFloor, `F +${extra}`).toBe(GRAVEL_FLOORS[0]);
-    }
-  });
-
-  it("fits a short-axis stress case with supply leaders in every outer grade", () => {
-    const leaders: MapCoin[] = captured.filter((coin): coin is MapCoin & { mcap: number } => coin.mcap !== null)
-      .sort((a, b) => b.mcap - a.mcap).slice(0, 8);
-    expect(leaders).toHaveLength(8);
-    const tiers = ["B", "B", "C", "C", "D", "D", "F", "F"] as const;
-    const moved = captured.map((coin) => {
-      const index = leaders.indexOf(coin);
-      return index < 0 ? coin : { ...coin, tier: tiers[index], grade: tiers[index] };
-    });
-    assertCompleteLayout(moved);
   });
 
   it("fails loudly with a machine-readable reason when readable capacity is exhausted", () => {

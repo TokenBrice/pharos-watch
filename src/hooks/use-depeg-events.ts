@@ -42,7 +42,7 @@ function buildDepegEventsPath({
   });
 }
 
-export function depegEventsInfiniteQueryOptions(
+function depegEventsInfiniteQueryOptions(
   stablecoinId?: string,
   options: { activeOnly?: boolean; includePending?: boolean } = {},
 ) {

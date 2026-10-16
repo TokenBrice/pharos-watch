@@ -49,48 +49,6 @@ function harness() {
 beforeEach(() => { fixture.changedFiles = ["worker/src/api/example.ts"]; });
 
 describe("receipt explanation dispatch", () => {
-  it("reads the current-HEAD receipt without invoking runtime guards, fetches, checks, discovery or receipt writes", async () => {
-    const root = mkdtempSync(`${tmpdir()}/pharos-explain-dispatch-`);
-    try {
-      const path = writePrCheckReceipt({
-        schemaVersion: 1, node: "24.16.0", npm: "11.13.0", baseSha, headSha,
-        treeClean: true, flags: {}, weakened: false, startedAt: "start", finishedAt: "finish",
-        leaves: [{ id: "tests", command: "npm run test:pr", status: "failed", durationMs: 1, firstError: "Type error" }],
-        outcome: "failed",
-      }, root);
-      const before = readFileSync(path, "utf8");
-      const h = harness();
-      const runtimeVersions = vi.fn(() => { throw new Error("must not inspect runtime"); });
-      const inspectReceiptCheckout = vi.fn(() => ({ headSha, treeClean: true, baseRef: "origin/main", localBaseSha: baseSha }));
-      const inspectCheckout = vi.fn(() => { throw new Error("must not inspect gate checkout"); });
-      expect(await runPrChecks(["--explain-receipt"], { ...testEnv, PR_HEAD_SHA: "other-commit" }, {
-        ...h.options, repoRoot: root, runtimeVersions, inspectReceiptCheckout, inspectCheckout,
-      })).toBe(0);
-      expect(inspectReceiptCheckout).toHaveBeenCalledWith("origin/main");
-      expect(runtimeVersions).not.toHaveBeenCalled();
-      expect(inspectCheckout).not.toHaveBeenCalled();
-      expect(h.runCommandImpl).not.toHaveBeenCalled();
-      expect(h.runSecrets).not.toHaveBeenCalled();
-      expect(h.selectPlanTestFiles).not.toHaveBeenCalled();
-      expect(h.receipts).toEqual([]);
-      expect(readFileSync(path, "utf8")).toBe(before);
-      expect(h.stdout.write.mock.calls.map(([chunk]) => chunk).join("")).toContain("Next action: Fix every failed lane (tests)");
-    } finally { rmSync(root, { recursive: true, force: true }); }
-  });
-
-  it.each(["--ci-parity", "--plan", "--no-fetch", "--head=other", "--explain-receipt", "--typo"])(
-    "rejects %s alongside explanation before inspecting or executing anything",
-    async (arg) => {
-      const h = harness();
-      const inspectReceiptCheckout = vi.fn(() => { throw new Error("must not inspect checkout"); });
-      expect(await runPrChecks(["--explain-receipt", arg], testEnv, { ...h.options, inspectReceiptCheckout })).toBe(2);
-      expect(inspectReceiptCheckout).not.toHaveBeenCalled();
-      expect(h.runCommandImpl).not.toHaveBeenCalled();
-      expect(h.runSecrets).not.toHaveBeenCalled();
-      expect(h.receipts).toEqual([]);
-    },
-  );
-
   it("treats a missing receipt as a completed diagnostic, not readiness or a trigger to run checks", async () => {
     const root = mkdtempSync(`${tmpdir()}/pharos-explain-missing-`);
     try {
@@ -207,6 +165,7 @@ describe("isolated V9 resource execution", () => {
   }, 65_000);
 
   it("runs the resource lane once after ordinary tests settle and records its outcome", async () => {
+    fixture.changedFiles = ["worker/src/lib/safety-score-v9/resource-budget.ts"];
     const h = harness();
     let testing = false;
     const resourceCalls: string[] = [];
@@ -268,14 +227,15 @@ describe("readiness execution", () => {
       if (command.cmd.startsWith("git rev-parse")) return { status: 0, aborted: false, output: baseSha };
       if (command.cmd.startsWith("git show")) return { status: 0, aborted: false, output: "0" };
       if (command.cmd.includes("lint:changed")) return { status: 1, aborted: false, output: "> banner\nError: lint violation" };
-      if (command.cmd.includes("check:table-primitives")) throw new Error("spawn ENOENT");
+      if (command.cmd.includes("check:env-contract")) throw new Error("spawn ENOENT");
       return { status: 0, aborted: false, output: "" };
     });
     expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(1);
     expect(h.receipts[0].outcome).toBe("failed");
     expect(h.receipts[0].leaves).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "pr-static:lint:changed", status: "failed", firstError: "Error: lint violation" }),
-      expect.objectContaining({ id: "pr-static:check:table-primitives", status: "failed", firstError: "spawn ENOENT" }),
+      expect.objectContaining({ id: "pr-static:check:env-contract", status: "failed", firstError: "spawn ENOENT" }),
+      expect.objectContaining({ id: "pr-static:check:shared-types-imports", status: "passed" }),
       expect.objectContaining({ id: "pr-tests", status: "passed" }),
     ]));
     const output = h.stdout.write.mock.calls.map(([chunk]) => chunk).join("");
@@ -338,27 +298,31 @@ describe("readiness execution", () => {
     expect(h.runSecrets).not.toHaveBeenCalled();
     expect(h.runCommandImpl.mock.calls.every(([command]) => command.cmd.startsWith("git "))).toBe(true);
     expect(h.receipts[0]).toMatchObject({ headSha, outcome: "failed" });
-    expect(h.stderr.write.mock.calls.join("")).toContain("Tests and coverage inspect the checkout");
+    expect(h.stderr.write.mock.calls.join("")).toContain("Tests inspect the checkout");
   });
 
-  it("defers critical-owner tests out of pr-tests only when the coverage leaf executes them", async () => {
+  it("never delegates critical-owner tests to local coverage or emits a deferral override", async () => {
     fixture.changedFiles = ["worker/src/lib/evm-rpc.ts"];
-    const deferFlag = async (argv: string[], env = testEnv) => {
+    const assertNoDeferral = async (argv: string[], env = testEnv) => {
       const h = harness();
       await runPrChecks(argv, env, h.options);
       const ran = (fragment: string): unknown[] | undefined => h.runCommandImpl.mock.calls.find(([command]) => command.cmd.includes(fragment));
-      const testEnvFor = { ...env, ...(ran("test:pr")?.[1] as Record<string, string> | undefined) };
-      return { coverageRan: ran("coverage:critical") !== undefined, flag: testEnvFor.PR_TESTS_DEFER_CRITICAL_OWNERS };
+      const testCall = ran("test:pr");
+      const testCommand = testCall?.[0] as { extraEnv?: Record<string, string> } | undefined;
+      expect(ran("coverage:critical")).toBeUndefined();
+      expect(testCommand).toBeDefined();
+      expect(testCommand?.extraEnv ?? {}).not.toHaveProperty("PR_TESTS_DEFER_CRITICAL_OWNERS");
+      expect(testCall?.[1]).toHaveProperty("PHAROS_V9_RESOURCE_LANE", "0");
     };
-    expect(await deferFlag([`--base=${baseSha}`, "--with-coverage"])).toEqual({ coverageRan: true, flag: "1" });
-    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: "0" });
-    // An inherited flag must not drop owner tests when coverage is deferred to CI.
-    expect(await deferFlag([`--base=${baseSha}`], { ...testEnv, PR_TESTS_DEFER_CRITICAL_OWNERS: "1" })).toEqual({ coverageRan: false, flag: "0" });
+    await assertNoDeferral([`--base=${baseSha}`, "--with-pages"]);
+    await assertNoDeferral([`--base=${baseSha}`]);
+    // The retired ambient flag may be inherited, but must not produce a lane override.
+    await assertNoDeferral([`--base=${baseSha}`], { ...testEnv, PR_TESTS_DEFER_CRITICAL_OWNERS: "1" });
     fixture.changedFiles = ["worker/src/api/example.ts"];
-    expect(await deferFlag([`--base=${baseSha}`])).toEqual({ coverageRan: false, flag: "0" });
+    await assertNoDeferral([`--base=${baseSha}`]);
   });
 
-  it("records classifier-selected coverage and Pages as deferred to CI without weakening a clean pass", async () => {
+  it("records classifier-selected Pages as deferred to CI without weakening a clean pass", async () => {
     fixture.changedFiles = ["worker/src/lib/evm-rpc.ts", "src/app/page.tsx"];
     const h = harness();
     expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(0);
@@ -366,31 +330,12 @@ describe("readiness execution", () => {
     expect(h.receipts[0]).toMatchObject({ weakened: false, outcome: "passed" });
     expect(h.receipts[0].leaves).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "pages-artifact", status: "deferred-to-ci" }),
-      expect.objectContaining({ id: "critical-coverage", status: "deferred-to-ci" }),
     ]));
-  });
-
-  it("starts pages-artifact only after every other leaf has settled", async () => {
-    fixture.changedFiles = ["worker/src/lib/evm-rpc.ts", "src/app/page.tsx"];
-    const h = harness();
-    const inFlight = new Set<string>();
-    const inFlightAtPagesStart: string[][] = [];
-    const track = async <T,>(id: string, result: T): Promise<T> => {
-      if (id.includes("check:pages-artifact")) inFlightAtPagesStart.push([...inFlight]);
-      inFlight.add(id);
-      // Keep the coverage leaf in flight across the whole static track, so a
-      // pages-artifact leaf scheduled concurrently would observe it.
-      for (let hop = id.includes("coverage:critical") ? 1000 : 1; hop > 0; hop--) await Promise.resolve();
-      inFlight.delete(id);
-      return result;
-    };
-    h.runCommandImpl.mockImplementation((command) => command.cmd.startsWith("git ")
-      ? Promise.resolve({ status: 0, aborted: false, output: command.cmd.startsWith("git rev-parse") ? baseSha : "0" })
-      : track(command.cmd, { status: 0, aborted: false, output: "" }));
-    h.runSecrets.mockImplementation(() => track("gitleaks", { ok: true, exitCode: 0, summary: "clean" }));
-    expect(await runPrChecks([`--base=${baseSha}`, "--with-coverage", "--with-pages"], testEnv, h.options)).toBe(0);
-    expect(inFlightAtPagesStart).toEqual([[]]);
-    expect(h.receipts[0].leaves.at(-1)).toMatchObject({ id: "critical-coverage", status: "passed" });
+    expect(h.receipts[0].leaves.some((leaf) => leaf.id === "critical-coverage")).toBe(false);
+    expect(h.runCommandImpl).toHaveBeenCalledWith(
+      expect.objectContaining({ lane: "pr-static:check:critical-coverage-completeness" }),
+      expect.objectContaining({ PR_BASE_SHA: baseSha, PR_HEAD_SHA: headSha }),
+    );
   });
 });
 

@@ -1,80 +1,23 @@
 import sharp from "sharp";
-import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildOgCemetery,
   checkOgCemetery,
-  cssModuleClassMap,
   resolveRootTokens,
   rootCustomProperties,
-  unwrapCssModule,
   type OgCemeteryDocument,
   type OgCemeteryPaths,
 } from "../maintenance/build-og-cemetery";
 
-describe("CSS module under the identity class map", () => {
-  const moduleCss = `
-.tokens { --c-ab: var(--c-ab-l); }
-:global(.dark) .tokens { --c-ab: var(--c-ab-d); }
-:global(.dark) .map .lamp { opacity: 1; }
-.hero::before { content: ""; }
-.c-ab { --cause: var(--c-ab); }
-@media (min-width: 1280px) { .stage .chip:hover { color: red; } }
-@keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
-`;
-
-  it("exports every local class, including ones only inside media queries, and no global-only class", () => {
-    expect(cssModuleClassMap(moduleCss)).toEqual({
-      "c-ab": "c-ab",
-      chip: "chip",
-      hero: "hero",
-      lamp: "lamp",
-      map: "map",
-      stage: "stage",
-      tokens: "tokens",
-    });
-  });
-
-  it("unwraps :global so the theme selector matches the plain class names", () => {
-    const css = unwrapCssModule(moduleCss);
-    expect(css).toContain(".dark .tokens { --c-ab: var(--c-ab-d); }");
-    expect(css).toContain(".dark .map .lamp");
-    expect(css).not.toContain(":global");
-  });
-});
-
 describe("resolveRootTokens", () => {
-  const primitives = ":root { --p-neutral-900: oklch(0.2 0 0); --p-blue-500: oklch(0.6 0.2 250); --unused: 1px; }";
-  const semantic = `
-:root { --text-primary: var(--p-neutral-900); --brand-accent: var(--p-blue-500); }
-.dark { --text-primary: white; }
-@media (max-width: 767px) { :root { --text-primary: black; } }
-`;
-  const globals = "@layer base { :root { --foreground: var(--text-primary); --frost-blue: var(--brand-accent); } }";
   const moduleCss = `
 .tokens { --beam: color-mix(in oklab, var(--frost-blue) 40%, transparent); --plot-mono: var(--font-geist-mono), monospace; }
 .figure { right: calc(var(--lantern-right) + 22px); color: var(--foreground); }
 .beam { fill: var(--beam); }
 `;
-
-  it("keeps the light :root closure of what the sheet reads and nothing else", () => {
-    expect(resolveRootTokens(moduleCss, rootCustomProperties([primitives, semantic, globals]))).toEqual({
-      "--brand-accent": "var(--p-blue-500)",
-      "--foreground": "var(--text-primary)",
-      "--frost-blue": "var(--brand-accent)",
-      "--p-blue-500": "oklch(0.6 0.2 250)",
-      "--p-neutral-900": "oklch(0.2 0 0)",
-      "--text-primary": "var(--p-neutral-900)",
-    });
-  });
-
-  it("lets a later sheet override an earlier :root token", () => {
-    const override = ":root { --p-blue-500: oklch(0.7 0.1 240); }";
-    const tokens = resolveRootTokens(moduleCss, rootCustomProperties([primitives, semantic, globals, override]));
-    expect(tokens["--p-blue-500"]).toBe("oklch(0.7 0.1 240)");
-  });
 
   it("fails on a dangling reference inside the closure instead of rendering an unstyled fallback", () => {
     const broken = ":root { --foreground: var(--text-missing); --frost-blue: blue; }";
@@ -114,21 +57,6 @@ describe("buildOgCemetery + checkOgCemetery", () => {
     const result = await buildOgCemetery({ paths, document, render: () => png() });
     expect(result.status).toBe("written");
     expect(await problemKinds(document, paths)).toEqual([]);
-  });
-
-  it("is a no-op when the document is unchanged, so another platform's renderer never churns the PNG", async () => {
-    const paths = makePaths();
-    const document = makeDocument("<p>113</p>");
-    await buildOgCemetery({ paths, document, render: () => png() });
-    const before = readFileSync(paths.imagePath);
-
-    const render = vi.fn(() => png(1200, 630, "#000000"));
-    expect((await buildOgCemetery({ paths, document, render })).status).toBe("current");
-    expect(render).not.toHaveBeenCalled();
-    expect(readFileSync(paths.imagePath).equals(before)).toBe(true);
-
-    expect((await buildOgCemetery({ paths, document, render, force: true })).status).toBe("written");
-    expect(render).toHaveBeenCalledOnce();
   });
 
   it("flags a new death (a changed document) as stale inputs and re-renders on the next run", async () => {

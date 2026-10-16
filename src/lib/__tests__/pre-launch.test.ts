@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateScore, formatFuzzyDate, getDriftStatus, parseFuzzyDate, parseFuzzyDeadline } from "../pre-launch";
+import { dateScore, getDriftStatus, parseFuzzyDate, parseFuzzyDeadline } from "../pre-launch";
 
 describe("pre-launch fuzzy dates", () => {
   it("parses supported fuzzy date formats to deterministic period ends", () => {
@@ -16,24 +16,6 @@ describe("pre-launch fuzzy dates", () => {
       expect(parseFuzzyDate(value)).toBeNull();
       expect(dateScore(value)).toBe(Number.POSITIVE_INFINITY);
     }
-  });
-
-  it("formats full, monthly, quarterly, and half-year dates", () => {
-    expect(formatFuzzyDate("2026-05-27")).toBe("May 27, 2026");
-    expect(formatFuzzyDate("2026-05")).toBe("May 2026");
-    expect(formatFuzzyDate("2026-Q2")).toBe("Q2 2026");
-    expect(formatFuzzyDate("2026-H1")).toBe("H1 2026");
-  });
-
-  it("sorts fuzzy dates chronologically using the representative period end", () => {
-    const values = ["2026-H2", "2026-05-27", "2026-Q2", "2026-05", "2026"];
-    expect([...values].sort((a, b) => dateScore(a) - dateScore(b))).toEqual([
-      "2026-05-27",
-      "2026-05",
-      "2026-Q2",
-      "2026-H2",
-      "2026",
-    ]);
   });
 });
 
@@ -57,10 +39,4 @@ describe("pre-launch drift deadlines", () => {
       }
     },
   );
-
-  it("does not assign an overdue deadline to invalid or absent targets", () => {
-    expect(parseFuzzyDeadline("2026-02-30")).toBeNull();
-    expect(getDriftStatus(undefined, undefined, Date.UTC(2027, 0, 1))).toBe("on-track");
-    expect(getDriftStatus([], "2026-02-30", Date.UTC(2027, 0, 1))).toBe("on-track");
-  });
 });

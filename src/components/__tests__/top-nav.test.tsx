@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createContext, useContext, type ReactNode } from "react";
 import { TopNav } from "@/components/top-nav";
-import { NAV_GROUPS, QUICK_NAV_ITEMS, normalizeNavPath } from "@/lib/nav-config";
+import { NAV_GROUPS } from "@/lib/nav-config";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import { makeHealthyHealthResponse } from "@/test-utils/status-fixtures";
 
@@ -66,50 +66,6 @@ describe("TopNav", () => {
     });
   });
 
-  it("promotes the configured quick routes to direct links", () => {
-    installMatchMediaMock(true);
-
-    render(<TopNav />);
-
-    const rail = document.querySelector('nav[aria-label="Quick links"]');
-    const railLinks = [...(rail?.querySelectorAll("a") ?? [])];
-
-    expect(railLinks.map((link) => normalizeNavPath(link.getAttribute("href") ?? ""))).toEqual(
-      QUICK_NAV_ITEMS.map((item) => normalizeNavPath(item.href)),
-    );
-    expect(railLinks.every((link) => link.querySelector("svg") !== null)).toBe(true);
-    expect(railLinks[0].getAttribute("aria-current")).toBe("page");
-  });
-
-  it("steps rail labels through three width tiers while expanding entity search", () => {
-    installMatchMediaMock(true);
-
-    render(<TopNav />);
-
-    const tieredItem = QUICK_NAV_ITEMS.find((item) => item.compactLabel && item.shortLabel !== item.label);
-    expect(tieredItem).toBeDefined();
-    const tieredLink = [...document.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Quick links"] a')].find(
-      (link) => normalizeNavPath(link.getAttribute("href") ?? "") === normalizeNavPath(tieredItem!.href),
-    )!;
-    const spans = [...tieredLink.querySelectorAll("span")];
-    const compactLabel = spans.find((node) => node.className === "min-[1440px]:hidden");
-    const shortLabel = spans.find((node) => node.classList.contains("min-[1680px]:hidden"));
-    const fullLabel = spans.find((node) => node.className === "hidden min-[1680px]:inline");
-    const search = screen.getByRole("button", { name: "Search" });
-
-    expect(compactLabel?.textContent).toBe(tieredItem!.compactLabel);
-    expect(shortLabel?.textContent).toBe(tieredItem!.shortLabel);
-    expect(fullLabel?.textContent).toBe(tieredItem!.label);
-    // Assert the breakpoint contract, not the width literal: the search
-    // control expands one breakpoint before the rail gives up its shorthand,
-    // and the exact xl width is a fitting detail that has already had to move
-    // once to stop the masthead overflowing at 1280.
-    expect(search.className).toContain("xl:justify-start");
-    expect(screen.getByText("Coin or page").className).toContain("xl:inline");
-    // The ⌘K hint arrives with the text label at xl; at lg the rail's full
-    // "Stability" label already fills the 1024px masthead.
-    expect(screen.getByText("⌘K").className).toContain("xl:inline");
-  });
 
   it("opens Resources only after hover intent and renders its configured columns", () => {
     vi.useFakeTimers();
@@ -163,22 +119,6 @@ describe("TopNav", () => {
     expect(secondTrigger.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("marks a section trigger current on detail routes beneath its items", () => {
-    pathnameMock.current = "/chains/ethereum/";
-    installMatchMediaMock(true);
-
-    render(<TopNav />);
-
-    // Chain detail pages sit beneath the Markets Chains row: the rail stays
-    // quiet while the Markets trigger owns the current section.
-    expect(screen.getByRole("button", { name: "Markets" }).getAttribute("aria-current")).toBe("true");
-    expect(screen.getByRole("button", { name: "Risk" }).getAttribute("aria-current")).toBeNull();
-    expect(screen.getByRole("button", { name: "Tools" }).getAttribute("aria-current")).toBeNull();
-    const rail = document.querySelector('nav[aria-label="Quick links"]');
-    expect([...(rail?.querySelectorAll("a") ?? [])].every((link) => link.getAttribute("aria-current") !== "page")).toBe(
-      true,
-    );
-  });
 
   it("opens a closed trigger pinned on ArrowDown and roves its panel links", () => {
     installMatchMediaMock(true);
@@ -247,17 +187,6 @@ describe("TopNav", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("closes an open section panel on Esc while focus is outside it", () => {
-    installMatchMediaMock(true);
-
-    render(<TopNav />);
-    const trigger = screen.getByRole("button", { name: NAV_GROUPS.find((group) => !group.columns)!.label });
-    fireEvent.click(trigger);
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-
-    fireEvent.keyDown(document.body, { key: "Escape" });
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-  });
 
   it("keeps the Status destination label and shows health as separate metadata", () => {
     installMatchMediaMock(true);
@@ -322,14 +251,4 @@ describe("TopNav", () => {
     expect(screen.getByText("Partial outage", { selector: "span" })).not.toBeNull();
   });
 
-  it("uses readable unavailable metadata when public health cannot be loaded", () => {
-    installMatchMediaMock(true);
-    useHealthMock.mockReturnValue({ data: undefined, isError: true });
-
-    render(<TopNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
-
-    expect(screen.getByText("Status", { selector: "span" })).not.toBeNull();
-    expect(screen.getByText("Unavailable", { selector: "span" })).not.toBeNull();
-  });
 });

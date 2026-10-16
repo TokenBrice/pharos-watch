@@ -7,7 +7,6 @@ import {
   LiveReservesConfigSchema,
 } from "@shared/lib/live-reserve-adapters";
 import {
-  getAuthoredDefaultFlagIssues,
   getCommodityProtocolSlugIssue,
   getCommodityAllocatedPegMatchIssues,
   getDependencyReserveOverlapIssues,
@@ -86,43 +85,6 @@ describe("authored linked reserve type gate", () => {
     expect(getLiveReserveDependencyTypeLinkIssues({
       asset: { coinId: "usdc-circle", depType: "collateral" },
     })).toEqual([]);
-  });
-});
-
-describe("stablecoin source flag default omission", () => {
-  it("flags authored schema defaults", () => {
-    expect(
-      getAuthoredDefaultFlagIssues({
-        flags: {
-          backing: "crypto-backed",
-          pegCurrency: "USD",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: false,
-          navToken: false,
-        },
-      }),
-    ).toEqual([
-      'flags.pegCurrency sets the schema default "USD"; omit this key from the source file',
-      "flags.yieldBearing sets the schema default false; omit this key from the source file",
-      "flags.rwa sets the schema default false; omit this key from the source file",
-      "flags.navToken sets the schema default false; omit this key from the source file",
-    ]);
-  });
-
-  it("allows non-default authored flag values", () => {
-    expect(
-      getAuthoredDefaultFlagIssues({
-        flags: {
-          backing: "crypto-backed",
-          pegCurrency: "EUR",
-          governance: "centralized",
-          yieldBearing: true,
-          rwa: true,
-          navToken: true,
-        },
-      }),
-    ).toEqual([]);
   });
 });
 

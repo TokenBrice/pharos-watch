@@ -23,7 +23,7 @@ export const ProducerHeadStatusSchema = z.object({
 });
 export type ProducerHeadStatus = z.output<typeof ProducerHeadStatusSchema>;
 
-export const PUBLICATION_SURFACE_IDS = [
+const PUBLICATION_SURFACE_IDS = [
   "dex-liquidity",
   "yield-rankings",
   "stablecoins",
@@ -33,7 +33,7 @@ export const PUBLICATION_SURFACE_IDS = [
 ] as const;
 export type PublicationSurfaceId = (typeof PUBLICATION_SURFACE_IDS)[number];
 
-export const PUBLICATION_GENERATION_STATES = [
+const PUBLICATION_GENERATION_STATES = [
   "candidate",
   "validated",
   "published",
@@ -41,10 +41,10 @@ export const PUBLICATION_GENERATION_STATES = [
   "superseded",
   "failed",
 ] as const;
-export const PublicationGenerationStateSchema = z.enum(PUBLICATION_GENERATION_STATES);
+const PublicationGenerationStateSchema = z.enum(PUBLICATION_GENERATION_STATES);
 export type PublicationGenerationState = z.infer<typeof PublicationGenerationStateSchema>;
 
-export const PublicationGenerationHealthSchema = z.object({
+const PublicationGenerationHealthSchema = z.object({
   generationId: z.string(),
   sourceState: z.string(),
   state: PublicationGenerationStateSchema,
@@ -60,7 +60,7 @@ export const PublicationGenerationHealthSchema = z.object({
 });
 export type PublicationGenerationHealth = z.output<typeof PublicationGenerationHealthSchema>;
 
-export const PublicationSurfaceHealthSchema = z.object({
+const PublicationSurfaceHealthSchema = z.object({
   surface: z.enum(PUBLICATION_SURFACE_IDS),
   label: z.string(),
   sourceOfTruth: z.string(),
@@ -72,7 +72,7 @@ export const PublicationSurfaceHealthSchema = z.object({
 });
 export type PublicationSurfaceHealth = z.output<typeof PublicationSurfaceHealthSchema>;
 
-export const PublicationSurfaceFailureSchema = z.object({
+const PublicationSurfaceFailureSchema = z.object({
   surface: z.enum(PUBLICATION_SURFACE_IDS),
   code: z.string(),
   message: z.string(),
@@ -86,19 +86,19 @@ export const PublicationHealthSchema = z.object({
 });
 export type PublicationHealth = z.output<typeof PublicationHealthSchema>;
 
-export const DEPENDENCY_HEALTH_STATUS_VALUES = ["healthy", "degraded", "stale", "unknown"] as const;
-export const DependencyHealthStatusSchema = z.enum(DEPENDENCY_HEALTH_STATUS_VALUES);
+const DEPENDENCY_HEALTH_STATUS_VALUES = ["healthy", "degraded", "stale", "unknown"] as const;
+const DependencyHealthStatusSchema = z.enum(DEPENDENCY_HEALTH_STATUS_VALUES);
 export type DependencyHealthStatus = z.infer<typeof DependencyHealthStatusSchema>;
 
-export const DEPENDENCY_IMPACT_LAYER_VALUES = ["availability", "data-quality", "system"] as const;
-export const DependencyImpactLayerSchema = z.enum(DEPENDENCY_IMPACT_LAYER_VALUES);
+const DEPENDENCY_IMPACT_LAYER_VALUES = ["availability", "data-quality", "system"] as const;
+const DependencyImpactLayerSchema = z.enum(DEPENDENCY_IMPACT_LAYER_VALUES);
 export type DependencyImpactLayer = z.infer<typeof DependencyImpactLayerSchema>;
 
-export const DEPENDENCY_CRITICALITY_VALUES = ["critical", "watch"] as const;
-export const DependencyCriticalitySchema = z.enum(DEPENDENCY_CRITICALITY_VALUES);
+const DEPENDENCY_CRITICALITY_VALUES = ["critical", "watch"] as const;
+const DependencyCriticalitySchema = z.enum(DEPENDENCY_CRITICALITY_VALUES);
 export type DependencyCriticality = z.infer<typeof DependencyCriticalitySchema>;
 
-export const DependencyHealthItemSchema = z.object({
+const DependencyHealthItemSchema = z.object({
   id: z.string(),
   label: z.string(),
   sourceOfTruth: z.string(),
@@ -144,7 +144,7 @@ export const DependencyHealthSchema = z.object({
 });
 export type DependencyHealth = z.output<typeof DependencyHealthSchema>;
 
-export const ProviderCircuitHealthEntrySchema = z.object({
+const ProviderCircuitHealthEntrySchema = z.object({
   providerId: z.string(),
   family: z.string(),
   state: z.enum(["closed", "half-open", "open"]),
@@ -156,7 +156,7 @@ export const ProviderCircuitHealthEntrySchema = z.object({
 });
 export type ProviderCircuitHealthEntry = z.output<typeof ProviderCircuitHealthEntrySchema>;
 
-export const ProviderCircuitHealthFamilySummarySchema = z.object({
+const ProviderCircuitHealthFamilySummarySchema = z.object({
   total: z.number(),
   closed: z.number(),
   halfOpen: z.number(),
@@ -181,16 +181,16 @@ export const ProviderCircuitHealthSchema = z.object({
 });
 export type ProviderCircuitHealth = z.output<typeof ProviderCircuitHealthSchema>;
 
-export const CANARY_RUN_STATUS_VALUES = ["ok", "degraded", "error", "skipped"] as const;
-export const CanaryRunStatusSchema = z.enum(CANARY_RUN_STATUS_VALUES);
+const CANARY_RUN_STATUS_VALUES = ["ok", "degraded", "error", "skipped"] as const;
+const CanaryRunStatusSchema = z.enum(CANARY_RUN_STATUS_VALUES);
 export type CanaryRunStatus = z.infer<typeof CanaryRunStatusSchema>;
 
-export const CANARY_RUN_SEVERITY_VALUES = ["info", "warning", "error", "critical"] as const;
-export const CanaryRunSeveritySchema = z.enum(CANARY_RUN_SEVERITY_VALUES);
+const CANARY_RUN_SEVERITY_VALUES = ["info", "warning", "error", "critical"] as const;
+const CanaryRunSeveritySchema = z.enum(CANARY_RUN_SEVERITY_VALUES);
 export type CanaryRunSeverity = z.infer<typeof CanaryRunSeveritySchema>;
 
-export const CANARY_EXECUTION_STATUS_VALUES = ["completed", "failed"] as const;
-export const CanaryExecutionStatusSchema = z.enum(CANARY_EXECUTION_STATUS_VALUES);
+const CANARY_EXECUTION_STATUS_VALUES = ["completed", "failed"] as const;
+const CanaryExecutionStatusSchema = z.enum(CANARY_EXECUTION_STATUS_VALUES);
 export type CanaryExecutionStatus = z.infer<typeof CanaryExecutionStatusSchema>;
 
 const CanaryStatusCheckSchema = z.object({

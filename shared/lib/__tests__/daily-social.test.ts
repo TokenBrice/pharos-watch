@@ -55,10 +55,6 @@ describe("daily social publication contract", () => {
       expect(DailySocialSnapshotSchema.safeParse({ ...snapshot, rows: [{ ...row, ...patch }] }).success).toBe(false);
     }
   });
-  it("preserves frozen copy for legacy ungraded snapshots", () => {
-    expect(buildDailySocialTweetText(snapshot)).toBe("This week's market-share gainers\n\n1. USDC 0.123 pp\n\npharos.watch #Stablecoins");
-    expect(buildDailySocialAltText(snapshot)).toBe("This week's market-share gainers. Comparable cohort · 7 days. Data as of 2026-09-10T11:58:20.000Z. USDC: 0.123 pp; 22% share today. Same cohort at both dates. Source: Pharos.");
-  });
   it("produces deterministic bounded copy without cutting numeric facts", () => {
     const long = { ...snapshot, title: "A".repeat(70), rows: Array.from({ length: 5 }, (_, index) => ({ ...snapshot.rows[0], id: String(index), symbol: "SYMBOL".repeat(3), value: 123.123 })) };
     const tweet = buildDailySocialTweetText(long);

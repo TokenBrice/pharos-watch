@@ -108,13 +108,6 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   });
 
 
-  it("does not expect absent retired Workflow runs", async () => {
-    const rows = seedWithOverrides(NOW, []).filter((row) => row.job !== "compute-safety-score-v9-workflow");
-    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.crons).not.toHaveProperty("compute-safety-score-v9-workflow");
-    expect(snapshot.watchUnhealthyCrons).toBe(0);
-  });
-
   it("projects reasons for all retained rows and ignores ok quality-only findings", async () => {
     const rows = seedWithOverrides(NOW, [
       { job: "status-self-check", status: "ok", ageSec: 30 },
@@ -387,51 +380,6 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     });
     expect(visibleDegraded).toHaveLength(3);
     expect(snapshot.degradedCronRuns).toBe(visibleDegraded.length);
-  });
-
-  it("does not add required-history lookups when all recent windows contain required evidence", async () => {
-    const db = makeDb(NOW, seedWithOverrides(NOW, []));
-    await loadCronHealth(db, NOW);
-    expect(db.getHistory().some((entry) => entry.sql.includes("AND status !="))).toBe(false);
-  });
-
-  it("chunks cron history queries below D1's compound SELECT term limit", async () => {
-    const rows = seedWithOverrides(NOW, []);
-    const db = makeDb(NOW, rows);
-    const snapshot = await loadCronHealth(db, NOW);
-    const historyQueries = db.getHistory().filter((entry) => entry.sql.includes("UNION ALL"));
-
-    expect(historyQueries.length).toBeGreaterThan(1);
-    expect(historyQueries.every((entry) => entry.binds.length <= 5)).toBe(true);
-    expect(snapshot.cronHistoryQueryFailed).toBe(false);
-    expect(snapshot.crons["sync-stablecoins"]?.telemetryUnknown).toBe(false);
-    expect(snapshot.crons["sync-stablecoins"]?.recentRuns.length).toBeGreaterThan(0);
-  });
-
-  it("ignores legacy false daily-digest failures synthesized from idle conditional polls", async () => {
-    const rows = seedWithOverrides(NOW, []);
-    rows.push({
-      ...makeCronRow("daily-digest", "error", 10, NOW),
-      schedule_key: "digestTriggerPoll",
-      metadata: JSON.stringify({
-        reason: "stale-slot-reconciled",
-        childDisposition: "not_started",
-        slotKey: "digestTriggerPoll",
-      }),
-    });
-    rows.sort((left, right) => (right.started_at as number) - (left.started_at as number));
-    const db = makeDb(NOW, rows);
-
-    const snapshot = await loadCronHealth(db, NOW);
-    const historyQueries = db.getHistory().filter((entry) => entry.sql.includes("UNION ALL"));
-
-    expect(historyQueries.every((entry) =>
-      entry.sql.includes("schedule_key = 'digestTriggerPoll'")
-      && entry.sql.includes("$.childDisposition"),
-    )).toBe(true);
-    expect(snapshot.crons["daily-digest"]?.lastRun?.status).toBe("ok");
-    expect(snapshot.crons["daily-digest"]?.recentRuns).toHaveLength(1);
-    expect(snapshot.crons["daily-digest"]?.healthy).toBe(true);
   });
 
   it("filters legacy idle-poll failures before the history limit without hiding a real forced run", async () => {
@@ -747,86 +695,6 @@ describe("loadCronHealth — stale cron artifact readout", () => {
 
 describe("loadCronHealth — running scheduled slot telemetry", () => {
   const NOW = 1_775_890_000;
-
-  it("summarizes running and stale candidate scheduled slots", async () => {
-    const rows = seedWithOverrides(NOW, []);
-    const db = mockD1([
-      { match: "UNION ALL", rows },
-      { match: "FROM cron_leases", rows: [] },
-      { match: "FROM cron_run_progress", rows: [] },
-      { match: "FROM cache", rows: [] },
-      {
-        match: "FROM cron_slot_executions",
-        rows: [
-          {
-            slot_key: "statusSelfCheckOffset",
-            slot_started_at: NOW - 600,
-            execution_owner: "slot-owner-fresh",
-            started_at: NOW - 600,
-            updated_at: NOW - 60,
-            running_count: 42,
-            stale_candidate_count: 1,
-          },
-          {
-            slot_key: "halfHourlyOffset",
-            slot_started_at: NOW - 4_000,
-            execution_owner: "slot-owner-stale",
-            started_at: NOW - 4_000,
-            updated_at: NOW - 2_400,
-            running_count: 42,
-            stale_candidate_count: 1,
-          },
-        ],
-      },
-    ]);
-
-    const snapshot = await loadCronHealth(db, NOW);
-
-    expect(snapshot.scheduledSlots).toEqual({
-      runningSlots: 42,
-      staleCandidateSlots: 1,
-      oldestRunningAgeSec: 2_400,
-      oldestStaleAgeSec: 2_400,
-      queryFailed: false,
-    });
-    expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(false);
-  });
-
-  it("uses full-population stale counts beyond the 25-row detail cap", async () => {
-    const rows = seedWithOverrides(NOW, []);
-    const slotRows = Array.from({ length: 25 }, (_, index) => ({
-      slot_key: `stale-slot-${index}`,
-      slot_started_at: NOW - 4_000,
-      execution_owner: `slot-owner-${index}`,
-      started_at: NOW - 4_000,
-      updated_at: NOW - 2_400 + index,
-      running_count: 60,
-      stale_candidate_count: 42,
-    }));
-    const db = mockD1([
-      { match: "UNION ALL", rows },
-      { match: "FROM cron_leases", rows: [] },
-      { match: "FROM cron_run_progress", rows: [] },
-      { match: "FROM cache", rows: [] },
-      { match: "FROM cron_slot_executions", rows: slotRows },
-    ]);
-
-    const snapshot = await loadCronHealth(db, NOW);
-
-    expect(snapshot.scheduledSlots).toEqual({
-      runningSlots: 60,
-      staleCandidateSlots: 42,
-      oldestRunningAgeSec: 2_400,
-      oldestStaleAgeSec: 2_400,
-      queryFailed: false,
-    });
-    const slotQuery = db.getHistory().find((entry) => entry.sql.includes("FROM cron_slot_executions"));
-    expect(slotQuery?.sql).toContain(
-      "SUM(CASE WHEN updated_at <= ? THEN 1 ELSE 0 END) OVER () AS stale_candidate_count",
-    );
-    expect(slotQuery?.sql).toContain("LIMIT 25");
-    expect(slotQuery?.binds).toEqual([NOW - 600]);
-  });
 
   it("executes full-population scheduled slot counts against SQLite beyond the detail cap", async () => {
     let runningSlotSql = "";

@@ -113,22 +113,6 @@ describe("mint-burn-contracts configured scope", () => {
     });
   });
 
-  it("tracks USDC with CCTP bridge detection", () => {
-    const configs = getMintBurnConfigsForStablecoin("usdc-circle");
-    expect(configs.length).toBeGreaterThan(0);
-    const ethConfig = configs.find((c) => c.chain.chainId === "ethereum");
-    expect(ethConfig).toBeDefined();
-    expect(ethConfig!.bridgeDetection?.protocol).toBe("cctp");
-  });
-
-  it("tracks EURC with CCTP bridge detection", () => {
-    const configs = getMintBurnConfigsForStablecoin("eurc-circle");
-    expect(configs.length).toBeGreaterThan(0);
-    const ethConfig = configs.find((c) => c.chain.chainId === "ethereum");
-    expect(ethConfig).toBeDefined();
-    expect(ethConfig!.bridgeDetection?.protocol).toBe("cctp");
-  });
-
   it("tracks USDai on Arbitrum with LayerZero bridge detection", () => {
     const configs = getMintBurnConfigsForStablecoin("usdai-usd-ai");
     expect(configs).toHaveLength(1);
@@ -330,15 +314,6 @@ describe("validateMintBurnBridgeDetection", () => {
     expect(collectMintBurnBridgeValidationErrors(MINT_BURN_CONFIGS)).toEqual([]);
   });
 
-  it("accepts a well-formed config", () => {
-    expect(() => validateMintBurnBridgeDetection({
-      protocol: "ccip",
-      knownBridgePoolAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
-      knownBridgeRouterAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
-      bridgeSignalTopics: ["0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd"],
-      bridgeSignalSelectors: ["0x96f4e9f9"],
-    })).not.toThrow();
-  });
   it("rejects malformed address (no 0x)", () => {
     expect(() => validateMintBurnBridgeDetection({
       protocol: "ccip",

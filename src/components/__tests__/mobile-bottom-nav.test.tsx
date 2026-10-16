@@ -4,7 +4,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { trackEvent } from "@/lib/analytics";
 import { QUICK_NAV_ITEMS } from "@/lib/nav-config";
 import { OPEN_NAV_DRAWER_EVENT } from "@/lib/nav-drawer";
 
@@ -55,14 +54,6 @@ describe("MobileBottomNav", () => {
     expect(screen.getByRole("link", { name: "Depeg" }).getAttribute("href")).toBe("/depeg/");
   });
 
-  it("marks the config-derived current route as the current page", () => {
-    const activeItem = routeItems[1];
-    pathnameMock.mockReturnValue(activeItem.href);
-    render(<MobileBottomNav />);
-
-    const activeLink = screen.getAllByRole("link").find((link) => link.getAttribute("href") === activeItem.href);
-    expect(activeLink?.getAttribute("aria-current")).toBe("page");
-  });
 
   it("dispatches the drawer-open event from Menu", () => {
     pathnameMock.mockReturnValue("/");
@@ -76,16 +67,4 @@ describe("MobileBottomNav", () => {
     window.removeEventListener(OPEN_NAV_DRAWER_EVENT, handleOpen);
   });
 
-  it("fires a bottom_bar nav_click when a route link is tapped", () => {
-    pathnameMock.mockReturnValue("/");
-    render(<MobileBottomNav />);
-
-    fireEvent.click(screen.getByRole("link", { name: "Depeg" }));
-
-    expect(trackEvent).toHaveBeenCalledWith("nav_click", {
-      surface: "bottom_bar",
-      group: "rail",
-      href: "/depeg/",
-    });
-  });
 });

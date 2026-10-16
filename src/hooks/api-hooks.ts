@@ -140,7 +140,7 @@ export function useDexLiquidityHistory(stablecoinId: string, days?: number) {
   return useQuery<DexLiquidityHistoryPoint[], Error>(dexLiquidityHistoryQueryOptions(stablecoinId, days));
 }
 
-export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days?: number) {
+function dexLiquidityHistoryQueryOptions(stablecoinId: string, days?: number) {
   return asPlainQueryOptions<DexLiquidityHistoryPoint[]>(
     createRegisteredApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
       FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityHistory(stablecoinId, days),

@@ -155,7 +155,7 @@ Skill bodies must not hard-code snapshots of current repo state (counts, methodo
 
 Skill parity is structural proof, not evidence that embedded source paths, commands, or policy claims are current. Before following or changing an instruction, verify its literal path and current owner in source; methodology version ownership follows ADR-3 in `docs/architecture.md`. Fix canonical bodies only, preserving the symlink facade rather than creating duplicate physical copies. Durable contracts must link to owning source or verified docs, never rely on an expired scratch task ID.
 
-Release and CI skills must link to [Pre-push readiness](../testing.md#pre-push-readiness) for the sole ordered readiness and receipt procedure, not restate it. Deployment policy, workflow YAML, and automation registries retain their own authority. Keep protected-main authorization, final committed-HEAD proof, failed-leaf diagnosis, generated-artifact staging behavior, and deployment-versus-operational evidence explicit at the point of action.
+Release and CI skills must link to [Pre-push readiness](../testing.md#pre-push-readiness) for local feedback guidance and hosted readiness authority, not introduce a local receipt mandate. Deployment policy, workflow YAML, and automation registries retain their own authority. Keep protected-main authorization, failed-leaf diagnosis, generated-artifact staging behavior, and deployment-versus-operational evidence explicit at the point of action.
 
 Symlinks pointing outside this repository are unsupported. `check:agent-skills` also validates nested canonical companions and rejects broken or external symlink targets.
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CRON_RUN_STATUS_VALUES = [
+const CRON_RUN_STATUS_VALUES = [
   "ok",
   "degraded",
   "error",
@@ -17,16 +17,11 @@ export const SchedulerChildDispositionSchema = z.enum([
   "completed", "abandoned", "not_started", "execution_unknown", "interrupted-by-deploy",
 ]);
 export type SchedulerChildDisposition = z.output<typeof SchedulerChildDispositionSchema>;
-export const SchedulerTerminalSourceSchema = z.enum(["real", "preflight", "synthetic"]);
-export type SchedulerTerminalSource = z.output<typeof SchedulerTerminalSourceSchema>;
-export const ProducerOutcomeSchema = CronRunStatusSchema
-  .exclude(["skipped_duplicate", "skipped_running"])
-  .or(z.enum(["not_started", "abandoned"]));
-export type ProducerOutcome = z.output<typeof ProducerOutcomeSchema>;
-export const SchedulerSummaryOutcomeSchema = z.enum(["ok", "degraded", "error", "skipped"]);
+export type SchedulerTerminalSource = "real" | "preflight" | "synthetic";
+export type ProducerOutcome = CronResultStatus | "not_started" | "abandoned";
+const SchedulerSummaryOutcomeSchema = z.enum(["ok", "degraded", "error", "skipped"]);
 export type SchedulerSummaryOutcome = z.output<typeof SchedulerSummaryOutcomeSchema>;
-export const CronTerminalAccountingStageSchema = z.enum(["cron-run", "producer-history", "terminal-batch"]);
-export type CronTerminalAccountingStage = z.output<typeof CronTerminalAccountingStageSchema>;
+export type CronTerminalAccountingStage = "cron-run" | "producer-history" | "terminal-batch";
 
 const ResourceCountSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable();
 
@@ -58,10 +53,9 @@ export const ResourcePressureSchema = z.object({
 );
 export type ResourcePressure = z.output<typeof ResourcePressureSchema>;
 
-export const CronMetadataSchema = z.object({
+const CronMetadataSchema = z.object({
   resourcePressure: ResourcePressureSchema.optional(),
 }).catchall(z.unknown());
-export type CronMetadata = z.output<typeof CronMetadataSchema>;
 
 export const CronRunSchema = z.object({
   startedAt: z.number(),
@@ -87,7 +81,7 @@ export const CronInFlightSchema = z.object({
 });
 export type CronInFlight = z.output<typeof CronInFlightSchema>;
 
-export const CronStaleArtifactSchema = z.object({
+const CronStaleArtifactSchema = z.object({
   kind: z.enum(["expired-lease", "orphaned-progress"]),
   job: z.string(),
   leaseOwner: z.string().optional(),
@@ -98,7 +92,7 @@ export const CronStaleArtifactSchema = z.object({
 });
 export type CronStaleArtifact = z.output<typeof CronStaleArtifactSchema>;
 
-export const CronEventSchema = z.object({
+const CronEventSchema = z.object({
   event: z.literal("cron_event"),
   job: z.string(),
   eventType: z.string(),

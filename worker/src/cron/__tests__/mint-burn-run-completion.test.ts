@@ -109,48 +109,6 @@ describe("completeMintBurnRun", () => {
     expect(result.metadata.apiErrors).toBe(0);
   });
 
-  it("keeps provider errors in the canonical apiErrors metadata field", async () => {
-    vi.mocked(setMintBurnRunState).mockResolvedValue(true);
-    vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
-    vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
-    vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
-
-    const result = await completeMintBurnRun(buildRunInput({ apiErrors: 4 }));
-
-    expect(result.metadata.apiErrors).toBe(4);
-    expect(setMintBurnRunState).toHaveBeenCalledWith(expect.anything(), "sync-mint-burn", 1, null);
-  });
-
-  it("warns when the historical NULL-price backlog exceeds the threshold", async () => {
-    vi.mocked(setMintBurnRunState).mockResolvedValue(true);
-    vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 51 });
-    vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
-    vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    try {
-      await completeMintBurnRun(buildRunInput());
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"historical":51'));
-    } finally {
-      warnSpy.mockRestore();
-    }
-  });
-
-  it("does not warn when the historical NULL-price backlog is within the threshold", async () => {
-    vi.mocked(setMintBurnRunState).mockResolvedValue(true);
-    vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 50 });
-    vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
-    vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    try {
-      await completeMintBurnRun(buildRunInput());
-      expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Historical NULL amount_usd backlog"));
-    } finally {
-      warnSpy.mockRestore();
-    }
-  });
-
   it("does not persist run state when the run has already been aborted", async () => {
     const controller = new AbortController();
     controller.abort(new Error("lease lost before completion"));

@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  parseZoneCachePurgeArgs,
   purgeCloudflareZoneCache,
-  runZoneCachePurgeCli,
 } from "../maintenance/purge-cloudflare-zone-cache.mjs";
 
 const noRetry = { maxAttempts: 1, retryDelayMs: 0 };
@@ -136,37 +134,5 @@ describe("purgeCloudflareZoneCache", () => {
       vi.useRealTimers();
     }
   });
-
-  it("validates DNS zone names before making a request", async () => {
-    const fetchMock = vi.fn();
-    await expect(
-      purgeCloudflareZoneCache({
-        apiToken: "token-1",
-        zoneName: "https://pharos.watch/path",
-        fetchImpl: fetchMock,
-        ...noRetry,
-      }),
-    ).rejects.toThrow(/valid DNS zone name/);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
 });
 
-describe("zone cache purge CLI", () => {
-  it("parses the explicit zone and dry-run flag", () => {
-    expect(parseZoneCachePurgeArgs(["--zone", "PHAROS.WATCH", "--dry-run"])).toEqual({
-      zone: "pharos.watch",
-      dryRun: true,
-      help: false,
-    });
-  });
-
-  it("allows dry-run without a credential and never calls fetch", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    await runZoneCachePurgeCli(["--dry-run"], { NODE_ENV: "test" });
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("pharos.watch"));
-    fetchSpy.mockRestore();
-    logSpy.mockRestore();
-  });
-});

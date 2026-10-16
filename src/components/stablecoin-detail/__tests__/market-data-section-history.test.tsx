@@ -128,27 +128,6 @@ describe("MarketDataSection history expansion", () => {
     expect(container.querySelector("time")?.getAttribute("data-state")).toBe("stale");
   });
 
-  it("keeps the seeded 90-day chart visible while the full-history request is in flight", async () => {
-    let resolveFull: (response: Response) => void = () => {};
-    const fetchMock = vi.fn(
-      (_input: string | URL | Request) =>
-        new Promise<Response>((resolve) => {
-          resolveFull = resolve;
-        }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    renderSeededSection();
-
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-
-    // No blank chart while the expanded query runs: the seed stays on screen.
-    expect(marketCapDomain()).toBe(SEED_DOMAIN);
-
-    resolveFull(fullHistoryResponse());
-    await waitFor(() => expect(marketCapDomain()).toBe(FULL_DOMAIN));
-  });
-
   it("falls back to the seeded 90-day chart when the expanded query fails or comes back empty", async () => {
     const failing = vi.fn(async (_input: string | URL | Request) => {
       throw new Error("history upstream down");

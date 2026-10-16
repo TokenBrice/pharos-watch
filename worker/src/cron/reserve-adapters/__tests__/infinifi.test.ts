@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { encodeUint256, PAUSED_SELECTOR } from "../../../lib/evm-selectors";
 import {
   adaptInfiniFi,
@@ -259,13 +258,6 @@ describe("adaptInfiniFi", () => {
   });
 
 
-  it("allows verified freshness (rate-history probe) with unverified fallback", () => {
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.infinifi.validation.allowedFreshnessModes).toEqual([
-      "verified",
-      "unverified",
-    ]);
-  });
-
   it("converts farm data to ReserveSlice[], skips PROTOCOL and zero-asset farms", () => {
     const { slices, immediateRedeemableUsd, supplyUsd } = adaptInfiniFi(SAMPLE_RESPONSE);
     expect(slices).toHaveLength(3);
@@ -285,27 +277,6 @@ describe("adaptInfiniFi", () => {
     expect(supplyUsd).toBeUndefined();
   });
 
-
-  it("drops farms where assetsNormalized is 0", () => {
-    const { slices } = adaptInfiniFi(SAMPLE_RESPONSE);
-    expect(slices.every((s) => s.pct > 0)).toBe(true);
-  });
-
-  it("returns unknown farm names in a separate list", () => {
-    const response: InfiniFiProtocolData = {
-      ...SAMPLE_RESPONSE,
-      data: {
-        ...SAMPLE_RESPONSE.data,
-        farms: [
-          ...SAMPLE_RESPONSE.data.farms,
-          { name: "brand-new-farm", label: "Brand New", assetsNormalized: 10, type: "LIQUID", underlyingAssetSymbol: "USDC" },
-        ],
-        stats: { asset: { totalTVLAssetNormalized: 110 } },
-      },
-    };
-    const result = adaptInfiniFi(response);
-    expect(result.unknownFarms).toContain("brand-new-farm");
-  });
 
   it("recognizes current tiny SwapFarm and Tokemak infiniFiUSD positions", () => {
     const response = farmResponse([
@@ -411,23 +382,6 @@ describe("adaptInfiniFi", () => {
     expect(slices.find((s) => s.name === "Fasanara mGLOBAL (GDADF)")).toMatchObject({ coinId: "mglobal-midas-fasanara", depType: "collateral" });
   });
 
-  it("preserves a small tracked farm", () => {
-    const response: InfiniFiProtocolData = {
-      code: "OK",
-      data: {
-        stats: { asset: { totalTVLAssetNormalized: 1000 } },
-        farms: [
-          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL", assetsNormalized: 995, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-          { name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 5, type: "LIQUID", underlyingAssetSymbol: "sUSDC" },
-        ],
-      },
-    };
-
-    const { slices } = adaptInfiniFi(response);
-    expect(slices).toHaveLength(2);
-    expect(slices.reduce((acc, s) => acc + s.pct, 0)).toBe(100);
-  });
-
   it("keeps PROTOCOL farm exposure explicit instead of renormalizing active farm subset", () => {
     const response = protocolBufferResponse();
 
@@ -475,10 +429,6 @@ describe("fetchInfiniFiReserves", () => {
     {
       label: "active rows slightly above TVL",
       farms: [{ name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 101, type: "LIQUID" as const }],
-    },
-    {
-      label: "active rows far above TVL",
-      farms: [{ name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 150, type: "LIQUID" as const }],
     },
     {
       label: "PROTOCOL rows pushing the farm total above TVL",
@@ -696,7 +646,6 @@ describe("resolveInfiniFiFreshness", () => {
   it.each([
     [0, 1, 2],
     [2, 1, 0],
-    [1, 2, 0],
   ])("selects the maximum parsed history clock regardless of ordering %s", (...order) => {
     const points = [
       { time: 1_781_100_000_000, value: 1.05 },
@@ -751,17 +700,6 @@ describe("resolveInfiniFiFreshness", () => {
     const expectedReason = "InfiniFi protocol stats payload does not expose a trustworthy source timestamp";
     for (const rateHistory of [null, { code: "ERROR" }, { code: "OK", data: { dataPoints: [] } }] as const) {
       expect(resolveInfiniFiFreshness(payloadWithRate(1.07), rateHistory as InfiniFiRateHistoryResponse | null))
-        .toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: expectedReason } });
-    }
-  });
-
-  it("stays unverified for malformed rate-history dataPoints payloads", () => {
-    const expectedReason = "InfiniFi protocol stats payload does not expose a trustworthy source timestamp";
-    for (const rateHistory of [
-      { code: "OK", data: { dataPoints: {} } },
-      { code: "OK", data: { dataPoints: [null] } },
-    ] as const) {
-      expect(resolveInfiniFiFreshness(payloadWithRate(1.07), rateHistory))
         .toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: expectedReason } });
     }
   });

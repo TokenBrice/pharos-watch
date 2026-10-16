@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -10,33 +9,113 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
-  it("retains resource evidence after failure only for the selected resource lane", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml"));
-    const upload = workflow.jobs.validation.steps.find(
-      (step: { name?: string }) => step.name === "Upload V9 resource results",
-    );
-    expect(upload.if).toBe("${{ always() && matrix.lane == 'v9-resource' }}");
-    expect(upload.with.path.trim().split(/\s+/)).toEqual([".tmp/safety-score-v9-resource/", ".tmp/v9-resource-lane/"]);
-    expect(upload.with.name).toBe("safety-score-v9-resource-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}");
-    expect(upload.with["retention-days"]).toBe(30);
-    expect(upload.with["if-no-files-found"]).toBe("error");
-    for (const lane of ["v9-resource", "tests", "static-guards"]) {
-      for (const outcome of ["success", "failure", "cancelled"]) {
-        const selected = runInNewContext(upload.if.slice(3, -2), {
-          always: () => true, success: () => outcome === "success",
-          failure: () => outcome === "failure", cancelled: () => outcome === "cancelled",
-          matrix: { lane },
-        });
-        expect(selected, `${lane}/${outcome}`).toBe(lane === "v9-resource");
+  it("installs each nightly Node 24 lane independently", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
+      jobs: Record<string, {
+        needs?: string | string[];
+        "continue-on-error"?: boolean;
+        steps?: Array<{ uses?: string; run?: string; if?: string; id?: string; name?: string; env?: Record<string, string>; "continue-on-error"?: boolean; with?: Record<string, unknown> }>;
+      }>;
+    };
+    // The workspace-artifact fan-out was measured across three paired
+    // nightlies and lengthened the critical path (+104s median) while the npm
+    // cache was already hot in every job, so each lane installs on its own.
+    expect(workflow.jobs.prepare).toBeUndefined();
+    for (const job of ["full-static", "full-tests"]) {
+      const setup = workflow.jobs[job].steps?.find(
+        (step) => step.uses === "$/.github/actions/setup-workspace");
+      expect(workflow.jobs[job].needs).toBeUndefined();
+      expect(setup?.with?.["workspace-artifact"]).toBeUndefined();
+      expect(setup?.with?.["install-deps"]).toBeUndefined();
+      expect(setup?.with?.["bootstrap-history"]).toBe("true");
+    }
+    const fullStatic = workflow.jobs["full-static"];
+    expect(fullStatic["continue-on-error"]).toBeUndefined();
+    const staticSteps = fullStatic.steps ?? [];
+    const save = staticSteps.findIndex((step) => step.uses?.startsWith("actions/cache/save@"));
+    expect(save).toBeGreaterThan(-1);
+    expect(staticSteps.filter((step) => step.run?.startsWith("npm run ")).map((step) => step.run)).toEqual([
+      "npm run lint", "npm run typecheck", "npm run typecheck:worker",
+      "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
+    ]);
+    // Every mandatory command runs independently once the workspace is ready,
+    // so one red step cannot mask the remaining mandatory outcomes.
+    for (const step of staticSteps) {
+      if (!step.run?.startsWith("npm run ")) continue;
+      expect(step["continue-on-error"]).toBeUndefined();
+      expect(step.if).toContain("!cancelled()");
+      expect(step.if).toContain("steps.workspace.outcome == 'success'");
+    }
+    for (const command of ["lint", "typecheck", "typecheck:worker"]) {
+      expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeLessThan(save);
+    }
+    for (const command of ["lint:typed", "typecheck:tests", "check:structural"]) {
+      expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeGreaterThan(save);
+    }
+    // The cache publishes only fully validated lint and compiler state.
+    expect(staticSteps[save]["continue-on-error"]).toBeUndefined();
+    expect(staticSteps[save].if).toContain("!cancelled()");
+    for (const command of ["lint", "typecheck", "typecheck:worker"]) {
+      const id = staticSteps.find((step) => step.run === `npm run ${command}`)?.id;
+      expect(id, `Missing step id for npm run ${command}`).toBeDefined();
+      expect(staticSteps[save].if).toContain(`steps.${id}.outcome == 'success'`);
+    }
+    // The aggregate step reports every mandatory outcome and fails the job
+    // naming each failed command, whatever their count.
+    const aggregate = staticSteps.find((step) => step.name === "Report mandatory static outcomes");
+    expect(aggregate).toBeDefined();
+    expect(aggregate!.if).toContain("steps.workspace.outcome == 'success'");
+    expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
+      staticSteps.findIndex((step) => step.run === "npm run check:structural"));
+    const outcomeEnv = Object.entries(aggregate!.env ?? {});
+    expect(outcomeEnv).toHaveLength(6);
+    for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
+      const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
+      for (const [key, expression] of outcomeEnv) {
+        env[key] = expression === failedExpression ? "failure" : "success";
+      }
+      const result = spawnSync("bash", ["-c", aggregate!.run!], { env, encoding: "utf8" });
+      expect(result.stderr.toString()).toBe("");
+      expect(result.status).toBe(failedExpression === undefined ? 0 : 1);
+      if (failedExpression !== undefined) {
+        const id = /steps\.([^.]+)\.outcome/.exec(failedExpression)![1];
+        const command = staticSteps.find((step) => step.id === id)?.run;
+        expect(command).toBeDefined();
+        expect(result.stdout).toContain(command!.slice("npm run ".length));
       }
     }
-    for (const file of ["nightly-validation.yml", "weekly-validation.yml"]) {
-      const scheduled = parseYaml(readRepoFile(`.github/workflows/${file}`));
-      expect(scheduled.jobs["v9-resource"].strategy).toBeUndefined();
-      expect(scheduled.jobs["v9-resource"].steps.filter(
-        (step: { run?: string }) => step.run === "npm run test:v9-resource",
-      )).toHaveLength(1);
-    }
+  });
+
+  it("keeps Node 26 advisory typing weekly and V9 resources unconditional only nightly", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml"));
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml"));
+    expect(nightly.jobs["node26-proof"]).toBeUndefined();
+    const probe = weekly.jobs["node26-proof"];
+    expect(probe["continue-on-error"]).toBe(true);
+    expect(probe.needs).toBeUndefined();
+    expect(probe.steps.find((step: { uses?: string }) =>
+      step.uses === "$/.github/actions/setup-workspace").with).toMatchObject({
+      "node-version": "26", "bootstrap-history": "true", "static-cache": "true",
+    });
+    expect(probe.steps.filter((step: { run?: string }) => step.run).map((step: { run: string }) => step.run))
+      .toEqual(["npm run typecheck", "npm run typecheck:worker"]);
+    expect(nightly.jobs["v9-resource"].if).toBeUndefined();
+    expect(nightly.jobs["v9-resource"].steps.filter((step: { run?: string }) =>
+      step.run === "npm run test:v9-resource")).toHaveLength(1);
+    expect(weekly.jobs["v9-resource"]).toBeUndefined();
+    expect(readRepoFile(".github/workflows/weekly-validation.yml")).not.toContain("npm run test:v9-resource");
+    expect(nightly.jobs["full-tests"].steps.some((step: { run?: string }) =>
+      step.run === "npm run test:all -- --shard=${{ matrix.shard }}/2")).toBe(true);
+  });
+
+  it("runs CodeQL daily with the existing Monday authority and manual dispatch, not pushes", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/codeql.yml"));
+    expect(workflow.on.push).toBeUndefined();
+    expect(workflow.on).toHaveProperty("workflow_dispatch");
+    expect(workflow.on.schedule).toEqual([
+      { cron: "0 6 * * 1" },
+      { cron: "17 6 * * *" },
+    ]);
   });
 
   it("restricts auxiliary production publishers to main for manual and scheduled runs", () => {
@@ -186,61 +265,6 @@ describe("CI workflow scope", () => {
     }
   });
 
-  it("prepares validation independently of secrets and merges only coverage shards", () => {
-    const workflow = readRepoFile(".github/workflows/pull-request-checks.yml");
-    const parsed = parseYaml(workflow);
-    const jobs = parsed.jobs;
-    expect(jobs.preflight).toBeUndefined();
-    expect(jobs.secrets.needs).toBeUndefined();
-    expect(jobs.prepare.needs).toBeUndefined();
-    expect(jobs.validation.needs).toBe("prepare");
-    expect(jobs["critical-coverage-shards"].needs).toBe("prepare");
-    expect(jobs["critical-coverage"].needs).toEqual(["prepare", "critical-coverage-shards"]);
-    expect(jobs["pages-artifact"].needs).toBe("prepare");
-    expect(jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "critical-coverage-shards", "critical-coverage", "pages-artifact"]);
-    expect(jobs["pr-gate"].if).toBe("${{ always() }}");
-    expect(jobs.validation.strategy["max-parallel"]).toBe(10);
-    expect(jobs["critical-coverage-shards"].strategy["max-parallel"]).toBe(8);
-    expect(jobs.validation.strategy.matrix).toBe("${{ fromJSON(needs.prepare.outputs.matrix) }}");
-    expect(jobs["critical-coverage-shards"].strategy.matrix).toBe("${{ fromJSON(needs.prepare.outputs.coverage_matrix) }}");
-    const prepareSteps = jobs.prepare.steps;
-    const setups = prepareSteps.filter((step: { uses?: string }) => step.uses === "$/.github/actions/setup-workspace");
-    expect(setups).toHaveLength(2);
-    expect(setups[0].with).toMatchObject({ "bootstrap-history": "true", "workspace-artifact": "none", "install-ripgrep": "true" });
-    expect(setups[1].with).toMatchObject({ "install-deps": "false", "cache-npm": "false", "workspace-artifact": "publish" });
-    expect(setups[1].id).toBe("publish-workspace");
-    expect(jobs.prepare.outputs.workspace_artifact_name).toBe("${{ steps.publish-workspace.outputs.workspace-artifact-name }}");
-    const docs = prepareSteps.find((step: { id?: string }) => step.id === "docs");
-    expect(docs.if).toBe("${{ steps.classify.outputs.docs_only == 'true' }}");
-    expect(docs.env.PR_LANE_ID).toBe("docs");
-    expect(prepareSteps.indexOf(docs)).toBeLessThan(prepareSteps.indexOf(setups[1]));
-    expect(prepareSteps.some((step: { run?: string }) => step.run?.includes("generate-pr-workflow-matrix.ts --classify"))).toBe(true);
-    expect(prepareSteps.some((step: { run?: string }) => step.run?.includes("--plan-out=.tmp/pr-test-plan.json"))).toBe(true);
-    for (const job of ["validation", "critical-coverage-shards", "critical-coverage"]) {
-      const steps = jobs[job].steps;
-      const checkout = steps.find((step: { uses?: string }) => step.uses?.startsWith("actions/checkout@"));
-      expect(checkout.with).toMatchObject({ "fetch-depth": 0, filter: "blob:none", "persist-credentials": false });
-      const setup = steps.find((step: { uses?: string }) => step.uses === "$/.github/actions/setup-workspace");
-      expect(setup.with).toMatchObject({ "install-deps": "false", "cache-npm": "false", "workspace-artifact": "restore" });
-      expect(setup.with["workspace-artifact-name"]).toBe("${{ needs.prepare.outputs.workspace_artifact_name }}");
-    }
-    expect(workflow).toContain("PR_TEST_PLAN_FILE: ${{ matrix.lane == 'tests' && '.tmp/pr-test-plan.json' || '' }}");
-    expect(workflow).toContain("merge-multiple: true");
-    expect(workflow).toContain("include-hidden-files: true");
-    expect(workflow).toContain("install-playwright-firefox: ${{ matrix.lane == 'static-guards'");
-    expect(workflow).toContain("static-cache: ${{ matrix.lane == 'static-compile'");
-    expect(workflow).toContain("matrix.lane == 'static-guards' || matrix.lane == 'docs'");
-    const timings = jobs["critical-coverage-shards"].steps.find((step: { with?: { name?: string } }) => step.with?.name === "pr-coverage-timings-${{ matrix.shard }}");
-    expect(timings.with["retention-days"]).toBe(7);
-    for (const job of ["validation", "critical-coverage-shards"]) {
-      for (const step of jobs[job].steps.filter((step: { uses?: string }) => step.uses?.startsWith("actions/upload-artifact@"))) {
-        expect(step.with.overwrite).toBe(true);
-      }
-    }
-    const blobs = jobs["critical-coverage"].steps.find((step: { uses?: string }) => step.uses?.startsWith("actions/download-artifact@"));
-    expect(blobs.with).toMatchObject({ pattern: "critical-coverage-*", "merge-multiple": true });
-  });
-
   it("packages both Workers before one migration and deploys heavy then public with individual proofs", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml"));
     const steps = workflow.jobs["deploy-worker"].steps as Array<{ id?: string; run?: string }>;
@@ -339,99 +363,6 @@ describe("CI workflow scope", () => {
     });
   });
 
-  it("installs each nightly Node 24 lane independently and keeps the Node 26 probe separate", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
-      jobs: Record<string, {
-        needs?: string | string[];
-        "continue-on-error"?: boolean;
-        steps?: Array<{ uses?: string; run?: string; if?: string; id?: string; name?: string; env?: Record<string, string>; "continue-on-error"?: boolean; with?: Record<string, unknown> }>;
-      }>;
-    };
-    // The workspace-artifact fan-out was measured across three paired
-    // nightlies and lengthened the critical path (+104s median) while the npm
-    // cache was already hot in every job, so each lane installs on its own.
-    expect(workflow.jobs.prepare).toBeUndefined();
-    for (const job of ["full-static", "full-tests", "node26-proof"]) {
-      const setup = workflow.jobs[job].steps?.find(
-        (step) => step.uses === "$/.github/actions/setup-workspace");
-      expect(workflow.jobs[job].needs).toBeUndefined();
-      expect(setup?.with?.["workspace-artifact"]).toBeUndefined();
-      expect(setup?.with?.["install-deps"]).toBeUndefined();
-      expect(setup?.with?.["bootstrap-history"]).toBe("true");
-    }
-    expect(workflow.jobs["node26-proof"].steps?.find(
-      (step) => step.uses === "$/.github/actions/setup-workspace")?.with?.["node-version"]).toBe("26");
-    const fullStatic = workflow.jobs["full-static"];
-    expect(fullStatic["continue-on-error"]).toBeUndefined();
-    const staticSteps = fullStatic.steps ?? [];
-    const save = staticSteps.findIndex((step) => step.uses?.startsWith("actions/cache/save@"));
-    expect(save).toBeGreaterThan(-1);
-    expect(staticSteps.filter((step) => step.run?.startsWith("npm run ")).map((step) => step.run)).toEqual([
-      "npm run lint", "npm run typecheck", "npm run typecheck:worker",
-      "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
-    ]);
-    // Every mandatory command runs independently once the workspace is ready,
-    // so one red step cannot mask the remaining mandatory outcomes.
-    for (const step of staticSteps) {
-      if (!step.run?.startsWith("npm run ")) continue;
-      expect(step["continue-on-error"]).toBeUndefined();
-      expect(step.if).toContain("!cancelled()");
-      expect(step.if).toContain("steps.workspace.outcome == 'success'");
-    }
-    for (const command of ["lint", "typecheck", "typecheck:worker"]) {
-      expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeLessThan(save);
-    }
-    for (const command of ["lint:typed", "typecheck:tests", "check:structural"]) {
-      expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeGreaterThan(save);
-    }
-    // The cache publishes only fully validated lint and compiler state.
-    expect(staticSteps[save]["continue-on-error"]).toBeUndefined();
-    expect(staticSteps[save].if).toContain("!cancelled()");
-    for (const command of ["lint", "typecheck", "typecheck:worker"]) {
-      const id = staticSteps.find((step) => step.run === `npm run ${command}`)?.id;
-      expect(id, `Missing step id for npm run ${command}`).toBeDefined();
-      expect(staticSteps[save].if).toContain(`steps.${id}.outcome == 'success'`);
-    }
-    // The aggregate step reports every mandatory outcome and fails the job
-    // naming each failed command, whatever their count.
-    const aggregate = staticSteps.find((step) => step.name === "Report mandatory static outcomes");
-    expect(aggregate).toBeDefined();
-    expect(aggregate!.if).toContain("steps.workspace.outcome == 'success'");
-    expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
-      staticSteps.findIndex((step) => step.run === "npm run check:structural"));
-    const outcomeEnv = Object.entries(aggregate!.env ?? {});
-    expect(outcomeEnv).toHaveLength(6);
-    for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
-      const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
-      for (const [key, expression] of outcomeEnv) {
-        env[key] = expression === failedExpression ? "failure" : "success";
-      }
-      const result = spawnSync("bash", ["-c", aggregate!.run!], { env, encoding: "utf8" });
-      expect(result.stderr.toString()).toBe("");
-      expect(result.status).toBe(failedExpression === undefined ? 0 : 1);
-      if (failedExpression !== undefined) {
-        const id = /steps\.([^.]+)\.outcome/.exec(failedExpression)![1];
-        const command = staticSteps.find((step) => step.id === id)?.run;
-        expect(command).toBeDefined();
-        expect(result.stdout).toContain(command!.slice("npm run ".length));
-      }
-    }
-  });
-
-  it("runs the weekly gitleaks scan without npm installation", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as {
-      jobs: Record<string, { steps?: Array<{ uses?: string; run?: string; with?: Record<string, string> }> }>;
-    };
-    const steps = workflow.jobs.gitleaks.steps ?? [];
-    expect(steps.some((step) => step.uses === "$/.github/actions/setup-workspace")).toBe(false);
-    // Type stripping for the dependency-free runner needs the pinned Node 24.
-    expect(steps.find((step) => step.uses?.startsWith("actions/setup-node@"))?.with).toMatchObject({
-      "node-version": "24.16.0",
-    });
-    const scan = steps.find((step) => step.run?.includes("run-gitleaks.ts"));
-    expect(scan?.run).toBe(
-      "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range");
-  });
 });
 
 it("runs secret scanning from trusted base code and policy before checking out PR content", () => {
@@ -472,20 +403,6 @@ it("admits hosted protocol mechanism refresh only for Falcon on main dispatches 
   expect(workflow.jobs.refresh.steps.some(
     (step: { uses?: string }) => step.uses === "$/.github/actions/setup-workspace",
   )).toBe(true);
-});
-
-it("keeps the always-run Worker rollback summary within the retired Workflow contract", () => {
-  const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml"));
-  const summary = workflow.jobs["deploy-worker"].steps.find(
-    (step: { name?: string }) => step.name === "Summarize Worker release",
-  );
-  expect(summary.if).toBe("always()");
-  expect(summary.run).toContain("restore moved registry plans to public first, re-add public triggers");
-  expect(summary.run).toContain("then deploy heavy with explicit empty crons");
-  expect(summary.run).toContain("Do not recreate the retired Workflow");
-  expect(summary.run).toContain("retain its referenced heavy class until export/deletion");
-  expect(summary.run).not.toContain("restore moved plans/triggers/Workflow");
-  expect(summary.run).toContain("version rollback alone restores neither trigger ownership nor D1 migrations");
 });
 
 it("runs the mechanism-refresh verifier only from a trusted snapshot inside the token step", () => {

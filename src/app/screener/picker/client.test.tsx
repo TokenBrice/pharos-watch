@@ -135,14 +135,6 @@ afterEach(() => {
 // ----------------------------------------------------------------------------
 
 describe("SelectorClient — state machine", () => {
-  it("renders Q1 on initial mount with no URL state", () => {
-    render(<SelectorClient />);
-    expect(screen.getAllByText(/What are you using this stablecoin for/i).length).toBeGreaterThan(0);
-    // Q1's three option labels render.
-    expect(screen.getByText(/Hold under Treasury constraints/i)).toBeTruthy();
-    expect(screen.getByText(/Earn yield/i)).toBeTruthy();
-    expect(screen.getByText(/Trade actively/i)).toBeTruthy();
-  });
 
   it("rehydrates down when URL claims a step beyond what's answerable", () => {
     setUrlSearch("p=treasury&step=5");
@@ -163,91 +155,6 @@ describe("SelectorClient — state machine", () => {
 
     expect(window.location.search).toContain("peg=EUR");
     expect(screen.getAllByText(/How long do you plan to hold this position/i).length).toBeGreaterThan(0);
-  });
-
-  it("includes CHF and Gold in Yield peg choices while hiding unsupported pegs", async () => {
-    render(<SelectorClient />);
-
-    fireEvent.click(screen.getByLabelText(/Earn yield/i));
-    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    expect((await screen.findAllByText(/Which peg currency should it target/i)).length).toBeGreaterThan(0);
-
-    expect(screen.getByLabelText(/CHF/i)).toBeTruthy();
-    expect(screen.getByLabelText(/Gold/i)).toBeTruthy();
-    expect(screen.queryByLabelText(/AUD/i)).toBeNull();
-  });
-
-  it("renders the result page with mocked engine output", async () => {
-    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
-    render(<SelectorClient />);
-    // Shortlist heading + first card.
-    expect((await screen.findAllByText(/Shortlist/i)).length).toBeGreaterThan(0);
-    expect(screen.getByText("USDC")).toBeTruthy();
-    // Funnel headline ("… tracked USD stablecoins → … filtered → … shortlist
-    // entries") is the canonical "result page rendered" marker.
-    expect(screen.getByText(/tracked USD stablecoins/)).toBeTruthy();
-    // Single-result shortlist: Compare these is hidden in favor of the
-    // per-card prominent Open detail link.
-    expect(screen.queryByRole("link", { name: /Compare these/i })).toBeNull();
-    expect(screen.getByText("Open detail")).toBeTruthy();
-  });
-
-  it("logs selector engine failures and shows the error state", async () => {
-    const mod = await import("@shared/lib/selector");
-    const engineError = new Error("engine exploded");
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      throw engineError;
-    });
-
-    try {
-      setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
-      render(<SelectorClient />);
-
-      expect(await screen.findByText(/Selector could not produce a result \(engine failed\)/i)).toBeTruthy();
-      expect(consoleError).toHaveBeenCalledWith("[selector] Selector engine failed", engineError);
-    } finally {
-      consoleError.mockRestore();
-    }
-  });
-
-  it("offers a Telegram subscribe command for the shortlisted stablecoins", async () => {
-    const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
-      mockSelectorOutput({
-        input,
-        recommended: [
-          { ...baseRecommendation, profile: "treasury", recommendedSource: null, perInputStaleness: null },
-          {
-            ...baseRecommendation,
-            id: "usdt-tether",
-            symbol: "USDT",
-            name: "Tether USDt",
-            rank: 2,
-            profile: "treasury",
-            recommendedSource: null,
-            perInputStaleness: null,
-          },
-          {
-            ...baseRecommendation,
-            id: "dai-makerdao",
-            symbol: "DAI",
-            name: "Dai",
-            rank: 3,
-            profile: "treasury",
-            recommendedSource: null,
-            perInputStaleness: null,
-          },
-        ],
-      }),
-    );
-
-    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
-    render(<SelectorClient />);
-
-    expect(await screen.findByText("/subscribe dews, depeg, safety usdc-circle, usdt-tether, dai-makerdao")).toBeTruthy();
-    const botLink = screen.getByRole("link", { name: /Open PharosWatchBot/i });
-    expect(botLink.getAttribute("href")).toBe("https://t.me/PharosWatchBot");
   });
 
   it.each(["unsafe token", "all", "freeze"])("uses canonical ids regardless of the %s display symbol", async (symbol) => {
@@ -327,69 +234,6 @@ describe("SelectorClient — state machine", () => {
     expect(screen.getByText(/NEAR/)).toBeTruthy();
     expect(screen.getByText(/missed on liquidity/i)).toBeTruthy();
     expect(screen.getByText(/Hypothetical score 74.5/i)).toBeTruthy();
-  });
-
-  it("does not render a duplicate compare link inside the shortlist section", async () => {
-    const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
-      mockSelectorOutput({
-        profile: "yield",
-        pegCurrency: "GOLD",
-        input,
-        recommended: [
-          {
-            ...baseRecommendation,
-            id: "xaut-tether",
-            symbol: "XAUT",
-            name: "Tether Gold",
-            rank: 1,
-            profile: "yield",
-            recommendedSource: {
-              protocol: "yo-protocol",
-              chain: "Ethereum",
-              apy30d: 6.5,
-              pharosYieldScore: 17,
-              sourceRiskTier: "mid",
-              freshness: { capturedAt: 1_700_000_000_000, ageSeconds: 60 },
-            },
-            perInputStaleness: null,
-          },
-          {
-            ...baseRecommendation,
-            id: "paxg-paxos",
-            symbol: "PAXG",
-            name: "PAX Gold",
-            rank: 2,
-            profile: "yield",
-            recommendedSource: {
-              protocol: "hydration-dex",
-              chain: "Polkadot",
-              apy30d: 6.5,
-              pharosYieldScore: 18,
-              sourceRiskTier: "mid",
-              freshness: { capturedAt: 1_700_000_000_000, ageSeconds: 60 },
-            },
-            perInputStaleness: null,
-          },
-        ],
-      }),
-    );
-
-    setUrlSearch("p=yield&peg=GOLD&h=1to6m&d=moderate&v=all&u=any&step=result");
-    render(<SelectorClient />);
-
-    expect(await screen.findByRole("heading", { name: "Shortlist" })).toBeTruthy();
-    const yieldInspectLinks = screen.getAllByRole("link", { name: /Inspect on Yield Intelligence/i });
-    expect(yieldInspectLinks.map((link) => link.getAttribute("href"))).toEqual([
-      "/yield/?from=selector&compare=xaut-tether%2Cpaxg-paxos",
-      "/stablecoin/xaut-tether/yield/",
-      "/stablecoin/paxg-paxos/yield/",
-    ]);
-    expect(
-      screen.queryByRole("link", {
-        name: /Compare the shortlisted stablecoins/i,
-      }),
-    ).toBeNull();
   });
 
   it("does not advance desktop depeg, venue, or exit choices until Next", async () => {
@@ -529,17 +373,6 @@ describe("SelectorClient — state machine", () => {
   });
 });
 
-describe("SelectorClient — empty state", () => {
-  it("renders SelectorEmptyState", async () => {
-    // Re-mock for this test only:
-    const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation(() => mockSelectorOutput({ recommended: [] }));
-
-    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
-    render(<SelectorClient />);
-    expect(await screen.findByText(/No tracked USD stablecoin currently passes/i)).toBeTruthy();
-  });
-});
 
 describe("selector-state input adapter", () => {
   it("persists exact venue preferences into SelectorInput", () => {

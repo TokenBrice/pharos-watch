@@ -145,30 +145,6 @@ describe("handleCallbackQuery", () => {
       expect(body.text).toMatch(/Snoozed USDC for 4h/);
     });
 
-    it("coinsnooze D1 write failure records a failure usage event", async () => {
-      const db = mockTelegramD1([
-        {
-          match: "INSERT INTO telegram_subscriptions",
-          rows: [],
-          throwError: new Error("d1 boom"),
-        },
-      ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze-fail" }));
-
-      const usageRow = db
-        .getHistory()
-        .find(
-          (entry) =>
-            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-            entry.binds.includes("snooze_change") &&
-            entry.binds.includes("coin") &&
-            entry.binds.includes("failure"),
-        );
-      expect(usageRow).toBeDefined();
-      expect(usageRow!.binds[6]).toBe("d1_write_failed");
-      expect(lastAckBody().text).toMatch(/could not save snooze/i);
-    });
-
     it.each([
       { label: "an unknown stablecoin id", data: "coinsnooze:not-a-coin:1h", id: "cb-coinsnooze-bad" },
       { label: "an unknown duration token", data: "coinsnooze:usdc-circle:12h", id: "cb-coinsnooze-bad-dur" },

@@ -68,7 +68,7 @@ export type PriceSourceDepthBucket = "0" | "1" | "2" | "3" | "4" | "5+";
 
 const PRICE_SOURCE_DEPTH_BUCKETS = ["0", "1", "2", "3", "4", "5+"] as const;
 
-export const PriceSourceDepthDistributionSchema = z.record(
+const PriceSourceDepthDistributionSchema = z.record(
   z.enum(PRICE_SOURCE_DEPTH_BUCKETS),
   z.number(),
 );

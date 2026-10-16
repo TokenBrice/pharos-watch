@@ -28,6 +28,19 @@ function mockCoingeckoPrices(quotes: Readonly<Record<string, number>>, observedA
   });
 }
 
+type LowVolumeRecoveryCase = {
+  id: string;
+  geckoId: string;
+  price: number;
+  observedAt: number;
+  nowMs: number;
+  assetFields: Parameters<typeof makePeggedAsset>[0];
+  expiredFields: Parameters<typeof makePeggedAsset>[0];
+  expectedSupply: Parameters<typeof makePeggedAsset>[0];
+  fxRates?: Record<string, number>;
+  responseJson?: boolean;
+};
+
 describe("LOW_VOLUME_CG_FALLBACK_IDS registry invariant", () => {
   it("only references IDs present in the active stablecoin registry", () => {
     const orphaned = [...LOW_VOLUME_CG_FALLBACK_IDS].filter((id) => !ACTIVE_META_BY_ID.has(id));
@@ -80,156 +93,98 @@ describe("runCoingeckoLowVolumePass", () => {
     }
   });
 
-  it.each([
-    ["usdkg-gold-dollar", "usdkg", 1.001, 1791222170],
-    ["fusd-freedom-dollar", "freedom-dollar", 0.997906, 1790853290],
-    ["chfau-allunity", "allunity-chf", 1.2, 1791267900],
-  ] as const)("recovers audited %s observations without renewing their clock and fails closed at expiry", async (id, geckoId, price, observedAt) => {
+  it.each<LowVolumeRecoveryCase>([
+    ...([
+      ["usdkg-gold-dollar", "usdkg", 1.001, 1791222170],
+      ["fusd-freedom-dollar", "freedom-dollar", 0.997906, 1790853290],
+      ["chfau-allunity", "allunity-chf", 1.2, 1791267900],
+    ] as const).map(([id, geckoId, price, observedAt]) => {
+      const pegType = id === "chfau-allunity" ? "peggedCHF" : "peggedUSD";
+      return {
+        id, geckoId, price, observedAt, nowMs: 1791299423 * 1000, responseJson: false,
+        assetFields: { pegType, supplySource: "defillama", circulating: { peggedUSD: 123 } },
+        expiredFields: { pegType },
+        expectedSupply: { supplySource: "defillama", circulating: { peggedUSD: 123 } },
+        fxRates: { peggedCHF: 1.2 },
+      };
+    }),
+    ...([
+      ["cgusd-cygnus-finance", "cygnus-finance-global-usd", 0.991614, 1791903934, "peggedUSD"],
+      ["wm-m0", "wrappedm-by-m0", 0.999229, 1792012792, "peggedUSD"],
+      ["mxne-real-mxn", "real-mxn", 0.054597, 1792021431, "peggedMXN"],
+      ["usdfc-secured-finance", "usdfc", 0.950358, 1792002424, "peggedUSD"],
+    ] as const).map(([id, geckoId, price, observedAt, pegType]) => ({
+      id, geckoId, price, observedAt, nowMs: 1792043600 * 1000,
+      assetFields: {
+        pegType, supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
+        circulating: { [pegType]: 123 },
+      },
+      expiredFields: { pegType },
+      expectedSupply: {
+        supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
+        circulating: { [pegType]: 123 },
+      },
+      fxRates: { peggedMXN: 0.055 },
+    })),
+    {
+      id: "hbd-hive", geckoId: "hive_dollar", price: 0.990063,
+      observedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000, nowMs: Date.UTC(2026, 8, 30, 15),
+      responseJson: false,
+      assetFields: {
+        symbol: "HBD", supplyRestored: true, supplySource: "coingecko-fallback",
+        supplyObservedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000, circulating: { peggedUSD: 32_677_939 },
+      },
+      expiredFields: { symbol: "HBD" },
+      expectedSupply: {
+        supplyRestored: true, supplyObservedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000,
+        circulating: { peggedUSD: 32_677_939 },
+      },
+    },
+    {
+      id: "brlv-crown", geckoId: "crown-brlv", price: 0.200255,
+      observedAt: 1_791_806_930, nowMs: 1_791_885_552 * 1000,
+      assetFields: {
+        symbol: "BRLV", pegType: "peggedREAL", supplyRestored: true, supplySource: "coingecko-fallback",
+        supplyObservedAt: 1_791_806_930, circulating: { peggedREAL: 73_888_563 },
+      },
+      expiredFields: { symbol: "BRLV", pegType: "peggedREAL" },
+      expectedSupply: {
+        supplyRestored: true, supplyObservedAt: 1_791_806_930, circulating: { peggedREAL: 73_888_563 },
+      },
+      fxRates: { peggedREAL: 0.2006 },
+    },
+    ...([
+      ["nxusd-nereus", "nxusd", 1.0218116165811697, 1_791_761_973],
+      ["usdh-hermetica", "hermetica-usdh", 0.9997925123055649, 1_791_780_809],
+    ] as const).map(([id, geckoId, price, observedAt]) => ({
+      id, geckoId, price, observedAt, nowMs: 1_791_787_489 * 1000,
+      assetFields: { supplySource: "defillama", circulating: { peggedUSD: 123 } },
+      expiredFields: {},
+      expectedSupply: { supplySource: "defillama", circulating: { peggedUSD: 123 } },
+    })),
+  ])("recovers reviewed $id price without upgrading supply, confidence, or observation time, then expires it", async ({
+    id, geckoId, price, observedAt, nowMs, assetFields, expiredFields, expectedSupply, fxRates, responseJson = true,
+  }) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",
     );
     vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
     vi.useFakeTimers();
-    vi.setSystemTime(1791299423 * 1000);
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      [geckoId]: { usd: price, last_updated_at: observedAt },
-    }), { status: 200 })));
-    const pegType = id === "chfau-allunity" ? "peggedCHF" : "peggedUSD";
-    const asset = makePeggedAsset({ id, pegType, price: null, supplySource: "defillama", circulating: { peggedUSD: 123 } });
-    expect(await runCoingeckoLowVolumePass([asset], null, { peggedCHF: 1.2 })).toEqual({ resolved: 1, failures: [] });
-    expect(asset).toMatchObject({
-      price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
-      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-      supplySource: "defillama", circulating: { peggedUSD: 123 },
-    });
-    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
-    const expired = makePeggedAsset({ id, pegType, price: null });
-    expect(await runCoingeckoLowVolumePass([expired], null, { peggedCHF: 1.2 })).toEqual({ resolved: 0, failures: [] });
-    expect(expired.price).toBeNull();
-  });
-
-  it.each([
-    ["cgusd-cygnus-finance", "cygnus-finance-global-usd", 0.991614, 1791903934, "peggedUSD"],
-    ["wm-m0", "wrappedm-by-m0", 0.999229, 1792012792, "peggedUSD"],
-    ["mxne-real-mxn", "real-mxn", 0.054597, 1792021431, "peggedMXN"],
-    ["usdfc-secured-finance", "usdfc", 0.950358, 1792002424, "peggedUSD"],
-  ] as const)("recovers reviewed %s price without upgrading supply, confidence, or observation time", async (id, geckoId, price, observedAt, pegType) => {
-    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
-      "../../../lib/coingecko-simple-price",
-    );
-    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
-    vi.useFakeTimers();
-    vi.setSystemTime(1792043600 * 1000);
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-      [geckoId]: { usd: price, last_updated_at: observedAt },
-    })));
-    const asset = makePeggedAsset({
-      id, pegType, price: null, supplyRestored: true,
-      supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
-      circulating: { [pegType]: 123 },
-    });
-    const fxRates = { peggedMXN: 0.055 };
+    vi.setSystemTime(nowMs);
+    const quotes = { [geckoId]: { usd: price, last_updated_at: observedAt } };
+    vi.stubGlobal("fetch", vi.fn(async () => responseJson
+      ? Response.json(quotes)
+      : new Response(JSON.stringify(quotes), { status: 200 })));
+    const asset = makePeggedAsset({ id, price: null, ...assetFields });
     expect(await runCoingeckoLowVolumePass([asset], null, fxRates)).toEqual({ resolved: 1, failures: [] });
     expect(asset).toMatchObject({
       price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
       priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-      supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
-      circulating: { [pegType]: 123 },
+      ...expectedSupply,
     });
     vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
-    const expired = makePeggedAsset({ id, pegType, price: null });
+    const expired = makePeggedAsset({ id, price: null, ...expiredFields });
     expect(await runCoingeckoLowVolumePass([expired], null, fxRates)).toEqual({ resolved: 0, failures: [] });
-    expect(expired.price).toBeNull();
-  });
-
-  it("recovers HBD on carried supply without renewing its upstream clock, then rejects it at expiry", async () => {
-    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
-      "../../../lib/coingecko-simple-price",
-    );
-    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
-    const observedAt = Date.UTC(2026, 8, 28, 18, 49, 20) / 1000;
-    vi.useFakeTimers();
-    vi.setSystemTime(Date.UTC(2026, 8, 30, 15));
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      hive_dollar: { usd: 0.990063, last_updated_at: observedAt },
-    }), { status: 200 })));
-    const carried = makePeggedAsset({
-      id: "hbd-hive", symbol: "HBD", price: null,
-      supplyRestored: true, supplySource: "coingecko-fallback",
-      supplyObservedAt: observedAt, circulating: { peggedUSD: 32_677_939 },
-    });
-
-    expect(await runCoingeckoLowVolumePass([carried], null, undefined)).toEqual({ resolved: 1, failures: [] });
-    expect(carried).toMatchObject({
-      price: 0.990063, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
-      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-      supplyRestored: true, supplyObservedAt: observedAt,
-      circulating: { peggedUSD: 32_677_939 },
-    });
-
-    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
-    const expired = makePeggedAsset({ id: "hbd-hive", symbol: "HBD", price: null });
-    expect(await runCoingeckoLowVolumePass([expired], null, undefined)).toEqual({ resolved: 0, failures: [] });
-    expect(expired.price).toBeNull();
-  });
-
-  it("recovers BRLV on carried supply without renewing its upstream clock, then rejects it at expiry", async () => {
-    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
-      "../../../lib/coingecko-simple-price",
-    );
-    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
-    const observedAt = 1_791_806_930;
-    const fxRates = { peggedREAL: 0.2006 };
-    vi.useFakeTimers();
-    vi.setSystemTime(1_791_885_552 * 1000);
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-      "crown-brlv": { usd: 0.200255, last_updated_at: observedAt },
-    })));
-    const carried = makePeggedAsset({
-      id: "brlv-crown", symbol: "BRLV", pegType: "peggedREAL", price: null,
-      supplyRestored: true, supplySource: "coingecko-fallback",
-      supplyObservedAt: observedAt, circulating: { peggedREAL: 73_888_563 },
-    });
-
-    expect(await runCoingeckoLowVolumePass([carried], null, fxRates)).toEqual({ resolved: 1, failures: [] });
-    expect(carried).toMatchObject({
-      price: 0.200255, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
-      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-      supplyRestored: true, supplyObservedAt: observedAt,
-      circulating: { peggedREAL: 73_888_563 },
-    });
-
-    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
-    const expired = makePeggedAsset({ id: "brlv-crown", symbol: "BRLV", pegType: "peggedREAL", price: null });
-    expect(await runCoingeckoLowVolumePass([expired], null, fxRates)).toEqual({ resolved: 0, failures: [] });
-    expect(expired.price).toBeNull();
-  });
-
-  it.each([
-    ["nxusd-nereus", "nxusd", 1.0218116165811697, 1_791_761_973],
-    ["usdh-hermetica", "hermetica-usdh", 0.9997925123055649, 1_791_780_809],
-  ] as const)("recovers audited %s without renewing its clock or changing supply, then expires the quote", async (id, geckoId, price, observedAt) => {
-    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
-      "../../../lib/coingecko-simple-price",
-    );
-    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
-    vi.useFakeTimers();
-    vi.setSystemTime(1_791_787_489 * 1000);
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-      [geckoId]: { usd: price, last_updated_at: observedAt },
-    })));
-    const asset = makePeggedAsset({
-      id, price: null, supplySource: "defillama", circulating: { peggedUSD: 123 },
-    });
-    expect(await runCoingeckoLowVolumePass([asset], null, undefined)).toEqual({ resolved: 1, failures: [] });
-    expect(asset).toMatchObject({
-      price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
-      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-      supplySource: "defillama", circulating: { peggedUSD: 123 },
-    });
-    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
-    const expired = makePeggedAsset({ id, price: null });
-    expect(await runCoingeckoLowVolumePass([expired], null, undefined)).toEqual({ resolved: 0, failures: [] });
     expect(expired.price).toBeNull();
   });
 

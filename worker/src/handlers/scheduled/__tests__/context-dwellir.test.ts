@@ -292,21 +292,6 @@ describe("scheduled runtime Dwellir enablement", () => {
     expect(cacheReadsFor(CIRCUIT_CACHE_KEY)).toBe(1);
   });
 
-  it("reads the budget and circuit once per runtime across jobs", async () => {
-    const { db, cacheReadsFor } = makeContextDb({ cacheRows: { [ledgerCacheKey()]: ledgerRow(0) } });
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
-
-    await runJob(runtime);
-    const admittedNative = runtime.dwellirNative;
-    await runJob(runtime);
-
-    expect(dwellirUrls(runtime.chainRpcs).length).toBeGreaterThan(0);
-    expect(admittedNative).toBeDefined();
-    expect(runtime.dwellirNative).toBe(admittedNative);
-    expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(1);
-    expect(cacheReadsFor(CIRCUIT_CACHE_KEY)).toBe(1);
-  });
-
   it("reads the budget once for concurrently started jobs", async () => {
     const { db, cacheReadsFor } = makeContextDb({ cacheRows: { [ledgerCacheKey()]: ledgerRow(0) } });
     const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });

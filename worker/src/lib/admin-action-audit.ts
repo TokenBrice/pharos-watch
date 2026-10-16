@@ -13,7 +13,7 @@ export interface AdminActionLogEntry {
   actor?: string;
 }
 
-export const DETAILS_MAX_LEN = 4096;
+const DETAILS_MAX_LEN = 4096;
 
 function reportAuditWriteFailure(action: string, error: unknown): false {
   logWorkerEventArgs("lib", "warn", `[admin-action-audit] write failed for action=${action}:`, error);

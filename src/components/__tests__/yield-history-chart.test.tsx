@@ -97,15 +97,6 @@ describe("YieldHistoryChart", () => {
     expect((blocks[2] as HTMLElement).style.width).toBe("2px");
   });
 
-  it("counts distinct grouped sources rather than repeated segments", () => {
-    const start = Date.UTC(2026, 8, 1);
-    const segments = deriveYieldSourceSegments(["a", "b", "c", "b"].map((sourceKey, index) => ({
-      ts: start + index * 1000, sourceKey,
-    })), { maxDistinctSources: 1 });
-    render(<SourceStrip segments={segments} timeStart={start} timeEnd={start + 3000} />);
-    expect(screen.getByText("other (2)")).toBeTruthy();
-    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("b from");
-  });
   it("exposes publish-time PYS snapshots on the full chart", () => {
     const history = Array.from({ length: 30 }, (_, index) => ({
       date: Date.UTC(2026, 3, index + 1),
@@ -283,33 +274,4 @@ describe("YieldHistoryChart", () => {
   });
 });
 
-describe("YieldHistoryTooltip spike copy (E22)", () => {
-  it("labels the effective trailing span of the spike average", async () => {
-    const { YieldHistoryTooltip } = await import("@/components/yield-history-chart-ui");
-    const payloadPoint = {
-      date: Date.UTC(2026, 4, 10),
-      apy: 9,
-      apyBase: null,
-      apyReward: null,
-      sourceTvlUsd: null,
-      warningSignals: [],
-      sourceKey: null,
-      yieldSource: "Source A",
-      dataSource: null,
-      isBest: true,
-      sourceSwitch: false,
-    };
-    const { render: rtlRender, screen: rtlScreen } = await import("@testing-library/react");
-    rtlRender(
-      <YieldHistoryTooltip
-        active
-        showBreakdown={false}
-        compact={false}
-        label={Date.UTC(2026, 4, 10)}
-        spikesByDate={new Map([[Date.UTC(2026, 4, 10), { trailingAvg: 3, ratio: 3, windowDays: 7 }]])}
-        payload={[{ dataKey: "apy", payload: payloadPoint }]}
-      />,
-    );
-    expect(rtlScreen.getByText(/3\.0× the trailing 7d average of 3\.00%/)).toBeTruthy();
-  });
-});
+

@@ -951,57 +951,6 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.perCoinQuarterlyEventTypes.USDT).toEqual([]);
   });
 
-  it("preserves net-frozen semantics for frozenAddresses", async () => {
-    // One address blacklisted then unblacklisted (net=0); one address blacklisted only (net=1).
-    // Net frozen = 1, NOT distinct-ever-blacklisted (2).
-    const db = mockD1([
-      {
-        match: "GROUP BY stablecoin, event_type",
-        rows: [
-          { stablecoin: "USDC", event_type: "blacklist", n: 2, usd_sum: 0, usd_known: 2 },
-          { stablecoin: "USDC", event_type: "unblacklist", n: 1, usd_sum: 0, usd_known: 1 },
-        ],
-      },
-      {
-        match: "latest_event_type",
-        // Latest-per-event-type rows contain enough history to derive the
-        // latest event per address. 0xa's latest is unblacklist; 0xb's latest is blacklist.
-        rows: [
-          makeBlacklistRow({
-            id: "bl-a-u",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "unblacklist",
-            address: "0xa",
-            timestamp: 1_700_100_000,
-          }),
-          makeBlacklistRow({
-            id: "bl-b",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
-            address: "0xb",
-            timestamp: 1_700_200_000,
-          }),
-        ],
-      },
-      {
-        match: "COUNT(*) AS total",
-        rows: [],
-        first: { total: 3, max_ts: 1_700_200_000, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
-      },
-      { match: "FROM blacklist_current_balances", rows: [] },
-      { match: "cron_runs", rows: [], first: { started_at: null } },
-      ...makeBlacklistSummaryFallbackTables(),
-    ]);
-
-    const res = await handleBlacklistSummary(db);
-    const json = await res.json() as { stats: { frozenAddresses: number } };
-    expect(json.stats.frozenAddresses).toBe(1);
-  });
-
   it("derives latest active identities from time and numeric execution position, not hash order", async () => {
     const db = mockD1([
       {

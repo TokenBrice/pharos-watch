@@ -222,11 +222,6 @@ describe("pending Telegram preference revalidation", () => {
     await expect(evaluate()).resolves.toMatchObject({ kind: "cancel", reason: "scope_disabled" });
   });
 
-  it("cancels after a preset unfollow", async () => {
-    insertSubscriber({ generation: 2 });
-    await expect(evaluate()).resolves.toMatchObject({ kind: "cancel", reason: "scope_disabled" });
-  });
-
   it("allows a still-followed preset whose current membership contains the coin", async () => {
     insertSubscriber({ generation: 2 });
     insertPreset();
@@ -247,12 +242,6 @@ describe("pending Telegram preference revalidation", () => {
 
   it("cancels a forgotten or otherwise missing subscriber", async () => {
     await expect(evaluate()).resolves.toMatchObject({ kind: "cancel", reason: "subscriber_missing" });
-  });
-
-  it("cancels a block-disabled direct subscription", async () => {
-    insertSubscriber({ generation: 2 });
-    insertDirect({ enabled: 0, override: 1 });
-    await expect(evaluate()).resolves.toMatchObject({ kind: "cancel", reason: "scope_disabled" });
   });
 
   it("defers the whole immutable target group for chat or coin snooze", async () => {

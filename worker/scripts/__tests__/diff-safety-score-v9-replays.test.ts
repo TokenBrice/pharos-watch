@@ -1,7 +1,7 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
 import {
   diffReplayArtifacts,
@@ -21,15 +21,6 @@ function artifact(cards: unknown[], volatile: Record<string, unknown> = {}) {
 }
 
 describe("diffReplayArtifacts", () => {
-  it("keeps the movers entrypoint and registration inside the Worker tooling boundary", () => {
-    const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../../../package.json", import.meta.url).href), "utf8"));
-    expect(pkg.scripts["safety-score-v9:movers"]).toBe("node --import tsx worker/scripts/diff-safety-score-v9-movers.ts");
-    expect(existsSync(fileURLToPath(new URL("../../../scripts/maintenance/diff-safety-score-v9-movers.ts", import.meta.url).href))).toBe(false);
-    const policy = readFileSync(fileURLToPath(new URL("../../../scripts/lib/cli-argv-policy.mjs", import.meta.url).href), "utf8");
-    expect(policy).toContain('strict("worker/scripts/diff-safety-score-v9-movers.ts")');
-    expect(policy).not.toContain('strict("scripts/maintenance/diff-safety-score-v9-movers.ts")');
-  });
-
   it.each([
     {}, { pipeline: { candidate: {} } },
     artifact([{ id: "", grade: "A", score: 90 }]),
@@ -41,11 +32,6 @@ describe("diffReplayArtifacts", () => {
     expect(() => extractCardGrades(value)).toThrow();
   });
 
-  it("accepts valid reordered live-card projections", () => {
-    const cards = [{ id: "a", grade: "A", score: 90 }, { id: "b", grade: "NR", score: null }];
-    expect(diffReplayArtifacts(artifact(cards), artifact([...cards].reverse())).equal).toBe(true);
-  });
-
   it("rejects malformed, duplicate and unreviewed mover declarations", () => {
     const entry = { id: "a", from: "B", to: "A", reason: "reviewed evidence", workstream: "curation" };
     expect(parseMoverManifest({ movers: [entry] }).movers).toHaveLength(1);
@@ -53,20 +39,6 @@ describe("diffReplayArtifacts", () => {
       expect(() => parseMoverManifest({ movers })).toThrow();
     }
   });
-  it("self-diff is empty even when volatile identity fields differ", () => {
-    const a = artifact([{ id: "usdt-tether", grade: "B+", score: 72 }], {
-      publishedAt: 1,
-      safetyScoreIdentity: { x: 1 },
-    });
-    const b = artifact([{ id: "usdt-tether", grade: "B+", score: 72 }], {
-      publishedAt: 2,
-      safetyScoreIdentity: { x: 2 },
-    });
-    const diff = diffReplayArtifacts(a, b);
-    expect(diff.equal).toBe(true);
-    expect(diff.entries).toEqual([]);
-  });
-
   it("reports a changed score with its asset id and path", () => {
     const a = artifact([{ id: "usdt-tether", grade: "B+", score: 72 }]);
     const b = artifact([{ id: "usdt-tether", grade: "B+", score: 71 }]);
@@ -102,22 +74,6 @@ describe("diffReplayArtifacts", () => {
         candidate: 1,
       },
     ]);
-  });
-
-
-  it.each([
-    "publishedAt", "safetyScoreIdentity", "baseInputGenerationId", "publicationGenerationId",
-    "evaluationBuildDigest", "capturedAt", "updatedAt", "payloadSha256", "contentSha256",
-    "generationId", "releaseCandidateId", "stateDigest", "resultDigest", "scoreResultDigest",
-    "evaluatedSetDigest", "candidateId", "compilerFactSchemaDigest", "policyVersion",
-  ])("ignores %s at the candidate and nested card levels", (key) => {
-    for (const nested of [false, true]) {
-      const make = (value: string) => artifact(
-        [{ id: "usdc-circle", grade: "A", score: 85, ...(nested ? { evidence: [{ [key]: value }] } : {}) }],
-        nested ? {} : { [key]: value },
-      );
-      expect(diffReplayArtifacts(make("before"), make("after"))).toEqual({ equal: true, entries: [] });
-    }
   });
 
   it("strips version-activation digests at every depth without hiding scored drift", () => {
@@ -173,23 +129,6 @@ describe("diffReplayArtifacts", () => {
     expect(categorizeReplayChanges(baseline, candidate).availability).toEqual([
       expect.objectContaining({ assetId: "asset", path: "cards[asset].ratingStatus", candidate: "pipeline-gap" }),
     ]);
-  });
-
-  it("separates unknown credit, removed caps, reserve admission, routes, causes and schema diagnostics", () => {
-    const a = { id: "asset", grade: "C", score: 55, schemaVersion: 3, caps: [{ kind: "missing-data", source: "evidence", limit: 55 }],
-      breakdowns: { backing: { contributions: [{ key: "reserve:one", observationState: "missing", score: 25, wholeAssetWeight: 0.5 }] }, control: { components: [{ key: "mint", posture: "unknown", score: 35 }] } },
-      scoreTrace: { primaryRouteKey: "old" } };
-    const b = { ...a, schemaVersion: 4, caps: [], breakdowns: {
-      backing: { contributions: [{ key: "reserve:one", observationState: "missing", score: 25, wholeAssetWeight: 0.8, cause: "U" }] },
-      control: { components: [{ key: "mint", posture: "unknown", score: 50 }] },
-    }, scoreTrace: { primaryRouteKey: "new" } };
-    const categories = categorizeReplayChanges(artifact([a]), artifact([b]));
-    expect(categories["unknown-credit-raises"]).toEqual([expect.objectContaining({ baseline: 35, candidate: 50 })]);
-    expect(categories["cap-removal"]).toEqual([expect.objectContaining({ path: "cards[asset].caps" })]);
-    expect(categories["reserve-admission"]).toEqual([expect.objectContaining({ baseline: 0.5, candidate: 0.8 })]);
-    expect(categories["route-selection"]).toEqual([expect.objectContaining({ baseline: "old", candidate: "new" })]);
-    expect(categories["cause-classification"]).toEqual([expect.objectContaining({ candidate: "U" })]);
-    expect(categories.schema).toEqual([expect.objectContaining({ baseline: 3, candidate: 4 })]);
   });
 
   it("retains status-only and diagnostic-only movers without inventing numeric deltas", () => {

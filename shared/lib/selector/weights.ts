@@ -13,12 +13,6 @@ import {
   type WeightKey,
   type WeightVector,
 } from "./types";
-import { SELECTOR_VERSION } from "./version";
-
-/**
- * Bumped on any weight or exclusion-rule change. Matches `ENGINE_VERSION`.
- */
-export const WEIGHTS_VERSION = SELECTOR_VERSION;
 
 /**
  * Weight vectors carry **one** Safety Score input — the published overall

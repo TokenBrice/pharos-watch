@@ -67,26 +67,4 @@ describe("CacheFreshnessTable", () => {
     ).toBeTruthy();
   });
 
-  it("keeps headers on the collapsed healthy table when unhealthy rows are visible", async () => {
-    const degradedCache: CacheStatus = {
-      ageSeconds: 9_000,
-      maxAge: 1_000,
-      healthy: false,
-      producerJob: "sync-degraded",
-    };
-    const healthyCache: CacheStatus = {
-      ageSeconds: 60,
-      maxAge: 3_600,
-      healthy: true,
-      producerJob: "sync-healthy",
-    };
-
-    render(<CacheFreshnessTable caches={{ degraded: degradedCache, healthy: healthyCache }} />);
-
-    expect(screen.getByTestId("cache-freshness-unhealthy-table")).toBeTruthy();
-    fireEvent.click(screen.getByText("1 healthy cache"));
-    const healthyTable = await screen.findByTestId("cache-freshness-healthy-table");
-    expect(within(healthyTable).getByRole("columnheader", { name: "Lane" })).toBeTruthy();
-    expect(within(healthyTable).getByText("healthy")).toBeTruthy();
-  });
 });

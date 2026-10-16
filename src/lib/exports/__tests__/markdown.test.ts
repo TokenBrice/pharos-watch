@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildMarkdownWithPreamble, copyMarkdownWithPreamble } from "@/lib/exports/markdown";
+import { describe, expect, it } from "vitest";
+import { buildMarkdownWithPreamble } from "@/lib/exports/markdown";
 import { PREAMBLE } from "./exports.test-support";
 
 describe("buildMarkdownWithPreamble", () => {
@@ -51,50 +51,3 @@ describe("buildMarkdownWithPreamble", () => {
   });
 });
 
-describe("copyMarkdownWithPreamble", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("writes the rendered markdown to the clipboard and returns true on success", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
-
-    const result = await copyMarkdownWithPreamble(
-      [{ name: "USDC" }],
-      [{ header: "Name", accessor: (row) => row.name }],
-      PREAMBLE,
-    );
-
-    expect(result).toBe(true);
-    expect(writeText).toHaveBeenCalledTimes(1);
-    const arg = writeText.mock.calls[0]?.[0] as string;
-    expect(arg.startsWith("> Pharos pharos.watch")).toBe(true);
-    expect(arg).toContain("| USDC |");
-  });
-
-  it("returns false when the clipboard API rejects", async () => {
-    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
-
-    const result = await copyMarkdownWithPreamble(
-      [{ name: "USDC" }],
-      [{ header: "Name", accessor: (row) => row.name }],
-      PREAMBLE,
-    );
-
-    expect(result).toBe(false);
-  });
-
-  it("returns false when the clipboard API is unavailable", async () => {
-    vi.stubGlobal("navigator", {});
-
-    const result = await copyMarkdownWithPreamble(
-      [{ name: "USDC" }],
-      [{ header: "Name", accessor: (row) => row.name }],
-      PREAMBLE,
-    );
-
-    expect(result).toBe(false);
-  });
-});

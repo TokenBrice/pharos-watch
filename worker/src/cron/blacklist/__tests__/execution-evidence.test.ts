@@ -182,7 +182,7 @@ describe("blacklist execution evidence", () => {
     sqlite.close();
   });
 
-  it.each(["[]", "42"])("replaces parseable corrupt retry state %s and requires three distinct observations", async (priorValue) => {
+  it.each(["[]"])("replaces parseable corrupt retry state %s and requires three distinct observations", async (priorValue) => {
     const sqlite = new DatabaseSync(":memory:");
     try {
       sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");

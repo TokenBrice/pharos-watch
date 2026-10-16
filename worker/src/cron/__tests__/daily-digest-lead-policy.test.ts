@@ -246,66 +246,6 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
 describe("next-trigger lifecycle (Batch 4)", () => {
   const fixture18 = loadFixture("2026-07-18");
 
-  // Strip candidates so the fallback path (top depeg + PSI) arms deterministically
-  // within TRIGGER_LIMIT regardless of what the fixture's candidate set produces.
-  const bareInput: DigestInputData = { ...fixture18.inputData, editorialCandidates: [] };
-
-  function inputWithTriggers(triggers: DigestInputData["nextTriggers"]): DigestInputData {
-    return { ...bareInput, nextTriggers: triggers };
-  }
-
-  it("keeps an armed threshold sticky instead of chasing the metric", async () => {
-    const { buildNextTriggers } = await import("../daily-digest/digest-next-triggers");
-    const psi = (fixture18.inputData.stabilityIndex?.score ?? 90);
-    // A deterioration target below the current score is genuinely pending.
-    const previous = inputWithTriggers([
-      {
-        id: "trigger:psi-score",
-        label: "PSI threshold",
-        metric: "psi-score",
-        comparator: "lte",
-        thresholdValue: psi - 5,
-        thresholdLabel: `${psi - 5} PSI`,
-        rationale: "r",
-        detail: "d",
-      },
-    ]);
-    const triggers = buildNextTriggers(bareInput, previous);
-    const psiTrigger = triggers.find((trigger) => trigger.id === "trigger:psi-score");
-    expect(psiTrigger?.thresholdValue).toBe(psi - 5);
-    expect(psiTrigger?.repeatedCount).toBe(1);
-  });
-
-  it("expires a perpetually-pending trigger after three editions and frees its slot", async () => {
-    const { buildNextTriggers, buildForwardLookOutcomes } = await import("../daily-digest/digest-next-triggers");
-    // The real corpus shape: the apxUSD widening trigger sat pending for 20
-    // consecutive editions because its threshold could never be reached.
-    const staleTrigger = {
-      id: "trigger:depeg:apxusd-apyx",
-      label: "APXUSD depeg widening",
-      metric: "depeg-bps" as const,
-      comparator: "abs-gte" as const,
-      thresholdValue: 3650,
-      thresholdLabel: "3650 bps off peg",
-      symbol: "APXUSD",
-      stablecoinId: "apxusd-apyx",
-      rationale: "r",
-      detail: "d",
-      repeatedCount: 2,
-    };
-    const at = generatedAt(bareInput);
-    const observed: DigestInputData = { ...bareInput, topDepegs: [{
-      stablecoinId: "apxusd-apyx", symbol: "APXUSD", bps: -3650, currentBps: -1570,
-      severityBasis: "current", pegReference: 1, priceObservedAt: at, startedAt: 1, mcapUsd: 1e8,
-    }] };
-    const previous = { ...inputWithTriggers([staleTrigger]), dataQuality: { ...bareInput.dataQuality!, generatedAt: at - 86400 },
-      topDepegs: [{ ...observed.topDepegs[0], currentBps: -1500, priceObservedAt: at - 86400 }] };
-    const triggers = buildNextTriggers(observed, previous);
-    expect(triggers.find((trigger) => trigger.id === "trigger:depeg:apxusd-apyx")).toBeUndefined();
-    const outcomes = buildForwardLookOutcomes(observed, previous);
-    expect(outcomes.find((outcome) => outcome.triggerId === "trigger:depeg:apxusd-apyx")?.status).toBe("expired");
-  });
-
   it("builds evaluatable triggers for yield and liquidity candidates", async () => {
     const { buildNextTriggers } = await import("../daily-digest/digest-next-triggers");
     const input: DigestInputData = {

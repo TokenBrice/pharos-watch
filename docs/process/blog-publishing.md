@@ -8,7 +8,7 @@ what shipped, what's next, and why.
 ## Architecture
 
 - **Registry:** `src/data/blog/index.ts` — one `BlogPost` per post (the single
-  source of truth). Guarded by `src/data/blog/__tests__/blog-registry.test.ts`.
+  source of truth).
 - **Post bodies:** `src/data/blog/posts/<slug>.md` — Markdown, rendered by
   `src/app/blog/[slug]/page.tsx` (react-markdown, `remarkGfm` + `rehypeSlug` — no
   heading autolinks, unlike `/docs`).
@@ -39,10 +39,10 @@ what shipped, what's next, and why.
      `coverImage: "/blog/<slug>-cover.png"` + `coverAlt`. Author it **1200×630**
      — it renders atop the post and the hub card in a `1200/630` frame and
      doubles as the post's social/OG card (falling back to the shared
-     `og-blog.png` when absent). The registry test verifies the file exists.
-3. **Test** the registry, feed, and sitemap:
+     `og-blog.png` when absent). Review the cover file and alt text before publishing.
+3. **Test** the feed and sitemap inventory:
    ```bash
-   npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts
+   npx vitest run src/app/feed src/app/__tests__/sitemap-frozen.test.ts
    ```
 4. **Commit** the post + registry.
    `src/data/blog/**` is wired into `GIT_DATE_SCAN_PATHS`
@@ -116,9 +116,10 @@ no RSS feed.
    and any copy or renderer change — fails that snapshot until you run
    `npm run refresh:markdown-fixtures` and commit the fixture in the same
    change.
-3. **Test** the registry, page, Markdown export, and sitemap:
+3. **Validate** the editorial content, Markdown export, and sitemap inventory:
    ```bash
-   npx vitest run src/data/changelogs src/app/changelog scripts/__tests__/generate-markdown-exports.test.ts src/app/__tests__/sitemap-frozen.test.ts
+   npm run check:editorial-content
+   npx vitest run scripts/__tests__/generate-markdown-exports.test.ts src/app/__tests__/sitemap-frozen.test.ts
    ```
 4. **Commit and push** as usual. Discovery needs no per-week work:
    `src/app/sitemap.ts` stamps `/changelog/` from the newest `dateRange.to`,

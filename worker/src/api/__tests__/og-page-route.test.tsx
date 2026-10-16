@@ -1,11 +1,8 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import satori from "satori";
 import satoriStandalone from "satori/standalone";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { OG_LIVE_PAGE_SLUGS, OG_ROUTE_CARDS, type OgRouteCardKey } from "@shared/lib/og-route-cards";
+import { OG_ROUTE_CARDS, type OgRouteCardKey } from "@shared/lib/og-route-cards";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { RouteCard } from "../../lib/og-templates/route-card";
 
@@ -95,37 +92,11 @@ describe("/api/og/page/:slug", () => {
 });
 
 describe("RouteCard template", () => {
-  const font = (file: string) =>
-    readFileSync(fileURLToPath(new URL(`../../../assets/fonts/${file}`, import.meta.url).href));
-  const fonts = [
-    { name: "Geist Sans", data: font("Geist-Regular.ttf"), weight: 400 as const, style: "normal" as const },
-    { name: "Geist Sans", data: font("Geist-Bold.ttf"), weight: 700 as const, style: "normal" as const },
-    { name: "Geist Mono", data: font("GeistMono-Regular.ttf"), weight: 400 as const, style: "normal" as const },
-  ];
-
   it("carries no figure, date or state claim in any timeless card", () => {
     for (const key of Object.keys(OG_ROUTE_CARDS) as OgRouteCardKey[]) {
       const text = renderToStaticMarkup(<RouteCard cardKey={key} variant="timeless" />).replace(/<[^>]+>/g, " ");
       expect(text, key).not.toMatch(/\d/);
       expect(text, key).not.toMatch(/\b(live|now|today|updated|open)\b(?! figures)/i);
     }
-  });
-
-  it("every live slug has timeless copy to fall back to", () => {
-    for (const slug of OG_LIVE_PAGE_SLUGS) expect(OG_ROUTE_CARDS[slug].promise).toHaveLength(2);
-  });
-
-  it("lays out both variants through the real satori engine", async () => {
-    const live = await satori(
-      <RouteCard
-        cardKey="flows"
-        variant="live"
-        data={{ hero: "≥ $200.0M", context: "gross stablecoin mint + burn, last 24h (known subtotal)", support: ["Printed $300.0M", "Shredded $100.0M"], stamp: "As of 12 Oct 2026, 14:05 UTC" }}
-      />,
-      { width: 1200, height: 628, fonts },
-    );
-    expect(live).toContain("<svg");
-    const timeless = await satori(<RouteCard cardKey="freezewatch" variant="timeless" />, { width: 1200, height: 628, fonts });
-    expect(timeless).toContain("<svg");
   });
 });

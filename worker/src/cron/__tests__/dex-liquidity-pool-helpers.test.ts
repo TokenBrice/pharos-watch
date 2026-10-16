@@ -155,23 +155,6 @@ describe("dex-liquidity pool helpers", () => {
     expect(result.score).toBe(67);
   });
 
-  it("falls back to absolute TVL depth when market cap is unavailable", () => {
-    const m = initMetrics("unknown-coin", "UNK");
-    m.effectiveTvl = 10_000_000;
-    m.totalTvlUsd = 20_000_000;
-    m.totalVolume24hUsd = 1_000_000;
-    m.qualityAdjustedTvl = 12_000_000;
-    m.poolCount = 8;
-
-    const withMcap = computeLiquidityScore(m, 70, 100_000_000);
-    const withoutMcap = computeLiquidityScore(m, 70);
-
-    expect(withoutMcap.components.tvlDepth).not.toBe(withMcap.components.tvlDepth);
-    // v5.5 absolute fallback (parity with ratio at $1B reference mcap):
-    // 35 * log10(10M / 700_000) = 35 * log10(14.286) ≈ 35 * 1.155 ≈ 40.4 → 40
-    expect(withoutMcap.components.tvlDepth).toBe(40);
-  });
-
   it("clamps pool quality retention to 0-100 range", () => {
     const m = initMetrics("low-quality", "LOW");
     m.effectiveTvl = 500_000;

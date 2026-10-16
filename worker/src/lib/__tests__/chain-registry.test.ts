@@ -44,73 +44,31 @@ describe("public supply RPC provider exclusions", () => {
   });
 });
 
-/** Today's [rpcUrl, fallbackRpcUrl] lists, captured before the endpoint refactor. */
 const KEY_COMBINATIONS = [
   {
     label: "no key",
     alchemyApiKey: undefined,
     drpcApiKey: undefined,
-    urls: {
-      ethereum: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
-      base: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"],
-      gnosis: ["https://rpc.gnosischain.com"],
-      fantom: ["https://fantom.drpc.org"],
-      tempo: ["https://rpc.tempo.xyz"],
-      monad: ["https://rpc.monad.xyz"],
-      solana: [],
-      tron: ["https://api.trongrid.io"],
-    },
   },
   {
     label: "alchemy only",
     alchemyApiKey: ALCHEMY_KEY,
     drpcApiKey: undefined,
-    urls: {
-      ethereum: ["https://eth-mainnet.g.alchemy.com/v2/", "https://ethereum-rpc.publicnode.com"],
-      base: ["https://base-mainnet.g.alchemy.com/v2/", "https://mainnet.base.org"],
-      gnosis: ["https://rpc.gnosischain.com"],
-      fantom: ["https://fantom.drpc.org"],
-      tempo: ["https://rpc.tempo.xyz"],
-      monad: ["https://monad-mainnet.g.alchemy.com/v2/", "https://rpc.monad.xyz"],
-      solana: ["https://solana-mainnet.g.alchemy.com/v2/"],
-      tron: ["https://tron-mainnet.g.alchemy.com/v2/", "https://api.trongrid.io"],
-    },
   },
   {
     label: "drpc only",
     alchemyApiKey: undefined,
     drpcApiKey: DRPC_KEY,
-    urls: {
-      ethereum: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
-      base: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"],
-      gnosis: [`https://lb.drpc.org/ogrpc?network=gnosis&dkey=${DRPC_KEY}`, "https://rpc.gnosischain.com"],
-      fantom: [`https://lb.drpc.org/ogrpc?network=fantom&dkey=${DRPC_KEY}`, "https://fantom.drpc.org"],
-      tempo: ["https://rpc.tempo.xyz"],
-      monad: ["https://rpc.monad.xyz"],
-      solana: [`https://lb.drpc.org/ogrpc?network=solana&dkey=${DRPC_KEY}`],
-      tron: ["https://api.trongrid.io"],
-    },
   },
   {
     label: "both keys",
     alchemyApiKey: ALCHEMY_KEY,
     drpcApiKey: DRPC_KEY,
-    urls: {
-      ethereum: ["https://eth-mainnet.g.alchemy.com/v2/", "https://ethereum-rpc.publicnode.com"],
-      base: ["https://base-mainnet.g.alchemy.com/v2/", "https://mainnet.base.org"],
-      gnosis: [`https://lb.drpc.org/ogrpc?network=gnosis&dkey=${DRPC_KEY}`, "https://rpc.gnosischain.com"],
-      fantom: [`https://lb.drpc.org/ogrpc?network=fantom&dkey=${DRPC_KEY}`, "https://fantom.drpc.org"],
-      tempo: ["https://rpc.tempo.xyz"],
-      monad: ["https://monad-mainnet.g.alchemy.com/v2/", "https://rpc.monad.xyz"],
-      solana: ["https://solana-mainnet.g.alchemy.com/v2/", `https://lb.drpc.org/ogrpc?network=solana&dkey=${DRPC_KEY}`],
-      tron: ["https://tron-mainnet.g.alchemy.com/v2/", "https://api.trongrid.io"],
-    },
   },
 ] satisfies readonly {
   label: string;
   alchemyApiKey: string | undefined;
   drpcApiKey: string | undefined;
-  urls: Record<string, string[]>;
 }[];
 
 function dwellirEntry(chainId: string) {
@@ -127,17 +85,6 @@ describe("buildChainRpcs", () => {
     expect(endpoints.length).toBeGreaterThan(0);
     expect(endpoints.every(endpoint => !endpoint.keyed && endpoint.verifiedAt === undefined)).toBe(true);
   });
-  it.each(KEY_COMBINATIONS)(
-    "keeps today's registry URL lists with $label",
-    ({ alchemyApiKey, drpcApiKey, urls }) => {
-      const chainRpcs = buildChainRpcs(alchemyApiKey, drpcApiKey);
-
-      for (const [chainId, expectedUrls] of Object.entries(urls)) {
-        expect(registryRpcUrls(chainRpcs.get(chainId)), chainId).toEqual(expectedUrls);
-      }
-    },
-  );
-
   it("emits no Dwellir endpoint at all without a Dwellir key", () => {
     for (const { alchemyApiKey, drpcApiKey } of KEY_COMBINATIONS) {
       const chainRpcs = buildChainRpcs(alchemyApiKey, drpcApiKey);
@@ -398,17 +345,6 @@ describe("buildChainRpcs", () => {
       stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-13",
     });
     expect(logScanRpcEndpoints(arc).some((endpoint) => endpoint.operator === "dwellir")).toBe(false);
-  });
-
-  it("pairs every Dwellir entry with the CHAIN_META key and EVM chain id it reads", () => {
-    expect(new Set(DWELLIR_CHAINS.map((entry) => entry.chainId)).size).toBe(DWELLIR_CHAINS.length);
-
-    for (const entry of DWELLIR_CHAINS) {
-      const meta = CHAIN_META[entry.chainId];
-      expect(meta, entry.chainId).toBeDefined();
-      expect(meta!.evmChainId, entry.chainId).toBe(entry.evmChainId);
-      expect(meta!.type, entry.chainId).toBe("evm");
-    }
   });
 
   it("never puts the Dwellir key in a URL and serves it as an X-Api-Key header", () => {

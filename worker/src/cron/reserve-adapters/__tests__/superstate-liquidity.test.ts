@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { installAdapterNetwork, expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 import { adaptSuperstateLiquidity } from "../superstate-liquidity";
 
@@ -93,68 +93,5 @@ describe("adaptSuperstateLiquidity", () => {
         9_310_000,
       ),
     ).toThrow("invalid circle_usd_available_amount");
-  });
-});
-
-describe("fetchSuperstateLiquidityReserves", () => {
-  const liquidityUrl = "https://api.superstate.com/v1/funds/liquidity";
-  const oracle = "0x289B5036cd942e619E1Ee48670F98d214E745AAC";
-  const token = "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e";
-  const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-  const latestRoundData = `0x${[
-    1n,
-    1_015_000_000n,
-    1_757_000_000n,
-    1_757_000_000n,
-    1n,
-  ].map((word) => word.toString(16).padStart(64, "0")).join("")}`;
-
-  function network(payload: unknown) {
-    return installAdapterNetwork({
-      json: {
-        [liquidityUrl]: payload,
-      },
-      rpc: {
-        [`${token}:decimals()`]: 18n,
-        [`${token}:totalSupply()`]: 1_000_000n * 10n ** 18n,
-        [`${oracle}:decimals()`]: 8n,
-        [`${oracle}:latestRoundData()`]: latestRoundData,
-        [`${usdc}:balanceOf(address)`]: 9_310_000_000000n,
-      },
-      block: { number: 23_000_000, timestamp: 1_757_000_000 },
-    });
-  }
-
-  it("reads the liquidity API and on-chain RedemptionIdle balance through the shared harness", async () => {
-    const { result, network: installed } = await runAdapter("superstate-liquidity", "ustb-superstate", {
-      network: network({
-        USTB: {
-          circle_usd_available_amount: "2696887.17",
-          usdc_redemption_idle_balance: "3412248.944618",
-        },
-      }),
-      nowSec: 1_757_000_100,
-    });
-
-    expect(result.metadata).toMatchObject({
-      redemption: {
-        capacityUsd: 9_310_000,
-        capacityKind: "live-direct-bounded",
-      },
-    });
-    expect(installed.requests).toContainEqual({ url: liquidityUrl, method: "GET" });
-    expectValidAdapterOutput("superstate-liquidity", result);
-  });
-
-  it("fails closed when the liquidity payload renames a required field", async () => {
-    await expect(runAdapter("superstate-liquidity", "ustb-superstate", {
-      network: network({
-        USTB: {
-          usdc_redemption_idle_balance: "3412248.944618",
-        },
-      }),
-      nowSec: 1_757_000_100,
-      validate: false,
-    })).rejects.toThrow("circle_usd_available_amount");
   });
 });

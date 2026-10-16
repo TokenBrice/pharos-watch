@@ -208,10 +208,6 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
 }
 
 describe("separate matched v9 invariant corpus", () => {
-  it("keeps invariant identities unique", () => {
-    expect(new Set(MATCHED_V9_INVARIANTS.map((entry) => entry.id)).size).toBe(MATCHED_V9_INVARIANTS.length);
-  });
-
   it.each(MATCHED_V9_INVARIANTS)("$id", executeInvariant);
 
   it("validates reserve-loss fact percentages before deriving a signal", () => {

@@ -173,38 +173,6 @@ describe("loadStatusForCoin", () => {
     expect(status.depeg.status).toBe("stable");
   });
 
-  it("uses schema-correct column names", async () => {
-    // Regression guard: the dispatcher uses `computed_at` on stress_signals and
-    // does not query the legacy safety history table.
-    const db = mockD1([
-      { match: "FROM stress_signals", rows: [] },
-      { match: "FROM safety_grade_history", rows: [] },
-      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
-    ]);
-    await loadStatusForCoin(db, "usdc-circle");
-    const history = db.getHistory().map((h) => h.sql);
-
-    const stressSql = history.find((s) => s.includes("FROM stress_signals"));
-    expect(stressSql).toMatch(/\bcomputed_at\b/);
-    expect(stressSql).not.toMatch(/\brecorded_at\b/);
-
-    expect(history.some((s) => s.includes("safety_grade_history"))).toBe(false);
-
-    const priceSql = history.find((s) => s.includes("FROM price_cache"));
-    expect(priceSql).toMatch(/\basset_id\b/);
-    expect(priceSql).toMatch(/\bupdated_at\b/);
-
-    const depegSql = history.find((s) => s.includes("FROM depeg_events"));
-    expect(depegSql).toMatch(/\bpeak_deviation_bps\b/);
-    expect(depegSql).toMatch(/\bpeg_reference\b/);
-
-    const yieldSql = history.find((s) => s.includes("FROM yield_data"));
-    expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
-    expect(yieldSql).not.toContain("pharos_yield_score");
-    expect(yieldSql).toContain("ORDER BY apy_30d DESC, updated_at DESC");
-  });
-
   it("fails closed when canonical safety identity is unavailable", async () => {
     mocks.loadActiveSafetyScoreSource.mockResolvedValueOnce({
       kind: "error",

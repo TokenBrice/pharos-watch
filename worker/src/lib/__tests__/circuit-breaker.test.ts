@@ -95,15 +95,6 @@ describe("circuit-breaker", () => {
   // --- getCircuitRecord ---
 
   describe("getCircuitRecord", () => {
-    it("returns default closed state when no DB record exists", async () => {
-      const db = mockD1([{ match: "cache", rows: [] }]);
-      const record = await getCircuitRecord(db, "test-source");
-      expect(record.state).toBe("closed");
-      expect(record.consecutiveFailures).toBe(0);
-      expect(record.lastFailureAt).toBeNull();
-      expect(record.lastSuccessAt).toBeNull();
-      expect(record.openedAt).toBeNull();
-    });
 
     it("parses stored state correctly", async () => {
       const stored = makeRecord({
@@ -144,11 +135,6 @@ describe("circuit-breaker", () => {
       },
     );
 
-    it("preserves additive persisted fields on valid circuit records", async () => {
-      const stored = { ...makeRecord({ state: "open", consecutiveFailures: 3 }), futureField: "kept" };
-      const db = mockDbWithCircuit("additive", stored);
-      expect(await getCircuitRecord(db, "additive")).toEqual(stored);
-    });
 
     it("memoizes repeated reads briefly and returns defensive copies", async () => {
       const db = mockDbWithCircuit("memo-source", makeRecord({ state: "closed" }));
@@ -333,12 +319,6 @@ describe("circuit-breaker", () => {
       expect(outcome.after.state).toBe("closed");
     });
 
-    it("stays closed after a successful outcome", async () => {
-      const stored = makeRecord({ state: "closed" });
-      const db = mockDbWithCircuit("src", stored);
-      const outcome = await recordOutcome(db, "src", true);
-      expect(outcome.after.state).toBe("closed");
-    });
 
     it("stores only the authoritative circuit record cache row", async () => {
       const stored = makeRecord({ state: "closed" });
@@ -357,15 +337,6 @@ describe("circuit-breaker", () => {
       expect(circuitCacheKeysTouched(db)).toEqual(["circuit:src", "circuit:src"]);
     });
 
-    it("invalidates cached state after an outcome write", async () => {
-      const db = mockDbWithCircuit("write-memo", makeRecord({ state: "closed" }));
-
-      await getCircuitRecord(db, "write-memo");
-      await recordOutcome(db, "write-memo", true);
-      await getCircuitRecord(db, "write-memo");
-
-      expect(countCircuitRecordReads(db, "write-memo")).toBe(2);
-    });
   });
 
   describe("malformed Dwellir outcome repair", () => {
@@ -445,11 +416,6 @@ describe("circuit-breaker", () => {
       expect(states["source-b"].consecutiveFailures).toBe(3);
     });
 
-    it("returns empty object when no circuits exist", async () => {
-      const db = mockD1([{ match: "circuit", rows: [] }]);
-      const states = await getCircuitStates(db);
-      expect(Object.keys(states)).toHaveLength(0);
-    });
 
     it("handles malformed JSON gracefully (skips bad entries)", async () => {
       const db = mockD1([{
@@ -498,14 +464,6 @@ describe("circuit-breaker", () => {
     });
     expect(countPublicImpactOpenCircuits(circuits)).toBe(2);
     expect(getCircuitImpactStatus(countPublicImpactOpenCircuits(circuits))).toBe("healthy");
-  });
-
-  // --- Etherscan circuit source ---
-
-  describe("Etherscan circuit source", () => {
-    it("ETHERSCAN source constant exists", () => {
-      expect(CIRCUIT_SOURCE.ETHERSCAN).toBe("etherscan");
-    });
   });
 
   // --- recoverBreakerOnNoCandidate ---

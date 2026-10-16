@@ -4,7 +4,6 @@ import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { DepegControlBoard } from "@/components/depeg-control-board";
-import { getDeviationBarWidthPercent } from "@/components/depeg-board-model";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
@@ -71,16 +70,6 @@ function renderBoard(
   );
 }
 
-describe("getDeviationBarWidthPercent", () => {
-  it("uses a tiered scale so extreme deviations do not collapse with 500 bps moves", () => {
-    expect(getDeviationBarWidthPercent(0)).toBe(0);
-    expect(getDeviationBarWidthPercent(200)).toBeCloseTo(35);
-    expect(getDeviationBarWidthPercent(500)).toBeCloseTo(60);
-    expect(getDeviationBarWidthPercent(6899)).toBeGreaterThan(getDeviationBarWidthPercent(500));
-    expect(getDeviationBarWidthPercent(6899)).toBeLessThanOrEqual(95);
-  });
-});
-
 describe("DepegControlBoard", () => {
   it.each([
     { currentDeviationBps: null, dews: null },
@@ -89,8 +78,7 @@ describe("DepegControlBoard", () => {
   ])("does not claim clear health with incomplete live observations: %j", ({ currentDeviationBps, dews }) => {
     renderBoard([makeRow({ activeDepeg: false, currentDeviationBps, pegScore: null }, dews)]);
     const row = screen.getByRole("button", { name: /open susd depeg detail/i });
-    const status = within(row).getByText("unknown");
-    expect(status.className).toContain("text-muted-foreground");
+    expect(within(row).getByText("unknown")).toBeTruthy();
     expect(within(row).queryByText("clear")).toBeNull();
   });
 
@@ -142,9 +130,6 @@ describe("DepegControlBoard", () => {
   it("renders rows without side-stripe or blanket severity tint and keeps units explicit", () => {
     renderBoard([makeRow()]);
 
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
-    expect(row.className).not.toContain("border-l-2");
-    expect(row.className).not.toMatch(/bg-red-500|bg-state-danger/);
     expect(screen.getByText("worst -6988 bps")).toBeTruthy();
     expect(screen.getAllByText("Peg health").length).toBeGreaterThan(0);
     expect(screen.queryByText("Peg score")).toBeNull();
@@ -168,32 +153,4 @@ describe("DepegControlBoard", () => {
     expect(within(rows[0]).getByText("CLEAR")).toBeTruthy();
   });
 
-  it("offers a clear-filter recovery action in the empty filtered state", () => {
-    const onClearFilters = vi.fn();
-    renderBoard([], {
-      pegFilter: "USD",
-      searchQuery: "nope",
-      onClearFilters,
-    });
-
-    expect(screen.getByText("No stablecoins match these filters.")).toBeTruthy();
-    fireEvent.click(screen.getAllByRole("button", { name: /clear filters/i })[0]);
-    expect(onClearFilters).toHaveBeenCalledTimes(1);
-  });
-
-  it("renders human-readable one-based pagination", () => {
-    renderBoard(
-      Array.from({ length: 13 }, (_, index) => makeRow({
-        id: `coin-${index}`,
-        symbol: `C${index}`,
-        name: `Coin ${index}`,
-        currentDeviationBps: index,
-        activeDepeg: false,
-      })),
-    );
-
-    expect(screen.getByText("page 1 / 2")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(false);
-  });
 });

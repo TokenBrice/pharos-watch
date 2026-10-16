@@ -92,6 +92,7 @@ describe("CHFm guarded FPMM price", () => {
     ["exhausted output limit", { outputLimits: limits(100n * 10n ** 15n) }],
     ["negative limit", { inputLimits: limits(-1n) }],
     ["malformed limits", { outputLimits: "0x" }],
+    ["int96 flow overflow even under a larger configured limit", { inputLimits: limits(1n << 100n, (1n << 95n) - 1n) }],
   ] as Array<[string, Record<string, `0x${string}`>]>) ("fails closed on %s", async (_name, overrides) => {
     pool(overrides);
     expect(await fetchMentoFpmmPrice("chfm-mento", context())).toBeNull();
@@ -136,10 +137,6 @@ describe("CHFm guarded FPMM price", () => {
   it("rejects a trusted parent already too old for the five-minute derived source", async () => {
     expect(await fetchMentoFpmmPrice("chfm-mento", context({ priceObservedAt: Math.floor(Date.now() / 1000) - 300 }))).toBeNull();
     expect(blockNumber).not.toHaveBeenCalled();
-  });
-  it("rejects int96 flow overflow even under a larger configured limit", async () => {
-    pool({ inputLimits: limits(1n << 100n, (1n << 95n) - 1n) });
-    expect(await fetchMentoFpmmPrice("chfm-mento", context())).toBeNull();
   });
   it.each(["stale", "future"])("rejects a %s block before reading pool state", async (kind) => {
     blockHeader.mockResolvedValue({ number: 77580896, timestamp: Math.floor(Date.now() / 1000) + (kind === "stale" ? -301 : 1), hash: `0x${"ab".repeat(32)}` });

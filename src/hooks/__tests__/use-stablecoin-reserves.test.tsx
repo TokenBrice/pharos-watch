@@ -15,7 +15,7 @@ vi.mock("@/lib/api", () => ({
 }));
 
 import { fetchStablecoinReserves } from "@/lib/api";
-import { useStablecoinReserves, toReserveResult } from "../use-stablecoin-reserves";
+import { useStablecoinReserves } from "../use-stablecoin-reserves";
 
 describe("useStablecoinReserves", () => {
   const fetchStablecoinReservesMock = vi.mocked(fetchStablecoinReserves);
@@ -74,21 +74,6 @@ describe("useStablecoinReserves", () => {
     expect(result.current.isFetching).toBe(true);
   });
 
-  it("projects reserve API responses from the shared endpoint shape", () => {
-    const result = toReserveResult({
-      stablecoinId: "usdc-circle",
-      reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
-      estimated: false,
-      mode: "curated-fallback",
-    });
-
-    expect(result).toEqual({
-      reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
-      estimated: false,
-      mode: "curated-fallback",
-    });
-  });
-
   it("uses long polling for live reserve responses and short polling for fallback responses", () => {
     useQueryMock.mockReturnValue({ data: null, error: null, refetch: vi.fn(), isFetching: false });
 
@@ -107,35 +92,6 @@ describe("useStablecoinReserves", () => {
     expect(options.refetchInterval({ state: { data: { mode: "live" } } })).toBe(2 * 4 * 60 * 60 * 1000);
     expect(options.staleTime({ state: { data: { mode: "curated-fallback" } } })).toBe(60 * 1000);
     expect(options.refetchInterval({ state: { data: { mode: "curated-fallback" } } })).toBe(2 * 60 * 1000);
-  });
-
-  it("uses recovery polling for live responses with active sync issues", () => {
-    useQueryMock.mockReturnValue({ data: null, error: null, refetch: vi.fn(), isFetching: false });
-
-    renderHook(() => useStablecoinReserves("usdc-circle", true));
-    const options = useQueryMock.mock.calls[0][0] as {
-      staleTime: (query: { state: { data?: { mode: string; sync?: { status: string; uncertainWrite?: boolean } } | null } }) => number;
-      refetchInterval: (query: { state: { data?: { mode: string; sync?: { status: string; uncertainWrite?: boolean } } | null } }) => number;
-    };
-
-    const degradedLive = {
-      mode: "live",
-      sync: {
-        status: "degraded",
-      },
-    };
-    const uncertainLive = {
-      mode: "live",
-      sync: {
-        status: "ok",
-        uncertainWrite: true,
-      },
-    };
-
-    expect(options.staleTime({ state: { data: degradedLive } })).toBe(60 * 1000);
-    expect(options.refetchInterval({ state: { data: degradedLive } })).toBe(2 * 60 * 1000);
-    expect(options.staleTime({ state: { data: uncertainLive } })).toBe(60 * 1000);
-    expect(options.refetchInterval({ state: { data: uncertainLive } })).toBe(2 * 60 * 1000);
   });
 
   it("passes the TanStack query abort signal to the reserve API request", async () => {

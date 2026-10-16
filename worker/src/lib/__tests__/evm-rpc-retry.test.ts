@@ -142,17 +142,6 @@ describe.each(["single", "batch", "no-batch"] as const)("physical RPC retries: %
     expect(recordCredits).toHaveBeenCalledTimes(1);
   });
 
-  it("denies a retry when the one-request guard is exhausted", async () => {
-    const fetchMock = setupFetch();
-    const beforeRequest = vi.fn().mockReturnValueOnce(true).mockReturnValue(false);
-    const pending = invoke(transport, { beforeRequest });
-    await vi.runAllTimersAsync();
-    expect(await pending).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(beforeRequest).toHaveBeenCalledTimes(2);
-    expect(recordCredits).toHaveBeenCalledTimes(1);
-  });
-
   it("admits and meters a successful retry independently", async () => {
     const fetchMock = setupFetch();
     const beforeRequest = vi.fn(() => true);

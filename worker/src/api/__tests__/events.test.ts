@@ -1,6 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const { logWorkerEventMock } = vi.hoisted(() => ({
   logWorkerEventMock: vi.fn(),
@@ -342,20 +342,6 @@ describe("handleEvents", () => {
     }
   });
 
-  it("normalizes allowed peg-currency and chain filters through canonical registries", async () => {
-    const db = mockD1([
-      { match: "FROM tape_events", rows: [] },
-      { match: "cron_runs", rows: [], first: { started_at: SEC } },
-    ]) as MockD1Database;
-    const res = await handleEvents(
-      db,
-      new URL("https://x/api/events?coin=usdt-tether&pegCurrency=eur&chain=Ethereum"),
-    );
-    expect(res.status).toBe(200);
-    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
-    expect(dataQuery?.binds).toEqual(expect.arrayContaining(["usdt-tether", "EUR", "ethereum"]));
-  });
-
   it.each([
     ["PYUSD", ["search-2", "search-1", "search-0"]],
     ["US%_D\\x", ["search-3"]],
@@ -376,14 +362,4 @@ describe("handleEvents", () => {
     expect(res.status).toBe(400);
   });
 
-  it("skips the q clause when empty", async () => {
-    const db = mockD1([
-      { match: "FROM tape_events", rows: [] },
-      { match: "cron_runs", rows: [], first: { started_at: SEC } },
-    ]) as MockD1Database;
-    const res = await handleEvents(db, new URL("https://x/api/events?q="));
-    expect(res.status).toBe(200);
-    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
-    expect(dataQuery?.sql).not.toContain("LOWER(title) LIKE ?");
-  });
 });

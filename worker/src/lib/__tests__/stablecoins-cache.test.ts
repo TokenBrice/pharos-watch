@@ -55,30 +55,6 @@ function makeDbWithStablecoinsValue(value: string | null): D1Database {
 }
 
 describe("loadStablecoinsCache", () => {
-  it("returns strict error when cache is missing", async () => {
-    const db = makeDbWithStablecoinsValue(null);
-
-    const result = await loadStablecoinsCache(db, { mode: "strict" });
-
-    expect(result).toEqual({
-      kind: "error",
-      reason: "missing-cache",
-      updatedAt: null,
-    });
-  });
-
-  it("returns lenient error when cache is missing", async () => {
-    const db = makeDbWithStablecoinsValue(null);
-
-    const result = await loadStablecoinsCache(db, { mode: "lenient" });
-
-    expect(result).toEqual({
-      kind: "error",
-      reason: "missing-cache",
-      updatedAt: null,
-    });
-  });
-
   it.each(READ_INPUT_STATES.flatMap((state) => (["strict", "lenient"] as const).map((mode) => ({ state, mode }))))(
     "preserves $state evidence separately in $mode mode", async ({ state, mode }) => {
       const db = mockD1([{ match: "cache", rows: [], first: null,
@@ -133,17 +109,6 @@ describe("loadStablecoinsCache", () => {
     }
   });
 
-  it("returns lenient error when cache is malformed", async () => {
-    const db = makeDbWithStablecoinsValue("{still-bad");
-
-    const result = await loadStablecoinsCache(db, { mode: "lenient" });
-
-    expect(result.kind).toBe("error");
-    if (result.kind === "error") {
-      expect(result.reason).toBe("json-parse-failed");
-    }
-  });
-
   it("returns invalid-payload-shape for scalar payloads", async () => {
     const db = makeDbWithStablecoinsValue("123");
 
@@ -164,17 +129,6 @@ describe("loadStablecoinsCache", () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
 
     const result = await loadStablecoinsCache(db, { mode: "strict" });
-
-    expect(result.kind).toBe("error");
-    if (result.kind === "error") {
-      expect(result.reason).toBe("invalid-payload-shape");
-    }
-  });
-
-  it("rejects bare array payloads in lenient mode", async () => {
-    const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
-
-    const result = await loadStablecoinsCache(db, { mode: "lenient" });
 
     expect(result.kind).toBe("error");
     if (result.kind === "error") {

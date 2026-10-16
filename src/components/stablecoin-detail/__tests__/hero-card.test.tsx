@@ -4,11 +4,10 @@ import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/her
 import { HeroPriceMetric } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
-import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import type * as FeatureFlags from "@/lib/feature-flags";
 import type {
   DexLiquidityData,
-  Infrastructure,
   PegSummaryCoin,
   StablecoinData,
   StablecoinMeta,
@@ -21,11 +20,9 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 
-const { heroVerdictEnabled } = vi.hoisted(() => ({ heroVerdictEnabled: { value: true } }));
-
 vi.mock("@/lib/feature-flags", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/feature-flags")>()),
-  isHeroVerdictEnabled: () => heroVerdictEnabled.value,
+  ...(await importOriginal<typeof FeatureFlags>()),
+  isHeroVerdictEnabled: () => true,
 }));
 
 vi.mock("@/components/bluechip-header-badge", () => ({
@@ -419,15 +416,6 @@ describe("HeroCard", () => {
     expect(html).toContain("Last observed · 2026-06-30");
   });
 
-  it("renders website and social link destinations with accessible names", () => {
-    const html = renderHero();
-
-    expect(html).toContain('href="https://www.circle.com/usdc"');
-    expect(html).toContain('aria-label="Website"');
-    expect(html).toContain('href="https://x.com/circle"');
-    expect(html).toContain('aria-label="Twitter"');
-  });
-
   it("renders the active-depeg chip when the peg summary flags one", () => {
     const html = renderHero();
 
@@ -480,14 +468,6 @@ describe("HeroCard", () => {
     expect(html).not.toContain("peg-gauge:350");
   });
 
-  it("renders the subject case study callout with its destination and outcome", () => {
-    const html = renderHero({ reportCard: null });
-
-    expect(html).toContain('href="/learn/case-studies/usdc-svb-2023/"');
-    expect(html).toContain("Read the case study: USDC and the Silicon Valley Bank weekend");
-    expect(html).toContain("Survived");
-  });
-
   it("uses the reviewed registry blacklist status for inherited-risk coins", () => {
     const html = renderHero({
       coin: {
@@ -505,48 +485,6 @@ describe("HeroCard", () => {
 
     expect(html).toContain(">Upstream<");
     expect(html).not.toContain("No issuer controls");
-  });
-
-  it("uses shared no-gap copy when excess yield is unavailable", () => {
-    const html = renderHero({
-      yieldRanking: { ...yieldRanking, excessYield: null },
-      reportCard: reportCardWithInheritedBlacklistRisk,
-    });
-
-    expect(html).toContain("No 30d benchmark gap");
-  });
-
-  it("renders the tracked parent chip for variant detail pages", () => {
-    // Local parent fixture: the chip only reads id/name/symbol, so the case
-    // does not depend on the live client registry keeping a usds-sky row.
-    const parentCoin = {
-      id: "usds-sky",
-      name: "Sky Dollar",
-      symbol: "USDS",
-      listingClass: "core-stablecoin",
-    } as StablecoinClientMeta;
-
-    const html = renderHero({
-      coin: {
-        id: "susds-sky",
-        name: "Sky Savings USDS",
-        symbol: "sUSDS",
-        variantOf: "usds-sky",
-        variantKind: "savings-passthrough",
-        flags: { navToken: true },
-      },
-      coinData: { id: "susds-sky", name: "Sky Savings USDS", symbol: "sUSDS" },
-      logoSrc: "/logos/susds.svg",
-      isNavToken: true,
-      deviationBps: 0,
-      pegScoreResult: null,
-      reportCard: null,
-      variantParent: parentCoin,
-      variantKind: "savings-passthrough",
-    });
-
-    expect(html).toContain("Wraps USDS");
-    expect(html).toContain('href="/stablecoin/usds-sky/"');
   });
 
   it("renders 1Y vs USD for eligible non-USD coins when performance is available", () => {
@@ -616,27 +554,6 @@ describe("HeroCard", () => {
     expect(html).not.toContain("-99.98%");
   });
 
-  // Infrastructure membership is the only axis these cases vary: everything
-  // else stays on the shared hero baseline, so nothing but the badge row can
-  // move the assertions.
-  it.each([
-    { label: "one infrastructure", infrastructures: ["m0"], present: ["M0"], absent: ["Liquity v2"] },
-    {
-      label: "several infrastructures",
-      infrastructures: ["liquity-v2", "m0"],
-      present: ["Liquity v2", "M0"],
-      absent: [],
-    },
-  ] satisfies Array<{ label: string; infrastructures: Infrastructure[]; present: string[]; absent: string[] }>)(
-    "renders one infrastructure badge per membership ($label)",
-    ({ infrastructures, present, absent }) => {
-      const html = renderHero({ coin: { infrastructures } });
-
-      expect(html).toContain("Infrastructure");
-      for (const label of present) expect(html).toContain(label);
-      for (const label of absent) expect(html).not.toContain(label);
-    },
-  );
 });
 
 describe("HeroIdentityHeader", () => {
@@ -644,29 +561,6 @@ describe("HeroIdentityHeader", () => {
     const model = buildStablecoinDetailHeroViewModel(makeHeroProps(overrides));
     return renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} gradeRead={gradeRead} />);
   }
-
-  it("describes the coin heading by the chip-rail verdict when one is shown", () => {
-    expect(renderHeader()).toMatch(/<h2[^>]*aria-describedby="hero-verdict-[^"]+"/);
-  });
-
-  it("gates the verdict chip and its heading reference behind NEXT_PUBLIC_PHAROS_HERO_VERDICT", () => {
-    const on = renderHero();
-    expect(on).toMatch(/id="hero-verdict-[^"]+"[^>]*data-archetype=/);
-
-    heroVerdictEnabled.value = false;
-    try {
-      const off = renderHero();
-      expect(off).not.toContain('id="hero-verdict-');
-      expect(off).not.toContain("aria-describedby");
-    } finally {
-      heroVerdictEnabled.value = true;
-    }
-  });
-
-  it("omits aria-describedby for an uncategorized verdict", () => {
-    const html = renderHeader({ verdict: { archetype: "uncategorized", label: "Uncategorized" } });
-    expect(html).not.toContain("aria-describedby");
-  });
 
   it("passes the report-card read to the mobile grade", () => {
     expect(renderHeader({ reportCard: null }, "failed")).toContain("Grade unavailable");

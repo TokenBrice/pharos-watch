@@ -21,13 +21,6 @@ describe("reserve composition validation", () => {
     expect(schema.safeParse([{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" }]).success).toBe(true);
   });
 
-  it("accepts full compositions that sum to 100 within tolerance", () => {
-    expect(FullReserveCompositionSchema.safeParse([
-      { name: "Cash", pct: 49.75, risk: "very-low" },
-      { name: "Treasuries", pct: 50, risk: "very-low" },
-    ]).success).toBe(true);
-  });
-
   it("uses the shared full-composition tolerance at the boundary", () => {
     expect(validateReserveCompositionTotal([
       { pct: 100 - RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT },

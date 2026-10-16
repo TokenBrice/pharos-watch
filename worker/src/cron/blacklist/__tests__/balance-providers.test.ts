@@ -141,23 +141,6 @@ describe("fetchEvmTokenCurrentBalance", () => {
 
     expect(amount).toBe(50);
   });
-
-  it("selects dRPC before configured chain RPC and Etherscan for current balances", async () => {
-    const fetchMock = mockFetch([
-      { match: "drpc.org", body: { result: "0x0f4240" } },
-      { match: "chain-rpc.test", body: { result: "0x1e8480" } },
-      { match: "etherscan.io", body: { result: "0x2dc6c0" } },
-    ], { requireMatch: true });
-    const amount = await fetchEvmTokenCurrentBalance(
-      ethereumConfig, "0x0000000000000000000000000000000000000abc",
-      "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10), undefined,
-      chainRpcFixture(["https://chain-rpc.test"]),
-    );
-    expect(amount).toBe(1);
-    expect(fetchMock.getHistory()).toHaveLength(1);
-    expect(fetchMock.getHistory()[0].url).toContain("drpc.org");
-    expect(JSON.parse(fetchMock.getHistory()[0].body!).params[1]).toBe("latest");
-  });
 });
 
 describe("fetchEvmTokenBalance", () => {

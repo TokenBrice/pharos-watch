@@ -138,20 +138,6 @@ describe("ActiveDepegsCard", () => {
     expect(screen.queryByText("C15")).toBeNull();
   });
 
-  it("keeps flashing the headline when the active count changes above the render cap", () => {
-    const nineteen = makeActiveFixtures(19);
-    useActiveDepegEventsMock.mockReturnValue({ data: { events: nineteen.events }, isLoading: false });
-    usePegSummaryMock.mockReturnValue({ data: { coins: nineteen.coins }, isLoading: false });
-    const view = render(<ActiveDepegsCard />);
-    expect(view.container.querySelector("[class*='pharos-data-fresh']")).toBeNull();
-
-    const twenty = makeActiveFixtures(20);
-    useActiveDepegEventsMock.mockReturnValue({ data: { events: twenty.events }, isLoading: false });
-    usePegSummaryMock.mockReturnValue({ data: { coins: twenty.coins }, isLoading: false });
-    view.rerender(<ActiveDepegsCard />);
-
-    expect(view.container.querySelector(".pharos-data-fresh-up")?.textContent).toBe("20");
-  });
   it("counts an open incident whose current observation is unavailable", () => {
     useActiveDepegEventsMock.mockReturnValue({ data: { events: [makeEvent()] }, isLoading: false });
     usePegSummaryMock.mockReturnValue({

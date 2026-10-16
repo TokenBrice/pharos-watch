@@ -2,10 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   ReportCardEvidenceJournalByIdV1Schema,
   ReportCardEvidenceJournalV1Schema,
-  ReserveEvidenceAdmissionCodeSchema,
-  ReserveEvidenceAttemptCodeSchema,
-  ReserveEvidenceFallbackCodeSchema,
-  ReserveEvidenceSourceOriginClassSchema,
   createReportCardEvidenceJournalV1,
   type ReportCardEvidenceJournalV1Payload,
 } from "../report-card-evidence-journal";
@@ -39,22 +35,6 @@ function payload(
 }
 
 describe("report-card evidence journal runtime", () => {
-  it.each([
-    [ReserveEvidenceAttemptCodeSchema, "reserve.collector."],
-    [ReserveEvidenceAdmissionCodeSchema, "reserve.admission."],
-    [ReserveEvidenceFallbackCodeSchema, "reserve.fallback."],
-  ])("keeps each reserve outcome vocabulary non-empty, unique, and namespaced", (schema, prefix) => {
-    expect(schema.options.length).toBeGreaterThan(0);
-    expect(new Set(schema.options).size).toBe(schema.options.length);
-    expect(schema.options.every((option) => option.startsWith(prefix))).toBe(true);
-  });
-
-  it("keeps reserve source-origin values non-empty and unique", () => {
-    expect(ReserveEvidenceSourceOriginClassSchema.options.length).toBeGreaterThan(0);
-    expect(new Set(ReserveEvidenceSourceOriginClassSchema.options).size)
-      .toBe(ReserveEvidenceSourceOriginClassSchema.options.length);
-  });
-
   it("canonicalizes asset and reserve-attempt ordering", () => {
     const alphaOld = createReportCardEvidenceJournalV1(payload("alpha", "attempt:old", 100));
     const alphaNew = createReportCardEvidenceJournalV1(payload("alpha", "attempt:new", 200));

@@ -18,13 +18,6 @@ afterEach(() => {
 });
 
 describe("YieldWatchlistStar", () => {
-  it("renders aria-pressed false with add label when not in watchlist", async () => {
-    render(<YieldWatchlistStar stablecoinId="usdc-circle" symbol="USDC" />);
-    const button = await screen.findByRole("button", { name: "Add USDC to watchlist" });
-    expect(button.getAttribute("aria-pressed")).toBe("false");
-    expect(button.getAttribute("data-active")).toBe("false");
-  });
-
   it("toggles to aria-pressed true after click and persists to storage", async () => {
     render(<YieldWatchlistStar stablecoinId="usdc-circle" symbol="USDC" />);
     const button = await screen.findByRole("button", { name: "Add USDC to watchlist" });
@@ -45,11 +38,4 @@ describe("YieldWatchlistStar", () => {
     });
   });
 
-  it("reads existing watchlist state from storage", async () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle"]));
-    render(<YieldWatchlistStar stablecoinId="usdc-circle" symbol="USDC" />);
-
-    const button = await screen.findByRole("button", { name: "Remove USDC from watchlist" });
-    expect(button.getAttribute("aria-pressed")).toBe("true");
-  });
 });

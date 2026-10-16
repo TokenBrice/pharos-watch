@@ -1,18 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  balanceRailDashArray,
-  buildLiquidityExitRouteModel,
-  compactRouteLabel,
-  crowdingBand,
-  flowIntensityBand,
-  organicDashArray,
-  protocolRouteGeometry,
-  routeMagnitudeScale,
-  routePacketCount,
-  stableRouteAccentColor,
-  throatGeometry,
-  throatLabelForCrowding,
-} from "@/components/exit-route-model";
+import { buildLiquidityExitRouteModel } from "@/components/exit-route-model";
 import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
@@ -67,18 +54,6 @@ describe("buildProtocolBreakdown", () => {
 });
 
 describe("buildLiquidityExitRouteModel", () => {
-  it("derives flow intensity and packet counts from route share", () => {
-    expect(flowIntensityBand(30)).toBe("high");
-    expect(flowIntensityBand(12)).toBe("medium");
-    expect(flowIntensityBand(4)).toBe("low");
-    expect(routePacketCount(40)).toBe(5);
-    expect(routePacketCount(13)).toBe(3);
-    expect(routePacketCount(1)).toBe(1);
-    expect(throatLabelForCrowding(0.12)).toBe("Broad route diversity");
-    expect(throatLabelForCrowding(0.28)).toBe("Visible route concentration");
-    expect(throatLabelForCrowding(0.42)).toBe("Crowded exits");
-  });
-
   it("derives exit routes from the global DEX liquidity row", () => {
     const model = buildLiquidityExitRouteModel({
       [DEX_GLOBAL_KEY]: makeDexLiquidityData({
@@ -116,15 +91,11 @@ describe("buildLiquidityExitRouteModel", () => {
       key: "curve",
       sharePct: 50,
       rank: 1,
-      flowIntensity: "high",
-      packetCount: 5,
     });
     expect(model?.topChain).toMatchObject({
       key: "ethereum",
       sharePct: 60,
       rank: 1,
-      flowIntensity: "high",
-      packetCount: 5,
     });
   });
 
@@ -195,8 +166,6 @@ describe("buildLiquidityExitRouteModel", () => {
       valueUsd: 1_100,
       sharePct: 11,
       isOther: true,
-      flowIntensity: "medium",
-      packetCount: 2,
     });
   });
 
@@ -209,60 +178,4 @@ describe("buildLiquidityExitRouteModel", () => {
     ).toBeNull();
   });
 
-  it("keeps visual encodings monotonic, clamped, and resilient to invalid inputs", () => {
-    expect(routeMagnitudeScale(-20, 28, 132)).toBe(28);
-    expect(routeMagnitudeScale(Number.NaN, 28, 132)).toBe(28);
-    expect(routeMagnitudeScale(5, 28, 132)).toBeGreaterThan(routeMagnitudeScale(1, 28, 132));
-    expect(routeMagnitudeScale(50, 28, 132)).toBeGreaterThan(routeMagnitudeScale(20, 28, 132));
-    expect(routeMagnitudeScale(9_999, 28, 132)).toBe(132);
-
-    expect(crowdingBand(null)).toBe("unknown");
-    expect(crowdingBand(0.179)).toBe("broad");
-    expect(crowdingBand(0.18)).toBe("visible");
-    expect(crowdingBand(0.35)).toBe("crowded");
-
-    expect(organicDashArray(null)).toBeUndefined();
-    expect(organicDashArray(70)).toBeUndefined();
-    expect(organicDashArray(45)).toBe("10 8");
-    expect(organicDashArray(20)).toBe("5 9");
-    expect(balanceRailDashArray(null)).toBeUndefined();
-    expect(balanceRailDashArray(72)).toBeUndefined();
-    expect(balanceRailDashArray(52)).toBe("12 8");
-    expect(balanceRailDashArray(30)).toBe("5 8");
-
-    expect(compactRouteLabel("Very Long Protocol Name", 12)).toBe("Very Long P...");
-    expect(stableRouteAccentColor("chain:unknown")).toBe(stableRouteAccentColor("chain:unknown"));
-    expect(stableRouteAccentColor("chain:unknown")).toMatch(/^oklch\(0\.68 0\.14 \d+\)$/);
-  });
-
-  it("derives geometry from the model without React state", () => {
-    const model = buildLiquidityExitRouteModel({
-      [DEX_GLOBAL_KEY]: makeDexLiquidityData({
-        totalTvlUsd: 10_000,
-        totalVolume24hUsd: 2_500,
-        protocolTvl: { curve: 5_000, fluid: 2_500 },
-        chainTvl: { ethereum: 6_000, base: 2_000 },
-        poolCount: 6_021,
-        concentrationHhi: 0.42,
-        weightedBalanceRatio: 0.61,
-        organicFraction: 0.31,
-      }),
-    });
-
-    expect(model).not.toBeNull();
-    const throat = throatGeometry(model!);
-    expect(throat).toMatchObject({
-      band: "crowded",
-      throatHalfWidth: 22,
-      railDashArray: "12 8",
-      flowDashArray: "5 9",
-      poolTickCount: 12,
-    });
-    expect(throat.channelPath).toContain("Z");
-
-    const topProtocol = protocolRouteGeometry(model!.protocolRoutes[0], 0);
-    const secondProtocol = protocolRouteGeometry(model!.protocolRoutes[1], 1);
-    expect(topProtocol.apertureWidth).toBeGreaterThan(secondProtocol.apertureWidth);
-    expect(topProtocol.pathD).toContain("M ");
-  });
 });

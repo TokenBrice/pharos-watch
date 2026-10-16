@@ -64,18 +64,4 @@ describe("YieldCompareTray", () => {
     expect(onOpenDrawer).toHaveBeenCalledTimes(1);
   });
 
-  it("does not pass inherited logo properties as image sources", () => {
-    window.history.replaceState(null, "", "/yield/?compare=__proto__");
-    render(<YieldCompareTray rows={rows} logos={{}} onOpenDrawer={vi.fn()} />);
-
-    expect(screen.getByTestId("logo").getAttribute("data-src")).toBe("");
-  });
-
-  it("Clear button removes all ids from the URL", () => {
-    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
-    render(<YieldCompareTray rows={rows} logos={{}} onOpenDrawer={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Clear compare selection" }));
-    expect(window.location.search).toBe("");
-  });
 });

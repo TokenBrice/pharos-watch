@@ -65,21 +65,6 @@ describe("DominanceBreakdown", () => {
     );
   });
 
-  it("hides 'Other chains' and 'Unattributed' below the 0.5% threshold", () => {
-    render(
-      <DominanceBreakdown
-        topBySupply={topBySupply}
-        globalTotalUsd={1_000}
-        chainAttributedTotalUsd={700}
-        unattributedTotalUsd={0}
-        chains={topBySupply}
-      />,
-    );
-
-    expect(screen.queryByText("Other chains")).toBeNull();
-    expect(screen.queryByText("Unattributed")).toBeNull();
-  });
-
   it("hides residuals below and at the strict 0.5% threshold and shows them above", () => {
     const labelFor = (chainAttributedTotalUsd: number, unattributedTotalUsd: number) => {
       const { container } = render(

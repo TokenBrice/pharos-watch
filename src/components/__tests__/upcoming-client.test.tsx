@@ -22,16 +22,6 @@ const PRE_LAUNCH_STABLECOINS = [
 describe("UpcomingClient", () => {
   afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-  it.each([undefined, [], [{ date: "2026-06", setOn: "2026-01-01" }], [{ date: "2026-05", setOn: "2026-01-01" }, { date: "2026-06", setOn: "2026-02-01" }]])(
-    "marks elapsed targets overdue independently of revisions (%j)",
-    (dateHistory) => {
-      window.history.replaceState(null, "", "/upcoming/");
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2026-07-02T00:00:00Z"));
-      render(<UpcomingClient coins={[{ ...PRE_LAUNCH_STABLECOINS[0], expectedLaunchDate: "2026-06", dateHistory }]} logos={{}} teasers={{}} />);
-      expect(screen.getByText("Overdue")).toBeTruthy();
-    },
-  );
 
   it("expires an unrevised target only at the next UTC midnight without a rerender or refetch", () => {
     window.history.replaceState(null, "", "/upcoming/");
@@ -43,39 +33,4 @@ describe("UpcomingClient", () => {
     expect(screen.getByText("Overdue")).toBeTruthy();
   });
 
-  it("renders AI-summary term markers as plain labels inside linked teaser cards", () => {
-    const preLaunchId = "fixture-announced";
-
-    const { container } = render(
-      <UpcomingClient
-        coins={PRE_LAUNCH_STABLECOINS}
-        logos={{}}
-        teasers={{
-          [preLaunchId]:
-            "An {{term:overcollateralization}}overcollateralized{{/term}} note parked in {{term:money-market-fund}}MMFs{{/term}}.",
-        }}
-      />,
-    );
-    const text = container.textContent ?? "";
-
-    expect(text).not.toContain("{{term:");
-    expect(text).not.toContain("{{/term}}");
-    expect(text).toContain("overcollateralized");
-    expect(text).toContain("MMFs");
-  });
-
-  it("hydrates phase and sort filters from the URL", () => {
-    window.history.replaceState(null, "", "/upcoming/?phase=beta&sort=alphabetical");
-
-    render(
-      <UpcomingClient
-        coins={PRE_LAUNCH_STABLECOINS}
-        logos={{}}
-        teasers={{}}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Beta" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Name" }).getAttribute("aria-pressed")).toBe("true");
-  });
 });

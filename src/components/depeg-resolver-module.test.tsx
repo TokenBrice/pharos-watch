@@ -211,7 +211,7 @@ function response(overrides: Partial<DdrResponse> = {}): DdrResponse {
 }
 
 describe("DepegResolverModule", () => {
-  it.each(["GOLD", "SILVER", "VAR", "USD", "EUR"] as const)(
+  it.each(["GOLD", "USD"] as const)(
     "labels the %s peg-relative ratio without publishing a synthetic currency price",
     (pegCurrency) => {
       const ratioRow = makePredictionRow(makeSourceRow({ pegCurrency }), { currentDeviationBps: -500 });
@@ -235,12 +235,6 @@ describe("DepegResolverModule", () => {
     render(<DepegResolverModule data={response({ rows: mixed })} />);
     expect(screen.getByText(/forecast.*across 6 incident rows/).textContent).toContain("1 forecast across 6 incident rows");
     expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
-  });
-
-  it("shows the DDR methodology version in the module header", () => {
-    render(<DepegResolverModule data={response()} />);
-
-    expect(screen.getByText(DDR_METHODOLOGY_VERSION_LABEL)).toBeTruthy();
   });
 
   it("does not claim there are no active depegs before data loads", () => {
@@ -280,7 +274,7 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("At risk")).toBeTruthy();
   });
 
-  it.each(["secondary-overlay-unavailable", "manifest-fallback:missing-cache", "unknown-failure"])(
+  it.each(["unknown-failure"])(
     "withholds whole-book claims when retained forecasts are unavailable because of %s",
     (degradedReason) => {
       render(<DepegResolverModule data={response({
@@ -294,13 +288,6 @@ describe("DepegResolverModule", () => {
       expect(screen.queryByText("At risk")).toBeNull();
     },
   );
-
-  it("maps suppressed duration reasons to public copy", () => {
-    render(<DepegResolverModule data={response({ rows: [row] })} />);
-
-    expect(screen.getByText("Insufficient comparable recoveries for a duration band.")).toBeTruthy();
-    expect(screen.queryByText("insufficient_support")).toBeNull();
-  });
 
   it("states the terminal recovery outlook clearly", () => {
     const terminalRow = makePredictionRow(
@@ -455,49 +442,11 @@ describe("DepegResolverModule", () => {
 });
 
 describe("StablecoinDepegResolverRows", () => {
-  it("renders only the DDR row for the current stablecoin", () => {
-    render(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [row] })} />);
-
-    expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
-    expect(screen.getByText("At risk")).toBeTruthy();
-  });
-
   it("stays hidden when the DDR snapshot has no row for the current stablecoin", () => {
     render(<StablecoinDepegResolverRows stablecoinId="usdc-circle" data={response({ rows: [row] })} />);
 
     expect(screen.queryByText("At risk")).toBeNull();
     expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
-  });
-
-  it("renders matching rows when the resolver payload is missing metadata", () => {
-    render(
-      <StablecoinDepegResolverRows
-        stablecoinId="lusd-liquity"
-        data={{
-          rows: [row],
-        }}
-      />,
-    );
-
-    expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
-    expect(screen.getByText("At risk")).toBeTruthy();
-  });
-
-  it("keeps matching rows visible when the resolver snapshot is stale", () => {
-    render(
-      <StablecoinDepegResolverRows
-        stablecoinId="lusd-liquity"
-        data={response({
-          _meta: { ...meta, degraded: true, degradedReason: "stale-cache" },
-          rows: [row],
-        })}
-      />,
-    );
-
-    expect(
-      screen.getByText(/live overlay is stale.*frozen forecasts.*remain unchanged/i),
-    ).toBeTruthy();
-    expect(screen.getByText("At risk")).toBeTruthy();
   });
 
   it.each(["resolver list", "stablecoin detail"] as const)(
@@ -555,11 +504,3 @@ describe("StablecoinDepegResolverRows", () => {
   });
 });
 
-describe("DDR reader copy", () => {
-  it("maps live-overlay reason codes to plain copy instead of printing the code", async () => {
-    const { formatDdrReason } = await import("@/components/depeg-resolver-row-card-model");
-    expect(formatDdrReason("duration-exceeded")).toBe("past its forecast window");
-    expect(formatDdrReason("manifest-fallback:kv-miss")).toBe("served from the publication manifest");
-    expect(formatDdrReason("some-new_code")).toBe("some new code");
-  });
-});

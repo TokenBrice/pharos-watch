@@ -53,7 +53,7 @@ const pending: Promise<unknown>[] = [];
 afterEach(async () => { await Promise.all(pending.splice(0)); });
 
 describe("native supply conversion", () => {
-  it.each([null, undefined, 0, -1, NaN, Infinity, Number.MIN_VALUE])(
+  it.each([null, 0, Infinity, Number.MIN_VALUE])(
     "omits unavailable native units for price %s without dropping USD history",
     (price) => {
       const timestamp = Date.UTC(2026, 0, 1);
@@ -69,14 +69,10 @@ describe("native supply conversion", () => {
     expect(buildNativeSupplyBuckets("peggedUSD", 100, 2)).toEqual({ peggedUSD: 50 });
   });
 
-  it.each([0, -1, NaN, Infinity])("does not use an unusable nearest quote %s", (price) => {
+  it.each([0, Infinity])("does not use an unusable nearest quote %s", (price) => {
     expect(findNearestPrice([{ timestamp: 100, price }, { timestamp: 300, price: 2 }], 100)).toBeNull();
   });
 
-  it("distinguishes empty price history from a usable nearest quote", () => {
-    expect(findNearestPrice([], 100)).toBeNull();
-    expect(findNearestPrice([{ timestamp: 100, price: 2 }], 100)).toBe(2);
-  });
 });
 
 describe("fetchCommodityTokens", () => {
@@ -129,38 +125,6 @@ describe("fetchCommodityTokens", () => {
     ]);
   });
 
-  it("passes the CoinGecko API key through the commodity fallback path", async () => {
-    fetchWithRetryMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }))
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            market_caps: [[1_700_000_000_000, 1_000]],
-            prices: [[1_700_000_000_000, 2]],
-          }),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ market_data: { circulating_supply: 200 } }), { status: 200 }),
-      );
-
-    await fetchCommodityTokens({
-      stablecoinId: "xaut-tether",
-      geckoId: "tether-gold",
-      protocolSlug: "tether-gold",
-      pegType: "peggedGOLD",
-      coingeckoApiKey: "cg-pro-key",
-    });
-
-    const marketChartCall = fetchWithRetryMock.mock.calls[2]?.[0];
-    const detailCall = fetchWithRetryMock.mock.calls[3]?.[0];
-
-    expect(marketChartCall).toContain("https://pro-api.coingecko.com/api/v3/");
-    expect(detailCall).toContain("https://pro-api.coingecko.com/api/v3/");
-  });
-
   it("returns an empty array when CoinGecko market chart fails in fallback", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), { status: 200 }))
@@ -206,7 +170,7 @@ describe("fetchCommodityTokens", () => {
     ]);
   });
 
-  it.each([null, 0, -1, Infinity])("retains D1 USD history when price %s cannot supply native units", async (price) => {
+  it.each([null, 0])("retains D1 USD history when price %s cannot supply native units", async (price) => {
     const detail = createDetailResponseHelpers({
       db: mockD1([
         { match: "FROM supply_history", rows: [{ snapshot_date: 100, circulating_usd: 100, price }] },

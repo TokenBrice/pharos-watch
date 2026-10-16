@@ -25,18 +25,6 @@ function archetypeOf(overrides: Partial<VerdictInputs>): StablecoinVerdictArchet
 }
 
 describe("deriveStablecoinVerdict — rule precedence", () => {
-  it("returns pre-launch when status is pre-launch", () => {
-    const verdict = deriveStablecoinVerdict(inputs({ status: "pre-launch" }));
-    expect(verdict.archetype).toBe("pre-launch");
-    expect(verdict.label).toBe("Pre-launch");
-  });
-
-  it("returns frozen-archive when status is frozen", () => {
-    const verdict = deriveStablecoinVerdict(inputs({ status: "frozen" }));
-    expect(verdict.archetype).toBe("frozen-archive");
-    expect(verdict.label).toBe("Frozen Archive");
-  });
-
   it.each([
     ["quarantined", "quarantined-record", "Quarantined Record"],
     ["delisted", "delisted-record", "Delisted Record"],
@@ -210,15 +198,6 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
       governance: "centralized",
     });
     expect(archetype).toBe("uncategorized");
-  });
-
-  it("returns institutional-default for centralized fiat-cash with passing grade", () => {
-    const archetype = archetypeOf({
-      mechanismArchetype: "fiat-cash",
-      governance: "centralized",
-      reportCardGrade: "A",
-    });
-    expect(archetype).toBe("institutional-default");
   });
 
   it.each([

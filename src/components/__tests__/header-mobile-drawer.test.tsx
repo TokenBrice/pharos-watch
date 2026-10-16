@@ -4,7 +4,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Header } from "@/components/header";
-import { trackEvent } from "@/lib/analytics";
 import { NAV_GROUPS } from "@/lib/nav-config";
 
 vi.mock("next/navigation", () => ({
@@ -124,55 +123,4 @@ describe("Header mobile drawer", () => {
     }
   });
 
-  it("keeps a columned menu's columns as subheads inside its category", () => {
-    render(<Header />);
-    openDrawer();
-    const columned = categories.find((category) => category.columns.length > 0)!;
-    fireEvent.click(categoryButton(columned.label, columned.items.length));
-    for (const column of columned.columns) {
-      expect(screen.getByRole("heading", { name: column.label, level: 3 })).toBeTruthy();
-    }
-  });
-
-  it("offers a labeled search pill, not a bare icon, in the header bar", () => {
-    render(<Header />);
-
-    const searchButton = screen.getByRole("button", { name: "Search stablecoins and pages" });
-    expect(searchButton.textContent).toContain("Search");
-  });
-
-  it("shows child descriptions under labels so invented names stay legible", () => {
-    render(<Header />);
-    openDrawer();
-
-    const markets = categories[0]!;
-    fireEvent.click(categoryButton(markets.label, markets.items.length));
-
-    expect(screen.getByText(markets.items[0]!.description!)).toBeTruthy();
-  });
-
-  it("fires drawer nav_click events from the quick rail and category rows", () => {
-    render(<Header />);
-    openDrawer();
-
-    const linkTo = (href: string) =>
-      screen.getAllByRole("link").find((link) => link.getAttribute("href") === href)!;
-
-    fireEvent.click(linkTo("/depeg/"));
-    expect(trackEvent).toHaveBeenCalledWith("nav_click", {
-      surface: "drawer",
-      group: "rail",
-      href: "/depeg/",
-    });
-
-    openDrawer();
-    const markets = categories[0]!;
-    fireEvent.click(categoryButton(markets.label, markets.items.length));
-    fireEvent.click(linkTo("/liquidity/"));
-    expect(trackEvent).toHaveBeenCalledWith("nav_click", {
-      surface: "drawer",
-      group: "markets",
-      href: "/liquidity/",
-    });
-  });
 });

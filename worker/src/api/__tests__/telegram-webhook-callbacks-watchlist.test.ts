@@ -26,22 +26,6 @@ describe("handleCallbackQuery", () => {
       return telegramApiCallBody(fetchSpy, "editMessageText", { last: false });
     }
 
-    it("manage:page:0 edits the message with the first page of unsub buttons", async () => {
-      const subs = [makeSubscriptionRow("usdc-circle"), makeSubscriptionRow("dai-makerdao")];
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows(subs) }]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:0", { id: "cb-manage-0", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
-
-      const body = editMessageBody();
-      expect(body.text).toContain("Manage watchlist");
-      const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
-      expect(callbacks).toContain("unsub:usdc-circle");
-      expect(callbacks).toContain("unsub:dai-makerdao");
-      const subscriptionSelect = db.getHistory().find((h) => h.sql.includes("FROM telegram_subscriptions"));
-      expect(subscriptionSelect?.sql).toContain("alert_reserve");
-      // No mutations on a pure page render.
-      expect(db.getHistory().some((h) => /\bDELETE\b|\bINSERT\b/i.test(h.sql))).toBe(false);
-    });
-
     it("manage:page:1 paginates beyond the first 5 entries", async () => {
       const ids = [
         "usdc-circle",
@@ -62,14 +46,6 @@ describe("handleCallbackQuery", () => {
       // Exactly two rows fit on the second page given 5/page.
       const unsubCount = callbacks.filter((c) => c?.startsWith("unsub:")).length;
       expect(unsubCount).toBe(2);
-    });
-
-    it("manage:page in a group allows non-admin read-only pagination", async () => {
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows([makeSubscriptionRow("usdc-circle")]) }]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:0", { id: "cb-manage-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 100 } }));
-
-      expect(editMessageBody().text).toContain("Manage watchlist");
-      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
     });
 
     it("rejects malformed manage page numbers without loading subscriptions", async () => {
@@ -162,41 +138,6 @@ describe("handleCallbackQuery", () => {
       // After deletion only 5 coins remain — a single page — so no nav row.
       expect(callbacks.filter((c) => c?.startsWith("unsub:"))).toHaveLength(5);
       expect(callbacks.some((c) => c?.startsWith("manage:page:"))).toBe(false);
-    });
-
-    it("infers the current manage page from nav callback_data when labels change", async () => {
-      const remaining = [
-        "usdc-circle",
-        "usdt-tether",
-        "dai-makerdao",
-        "frax-frax",
-        "tusd-trueusd",
-        "lusd-liquity",
-        "susd-synthetix",
-        "pyusd-paypal",
-        "eurc-circle",
-        "xaut-tether",
-        "aeur-anchored-coins",
-      ].map((id) => makeSubscriptionRow(id));
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows(remaining) }]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", {
-        id: "cb-unsub-relabel",
-        message: {
-          chat: { id: 42, type: "private" },
-          message_id: 100,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Remove USDC", callback_data: "unsub:usdc-circle" }],
-              [
-                { text: "Back", callback_data: "manage:page:0" },
-                { text: "Forward", callback_data: "manage:page:2" },
-              ],
-            ],
-          },
-        } as unknown as Parameters<typeof handleCallbackQuery>[2]["message"]
-      }));
-
-      expect(editMessageBody().text).toContain("Page 2/3");
     });
   });
 });

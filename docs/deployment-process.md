@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This document defines the production deploy flow, the GitHub Actions release gate, and optional production-profile rehearsal. Mandatory local readiness is owned by [Testing: Pre-push readiness](./testing.md#pre-push-readiness).
+This document defines the production deploy flow, the GitHub Actions release gate, and optional production-profile rehearsal. Local feedback and hosted readiness authority are owned by [Testing: Pre-push readiness](./testing.md#pre-push-readiness).
 
 ## Core Rules
 
@@ -13,14 +13,14 @@ This document defines the production deploy flow, the GitHub Actions release gat
    Auxiliary publication follows the same rule: the Dependency Scenarios `scenarios` job and Safety Map `plan` and `render` jobs require `refs/heads/main` before checkout or credential use. Non-main manual dispatch skips those jobs; main dispatch and scheduled execution remain enabled, with Safety Map rendering still conditional on `should_render`.
 2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one. A request to push, publish, release, or take work to production is authorization to use the required protected-main branch/PR path; it is not authorization for a direct `main` push.
 3. Merge release pull requests with a merge commit (`gh pr merge --merge`), never with squash or rebase merge. Before declaring the release merged, verify the resulting `main` commit has two parents and contains the recorded PR head SHA.
-4. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Focused checks provide authoring feedback; full local readiness is required before every push. GitHub Actions owns the authoritative protected release gate.
+4. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Run `npm run check:pr` for focused authoring feedback before pushing; GitHub Actions owns the authoritative protected release gate.
 
 ## Release Snapshot State Machine
 
 Treat release preparation as ordered state transitions. Passing a check against an earlier state does not validate a later commit, generated diff, or environment profile.
 
 1. **Classify** — inspect committed/staged/worktree/untracked state, identify Pages and Worker impact, and preserve unrelated work.
-2. **Prepare the release** — create logical source commits and follow the mandatory [Pre-push readiness](./testing.md#pre-push-readiness) procedure before **every** authorized first or replacement push. Its proof must cover the final committed HEAD; later source/output/integration changes invalidate it. Focused checks and optional `check:release` rehearsal do not substitute for readiness.
+2. **Prepare the release** — create logical source commits, keep generated artifacts with their owning sources, and run `npm run check:pr` for focused authoring feedback under [Pre-push readiness](./testing.md#pre-push-readiness). Local receipts are optional diagnostics; hosted CI is the readiness authority. `check:release` remains an explicitly requested rehearsal.
 3. **Publish** — push a release branch, wait for the authoritative protected `PR gate`, merge through GitHub, and map the PR head SHA to the resulting `main` SHA and deployment run. Do not attempt direct `main` first.
 4. **Prove deployment and operation separately** — verify Worker activation and/or the immutable Pages marker. Cron, scheduler, ingestion, memory, and migration changes also require the first relevant production execution or observation under [Operational Acceptance](#operational-acceptance) before being called operationally complete.
 
@@ -35,8 +35,8 @@ git fetch origin
 git worktree add ".worktrees/$FEATURE_NAME" -b "$BRANCH_NAME" origin/main
 ```
 
-2. Implement with focused feedback, then follow the mandatory [pre-push readiness](./testing.md#pre-push-readiness) procedure on the final committed HEAD.
-3. Push the branch and open a pull request into `main`. Replacement pushes require the same full final-state readiness.
+2. Implement with focused feedback and use `npm run check:pr` under [pre-push readiness](./testing.md#pre-push-readiness) before pushing.
+3. Push the branch and open a pull request into `main`. Hosted CI judges readiness for both first and replacement pushes.
 
 ```bash
 git push -u origin "$BRANCH_NAME"
@@ -106,12 +106,17 @@ Do not run older delete-and-replace revisions of either balance tool: they can e
 Production responsibility is split deliberately:
 
 - Validation workflow ownership and lane composition are documented in [Testing: CI Pipeline](./testing.md#ci-pipeline).
+- `.github/workflows/pull-request-checks.yml` selects the unsharded `v9-resource` lane for the audited evaluator/catalog dependencies plus conservative shared/Worker library, data, setup-migration, resource-harness, bundler and toolchain input families. Unrelated frontend, API and most cron edits skip it. Missing or unclassifiable inputs select it fail-closed; the selected lane remains required.
+- `.github/workflows/nightly-validation.yml` retains unconditional V9 resource-budget validation and the two-shard `test:all` backstop, alongside mandatory static validation.
+- `.github/workflows/weekly-validation.yml` owns the advisory Node 26 root/Worker typecheck probe; it no longer duplicates the nightly V9 resource run.
+- `.github/workflows/codeql.yml` runs daily at 06:17 UTC, retaining its Monday 06:00 UTC schedule and manual dispatch rather than scanning every `main` push.
 - `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.
 - `.github/workflows/pages-prepare.yml` installs and materializes the Worker-independent compile-input workspace without secrets or live producers.
 - `.github/workflows/pages-release.yml` builds and publishes one exact Pages artifact.
 - `.github/workflows/rebuild-pages.yml` performs the one daily API-backed Pages data refresh.
 - `.github/workflows/dependency-scenarios-refresh.yml` independently computes and publishes offline modeled dependency artifacts hourly at minute 17 or on manual dispatch. It does not deploy code or add Worker cron work; [Dependency network operations](./runbooks/dependency-network.md#offline-scenario-workflow) owns its commands, retained artifacts, readback proof, and failure handling.
 - `.github/workflows/worker-memory-monitor.yml` reads both Workers' sampled isolate memory and independently filtered Adaptive memory kills hourly at minute 43 or on main dispatch with optional paired `from`/`to` timestamps. It deploys nothing, does not enter `production-deploy` concurrency or use the production environment, and retains evidence before separate heavy-kill/collection incidents. [Memory triage](./runbooks/cron-slot-abandonment.md#first-checks) owns interpretation.
+- `.github/workflows/production-canaries.yml` runs daily at 06:37 UTC or on manual dispatch, independently of static validation. Its three read-only jobs run authenticated full API contract smoke (including the built-in stablecoin, chain, and aggregate OG PNG probes), live Pages asset smoke in Chromium, and public API HTTP-to-HTTPS transport smoke. Any non-zero command exit fails its job and the run, surfacing through GitHub Actions notifications; use the [workflow incident runbook](./runbooks/workflow-incidents.md) for triage. It does not deploy, enter `production-deploy` concurrency, roll back, or replace post-deploy acceptance.
 
 Pages-impact/build-pipeline PRs select `pages-artifact` in `.github/workflows/pull-request-checks.yml`. Before candidate setup, the frozen PR base helper acquires/validates the latest unexpired successful-main release data; the GitHub Actions token is scoped only to that trusted step. The token-free candidate build consumes `PAGES_RELEASE_DATA_DIR` through `scripts/ci/run-pages-artifact-lane.ts`, with no live refresh or publishing. Missing base helper or expired/unavailable data yields explicit `degraded-data`: committed snapshots + offline detail bootstrap, not realistic size proof; every artifact gate remains required and invalid data fails. Protected merges independently select production surfaces. Worker mutation packages both scripts before one migration application, then proves both activations and writes verified role markers plus immutable UUID activation evidence; Pages retains artifact and release-marker proof. Static, Next compiler and Playwright caches remain separate.
 
@@ -223,7 +228,7 @@ These collectors write evidence; exit zero does not certify health, and night-wa
 
 Repository settings:
 
-- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. Independent `secrets` and `prepare` jobs must succeed: secrets uses the trusted base scanner/policy, while preparation installs and publishes one generated workspace and test-selection plan. The validation matrix uses static-compile, static-guards, plan-driven tests (four shards, or eight above 800 selected files), and selected docs, with `max-parallel: 10`; docs-only checks run inline in preparation. Touched-critical coverage uses a separate matrix of up to eight shards (`max-parallel: 8`), whose merge needs only preparation and coverage shards. The gate requires every selected job and permits only explicit legitimate skips. [Testing: CI Pipeline](./testing.md#ci-pipeline) owns the detailed lane contract.
+- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. Independent `secrets` and `prepare` jobs must succeed: secrets uses the trusted base scanner/policy, while preparation installs and publishes one generated workspace and test-selection plan. The validation matrix uses static-compile, static-guards (including critical-ownership completeness), uninstrumented plan-driven tests (four shards, or eight above 800 selected files), and selected docs, with `max-parallel: 10`; docs-only checks run inline in preparation. Measured critical coverage runs only in the weekly/manual `all-critical-ratchet` job with `CRITICAL_COVERAGE_RATCHET_ALL=1`; no PR coverage shards or merge gate remain. The gate requires every selected job and permits only explicit legitimate skips. [Testing: CI Pipeline](./testing.md#ci-pipeline) owns the detailed lane contract.
 - Critical-coverage waiver cohorts are re-reviewed and re-dated quarterly by the owning teams. The completeness gate reports reviews due within 14 days, caps each printed queue at 10 entries plus the remaining count, and fails once any review is more than 30 days overdue.
 - The GitHub `production` environment is restricted to `main` and is attached to the Worker deploy job, the Pages release job, and the manual zone-cache purge job — the three production-mutating jobs.
 - Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
@@ -236,6 +241,8 @@ Cloudflare credentials consumed by production-mutating jobs and the read-only Wo
 The Cloudflare credentials authorize Worker/D1 and Pages deployment. Production-mutating jobs use the protected environment, while the acceptance job needs repository-scoped credential access for its read-only deployment API query; do not remove that access without providing an equivalent read-only credential path. GitHub does not expose existing secret values for automated migration, and secret values are never recorded in the repository. The matching Pages and Worker `SITE_API_SHARED_SECRET` bindings remain Cloudflare-managed. The repository secret of the same name authenticates cache-only bulk detail snapshot acquisition during the release build; release-data refreshes continue through the Pages proxy. Pages preparation receives none of these secrets.
 
 The read-only Worker Memory Monitor instead requires repository secret `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN`, scoped **Account → Account Analytics → Read**, plus the existing `CLOUDFLARE_ACCOUNT_ID`. Deployment/D1-status/settings tokens do not establish Analytics permission. Inject the dedicated token only into collection, not install/bootstrap; no Worker Scripts Edit, D1 Write, Pages, zone, OPS service-token or Telegram credentials are required. Confirm access to both Adaptive and Scheduled datasets and retain a first main dispatch plus a naturally scheduled fresh complete run before calling the monitor operational. Local operators explicitly export `CLOUDFLARE_ACCOUNT_ID`; `.env.local` may not contain it, and the collector has no account-discovery flag or OAuth fallback.
+
+Production Canaries uses the existing repository secret `PHAROS_API_KEY`, exposed only to its API and Pages smoke steps as `SMOKE_API_KEY`, not to dependency installation or bootstrap. The API job sets `SMOKE_API_BASE=https://api.pharos.watch`, `SMOKE_API_REQUIRE_KEY=true`, and `SMOKE_API_SCOPE=full`; missing credentials fail rather than skipping protected contracts. The Pages job sets `SMOKE_PAGES_ASSET_MODE=live`, `SMOKE_PAGES_ASSET_URL=https://pharos.watch`, and `SMOKE_API_BASE_URL=https://api.pharos.watch`, and shared workspace setup installs Chromium with Playwright's system dependencies. The credential-free transport job sets `SMOKE_TRANSPORT_API_URL` and `SMOKE_TRANSPORT_SITE_API_URL` to the production `http://api.pharos.watch` and `http://site-api.pharos.watch` probes so exact HTTPS redirects are exercised before application auth.
 
 The manual zone-cache recovery workflow additionally requires the Cloudflare token to grant `Zone Read` and `Cache Purge` for `pharos.watch`. Normal Pages and Worker deployment permissions do not imply those zone permissions.
 
@@ -451,7 +458,7 @@ Production smoke for this surface should confirm the retired request and verific
 
 ## Failure Policy
 
-For CI validation failures, collect **every failed leaf**, use the [workflow incident runbook](./runbooks/workflow-incidents.md) for remote diagnosis, and fix all causal failures in one revision. Follow [Pre-push readiness](./testing.md#pre-push-readiness) before the replacement push; a focused rerun alone is not authorization to push.
+For CI validation failures, collect **every failed leaf**, use the [workflow incident runbook](./runbooks/workflow-incidents.md) for remote diagnosis, and fix all causal failures in one revision. Rerun focused checks before an authorized replacement push under [Pre-push readiness](./testing.md#pre-push-readiness); hosted CI is the readiness authority.
 
 If an explicit local `check:release` rehearsal fails:
 
@@ -459,8 +466,8 @@ If an explicit local `check:release` rehearsal fails:
 2. Confirm the exact `.nvmrc` runtime, check lane, snapshot cleanliness, environment profile, and local concurrency before changing code. A release-only failure is not disproved by `npm run check:pr`, and a globally exported Pages flag does not reproduce job-scoped CI.
 3. For a small change, fix the failing command directly. For a large batch, run `npm run check:pr -- --base=<ref>` and read its final summary.
 4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused command alone or set `PR_STATIC_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
-5. After focused fixes, follow the mandatory [Pre-push readiness](./testing.md#pre-push-readiness) procedure on the final committed source/integration state.
-6. Rerun an explicitly requested `check:release` rehearsal after its failure is resolved; it never replaces readiness. Only then push through the protected PR gate. GitHub Actions remains authoritative.
+5. After focused fixes, use `npm run check:pr` for authoring feedback under [Pre-push readiness](./testing.md#pre-push-readiness).
+6. Rerun an explicitly requested `check:release` rehearsal after its failure is resolved. Publish only through the protected PR gate; GitHub Actions remains authoritative.
 
 If a production deployment fails after mutation:
 

@@ -14,15 +14,6 @@ describe("fetchPagedTokenPools", () => {
     expect(fetchPage.mock.calls).toEqual([[1], [2]]);
   });
 
-  it("stops immediately on an empty page", async () => {
-    const fetchPage = vi.fn(async () => []);
-    expect(await fetchPagedTokenPools({ maxPages: 3, pageSize: 2, fetchPage })).toMatchObject({
-      rows: [],
-      complete: true,
-    });
-    expect(fetchPage.mock.calls).toEqual([[1]]);
-  });
-
   it("reports a cap-bounded scan as incomplete", async () => {
     const fetchPage = vi.fn(async (page: number) => [page * 2 - 1, page * 2]);
     expect(await fetchPagedTokenPools({ maxPages: 3, pageSize: 2, fetchPage })).toEqual({

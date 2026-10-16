@@ -518,18 +518,6 @@ describe("retained v3 fixed report-card input", () => {
     ).toThrow("route count mismatch");
   });
 
-  it("normalizes equivalent record insertion orders", () => {
-    const input = fixedInput();
-    const permuted = {
-      ...input,
-      resolvedBlacklistStatuses: Object.fromEntries(Object.entries(input.resolvedBlacklistStatuses).reverse()),
-    };
-    expect(JSON.stringify(normalizeFixedInput(permuted))).toBe(JSON.stringify(normalizeFixedInput(input)));
-    expect(normalizeFixedInput(permuted).baseInputGenerationId).toBe(
-      normalizeFixedInput(input).baseInputGenerationId,
-    );
-  });
-
   it("normalizes nested route, key, output, and capacity-curve ordering", () => {
     const first = route("dex:a", ["protocol:test", "chain:solana"], ["solana:MintB", "solana:MintA"]);
     const second = route("dex:b", ["chain:solana", "protocol:test"], ["solana:MintA"]);

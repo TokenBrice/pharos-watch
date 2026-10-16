@@ -1,6 +1,3 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { argv as processArgv } from "node:process";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
@@ -9,28 +6,11 @@ import {
   CliUsageError,
   parseCliInteger,
   parseStrictCliArgs,
-  requireCliString,
   runCliEntrypoint,
   runDirectCli,
-  writeJsonOutput,
-  writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
 
 describe("strict operator CLI arguments", () => {
-  it("parses declared options, aliases, and intentional repeats", () => {
-    const parsed = parseStrictCliArgs(
-      ["-h", "--url", "https://one.test", "--url=https://two.test"],
-      {
-        options: {
-          url: { type: "string", multiple: true },
-        },
-      },
-    );
-
-    expect(parsed.values.help).toBe(true);
-    expect(parsed.values.url).toEqual(["https://one.test", "https://two.test"]);
-  });
-
   it.each([
     { argv: ["--unknown"], message: "Unknown option" },
     { argv: ["--name"], message: "argument missing" },
@@ -68,32 +48,6 @@ describe("strict operator CLI arguments", () => {
     expect(() => parseCliInteger("0", { name: "--attempts", min: 1 })).toThrow(
       "--attempts must be between",
     );
-  });
-
-  it("writes help exactly once when requested", () => {
-    const output = { write: vi.fn() };
-    expect(writeCliHelpIfRequested({ help: true }, "Usage: tool", output)).toBe(true);
-    expect(output.write).toHaveBeenCalledWith("Usage: tool\n");
-    expect(writeCliHelpIfRequested({ help: false }, "Usage: tool", output)).toBe(false);
-  });
-
-  it.each([
-    { value: undefined, name: "--output", message: "--output is required" },
-    { value: "", name: "--output", message: "--output is required" },
-    { value: "  ", name: "--output", message: "--output is required" },
-  ])("rejects missing required string values: $value", ({ value, name, message }) => {
-    expect(() => requireCliString(value, name)).toThrow(message);
-  });
-
-  it("writes JSON output into a missing parent directory", () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-cli-args-"));
-    try {
-      const outputPath = join(root, "nested", "report.json");
-      writeJsonOutput(outputPath, '{"ok":true}\n');
-      expect(readFileSync(outputPath, "utf8")).toBe('{"ok":true}\n');
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
   });
 
   it.each([

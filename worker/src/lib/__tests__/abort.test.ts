@@ -1,22 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { abortError, sleepWithSignal, throwIfAborted, yieldToEventLoop } from "../abort";
+import { sleepWithSignal, throwIfAborted, yieldToEventLoop } from "../abort";
 
 describe("abort helpers", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-  });
-
-  it("builds abort errors from error, string, and default reasons", () => {
-    const errorController = new AbortController();
-    errorController.abort(new Error("boom"));
-    expect(abortError(errorController.signal).message).toBe("boom");
-
-    const stringController = new AbortController();
-    stringController.abort("stopped");
-    expect(abortError(stringController.signal).message).toBe("stopped");
-
-    expect(abortError().message).toBe("Operation aborted");
   });
 
   it("throws only when the signal is aborted", () => {

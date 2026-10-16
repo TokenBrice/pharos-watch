@@ -65,15 +65,6 @@ describe("authoritative-price-sources", () => {
       );
     });
 
-    it("preserves explicit vault RPC priority over configured routing", async () => {
-      const chainRpcs = new Map();
-      fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
-      await fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", 123, undefined, { chainRpcs });
-      expect(fetchEvmCallHexAtBlockMock.mock.calls[fetchEvmCallHexAtBlockMock.mock.calls.length - 1]?.[4]).toMatchObject({
-        extraRpcUrls: ["https://rpc.example"], chainRpcs: undefined,
-      });
-    });
-
     it("rejects null, zero, and out-of-bounds selector quotes", async () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 

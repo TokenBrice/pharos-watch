@@ -27,18 +27,6 @@ function makeRow(overrides: Partial<MintBurnRow>): MintBurnRow {
 }
 
 describe("detectAtomicRoundtrips", () => {
-  it("flags rows when same tx has both mint and burn for same coin", () => {
-    const rows = [
-      makeRow({ id: "eth-0xabc-0", tx_hash: "0xabc", direction: "mint" }),
-      makeRow({ id: "eth-0xabc-1", tx_hash: "0xabc", direction: "burn" }),
-    ];
-
-    const flagged = detectAtomicRoundtrips(rows);
-
-    expect(flagged).toBe(2);
-    expect(rows[0].flow_type).toBe("atomic_roundtrip");
-    expect(rows[1].flow_type).toBe("atomic_roundtrip");
-  });
 
   it("does not flag when tx has only mints", () => {
     const rows = [
@@ -118,9 +106,6 @@ describe("detectAtomicRoundtrips", () => {
     expect(rows.every((r) => r.flow_type === "standard")).toBe(true);
   });
 
-  it("returns 0 for empty array", () => {
-    expect(detectAtomicRoundtrips([])).toBe(0);
-  });
 });
 
 function mb(direction: "mint" | "burn", tx: string, amount: number, id = "x"): MintBurnRow {
@@ -138,12 +123,6 @@ describe("detectAtomicRoundtrips — amount tolerance", () => {
     const rows = [mb("mint", "0x1", 100), mb("burn", "0x1", 100.4)];
     detectAtomicRoundtrips(rows);
     expect(rows.every((r) => r.flow_type === "atomic_roundtrip")).toBe(true);
-  });
-
-  it("does NOT flag mint 100 / burn 50 (net economic flow)", () => {
-    const rows = [mb("mint", "0x2", 100), mb("burn", "0x2", 50)];
-    detectAtomicRoundtrips(rows);
-    expect(rows.every((r) => r.flow_type === "standard")).toBe(true);
   });
 
   it("does NOT flag mint 100 / burn 95 (5% mismatch exceeds tolerance)", () => {

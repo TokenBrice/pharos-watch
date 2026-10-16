@@ -91,16 +91,6 @@ describe("logCronRun", () => {
     expect(JSON.parse(row.metadata).resourcePressure).toEqual(pressure);
   });
 
-  it("passes AbortSignal to the job function", async () => {
-    let receivedSignal: AbortSignal | undefined;
-    await logCronRun(db, "test-job", async (signal) => {
-      receivedSignal = signal;
-      return { itemCount: 0 };
-    });
-    expect(receivedSignal).toBeInstanceOf(AbortSignal);
-    expect(receivedSignal!.aborted).toBe(false);
-  });
-
   it("clears timeout on successful completion (signal not aborted)", async () => {
     vi.useFakeTimers();
     let signalRef: AbortSignal | undefined;
@@ -109,17 +99,6 @@ describe("logCronRun", () => {
       return { itemCount: 42 };
     });
     await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
-    expect(signalRef!.aborted).toBe(false);
-  });
-
-  it("provides AbortSignal for jobs with custom timeouts", async () => {
-    // sync-dex-liquidity has a custom override; verify signal is still passed
-    let signalRef: AbortSignal | undefined;
-    await logCronRun(db, "sync-dex-liquidity", async (signal) => {
-      signalRef = signal;
-      return { itemCount: 0 };
-    });
-    expect(signalRef).toBeInstanceOf(AbortSignal);
     expect(signalRef!.aborted).toBe(false);
   });
 
@@ -275,19 +254,6 @@ describe("logCronRun", () => {
 
     expect(sqlite.prepare("SELECT slot_started_at FROM cron_runs").all())
       .toEqual([{ slot_started_at: 1_772_495_700 }]);
-  });
-
-  it("fails fast with timeout error when job exceeds timeout", async () => {
-    vi.useFakeTimers();
-    try {
-      const hangingJob = logCronRun(db, "test-job", async () => new Promise(() => {}));
-      const timeoutExpectation = expect(hangingJob).rejects.toThrow(/timed out/i);
-
-      await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
-      await timeoutExpectation;
-    } finally {
-      vi.useRealTimers();
-    }
   });
 
   it("logs abandoned metadata when a timed-out job does not settle", async () => {

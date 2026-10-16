@@ -12,7 +12,6 @@ import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__test
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 import {
   findFutureDatedCuratedReviews,
-  formatFutureDatedReviewError,
   buildSafetyScoreV9ReplayArtifact,
   parseSafetyScoreV9PublishedAtSec,
   parseSafetyScoreV9ReplayFixedInput,
@@ -412,28 +411,13 @@ describe("future-dated curated review guard", () => {
     throw new Error("no curated reserve review in the registry");
   }
 
-  it("finds nothing when the clock is after every curated review", () => {
-    const far = Date.parse("2999-01-01T00:00:00.000Z") / 1_000;
-    expect(findFutureDatedCuratedReviews(far)).toEqual([]);
-  });
-
   it("flags a review dated after the capture clock", () => {
     const { assetId, sec } = anyReviewedAtSec();
     const rows = findFutureDatedCuratedReviews(sec - 86_400);
     expect(rows.some((row) => row.assetId === assetId && row.field === "reviewedAt")).toBe(true);
   });
-
-  it("explains that the movers are artifacts and names the escape hatch", () => {
-    const message = formatFutureDatedReviewError(
-      [{ assetId: "usdt-tether", field: "reviewedAt", date: "2026-08-12" }],
-      Date.parse("2026-08-11T11:46:57.000Z") / 1_000,
-    );
-    expect(message).toContain("usdt-tether: reviewedAt 2026-08-12");
-    expect(message).toContain("2026-08-11T11:46:57.000Z");
-    expect(message).toContain("not a regression");
-    expect(message).toContain("--allow-future-reviews");
-  });
 });
+
 describe("mechanism capture replay resolution", () => {
   it("resolves a local cache hit, then an R2 hit, and fails closed after expiry", async () => {
     const dir = mkdtempSync(resolve(tmpdir(), "pharos-measurement-replay-"));

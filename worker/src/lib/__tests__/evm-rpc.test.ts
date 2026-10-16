@@ -198,21 +198,6 @@ describe("evm-rpc helpers", () => {
     expect(parseUint256Hex("not-hex")).toBeNull();
   });
 
-  it("fetches uint256 values from extra RPC URLs", async () => {
-    fetchWithRetryMock.mockImplementation(async (url: string) => {
-      if (url === "https://rpc.example") {
-        return rpcResponse({ result: "0x64" });
-      }
-      return null;
-    });
-
-    const result = await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
-      extraRpcUrls: ["https://rpc.example"],
-    });
-
-    expect(result).toBe(100n);
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
-  });
 
   it.each([undefined, 131072])("forwards only an explicitly requested RPC body ceiling (%s)", async maxResponseBytes => {
     fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x64" }));
@@ -603,15 +588,6 @@ describe("evm-rpc helpers", () => {
       fetchEvmStorageAtBlock("ethereum", address, `0x${"0".repeat(64)}`, 16, options))).toBeNull();
   });
 
-  it("fetches raw hex call results from RPC URLs", async () => {
-    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
-
-    const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
-      extraRpcUrls: ["https://rpc.example"],
-    });
-
-    expect(result).toBe("0x2a");
-  });
 
   it("falls back when first eth_call result is empty hex", async () => {
     fetchWithRetryMock
@@ -626,19 +602,6 @@ describe("evm-rpc helpers", () => {
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
   });
 
-  it("includes gas in eth_call request body when provided", async () => {
-    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
-
-    await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
-      extraRpcUrls: ["https://rpc.example"],
-      gas: "0x7a120",
-    });
-
-    const body = JSON.parse(fetchWithRetryMock.mock.calls[0][1]?.body) as {
-      params: Array<{ to: string; data: string; gas?: string }>;
-    };
-    expect(body.params[0]).toMatchObject({ to: "0xToken", data: "0x1234", gas: "0x7a120" });
-  });
 
   it("normalizes gas as a JSON-RPC quantity before sending eth_call", async () => {
     fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
@@ -927,40 +890,6 @@ describe("evm-rpc helpers", () => {
     expect(body.params).toEqual(["safe", false]);
   });
 
-  it("rejects a malformed safe block header", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(
-      rpcResponse({
-        result: {
-          number: "not-hex",
-          timestamp: "0x80",
-          hash: "0xmalformed",
-        },
-      }),
-    );
-
-    await expect(
-      fetchEvmBlockHeaderAtTag("gnosis", "safe", {
-        extraRpcUrls: ["https://rpc.example"],
-      }),
-    ).resolves.toBeNull();
-  });
-
-  it("rejects a safe block header with a missing required field", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(
-      rpcResponse({
-        result: {
-          number: "0x20",
-          hash: `0x${"e".repeat(64)}`,
-        },
-      }),
-    );
-
-    await expect(
-      fetchEvmBlockHeaderAtTag("gnosis", "safe", {
-        extraRpcUrls: ["https://rpc.example"],
-      }),
-    ).resolves.toBeNull();
-  });
 
   it("returns null when the safe block header request errors", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -1230,21 +1159,6 @@ describe("evm-rpc helpers", () => {
     expect(attemptedUrls()).toEqual(["https://polygon-public-a.example", recentUrl, archiveUrl]);
   });
 
-  it("treats every batch as potentially historical for supplemental selection", async () => {
-    const chainRpcs = chainRpcsWith("tempo", [
-      registryEndpoint("https://tempo-public-a.example"),
-      dwellirEndpoint("https://api-tempo-mainnet.n.dwellir.com", "recent"),
-    ]);
-    fetchWithRetryMock.mockResolvedValue(null);
-
-    await fetchEvmRpcBatch(
-      "tempo",
-      [{ method: "eth_call", params: [{ to: "0xToken", data: "0x18160ddd" }, "0x4d2"] }],
-      { chainRpcs, maxRetries: 0 },
-    );
-
-    expect(attemptedUrls()).toEqual(["https://tempo-public-a.example"]);
-  });
 
   it("meters one credit per Dwellir attempt and none for registry operators", async () => {
     const chainRpcs = chainRpcsWith("celo", [

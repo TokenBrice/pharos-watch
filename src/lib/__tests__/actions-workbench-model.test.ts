@@ -3,17 +3,11 @@
 import { describe, expect, it } from "vitest";
 import type { StatusPageAction } from "@shared/lib/api-endpoints";
 import {
-  auditEntryMatchesAction,
   buildActionReadiness,
   extractStructuredActionOutcome,
-  filterActionCatalog,
   getSafeActionFollowUpHref,
-  getActionIntentCategory,
-  groupConsecutiveActivity,
   reconcileActionActivity,
-  type ActionActivity,
   type AdminActionAuditEntry,
-  type SessionActionExecutionLike,
 } from "@/lib/actions-workbench-model";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
@@ -57,62 +51,6 @@ const auditEntry: AdminActionAuditEntry = {
 };
 
 describe("actions workbench model", () => {
-  it("classifies all five operator intent groups", () => {
-    expect(getActionIntentCategory(action({ kind: "inspect", risk: "read-only" }))).toBe("inspect");
-    expect(
-      getActionIntentCategory(
-        action({ dryRun: { supported: true, default: true, liveSupported: true, queryParam: "dryRun" } }),
-      ),
-    ).toBe("dry-run");
-    expect(getActionIntentCategory(action())).toBe("recovery");
-    expect(getActionIntentCategory(action({ kind: "communication" }))).toBe("communications");
-    expect(getActionIntentCategory(action({ kind: "reset", destructive: true }))).toBe("destructive");
-  });
-
-  it("searches metadata and composes intent and risk filters", () => {
-    const inspect = action({
-      label: "Validate DEWS",
-      path: "/api/backfill-dews",
-      kind: "inspect",
-      risk: "read-only",
-      preconditions: ["Completed depeg events must exist."],
-    });
-    expect(
-      filterActionCatalog([action(), inspect], { query: "completed events", intent: "inspect", risk: "read-only" }),
-    ).toEqual([inspect]);
-    expect(filterActionCatalog([action(), inspect], { query: "", intent: "all", risk: "moderate" })).toEqual([
-      action(),
-    ]);
-  });
-
-  it("matches persisted action names to catalog paths without fuzzy collisions", () => {
-    expect(auditEntryMatchesAction(auditEntry, action())).toBe(true);
-    expect(auditEntryMatchesAction({ ...auditEntry, action: "backfill-supply" }, action())).toBe(false);
-    expect(
-      auditEntryMatchesAction(
-        { ...auditEntry, action: "wrapper", details: { actionPath: "/api/remediate-blacklist-amount-gaps" } },
-        action(),
-      ),
-    ).toBe(true);
-  });
-
-  it("reconciles persisted and session activity with the session result winning a duplicate", () => {
-    const session: SessionActionExecutionLike = {
-      action: { path: action().path, label: action().label },
-      intentId: "intent-1",
-      scopeLabel: "usdc-circle",
-      status: "succeeded",
-      ok: true,
-      createdAt: 99_000,
-      startedAt: 99_500,
-      completedAt: 100_000,
-      httpStatus: 200,
-    };
-    const activities = reconcileActionActivity([action()], [session], [auditEntry]);
-    expect(activities).toHaveLength(1);
-    expect(activities[0]).toMatchObject({ source: "session", actionPath: action().path });
-  });
-
   it("preserves canonical unknown outcomes from persisted audit details", () => {
     const activities = reconcileActionActivity(
       [action()],
@@ -127,25 +65,6 @@ describe("actions workbench model", () => {
     );
 
     expect(activities[0]?.status).toBe("unknown");
-  });
-
-  it("preserves distinct same-source executions while reconciling one cross-source counterpart", () => {
-    const session = (intentId: string): SessionActionExecutionLike => ({
-      action: { path: action().path, label: action().label },
-      intentId,
-      scopeLabel: "usdc-circle",
-      status: "succeeded",
-      ok: true,
-      createdAt: 99_000,
-      startedAt: 99_500,
-      completedAt: 100_000,
-      httpStatus: 200,
-    });
-
-    const activities = reconcileActionActivity([action()], [session("intent-1"), session("intent-2")], [auditEntry]);
-
-    expect(activities).toHaveLength(2);
-    expect(activities.map((activity) => activity.id)).toEqual(["session:intent-1", "session:intent-2"]);
   });
 
   it("blocks stale or unhealthy evidence only for live writes and exposes no override", () => {
@@ -208,26 +127,5 @@ describe("actions workbench model", () => {
     expect(getSafeActionFollowUpHref("//evil.example/jobs/42")).toBeNull();
     expect(getSafeActionFollowUpHref("/\\evil.example/jobs/42")).toBeNull();
     expect(getSafeActionFollowUpHref("javascript:alert(1)")).toBeNull();
-  });
-});
-
-describe("groupConsecutiveActivity", () => {
-  function activity(id: string, at: number, status: ActionActivity["status"] = "succeeded"): ActionActivity {
-    return { id, actionPath: "/api/debug-sync-state", actionLabel: "Debug Sync State", at, actor: "ops", target: "global", status, httpStatus: 200, source: "persisted" };
-  }
-
-  it("collapses identical consecutive rows into one row with a count and range", () => {
-    const groups = groupConsecutiveActivity([
-      activity("a", 4_000),
-      activity("b", 3_000),
-      activity("c", 2_000),
-      activity("d", 1_500, "error"),
-      activity("e", 1_000),
-    ]);
-    expect(groups.map((group) => [group.latest.id, group.count, group.oldestAt])).toEqual([
-      ["a", 3, 2_000],
-      ["d", 1, 1_500],
-      ["e", 1, 1_000],
-    ]);
   });
 });

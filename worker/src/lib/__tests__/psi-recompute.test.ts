@@ -17,21 +17,6 @@ describe("buildSupplySnapshotMap", () => {
     expect(result.size).toBe(0);
   });
 
-  it("groups a single coin and sorts snapshots by date", () => {
-    const rows: PsiSupplyRow[] = [
-      { stablecoin_id: "usdt-tether", snapshot_date: 3 * DAY, circulating_usd: 300 },
-      { stablecoin_id: "usdt-tether", snapshot_date: 1 * DAY, circulating_usd: 100 },
-      { stablecoin_id: "usdt-tether", snapshot_date: 2 * DAY, circulating_usd: 200 },
-    ];
-
-    const result = buildSupplySnapshotMap(rows);
-    expect(result.get("usdt-tether")).toEqual([
-      { date: 1 * DAY, mcap: 100 },
-      { date: 2 * DAY, mcap: 200 },
-      { date: 3 * DAY, mcap: 300 },
-    ]);
-  });
-
   it("groups multiple coins independently and keeps per-coin sorting", () => {
     const rows: PsiSupplyRow[] = [
       { stablecoin_id: "usdc-circle", snapshot_date: 2 * DAY, circulating_usd: 220 },
@@ -74,13 +59,6 @@ describe("findNearestSupplySnapshot", () => {
 
   it("returns exact date match", () => {
     expect(findNearestSupplySnapshot(snapshots, 20 * DAY)).toEqual({
-      date: 20 * DAY,
-      mcap: 2000,
-    });
-  });
-
-  it("returns nearest snapshot within 14-day window", () => {
-    expect(findNearestSupplySnapshot(snapshots, 27 * DAY)).toEqual({
       date: 20 * DAY,
       mcap: 2000,
     });

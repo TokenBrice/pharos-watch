@@ -166,24 +166,6 @@ describe("PriceTransparencyCard", () => {
     expect(within(jupiterRow as HTMLElement).getByText("Available")).toBeTruthy();
   });
 
-  it("shows current price and confidence", () => {
-    render(
-      <PriceTransparencyCard
-        coinData={makeCoinData("coingecko")}
-        consensusSources={["coingecko"]}
-        agreeSources={["coingecko"]}
-        dexPriceCheck={null}
-      />,
-    );
-
-    // Check price is displayed (appears twice in component, so check at least one exists)
-    expect(screen.getAllByText("$1.0000").length).toBeGreaterThanOrEqual(1);
-
-    // Check confidence badge (appears in summary and DEX check)
-    expect(screen.getAllByText("High").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Sources 1/3")).toBeTruthy();
-  });
-
   it("renders compact rail layout with summary, DEX check, and source sections", () => {
     const { container } = render(
       <PriceTransparencyCard

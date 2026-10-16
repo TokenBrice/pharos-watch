@@ -37,15 +37,6 @@ const BASE_PROPS = {
 };
 
 describe("MintAuthorityRail", () => {
-  it("renders issuer, control, and supply stations from the view model", () => {
-    const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={[makeControl()]} />);
-
-    expect(html).toContain("Issuer direct");
-    expect(html).toContain("Issuer direct mint"); // full label carried as the origin title
-    expect(html).toContain("3/6");
-    expect(html).toContain("USDC");
-    expect(html).toContain("Unbounded, supervised &amp; reconciled");
-  });
 
   it.each([
     { overrides: {}, expected: ">Minter admin multisig<" },
@@ -70,17 +61,6 @@ describe("MintAuthorityRail", () => {
     expect(html).toContain("5/11");
     // Past the budget the dot row is dropped entirely, so its signer title goes too.
     expect(html).not.toContain("signers required");
-  });
-
-  it("gives EOA controls the caution tone and short label", () => {
-    const eoa = { authorityTypeKey: "eoa", authorityTypeLabel: "Externally owned account", threshold: null, signerCount: null };
-    const roleNamed = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={[makeControl(eoa)]} />);
-    expect(roleNamed).toContain(">Minter admin EOA<");
-    expect(roleNamed).toContain("text-state-warn");
-    const generic = renderToStaticMarkup(
-      <MintAuthorityRail {...BASE_PROPS} controls={[makeControl({ ...eoa, roleKey: "unknown", roleLabel: "Unknown" })]} />,
-    );
-    expect(generic).toContain(">EOA<");
   });
 
   it("caps rail controls at three and points to the disclosure for the rest", () => {

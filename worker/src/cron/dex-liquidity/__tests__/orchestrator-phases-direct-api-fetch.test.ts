@@ -225,32 +225,6 @@ describe("runDirectApiFetchPhase", () => {
     );
   });
 
-  it("reports circuit close events after a half-open source recovers", async () => {
-    circuitStore.records.set("recovering-circuit", {
-      state: "half-open",
-      consecutiveFailures: 3,
-      lastFailureAt: 1_799_999_900,
-      lastSuccessAt: null,
-      openedAt: 1_799_999_900,
-    });
-    const fetchers = [
-      makeFetcher("recovering", async () =>
-        makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] }),
-      ),
-    ];
-
-    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
-
-    expect(result.circuitEvents).toEqual([
-      {
-        circuitKey: "recovering-circuit",
-        from: "half-open",
-        to: "closed",
-        at: 1_800_000_000,
-      },
-    ]);
-  });
-
   it("skips an open provider circuit without invoking its fetcher", async () => {
     circuitStore.records.set("blocked-circuit", {
       state: "open",

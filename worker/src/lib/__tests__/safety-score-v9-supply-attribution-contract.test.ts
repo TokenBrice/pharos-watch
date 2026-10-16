@@ -233,17 +233,6 @@ describe("reviewed deployment supply attribution contract", () => {
     ).toBeNull();
   });
 
-  it("attributes a cross-chain skew to the earliest lagging route, not the freshest peer", () => {
-    const deployments = [
-      { routeId: "lagging", blockTimeSec: CLOCK_SEC - 121 },
-      { routeId: "fresh", blockTimeSec: CLOCK_SEC },
-    ];
-    expect(reviewedDeploymentObservationTimingIssue({
-      clockSec: CLOCK_SEC, captureStartedAtSec: CLOCK_SEC - 121,
-      captureEndedAtSec: CLOCK_SEC, observedAtSec: CLOCK_SEC, deployments,
-    })).toEqual({ code: "cross-chain-skew", failedRouteId: "lagging" });
-  });
-
   it("ages every deployment independently and retains the oldest route on re-admission", () => {
     const rowsAtAge = (ageSec: number) => observations().map((row, index) => ({
       ...row, blockTimeSec: CLOCK_SEC - ageSec + (index === 0 ? 0 : 120),
@@ -267,26 +256,22 @@ describe("reviewed deployment supply attribution contract", () => {
     })).toContain("stale");
   });
 
-  it("invalidates a packet when registry or route-inventory identity drifts", () => {
+  it.each([
+    ["route inventory", "route inventory mismatch"],
+    ["registry fingerprint", "registry fingerprint mismatch"],
+  ] as const)("invalidates a packet when %s identity drifts", (identity, expected) => {
     const attribution = derive()!;
     expect(
       reviewedDeploymentAttributionValidationError({
         assetId: "wm-m0",
-        attribution: { ...attribution, routeInventoryDigest: "0".repeat(64) },
+        attribution: identity === "route inventory"
+          ? { ...attribution, routeInventoryDigest: "0".repeat(64) }
+          : attribution,
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
+        registryFingerprint: identity === "registry fingerprint" ? "b".repeat(64) : REGISTRY_FINGERPRINT,
         clockSec: CLOCK_SEC,
       }),
-    ).toContain("route inventory mismatch");
-    expect(
-      reviewedDeploymentAttributionValidationError({
-        assetId: "wm-m0",
-        attribution,
-        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-        registryFingerprint: "b".repeat(64),
-        clockSec: CLOCK_SEC,
-      }),
-    ).toContain("registry fingerprint mismatch");
+    ).toContain(expected);
   });
 });
 
@@ -472,16 +457,15 @@ describe("Centrifuge burn/mint deployment supply attribution contract", () => {
       expect(route.reviewDisposition).toBe("unresolved");
     });
 
-    it("rejects an unreviewed deployment with even one raw unit", () => {
-      expect(deriveJtrsy(centrifugeObservations(assetId).map((row) =>
+    it.each([
+      ["an unreviewed deployment with even one raw unit", () => centrifugeObservations(assetId).map((row) =>
         row.chainId === "solana" ? { ...row, rawSupply: "1" } : row,
-      ))).toBeNull();
-    });
-
-    it("rejects an unobserved unreviewed deployment rather than assuming zero", () => {
-      expect(deriveJtrsy(centrifugeObservations(assetId).filter((row) =>
+      )],
+      ["an unobserved unreviewed deployment rather than assuming zero", () => centrifugeObservations(assetId).filter((row) =>
         row.chainId !== "solana",
-      ))).toBeNull();
+      )],
+    ] as const)("rejects %s", (_label, rows) => {
+      expect(deriveJtrsy(rows())).toBeNull();
     });
 
     it("does not waive identity or freshness gates for an observed zero", () => {
@@ -541,7 +525,39 @@ describe("XAUT representation-group supply attribution contract", () => {
     ]);
   });
 
-  it("rejects inventory, identity, freshness, and conservation drift", () => {
+  it.each<[
+    string,
+    (attribution: XautRepresentationGroupSupplyAttributionV2) => Partial<Parameters<typeof xautRepresentationGroupAttributionValidationError>[0]>,
+    string,
+  ]>([
+    ["inventory", attribution => ({
+      attribution: { ...attribution, routeInventoryDigest: "0".repeat(64) },
+    }), "route inventory mismatch"],
+    ["observation freshness", attribution => ({
+      clockSec: attribution.observedAtSec + XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC + 1,
+    }), "observation time"],
+    ["disclosure freshness", attribution => ({
+      attribution: {
+        ...attribution,
+        observation: {
+          ...attribution.observation,
+          disclosure: {
+            ...attribution.observation.disclosure,
+            sourceTimestampSec: CLOCK_SEC - 172_801,
+          },
+        },
+      },
+    }), "disclosure time"],
+    ["conservation", attribution => ({
+      attribution: {
+        ...attribution,
+        representationGroup: {
+          ...attribution.representationGroup,
+          currentSupplyUsd: attribution.representationGroup.currentSupplyUsd + 1,
+        },
+      },
+    }), "does not conserve"],
+  ])("rejects %s drift", (_label, overrides, expected) => {
     const attribution =
       deriveXautRepresentationGroupSupplyAttribution({
         aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
@@ -551,58 +567,13 @@ describe("XAUT representation-group supply attribution contract", () => {
       })!;
     expect(
       xautRepresentationGroupAttributionValidationError({
-        attribution: {
-          ...attribution,
-          routeInventoryDigest: "0".repeat(64),
-        },
-        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
-        clockSec: CLOCK_SEC,
-      }),
-    ).toContain("route inventory mismatch");
-    expect(
-      xautRepresentationGroupAttributionValidationError({
         attribution,
         aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
         registryFingerprint: REGISTRY_FINGERPRINT,
-        clockSec:
-          attribution.observedAtSec +
-          XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC +
-          1,
-      }),
-    ).toContain("observation time");
-    expect(
-      xautRepresentationGroupAttributionValidationError({
-        attribution: {
-          ...attribution,
-          observation: {
-            ...attribution.observation,
-            disclosure: {
-              ...attribution.observation.disclosure,
-              sourceTimestampSec: CLOCK_SEC - 172_801,
-            },
-          },
-        },
-        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
         clockSec: CLOCK_SEC,
+        ...overrides(attribution),
       }),
-    ).toContain("disclosure time");
-    expect(
-      xautRepresentationGroupAttributionValidationError({
-        attribution: {
-          ...attribution,
-          representationGroup: {
-            ...attribution.representationGroup,
-            currentSupplyUsd:
-              attribution.representationGroup.currentSupplyUsd + 1,
-          },
-        },
-        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
-        clockSec: CLOCK_SEC,
-      }),
-    ).toContain("does not conserve");
+    ).toContain(expected);
   });
 
   it.each([

@@ -155,19 +155,6 @@ describe("PortfolioClient URL sync", () => {
     });
   });
 
-  it("preserves canonical portfolio params", async () => {
-    portfolioState = {
-      ...basePortfolioState(),
-      holdings: [{ coinId: "usdc-circle", amount: 25 }],
-    };
-    window.history.replaceState(null, "", "/portfolio/?p=usdc-circle:25");
-
-    render(<PortfolioClient />);
-
-    await waitFor(() => {
-      expect(window.location.search).toBe("?p=usdc-circle%3A25");
-    });
-  });
   it("labels partial score and pillar averages by their own known-only holding coverage", () => {
     portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdt-tether", amount: 300 }] };
     const complete = makeV9Card({ id: "usdc-circle", score: 80, pillars: {

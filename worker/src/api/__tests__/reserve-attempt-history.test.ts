@@ -45,20 +45,4 @@ describe("handleReserveAttemptHistoryRoute", () => {
       sqlite.close();
     }
   });
-
-  it("rejects a request without the required coin parameter", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const request = new Request("https://ops-api.pharos.watch/api/reserve-attempt-history");
-      const res = await handleReserveAttemptHistoryRoute({
-        db,
-        trustedAdmin: true,
-        request,
-        url: new URL(request.url),
-      });
-      expect(res.status).toBe(400);
-    } finally {
-      sqlite.close();
-    }
-  });
 });

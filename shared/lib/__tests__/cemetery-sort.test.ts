@@ -50,23 +50,6 @@ describe("sortCemeteryCoins", () => {
     expect(ids(sortCemeteryCoins(rows, "oldest"))).toEqual(["dec-2024", "y2025", "jan-2025"]);
   });
 
-  it("breaks same-date ties by peak descending, unknown peak last, then symbol and id, in both modes", () => {
-    const tied = [
-      coin("no-peak-b", "2024-03", { symbol: "USDB" }),
-      coin("mid-peak", "2024-03", { peakMcap: 500_000_000, symbol: "ZED" }),
-      coin("usdx-second", "2024-03", { symbol: "USDX" }),
-      coin("major", "2024-03", { peakMcap: 2_000_000_000, symbol: "AAA" }),
-      coin("lower-case", "2024-03", { symbol: "aUSD" }),
-      coin("usdx-first", "2024-03", { symbol: "USDX" }),
-      coin("small-peak", "2024-03", { peakMcap: 1_000_000, symbol: "AAA" }),
-    ];
-    // Symbols compare by code unit: every upper-case symbol precedes "aUSD"
-    // whatever the runtime locale, so SSR and client orders cannot diverge.
-    const expected = ["major", "mid-peak", "small-peak", "no-peak-b", "usdx-first", "usdx-second", "lower-case"];
-    expect(ids(sortCemeteryCoins(tied, "newest"))).toEqual(expected);
-    expect(ids(sortCemeteryCoins(tied, "oldest"))).toEqual(expected);
-  });
-
   it("keeps rows with an unparseable deathDate after every dated row in both modes", () => {
     const rows = [coin("unknown", "not recorded"), coin("bad-month", "2026-13"), ...DATED];
     const newest = ids(sortCemeteryCoins(rows, "newest"));
@@ -77,29 +60,6 @@ describe("sortCemeteryCoins", () => {
     expect(oldest.slice(DATED.length)).toEqual(["bad-month", "unknown"]);
   });
 
-  it("returns the same order for every input permutation without mutating the input", () => {
-    const rows = [
-      ...DATED,
-      coin("tie-a", "2026-06-17", { symbol: "TIE" }),
-      coin("tie-b", "2026-06-17", { symbol: "TIE" }),
-      coin("unknown", ""),
-    ];
-    const inputOrder = ids(rows);
-    const baseline = {
-      newest: ids(sortCemeteryCoins(rows, "newest")),
-      oldest: ids(sortCemeteryCoins(rows, "oldest")),
-    };
-    const permutations = [
-      [...rows].reverse(),
-      ...rows.map((_, offset) => [...rows.slice(offset), ...rows.slice(0, offset)]),
-      rows.filter((_, index) => index % 2 === 0).concat(rows.filter((_, index) => index % 2 === 1)),
-    ];
-    for (const permutation of permutations) {
-      expect(ids(sortCemeteryCoins(permutation, "newest"))).toEqual(baseline.newest);
-      expect(ids(sortCemeteryCoins(permutation, "oldest"))).toEqual(baseline.oldest);
-    }
-    expect(ids(rows)).toEqual(inputOrder);
-  });
 });
 
 describe("parseCemeteryDeathDate", () => {

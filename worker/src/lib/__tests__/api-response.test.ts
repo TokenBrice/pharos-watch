@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  cacheControlForDegradedPayload,
   errorResponse,
   jsonFreshDegradedResponse,
   jsonFreshResponse,
@@ -20,10 +19,6 @@ describe("errorResponse", () => {
     expect(body).toEqual({ error: "Bad request" });
   });
 
-  it("returns 503 for service unavailable", async () => {
-    const res = errorResponse(503, "Data not yet available");
-    expect(res.status).toBe(503);
-  });
 });
 
 describe("jsonResponse", () => {
@@ -106,13 +101,6 @@ describe("jsonFreshResponse", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
     expect(res.headers.get("X-Test")).toBe("1");
     expect(res.headers.get("X-Data-Age")).toBeNull();
-  });
-});
-
-describe("cacheControlForDegradedPayload", () => {
-  it("switches degraded payloads to no-store", () => {
-    expect(cacheControlForDegradedPayload({ _meta: { degraded: false } })).toBe("public, s-maxage=300, max-age=60");
-    expect(cacheControlForDegradedPayload({ _meta: { degraded: true } })).toBe("no-store");
   });
 });
 

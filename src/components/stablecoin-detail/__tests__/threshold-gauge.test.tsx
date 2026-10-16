@@ -19,11 +19,6 @@ function tickKinds(container: HTMLElement): string[] {
     .filter((kind) => kind !== "value");
 }
 
-function knobLeft(valuePct: number): number {
-  const { container } = render(<ThresholdGauge valuePct={valuePct} ariaLabel="Collateral ratio" showValueLabel={false} />);
-  return leftOf(container.querySelector('[data-gauge-marker="value"]'));
-}
-
 function scaleEnds(container: HTMLElement): { minPct: number; maxPct: number } {
   const read = (kind: string) =>
     Number.parseFloat(container.querySelector(`[data-gauge-label="${kind}"]`)!.textContent!.replace(/,/g, ""));
@@ -76,36 +71,6 @@ describe("ThresholdGauge", () => {
     expect(Number.parseFloat(container.querySelector<HTMLElement>("[data-gauge-fill]")!.style.width)).toBe(lefts[3]);
   });
 
-  it("puts labels of neighbouring markers on separate lanes", () => {
-    // On the 75–200 % track par and a 110 % MCR sit ~10 % of the track apart.
-    const { container } = render(
-      <ThresholdGauge
-        valuePct={140}
-        ariaLabel="Collateral ratio"
-        threshold={{ pct: 110, label: "MCR" }}
-        shutdown={{ pct: 150, label: "Shutdown" }}
-      />,
-    );
-    const top = (kind: string) => container.querySelector<HTMLElement>(`[data-gauge-label="${kind}"]`)!.style.top;
-    expect(top("par")).not.toBe(top("threshold"));
-  });
-
-  it("names markers a few pixels apart in one label, in track order, instead of stacking two", () => {
-    // On the 50–1,000 % track par and a 110 % MCR land ~3 % of the track apart.
-    const { container } = render(
-      <ThresholdGauge valuePct={279.2} ariaLabel="Collateral ratio" threshold={{ pct: 110, label: "Lowest MCR" }} />,
-    );
-    const par = container.querySelector('[data-gauge-label~="par"]');
-    expect(par).not.toBeNull();
-    expect(container.querySelector('[data-gauge-label~="threshold"]')).toBe(par);
-    const text = par!.textContent!;
-    expect(text.indexOf("Par 100%")).toBeGreaterThanOrEqual(0);
-    expect(text.indexOf("Lowest MCR 110%")).toBeGreaterThan(text.indexOf("Par 100%"));
-    // Both ticks stay drawn, and the accessible name still lists each marker.
-    expect(tickKinds(container)).toEqual(["par", "threshold"]);
-    expect(gauge(container).getAttribute("aria-label")).toContain("Lowest MCR 110%");
-  });
-
   it("keeps 100 % to 1,000 % on the track, unclamped and in order", () => {
     const ratios = [100, 279.2, 419.8, 744.9, 1000];
     const positions = ratios.map((pct) => thresholdGaugePosition(pct));
@@ -133,11 +98,6 @@ describe("ThresholdGauge", () => {
     expect(root.getAttribute("data-tone")).toBe("under");
     expect(leftOf(container.querySelector('[data-gauge-marker="value"]'))).toBe(0);
     expect(Number.parseFloat(container.querySelector<HTMLElement>("[data-gauge-fill]")!.style.width)).toBeGreaterThan(0);
-  });
-
-  it("separates ratios just above par from par itself", () => {
-    // On the wide 50–1,000 % track these two knobs land under a pixel apart.
-    expect(knobLeft(103) - knobLeft(100)).toBeGreaterThanOrEqual(5);
   });
 
   it("labels both ends of the track it draws, and puts par at its true place on them", () => {

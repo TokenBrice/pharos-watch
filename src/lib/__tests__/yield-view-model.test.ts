@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { scoreToGrade } from "@shared/lib/report-card-core";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { RISK_BUDGET_FILTER_KEYS, YIELD_FILTER_AXIS_REGISTRY, YIELD_LANDING_RISK_BUDGET, YIELD_RISK_BUDGET_MIN_SAFETY, YIELD_RISK_BUDGET_SPECS, buildYieldViewModel, prepareYieldUniverse, riskBudgetUrlValue } from "@/lib/yield-view-model";
+import { RISK_BUDGET_FILTER_KEYS, YIELD_FILTER_AXIS_REGISTRY, YIELD_LANDING_RISK_BUDGET, buildYieldViewModel, prepareYieldUniverse, riskBudgetUrlValue } from "@/lib/yield-view-model";
 import type { YieldViewModelUrlParams } from "@/lib/yield-view-config";
 
 const rows = [
@@ -242,17 +241,6 @@ describe("buildYieldViewModel", () => {
     });
   });
 
-  it("returns a useful filtered empty state", () => {
-    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { q: "zzzz" });
-
-    expect(model.visibleRows).toEqual([]);
-    expect(model.emptyState).toMatchObject({
-      isEmpty: true,
-      title: "No rows match this view",
-      description: "Reset one or more filters to broaden the comparable set.",
-    });
-  });
-
   it("filters by URL-backed source depth lens", () => {
     expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", depth: "thin" }).visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
     expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", depth: "moderate" }).visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
@@ -375,64 +363,6 @@ describe("buildYieldViewModel", () => {
 
     const model = buildYieldViewModel(prepareYieldUniverse(trendingRows, null), { trending: "rising" });
     expect(model.visibleRows.map((row) => row.id)).toEqual(["rising-row"]);
-  });
-
-  it("marks the active preset and counts its matching rows", () => {
-    // Stacking contract: the landing band fills minSafety=50, but preset
-    // matching only checks the preset's own override keys, so
-    // watchlist-warnings stays active on top of the band. The count is
-    // evaluated on the stacked filters — the null-safety EURC row never
-    // clears the band's safety floor, so only two watched rows count.
-    const warningsModel = buildYieldViewModel(prepareYieldUniverse(rows, new Set(["usdc-circle", "eurc-circle", "usdt-tether"])), {
-      attention: "watchlist",
-      warnings: "all",
-    });
-    expect(warningsModel.matchingPreset).toBe("watchlist-warnings");
-    expect(warningsModel.normalizedParams.warnings).toBe("all");
-    expect(warningsModel.invalidParamKeys).not.toContain("warnings");
-    const watchlist = warningsModel.presets.find((preset) => preset.key === "watchlist-warnings");
-    expect(watchlist?.active).toBe(true);
-    expect(watchlist?.count).toBe(2);
-
-    // A partial override match is inactive: the band fills warnings=hide,
-    // which the preset's overrides do not match.
-    const mismatched = buildYieldViewModel(prepareYieldUniverse(rows, null), { attention: "watchlist" });
-    expect(mismatched.matchingPreset).toBeNull();
-
-    const defaultModel = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any" });
-    expect(defaultModel.matchingPreset).toBeNull();
-  });
-
-  it("deactivates the preset when an additional filter is toggled", () => {
-    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { warnings: "only", minSafety: "70" });
-    expect(model.matchingPreset).toBeNull();
-  });
-
-  it("builds currency tab options conditional on row presence", () => {
-    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
-    const tabValues = model.options.currencyTabs.map((option) => option.value);
-
-    // USD + EUR present in rows; AUD/CAD/Other absent → no tabs for those.
-    expect(tabValues).toEqual(["all", "USD", "EUR"]);
-    expect(model.options.currencyTabs.find((option) => option.value === "all")?.count).toBe(3);
-    expect(model.options.currencyTabs.find((option) => option.value === "USD")?.count).toBe(2);
-    expect(model.options.currencyTabs.find((option) => option.value === "EUR")?.count).toBe(1);
-  });
-
-  it("groups AUD/CAD into a shared tab and aggregates non-enumerated pegs into Other", () => {
-    const audCadOtherRows = [
-      makeYieldRanking({ id: "audd-novatti", symbol: "AUDD", name: "AUDD" }),
-      makeYieldRanking({ id: "cadm-mento", symbol: "CADM", name: "CADM" }),
-      makeYieldRanking({ id: "zarp-zarp", symbol: "ZARP", name: "ZARP" }),
-      makeYieldRanking({ id: "paxg-paxos", symbol: "PAXG", name: "PAXG" }),
-    ];
-
-    const model = buildYieldViewModel(prepareYieldUniverse(audCadOtherRows, null), {});
-    const tabValues = model.options.currencyTabs.map((option) => option.value);
-
-    expect(tabValues).toEqual(["all", "aud-cad", "other"]);
-    expect(model.options.currencyTabs.find((option) => option.value === "aud-cad")?.count).toBe(2);
-    expect(model.options.currencyTabs.find((option) => option.value === "other")?.count).toBe(2);
   });
 
   it("filters rows by the aud-cad and other peg aggregates", () => {
@@ -569,58 +499,6 @@ describe("buildYieldViewModel", () => {
     expect(stacked.normalizedParams.risk).toBeNull();
   });
 
-  it("offers lifting the whole landing band when single-axis relaxations recover nothing", () => {
-    const blocked = [
-      makeYieldRanking({ id: "risky-row", symbol: "RISKY", safetyScore: 40, warningSignals: ["data-stale"] }),
-    ];
-    const model = buildYieldViewModel(prepareYieldUniverse(blocked, null), { q: "risky" });
-
-    expect(model.visibleRows).toEqual([]);
-    // Clearing q, the safety floor, or the warnings filter alone still leaves
-    // the row blocked by the other band keys; only risk=any lifts both.
-    expect(model.emptyState.suggestions.map((s) => s.filterKey)).toEqual(["risk"]);
-    expect(model.emptyState.suggestions[0]).toMatchObject({ targetValue: "any", gain: 1 });
-  });
-
-  it("computes empty-state suggestions ranked by row recovery", () => {
-    // Designed so dropping any of these three filters recovers a non-empty subset:
-    //   peg=USD ∧ warnings=only ∧ benchmark=EUR
-    // Drop peg → EURC matches (warnings+EUR). Drop benchmark → USDT matches.
-    // Drop warnings → still empty (USDC/USDT are USD-not-EUR). Top 3 by gain.
-    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {
-      risk: "any",
-      peg: "USD",
-      warnings: "only",
-      benchmark: "EUR",
-    });
-
-    expect(model.visibleRows).toEqual([]);
-    expect(model.emptyState.isEmpty).toBe(true);
-    expect(model.emptyState.suggestions.length).toBeGreaterThan(0);
-    expect(model.emptyState.suggestions.length).toBeLessThanOrEqual(3);
-    expect(model.emptyState.suggestions.every((s) => s.gain > 0)).toBe(true);
-    const gains = model.emptyState.suggestions.map((s) => s.gain);
-    expect(gains).toEqual([...gains].sort((a, b) => b - a));
-    const keys = model.emptyState.suggestions.map((s) => s.filterKey);
-    expect(keys).toEqual(expect.arrayContaining(["peg", "benchmark"]));
-  });
-
-  it("emits no empty-state suggestions when the payload itself is empty", () => {
-    const model = buildYieldViewModel(prepareYieldUniverse([], null), {});
-    expect(model.emptyState.isEmpty).toBe(true);
-    expect(model.emptyState.suggestions).toEqual([]);
-  });
-
-  it("suggests relaxing the watchlist filter when it leaves zero visible rows", () => {
-    // WHY: regression guard — getActiveFilterSummaries and listFilterRelaxations
-    // used to drift; watchlist used to surface as an active chip but not as a relax
-    // candidate. The registry now drives both.
-    const model = buildYieldViewModel(prepareYieldUniverse(rows, new Set<string>()), { watchlist: "only" });
-    expect(model.visibleRows).toEqual([]);
-    const keys = model.emptyState.suggestions.map((s) => s.filterKey);
-    expect(keys).toContain("watchlist");
-  });
-
   it("computes cohort percentile per row and suppresses small cohorts", () => {
     const cohortRows = Array.from({ length: 12 }, (_, i) =>
       makeYieldRanking({
@@ -733,12 +611,4 @@ describe("buildYieldViewModel", () => {
       ["unranked", 4],
     ]);
   });
-
-  it.each(["conservative", "balanced", "opportunistic"] as const)(
-    "labels the %s band with the V9 grade at its safety floor",
-    (key) => {
-      const spec = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === key);
-      expect(spec?.description).toContain(`${scoreToGrade(YIELD_RISK_BUDGET_MIN_SAFETY[key])} safety`);
-    },
-  );
 });

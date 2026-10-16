@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
-import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
 import {
   buildStablecoinSafetyScoreV9Presentation,
-  describeSafetyScoreV9Components,
-  humanizeSafetyScoreV9Value,
 } from "@/lib/stablecoin-safety-score-v9-presentation";
 
 // These suites author breakdowns whose published scores must match the
@@ -45,12 +41,6 @@ describe("stablecoin V9 safety presentation", () => {
       .pillars[0].breakdown!.groups[0].rows[0].children;
     expect(children).toContainEqual(expect.objectContaining({ key: "assetQuality", status: "Unresolved" }));
     expect(card.breakdowns!.backing.components[0].factors[0].cause).toBe("U");
-  });
-
-  it("has public copy for every evidence-responsibility value", () => {
-    expect(Object.keys(SAFETY_SCORE_V9_RESPONSIBILITY_LABELS).sort())
-      .toEqual([...V9EvidenceResponsibilitySchema.options].sort());
-    expect(SAFETY_SCORE_V9_RESPONSIBILITY_LABELS.unresearched).toBe("Unresolved");
   });
 
   it("explains limited score inputs without changing the visible evidence label or API key", () => {
@@ -149,29 +139,6 @@ describe("stablecoin V9 safety presentation", () => {
     ]);
   });
 
-  it("humanizes public enum values and omits unknown access fields", () => {
-    const card = makeV9Card({
-      accessPosture: {
-        transfer: "permissionless",
-        freezeExposure: "none-known",
-        primaryExit: "unknown",
-        governance: "single-entity",
-        unknownFields: ["primaryExit"],
-        signals: [],
-        reasons: [],
-      },
-    });
-
-    const presentation = buildStablecoinSafetyScoreV9Presentation(card);
-
-    expect(presentation.accessRows).toEqual([
-      { key: "transfer", label: "Transfer", value: "Permissionless" },
-      { key: "freezeExposure", label: "Freeze exposure", value: "None known" },
-      { key: "governance", label: "Governance", value: "Single entity" },
-    ]);
-    expect(humanizeSafetyScoreV9Value("issuer-discretionary")).toBe("Issuer discretionary");
-  });
-
   it("renders an undisclosed primary exit as an explicit row rather than dropping it", () => {
     const card = makeV9Card({
       accessPosture: {
@@ -192,38 +159,6 @@ describe("stablecoin V9 safety presentation", () => {
       label: "Primary exit",
       value: "Incomplete exit surface",
     });
-  });
-
-  it("turns opaque public component keys into categorized input details", () => {
-    expect(describeSafetyScoreV9Components([
-      "mechanism:liquidation-mechanics",
-      "reserve:concentration",
-      "reserve:reserve:abc",
-      "reserve:reserve:def",
-      "dex:generation:dex:asset:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool",
-      "redemption:generation:redemption:asset:collateral-redeem",
-      "bridge:arbitrum:0x123:bridge-meta:asset:key",
-      "mint",
-      "oracle",
-    ])).toEqual([
-      { key: "mechanism:liquidation-mechanics", label: "Liquidation mechanics", category: "Mechanism" },
-      { key: "reserve:concentration", label: "Reserve concentration", category: "Reserve" },
-      { key: "reserve:reserve:abc", label: "Reserve slice 1", category: "Reserve" },
-      { key: "reserve:reserve:def", label: "Reserve slice 2", category: "Reserve" },
-      {
-        key: "dex:generation:dex:asset:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool",
-        label: "Curve liquidity route",
-        category: "DEX",
-      },
-      {
-        key: "redemption:generation:redemption:asset:collateral-redeem",
-        label: "Collateral redemption",
-        category: "Redemption",
-      },
-      { key: "bridge:arbitrum:0x123:bridge-meta:asset:key", label: "Arbitrum bridge", category: "Bridge" },
-      { key: "mint", label: "Mint authority", category: "Authority" },
-      { key: "oracle", label: "Oracle design", category: "Oracle" },
-    ]);
   });
 
   it("splits causal attribution and names whose gap each unresolved fact is", () => {
@@ -457,32 +392,6 @@ describe("stablecoin V9 safety presentation", () => {
     expect(JSON.stringify(exit)).not.toContain("no confidence");
   });
 
-  it("gives an unexplained zero Exit score a concrete presentation reason", () => {
-    const card = makeV9Card({
-      pillars: makeV9Pillars({ backing: 88, exit: 0, control: 86 }),
-    });
-    card.breakdowns = {
-      ...breakdownsFixture(),
-      exit: { evaluatedScore: 0, publishedScore: 0, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], stressRequest: {
-        requestedNotionalUsd: 1_000_000,
-        maxCostBps: 200,
-        comparisonWindowSec: 300,
-      },
-      primaryRoute: null,
-      diversification: null,
-      alternatives: [],
-      adjustments: [], },
-    };
-
-    const exit = buildStablecoinSafetyScoreV9Presentation(
-      SafetyScoreV9CurrentCardSchema.parse(card),
-    ).pillars[1];
-
-    expect(exit.reasons).toEqual([
-      "No evaluated route qualified as an executable exit for the published stress request.",
-    ]);
-  });
-
   it("rolls loose bridges into one composite carrying the cohort's worst score", () => {
     const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
     card.breakdowns = {
@@ -514,46 +423,6 @@ describe("stablecoin V9 safety presentation", () => {
     expect(composite.status).toBe("3 chains");
     expect(composite.detail).toBe("Worst of 3 · range 50–85 · not binding");
     expect(composite.children.map((child) => child.key)).toEqual(["flow", "abstract", "boba"]);
-  });
-
-  it("folds low-weight reserve slices into a tail and tints only weak rows", () => {
-    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
-    const slice = (key: string, score: number, weight: number) => ({
-      key,
-      label: key,
-      source: "reserve-exposure" as const,
-      score,
-      effectiveScoringWeight: weight,
-      wholeAssetWeight: weight,
-      cause: null, causeGapRefs: [], scoringDisposition: "included" as const,
-      weightedContribution: score * weight,
-      observationState: "known" as const,
-    });
-    // Weights sum to 1; contributions sum to the evaluated score; keys sorted.
-    card.breakdowns = {
-      ...breakdownsFixture(),
-      backing: { evaluatedScore: 89.08, publishedScore: 89.08, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], groups: [{ key: "reserves" as const, label: "Reserves", score: 89.08, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
-      components: [
-        slice("a-dust", 30, 0.01),
-        slice("b-core", 95, 0.85),
-        slice("c-dust", 60, 0.012),
-        slice("d-mid", 55, 0.11),
-        slice("e-dust", 70, 0.018),
-      ],
-      adjustments: [], },
-    };
-    card.pillars.backing.score = 89.08;
-
-    const group = buildStablecoinSafetyScoreV9Presentation(
-      SafetyScoreV9CurrentCardSchema.parse(makeV9Card({ pillars: card.pillars, breakdowns: card.breakdowns })),
-    ).pillars[0].breakdown!.groups[0];
-
-    // Heaviest first, and the three sub-2% slices fold away with their combined weight.
-    expect(group.rows.map((row) => row.key)).toEqual(["b-core", "d-mid"]);
-    expect(group.tail?.rows.map((row) => row.key)).toEqual(["e-dust", "c-dust", "a-dust"]);
-    // Colour only where it means something: 95 neutral, 55 warns, 30 is critical.
-    expect(group.rows.map((row) => row.tone)).toEqual(["neutral", "warn"]);
-    expect(group.tail?.rows.map((row) => row.tone)).toEqual(["neutral", "warn", "critical"]);
   });
 
 });

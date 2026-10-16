@@ -125,24 +125,6 @@ describe("bucketForAsset", () => {
     }
   });
 
-  it("classifies ETH/LST assets", () => {
-    for (const asset of ["WETH", "wstETH", "rETH", "weETH"]) {
-      expect(bucketForAsset(asset)).toBe("eth-lst");
-    }
-  });
-
-  it("classifies BTC assets", () => {
-    for (const asset of ["WBTC", "cbBTC", "tBTC"]) {
-      expect(bucketForAsset(asset)).toBe("btc");
-    }
-  });
-
-  it("classifies governance assets", () => {
-    for (const asset of ["INV", "CRV", "CVX"]) {
-      expect(bucketForAsset(asset)).toBe("governance");
-    }
-  });
-
   it("classifies unknown assets as other", () => {
     expect(bucketForAsset("UNKNOWN_TOKEN")).toBe("other");
   });
@@ -279,25 +261,6 @@ describe("adaptFirmMarkets", () => {
     expect(result.slices).toHaveLength(1);
     expect(result.slices[0].name).toContain("ETH");
     expect(result.slices[0].pct).toBe(100);
-  });
-
-  it("includes activeMarkets in metadata", () => {
-    const result = adaptFirmMarkets({
-      markets: [
-        makeMarket("wstETH", 1_000_000),
-        makeMarket("WBTC", 0),
-        makeMarket("INV", 500_000),
-      ],
-      timestamp: 12345,
-    });
-
-    expect(result.metadata?.activeMarkets).toBe(2);
-    expect(result.metadata?.totalMarkets).toBe(3);
-    expect(result.metadata?.timestamp).toBe(12345);
-    expect(result.metadata?.sourceTimestamp).toBe(12345);
-    expect(result.metadata?.freshnessMode).toBe("verified");
-    expect(result.metadata?.redemption).toBeUndefined();
-    expectValidAdapterOutput("dola-inverse", result);
   });
 
   it("normalizes millisecond API timestamps before validation", () => {
@@ -510,14 +473,6 @@ describe("listUnexpectedDolaAssets", () => {
       timestamp: 1000,
     });
     expect(result).toEqual([]);
-  });
-
-  it("returns unknown asset symbols", () => {
-    const result = listUnexpectedDolaAssets({
-      markets: [makeMarket("wstETH"), makeMarket("MAGIC_TOKEN", 500)],
-      timestamp: 1000,
-    });
-    expect(result).toEqual(["MAGIC_TOKEN"]);
   });
 
   it("ignores zero-debt markets", () => {

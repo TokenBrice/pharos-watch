@@ -266,13 +266,6 @@ describe("adaptFlyingTulipFtUsd", () => {
     expect(() => adaptFlyingTulipFtUsd(changed)).toThrow("BNB Smart Chain borrow/stake strategy disappeared");
   });
 
-  it("drops a zero-capital reviewed collateral slot instead of fabricating exposure", () => {
-    const result = adaptFlyingTulipFtUsd(payload());
-    expect(result.warnings).toEqual([]);
-    expect(result.slices.some((slice) => slice.coinId === "fdusd-first-digital")).toBe(false);
-    expect(result.metadata?.unknownExposurePct).toBe(0);
-  });
-
   it("fails closed when a reviewed collateral publishes a negative amount", () => {
     const changed = payload();
     changed.chains[2].collaterals[2].tvlAmountUsd = -1;

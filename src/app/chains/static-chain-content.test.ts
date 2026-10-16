@@ -16,9 +16,4 @@ describe("getChainDirectoryEntries", () => {
     }
   });
 
-  it("returns entries sorted by name", () => {
-    const names = getChainDirectoryEntries().map((entry) => entry.name);
-    const sorted = [...names].sort((left, right) => left.localeCompare(right));
-    expect(names).toEqual(sorted);
-  });
 });

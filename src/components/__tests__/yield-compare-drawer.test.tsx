@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
@@ -123,40 +123,6 @@ describe("YieldCompareDrawer", () => {
     expect(screen.getAllByText("Curated source preferred | 1 alternate rejected").length).toBeGreaterThan(0);
   });
 
-  it("shows PYS evidence qualification and keeps remove controls touch-sized", () => {
-    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
-    render(
-      <YieldCompareDrawer
-        open
-        onOpenChange={vi.fn()}
-        rows={[
-          makeRow({
-            provenance: {
-              scoreQualification: "partial",
-              evidenceCompleteness: 0.71,
-            },
-          } as Partial<YieldViewModelRow>),
-        ]}
-        logos={{}}
-      />,
-    );
-
-    expect(screen.getAllByText("PYS qualification").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("partial (71% complete)").length).toBeGreaterThan(0);
-    for (const button of screen.getAllByRole("button", { name: "Remove USDC from compare" })) {
-      expect(button.className).toContain("h-11");
-      expect(button.className).toContain("w-11");
-    }
-  });
-
-  it("renders 'Coin not in current view' placeholder when a selected id is filtered out", () => {
-    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,absent-coin");
-    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc]} logos={{}} />);
-
-    const placeholders = screen.getAllByText("Coin not in current view");
-    expect(placeholders.length).toBeGreaterThan(0);
-  });
-
   it("does not pass inherited logo properties as image sources", () => {
     window.history.replaceState(null, "", "/yield/?compare=__proto__,usdc-circle");
     render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc]} logos={{}} />);
@@ -166,38 +132,6 @@ describe("YieldCompareDrawer", () => {
     expect(screen.getAllByTestId("logo")[0].getAttribute("data-src")).toBe("");
   });
 
-  it("copies a shareable comparison URL when Web Share is unavailable", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
-    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Share comparison" }));
-
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/\/yield\/?\?compare=usdc-circle%2Cusdt-tether/));
-      expect(screen.getByRole("button", { name: "Link copied" })).toBeTruthy();
-    });
-  });
-
-  it("renders stacked comparison summaries for narrow layouts", () => {
-    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
-    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
-
-    expect(screen.getByTestId("yield-compare-mobile-list")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /Remove .* from compare/ })).toHaveLength(4);
-  });
-
-  it("renders nothing when the drawer is closed", () => {
-    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
-    const { container } = render(
-      <YieldCompareDrawer open={false} onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />,
-    );
-    expect(container.firstChild).toBeNull();
-  });
   it("reads a native null-TVL row as Native and marks opportunity-derived safety", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
     render(

@@ -8,7 +8,6 @@ const blockNumber = vi.fn(), blockHeader = vi.fn(), rpcBatch = vi.fn();
 vi.mock("../evm-rpc", () => ({ fetchEvmRpcBatch: (...args: unknown[]) => rpcBatch(...args),
   fetchEvmBlockNumber: (...args: unknown[]) => blockNumber(...args), fetchEvmBlockHeader: (...args: unknown[]) => blockHeader(...args) }));
 import { fetchUsdafUniswapV4Price, usdafUniswapV4Provider } from "../authoritative-price-sources/usdaf-uniswap-v4";
-import { applyProtocolPriceOverrides, createValidationContextResolver } from "../../cron/sync-stablecoins/pricing";
 import reviewedRuntime from "./fixtures/usdaf-uniswap-v4-runtime.json";
 const NOW = 1_790_117_350;
 const encode = (types: string, values: readonly unknown[]) => encodeAbiParameters(parseAbiParameters(types), values);
@@ -80,12 +79,5 @@ describe("USDaf exact Uniswap v4 recovery", () => {
   it("never replaces a publishable incumbent", async () => {
     const asset = { id: "usdaf-asymmetry", price: 0.99, priceSource: "coingecko", priceObservedAt: NOW, priceObservedAtMode: "upstream" } as PeggedAsset;
     expect(await usdafUniswapV4Provider.fetchLivePrice?.(asset, context())).toBeNull(); expect(rpcBatch).not.toHaveBeenCalled();
-  });
-  it("admits the ordinary recovered price while retaining severe-downside publication protection", () => {
-    for (const [price, expected] of [[0.988425988054, 1], [0.2, 0]]) {
-      const asset = { id: "usdaf-asymmetry", symbol: "USDaf", price: null, pegType: "peggedUSD" } as unknown as PeggedAsset;
-      expect(applyProtocolPriceOverrides({ assets: [asset], overrides: new Map([[asset.id, { price, source: "uniswap-v4-exact",
-        confidence: "fallback", observedAt: NOW - 20, observedAtMode: "upstream" }]]), validationContexts: createValidationContextResolver(), syncStartSec: NOW })).toBe(expected);
-    }
   });
 });

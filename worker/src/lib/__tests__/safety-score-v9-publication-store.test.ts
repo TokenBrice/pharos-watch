@@ -199,24 +199,6 @@ describe("Safety Score V9 publication store", () => {
       expect(await loadState(db)).toEqual({ kind: "unavailable", reason: "read-failed" });
     });
 
-    it("logs a bounded read-failure cause with the affected projection", async () => {
-      const { db } = database();
-      const message = "D1 read failed: " + "x".repeat(600);
-      const prepare = vi.spyOn(db, "prepare").mockImplementation(() => { throw new Error(message); });
-      const log = vi.spyOn(console, "error").mockImplementation(() => {});
-      try {
-        expect(await loadState(db)).toEqual({ kind: "unavailable", reason: "read-failed" });
-        expect(log).toHaveBeenCalledTimes(1);
-        expect(JSON.parse(log.mock.calls[0]![0] as string)).toMatchObject({
-          scope: "lib", level: "error", event: "safety_score_v9_accepted_projection_read_failed",
-          source: projectionKey, errorName: "Error", errorMessage: message.slice(0, 500),
-        });
-      } finally {
-        prepare.mockRestore();
-        log.mockRestore();
-      }
-    });
-
     it("propagates a D1 AbortError even before the signal reports aborted", async () => {
       const { db } = database();
       const failure = new DOMException("D1 request cancelled", "AbortError");

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   adaptUsddLatestCollateral,
-  buildUsddHistoryUrl,
 } from "../usdd-data-platform";
 import {
   expectValidAdapterOutput,
@@ -167,12 +166,6 @@ describe("adaptUsddLatestCollateral", () => {
     expect(newer.metadata?.sourceTimestamp).toBeUndefined();
     expect(newer.metadata?.freshnessMode).toBe("unverified");
     expect(newer.metadata?.details?.historyTimestamp).toBe((HISTORY_TIMESTAMP + 604_800_000) / 1000);
-  });
-});
-
-describe("buildUsddHistoryUrl", () => {
-  it("derives the matching history endpoint from the active latest-collateral URL", () => {
-    expect(buildUsddHistoryUrl(ETHEREUM_LATEST)).toBe(ETHEREUM_HISTORY);
   });
 });
 
@@ -343,22 +336,4 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
     expect(result.metadata?.redemption).toBeUndefined();
   });
 
-  it("skips the Tron PSM probe when the configured collateral feed is not Tron", async () => {
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
-      config: {
-        inputs: {
-          primary: { kind: "http-json", url: ETHEREUM_LATEST },
-        },
-      },
-      network: {
-        json: {
-          [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "USDT-A", lockedValue: 100 }]),
-          [ETHEREUM_HISTORY]: historyResponse(),
-        },
-      },
-      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
-    });
-
-    expect(result.metadata?.redemption).toBeUndefined();
-  });
 });

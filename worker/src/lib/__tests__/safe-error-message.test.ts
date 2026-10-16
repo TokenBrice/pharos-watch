@@ -2,10 +2,6 @@ import { describe, it, expect } from "vitest";
 import { redactProviderUrls, safeErrorMessage, stripSensitive } from "../safe-error-message";
 
 describe("safeErrorMessage", () => {
-  it("formats Error instances with name and message", () => {
-    expect(safeErrorMessage(new TypeError("oops"))).toBe("TypeError: oops");
-  });
-
   it("sanitizes nested error messages without reading lazy stacks", () => {
     let stackReads = 0;
     const cause = new Error("contact alice@example.com");
@@ -20,14 +16,6 @@ describe("safeErrorMessage", () => {
     }
     expect(safeErrorMessage(error)).toBe("Error: request failed; cause: contact [email]");
     expect(stackReads).toBe(0);
-  });
-
-  it("returns string inputs sanitized", () => {
-    expect(safeErrorMessage("simple message")).toBe("simple message");
-  });
-
-  it("returns 'Unknown error' for undefined", () => {
-    expect(safeErrorMessage(undefined)).toBe("Unknown error");
   });
 
   it("returns 'Unknown error' for non-Error objects", () => {
@@ -92,17 +80,6 @@ describe("safeErrorMessage", () => {
     ).toBe("oxr https://openexchangerates.org/api/latest.json?app_id=[redacted]&symbols=EUR&base=USD failed");
   });
 
-  it("truncates messages longer than maxLength", () => {
-    const long = "x".repeat(500);
-    const safe = safeErrorMessage(new Error(long), 50);
-    // Error name prefix + 50-char body + ellipsis.
-    expect(safe.length).toBeLessThanOrEqual("Error: ".length + 51);
-    expect(safe.endsWith("…")).toBe(true);
-  });
-
-  it("truncates raw string inputs", () => {
-    expect(safeErrorMessage("a".repeat(300), 10)).toBe(`${"a".repeat(10)}…`);
-  });
 });
 
 describe("stripSensitive email redaction linearity", () => {

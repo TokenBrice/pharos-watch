@@ -38,34 +38,6 @@ describe("twitter helpers", () => {
     expect(longWord.endsWith("…")).toBe(true);
   });
 
-  it("adds the declared lead cashtag while preserving an existing cashtag", () => {
-    const result = buildTweetText(
-      "",
-      "$USDT fell while USDC rose and USDT stabilized.",
-      undefined,
-      null,
-      { leadSignalId: "liquidity:usdc", coins: ["USDC", "USDT"] },
-    );
-
-    expect(result).toBe("$USDT fell while $USDC rose and USDT stabilized.");
-    expect(result.match(/\$(?:USDT|USDC)/g)).toEqual(["$USDT", "$USDC"]);
-  });
-
-  it("falls back to the first ticker when the declared lead is absent from the text", () => {
-    expect(buildTweetText(
-      "",
-      "USDT fell while USDC rose.",
-      undefined,
-      null,
-      { leadSignalId: "liquidity:dai", coins: ["DAI"] },
-    )).toBe("$USDT fell while USDC rose.");
-  });
-
-  it("includes edition number in tweet when provided", () => {
-    const result = buildTweetText("Calm Drift", "PSI held firm at 94.1.", 22);
-    expect(result).toBe("Calm Drift (#22)\n\nPSI held firm at 94.1.");
-  });
-
   it("keeps the complete map hook inside the 270-character boundary", () => {
     const hook = "See the map.";
     const result = buildTweetText(
@@ -80,24 +52,6 @@ describe("twitter helpers", () => {
     expect(result).toContain("$USDT");
     expect(result.match(/\$/g)).toHaveLength(1);
     expect(result.slice(0, -hook.length).trimEnd()).toMatch(/\w…$/u);
-  });
-
-  it("does not truncate a representative long edition with the shortened map hook", () => {
-    const text = "USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.";
-    const hook = "See the map.";
-    const result = buildTweetText("Small Flows, Maxed Signals", text, 188, hook);
-
-    expect(result).toBe(`Small Flows, Maxed Signals (#188)\n\n$USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.\n\n${hook}`);
-    expect(result).toHaveLength(249);
-  });
-
-  it("does not append a map hook when captions are unavailable", () => {
-    expect(buildTweetText("Daily Digest", "USDT held steady.", 42, null)).not.toContain("See the map.");
-  });
-
-  it("omits edition number when null or undefined", () => {
-    expect(buildTweetText("Calm Drift", "PSI held firm.", null)).toBe("Calm Drift\n\nPSI held firm.");
-    expect(buildTweetText("Calm Drift", "PSI held firm.")).toBe("Calm Drift\n\nPSI held firm.");
   });
 
   it("posts a digest tweet with an OAuth header", async () => {

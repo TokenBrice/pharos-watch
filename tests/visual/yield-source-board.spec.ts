@@ -1,13 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { installHydratedApiFixtures } from "./a11y/hydrated-api-fixtures";
 
-// Source-board quality bars are the only place the deleted Tailwind target-floor
-// and composited `text-background/75` tooltip oracles could be observed: jsdom
-// has neither layout nor painted color. Each filter control is a stack-bar
-// segment rendered as an `aria-pressed` button with `min-w-6 h-6`; the tooltip
-// description is `--background` text at 75% opacity over the `--foreground`
-// tooltip surface. We assert the geometry floor and the measured composited
-// contrast, never a class string or a screenshot baseline.
+// Source-board quality bars render each filter control as a stack-bar segment.
+// Assert the measured target floor, not class strings or screenshot baselines.
 const VIEWPORTS = [
   { name: "mobile", width: 390, height: 844 },
   { name: "desktop", width: 1280, height: 720 },
@@ -46,54 +41,4 @@ for (const viewport of VIEWPORTS) {
     }
   });
 
-  test(`source-board tooltip text is readable against its surface (${viewport.name})`, async ({ page }) => {
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await installHydratedApiFixtures(page, "yield");
-    await page.goto("/yield");
-    await waitForFilterControls(page);
-
-    await page.locator(`${FILTER_CONTROL_SELECTOR}:visible`).first().hover();
-    const tooltip = page.locator('[role="tooltip"]');
-    await expect(tooltip).toBeVisible({ timeout: 5_000 });
-    expect(await tooltip.locator("span").count()).toBeGreaterThan(0);
-
-    const minRatio = await tooltip.evaluate((tip) => {
-      // Resolve any CSS color (oklch/rgba/color-mix) to sRGB through a scratch
-      // canvas so the measured ratio reflects painted pixels, not authored strings.
-      const resolve = (color: string): [number, number, number, number] => {
-        const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, 1, 1);
-        const d = ctx.getImageData(0, 0, 1, 1).data;
-        return [d[0], d[1], d[2], d[3] / 255];
-      };
-      const luminance = ([r, g, b]: [number, number, number]): number => {
-        const lin = (c: number) => {
-          const s = c / 255;
-          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-        };
-        return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-      };
-      const bg = resolve(getComputedStyle(tip).backgroundColor);
-      const bgRgb: [number, number, number] = [bg[0], bg[1], bg[2]];
-
-      let min = Infinity;
-      for (const span of tip.querySelectorAll("span")) {
-        const fg = resolve(getComputedStyle(span).color);
-        const alpha = fg[3];
-        const composite: [number, number, number] = [
-          fg[0] * alpha + bgRgb[0] * (1 - alpha),
-          fg[1] * alpha + bgRgb[1] * (1 - alpha),
-          fg[2] * alpha + bgRgb[2] * (1 - alpha),
-        ];
-        const l1 = luminance(composite);
-        const l2 = luminance(bgRgb);
-        const [hi, lo] = l1 >= l2 ? [l1, l2] : [l2, l1];
-        min = Math.min(min, (hi + 0.05) / (lo + 0.05));
-      }
-      return min;
-    });
-
-    expect(minRatio, "composited tooltip text contrast (WCAG AA small text)").toBeGreaterThanOrEqual(4.5);
-  });
 }

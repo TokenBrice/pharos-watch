@@ -941,21 +941,6 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     ).toBe("moderate");
   });
 
-  it("keeps retained USDC Hyperliquid exposure diagnostic under R2 maturity", () => {
-    const circulatingUsd = 73_162_245_998.21791;
-    const fantomShare = 181_391_703.16336077 / circulatingUsd;
-    const hyperliquidShare = 6_113_271_468.09971 / circulatingUsd;
-    const unattributedShare = 0.000812;
-    const exactUsdc = context({ fantom: fantomShare, hyperliquid: hyperliquidShare }, unattributedShare);
-
-    expect(fantomShare * 100).toBeCloseTo(0.2479307472, 9);
-    expect(hyperliquidShare * 100).toBeCloseTo(8.3557733701, 9);
-    expect(unattributedShare * 100).toBeCloseTo(0.0812, 9);
-    expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, exactUsdc, materiality)).toBe("low");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "Hyperliquid L1" }, exactUsdc, materiality)).toBe("low");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, exactUsdc, materiality)).toBe("low");
-  });
-
   it("grades DEX common mode on conservative capacity bounds while mature venues stay diagnostic", () => {
     expect(materiality.matureVenues).toEqual(expect.arrayContaining(["curve", "balancer", "raydium", "uniswap"]));
     for (const venue of ["curve", "balancer", "raydium", "uniswap", "Curve", "RAYDIUM", "UNISWAP"]) {

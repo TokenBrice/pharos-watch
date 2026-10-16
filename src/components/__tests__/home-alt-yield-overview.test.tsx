@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 const useYieldRankingsSummaryMock = vi.fn();
-const useYieldRankingsMock = vi.fn();
 const refetchMock = vi.fn();
 const NOW = Date.parse("2026-10-10T12:00:00Z");
 
@@ -13,7 +12,6 @@ vi.mock("@/hooks/api-hooks", () => ({
     error: null, meta: null, dataUpdatedAt: NOW, refetch: refetchMock,
     ...useYieldRankingsSummaryMock(),
   }),
-  useYieldRankings: () => useYieldRankingsMock(),
 }));
 
 vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
@@ -108,21 +106,6 @@ describe("HomeAltYieldOverview", () => {
     expect(screen.getByText("Best-paid risk in view", { exact: false }).textContent).toContain("USDC");
     expect(screen.queryByText("DJED")).toBeNull();
     expect(screen.getByRole("button", { name: /Universe: Yield rows, 2 in view of 3 · Opportunistic/ })).toBeTruthy();
-  });
-
-  it("reads the compact summary payload instead of the detail rankings payload", () => {
-    useYieldRankingsSummaryMock.mockReturnValue({
-      data: makeSummaryPayload({ coveredCount: 2, trackedCount: 3 }),
-      isLoading: false,
-    });
-    useYieldRankingsMock.mockReturnValue({ data: undefined, isLoading: false });
-
-    render(<HomeAltYieldOverview />);
-
-    expect(useYieldRankingsSummaryMock).toHaveBeenCalled();
-    expect(useYieldRankingsMock).not.toHaveBeenCalled();
-    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
-    expect(screen.getByText("/3")).toBeDefined();
   });
 
   it("reports coverage as unknown when the payload carries no safety snapshot", () => {

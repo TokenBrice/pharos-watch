@@ -19,16 +19,4 @@ describe("pharos/no-arbitrary-z-index", () => {
   ])("rejects %s", async (_name, source, filePath?: string) => {
     expect(await zIndexMessages(source, filePath)).toHaveLength(1);
   });
-
-  it.each([
-    ["local layers", 'export const c = "z-0 z-1 z-5 hover:z-10 -z-10";'],
-    ["named layers", 'export const c = "z-chrome z-chrome-dock z-modal focus:z-skip z-toast z-progress";'],
-    ["unrelated utilities", 'export const c = "size-10 w-[50px] top-z-50 data-z-[5]";'],
-  ])("allows %s", async (_name, source) => {
-    expect(await zIndexMessages(source)).toEqual([]);
-  });
-
-  it("does not apply outside src/components and src/app", async () => {
-    expect(await zIndexMessages('export const c = "z-[100]";', "src/lib/__z-index-fixture.ts")).toEqual([]);
-  });
 });

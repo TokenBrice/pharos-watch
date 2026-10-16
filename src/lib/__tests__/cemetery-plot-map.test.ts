@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
-import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { formatDeathDate } from "@shared/lib/format";
 import {
@@ -9,17 +8,26 @@ import {
   PLOT_STEP_THRESHOLDS_USD,
   buildCemeteryPlotMap,
   fitSectionCamera,
-  placeInspectorCard,
-  placePlotTag,
   plotHeightFactorOf,
   plotPeakClassOf,
   validatePlotMapCapacity,
   type CemeteryPlotMap,
   type CemeteryPlotMapInput,
-  type PlotGrave,
 } from "@/lib/cemetery-plot-map";
 import { CEMETERY_RESERVED_ID_PREFIXES, findCemeteryIdCollisions } from "@/lib/cemetery-selection";
-import { formatCemeteryPeak } from "@/lib/cemetery-stats";
+import { buildCemeteryStats, formatCemeteryPeak } from "@/lib/cemetery-stats";
+import {
+  PLOT_PROJECTIONS,
+  PLOT_STEP_HEIGHT,
+  fnv1a,
+  graveGeometry,
+  plotShapeOf,
+  portraitSiteMarks,
+  type PlotGraveShapeInput,
+  type PlotMark,
+} from "@/lib/cemetery-plot-geometry";
+import { toPlotMapInput } from "@/lib/cemetery-plot-map-input";
+import { buildCemeteryRegisterRows, type CemeteryRegisterRow } from "@/lib/cemetery-register";
 
 let seq = 0;
 function row(causeOfDeath: CauseOfDeath, deathDate: string, overrides: Partial<CemeteryPlotMapInput> = {}): CemeteryPlotMapInput {
@@ -28,47 +36,10 @@ function row(causeOfDeath: CauseOfDeath, deathDate: string, overrides: Partial<C
   return { id, name: `Coin ${id}`, symbol: id.toUpperCase(), causeOfDeath, deathDate, pegCurrency: "USD", peakMcap: 20_000_000, ...overrides };
 }
 
-/** Deterministic reorder: reverse, then rotate by a third. */
-function shuffled<T>(items: readonly T[]): T[] {
-  const reversed = [...items].reverse();
-  const k = Math.floor(reversed.length / 3);
-  return [...reversed.slice(k), ...reversed.slice(0, k)];
-}
-
 const byId = (map: CemeteryPlotMap) => new Map(map.graves.map((g) => [g.id, g]));
-const place = (g: PlotGrave) => ({ cell: g.cell, anchor: g.anchor });
-const within = (inner: { x0: number; y0: number; x1: number; y1: number }, outer: { x0: number; y0: number; x1: number; y1: number }) =>
-  inner.x0 >= outer.x0 && inner.x1 <= outer.x1 && inner.y0 >= outer.y0 && inner.y1 <= outer.y1;
 
 const desktop = buildCemeteryPlotMap(CEMETERY_ENTRIES, { preset: "desktop" });
 const portrait = buildCemeteryPlotMap(CEMETERY_ENTRIES, { preset: "portrait" });
-
-describe("buildCemeteryPlotMap: determinism and serialisation", () => {
-  it("is byte-identical for shuffled input, in both presets", () => {
-    expect(JSON.stringify(buildCemeteryPlotMap(shuffled(CEMETERY_ENTRIES), { preset: "desktop" }))).toBe(JSON.stringify(desktop));
-    expect(JSON.stringify(buildCemeteryPlotMap(shuffled(CEMETERY_ENTRIES), { preset: "portrait" }))).toBe(JSON.stringify(portrait));
-  });
-
-  it("is plain data: survives a JSON round trip unchanged", () => {
-    expect(JSON.parse(JSON.stringify(desktop))).toEqual(desktop);
-    expect(JSON.parse(JSON.stringify(portrait))).toEqual(portrait);
-  });
-
-  it("rounds world units to 0.01 and screen units to 0.1", () => {
-    const onGrid = (n: number, step: number) => Math.abs(Math.round(n / step) * step - n) < 1e-9;
-    for (const g of desktop.graves) {
-      for (const n of [g.cell.i0, g.cell.i1, g.cell.j0, g.cell.j1, g.anchor.i, g.anchor.j]) expect(onGrid(n, 0.01), `${g.id} world ${n}`).toBe(true);
-      const screen = [...g.screen.ground, ...g.screen.top, g.screen.medal.x, g.screen.medal.y, g.screen.box.x0, g.screen.box.y1, ...g.screen.hit.flat()];
-      for (const n of screen) expect(onGrid(n, 0.1), `${g.id} screen ${n}`).toBe(true);
-    }
-    for (const n of desktop.viewBox) expect(onGrid(n, 0.1)).toBe(true);
-  });
-
-  it("rejects duplicate ids and an empty set", () => {
-    expect(() => buildCemeteryPlotMap([row("abandoned", "2024-01", { id: "dup" }), row("regulatory", "2024-02", { id: "dup" })], { preset: "desktop" })).toThrow(/duplicate id dup/);
-    expect(() => buildCemeteryPlotMap([], { preset: "desktop" })).toThrow();
-  });
-});
 
 describe("buildCemeteryPlotMap: encodings", () => {
   it("scales height monotonically with peak between an explicit floor and ceiling", () => {
@@ -135,23 +106,6 @@ describe("buildCemeteryPlotMap: encodings", () => {
     expect(lone.neutralHeight).toBeGreaterThan(PLOT_HEIGHT.floor);
     expect(lone.graves.find((g) => g.unrecorded)?.steps).toBeNull();
   });
-
-  it("marks non-USD pegs with a footstone glyph and tracked-archive rows with the bronze plaque", () => {
-    const map = buildCemeteryPlotMap(
-      [
-        row("abandoned", "2024-01", { id: "eur", pegCurrency: "EUR" }),
-        row("abandoned", "2024-02", { id: "odd", pegCurrency: "GOLD" }),
-        row("abandoned", "2024-03", { id: "usd", archivedDataAvailable: true }),
-      ],
-      { preset: "desktop" },
-    );
-    const g = byId(map);
-    expect(g.get("eur")?.footstone).toBe("€");
-    expect(g.get("odd")?.footstone).toBe("◇");
-    expect(g.get("usd")?.footstone).toBeNull();
-    expect(g.get("usd")?.archived).toBe(true);
-    expect(g.get("eur")?.archived).toBe(false);
-  });
 });
 
 describe("buildCemeteryPlotMap: weathering depends only on asOf", () => {
@@ -173,39 +127,9 @@ describe("buildCemeteryPlotMap: weathering depends only on asOf", () => {
       else expect(grave.lean).toBe(0);
     }
   });
-
-  it("changes weathering with asOf and nothing else; defaults asOf to the latest recorded death", () => {
-    const early = buildCemeteryPlotMap(entries, { asOf: "2026-01-01", preset: "desktop" });
-    const late = buildCemeteryPlotMap(shuffled(entries), { asOf: "2031-01-01", preset: "desktop" });
-    expect(late.graves.map((g) => g.weather)).toEqual(late.graves.map(() => 4));
-    expect(late.graves.some((g) => g.fresh)).toBe(false);
-    expect(late.graves.map(place)).toEqual(early.graves.map(place));
-    expect(late.viewBox).toEqual(early.viewBox);
-
-    const byDefault = buildCemeteryPlotMap(entries, { preset: "desktop" });
-    expect(byDefault.asOf).toBe("2025-12-01");
-    expect(byDefault.graves).toEqual(buildCemeteryPlotMap(entries, { asOf: "2025-12-01", preset: "desktop" }).graves);
-  });
 });
 
 describe("buildCemeteryPlotMap: year blocks", () => {
-  it("holds exactly each year's graves, newest block at the gate, empty years as one 'none recorded' strip", () => {
-    const entries = [
-      row("abandoned", "2018-03"),
-      row("regulatory", "2021-04"),
-      row("liquidity-drain", "2021-09"),
-      row("abandoned", "2022-01"),
-      row("counterparty-failure", "2022-11"),
-      row("algorithmic-failure", "2022-05"),
-    ];
-    const map = buildCemeteryPlotMap(entries, { preset: "desktop" });
-    expect(map.blocks.map((b) => b.key)).toEqual(["2022", "2021", "2019-2020", "2018"]);
-    for (let k = 1; k < map.blocks.length; k++) expect(map.blocks[k].i0).toBeGreaterThan(map.blocks[k - 1].i1);
-    const strip = map.blocks[2];
-    expect(strip).toMatchObject({ empty: true, years: [2019, 2020], label: "2019–20", text: "2019–20", sub: "none recorded", count: 0 });
-    expect(map.blocks[0]).toMatchObject({ text: "2022 · 3", count: 3, sub: null });
-  });
-
   it("puts every real grave inside its own year's block and nowhere else", () => {
     for (const b of desktop.blocks) {
       const expected = desktop.graves.filter((g) => !b.empty && g.year === b.year).map((g) => g.id).sort();
@@ -221,33 +145,6 @@ describe("buildCemeteryPlotMap: year blocks", () => {
   });
 });
 
-describe("buildCemeteryPlotMap: append stability", () => {
-  const template = CEMETERY_ENTRIES.find((e) => e.causeOfDeath === "abandoned")!;
-  const later = (id: string, deathDate: string, causeOfDeath: CauseOfDeath = "abandoned") => ({ ...template, id, deathDate, causeOfDeath, peakMcap: 20_000_000 });
-  const latest = CEMETERY_ENTRIES.reduce((max, e) => (e.deathDate > max ? e.deathDate : max), "");
-  const nextYear = Number(latest.slice(0, 4)) + 1;
-  const sameYear = Array.from({ length: 16 }, (_, k) => later(`zz-later-${k}`, `${latest.slice(0, 4)}-12-${String(10 + k).padStart(2, "0")}`, CAUSE_ORDER[k % 5]));
-
-  for (const preset of ["desktop", "portrait"] as const) {
-    it(`moves no existing grave in world coordinates when newer deaths are appended (${preset})`, () => {
-      const before = buildCemeteryPlotMap(CEMETERY_ENTRIES, { preset });
-      for (const added of [sameYear.slice(0, 1), sameYear, [later("zz-next-year", `${nextYear}-02-01`)]]) {
-        const after = buildCemeteryPlotMap([...CEMETERY_ENTRIES, ...added], { preset });
-        const moved = byId(after);
-        for (const g of before.graves) expect(place(moved.get(g.id)!), g.id).toEqual(place(g));
-        expect(after.lanes.map((L) => [L.j0, L.j1])).toEqual(before.lanes.map((L) => [L.j0, L.j1]));
-      }
-    });
-  }
-
-  it("grows the platform toward the gate", () => {
-    const after = buildCemeteryPlotMap([...CEMETERY_ENTRIES, ...sameYear], { preset: "desktop" });
-    expect(after.site.iWest).toBeLessThan(desktop.site.iWest);
-    expect(after.site.iOldest).toBe(desktop.site.iOldest);
-    expect(after.site.iEast).toBe(desktop.site.iEast);
-  });
-});
-
 describe("buildCemeteryPlotMap: identity and order", () => {
   it("keeps every real id unique and clear of the reserved prefixes", () => {
     const ids = desktop.graves.map((g) => g.id);
@@ -256,47 +153,6 @@ describe("buildCemeteryPlotMap: identity and order", () => {
     for (const id of ids) for (const prefix of CEMETERY_RESERVED_ID_PREFIXES) expect(id.startsWith(prefix)).toBe(false);
     expect(new Set(desktop.drawOrder).size).toBe(desktop.drawOrder.length);
     for (const g of desktop.graves) expect(desktop.drawOrder[g.draw]).toBe(`grave:${g.id}`);
-  });
-
-  it("orders keyboard sections canonically and graves chronologically, landing first on the newest death", () => {
-    expect(desktop.keyboard.sections.map((s) => s.cause)).toEqual([...CAUSE_ORDER]);
-    expect(desktop.lanes.map((L) => L.cause)).toEqual([...CAUSE_ORDER]);
-    for (const section of desktop.keyboard.sections) {
-      const expected = sortCemeteryCoins(CEMETERY_ENTRIES.filter((e) => e.causeOfDeath === section.cause), "oldest").map((e) => e.id);
-      expect(section.ids).toEqual(expected);
-      section.ids.forEach((id, k) => expect(byId(desktop).get(id)?.laneIndex).toBe(k));
-    }
-    expect(desktop.keyboard.initialId).toBe(sortCemeteryCoins([...CEMETERY_ENTRIES], "newest")[0].id);
-    // Front lane (Abandoned) nearest the gate-side front, Regulatory under the sea wall.
-    for (let k = 1; k < desktop.lanes.length; k++) expect(desktop.lanes[k].j1).toBeLessThan(desktop.lanes[k - 1].j0);
-    expect(desktop.signposts.map((s) => s.cause)).toEqual([...CAUSE_ORDER]);
-  });
-
-  it("keeps 1×1 graves inside their own lane; only large lots overhang", () => {
-    for (const g of desktop.graves) {
-      const lane = desktop.lanes.find((L) => L.cause === g.cause)!;
-      if (g.lot === 1) {
-        expect(g.overhang).toBe(false);
-        expect(g.cell.j0).toBeGreaterThanOrEqual(lane.j0);
-        expect(g.cell.j1).toBeLessThanOrEqual(lane.j1);
-      } else {
-        expect(g.cell.j0 < lane.j1 && g.cell.j1 > lane.j0, g.id).toBe(true);
-      }
-    }
-  });
-
-  it("builds the same grave set with the same encodings in the portrait preset", () => {
-    expect(portrait.graves.map((g) => g.id)).toEqual(desktop.graves.map((g) => g.id));
-    const d = byId(desktop);
-    for (const g of portrait.graves) {
-      const twin = d.get(g.id)!;
-      expect([g.cause, g.year, g.lot, g.steps, g.heightFactor, g.weather, g.fresh, g.shape, g.footstone, g.archived]).toEqual([
-        twin.cause, twin.year, twin.lot, twin.steps, twin.heightFactor, twin.weather, twin.fresh, twin.shape, twin.footstone, twin.archived,
-      ]);
-    }
-    expect(portrait.keyboard).toEqual(desktop.keyboard);
-    expect(portrait.columns.map((c) => c.cause)).toEqual([...CAUSE_ORDER]);
-    for (let k = 1; k < portrait.columns.length; k++) expect(portrait.columns[k].x0).toBeGreaterThanOrEqual(portrait.columns[k - 1].x1);
   });
 });
 
@@ -316,92 +172,7 @@ describe("colossus chips", () => {
   });
 });
 
-describe("hover tag placement", () => {
-  it("takes the first candidate clear of obstacles and reports residual collisions", () => {
-    const stone = { left: 100, top: 100, right: 120, bottom: 130 };
-    const tag = { width: 60, height: 16 };
-    const frame = { width: 400, height: 300 };
-    expect(placePlotTag({ stone, tag, frame, obstacles: [] })).toEqual({ x: 80, y: 78, collisions: 0 });
-    const blocked = placePlotTag({ stone, tag, frame, obstacles: [{ left: 60, top: 60, right: 140, bottom: 95 }] });
-    expect(blocked.collisions).toBe(0);
-    expect(blocked.y).toBeGreaterThan(95);
-    const everywhere = placePlotTag({ stone, tag, frame, obstacles: [{ left: 0, top: 0, right: 400, bottom: 300 }] });
-    expect(everywhere.collisions).toBe(1);
-  });
-
-  it("keeps the tag below the sticky chrome's edge when the frame top is scrolled under it", () => {
-    const p = placePlotTag({ stone: { left: 100, top: 100, right: 120, bottom: 130 }, tag: { width: 60, height: 16 }, frame: { width: 400, height: 300 }, obstacles: [], top: 90 });
-    expect(p.y).toBeGreaterThanOrEqual(90);
-    expect(p.collisions).toBe(0);
-  });
-});
-
-describe("inspector docking", () => {
-  const frame = { left: 36, top: 200, right: 1404, bottom: 973 };
-  const stone = { left: 600, top: 400, right: 640, bottom: 440 };
-  const card = { width: 344, height: 300 };
-  const viewport = { width: 1440, height: 800 };
-  const overlaps = (a: { left: number; top: number; right: number; bottom: number }, b: typeof a) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-
-  it("docks beside the grave on the roomier side, centred on it inside the visible band", () => {
-    const p = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport });
-    expect(p).toMatchObject({ x: stone.right + 28, y: 270, maxHeight: 300 });
-    expect(p.connector).toEqual({ x1: 620, y1: 410, x2: stone.right + 28, y2: 410 });
-  });
-
-  it("moves to the other side rather than cover a volume it must avoid", () => {
-    const colossus = { left: 700, top: 150, right: 900, bottom: 700 };
-    const p = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport, avoid: [colossus] });
-    expect(p.x + card.width).toBeLessThanOrEqual(stone.left);
-    expect(overlaps({ left: p.x, top: p.y, right: p.x + card.width, bottom: p.y + p.maxHeight }, colossus)).toBe(false);
-  });
-
-  it("slides along its run to leave labels uncovered, never shortening for them", () => {
-    // a plate the centred card (y 270–570) would cover: the card moves below it at full height
-    const plate = { left: 700, top: 250, right: 820, bottom: 274 };
-    const p = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport, soft: [plate] });
-    expect(p.maxHeight).toBe(card.height);
-    expect(overlaps({ left: p.x, top: p.y, right: p.x + card.width, bottom: p.y + p.maxHeight }, plate)).toBe(false);
-    // a band-high label wider than the 48 px slide cannot be escaped: the card keeps its full height by the grave
-    const tall = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport, soft: [{ left: 660, top: 0, right: 760, bottom: 800 }] });
-    expect(tall).toMatchObject({ x: stone.right + 28, y: 270, maxHeight: 300 });
-  });
-
-  it("never docks under the sticky chrome or over the Feedback button's corner", () => {
-    const high = placeInspectorCard({ stone: { left: 600, top: 100, right: 640, bottom: 140 }, frame: { ...frame, top: 60 }, medal: [620, 110], card, viewport });
-    expect(high.y).toBeGreaterThanOrEqual(PLOT_LAYOUT.chromeTop);
-    const nearFeedback = placeInspectorCard({ stone: { left: 900, top: 700, right: 940, bottom: 760 }, frame: { ...frame, left: 700 }, medal: [920, 710], card: { width: 344, height: 700 }, viewport });
-    expect(nearFeedback.x + 344).toBeGreaterThan(viewport.width - 170);
-    expect(nearFeedback.y + nearFeedback.maxHeight).toBeLessThanOrEqual(viewport.height - 84);
-  });
-
-  it("stays by its grave inside the frame once the plan has scrolled out of view", () => {
-    const scrolled = { left: 36, top: -900, right: 1404, bottom: -127 };
-    const p = placeInspectorCard({ stone: { left: 600, top: -600, right: 640, bottom: -560 }, frame: scrolled, medal: [620, -590], card, viewport });
-    expect(p.y).toBeGreaterThanOrEqual(scrolled.top);
-    expect(p.y + p.maxHeight).toBeLessThanOrEqual(scrolled.bottom);
-  });
-});
-
 describe("section cameras", () => {
-  it("frame each section's graves only, reaching the zoom floor at 1440×800", () => {
-    expect(desktop.sectionCameras.map((c) => c.cause)).toEqual([...CAUSE_ORDER]);
-    for (const camera of desktop.sectionCameras) {
-      const section = desktop.graves.filter((g) => g.cause === camera.cause);
-      const inSpan = section.filter((g) => g.year >= camera.span[0] && g.year <= camera.span[1]);
-      expect(camera.total).toBe(section.length);
-      expect([...camera.ids].sort()).toEqual(inSpan.map((g) => g.id).sort());
-      expect(camera.partial).toBe(inSpan.length < section.length);
-      expect(camera.facePx).toBeGreaterThanOrEqual(PLOT_LAYOUT.zoomFloorFacePx);
-      for (const g of inSpan) expect(within(g.screen.box, camera.box), g.id).toBe(true);
-      // The frame is the union of exactly the shown graves.
-      expect(camera.box.x0).toBe(Math.min(...inSpan.map((g) => g.screen.box.x0)));
-      expect(camera.box.x1).toBe(Math.max(...inSpan.map((g) => g.screen.box.x1)));
-      expect(camera.box.y0).toBe(Math.min(...inSpan.map((g) => g.screen.box.y0)));
-      expect(camera.box.y1).toBe(Math.max(...inSpan.map((g) => g.screen.box.y1)));
-    }
-  });
-
   it("falls back to the contiguous run of years with the most graves when the whole section stays under the floor", () => {
     for (const cause of CAUSE_ORDER) {
       const narrow = fitSectionCamera(desktop, cause, { frameWidth: 700, viewportHeight: 800 })!;
@@ -415,47 +186,6 @@ describe("section cameras", () => {
       expect(narrow.ids.every((id) => desktop.graves.find((g) => g.id === id)!.cause === cause)).toBe(true);
     }
   });
-
-  // Real app chrome: the frame follows the content box (1024 → 984 px, 1440 → 1368, 1920 → 1848).
-  const viewports = [
-    { name: "1024×768", frameWidth: 984, viewportHeight: 768 },
-    { name: "1440×800", frameWidth: 1368, viewportHeight: 800 },
-    { name: "1920×1080", frameWidth: 1848, viewportHeight: 1080 },
-  ];
-  for (const viewport of viewports) {
-    it(`lands every shown grave inside the visible band and centres on the section, never the lighthouse (${viewport.name})`, () => {
-      const [vbX, vbY, vbW, vbH] = desktop.viewBox;
-      const scale = viewport.frameWidth / vbW;
-      const bandTop = PLOT_LAYOUT.zoomBar;
-      const bandBottom = Math.min(vbH * scale, viewport.viewportHeight - PLOT_LAYOUT.chromeTop);
-      const lighthouse = desktop.obstacles.find((o) => o.key === "lighthouse")!;
-      for (const cause of CAUSE_ORDER) {
-        const camera = fitSectionCamera(desktop, cause, viewport)!;
-        // `translate(tx ty) scale(zoom)` about user (0, 0), then the viewBox maps user units to frame px.
-        const toFrame = (x: number, y: number) => [(camera.zoom * x + camera.translate[0] - vbX) * scale, (camera.zoom * y + camera.translate[1] - vbY) * scale];
-        const toUser = (px: number, py: number) => [(px / scale + vbX - camera.translate[0]) / camera.zoom, (py / scale + vbY - camera.translate[1]) / camera.zoom];
-
-        const section = desktop.graves.filter((g) => g.cause === cause);
-        // Every grave, unless the 28 px floor forces the approved partial view (then its flagged run of years).
-        if (viewport.frameWidth >= PLOT_LAYOUT.reference.frameWidth && cause !== "algorithmic-failure") expect(camera.partial, cause).toBe(false);
-        const shown = camera.partial ? section.filter((g) => camera.ids.includes(g.id)) : section;
-        expect(shown).toHaveLength(camera.shown);
-        for (const g of shown) {
-          const [x0, y0] = toFrame(g.screen.box.x0, g.screen.box.y0);
-          const [x1, y1] = toFrame(g.screen.box.x1, g.screen.box.y1);
-          expect(x0, `${cause} ${g.id} left`).toBeGreaterThanOrEqual(-1);
-          expect(x1, `${cause} ${g.id} right`).toBeLessThanOrEqual(viewport.frameWidth + 1);
-          expect(y0, `${cause} ${g.id} top`).toBeGreaterThanOrEqual(bandTop - 1);
-          expect(y1, `${cause} ${g.id} bottom`).toBeLessThanOrEqual(bandBottom + 1);
-        }
-
-        // The middle of the visible band shows the framed graves, not the lighthouse or the sea behind the wall.
-        const [mx, my] = toUser(viewport.frameWidth / 2, (bandTop + bandBottom) / 2);
-        expect(within({ x0: mx, y0: my, x1: mx, y1: my }, camera.box), `${cause} centre`).toBe(true);
-        expect(within({ x0: mx, y0: my, x1: mx, y1: my }, lighthouse), `${cause} centre on the lighthouse`).toBe(false);
-      }
-    });
-  }
 });
 
 describe("validatePlotMapCapacity", () => {
@@ -496,5 +226,112 @@ describe("validatePlotMapCapacity", () => {
     const report = validatePlotMapCapacity(map);
     expect(report.issues.map((i) => i.kind)).toContain("lot-search");
     expect(report.issues.map((i) => i.kind)).not.toContain("overlap");
+  });
+});
+
+const dimetric = PLOT_PROJECTIONS.dimetric;
+
+function stone(overrides: Partial<PlotGraveShapeInput> = {}): PlotGraveShapeInput {
+  return {
+    shape: "pillow",
+    lot: 1,
+    steps: 1,
+    heightFactor: 0.83,
+    weather: 0,
+    fresh: false,
+    archived: false,
+    footstone: null,
+    seed: fnv1a("fixture"),
+    lean: 0,
+    cell: { i0: 0, i1: 1.1, j0: 0, j1: 0.92 },
+    anchor: { i: 0.3, j: 0.46 },
+    ...overrides,
+  };
+}
+
+const classes = (marks: PlotMark[]) => marks.map((m) => ("cls" in m ? m.cls : m.kind));
+
+describe("graveGeometry", () => {
+  it("draws one plinth box per step, and an outlined, hatched plinth for an unrecorded peak", () => {
+    const plinthFaces = (marks: PlotMark[]) => classes(marks).filter((c) => c.startsWith("pl-")).length;
+    for (const steps of [0, 1, 2, 3, 4] as const) expect(plinthFaces(graveGeometry(dimetric, stone({ steps })).body)).toBe(3 * steps);
+
+    const unrecorded = graveGeometry(dimetric, stone({ steps: null }));
+    expect(classes(unrecorded.body).filter((c) => c === "pl-open eo")).toHaveLength(3);
+    expect(classes(unrecorded.body)).toContain("hatch");
+    const floorStone = graveGeometry(dimetric, stone({ steps: 0 }));
+    expect(classes(floorStone.body)).not.toContain("hatch");
+    // It stands on its outlined plinth, never on the bare ground of the 0-step class.
+    expect(unrecorded.topZ).toBeCloseTo(floorStone.topZ + PLOT_STEP_HEIGHT, 9);
+  });
+
+  it("encodes cause, not recovery: only counterparty arches split, regulatory stones stay sealed and whole", () => {
+    expect(classes(graveGeometry(dimetric, stone({ shape: "split-arch" })).body)).toContain("crack");
+    const tablet = classes(graveGeometry(dimetric, stone({ shape: "sealed-tablet", weather: 4 })).body);
+    expect(tablet).toContain("seal e");
+    expect(tablet).not.toContain("crack");
+    const lot3 = { lot: 3 as const, steps: 4 as const, cell: { i0: 0, i1: 3.3, j0: 0, j1: 2.76 }, anchor: { i: 1.5, j: 1.38 } };
+    const mausoleum = graveGeometry(dimetric, stone({ ...lot3, shape: plotShapeOf("sealed-tablet", 3) }));
+    expect(classes(mausoleum.body)).not.toContain("crack");
+    expect(classes(mausoleum.body)).toContain("door e");
+    expect(classes(graveGeometry(dimetric, stone({ shape: "broken-column" })).body)).toContain("brk e");
+  });
+
+  it("adds lichen from w2 and moss from w3 only", () => {
+    const marks = (weather: 0 | 1 | 2 | 3 | 4) => classes(graveGeometry(dimetric, stone({ weather })).body);
+    for (const w of [0, 1] as const) expect(marks(w).filter((c) => c === "lichen" || c === "moss")).toEqual([]);
+    expect(marks(2)).toContain("lichen");
+    expect(marks(2)).not.toContain("moss");
+    expect(marks(4)).toEqual(expect.arrayContaining(["lichen", "moss"]));
+  });
+});
+
+describe("scene structure", () => {
+  it("builds the portrait structure from the portrait model", () => {
+    const tall = buildCemeteryPlotMap(CEMETERY_ENTRIES, { preset: "portrait" });
+    const site = portraitSiteMarks(tall);
+    const crossPaths = site.ground.filter((m) => "cls" in m && m.cls === "gravel");
+    expect(crossPaths).toHaveLength(tall.blocks.length - 1);
+    expect(site.beds.map((b) => b.cause).sort()).toEqual(tall.lanes.map((L) => L.cause).sort());
+  });
+});
+
+function registerRow(overrides: Partial<CemeteryRegisterRow>): CemeteryRegisterRow {
+  return {
+    id: "coin-a",
+    name: "Coin A",
+    symbol: "CNA",
+    logoUrl: null,
+    cause: "abandoned",
+    deathDate: "2024-03",
+    peak: 25_000_000,
+    pegCurrency: "USD",
+    mechanismArchetype: null,
+    tracked: false,
+    caseStudy: null,
+    epitaph: null,
+    obituary: "Coin A stopped.",
+    sourceUrl: "https://example.com/a",
+    sourceLabel: "Example",
+    contracts: [],
+    ...overrides,
+  };
+}
+
+describe("toPlotMapInput", () => {
+  it("keeps an unrecorded peak unrecorded (never a $0 peak) and an untracked record without a bronze plaque", () => {
+    const rows = [registerRow({ id: "coin-a", peak: null }), registerRow({ id: "coin-b", deathDate: "2024-05", peak: 3e9 })];
+    const [input] = toPlotMapInput(rows);
+    expect(input.peakMcap).toBeUndefined();
+    expect(input.archivedDataAvailable).toBe(false);
+
+    const grave = buildCemeteryPlotMap(toPlotMapInput(rows), { preset: "desktop" }).graves.find((g) => g.id === "coin-a");
+    expect(grave).toMatchObject({ peak: null, peakClass: null, unrecorded: true, archived: false });
+  });
+
+  it.each(["desktop", "portrait"] as const)("rebuilds exactly the catalog plan for %s (no model field is lost)", (preset) => {
+    const rows = buildCemeteryRegisterRows(CEMETERY_ENTRIES);
+    const asOf = buildCemeteryStats(CEMETERY_ENTRIES).asOf.date;
+    expect(buildCemeteryPlotMap(toPlotMapInput(rows), { asOf, preset })).toEqual(buildCemeteryPlotMap(CEMETERY_ENTRIES, { asOf, preset }));
   });
 });

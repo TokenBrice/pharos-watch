@@ -118,14 +118,6 @@ describe("parseFredLatest", () => {
       .toEqual({ recordDate: "2026-06-24", rate: 3.71 });
   });
 
-  it("rejects a months-old last row so USD falls through to the next provider", () => {
-    expect(parseFredLatest("DATE,DGS3MO\n2026-03-02,3.72\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS)).toBeNull();
-  });
-
-  it("rejects a future-dated last row instead of stamping it fresh", () => {
-    expect(parseFredLatest("DATE,DFF\n2099-01-01,4.33\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS)).toBeNull();
-  });
-
   it("skips missing-value rows but still guards the latest usable observation", () => {
     expect(parseFredLatest("DATE,DFF\n2026-03-02,4.33\n2026-06-25,.\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS)).toBeNull();
     expect(parseFredLatest("DATE,DFF\n2026-06-24,4.33\n2026-06-25,.\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS))

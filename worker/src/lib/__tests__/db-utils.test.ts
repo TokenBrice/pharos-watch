@@ -355,18 +355,6 @@ describe("db utility helpers", () => {
     expect(batchCalls).toHaveLength(0);
   });
 
-  it("batches price-cache upserts", async () => {
-    const { db, batchCalls } = makeDb();
-
-    await savePriceCache(db, [
-      { id: "usdt-tether", price: 1.0 },
-      { id: "usdc-circle", price: 0.9 },
-    ]);
-
-    expect(batchCalls).toHaveLength(1);
-    expect(batchCalls[0]).toHaveLength(2);
-  });
-
   it("returns first-seen date map", async () => {
     const { db } = makeDb({
       firstSeenRows: [

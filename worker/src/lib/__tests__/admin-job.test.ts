@@ -1,26 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildAdminJobSummary,
-  noAdminTargetsResponse,
   readAdminIntegerParam,
   readAdminStringParam,
   runAdminJob,
 } from "../admin-job";
 
 describe("admin-job helpers", () => {
-  it("executes jobs without owning route authentication", async () => {
-    const response = await runAdminJob(
-      {
-        request: new Request("https://api.pharos.watch/api/admin"),
-        url: new URL("https://api.pharos.watch/api/admin"),
-      },
-      async () => new Response("ok"),
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.text()).resolves.toBe("ok");
-  });
-
   it("parses body payloads and computes dryRun from body or query", async () => {
     const response = await runAdminJob(
       {
@@ -74,16 +59,4 @@ describe("admin-job helpers", () => {
     expect(readAdminIntegerParam({}, new URLSearchParams("chunkSize=2.5"), "chunkSize")).toBeNull();
   });
 
-  it("omits empty arrays from shared admin job summaries", () => {
-    expect(buildAdminJobSummary({ updated: 4, skipped: [], errors: [], preserved: ["usdc"] })).toEqual({
-      updated: 4,
-      preserved: ["usdc"],
-    });
-  });
-
-  it("returns the canonical no-targets response shape", async () => {
-    const response = noAdminTargetsResponse();
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ message: "No coins in this batch" });
-  });
 });

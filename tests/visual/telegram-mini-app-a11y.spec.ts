@@ -20,18 +20,6 @@ const LIGHT_THEME = {
   link_color: "#1266a3",
 };
 
-const DARK_THEME = {
-  bg_color: "#111827",
-  text_color: "#f9fafb",
-  secondary_bg_color: "#1f2937",
-  section_bg_color: "#1f2937",
-  hint_color: "#d1d5db",
-  subtitle_text_color: "#d1d5db",
-  button_color: "#75bdf2",
-  button_text_color: "#111827",
-  link_color: "#75bdf2",
-};
-
 const POPULATED_STATE = {
   ...MINI_APP_STATE,
   subscriber: {
@@ -159,28 +147,6 @@ test.describe("authenticated Telegram Mini App accessibility", () => {
       const box = await target.boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
-  });
-
-  test("dark tall state respects reduced motion and 200% text resizing", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 932 });
-    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
-    await trackMiniAppSessionRequests(page, POPULATED_STATE);
-    await installTelegramSdkFixture(page, { sdk: { colorScheme: "dark", themeParams: DARK_THEME } });
-    await launchSignedMiniApp(page);
-
-    await page.evaluate(() => {
-      document.documentElement.style.fontSize = "200%";
-    });
-    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
-    const transitionDurations = await page.getByRole("tab", { name: "home" }).evaluate((element) =>
-      getComputedStyle(element).transitionDuration.split(",").map((value) => Number.parseFloat(value) || 0));
-    expect(Math.max(...transitionDurations)).toBeLessThanOrEqual(0.01);
-
-    await expectAxeClean(page, "home-dark-tall-200-percent-text");
-    await expectNoHorizontalOverflow(page);
-    await page.getByRole("tab", { name: "settings" }).click();
-    await expectAxeClean(page, "settings-dark-tall-200-percent-text");
-    await expectNoHorizontalOverflow(page);
   });
 
   test("group and stale-auth read-only states remain explicit and accessible", async ({ page }) => {

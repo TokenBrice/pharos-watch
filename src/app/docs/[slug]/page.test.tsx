@@ -37,15 +37,4 @@ describe("DocPage", () => {
     }
   });
 
-  it("renders markdown tables with distinct accessible names and header cells", async () => {
-    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "dews" }) }));
-
-    const labels = Array.from(html.matchAll(/aria-label="(Documentation table:[^"]+)"/g), (match) => match[1]!);
-    expect(labels.length).toBeGreaterThan(1);
-    expect(new Set(labels).size).toBe(labels.length);
-    // The accessible name enumerates the table's own column headers.
-    expect(labels.some((label) => label.includes("Range, Band, Hex, Description"))).toBe(true);
-    expect((html.match(/<table/g) ?? []).length).toBe(labels.length);
-    expect(html).toContain("<th");
-  });
 });

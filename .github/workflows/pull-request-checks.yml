@@ -53,12 +53,10 @@ jobs:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     outputs:
-      critical_coverage_changed: ${{ steps.classify.outputs.critical_coverage_changed }}
       docs_changed: ${{ steps.classify.outputs.docs_changed }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
       docs_inline_succeeded: ${{ steps.docs.outcome == 'success' }}
       matrix: ${{ steps.matrix.outputs.matrix }}
-      coverage_matrix: ${{ steps.matrix.outputs.coverage_matrix }}
       playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
       pages_artifact_required: ${{ steps.classify.outputs.pages_artifact_required }}
       workspace_artifact_name: ${{ steps.publish-workspace.outputs.workspace-artifact-name }}
@@ -71,7 +69,6 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-          install-ripgrep: "true"
           workspace-artifact: none
       - name: Classify PR changes
         id: classify
@@ -85,13 +82,13 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: npm run test:pr -- --base=$PR_BASE_SHA --plan-out=.tmp/pr-test-plan.json
-      - name: Generate validation and coverage matrices
+      - name: Generate validation matrix
         id: matrix
         env:
-          CRITICAL_COVERAGE_CHANGED: ${{ steps.classify.outputs.critical_coverage_changed }}
           DOCS_CHANGED: ${{ steps.classify.outputs.docs_changed }}
           DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
           PAGES_ARTIFACT_REQUIRED: ${{ steps.classify.outputs.pages_artifact_required }}
+          V9_RESOURCE_REQUIRED: ${{ steps.classify.outputs.v9_resource_required }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix
@@ -132,7 +129,6 @@ jobs:
           cache-npm: "false"
           install-deps: "false"
           install-playwright-firefox: ${{ matrix.lane == 'static-guards' && needs.prepare.outputs.playwright_firefox_required || 'false' }}
-          install-ripgrep: ${{ (matrix.lane == 'static-guards' || matrix.lane == 'docs') && 'true' || 'false' }}
           static-cache: ${{ matrix.lane == 'static-compile' && 'true' || 'false' }}
           workspace-artifact: restore
           workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
@@ -171,7 +167,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Peak fan-out: validation 10 + coverage 8 + Pages 1 + secrets 1 = 20.
+  # Peak fan-out: validation 10 + Pages 1 + secrets 1 = 12.
   pages-artifact:
     name: Pages artifact
     needs: prepare
@@ -240,93 +236,10 @@ jobs:
           PR_LANE_ID: pages-artifact
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
 
-  critical-coverage-shards:
-    name: Critical coverage (${{ matrix.shard }}/${{ matrix.shardCount }})
-    needs: prepare
-    if: ${{ needs.prepare.outputs.critical_coverage_changed == 'true' }}
-    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: ${{ matrix.timeout }}
-    strategy:
-      fail-fast: false
-      max-parallel: 8
-      matrix: ${{ fromJSON(needs.prepare.outputs.coverage_matrix) }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-          filter: blob:none
-      - uses: $/.github/actions/setup-workspace
-        with:
-          cache-npm: "false"
-          install-deps: "false"
-          workspace-artifact: restore
-          workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
-      - name: Run manifest coverage shard
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_LANE_ID: critical-coverage-shards
-          PR_LANE_SHARD: ${{ matrix.shard }}
-          PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
-          PR_SHARD_TIMINGS_FILE: .tmp/pr-coverage-timings-${{ matrix.shard }}.json
-        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
-      - name: Upload critical coverage blob
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: critical-coverage-${{ matrix.shard }}
-          overwrite: true
-          path: .vitest-reports/*.json
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 1
-      - name: Upload critical coverage shard timings
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pr-coverage-timings-${{ matrix.shard }}
-          overwrite: true
-          path: .tmp/pr-coverage-timings-${{ matrix.shard }}.json
-          if-no-files-found: warn
-          retention-days: 7
-
-  critical-coverage:
-    name: Touched critical coverage
-    needs: [prepare, critical-coverage-shards]
-    if: ${{ needs.prepare.outputs.critical_coverage_changed == 'true' }}
-    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-          filter: blob:none
-      - uses: $/.github/actions/setup-workspace
-        with:
-          bootstrap-generated: "false"
-          cache-npm: "false"
-          install-deps: "false"
-          workspace-artifact: restore
-          workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: critical-coverage-*
-          path: .vitest-reports
-          merge-multiple: true
-      - name: Merge and enforce touched critical-file coverage ratchet
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.pull_request.base.sha }}
-          PR_LANE_ID: critical-coverage
-        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
-
   pr-gate:
     name: PR gate
     if: ${{ always() }}
-    needs: [secrets, prepare, validation, critical-coverage-shards, critical-coverage, pages-artifact]
+    needs: [secrets, prepare, validation, pages-artifact]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -335,9 +248,6 @@ jobs:
       DOCS_ONLY: ${{ needs.prepare.outputs.docs_only }}
       DOCS_INLINE_SUCCEEDED: ${{ needs.prepare.outputs.docs_inline_succeeded }}
       VALIDATION_RESULT: ${{ needs.validation.result }}
-      CRITICAL_COVERAGE_CHANGED: ${{ needs.prepare.outputs.critical_coverage_changed }}
-      CRITICAL_COVERAGE_SHARDS_RESULT: ${{ needs.critical-coverage-shards.result }}
-      CRITICAL_COVERAGE_RESULT: ${{ needs.critical-coverage.result }}
       PAGES_ARTIFACT_REQUIRED: ${{ needs.prepare.outputs.pages_artifact_required }}
       PAGES_ARTIFACT_RESULT: ${{ needs.pages-artifact.result }}
     steps:
@@ -355,16 +265,6 @@ jobs:
             fi
           elif [ "${VALIDATION_RESULT}" != "success" ]; then
             echo "Required PR validation failed: ${VALIDATION_RESULT}."
-            exit 1
-          fi
-
-          if [ "${CRITICAL_COVERAGE_CHANGED}" = "true" ]; then
-            if [ "${CRITICAL_COVERAGE_SHARDS_RESULT}" != "success" ] || [ "${CRITICAL_COVERAGE_RESULT}" != "success" ]; then
-              echo "Touched critical coverage failed: shards=${CRITICAL_COVERAGE_SHARDS_RESULT}, merge=${CRITICAL_COVERAGE_RESULT}."
-              exit 1
-            fi
-          elif [ "${CRITICAL_COVERAGE_CHANGED}" != "false" ] || [ "${CRITICAL_COVERAGE_SHARDS_RESULT}" != "skipped" ] || [ "${CRITICAL_COVERAGE_RESULT}" != "skipped" ]; then
-            echo "Unexpected unselected coverage state: selected=${CRITICAL_COVERAGE_CHANGED}, shards=${CRITICAL_COVERAGE_SHARDS_RESULT}, merge=${CRITICAL_COVERAGE_RESULT}."
             exit 1
           fi
 

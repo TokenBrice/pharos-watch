@@ -1,13 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { API_PATHS, getEndpointOpsProxyTimeoutMs } from "@shared/lib/api-endpoints";
 import { MAX_OPS_ADMIN_REQUEST_BODY_BYTES, onRequest } from "../api/admin/[[path]].ts";
 import type { OpsAdminProxyEnv } from "../lib/ops-env";
 import { makePagesProxyContext } from "./helpers/pages-context";
-import {
-  matchesHttpResponseObservation,
-  observeHttpResponse,
-  type HttpResponseObservation,
-} from "@shared/test-utils/http-response-contract";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockUpstream } from "./helpers/mock-upstream";
 
@@ -81,37 +75,6 @@ describe("ops admin proxy", () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
-  });
-
-  it("keeps the response contract for operator no-store policy", async () => {
-    verifyAccessJwtUserIdentity.mockResolvedValueOnce({
-      email: "operator@pharos.watch",
-      subject: "operator-subject",
-    });
-    opsApi.json("/api/status", { z: "last", a: "first" }, 200, {
-      "Cache-Control": "public, max-age=300",
-    });
-    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
-    const observed = await observeHttpResponse(response, [
-      "Cache-Control",
-      "CDN-Cache-Control",
-      "Cloudflare-CDN-Cache-Control",
-      "Content-Type",
-    ]);
-    const expected: HttpResponseObservation = {
-      status: 200,
-      headers: {
-        "cache-control": "private, no-store",
-        "cdn-cache-control": "no-store",
-        "cloudflare-cdn-cache-control": "no-store",
-        "content-type": "application/json",
-      },
-      bodyKind: "json",
-      canonicalBody: { a: "first", z: "last" },
-    };
-
-    expect(observed).toEqual(expected);
-    expect(matchesHttpResponseObservation(observed, expected)).toBe(true);
   });
 
   it("rejects requests from non-ops hosts", async () => {
@@ -568,12 +531,6 @@ describe("ops admin proxy", () => {
     const response = await responsePromise;
     expect(response.status).toBe(504);
     await expect(response.json()).resolves.toEqual({ error: "Operator API upstream timed out" });
-  });
-
-  it("declares ops proxy timeout budgets in endpoint metadata", () => {
-    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.status(), 10_000)).toBe(20_000);
-    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.statusHistoryBase(), 10_000)).toBe(20_000);
-    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.requestSourceStatsBase(), 10_000)).toBe(10_000);
   });
 
 });

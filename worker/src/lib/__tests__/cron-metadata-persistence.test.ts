@@ -18,16 +18,6 @@ describe("compactCronMetadataForPersistence", () => {
     expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
   });
 
-  it("keeps metadata unchanged when it is below the global ceiling", () => {
-    const metadata = JSON.stringify({ reason: "published", rowsWritten: 12 });
-    expect(compactCronMetadataForPersistence(metadata)).toEqual({
-      metadata,
-      originalBytes: new TextEncoder().encode(metadata).length,
-      persistedBytes: new TextEncoder().encode(metadata).length,
-      compacted: false,
-    });
-  });
-
   it("compacts oversized rich results below 64 KiB while retaining bounded diagnostics", () => {
     const metadata = JSON.stringify({
       reason: "stablecoin-publication",

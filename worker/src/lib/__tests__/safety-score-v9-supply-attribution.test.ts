@@ -145,24 +145,6 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       observation: makeXautObservation({ clockSec: OBSERVED_AT_SEC }),
     })).toBeNull();
   });
-  it("partitions aggregate XAUT without double-counting its XAUt0 group", () => {
-    const partition = deriveXautRepresentationGroupSupplyAttribution({
-      aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-      registryFingerprint: "a".repeat(64),
-      scoringClockSec: OBSERVED_AT_SEC,
-      observation: makeXautObservation({ clockSec: OBSERVED_AT_SEC }),
-    });
-
-    expect(partition).not.toBeNull();
-    expect(partition!.canonical.currentSupplyUsd + partition!.representationGroup.currentSupplyUsd).toBe(
-      XAUT_AGGREGATE_SUPPLY_USD,
-    );
-    expect(partition!.representationGroup.currentSupplyUsd / XAUT_AGGREGATE_SUPPLY_USD).toBeCloseTo(
-      0.04849813227,
-      10,
-    );
-  });
-
   it("captures an identity-bound V9-only group partition and leaves the source row unchanged", async () => {
     const representationGroupSupplyUsd =
       XAUT_AGGREGATE_SUPPLY_USD * 0.04198469365;

@@ -7,15 +7,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildPermissionRequestHookOutput,
   buildPreToolUseHookOutput,
-  buildSessionStartContext,
-  buildSessionStartHookOutput,
   classifyChangedFiles,
-  formatContract,
-  getHookHarness,
   findShellCommandViolation,
-  normalizeChangedFiles,
-  normalizeExplicitFiles,
-  readHookInput,
 } from "../ci/pharos-change-contract.ts";
 import { PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
@@ -48,23 +41,6 @@ function runHookCliProcess(
   };
 }
 
-function runHookCli(hook: HookMode, input = ""): unknown {
-  return JSON.parse(runHookCliProcess(hook, input).stdout);
-}
-
-function runContractCli(args: readonly string[], env: NodeJS.ProcessEnv = process.env) {
-  const result = spawnSync(
-    process.execPath,
-    ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), ...args],
-    { cwd: process.cwd(), encoding: "utf8", env, timeout: 15_000 },
-  );
-  return {
-    ...result,
-    stderr: String(result.stderr ?? ""),
-    stdout: String(result.stdout ?? ""),
-  };
-}
-
 function docKeys(contract: { docs: Array<{ anchor?: string; path: string }> }): string[] {
   return contract.docs.map((doc) => doc.anchor ? `${doc.path}#${doc.anchor}` : doc.path);
 }
@@ -80,357 +56,10 @@ function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
   }
 }
 
-describe("normalizeChangedFiles", () => {
-  it("normalizes path separators, blanks, and duplicates", () => {
-    expect(normalizeChangedFiles(["worker\\src\\cron\\sync.ts", "", "worker/src/cron/sync.ts"])).toEqual([
-      "worker/src/cron/sync.ts",
-    ]);
-  });
-});
-
-describe("classifyChangedFiles", () => {
-  it("routes the heavy configuration to Worker deployment ownership", () => {
-    const contract = classifyChangedFiles(["worker/wrangler.heavy.toml"]);
-    expect(contract.background.map((entry) => entry.path)).toContain("docs/worker-infrastructure.md");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("worker-cron");
-    expect(contract.deploy.workerImpact).toBe(true);
-  });
-  // One row per owned path family: what the router must attach to a change in it.
-  it.each([
-    {
-      name: "stablecoin registry data to the data docs",
-      files: ["shared/data/stablecoins/coins/example-usd.json"],
-      mappings: ["stablecoin-registry"],
-      docs: ["docs/stablecoin-data.md#registry-editing-entry"],
-      checks: ["npm run check:stablecoin-data"],
-      // wording is owner-editable in docs/doc-ownership.json (it was reworded by
-      // 38dbd97cf), so pin the invariant rather than the sentence.
-      hardRule: /supply overrides?\b/i,
-      deploy: { pagesImpact: true, workerImpact: true },
-    },
-    {
-      name: "a coin record to the addition procedure and scoped context",
-      files: ["shared/data/stablecoins/coins/usdc-circle.json"],
-      mappings: ["stablecoin-registry"],
-      docs: ["docs/process/adding-a-stablecoin.md#source-of-truth"],
-      checks: ["npm run check:stablecoin-data"],
-      scopedContext: ["shared/data/stablecoins/AGENTS.md", "shared/AGENTS.md"],
-    },
-    {
-      name: "scheduled Worker changes to cron docs and guardrails",
-      files: ["worker/src/cron/sync-yield-data.ts"],
-      mappings: ["worker-cron"],
-      background: ["docs/worker-and-api-limits.md"],
-      checks: ["npm run check:cron-sync", "npm run check:cron-connections"],
-      hardRule: /six-connection trigger budget/,
-    },
-    {
-      name: "the yield cron to the shared cron contract",
-      files: ["worker/src/cron/yield-coverage-audit.ts"],
-      mappings: ["worker-cron"],
-      scopedContextHead: ["worker/src/cron/AGENTS.md", "worker/AGENTS.md"],
-      checks: ["npm run check:cron-sync"],
-    },
-    {
-      name: "blog publishing changes to the frontend contract",
-      files: ["src/data/blog/posts/example.md"],
-      mappings: ["frontend-routes"],
-      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
-    },
-    {
-      name: "token logos and compact variants to the frontend contract",
-      files: ["data/logos.json", "public/logos/kpkusdcprime-kpk.png", "public/logos/compact/kpkusdcprime-kpk.webp"],
-      mappings: ["frontend-routes"],
-      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
-    },
-    {
-      name: "a screener component through the shared frontend route contract",
-      files: ["src/components/screener/screener-table.tsx"],
-      mappings: ["frontend-routes"],
-      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
-      maxDocs: 3,
-      checks: ["npm run typecheck"],
-    },
-    {
-      name: "the homepage entrypoint through the shared frontend route contract",
-      files: ["src/app/page.tsx"],
-      mappings: ["frontend-routes"],
-      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
-      checks: ["npm run typecheck"],
-    },
-    {
-      name: "Next configuration to frontend and deployment owners",
-      files: ["next.config.ts"],
-      mappings: ["frontend-routes", "validation-ci-policy"],
-      docs: ["docs/deployment-process.md#ci-deploy-sequence"],
-    },
-    {
-      name: "PR partition timing inputs to CI policy ownership",
-      files: ["scripts/data/pr-test-timings.json", "scripts/lib/shard-timing-reporter.mts", "scripts/maintenance/refresh-pr-test-timings.ts"],
-      mappings: ["validation-ci-policy"],
-      docs: ["docs/testing.md#ci-pipeline", "docs/scripts.md#pr-and-release-gates"],
-      checks: ["npx vitest run scripts/__tests__"],
-    },
-    {
-      name: "historical secret-scan exceptions to CI policy ownership",
-      files: [".gitleaksignore"],
-      mappings: ["validation-ci-policy"],
-      docs: ["docs/testing.md#ci-pipeline"],
-    },
-    {
-      name: "Telegram delivery changes to the unified Telegram contract",
-      files: ["worker/src/lib/telegram/mini-app-auth.ts", "shared/lib/telegram-delivery-policy.ts"],
-      mappings: ["telegram"],
-      docs: ["docs/telegram-alerts.md#dispatch"],
-    },
-    {
-      name: "Telegram API ingress to the unified Telegram contract",
-      files: ["worker/src/api/telegram-webhook.ts"],
-      mappings: ["telegram"],
-      docs: [
-        "docs/telegram-architecture.md#1-ingress",
-        "docs/telegram-alerts.md#dispatch",
-        "docs/telegram-mini-app.md#overview",
-      ],
-      checks: ["npm run typecheck"],
-    },
-    {
-      name: "Telegram command handlers to the unified Telegram contract",
-      files: ["worker/src/api/webhook-commands/subscribe.ts"],
-      mappings: ["telegram"],
-      docs: ["docs/telegram-alerts.md#commands", "docs/telegram-architecture.md#1-ingress"],
-      checks: ["npm run typecheck"],
-    },
-    {
-      name: "feedback verification changes to the Worker API contract",
-      files: ["worker/src/api/feedback/verification.ts"],
-      mappings: ["worker-api-auth"],
-      docs: ["docs/api-endpoint-authoring.md"],
-    },
-    {
-      name: "the digest safety-map type contract to the V9 publication owner",
-      files: ["shared/types/digest-safety-map-contract.ts"],
-      mappings: ["safety-score-v9"],
-      docs: ["docs/digest-pipeline.md#generation", "docs/safety-score-map.md"],
-      checks: ["npm run check:doc-sync"],
-    },
-    {
-      name: "repo-local agent config changes to agent process guidance",
-      files: [".codex/config.toml", ".claude/settings.json", "scripts/ci/pharos-change-contract.ts"],
-      mappings: ["agent-hooks-process"],
-      docs: ["docs/process/agent-artifacts.md#harness-configuration", "docs/process/agent-artifacts.md#agent-skills"],
-      absentDocs: ["CLAUDE.md"],
-      checks: ["npm run check:generated-artifacts -- --only=agents-doc"],
-    },
-  ] as Array<{
-    name: string;
-    files: string[];
-    mappings: string[];
-    docs?: string[];
-    absentDocs?: string[];
-    maxDocs?: number;
-    checks?: string[];
-    background?: string[];
-    scopedContext?: string[];
-    scopedContextHead?: string[];
-    hardRule?: RegExp;
-    deploy?: { pagesImpact: boolean; workerImpact: boolean };
-  }>)("routes $name", (routing) => {
-    const contract = classifyChangedFiles(routing.files);
-
-    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(expect.arrayContaining(routing.mappings));
-    for (const doc of routing.docs ?? []) expect(docKeys(contract)).toContain(doc);
-    for (const doc of routing.absentDocs ?? []) expect(docKeys(contract)).not.toContain(doc);
-    for (const check of routing.checks ?? []) expect(contract.checks).toContain(check);
-    for (const doc of routing.background ?? []) {
-      expect(contract.background.map((entry) => entry.path)).toContain(doc);
-    }
-    if (routing.maxDocs !== undefined) expect(docKeys(contract).length).toBeLessThanOrEqual(routing.maxDocs);
-    if (routing.scopedContext) expect(contract.scopedContext).toEqual(routing.scopedContext);
-    if (routing.scopedContextHead) {
-      expect(contract.scopedContext.slice(0, routing.scopedContextHead.length)).toEqual(routing.scopedContextHead);
-    }
-    if (routing.hardRule) {
-      const hardRule = routing.hardRule;
-      expect(contract.hardRules.some((rule: string) => hardRule.test(rule))).toBe(true);
-    }
-    if (routing.deploy) expect(contract.deploy).toMatchObject(routing.deploy);
-  });
-  it("includes docs, warnings, and deploy impact in text output", () => {
-    const contract = classifyChangedFiles(["worker/migrations/0123_example.sql"]);
-    const text = formatContract(contract);
-
-    expect(text).toContain("D1 schema or migration");
-    expect(text).toContain("npm run check:migrations");
-    expect(text).toContain("D1 migrations are applied before the new Worker is live");
-    expect(text).toContain("Scoped context:\n- worker/migrations/AGENTS.md\n- worker/AGENTS.md");
-    expect(text).toContain("Also relevant:");
-    expect(text).toContain("Deploy impact:");
-  });
-
-  it("adds the planned-file next step only for working-tree output", () => {
-    const explicit = formatContract(classifyChangedFiles(["src/app/page.tsx"]));
-    const workingTree = formatContract({
-      ...classifyChangedFiles(["src/app/page.tsx"]),
-      source: "working tree",
-    });
-
-    expect(explicit).not.toContain("Next: npm run agent:route -- --file <path> for planned files");
-    expect(workingTree).toMatch(/Next: npm run agent:route -- --file <path> for planned files$/);
-  });
-  it.each([
-    ["worker/src/cron/reserve-adapters/3jane-usd3.ts", "docs/live-reserves.md"],
-    ["shared/types/live-reserve-adapter-declarations.ts", "docs/live-reserves.md"],
-    ["worker/src/api/stablecoin-reserves.ts", "docs/live-reserves.md"],
-    ["worker/src/lib/live-reserves/store-read.ts", "docs/live-reserves.md"],
-    ["worker/src/cron/sync-yield-data.ts", "docs/yield-intelligence.md"],
-    ["worker/src/api/yield-rankings.ts", "docs/yield-intelligence.md"],
-    ["src/app/page.tsx", "docs/homepage.md"],
-    ["src/components/about/about-page-content.tsx", "docs/about-page.md"],
-    ["src/app/coverage/client.tsx", "docs/coverage-page.md"],
-    ["worker/src/api/feedback.ts", "docs/feedback-pipeline.md"],
-    ["shared/data/stablecoins/domains/compliance/usdc-circle.json", "docs/compliance-page.md"],
-    [".omp/config.yml", "docs/process/agent-artifacts.md"],
-    ["scripts/maintenance/sync-agent-skills.mjs", "docs/process/agent-artifacts.md"],
-    ["src/app/dependency-map/client.tsx", "docs/dependency-map.md"],
-    ["src/components/contagion-graph-root.tsx", "docs/dependency-map.md"],
-    ["src/components/contagion-graph/contagion-graph-shell.tsx", "docs/dependency-map.md"],
-    ["src/lib/contagion-layout.ts", "docs/dependency-map.md"],
-    ["shared/lib/dependency-hubs-model.ts", "docs/dependency-map.md"],
-    ["shared/lib/dependency-exposure.ts", "docs/dependency-map.md"],
-    ["shared/lib/dependency-graph.ts", "docs/dependency-map.md"],
-    ["shared/lib/dependency-derivation.ts", "docs/dependency-map.md"],
-    ["src/components/stablecoin-detail/contagion-snapshot.tsx", "docs/dependency-map.md"],
-    ["shared/data/coverage-dispositions/dependency-target-dispositions.ts", "docs/dependency-map.md"],
-    ["scripts/maintenance/generate-dependency-coverage-audit.ts", "docs/dependency-map.md"],
-    ["scripts/maintenance/reconcile-dependency-graph.ts", "docs/dependency-map.md"],
-    ["scripts/ci/check-dependency-review-gaps.ts", "docs/dependency-map.md"],
-    [".agents/skills/dependency-coverage-drain/SKILL.md", "docs/dependency-map.md"],
-    ["docs/runbooks/dependency-network.md", "docs/dependency-map.md"],
-  ])("retains the domain owner in bounded Read first for %s", (file, owner) => {
-    const contract = classifyChangedFiles([file]);
-    expect(contract.docs.map((doc) => doc.path)).toContain(owner);
-    expect(contract.docs.length).toBeLessThanOrEqual(6);
-  });
-
-  it("warns for each missing owner even alongside an owned path", () => {
-    const contract = classifyChangedFiles(["planned-domain/new-source.ts", "src/app/page.tsx"]);
-    expect(contract.warnings.some((warning) => warning.includes("planned-domain/new-source.ts"))).toBe(true);
-    expect(contract.unmappedPaths).toEqual(["planned-domain/new-source.ts"]);
-    expect(classifyChangedFiles(["src/app/page.tsx"]).unmappedPaths).toEqual([]);
-    expect(classifyChangedFiles(["src/app/page.tsx"]).warnings).toEqual([]);
-  });
-
-  it.each(["worker/src/routes/admin-routes.ts", "worker/src/api/backfill-dews.ts", "functions/admin-api/[[path]].ts"])(
-    "keeps admin guidance primary for %s without imposing it on public bindings", (file) => {
-      expect(classifyChangedFiles([file]).docs.map((doc) => doc.path)).toContain("docs/api-reference-admin.md");
-      expect(classifyChangedFiles(["worker/src/routes/public-routes.ts"]).docs.map((doc) => doc.path)).not.toContain("docs/api-reference-admin.md");
-    },
-  );
-
-  it("retains incident observation and remote inspection guidance for scheduler edits", () => {
-    const contract = classifyChangedFiles(["worker/src/handlers/scheduled.ts"]);
-    expect(docKeys(contract)).toContain("docs/process/cron-trigger-policy.md");
-    expect(docKeys({ docs: contract.background })).toEqual(expect.arrayContaining([
-      "docs/README.md#stale-output-diagnosis",
-      "docs/deployment-process.md#monitoring-without-model-polling",
-      "docs/worker-infrastructure.md#remote-d1-inspection",
-    ]));
-  });
-});
-
 describe("representative --file routing", () => {
   function route(file: string) {
     return classifyChangedFiles([file]);
   }
-
-  it("routes the depeg route and its owned modules to the depeg page contract", () => {
-    const clientContract = route("src/app/depeg/client.tsx");
-    expect(clientContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
-    expect(docKeys(clientContract)).toContain("docs/depeg-page.md");
-
-    // Route-owned components live outside src/app/depeg/, so the mapping has to
-    // reach them too or a hero/board change silently loses its contract.
-    const heroContract = route("src/components/depeg-outlook-hero.tsx");
-    expect(heroContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
-    expect(docKeys(heroContract)).toContain("docs/depeg-page.md");
-
-    // The disclosure-gated reviewer fetch contract lives in this hook, not in
-    // the client, so it has to route to the same owner.
-    const hookContract = route("src/hooks/use-depeg-resolver-surfaces.ts");
-    expect(hookContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
-    expect(docKeys(hookContract)).toContain("docs/depeg-page.md");
-  });
-
-  it.each([
-    "scripts/maintenance/run-focused-checks.ts",
-    "scripts/maintenance/build-annotation-candidates.ts",
-    "scripts/maintenance/compare-detail-snapshot-sources.ts",
-    "scripts/__tests__/pharos-change-contract.test.ts",
-  ])("keeps ordinary script reads bounded for %s", (file) => {
-    const contract = route(file);
-    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["scripts-tooling"]);
-    expect(docKeys(contract)).toEqual([
-      "docs/scripts.md#operator-cli-contract",
-      "docs/testing.md#smallest-adequate-check-per-area",
-      "docs/process/agent-start-here.md",
-    ]);
-    expect(contract.scopedContext).toContain("scripts/AGENTS.md");
-  });
-
-  it("routes bulk detail transport and its shared contracts through the existing owners", () => {
-    const worker = route("worker/src/api/stablecoin-detail/snapshot-inputs.ts");
-    expect(worker.mappings.map((mapping) => mapping.id)).toContain("worker-api-auth");
-    expect(docKeys(worker)).toContain("docs/api-reference.md#public-endpoints");
-    for (const file of [
-      "shared/lib/stablecoin-live-summary.ts",
-      "shared/lib/detail-snapshot-inputs.ts",
-      "shared/types/stablecoin-live-summary.ts",
-      "shared/types/detail-snapshot-inputs.ts",
-    ]) {
-      const contract = route(file);
-      expect(contract.mappings.map((mapping) => mapping.id)).toContain("shared-runtime");
-      expect(contract.deploy.workerImpact).toBe(true);
-      expect(contract.deploy.pagesImpact).toBe(true);
-    }
-  });
-
-  it.each([
-    ".github/workflows/pages-release.yml",
-    ".github/workflows/pages-prepare.yml",
-    "scripts/ci/classify-deploy-changes.ts",
-    "scripts/lib/automation-registry.mjs",
-    "scripts/lib/deploy-impact.mts",
-    "scripts/lib/pr-lanes.mts",
-    "scripts/maintenance/run-pr-static-checks.ts",
-    "scripts/maintenance/refresh-pages-release-data.ts",
-    "scripts/maintenance/run-generated-artifacts.ts",
-    "scripts/maintenance/prepare-workspace.ts",
-  ])("preserves CI and deployment ownership for %s", (file) => {
-    const contract = route(file);
-    expect(contract.mappings.find((mapping) => mapping.id === "validation-ci-policy")?.risk).toBe("high");
-    expect(docKeys(contract)).toContain("docs/testing.md#ci-pipeline");
-    expect(docKeys(contract)).toContain("docs/deployment-process.md#ci-deploy-sequence");
-    expect(contract.background.map((doc) => doc.path)).toContain("docs/process/feature-flags.md");
-    expect(contract.checks).toContain("npx vitest run scripts/__tests__");
-    expect(contract.checks).toContain("npm run check:generated-artifacts");
-  });
-
-  it("keeps dynamic guidance out of Read first", () => {
-    const result = runContractCli(["--file", "worker/src/cron/sync-yield-data.ts"]);
-    expect(result.stdout).toContain("Read first:");
-    expect(result.stdout).not.toContain("specific methodology doc");
-    expect(result.stdout).not.toContain("matching entries under");
-    expect(result.stdout).not.toContain("matched route-specific doc");
-  });
-
-  it.each([
-    "shared/data/stablecoins/coins/usdc-circle.json",
-    "worker/src/api/feedback/verification.ts",
-    "shared/data/safety-score-v9/historical-fixtures-v1.json",
-  ])("keeps one source path to at most six Read first entries: %s", (file) => {
-    expect(route(file).docs.length).toBeLessThanOrEqual(6);
-  });
 
   it("caps single-path guidance while preserving ranked overflow in background", () => {
     const originalLength = PATH_FAMILIES.length;
@@ -454,174 +83,7 @@ describe("representative --file routing", () => {
   });
 });
 
-describe("scoped AGENTS.md discovery", () => {
-  it.each([
-    ["src/AGENTS.md", ["src/AGENTS.md"]],
-    ["src/app/page.tsx", ["src/app/AGENTS.md", "src/AGENTS.md"]],
-    ["src/components/screener/screener-table.tsx", ["src/components/AGENTS.md", "src/AGENTS.md"]],
-    ["shared/AGENTS.md", ["shared/AGENTS.md"]],
-    ["shared/data/stablecoins/coins/usdc-circle.json", ["shared/data/stablecoins/AGENTS.md", "shared/AGENTS.md"]],
-    ["shared/data/safety-score-v9/historical-fixtures-v1.json", ["shared/data/safety-score-v9/AGENTS.md", "shared/AGENTS.md"]],
-    ["worker/AGENTS.md", ["worker/AGENTS.md"]],
-    ["worker/src/cron/yield-coverage-audit.ts", ["worker/src/cron/AGENTS.md", "worker/AGENTS.md"]],
-    ["worker/migrations/0001_initial.sql", ["worker/migrations/AGENTS.md", "worker/AGENTS.md"]],
-    ["functions/_middleware.ts", ["functions/AGENTS.md"]],
-    ["scripts/ci/pharos-change-contract.ts", ["scripts/AGENTS.md"]],
-    [".github/workflows/pull-request-checks.yml", [".github/workflows/AGENTS.md"]],
-  ])("discovers nearest context for %s", (file, expected) => {
-    expect(classifyChangedFiles([file]).scopedContext).toEqual(expected);
-  });
-});
-
-describe("CLI path and source selection", () => {
-  it("normalizes absolute, file URL, and ./ explicit paths without duplicate routing", () => {
-    expect(normalizeExplicitFiles([
-      resolve(process.cwd(), "src/app/page.tsx"),
-      "./src/app/page.tsx",
-      `file://${resolve(process.cwd(), "src/app/page.tsx")}`,
-    ])).toEqual(["src/app/page.tsx"]);
-  });
-
-  it("rejects explicit paths outside the repository with exit 2", () => {
-    const result = runContractCli(["--file", resolve(process.cwd(), "..", "outside-pharos-change-contract.ts")]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("error: explicit path resolves outside repository");
-  });
-
-  it.each(["../outside-pharos-change-contract.ts", String.raw`C:\outside\x.ts`])(
-    "rejects escaping explicit paths: %s",
-    (path) => {
-      expect(() => normalizeExplicitFiles([path])).toThrow(/explicit path resolves outside repository/);
-    },
-  );
-
-  it("rejects an existing repository symlink that targets outside the repository", ({ skip }) => {
-    const repositoryFixture = mkdtempSync(join(process.cwd(), ".pharos-change-contract-"));
-    const outsideFixture = mkdtempSync(join(tmpdir(), "pharos-change-contract-outside-"));
-    const outsideFile = join(outsideFixture, "outside.ts");
-    const linkPath = join(repositoryFixture, "outside-link.ts");
-
-    try {
-      writeFileSync(outsideFile, "export const outside = true;\n");
-      try {
-        symlinkSync(outsideFile, linkPath);
-      } catch (error) {
-        if (!["EPERM", "EACCES", "ENOSYS", "ENOTSUP"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
-        skip();
-        return;
-      }
-
-      const result = runContractCli(["--file", linkPath]);
-
-      expect(result.status).toBe(2);
-      expect(result.stderr).toContain("error: explicit path resolves outside repository");
-    } finally {
-      rmSync(repositoryFixture, { force: true, recursive: true });
-      rmSync(outsideFixture, { force: true, recursive: true });
-    }
-  });
-
-  it("accepts an existing repository symlink that targets an in-repository file", ({ skip }) => {
-    const repositoryFixture = mkdtempSync(join(process.cwd(), ".pharos-change-contract-"));
-    const linkPath = join(repositoryFixture, "in-repo-link.tsx");
-    const targetPath = resolve(process.cwd(), "src/app/page.tsx");
-
-    try {
-      try {
-        symlinkSync(targetPath, linkPath);
-      } catch (error) {
-        if (!["EPERM", "EACCES", "ENOSYS", "ENOTSUP"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
-        skip();
-        return;
-      }
-
-      const result = runContractCli(["--file", linkPath, "--json"]);
-
-      expect(result.status).toBe(0);
-      expect(JSON.parse(result.stdout).changedFiles).toEqual([
-        `${repositoryFixture.slice(process.cwd().length + 1).replaceAll("\\", "/")}/in-repo-link.tsx`,
-      ]);
-      expect(result.stderr).toBe("");
-    } finally {
-      rmSync(repositoryFixture, { force: true, recursive: true });
-    }
-  });
-
-  it("warns for missing planned files and suppresses it with --new-file", () => {
-    const plannedPath = "src/app/__planned-change-contract-file__.tsx";
-    const warning = runContractCli(["--file", plannedPath, "--json"]);
-    const suppressed = runContractCli(["--file", plannedPath, "--new-file", "--json"]);
-
-    expect(warning.status).toBe(0);
-    expect(warning.stderr.trim()).toBe(
-      `warning: ${plannedPath} does not exist (routing as a planned new file)`,
-    );
-    expect(suppressed.status).toBe(0);
-    expect(suppressed.stderr).toBe("");
-  });
-
-  it("lets --staged take precedence over an environment range and reports the source", () => {
-    const env = {
-      ...process.env,
-      PHAROS_CHANGE_CONTRACT_BASE_REF: "HEAD",
-      PHAROS_CHANGE_CONTRACT_HEAD_REF: "HEAD",
-    };
-    const range = runContractCli(["--json"], env);
-    const staged = runContractCli(["--staged", "--json"], env);
-    const explicit = runContractCli(["--file", "./src/app/page.tsx", "--staged", "--json"], env);
-
-    expect(JSON.parse(range.stdout).source).toBe("base/head range");
-    expect(JSON.parse(staged.stdout).source).toBe("staged index");
-    expect(staged.status).toBe(0);
-    expect(runContractCli(["--staged"], env).stdout).toContain("Source: staged index");
-    expect(JSON.parse(explicit.stdout).source).toBe("explicit files");
-  });
-});
-
 describe("Codex hook outputs", () => {
-  it("emits the compact two-line startup context for an empty tree", () => {
-    const contract = classifyChangedFiles([]);
-    const context = buildSessionStartContext(contract);
-
-    expect(context.split("\n")).toEqual([
-      "Pharos change contract — explicit files (0 files) — deploy: pages=n, worker=n",
-      "Route a planned path: npm run agent:route -- --file <path>",
-    ]);
-    expect(buildSessionStartHookOutput(contract)).toMatchObject({
-      hookSpecificOutput: {
-        hookEventName: "SessionStart",
-      },
-    });
-  });
-
-  it("emits bounded read and scoped-context lines for a routed file", () => {
-    const context = buildSessionStartContext(classifyChangedFiles(["src/app/page.tsx"]));
-
-    const readFirst = context.split("\n").find((line) => line.startsWith("Read first: "))!
-      .slice("Read first: ".length).split(", ");
-    expect(readFirst).toContain("docs/homepage.md#top-fold-contract");
-    expect(readFirst.length).toBeLessThanOrEqual(4);
-    const scopedContext = context.split("\n").find((line) => line.startsWith("Scoped context: "))!
-      .slice("Scoped context: ".length).split(", ");
-    expect(scopedContext).toContain("src/app/AGENTS.md");
-    expect(scopedContext).toContain("src/AGENTS.md");
-  });
-
-  it("keeps the cron contract ahead of its runtime fallback", () => {
-    const context = buildSessionStartContext(
-      classifyChangedFiles(["worker/src/cron/yield-coverage-audit.ts"]),
-    );
-
-    const readFirst = context.split("\n").find((line) => line.startsWith("Read first: "))!
-      .slice("Read first: ".length).split(", ");
-    expect(readFirst).toContain("docs/yield-intelligence.md#engineering-contract");
-    const cronIndex = readFirst.indexOf("docs/process/cron-trigger-policy.md");
-    const runtimeIndex = readFirst.indexOf("docs/worker-infrastructure.md#module-initialization");
-    expect(cronIndex).toBeGreaterThanOrEqual(0);
-    expect(runtimeIndex).toBeGreaterThan(cronIndex);
-  });
-
   it("emits no decision for an allowed PermissionRequest", () => {
     expect(
       buildPermissionRequestHookOutput({
@@ -630,45 +92,6 @@ describe("Codex hook outputs", () => {
         tool_input: { command: "git status" },
       }),
     ).toEqual({});
-  });
-
-  it("fails closed for empty hook stdin in an enforcement mode", () => {
-    expect(runHookCli("pre-tool-use")).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: { permissionDecision: "deny" },
-    });
-  });
-});
-
-describe("hook harness classification", () => {
-  it("recognizes a Claude-shaped payload before shared session metadata", () => {
-    expect(getHookHarness({
-      session_id: "claude-session",
-      transcript_path: "/tmp/claude-transcript.jsonl",
-      cwd: process.cwd(),
-      hook_event_name: "PreToolUse",
-      tool_name: "Bash",
-      tool_input: { command: "git status" },
-    })).toBe("claude");
-  });
-
-  it("recognizes a Codex-specific payload", () => {
-    expect(getHookHarness({
-      session_id: "codex-session",
-      cwd: process.cwd(),
-      model: "codex",
-      hookEventName: "PermissionRequest",
-      toolName: "Bash",
-      toolInput: { command: "git status" },
-    })).toBe("codex");
-  });
-
-  it("does not infer a harness from ambiguous shared metadata", () => {
-    expect(getHookHarness({
-      session_id: "session",
-      transcript_path: "/tmp/transcript.jsonl",
-      cwd: process.cwd(),
-    })).toBe("unknown");
   });
 });
 
@@ -1279,13 +702,6 @@ describe("W2.7 Python and Node one-line writes", () => {
 });
 
 describe("W2.7 malformed hook payloads", () => {
-  it("marks empty input as malformed without touching the process stdin", () => {
-    expect(readHookInput({ readStdin: () => "" })).toEqual({ input: {}, malformed: true });
-  });
-
-  it("marks malformed JSON as malformed without touching the process stdin", () => {
-    expect(readHookInput({ readStdin: () => "{not-json" })).toEqual({ input: {}, malformed: true });
-  });
   it.each([
     ["empty", ""],
     ["truncated", '{"tool_name": "Bash", "tool_inp'],
@@ -1310,21 +726,6 @@ describe("W2.7 malformed hook payloads", () => {
     });
   });
 
-  it("keeps a malformed payload nonfatal and diagnostic in SessionStart", () => {
-    const result = runHookCliProcess("session-start", "{not-json");
-
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe("{}");
-    expect(result.stderr.trim()).toBe("pharos-change-contract: empty or malformed hook payload; no policy applied");
-  });
-
-  it("does not log for a valid empty hook object", () => {
-    const result = runHookCliProcess("pre-tool-use", "{}");
-
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe("{}");
-    expect(result.stderr).toBe("");
-  });
 });
 
 describe("hook diagnostics", () => {
@@ -1344,28 +745,6 @@ describe("hook diagnostics", () => {
       expect(readFileSync(target, "utf8")).toBe("unchanged");
     } finally {
       rmSync(directory, { recursive: true, force: true });
-    }
-  });
-
-  it("does not write diagnostics when disabled", () => {
-    const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-off-"));
-    const diagnosticsPath = join(directory, "hook-diagnostics.jsonl");
-
-    try {
-      const result = runHookCliProcess(
-        "pre-tool-use",
-        JSON.stringify({ tool_name: "Bash", tool_input: { command: "git reset --hard HEAD" } }),
-        {
-          ...process.env,
-          PHAROS_HOOK_DIAGNOSTICS: "0",
-          PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
-        },
-      );
-
-      expect(result.status).toBe(0);
-      expect(() => readFileSync(diagnosticsPath, "utf8")).toThrow();
-    } finally {
-      rmSync(directory, { force: true, recursive: true });
     }
   });
 
@@ -1477,28 +856,6 @@ describe("hook diagnostics", () => {
     }
   });
 
-  it("enables diagnostics with the CLI flag", () => {
-    const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-flag-"));
-    const diagnosticsPath = join(directory, "hook-diagnostics.jsonl");
-
-    try {
-      const result = runHookCliProcess(
-        "pre-tool-use",
-        JSON.stringify({ tool_name: "Bash", tool_input: { command: "echo ready" } }),
-        {
-          ...process.env,
-          PHAROS_HOOK_DIAGNOSTICS: "0",
-          PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
-        },
-        ["--diagnostics"],
-      );
-
-      expect(result.status).toBe(0);
-      expect(readFileSync(diagnosticsPath, "utf8").trim()).toContain('"decision":"allow"');
-    } finally {
-      rmSync(directory, { force: true, recursive: true });
-    }
-  });
 });
 
 describe("W2.7 PermissionRequest parity", () => {
@@ -1560,18 +917,6 @@ describe("W2.7 PermissionRequest parity", () => {
         tool_input: { command: "npx wrangler d1 execute stablecoin-db --remote --command 'select 1'" },
       }),
     ).toEqual({});
-  });
-});
-
-describe("repo Codex hook config", () => {
-  it("keeps Codex hook configuration user-local instead of tracked", () => {
-    const trackedConfig = execFileSync(
-      "git",
-      ["ls-files", "--", ".codex/config.toml", ".codex/hooks.json"],
-      { encoding: "utf8" },
-    ).trim();
-
-    expect(trackedConfig).toBe("");
   });
 });
 

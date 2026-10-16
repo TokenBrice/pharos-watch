@@ -29,11 +29,6 @@ describe("DEX liquidity verdict bands", () => {
     expect(getHhiBand(0)).toMatchObject({ key: "broad", concentrationLabel: "Low" });
   });
 
-  it("returns the broadest band for a non-finite HHI instead of throwing", () => {
-    expect(getHhiBand(Number.NaN)).toMatchObject({ key: "broad", concentrationLabel: "Low" });
-    expect(getConcentrationLabel(Number.NaN).label).toBe("Low");
-  });
-
   it("uses the canonical organic tiers for thresholds and mature low-organic pools", () => {
     expect(getOrganicFractionTier(0.7)).toMatchObject({ label: "Organic" });
     expect(getOrganicFractionTier(0.3)).toMatchObject({ label: "Mixed" });

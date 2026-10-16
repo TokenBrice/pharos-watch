@@ -160,21 +160,6 @@ describe("DEWS publication pointer reader", () => {
     expect(db.getHistory()).toHaveLength(1);
   });
 
-  it("distinguishes a missing pointer from invalid pointers", async () => {
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: [pointerKey],
-        rows: [],
-        first: null,
-      },
-    ], { requireMatch: true });
-
-    await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toEqual({
-      status: "no-pointer",
-    });
-  });
-
   it("rejects future pointers", async () => {
     const db = mockD1([
       pointerMatch(pointerPayload(nowSec + 60), nowSec + 60),

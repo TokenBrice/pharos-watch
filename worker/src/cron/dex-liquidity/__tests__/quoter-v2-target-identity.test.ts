@@ -11,7 +11,6 @@ import {
 } from "../process-pool-execution-capability";
 import { buildUniV3MessariPoolQuery, buildUniV3PoolQuery } from "../constants";
 import { fetchUniV3Data } from "../subgraph-source-families";
-import { isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 import type { PoolProcessingContext, PoolProtocolEnrichment, ResolvedPoolIdentity } from "../process-pool-types";
 
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -150,10 +149,6 @@ describe("registered QuoterV2 exact identity", () => {
     const result = buildTarget(0.003, [candidate()], [USDC, USDT], `fp:ethereum:uniswap-v3:${USDC}:${USDT}`);
     expect(result?.measuredExecutionTarget).toBeUndefined();
     expect(result?.executionCapabilityGate?.reason).toBe("target-unresolved");
-  });
-
-  it("does not admit an unsupported QuoterV2 chain", () => {
-    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "optimism")).toBe(false);
   });
 
   it("does not use a display-enrichment minimum fee to choose an ambiguous primary pool", () => {

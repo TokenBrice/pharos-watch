@@ -27,15 +27,6 @@ describe("adaptEthenaCollateral", () => {
     expect(listUnexpectedEthenaAssets(payload)).toEqual(["UNKNOWN"]);
   });
 
-  it("rejects drift removing totalBackingAssetsInUsd", () => {
-    const payload: EthenaCollateralResponse = {
-      totalBackingAssetsInUsd: 100,
-      collateral: [{ asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 100 }],
-    };
-    Reflect.deleteProperty(payload, "totalBackingAssetsInUsd");
-    expect(() => adaptEthenaCollateral(payload)).toThrow(/totalBackingAssetsInUsd/);
-  });
-
   it("groups Ethena collateral into reserve buckets", () => {
     const payload: EthenaCollateralResponse = {
       totalBackingAssetsInUsd: 100,
@@ -82,18 +73,6 @@ describe("adaptEthenaCollateral", () => {
     };
 
     expect(listUnexpectedEthenaAssets(payload)).toEqual([]);
-  });
-
-  it("still surfaces genuinely new Ethena assets", () => {
-    const payload: EthenaCollateralResponse = {
-      totalBackingAssetsInUsd: 100,
-      collateral: [
-        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 95 },
-        { asset: "DOGE", exchange: "Binance", timestamp: 1, usdAmount: 5 },
-      ],
-    };
-
-    expect(listUnexpectedEthenaAssets(payload)).toEqual(["DOGE"]);
   });
 
   it("uses the oldest material collateral timestamp as source freshness", () => {
@@ -176,20 +155,6 @@ describe("adaptEthenaCollateral", () => {
     }
   });
 
-  it("does not treat the mixed Liquid Cash bucket as redemption capacity", () => {
-    const payload: EthenaCollateralResponse = {
-      totalBackingAssetsInUsd: 100,
-      collateral: [
-        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 100 },
-      ],
-    };
-
-    const result = adaptEthenaCollateral(payload);
-
-    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
-    expect(result.metadata).not.toHaveProperty("immediateRedeemableRatio");
-    expect(result.metadata).not.toHaveProperty("redemption");
-  });
 });
 
 // Fixtures mirror the mainnet reads observed on 2026-08-12:

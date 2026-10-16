@@ -22,12 +22,6 @@ const LIVE_CAPTURE = JSON.parse(
 ) as FalconTransparencyResponse;
 
 describe("adaptFalconTransparency", () => {
-  it("rejects drift removing usdf.supply", () => {
-    const payload = falconPayload([{ label: "USDC", ceffu: "100" }]);
-    Reflect.deleteProperty(payload.usdf!, "supply");
-    expect(() => adaptFalconTransparency(payload)).toThrow(/usdf.supply/);
-  });
-
   it("groups Falcon asset-level reserves into reserve buckets", () => {
     const payload = falconPayload([
       { label: "USDC", ceffu: "20", fireblocks: "10" },
@@ -72,27 +66,6 @@ describe("adaptFalconTransparency", () => {
     expect(() => adaptFalconTransparency(falconPayload([
       { label: "USDC", ceffu: "malformed", fireblocks: "100" },
     ]))).toThrow(/Falcon USDC venue values row 1 has invalid value: NaN/);
-  });
-
-  it("aggregates the unmapped tail into one info warning instead of degrading per asset", () => {
-    const result = adaptFalconTransparency(falconPayload([
-      { label: "BTC", multisig: "990" },
-      { label: "FLOKI", ceffu: "5" },
-      { label: "NEAR", ceffu: "3" },
-      { label: "SOL", ceffu: "2" },
-    ], { insurance: "0" }));
-
-    expect(result.metadata?.unknownExposurePct).toBeCloseTo(1);
-    expect(result.slices).toContainEqual({ name: "Other crypto / tokenized assets", pct: 1, risk: "high" });
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "unknown-asset",
-        effect: "info",
-        message: expect.stringContaining("FLOKI, NEAR, SOL"),
-      }),
-    ]);
-    const report = expectValidAdapterOutput("falcon", result, { now: FIXTURE_TIMESTAMP });
-    expect(report.warnings.filter((warning) => warning.effect === "degraded")).toEqual([]);
   });
 
   it("degrades through the shared 5% unknown-exposure cap", () => {

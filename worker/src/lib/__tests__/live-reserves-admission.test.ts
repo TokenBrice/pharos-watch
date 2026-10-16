@@ -140,18 +140,6 @@ describe("live reserve admission", () => {
     expect((await loadReserveSnapshotMetadataMap(db, ["hbd-hive"], 1_200)).has("hbd-hive")).toBe(false);
   });
 
-  it("names config-mismatch as the rejection reason for a stale fingerprint", () => {
-    const coin = TRACKED_META_BY_ID.get("hbd-hive")!;
-    const record = {
-      stablecoinId: "hbd-hive", slices: [{ name: "HBD", pct: 100, risk: "low" as const }], fetchedAt: 1_000, source: coin.liveReservesConfig!.adapter,
-      metadata: { freshnessMode: "not-applicable" as const }, warnings: [], warningCount: 0,
-      adapterSourceModel: "dynamic-mix" as const, adapterEvidenceClass: "independent" as const,
-      configFingerprint: computeLiveReserveConfigFingerprint({ ...coin.liveReservesConfig!, version: coin.liveReservesConfig!.version + 1 }),
-    };
-    expect(evaluateLiveReserveAdmission(record, null, coin, 1_200).reasons).toContain("config-mismatch");
-    expect(evaluateLiveReserveAdmission({ ...record, configFingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!) }, null, coin, 1_200).reasons).not.toContain("config-mismatch");
-  });
-
   it("accepts matching fingerprints but excludes internal diagnostics from detail", async () => {
     const config = TRACKED_META_BY_ID.get("hbd-hive")!.liveReservesConfig!;
     const db = fixture("hbd-hive", { freshnessMode: "not-applicable", diag: { durationMs: 123 }, supplyUsd: 456 }, computeLiveReserveConfigFingerprint(config));

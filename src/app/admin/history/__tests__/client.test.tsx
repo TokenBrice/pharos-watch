@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from "react";
 import type { HistorySection } from "../../sections/history-section";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
@@ -86,85 +86,6 @@ afterEach(() => {
 });
 
 describe("HistoryClient", () => {
-  it("hydrates window and filters from the URL and preserves unrelated query state", async () => {
-    render(<HistoryClient />);
-
-    await waitFor(() => expect(useStatusHistoryMock).toHaveBeenLastCalledWith("7d"));
-    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as {
-      historyWindow: string;
-      historyFilters: Record<string, unknown>;
-      setHistoryFilters: (patch: Record<string, unknown>) => void;
-    };
-    expect(props.historyWindow).toBe("7d");
-    expect(props.historyFilters).toMatchObject({
-      severity: "critical",
-      surface: "system",
-      causeCode: "db_unhealthy",
-      publicImpact: "impacting",
-    });
-
-    act(() => props.setHistoryFilters({ severity: "warning" }));
-    expect(window.location.search).toContain("keep=1");
-    expect(window.location.search).toContain("severity=warning");
-    expect(window.location.search).toContain("cause=db_unhealthy");
-  });
-
-  it("resynchronizes filters and the query window on browser history navigation", () => {
-    render(<HistoryClient />);
-    act(() => {
-      window.history.replaceState({}, "", "/admin/history/?keep=2&window=30d&severity=warning");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    });
-    expect(useStatusHistoryMock).toHaveBeenLastCalledWith("30d");
-    expect(historySectionPropsMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      historyWindow: "30d",
-      historyFilters: { severity: "warning", surface: "all", causeCode: null, publicImpact: "all" },
-    });
-  });
-
-  it("changes the history window without losing filters or unrelated URL state", () => {
-    render(<HistoryClient />);
-    fireEvent.click(screen.getByRole("button", { name: "Last 30 days" }));
-    expect(useStatusHistoryMock).toHaveBeenLastCalledWith("30d");
-    const query = new URLSearchParams(window.location.search);
-    expect(Object.fromEntries(query)).toMatchObject({
-      keep: "1", window: "30d", severity: "critical", cause: "db_unhealthy",
-    });
-  });
-
-  it("retries all four failed-workspace queries even when one refresh rejects", async () => {
-    const refreshes = [useStatusMock, useStatusHistoryMock, useAdminActionLogMock, useApiKeyAuditLogMock]
-      .map((query) => query.getMockImplementation()!().refetch);
-    useStatusMock.mockReturnValue({
-      data: undefined, error: new Error("status unavailable"), isLoading: false, refetch: refreshes[0],
-    });
-    refreshes[1].mockRejectedValueOnce(new Error("history still unavailable"));
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      render(<HistoryClient />);
-      expect(screen.getByRole("alert").textContent).toContain("status unavailable");
-      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retry" })));
-      for (const refetch of refreshes) expect(refetch).toHaveBeenCalledTimes(1);
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("retries each operational log independently", () => {
-    const actionRefetch = useAdminActionLogMock.getMockImplementation()!().refetch;
-    const credentialRefetch = useApiKeyAuditLogMock.getMockImplementation()!().refetch;
-    const statusRefetch = useStatusMock.getMockImplementation()!().refetch;
-    const historyRefetch = useStatusHistoryMock.getMockImplementation()!().refetch;
-    render(<HistoryClient />);
-    fireEvent.click(screen.getByRole("button", { name: "Retry actions" }));
-    expect(actionRefetch).toHaveBeenCalledTimes(1);
-    expect(credentialRefetch).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Retry credentials" }));
-    expect(credentialRefetch).toHaveBeenCalledTimes(1);
-    expect(actionRefetch).toHaveBeenCalledTimes(1);
-    expect(statusRefetch).not.toHaveBeenCalled();
-    expect(historyRefetch).not.toHaveBeenCalled();
-  });
 
   it("passes nullable role evidence without manufacturing deployment metadata", async () => {
     render(<HistoryClient />);

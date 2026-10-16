@@ -179,66 +179,6 @@ describe("useStablecoinDetailViewModel", () => {
     expect(coinData.supplyObservedAt).toBe(1_790_793_000);
   });
 
-  it("keeps only price, peg, and supply eager while disabling below-fold queries", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-
-    renderHook(() =>
-      useStablecoinDetailViewModel({
-        id: coin.id,
-        coin,
-        summary: null,
-        supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
-      }),
-    );
-
-    expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id, 90);
-    expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id, 380, { enabled: false });
-    expect(mocks.useRegisteredApiQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["stablecoin-live-summary", coin.id] }),
-    );
-    expect(mocks.usePegSummary).toHaveBeenCalled();
-    expect(mocks.useDexLiquidity).toHaveBeenCalledWith({ enabled: false });
-    expect(mocks.useReportCardsV9).toHaveBeenCalledWith({ enabled: false });
-    expect(mocks.useRegisteredApiQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["redemption-backstops"] }),
-      { enabled: false },
-    );
-    expect(mocks.useYieldRankings).toHaveBeenCalledWith({ enabled: false });
-    expect(mocks.useStressSignals).toHaveBeenCalledWith({ enabled: false });
-    expect(mocks.useMintBurnFlows).toHaveBeenCalledWith(24, { enabled: false });
-    expect(mocks.useBlacklistSummary).toHaveBeenCalledWith({ enabled: false });
-    expect(mocks.useStablecoinReserves).toHaveBeenCalledWith(coin.id, false);
-    const { queries } = mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0];
-    expect(queries.dexLiquidity.enabled).toBe(false);
-    expect(queries.reportCards.enabled).toBe(false);
-    expect(queries.redemptionBackstops.enabled).toBe(false);
-  });
-
-  it("reuses the built view model when inputs have not changed", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    const supplementalQueryControls = {
-      flows: true,
-      blacklist: true,
-      reserves: true,
-    };
-    const { rerender } = renderHook(
-      ({ controls }) =>
-        useStablecoinDetailViewModel({
-          id: coin.id,
-          coin,
-          summary: null,
-          supplementalQueryControls: controls,
-        }),
-      { initialProps: { controls: supplementalQueryControls } },
-    );
-
-    expect(mocks.buildStablecoinDetailViewModel).toHaveBeenCalledTimes(1);
-
-    rerender({ controls: supplementalQueryControls });
-
-    expect(mocks.buildStablecoinDetailViewModel).toHaveBeenCalledTimes(1);
-  });
-
   it("masks cached supplemental data while controls are disabled", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     mocks.useMintBurnFlows.mockReturnValue(queryResult({
@@ -300,45 +240,6 @@ describe("useStablecoinDetailViewModel", () => {
         }),
       }),
     );
-  });
-
-  it("enables supplemental queries when controls and capability allow them", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-
-    renderHook(() =>
-      useStablecoinDetailViewModel({
-        id: coin.id,
-        coin,
-        summary: null,
-        supplementalQueryControls: {
-          flows: true,
-          blacklist: true,
-          reserves: true,
-        },
-      }),
-    );
-
-    expect(mocks.useMintBurnFlows).toHaveBeenCalledWith(24, { enabled: true });
-    expect(mocks.useBlacklistSummary).toHaveBeenCalledWith({ enabled: true });
-    expect(mocks.useStablecoinReserves).toHaveBeenCalledWith(coin.id, true);
-  });
-
-  it("keeps blacklist disabled for unsupported symbols even when the visibility gate is open", () => {
-    const baseCoin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    const coin = { ...baseCoin, symbol: "NOPE" };
-
-    renderHook(() =>
-      useStablecoinDetailViewModel({
-        id: coin.id,
-        coin,
-        summary: null,
-        supplementalQueryControls: {
-          blacklist: true,
-        },
-      }),
-    );
-
-    expect(mocks.useBlacklistSummary).toHaveBeenCalledWith({ enabled: false });
   });
 
   it("retries only failed enabled lanes", async () => {

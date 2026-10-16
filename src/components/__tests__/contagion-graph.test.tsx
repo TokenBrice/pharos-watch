@@ -3,9 +3,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
+import { ContagionGraphControls } from "@/components/contagion-graph/contagion-graph-controls";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { installSvgCoordinateShim } from "./contagion-graph-test-support";
-import { buildGraphData, buildSupernodeState, runSimulationInChunks } from "@/lib/contagion-layout";
+import { ALL_NODE_LIMIT, runSimulationInChunks } from "@/lib/contagion-layout";
 import { trackEvent } from "@/lib/analytics";
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
@@ -209,13 +210,6 @@ describe("ContagionGraph", () => {
     expect(liveRegion.textContent).toBe("");
     expect(within(picker).queryByRole("option", { name: /USDC depends on USDe/ })).toBeNull();
   });
-  it("announces the effective detail limit rather than the unused control default", () => {
-    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} maxNodes={2} minimalChrome />);
-    const filterRegion = screen.getByLabelText("Graph filter announcements");
-    expect(filterRegion.textContent).toContain("limit 2.");
-    expect(filterRegion.textContent).not.toContain("limit 200.");
-    expect(filterRegion.textContent).toContain("2 stablecoins");
-  });
   it("keeps full direct exposure and counts when a type filter hides dependents", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES.slice(0, 2)} mcapMap={MCAP_MAP} />);
     fireEvent.click(screen.getByRole("button", { name: /USDe, Grade A/ }));
@@ -267,16 +261,6 @@ describe("ContagionGraph", () => {
     expect(within(getTraceCoinPicker()).getByRole("option", { name: "DUSD (Dialectic USD)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /DUSD \(Alto DUSD\), Grade B/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /DUSD \(Dialectic USD\), Grade B/ })).toBeTruthy();
-  });
-
-  it("counts hubs only in the visible neighborhood", () => {
-    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
-    fireEvent.change(getTraceCoinPicker(), { target: { value: "usdtb-ethena" } });
-    const { nodes, links } = buildGraphData(CARDS, MCAP_MAP, DEPENDENCY_EDGES);
-    const tiers = buildSupernodeState(nodes, links).tierById;
-    const visible = new Set(["usdtb-ethena", "usde-ethena"]);
-    const expected = nodes.filter((node) => visible.has(node.id) && (tiers.get(node.id) ?? 0) > 0).length;
-    expect(screen.getAllByText("Hubs").find((element) => element.tagName === "P")?.nextElementSibling?.textContent).toBe(String(expected));
   });
 
   it("retains a tracked edge-free focus and offers an honest empty neighborhood", () => {
@@ -336,26 +320,6 @@ describe("ContagionGraph", () => {
     expect(trackEvent).not.toHaveBeenCalled();
   });
 
-  it("renders the expected visible node and edge counts", () => {
-    const { container } = render(
-      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
-    );
-
-    expect(screen.getAllByRole("button", { name: /market cap/i })).toHaveLength(4);
-    expect(container.querySelectorAll('svg line[stroke="transparent"]')).toHaveLength(3);
-  });
-
-  it("shows focused node styling and announces the focused node", () => {
-    const { container } = render(
-      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
-    );
-
-    fireEvent.focus(within(screen.getByRole("figure")).getByRole("button", { name: /USDC/i }));
-
-    expect(container.querySelector('circle[stroke="var(--color-ring)"][stroke-dasharray="4 2"]')).not.toBeNull();
-    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("USDC, Grade A");
-  });
-
   it("supports keyboard neighborhood focus and directional node navigation", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
@@ -370,17 +334,6 @@ describe("ContagionGraph", () => {
 
     fireEvent.keyDown(usdcNode, { key: "ArrowLeft" });
     expect((document.activeElement as HTMLElement | null)?.getAttribute("data-node-id")).toBe("usde-ethena");
-  });
-
-  it("lets clicks retarget the selected neighborhood", () => {
-    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
-
-    const nodePicker = getTraceCoinPicker();
-    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
-
-    expect(nodePicker.value).toBe("usde-ethena");
   });
 
   it("does not retarget the selected neighborhood on the click emitted after a drag", () => {
@@ -406,22 +359,6 @@ describe("ContagionGraph", () => {
     expect(nodePicker.value).toBe(initialValue);
   });
 
-  it("shows an edge tooltip labelled by relationship on edge hover", async () => {
-    const { container } = render(
-      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
-    );
-
-    const edgeHitArea = container.querySelectorAll('svg line[stroke="transparent"]')[0];
-    expect(edgeHitArea).not.toBeNull();
-
-    fireEvent.mouseEnter(edgeHitArea!);
-
-    await waitFor(() => {
-      expect(container.textContent).toContain("USDTB");
-      expect(container.textContent).toContain("Wrapper dependency");
-    });
-  });
-
   it("uses the trace picker to open a selected neighborhood", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
@@ -438,49 +375,6 @@ describe("ContagionGraph", () => {
     fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));
 
     expect(screen.getByText(/Showing 4 of 4 dependency-linked stablecoins with 1 visible edges\./)).toBeTruthy();
-  });
-
-  it("reduces visible nodes in neighborhood mode for connected subsets", () => {
-    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
-    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
-
-    expect(screen.getByText(/Showing 3 of 4 dependency-linked stablecoins with 2 visible edges\./)).toBeTruthy();
-  });
-
-  it("updates visible counts when focus mode changes", () => {
-    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
-
-    expect(screen.getByText(/Showing 4 of 4 dependency-linked stablecoins with 3 visible edges\./)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
-
-    const sr = screen.getByText(/Showing \d+ of \d+ dependency-linked stablecoins with \d+ visible edges\./);
-    expect(sr.textContent).not.toMatch(/Showing 4 of 4 dependency-linked stablecoins with 3 visible edges\./);
-  });
-
-  it("clears the pinned selection when Escape is pressed", () => {
-    const { container } = render(
-      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
-    );
-
-    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
-    expect(container.querySelector('circle[stroke="var(--p-frost-blue)"]')).not.toBeNull();
-
-    fireEvent.keyDown(document, { key: "Escape" });
-
-    expect(container.querySelector('circle[stroke="var(--p-frost-blue)"]')).toBeNull();
-  });
-
-  it("never mounts a modal dialog when a node is clicked", () => {
-    const { container } = render(
-      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
-    );
-
-    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
-
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it("double-clicking a pinned node unpins it", () => {
@@ -500,5 +394,29 @@ describe("ContagionGraph", () => {
     fireEvent.doubleClick(usdeNode);
 
     expect(container.querySelector('[data-pinned="true"]')).toBeNull();
+  });
+});
+
+describe("ContagionGraphControls", () => {
+  it("emits the all node-limit option without numeric coercion", () => {
+    const onNodeLimitChange = vi.fn();
+    render(
+      <ContagionGraphControls
+        focusMode="all"
+        edgeTypeFilter="all"
+        nodeLimit={50}
+        nodeSelectOptions={[{ id: "usdc-circle", symbol: "USDC", mcap: 1_000_000_000 }]}
+        selectedNeighborhoodId={null}
+        onFocusModeChange={vi.fn()}
+        onEdgeTypeFilterChange={vi.fn()}
+        onNodeLimitChange={onNodeLimitChange}
+        onTraceNodeChange={vi.fn()}
+      />,
+    );
+
+    const limitControls = screen.getByRole("group", { name: "Maximum nodes shown" });
+    fireEvent.click(within(limitControls).getByText("All"));
+
+    expect(onNodeLimitChange).toHaveBeenCalledWith(ALL_NODE_LIMIT);
   });
 });

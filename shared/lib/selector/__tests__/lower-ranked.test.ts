@@ -54,25 +54,6 @@ describe("userEmphasizedDimension", () => {
     );
     expect(lowerRanked).toMatchObject([{ slot: "B", id: "protocol-5", failedComponent: dimension }]);
   });
-  it("composability=high → liquidity", () => {
-    expect(userEmphasizedDimension(makeInput({ composability: "high" }))).toBe("liquidity");
-  });
-  it("exitSpeed=1h → liquidity", () => {
-    expect(userEmphasizedDimension(makeInput({ exitSpeed: "1h" }))).toBe("liquidity");
-  });
-  it("treasury × 6mplus → safetyOverall", () => {
-    expect(
-      userEmphasizedDimension(makeInput({ profile: "treasury", horizon: "6mplus" })),
-    ).toBe("safetyOverall");
-  });
-  it("yield + minApy set → pharosYieldScore", () => {
-    expect(
-      userEmphasizedDimension(makeInput({ profile: "yield", minApy: 5 })),
-    ).toBe("pharosYieldScore");
-  });
-  it("default → safetyOverall", () => {
-    expect(userEmphasizedDimension(makeInput())).toBe("safetyOverall");
-  });
   it("zero tolerance precedes composability and minimum APY, which lose to liquidity next", () => {
     const input = makeInput({ profile: "yield", depegTolerance: "zero", composability: "high", minApy: 8 });
     expect(userEmphasizedDimension(input)).toBe("pegStabilityLive");
@@ -98,40 +79,6 @@ describe("selectLowerRanked — Slot A", () => {
     // Treasury PROFILE_DEFINING_EXCLUSIONS declares safety-resilience-floor before
     // dews-ceiling, so nearMissB wins on priority even with a lower hypothetical.
     expect(result[0]!.id).toBe("nearMissB");
-  });
-
-  it("within the same priority, higher hypothetical wins", () => {
-    const allMerged = [
-      makeRow("hi", { safetyScore: 75 }),
-      makeRow("lo", { safetyScore: 50 }),
-    ];
-    const excluded: ExclusionRecord[] = [
-      { id: "hi", reason: "dews-ceiling", severity: "hard" },
-      { id: "lo", reason: "dews-ceiling", severity: "hard" },
-    ];
-    const result = selectLowerRanked([], excluded, makeInput(), allMerged, new Set(), scorer);
-    expect(result[0]!.id).toBe("hi");
-  });
-
-  it("Yield priority: venue-on-c-tier beats peg-score-floor", () => {
-    const allMerged = [
-      makeRow("hotVenue", { safetyScore: 60 }),
-      makeRow("pegMiss", { safetyScore: 90 }),
-    ];
-    const excluded: ExclusionRecord[] = [
-      { id: "hotVenue", reason: "high-venue-on-c-tier", severity: "hard" },
-      { id: "pegMiss", reason: "peg-score-floor", severity: "hard" },
-    ];
-    const result = selectLowerRanked(
-      [],
-      excluded,
-      makeInput({ profile: "yield" }),
-      allMerged,
-      new Set(),
-      scorer,
-    );
-    expect(result[0]!.id).toBe("hotVenue");
-    expect(result[0]!.reasonKey).toBe("high-venue-on-c-tier");
   });
 
   it("skips coverage-too-thin (anti-rule)", () => {

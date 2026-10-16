@@ -1,6 +1,8 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 import {
   resolveSafetyScoreV9ReviewedTransferFact,
@@ -72,37 +74,20 @@ describe("single-deployment transfer attribution", () => {
     expect(input.aggregateCirculating).toEqual({ circulating: { peggedUSD: 100 } });
   });
 
-  it("rejects a second deployment", () => {
+  it.each<[string, (input: { meta: StablecoinMeta; review: SafetyScoreV9ReviewedTransferFact }) => void]>([
+    ["a second deployment", input => { input.meta.contracts!.push({ ...input.meta.contracts![0]!, chain: "base" }); }],
+    ["a wrapper liability", input => { input.meta.variantKind = "pure-wrapper"; }],
+    ["a bridge representation route", input => {
+      input.meta.bridgeRouteRisk = structuredClone(ACTIVE_META_BY_ID.get("xdai-gnosis")!.bridgeRouteRisk);
+    }],
+    ["a missing attestation", input => { delete input.review.transferScopeAttestation; }],
+    ["an expired attestation", input => { input.review.transferScopeAttestation!.expiresAt = "2026-08-01"; }],
+    ["a mismatched attestation", input => { input.review.transferScopeAttestation!.deploymentKey = "base:0x123"; }],
+    ["a future attestation", input => { input.review.transferScopeAttestation!.reviewedAt = "2026-08-02"; }],
+  ])("rejects %s", (_label, mutate) => {
     const input = fixture();
-    input.meta.contracts!.push({ ...input.meta.contracts![0]!, chain: "base" });
+    mutate(input);
     expect(transferMaterialScopeFromSingleDeploymentAttribution(input)).toBe(BASE_SCOPE);
-  });
-
-  it("rejects a wrapper liability", () => {
-    const input = fixture();
-    input.meta.variantKind = "pure-wrapper";
-    expect(transferMaterialScopeFromSingleDeploymentAttribution(input)).toBe(BASE_SCOPE);
-  });
-
-  it("rejects a bridge representation route", () => {
-    const input = fixture();
-    input.meta.bridgeRouteRisk = structuredClone(ACTIVE_META_BY_ID.get("xdai-gnosis")!.bridgeRouteRisk);
-    expect(transferMaterialScopeFromSingleDeploymentAttribution(input)).toBe(BASE_SCOPE);
-  });
-
-  it("rejects missing, expired, mismatched and future attestations", () => {
-    const missing = fixture();
-    delete missing.review.transferScopeAttestation;
-    expect(transferMaterialScopeFromSingleDeploymentAttribution(missing)).toBe(BASE_SCOPE);
-    const expired = fixture();
-    expired.review.transferScopeAttestation!.expiresAt = "2026-08-01";
-    expect(transferMaterialScopeFromSingleDeploymentAttribution(expired)).toBe(BASE_SCOPE);
-    const mismatch = fixture();
-    mismatch.review.transferScopeAttestation!.deploymentKey = "base:0x123";
-    expect(transferMaterialScopeFromSingleDeploymentAttribution(mismatch)).toBe(BASE_SCOPE);
-    const future = fixture();
-    future.review.transferScopeAttestation!.reviewedAt = "2026-08-02";
-    expect(transferMaterialScopeFromSingleDeploymentAttribution(future)).toBe(BASE_SCOPE);
   });
 
   it("rejects absent admitted aggregate and preserves observed scope", () => {

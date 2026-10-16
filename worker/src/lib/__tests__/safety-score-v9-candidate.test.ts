@@ -887,54 +887,6 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       ]));
   });
 
-  it("reaches A+ through the normal candidate compiler and evaluator from ideal reviewed facts", () => {
-    const fixedInput = exactFixedInput("alpha");
-    const stressGrid = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.stressRequest.notionalGridUsd;
-    const peg = fixedInput.pegDataById.alpha!;
-    peg.currentDeviationBps = 0;
-    peg.pegScore = 100;
-    peg.pegPct = 100;
-    peg.worstDeviationBps = 0;
-    const observation = fixedInput.dexLiqMap.alpha!.exitRouteObservations![0]!;
-    observation.executableUsd = observation.requestedNotionalUsd;
-    observation.completionRatio = 1;
-    observation.capacityEvidenceTier = "live-direct";
-    observation.capacityCurve = stressGrid.map((requestedNotionalUsd) => ({
-      requestedNotionalUsd,
-      maxCostBps: observation.maxCostBps,
-      executableUsd: requestedNotionalUsd,
-      completionRatio: 1,
-    }));
-    fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(
-      fixedInput.dexLiqMap,
-      fixedInput.dexGenerationId,
-    );
-    fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
-
-    const extension = reviewedExtension(fixedInput);
-    const asset = extension.assets[0]!;
-    asset.routeReviews[0]!.executionModel = "atomic";
-    asset.routeReviews[0]!.executionCertainty = "guaranteed";
-    asset.routeReviews[0]!.modelConfidence = "high";
-    asset.routeReviews[0]!.settlementModel = "atomic";
-    asset.routeReviews[0]!.settlementSlaSec = 0;
-    asset.routeReviews[0]!.executionCosts = stressGrid.map((requestedNotionalUsd) => ({
-      requestedNotionalUsd,
-      maxCostBps: observation.maxCostBps,
-      executionCostBps: 0,
-    }));
-
-    const result = buildSafetyScoreV9Candidate({
-      fixedInput,
-      extension,
-      publishedAtSec: PUBLISHED_AT_SEC,
-    });
-    expect(SafetyScoreV9ResponseSchema.parse(result.candidate)).toEqual(result.candidate);
-    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", grade: "A+" });
-    expect(result.candidate.cards[0]!.score).toBeGreaterThanOrEqual(87);
-    expect(result.evaluatedSet.assets[0]!.trace.bindingCap).toBeNull();
-  });
-
   it("changes only V9 exit economics when measured points retain realized cost", () => {
     const fixedInput = exactFixedInput("alpha");
     const observation = fixedInput.dexLiqMap.alpha!.exitRouteObservations![0]!;

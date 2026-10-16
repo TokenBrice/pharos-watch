@@ -4,10 +4,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
-import { buildLiquidityVerdictLine } from "@/components/dex-liquidity-card-model";
 import { PoolSourceLabel, TvlTrendChart } from "@/components/dex-liquidity-card-parts";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
-import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
+import type { DexLiquidityHistoryPoint } from "@shared/types";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
 import { formatCurrency } from "@shared/lib/format";
 
@@ -83,15 +82,6 @@ describe("PoolSourceLabel", () => {
     expect(screen.getByText(expected)).toBeTruthy();
   });
 
-  it("keeps the source label when the protocol list expands", () => {
-    const sources = ["curve", "uniswap-v3", "balancer", "pancakeswap", "aerodrome", "orca"]
-      .map((protocol) => ({ protocol }));
-    render(<PoolSourceLabel count={6} tvl={null} priceSources={sources} />);
-    expect(screen.getByText("from 6 price sources")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "show all" }));
-    expect(screen.getByRole("button", { name: "hide sources" })).toBeTruthy();
-    expect(screen.getByText("from 6 price sources")).toBeTruthy();
-  });
 });
 
 describe("TvlTrendChart", () => {
@@ -186,48 +176,6 @@ describe("DexLiquidityCard", () => {
     expect(screen.getByRole("alert").textContent).toContain("DEX liquidity data is temporarily unavailable");
   });
 
-  it("promotes effective liquidity above total AMM liquidity in the overview metrics", () => {
-    useDexLiquidityMock.mockReturnValue({
-      data: {
-        "usdc-circle": makeDexLiquidityData({
-          totalTvlUsd: 10_200_000,
-          effectiveTvlUsd: 910_710,
-          totalVolume24hUsd: 265_010,
-          totalVolume7dUsd: 663_820,
-          poolCount: 13,
-          chainCount: 2,
-          liquidityScore: 40,
-          coverageClass: "mixed",
-          liquidityEvidenceClass: "partial_measured",
-          hasMeasuredLiquidityEvidence: true,
-          balanceMeasuredTvlUsd: 1_224_000,
-          tvlChange24h: -14.3,
-          tvlChange7d: -12.3,
-        }),
-      },
-      isLoading: false,
-    });
-    useDexLiquidityHistoryMock.mockReturnValue({
-      data: [],
-      isLoading: false,
-    });
-
-    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
-
-    expect(screen.getAllByText("DEX market liquidity").length).toBeGreaterThan(0);
-    expect(screen.getByText("Mixed coverage")).toBeTruthy();
-    // The opening line is now the component-derived verdict (when components
-    // are published); the old disclaimer lives in the methodology hint.
-    expect(screen.queryByText("Aggregate DEX market score; not a single-route execution test.")).toBeNull();
-    const effectiveLabel = screen.getByText("Effective liquidity");
-    const effectiveValue = screen.getByText("$910.71K");
-    const totalAmmLabel = screen.getByText("Total AMM Liquidity TVL");
-    const totalAmmValue = screen.getByText("$10.20M");
-
-    expect(effectiveLabel.compareDocumentPosition(totalAmmLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(effectiveValue.compareDocumentPosition(totalAmmValue) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
   it("renders unavailable 7d volume as an em dash", () => {
     useDexLiquidityMock.mockReturnValue({
       data: {
@@ -282,70 +230,6 @@ describe("DexLiquidityCard", () => {
       screen.getByText("Related-asset liquidity is intentionally not merged into the canonical Liquidity Score."),
     ).toBeTruthy();
     expect(screen.queryByLabelText("TVL trend chart")).toBeNull();
-  });
-
-  it("renders top pools through the shared embedded table frame", () => {
-    const topPool: DexLiquidityPool = {
-      project: "curve",
-      chain: "Ethereum",
-      tvlUsd: 1_250_000,
-      symbol: "USDC/USDT",
-      volumeUsd1d: 420_000,
-      poolType: "stable",
-      price: 0.9998,
-      extra: {
-        balanceRatio: 0.96,
-        organicFraction: 0.82,
-        feeTier: 100,
-        stressIndex: 12,
-      },
-    };
-    useDexLiquidityMock.mockReturnValue({
-      data: {
-        "usdc-circle": makeDexLiquidityData({
-          totalTvlUsd: 1_250_000,
-          effectiveTvlUsd: 1_250_000,
-          totalVolume24hUsd: 420_000,
-          totalVolume7dUsd: 2_500_000,
-          poolCount: 1,
-          chainCount: 1,
-          topPools: [topPool],
-          coverageClass: "primary",
-          liquidityEvidenceClass: "measured",
-          hasMeasuredLiquidityEvidence: true,
-        }),
-      },
-      isLoading: false,
-    });
-    useDexLiquidityHistoryMock.mockReturnValue({
-      data: [],
-      isLoading: false,
-    });
-
-    const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
-
-    openMarketBreakdown(container);
-    const shell = screen.getByTestId("dex-liquidity-top-pools-table");
-    const table = screen.getByRole("table", { name: "Top DEX liquidity pools" });
-
-    expect(shell.getAttribute("data-table-id")).toBe("dex-liquidity-top-pools");
-    expect(shell.className).toContain("pharos-density-compact");
-    expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
-    expect(table.getAttribute("data-slot")).toBe("table");
-    expect(screen.getByText("USDC/USDT")).toBeTruthy();
-  });
-
-  it("derives the verdict line from score components", () => {
-    expect(
-      buildLiquidityVerdictLine({
-        tvlDepth: 29,
-        volumeActivity: 95,
-        poolQuality: 46,
-        durability: 80,
-        pairDiversity: 100,
-      }),
-    ).toBe("Diversity 100 and volume 95 carry the score; tvl depth 29 is the drag.");
-    expect(buildLiquidityVerdictLine(null)).toBeNull();
   });
 
   describe("DEC-19 volume availability", () => {

@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
   usePathname: usePathnameMock,
 }));
 
-import { GlobalFooterChrome, MainContent, RegimeBarChrome, RouteChrome } from "../route-chrome";
+import { GlobalFooterChrome, RegimeBarChrome, RouteChrome } from "../route-chrome";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -60,33 +60,6 @@ describe("operator route chrome", () => {
     expect(screen.queryByText("public footer")).toBeNull();
   });
 
-  it("does not wrap an operator shell main landmark in another main landmark", () => {
-    usePathnameMock.mockReturnValue("/admin/pipeline/");
-
-    render(
-      <MainContent>
-        <main id="ops-main-content">workspace</main>
-      </MainContent>,
-    );
-
-    const mains = screen.getAllByRole("main");
-    expect(mains).toHaveLength(1);
-    expect(mains[0]?.id).toBe("ops-main-content");
-    expect(document.getElementById("main-content")).toBeNull();
-    expect(screen.getByText("workspace")).toBeTruthy();
-  });
-
-  it("retains the standard main-content landmark on product routes", () => {
-    usePathnameMock.mockReturnValue("/yield/");
-
-    render(
-      <MainContent>
-        <div>yield workspace</div>
-      </MainContent>,
-    );
-
-    expect(screen.getByRole("main").id).toBe("main-content");
-  });
 
   it("keeps public chrome on normal product routes", () => {
     usePathnameMock.mockReturnValue("/yield/");

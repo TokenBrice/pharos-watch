@@ -68,21 +68,10 @@ export const TYPE_DASH: Record<ContagionEdgeRelationship, string | undefined> = 
   DEPENDENCY_TYPE_ORDER.map((type) => [type, DEPENDENCY_TYPE_PRESENTATION[type].dash]),
 ) as Record<ContagionEdgeRelationship, string | undefined>;
 
-const DEPENDENCY_TYPE_RANK = new Map<ContagionEdgeRelationship, number>(
-  DEPENDENCY_TYPE_ORDER.map((type, index) => [type, index]),
-);
-
 // ---------------------------------------------------------------------------
 // Pure helpers
 // ---------------------------------------------------------------------------
 
 export function gradeColor(grade: V9Grade | null): string {
   return grade === null ? "var(--color-muted-foreground)" : GRADE_RADAR_COLORS[gradeRange(grade)];
-}
-
-export function compareDependencyTypes(a: ContagionEdgeRelationship, b: ContagionEdgeRelationship): number {
-  const rank = (DEPENDENCY_TYPE_RANK.get(a) ?? Number.MAX_SAFE_INTEGER)
-    - (DEPENDENCY_TYPE_RANK.get(b) ?? Number.MAX_SAFE_INTEGER);
-  if (rank !== 0) return rank;
-  return a.localeCompare(b);
 }

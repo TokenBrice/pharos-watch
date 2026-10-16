@@ -60,7 +60,7 @@ const RESPONSIVE_ARROW_CLASSES = {
  * "Atomic", "Same day") reads as sentence-case sans, so one rail never mixes
  * the two cases for the same kind of fact.
  */
-export function isMonoArrowLabel(label: string): boolean {
+function isMonoArrowLabel(label: string): boolean {
   return !/\p{L}/u.test(label);
 }
 

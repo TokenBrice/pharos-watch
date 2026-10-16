@@ -48,21 +48,4 @@ describe("ShowYourWorkPanel", () => {
     expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
   });
 
-  it("returns null when SYW mode is off", () => {
-    window.history.replaceState({}, "", "/");
-    window.localStorage.removeItem("pharos.show-work");
-    const { container } = render(
-      <ShowYourWorkPanel
-        kind="chain-health"
-        factors={{
-          concentration: 80,
-          quality: 70,
-          pegStability: 95,
-          backingDiversity: 60,
-          chainEnvironment: 100,
-        }}
-      />,
-    );
-    expect(container.textContent).toBe("");
-  });
 });

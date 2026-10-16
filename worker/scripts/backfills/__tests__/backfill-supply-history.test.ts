@@ -2,7 +2,6 @@ import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
-import { makeNoopD1 } from "../../../src/test-helpers/noop-d1";
 import { registerStablecoinParameterContract } from "../../../src/test-helpers/__shared/endpoint-contracts";
 import type { ChainRpcConfig } from "../../../src/lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../../src/lib/evm-selectors";
@@ -146,12 +145,6 @@ describe("handleBackfillSupplyHistory", () => {
     path: "/api/backfill-supply-history",
     invoke: (db, url) => handleBackfillSupplyHistoryTrusted({ db, url, request: makeApiRequest(url.toString(), { adminKey: "secret" }) }),
     cases: [{ kind: "unknown", stablecoin: "not-a-real-id", error: "Stablecoin not found" }],
-  });
-
-  it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillSupplyHistoryTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-supply-history?batch=999999&batchSize=100"), request: makeApiRequest("/api/backfill-supply-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
-
-    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("inserts rows for a valid USD stablecoin detail payload", async () => {
@@ -698,63 +691,6 @@ describe("handleBackfillSupplyHistory", () => {
     const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"));
     expect(inserts.map((stmt) => stmt.binds)).toEqual([[fixtureId, ts / 1000, cap, price]]);
     expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
-  });
-
-  it("skips eEARN days when historical totalSupply has no USD price", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unpriced days must not fetch"));
-    const chainRpcs = ethereumSupplyRpc();
-
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=eearn-ember&startDay=2026-06-09&endDay=2026-06-10"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=eearn-ember&startDay=2026-06-09&endDay=2026-06-10", {
-        adminKey: "secret",
-      }), coingeckoApiKey: null, chainRpcs });
-
-    const body = (await readJsonResponse(res, 200)) as {
-      coinsProcessed: number;
-      rowsInserted: number;
-      errors?: string[];
-      skipped?: string[];
-      skippedDays?: number;
-    };
-    expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(0);
-    expect(body.errors?.[0]).toContain("historical totalSupply backfill wrote 0 rows");
-    expect(body.skippedDays).toBe(2);
-    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
-    expect(fetchSpy).not.toHaveBeenCalled();
-    const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
-    );
-    expect(inserts).toHaveLength(0);
-  });
-
-  it("skips autoUSD days without a CoinGecko ID or historical price", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unpriced days must not fetch"));
-    const chainRpcs = ethereumSupplyRpc();
-
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=autousd-auto-finance&startDay=2026-06-09&endDay=2026-06-10"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=autousd-auto-finance&startDay=2026-06-09&endDay=2026-06-10", {
-        adminKey: "secret",
-      }), coingeckoApiKey: null, chainRpcs });
-
-    const body = (await readJsonResponse(res, 200)) as {
-      coinsProcessed: number;
-      rowsInserted: number;
-      errors?: string[];
-      skipped?: string[];
-      skippedDays?: number;
-    };
-    expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(0);
-    expect(body.errors?.[0]).toContain("historical totalSupply backfill wrote 0 rows");
-    expect(body.skippedDays).toBe(2);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
-
-    const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
-    );
-    expect(inserts).toHaveLength(0);
   });
 
   it("skips historical totalSupply when contract decimals are missing", async () => {

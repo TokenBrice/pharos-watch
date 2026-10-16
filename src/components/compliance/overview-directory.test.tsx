@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildComplianceOverviewModel } from "@/lib/compliance-model";
-import { OverviewDirectory, parseOverviewSort } from "./overview-directory";
+import { OverviewDirectory } from "./overview-directory";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -16,15 +16,6 @@ afterEach(() => {
 });
 
 const rows = buildComplianceOverviewModel({ peg: "all", search: "" }).rows;
-
-describe("parseOverviewSort", () => {
-  it("parses canonical column-direction values only", () => {
-    expect(parseOverviewSort("mica-desc")).toEqual({ column: "mica", direction: "desc" });
-    expect(parseOverviewSort("genius-asc")).toEqual({ column: "genius", direction: "asc" });
-    expect(parseOverviewSort("mica")).toBeNull();
-    expect(parseOverviewSort("")).toBeNull();
-  });
-});
 
 describe("OverviewDirectory", () => {
   it("pages the directory with an honest count and keeps sort and page in the URL", () => {

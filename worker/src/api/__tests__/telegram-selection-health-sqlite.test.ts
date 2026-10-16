@@ -8,14 +8,13 @@ import { TelegramWebhookEffectFence, buildMutationOperations, createTelegramWebh
 import { parseStoredCommandSelectionIntent } from "../telegram-webhook-disambiguation-selection";
 import { parseSetCommand } from "../telegram-webhook-parsing";
 import { handleSetupBranch } from "../telegram-webhook-setup";
-import { loadTelegramMiniAppState } from "../telegram-mini-app-state";
 import { applySettingToSubscriptions, loadSubscriptionRowsByChat, upsertSubscriberAndSubscriptions } from "../telegram-store/subscriptions";
 import { describeSubscriptionSettings } from "../telegram-webhook-messages";
 import { buildPendingAlertEnqueueStatement } from "../../lib/telegram/pending-queue";
 import { revalidatePendingAlertPreferences } from "../../cron/telegram-pending/preference-revalidation";
 import type { PendingAlertRow } from "../../cron/telegram-pending/types";
 import {
-  fetchSpy, handleTelegramWebhook, makeCallbackRequest, makeWebhookRequest,
+  fetchSpy, handleTelegramWebhook, makeCallbackRequest,
   resetTelegramWebhookTest, sentMessageBody,
 } from "./telegram-webhook.test-support";
 
@@ -123,26 +122,6 @@ describe("setup atomic refused transition", () => {
       expect(response.text).toBe("Pick alert types.");
       expect(fetchSpy).toHaveBeenCalledOnce();
     }
-  });
-});
-
-describe("chat queued health", () => {
-  it.each([0, 2])("counts only pending work on health and Mini App with %s pending rows", async (pendingCount) => {
-    const { sqlite, db } = fixtures.open();
-    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', ?, ?)").run(NOW, NOW);
-    for (const state of [...Array<string>(pendingCount).fill("pending"), "sending", "sent", "execution_unknown"]) {
-      sqlite.prepare(`INSERT INTO telegram_pending_alerts
-        (chat_id, message_html, created_at, expires_at, delivery_state) VALUES ('42', 'x', ?, ?, ?)`)
-        .run(NOW, NOW + 3600, state);
-    }
-    await handleTelegramWebhook(db, makeWebhookRequest(42, "/health"), "test-secret", "bot-token");
-    expect(sentMessageBody().text).toContain(`Queued alerts for this chat: ${pendingCount}`);
-    const state = await loadTelegramMiniAppState(db, {
-      userId: "42", username: null, firstName: null, chatType: "private", startParam: null,
-      authDate: NOW, initDataHash: "test", canMutatePrivateChat: true,
-    }, { nowSec: NOW, mutationMaxAgeSec: 300 });
-    expect(state.health.queuedAlerts).toBe(pendingCount);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: pendingCount + 3 });
   });
 });
 

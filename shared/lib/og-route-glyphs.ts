@@ -10,8 +10,7 @@ export type OgRouteGlyphElement = readonly [
  * Route glyphs for share cards: the geometry of each route's navigation icon in
  * `src/lib/nav-config.ts` (lucide icons, plus the custom FreezeWatch shield),
  * copied as data because the Worker and the static generator cannot import the
- * React icon components. `src/lib/__tests__/og-route-cards.test.ts` renders
- * both and fails on any drift.
+ * React icon components.
  */
 export const OG_ROUTE_GLYPHS: Readonly<Record<OgRouteCardKey, readonly OgRouteGlyphElement[]>> = {
   home: [["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1" }], ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1" }], ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1" }], ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1" }]],

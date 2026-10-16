@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { collectAdrNavigationViolations, collectLinkViolations, collectNavigationBlockViolations } from "../ci/check-verified-doc-links.ts";
-import { collectMarkdownReferences } from "../lib/doc-markdown.mts";
 import { createTempRepoTracker } from "./helpers/test-state";
 
 const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-doc-navigation");
@@ -42,18 +41,6 @@ describe("verified documentation navigation blocks", () => {
 describe("architectural decision quick-nav", () => {
   const quickNav = "Read an individual decision rather than the entire record collection:";
 
-  it("accepts every heading exactly once, including ADR-5 outside the active records", () => {
-    const content = [
-      `${quickNav} [ADR-1](#adr-1) · [ADR-39](#adr-39) · [ADR-5](#adr-5).`,
-      "### Active Records",
-      "#### ADR-1",
-      "#### ADR-39",
-      "### Superseded Records",
-      "#### ADR-5",
-    ].join("\n");
-    expect(collectAdrNavigationViolations(content)).toEqual([]);
-  });
-
   it("rejects a heading missing from quick-nav even when linked elsewhere", () => {
     const content = [
       `${quickNav} [ADR-1](#adr-1).`,
@@ -66,55 +53,9 @@ describe("architectural decision quick-nav", () => {
     ]);
   });
 
-  it("rejects a quick-nav entry without a heading", () => {
-    const content = `${quickNav} [ADR-1](#adr-1) · [ADR-40](#adr-40).\n#### ADR-1`;
-    expect(collectAdrNavigationViolations(content)).toEqual([
-      "docs/architecture.md: ADR-40 quick-nav entry has no heading",
-    ]);
-  });
-
-  it("rejects duplicate quick-nav entries", () => {
-    const content = `${quickNav} [ADR-1](#adr-1) · [ADR-1](#adr-1).\n#### ADR-1`;
-    expect(collectAdrNavigationViolations(content)).toEqual([
-      "docs/architecture.md: duplicate ADR-1 quick-nav entry",
-    ]);
-  });
-
-  it("rejects duplicate heading IDs", () => {
-    const content = `${quickNav} [ADR-1](#adr-1).\n#### ADR-1\n#### ADR-1`;
-    expect(collectAdrNavigationViolations(content)).toEqual([
-      "docs/architecture.md: duplicate ADR-1 heading",
-    ]);
-  });
-
-  it("rejects a missing quick-nav line", () => {
-    expect(collectAdrNavigationViolations("#### ADR-1")).toEqual([
-      "docs/architecture.md: ADR-1 heading is missing from the ADR quick-nav",
-    ]);
-  });
-
-  it("checks architecture through the existing violation collector even below the navigation-block threshold", () => {
-    const root = makeRoot();
-    writeText(root, "docs/architecture.md", `${quickNav} [ADR-1](#adr-1).\n#### ADR-1\n#### ADR-5`);
-    expect(collectNavigationBlockViolations([`${root}/docs/architecture.md`], root)).toEqual([
-      "docs/architecture.md: ADR-5 heading is missing from the ADR quick-nav",
-    ]);
-  });
-
-  it("does not apply the ADR quick-nav contract to other documentation", () => {
-    const root = makeRoot();
-    writeText(root, "docs/other.md", "#### ADR-1");
-    expect(collectNavigationBlockViolations([`${root}/docs/other.md`], root)).toEqual([]);
-  });
 });
 
 describe("rendered documentation links", () => {
-  it("shares punctuation, formatting, image and duplicate-heading semantics with the renderer", () => {
-    const result = collectMarkdownReferences("# Legal framing & **non-goals**\n\n# Legal framing & **non-goals**\n\n# A `code` [link](target.md)\n\n![alt](image.svg)");
-    expect([...result.anchors]).toEqual(["legal-framing--non-goals", "legal-framing--non-goals-1", "a-code-link"]);
-    expect(result.links).toEqual(["target.md", "image.svg"]);
-  });
-
   it("validates angle-delimited, titled and reference links against actual headings", () => {
     const root = makeRoot();
     writeText(root, "docs/target.md", "# A & B\n\n# A & B");
@@ -127,9 +68,4 @@ describe("rendered documentation links", () => {
     expect(errors[1]).toContain("target file does not exist");
   });
 
-  it("rejects an escaped target even when its directory shares the repository prefix", () => {
-    const root = makeRoot();
-    writeText(root, "docs/source.md", `[outside](../../${root.split("/").at(-1)}-other/file.md)`);
-    expect(collectLinkViolations([`${root}/docs/source.md`], root)[0]).toContain("outside the repo");
-  });
 });

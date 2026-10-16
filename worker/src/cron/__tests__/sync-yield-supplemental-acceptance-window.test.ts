@@ -13,13 +13,11 @@ import {
   type YieldCacheFixture,
 } from "./yield-cache.test-support";
 import {
-  buildYieldSupplementalFamilyCache,
   buildYieldSupplementalPendleBackoff,
   buildYieldSupplementalRunOutcome,
   getYieldSupplementalFamilyCacheKey,
   getYieldSupplementalPendleBackoffCacheKey,
   getYieldSupplementalRunOutcomeCacheKey,
-  parseYieldSupplementalSourcesCache,
   type SupplementalFamilyCacheResult,
   supplementalFamilySnapshotHash,
 } from "../yield-sync/cache/supplemental-cache-keys";
@@ -142,16 +140,6 @@ describe("supplemental family cache acceptance window", () => {
       fallbackMode: "stale-cache",
       sourceCount: 0,
     });
-  });
-
-  it("rejects a cached family payload whose stored version does not match the key version", () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const stored = buildYieldSupplementalFamilyCache([morphoCandidate(nowSec)], nowSec);
-    const mismatched = JSON.stringify({ ...(JSON.parse(stored) as Record<string, unknown>), version: 2 });
-
-    expect(parseYieldSupplementalSourcesCache(stored, nowSec, nowSec)?.candidates).toHaveLength(1);
-    expect(parseYieldSupplementalSourcesCache(mismatched, nowSec, nowSec)).toBeNull();
-    expect(getYieldSupplementalFamilyCacheKey("morpho")).toBe("yield:supplemental-sources:v1:morpho");
   });
 
   it("invalidates a version-mismatched family row instead of loading its candidates", async () => {

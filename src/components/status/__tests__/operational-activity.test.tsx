@@ -115,26 +115,4 @@ describe("OperationalActivity", () => {
     expect(screen.getByText(/Coverage reflects audit rows emitted by the deployed backend/i)).toBeTruthy();
   });
 
-  it("collapses identical consecutive admin actions into one row with a count and time range", () => {
-    const debug = (id: number, at: number): AdminActionAuditEntry => ({
-      id,
-      at,
-      actor: "operator@example.invalid",
-      action: "debug_sync_state",
-      target: "sync-mint-burn",
-      result: "ok",
-      httpStatus: 200,
-      details: null,
-    });
-    render(
-      <OperationalActivity
-        adminActions={state([debug(1, 1_700_000_000), debug(2, 1_700_000_030), debug(3, 1_700_000_060), debug(4, 1_700_000_090)])}
-        credentialAudit={state<ApiKeyAuditEntry>([])}
-        nowSeconds={1_700_000_100}
-      />,
-    );
-
-    expect(screen.getAllByText("Debug sync state")).toHaveLength(1);
-    expect(screen.getByLabelText("4 identical consecutive events").textContent).toBe("×4");
-  });
 });

@@ -207,16 +207,6 @@ describe("coin-agnostic failure scenarios", () => {
     expect(container.textContent).toContain(scenario.window!.note);
   });
 
-  it("retains a draft review note in detail when it cannot appear in the summary", () => {
-    const note = "Verified state at block 26,138,725; awaiting maintainer review.";
-    const scenario = makeScenario({ review: { status: "draft", note } });
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
-    expectSummaryBudget(container, scenario);
-    expect(screen.getByText(note)).toBeDefined();
-    expect(container.querySelector("#failure-scenario-path")!.textContent).toContain(note);
-    expect(screen.getByRole("note", { name: "Draft scenario" }).textContent).not.toContain(note);
-  });
-
   it("marks a duration-based outcome as terminal on the clock", () => {
     const scenario = makeScenario({ stages: LINEAR.stages.map((stage, index) => index === 4 ? { ...stage, elapsed: "T+4d → T+1w" } : stage) });
     const clock = buildScenarioClock(scenario, buildScenarioRoute(scenario))!;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { logAdminAction, DETAILS_MAX_LEN } from "../admin-action-audit";
+import { logAdminAction } from "../admin-action-audit";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
@@ -57,80 +57,4 @@ describe("logAdminAction", () => {
     expect(insert.binds[5]).toBe(200);
   });
 
-  it("records actor as 'internal' when no CF Access header is present", async () => {
-    const db = makeAuditMockDb();
-
-    await logAdminAction(db, { action: "reset-blacklist-sync", result: "ok" });
-
-    const insert = lastInsert(db);
-    expect(insert.binds[1]).toBe("internal");
-  });
-
-  it("falls back to 'internal' when the request lacks the CF Access header", async () => {
-    const db = makeAuditMockDb();
-    const req = new Request("https://ops-api.pharos.watch/api/reset-blacklist-sync", {
-      method: "POST",
-      headers: { "X-Pharos-Admin": "1" },
-    });
-
-    await logAdminAction(db, { action: "reset-blacklist-sync", result: "ok" }, req);
-
-    const insert = lastInsert(db);
-    expect(insert.binds[1]).toBe("internal");
-  });
-
-  it("stores valid JSON with a truncation sentinel when details exceed DETAILS_MAX_LEN", async () => {
-    const db = makeAuditMockDb();
-    const huge = { blob: "x".repeat(10_000) };
-
-    await logAdminAction(db, { action: "backfill", result: "ok", details: huge });
-
-    const insert = lastInsert(db);
-    const detailsJson = insert.binds[6];
-    expect(typeof detailsJson).toBe("string");
-    expect((detailsJson as string).length).toBeLessThanOrEqual(DETAILS_MAX_LEN);
-    expect(JSON.parse(detailsJson as string)).toEqual({
-      _truncated: true,
-      maxSize: DETAILS_MAX_LEN,
-      originalSize: JSON.stringify(huge).length,
-    });
-  });
-
-  it("uses the unique intent insert only for canonical deduplicated rows", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT OR IGNORE INTO admin_action_audit",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ]);
-
-    await logAdminAction(db, {
-      action: "backfill-depegs",
-      result: "ok",
-      intentKey: "catalog:v1:opaque-hash",
-    });
-
-    const insert = db.getHistory().find((row) => row.sql.startsWith("INSERT OR IGNORE INTO admin_action_audit"));
-    expect(insert?.binds[7]).toBe("catalog:v1:opaque-hash");
-  });
-
-  it("uses an upsert for an authoritative original outcome", async () => {
-    const db = mockD1([
-      {
-        match: "ON CONFLICT(action, intent_key)",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ]);
-
-    await logAdminAction(db, {
-      action: "backfill-depegs",
-      result: "ok",
-      intentKey: "catalog:v1:opaque-hash",
-      intentWriteMode: "authoritative",
-    });
-
-    expect(db.getHistory()[0]?.sql).toContain("DO UPDATE SET");
-  });
 });

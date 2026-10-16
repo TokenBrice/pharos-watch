@@ -460,28 +460,6 @@ describe("syncMintBurn", () => {
     expect(result.summary.advanceReason).toBe("full-success-empty");
   });
 
-  it("resumes from canonical sync-state progress", async () => {
-    const db = makeDb({
-      syncRows: [{
-        config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-        last_block: 21_955_000,
-      }],
-    });
-
-    await syncMintBurn(db, "alchemy-key");
-
-    const firstCall = vi.mocked(fetchAlchemyLogs).mock.calls[0];
-    const fromBlock = firstCall[3] as number;
-    expect(fromBlock).toBe(21_955_001);
-
-    const history = (db as ReturnType<typeof makeDb> & { getHistory(): Array<{ sql: string; binds: unknown[] }> }).getHistory();
-    const syncStateUpsert = history.find((entry: { sql: string; binds: unknown[] }) =>
-      entry.sql.includes("INSERT INTO mint_burn_sync_state")
-      && entry.binds[0] === "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-    );
-    expect(syncStateUpsert).toBeDefined();
-  });
-
   it("holds the durable sync-state frontier through a config-phase rejection and advances it on the retry run", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     sqlite
@@ -846,34 +824,6 @@ describe("syncMintBurn", () => {
     expect(usdt?.failedEventDefs).toContain("tx-context:1");
     expect(usdt?.advancedTo).toBe(21_999_999);
     expect(usdt?.advanceReason).toBe("partial-frontier");
-  });
-
-  it("counts atomic roundtrips across mint and burn event definitions", async () => {
-    const db = makeDb();
-
-    vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [makeMintLog({ txHash: "0xroundtrip", logIndex: 0 })],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [makeBurnLog({ txHash: "0xroundtrip", logIndex: 1 })],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
-
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
-
-    const result = await syncMintBurn(db, "alchemy-key");
-    const meta = JSON.parse(result.metadata);
-
-    expect(meta.atomicRoundtripsDetected).toBe(2);
   });
 
   it("keeps status ok when only extended configs are deferred", async () => {

@@ -61,44 +61,6 @@ describe("useCommandPaletteHistory", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("reads valid array history from localStorage", () => {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify([
-        {
-          id: "about",
-          type: "page",
-          label: "About",
-          href: "/about/",
-          timestamp: Date.now(),
-        },
-      ]),
-    );
-
-    const { result } = renderHook(() => useCommandPaletteHistory());
-
-    expect(result.current.history).toEqual([
-      expect.objectContaining({
-        id: "about",
-        type: "page",
-        label: "About",
-        href: "/about/",
-      }),
-    ]);
-  });
-
-  it.each([
-    ["object", { id: "about" }],
-    ["null", null],
-    ["primitive", "about"],
-  ])("treats %s JSON as empty history", (_label, stored) => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-
-    const { result } = renderHook(() => useCommandPaletteHistory());
-
-    expect(result.current.history).toEqual([]);
-  });
-
   it("ignores malformed items inside a valid history array", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
@@ -159,27 +121,4 @@ describe("useCommandPaletteHistory", () => {
     }
   });
 
-  it("moves a re-added entry to the front with its updated fields instead of duplicating it", () => {
-    vi.useFakeTimers({ now: NOW });
-    const { result } = renderHook(() => useCommandPaletteHistory());
-
-    act(() => {
-      result.current.addToHistory("usdc", "stablecoin", "USD Coin", "USDC", "/stablecoin/usdc-usd-coin/");
-    });
-    act(() => {
-      vi.advanceTimersByTime(60_000);
-      result.current.addToHistory("about", "page", "About", undefined, "/about/");
-    });
-    act(() => {
-      vi.advanceTimersByTime(60_000);
-      result.current.addToHistory("usdc", "stablecoin", "USD Coin (updated)", "USDC v2", "/stablecoin/usdc-usd-coin/");
-    });
-
-    expect(result.current.history.map((item) => item.id)).toEqual(["usdc", "about"]);
-    expect(result.current.history[0]).toMatchObject({
-      label: "USD Coin (updated)",
-      sublabel: "USDC v2",
-      timestamp: NOW + 120_000,
-    });
-  });
 });

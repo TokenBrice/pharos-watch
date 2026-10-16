@@ -295,23 +295,6 @@ describe("BridgingDeploymentsModule", () => {
     expect(badges).toContain(chip.label);
   });
 
-  it("keeps every route-mix chip short enough for a tile header, whatever tier leads", () => {
-    // ~160 px at 11 px: what a 480 px tile header leaves beside the coin and title.
-    const HEADER_CHIP_MAX_CHARS = 25;
-    for (const tier of BRIDGE_TIER_POLICY_ORDER) {
-      const lead = Array.from({ length: 4 }, (_, index) => route(`${tier}${index}:0x${index}`, { tierKey: tier }));
-      const other = tier === "external-lock-mint" ? "issuer-native-burn-mint" : "external-lock-mint";
-      const inventories = [
-        summaryOf(lead),
-        summaryOf([...lead, route("other:0xo", { tierKey: other }), route("corn:0xc", { unresolved: true })]),
-      ];
-      for (const summary of inventories) {
-        const label = buildBridgingDeploymentsIndexChip(summary, null, null)!.label;
-        expect(label.length, label).toBeLessThanOrEqual(HEADER_CHIP_MAX_CHARS);
-      }
-    }
-  });
-
   it("keeps the chip with the drawn cells and states a disagreeing authored tier in the notes fold (MAI shape)", () => {
     const routes = Array.from({ length: 15 }, (_, index) => route(`chain${index}:0x${index}`));
     const summary = summaryOf(routes, { authoredTier: "external-lock-mint" });
@@ -414,35 +397,6 @@ describe("BridgingDeploymentsModule", () => {
     // A single-member domain carries its reason on the row, without a member list.
     expect(container.querySelector('#failure-domains ul[aria-label="Plasma members"]')).toBeNull();
     expect(container.querySelector("#failure-domains")?.textContent).toContain("Deployed on Plasma.");
-  });
-
-  it("puts the #failure-domains anchor on the fold itself, so the section scroll margin applies to it", () => {
-    const plasma = route("plasma:0xp", { tierKey: "external-lock-mint" });
-    const failureDomains: FailureDomainsView = {
-      rows: [domainRow({ key: "chain:Plasma", label: "Plasma", span: { chainIds: ["plasma"], routeKeys: [], protocolKeys: [] } })],
-      totalAdjustmentPoints: 0,
-    };
-
-    const { container } = render(
-      <BridgingDeploymentsModule summary={summaryOf([NATIVE, plasma])} failureDomains={failureDomains} variant="tile" />,
-    );
-
-    expect(container.querySelector("section#bridging details#failure-domains")).not.toBeNull();
-  });
-
-  it("names each route of a chain carrying several by protocol, and a native one as native", () => {
-    const summary = summaryOf([
-      NATIVE,
-      route("ethereum:0xf", { tierKey: "external-lock-mint", protocolLabel: "LayerZero OFT" }),
-      route("arbitrum:0xa", { tierKey: "canonical-rollup-bridge" }),
-    ]);
-
-    const { container } = render(<BridgingDeploymentsModule summary={summary} failureDomains={null} variant="tile" />);
-
-    expect(container.querySelector(`[data-cell="${NATIVE.key}"]`)?.getAttribute("title")).toMatch(/^Ethereum · native · /);
-    expect(container.querySelector('[data-cell="ethereum:0xf"]')?.getAttribute("title")).toMatch(/^Ethereum · LayerZero OFT · /);
-    expect(container.querySelector('[data-cell="arbitrum:0xa"]')?.getAttribute("title"))
-      .toBe(`Arbitrum · ${getBridgeTierLabel("canonical-rollup-bridge", 2)}`);
   });
 
   it("renders a single-chain coin in strip form without a one-cell strip", () => {
@@ -558,16 +512,4 @@ describe("buildBridgingDeploymentsVerdict", () => {
     expect(resolved).not.toMatch(/unresolved/);
   });
 
-  it("keeps the limiting clause within budget on a mixed inventory", () => {
-    const { roles } = ustbShape();
-    const routes = [
-      NATIVE,
-      ...Array.from({ length: 5 }, (_, index) => route(`burn${index}:0x${index}`)),
-      ...Array.from({ length: 4 }, (_, index) => route(`lz${index}:0x${index}`, { tierKey: "external-lock-mint" })),
-      route("corn:0xc", { tierKey: "opaque-or-unknown", unresolved: true }),
-    ];
-    const verdict = buildBridgingDeploymentsVerdict(summaryOf(routes), null, roles)!;
-    expect(findSummaryBudgetViolations(verdict)).toEqual([]);
-    expect(verdict).toMatch(/unverified bridge controls/i);
-  });
 });

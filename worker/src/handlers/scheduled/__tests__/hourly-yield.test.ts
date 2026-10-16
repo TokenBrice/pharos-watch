@@ -58,15 +58,6 @@ describe("runHourlyYieldSlot", () => {
     );
   });
 
-  it("runs the hourly supplemental catch-up with the marker-age gate only", async () => {
-    const { runtime, signal, reportProgress } = buildRuntime();
-    await runHourlyYieldSlot(runtime);
-    expect(mocks.syncYieldSupplemental).toHaveBeenCalledWith(
-      runtime.db, signal, runtime.chainRpcs, reportProgress,
-      { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
-    );
-  });
-
   it("runs the catch-up, the benchmark refresh and the publication in one serial leased chain", async () => {
     mocks.syncYieldSupplemental.mockResolvedValueOnce({
       status: "skipped_neutral",

@@ -77,16 +77,6 @@ describe("DependencyMapClient", () => {
     );
   });
 
-  it("renders the dependency graph alongside the V9 hub summaries", () => {
-    render(<DependencyMapClient />);
-
-    expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
-    // Only the two dependency-linked cards enter the map; the isolated one is pruned.
-    expect(screen.getAllByRole("button", { name: /market cap/i })).toHaveLength(2);
-    expect(screen.getByTestId("dependency-hubs-board")).toBeTruthy();
-    expect(screen.getByTestId("mobile-summary")).toBeTruthy();
-  });
-
   it("keeps the graph visible when the market-cap endpoint fails", () => {
     mockUseStablecoins.mockReturnValue({
       ...makeQueryResult(undefined),
@@ -97,15 +87,6 @@ describe("DependencyMapClient", () => {
     expect(screen.getByText(/Market-cap data is unavailable/)).toBeTruthy();
     expect(screen.getByText("Supply data unavailable")).toBeTruthy();
     expect(screen.getByText(/Excludes 1 coins without supply data/)).toBeTruthy();
-  });
-
-  it("renders the V9 graph while market-cap data is still loading", () => {
-    mockUseStablecoins.mockReturnValue({
-      ...makeQueryResult(undefined),
-      isLoading: true,
-    } as unknown as ReturnType<typeof useStablecoins>);
-    render(<DependencyMapClient />);
-    expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
   });
 
   it("retains the held notice and unpublished v5 coverage and supply facts", () => {

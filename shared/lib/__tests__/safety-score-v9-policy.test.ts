@@ -264,14 +264,6 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(policy)).toThrow();
   });
 
-  it("loads a changed withholding danger threshold with a distinct digest", () => {
-    const changedPolicy = candidateClone();
-    changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;
-    const policy = loadV9MethodologyPolicy(changedPolicy);
-    expect(policy.policy.semantic.formula.danger.withholdPegMultiplierFloor).toBe(0.84);
-    expect(policy.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-  });
-
   it("makes object order and set-like array order digest-neutral", () => {
     const reordered = candidateClone();
     reordered.reasonRegistry.reverse();

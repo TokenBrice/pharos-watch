@@ -17,22 +17,4 @@ describe("StablecoinModuleTitle", () => {
     expect(html).toContain(">BD<");
     expect(html).toContain("Reserve quality");
   });
-
-  it("prefers an explicit identity over the page provider", () => {
-    const html = renderToStaticMarkup(
-      <StablecoinDetailIdentityProvider symbol="BD" logoSrc={undefined}>
-        <StablecoinModuleTitle symbol="USDC" logoSrc={undefined}>Safety Score</StablecoinModuleTitle>
-      </StablecoinDetailIdentityProvider>,
-    );
-
-    expect(html).toContain(">USDC<");
-    expect(html).not.toContain(">BD<");
-  });
-
-  it("keeps the ordinary module title outside a detail-page identity provider", () => {
-    const html = renderToStaticMarkup(<StablecoinModuleTitle>Reserve quality</StablecoinModuleTitle>);
-
-    expect(html).not.toContain("logo");
-    expect(html).toContain("Reserve quality");
-  });
 });

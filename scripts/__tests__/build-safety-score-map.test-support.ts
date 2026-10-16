@@ -1,3 +1,4 @@
+import { createServer } from "node:http";
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Response,
@@ -121,4 +122,40 @@ export function makeSafetyMapPsiPayload(
       isCurrent: true,
     },
   };
+}
+
+/** Serve live payload callbacks so each suite can keep its own fixture state. */
+export async function startSafetyMapFixtureServer({
+  reportCardsPayload,
+  stablecoinsPayload,
+  psiPayload,
+  publicationStatus,
+}: {
+  reportCardsPayload: () => unknown;
+  stablecoinsPayload: () => unknown;
+  psiPayload: () => unknown;
+  publicationStatus: () => string;
+}) {
+  const server = createServer((req, res) => {
+    const path = (req.url ?? "").split("?")[0];
+    const body =
+      path === "/api/report-cards/v9"
+        ? reportCardsPayload()
+        : path === "/api/stablecoins"
+          ? stablecoinsPayload()
+          : path === "/api/stability-index"
+            ? psiPayload()
+            : null;
+    if (!body) {
+      res.writeHead(404).end("{}");
+      return;
+    }
+    if (path === "/api/report-cards/v9") res.setHeader("X-Safety-Score-Status", publicationStatus());
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify(body));
+  });
+  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+  const address = server.address();
+  if (typeof address === "string" || address == null) throw new Error("fixture server did not bind a port");
+  return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 }

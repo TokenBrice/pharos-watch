@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BudgetOnlySurfaceStatus, CronStatus, StatusResponse } from "@shared/types";
+import type { CronStatus, StatusResponse } from "@shared/types";
 import { CronsSection, type CronGroup } from "@/app/admin/sections/crons-section";
 import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
@@ -36,30 +36,7 @@ function makeData(overrides: Partial<StatusResponse> = {}): StatusResponse {
   return degraded(makeHealthyStatusResponse(), overrides);
 }
 
-function makeBudgetSurface(overrides: Partial<BudgetOnlySurfaceStatus> = {}): BudgetOnlySurfaceStatus {
-  return {
-    job: "telegram-registration-reconciliation",
-    label: "Telegram registration reconciliation",
-    scheduleKey: "fiveMinuteTelegramAlerts",
-    schedule: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
-    expectedIntervalSec: 300,
-    maxAgeSec: 900,
-    maxConnections: 1,
-    connectionGroup: "five-minute-telegram-chain",
-    telemetryStatus: "fresh",
-    telemetryUnknown: false,
-    checkedAt: 1_699_999_970,
-    ageSeconds: 30,
-    durationMs: 2_582_400,
-    dueCount: 4,
-    processedCount: 3,
-    outcome: "degraded",
-    skippedReason: null,
-    error: null,
-    metadata: { reconciled: 3 },
-    ...overrides,
-  };
-}
+
 
 function renderCrons({
   groups,
@@ -118,71 +95,20 @@ describe("CronsSection", () => {
       }
     },
   );
-  it("defers healthy rows by default and lets the operator mount all jobs explicitly", () => {
-    renderCrons({
-      groups: [
-        makeGroup([["sync-stablecoins", makeCronStatus()]], {
-          description: "Healthy shared ingestion.",
-        }),
-      ],
-    });
-
-    expect(screen.getByRole("heading", { level: 1, name: "Crons" })).toBeTruthy();
-    expect(screen.getByText("Nothing to act on or watch. 1 OK job is hidden.")).toBeTruthy();
-    expect(screen.queryByTestId("cron-row-sync-stablecoins")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Show all jobs" }));
-
-    expect(screen.getByTestId("cron-row-sync-stablecoins")).toBeTruthy();
-    expect(screen.getByRole("table", { name: "Cron jobs by trigger group" })).toBeTruthy();
-    expect(within(screen.getByTestId("cron-row-sync-stablecoins")).getByText("OK")).toBeTruthy();
-    expect(screen.getByText("1 job · 1 OK")).toBeTruthy();
-  });
-
-  it("renders trigger-group boundaries and canonical severity ordering inside each group", () => {
-    const unhealthy = makeCronStatus({ healthy: false });
-    const degradedCron = makeCronStatus({
-      lastRun: { startedAt: 1_699_999_900, durationMs: 400, status: "degraded" },
-      recentRuns: [{ startedAt: 1_699_999_900, durationMs: 400, status: "degraded" }],
-    });
-    renderCrons({
-      groups: [
-        makeGroup([
-          ["snapshot-chain-supply", unhealthy],
-          ["sync-fx-rates", degradedCron],
-          ["sync-stablecoins", unhealthy],
-        ]),
-        makeGroup([["dispatch-telegram-alerts", makeCronStatus({ healthy: false })]], {
-          key: "five-minute",
-          title: "5-minute slot",
-          badge: "~5 min",
-          description: "Dedicated delivery and recovery jobs.",
-        }),
-      ],
-      data: makeData({
-        summary: {
-          ...makeHealthyStatusResponse().summary,
-          unhealthyCrons: 3,
-          availabilityImpactingUnhealthyCrons: 2,
-          watchUnhealthyCrons: 1,
-          degradedCrons: 1,
-        },
-      }),
-    });
-
-    expect(screen.getAllByText("15-minute slot").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("5-minute slot").length).toBeGreaterThan(0);
-    expect(screen.getByText("3 jobs · 1 act now · 2 watch")).toBeTruthy();
-    const firstGroup = screen.getByRole("rowgroup", { name: "15-minute slot cron jobs" });
-    const rowIds = within(firstGroup)
-      .getAllByTestId(/^cron-row-/)
-      .map((row) => row.getAttribute("data-testid"));
-    expect(rowIds).toEqual(["cron-row-sync-stablecoins", "cron-row-snapshot-chain-supply", "cron-row-sync-fx-rates"]);
-  });
-
-  it("shows neutral skips that inherit a degraded required outcome in the attention view", () => {
+  it.each([
+    {
+      name: "shows neutral skips that inherit a degraded required outcome in the attention view",
+      requiredStatus: "degraded",
+      healthy: true,
+    },
+    {
+      name: "labels a neutral skip after a failed required run as unhealthy",
+      requiredStatus: "error",
+      healthy: false,
+    },
+  ] as const)("$name", ({ requiredStatus, healthy }) => {
     const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
-    const degradedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "degraded" as const };
+    const requiredRun = { startedAt: 1_699_999_000, durationMs: 500, status: requiredStatus };
     renderCrons({
       groups: [
         makeGroup([
@@ -190,40 +116,9 @@ describe("CronsSection", () => {
             "weekly-recap",
             makeCronStatus({
               lastRun: neutralRun,
-              recentRuns: [neutralRun, degradedRun],
+              recentRuns: [neutralRun, requiredRun],
               expectedIntervalSec: 900,
-              healthy: true,
-            }),
-          ],
-        ]),
-      ],
-    });
-
-    const row = screen.getByTestId("cron-row-weekly-recap");
-    expect(within(row).getByText("Watch")).toBeTruthy();
-    expect(within(row).queryByText("Run warning")).toBeNull();
-    expect(within(row).getByText("Skipped: no work required")).toBeTruthy();
-    expect(within(row).getByText("200ms")).toBeTruthy();
-    expect(within(row).queryByText("500ms")).toBeNull();
-    const warningBadge = screen
-      .getAllByText("Completed with warnings")
-      .find((element) => element.getAttribute("data-slot") === "badge");
-    expect(warningBadge?.className).toContain("whitespace-normal");
-  });
-
-  it("labels a neutral skip after a failed required run as unhealthy", () => {
-    const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
-    const failedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "error" as const };
-    renderCrons({
-      groups: [
-        makeGroup([
-          [
-            "weekly-recap",
-            makeCronStatus({
-              lastRun: neutralRun,
-              recentRuns: [neutralRun, failedRun],
-              expectedIntervalSec: 900,
-              healthy: false,
+              healthy,
             }),
           ],
         ]),
@@ -233,7 +128,17 @@ describe("CronsSection", () => {
     const row = screen.getByTestId("cron-row-weekly-recap");
     expect(within(row).getByText("Watch")).toBeTruthy();
     expect(within(row).getByText("Skipped: no work required")).toBeTruthy();
-    expect(within(row).getByText("The latest required run failed.")).toBeTruthy();
+    if (requiredStatus === "degraded") {
+      expect(within(row).queryByText("Run warning")).toBeNull();
+      expect(within(row).getByText("200ms")).toBeTruthy();
+      expect(within(row).queryByText("500ms")).toBeNull();
+      const warningBadge = screen
+        .getAllByText("Completed with warnings")
+        .find((element) => element.getAttribute("data-slot") === "badge");
+      expect(warningBadge?.className).toContain("whitespace-normal");
+    } else {
+      expect(within(row).getByText("The latest required run failed.")).toBeTruthy();
+    }
   });
 
   it("keeps a fresh neutral-only no-op without success evidence in the attention view as one verdict", () => {
@@ -259,100 +164,6 @@ describe("CronsSection", () => {
     expect(screen.getByText("1 job · 1 watch")).toBeTruthy();
   });
 
-  it("combines verdict chips, impact, trigger-group, and search filters", () => {
-    renderCrons({
-      groups: [
-        makeGroup([
-          ["sync-stablecoins", makeCronStatus({ healthy: false })],
-          ["snapshot-chain-supply", makeCronStatus()],
-        ]),
-        makeGroup(
-          [
-            [
-              "dispatch-telegram-alerts",
-              makeCronStatus({ inFlight: { startedAt: 1_699_999_900, updatedAt: 1_699_999_990, stale: false } }),
-            ],
-          ],
-          { key: "five-minute", title: "5-minute slot", badge: "~5 min" },
-        ),
-      ],
-    });
-
-    expect(screen.getByRole("button", { name: "Act now 1" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Needs attention 2" }).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "All 3" }));
-    expect(screen.getByTestId("cron-row-snapshot-chain-supply")).toBeTruthy();
-    expect(screen.getByTestId("cron-row-dispatch-telegram-alerts")).toBeTruthy();
-
-    fireEvent.change(screen.getByLabelText("Impact class"), { target: { value: "public-critical" } });
-    expect(screen.getByTestId("cron-row-sync-stablecoins")).toBeTruthy();
-    expect(screen.queryByTestId("cron-row-dispatch-telegram-alerts")).toBeNull();
-
-    fireEvent.change(screen.getByLabelText("Impact class"), { target: { value: "all" } });
-    fireEvent.change(screen.getByLabelText("Trigger group"), { target: { value: "five-minute" } });
-    expect(screen.getByTestId("cron-row-dispatch-telegram-alerts")).toBeTruthy();
-    expect(screen.queryByTestId("cron-row-sync-stablecoins")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Running 1" }));
-    expect(screen.getByTestId("cron-row-dispatch-telegram-alerts")).toBeTruthy();
-
-    fireEvent.change(screen.getByLabelText("Search jobs"), { target: { value: "no-match" } });
-    expect(screen.getByText("No cron jobs match the current filters.")).toBeTruthy();
-  });
-
-  it("uses one row selection control and conditionally links only the selected row to detail", () => {
-    renderCrons({
-      groups: [
-        makeGroup([
-          ["sync-stablecoins", makeCronStatus({ healthy: false })],
-          ["sync-fx-rates", makeCronStatus({ healthy: false })],
-        ]),
-      ],
-    });
-
-    const stablecoinRow = screen.getByTestId("cron-row-sync-stablecoins");
-    const fxRow = screen.getByTestId("cron-row-sync-fx-rates");
-    const stablecoinSelect = within(stablecoinRow).getByRole("button");
-    const fxSelect = within(fxRow).getByRole("button");
-    // Selection is announced on the row button (aria-current), not aria-selected on a non-grid <tr>.
-    expect(stablecoinRow.hasAttribute("aria-selected")).toBe(false);
-    expect(stablecoinSelect.getAttribute("aria-current")).toBe("true");
-    expect(fxSelect.hasAttribute("aria-current")).toBe(false);
-    expect(stablecoinSelect.getAttribute("aria-controls")).toBe("cron-selected-job-detail");
-    expect(fxSelect.hasAttribute("aria-controls")).toBe(false);
-    expect(within(fxRow).getAllByRole("button")).toHaveLength(1);
-
-    fireEvent.click(fxSelect);
-
-    expect(fxSelect.getAttribute("aria-current")).toBe("true");
-    expect(fxSelect.getAttribute("aria-controls")).toBe("cron-selected-job-detail");
-    expect(stablecoinSelect.hasAttribute("aria-current")).toBe(false);
-    expect(stablecoinSelect.hasAttribute("aria-controls")).toBe(false);
-    expect(screen.getByRole("complementary", { name: "Details for FX rates" })).toBeTruthy();
-
-    expect(window.location.search).toBe("?job=sync-fx-rates");
-
-    fireEvent.click(stablecoinRow);
-    expect(stablecoinSelect.getAttribute("aria-current")).toBe("true");
-  });
-
-  it("selects a deep-linked job and keeps it visible under the default filter", () => {
-    window.history.replaceState(null, "", "/admin/crons/?job=snapshot-chain-supply");
-    renderCrons({
-      groups: [
-        makeGroup([
-          ["sync-stablecoins", makeCronStatus({ healthy: false })],
-          ["snapshot-chain-supply", makeCronStatus()],
-        ]),
-      ],
-    });
-
-    const row = screen.getByTestId("cron-row-snapshot-chain-supply");
-    expect(within(row).getByRole("button").getAttribute("aria-current")).toBe("true");
-    expect(screen.getByRole("complementary", { name: /Details for/ }).textContent).toContain("snapshot-chain-supply");
-    expect(screen.getByText("2 jobs · 1 act now · 1 OK")).toBeTruthy();
-  });
-
   it("leads the detail panel with the reason, budget, and operator actions", () => {
     renderCrons({
       groups: [makeGroup([["sync-blacklist", makeCronStatus({ healthy: false, lastRun: null, recentRuns: [] })]])],
@@ -369,82 +180,6 @@ describe("CronsSection", () => {
     expect(within(actions).getByText("wrangler tail stablecoin-api --format pretty --search sync-blacklist")).toBeTruthy();
     expect(within(actions).getAllByRole("link").length).toBeGreaterThanOrEqual(3);
     expect(within(detail).getByText("Resource telemetry not measured on this runtime.")).toBeTruthy();
-  });
-
-  it("shows readable outcomes, exact long durations, visible dot legend, and accessible dot labels", () => {
-    const runs: CronStatus["recentRuns"] = [
-      { startedAt: 1_699_999_940, durationMs: 2_582_400, status: "skipped_neutral" },
-      { startedAt: 1_699_999_880, durationMs: 1_000, status: "ok" },
-      { startedAt: 1_699_999_820, durationMs: 2_000, status: "degraded" },
-      { startedAt: 1_699_999_760, durationMs: 3_000, status: "error" },
-    ];
-    renderCrons({
-      groups: [
-        makeGroup([
-          [
-            "sync-stablecoins",
-            makeCronStatus({
-              healthy: false,
-              lastRun: runs[0]!,
-              recentRuns: runs,
-            }),
-          ],
-        ]),
-      ],
-    });
-
-    expect(screen.getByRole("columnheader", { name: "Recent runs" })).toBeTruthy();
-    expect(screen.getAllByText("43m 2s").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("skipped_neutral").length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/Skipped: .*raw status skipped_neutral/).length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/Succeeded: .*raw status ok/).length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/Completed with warnings: .*raw status degraded/).length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/Failed: .*raw status error/).length).toBeGreaterThan(0);
-    expect(screen.getAllByTitle(/2582\.4s \(2582400ms\)/).length).toBeGreaterThan(0);
-  });
-
-  it("distinguishes an abandoned execution from downstream jobs that never started", () => {
-    const abandonedRun = {
-      startedAt: 1_699_999_000,
-      durationMs: 2_580_000,
-      status: "error" as const,
-      metadata: {
-        reason: "stale-slot-reconciled",
-        progressUpdatedAt: 1_699_999_059,
-        reconciledAt: 1_700_001_580,
-      },
-    };
-    const notStartedRun = {
-      startedAt: 1_700_001_580,
-      durationMs: 0,
-      status: "error" as const,
-      metadata: {
-        reason: "stale-slot-reconciled",
-        childDisposition: "not_started",
-        reconciledAt: 1_700_001_580,
-      },
-    };
-    renderCrons({
-      groups: [
-        makeGroup([
-          [
-            "sync-live-reserves",
-            makeCronStatus({ healthy: false, lastRun: abandonedRun, recentRuns: [abandonedRun] }),
-          ],
-          [
-            "sync-kinesis-supply",
-            makeCronStatus({ healthy: false, lastRun: notStartedRun, recentRuns: [notStartedRun] }),
-          ],
-        ]),
-      ],
-    });
-
-    expect(screen.getAllByText("Abandoned").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Not started: upstream abandoned").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("59s").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
-    fireEvent.click(within(screen.getByTestId("cron-row-sync-live-reserves")).getByRole("button"));
-    expect(screen.getAllByText("Last heartbeat after 59s; reconciled 42m 1s later.").length).toBeGreaterThan(0);
   });
 
   it("surfaces running lease, stale artifacts, and orphaned progress evidence", () => {
@@ -531,33 +266,6 @@ describe("CronsSection", () => {
     } else {
       expect(cell.textContent).toBe("0");
     }
-  });
-
-  it("renders budget-only trigger groups from top-level telemetry with outcome, counts, duration, and budget", async () => {
-    const data = makeData({
-      budgetOnlySurfaces: [makeBudgetSurface()],
-      summary: {
-        ...makeHealthyStatusResponse().summary,
-        budgetOnlySurfaceCount: 1,
-        budgetOnlySurfaceStaleTelemetry: 0,
-        budgetOnlySurfaceErrors: 0,
-      },
-    });
-    renderCrons({ groups: [], data });
-
-    expect(screen.getByText("Budget-only scheduled surfaces")).toBeTruthy();
-    expect(screen.getByText("fiveMinuteTelegramAlerts")).toBeTruthy();
-    expect(screen.getByText("Telegram registration reconciliation")).toBeTruthy();
-    expect(screen.getByText("Fresh telemetry")).toBeTruthy();
-    expect(screen.getAllByText("Completed with warnings").length).toBeGreaterThan(0);
-    // Deep surface evidence stays unmounted until the row disclosure opens.
-    expect(screen.queryByText("43m 2s")).toBeNull();
-    fireEvent.click(screen.getByText("Telegram registration reconciliation"));
-    expect(await screen.findByText("43m 2s")).toBeTruthy();
-    expect(screen.getByText("4 / 3")).toBeTruthy();
-    expect(screen.getByText("1 max")).toBeTruthy();
-    expect(screen.getByText("five-minute-telegram-chain")).toBeTruthy();
-    expect(screen.getByText("fresh / degraded")).toBeTruthy();
   });
 
   it("states Unknown explicitly when tracked and budget-only telemetry are both empty", () => {

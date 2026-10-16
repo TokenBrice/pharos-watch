@@ -9,7 +9,7 @@ export interface PortfolioHolding {
   amount: number;
 }
 
-export function normalizePortfolioAmount(value: unknown): number | null {
+function normalizePortfolioAmount(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? value
     : null;

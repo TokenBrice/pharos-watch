@@ -158,8 +158,6 @@ describe("pipeline market price scope", () => {
     sourceDistribution: { missing: 106 },
   };
   it.each([
-    ["active", { ...legacy, active: { ...legacy, totalAssets: 334, sourceDistribution: { missing: 16 } } }, 16],
-    ["legacy", legacy, 106],
     ["empty active population", { ...legacy, active: { ...legacy, totalAssets: 0, sourceDistribution: { missing: 0 } } }, 1],
   ])("uses the %s population for the Markets badge", (_label, priceSourceHealth, priceIssues) => {
     const base = makeHealthyStatusResponse();

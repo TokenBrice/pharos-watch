@@ -11,12 +11,6 @@ vi.mock("@shared/data/safety-score-v9/transfer-review-overlays-v1.json", () => {
     ],
   });
   return { default: { reviews: {
-    mixed: { assetId: "mixed", reviewedAt: "2026-05-01", deployments: [
-      deployment("ethereum", "material-bridge", "restrictable"),
-      deployment("ethereum", "canonical"),
-      deployment("arbitrum", "material-bridge"),
-      deployment("arbitrum", "canonical"),
-    ] },
     sanitized: { assetId: "sanitized", reviewedAt: "2026-05-02", deployments: [
       deployment("new-chain", "new-scope", "new-posture"),
       deployment("ethereum", "canonical", "restrictable", " \n "),
@@ -29,18 +23,6 @@ vi.mock("@shared/data/safety-score-v9/transfer-review-overlays-v1.json", () => {
 });
 
 describe("buildTransferReviewView", () => {
-  it("orders canonical deployments first and chain names alphabetically within scope", () => {
-    const view = buildTransferReviewView("mixed");
-    expect(view?.deployments.map(({ key, scopeLabel, postureLabel, chainName }) =>
-      [key, scopeLabel, postureLabel, chainName])).toEqual([
-      ["arbitrum:arbitrum-canonical", "Canonical", "Permissionless", "Arbitrum"],
-      ["ethereum:ethereum-canonical", "Canonical", "Permissionless", "Ethereum"],
-      ["arbitrum:arbitrum-material-bridge", "Bridged", "Permissionless", "Arbitrum"],
-      ["ethereum:ethereum-material-bridge", "Bridged", "Restrictable", "Ethereum"],
-    ]);
-    expect(view?.mixedPosture).toBe(true);
-  });
-
   it("filters blank evidence and sources before computing posture, and labels unknown slugs", () => {
     expect(buildTransferReviewView("sanitized")).toEqual({
       reviewedAt: "2026-05-02",

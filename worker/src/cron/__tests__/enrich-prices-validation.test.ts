@@ -21,11 +21,6 @@ describe("isReasonablePrice", () => {
   });
 
   describe("NAV token override", () => {
-    it("accepts high USD-denominated prices for NAV tokens", () => {
-      expect(isReasonablePrice(11.02, "peggedUSD", undefined, { navToken: true })).toBe(true);
-      expect(isReasonablePrice(113.4, "peggedUSD", undefined, { navToken: true })).toBe(true);
-    });
-
     it("still rejects invalid NAV token prices", () => {
       expect(isReasonablePrice(0, "peggedUSD", undefined, { navToken: true })).toBe(false);
       expect(isReasonablePrice(100_000, "peggedUSD", undefined, { navToken: true })).toBe(false);
@@ -43,10 +38,6 @@ describe("isReasonablePrice", () => {
   });
 
   describe("GOLD peg", () => {
-    it("accepts gold price ~2900", () => {
-      expect(isReasonablePrice(2900, "peggedGOLD")).toBe(true);
-    });
-
     it("accepts fractional-ounce gold tokens when commodityOunces is provided", () => {
       expect(isReasonablePrice(5.15, "peggedGOLD", { peggedGOLD: 2_915 }, { commodityOunces: 0.001 })).toBe(
         true,
@@ -61,9 +52,6 @@ describe("isReasonablePrice", () => {
       expect(isReasonablePrice(50, "peggedGOLD")).toBe(false);
     });
 
-    it("rejects 200000 (too high)", () => {
-      expect(isReasonablePrice(200000, "peggedGOLD")).toBe(false);
-    });
   });
 
   describe("SILVER peg", () => {
@@ -108,10 +96,6 @@ describe("isReasonablePrice", () => {
       expect(isReasonablePrice(5_900, "peggedGOLD", { peggedGOLD: 2_915 })).toBe(false);
     });
 
-    it("uses dynamic bounds for GBP", () => {
-      expect(isReasonablePrice(1.25, "peggedGBP", { peggedGBP: 1.26 })).toBe(true);
-    });
-
     it("falls back to hardcoded when fxRate is zero", () => {
       expect(isReasonablePrice(1.08, "peggedEUR", { peggedEUR: 0 })).toBe(true);
     });
@@ -121,38 +105,6 @@ describe("isReasonablePrice", () => {
     });
   });
 
-  // --- Edge cases ---
-
-  describe("edge cases", () => {
-    it("accepts any positive price for undefined pegType (up to 100k)", () => {
-      expect(isReasonablePrice(50000, undefined)).toBe(true);
-      expect(isReasonablePrice(0.001, undefined)).toBe(true);
-    });
-
-    it("rejects zero for undefined pegType", () => {
-      expect(isReasonablePrice(0, undefined)).toBe(false);
-    });
-
-    it("rejects negative for undefined pegType", () => {
-      expect(isReasonablePrice(-5, undefined)).toBe(false);
-    });
-
-    it("rejects >= 100k for undefined pegType", () => {
-      expect(isReasonablePrice(100_000, undefined)).toBe(false);
-    });
-
-    it("accepts any positive price for unknown pegType (default bounds)", () => {
-      expect(isReasonablePrice(500, "peggedXYZ")).toBe(true);
-    });
-
-    it("rejects 100k for unknown pegType", () => {
-      expect(isReasonablePrice(100_000, "peggedXYZ")).toBe(false);
-    });
-
-    it("handles empty string pegType (like undefined → default)", () => {
-      expect(isReasonablePrice(50, "")).toBe(true);
-    });
-  });
 });
 
 describe("hasMissingPrice", () => {

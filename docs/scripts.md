@@ -198,11 +198,11 @@ Build and release ordering is documented in [Deployment Process](./deployment-pr
 
 ### PR And Release Gates
 
-Use [Pre-push readiness](./testing.md#pre-push-readiness) for the ordered runtime/ref/artifact/receipt contract and [release policy](./deployment-process.md#release-snapshot-state-machine) for deployment gates. [Boundary waivers](./process/boundary-waivers.md) retain their reviewed scope. Focused, filtered and plan-only checks are authoring feedback, never readiness proof; unmapped production paths are routing failures.
+Use [Pre-push readiness](./testing.md#pre-push-readiness) for local feedback and optional receipt diagnostics, and [release policy](./deployment-process.md#release-snapshot-state-machine) for deployment gates. Hosted CI is the readiness authority. [Boundary waivers](./process/boundary-waivers.md) retain their reviewed scope. Focused, filtered and plan-only checks are authoring feedback; unmapped production paths are routing failures.
 
 [`scripts/lib/pr-test-selection.mts`](../scripts/lib/pr-test-selection.mts) owns changed-file test selection, with always-run sets in [`scripts/lib/critical-test-files.mts`](../scripts/lib/critical-test-files.mts); [`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) only partitions the selected list into weighted shards and serializes the plan. [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption and timing refresh/provenance/review. Timing lanes must remain explicit and consistent across headings and overflow links; scheduling telemetry never establishes test or coverage correctness.
 
-`npm run test:v9-resource` invokes [`run-v9-resource-lane.ts`](../scripts/maintenance/run-v9-resource-lane.ts): the required unsharded code lane shared by PR, nightly/weekly and serial local readiness. It runs the faithful compute `--guard` (natural 128 MiB, complete live phases, correctness/bytes, auto-enforcing any qualified policy) and independent 256 MiB contagion matrix. Until qualification, phase limits are not enforced and `policy: "unqualified"` is explicit. Invocation-bound `.tmp/safety-score-v9-resource/report.json` must be complete without violations and the named contagion case must pass in fresh `.tmp/v9-resource-lane/vitest.json`; optional historical capture checks may skip. Ordinary tests/coverage suppress ambient probe opt-in. See [V9 resource lane](./testing.md#v9-resource-lane) for proposal-only calibration, 30-day artifacts and failure classification.
+`npm run test:v9-resource` invokes [`run-v9-resource-lane.ts`](../scripts/maintenance/run-v9-resource-lane.ts): the unsharded V9-impact PR lane shared with unconditional nightly/manual validation and selected serial local feedback. It runs the faithful compute `--guard` (natural 128 MiB, complete live phases, correctness/bytes, auto-enforcing any qualified policy) and independent 256 MiB contagion matrix. Until qualification, phase limits are not enforced and `policy: "unqualified"` is explicit. Invocation-bound `.tmp/safety-score-v9-resource/report.json` must be complete without violations and the named contagion case must pass in fresh `.tmp/v9-resource-lane/vitest.json`; optional historical capture checks may skip. Ordinary tests/coverage suppress ambient probe opt-in. See [V9 resource lane](./testing.md#v9-resource-lane) for proposal-only calibration, 30-day artifacts and failure classification.
 
 Critical ownership reads base-revision Git blobs by declared byte length, so NULs and multibyte text cannot shift later records. Import-boundary checks include literal dynamic imports and retain only the reviewed waiver. Use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area) for focused selection and preview.
 
@@ -210,7 +210,7 @@ Critical ownership reads base-revision Git blobs by declared byte length, so NUL
 
 Useful test-only evidence belongs in recognized `*.test-support.ts` files, not production module DEBT or external-consumer blind spots. The matched Safety Score invariant corpus lives beside its importing shared test and remains outside the product evaluation-build manifest. Preserve its evidence when relocating it.
 
-`check:cron-console-usage` reports missing baseline paths separately from extant zero-call files and keeps its blocking growth ratchet. Structured-log conversions must preserve console-only versus durable-event semantics; no date or stored-budget decrease authorizes strict-zero enforcement without a measured current-root zero scan and persistence parity.
+Structured-log conversions must preserve console-only versus durable-event semantics, including failure counters, terminal `logCronRun` persistence, and already-authored durable events.
 
 `check:script-entrypoints` includes `.mts` files in forward command scanning, reverse candidates and reverse references; declaration files are not runnable candidates. Markdown still receives stale-command checks but cannot retain an otherwise unreferenced script. The reverse check remains a textual-reference audit, not an executable import graph: policy-retained operator tools remain valid, and mutually referring disconnected scripts are not proven reachable.
 
@@ -248,7 +248,7 @@ The shadow-era replay summary and fixed July B1 historical DEX root-ledger entry
 
 Audit and draft modes do not mutate admission authority. Only explicit `--merge-into-sidecar` changes the reviewed sidecar and regenerates its runtime projection; retain the journal and restore the exact sidecar/projection pair on rollback, never disable the ingestion fence.
 
-V9 typed queue: `safety-score-v9:missing-data-registry`; `safety-score-v9:curation-worklist` renders Markdown; `safety-score-v9:expiry-queue` adds preventive production-admission expiry checks. Direct evidence-gap/mint-posture compatibility tools have no aliases or routing role.
+V9 typed queue: `safety-score-v9:missing-data-registry`; `safety-score-v9:curation-worklist` renders Markdown; `safety-score-v9:expiry-queue` adds preventive production-admission expiry checks. The direct mint-posture compatibility tool has no alias or routing role.
 
 Worklist and pre-expiry supply come from the exact replay's retained nullable supply state, not a fresh market-cap lookup. Missing supply stays unavailable with a reason; observed zero stays zero. Reports disclose known-supply subtotals/unavailable counts and qualify known-only ratios, with deterministic unknown-first ordering rather than assigning unknown assets the smallest weight.
 
@@ -269,7 +269,9 @@ AI-summary circulation comparisons use nullable admitted supply: empty or invali
 
 ### One-Time And Operator Tools
 
-Direct entrypoints without an npm alias are intentional operator tools only when retained by the script-entrypoint policy. Find them through `scripts/lib/cli-argv-policy.mjs`, then use the entrypoint's `--help` and the relevant runbook from the [documentation index](./README.md) rather than an inventory row here. Worker-bound tools live under `worker/scripts/`; for example, Yield history cleanup follows the [writer-pause runbook](./runbooks/yield-history-cleanup-writer-pause.md), including its export, confirmation, abort, and restore requirements.
+Direct entrypoints without an npm alias can be intentional hand-run operator or research tools. `scripts/lib/cli-argv-policy.mjs` classifies argument handling; enrollment alone does not establish an active caller or operator contract. Inspect the entrypoint's supported options and the relevant runbook from the [documentation index](./README.md). Worker-bound tools live under `worker/scripts/`; for example, Yield history cleanup follows the [writer-pause runbook](./runbooks/yield-history-cleanup-writer-pause.md), including its export, confirmation, abort, and restore requirements.
+
+`scripts/maintenance/audit-dex-pricing-source-gaps.ts` is retained for hand-run pricing research, not scheduled automation. Run it with `--price-depth <path>` (or `--stablecoins <path>`) and `--dex-prices <path>` to join local snapshots into a DEX source-gap report; optional `--dex-liquidity <path>` and `--curve-candidates <path>` add liquidity and Curve-route evidence. It prints Markdown by default, supports `--json` and optional local `--report <path>` output, and does not publish pricing changes.
 
 ## Operational Notes
 
@@ -307,7 +309,7 @@ The pre-commit hook runs `npm run sync:staged-artifacts`, regenerating/staging c
 
 Exact wrapper bypasses in `.githooks/pre-commit`: `PHAROS_SKIP_ARTIFACT_HOOK=1`, an in-progress merge, cherry-pick or revert (their Git state files under `.git/`), `rebase-merge` or `rebase-apply`, and an empty staged diff. Hook installation itself is skipped when `CI` or `GITHUB_ACTIONS` is `1`/`true`, or `PHAROS_PREPARE_SKIP_GIT_HOOKS` is `1`/`true`; `PHAROS_PREPARE_BOOTSTRAP` forces ordinary bootstrap in CI but does not install hooks or enable history bootstrap there (`scripts/maintenance/prepare-workspace.ts`).
 
-The hook is neither full artifact convergence nor a local test/build gate. After final source/integration history, including bypassed merge/rebase/cherry-pick/revert operations, run full `npm run check:generated-artifacts` before the [pre-push readiness run](./testing.md#pre-push-readiness).
+The hook is neither full artifact convergence nor a local test/build gate. After source/integration changes, including bypassed merge/rebase/cherry-pick/revert operations, use `npm run check:generated-artifacts` to inspect convergence and keep generated artifacts with their owning sources. [Pre-push readiness](./testing.md#pre-push-readiness) defines local feedback and hosted readiness authority.
 
 ### Release Ownership
 

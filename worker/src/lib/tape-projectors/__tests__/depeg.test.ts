@@ -82,58 +82,52 @@ describe("depeg projector", () => {
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'tape-projector:cursor:depeg.resolved'").get()?.value).toBe(String(SEC));
   });
 
-  it("expands a full opened batch through same-started_at rows before advancing the watermark", async () => {
-    const limitedRows = [
-      depegRow({ id: 1, stablecoin_id: "usdt-tether" }),
-      depegRow({ id: 2, stablecoin_id: "usdc-circle" }),
-    ];
-    const expandedRows = [
-      ...limitedRows,
-      depegRow({ id: 3, stablecoin_id: "dai-makerdao" }),
-    ];
+  it.each([
+    {
+      name: "opened batch through same-started_at rows",
+      project: projectDepegOpened,
+      type: "depeg.opened",
+      limitedRows: [
+        depegRow({ id: 1, stablecoin_id: "usdt-tether" }),
+        depegRow({ id: 2, stablecoin_id: "usdc-circle" }),
+      ],
+      extraRow: depegRow({ id: 3, stablecoin_id: "dai-makerdao" }),
+      limitedBinds: [RECONCILIATION_SINCE, "opened", 2],
+      expandedBinds: [RECONCILIATION_SINCE, SEC, "opened"],
+      sourceIds: ["1", "2", "3"],
+      advanced: SEC,
+    },
+    {
+      name: "resolved batch through same-ended_at rows",
+      project: projectDepegResolved,
+      type: "depeg.resolved",
+      limitedRows: [
+        depegRow({ id: 10, ended_at: SEC + 900, recovery_price: 0.999, close_reason: "recovered-primary" }),
+        depegRow({ id: 11, ended_at: SEC + 900, recovery_price: 1.001, close_reason: "recovered-dex" }),
+      ],
+      extraRow: depegRow({ id: 12, ended_at: SEC + 900, recovery_price: 1, close_reason: "recovered-native" }),
+      limitedBinds: [RECONCILIATION_SINCE, ...DEPEG_RECOVERY_CLOSE_REASONS, "resolved", 2],
+      expandedBinds: [RECONCILIATION_SINCE, SEC + 900, ...DEPEG_RECOVERY_CLOSE_REASONS, "resolved"],
+      sourceIds: ["10", "11", "12"],
+      advanced: SEC + 900,
+    },
+  ])("expands a full $name before advancing the watermark", async ({ project, type, limitedRows, extraRow, limitedBinds, expandedBinds, sourceIds, advanced }) => {
     const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [] },
-      { match: MATCH_DEPEG_EVENTS, matchBinds: [RECONCILIATION_SINCE, "opened", 2], rows: limitedRows },
-      { match: MATCH_DEPEG_EVENTS, matchBinds: [RECONCILIATION_SINCE, SEC, "opened"], rows: expandedRows },
+      { match: MATCH_DEPEG_EVENTS, matchBinds: limitedBinds, rows: limitedRows },
+      { match: MATCH_DEPEG_EVENTS, matchBinds: expandedBinds, rows: [...limitedRows, extraRow] },
     ]) as MockD1Database;
 
-    const result = await projectDepegOpened(db, { maxRows: 2 });
+    const result = await project(db, { maxRows: 2 });
 
-    expect(result).toEqual({ projected: 3, advanced: SEC });
-    expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual(["1", "2", "3"]);
+    expect(result).toEqual({ projected: 3, advanced });
+    expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual(sourceIds);
     expect(tapeInsertBinds(db).map((binds) => binds[16])).toEqual([
-      getMethodologyVersionAt("depeg-dews", SEC),
-      getMethodologyVersionAt("depeg-dews", SEC),
-      getMethodologyVersionAt("depeg-dews", SEC),
+      getMethodologyVersionAt("depeg-dews", advanced),
+      getMethodologyVersionAt("depeg-dews", advanced),
+      getMethodologyVersionAt("depeg-dews", advanced),
     ]);
-    expect(tapeCacheWriteBinds(db, "depeg.opened")[0]?.[1]).toBe(String(SEC));
-  });
-
-  it("expands a full resolved batch through same-ended_at rows before advancing the watermark", async () => {
-    const limitedRows = [
-      depegRow({ id: 10, ended_at: SEC + 900, recovery_price: 0.999, close_reason: "recovered-primary" }),
-      depegRow({ id: 11, ended_at: SEC + 900, recovery_price: 1.001, close_reason: "recovered-dex" }),
-    ];
-    const expandedRows = [
-      ...limitedRows,
-      depegRow({ id: 12, ended_at: SEC + 900, recovery_price: 1, close_reason: "recovered-native" }),
-    ];
-    const db = mockTapeD1([
-      { match: "FROM cache WHERE key", rows: [] },
-      { match: MATCH_DEPEG_EVENTS, matchBinds: [RECONCILIATION_SINCE, ...DEPEG_RECOVERY_CLOSE_REASONS, "resolved", 2], rows: limitedRows },
-      { match: MATCH_DEPEG_EVENTS, matchBinds: [RECONCILIATION_SINCE, SEC + 900, ...DEPEG_RECOVERY_CLOSE_REASONS, "resolved"], rows: expandedRows },
-    ]) as MockD1Database;
-
-    const result = await projectDepegResolved(db, { maxRows: 2 });
-
-    expect(result).toEqual({ projected: 3, advanced: SEC + 900 });
-    expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual(["10", "11", "12"]);
-    expect(tapeInsertBinds(db).map((binds) => binds[16])).toEqual([
-      getMethodologyVersionAt("depeg-dews", SEC + 900),
-      getMethodologyVersionAt("depeg-dews", SEC + 900),
-      getMethodologyVersionAt("depeg-dews", SEC + 900),
-    ]);
-    expect(tapeCacheWriteBinds(db, "depeg.resolved")[0]?.[1]).toBe(String(SEC + 900));
+    expect(tapeCacheWriteBinds(db, type)[0]?.[1]).toBe(String(advanced));
   });
 
   it("caps peak-worsened scans at the maxRows total instead of paging past it", async () => {

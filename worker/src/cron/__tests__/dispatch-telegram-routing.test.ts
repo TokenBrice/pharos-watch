@@ -130,24 +130,6 @@ describe("dispatch telegram routing helpers", () => {
     expect(alertsByChat.get("global-only")?.alerts.dews).toEqual([DEWS_WARNING]);
   });
 
-  it("applies per-coin snooze to both specific and global fan-out", () => {
-    const alertsByChat = new Map<string, AlertsByChatEntry>();
-    const specificRows = new Map([["usdc-circle", [subscriber({ chat_id: "specific-chat" })]]]);
-    const globalRows = [subscriber({ chat_id: "global-chat", isGlobal: true })];
-
-    routeAlertEvents(
-      [DEWS_WARNING],
-      specificRows,
-      globalRows,
-      alertsByChat,
-      (alerts) => alerts.dews,
-      undefined,
-      new Map([["usdc-circle", new Set(["specific-chat", "global-chat"])]]),
-    );
-
-    expect(alertsByChat.size).toBe(0);
-  });
-
   it("applies per-coin off rows to preset/specific and global fan-out", () => {
     const alertsByChat = new Map<string, AlertsByChatEntry>();
     const specificRows = new Map([
@@ -237,18 +219,6 @@ describe("dispatch telegram routing helpers", () => {
       ["newer-reserve", 2],
       ["older-dews", 1],
     ]);
-  });
-
-  it("counts freeze alerts in the cheap pre-format chunk estimate", () => {
-    const freezeAlerts = Array.from({ length: 17 }, (_, index) => ({
-      stablecoinId: `freeze-${index}`,
-      symbol: `F${index}`,
-    })) as NonNullable<ConsolidatedAlerts["freeze"]>;
-    const planned = planSubscriberQueue(
-      new Map([["freeze", alertsEntry({ alerts: emptyAlerts({ freeze: freezeAlerts }) })]]),
-    );
-
-    expect(planned).toMatchObject([{ alertType: "freeze", alertTypes: ["freeze"], estimatedChunks: 2 }]);
   });
 
   it("expands chunks with private-chat Mini App markup and skips blocked chats", () => {

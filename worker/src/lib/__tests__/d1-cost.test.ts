@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createD1CostTracker } from "../d1-cost";
-import { runWithOverloadRetry } from "../d1-overload-retry";
 
 function result(rowsRead: number, rowsWritten: number, totalAttempts = 1): D1Result {
   return {
@@ -45,28 +44,6 @@ describe("createD1CostTracker", () => {
     expect(statement.run).toHaveBeenCalledTimes(1);
     expect(tracker.snapshot()).toEqual({ queries: 4, rowsRead: 24, rowsWritten: 6, coverage: "complete", reasons: [] });
     expect(createD1CostTracker(database).snapshot().queries).toBe(0);
-  });
-
-  it("counts every overload-retried batch attempt and keeps unavailable failure costs explicit", async () => {
-    vi.useFakeTimers();
-    try {
-      const database = mockD1();
-      const failure = new Error("D1 DB is overloaded");
-      database.batch = vi.fn()
-        .mockRejectedValueOnce(failure)
-        .mockResolvedValueOnce([result(5, 1), result(7, 2)]);
-      const tracker = createD1CostTracker(database);
-      const statements = [tracker.db.prepare("SELECT 1"), tracker.db.prepare("SELECT 2")];
-      const pending = runWithOverloadRetry(() => tracker.db.batch(statements));
-      await vi.runAllTimersAsync();
-      await pending;
-      expect(database.batch).toHaveBeenCalledTimes(2);
-      expect(tracker.snapshot()).toEqual({
-        queries: 4, rowsRead: 12, rowsWritten: 3, coverage: "partial", reasons: ["failed-attempt-rows-unavailable"],
-      });
-    } finally {
-      vi.useRealTimers();
-    }
   });
 
   it("preserves first/raw results and marks metadata-less calls as partial", async () => {

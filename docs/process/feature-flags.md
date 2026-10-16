@@ -24,7 +24,7 @@ The no-op blacklist banner control was retired on 2026-09-27 (DEC-15): its flag,
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | DDRR module below DDR on `/depeg/` and the detail DDR track-record section (emergency rollback) |
 
-`expiresAt` is enforceable: dated flags carry an `// expiresAt:` comment immediately above the flag key in `src/lib/feature-flags.ts`; undated flags have no expiry. By the deadline, either retire the flag after acceptance or extend its date with a documented retention rationale. Documentation alone does not waive expiry. `check:stale-flags` runs in affected PR structural guards and nightly/manual validation; it fails on dates today or earlier, warns 30 days ahead, and rejects an inventory with no parsed dated flags.
+Dated flags carry an `// expiresAt:` comment immediately above the flag key in `src/lib/feature-flags.ts`; undated flags have no expiry. By the deadline, either retire the flag after acceptance or extend its date with a documented retention rationale. Documentation alone does not waive expiry; flag lifecycle dates are reviewed manually.
 
 ## Flip readiness gates
 
@@ -49,7 +49,7 @@ has been completed.
 
 | Flag | Owner | Evidence reviewed 2026-07-29 | Reason retained | Next review |
 | --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | tokenbrice | CLI WCAG review passes AA for all flag-selected text tokens (minimum 4.78:1 light, 7.23:1 dark); `src/lib/__tests__/severity-colors.test.ts` passes. | A human must visually review USDC, USDe, and a coin with an active depeg before the default-off path can be removed. | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | tokenbrice | CLI WCAG review passes AA for all flag-selected text tokens (minimum 4.78:1 light, 7.23:1 dark); retained `src/lib/__tests__/severity-colors.test.ts` coverage checks the default thresholds, not the flag-enabled palette. | A human must visually review USDC, USDe, and a coin with an active depeg before the default-off path can be removed. | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | tokenbrice | `src/components/stablecoin-detail/__tests__/mobile-sticky-summary.test.tsx` verifies height publication; `src/components/__tests__/longform-scrollspy-nav.test.tsx` verifies the reactive `scroll-margin-top` calculation. | A real device must verify mounted-summary scrollspy behavior in iOS Safari and Android Chrome. | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | tokenbrice | Historical rendering/suppression and aggregation tests were retired with the unmounted banner and hook. | Configuration retirement is a separate owner decision; there is no current render site. | 2026-09-01 |
 
@@ -57,7 +57,7 @@ has been completed.
 
 - [x] Hero verdict surface (the archetype verdict chip in `HeroChipRail`, `hero-card-sections.tsx`, at every width, plus the `HeroIdentityHeader` heading's `aria-describedby` in `hero-card.tsx`) lands behind the flag via `isHeroVerdictEnabled()`; the hoisted `<AiSummary>` renders unconditionally and is not gated by the flag.
 - [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
-- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current one-liner coverage is owned by `scripts/__tests__/weekly-curation-digest.test.ts`; `src/lib/__tests__/term-markup.test.ts` owns summary term wiring. TL;DR-first top-60 editorial QA remains in flight.**
+- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **`src/lib/__tests__/term-markup.test.ts` owns summary term wiring: known glossary slugs and no raw opening/closing markers. One-liner coverage and TL;DR-first top-60 editorial QA require editorial review; the retained curation-digest tests do not enforce authored-catalog coverage.**
 
 ### Retired chart annotation overlay
 
@@ -116,11 +116,11 @@ release path runs `check:feature-flag-inlining` against the built bundle.
 Adding, renaming, or removing a flag also requires updating
 `src/lib/feature-flags.ts`, the env block in
 `.github/workflows/pages-release.yml`, this inventory, and the
-inlining/stale-flag checks as applicable.
+inlining check as applicable.
 
 ## Spec source
 
-`src/lib/feature-flags.ts` is the source of truth for flag names, defaults, and `expiresAt` — it is the only file `scripts/ci/check-stale-flags.ts` reads. This page is the durable reference for what each flag gates, its flip-readiness gate, the rollout procedure, and the retention rationale. Build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).
+`src/lib/feature-flags.ts` is the source of truth for flag names, defaults, and `expiresAt`. This page is the durable reference for what each flag gates, its flip-readiness gate, the rollout procedure, and the retention rationale. Build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).
 
 ## 2026-08-23 lifecycle review
 

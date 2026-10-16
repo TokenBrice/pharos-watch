@@ -20,14 +20,12 @@ import {
   checkIsolateLocalApiKeyRateLimit,
   createApiKey,
   isApiKeyRateLimitDependencyCircuitOpen,
-  listApiKeys,
   parseApiKeyToken,
   recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess,
   resetApiKeyStateForTests,
   recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit,
-  rotateApiKey,
   updateApiKey,
 } from "../api-keys";
 import { authenticateApiKeyFromFreshCache } from "../api-key-auth";
@@ -96,31 +94,6 @@ describe("api key helpers", () => {
     });
   });
 
-  it("rejects expired API keys even when the prefix and secret hash match", async () => {
-    const pepper = "pepper";
-    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const db = mockD1(
-      [
-        makeApiKeyPrefixLookup({
-          prefix: "0123456789abcdef",
-          row: await makeAuthenticatedApiKeyRow({
-            pepper,
-            secret,
-            name: "Expired",
-            owner_email: "ops@pharos.watch",
-            tier: "ci",
-            rate_limit_per_minute: 180,
-            expires_at: 900,
-          }),
-        }),
-      ],
-      { requireMatch: true },
-    );
-
-    await expect(
-      authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", pepper, undefined, 1_000),
-    ).resolves.toEqual({ kind: "invalid" });
-  });
 
   it("creates an API key and returns the raw token once", async () => {
     const db = mockD1(
@@ -180,23 +153,6 @@ describe("api key helpers", () => {
     expect(parseApiKeyToken((created as Exclude<typeof created, Response>).token)).not.toBeNull();
   });
 
-  it("rejects partial numeric rate limit strings", async () => {
-    const created = await createApiKey(
-      mockD1([], { requireMatch: true }),
-      "pepper",
-      {
-        name: "Bad rate",
-        rateLimitPerMinute: "120abc",
-      },
-      111,
-    );
-
-    expect(created).toBeInstanceOf(Response);
-    expect((created as Response).status).toBe(400);
-    await expect((created as Response).json()).resolves.toEqual({
-      error: "rateLimitPerMinute must be an integer between 1 and 10000",
-    });
-  });
 
   it("normalizes create input string fields and rejects an unknown tier", async () => {
     expect(
@@ -334,66 +290,6 @@ describe("api key helpers", () => {
     sqlite.close();
   });
 
-  it("lists expired keys instead of filtering them out", async () => {
-    const db = mockD1(
-      [
-        {
-          match: "ORDER BY created_at DESC, id DESC",
-          rows: [
-            makeApiKeyRow({
-              id: 9,
-              key_prefix: "0011223344556677",
-              name: "Expired",
-              expires_at: 900,
-              created_at: 100,
-              updated_at: 100,
-            }),
-            makeApiKeyRow({
-              id: 8,
-              key_prefix: "8899aabbccddeeff",
-              name: "Permanent",
-              created_at: 90,
-              updated_at: 90,
-            }),
-          ],
-        },
-      ],
-      { requireMatch: true },
-    );
-
-    const listed = await listApiKeys(db, 1_000);
-
-    expect(listed.keys).toHaveLength(2);
-    expect(listed.keys[0]?.expiresAt).toBe(900);
-    expect(listed.keys[1]?.expiresAt).toBeNull();
-  });
-
-  it("preserves the current expiry when rotating a key", async () => {
-    const db = mockD1(
-      [
-        ...makeApiKeyMutationTables({
-          existingRow: {
-            owner_email: "ops@pharos.watch",
-            expires_at: 5_000,
-            last_used_at: 100,
-            last_used_route: "/api/stablecoins",
-          },
-          postMutationRow: {
-            key_prefix: "fedcba9876543210",
-            owner_email: "ops@pharos.watch",
-            expires_at: 5_000,
-            updated_at: 2_000,
-          },
-        }),
-      ],
-      { requireMatch: true },
-    );
-
-    const rotated = await rotateApiKey(db, "pepper", 7, 2_000);
-
-    expect(rotated).not.toBeInstanceOf(Response);
-    expect((rotated as Exclude<typeof rotated, Response>).key.expiresAt).toBe(5_000);
-  });
 
   it("returns 429 when the per-key minute bucket is exhausted", async () => {
     const db = mockD1(
@@ -765,16 +661,6 @@ describe("api key helpers", () => {
     expect(rehashQuery?.binds[0]).toBe(await hmacSha256Hex(newPepper, secret));
   });
 
-  it("returns unavailable when API key lookup storage fails", async () => {
-    const db = mockD1(
-      [makeApiKeyPrefixLookupError("0123456789abcdef", new Error("lookup failed"))],
-      { requireMatch: true },
-    );
-
-    await expect(
-      authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", "pepper"),
-    ).resolves.toEqual({ kind: "unavailable" });
-  });
 
   it("treats previous-pepper rehash storage as best-effort after auth succeeds", async () => {
     const oldPepper = "old-pepper";

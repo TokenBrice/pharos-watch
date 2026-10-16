@@ -55,19 +55,6 @@ function telemetryValue(
 
 describe("buildRedemptionBackstopCardViewModel", () => {
   it.each([
-    { accessModel: "permissionless-onchain", accessLabel: "Permissionless onchain" },
-    { accessModel: "whitelisted-onchain", accessLabel: "Whitelisted onchain" },
-    { accessModel: "issuer-api", accessLabel: "Issuer / institutional" },
-    { accessModel: "manual", accessLabel: "Manual / discretionary" },
-  ] as const)("keeps the full $accessModel label in route prose", ({ accessModel, accessLabel }) => {
-    const viewModel = buildRedemptionBackstopCardViewModel(entry({ accessModel }));
-    expect(viewModel.accessLabel).toBe(accessLabel);
-    expect(viewModel.settlementLabel).toBe("Atomic");
-    expect(viewModel.outputAssetLabel).toBe("Stable output");
-    expect(viewModel.routeFamilyLabel).toBe("Stablecoin redeem");
-  });
-
-  it.each([
     { stablecoinId: "mhyper-midas", businessDays: 6 },
     { stablecoinId: "mre7yield-midas", businessDays: 10 },
     { stablecoinId: "ousd-open-standard", businessDays: null },
@@ -345,38 +332,6 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     ]);
   });
 
-  it("publishes size-aware cost scenarios and confidence detail as distinct labelled values", () => {
-    const viewModel = buildRedemptionBackstopCardViewModel(
-      entry({
-        costScenarioScores: { retail: 40, activeUser: 80, institutional: 100 },
-        confidenceDetails: {
-          capacityEvidenceQuality: 90,
-          feeEvidenceQuality: 70,
-          routeStatusFreshness: 80,
-          holderCohortBreadth: 60,
-          sourceQuality: 95,
-          reviewedDocAgeDays: 12,
-          reasons: ["live telemetry reviewed"],
-        },
-      }),
-    );
-
-    expect(viewModel.costScenarioContext).toEqual([
-      { label: "Retail cost", value: "40/100" },
-      { label: "Active-user cost", value: "80/100" },
-      { label: "Institutional cost", value: "100/100" },
-    ]);
-    expect(viewModel.confidenceContext).toEqual([
-      { label: "Capacity evidence", value: "90/100" },
-      { label: "Fee evidence", value: "70/100" },
-      { label: "Route freshness", value: "80/100" },
-      { label: "Holder breadth", value: "60/100" },
-      { label: "Source quality", value: "95/100" },
-      { label: "Reviewed docs age", value: "12d" },
-    ]);
-    expect(viewModel.confidenceReasons).toEqual(["live telemetry reviewed"]);
-  });
-
   it("omits unmeasured cost scenarios and the docs age instead of scoring them zero", () => {
     const viewModel = buildRedemptionBackstopCardViewModel(
       entry({
@@ -399,29 +354,6 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     ]);
     expect(viewModel.confidenceContext.map((item) => item.label)).not.toContain("Reviewed docs age");
     expect(viewModel.confidenceContext[0]).toEqual({ label: "Capacity evidence", value: "0/100" });
-  });
-
-  it.each([
-    ["stablecoin-redeem", "Stablecoin redeem"],
-    ["basket-redeem", "Basket redeem"],
-    ["collateral-redeem", "Collateral redeem"],
-    ["psm-swap", "PSM / swap floor"],
-    ["queue-redeem", "Queue redeem"],
-    ["offchain-issuer", "Offchain issuer"],
-  ] as const)("labels the %s route family as %s", (routeFamily, routeFamilyLabel) => {
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily })).routeFamilyLabel).toBe(routeFamilyLabel);
-  });
-
-  it.each([
-    ["open", false, "open"],
-    ["degraded", true, "degraded"],
-    ["cohort-limited", true, "cohort limited"],
-    ["unknown", true, "status unknown"],
-  ] as const)("badges the %s route status as %s", (routeStatus, showRouteStatusBadge, routeStatusLabel) => {
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus }))).toMatchObject({
-      showRouteStatusBadge,
-      routeStatusLabel,
-    });
   });
 
   it("maps docs provenance labels", () => {

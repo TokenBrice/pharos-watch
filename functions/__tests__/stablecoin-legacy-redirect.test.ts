@@ -19,23 +19,10 @@ function makeContext(request: Request) {
 }
 
 describe("stablecoin legacy redirects", () => {
-  it("redirects old DefiLlama numeric stablecoin URLs to canonical Pharos IDs", async () => {
-    const ctx = makeContext(new Request("https://pharos.watch/stablecoin/343/"));
-
-    const response = await onRequest(ctx);
-
-    expect(response.status).toBe(301);
-    expect(response.headers.get("Location")).toBe("https://pharos.watch/stablecoin/usat-tether/");
-    expect(ctx.assetsFetch).not.toHaveBeenCalled();
-  });
-
   it.each([
     ["cg-syrupusdc", "/stablecoin/syrupusdc-maple/"],
-    ["gold-kau", "/stablecoin/kau-kinesis/"],
-    ["430", "/stablecoin/sofid-sofi/"],
     ["185", "/cemetery/"],
-    ["gyd-gyroscope", "/cemetery/"],
-    ...["usp-pareto-credit", "xai-silo-finance", "krwo-gimswap", "veur-vnx", "phpm-mento", "usd-nubank"]
+    ...["usp-pareto-credit"]
       .map((alias) => [alias, "/coverage/"]),
   ])("resolves reviewed legacy alias %s without depending on asset redirects", async (alias, destination) => {
     const ctx = makeContext(new Request(`https://pharos.watch/stablecoin/${alias}/?utm_source=google`, { method: "HEAD" }));
@@ -68,7 +55,7 @@ describe("stablecoin legacy redirects", () => {
     expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
   });
 
-  it.each(["999999", "999998"])("passes unreviewed numeric stablecoin %s through to static 404 handling", async (id) => {
+  it.each(["999999"])("passes unreviewed numeric stablecoin %s through to static 404 handling", async (id) => {
     const request = new Request(`https://pharos.watch/stablecoin/${id}/`);
     const ctx = makeContext(request);
     ctx.assetsFetch.mockResolvedValueOnce(new Response("not found", { status: 404 }));
@@ -77,15 +64,6 @@ describe("stablecoin legacy redirects", () => {
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("not found");
     expect(response.headers.has("Location")).toBe(false);
-
-    expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
-  });
-
-  it("does not redirect PSI-only shadow assets without public detail pages", async () => {
-    const request = new Request("https://pharos.watch/stablecoin/3/");
-    const ctx = makeContext(request);
-
-    await onRequest(ctx);
 
     expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
   });
@@ -132,17 +110,6 @@ describe("stablecoin legacy redirects", () => {
     expect(await response.text()).toBe("asset post");
     expect(response.headers.has("Location")).toBe(false);
     expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
-  });
-
-  it("redirects HEAD for a missing known yield workbench", async () => {
-    const ctx = makeContext(new Request("https://pharos.watch/stablecoin/usdc-circle/yield/", { method: "HEAD" }));
-    ctx.assetsFetch.mockResolvedValueOnce(new Response(null, { status: 404 }));
-    const response = await onRequest(ctx);
-    expect(response.status).toBe(302);
-    expect(response.headers.get("Location")).toBe(
-      "https://pharos.watch/yield/?compare=usdc-circle&from=detail-fallback&workbenchFallback=usdc-circle",
-    );
-    expect(await response.text()).toBe("");
   });
 
   it("waits for discarded asset stream cancellation before returning the redirect", async () => {

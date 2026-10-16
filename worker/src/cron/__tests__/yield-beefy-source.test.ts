@@ -50,83 +50,68 @@ describe("fetchBeefySources", () => {
     );
   });
 
-  it("skips EOL vaults", async () => {
-    mockYieldSourceRoutes([
-      { match: "api.beefy.finance/apy", body: { "old-usdc": 0.05 } },
-      { match: "api.beefy.finance/tvl", body: { "1": { "old-usdc": 1_000_000 } } },
-      {
-        match: "api.beefy.finance/vaults",
-        body: [
-          {
-            id: "old-usdc",
-            name: "Old USDC",
-            token: "USDC",
-            assets: ["USDC"],
-            status: "eol",
-            chain: "ethereum",
-            platformId: "aave",
-            tokenAddress: "0x1",
-            earnContractAddress: "0x2",
-            earnedToken: "moo",
-            earnedTokenAddress: "0x3",
-            oracle: "tokens",
-            oracleId: "USDC",
-          },
-        ],
+  it.each([
+    {
+      name: "skips EOL vaults",
+      apy: { "old-usdc": 0.05 },
+      tvl: { "1": { "old-usdc": 1_000_000 } },
+      vault: {
+        id: "old-usdc",
+        name: "Old USDC",
+        token: "USDC",
+        assets: ["USDC"],
+        status: "eol",
+        chain: "ethereum",
+        platformId: "aave",
+        tokenAddress: "0x1",
+        earnContractAddress: "0x2",
+        earnedToken: "moo",
+        earnedTokenAddress: "0x3",
+        oracle: "tokens",
+        oracleId: "USDC",
       },
-    ]);
-    expect(await fetchBeefySources()).toEqual({ candidates: [], degraded: false });
-  });
-
-  it("skips multi-asset LP vaults", async () => {
-    mockYieldSourceRoutes([
-      { match: "api.beefy.finance/apy", body: { "curve-usdc-usdt": 0.06 } },
-      { match: "api.beefy.finance/tvl", body: { "1": { "curve-usdc-usdt": 1_000_000 } } },
-      {
-        match: "api.beefy.finance/vaults",
-        body: [
-          {
-            id: "curve-usdc-usdt",
-            name: "Curve USDC-USDT",
-            token: "crvUSDC-USDT",
-            assets: ["USDC", "USDT"],
-            status: "active",
-            chain: "ethereum",
-            platformId: "curve",
-            tokenAddress: "0x1",
-            earnContractAddress: "0x2",
-            earnedToken: "moo",
-            earnedTokenAddress: "0x3",
-            oracle: "lps",
-            oracleId: "curve-usdc-usdt",
-          },
-        ],
+    },
+    {
+      name: "skips multi-asset LP vaults",
+      apy: { "curve-usdc-usdt": 0.06 },
+      tvl: { "1": { "curve-usdc-usdt": 1_000_000 } },
+      vault: {
+        id: "curve-usdc-usdt",
+        name: "Curve USDC-USDT",
+        token: "crvUSDC-USDT",
+        assets: ["USDC", "USDT"],
+        status: "active",
+        chain: "ethereum",
+        platformId: "curve",
+        tokenAddress: "0x1",
+        earnContractAddress: "0x2",
+        earnedToken: "moo",
+        earnedTokenAddress: "0x3",
+        oracle: "lps",
+        oracleId: "curve-usdc-usdt",
       },
-    ]);
-    expect(await fetchBeefySources()).toEqual({ candidates: [], degraded: false });
-  });
-
-  it("skips vaults without enough Beefy TVL to pass size gates", async () => {
-    mockYieldSourceRoutes([
-      { match: "api.beefy.finance/apy", body: { "aave-usdc": 0.037 } },
-      { match: "api.beefy.finance/tvl", body: { "1": { "aave-usdc": 99_999 } } },
-      {
-        match: "api.beefy.finance/vaults",
-        body: [
-          {
-            id: "aave-usdc",
-            name: "Aave USDC",
-            token: "USDC",
-            assets: ["USDC"],
-            status: "active",
-            chain: "ethereum",
-            platformId: "aave",
-            tokenAddress: "0x123",
-          },
-        ],
+    },
+    {
+      name: "skips vaults without enough Beefy TVL to pass size gates",
+      apy: { "aave-usdc": 0.037 },
+      tvl: { "1": { "aave-usdc": 99_999 } },
+      vault: {
+        id: "aave-usdc",
+        name: "Aave USDC",
+        token: "USDC",
+        assets: ["USDC"],
+        status: "active",
+        chain: "ethereum",
+        platformId: "aave",
+        tokenAddress: "0x123",
       },
+    },
+  ])("$name", async ({ apy, tvl, vault }) => {
+    mockYieldSourceRoutes([
+      { match: "api.beefy.finance/apy", body: apy },
+      { match: "api.beefy.finance/tvl", body: tvl },
+      { match: "api.beefy.finance/vaults", body: [vault] },
     ]);
-
     await expect(fetchBeefySources()).resolves.toEqual({ candidates: [], degraded: false });
   });
 

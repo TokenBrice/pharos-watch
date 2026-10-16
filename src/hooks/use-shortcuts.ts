@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { usePreference } from "@/hooks/use-preferences";
 
-export const SHORTCUTS_STORAGE_KEY = "pharos-shortcuts";
+const SHORTCUTS_STORAGE_KEY = "pharos-shortcuts";
 
 // Default saved shortcuts, identified by their `nav-config` href. Resolution to
 // label/icon happens in the consuming component so this hook stays data-only and
@@ -49,7 +49,7 @@ function shortcutListsMatch(a: string[], b: string[]): boolean {
 // Dedupe + drop non-string entries on read; an empty array is a valid (user
 // cleared everything) state and is preserved, only malformed payloads fall back
 // to the defaults. Exact legacy defaults migrate to the expanded default set.
-export function decodeShortcuts(raw: unknown): string[] {
+function decodeShortcuts(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [...DEFAULT_SHORTCUT_HREFS];
   const seen = new Set<string>();
   const hrefs: string[] = [];

@@ -10,16 +10,6 @@ describe("unwrapStressSignalsEnvelope", () => {
     expect(unwrapStressSignalsEnvelope(42)).toBeNull();
   });
 
-  it("unwraps the new { signals, amplifiers } wrapped shape", () => {
-    const result = unwrapStressSignalsEnvelope({
-      signals: { supply: { value: 40, available: true } },
-      amplifiers: { psi: 1.2, contagion: 1.15 },
-    });
-    expect(result).not.toBeNull();
-    expect(result!.signals).toEqual({ supply: { value: 40, available: true } });
-    expect(result!.amplifiers).toEqual({ psi: 1.2, contagion: 1.15 });
-  });
-
   it("treats legacy flat shape as signals map with default amplifiers", () => {
     const result = unwrapStressSignalsEnvelope({
       supply: { value: 10, available: true },

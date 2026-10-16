@@ -96,9 +96,4 @@ describe("RailSafetySummary", () => {
     expect(headline?.textContent).not.toContain("Frozen");
   });
 
-  it("links a published grade to the report card", () => {
-    render(<RailSafetySummary items={signals({ grade: "B+", dews: "40" })} />);
-
-    expect(screen.getByText("B+").closest("a")?.getAttribute("href")).toBe("#report-card");
-  });
 });

@@ -49,7 +49,7 @@ export interface TimelineUrlState {
   event: string;
 }
 
-export const TIMELINE_URL_SCHEMA: UrlStateSchema<TimelineUrlState> = {
+const TIMELINE_URL_SCHEMA: UrlStateSchema<TimelineUrlState> = {
   type: { kind: "string", defaultValue: "", trim: false },
   severity: {
     kind: "enum",

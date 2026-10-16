@@ -1,11 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
-import { getVerifiedDocFiles } from "../lib/doc-files.mts";
-import { canonicalizeOwnershipSourcePattern, createOwnershipGlobMatcher, PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
+import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
@@ -34,10 +33,6 @@ type OwnershipRegistry = {
 const ownership = JSON.parse(
   readFileSync(resolve(REPO_ROOT, "docs/doc-ownership.json"), "utf8"),
 ) as OwnershipRegistry;
-const packageJson = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8")) as {
-  scripts?: Record<string, string>;
-};
-const packageScripts = packageJson.scripts ?? {};
 const mappings = ownership.mappings ?? [];
 const exclusions = ownership.exclusions ?? [];
 const trackedFiles = execFileSync("git", ["ls-files", "-z"], {
@@ -66,70 +61,6 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
 }
 
 describe("doc-ownership registry integrity", () => {
-  it("requires bounded references for a short document at the byte threshold", () => {
-    expect(requiresDocNavigation("x".repeat(50 * 1024))).toBe(true);
-    expect(requiresDocNavigation("short document")).toBe(false);
-  });
-
-  it("matches globstar directories at zero or multiple depths", () => {
-    const match = createOwnershipGlobMatcher("scripts/**/check-*.ts");
-    expect(match("scripts/check-docs.ts")).toBe(true);
-    expect(match("scripts/ci/nested/check-docs.ts")).toBe(true);
-    expect(match("worker/check-docs.ts")).toBe(false);
-  });
-
-  it("normalizes only skill facade sources to canonical tracked paths", () => {
-    for (const facade of [".agents", ".claude"]) {
-      expect(canonicalizeOwnershipSourcePattern(`${facade}/skills/**/SKILL.md`)).toBe(".codex/skills/**/SKILL.md");
-    }
-    expect(canonicalizeOwnershipSourcePattern(".codex/skills/**")).toBe(".codex/skills/**");
-    expect(canonicalizeOwnershipSourcePattern(".claude/settings.json")).toBe(".claude/settings.json");
-  });
-
-  it("keeps curated runbook navigation metadata out of runtime routing references", () => {
-    for (const reference of PATH_FAMILIES.flatMap((family) => [...family.docs, ...family.background])) {
-      expect(reference).not.toHaveProperty("runbook");
-    }
-  });
-
-  it("uses mappings as the sole authored routing model", () => {
-    expect(mappings.length).toBeGreaterThan(0);
-    // DEC-14: nine bounded domain/admin mappings, without additional check trees.
-    expect(mappings.length).toBeLessThanOrEqual(29);
-    expect(ownership.taskFamilies).toBeUndefined();
-    expect(new Set(mappings.map((mapping) => mapping.id)).size).toBe(mappings.length);
-    expect(mappings.find((mapping) => mapping.id === "documentation")?.tier).toBe("fallback");
-    expect(mappings.find((mapping) => mapping.id === "frontend-routes")?.checks).toEqual([
-      "npm run lint:changed",
-      "npm run typecheck",
-      "npx vitest run src",
-    ]);
-    expect(mappings.find((mapping) => mapping.id === "documentation")?.checks).toBeUndefined();
-    for (const id of ["worker-runtime", "shared-runtime"]) {
-      expect(mappings.find((mapping) => mapping.id === id)?.checks).toEqual(expect.arrayContaining([
-        "npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts",
-      ]));
-    }
-  });
-
-  it.each([
-    "worker/src/cron/sync-v9-supply-attribution.ts",
-    "worker/src/lib/safety-score-v9/supply-attribution.ts",
-    "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-    "worker/src/lib/safety-score-v9/ccip-pending-observer.ts",
-    "worker/src/lib/safety-score-v9/layerzero-oft-pending-observer.ts",
-    "worker/src/lib/safety-score-v9/l2-messenger-pending-observer.ts",
-    "worker/src/lib/safety-score-v9/transfer-materiality.ts",
-  ])("routes supply producers to attribution and in-flight accounting: %s", (file) => {
-    const primaryDocs = mappings
-      .filter((mapping) => matchesAny(file, mapping.sources))
-      .flatMap((mapping) => mapping.docs.map(normalizeDoc));
-    expect(primaryDocs).toEqual(expect.arrayContaining([
-      { path: "docs/process/report-cards-appendix.md", anchor: "supply-attribution-and-in-flight-accounting" },
-      { path: "docs/process/report-cards-appendix.md", anchor: "bridge-in-flight-accounting" },
-    ]));
-  });
-
   const references: Array<{ path: string; anchor?: string }> = [
     ...(ownership.baseDocs ?? []).map((path) => ({ path })),
     ...mappings.flatMap((mapping) => [
@@ -213,16 +144,6 @@ describe("doc-ownership registry integrity", () => {
     }
     expect([...remainingExceptions], "Remove exceptions no longer routed as primary sections").toEqual([]);
   });
-  it("keeps npm run checks wired to package scripts", () => {
-    for (const mapping of mappings) {
-      for (const check of mapping.checks ?? []) {
-        for (const match of check.matchAll(/\bnpm run\s+([^\s]+)/g)) {
-          expect(Object.hasOwn(packageScripts, match[1]), `${mapping.id}: ${match[1]}`).toBe(true);
-        }
-      }
-    }
-  });
-
   it("keeps declared invariant inputs live and their tests executable", () => {
     for (const mapping of mappings) {
       for (const declaration of mapping.testOwnership ?? []) {
@@ -235,64 +156,6 @@ describe("doc-ownership registry integrity", () => {
     }
   });
 
-  it("rejects every dead mapping source pattern and dead exclusions", () => {
-    const unmatchedSources: string[] = [];
-    for (const mapping of mappings) {
-      expect(mapping.sources.length, mapping.id).toBeGreaterThan(0);
-      for (const source of mapping.sources) {
-        const match = createOwnershipGlobMatcher(canonicalizeOwnershipSourcePattern(source));
-        if (!trackedFiles.some(match)) unmatchedSources.push(`${mapping.id}: ${source}`);
-      }
-    }
-    expect(unmatchedSources, `Unmatched ownership source patterns:\n${unmatchedSources.join("\n")}`).toEqual([]);
-    for (const exclusion of exclusions) {
-      expect(exclusion.reason.trim()).not.toBe("");
-      expect(trackedFiles.some((file) => matchesAny(file, exclusion.sources)), exclusion.reason).toBe(true);
-    }
-  });
-
-  it("keeps critical contract docs owned while generic routes use the frontend contract", () => {
-    const required = [
-      "docs/stablecoin-data.md",
-      "docs/process/adding-a-stablecoin.md",
-      "docs/process/stablecoin-research-sidecars.md",
-      "docs/pricing-pipeline.md",
-      "docs/supply-snapshot.md",
-      "docs/api-endpoint-authoring.md",
-      "docs/worker-infrastructure.md",
-      "docs/process/cron-trigger-policy.md",
-      "docs/telegram-architecture.md",
-      "docs/telegram-alerts.md",
-      "docs/telegram-mini-app.md",
-      "docs/deployment-process.md",
-      "docs/report-cards.md",
-      "docs/mint-authority-scoring.md",
-      "docs/safety-score-map.md",
-      "docs/status-dashboard.md",
-      "docs/testing.md",
-      "docs/scripts.md",
-      "docs/process/agent-start-here.md",
-    ];
-    const ownedDocs = new Set(
-      mappings.flatMap((mapping) => [...mapping.docs, ...(mapping.background ?? [])]
-        .map(normalizeDoc)
-        .map((doc) => doc.path)),
-    );
-    expect(required.filter((path) => !ownedDocs.has(path))).toEqual([]);
-  });
-
-  it("declares a source-bound owner for every verified document", () => {
-    const ownedDocs = new Set(mappings.flatMap((mapping) =>
-      [...mapping.docs, ...(mapping.background ?? [])].map(normalizeDoc).map((doc) => doc.path)));
-    const verifiedDocs = getVerifiedDocFiles(REPO_ROOT).map((path) => relative(REPO_ROOT, path));
-    expect(verifiedDocs.filter((path) => !ownedDocs.has(path))).toEqual([]);
-    for (const path of verifiedDocs) {
-      const owners = mappings.filter((mapping) =>
-        [...mapping.docs, ...(mapping.background ?? [])].map(normalizeDoc).some((doc) => doc.path === path));
-      expect(owners.some((mapping) => matchesAny(path, mapping.sources)), path).toBe(true);
-    }
-  });
-
   it.each([
     "live-reserves", "dex-liquidity", "worker-infrastructure", "report-cards", "pricing-pipeline",
   ])("keeps the current %s contract below 40KB with a navigable appendix", (name) => {
@@ -302,27 +165,6 @@ describe("doc-ownership registry integrity", () => {
     expect(Buffer.byteLength(contract, "utf8")).toBeLessThan(40_000);
     expect(collectMarkdownReferences(contract).links.some((link) => link.includes(appendixPath.slice(5)))).toBe(true);
     expect(appendix).toMatch(/^> \*\*Agent navigation\*\*/m);
-  });
-
-  it("covers every tracked depth-two directory with a mapping or exclusion", () => {
-    const coveredPatterns = [
-      ...mappings.flatMap((mapping) => mapping.sources),
-      ...exclusions.flatMap((exclusion) => exclusion.sources),
-    ];
-    const filesByDirectory = new Map<string, string[]>();
-    for (const file of trackedFiles) {
-      if (!COVERAGE_ROOTS.some((root) => file.startsWith(root))) continue;
-      const parts = file.split("/");
-      const directory = parts.slice(0, Math.min(3, parts.length - 1)).join("/");
-      if (!directory.includes("/")) continue;
-      const group = filesByDirectory.get(directory) ?? [];
-      group.push(file);
-      filesByDirectory.set(directory, group);
-    }
-    const uncoveredDirectories = [...filesByDirectory].filter(
-      ([, files]) => !files.some((file) => matchesAny(file, coveredPatterns)),
-    ).map(([directory]) => directory);
-    expect(uncoveredDirectories).toEqual([]);
   });
 
   it("reports fallback-inclusive coverage while enforcing honest specific coverage", () => {

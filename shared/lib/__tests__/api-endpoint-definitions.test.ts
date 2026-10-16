@@ -5,6 +5,12 @@ import {
 } from "@shared/lib/api-endpoints/definitions";
 import { validateAllowedEndpointMethods } from "@shared/lib/api-endpoints/validation";
 
+expectTypeOf<EndpointDefinitionByKey<"stablecoins">["key"]>().toEqualTypeOf<"stablecoins">();
+expectTypeOf<EndpointDefinitionByKey<"stablecoins">["methods"]>().toEqualTypeOf<readonly ["GET"]>();
+expectTypeOf<EndpointDefinitionByKey<"feedback">["methods"]>().toEqualTypeOf<readonly ["POST"]>();
+expectTypeOf<EndpointDefinitionByKey<"backfill-dews">["methods"]>()
+  .toEqualTypeOf<readonly ["GET", "POST"]>();
+
 describe("endpoint definition factory parity", () => {
   it.each(["PUT", "DELETE", "PATCH"])("advertises only actual endpoint methods for %s", (method) => {
     expect(validateAllowedEndpointMethods(method, ["POST"])).toEqual({
@@ -13,14 +19,6 @@ describe("endpoint definition factory parity", () => {
     expect(validateAllowedEndpointMethods(method, ["GET"])).toEqual({
       message: "Method not allowed", allowedMethods: ["GET"],
     });
-  });
-
-  it("preserves inferred literal keys and method tuples", () => {
-    expectTypeOf<EndpointDefinitionByKey<"stablecoins">["key"]>().toEqualTypeOf<"stablecoins">();
-    expectTypeOf<EndpointDefinitionByKey<"stablecoins">["methods"]>().toEqualTypeOf<readonly ["GET"]>();
-    expectTypeOf<EndpointDefinitionByKey<"feedback">["methods"]>().toEqualTypeOf<readonly ["POST"]>();
-    expectTypeOf<EndpointDefinitionByKey<"backfill-dews">["methods"]>()
-      .toEqualTypeOf<readonly ["GET", "POST"]>();
   });
 
   it("keeps endpoint keys and route paths unambiguous", () => {

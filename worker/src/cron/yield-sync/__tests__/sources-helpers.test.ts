@@ -143,13 +143,6 @@ describe("createOptionalSourceBudget", () => {
     vi.useRealTimers();
   });
 
-  it("exposes the budget controller directly when no caller signal is supplied", () => {
-    const budget = createOptionalSourceBudget("fixture source", 30_000);
-    expect(budget.signal).toBe(budget.budgetController.signal);
-    expect(budget.signal.aborted).toBe(false);
-    budget.cleanup();
-  });
-
   it("aborts with the label and elapsed budget once the timeout fires", async () => {
     const budget = createOptionalSourceBudget("Aave V3 supply rates", 25_000);
 

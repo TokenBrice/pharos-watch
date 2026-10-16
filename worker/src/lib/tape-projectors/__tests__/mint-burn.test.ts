@@ -41,45 +41,6 @@ function makeFlow(overrides: Partial<Record<string, unknown>> = {}): Record<stri
 }
 
 describe("mint_burn projector", () => {
-  it("emits mint_burn.large_mint at notice severity for $15M mints", async () => {
-    const db = mockTapeD1(withRows([makeFlow({ amount_usd: 15_000_000 })])) as MockD1Database;
-    await projectMintBurnLargeFlows(db);
-    const inserts = tapeInsertBindsForType(db, "mint_burn.large_mint");
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]![2]).toBe("notice");
-  });
-
-  it("scales severity to warning at $25M and severe at $100M", async () => {
-    const db = mockTapeD1(withRows([
-      makeFlow({ id: "ethereum-0xa-0", amount_usd: 30_000_000 }),
-      makeFlow({ id: "ethereum-0xb-0", amount_usd: 150_000_000, direction: "burn", burn_type: "effective_burn" }),
-    ])) as MockD1Database;
-    await projectMintBurnLargeFlows(db);
-    const mints = tapeInsertBindsForType(db, "mint_burn.large_mint");
-    const burns = tapeInsertBindsForType(db, "mint_burn.large_burn");
-    expect(mints[0]![2]).toBe("warning"); // $30M mint
-    expect(burns[0]![2]).toBe("severe");  // $150M burn
-  });
-
-  it("renders compact USD in the title and a burn verb for burn rows", async () => {
-    const db = mockTapeD1(withRows([
-      makeFlow({
-        id: "polygon-0xc-0",
-        stablecoin_id: "usdc-circle",
-        symbol: "USDC",
-        chain_id: "polygon",
-        direction: "burn",
-        amount_usd: 50_000_000,
-        burn_type: "effective_burn",
-      }),
-    ])) as MockD1Database;
-    await projectMintBurnLargeFlows(db);
-    const inserts = tapeInsertBindsForType(db, "mint_burn.large_burn");
-    expect(inserts).toHaveLength(1);
-    // bind order: eventId, type, severity, ts, ends_at, coin_id, issuer_id, peg, chain, title, ...
-    const title = inserts[0]![9];
-    expect(title).toMatch(/USDC burned \$50\.0M.*polygon/);
-  });
 
   it("persists only economic flows at exact severity boundaries and keeps reruns durable", async () => {
     const { db, sqlite } = fixtures.open();

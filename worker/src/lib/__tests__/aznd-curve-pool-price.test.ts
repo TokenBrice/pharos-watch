@@ -96,24 +96,12 @@ describe("AZND exact Curve pool price", () => {
     })).resolves.toBeNull();
   });
 
-  it("rejects token-index reversal", async () => {
-    mockHealthyPool({ coin0: USDC });
-
-    await expect(fetchAzndCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
-  });
-
-  it("rejects a pool below the reviewed quote-reserve floor", async () => {
-    mockHealthyPool({ usdcBalance: 99n * 10n ** 6n });
-
-    await expect(fetchAzndCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
-  });
-
-  it("rejects excessive executable quote impact", async () => {
-    mockHealthyPool({ impactOutput: 1_500_000n });
+  it.each([
+    ["token-index reversal", { coin0: USDC }],
+    ["a pool below the reviewed quote-reserve floor", { usdcBalance: 99n * 10n ** 6n }],
+    ["excessive executable quote impact", { impactOutput: 1_500_000n }],
+  ])("rejects %s", async (_name, overrides) => {
+    mockHealthyPool(overrides);
 
     await expect(fetchAzndCurvePoolPrice({
       assetsById: new Map([["usdc-circle", trustedUsdc()]]),

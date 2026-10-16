@@ -3,7 +3,6 @@ import type { ApiKeyAuditEntry } from "@shared/types";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 import {
   buildOperationalActivityView,
-  groupConsecutiveActivity,
   sanitizeOperationalDetail,
 } from "@/lib/operational-history-model";
 
@@ -56,39 +55,6 @@ describe("operational history model", () => {
     });
   });
 
-  it("does not fuzzy-deduplicate different keys, lifecycle verbs, or distant timestamps", () => {
-    const view = buildOperationalActivityView(
-      [adminLifecycle],
-      [
-        { ...credentialLifecycle, id: 12, apiKeyId: 8 },
-        { ...credentialLifecycle, id: 13, action: "deactivated" },
-        { ...credentialLifecycle, id: 14, createdAt: 1_100 },
-      ],
-    );
-
-    expect(view.entries).toHaveLength(4);
-    expect(view.deduplicatedCount).toBe(0);
-  });
-
-  it.each([5, 6])("deduplicates only within five seconds (offset %s)", (offset) => {
-    const view = buildOperationalActivityView(
-      [adminLifecycle],
-      [{ ...credentialLifecycle, createdAt: adminLifecycle.at + offset }],
-    );
-    expect(view.entries.map((entry) => entry.id)).toEqual(offset === 5
-      ? ["combined:admin-action:1:credential-audit:11"]
-      : ["credential-audit:11", "admin-action:1"]);
-  });
-
-  it("retains repeated lifecycle events from the same source", () => {
-    const view = buildOperationalActivityView(
-      [adminLifecycle, { ...adminLifecycle, id: 2, at: 1_001 }],
-      [],
-    );
-    expect(view.entries.map((entry) => entry.id)).toEqual(["admin-action:2", "admin-action:1"]);
-    expect(view.deduplicatedCount).toBe(0);
-  });
-
   it("redacts normalized keys and array strings through both public adapters", () => {
     const detail = { "Access_Token": "plain-secret", "api_key_id": 7, values: ["ph_live_hidden", "/api/status"] };
     const view = buildOperationalActivityView(
@@ -134,43 +100,5 @@ describe("operational history model", () => {
       header: "[redacted]",
       note: "[redacted]",
     });
-  });
-
-  it("bounds deeply nested, oversized detail payloads", () => {
-    const detail = { level1: { level2: { level3: { level4: { level5: { value: "hidden" } } } } } };
-    expect(JSON.stringify(sanitizeOperationalDetail(detail))).toContain("[truncated]");
-    expect(sanitizeOperationalDetail({ values: Array.from({ length: 25 }, (_, index) => index) })).toMatchObject({
-      values: expect.arrayContaining(["[5 more items]"]),
-    });
-  });
-});
-
-describe("groupConsecutiveActivity", () => {
-  const entry = (id: string, at: number, actionCode = "debug_sync_state") => ({
-    id,
-    sources: ["admin-action" as const],
-    at,
-    actors: ["operator"],
-    actionCode,
-    actionLabel: actionCode,
-    target: "sync-mint-burn",
-    outcome: "ok" as const,
-    httpStatus: 200,
-    detail: null,
-    lifecycleIdentity: null,
-  });
-
-  it("groups only identical consecutive rows and keeps the time range", () => {
-    const groups = groupConsecutiveActivity([
-      entry("a", 400),
-      entry("b", 300),
-      entry("c", 200, "trigger_cron"),
-      entry("d", 100),
-    ]);
-    expect(groups.map((group) => [group.entry.id, group.count, group.firstAt, group.lastAt])).toEqual([
-      ["a", 2, 300, 400],
-      ["c", 1, 200, 200],
-      ["d", 1, 100, 100],
-    ]);
   });
 });

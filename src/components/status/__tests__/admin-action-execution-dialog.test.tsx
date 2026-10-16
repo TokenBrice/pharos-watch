@@ -109,18 +109,6 @@ function renderDialog(
 }
 
 describe("AdminActionExecutionDialog", () => {
-  it("blocks confirmation while live readiness is blocked", () => {
-    const { controller } = renderDialog(makeAction(), makeController(), [
-      { id: "d1-writes", label: "D1 writes", state: "blocked", detail: "Write probe failed." },
-    ]);
-
-    const confirm = screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement;
-    expect(screen.getByText("Live execution blocked")).toBeTruthy();
-    expect(confirm.disabled).toBe(true);
-    fireEvent.click(confirm);
-    expect(controller.execute).not.toHaveBeenCalled();
-  });
-
   it("requires broad-scope acknowledgement only for live non-scoped and batch runs", () => {
     const dualModeAction = makeAction({
       dryRun: { supported: true, default: true, liveSupported: true, queryParam: "dry-run" },

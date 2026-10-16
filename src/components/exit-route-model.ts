@@ -135,20 +135,20 @@ function finiteNumber(value: number | null | undefined, fallback = 0): number {
   return Number.isFinite(value) ? Number(value) : fallback;
 }
 
-export function stableRouteAccentColor(id: string): string {
+function stableRouteAccentColor(id: string): string {
   let hash = 0;
   for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) % 360;
   return `oklch(0.68 0.14 ${hash})`;
 }
 
-export function flowIntensityBand(sharePct: number): LiquidityExitRouteItem["flowIntensity"] {
+function flowIntensityBand(sharePct: number): LiquidityExitRouteItem["flowIntensity"] {
   const share = Math.max(0, finiteNumber(sharePct));
   if (share >= 25) return "high";
   if (share >= 10) return "medium";
   return "low";
 }
 
-export function routePacketCount(sharePct: number): number {
+function routePacketCount(sharePct: number): number {
   const share = Math.max(0, finiteNumber(sharePct));
   if (share >= 35) return 5;
   if (share >= 22) return 4;
@@ -185,14 +185,14 @@ function routeY(index: number, base: number, gap: number): number {
   return base + Math.max(0, index) * gap;
 }
 
-export function organicDashArray(organicPct: number | null): string | undefined {
+function organicDashArray(organicPct: number | null): string | undefined {
   const organic = finiteNumber(organicPct, Number.NaN);
   if (!Number.isFinite(organic) || organic >= 60) return undefined;
   if (organic >= 35) return "10 8";
   return "5 9";
 }
 
-export function balanceRailDashArray(balancePct: number | null): string | undefined {
+function balanceRailDashArray(balancePct: number | null): string | undefined {
   const balance = finiteNumber(balancePct, Number.NaN);
   if (!Number.isFinite(balance) || balance >= 70) return undefined;
   if (balance >= 45) return "12 8";

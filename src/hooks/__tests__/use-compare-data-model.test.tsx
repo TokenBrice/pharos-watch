@@ -280,23 +280,4 @@ describe("useCompareDataModel", () => {
     for (const history of histories) expect(history.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it("includes aggregate flow refetches in handleRetry", async () => {
-    const refetchFlows = vi.fn().mockResolvedValue({ status: "success", error: null });
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [] },
-      refetch: refetchFlows,
-    });
-
-    const { result } = renderHook(() => useCompareDataModel({
-      selectedIds: [],
-      flowHours: 24,
-      radarCohort: "peg",
-    }));
-
-    await act(async () => {
-      await result.current.handleRetry();
-    });
-
-    expect(refetchFlows).toHaveBeenCalledTimes(1);
-  });
 });

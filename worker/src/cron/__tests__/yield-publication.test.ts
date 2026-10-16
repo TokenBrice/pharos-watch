@@ -26,7 +26,7 @@ import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/cons
 import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/coordinator-persist";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
-import { publishYieldRowsAtomically, YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS } from "../yield-sync/publication-atomic-batch";
+import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";
 import {
   FIXED_NOW,
   buildPayloadWithObservedAt,
@@ -45,15 +45,6 @@ import { evaluateYieldSources } from "../yield-sync/evaluation";
 
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((res) => {
-    resolve = res;
-  });
-  return { promise, resolve };
-}
-
 
 describe("publishYieldCoordinatorResults", () => {
   function parseJsonBind<T>(entry: { binds: unknown[] } | undefined, index = 0): T {
@@ -538,44 +529,6 @@ describe("publishYieldCoordinatorResults", () => {
     });
     expect(history.some((entry) => entry.sql.includes("SET state = 'published'"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?"))).toBe(false);
-  });
-
-  it("retains the matching freshness sentinel when the cron signal aborts after row publication", async () => {
-    const db = makePublicationDb();
-    const controller = new AbortController();
-    const entered = deferred<void>();
-    const release = deferred<void>();
-    const prepare = db.prepare.bind(db);
-    const prepareSpy = vi.spyOn(db, "prepare").mockImplementation((sql) => {
-      const statement = prepare(sql);
-      if (!sql.includes("UPDATE yield_publication_generations")) return statement;
-      const bind = statement.bind.bind(statement);
-      statement.bind = (...values) => {
-        const bound = bind(...values);
-        const run = bound.run.bind(bound);
-        bound.run = async () => {
-          entered.resolve();
-          await release.promise;
-          return run();
-        };
-        return bound;
-      };
-      return statement;
-    });
-    const resultPromise = publishYieldCoordinatorResults(makePublishParams({ db, signal: controller.signal }));
-    const rejected = expect(resultPromise).rejects.toThrow("cron timeout");
-    try {
-      await entered.promise;
-      controller.abort(new Error("cron timeout"));
-    } finally {
-      release.resolve();
-      await rejected;
-      prepareSpy.mockRestore();
-    }
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
-    expect(history.some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("pharos:yield-sync:history-retention-delete"))).toBe(false);
   });
 
   it("advances the matching freshness sentinel for expired-source rankings", async () => {
@@ -1203,62 +1156,6 @@ describe("yield publication migration compatibility", () => {
         { generation_id: "g-3", retention_reason: "trend" },
       ]);
     } finally {
-      sqlite.close();
-    }
-  });
-
-  it("measures the published payload and warns before the D1 statement cap", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      const result = await publishYieldRowsAtomically(db, {
-        rankingsPayload: {
-          rankings: [],
-          publication: { generationId: "yield-1774526400" },
-          blob: "x".repeat(YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS + 1),
-        },
-        startSec: 1_774_526_400,
-        generationId: "yield-1774526400",
-        yieldDataRows: [],
-        historyRows: [
-          {
-            stablecoin_id: "coin-a",
-            source_key: "source-a",
-            recorded_at: 1_774_526_400,
-            is_best: 1,
-            apy: 4.2,
-            data_source: "test",
-            publication_generation_id: "yield-1774526400",
-            publication_state: "published",
-            pys_inputs_at_publish: null,
-          },
-          {
-            stablecoin_id: "coin-b",
-            source_key: "source-b",
-            recorded_at: 1_774_526_400,
-            is_best: 1,
-            apy: 4.4,
-            data_source: "test",
-            publication_generation_id: "yield-1774526400",
-            publication_state: "published",
-            pys_inputs_at_publish: JSON.stringify({ schemaVersion: YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION }),
-          },
-        ],
-        decisionRows: [],
-        decisionAlternativeRows: [],
-      });
-
-      expect(result.written).toBe(true);
-      expect(result.publicationStats.cacheValueChars).toBeGreaterThan(YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS);
-      expect(result.publicationStats.oversize).toBe(true);
-      // The replay-evidence counters follow the rows actually bound to the write.
-      expect(result.publicationStats.pysInputsPersistedCount).toBe(1);
-      expect(result.publicationStats.pysInputsNullCount).toBe(1);
-      expect(
-        warnSpy.mock.calls.some((call) => String(call[0]).includes("yield-publication-payload-oversize")),
-      ).toBe(true);
-    } finally {
-      warnSpy.mockRestore();
       sqlite.close();
     }
   });

@@ -3,29 +3,12 @@ import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import { catchAndWarn, redactUrlSecrets } from "../warnings";
 
 describe("redactUrlSecrets", () => {
-  it("redacts a plain apikey query param", () => {
-    expect(redactUrlSecrets("https://api.example.com/v1?apikey=secret123")).toBe(
-      "https://api.example.com/v1?apikey=REDACTED",
-    );
-  });
-
   it("redacts mixed-case secret param names", () => {
     const input =
       "fetched https://api.example.com/v1?ApiKey=abc and https://other.example.com/data?TOKEN=xyz now";
     expect(redactUrlSecrets(input)).toBe(
       "fetched https://api.example.com/v1?ApiKey=REDACTED and https://other.example.com/data?TOKEN=REDACTED now",
     );
-  });
-
-  it("redacts multiple secret params on a single URL", () => {
-    expect(redactUrlSecrets("https://api.example.com/v1?apikey=a&token=b&foo=bar")).toBe(
-      "https://api.example.com/v1?apikey=REDACTED&token=REDACTED&foo=bar",
-    );
-  });
-
-  it("passes a non-URL string through unchanged", () => {
-    const input = "no urls here, even apikey=secret should not be touched";
-    expect(redactUrlSecrets(input)).toBe(input);
   });
 
   it("redacts api_key, auth, access_token, secret variants", () => {

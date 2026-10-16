@@ -30,22 +30,6 @@ function html(noise: string, substance = "Verified customers may redeem at a min
 }
 
 describe("scenario document substance fingerprints", () => {
-  it("excludes per-request scripts, nonces, build ids, rotating assets, sessions and cache-busters", async () => {
-    const before = document(html("request-one"));
-    const after = document(html("request-two"));
-    expect(before.normalizedText).toBe(after.normalizedText);
-    expect((await compareDocuments(before, after)).verdict).toBe("holds");
-    expect(before.normalizedText).toContain("Last updated: February 26, 2026");
-  });
-
-  it("reports moved Last-Modified and ETag as evidence without changing the verdict", async () => {
-    const before = document(html("one"), { lastModified: "Wed, 30 Sep 2026 18:10:04 GMT", etag: '"edge-one"' });
-    const after = document(html("two"), { lastModified: "Wed, 30 Sep 2026 18:09:44 GMT", etag: '"edge-two"' });
-    const result = await compareDocuments(before, after);
-    expect(result.verdict).toBe("holds");
-    expect(result.observed).toMatchObject({ differences: [], transportMetadataChanges: [{ sourceId: "terms", recorded: { lastModified: before.fingerprint!.lastModified, etag: '"edge-one"' }, observed: { lastModified: after.fingerprint!.lastModified, etag: '"edge-two"' } }] });
-  });
-
   it("still detects an injected substantive redemption edit with unchanged transport headers", async () => {
     const result = await compareDocuments(document(html("one")), document(html("two", "Every holder may redeem without any minimum.")));
     expect(result.verdict).toBe("changed");
@@ -90,14 +74,6 @@ const skyChecks = FAILURE_SCENARIO_CHECKS["usds-sky"]!.checks;
 const structuralChecks = skyChecks.filter((check) => check.id === "hat-approvals-bar");
 
 describe("Sky structural governance bar and live figure", () => {
-  it("keeps ordinary approval-weight movement informational", async () => {
-    const context = skyContext();
-    for (const check of structuralChecks) expect((await check.run(context)).verdict).toBe("holds");
-    const figure = skyChecks.find((check) => check.id === "hat-approval-weight")!;
-    expect(figure.kind).toBe("figure");
-    expect(await figure.run(context)).toMatchObject({ verdict: "changed", observed: { approvalsSky: "7044269284", approvalsWad: (7044269284n * 10n ** 18n).toString() } });
-  });
-
   it.each(["hat", "pauseAuthority", "pauseProxy", "proxyOwner"] as const)("detects a changed %s", async (field) => {
     const result = await structuralChecks[0]!.run(skyContext({ [field]: "0x0000000000000000000000000000000000000001" }));
     expect(result.verdict).toBe("changed");

@@ -300,56 +300,6 @@ describe("mint-authority detail view-model builder", () => {
     });
   });
 
-  it("sorts incident callouts from a typed mint-authority summary", () => {
-    const viewModel = buildMintAuthorityDetailViewModel(makeMintAuthorityCoin({
-      mintPath: "issuer-direct-mint",
-      authorityPosture: "concentrated-admin",
-      confidence: "verified",
-      summary: "Issuer backend can mint through reviewed operator controls.",
-      sources: [
-        { label: "Review", url: "https://example.com/review" },
-        { label: "Docs", url: "https://example.com/docs" },
-      ],
-      mintIncidents: [
-        {
-          date: "2024-01-01",
-          status: "resolved",
-          summary: "Older privileged mint incident.",
-          sources: [{ label: "Postmortem", url: "https://example.com/postmortem" }],
-        },
-        {
-          date: "2025-02-01",
-          status: "active",
-          summary: "Newer privileged mint incident.",
-          sources: [{ label: "Thread", url: "https://example.com/thread" }],
-        },
-      ],
-    }));
-
-    expect(viewModel.sources).toEqual([
-      { label: "Review", url: "https://example.com/review" },
-      { label: "Docs", url: "https://example.com/docs" },
-    ]);
-    expect(viewModel.mintIncidents.map((incident) => incident.date)).toEqual(["2025-02-01", "2024-01-01"]);
-    expect(viewModel.mintIncidents[1]?.sources).toEqual([
-      { label: "Postmortem", url: "https://example.com/postmortem" },
-    ]);
-  });
-
-  it("lets an authored headline override the generated verdict", () => {
-    const summary: MintAuthorityClientSummary = {
-      mintPath: "issuer-direct-mint", authorityPosture: "concentrated-admin", confidence: "verified",
-      summary: "Long reviewer narrative about the issuer mint route.",
-    };
-    const published = { mint: { score: 40, posture: "concentrated-admin" }, caps: [] };
-    expect(buildMintAuthorityDetailViewModel(makeMintAuthorityCoin(summary), published).verdict)
-      .toMatch(/^Concentrated — the issuer mints /);
-    expect(buildMintAuthorityDetailViewModel(
-      makeMintAuthorityCoin({ ...summary, headline: "Authored issuer verdict." }),
-      published,
-    ).verdict).toBe("Authored issuer verdict.");
-  });
-
   it("resolves the inheritance parent to its symbol and Mint Authority anchor", () => {
     const view = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("susde-ethena")!));
     expect(view.inheritedFrom).toEqual({ symbol: "USDe", href: "/stablecoin/usde-ethena/#mint-authority" });

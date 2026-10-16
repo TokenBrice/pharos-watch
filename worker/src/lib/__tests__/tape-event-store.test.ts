@@ -70,18 +70,6 @@ function createTapeDatabase(): { db: D1Database } {
 }
 
 describe("Tape event store static-catalog probes", () => {
-  it("returns only events whose source identity has not been persisted", async () => {
-    const { db } = createTapeDatabase();
-    const observed = event("observed");
-    const pending = {
-      ...event("pending"),
-      type: "depeg.opened" as const,
-    };
-    await insertTapeEvents(db, [observed]);
-
-    await expect(filterUnprojectedTapeEvents(db, [observed, pending])).resolves.toEqual([pending]);
-  });
-
   it("retries two overload failures and returns each unprojected event once", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);

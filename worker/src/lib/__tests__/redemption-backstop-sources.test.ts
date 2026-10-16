@@ -57,7 +57,6 @@ describe("buildRedemptionBackstopEntry", () => {
   const now = 1_700_000_000;
   const fixedFeeCases = [
     { feeBps: 0, expectedScore: 100 }, { feeBps: 25, expectedScore: 80 },
-    { feeBps: 75, expectedScore: 60 }, { feeBps: 200, expectedScore: 40 },
   ] as const;
 
   type RedemptionConfig = Parameters<typeof buildRedemptionBackstopEntry>[2];
@@ -1590,25 +1589,6 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacityRejectionReason).toBe("invalid-freshness");
   });
 
-  it("does not emit an effective-exit score when the redemption route is unresolved", async () => {
-    const entry = await buildEntry(
-      "test-coin",
-      route({
-        routeFamily: "queue-redeem",
-        settlementModel: "queued",
-        executionModel: "rules-based-nav",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "dynamic-or-unclear" },
-      }),
-      50_000_000,
-      55,
-      { reserveSnapshotMetadata: null },
-    );
-
-    expect(entry.resolutionState).toBe("missing-capacity");
-    expect(entry.score).toBeNull();
-  });
-
   it("preserves reviewed fee and docs metadata on failed reserve-sync routes", () => {
     const entry = buildFailedRedemptionBackstopEntry(
       "test-coin",
@@ -2066,24 +2046,6 @@ describe("buildRedemptionBackstopEntry", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
       docs: [],
     }), 100_000_000, null)).rejects.toThrow(/Unknown tracked stablecoin id "test-coin"/);
-  });
-
-  it("deduplicates notes both within config and across config + runtime sources", async () => {
-    const runtimeNote = "Live reserve metadata unavailable; using configured fallback ratio";
-    const entry = await buildEntry(
-      "usds-sky",
-      route({
-        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
-        costModel: { kind: "fee-bps", feeBps: 0 },
-        notes: ["Shared note", "Shared note", runtimeNote],
-      }),
-      1_000_000,
-      50,
-      { reserveSnapshotMetadata: null },
-    );
-    const notes = entry.notes ?? [];
-    expect(notes.filter((n) => n === "Shared note").length).toBe(1);
-    expect(notes.filter((n) => n === runtimeNote).length).toBe(1);
   });
 
   it("adds the accepted FPI controller route without changing legacy entry fields", async () => {

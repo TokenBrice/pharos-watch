@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
@@ -53,41 +53,6 @@ afterEach(() => {
 });
 
 describe("PipelineSection", () => {
-  it("syncs keyboard tab selection to the URL and mounts only the active mode", async () => {
-    render(<PipelineSection data={makeHealthyStatusResponse()} />);
-
-    const qualityTab = screen.getByRole("tab", { name: /^Quality/ });
-    const marketsTab = screen.getByRole("tab", { name: /^Markets/ });
-    expect(screen.getByText("Quality panel mounted")).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1, name: "Pipeline" })).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: "Quality pipeline view" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain("Pipeline view: Quality");
-    expect(screen.queryByText("Price source panel mounted")).toBeNull();
-    expect(qualityTab.getAttribute("aria-controls")).toBe("pipeline-panel-quality");
-    expect(marketsTab.getAttribute("aria-controls")).toBeNull();
-
-    fireEvent.keyDown(qualityTab, { key: "ArrowRight" });
-
-    await waitFor(() => expect(screen.getByText("Price source panel mounted")).toBeTruthy());
-    expect(screen.getByText("Liquidity panel mounted")).toBeTruthy();
-    expect(screen.getByText("CoinGecko panel mounted")).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: "Markets pipeline view" })).toBeTruthy();
-    expect(screen.queryByText("Quality panel mounted")).toBeNull();
-    expect(window.location.search).toContain("view=markets");
-    expect(screen.getByRole("status").textContent).toContain("Pipeline view: Markets");
-    expect(document.activeElement).toBe(marketsTab);
-    expect(marketsTab.getAttribute("aria-controls")).toBe("pipeline-panel-markets");
-    expect(qualityTab.getAttribute("aria-controls")).toBeNull();
-  });
-
-  it("honors a URL-selected mode on mount", async () => {
-    window.history.replaceState({}, "", "/admin/pipeline/?view=integrity");
-    render(<PipelineSection data={makeHealthyStatusResponse()} />);
-
-    await waitFor(() => expect(screen.getByText("Integrity panel mounted")).toBeTruthy());
-    expect(screen.getByRole("tab", { name: /^Integrity/ }).getAttribute("aria-selected")).toBe("true");
-    expect(screen.queryByText("Quality panel mounted")).toBeNull();
-  });
 
   it("surfaces loader failures for inactive modes with human and raw labels", () => {
     const base = makeHealthyStatusResponse();

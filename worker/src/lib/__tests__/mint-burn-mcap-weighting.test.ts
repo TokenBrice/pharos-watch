@@ -12,15 +12,7 @@ describe("getMintBurnTrackedChains — per-coin contract pins", () => {
   it("USDai tracks arbitrum only", () => {
     expect(getMintBurnTrackedChains("usdai-usd-ai")).toEqual(["arbitrum"]);
   });
-  it("USDT tracks ethereum only (until Tron support)", () => {
-    expect(getMintBurnTrackedChains("usdt-tether")).toEqual(["ethereum"]);
-  });
-  it("EURC tracks ethereum only", () => {
-    expect(getMintBurnTrackedChains("eurc-circle")).toEqual(["ethereum"]);
-  });
-  it("DAI tracks ethereum only", () => {
-    expect(getMintBurnTrackedChains("dai-makerdao")).toEqual(["ethereum"]);
-  });
+
   it("returns empty array for an untracked coin", () => {
     expect(getMintBurnTrackedChains("nonexistent-coin")).toEqual([]);
   });
@@ -55,10 +47,6 @@ describe("sumMcapForTrackedChains", () => {
 
   it("falls back to peg-bucket total when chainCirculating is undefined", () => {
     expect(sumMcapForTrackedChains("usdc-circle", undefined, peggedTotal)).toBe(37_000_000_000);
-  });
-
-  it("falls back to peg-bucket total when chainCirculating is empty (CG-fallback assets)", () => {
-    expect(sumMcapForTrackedChains("usdc-circle", {}, peggedTotal)).toBe(37_000_000_000);
   });
 
   it("returns the circulating bucket total for an untracked coin id", () => {

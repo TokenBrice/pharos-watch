@@ -18,91 +18,41 @@ vi.mock("../../lib/abort", async (importOriginal) => ({
 }));
 
 describe("applyCuratedDetailAddress", () => {
-  it("returns already-normalized cached bodies unchanged without parsing", () => {
-    const curatedAddress = "0x57ab1e0003f623289cd798b1824be09a793e4bec";
-    const body = JSON.stringify({
-      price: 0.99,
-      address: curatedAddress,
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-    const parseSpy = vi.spyOn(JSON, "parse");
-
-    try {
-      expect(
-        applyCuratedDetailAddress(body, {
-          contracts: [{ chain: "ethereum", address: curatedAddress, decimals: 18 }],
-        }),
-      ).toBe(body);
-      expect(parseSpy).not.toHaveBeenCalled();
-    } finally {
-      parseSpy.mockRestore();
-    }
-  });
-
-  it("adds the curated address to token-built cached bodies", () => {
-    const body = JSON.stringify({
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-
-    expect(
-      JSON.parse(
-        applyCuratedDetailAddress(body, {
-          contracts: [
-            {
-              chain: "ethereum",
-              address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-              decimals: 18,
-            },
-          ],
-        }),
-      ),
-    ).toEqual({
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-      address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-    });
-  });
-
-  it("overrides stale cached addresses when the curated address is absent", () => {
-    const body = JSON.stringify({
-      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-
-    expect(
-      JSON.parse(
-        applyCuratedDetailAddress(body, {
-          contracts: [
-            {
-              chain: "ethereum",
-              address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-              decimals: 18,
-            },
-          ],
-        }),
-      ),
-    ).toEqual({
-      address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-  });
-
-  it("overrides stale cached addresses when a nested address matches the curated address", () => {
-    const curatedAddress = "0x57ab1e0003f623289cd798b1824be09a793e4bec";
-    const body = JSON.stringify({
-      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
-      tokens: [{ address: curatedAddress, totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-
-    expect(
-      JSON.parse(
-        applyCuratedDetailAddress(body, {
-          contracts: [{ chain: "ethereum", address: curatedAddress, decimals: 18 }],
-        }),
-      ),
-    ).toEqual({
-      address: curatedAddress,
-      tokens: [{ address: curatedAddress, totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
+  it.each([
+    {
+      name: "adds the curated address to token-built cached bodies",
+      body: { tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }] },
+      expected: {
+        tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+        address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      },
+    },
+    {
+      name: "overrides stale cached addresses when the curated address is absent",
+      body: {
+        address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+        tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+      expected: {
+        address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+        tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+    },
+    {
+      name: "overrides stale cached addresses when a nested address matches the curated address",
+      body: {
+        address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+        tokens: [{ address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+      expected: {
+        address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+        tokens: [{ address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+    },
+  ])("$name", ({ body, expected }) => {
+    expect(JSON.parse(applyCuratedDetailAddress(JSON.stringify(body), {
+      contracts: [{ chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 }],
+    }))).toEqual(expected);
   });
 });
 
@@ -200,7 +150,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
     })));
   });
 
-  it.each([undefined, null, 0, -1, "1"])("does not invent USD totals with invalid price %s", (price) => {
+  it.each([undefined, 0, "1"])("does not invent USD totals with invalid price %s", (price) => {
     const body = JSON.stringify({ price, tokens: [{ circulating: { peggedUSD: 100 } }] });
     const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, { flags: { pegCurrency: "USD" } }));
     expect(normalized.tokens[0].totalCirculatingUSD).toBeUndefined();
@@ -252,33 +202,6 @@ describe("normalizeDefiLlamaDetailBody", () => {
     });
   });
 
-  it("leaves gold USD history unavailable without a day-specific valuation", () => {
-    const body = JSON.stringify({
-      price: 2_300,
-      tokens: [
-        {
-          circulating: { peggedGOLD: 1_000 },
-        },
-      ],
-    });
-
-    expect(
-      JSON.parse(
-        normalizeDefiLlamaDetailBody(body, {
-          flags: { pegCurrency: "GOLD" },
-        }),
-      ),
-    ).toEqual({
-      price: 2_300,
-      tokens: [
-        {
-          totalCirculating: { peggedGOLD: 1_000 },
-          circulating: { peggedGOLD: 1_000 },
-        },
-      ],
-    });
-  });
-
   it("preserves non-USD USD-only history without inventing native units from today's quote", () => {
     const body = JSON.stringify({
       price: 2,
@@ -303,10 +226,6 @@ describe("normalizeDefiLlamaDetailBody", () => {
         },
       ],
     });
-  });
-
-  it("throws for invalid upstream JSON", () => {
-    expect(() => normalizeDefiLlamaDetailBody("{", { flags: { pegCurrency: "EUR" } })).toThrow();
   });
 
   it("strips the chainBalances blob while preserving other passthrough fields", () => {

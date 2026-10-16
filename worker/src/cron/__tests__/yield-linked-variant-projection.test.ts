@@ -334,39 +334,4 @@ describe("appendLinkedVariantParentYieldSources", () => {
     expect(appendLinkedVariantParentYieldSources(resolved)).toBe(0);
     expect(resolved).toHaveLength(1);
   });
-
-  it("does not project fixed-yield PT opportunities from variants to parents", () => {
-    const resolved: ResolvedYieldEntry[] = [
-      {
-        id: "sbold-k3-capital",
-        symbol: "sBOLD",
-        yield: source({
-          sourceKey: "protocol-api:pendle:ethereum:0xpt",
-          yieldSource: "Pendle fixed yield: sBOLD PT-sBOLD",
-          yieldType: "fixed-yield",
-        }),
-      },
-    ];
-
-    expect(appendLinkedVariantParentYieldSources(resolved)).toBe(0);
-    expect(resolved).toHaveLength(1);
-  });
-
-
-  it("does not project third-party structured tranches from variants to parents", () => {
-    const resolved: ResolvedYieldEntry[] = [
-      {
-        id: "srusde-strata",
-        symbol: "srUSDe",
-        yield: source({
-          sourceKey: "royco-dawn:ethereum:senior-tranche",
-          yieldSource: "Royco Dawn senior tranche",
-          yieldType: "structured-tranche",
-        }),
-      },
-    ];
-
-    expect(appendLinkedVariantParentYieldSources(resolved)).toBe(0);
-    expect(resolved).toHaveLength(1);
-  });
 });

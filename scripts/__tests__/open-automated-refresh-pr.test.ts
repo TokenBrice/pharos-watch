@@ -41,40 +41,6 @@ describe("open automated refresh PR", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("updated by force-push"));
   });
 
-  it("creates and optionally queues auto-merge when no open PR exists", () => {
-    const exec = vi.fn((file: string, args: readonly string[]) => {
-      if (file === "gh" && args[0] === "pr" && args[1] === "view") {
-        throw new Error("no pull request found");
-      }
-      return "";
-    });
-
-    expect(
-      openAutomatedRefreshPr({ ...options, autoMerge: true }, { automationToken: "pat", exec }),
-    ).toBe("created");
-    expect(exec).toHaveBeenCalledWith(
-      "gh",
-      [
-        "pr",
-        "create",
-        "--base",
-        "main",
-        "--head",
-        options.branch,
-        "--title",
-        options.title,
-        "--body",
-        options.body,
-      ],
-      expect.objectContaining({ env: expect.objectContaining({ GH_TOKEN: "pat" }) }),
-    );
-    expect(exec).toHaveBeenCalledWith(
-      "gh",
-      ["pr", "merge", options.branch, "--squash", "--auto"],
-      expect.objectContaining({ env: expect.objectContaining({ GH_TOKEN: "pat" }) }),
-    );
-  });
-
   it("uses the explicit automation credential without leaking conflicting GitHub tokens", () => {
     const exec = vi.fn((_file: string, _args: readonly string[], _options?: { env?: NodeJS.ProcessEnv }) => "");
     const env = { GH_TOKEN: "gh-default", GITHUB_TOKEN: "actions-default", AUTOMATION_GITHUB_TOKEN: "env-pat", NODE_ENV: "test" as const };

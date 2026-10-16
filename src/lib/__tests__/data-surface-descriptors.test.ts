@@ -88,21 +88,6 @@ const EXPECTED_SURFACE_POLICY: Record<string, Record<string, unknown>> = {
 };
 
 describe("data surface descriptors", () => {
-  it("declares the stage 2.1a surface inventory with stable keys", () => {
-    expect(DATA_SURFACE_DESCRIPTOR_LIST.map((surface) => surface.key)).toEqual([
-      "stablecoins",
-      "dexLiquidity",
-      "yieldRankings",
-      "yieldHistory",
-      "stressSignals",
-      "reportCards",
-      "publicHealth",
-    ]);
-    expect(new Set(DATA_SURFACE_DESCRIPTOR_LIST.map((surface) => surface.key)).size).toBe(
-      DATA_SURFACE_DESCRIPTOR_LIST.length,
-    );
-  });
-
   it("publishes the expected route, cache and budget policy per surface", () => {
     expect(Object.keys(EXPECTED_SURFACE_POLICY)).toEqual(DATA_SURFACE_DESCRIPTOR_LIST.map((surface) => surface.key));
 

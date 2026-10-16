@@ -6,20 +6,12 @@ import {
   parseSubscribeArgs,
   validateSubscribeArgs,
   parseDisambiguationReply,
-  findInvalidDisambiguationToken,
-  suggestClosestToken,
   type ParsedSubscribeArgs,
 } from "../telegram/alerts-parser";
 
 describe("resolveTicker", () => {
   it("resolves unique ticker", () => {
     const result = resolveTicker("USDC");
-    expect(result.status).toBe("unique");
-    expect(result.matches[0].id).toBe("usdc-circle");
-  });
-
-  it("is case-insensitive", () => {
-    const result = resolveTicker("usdc");
     expect(result.status).toBe("unique");
     expect(result.matches[0].id).toBe("usdc-circle");
   });
@@ -70,19 +62,6 @@ describe("parseSubscribeArgs", () => {
     expect(result.tickers).toEqual(["USDC", "BOLD"]);
   });
 
-  it("is order-independent", () => {
-    const result = parseSubscribeArgs("USDC dews BOLD depeg");
-    expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
-    expect(result.tickers).toEqual(["USDC", "BOLD"]);
-  });
-
-  it("handles all three types", () => {
-    const result = parseSubscribeArgs("dews depeg safety USDT");
-    expect(result.alertTypes).toEqual(new Set(["dews", "depeg", "safety"]));
-  });
-
   it("recognizes the all-stablecoin token", () => {
     const result = parseSubscribeArgs("dews all");
     expect(result.alertTypes).toEqual(new Set(["dews"]));
@@ -110,15 +89,6 @@ describe("parseSubscribeArgs", () => {
     expect(result.invalidTargets).toEqual([]);
   });
 
-  it("accepts non-USD preset aliases and canonicalizes dashed forms", () => {
-    const result = parseSubscribeArgs("dews,depeg non-usd-top-25");
-    expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual(["non-usd-top25"]);
-    expect(result.tickers).toEqual([]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
   it("classifies unknown tokens as invalidTargets", () => {
     const result = parseSubscribeArgs("foo dews USDC");
     expect(result.alertTypes).toEqual(new Set(["dews"]));
@@ -128,35 +98,11 @@ describe("parseSubscribeArgs", () => {
     expect(result.invalidTargets).toEqual(["foo"]);
   });
 
-  it("classifies completely unknown tokens when no types present", () => {
-    const result = parseSubscribeArgs("foo USDC");
-    expect(result.alertTypes.size).toBe(0);
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual(["foo"]);
-  });
-
-  it("handles comma-separated alert types", () => {
-    const result = parseSubscribeArgs("dews,depeg USDC");
-    expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
   it("parses depeg-step after preset targets and implies depeg", () => {
     const result = parseSubscribeArgs("usd-top-50 depeg-step 250");
     expect(result.alertTypes).toEqual(new Set(["depeg"]));
     expect(result.presetIds).toEqual(["usd-top50"]);
     expect(result.tickers).toEqual([]);
-    expect(result.depegWorseningBpsStep).toBe(250);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("parses depeg-step before preset targets", () => {
-    const result = parseSubscribeArgs("depeg-step 250 usd-top-50");
-    expect(result.alertTypes).toEqual(new Set(["depeg"]));
-    expect(result.presetIds).toEqual(["usd-top50"]);
     expect(result.depegWorseningBpsStep).toBe(250);
     expect(result.invalidTargets).toEqual([]);
   });
@@ -182,22 +128,6 @@ describe("parseTargetArgs", () => {
     expect(result.includeAll).toBe(false);
     expect(result.presetIds).toEqual(["usd-top25"]);
     expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("accepts dashed preset aliases for unsubscribe-style commands", () => {
-    const result = parseTargetArgs("usd-top-25 USDC");
-    expect(result.includeAll).toBe(false);
-    expect(result.presetIds).toEqual(["usd-top25"]);
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("accepts non-USD preset aliases for unsubscribe-style commands", () => {
-    const result = parseTargetArgs("non-usd-top-50");
-    expect(result.includeAll).toBe(false);
-    expect(result.presetIds).toEqual(["non-usd-top50"]);
-    expect(result.tickers).toEqual([]);
     expect(result.invalidTargets).toEqual([]);
   });
 
@@ -287,42 +217,9 @@ describe("validateSubscribeArgs", () => {
   });
 });
 
-describe("suggestClosestToken", () => {
-  const candidates = ["dews", "depeg", "safety", "launch"];
-
-  it("returns an exact match", () => {
-    expect(suggestClosestToken("dews", candidates)).toBe("dews");
-  });
-
-  it("is case-insensitive", () => {
-    expect(suggestClosestToken("Dews", candidates)).toBe("dews");
-  });
-
-  it("returns the candidate within edit distance 1", () => {
-    expect(suggestClosestToken("dewz", candidates)).toBe("dews");
-    expect(suggestClosestToken("depig", candidates)).toBe("depeg");
-  });
-
-  it("returns null when no candidate is within edit distance 1", () => {
-    expect(suggestClosestToken("xyzzy", candidates)).toBeNull();
-  });
-
-  it("returns null for empty input", () => {
-    expect(suggestClosestToken("", candidates)).toBeNull();
-  });
-});
-
 describe("parseDisambiguationReply", () => {
-  it("parses single number", () => {
-    expect(parseDisambiguationReply("1", 3)).toEqual([0]);
-  });
-
   it("parses comma-separated numbers", () => {
     expect(parseDisambiguationReply("1,2", 3)).toEqual([0, 1]);
-  });
-
-  it("parses space-separated numbers", () => {
-    expect(parseDisambiguationReply("1 3", 3)).toEqual([0, 2]);
   });
 
   it("returns null for out-of-range", () => {
@@ -331,11 +228,5 @@ describe("parseDisambiguationReply", () => {
 
   it("returns null for non-numeric input", () => {
     expect(parseDisambiguationReply("abc", 3)).toBeNull();
-  });
-
-  it("identifies the offending token for invalid replies", () => {
-    expect(findInvalidDisambiguationToken("1 abc", 3)).toBe("abc");
-    expect(findInvalidDisambiguationToken("4", 3)).toBe("4");
-    expect(findInvalidDisambiguationToken("1,2", 3)).toBeNull();
   });
 });

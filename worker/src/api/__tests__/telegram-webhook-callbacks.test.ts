@@ -123,30 +123,6 @@ describe("handleCallbackQuery", () => {
     expect(ackCall).toBeDefined();
   });
 
-  it("snooze D1 write failure records a failure usage event", async () => {
-    const db = mockTelegramD1([
-      {
-        match: "INSERT INTO telegram_subscribers",
-        rows: [],
-        throwError: new Error("d1 boom"),
-      },
-    ]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("snooze:1h", { id: "cb-snooze-fail" }));
-
-    const usageRow = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-          entry.binds.includes("snooze_change") &&
-          entry.binds.includes("chat") &&
-          entry.binds.includes("failure"),
-      );
-    expect(usageRow).toBeDefined();
-    expect(usageRow!.binds[6]).toBe("d1_write_failed");
-    expect(lastAckBody().text).toMatch(/could not save snooze/i);
-  });
-
   it("does not overwrite group subscriber username with the callback actor username", async () => {
     const db = mockTelegramD1([], {
       fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],

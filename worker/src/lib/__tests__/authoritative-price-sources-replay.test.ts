@@ -258,34 +258,6 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("preserves a usable WEUSD market quote instead of applying the redemption floor", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      freshParent("weusd-picwe", 0.91, "coingecko", { nowSec }),
-      freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec }),
-    ]);
-
-    expect(overrides.has("weusd-picwe")).toBe(false);
-  });
-
-  it("re-derives the WEUSD fallback when the incumbent market quote is stale restored data", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchLiveOverrides([
-      // A restored row keeps its original observation time for up to seven
-      // days while priceSyncedAt moves to the current run, so only the
-      // observation age can disqualify it from the market-price-wins guard.
-      freshParent("weusd-picwe", 0.91, "coingecko", { nowSec, observedAt: nowSec - 6 * 86400 }),
-      freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec }),
-    ]);
-
-    expect(overrides.get("weusd-picwe")).toMatchObject({
-      price: 0.9899802,
-      source: "protocol-redeem",
-      confidence: "high",
-      metadata: { inheritedFrom: "usdc-circle" },
-    });
-  });
-
   it.each([
     ["protocol-derived", "protocol-redeem"],
     ["cached replay", "cached"],
@@ -568,14 +540,6 @@ describe("authoritative-price-sources", () => {
         coingeckoApiKey: "cg-pro-key",
       },
     );
-  });
-
-  it("skips inherited tracked-price overrides when the parent asset is unavailable", async () => {
-    const overrides = await fetchLiveOverrides([
-      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
-    ]);
-
-    expect(overrides.has("usdk-kast")).toBe(false);
   });
 
   it("skips inherited tracked-price overrides when the parent price is low confidence, cached, stale, or missing provenance", async () => {

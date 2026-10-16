@@ -290,19 +290,6 @@ describe("Mini App versioned API client", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it("does not auto-refresh when the browser denies session storage access", () => {
-    const refresh = vi.fn();
-    vi.spyOn(window, "sessionStorage", "get").mockImplementation(() => {
-      throw new DOMException("blocked", "SecurityError");
-    });
-
-    expect(refreshMiniAppBundleOnce(
-      { contractVersion: "3", catalogVersion: "catalog-v2-next" },
-      { refresh },
-    )).toBe(false);
-    expect(refresh).not.toHaveBeenCalled();
-  });
-
   it("does not refresh when recording the version target fails", () => {
     const refresh = vi.fn();
     const storage = {

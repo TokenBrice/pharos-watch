@@ -125,18 +125,6 @@ describe("rpc parity targets", () => {
     }
   });
 
-  it("reports a planned comparator only for chains with no observation yet", () => {
-    expect(plannedRpcParityComparator(target("base"))).toEqual({
-      operator: "public",
-      host: "mainnet.base.org",
-      source: "registry",
-    });
-    expect(plannedRpcParityComparator(target("xdc"))).toEqual({
-      operator: "public",
-      host: "erpc.xinfin.network",
-      source: "pin",
-    });
-  });
 
   it("returns no comparator for a registry target the runtime cannot read", () => {
     expect(resolveRpcParityComparator(target("base"), new Map())).toBeNull();

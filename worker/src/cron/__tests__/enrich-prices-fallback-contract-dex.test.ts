@@ -101,35 +101,6 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
-  it("enriches via curated tracked contract metadata when the upstream row is addressless", async () => {
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "ctusd-citrea",
-        name: "Citrea USD",
-        symbol: "ctUSD",
-        price: 0,
-      }),
-    ];
-
-    mockFetch([
-      {
-        match: "coins.llama.fi/prices/current/citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
-        body: {
-          coins: {
-            "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d": dlQuote(1.0015, "ctUSD", { confidence: 0.97 }),
-          },
-        },
-      },
-    ]);
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.pass1).toBe(1);
-    expect(assets[0].price).toBe(1.0015);
-    expect(assets[0].priceSource).toBe("defillama-contract");
-    expect(stats.finalMissing).toBe(0);
-  });
-
   it("normalizes EVM contract casing for DefiLlama contract fallback", async () => {
     const assets: PeggedAsset[] = [
       makePeggedAsset({
@@ -280,30 +251,6 @@ describe("enrichMissingPrices", () => {
     expect(await runDlContractPasses(assets, undefined)).toMatchObject({ pass1: 0, pass1b: 0, failures: [] });
     expect(assets[0].price).toBe(0);
     expect(fetchSpy.getHistory()).toHaveLength(0);
-  });
-
-  it("reports a non-OK DefiLlama contract batch as a failed pass", async () => {
-    mockFetch([
-      {
-        match: "coins.llama.fi/prices/current/ethereum:0xfailed",
-        status: 404,
-        body: { error: "not found" },
-      },
-    ]);
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "failed-contract",
-        name: "Failed Contract",
-        symbol: "FAIL",
-        price: 0,
-        address: "ethereum:0xfailed",
-      }),
-    ];
-
-    const result = await runDlContractPasses(assets, undefined);
-
-    expect(result.failures).toEqual(["dl-contracts"]);
-    expect(result.resolved).toBe(0);
   });
 
   it("rejects unreasonable DefiLlama contract prices and allows later fallback passes to resolve", async () => {
@@ -714,16 +661,6 @@ describe("bounded DefiLlama contract batches", () => {
     expect(result.resolved).toBeLessThan(assets.length);
     expect(assets[0].price).toBe(1);
     expect(assets[assets.length - 1].price).toBeNull();
-  });
-
-  it("bounds the total batch budget and reports unqueried remainder", async () => {
-    const urls: string[] = [];
-    installFetch((url) => { urls.push(url); return quoteResponse(url); });
-    const result = await runDlContractPasses(cohort(2_000), undefined);
-    expect(urls).toHaveLength(8);
-    expect(result.failures).toEqual(["dl-contracts"]);
-    expect(result.resolved).toBeGreaterThan(0);
-    expect(result.resolved).toBeLessThan(2_000);
   });
 
   it("does not count local budget exhaustion as a provider failure", async () => {

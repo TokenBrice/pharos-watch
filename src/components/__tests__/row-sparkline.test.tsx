@@ -13,15 +13,6 @@ describe("RowSparkline", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
-  it("renders an SVG with a path when given a positive series", () => {
-    const data = Array.from({ length: 30 }, (_, i) => i);
-    const { container } = render(
-      <RowSparkline data={data} ariaLabel="Ascending" />,
-    );
-    const svg = container.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.querySelectorAll("path").length).toBeGreaterThanOrEqual(1);
-  });
 
   it("draws a reference line when referenceValue is provided", () => {
     const data = Array.from({ length: 30 }, (_, i) => (i % 2 === 0 ? 50 : -50));

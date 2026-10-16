@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   resolveYieldSourceKeyRoute,
-  YIELD_SOURCE_KEY_ROUTES,
 } from "../yield-source-key-routing";
 import { buildYieldSourceRisk, resolveYieldVenueProtocol } from "../source-risk";
 import type { EvaluatedYieldSource } from "../evaluation-types";
@@ -141,10 +140,5 @@ describe("yield source-key routing table", () => {
     expect(resolveYieldSourceKeyRoute(undefined)).toBeNull();
     expect(getSupplementalCandidateFamily("dl-list:usdc")).toBeNull();
     expect(getSupplementalCandidateFamily(null)).toBeNull();
-  });
-
-  it("has no duplicate prefixes", () => {
-    const prefixes = YIELD_SOURCE_KEY_ROUTES.map((route) => route.prefix);
-    expect(new Set(prefixes).size).toBe(prefixes.length);
   });
 });

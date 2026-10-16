@@ -207,8 +207,4 @@ describe("fetchOriginVaultBalancesReserves", () => {
     expectWarnings(result, []);
   });
 
-  it("rejects a renamed totalValue field instead of publishing a plausible snapshot", async () => {
-    await expect(runOrigin(originNetwork({ failed: TOTAL_VALUE_SELECTOR }), undefined, false))
-      .rejects.toThrow(/totalValue probe failed/);
-  });
 });

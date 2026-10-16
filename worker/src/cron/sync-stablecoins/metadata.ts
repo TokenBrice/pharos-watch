@@ -261,7 +261,7 @@ function hasIndependentHardSource(asset: PeggedAsset): boolean {
   );
 }
 
-export function buildPricingSourceAuditReport(
+function buildPricingSourceAuditReport(
   assets: PeggedAsset[],
   providerDiagnostics: readonly PricingProviderAttemptDiagnostic[] = [],
 ): PricingSourceAuditReport {

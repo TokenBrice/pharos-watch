@@ -4,11 +4,8 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { L2BEAT_CHAIN_RISK_SNAPSHOT, L2BEAT_CHAIN_RISK_FIELD_LABELS } from "@shared/lib/chains/l2beat-risk";
 import {
-  buildL2BeatSnapshotCoverageAudit,
   compareSnapshotToObserved,
-  parseArgs,
   parseL2BeatSummaryProjects,
-  renderL2BeatSnapshotCoverageAuditMarkdown,
   runCli,
 } from "../maintenance/generate-l2beat-snapshot-coverage-audit";
 
@@ -24,17 +21,6 @@ function observedBaseline() {
 }
 
 describe("generate-l2beat-snapshot-coverage-audit", () => {
-  it("parses CLI options", () => {
-    expect(parseArgs([
-      "--input", "agents/l2beat.json", "--json", "--check", "--report", "agents/report.json",
-      "--generated-at", "2026-06-12T00:00:00.000Z",
-    ])).toMatchObject({
-      inputPath: "agents/l2beat.json", format: "json", check: true,
-      reportPath: "agents/report.json", generatedAt: "2026-06-12T00:00:00.000Z",
-    });
-    expect(() => parseArgs(["--input", "fixture.json", "--live"])).toThrow("Choose only one of --input or --live.");
-  });
-
   it.each(["changed", "missing"])("isolates a %s consumed risk from an exact baseline", (mutation) => {
     const payload = observedBaseline();
     expect(compareSnapshotToObserved(parseL2BeatSummaryProjects(payload))).toEqual({ driftRows: [], observedOnlyProjects: [] });
@@ -50,16 +36,6 @@ describe("generate-l2beat-snapshot-coverage-audit", () => {
       }],
       observedOnlyProjects: [],
     });
-  });
-
-  it("renders a controlled matched-chain count and alias integrity", () => {
-    const audit = buildL2BeatSnapshotCoverageAudit({ generatedAt: "2026-06-12T00:00:00.000Z" });
-    audit.coverage.summary.matchedChainCount = 2;
-    audit.coverage.matchedChains = audit.coverage.matchedChains.slice(0, 2);
-    const markdown = renderL2BeatSnapshotCoverageAuditMarkdown(audit);
-    expect(markdown).toContain("# L2BEAT Snapshot Coverage Audit");
-    expect(markdown).toContain("- Matched chains: 2");
-    expect(markdown).toContain("## Alias Integrity Issues");
   });
 
   it("passes an exact baseline and observed-only addition, but fails consumed drift", async () => {

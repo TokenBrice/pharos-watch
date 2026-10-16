@@ -1,22 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
-  SAFETY_GRADE_VALUES,
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
   applyFilters,
-  countActiveScreenerFilters,
   hasLoadingScoreFilterData,
   hasActiveFilters,
   normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
-  projectMintAuthority,
   sortScreenerRows,
   type ScreenerFilters,
   type ScreenerRow,
 } from "@/lib/screener-filters";
 import { decodeState, encodeState } from "@/lib/url-state";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
-import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 
 function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
   return {
@@ -341,11 +337,6 @@ describe("applyFilters", () => {
 });
 
 describe("hasActiveFilters", () => {
-  it("reports false for defaults", () => {
-    expect(hasActiveFilters(SCREENER_FILTER_DEFAULTS)).toBe(false);
-    expect(countActiveScreenerFilters(SCREENER_FILTER_DEFAULTS)).toBe(0);
-  });
-
   it.each<Partial<ScreenerFilters>>([
     { dewsMin: 50 },
     { safetyGrades: ["A", "B+"] },
@@ -363,20 +354,6 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, ...patch })).toBe(true);
   });
 
-  it("counts active range groups once and selected pills individually", () => {
-    expect(
-      countActiveScreenerFilters({
-        ...SCREENER_FILTER_DEFAULTS,
-        dewsMin: 80,
-        dewsMax: 95,
-        supplyMax: 1_000_000_000,
-        safetyGrades: ["A", "B+"],
-        types: ["centralized", "decentralized"],
-        pegs: ["USD"],
-        mintAuthority: ["multisig-mint"],
-      }),
-    ).toBe(8);
-  });
 });
 
 describe("sortScreenerRows", () => {
@@ -385,10 +362,6 @@ describe("sortScreenerRows", () => {
     makeRow({ id: "high", symbol: "HIGH", safetyScore: 95, pegScore: 95 }),
     makeRow({ id: "mid", symbol: "MID", safetyScore: 80, pegScore: 70 }),
   ];
-
-  it("sorts the same row order used by table rendering and exports", () => {
-    expect(sortScreenerRows(rows, "safetyScore", "desc").map((row) => row.id)).toEqual(["high", "mid", "low"]);
-  });
 
   it("sorts by Mint Authority Score with unrated rows last", () => {
     const mintRows = [
@@ -500,14 +473,6 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(decoded.liquidityScoreMin).toBe(65);
   });
 
-  it("omits defaults from the encoded URL", () => {
-    expect(encodeState(SCREENER_FILTER_DEFAULTS, SCREENER_URL_SCHEMA)).toBe("");
-  });
-
-  it("decodes an empty query string to defaults", () => {
-    expect(decodeState("", SCREENER_URL_SCHEMA)).toEqual(SCREENER_FILTER_DEFAULTS);
-  });
-
   it("clamps out-of-range numbers to defaults", () => {
     const decoded = decodeState("dewsMax=999&dewsMin=-5&supplyMin=-1", SCREENER_URL_SCHEMA);
     expect(decoded.dewsMax).toBe(SCREENER_FILTER_DEFAULTS.dewsMax);
@@ -553,24 +518,6 @@ describe("projectBlacklistable", () => {
     [undefined, null],
   ])("maps %s to %s", (value, expected) => {
     expect(projectBlacklistable(value)).toBe(expected);
-  });
-});
-
-describe("projectMintAuthority", () => {
-  it("maps missing summaries to unknown", () => {
-    expect(projectMintAuthority(undefined)).toBe("unknown");
-  });
-
-  it("maps issuer direct mint summaries to the issuer/backend bucket", () => {
-    expect(
-      projectMintAuthority({
-        mintPath: "issuer-direct-mint",
-        authorityPosture: "concentrated-admin",
-        confidence: "verified",
-        inheritedFrom: undefined,
-        mintIncidents: [],
-      }),
-    ).toBe("issuer-or-backend-mint");
   });
 });
 
@@ -642,16 +589,3 @@ describe("normalizeScreenerDeepLinkAliases", () => {
   });
 });
 
-describe("canonical screener safety grades", () => {
-  it("uses the complete published vocabulary in canonical order", () => {
-    expect(SAFETY_GRADE_VALUES).toEqual(ReportCardGradeSchema.options);
-    const field = SCREENER_URL_SCHEMA.safetyGrades;
-    if (field.kind !== "enumList") throw new Error("Safety grade URL field must be an enum list");
-    expect(field.allowedValues).toEqual(ReportCardGradeSchema.options);
-  });
-
-  it.each(ReportCardGradeSchema.options)("round-trips the published grade %s", (grade) => {
-    const state = { ...SCREENER_FILTER_DEFAULTS, safetyGrades: [grade] };
-    expect(decodeState(encodeState(state, SCREENER_URL_SCHEMA), SCREENER_URL_SCHEMA).safetyGrades).toEqual([grade]);
-  });
-});

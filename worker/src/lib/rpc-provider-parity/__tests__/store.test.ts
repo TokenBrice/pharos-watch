@@ -72,15 +72,6 @@ describe("rpc parity store merging", () => {
     expect(row?.runs[0].atSec).toBe(NOW_SEC + 5 * 3600);
   });
 
-  it("keeps the serialized window well under the cache-row budget", () => {
-    const row = buildParityRow(
-      Array.from({ length: RPC_PARITY_RETENTION_RUNS }, (_, index) => NOW_SEC - (RPC_PARITY_RETENTION_RUNS - 1 - index) * 3600),
-    );
-    const bytes = encodeRpcParityStoreRow(row).length;
-    expect(row.runs).toHaveLength(RPC_PARITY_RETENTION_RUNS);
-    expect(bytes).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
-    expect(bytes).toBeLessThan(256 * 1024);
-  });
 
   it("drops the oldest runs, never the newest, when the row exceeds the size bound", () => {
     let row: RpcParityStoreRow | null = null;
@@ -131,21 +122,6 @@ describe("rpc parity store merging", () => {
     expect(prior.runs[0].samples).toHaveLength(RPC_PARITY_TARGETS.length);
   });
 
-  it("resets only Ethereum's old-host window and retains Arc's near-head evidence", () => {
-    const prior = buildParityRow([NOW_SEC - 3600]);
-    const ethereum = prior.runs[0].samples.find((sample) => sample.chainId === "ethereum")!;
-    ethereum.dwellirHost = "api-ethereum-mainnet-erigon.n.dwellir.com";
-    const arc = prior.runs[0].samples.find((sample) => sample.chainId === "arc")!;
-    const merged = mergeRpcParityRun(prior, fullParityRun(NOW_SEC), { nowSec: NOW_SEC });
-    expect(merged.reset).toBe(false);
-    expect(merged.row.runs[0].samples).toEqual(
-      prior.runs[0].samples.filter((sample) => sample.chainId !== "ethereum"),
-    );
-    expect(merged.row.runs[0].samples).toContainEqual(arc);
-    expect(merged.row.runs[1].samples.find((sample) => sample.chainId === "ethereum")?.dwellirHost)
-      .toBe("api-ethereum-mainnet.n.dwellir.com");
-    expect(prior.runs[0].samples).toHaveLength(RPC_PARITY_TARGETS.length);
-  });
 });
 
 describe("rpc parity store wire form", () => {

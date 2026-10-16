@@ -1,6 +1,6 @@
 /**
  * Editorial layer for cemetery obituaries: the hand-curated display titles
- * and the sentence splitter behind obituary leads and previews.
+ * and the sentence splitter behind obituary leads.
  *
  * The titled set IS the editorial set. Titles stay factual: a title never
  * states a figure that contradicts its record (the UST title carries no dollar
@@ -31,15 +31,6 @@ export const EDITORIAL_TITLES: Readonly<Record<string, string>> = {
   "tor-tor-2023-07":
     "How the Multichain exploit ended Hector Network's stablecoin",
 };
-
-export function isEditorialId(id: string): boolean {
-  return Object.hasOwn(EDITORIAL_TITLES, id);
-}
-
-/** Maximum length of an editorial preview, ellipsis included. */
-export const EDITORIAL_PREVIEW_MAX_CHARS = 380;
-
-const ELLIPSIS = "\u2026";
 
 /**
  * Terminal punctuation, then any closing quotes or brackets, then whitespace
@@ -113,7 +104,7 @@ function isAbbreviationStop(text: string, matchIndex: number, match: string, mat
  * Sentences that open lowercase ("sUSD", "eUSD") are real sentences, so case
  * alone never vetoes a boundary.
  */
-export function splitObituarySentences(text: string): string[] {
+function splitObituarySentences(text: string): string[] {
   const source = text.trim();
   if (!source) return [];
 
@@ -137,28 +128,4 @@ export function getObituaryLead(obituary: string): string {
   const [lead] = splitObituarySentences(obituary);
   if (!lead) return "";
   return ENDS_WITH_TERMINAL.test(lead) ? lead : `${lead}.`;
-}
-
-function truncateOnWordBoundary(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text;
-  const budget = maxChars - ELLIPSIS.length;
-  let cut = text.slice(0, budget);
-  // Cutting inside a word: fall back to the last whitespace in the budget.
-  if (!/\s/.test(text[budget])) {
-    const lastSpace = cut.search(/\s\S*$/);
-    if (lastSpace > 0) cut = cut.slice(0, lastSpace);
-  }
-  return `${cut.trimEnd().replace(/[\s,;:\u2013\u2014-]+$/, "")}${ELLIPSIS}`;
-}
-
-/**
- * Inspector/register preview. Editorial ids get the first two sentences,
- * capped at {@link EDITORIAL_PREVIEW_MAX_CHARS} on a word boundary with an
- * ellipsis; every other record gets its lead sentence.
- */
-export function getObituaryPreview(obituary: string, { editorial }: { editorial: boolean }): string {
-  if (!editorial) return getObituaryLead(obituary);
-  const preview = splitObituarySentences(obituary).slice(0, 2).join(" ");
-  if (!preview) return getObituaryLead(obituary);
-  return truncateOnWordBoundary(preview, EDITORIAL_PREVIEW_MAX_CHARS);
 }

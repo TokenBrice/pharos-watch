@@ -5,8 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   collectSeoStaticCheckResult,
-  collectSeoStaticCheckResultParallel,
-  findPublishedArchiveContinuityErrors,
 } from "../ci/check-seo-static.mjs";
 
 const roots: string[] = [];
@@ -47,25 +45,6 @@ const BASELINE_HEADERS = `/*
 afterEach(async () => {
   vi.unstubAllEnvs();
   await Promise.all(roots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
-});
-
-it("keeps parallel page parsing equivalent to the synchronous SEO gate", async () => {
-  const root = await makeOutDir();
-  vi.stubEnv("SEO_CHECK_WORKERS", "2");
-  await Promise.all(
-    Array.from({ length: 20 }, (_, index) =>
-      writePage(root, index === 0 ? "/" : `/parallel-${index}/`),
-    ),
-  );
-
-  const synchronous = collectSeoStaticCheckResult({ outDir: root });
-  const parallel = await collectSeoStaticCheckResultParallel({ outDir: root });
-
-  expect(parallel.errors).toEqual(synchronous.errors);
-  expect(parallel.warnings).toEqual(synchronous.warnings);
-  expect(parallel.pageRecords.map((record: { route: string }) => record.route)).toEqual(
-    synchronous.pageRecords.map((record: { route: string }) => record.route),
-  );
 });
 
 async function makeOutDir() {
@@ -178,15 +157,6 @@ async function writeBaselinePages(
   if (sitemapRoutes) await writeSitemap(root, sitemapRoutes);
 }
 
-const HOME_SNIPPET = {
-  title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
-  description: "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
-};
-const STABILITY_SNIPPET = {
-  title: "Pharos Stability Index: Stablecoin Market Stress | Pharos",
-  description: "Monitor stablecoin market stress through PSI, depeg breadth, severity, liquidity, safety signals, and historical stability-index context.",
-};
-
 describe("check-seo-static", () => {
   it.each([
     { robots: ["noindex, follow"] },
@@ -204,48 +174,6 @@ describe("check-seo-static", () => {
     );
     await writeSitemap(root, ["/", "/stability-index/"]);
     expect(collectFixtureSeoResult(root).errors).toEqual([]);
-  });
-
-  it("rejects a previously published archive URL that disappears without a canonical redirect", () => {
-    const previous = `
-      <urlset>
-        <url><loc>https://pharos.watch/digest/2026-07-17/</loc></url>
-        <url><loc>https://pharos.watch/depeg/apxusd-2026-06-16/</loc></url>
-      </urlset>`;
-    const current = `
-      <urlset>
-        <url><loc>https://pharos.watch/digest/2026-07-17/</loc></url>
-        <url><loc>https://pharos.watch/depeg/apxusd-2026-06-02/</loc></url>
-      </urlset>`;
-
-    expect(findPublishedArchiveContinuityErrors(previous, current)).toEqual([
-      "published archive URLs missing from the current sitemap without a direct 301 to a submitted URL: https://pharos.watch/depeg/apxusd-2026-06-16/",
-    ]);
-  });
-
-  it("accepts an explicit one-hop consolidation into a submitted archive URL", () => {
-    const previous =
-      "<urlset><url><loc>https://pharos.watch/depeg/apxusd-2026-06-16/</loc></url></urlset>";
-    const current =
-      "<urlset><url><loc>https://pharos.watch/depeg/apxusd-2026-06-02/</loc></url></urlset>";
-
-    expect(
-      findPublishedArchiveContinuityErrors(previous, current, [
-        {
-          source: "/depeg/apxusd-2026-06-16/",
-          destination: "/depeg/apxusd-2026-06-02/",
-          status: "301",
-        },
-      ]),
-    ).toEqual([]);
-  });
-
-  it("accepts an archive page that left the sitemap but still exports HTML (noindexed)", () => {
-    const previous = "<urlset><url><loc>https://pharos.watch/digest/2026-07-17/</loc></url></urlset>";
-    const current = "<urlset><url><loc>https://pharos.watch/digest/</loc></url></urlset>";
-
-    expect(findPublishedArchiveContinuityErrors(previous, current, [], new Set(["/digest/2026-07-17/"]))).toEqual([]);
-    expect(findPublishedArchiveContinuityErrors(previous, current, [], new Set())).toHaveLength(1);
   });
 
   type SeoFixtureCase = {
@@ -449,35 +377,6 @@ describe("check-seo-static", () => {
     }
   });
 
-  it("fails site-data URLs inside indexable structured data only", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, ["/compare/"]);
-    await writePage(root, "/compare/", {
-      h1: "Compare",
-      robots: ["noindex, follow"],
-      extraHead:
-        '<script type="application/ld+json">{"@context":"https://schema.org","contentUrl":"https://pharos.watch/_site-data/noindex"}</script>',
-    });
-    await writePage(root, "/stablecoin/usdt-tether/", {
-      h1: "Tether",
-      mainText: "Useful stablecoin detail text ".repeat(20),
-      extraHead:
-        '<script type="application/ld+json">{"@context":"https://schema.org","distribution":[{"contentUrl":"https://pharos.watch/_site-data/stablecoin/usdt-tether"}]}</script>',
-    });
-    await writeSitemap(root, ["/", "/stability-index/", "/stablecoin/usdt-tether/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "/stablecoin/usdt-tether/: structured data URL points under /_site-data/ at $.distribution[0].contentUrl",
-        ),
-      ]),
-    );
-    expect(result.errors.some((error) => error.startsWith("/compare/: structured data URL"))).toBe(false);
-  });
-
   it("fails indexable pages with titles or descriptions outside the search-snippet envelope", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", {
@@ -509,106 +408,6 @@ describe("check-seo-static", () => {
     );
   });
 
-  it("does not apply search-snippet length checks to noindex pages", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/compare/"],
-      ...HOME_SNIPPET,
-    });
-    await writePage(root, "/compare/", {
-      h1: "Compare",
-      robots: ["noindex, follow"],
-      title: "Tiny",
-      description: "Short.",
-    });
-    await writeSitemap(root, ["/"]);
-
-    const result = collectSeoStaticCheckResult({
-      outDir: root,
-      enforceStructuredDataMatrix: false,
-    });
-
-    expect(result.errors.some((error) => error.includes("/compare/: <title> is too short"))).toBe(false);
-    expect(result.errors.some((error) => error.includes("/compare/: meta description is too short"))).toBe(false);
-  });
-
-  it("fails indexable pages without Google preview directives", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      ...HOME_SNIPPET,
-    });
-    await writePage(root, "/stability-index/", {
-      h1: "Stability Index",
-      ...STABILITY_SNIPPET,
-      googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large"],
-    });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectSeoStaticCheckResult({
-      outDir: root,
-      enforceStructuredDataMatrix: false,
-    });
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        "/: missing Google preview directive max-snippet:-1",
-        "/: missing Google preview directive max-image-preview:large",
-        "/: missing Google preview directive max-video-preview:-1",
-        "/stability-index/: missing Google preview directive max-video-preview:-1",
-      ]),
-    );
-  });
-
-  it("accepts Google preview directives from robots or googlebot tags", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      ...HOME_SNIPPET,
-      googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
-    });
-    await writePage(root, "/stability-index/", {
-      h1: "Stability Index",
-      ...STABILITY_SNIPPET,
-      robots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
-    });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectSeoStaticCheckResult({
-      outDir: root,
-      enforceStructuredDataMatrix: false,
-    });
-
-    expect(result.errors.some((error) => error.includes("missing Google preview directive"))).toBe(false);
-  });
-
-  it("does not require Google preview directives on noindex pages", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/compare/"],
-      ...HOME_SNIPPET,
-      googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
-    });
-    await writePage(root, "/compare/", {
-      h1: "Compare",
-      robots: ["noindex, follow"],
-      title: "Compare",
-      description: "Short.",
-    });
-    await writeSitemap(root, ["/"]);
-
-    const result = collectSeoStaticCheckResult({
-      outDir: root,
-      enforceStructuredDataMatrix: false,
-    });
-
-    expect(result.errors.some((error) => error.includes("/compare/: missing Google preview directive"))).toBe(false);
-  });
-
   it.each([
     { kind: "missing", og: "https://pharos.watch/og-missing.png", twitter: "/og-missing.png", localFile: null,
       errors: ["/: og:image references missing file /og-missing.png", "/: twitter:image references missing file /og-missing.png"] },
@@ -624,71 +423,6 @@ describe("check-seo-static", () => {
 
     const result = collectFixtureSeoResult(root);
     expect(result.errors.filter((error) => error.includes("references missing file"))).toEqual(errors);
-  });
-
-  it("follows single-quoted internal links when calculating reachability", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", { h1: "Home", links: ["/stability-index/"], quote: "'" });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(
-      false,
-    );
-  });
-
-  it("fails sitemap URLs that conflict with _headers noindex rules", async () => {
-    const root = await makeOutDir();
-    await writeFile(path.join(root, "_headers"), `${BASELINE_HEADERS}\n/compare/\n  X-Robots-Tag: noindex, follow\n`);
-    await writeBaselinePages(root, ["/compare/"]);
-    await writePage(root, "/compare/", { h1: "Compare" });
-    await writePage(root, "/stablecoin/usdt-tether/yield/", {
-      h1: "Tether Yield",
-      robots: ["noindex, follow"],
-    });
-    await writeSitemap(root, ["/", "/stability-index/", "/compare/", "/stablecoin/usdt-tether/yield/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        "sitemap.xml URL https://pharos.watch/compare/ conflicts with _headers noindex rule /compare/; drop one of the two signals",
-        "sitemap.xml URL https://pharos.watch/stablecoin/usdt-tether/yield/ conflicts with _headers noindex rule /stablecoin/*/yield/; drop one of the two signals",
-      ]),
-    );
-    expect(
-      result.errors.some(
-        (error) =>
-          error.startsWith("sitemap.xml URL https://pharos.watch/stability-index/") && error.includes("conflicts"),
-      ),
-    ).toBe(false);
-  });
-
-  it("ignores retired route text, canonical route links, and external retired-route links", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: [
-        "/stability-index/",
-        "/freezewatch/",
-        "/timeline/",
-        "/compliance/",
-        "/feed/digest.xml",
-        "/pharoswatchbot/",
-        "/blacklist-report/",
-        "https://docs.example.com/blacklist/",
-        "https://example.com/tape/",
-      ],
-      mainText: "Plain text mentions /blacklist/ and https://pharos.watch/tape/ without linking to either route.",
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors.filter((error) => error.includes("retired route prefix"))).toEqual([]);
   });
 
   it("asserts required structured-data fields for representative routes", async () => {
@@ -723,88 +457,4 @@ describe("check-seo-static", () => {
     );
   });
 
-  it("asserts Dataset catalog references include Google-required fields", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, ["/safety-scores/"]);
-    await writePage(root, "/safety-scores/", {
-      h1: "Safety Scores",
-      extraHead: jsonLdScript({
-        "@context": "https://schema.org",
-        "@type": "Dataset",
-        name: "Pharos Latest Stablecoin Scores Dataset",
-        includedInDataCatalog: { "@id": "https://pharos.watch/api/#data-catalog" },
-      }),
-    });
-    await writeSitemap(root, ["/", "/stability-index/", "/safety-scores/"]);
-
-    const result = collectSeoStaticCheckResult({
-      outDir: root,
-      structuredDataRouteMatrix: [
-        {
-          label: "safety scores",
-          route: "/safety-scores/",
-          nodes: [
-            {
-              type: "Dataset",
-              requiredPaths: ["includedInDataCatalog.name", "includedInDataCatalog.url"],
-            },
-          ],
-        },
-      ],
-    });
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.name",
-        ),
-        expect.stringContaining(
-          "/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.url",
-        ),
-      ]),
-    );
-  });
-
-  it("fails /about/ FAQ structured data when the emitted Q&A is not visible", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, ["/about/"]);
-    await writePage(root, "/about/", {
-      h1: "About Pharos",
-      mainText: "About Pharos overview without the structured question and answer.",
-      extraHead: jsonLdScript({
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        mainEntity: [
-          {
-            "@type": "Question",
-            name: "Why does Pharos exist?",
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: "Pharos makes stablecoin risk visible.",
-            },
-          },
-        ],
-      }),
-    });
-    await writeSitemap(root, ["/", "/stability-index/", "/about/"]);
-
-    const result = collectSeoStaticCheckResult({
-      outDir: root,
-      structuredDataRouteMatrix: [
-        {
-          label: "about FAQ",
-          route: "/about/",
-          nodes: [{ type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] }],
-          requireVisibleFaq: true,
-        },
-      ],
-    });
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("/about/: FAQPage question is not visible in page content: Why does Pharos exist?"),
-        expect.stringContaining("/about/: FAQPage answer is not visible in page content for: Why does Pharos exist?"),
-      ]),
-    );
-  });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { stripQueryVerificationTokenFromUrl } from "../api-key-verification-url";
 
 beforeEach(() => {
@@ -25,19 +25,5 @@ describe("API-key verification URL handling", () => {
 
     expect(window.location.search).toBe("?utm_source=email");
     expect(window.location.hash).toBe("#section");
-  });
-
-  it("leaves a URL without a verify parameter untouched", () => {
-    window.history.replaceState(null, "", "/api/?utm_source=email");
-
-    stripQueryVerificationTokenFromUrl();
-
-    expect(window.location.search).toBe("?utm_source=email");
-  });
-
-  it("performs no scrubbing without a window", () => {
-    vi.stubGlobal("window", undefined);
-
-    expect(stripQueryVerificationTokenFromUrl()).toBeUndefined();
   });
 });

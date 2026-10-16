@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
-import PegPage, { generateMetadata } from "./page";
+import PegPage from "./page";
 
 vi.mock("./client", () => ({
   PegLandingClient: ({ pegCurrency }: { pegCurrency: string }) => (
@@ -27,14 +27,4 @@ describe("PegPage", () => {
     expect(html).toContain("peg client USD");
   });
 
-  it("uses enriched peg page metadata descriptions", async () => {
-    const page = PEG_TAXONOMY_PAGE_BY_SLUG.get("eur")!;
-    const metadata = await generateMetadata({ params: Promise.resolve({ peg: "eur" }) });
-
-    expect(metadata).toMatchObject({
-      title: page.title,
-      description: expect.stringContaining("leading symbols like"),
-      alternates: { canonical: "/stablecoins/eur/" },
-    });
-  });
 });

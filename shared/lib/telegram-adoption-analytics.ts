@@ -46,7 +46,7 @@ export interface TelegramAdoptionCatalogEntry {
   destination: TelegramAdoptionDestination;
 }
 
-export const TELEGRAM_ADOPTION_CATALOG = Object.freeze([
+const TELEGRAM_ADOPTION_CATALOG = Object.freeze([
   { campaign: "landing", placement: "hero", token: "pw1_landing_hero", destination: "setup" },
   { campaign: "landing", placement: "setup", token: "pw1_landing_setup", destination: "setup" },
   {

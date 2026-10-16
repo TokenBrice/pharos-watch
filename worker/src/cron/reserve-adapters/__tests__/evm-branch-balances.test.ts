@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseAbi, toFunctionSelector } from "viem/utils";
+import { toFunctionSelector } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
@@ -11,7 +11,6 @@ import {
   type AdapterRpcCall,
   type AdapterRpcValue,
 } from "./reserve-adapter.test-support";
-import { fetchEvmBranchBalancesReserves } from "../evm-branch-balances";
 import { hasFatalWarnings } from "../validate";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
@@ -1420,9 +1419,4 @@ describe("fetchEvmBranchBalancesReserves", () => {
       .toEqual([BALANCE_OF_SELECTOR, DECIMALS_SELECTOR]);
   });
 
-  it("resolves per-chain pinned blocks for multichain branch aggregation", async () => {
-    void coin;
-    void parseAbi;
-    void fetchEvmBranchBalancesReserves;
-  });
 });

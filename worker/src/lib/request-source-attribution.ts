@@ -157,7 +157,7 @@ function toCount(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-export function buildApiRequestAttributionSplit(
+function buildApiRequestAttributionSplit(
   siteRequests: number,
   externalRequests: number,
 ): ApiRequestAttributionSplit {

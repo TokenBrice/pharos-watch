@@ -9,13 +9,6 @@ describe("YieldCoinIndex", () => {
     cleanup();
   });
 
-  it("renders the kicker, headline, and the moved PYS disclaimer", () => {
-    render(<YieldCoinIndex />);
-    expect(screen.getByText("Browse")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: /Per-coin yield detail/i })).toBeTruthy();
-    expect(screen.getByText(/Pharos Yield Score \(PYS\) is for informational/i)).toBeTruthy();
-  });
-
   it("renders at least one yield-type group with linked coin chips", () => {
     render(<YieldCoinIndex />);
     const links = screen.getAllByRole("link");

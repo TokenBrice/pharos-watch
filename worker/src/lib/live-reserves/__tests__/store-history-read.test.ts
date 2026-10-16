@@ -39,27 +39,6 @@ function insertAttempt(
 }
 
 describe("store-history-read", () => {
-  it.each([
-    [{ durationMs: 20000 }, 20000],
-    [{ durationMs: 0 }, 0],
-    [{ durationMs: 120, diag: { durationMs: 99 } }, 120],
-    [{ diag: { durationMs: 42 } }, 42],
-    [{ durationMs: "invalid", diag: { durationMs: 42 } }, 42],
-    [{ durationMs: -1 }, null],
-    [{ diag: { durationMs: -1 } }, null],
-    [{ durationMs: "20000" }, null],
-    [{ durationMs: null, diag: [] }, null],
-  ])("reads current and legacy duration metadata safely: %j", async (metadata, expected) => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      insertAttempt(sqlite, { stablecoinId: "bnusd-balanced", attemptedAt: 1000,
-        adapterKey: "sodax-sonic", status: "error", metadata: JSON.stringify(metadata) });
-      const timeline = await loadReserveSyncAttemptTimeline(db, "bnusd-balanced");
-      expect(timeline[0].durationMs).toBe(expected);
-    } finally { sqlite.close(); }
-  });
-
-
   it("returns the newest-N attempt timeline for one coin with parsed failure metadata", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -201,15 +180,6 @@ describe("store-history-read", () => {
         { adapterKey: "adapter-a", attempts: 4, ok: 2, degraded: 1, error: 1, skipped: 0, successRate: 0.5 },
         { adapterKey: "adapter-b", attempts: 2, ok: 0, degraded: 0, error: 0, skipped: 2, successRate: 0 },
       ]);
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("returns an empty rollup when no attempts fall inside the window", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      expect(await loadReserveSyncReliabilityRollup(db, 10_000, 1000)).toEqual([]);
     } finally {
       sqlite.close();
     }

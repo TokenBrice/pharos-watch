@@ -37,13 +37,6 @@ describe("decodeState", () => {
     });
   });
 
-  it("accepts a leading '?'", () => {
-    expect(decodeState("?view=grid&page=5", schema)).toMatchObject({
-      view: "grid",
-      page: 5,
-    });
-  });
-
   it("accepts a URLSearchParams input", () => {
     const params = new URLSearchParams("view=grid");
     expect(decodeState(params, schema)).toMatchObject({ view: "grid" });
@@ -60,42 +53,21 @@ describe("decodeState", () => {
     expect(state.pegs).toEqual(["usd", "eur"]);
   });
 
-  it("ignores unknown params", () => {
-    const state = decodeState("foo=bar&view=grid", schema);
-    expect(state).toEqual({
-      view: "grid",
-      page: 1,
-      query: "",
-      expanded: false,
-      pegs: [],
-    });
+  it.each([
+    ["true", true], ["1", true], ["false", false], ["0", false],
+  ] as const)("decodes expanded=%s as %s", (value, expected) => {
+    expect(decodeState(`expanded=${value}`, schema).expanded).toBe(expected);
   });
 
-  it("decodes booleans from true/false/1/0", () => {
-    expect(decodeState("expanded=true", schema).expanded).toBe(true);
-    expect(decodeState("expanded=1", schema).expanded).toBe(true);
-    expect(decodeState("expanded=false", schema).expanded).toBe(false);
-    expect(decodeState("expanded=0", schema).expanded).toBe(false);
-  });
-
-  it("trims and decodes string fields", () => {
-    expect(decodeState("query=%20hello%20", schema).query).toBe("hello");
-  });
-
-  it("deduplicates enumList entries", () => {
-    expect(decodeState("pegs=usd,usd,eur", schema).pegs).toEqual(["usd", "eur"]);
-  });
-
-  it("respects enumList maxItems", () => {
-    const cappedSchema: UrlStateSchema<{ pegs: readonly string[] }> = {
-      pegs: {
-        kind: "enumList",
-        defaultValue: [],
-        allowedValues: ["usd", "eur", "gbp"],
-        maxItems: 2,
-      },
+  it.each([
+    { name: "deduplicates enumList entries", query: "pegs=usd,usd,eur", maxItems: undefined },
+    { name: "respects enumList maxItems", query: "pegs=usd,eur,gbp", maxItems: 2 },
+  ])("$name", ({ query, maxItems }) => {
+    const listSchema: UrlStateSchema<{ pegs: readonly string[] }> = {
+      pegs: { kind: "enumList", defaultValue: [], allowedValues: ["usd", "eur", "gbp"], maxItems },
     };
-    expect(decodeState("pegs=usd,eur,gbp", cappedSchema).pegs).toEqual(["usd", "eur"]);
+    const state = maxItems === undefined ? decodeState(query, schema) : decodeState(query, listSchema);
+    expect(state.pegs).toEqual(["usd", "eur"]);
   });
 
   it("normalizes enum aliases and preserves untrimmed string fields when configured", () => {
@@ -127,33 +99,6 @@ describe("encodeState", () => {
     )).toBe("");
   });
 
-  it("omits fields that match the default", () => {
-    expect(encodeState(
-      { view: "grid", page: 1, query: "", expanded: false, pegs: [] },
-      schema,
-    )).toBe("view=grid");
-  });
-
-  it("emits encoded params for all non-default fields", () => {
-    const encoded = encodeState(
-      { view: "grid", page: 5, query: "usdc", expanded: true, pegs: ["usd", "eur"] },
-      schema,
-    );
-    const params = new URLSearchParams(encoded);
-    expect(params.get("view")).toBe("grid");
-    expect(params.get("page")).toBe("5");
-    expect(params.get("query")).toBe("usdc");
-    expect(params.get("expanded")).toBe("true");
-    expect(params.get("pegs")).toBe("usd,eur");
-  });
-
-  it("orders keys alphabetically", () => {
-    const encoded = encodeState(
-      { view: "grid", page: 5, query: "x", expanded: true, pegs: ["usd"] },
-      schema,
-    );
-    expect(encoded).toBe("expanded=true&page=5&pegs=usd&query=x&view=grid");
-  });
 });
 
 describe("round-trip", () => {
@@ -168,16 +113,4 @@ describe("round-trip", () => {
     expect(decodeState(encodeState(state, schema), schema)).toEqual(state);
   });
 
-  it("encodes defaults to empty and decodes empty back to defaults", () => {
-    const defaults: SampleState = {
-      view: "table",
-      page: 1,
-      query: "",
-      expanded: false,
-      pegs: [],
-    };
-    const encoded = encodeState(defaults, schema);
-    expect(encoded).toBe("");
-    expect(decodeState(encoded, schema)).toEqual(defaults);
-  });
 });

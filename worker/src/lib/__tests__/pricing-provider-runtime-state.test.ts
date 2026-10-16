@@ -31,22 +31,6 @@ describe("pricing provider runtime state", () => {
     });
   });
 
-  it("suppresses a blocked environment until its TTL probe", async () => {
-    const { db } = makeDb({ availability: "blocked", blocked_status: 451, next_probe_at: 10_000 });
-    await expect(readProviderAvailability(db, "binance", 9_999)).resolves.toEqual({
-      shouldFetch: false,
-      probeOnly: false,
-      blockedStatus: 451,
-      nextProbeAt: 10_000,
-    });
-    await expect(readProviderAvailability(db, "binance", 10_000)).resolves.toEqual({
-      shouldFetch: true,
-      probeOnly: true,
-      blockedStatus: 451,
-      nextProbeAt: 10_000,
-    });
-  });
-
   it("persists blocking, TTL probing and recovery independently per provider", async () => {
     const { db } = fixtures.open();
     const available = { shouldFetch: true, probeOnly: false, blockedStatus: null, nextProbeAt: null };

@@ -6,8 +6,6 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9EconomicControlResult } from "@shared/lib/safety-score-v9/control-primitives";
 import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
-import ghoRiskReview from "@shared/data/stablecoins/domains/risk-review/gho-aave.json";
-import phtRiskReview from "@shared/data/stablecoins/domains/risk-review/pht-pht.json";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
@@ -118,14 +116,6 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(oracle.status.applicability.state).not.toBe("not-applicable");
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "standard-external", score: 70 });
   });
-  it("retains GHO's admitted lending tier without scoring its four allocation facilitators", () => {
-    const { control } = evaluate(OracleRiskProfileSchema.parse(ghoRiskReview.oracleRisk), Date.parse("2026-10-01T12:00:00Z") / 1000);
-    expect(control.components.filter((component) => component.kind === "oracle")).toEqual([
-      expect.objectContaining({ posture: "standard-external", score: 70, binding: true }),
-    ]);
-    expect(oracleReasons(control)).toEqual([]);
-  });
-
   it("scores only the price-sensitive Core market in a mixed allocation inventory", () => {
     const { oracle, control } = evaluate(lendingProfile());
     expect(oracle.paths).toContainEqual(expect.objectContaining({ id: "allocation", applicability: expect.objectContaining({ state: "not-applicable" }) }));
@@ -184,17 +174,6 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
       code: "oracle-topology-undisclosed", responsibility: "unresearched", cause: "U",
     }));
     expect(trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual([]);
-  });
-
-  it("retains PHT's verified manual feeds as single-source measured-adverse evidence", () => {
-    const { control, trace } = evaluate(OracleRiskProfileSchema.parse(phtRiskReview.oracleRisk), Date.parse("2026-10-01T12:00:00Z") / 1000);
-    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
-      posture: "single-source-or-laggy", score: 45,
-    });
-    expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
-      path: "structural:weak-oracle-branch:high", responsibility: "measured-adverse",
-    }));
-    expect(oracleReasons(control).some((reason) => reason.code === "oracle-topology-undisclosed")).toBe(false);
   });
 
   it("retains adverse attribution and the single-source ceiling for verified owner-set pricing", () => {

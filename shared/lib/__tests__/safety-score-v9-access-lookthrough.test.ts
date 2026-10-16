@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateV9AccessLookthrough, resolveV9AccessClaimGraph } from "../safety-score-v9/access-lookthrough";
 import { evaluateV9AccessPosture } from "../safety-score-v9/access-posture";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
-import { ACCESS_LOOKTHROUGH_CAPABILITY_LABELS, ACCESS_LOOKTHROUGH_COVERAGE_LABELS, ACCESS_LOOKTHROUGH_REASON_LABELS } from "../classification";
+
 import { makeAccessGraph } from "./safety-score-v9-access-lookthrough.test-support";
 import { requiredKnown } from "./safety-score-v9-fixtures.test-support";
 
@@ -101,12 +101,6 @@ describe("reviewed reserve-access look-through", () => {
     graph.unresolved.push({ branchKey: "origin-disclosure", nodeKey: "token", reason: "issuer-undisclosed", responsibility: "issuer-undisclosed", status: requiredKnown("disclosure") });
     expect(evaluateV9AccessLookthrough(graph).unresolved).toContainEqual({ branchKey: "origin-disclosure", nodeKey: "token", reason: "issuer-undisclosed", responsibility: "issuer-undisclosed" });
     expect(evaluateV9AccessLookthrough(graph).unresolvedCoverageShare).toBeNull();
-  });
-  it("owns all display vocabulary in classification", () => {
-    const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.accessLookthrough;
-    expect(Object.keys(ACCESS_LOOKTHROUGH_COVERAGE_LABELS).sort()).toEqual([...policy.coverageStates].sort());
-    expect(Object.keys(ACCESS_LOOKTHROUGH_CAPABILITY_LABELS).sort()).toEqual([...policy.authorityCapabilities].sort());
-    expect(Object.keys(ACCESS_LOOKTHROUGH_REASON_LABELS).sort()).toEqual([...policy.unresolvedReasons].sort());
   });
   it("binds graph vocabulary into the semantic digest without a new scoring decision", () => {
     const raw = structuredClone(V9_CANDIDATE_POLICY_V1.policy);

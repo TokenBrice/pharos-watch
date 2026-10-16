@@ -85,11 +85,10 @@ The hub at `/learn/mechanisms/` renders the same shell with its own headline, a 
 
 ## Coverage Invariant
 
-Ordinary noncritical domain tests split the invariant for every `MECHANISM_ARCHETYPE_VALUES` entry:
+Ordinary noncritical domain tests cover routing:
 
-- `src/app/learn/mechanisms/__tests__/content.test.ts` requires a trimmed label and one-liner, non-stub headline and subtitle, at least one representative coin, and `TRACKED_META_BY_ID` resolution for every representative `coinId`.
-- The existing `src/app/learn/mechanisms/[archetype]/__tests__/page.test.tsx` exact static-param test imports the route module and round-trips every slug.
-- `src/app/__tests__/sitemap-frozen.test.ts` requires `/learn/mechanisms/<slug>/` membership for every archetype.
+- `src/app/__tests__/static-content-route-contracts.test.tsx` imports the mechanism route module and checks its exact static-param set against `MECHANISM_ARCHETYPE_VALUES`.
+- `src/app/__tests__/sitemap-frozen.test.ts` checks that the sitemap matches the canonical public route inventory, including its registry-derived mechanism routes.
 
 These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og-learn-images.ts --check` regenerates source SVGs, verifies source/local-font signatures, and compares Firefox-rendered PNGs with committed assets through `scripts/lib/og-static-runner.mts`; it is not an existence-only check.
 

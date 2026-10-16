@@ -3,9 +3,6 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
-import { collectGitPaths } from "../lib/changed-files.mts";
-import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
-import { countCriticalCoverageShards } from "../lib/critical-test-files.mts";
 import { PR_TEST_PLAN_PATH, readPrTestPlan } from "../lib/pr-test-plan.mts";
 import {
   PR_LANES,
@@ -30,7 +27,7 @@ export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: Wo
   // The docs lane owns doc-sync for mixed docs/source PRs.
   const docsLaneSelected = isPrLaneSelected(getPrLane("docs"), selection);
   for (const lane of PR_LANES) {
-    if (["preflight", "critical-coverage-shards", "critical-coverage", "pages-artifact", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
+    if (["preflight", "pages-artifact", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
     const shards = lane.id === "tests" ? selection.testShards ?? 4 : 1;
     if (!Number.isInteger(shards) || shards < 1 || (lane.shards !== undefined && shards > lane.shards)) {
       throw new Error(`Invalid shard count for ${lane.id}: ${shards}`);
@@ -47,20 +44,8 @@ export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: Wo
   return { include };
 }
 
-export function buildPrCoverageMatrix(selection: PrLaneSelection): { include: WorkflowMatrixEntry[] } {
-  if (!selection.criticalCoverageChanged) return { include: [] };
-  const lane = getPrLane("critical-coverage-shards");
-  const shards = selection.criticalCoverageShards;
-  if (!Number.isInteger(shards) || shards < 1 || shards > lane.shards!) {
-    throw new Error(`Invalid shard count for ${lane.id}: ${shards}`);
-  }
-  return { include: Array.from({ length: shards }, (_, index) => ({
-    lane: lane.id, shard: index + 1, shardCount: shards, timeout: lane.timeoutMinutes,
-  })) };
-}
-
 export function formatPrWorkflowOutputs(selection: PrLaneSelection): string {
-  return `matrix=${JSON.stringify(buildPrWorkflowMatrix(selection))}\ncoverage_matrix=${JSON.stringify(buildPrCoverageMatrix(selection))}\n`;
+  return `matrix=${JSON.stringify(buildPrWorkflowMatrix(selection))}\n`;
 }
 
 function bool(value: string | undefined): boolean {
@@ -72,7 +57,6 @@ function runLane(laneId: PrLaneId, env: NodeJS.ProcessEnv): number {
   const shard = env.PR_LANE_SHARD ? Number(env.PR_LANE_SHARD) : undefined;
   const shardCount = env.PR_LANE_SHARD_COUNT ? Number(env.PR_LANE_SHARD_COUNT) : undefined;
   for (const command of lane.commands) {
-    if (laneId === "critical-coverage" && command.id !== "critical-coverage-merge") continue;
     const program = command.program === "npm" ? "npm" : process.execPath;
     const result = spawnSync(program, buildPrLaneCommandArgs(command, {
       base: env.PR_BASE_SHA,
@@ -111,26 +95,12 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
   const selectedModes = [values.matrix, values.classify, values.run].filter(Boolean);
   assertCliUsage(selectedModes.length === 1, "Exactly one of --matrix, --classify, or --run is required");
   if (values.matrix) {
-    const criticalCoverageChanged = bool(env.CRITICAL_COVERAGE_CHANGED);
-    let criticalCoverageShards = 0;
-    if (criticalCoverageChanged) {
-      const base = env.PR_BASE_SHA;
-      const head = env.PR_HEAD_SHA;
-      const changedFiles = base && head
-        ? collectGitPaths({ kind: "range", base, head, diffFilter: "ACMR" })
-        : [];
-      const changedCriticalFiles = changedFiles.some((file) => CRITICAL_FILES.includes(file))
-        ? changedFiles
-        : undefined;
-      criticalCoverageShards = countCriticalCoverageShards({ changedFiles: changedCriticalFiles });
-    }
     const docsOnly = bool(env.DOCS_ONLY);
     const outputs = formatPrWorkflowOutputs({
-      criticalCoverageChanged,
-      criticalCoverageShards,
       docsChanged: bool(env.DOCS_CHANGED),
       docsOnly,
       pagesArtifactRequired: bool(env.PAGES_ARTIFACT_REQUIRED),
+      v9ResourceRequired: env.V9_RESOURCE_REQUIRED !== "false",
       ...(docsOnly ? {} : { testShards: readPrTestPlan(PR_TEST_PLAN_PATH).shardCount }),
     });
     if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, outputs);

@@ -13,20 +13,6 @@ describe("ScoreConstructionPanel", () => {
     expect(container.textContent).toContain("The backing pillar, the exit pillar are left out of the score");
     expect(container.textContent).not.toContain("NR");
   });
-  it("folds repeated unresolved-datum reasons into one counted line with no evaluator keys", () => {
-    const card = makeV9Card();
-    card.scoreTrace.boundedUncertaintyAttribution.items = ["aa11", "bb22", "cc33"].map((hash, index) => ({
-      source: "reason" as const,
-      code: "runtime-bridge-materiality-unavailable",
-      path: `control:bridge:cause:${index}`,
-      message: `The materialSupplyShare datum for independently identified control bridge-meta:test-coin:${hash} remains unresolved.`,
-      responsibility: "unresearched" as const,
-      cause: "U" as const, causeGapRefs: [],
-    }));
-    const { container } = render(<ScoreConstructionPanel card={card} />);
-    expect(container.textContent).toContain("Bridged supply share unresolved on 3 bridge routes");
-    expect(container.textContent).not.toContain("bridge-meta:");
-  });
   it("renders distinct adverse and uncertainty attribution messages", () => {
     const address = "0xa6fa4b5f76172d178d61b04b0ecd31909de037b6e";
     const card = makeV9Card();

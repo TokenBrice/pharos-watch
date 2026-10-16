@@ -374,12 +374,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
     ).toThrow();
   });
 
-  it("routes every supported archetype to exactly one rateable adapter", () => {
-    const results = Object.values(reviews).map((review) => evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1));
-    expect(results.map((result) => result.archetype)).toEqual(Object.keys(reviews));
-    expect(results.every((result) => result.rateability === "rateable" && result.score !== null)).toBe(true);
-  });
-
   it.each(Object.keys(reviews) as V9MechanismRiskReview["archetype"][])(
     "caps %s Backing by the measured covered liability share",
     (archetype) => {
@@ -644,22 +638,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
       const reserves = evaluateV9ReserveExposures(asset(), V9_CANDIDATE_POLICY_V1).score!;
       expect(result.rateability).toBe("rateable");
       expect(result.score).toBeCloseTo(reserves * 0.55 + 87 * 0.15 + 60 * 0.1 + 35 * 0.13 + 10 * 0.07, 8);
-    });
-
-    it("publishes one mechanism contribution per component under the commodity archetype", () => {
-      const result = evaluateV9Backing(asset(), commodityReview, V9_CANDIDATE_POLICY_V1);
-      expect(result.archetype).toBe("commodity-claim");
-      expect(result.rateability).toBe("rateable");
-      expect(
-        result.contributions
-          .filter((contribution) => contribution.source === "mechanism")
-          .map((contribution) => contribution.componentKey),
-      ).toEqual([
-        "mechanism:assurance-and-reconciliation",
-        "mechanism:custody-continuity",
-        "mechanism:physical-redemption",
-        "mechanism:title-and-allocation",
-      ]);
     });
 
     it("bounds a missing title claim and missing redemption without asserting either is measured", () => {

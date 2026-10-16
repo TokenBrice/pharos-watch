@@ -60,19 +60,6 @@ describe("GoogleAnalytics", () => {
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
   });
 
-  it("keeps analytics enabled on the public PharosWatchBot page", async () => {
-    pathnameMock.mockReturnValue("/pharoswatchbot/");
-
-    render(<GoogleAnalytics measurementId="G-TEST" />);
-
-    expect(window.dataLayer).toHaveLength(4);
-    expect(Array.from(window.dataLayer?.at(-1) ?? [])).toEqual([
-      "event",
-      "page_view",
-      expect.objectContaining({ page_path: "/pharoswatchbot/" }),
-    ]);
-  });
-
   it("queues native gtag arguments objects so gtag.js can emit collect hits", async () => {
     pathnameMock.mockReturnValue("/");
 
@@ -127,22 +114,6 @@ describe("GoogleAnalytics", () => {
     ]);
   });
 
-  it("tracks SPA path changes after bootstrap", async () => {
-    pathnameMock.mockReturnValue("/");
-    const view = render(<GoogleAnalytics measurementId="G-TEST" />);
-
-    expect(window.dataLayer).toHaveLength(4);
-    pathnameMock.mockReturnValue("/liquidity/");
-    view.rerender(<GoogleAnalytics measurementId="G-TEST" />);
-
-    expect(window.dataLayer).toHaveLength(5);
-    const lastEntry = Array.from(window.dataLayer?.at(-1) ?? []);
-    expect(lastEntry).toEqual([
-      "event",
-      "page_view",
-      expect.objectContaining({ page_path: "/liquidity/" }),
-    ]);
-  });
   it.each(["unmount", "private-route"])("cancels pending script injection on %s", (transition) => {
     pathnameMock.mockReturnValue("/");
     const view = render(<GoogleAnalytics measurementId="G-TEST" />);

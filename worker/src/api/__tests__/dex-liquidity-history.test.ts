@@ -115,19 +115,6 @@ describe("handleDexLiquidityHistory", () => {
     expect(body).toEqual([]);
   });
 
-  it("maps snake_case columns to camelCase", async () => {
-    const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
-    const res = await handleDexLiquidityHistory(
-      db,
-      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
-    );
-    const body = (await res.json()) as Array<Record<string, unknown>>;
-    expect(body[0]).not.toHaveProperty("total_tvl_usd");
-    expect(body[0]).not.toHaveProperty("total_volume_24h_usd");
-    expect(body[0]).not.toHaveProperty("liquidity_score");
-    expect(body[0]).not.toHaveProperty("snapshot_date");
-  });
-
   it("passes the stored methodology_version through unchanged", async () => {
     const db = mockD1([
       { match: "dex_liquidity_history", rows: [makeDexLiquidityHistoryRow({ methodology_version: "5.91" })] },

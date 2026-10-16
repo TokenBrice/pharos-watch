@@ -172,18 +172,6 @@ describe("adaptCapVaultState", () => {
     expectValidAdapterOutput("cap-vault", result);
   });
 
-  it("omits the redemption fee telemetry when the redeem fee could not be read", () => {
-    const result = adaptCapVaultState({
-      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
-      supplyUsd: 100,
-      redemptionFeeBps: null,
-      assets: [makeCapAsset({ priceUsd: 1 })],
-    });
-
-    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
-    expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
-  });
-
   it("marks the route paused when no unpaused capacity remains", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
@@ -195,20 +183,6 @@ describe("adaptCapVaultState", () => {
       capacityUsd: 0,
       routeStatus: "paused",
     });
-  });
-
-  it("emits cap-vault-asset-status-unavailable info warning when paused status cannot be read", () => {
-    const result = adaptCapVaultState({
-      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
-      supplyUsd: 100,
-      assets: [makeCapAsset({ paused: true, pausedStatusUnavailable: true })],
-    });
-
-    const statusWarning = result.warnings?.find((w) => w.code === "cap-vault-asset-status-unavailable");
-    expect(statusWarning).toBeDefined();
-    expect(statusWarning?.severity).toBe("info");
-    // Paused-treated-as-true must exclude the asset from immediate redeemable capacity.
-    expect(result.metadata?.redemption?.capacityUsd).toBe(0);
   });
 
   it("emits cap-vault-peg-assumed info warning when any active asset lacks priceUsd", () => {

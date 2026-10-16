@@ -54,7 +54,6 @@ import type {
 // public surface. [audit Q-130]
 export type { CommandPaletteSection, CommandPaletteActionId, CommandPaletteActionIcon, CommandPaletteActionDefinition, CommandPaletteGroup, CommandPaletteSectionedItem, CommandPaletteHistoryItem, CommandPalettePegStatus, CommandPaletteStablecoinHealth, CommandPaletteStablecoinLiveMetadata, CommandPaletteResultDescriptor, CommandPaletteResultKind } from "./command-palette-types";
 export {
-  fuzzyMatch,
   rankCommandPaletteResults,
 } from "./command-palette-scoring";
 
@@ -144,7 +143,7 @@ function dedupeCommandPalettePages(pages: readonly NavItem[]): NavItem[] {
   });
 }
 
-export const COMMAND_PALETTE_PAGES = dedupeCommandPalettePages([
+const COMMAND_PALETTE_PAGES = dedupeCommandPalettePages([
   ...NAV_ITEMS,
   ...COMMAND_PALETTE_EXTRA_PAGES,
 ]);
@@ -293,7 +292,7 @@ export function buildPopularStablecoinDescriptors(
   return out;
 }
 
-export function buildCommandPaletteActionDefinitions(
+function buildCommandPaletteActionDefinitions(
   isDark: boolean,
   options?: { watchlistCount?: number },
 ): CommandPaletteActionDefinition[] {

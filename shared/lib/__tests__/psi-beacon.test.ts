@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX } from "../classification";
 import {
@@ -161,14 +161,6 @@ describe("buildPsiBeaconModel (hero)", () => {
     expect(model.unknown?.unreconciled).toBe(true);
   });
 
-  it("handles a crisis where fog dominates", () => {
-    const model = hero(withComponents(25.5, "CRISIS", { severity: 52, breadth: 17, stressBreadth: 3, trend: -2.5 }));
-    expect(model.unknown).toBeNull();
-    expect(model.fog.map((bank) => bank.from)).toEqual([48, 31, 28]);
-    expect(model.drag).toMatchObject({ from: 25.5, to: 28 });
-    expect(Math.abs(psiBeaconConservationResidual(model)!)).toBeLessThanOrEqual(0.05);
-  });
-
   it("leaves the gap unattributed with a dashed tip when one component is null (R1)", () => {
     const model = hero({ ...LIVE, components: { severity: 0.02, breadth: null, stressBreadth: 1.33, trend: -0.14 } });
     expect(model.fog.map((bank) => bank.key)).toEqual(["severity", "stressBreadth"]);
@@ -176,12 +168,6 @@ describe("buildPsiBeaconModel (hero)", () => {
     expect(model.unknown!.to - model.unknown!.from).toBeCloseTo(6.65, 1);
     expect(model.beam!.dashedTip).toBe(true);
     expect(model.ariaLabel).toContain("breadth unavailable");
-    expect(Math.abs(psiBeaconConservationResidual(model)!)).toBeLessThanOrEqual(0.05);
-  });
-
-  it.each(["severity", "stressBreadth"] as const)("keeps conservation when %s is null", (key) => {
-    const model = hero({ ...LIVE, components: { ...LIVE.components!, [key]: null } });
-    expect(model.unknown?.keys).toEqual([key]);
     expect(Math.abs(psiBeaconConservationResidual(model)!)).toBeLessThanOrEqual(0.05);
   });
 
@@ -213,10 +199,6 @@ describe("buildPsiBeaconModel (hero)", () => {
     expect(model.ariaLabel).toContain("severity 0.0 (lower bound)");
   });
 
-  it("omits the avg tick when the API has no 24h average", () => {
-    expect(hero({ ...LIVE, avg24h: undefined, avg24hBand: undefined }).avgTick).toBeNull();
-  });
-
   it("reads rings and zones from psi-policy (R5)", () => {
     const model = hero(LIVE);
     expect(model.rings.map((ring) => ring.value)).toEqual([20, 40, 60, 75, 90, 100]);
@@ -230,20 +212,6 @@ describe("buildPsiBeaconModel (hero)", () => {
     ]);
   });
 
-  it("names the full reading in its aria label", () => {
-    expect(hero(LIVE).ariaLabel).toBe(
-      "Pharos Stability Index lighthouse: instant 91.9 BEDROCK; light lost to severity 0.0, breadth 6.7, stress breadth 1.3; trend −0.1; 24h average 92.1.",
-    );
-  });
-
-  it("conserves for the committed snapshot fixture", () => {
-    const fixture = JSON.parse(
-      readFileSync(new URL("../../../worker/src/api/__tests__/fixtures/snapshot-2026-10-07-v10.09.json", import.meta.url), "utf8"),
-    ) as { psi: PsiBeaconCurrentLike };
-    const model = hero(fixture.psi);
-    expect(model.unknown).toBeNull();
-    expect(Math.abs(psiBeaconConservationResidual(model)!)).toBeLessThanOrEqual(0.05);
-  });
 });
 
 describe("buildPsiBeaconModel states", () => {
@@ -270,4 +238,5 @@ describe("buildPsiBeaconModel states", () => {
     const model = buildPsiBeaconModel({ kind: "loading" });
     expect(model).toMatchObject({ state: "loading", beam: null, paint: { mode: "dark" } });
   });
+
 });

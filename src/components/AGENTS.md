@@ -13,7 +13,7 @@ Applies to reusable product components under `src/components/`.
 - Tailwind classes must be static strings; this root rule is prose-enforced.
 - Do not edit `src/components/ui/` shadcn primitives unless explicitly required.
 - Classification labels and colors come only from `shared/lib/classification.ts`.
-- Product tables use `src/components/table/` primitives; `npm run check:table-primitives` enforces the allowed raw-table exceptions.
+- Product tables use `src/components/table/` primitives; see `docs/design-language.md#tables-and-charts` for composition conventions and raw-table exceptions.
 
 ## Entrypoints & generation
 
@@ -25,5 +25,5 @@ Applies to reusable product components under `src/components/`.
 
 ## Common checks
 
-- Run `npm run check:table-primitives` and `npm run check:shared-types-imports` as applicable.
+- Run `npm run check:shared-types-imports` as applicable.
 - Run focused component tests plus `npm run test:a11y` for interaction, semantic, or visualization changes.

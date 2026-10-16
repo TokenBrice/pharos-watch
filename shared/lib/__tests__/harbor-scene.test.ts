@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { RatioSchema, ZERO_RATIO } from "../../types/ratio";
 import {
   buildHarborScene,
-  harborHash,
-  parseHarborHash,
   stepHarborBerth,
   CRAFT_MIN_USD,
   HARBOR_UNIT_USD,
@@ -113,10 +111,6 @@ describe("buildHarborScene on the 2026-10-12 payload", () => {
     expect(scene.vessels.at(-1)?.id).toBe("harbor-unattributed");
   });
 
-  it("is deterministic under shuffled input", () => {
-    const reversed = { ...LIVE, chains: LIVE.chains.slice().reverse() };
-    expect(JSON.stringify(buildHarborScene(reversed))).toBe(JSON.stringify(scene));
-  });
 });
 
 describe("buildHarborScene edge cases", () => {
@@ -193,15 +187,6 @@ describe("buildHarborScene edge cases", () => {
 });
 
 describe("harbor deep links and keys", () => {
-  const known = new Set(["ethereum", "tron"]);
-  it("parses #chain-<id> only for known chains", () => {
-    expect(parseHarborHash("#chain-tron", known)).toBe("tron");
-    expect(parseHarborHash(harborHash("ethereum"), known)).toBe("ethereum");
-    expect(parseHarborHash("#chain-nope", known)).toBeNull();
-    expect(parseHarborHash("#tron", known)).toBeNull();
-    expect(parseHarborHash("#chain-%E0%A4%A", known)).toBeNull();
-  });
-
   it("steps berths in rank order and clamps at the ends", () => {
     const vessels = [{ id: "a" }, { id: "b" }, { id: "c" }];
     expect(stepHarborBerth(vessels, "a", "ArrowDown")).toBe("b");

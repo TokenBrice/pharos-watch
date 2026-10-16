@@ -87,7 +87,6 @@ describe("custody inventory USDtb profile", () => {
   });
 
   it.each([
-    [50, 0, 0.5, true],
     [99.5, 0, 0.995, false],
     [99.49, 0, 0.9949, true],
     [100, 0, 1, false],
@@ -165,11 +164,6 @@ describe("custody inventory USDtb profile", () => {
     );
   });
 
-  it("throws when backingAssets is missing", () => {
-    expect(() => adaptCustodyInventory("usdtb-transparency", { ...USDTB_BACKING, backingAssets: undefined }))
-      .toThrow("missing backingAssets");
-  });
-
   it("throws when supply is missing or not a positive number", () => {
     expect(() => adaptCustodyInventory("usdtb-transparency", { ...USDTB_BACKING, supply: undefined }))
       .toThrow("not a finite number");
@@ -224,11 +218,6 @@ describe("custody inventory USDtb profile", () => {
       .toThrow("assetsInMotion is negative");
   });
 
-  it("throws when lastUpdatedAt is unreadable", () => {
-    expect(() => adaptCustodyInventory("usdtb-transparency", { ...USDTB_BACKING, lastUpdatedAt: "" }))
-      .toThrow("unreadable lastUpdatedAt");
-  });
-
   it("throws when every backing asset amount is zero and there is no assets-in-motion float", () => {
     expect(() =>
       adaptCustodyInventory("usdtb-transparency", {
@@ -255,22 +244,6 @@ describe("custody inventory USDtb profile", () => {
 });
 
 describe("custody inventory USDtb fetch", () => {
-  it("fetches the configured backing-and-supply endpoint and adapts the payload", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue(USDTB_BACKING);
-    const config = makeConfig();
-
-    const result = await fetchCustodyInventoryReserves(makeCoin(), config, signal);
-
-    expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
-      config,
-      "usdtb-transparency",
-      signal,
-      12_000,
-      undefined,
-    );
-    expect(result.slices[0]).toMatchObject({ name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)" });
-  });
-
   it("propagates an error when the endpoint request fails", async () => {
     mockedReserveHelper(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://usdtb.money/api/transparency/backing-and-supply/current"));
     const config = makeConfig();

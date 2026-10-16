@@ -13,10 +13,6 @@ import {
 } from "@shared/lib/stats";
 
 describe("mean", () => {
-  it("averages finite samples", () => {
-    expect(mean([1, 2, 3])).toBe(2);
-  });
-
   it("ignores non-finite samples and returns null for empty finite input", () => {
     expect(mean([1, NaN, Infinity, 3])).toBe(2);
     expect(mean([])).toBeNull();
@@ -25,10 +21,6 @@ describe("mean", () => {
 });
 
 describe("median", () => {
-  it("returns the middle sorted finite sample for odd input", () => {
-    expect(median([3, 1, 2])).toBe(2);
-  });
-
   it("averages the two middle sorted finite samples for even input", () => {
     expect(median([10, 2, 8, 4])).toBe(6);
   });

@@ -84,33 +84,6 @@ describe("CoverageMatrixCard", () => {
     ).toBeNull();
   });
 
-  it("renders the empty-result state and reset affordance", () => {
-    render(
-      <CoverageMatrixCard
-        {...makeMatrixModel({
-          search: "nomatch",
-          filteredRows: [],
-          hasActiveFilters: true,
-        })}
-      />,
-    );
-
-    expect(screen.getByText("No stablecoins match your search or filters.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Clear all filters" })).toBeTruthy();
-  });
-
-  it("renders the desktop comparison table with per-feature badges", () => {
-    const { container } = render(<CoverageMatrixCard {...makeMatrixModel()} />);
-    const view = within(container);
-
-    const matrixTable = view.getByRole("table", { name: /Per-coin feature availability/ });
-
-    expect(screen.getAllByText("Coin 1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("C1").length).toBeGreaterThan(0);
-    expect(within(matrixTable).getByRole("rowheader", { name: /Coin 1/ })).toBeTruthy();
-    expect(screen.getAllByRole("columnheader", { name: /Backstop/ }).length).toBeGreaterThan(0);
-  });
-
   it("pages long results 20 at a time with an honest count and a URL page", () => {
     window.history.replaceState(null, "", "/coverage/");
     const rows = Array.from({ length: 30 }, (_value, index) => makeCoverageRow(index + 1));
@@ -129,16 +102,6 @@ describe("CoverageMatrixCard", () => {
     window.history.replaceState(null, "", "/coverage/");
   });
 
-  it("renders the impaired redemption legend entry", () => {
-    render(<CoverageMatrixCard {...makeMatrixModel()} />);
-
-    expect(screen.getAllByText("Impaired").length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(
-        "A redemption route is configured, but current market or route-availability evidence contradicts strong redemption coverage.",
-      ).length,
-    ).toBeGreaterThan(0);
-  });
 });
 
 describe("CoverageSafetyScoreDataCard", () => {

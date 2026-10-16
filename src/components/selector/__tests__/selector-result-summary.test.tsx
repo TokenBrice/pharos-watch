@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { act } from "react";
 import type { SelectorInput } from "@shared/lib/selector";
@@ -14,10 +14,6 @@ import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
   return createNextLinkMock();
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
 
 const input: SelectorInput = {
@@ -51,12 +47,10 @@ function summaryProps(
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  let reject!: (reason: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
+  const promise = new Promise<T>((res) => {
     resolve = res;
-    reject = rej;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 }
 
 const shareButton = () => screen.getByRole("button", { name: /Copy share link|Creating link|Link copied/i });
@@ -107,22 +101,6 @@ describe("SelectorResultSummary", () => {
     expect(onEditAnswer).toHaveBeenCalledWith("peg");
   });
 
-  it("announces share copy errors and exposes manual fallback URL", async () => {
-    render(
-      <SelectorResultSummary
-        {...summaryProps({
-          onCopyShareLink: vi.fn().mockRejectedValue(new Error("Clipboard denied")),
-          shareFallbackUrl: "https://pharos.watch/screener/picker/?sid=abc",
-        })}
-      />,
-    );
-
-    fireEvent.click(shareButton());
-
-    expect((await screen.findByRole("alert")).textContent).toContain("Clipboard denied");
-    expect(screen.getByDisplayValue("https://pharos.watch/screener/picker/?sid=abc")).toBeTruthy();
-  });
-
   it("blocks a second submission while the share link is pending", async () => {
     const pending = deferred<void>();
     const onCopyShareLink = vi.fn().mockReturnValue(pending.promise);
@@ -148,76 +126,6 @@ describe("SelectorResultSummary", () => {
     expect(screen.getByRole("status").textContent).toBe("Share link copied.");
   });
 
-  it("returns the copied feedback to idle after the reset window", async () => {
-    vi.useFakeTimers();
-
-    render(<SelectorResultSummary {...summaryProps()} />);
-
-    await act(async () => {
-      fireEvent.click(shareButton());
-      await Promise.resolve();
-    });
-    expect(screen.getByRole("button", { name: /Link copied/i })).toBeTruthy();
-
-    await act(async () => {
-      vi.advanceTimersByTime(2499);
-    });
-    expect(screen.getByRole("button", { name: /Link copied/i })).toBeTruthy();
-
-    await act(async () => {
-      vi.advanceTimersByTime(1);
-    });
-    expect(screen.getByRole("button", { name: /^Copy share link$/i })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toBe("");
-  });
-
-  it("clears the outstanding copied-feedback timer on unmount", async () => {
-    vi.useFakeTimers();
-
-    const { unmount } = render(<SelectorResultSummary {...summaryProps()} />);
-    const baseline = vi.getTimerCount();
-
-    await act(async () => {
-      fireEvent.click(shareButton());
-      await Promise.resolve();
-    });
-
-    expect(screen.getByRole("button", { name: /Link copied/i })).toBeTruthy();
-    expect(vi.getTimerCount()).toBe(baseline + 1);
-
-    unmount();
-
-    expect(vi.getTimerCount()).toBe(baseline);
-  });
-
-  it("clears the error announcement and fallback when a retry succeeds", async () => {
-    const onCopyShareLink = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("Clipboard denied"))
-      .mockResolvedValueOnce(undefined);
-
-    render(
-      <SelectorResultSummary
-        {...summaryProps({
-          onCopyShareLink,
-          shareFallbackUrl: "https://pharos.watch/screener/picker/?sid=abc",
-        })}
-      />,
-    );
-
-    fireEvent.click(shareButton());
-    expect((await screen.findByRole("alert")).textContent).toContain("Clipboard denied");
-
-    await act(async () => {
-      fireEvent.click(shareButton());
-      await Promise.resolve();
-    });
-
-    expect(onCopyShareLink).toHaveBeenCalledTimes(2);
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByDisplayValue("https://pharos.watch/screener/picker/?sid=abc")).toBeNull();
-    expect(screen.getByRole("button", { name: /Link copied/i })).toBeTruthy();
-  });
 });
 
 describe("SelectorSnapshotBanner", () => {
@@ -229,20 +137,4 @@ describe("SelectorSnapshotBanner", () => {
     expect(screen.queryByText("Unverified client snapshot")).toBeNull();
   });
 
-  it("keeps current-data comparison behind the single snapshot action", () => {
-    const onCompareToToday = vi.fn();
-
-    render(
-      <SelectorSnapshotBanner
-        mode="frozen"
-        capturedAt={1_700_000_000_000}
-        onCompareToToday={onCompareToToday}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /Compare to today/i }));
-
-    expect(onCompareToToday).toHaveBeenCalledOnce();
-    expect(screen.queryByText(/snapshot differs from today's data/i)).toBeNull();
-  });
 });

@@ -153,7 +153,7 @@ function describeKeyNoun(key: string): KeyNoun {
 }
 
 /** Reader-facing label for one evaluator key (`chain:solana` → "Solana"). */
-export function describeEvaluatorKey(key: string): string {
+function describeEvaluatorKey(key: string): string {
   return describeKeyNoun(key).one;
 }
 
@@ -327,7 +327,7 @@ export function groupSafetyScoreReasons(messages: readonly string[]): SafetyScor
  * Excluded score component keys (`partialEvidence.excludedComponentKeys`) in
  * plain words, e.g. the USDC issuer-redemption cost gap → "issuer redemption cost".
  */
-export function describeExcludedScoreComponent(key: string): string {
+function describeExcludedScoreComponent(key: string): string {
   if (key === "dependency:parent") return "the parent asset's score";
   if (key.startsWith("wrapper-local:")) return `wrapper ${describeEvidenceDatum(key.slice("wrapper-local:".length))}`;
   if (key.startsWith("mechanism:")) return `${slugWords(key.slice("mechanism:".length))} review`;

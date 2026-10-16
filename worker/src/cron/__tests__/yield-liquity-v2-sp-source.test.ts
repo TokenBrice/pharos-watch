@@ -113,14 +113,10 @@ function buildBranchValues(config: LiquityV2SpSourceConfig): BranchValues[] {
 }
 
 describe.each([
-  { name: "Base Dollar", config: BASEDOLLAR_SP_CONFIG, expectedBranchCount: 5 },
-  { name: "Liquity V2", config: LIQUITY_V2_SP_CONFIG, expectedBranchCount: 3 },
-])("fetchLiquityV2StabilityPoolSource ($name)", ({ config, expectedBranchCount }) => {
+  { name: "Base Dollar", config: BASEDOLLAR_SP_CONFIG },
+  { name: "Liquity V2", config: LIQUITY_V2_SP_CONFIG },
+])("fetchLiquityV2StabilityPoolSource ($name)", ({ config }) => {
   afterEach(cleanupYieldSourceTest);
-
-  it("aggregates every configured branch", () => {
-    expect(config.branches).toHaveLength(expectedBranchCount);
-  });
 
   it("computes the deposit-weighted interest-only APR across all branches", async () => {
     const values = buildBranchValues(config);

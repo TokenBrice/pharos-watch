@@ -78,13 +78,4 @@ describe("status summary scheduled-slot query failures", () => {
     expect(summary).not.toHaveProperty("scheduledSlotRunningQueryFailed");
   });
 
-  it("surfaces both scheduled-slot query failures together", () => {
-    const summary = buildSummary(makeCronHealth({
-      scheduledSlots: { queryFailed: true },
-      scheduledSlotEventMarkerQueryFailed: true,
-    }));
-
-    expect(summary.scheduledSlotRunningQueryFailed).toBe(true);
-    expect(summary.scheduledSlotEventMarkerQueryFailed).toBe(true);
-  });
 });

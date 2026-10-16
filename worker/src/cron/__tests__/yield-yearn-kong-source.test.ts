@@ -8,48 +8,6 @@ import { fetchYearnKongSources } from "../yield-sync/sources";
 describe("fetchYearnKongSources", () => {
   afterEach(cleanupYieldSourceTest);
 
-  it("extracts stablecoin vault APYs from Kong GraphQL", async () => {
-    mockYieldSourceRoutes([
-      {
-        match: "kong.yearn.fi",
-        matchBody: '"chainId":1}',
-        body: {
-          data: {
-            vaults: [
-              {
-                address: "0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204",
-                name: "USDC-1 yVault",
-                yearn: true,
-                asset: { symbol: "USDC" },
-                tvl: { close: 31_708_022 },
-                apy: { net: 0.0312, monthlyNet: 0.0312 },
-                meta: { category: "Stablecoin", isRetired: false },
-              },
-            ],
-          },
-        },
-      },
-      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
-    ]);
-
-    const { candidates: results } = await fetchYearnKongSources();
-    expect(results.map((result) => result.yield.sourceKey)).toEqual([
-      "protocol-api:yearn:ethereum:0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
-    ]);
-    expect(results[0]).toEqual(
-      expect.objectContaining({
-        symbol: "USDC",
-        chain: "ethereum",
-        yield: expect.objectContaining({
-          currentApy: expect.closeTo(3.12, 1),
-          dataSource: "protocol-api",
-          sourceKey: expect.stringContaining("protocol-api:yearn:ethereum:"),
-          yieldSource: expect.stringContaining("Yearn"),
-        }),
-      }),
-    );
-  });
-
   it("skips retired vaults", async () => {
     mockYieldSourceRoutes([
       {

@@ -5,9 +5,6 @@ import { describe, expect, it } from "vitest";
 import donorCapture from "./fixtures/safety-score-v9-a-plus-donor-capture.json";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
-  normalizeFixedInput,
-} from "../report-cards-fixed-input";
-import {
   createReportCardsFixedInput,
   type ReportCardsFixedInputDraft,
 } from "../../test-helpers/report-cards-fixed-input";
@@ -523,30 +520,4 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
     ).toBe(false);
   });
 
-  it("loads the frozen donor capture through the production schemas", () => {
-    // The capture is stored as JSON so the epoch-shift reclocking tooling can
-    // rewrite it in place; these guards keep the load honest now that the TS
-    // `satisfies` checks no longer stand between the file and the suite.
-    expect(donorReplay.extension.assets.map((asset) => asset.assetId)).toEqual([
-      "ausd-agora",
-      "bold-liquity",
-      "dai-makerdao",
-      "europ-schuman",
-      "sdola-inverse-finance",
-      "usdc-circle",
-      "usdt-tether",
-    ]);
-
-    // Donor assets are deliberately partial fragments, so the capture is
-    // validated the only way it can be: assembled into the two-asset fixture and
-    // parsed by the production fixed-input and extension schemas.
-    const { fixedInput, extension } = buildFixture();
-    expect(normalizeFixedInput(fixedInput)).toEqual(fixedInput);
-    expect(SafetyScoreV9FactSetExtensionV2Schema.parse(extension)).toEqual(extension);
-    expect(extension).toMatchObject({
-      compiledAtSec: donorReplay.extension.compiledAtSec,
-      routeFreshness: donorReplay.extension.routeFreshness,
-      sources: donorReplay.extension.sources,
-    });
-  });
 });

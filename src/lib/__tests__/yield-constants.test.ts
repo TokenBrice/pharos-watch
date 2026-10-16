@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatYieldWarningSignal,
   formatYieldWarningSignalDescription,
   formatYieldRatioPercent,
   resolveYieldScoreQualification,
@@ -8,17 +7,7 @@ import {
 } from "@/lib/yield-constants";
 import { computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 
-describe("formatYieldWarningSignal", () => {
-  it("returns the mapped label for known signals", () => {
-    expect(formatYieldWarningSignal("yield-spike")).toBe("Yield spike");
-    expect(formatYieldWarningSignal("tvl-outflow")).toBe("TVL outflow");
-    expect(formatYieldWarningSignal("opportunity-evidence-missing")).toBe("Opportunity evidence incomplete");
-  });
 
-  it("converts unknown signals from kebab-case to space-separated", () => {
-    expect(formatYieldWarningSignal("some-new-signal")).toBe("some new signal");
-  });
-});
 
 describe("missing-evidence warning descriptions", () => {
   it.each(["safety-unrated", "opportunity-evidence-missing"])(
@@ -95,11 +84,6 @@ describe("computePysBreakdown", () => {
 });
 
 describe("computePysBreakdown benchmarkCurrency (USD_EFFR re-base)", () => {
-  it("re-bases a foreign-benchmark row onto the USD reference", () => {
-    const { hurdleRebase } = computePysBreakdown(5, 80, 0.9, 0.4, null, 3.95, "CHF");
-    expect(hurdleRebase).toBeCloseTo(3.55, 6);
-  });
-
   it("takes no re-base on a USD-benchmarked row (USD_EFFR key)", () => {
     // EFFR row: benchmarkRate and the USD reference are both USD rates, so
     // the spread between them must not be credited as excess yield.

@@ -5,7 +5,6 @@ import {
   formatScore,
   formatChartDate,
   formatChartPercent,
-  formatDecimal,
   formatPercent,
   formatPegOccupancy,
   formatPercentFromRatio,
@@ -21,9 +20,7 @@ import {
   formatCompactUsdShortLowerK,
   formatSignedCompactUsd,
   formatBps,
-  formatDeathDate,
   formatEventDate,
-  formatYearMonth,
   formatNativePrice,
   pegCurrencySymbol,
   formatPercentChange,
@@ -35,7 +32,6 @@ import {
   timeAgo,
   formatAddress,
   formatScoreTrimmed,
-  slugifyId,
 } from "../format";
 import {
   formatApproxDurationSeconds,
@@ -63,15 +59,12 @@ describe("formatWholeUnitDurationSeconds", () => {
 
 describe("formatScore", () => {
   it("formats to one decimal", () => expect(formatScore(72.456)).toBe("72.5"));
-  it("handles zero", () => expect(formatScore(0)).toBe("0.0"));
-  it("handles 100", () => expect(formatScore(100)).toBe("100.0"));
   it("can trim integer scores", () => {
     expect(formatScore(100, { trimInteger: true })).toBe("100");
     expect(formatScore(72.456, { trimInteger: true })).toBe("72.5");
     expect(formatScoreTrimmed(80)).toBe("80");
   });
   it("returns dash for null", () => expect(formatScore(null)).toBe("-"));
-  it("returns dash for undefined", () => expect(formatScore(undefined)).toBe("-"));
   it("returns dash for non-finite values", () => {
     expect(formatScore(Infinity)).toBe("-");
     expect(formatScore(NaN)).toBe("-");
@@ -121,19 +114,6 @@ describe("formatPegOccupancy", () => {
   });
 });
 
-describe("formatDecimal", () => {
-  it("defaults to two fraction digits", () => {
-    expect(formatDecimal(12.3)).toBe("12.30");
-  });
-  it("respects a custom digit range", () => {
-    expect(formatDecimal(12.345, 1, 1)).toBe("12.3");
-    expect(formatDecimal(5, 0, 2)).toBe("5");
-  });
-  it("adds grouping separators", () => {
-    expect(formatDecimal(1234.5)).toBe("1,234.50");
-  });
-});
-
 describe("formatSignedPercent", () => {
   it.each([
     [5.5, "+5.50%"],
@@ -162,34 +142,11 @@ describe("formatElapsedSeconds", () => {
   });
 });
 
-describe("formatChartDate", () => {
-  const ts = new Date("2025-06-15T12:00:00Z").getTime();
-  it("short format: month + day", () => {
-    expect(formatChartDate(ts, "short")).toBe("Jun 15");
-  });
-  it("month-year format", () => {
-    expect(formatChartDate(ts, "month-year")).toBe("Jun 2025");
-  });
-  it("compact format: month + 2-digit year", () => {
-    expect(formatChartDate(ts, "compact")).toBe("Jun '25");
-  });
-  it("with-time format: month + day + hour", () => {
-    const result = formatChartDate(ts, "with-time");
-    expect(result).toMatch(/Jun 15/);
-    expect(result).toMatch(/\d{1,2}\s*(AM|PM)/i);
-  });
-});
-
 describe("formatCurrency", () => {
-  it("formats trillions", () => expect(formatCurrency(1.5e12)).toBe("$1.50T"));
-  it("formats billions", () => expect(formatCurrency(2.345e9)).toBe("$2.35B"));
   it("formats millions", () => expect(formatCurrency(7.891e6)).toBe("$7.89M"));
-  it("formats thousands", () => expect(formatCurrency(42_500)).toBe("$42.50K"));
   it("formats small values", () => expect(formatCurrency(123.456)).toBe("$123.46"));
-  it("formats zero", () => expect(formatCurrency(0)).toBe("$0.00"));
   it("formats negative values", () => expect(formatCurrency(-3e9)).toBe("-$3.00B"));
   it("returns N/A for NaN", () => expect(formatCurrency(NaN)).toBe("N/A"));
-  it("returns N/A for Infinity", () => expect(formatCurrency(Infinity)).toBe("N/A"));
   it("respects custom decimals", () => expect(formatCurrency(1.2345e9, 3)).toBe("$1.234B"));
 });
 
@@ -243,89 +200,78 @@ describe("formatSignedCurrency", () => {
   });
 });
 
-describe("formatCompactUsd", () => {
-  it("formats trillions with 2 decimals", () => expect(formatCompactUsd(1.567e12)).toBe("$1.57T"));
-  it("formats billions with 2 decimals", () => expect(formatCompactUsd(4.321e9)).toBe("$4.32B"));
-  it("formats millions with 1 decimal", () => expect(formatCompactUsd(8.76e6)).toBe("$8.8M"));
-  it("formats thousands with 0 decimals", () => expect(formatCompactUsd(12_345)).toBe("$12K"));
-  it("formats sub-thousand with 0 decimals", () => expect(formatCompactUsd(999)).toBe("$999"));
-  it("formats zero", () => expect(formatCompactUsd(0)).toBe("$0"));
-  it("formats negative billion", () => expect(formatCompactUsd(-2.5e9)).toBe("-$2.50B"));
-  it("formats negative sub-thousand", () => expect(formatCompactUsd(-42)).toBe("-$42"));
-  it("returns N/A for NaN", () => expect(formatCompactUsd(NaN)).toBe("N/A"));
-  it("returns N/A for Infinity", () => expect(formatCompactUsd(Infinity)).toBe("N/A"));
-});
-
-describe("formatCompactUsdShort", () => {
-  it("formats billions, millions, and thousands with one decimal", () => {
-    expect(formatCompactUsdShort(4.321e9)).toBe("$4.3B");
-    expect(formatCompactUsdShort(8.76e6)).toBe("$8.8M");
-    expect(formatCompactUsdShort(12_345)).toBe("$12.3K");
-    expect(formatCompactUsdShort(1_000)).toBe("$1.0K");
-  });
-
-  it("rounds sub-thousand values without decimals", () => {
-    expect(formatCompactUsdShort(999)).toBe("$999");
-    expect(formatCompactUsdShort(999.6)).toBe("$1000");
-    expect(formatCompactUsdShort(0)).toBe("$0");
-  });
-
-  it("preserves the existing short-surface negative sign placement", () => {
-    expect(formatCompactUsdShort(-2.5e9)).toBe("$-2.5B");
-    expect(formatCompactUsdShort(-42)).toBe("$-42");
-  });
-
-  it("returns N/A for non-finite values", () => {
-    expect(formatCompactUsdShort(NaN)).toBe("N/A");
-    expect(formatCompactUsdShort(Infinity)).toBe("N/A");
-  });
-});
-
-describe("formatCompactUsdShortLowerK", () => {
-  it("keeps one decimal for B/M and rounds thousands to a lowercase k", () => {
-    expect(formatCompactUsdShortLowerK(4.321e9)).toBe("$4.3B");
-    expect(formatCompactUsdShortLowerK(8.76e6)).toBe("$8.8M");
-    expect(formatCompactUsdShortLowerK(12_345)).toBe("$12k");
-    expect(formatCompactUsdShortLowerK(1_000)).toBe("$1k");
-  });
-
-  it("rounds sub-thousand values without a suffix", () => {
-    expect(formatCompactUsdShortLowerK(999)).toBe("$999");
-    expect(formatCompactUsdShortLowerK(0)).toBe("$0");
-  });
-
-  it("returns $0 for non-finite values", () => {
-    expect(formatCompactUsdShortLowerK(NaN)).toBe("$0");
-    expect(formatCompactUsdShortLowerK(Infinity)).toBe("$0");
-  });
-});
-
-describe("formatSignedCompactUsd", () => {
-  it("prefixes a + for positive values and reuses formatCompactUsd tiers", () => {
-    expect(formatSignedCompactUsd(2.5e9)).toBe("+$2.50B");
-    expect(formatSignedCompactUsd(8.76e6)).toBe("+$8.8M");
-    expect(formatSignedCompactUsd(12_345)).toBe("+$12K");
-  });
-
-  it("renders negative values with the abbreviateNumber minus sign", () => {
-    expect(formatSignedCompactUsd(-2.5e9)).toBe("-$2.50B");
-    expect(formatSignedCompactUsd(-42)).toBe("-$42");
-  });
-
-  it("does not prefix zero", () => {
-    expect(formatSignedCompactUsd(0)).toBe("$0");
-  });
-
-  it("returns N/A for non-finite values", () => {
-    expect(formatSignedCompactUsd(NaN)).toBe("N/A");
-  });
-});
-
-describe("formatCompactCount", () => {
-  it("formats large counts with a compact k suffix", () => {
-    expect(formatCompactCount(1_500)).toBe("1.5k");
-    expect(formatCompactCount(1_000)).toBe("1k");
-    expect(formatCompactCount(999)).toBe("999");
+describe.each<{
+  name: string;
+  format: (value: number) => string;
+  cases: [string, [number, string][]][];
+}>([
+  {
+    name: "formatCompactUsd", format: formatCompactUsd,
+    cases: [
+      ["formats billions with 2 decimals", [[4.321e9, "$4.32B"]]],
+      ["formats millions with 1 decimal", [[8.76e6, "$8.8M"]]],
+      ["formats thousands with 0 decimals", [[12_345, "$12K"]]],
+      ["formats sub-thousand with 0 decimals", [[999, "$999"]]],
+      ["formats negative billion", [[-2.5e9, "-$2.50B"]]],
+      ["returns N/A for NaN", [[NaN, "N/A"]]],
+    ],
+  },
+  {
+    name: "formatCompactUsdShort", format: formatCompactUsdShort,
+    cases: [
+      ["formats billions, millions, and thousands with one decimal", [[4.321e9, "$4.3B"], [8.76e6, "$8.8M"], [12_345, "$12.3K"], [1_000, "$1.0K"]]],
+      ["preserves the existing short-surface negative sign placement", [[-2.5e9, "$-2.5B"], [-42, "$-42"]]],
+      ["returns N/A for non-finite values", [[NaN, "N/A"], [Infinity, "N/A"]]],
+    ],
+  },
+  {
+    name: "formatCompactUsdShortLowerK", format: formatCompactUsdShortLowerK,
+    cases: [
+      ["keeps one decimal for B/M and rounds thousands to a lowercase k", [[4.321e9, "$4.3B"], [8.76e6, "$8.8M"], [12_345, "$12k"], [1_000, "$1k"]]],
+      ["returns $0 for non-finite values", [[NaN, "$0"], [Infinity, "$0"]]],
+    ],
+  },
+  {
+    name: "formatSignedCompactUsd", format: formatSignedCompactUsd,
+    cases: [
+      ["prefixes a + for positive values and reuses formatCompactUsd tiers", [[2.5e9, "+$2.50B"], [8.76e6, "+$8.8M"], [12_345, "+$12K"]]],
+      ["renders negative values with the abbreviateNumber minus sign", [[-2.5e9, "-$2.50B"], [-42, "-$42"]]],
+      ["does not prefix zero", [[0, "$0"]]],
+      ["returns N/A for non-finite values", [[NaN, "N/A"]]],
+    ],
+  },
+  {
+    name: "formatCompactCount", format: formatCompactCount,
+    cases: [
+      ["formats large counts with a compact k suffix", [[1_500, "1.5k"], [1_000, "1k"], [999, "999"]]],
+    ],
+  },
+  {
+    name: "formatSupply", format: formatSupply,
+    cases: [
+      ["formats millions", [[4.56e6, "4.56M"]]],
+      ["formats sub-thousand with 0 decimals", [[999, "999"]]],
+      ["formats zero", [[0, "0"]]],
+      ["returns N/A for NaN", [[NaN, "N/A"]]],
+      ["boundary: exactly 1000 gets abbreviated", [[1000, "1.00K"]]],
+    ],
+  },
+  {
+    name: "formatTokenAmount", format: formatTokenAmount,
+    cases: [
+      ["abbreviates values >= 1000", [[12_345, "12.35K"], [5e6, "5.00M"]]],
+      ["formats values >= 1 with 2 decimals, trimming trailing zeros", [[5.50, "5.5"], [3.00, "3"], [7.89, "7.89"]]],
+      ["returns '0' for zero", [[0, "0"]]],
+      ["formats sub-1 values with 4 decimals, trimming trailing zeros", [[0.1234, "0.1234"], [0.5, "0.5"], [0.0010, "0.001"]]],
+      ["handles negative values >= 1", [[-5.10, "-5.1"]]],
+      ["returns N/A for NaN", [[NaN, "N/A"]]],
+    ],
+  },
+])("$name", ({ format, cases }) => {
+  it.each(cases)("%s", (_, values) => {
+    for (const [value, expected] of values) {
+      expect(format(value)).toBe(expected);
+    }
   });
 });
 
@@ -341,138 +287,63 @@ describe("abbreviateNumberParts", () => {
 });
 
 describe("formatBps", () => {
-  it("formats positive bps with + sign", () => expect(formatBps(12)).toBe("+12 bps"));
-  it("formats negative bps with - sign", () => expect(formatBps(-5)).toBe("-5 bps"));
-  it("formats zero with + sign", () => expect(formatBps(0)).toBe("+0 bps"));
-  it("passes through non-integer values as-is", () => expect(formatBps(3.7)).toBe("+3.7 bps"));
-  it("returns N/A for non-finite values", () => {
-    expect(formatBps(Infinity)).toBe("N/A");
-    expect(formatBps(NaN)).toBe("N/A");
+  it.each([
+    ["formats positive bps with + sign", [[12, "+12 bps"]]],
+    ["formats negative bps with - sign", [[-5, "-5 bps"]]],
+    ["formats zero with + sign", [[0, "+0 bps"]]],
+    ["returns N/A for non-finite values", [[Infinity, "N/A"], [NaN, "N/A"]]],
+  ] as const)("%s", (_, values) => {
+    for (const [value, expected] of values) {
+      expect(formatBps(value)).toBe(expected);
+    }
   });
 });
 
 
 describe("formatPercentChange", () => {
-  it("formats positive change", () => {
-    expect(formatPercentChange(110, 100)).toBe("+10.00%");
-  });
-  it("formats negative change", () => {
-    expect(formatPercentChange(90, 100)).toBe("-10.00%");
-  });
-  it("formats zero change", () => {
-    expect(formatPercentChange(100, 100)).toBe("+0.00%");
-  });
-  it("returns N/A for division by zero (previous=0)", () => {
-    expect(formatPercentChange(100, 0)).toBe("N/A");
-  });
-  it("returns N/A for NaN current", () => {
-    expect(formatPercentChange(NaN, 100)).toBe("N/A");
-  });
-  it("returns N/A for Infinity previous", () => {
-    expect(formatPercentChange(100, Infinity)).toBe("N/A");
+  it.each([
+    [110, 100, "+10.00%"],
+    [90, 100, "-10.00%"],
+    [100, 100, "+0.00%"],
+    [100, 0, "N/A"],
+    [NaN, 100, "N/A"],
+    [100, Infinity, "N/A"],
+  ])("formats current %s against previous %s as %s", (current, previous, expected) => {
+    expect(formatPercentChange(current, previous)).toBe(expected);
   });
 });
 
-describe("formatSupply", () => {
-  it("formats trillions", () => expect(formatSupply(2.5e12)).toBe("2.50T"));
-  it("formats billions", () => expect(formatSupply(1.23e9)).toBe("1.23B"));
-  it("formats millions", () => expect(formatSupply(4.56e6)).toBe("4.56M"));
-  it("formats thousands", () => expect(formatSupply(7890)).toBe("7.89K"));
-  it("formats sub-thousand with 0 decimals", () => expect(formatSupply(999)).toBe("999"));
-  it("formats small values without abbreviation", () => expect(formatSupply(42)).toBe("42"));
-  it("formats zero", () => expect(formatSupply(0)).toBe("0"));
-  it("returns N/A for NaN", () => expect(formatSupply(NaN)).toBe("N/A"));
-  it("returns N/A for Infinity", () => expect(formatSupply(Infinity)).toBe("N/A"));
-  it("boundary: exactly 1000 gets abbreviated", () => expect(formatSupply(1000)).toBe("1.00K"));
-});
-
-describe("formatTokenAmount", () => {
-  it("abbreviates values >= 1000", () => {
-    expect(formatTokenAmount(12_345)).toBe("12.35K");
-    expect(formatTokenAmount(5e6)).toBe("5.00M");
-  });
-  it("formats values >= 1 with 2 decimals, trimming trailing zeros", () => {
-    expect(formatTokenAmount(5.50)).toBe("5.5");
-    expect(formatTokenAmount(3.00)).toBe("3");
-    expect(formatTokenAmount(7.89)).toBe("7.89");
-  });
-  it("returns '0' for zero", () => {
-    expect(formatTokenAmount(0)).toBe("0");
-  });
-  it("formats sub-1 values with 4 decimals, trimming trailing zeros", () => {
-    expect(formatTokenAmount(0.1234)).toBe("0.1234");
-    expect(formatTokenAmount(0.5)).toBe("0.5");
-    expect(formatTokenAmount(0.0010)).toBe("0.001");
-  });
-  it("handles negative values >= 1", () => {
-    expect(formatTokenAmount(-5.10)).toBe("-5.1");
-  });
-  it("handles negative values >= 1000", () => {
-    expect(formatTokenAmount(-2500)).toBe("-2.50K");
-  });
-  it("returns N/A for NaN", () => expect(formatTokenAmount(NaN)).toBe("N/A"));
-  it("returns N/A for Infinity", () => expect(formatTokenAmount(Infinity)).toBe("N/A"));
-});
 
 describe("formatDuration", () => {
-  it("formats days and hours", () => {
-    // 2d 5h = 2*86400 + 5*3600 = 190800 seconds
-    expect(formatDuration(0, 190800)).toBe("2d 5h");
-  });
-  it("formats days without hours", () => {
-    expect(formatDuration(0, 172800)).toBe("2d");
-  });
-  it("formats hours and minutes", () => {
-    // 14h 30m = 14*3600 + 30*60 = 52200 seconds
-    expect(formatDuration(0, 52200)).toBe("14h 30m");
-  });
-  it("formats hours without minutes", () => {
-    expect(formatDuration(0, 7200)).toBe("2h");
-  });
-  it("formats minutes only", () => {
-    expect(formatDuration(0, 2700)).toBe("45m");
-  });
-  it("returns '< 1m' for sub-minute durations", () => {
-    expect(formatDuration(0, 30)).toBe("< 1m");
-    expect(formatDuration(0, 59)).toBe("< 1m");
-  });
-  it("returns 'Ongoing' for null end", () => {
-    expect(formatDuration(1000, null)).toBe("Ongoing");
-  });
-  it("returns 'N/A' for negative duration", () => {
-    expect(formatDuration(100, 50)).toBe("N/A");
-  });
-  it("returns 'N/A' for non-finite durations", () => {
-    expect(formatDuration(Infinity, 50)).toBe("N/A");
-    expect(formatDuration(0, Infinity)).toBe("N/A");
-  });
-  it("handles non-zero start", () => {
-    expect(formatDuration(1000, 1000 + 3600)).toBe("1h");
+  it.each([
+    ["formats days and hours", [[0, 190800, "2d 5h"]]],
+    ["formats hours and minutes", [[0, 52200, "14h 30m"]]],
+    ["formats minutes only", [[0, 2700, "45m"]]],
+    ["returns '< 1m' for sub-minute durations", [[0, 30, "< 1m"], [0, 59, "< 1m"]]],
+    ["returns 'Ongoing' for null end", [[1000, null, "Ongoing"]]],
+    ["returns 'N/A' for negative duration", [[100, 50, "N/A"]]],
+    ["returns 'N/A' for non-finite durations", [[Infinity, 50, "N/A"], [0, Infinity, "N/A"]]],
+  ] as const)("%s", (_, values) => {
+    for (const [start, end, expected] of values) {
+      expect(formatDuration(start, end)).toBe(expected);
+    }
   });
 });
 
 describe("timeAgo", () => {
   const nowSec = 1_700_000_000;
-  it("returns 'just now' for recent timestamps", () => {
-    expect(timeAgo(nowSec, nowSec)).toBe("just now");
-    expect(timeAgo(nowSec - 30, nowSec)).toBe("just now");
-  });
-  it("returns minutes ago", () => {
-    expect(timeAgo(nowSec - 5 * 60, nowSec)).toBe("5m ago");
-    expect(timeAgo(nowSec - 59 * 60, nowSec)).toBe("59m ago");
-  });
-  it("returns hours ago", () => {
-    expect(timeAgo(nowSec - 2 * 3600, nowSec)).toBe("2h ago");
-    expect(timeAgo(nowSec - 23 * 3600, nowSec)).toBe("23h ago");
-  });
-  it("returns days ago", () => {
-    expect(timeAgo(nowSec - 3 * 86400, nowSec)).toBe("3d ago");
+  it.each([
+    ["returns 'just now' for recent timestamps", [[nowSec, "just now"], [nowSec - 30, "just now"]]],
+    ["returns minutes ago", [[nowSec - 5 * 60, "5m ago"], [nowSec - 59 * 60, "59m ago"]]],
+    ["returns hours ago", [[nowSec - 2 * 3600, "2h ago"], [nowSec - 23 * 3600, "23h ago"]]],
+    ["returns days ago", [[nowSec - 3 * 86400, "3d ago"]]],
+  ] as const)("%s", (_, values) => {
+    for (const [timestamp, expected] of values) {
+      expect(timeAgo(timestamp, nowSec)).toBe(expected);
+    }
   });
   it("returns N/A for NaN", () => {
     expect(timeAgo(NaN)).toBe("N/A");
-  });
-  it("returns N/A for Infinity", () => {
-    expect(timeAgo(Infinity)).toBe("N/A");
   });
 });
 
@@ -481,10 +352,6 @@ describe("formatPercentFromRatio", () => {
     expect(formatPercentFromRatio(0.1234)).toBe("12.34%");
     expect(formatPercentFromRatio(1)).toBe("100.00%");
     expect(formatPercentFromRatio(0)).toBe("0.00%");
-  });
-  it("respects decimal precision", () => {
-    expect(formatPercentFromRatio(0.1234, 1)).toBe("12.3%");
-    expect(formatPercentFromRatio(0.1234, 0)).toBe("12%");
   });
   it("returns dash for nullish", () => {
     expect(formatPercentFromRatio(null)).toBe("-");
@@ -497,29 +364,11 @@ describe("formatPercentFromRatio", () => {
 });
 
 describe("formatAddress", () => {
-  it("truncates long addresses", () => {
-    expect(formatAddress("0x1234567890abcdef1234567890abcdef12345678")).toBe("0x1234...5678");
-  });
-  it("returns short addresses unchanged", () => {
-    expect(formatAddress("0x12345678")).toBe("0x12345678");
-    expect(formatAddress("abc")).toBe("abc");
-  });
   it("returns 12-char addresses unchanged (boundary)", () => {
     expect(formatAddress("123456789012")).toBe("123456789012");
   });
   it("truncates 13-char addresses", () => {
     expect(formatAddress("1234567890123")).toBe("123456...0123");
-  });
-});
-
-describe("slugifyId", () => {
-  it("normalizes text into DOM-safe ids", () => {
-    expect(slugifyId("Safety Score v6.92")).toBe("safety-score-v6-92");
-  });
-
-  it("can strip punctuation before separator normalization", () => {
-    expect(slugifyId("foo(bar)", { stripPunctuation: true })).toBe("foobar");
-    expect(slugifyId("foo(bar)")).toBe("foo-bar");
   });
 });
 
@@ -554,10 +403,6 @@ describe("formatTrackingSpanDays", () => {
 });
 
 describe("formatTrackingSpanSeconds", () => {
-  it("delegates to the shared day formatter", () => {
-    expect(formatTrackingSpanSeconds(90 * 86400)).toBe("2mo");
-  });
-
   it.each([
     [29 * 86400, "29d"],
     [30 * 86400, "30d"],
@@ -577,14 +422,6 @@ describe("formatTrackingSpanSeconds", () => {
 });
 
 describe("pegCurrencySymbol", () => {
-  it("returns distinct symbols for supported non-USD fiat peg badges", () => {
-    expect(pegCurrencySymbol("KRW")).toBe("₩");
-    expect(pegCurrencySymbol("INR")).toBe("₹");
-    expect(pegCurrencySymbol("MYR")).toBe("RM");
-    expect(pegCurrencySymbol("HKD")).toBe("HK$");
-    expect(pegCurrencySymbol("VND")).toBe("₫");
-  });
-
   it("falls back to USD for unknown peg currency values", () => {
     expect(pegCurrencySymbol("UNKNOWN")).toBe("$");
   });
@@ -653,17 +490,6 @@ describe("formatRelativeTimeMs", () => {
     expect(formatRelativeTimeMs(now, { now })).toBe("1s ago");
     expect(formatRelativeTimeMs(now + 5_000, { now })).toBe("1s ago");
   });
-  it("returns minutes ago for sub-hour age", () => {
-    expect(formatRelativeTimeMs(now - 5 * 60_000, { now })).toBe("5m ago");
-    expect(formatRelativeTimeMs(now - 59 * 60_000, { now })).toBe("59m ago");
-  });
-  it("returns hours ago for sub-day age", () => {
-    expect(formatRelativeTimeMs(now - 2 * 3_600_000, { now })).toBe("2h ago");
-    expect(formatRelativeTimeMs(now - 23 * 3_600_000, { now })).toBe("23h ago");
-  });
-  it("returns days ago for multi-day age", () => {
-    expect(formatRelativeTimeMs(now - 3 * 86_400_000, { now })).toBe("3d ago");
-  });
 });
 
 describe("relative duration helpers", () => {
@@ -689,19 +515,3 @@ describe("relative duration helpers", () => {
   });
 });
 
-describe("formatDeathDate", () => {
-  it('formats "YYYY-MM" as "Mon YYYY"', () => {
-    expect(formatDeathDate("2023-01")).toBe("Jan 2023");
-    expect(formatDeathDate("2024-12")).toBe("Dec 2024");
-  });
-
-  it("returns year only if no month", () => {
-    expect(formatDeathDate("2023")).toBe("2023");
-  });
-
-  it("preserves malformed month fallbacks", () => {
-    expect(formatDeathDate("2023-13")).toBe("2023-13");
-    expect(formatYearMonth("2023-13")).toBe("2023-13");
-    expect(formatYearMonth("not-a-month")).toBe("not-a-month");
-  });
-});

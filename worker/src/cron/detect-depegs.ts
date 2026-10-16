@@ -17,8 +17,6 @@ import {
 } from "./depeg-detection/repair";
 import type { DepegPersistenceCommand } from "./depeg-detection/types";
 
-export { shouldCloseOrphanedDepeg } from "./depeg-detection/repair";
-
 // --- Depeg event detection ---
 
 export async function detectDepegEvents(

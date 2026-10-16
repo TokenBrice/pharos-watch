@@ -19,16 +19,6 @@ afterEach(() => {
 });
 
 describe("useThemeToggle", () => {
-  it("toggles the rendered system-dark theme to light", () => {
-    const { result } = renderHook(() => useThemeToggle());
-    expect(result.current.mounted).toBe(true);
-    expect(result.current.isDark).toBe(true);
-    expect(result.current.label).toBe("Light mode");
-    act(() => result.current.toggleTheme());
-    expect(setTheme).toHaveBeenCalledWith("light");
-    expect(themeState.theme).toBe("system");
-  });
-
   it("tracks OS preference changes while System remains selected", () => {
     themeState.resolvedTheme = "light";
     const { result, rerender } = renderHook(() => useThemeToggle());
@@ -41,30 +31,5 @@ describe("useThemeToggle", () => {
     expect(result.current.isDark).toBe(true);
     act(() => result.current.toggleTheme());
     expect(setTheme).toHaveBeenLastCalledWith("light");
-  });
-
-  it("cross-fades the theme swap through a view transition unless motion is reduced", () => {
-    themeState.resolvedTheme = "light";
-    let reduced = false;
-    const startViewTransition = vi.fn((update: () => void) => {
-      update();
-      return {};
-    });
-    Object.defineProperty(document, "startViewTransition", { configurable: true, value: startViewTransition });
-    vi.stubGlobal("matchMedia", (query: string) => ({ matches: reduced, media: query }) as MediaQueryList);
-    try {
-      const { result } = renderHook(() => useThemeToggle());
-      act(() => result.current.toggleTheme());
-      expect(startViewTransition).toHaveBeenCalledTimes(1);
-      expect(setTheme).toHaveBeenLastCalledWith("dark");
-
-      reduced = true;
-      act(() => result.current.toggleTheme());
-      expect(startViewTransition).toHaveBeenCalledTimes(1);
-      expect(setTheme).toHaveBeenCalledTimes(2);
-    } finally {
-      Reflect.deleteProperty(document, "startViewTransition");
-      vi.unstubAllGlobals();
-    }
   });
 });

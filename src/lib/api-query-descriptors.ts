@@ -574,5 +574,3 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     }),
   ),
 } as const;
-
-export type FrontendApiQueryDescriptorRegistry = typeof FRONTEND_API_QUERY_DESCRIPTORS;

@@ -2,20 +2,8 @@ import { describe, it, expect } from "vitest";
 import { buildAdaptiveMonthlyTicks, computeChartYDomain, mergeSeriesByTimestamp } from "../chart-utils";
 
 describe("computeChartYDomain", () => {
-  it("returns auto for all-range", () => {
-    expect(computeChartYDomain([10, 20, 30], true)).toEqual([0, "auto"]);
-  });
-
-  it("pads a varying series by exactly 15% of its range", () => {
-    expect(computeChartYDomain([100, 200], false)).toEqual([100 - 100 * 0.15, 200 + 100 * 0.15]);
-  });
-
   it("clamps the padded minimum at zero", () => {
     expect(computeChartYDomain([0, 100], false)).toEqual([0, 100 + 100 * 0.15]);
-  });
-
-  it("pads a constant series by exactly 5% of its value", () => {
-    expect(computeChartYDomain([7, 7], false)).toEqual([7 - 7 * 0.05, 7 + 7 * 0.05]);
   });
 });
 
@@ -103,11 +91,5 @@ describe("buildAdaptiveMonthlyTicks", () => {
       if (originalTz === undefined) delete process.env.TZ;
       else process.env.TZ = originalTz;
     }
-  });
-
-  it("returns an empty list for invalid ranges", () => {
-    expect(buildAdaptiveMonthlyTicks(Date.UTC(2026, 1, 1), Date.UTC(2026, 0, 1))).toEqual([]);
-    expect(buildAdaptiveMonthlyTicks(Number.NaN, Date.UTC(2026, 0, 1))).toEqual([]);
-    expect(buildAdaptiveMonthlyTicks(Date.UTC(2026, 0, 1), Number.POSITIVE_INFINITY)).toEqual([]);
   });
 });

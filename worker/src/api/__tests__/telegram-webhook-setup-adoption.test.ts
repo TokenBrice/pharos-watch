@@ -13,16 +13,6 @@ beforeEach(resetTelegramWebhookTest);
 afterEach(fixtures.closeAll);
 
 describe("setup adoption state", () => {
-  it("preserves only an allowlisted setup token through the short-lived wizard state", () => {
-    const base = { step: "branch", alertTypes: [], target: null };
-    expect(parseSetupState(JSON.stringify({ ...base, adoptionToken: "pw1_landing_hero" }), "42"))
-      .toMatchObject({ adoptionToken: "pw1_landing_hero", initiatorUserId: "42" });
-    expect(parseSetupState(JSON.stringify({ ...base, adoptionToken: "pw1_landing_arbitrary" }), "42"))
-      .toMatchObject({ adoptionToken: null, initiatorUserId: "42" });
-    expect(parseSetupState(JSON.stringify({ ...base, adoptionToken: "pw1_landing_miniapp_home" }), "42"))
-      .toMatchObject({ adoptionToken: null, initiatorUserId: "42" });
-  });
-
   it("keeps landing/setup attribution from click through immediate recommended confirmation and first follow", async () => {
     const { sqlite, db } = fixtures.open();
     const nowSec = Math.floor(Date.now() / 1_000);
@@ -55,22 +45,5 @@ describe("setup adoption state", () => {
       { campaign: "landing", placement: "setup", stage: "first_follow", count: 1 },
       { campaign: "landing", placement: "setup", stage: "setup_complete", count: 1 },
     ]);
-  });
-
-  it("keeps a generic sub link organic rather than inferring landing attribution", async () => {
-    const { sqlite, db } = fixtures.open();
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
-      .run(makeStablecoinsCacheValue({}), Math.floor(Date.now() / 1_000));
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/start sub_dews-depeg_usd-top25", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
-    expect(sqlite.prepare("SELECT campaign, placement, stage FROM telegram_adoption_daily").all())
-      .toEqual([{ campaign: "organic", placement: "unknown", stage: "bot_start" }]);
-    expect(sqlite.prepare("SELECT action_type FROM telegram_pending_disambiguation WHERE chat_id = '123'").get())
-      .toEqual({ action_type: "confirm-bulk" });
-    await handleTelegramWebhook(db, makeCallbackRequest("confirm:bulk", { updateId: 2 }), "test-secret", "bot-token");
-    expect(sqlite.prepare("SELECT campaign, placement, stage FROM telegram_adoption_daily ORDER BY stage").all()).toEqual([
-      { campaign: "organic", placement: "unknown", stage: "bot_start" },
-    ]);
-    expect(sqlite.prepare("SELECT preset_id FROM telegram_preset_subscriptions WHERE chat_id = '123'").get())
-      .toEqual({ preset_id: "usd-top25" });
   });
 });

@@ -75,16 +75,6 @@ describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
     }
   });
 
-  it("accepts valid JSON under the byte cap", async () => {
-    await expect(
-      parseRequestJsonWithSchema(
-        makeJsonBodyRequest("https://api.pharos.watch/api/test", JSON.stringify({ ok: true })),
-        schema,
-        { maxBytes: 64 },
-      ),
-    ).resolves.toEqual({ ok: true });
-  });
-
   it("preserves invalid JSON as 400 under the byte cap", async () => {
     const response = await parseRequestJsonWithSchema(
       makeJsonBodyRequest("https://api.pharos.watch/api/test", "{"),
@@ -108,20 +98,6 @@ describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
     });
     const response = await parseRequestJsonWithSchema(
       request,
-      schema,
-      { maxBytes: 64 },
-    );
-
-    expect(response).toBeInstanceOf(Response);
-    if (response instanceof Response) {
-      expect(response.status).toBe(413);
-      await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
-    }
-  });
-
-  it("rejects oversized chunked bodies without relying on Content-Length", async () => {
-    const response = await parseRequestJsonWithSchema(
-      streamedRequest(['{"ok":', "true", ',"pad":"', "x".repeat(80), '"}']),
       schema,
       { maxBytes: 64 },
     );

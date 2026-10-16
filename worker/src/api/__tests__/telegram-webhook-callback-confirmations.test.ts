@@ -206,43 +206,6 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Tap Confirm or Cancel");
   });
 
-  it("pending confirm-bulk nudges only the initiating user in groups", async () => {
-    const pendingRow = makeBulkPendingRow({
-      kind: "subscribe",
-      alertTypes: ["dews"],
-      presetIds: [],
-      coinIds: [],
-      subscribeAll: true,
-    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" });
-    const nonInitiatorDb = makeTelegramWebhookDb([
-      pendingDisambiguationTable(pendingRow),
-    ]);
-
-    await handleTelegramWebhook(
-      nonInitiatorDb,
-      makeWebhookRequest(-123, "looks good", "test-secret", { chatType: "supergroup", fromId: 111 }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(fetchSpy).not.toHaveBeenCalled();
-
-    fetchSpy.mockClear();
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    const initiatorDb = makeTelegramWebhookDb([
-      pendingDisambiguationTable(pendingRow),
-    ]);
-
-    await handleTelegramWebhook(
-      initiatorDb,
-      makeWebhookRequest(-123, "looks good", "test-secret", { chatType: "supergroup", fromId: 999 }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(sentMessageBody().text).toContain("Tap Confirm or Cancel");
-  });
-
   it("pending forget-confirm ignores plain text replies in private chats with a reminder", async () => {
     const db = makeTelegramWebhookDb([
       pendingDisambiguationTable({

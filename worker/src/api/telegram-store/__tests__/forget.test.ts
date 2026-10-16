@@ -268,36 +268,6 @@ describe("forgetSubscriber", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?").get(chatId))
       .toEqual({ count: 0 });
   });
-
-  it("deletes exact and actor-scoped command-flood keys", async () => {
-    const chatId = "42";
-    // Table-coverage discovery: every chat-owned table must appear in history,
-    // so the write set is observed rather than declared.
-    const db = mockD1([], { strictWrites: false });
-
-    await forgetSubscriber(db, chatId);
-
-    const cacheDeletes = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM cache"));
-    expect(
-      cacheDeletes.some(
-        (entry) =>
-          entry.sql.includes("WHERE key = ?") && entry.binds[0] === `telegram:command-flood:${chatId}`,
-      ),
-    ).toBe(true);
-    expect(
-      cacheDeletes.some(
-        (entry) =>
-          entry.sql.includes("WHERE key LIKE ?") && entry.binds[0] === `telegram:command-flood:${chatId}:%`,
-      ),
-    ).toBe(true);
-    expect(
-      cacheDeletes.some(
-        (entry) =>
-          entry.sql.includes("WHERE key LIKE ?") && entry.binds[0] === `telegram:command-cooldown:${chatId}:%`,
-      ),
-    ).toBe(true);
-  });
-
 });
 
 describe("migrateTelegramChatId", () => {

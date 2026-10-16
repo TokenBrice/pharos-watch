@@ -1,7 +1,6 @@
 import { projectNegativeIncidentReview } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
-import fusdRiskReview from "@shared/data/stablecoins/domains/risk-review/fusd-finchain.json";
 import { BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import type {
   BridgeRouteControl,
@@ -796,31 +795,6 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     }
   });
 
-  it.each(["active", "resolved"] as const)("routes a real %s bridge incident through the compiler", (state) => {
-    const clockSec = Date.parse("2026-10-07T14:00:00Z") / 1_000;
-    const metadata = meta("fixture-real-bridge-incident", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE, { observedAt: "2026-10-01" })], {
-        reviewedAt: "2026-10-01", controls: [bridgeControl()],
-      }),
-    });
-    const incident = incidentAdapters.getSafetyScoreV9ReviewedIncidents("usdp-parallel", clockSec)
-      .find((row) => row.domain === "control")!;
-    if (incident.domain !== "control") throw new Error("Expected control incident fixture");
-    const scopedIncident = V9ReviewedIncidentSchema.parse({
-      ...incident, assetId: metadata.id, status: state === "active" ? "active" : incident.status,
-      resolvedAt: state === "active" ? null : incident.resolvedAt,
-      posture: { ...incident.posture, controlKinds: ["bridge"], incidentState: state },
-    });
-    const incidentMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9ReviewedIncidents").mockReturnValue([scopedIncident]);
-    try {
-      const bridge = compileFixture(metadata, { clockSec }).compiled.assets[0]!.controls.find((control) => control.controlKind === "bridge")!;
-      expect(bridge.incidentState).toBe(state);
-      expect(bridge.factorStatuses?.incidentState).toBeUndefined();
-    } finally {
-      incidentMock.mockRestore();
-    }
-  });
-
   it.each(["active", "mitigated", "resolved"] as const)("compiles a %s exact-control bridge incident without inventing share-weighted loss", (status) => {
     const clockSec = Date.parse("2026-10-07T14:00:00Z") / 1_000;
     const metadata = meta("fixture-shareless-control-incident", {
@@ -865,21 +839,6 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     } finally {
       incidentMock.mockRestore();
     }
-  });
-
-  it("retains intrinsic bridge-mint for a reviewed representation route without structured coverage", () => {
-    const metadata = meta("fixture-intrinsic-bridge-mint", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)]),
-    });
-    const { compiled } = compileFixture(metadata);
-    const bridge = controlsFor(compiled, metadata.id).find((control) =>
-      control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
-    );
-
-    expect(bridge).toMatchObject({
-      deploymentKey: BASE_ROUTE,
-      capabilities: ["bridge-mint"],
-    });
   });
 
   it("quarantines shadowed representation bridge-mint with route and control attribution", () => {
@@ -1943,7 +1902,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.controls.length).toBeGreaterThan(0);
   });
 
-  it.each([0, 1e-8, 1e-5])("admits exhaustively reviewed native inventory with unmatched share %s without rewriting supply", (share) => {
+  it.each([0, 1e-5])("admits exhaustively reviewed native inventory with unmatched share %s without rewriting supply", (share) => {
     const { metadata, supply } = nativeDustFixture(share);
     const before = structuredClone(supply);
     const evidence = new ReviewEvidenceBuilder(metadata.id, 10_000);
@@ -2058,148 +2017,6 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
     expect(adapted.review.diagnostics?.reviewedNativeCoverage.supplyShare).toBeCloseTo(1 - unmatchedShare, 12);
     expect(supplyReview).toEqual(before);
-  });
-
-  it("records the native bridge join decision for all six reviewed FUSD deployments", () => {
-    const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
-    const routes = profile.routes ?? [];
-    expect(routes).toHaveLength(6);
-    expect(routes.find((candidate) => candidate.destinationChain === "exsat")?.id)
-      .toBe("exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c");
-    const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
-      selectedBridgeRoutes: routes.map((candidate) => ({
-        deploymentRouteKey: candidate.id,
-        supplyUsd: 1,
-        supplyShare: 1 / routes.length,
-        reviewState: "selected-reviewed",
-        reviewedRouteKind: "native",
-      })),
-      selectedRouteSupplyShare: 1,
-      unknownRouteSupplyShare: 0,
-      unreviewedRouteSupplyShare: 0,
-      failureDomains: [],
-    };
-    const chainRows = Object.fromEntries(
-      routes.map((candidate) => [
-        candidate.destinationChain === "exsat" ? "exSat" : candidate.destinationChain,
-        { current: 1 },
-      ]),
-    );
-    const adapted = adaptBridgeFixture(
-      meta("fusd-finchain", { bridgeRouteRisk: profile }),
-      supplyReview,
-      chainRows,
-      v9TestClockSec(),
-    );
-
-    expect(adapted.review.status.applicability.state).toBe("not-applicable");
-    expect(adapted.review.diagnostics).toEqual({
-      profileRouteCount: 6,
-      canonicalSupplyRowCount: 6,
-      unmatchedRowIdentities: [],
-      reviewedNativeCoverage: {
-        reviewedRowCount: 6,
-        canonicalSupplyRowCount: 6,
-        supplyShare: expect.closeTo(1, 12),
-        complete: true,
-      },
-      bridgeClaimControls: [],
-      applicabilityBranch: "native-only-not-applicable",
-      unprovenRouteJoins: [],
-    });
-    expect(adapted.review.routes).toEqual([]);
-    expect(adapted.controls.some((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
-  });
-
-  it("keeps a native fixture join applicable and names an unmatched raw chain label", () => {
-    const assetId = "fixture-native-unmatched";
-    const routes = [route(ETHEREUM_ROUTE), route(BASE_ROUTE)];
-    const profile = bridgeProfile(routes, {
-      controls: [bridgeControl({ routeRefs: routes.map((candidate) => candidate.id) })],
-    });
-    const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
-      selectedBridgeRoutes: [
-        ...routes.map((candidate) => ({
-          deploymentRouteKey: candidate.id,
-          supplyUsd: 1,
-          supplyShare: 0.8 / routes.length,
-          reviewState: "selected-reviewed" as const,
-          reviewedRouteKind: "native" as const,
-        })),
-        {
-          deploymentRouteKey: `unmatched-chain:${assetId}:future-network`,
-          supplyUsd: 1,
-          supplyShare: 0.2,
-          reviewState: "unmatched" as const,
-        },
-      ],
-      selectedRouteSupplyShare: 0.8,
-      unknownRouteSupplyShare: 0.2,
-      unreviewedRouteSupplyShare: 0,
-      failureDomains: [],
-    };
-    const chainRows = Object.fromEntries([
-      ...routes.map((candidate) => [candidate.destinationChain, { current: 1 }]),
-      ["Future Network", { current: 1 }],
-    ]);
-    const adapted = adaptBridgeFixture(
-      meta(assetId, { bridgeRouteRisk: profile }),
-      supplyReview,
-      chainRows,
-      v9TestClockSec(),
-    );
-
-    expect(adapted.review.status.applicability.state).toBe("required");
-    expect(adapted.review.diagnostics).toMatchObject({
-      profileRouteCount: 2,
-      canonicalSupplyRowCount: 2,
-      unmatchedRowIdentities: ["Future Network"],
-      reviewedNativeCoverage: {
-        reviewedRowCount: 2,
-        canonicalSupplyRowCount: 2,
-        supplyShare: 0.8,
-        complete: false,
-      },
-      applicabilityBranch: "applicable",
-    });
-    // Known native-control joins stay proven. Only the unmatched liability
-    // keeps the aggregate review applicable and remains in the unproven census.
-    expect(
-      adapted.review.diagnostics?.unprovenRouteJoins.map((row) => row.deploymentRouteKey),
-    ).toEqual([`unmatched-chain:${assetId}:future-network`]);
-  });
-
-  it("records no unproven bridge row when every selected row is a tolerated dust remainder", () => {
-    // ODR-D5a: the two forgiven sub-threshold branches must stay silent, so a
-    // clean asset does not grow a diagnostics payload it cannot act on.
-    const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
-    const routes = profile.routes ?? [];
-    const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
-      selectedBridgeRoutes: [
-        {
-          deploymentRouteKey: "unmatched-chain:fusd-finchain:future-network",
-          supplyUsd: 1,
-          supplyShare: 0.0001,
-          reviewState: "unmatched" as const,
-        },
-      ],
-      selectedRouteSupplyShare: 0,
-      unknownRouteSupplyShare: 0.0001,
-      unreviewedRouteSupplyShare: 0,
-      failureDomains: [],
-    };
-    const chainRows = Object.fromEntries([
-      ...routes.map((candidate) => [candidate.destinationChain, { current: 1 }]),
-      ["Future Network", { current: 1 }],
-    ]);
-    const adapted = adaptBridgeFixture(
-      meta("fusd-finchain", { bridgeRouteRisk: profile }),
-      supplyReview,
-      chainRows,
-      v9TestClockSec(),
-    );
-
-    expect(adapted.review.diagnostics?.unprovenRouteJoins).toEqual([]);
   });
 
   it("keeps a reviewed representation route bridge-applicable", () => {

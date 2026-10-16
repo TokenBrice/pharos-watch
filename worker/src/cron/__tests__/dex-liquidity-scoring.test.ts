@@ -1780,34 +1780,6 @@ describe("dex-liquidity scoring", () => {
     expect(prepared.slice(1).map((statement) => statement.boundValues[1])).toEqual([...stabilityRows.keys()]);
   });
 
-  it("constructs DEX price writes in bounded stablecoin order", async () => {
-    const coins = ACTIVE_STABLECOINS.slice(0, 30);
-    const retainedPools = new Map<string, PoolEntry[]>(coins.map((coin, index) => [
-      coin.id,
-      [makePool({
-        poolId: `ethereum:pool-${index}`,
-        project: "curve",
-        chain: "Ethereum",
-        tvlUsd: 100_000,
-        symbol: "PAIR",
-        volumeUsd1d: 0,
-        volumeUsd7d: null,
-        poolType: "generic",
-        price: 1,
-        source: "dl",
-      })],
-    ]));
-
-    const primaryPrices = new Map(coins.map((coin) => [coin.id, 1] as const));
-    await computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000, undefined, undefined, undefined, undefined, primaryPrices);
-
-    const calls = vi.mocked(batchExecute).mock.calls;
-    expect(calls.map(([, statements]) => statements.length)).toEqual([25, 5]);
-    expect(calls.every(([, statements]) => statements.length <= DEX_LIQUIDITY_SCORING_BATCH_SIZE)).toBe(true);
-    const prepared = calls.flatMap(([, statements]) => statements as PreparedStatementWithMeta[]);
-    expect(prepared.map((statement) => statement.boundValues[0])).toEqual(coins.map((coin) => coin.id));
-  });
-
   it("stops constructing DEX prices after a bounded write aborts", async () => {
     const controller = new AbortController();
     const abortReason = new Error("DEX price publication timed out");

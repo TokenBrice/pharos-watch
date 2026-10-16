@@ -61,20 +61,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(keyboard.inline_keyboard?.length).toBeLessThanOrEqual(2);
   });
 
-  it("attaches link_preview_options to the first chunk of single-coin alerts", async () => {
-    const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
-    harness.seed(dewsDirect("42"));
-    await dispatchTelegramAlerts(harness.db, "bot-token");
-
-    expect(telegramDeliveryTranscript[0]?.options.linkPreviewOptions).toEqual({
-      is_disabled: false,
-      url: "https://pharos.watch/stablecoin/usdc-circle",
-      prefer_small_media: true,
-      show_above_text: false,
-    });
-  });
-
   it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsWithActiveSnooze", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();

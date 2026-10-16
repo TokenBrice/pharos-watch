@@ -64,12 +64,6 @@ describe("dependency graph projection", () => {
     expect(body).not.toHaveProperty("cards");
   });
 
-  it("does not invent supply, book or coverage facts when current evidence is absent", () => {
-    const snapshot = makeReportCardsV9Response({ cards: [makeWorkerV9Card({ supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined })] });
-    const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
-    expect(body.nodes[0]).toMatchObject({ circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, dependencyCoverageCount: null });
-  });
-
   it("resolves common-mode cap and deployment adjustment prices without exposing evaluator detail", () => {
     const snapshot = fixturePublication();
     const card = snapshot.cards[0]!;

@@ -61,7 +61,7 @@ export type StatusSectionError = z.output<typeof StatusSectionErrorSchema>;
 
 export type StatusSectionErrors = Partial<Record<StatusSectionKey, StatusSectionError>>;
 
-export const StatusSummarySchema = z.object({
+const StatusSummarySchema = z.object({
   unhealthyCrons: z.number().nullable(),
   availabilityImpactingUnhealthyCrons: z.number().nullable(),
   watchUnhealthyCrons: z.number().nullable(),
@@ -144,7 +144,7 @@ const StatusReserveCompositionSchema = z.union([
   }),
 ]);
 
-export const ActiveWorkerVersionMarkerSchema = z.object({
+const ActiveWorkerVersionMarkerSchema = z.object({
   scriptName: z.string().min(1),
   workerVersion: z.string().min(1),
   activatedAt: z.number().int().positive(),

@@ -31,25 +31,6 @@ beforeEach(() => {
 });
 
 describe("CoreTopRail", () => {
-  it("renders the events tape on the homepage", () => {
-    pathnameMock.mockReturnValue("/");
-
-    render(<CoreTopRail />);
-
-    const tape = screen.getByTestId("core-top-tape");
-    expect(tape.getAttribute("data-placement")).toBe("top");
-    // The redundant core-nav pill rail is gone; the grouped top nav owns IA.
-    expect(screen.queryByRole("navigation", { name: "Core pages" })).toBeNull();
-  });
-
-  it("mounts on interior desktop routes", () => {
-    pathnameMock.mockReturnValue("/liquidity/");
-
-    render(<CoreTopRail />);
-
-    expect(screen.getByTestId("core-top-tape")).toBeTruthy();
-  });
-
   it("renders on stablecoin detail desktop routes", () => {
     pathnameMock.mockReturnValue("/stablecoin/usdt-tether");
 

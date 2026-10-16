@@ -19,7 +19,6 @@ import {
   type MintAuthorityScoreFilterValue,
   type MintAuthorityStatusKind,
 } from "@shared/lib/classification";
-import { resolveMintAuthorityStatusKind } from "@/lib/mint-authority-display";
 import type { UrlStateSchema } from "@/lib/url-state";
 import {
   GOVERNANCE_TYPE_VALUES,
@@ -27,7 +26,6 @@ import {
 } from "@shared/types/stablecoin-taxonomy";
 import { PEG_METADATA } from "@shared/lib/classification";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { CUSTODY_MODEL_VALUES } from "@shared/types/core";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
@@ -489,12 +487,6 @@ export function projectBlacklistable(
   if (value === false) return "no";
   if (value === "possible") return value;
   return null;
-}
-
-export function projectMintAuthority(
-  summary?: MintAuthorityCoverageSummary | null,
-): MintAuthorityStatusKind {
-  return resolveMintAuthorityStatusKind(summary);
 }
 
 /** Detects whether any filter is non-default. Used for the "Reset" CTA. */

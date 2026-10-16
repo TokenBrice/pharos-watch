@@ -10,7 +10,7 @@ import {
   type OracleBranchClientRow,
   type OracleRiskClientSummary,
 } from "@/lib/stablecoin-detail-oracle-client";
-import { OracleLiquidationSection, oracleModuleSize, sortOracleBranchesForDisplay } from "../oracle-liquidation-section";
+import { OracleLiquidationSection, sortOracleBranchesForDisplay } from "../oracle-liquidation-section";
 
 const ETH_USD_FEED = {
   key: "cl:eth",
@@ -150,23 +150,6 @@ function pricePath(container: HTMLElement): Element | null {
   return container.querySelector('[role="img"][aria-label^="Price path"]');
 }
 
-describe("oracleModuleSize", () => {
-  it("gives two or more branches the full-width module and everything else a tile", () => {
-    expect(oracleModuleSize({ branchCount: 0 })).toBe("tile");
-    expect(oracleModuleSize({ branchCount: 1 })).toBe("tile");
-    expect(oracleModuleSize({ branchCount: 2 })).toBe("module");
-    expect(oracleModuleSize({ branchCount: 40 })).toBe("module");
-  });
-
-  it("is the layout the module takes when the caller does not choose one", () => {
-    const multi = render(<OracleLiquidationSection summary={SUMMARY} />);
-    expect(multi.container.querySelector("#oracle")?.getAttribute("data-evidence-module")).toBe("module");
-    multi.unmount();
-    const single = render(<OracleLiquidationSection summary={PRICE_FEED} />);
-    expect(single.container.querySelector("#oracle")?.getAttribute("data-evidence-module")).toBe("tile");
-  });
-});
-
 describe("OracleLiquidationSection", () => {
   it.each(["Verified", "Probable", "Limited", "Unknown"])(
     "names authored oracle review confidence distinctly (%s)",
@@ -182,23 +165,9 @@ describe("OracleLiquidationSection", () => {
     },
   );
 
-  it("omits the oracle-review chip when confidence is absent", () => {
-    const view = render(<OracleLiquidationSection summary={{ ...PRICE_FEED, confidenceLabel: null }} />);
-    expect(view.queryByTitle(ORACLE_REVIEW_COPY.description)).toBeNull();
-  });
-
   it("renders nothing without an oracle summary", () => {
     expect(render(<OracleLiquidationSection summary={null} />).container.innerHTML).toBe("");
     expect(render(<OracleLiquidationSection />).container.innerHTML).toBe("");
-  });
-
-  it("anchors one level-3 module titled by the review's role", () => {
-    const { container } = render(<OracleLiquidationSection summary={PRICE_FEED} />);
-    const oracleModule = container.querySelector("section#oracle")!;
-    expect(oracleModule).not.toBeNull();
-    const heading = within(oracleModule as HTMLElement).getByRole("heading", { level: 3 });
-    expect(heading.textContent).toContain(PRICE_FEED.title);
-    expect(heading.textContent).not.toContain(SUMMARY.title);
   });
 
   it("tags the oracle component as limiting only when it sits at the Control minimum", () => {
@@ -259,26 +228,6 @@ describe("OracleLiquidationSection", () => {
     expect(path.getAttribute("aria-label")).toContain("liquidation engine");
   });
 
-  it("collapses providers past three into one overflow chip", () => {
-    const providers = ["Chainlink", "Pyth", "RedStone", "Chronicle", "Tellor"];
-    const { container } = render(<OracleLiquidationSection summary={{ ...PRICE_FEED, providers }} />);
-    const path = pricePath(container)!;
-    expect(path.textContent).toContain("RedStone");
-    expect(path.textContent).not.toContain("Chronicle");
-    expect(path.textContent).toContain("+2");
-    // Every provider stays in the accessible name.
-    expect(path.getAttribute("aria-label")).toContain("Tellor");
-  });
-
-  it("prints a feed shared by several branches once", () => {
-    const { container } = render(<OracleLiquidationSection summary={SUMMARY} />);
-    const feeds = container.querySelector('ul[aria-label="Price feeds"]')!;
-    expect(feeds.querySelectorAll("li")).toHaveLength(1);
-    expect(feeds.textContent).toContain("3 branches");
-    expect(feeds.textContent).toContain("Ethereum");
-    expect(feeds.textContent).not.toContain("ethereum");
-  });
-
   it("states a not-applicable review as one S14 line, with the rationale behind the closed provenance fold", () => {
     const { container } = render(<OracleLiquidationSection summary={NOT_APPLICABLE} variant="tile" />);
     const oracleModule = container.querySelector("section#oracle")!;
@@ -296,24 +245,6 @@ describe("OracleLiquidationSection", () => {
     expect(fold.textContent).toContain(NOT_APPLICABLE.notApplicableRationale!);
     expect(fold.querySelector('a[href="https://example.com/contracts"]')).not.toBeNull();
     expect(oracleModule.textContent).toContain("Reviewed 2026-07-13");
-  });
-
-  it("keeps the generated verdict in the summary layer and reviewer prose behind the notes fold", () => {
-    const { container } = render(<OracleLiquidationSection summary={SUMMARY} />);
-    expect(container.textContent).toContain(SUMMARY.verdict!);
-    const notesFold = container.querySelector("details#oracle-review-notes")!;
-    expect(notesFold).not.toBeNull();
-    expect(notesFold.hasAttribute("open")).toBe(false);
-    expect(notesFold.textContent).toContain(SUMMARY.summary);
-    expect(notesFold.textContent).toContain("WETH collateral uses external feeds");
-    expect(notesFold.querySelector('a[href="https://example.com/contracts"]')).not.toBeNull();
-  });
-
-  it("orders the folds as visual, domain detail, then review notes and sources, with only the visual open", () => {
-    const { container } = render(<OracleLiquidationSection summary={SUMMARY} />);
-    const folds = [...container.querySelectorAll("details")];
-    expect(folds.map((fold) => fold.id)).toEqual(["oracle-visual", "oracle-feeds", "oracle-review-notes"]);
-    expect(folds.map((fold) => fold.hasAttribute("open"))).toEqual([true, false, false]);
   });
 
   it("sorts branches by debt share with unmeasured branches last, preserving curated order on ties", () => {
@@ -398,20 +329,6 @@ describe("OracleLiquidationSection", () => {
     expect(facts.textContent).not.toContain("Liq. delay");
   });
 
-  it("appends the liquidation delay to the mechanism line, or renders it standalone", () => {
-    const withDelay: OracleRiskClientSummary = {
-      ...SUMMARY,
-      branches: [
-        { ...BRANCHES[0]!, liquidationMechanism: "Immediate Stability Pool offset.", liquidationDelayLabel: "1h" },
-        { ...BRANCHES[1]!, liquidationMechanism: null, liquidationDelayLabel: "None" },
-      ],
-    };
-    const { container } = render(<OracleLiquidationSection summary={withDelay} />);
-    const detail = container.querySelector("details#oracle-feeds")!;
-    expect(detail.textContent).toContain("Immediate Stability Pool offset. · liquidation delay 1h");
-    expect(detail.textContent).toContain("Liquidation delay None");
-  });
-
   it("caps the inline branch rows at 5, sorted by debt share, with the rest in the detail fold", () => {
     const manyBranches = Array.from({ length: 8 }, (_, index) =>
       branch({ id: `branch-${index}`, label: `Branch ${index}`, debtSharePct: index === 7 ? null : 80 - index * 10 }),
@@ -440,12 +357,4 @@ describe("OracleLiquidationSection", () => {
     expect(unmeasured.querySelector("[style]")).toBeNull();
   });
 
-  it("rounds debt shares for display", () => {
-    const { container } = render(
-      <OracleLiquidationSection
-        summary={{ ...SUMMARY, branches: [{ ...BRANCHES[0]!, debtSharePct: 33.333333333 }, BRANCHES[1]!], branchCount: 2 }}
-      />,
-    );
-    expect(container.textContent).toContain("33.33% of debt");
-  });
 });

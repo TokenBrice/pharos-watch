@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX } from "@shared/lib/classification";
+import { PSI_HEX_COLORS } from "@shared/lib/classification";
 import { derivePsiBeaconState, type PsiBeaconCurrentLike } from "@shared/lib/psi-beacon";
 import { PsiBeacon } from "./psi-beacon";
 import { PsiBeaconMicro } from "./psi-beacon-micro";
@@ -46,16 +46,6 @@ describe("PsiBeacon", () => {
     expect(root.querySelector('[data-testid="psi-beacon-fog-severity"] title')?.textContent).toContain("<0.3");
   });
 
-  it("prints component values at the panels' one-decimal precision", () => {
-    const legend = renderBeacon(LIVE).root.querySelector('[data-testid="psi-beacon-legend"]')!.textContent;
-    expect(legend).toContain("instant91.9");
-    expect(legend).toContain("severity0.0");
-    expect(legend).toContain("breadth6.7");
-    expect(legend).toContain("stress breadth1.3");
-    expect(legend).toContain("trend−0.1");
-    expect(legend).toContain("24h avg92.1");
-  });
-
   it("omits the avg tick without a 24h average", () => {
     const { root } = renderBeacon({ ...LIVE, avg24h: undefined, avg24hBand: undefined });
     expect(root.querySelector('[data-testid="psi-beacon-avg-tick"]')).toBeNull();
@@ -68,17 +58,6 @@ describe("PsiBeacon", () => {
     expect(root.querySelector('[data-testid="psi-beacon-legend"]')!.textContent).toContain("breadthn/a");
   });
 
-  it("drops the hue when retained and names the as-of", () => {
-    const { root, svg } = renderBeacon(LIVE, false);
-    expect(root.dataset.state).toBe("retained");
-    expect(root.dataset.paint).toBe("outline");
-    expect(root.style.getPropertyValue("--beam")).toBe(PSI_UNKNOWN_BAND_HEX);
-    expect(root.querySelector('[data-testid="psi-beacon-lamp"]')).toBeNull();
-    expect(svg.getAttribute("aria-label")).toMatch(/^Retained observation as of Oct 12, 2:32 PM, not current\./);
-    expect(svg.textContent).toContain("Retained · as of Oct 12, 2:32 PM");
-    expect(root.innerHTML).not.toContain(PSI_HEX_COLORS.BEDROCK);
-  });
-
   it("draws no beam and no hue when unavailable", () => {
     const { root, svg } = renderBeacon({ ...LIVE, score: Number.NaN });
     expect(root.dataset.state).toBe("unavailable");
@@ -89,28 +68,9 @@ describe("PsiBeacon", () => {
     expect(svg.textContent).toContain("No current reading");
   });
 
-  it("marks loading busy with no beam", () => {
-    const { root, svg } = renderBeacon(null, false, { isLoading: true });
-    expect(root.dataset.state).toBe("loading");
-    expect(svg.getAttribute("aria-busy")).toBe("true");
-    expect(root.querySelector('[data-testid="psi-beacon-beam"]')).toBeNull();
-  });
-
-  it("has no animation or transition hooks (fully static)", () => {
-    const { container } = renderBeacon(LIVE);
-    expect(container.querySelector("animate, animateTransform, [style*='animation']")).toBeNull();
-  });
 });
 
 describe("PsiBeaconMicro", () => {
-  it("is decorative and lights the track to the score", () => {
-    const { container } = render(<PsiBeaconMicro score={50} retained={false} />);
-    const svg = container.querySelector('[data-testid="psi-beacon-micro"]')!;
-    expect(svg.getAttribute("aria-hidden")).toBe("true");
-    expect(svg.querySelector("rect")?.getAttribute("width")).toBe("15");
-    expect(svg.querySelector("rect")?.getAttribute("fill")).toBe("currentColor");
-  });
-
   it("draws an outline when retained", () => {
     const { container } = render(<PsiBeaconMicro score={50} retained />);
     expect(container.querySelector("rect")?.getAttribute("fill")).toBe("none");

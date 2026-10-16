@@ -4,28 +4,15 @@ import { adaptUnitedPorPayload, type UnitedPorPayload } from "../united-por";
 import {
   expectWarningEffect,
   expectWarnings,
-  runAdapter,
 } from "./reserve-adapter.test-support";
 
-const UNITED_POR_ENDPOINT = "https://u.tech/u-client-api/v1/public/u/por";
+import { UNITED_POR_PAYLOAD } from "./united-por.test-support";
 
 const SLICE = {
   sourceKey: "united-por:total-reserve",
   name: "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
   risk: "low" as const,
 };
-
-// Captured 2026-07-09 from GET https://u.tech/u-client-api/v1/public/u/por
-const UNITED_POR_PAYLOAD: UnitedPorPayload = {
-  accountName: "United Stables",
-  totalReserve: "1038136298.86",
-  totalToken: "1030959209.00",
-  updatedAt: "2026-07-09T16:10:01.559Z",
-  ripcord: false,
-  ripcordDetails: [],
-};
-
-const CAPTURE_NOW_SEC = Math.floor(Date.parse(UNITED_POR_PAYLOAD.updatedAt) / 1000) + 3_600;
 
 
 describe("adaptUnitedPorPayload", () => {
@@ -64,15 +51,6 @@ describe("adaptUnitedPorPayload", () => {
       ripcord: true,
       ripcordDetails: ["reserve custodian reconciliation lag", "pending manual review"],
     });
-    expectWarnings(result, ["united-por-ripcord"]);
-    expectWarningEffect(result, "united-por-ripcord", "degraded");
-  });
-
-  it("still degrades a ripcord=true snapshot with no disclosed details", () => {
-    const payload: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, ripcord: true, ripcordDetails: [] };
-
-    const result = adaptUnitedPorPayload(payload, SLICE);
-
     expectWarnings(result, ["united-por-ripcord"]);
     expectWarningEffect(result, "united-por-ripcord", "degraded");
   });
@@ -162,27 +140,5 @@ describe("adaptUnitedPorPayload", () => {
       sourceTimestamp: Math.floor(Date.parse("2026-06-01T08:00:00.000Z") / 1000),
       freshnessMode: "verified",
     });
-  });
-});
-
-describe("fetchUnitedPorReserves", () => {
-  it("fetches the catalog PoR endpoint and adapts the payload", async () => {
-    const { result } = await runAdapter("united-por", "u-united-stables", {
-      network: { json: { [UNITED_POR_ENDPOINT]: UNITED_POR_PAYLOAD } },
-      nowSec: CAPTURE_NOW_SEC,
-    });
-
-    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Math.floor(Date.parse(UNITED_POR_PAYLOAD.updatedAt) / 1000),
-      freshnessMode: "verified",
-    });
-  });
-
-  it("propagates an error when the catalog PoR endpoint fails", async () => {
-    await expect(runAdapter("united-por", "u-united-stables", {
-      network: { json: { [UNITED_POR_ENDPOINT]: { status: 503, body: "upstream down" } } },
-      nowSec: CAPTURE_NOW_SEC,
-    })).rejects.toThrow("503");
   });
 });

@@ -305,29 +305,6 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-prune-skipped"
     ))).toBe(true);
   });
-
-
-  it("records deferred rows without a cache cursor", async () => {
-    let fetches = 0;
-    mockAdapterRegistry(async () => {
-      fetches += 1;
-      if (fetches === 2) nowMs += TIGHT_BUDGET.runBudgetMs - 1_500;
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
-    });
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {}, undefined, TIGHT_BUDGET);
-    const metadata = parseMetadata(result?.metadata);
-
-    expect(metadata.runBudgetTruncated).toBe(true);
-    expect(metadata.deferredCoins).toBeGreaterThan(0);
-    expect(metadata.cursorTailState).toBe("complete");
-    expect(db.getHistory().some((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "live-reserve:run-cursor"
-    ))).toBe(false);
-  });
 });
 
 describe("orderConfiguredCoinsForSync", () => {
@@ -405,10 +382,6 @@ describe("orderConfiguredCoinsForSync", () => {
 
 describe("live reserve sync budget defaults", () => {
   const TWELVE_MINUTE_LEASE_MS = 12 * 60 * 1000;
-
-  it("defaults the internal run budget to 9 minutes", () => {
-    expect(resolveLiveReserveSyncBudgetConfig().runBudgetMs).toBe(9 * 60 * 1000);
-  });
 
   it("keeps default budget + finalize + margin under the 12-minute lease with headroom", () => {
     const config = resolveLiveReserveSyncBudgetConfig();

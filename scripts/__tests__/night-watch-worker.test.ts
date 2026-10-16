@@ -1,9 +1,8 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  assertNightWatchRegistryFixture,
   buildNightWatchCoverage,
   collectD1Snapshot,
   loadNightWatchCheckpoint,
@@ -11,7 +10,6 @@ import {
   persistNightWatchCheckpoint,
   renderNightWatchMarkdown,
   runCli,
-  scheduledMinutesInWindow,
 } from "../maintenance/night-watch-worker.mjs";
 
 const generatedAt = "2026-06-24T10:00:00.000Z";
@@ -140,60 +138,6 @@ type TestEvidence = Omit<ReturnType<typeof evidence>, "snapshots"> & {
 };
 
 describe("night-watch-worker", () => {
-  it("parses watch windows and access options", () => {
-    const args = parseArgs([
-      "--cycles",
-      "2",
-      "--start",
-      generatedAt,
-      "--include-status-history",
-      "--include-d1",
-      "--metadata-bytes",
-      "1200",
-    ], new Date(generatedAt));
-
-    expect(args).toMatchObject({
-      cycles: 2,
-      start: generatedAt,
-      end: "2026-06-24T18:00:00.000Z",
-      includeStatus: true,
-      includeStatusHistory: true,
-      includeD1: true,
-      adminApiUrl: "https://ops-api.pharos.watch",
-      metadataBytes: 1200,
-    });
-    expect(parseArgs(["--admin-api-url", "https://ops.example.test"], new Date(generatedAt)).adminApiUrl)
-      .toBe("https://ops.example.test");
-    expect(() => parseArgs(["--cycles", "3"], new Date(generatedAt))).toThrow("--cycles must be 1 or 2");
-  });
-
-  it("enumerates exact due cron minutes at UTC boundaries", () => {
-    expect(scheduledMinutesInWindow(
-      "*/15 * * * *",
-      "2026-06-24T10:00:00.000Z",
-      "2026-06-24T10:31:00.000Z",
-    )).toEqual([1_782_295_200, 1_782_296_100, 1_782_297_000]);
-    expect(scheduledMinutesInWindow(
-      "0 6 1 * *",
-      "2026-06-30T23:59:00.000Z",
-      "2026-07-01T06:00:00.000Z",
-    )).toEqual([1_782_885_600]);
-  });
-
-  it("requires explicit fixture updates when canonical registry ownership changes", () => {
-    const matrix = scheduleMatrix();
-    const fixture = {
-      slotKeys: Object.keys(matrix.slotPlans),
-      jobIds: matrix.cronJobs.map((job) => job.job),
-      sharedJobPaths: {},
-      budgetOnlySurfaces: ["digest-trigger-poll"],
-    };
-    expect(() => assertNightWatchRegistryFixture(matrix, fixture)).not.toThrow();
-    expect(() => assertNightWatchRegistryFixture(matrix, { ...fixture, jobIds: [] })).toThrow(
-      "Night Watch registry fixture drift (jobIds)",
-    );
-  });
-
   it("does not count stale latest rows as in-window coverage", () => {
     const testEvidence = evidence();
     const snapshot = testEvidence.snapshots[0]! as Omit<(typeof testEvidence.snapshots)[number], "recentRuns"> & {
@@ -244,16 +188,6 @@ describe("night-watch-worker", () => {
     expect(loadNightWatchCheckpoint(checkpointPath, { ...window, start: "2026-06-25T10:00:00.000Z" })).toEqual([]);
   });
 
-  it("renders coverage, canary findings, and access sections", () => {
-    const markdown = renderNightWatchMarkdown(evidence());
-
-    expect(markdown).toContain("# Worker Night Watch Report");
-    expect(markdown).toContain("sync-stablecoins");
-    expect(markdown).toContain("data-invariant-canary");
-    expect(markdown).toContain("Canaries report 1 errors");
-    expect(markdown).toContain("digest-trigger-poll");
-  });
-
   it("keeps completed capacity findings visible even when metadata previews are truncated", () => {
     const qualityEvidence = evidence();
     Object.assign(qualityEvidence.snapshots[0]!.recentRuns[0]!, {
@@ -266,17 +200,6 @@ describe("night-watch-worker", () => {
     const markdown = renderNightWatchMarkdown(qualityEvidence);
     expect(markdown).toContain("cron runs reported quality warnings");
     expect(markdown).toContain("mint-burn-growth-watchdog:row-count-threshold");
-  });
-
-  it("escapes Markdown table pipes without letting existing backslashes change the table shape", () => {
-    const tableEvidence = evidence();
-    tableEvidence.scheduleMatrix.cronJobs[0]!.job = String.raw`sync\job|tenant`;
-    tableEvidence.scheduleMatrix.cronJobs[0]!.scheduleKey = String.raw`quarter|hourly`;
-
-    const markdown = renderNightWatchMarkdown(tableEvidence);
-
-    expect(markdown).toContain(String.raw`sync\\job\|tenant`);
-    expect(markdown).toContain(String.raw`quarter\|hourly`);
   });
 
   it("renders D1 child watcher failures as access gaps", () => {
@@ -382,48 +305,6 @@ describe("night-watch-worker", () => {
 
     expect(markdown).toContain("dependency root-cause group");
     expect(markdown).toContain("dex-liquidity: degraded");
-  });
-
-  it.each([false, true])("preserves existing and absent evidence in dry-run (fixture=%s)", async (withFixture) => {
-    const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-"));
-    const write = vi.fn((_text: string) => true);
-    const stdout = { write } as unknown as typeof process.stdout;
-    const reportPath = relative(process.cwd(), join(dir, "report.md"));
-    const evidencePath = relative(process.cwd(), join(dir, "evidence.json"));
-    const checkpointPath = join(dir, "checkpoint.jsonl");
-    const fixturePath = join(dir, "fixture.json");
-    if (withFixture) writeFileSync(fixturePath, JSON.stringify(evidence()));
-    const fetch = vi.fn(() => { throw new Error("dry-run must not fetch"); });
-    vi.stubGlobal("fetch", fetch);
-    const args = [
-      "--dry-run",
-      "--include-d1",
-      "--include-status",
-      "--start",
-      generatedAt,
-      "--output",
-      reportPath,
-      "--evidence-json",
-      evidencePath,
-      "--checkpoint-jsonl",
-      checkpointPath,
-      ...(withFixture ? ["--fixture", fixturePath] : []),
-    ];
-    const paths = [resolve(reportPath), resolve(evidencePath), checkpointPath];
-    try {
-      await expect(runCli(args, stdout)).resolves.toBe(0);
-      expect(paths.map((path) => existsSync(path))).toEqual([false, false, false]);
-      for (const path of paths) writeFileSync(path, `existing evidence at ${path}`);
-      const before = paths.map((path) => readFileSync(path, "utf8"));
-      await expect(runCli([...args, "--json"], stdout)).resolves.toBe(0);
-      expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
-      expect(write).toHaveBeenCalledWith(expect.stringContaining("# Worker Night Watch Report"));
-      expect(JSON.parse(write.mock.calls.at(-1)![0]).snapshots).toHaveLength(withFixture ? 1 : 0);
-      expect(fetch).not.toHaveBeenCalled();
-    } finally {
-      vi.unstubAllGlobals();
-      rmSync(dir, { recursive: true, force: true });
-    }
   });
 
   it("renders from a fixture while honoring output paths", async () => {

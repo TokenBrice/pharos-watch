@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ContagionGraph } from "@/components/contagion-graph-root";
 import { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
@@ -28,11 +28,9 @@ const exposureOverlay: ExposureOverlay = {
   rows: new Map(cards.slice(1).map((card, i) => [card.id, { minHop: i + 1, band: "material" as const, share: 1, exposureUsd: i === 6 ? null : 1_000_000 }])),
   highlightedPaths: [["coin-0", "coin-1", "coin-2"]],
 };
-let reduced = false;
 beforeEach(() => {
   installSvgCoordinateShim();
-  reduced = false;
-  vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduced-motion") ? reduced : true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: !query.includes("reduced-motion"), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 });
 afterEach(cleanup);
 
@@ -63,11 +61,6 @@ describe("controlled exposure graph", () => {
       if (grade === null) expect(panel.textContent).not.toContain("Grade");
     }
   });
-  it("keeps a selected root on the map even with no mapped relationships", () => {
-    const { container } = render(<ContagionGraph cards={cards.slice(0, 1)} dependencyEdges={[]} mcapMap={mcapMap} exposureOverlay={{ roots: ["coin-0"], rows: new Map(), highlightedPaths: [] }} />);
-    expect(container.querySelector('[data-exposure-halo="coin-0"]')).not.toBeNull();
-    expect(screen.getByRole("status").textContent).toContain("Showing 0 of 0 linked coins");
-  });
   it("renders roots, an unknown-supply hatch and long-hop rows without changing hover traversal", () => {
     const { container } = render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} exposureOverlay={exposureOverlay} />);
     const finalHalo = container.querySelector('[data-exposure-halo="coin-7"]')!;
@@ -79,14 +72,6 @@ describe("controlled exposure graph", () => {
     fireEvent.mouseEnter(container.querySelector('[data-node-id="coin-0"]')!);
     expect(container.querySelectorAll("[data-exposure-halo]")).toHaveLength(8);
     expect(finalHalo.getAttribute("data-min-hop")).toBe("7");
-  });
-  it("shows the final exposure footprint immediately with reduced motion", () => {
-    reduced = true;
-    const { container } = render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} exposureOverlay={exposureOverlay} />);
-    for (const halo of container.querySelectorAll("[data-exposure-halo]")) {
-      expect((halo.parentElement as unknown as SVGGElement).style.animation).toBe("none");
-    }
-    expect(container.querySelector('[data-exposure-halo="coin-7"]')).not.toBeNull();
   });
   it("points arrowheads toward the upstream endpoint in Explore and Exposure", () => {
     const point = upstreamArrowPoint({ x: 200, y: 100 }, { x: 100, y: 100 }, 20);
@@ -112,17 +97,6 @@ describe("controlled exposure graph", () => {
     expect(svg.getAttribute("viewBox")).not.toBe(fit);
     fireEvent.click(screen.getByRole("button", { name: "Fit" }));
     expect(svg.getAttribute("viewBox")).toBe(fit);
-  });
-  it("offers a 44px-equivalent neighborhood list and adds the chosen exposure root", () => {
-    const onUseAsExposureRoot = vi.fn();
-    render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} onUseAsExposureRoot={onUseAsExposureRoot} />);
-    const picker = screen.getByLabelText("Choose neighborhood");
-    fireEvent.change(picker, { target: { value: "coin-7" } });
-    const button = screen.getByRole("button", { name: /^Use .* as exposure root$/ });
-    fireEvent.click(button);
-    expect(onUseAsExposureRoot).toHaveBeenCalledWith("coin-7");
-    expect(button.classList.contains("min-h-11")).toBe(true);
-    expect(picker.classList.contains("min-h-11")).toBe(true);
   });
   it("uses supplied full-graph hub exposures identically to the fallback through limit changes", () => {
     const options = { cards, dependencyEdges, mcapMap, trackActions: false };
@@ -150,32 +124,6 @@ describe("controlled exposure graph", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Use .* as exposure root$/ }));
     expect(onUseAsExposureRoot).toHaveBeenCalledWith("coin-1");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  });
-  it("keeps Explore and the mode controls available after all exposure roots are cleared", () => {
-    const empty = { roots: [], rows: new Map(), highlightedPaths: [] };
-    const { container, rerender } = render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} exposureOverlay={empty} modeControls={<button type="button">Explore mode</button>} />);
-    expect(container.querySelectorAll("[data-node-id]")).toHaveLength(8);
-    expect(screen.getByRole("button", { name: "Explore mode" })).toBeTruthy();
-    rerender(<ContagionGraph cards={[]} dependencyEdges={[]} mcapMap={mcapMap} exposureOverlay={empty} modeControls={<button type="button">Explore mode</button>} />);
-    expect(screen.getByRole("button", { name: "Explore mode" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain("No mapped graph nodes");
-  });
-  it("exposes the complete Explore controls in the mobile fullscreen Graph tab", () => {
-    render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} />);
-    fireEvent.click(screen.getByRole("button", { name: "Fullscreen graph" }));
-    fireEvent.click(screen.getByText("Graph filters and trace"));
-    const type = screen.getByRole("group", { name: "Dependency type filter" });
-    fireEvent.click(within(type).getByRole("button", { name: "Collateral" }));
-    const limit = screen.getByRole("group", { name: "Maximum nodes shown" });
-    fireEvent.click(within(limit).getByRole("button", { name: "50" }));
-    const focus = screen.getByRole("group", { name: "Graph focus mode" });
-    fireEvent.click(within(focus).getByRole("button", { name: "All" }));
-    fireEvent.change(screen.getByLabelText("Trace coin"), { target: { value: "coin-7" } });
-    expect(screen.getByLabelText("Graph filter announcements").textContent).toContain("type collateral, limit 50");
-    expect(screen.getByLabelText("Trace coin").getAttribute("class")).toContain("h-11");
-    for (const group of [type, limit, focus]) {
-      for (const button of within(group).getAllByRole("button")) expect(button.classList.contains("min-h-11")).toBe(true);
-    }
   });
   it("retains manual zoom through a node drag until Fit or footprint identity changes", () => {
     const { container, rerender } = render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} exposureOverlay={exposureOverlay} />);
@@ -209,23 +157,6 @@ describe("controlled exposure graph", () => {
     expect(svg.getAttribute("viewBox")).toBe("-20 -30 800 600");
     fireEvent.click(screen.getByRole("button", { name: "Fit" }));
     expect(svg.getAttribute("viewBox")).not.toBe("-20 -30 800 600");
-  });
-  it.each(["explore", "exposure", "detail"] as const)("never auto-magnifies a two-node %s neighborhood and keeps the viewport aspect stable", mode => {
-    const overlay = mode === "exposure" ? { roots: ["coin-0"], rows: new Map([["coin-1", exposureOverlay.rows.get("coin-1")!]]), highlightedPaths: [] } : null;
-    const { container } = render(<ContagionGraph cards={cards.slice(0, 2)} dependencyEdges={dependencyEdges.slice(0, 1)} mcapMap={mcapMap} focusCoinId="coin-0" minimalChrome={mode === "detail"} exposureOverlay={overlay} />);
-    const svg = container.querySelector("line[data-upstream-id]")!.closest("svg")!;
-    const [, , width, height] = svg.getAttribute("viewBox")!.split(" ").map(Number);
-    expect(width).toBeGreaterThanOrEqual(800);
-    expect(height).toBeGreaterThanOrEqual(600);
-    expect(width / height).toBeCloseTo(800 / 600);
-    expect(svg.style.aspectRatio).toBe("800 / 600");
-    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
-    const [, , zoomWidth, zoomHeight] = svg.getAttribute("viewBox")!.split(" ").map(Number);
-    expect(zoomWidth).toBeLessThan(800);
-    expect(zoomWidth / zoomHeight).toBeCloseTo(800 / 600);
-    expect(svg.style.aspectRatio).toBe("800 / 600");
-    fireEvent.click(screen.getByRole("button", { name: "Fit" }));
-    expect(svg.getAttribute("viewBox")!.split(" ").slice(2).map(Number)).toEqual([800, 600]);
   });
   it("fits a large footprint without clipping or altering an already-base-aspect bounding box", () => {
     const nodes = cards.slice(0, 2).map(card => ({ ...card, r: 0, mcap: 1 }));

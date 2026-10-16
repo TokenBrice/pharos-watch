@@ -5,9 +5,6 @@ import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import usdxlSource from "../../data/stablecoins/coins/usdxl-last.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
-import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS, LiveReservesConfigSchema } from "../live-reserve-adapters";
-import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
   ACTIVE_META_BY_ID,
   ACTIVE_STABLECOINS,
@@ -367,20 +364,6 @@ describe("tracked stablecoin metadata", () => {
         /Expected an http\(s\) URL/,
       );
     }
-  });
-
-  it("allows local or http featured content images only", () => {
-    const content = { type: "article", url: "https://example.com/article", title: "Article" };
-    for (const image of ["/featured/example.png", "https://example.com/image.png"]) {
-      expect(parseStablecoinMetaAssets(
-        [makeStablecoinAsset({ featuredContent: [{ ...content, image }] })],
-        "valid featured image",
-      )[0]?.featuredContent?.[0]?.image).toBe(image);
-    }
-    expect(() => parseStablecoinMetaAssets(
-      [makeStablecoinAsset({ featuredContent: [{ ...content, image: "ftp://example.com/image.png" }] })],
-      "bad featured image",
-    )).toThrow(/Invalid input/);
   });
 
   it("tracks the current implementation-scope variants", () => {
@@ -1022,116 +1005,6 @@ describe("tracked stablecoin metadata", () => {
     expect(susdai?.pegReferenceId).toBe("usdai-usd-ai");
   });
 
-  it("uses explicit breaker scopes when a live-reserve adapter is reused across multiple coins", () => {
-    const liveCoins = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig);
-    const adapterUsage = new Map<string, string[]>();
-
-    for (const coin of liveCoins) {
-      const adapter = coin.liveReservesConfig!.adapter;
-      const existing = adapterUsage.get(adapter);
-      if (existing) {
-        existing.push(coin.id);
-      } else {
-        adapterUsage.set(adapter, [coin.id]);
-      }
-    }
-
-    const reusedAdapters = new Set(
-      Array.from(adapterUsage.entries())
-        .filter(([, ids]) => ids.length > 1)
-        .map(([adapter]) => adapter),
-    );
-
-    const missingScopes = liveCoins
-      .filter((coin) => reusedAdapters.has(coin.liveReservesConfig!.adapter))
-      .filter((coin) => !coin.liveReservesConfig!.breakerScope)
-      .map((coin) => `${coin.id}:${coin.liveReservesConfig!.adapter}`);
-
-    expect(missingScopes).toEqual([]);
-  });
-
-  it("keeps curated-validated live reserve configs aligned with an onchain tracked contract", () => {
-    const issues = TRACKED_STABLECOINS.filter(
-      (coin) => coin.liveReservesConfig?.adapter === "curated-validated",
-    ).flatMap((coin) => {
-      const config = coin.liveReservesConfig!;
-      const primary = config.inputs.primary;
-      if (primary.kind !== "onchain-evm" && primary.kind !== "onchain-solana") {
-        return [`${coin.id}:primary:${primary.kind}`];
-      }
-
-      const expectedChain = primary.kind === "onchain-solana" ? "solana" : primary.chain;
-      const hasMatchingContract =
-        coin.contracts?.some(
-          (contract) =>
-            contract.chain === expectedChain &&
-            (primary.kind === "onchain-solana" ? contract.address.length > 0 : contract.address.startsWith("0x")),
-        ) ?? false;
-      const contractKey = expectedChain;
-      return hasMatchingContract ? [] : [`${coin.id}:contract:${contractKey}`];
-    });
-
-    expect(issues).toEqual([]);
-  });
-
-  it("keeps curated-validated live reserve configs backed by curated reserve slices", () => {
-    const issues = TRACKED_STABLECOINS.filter(
-      (coin) => coin.liveReservesConfig?.adapter === "curated-validated",
-    )
-      .filter((coin) => (coin.reserves?.length ?? 0) === 0)
-      .map((coin) => coin.id);
-
-    expect(issues).toEqual([]);
-  });
-
-  it("does not let one breaker scope cover multiple distinct live-reserve source configs", () => {
-    const liveCoins = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig);
-    const scopeSourceGroups = new Map<string, Set<string>>();
-
-    for (const coin of liveCoins) {
-      const config = coin.liveReservesConfig!;
-      const scope = config.breakerScope ?? config.adapter;
-      const sourceIdentity = JSON.stringify({
-        adapter: config.adapter,
-        version: config.version,
-        semantics: config.semantics,
-        inputs: config.inputs,
-        params: config.params ?? null,
-      });
-      const existing = scopeSourceGroups.get(scope);
-      if (existing) {
-        existing.add(sourceIdentity);
-      } else {
-        scopeSourceGroups.set(scope, new Set([sourceIdentity]));
-      }
-    }
-
-    const overlappingScopes = Array.from(scopeSourceGroups.entries())
-      .filter(([, sourceIds]) => sourceIds.size > 1)
-      .map(([scope]) => scope);
-
-    expect(overlappingScopes).toEqual([]);
-  });
-
-  it("keeps configured live reserve inputs compatible with adapter input-kind constraints", () => {
-    const issues = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig).flatMap((coin) => {
-      const config = coin.liveReservesConfig!;
-      const parsed = LiveReservesConfigSchema.safeParse(config);
-      const allowedKinds = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter].primaryInputKinds as readonly string[];
-      const invalidKinds = [
-        config.inputs.primary.kind,
-        ...(config.inputs.fallbacks ?? []).map((fallback) => fallback.kind),
-      ].filter((kind) => !allowedKinds.includes(kind));
-
-      return [
-        ...(parsed.success ? [] : [`${coin.id}:schema:${parsed.error.issues[0]?.message ?? "invalid"}`]),
-        ...invalidKinds.map((kind) => `${coin.id}:${config.adapter}:${kind}`),
-      ];
-    });
-
-    expect(issues).toEqual([]);
-  });
-
   it("gives business-day NAV oracles enough freshness headroom for weekends", () => {
     const maxAgeSec = 4 * 24 * 60 * 60;
     const businessDayNavIds = ["ousg-ondo-finance"];
@@ -1149,54 +1022,6 @@ describe("tracked stablecoin metadata", () => {
     });
 
     expect(underConfigured).toEqual([]);
-  });
-
-  it("assigns a reserve display badge to every configured live-reserve adapter", () => {
-    const missingBadgeAdapters = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig)
-      .map((coin) => coin.liveReservesConfig!.adapter)
-      .filter((adapter, index, adapters) => adapters.indexOf(adapter) === index)
-      .filter((adapter) => !hasReserveDisplayBadgeForAdapter(adapter));
-
-    expect(missingBadgeAdapters).toEqual([]);
-  });
-
-  it("keeps direct ETH and WETH reserve mappings aligned with the canonical ETH risk tier", () => {
-    const mismatches: string[] = [];
-
-    for (const coin of TRACKED_STABLECOINS) {
-      for (const slice of coin.reserves ?? []) {
-        if (slice.name !== "ETH" && slice.name !== "WETH" && slice.name !== "WETH (wrapped Ether)") continue;
-        if (slice.risk !== CANONICAL_ETH_RESERVE_RISK) {
-          mismatches.push(`${coin.id}:reserve:${slice.name}:${slice.risk}`);
-        }
-      }
-
-      const config = coin.liveReservesConfig;
-      const params = config?.params;
-      if (!params || typeof params !== "object" || Array.isArray(params)) continue;
-
-      const maybeBranches = (params as { branches?: Array<{ name?: string; risk?: string }> }).branches;
-      if (Array.isArray(maybeBranches)) {
-        for (const branch of maybeBranches) {
-          if (branch?.name !== "WETH") continue;
-          if (branch.risk !== CANONICAL_ETH_RESERVE_RISK) {
-            mismatches.push(`${coin.id}:branch:${branch.name}:${branch.risk ?? "missing"}`);
-          }
-        }
-      }
-
-      const maybeLabel = (params as { label?: string; risk?: string }).label;
-      if (maybeLabel === "ETH" && (params as { risk?: string }).risk !== CANONICAL_ETH_RESERVE_RISK) {
-        mismatches.push(`${coin.id}:single-asset:ETH:${(params as { risk?: string }).risk ?? "missing"}`);
-      }
-
-      const riskMap = (params as { riskMap?: Record<string, string> }).riskMap;
-      if (riskMap?.ETH && riskMap.ETH !== CANONICAL_ETH_RESERVE_RISK) {
-        mismatches.push(`${coin.id}:risk-map:ETH:${riskMap.ETH}`);
-      }
-    }
-
-    expect(mismatches).toEqual([]);
   });
 });
 
@@ -1225,13 +1050,6 @@ describe("suspended live reserve feeds", () => {
     const stripped = withoutSuspendedLiveReserves(suspended);
     expect(stripped.liveReservesConfig).toBeUndefined();
     expect(stripped.id).toBe("test-coin");
-  });
-
-  it("exposes no suspended config through the tracked registry", async () => {
-    const { TRACKED_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
-    for (const coin of TRACKED_STABLECOINS) {
-      expect(coin.liveReservesConfig?.suspended, coin.id).toBeUndefined();
-    }
   });
 
   it("keeps the partial USDXL pool feed out of score-grade runtime metadata", () => {

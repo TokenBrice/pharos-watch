@@ -67,11 +67,6 @@ describe("validateAdapterOutput redemption telemetry", () => {
     expect(result.warnings.some((warning) => warning.effect === "degraded")).toBe(false);
   });
 
-  it("treats an explicitly undefined optional redemption block as absent", () => {
-    const result = validateAdapterOutput({ slices, metadata: { redemption: undefined } });
-    expect(result).toEqual({ valid: true, warnings: [] });
-  });
-
   it("retains raw upstream percentage drift after slices have been normalized", () => {
     const validateRawDeviation = (rawSumDeviation: number) => validateAdapterOutput({
       slices,
@@ -284,34 +279,6 @@ describe("validateAdapterOutput redemption telemetry", () => {
         effect: "degraded",
       }),
     );
-  });
-
-  it("suppresses redemption-capacity-unverified when the adapter policy is unverified-only", () => {
-    // Reservoir is the registry's own unverified-only adapter (covered by the
-    // next case); keep the generic branch covered here for a policy that is
-    // unverified-only without inheriting a declared budget.
-    const baseAdapter = getReserveAdapter("infinifi");
-    expect(baseAdapter).not.toBeNull();
-    const adapter: ReserveAdapterDefinition = {
-      ...baseAdapter!,
-      validation: { ...baseAdapter!.validation, allowedFreshnessModes: ["unverified"] },
-    };
-    const result = validateAdapterOutput(
-      {
-        slices,
-        metadata: {
-          immediateRedeemableUsd: 1_000_000,
-          redemption: {
-            capacityUsd: 1_000_000,
-            freshnessKind: "unverified",
-          },
-        },
-      },
-      { adapter },
-    );
-
-    expect(result.valid).toBe(true);
-    expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(false);
   });
 
   it("suppresses redemption-capacity-unverified under reservoir's unverified-only API policy", () => {

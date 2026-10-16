@@ -165,7 +165,7 @@ function readAuditPathCandidates(entry: AdminActionAuditEntry): string[] {
   ].filter(Boolean);
 }
 
-export function auditEntryMatchesAction(entry: AdminActionAuditEntry, action: Pick<StatusPageAction, "path">): boolean {
+function auditEntryMatchesAction(entry: AdminActionAuditEntry, action: Pick<StatusPageAction, "path">): boolean {
   const actionKey = normalize(action.path);
   return readAuditPathCandidates(entry).some((candidate) => normalize(candidate) === actionKey);
 }

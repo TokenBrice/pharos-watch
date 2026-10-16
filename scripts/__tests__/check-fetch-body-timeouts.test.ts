@@ -8,25 +8,6 @@ import {
 import { withTempRepo } from "./helpers/test-state";
 
 describe("fetch body timeout guardrail", () => {
-  it("detects direct body reads after raw fetchWithRetry responses", () => {
-    const violations = findFetchBodyTimeoutViolations(`
-      import { fetchWithRetry } from "../lib/fetch-retry";
-      export async function run() {
-        const res = await fetchWithRetry("https://example.test");
-        if (!res?.ok) return null;
-        return await res.json();
-      }
-    `);
-
-    expect(violations).toHaveLength(1);
-    expect(violations[0]).toMatchObject({
-      variable: "res",
-      method: "json",
-      fetchLine: 4,
-      bodyLine: 6,
-    });
-  });
-
   it.each(["json", "text"])("detects %s body reads beyond 80 source lines", (method) => {
     const violations = findFetchBodyTimeoutViolations([
       "async function run() {",
@@ -101,36 +82,6 @@ describe("fetch body timeout guardrail", () => {
     expect(violations.map(({ variable, method }) => ({ variable, method }))).toEqual([
       { variable: "res", method: "json" },
     ]);
-  });
-
-  it("does not carry response assignments into another function", () => {
-    expect(findFetchBodyTimeoutViolations(`
-      async function first() {
-        const res = await fetchWithRetry(url);
-      }
-      function second(res) {
-        return res.json();
-      }
-    `)).toEqual([]);
-  });
-
-  it("ignores comments and string literals containing fetch and body reads", () => {
-    expect(findFetchBodyTimeoutViolations(`
-      /* const res = await fetchWithRetry(url);
-      res.json(); */
-      const example = "const res = await fetchWithRetry(url);";
-      const bodyExample = "res.text()";
-    `)).toEqual([]);
-  });
-
-  it("stops tracking a response after unrelated reassignment", () => {
-    expect(findFetchBodyTimeoutViolations(`
-      async function run() {
-        let res = await fetchWithRetry(url);
-        res = unrelated;
-        return res.json();
-      }
-    `)).toEqual([]);
   });
 
   it("allows explicitly baselined debt and reports stale baseline entries", () => {

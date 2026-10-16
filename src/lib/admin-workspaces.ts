@@ -74,7 +74,7 @@ function isExactOrDescendant(pathname: string, routePath: string): boolean {
   return normalizedRoute != null && (pathname === normalizedRoute || pathname.startsWith(`${normalizedRoute}/`));
 }
 
-export function getAdminWorkspace(id: AdminWorkspaceId): AdminWorkspace {
+function getAdminWorkspace(id: AdminWorkspaceId): AdminWorkspace {
   const workspace = WORKSPACE_BY_ID.get(id);
   if (!workspace) throw new Error(`Unknown admin workspace: ${id}`);
   return workspace;

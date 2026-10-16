@@ -904,21 +904,6 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(conversionCalls).toEqual([]);
   });
 
-  it("emits degraded warning when convertToAssets diverges from totalAssets by >1%", async () => {
-    installErc4626Network({ totalAssets: 100, totalSupply: 100, convertedAssets: 110, idleBalance: 0 });
-
-    const result = await runTrackedVault("syrupusdc-maple");
-
-    expect(nonInfoWarnings(result.warnings)).toEqual([
-      expect.objectContaining({
-        code: "erc4626-nav-divergence",
-        severity: "warning",
-      }),
-    ]);
-    expect(result.metadata?.details?.navConsistencyRatio).toBeCloseTo(1.1, 2);
-    expect(result.metadata?.redemption?.routeStatus).toBe("unknown");
-  });
-
   it("uses explicit RPC URLs for ERC-4626 vaults on chains without registry RPCs", async () => {
     const scenario = catalogCases[0];
     installErc4626Network({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
@@ -960,22 +945,6 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
-  it("probes Strata srUSDe as a high-risk USDe wrapper", async () => {
-    const scenario = catalogCases[2];
-    installErc4626Network({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
-
-    const result = await runTrackedVault(scenario.id);
-
-    expect(result.slices).toEqual([{ sourceKey: "erc4626-single-asset:ethereum:0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003:deployed", name: "Strata Senior USDe deployed strategy positions", pct: 100, risk: "high" }]);
-    expect(result.slices[0]).not.toHaveProperty("coinId");
-    expect(result.metadata).toMatchObject({
-      chain: "ethereum",
-      assetAddress: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
-      details: {
-        assetAddressMatchesExpected: true,
-      },
-    });
-  });
 });
 
 describe("Morpho V2 operational conditions and composition admission", () => {

@@ -7,7 +7,6 @@ import {
   finalizeBackstopRegistry,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import {
-  documentedBoundSupplyFull,
   documentedVariableFee,
   expandIds,
   fixedFee,
@@ -213,23 +212,6 @@ describe("redemption backstop config helpers", () => {
     expect(entries[0]!.config.reviewedAt).toBeUndefined();
   });
 
-  it("builds compact source references", () => {
-    const supports = ["route", "capacity"] as const;
-    expect(sourceRef("Docs", "https://example.com/docs")).toEqual({
-      label: "Docs",
-      url: "https://example.com/docs",
-    });
-    expect(sourceRef("Docs", "https://example.com/docs", [])).toEqual({
-      label: "Docs",
-      url: "https://example.com/docs",
-    });
-    expect(sourceRef("Docs", "https://example.com/docs", [...supports])).toEqual({
-      label: "Docs",
-      url: "https://example.com/docs",
-      supports: ["route", "capacity"],
-    });
-  });
-
   it("builds common source support vectors in exact order as fresh arrays", () => {
     const cases = [
       [sourceRefFull, ["route", "capacity", "fees", "access", "settlement"]],
@@ -352,16 +334,6 @@ describe("redemption backstop config helpers", () => {
     expect(resolveRedemptionCostBpsAtNotional(config.costModel, 100_000)).toBe(10);
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 100_000)).toBe(100);
     expect(config.settlementModel).toBe("same-day");
-  });
-
-  it("builds documented-bound supply-full fragments with reviewedAt provenance", () => {
-    expect(documentedBoundSupplyFull("2026-05-12")).toEqual({
-      capacityModel: {
-        kind: "supply-full",
-        confidence: "documented-bound",
-      },
-      reviewedAt: "2026-05-12",
-    });
   });
 
   it("applies tracked reviewed docs without overwriting existing docs or reviewedAt", () => {

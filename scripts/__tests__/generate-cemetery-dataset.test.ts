@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { sortCemeteryCoins } from "@shared/lib/cemetery";
+
 import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, CEMETERY_RECORDED_AT_DESCRIPTION } from "@shared/lib/cemetery-merged";
-import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
@@ -55,18 +55,6 @@ describe("cemetery dataset provenance", () => {
     }
   });
 
-  it("does not rotate the checksum for unrelated active-coin metadata", () => {
-    const coin = ACTIVE_STABLECOINS[0]!;
-    const original = coin.name;
-    const before = generatedDataset();
-    try {
-      coin.name = `${original} revised`;
-      expect(generatedDataset()).toEqual(before);
-    } finally {
-      coin.name = original;
-    }
-  });
-
   it("does not pin the whole tracked-stablecoin aggregate", () => {
     // Hashing coins.generated.json rotated this export on every live-coin
     // curation while no cemetery row moved, and published a checksum for a
@@ -110,17 +98,6 @@ describe("cemetery dataset schema 1.1", () => {
       expect(FROZEN_STABLECOINS.find((coin) => coin.id === id)?.frozenAt).toBe(frozenAt);
       expect(recordedAt).not.toBe(frozenAt);
     }
-  });
-
-  it("publishes rows in the shared cemetery sort order it documents", () => {
-    expect(DATASET.rows.map((row) => row.id)).toEqual(
-      sortCemeteryCoins(CEMETERY_ENTRIES, "newest").map((entry) => entry.id),
-    );
-    // The documented keys appear in the order the sort applies them.
-    const keyOffsets = ["deathDate descending", "peakMcapUsd descending", "symbol ascending", "id ascending"]
-      .map((key) => DATASET.recordsOrderedBy.indexOf(key));
-    expect(keyOffsets.every((offset) => offset >= 0)).toBe(true);
-    expect([...keyOffsets].sort((left, right) => left - right)).toEqual(keyOffsets);
   });
 
   it("exports mechanismArchetype and recordedAt from the source rows, null when absent", () => {

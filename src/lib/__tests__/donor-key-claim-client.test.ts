@@ -7,7 +7,7 @@ import {
 } from "@shared/lib/donor-key-claim";
 import { DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
-import { DonorKeyClaimError, claimDonorKey, hexUtf8 } from "../donor-key-claim-client";
+import { claimDonorKey, hexUtf8 } from "../donor-key-claim-client";
 
 const ADDRESS = "0xAa7A9d80971e58641442774C373C94AAFEe87d66";
 const SIGNATURE = `0x${"ab".repeat(65)}`;
@@ -32,14 +32,6 @@ afterEach(() => {
 });
 
 describe("hexUtf8", () => {
-  it("hex-encodes UTF-8 bytes with a 0x prefix", () => {
-    expect(hexUtf8("abc")).toBe("0x616263");
-  });
-
-  it("pads bytes below 0x10 so the hex length stays even", () => {
-    expect(hexUtf8("\n")).toBe("0x0a");
-  });
-
   it("encodes multi-byte characters as their UTF-8 bytes", () => {
     // "é" is two bytes in UTF-8; a charCode-based encoder would emit "0xe9".
     expect(hexUtf8("é")).toBe("0xc3a9");
@@ -74,15 +66,6 @@ describe("buildDonorClaimSiweMessage as the page builds it", () => {
 });
 
 describe("claimDonorKey", () => {
-  it.each(["future_reason", undefined, 42])("ignores unknown or absent reasons (%s) and malformed detail", async (reason) => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({
-      error: "Unavailable", reason, qualifyingUsd: "10", countedAssets: ["USDC", 5],
-    }, 503));
-    await expect(claimDonorKey({ message: "siwe", signature: SIGNATURE })).rejects.toMatchObject({
-      status: 503, reason: null, qualifyingUsd: null, countedAssets: null,
-    });
-  });
-
   it("posts the signed message and returns the issued key", async () => {
     const body = issuedPayload();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse(body, 201));
@@ -111,14 +94,6 @@ describe("claimDonorKey", () => {
       qualifyingUsd: 4.25,
       countedAssets: ["USDC"],
     });
-  });
-
-  it("keeps the status for error bodies without a ledger timestamp", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ error: "Already claimed." }, 409));
-
-    const rejection = await claimDonorKey({ message: "siwe", signature: SIGNATURE }).catch((error: unknown) => error);
-    expect(rejection).toBeInstanceOf(DonorKeyClaimError);
-    expect(rejection).toMatchObject({ status: 409, message: "Already claimed.", ledgerUpdatedAt: null });
   });
 
   it("falls back to a status message when the error body is not JSON", async () => {

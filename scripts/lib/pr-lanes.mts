@@ -1,4 +1,4 @@
-export type PrLaneSelector = "always" | "code" | "critical-coverage" | "docs" | "pages-artifact";
+export type PrLaneSelector = "always" | "code" | "docs" | "pages-artifact" | "v9-resource";
 
 export type PrLaneId =
   | "preflight"
@@ -6,8 +6,6 @@ export type PrLaneId =
   | "static-guards"
   | "tests"
   | "v9-resource"
-  | "critical-coverage-shards"
-  | "critical-coverage"
   | "pages-artifact"
   | "docs"
   | "gate";
@@ -28,12 +26,12 @@ export interface PrLaneCommandDefinition {
 }
 
 export interface PrLaneSelection {
-  criticalCoverageChanged: boolean;
-  criticalCoverageShards: number;
   docsChanged: boolean;
   docsOnly: boolean;
   pagesArtifactRequired?: boolean;
   testShards?: number;
+  /** Missing classification selects the resource lane conservatively. */
+  v9ResourceRequired?: boolean;
 }
 
 export interface PrLaneCommandContext {
@@ -80,27 +78,11 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
   },
   {
     id: "v9-resource",
-    selector: "code",
+    selector: "v9-resource",
     // Faithful setup/live/natural/correctness smoke: 101s; contagion wall policy: 90s.
     // Eight minutes allows CI setup, bundling and scheduling headroom without a 35-minute hang.
     timeoutMinutes: 8,
     commands: [{ id: "v9-resource", program: "npm", args: ["run", "test:v9-resource"] }],
-  },
-  {
-    id: "critical-coverage-shards",
-    selector: "critical-coverage",
-    shards: 8,
-    timeoutMinutes: 15,
-    commands: [{ id: "critical-coverage-shard", program: "npm", args: ["run", "coverage:critical:shard", "--"] }],
-  },
-  {
-    id: "critical-coverage",
-    selector: "critical-coverage",
-    timeoutMinutes: 15,
-    commands: [
-      { id: "critical-coverage", program: "npm", args: ["run", "coverage:critical"] },
-      { id: "critical-coverage-merge", program: "npm", args: ["run", "coverage:critical:merge"] },
-    ],
   },
   {
     id: "pages-artifact",
@@ -133,9 +115,9 @@ export function isPrLaneSelected(lane: PrLaneDefinition, selection: PrLaneSelect
   switch (lane.selector) {
     case "always": return true;
     case "code": return !selection.docsOnly;
-    case "critical-coverage": return selection.criticalCoverageChanged;
     case "docs": return selection.docsChanged;
     case "pages-artifact": return selection.pagesArtifactRequired === true;
+    case "v9-resource": return selection.v9ResourceRequired !== false;
   }
 }
 
@@ -144,8 +126,7 @@ export function buildPrLaneCommandArgs(
   context: PrLaneCommandContext = {},
 ): string[] {
   const args = [...command.args];
-  const sharded = command.id === "critical-coverage-shard"
-    || (command.id === "pr-tests" && (context.shard !== undefined || context.shardCount !== undefined));
+  const sharded = command.id === "pr-tests" && (context.shard !== undefined || context.shardCount !== undefined);
   if (sharded && (
     !Number.isInteger(context.shard) || !Number.isInteger(context.shardCount)
     || context.shard! < 1 || context.shardCount! < 1 || context.shard! > context.shardCount!
@@ -155,9 +136,6 @@ export function buildPrLaneCommandArgs(
       if (context.base) args.push(`--base=${context.base}`);
       if (sharded) args.push(`--shard=${context.shard}/${context.shardCount}`);
       args.push(...(context.forwardedTestArgs ?? []));
-      break;
-    case "critical-coverage-shard":
-      args.push(`--shard=${context.shard}/${context.shardCount}`);
       break;
     case "pr-static":
     case "pr-static-compile":

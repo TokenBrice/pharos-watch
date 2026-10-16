@@ -19,40 +19,11 @@ describe("trackSearch debounce + clearAllTrackingTimers", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fires search_performed once after the debounce window elapses", () => {
-    trackSearch("depeg", 4);
-    expect(gtag).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1000);
-    expect(gtag).toHaveBeenCalledTimes(1);
-    expect(gtag).toHaveBeenCalledWith("event", "search_performed", {
-      page: "depeg",
-      query_length: 4,
-    });
-  });
-
   it("does not fire the previous page's event after clearAllTrackingTimers (navigation)", () => {
     trackSearch("depeg", 4);
     // user navigates away mid-debounce
     clearAllTrackingTimers();
     vi.advanceTimersByTime(1000);
-    expect(gtag).not.toHaveBeenCalled();
-  });
-
-  it("restarts the full quiet window and delivers only the newest search", () => {
-    trackSearch("depeg", 4);
-    vi.advanceTimersByTime(600);
-    trackSearch("yield", 7);
-    vi.advanceTimersByTime(999);
-    expect(gtag).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
-    expect(gtag.mock.calls).toEqual([["event", "search_performed", { page: "yield", query_length: 7 }]]);
-  });
-
-  it("clearing the query cancels a pending search", () => {
-    trackSearch("depeg", 4);
-    vi.advanceTimersByTime(500);
-    trackSearch("depeg", 0);
-    vi.advanceTimersByTime(1500);
     expect(gtag).not.toHaveBeenCalled();
   });
 

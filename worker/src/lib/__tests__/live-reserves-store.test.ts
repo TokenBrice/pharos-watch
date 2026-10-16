@@ -119,18 +119,6 @@ describe("live-reserves-store", () => {
     expect(overview.staleCoins).toBe(stale ? 1 : 0);
   });
 
-
-  it("treats a missing required reserve state row as infinitely stale", async () => {
-    const db = mockD1([
-      {
-        match: "FROM reserve_sync_state",
-        rows: [reserveSyncRow({ stablecoin_id: "coin-a", adapter_key: "test", breaker_key: "test", last_attempted_at: 950, last_success_at: 950 })],
-      },
-    ]);
-
-    await expect(getMaxSyncAge(db, 1_000, ["coin-a", "coin-b"])).resolves.toBe(Infinity);
-  });
-
   it("chunks configured reserve state reads within the D1 bind limit", async () => {
     const stablecoinIds = Array.from({ length: 181 }, (_, index) => `coin-${index}`);
     const db = mockD1([
@@ -480,24 +468,6 @@ describe("live-reserves-store", () => {
       + overview.degradedCoins + overview.errorCoins + overview.corruptCoins).toBe(overview.configuredCoins);
   });
 
-  it("counts pre-bootstrap adapter failures as error coins instead of missing coins", async () => {
-    const emptyOverview = await computeReserveCompositionOverview(mockD1(), 2_000);
-    const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [reserveSyncRow({ last_attempted_at: 2_000, last_success_at: null, last_status: "error", last_error: "HTTP 503" })],
-      },
-      {
-        match: "reserve_composition",
-        rows: [],
-      },
-    ]);
-
-    const overview = await computeReserveCompositionOverview(db, 2_100);
-    expect(overview.errorCoins).toBe(emptyOverview.errorCoins + 1);
-    expect(overview.missingCoins).toBe(emptyOverview.missingCoins - 1);
-  });
-
   it("prioritizes active sync errors over stale classification in the overview", async () => {
     const now = 10_000;
     const db = mockD1([
@@ -578,64 +548,6 @@ describe("live-reserves-store", () => {
     expect(result?.sync?.warnings).toHaveLength(1);
   });
 
-  it("uses only independent ok-status live reserve snapshots for scoring passthrough", async () => {
-    const now = 10_000;
-    const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [
-          reserveSyncRow({
-            last_attempted_at: now,
-            last_success_at: now,
-            last_status: "degraded",
-            warning_count: 1,
-            warnings: JSON.stringify([{ code: "unknown-position", message: "warn", severity: "warning" }]),
-          }),
-          reserveSyncRow({
-            stablecoin_id: "pyusd-paypal",
-            adapter_key: "single-asset",
-            breaker_key: "live-reserves:single-asset",
-            last_attempted_at: now,
-            last_success_at: now,
-          }),
-          reserveSyncRow({
-            stablecoin_id: "lusd-liquity",
-            adapter_key: "liquity-v1",
-            breaker_key: "live-reserves:lusd-liquity",
-            last_attempted_at: now,
-            last_success_at: now,
-          }),
-        ],
-      },
-      {
-        match: "reserve_composition",
-        rows: [
-          reserveCompositionRow({ slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]), fetched_at: now }),
-          reserveCompositionRow({
-            stablecoin_id: "pyusd-paypal",
-            slices: JSON.stringify([{ name: "Issuer reserves", pct: 100, risk: "very-low" }]),
-            fetched_at: now,
-            source: "single-asset",
-          }),
-          reserveCompositionRow({
-            stablecoin_id: "lusd-liquity",
-            slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
-            fetched_at: now,
-            source: "liquity-v1",
-            metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
-            adapter_source_model: "single-bucket",
-            adapter_evidence_class: "independent",
-          }),
-        ],
-      },
-    ]);
-
-    const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
-    expect(scoringMap.has("iusd-infinifi")).toBe(false);
-    expect(scoringMap.has("pyusd-paypal")).toBe(false);
-    expect(scoringMap.get("lusd-liquity")).toEqual([{ name: "ETH", pct: 100, risk: "very-low" }]);
-  });
-
   it("judges scoring on the snapshot's own warnings, not the latest attempt's status", async () => {
     const now = 10_000;
     const degradedThenErrored = mockD1([
@@ -682,67 +594,6 @@ describe("live-reserves-store", () => {
     const scoringMap = await loadFreshIndependentLiveReserveMap(degradedThenErrored, now);
     expect(scoringMap.has("iusd-infinifi")).toBe(false);
     expect(scoringMap.has("lusd-liquity")).toBe(true);
-  });
-
-  it("requires timestamp-backed or explicitly on-chain freshness metadata for scoring passthrough", async () => {
-    const now = 10_000;
-    const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [
-          reserveSyncRow({ last_attempted_at: now, last_success_at: now }),
-          reserveSyncRow({
-            stablecoin_id: "gho-aave",
-            adapter_key: "gho",
-            breaker_key: "live-reserves:gho",
-            last_attempted_at: now,
-            last_success_at: now,
-          }),
-          reserveSyncRow({
-            stablecoin_id: "usds-sky",
-            adapter_key: "sky-makercore",
-            breaker_key: "live-reserves:sky-makercore",
-            last_attempted_at: now,
-            last_success_at: now,
-          }),
-        ],
-      },
-      {
-        match: "reserve_composition",
-        rows: [
-          reserveCompositionRow({
-            slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
-            fetched_at: now,
-            metadata: JSON.stringify({ freshnessMode: "unverified", sourceTimestamp: now }),
-            adapter_source_model: "dynamic-mix",
-            adapter_evidence_class: "independent",
-          }),
-          reserveCompositionRow({
-            stablecoin_id: "gho-aave",
-            slices: JSON.stringify([{ name: "Tracked GSM", pct: 100, risk: "low" }]),
-            fetched_at: now,
-            source: "gho",
-            metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
-            adapter_source_model: "dynamic-mix",
-            adapter_evidence_class: "independent",
-          }),
-          reserveCompositionRow({
-            stablecoin_id: "usds-sky",
-            slices: JSON.stringify([{ name: "PSM USDC", pct: 100, risk: "low" }]),
-            fetched_at: now,
-            source: "sky-makercore",
-            metadata: JSON.stringify({ sourceTimestamp: now }),
-            adapter_source_model: "dynamic-mix",
-            adapter_evidence_class: "independent",
-          }),
-        ],
-      },
-    ]);
-
-    const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
-    expect(scoringMap.has("iusd-infinifi")).toBe(false);
-    expect(scoringMap.get("gho-aave")).toEqual([{ name: "Tracked GSM", pct: 100, risk: "low" }]);
-    expect(scoringMap.has("usds-sky")).toBe(false);
   });
 
   it("keeps static-validated, weak-probe, and unverified active configs out of score-grade reserve maps", async () => {

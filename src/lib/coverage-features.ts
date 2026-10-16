@@ -1,5 +1,5 @@
 import { COVERAGE_FEATURE_MODULES as modules } from "@/lib/coverage-feature-modules";
-import type { CoverageFeatureDefinition, CoverageFeatureKey } from "@/lib/coverage-types";
+import type { CoverageFeatureDefinition } from "@/lib/coverage-types";
 
 export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   {
@@ -152,22 +152,4 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     legendItems: modules.mintAuthority.legendItems,
     formatBreakdown: modules.mintAuthority.formatBreakdown,
   },
-] as const;
-
-export const COVERAGE_FEATURE_LEGEND_ITEMS = Object.fromEntries(
-  COVERAGE_FEATURES.map((feature) => [feature.key, feature.legendItems]),
-) as Record<CoverageFeatureKey, CoverageFeatureDefinition["legendItems"]>;
-
-/**
- * Cross-cutting status kinds covered by general legend entries (NR / Data n/a / —).
- * Used by the legend-coverage invariant test so per-feature modules can omit
- * legend terms for these shared-display kinds.
- */
-export const GENERAL_LEGEND_STATUS_KINDS: readonly string[] = [
-  "nr",
-  "unobserved",
-  "data-unavailable",
-  "none",
-  "unavailable",
-  "unknown",
 ] as const;

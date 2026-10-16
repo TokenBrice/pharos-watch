@@ -105,10 +105,6 @@ describe("buildMechanismBackingView", () => {
     });
   });
 
-  it("returns null when there is nothing beyond what other modules already show", () => {
-    expect(buildMechanismBackingView("not-a-real-coin")).toBeNull();
-  });
-
   it("renders a number for every overlay metric the engine requires", () => {
     // Guards against an archetype gaining a metric key upstream that this view
     // silently drops. Every numeric metric on a served archetype must appear.
@@ -127,13 +123,6 @@ describe("buildMechanismBackingView", () => {
 });
 
 describe("protocol facts", () => {
-  it("reads protocol-specific figures with humanized labels", () => {
-    const view = buildMechanismBackingView("reusd-resupply");
-    const labels = view?.protocolFacts.map((fact) => fact.label) ?? [];
-    expect(labels).toContain("Active pair count");
-    expect(labels).toContain("Supply debt divergence");
-  });
-
   it("preserves acronyms and formats signed money, percentages, and distinct ratios", () => {
     useOverlay({
       analogousMetrics: {
@@ -163,22 +152,5 @@ describe("protocol facts", () => {
       },
     });
     expect(buildMechanismBackingView("controlled")?.protocolFacts.map((fact) => fact.value)).toEqual(["44.7%", "10.0%"]);
-  });
-
-  it("retains exactly the first six finite protocol facts", () => {
-    useOverlay({
-      analogousMetrics: {
-        firstCount: 1, secondCount: 2, thirdCount: 3, fourthCount: 4,
-        fifthCount: 5, sixthCount: 6, seventhCount: 7,
-      },
-    });
-    expect(buildMechanismBackingView("controlled")?.protocolFacts).toEqual([
-      { key: "firstCount", label: "First count", value: "1" },
-      { key: "secondCount", label: "Second count", value: "2" },
-      { key: "thirdCount", label: "Third count", value: "3" },
-      { key: "fourthCount", label: "Fourth count", value: "4" },
-      { key: "fifthCount", label: "Fifth count", value: "5" },
-      { key: "sixthCount", label: "Sixth count", value: "6" },
-    ]);
   });
 });

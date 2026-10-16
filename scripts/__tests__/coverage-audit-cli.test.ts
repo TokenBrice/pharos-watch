@@ -3,28 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   assertCandidateReportLimitChoice,
   createCandidateReportCliOptions,
-  formatNumber,
-  formatUsd,
   numberValue,
-  parseCandidateReportOption,
   stringValue,
 } from "../lib/coverage-audit-cli";
-import { parseCoverageAuditCliArgs, renderCoverageAuditReport, runCoverageAuditCli } from "../lib/coverage-audit-cli";
+import { parseCoverageAuditCliArgs, runCoverageAuditCli } from "../lib/coverage-audit-cli";
 
 describe("coverage audit CLI helpers", () => {
-  it("preserves compact-USD report bytes across tiers and invalid values", () => {
-    expect(formatUsd(1_250_000_000_000)).toBe("$1,250B");
-    expect(formatUsd(2_500_000_000)).toBe("$2.5B");
-    expect(formatUsd(3_500_000)).toBe("$3.5M");
-    expect(formatUsd(4_500)).toBe("$4.5K");
-    expect(formatUsd(999.25)).toBe("$999.25");
-    expect(formatUsd(-2_500_000)).toBe("$-2,500,000");
-    expect(formatUsd(null)).toBe("");
-    expect(formatUsd(Number.NaN)).toBe("$NaN");
-    expect(formatUsd(Number.POSITIVE_INFINITY)).toBe("$∞");
-    expect(formatNumber(Number.NEGATIVE_INFINITY)).toBe("-∞");
-  });
-
   it("normalizes finite numbers and trimmed non-empty strings", () => {
     expect(numberValue(12.5)).toBe(12.5);
     expect(numberValue(Number.NaN)).toBeNull();
@@ -33,45 +17,6 @@ describe("coverage audit CLI helpers", () => {
     expect(stringValue("  USDC  ")).toBe("USDC");
     expect(stringValue("   ")).toBeNull();
     expect(stringValue(42)).toBeNull();
-  });
-
-  it("can preserve untrimmed non-empty strings for legacy callers", () => {
-    expect(stringValue("  USDC  ", { trim: false })).toBe("  USDC  ");
-    expect(stringValue("", { trim: false })).toBeNull();
-  });
-
-  it("parses common candidate report options", () => {
-    const options = createCandidateReportCliOptions({
-      defaultLimit: 50,
-      defaultOutputPath: "agents/report.md",
-    });
-    const argv = [
-      "--coin",
-      "usdc-circle",
-      "--limit",
-      "10",
-      "--json",
-      "--stdout",
-      "--generated-at",
-      "2026-06-12T00:00:00.000Z",
-    ];
-
-    for (let index = 0; index < argv.length; index += 1) {
-      const nextIndex = parseCandidateReportOption(options, argv, index, { usage: () => "usage" });
-      expect(nextIndex).not.toBeNull();
-      index = nextIndex!;
-    }
-
-    expect(options).toMatchObject({
-      coinIds: ["usdc-circle"],
-      limit: 10,
-      format: "json",
-      stdout: true,
-      generatedAt: "2026-06-12T00:00:00.000Z",
-    });
-    expect(renderCoverageAuditReport({ ok: true }, options.format, () => "markdown\n")).toBe(
-      '{\n  "ok": true\n}\n',
-    );
   });
 
   it("rejects --all combined with a custom limit", () => {

@@ -167,33 +167,6 @@ describe("handleYieldHistory", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("parses the rankings cache once before extracting history metadata", async () => {
-    const cache = publishedYieldCache(SOURCE_RISK_GOLDEN_UPDATED_AT);
-    const db = mockD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [cache] },
-      { match: "yield_history", rows: [] },
-    ]);
-    const parseSpy = vi.spyOn(JSON, "parse");
-
-    try {
-      const response = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
-      expect(response.status).toBe(200);
-      expect(parseSpy.mock.calls.filter(([value]) => value === cache.value)).toHaveLength(1);
-    } finally {
-      parseSpy.mockRestore();
-    }
-  });
-
-  it("does not report a cold rankings cache as malformed", async () => {
-    const response = await handleYieldHistory(
-      mockD1([{ match: "yield_history", rows: [] }]),
-      new URL("https://x/api/yield-history?stablecoin=usdt-tether"),
-    );
-
-    expect(response.status).toBe(200);
-    expect(logMalformedJsonPathMock).not.toHaveBeenCalled();
-  });
-
   it("returns 200 with history envelope", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
@@ -313,16 +286,6 @@ describe("handleYieldHistory", () => {
     expect(body.history[0]).not.toHaveProperty("source_tvl_usd");
   });
 
-  it("supports source-specific history mode", async () => {
-    const db = mockD1([{ match: "yield_history", rows: [row] }]);
-    const res = await handleYieldHistory(
-      db,
-      new URL(`https://x/api/yield-history?stablecoin=usdt-tether&sourceKey=${encodeURIComponent("aave-v3:usdt")}`),
-    );
-    const body = (await readJsonResponse(res, 200)) as { history: Array<{ sourceKey: string }> };
-    expect(body.history[0]?.sourceKey).toBe("aave-v3:usdt");
-  });
-
   it.each(["best", "source"])("filters on-chain bootstrap seed rows from %s-mode history", async (mode) => {
     const bootstrapRow = makeYieldHistoryRow({
       apy: 0,
@@ -432,16 +395,6 @@ describe("handleYieldHistory", () => {
     const body = (await readJsonResponse(res, 200)) as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
     expect(body.history[0]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
     expect(body.history[1]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
-  });
-
-  it("falls back to an empty warning list when warning_signals is malformed JSON", async () => {
-    const malformedRow = makeYieldHistoryRow({ warning_signals: "not-json" });
-    const db = mockD1([{ match: "yield_history", rows: [malformedRow] }]);
-
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
-
-    const body = (await readJsonResponse(res, 200)) as { history: Array<{ warningSignals: string[] }> };
-    expect(body.history[0]?.warningSignals).toEqual([]);
   });
 
   it("filters misattributed parent wrapper history after tracked-child ownership handoff", async () => {

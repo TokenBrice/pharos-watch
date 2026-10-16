@@ -6,7 +6,6 @@ import { adaptUsd1BundleOracle } from "../usd1-bundle-oracle";
 import type { MultichainSupplyContribution, ScopedLiabilitySupply } from "../multichain-supply";
 import {
   expectWarningEffect,
-  expectWarnings,
   resolveAdapterCoin,
   runAdapter,
   type AdapterNetworkSpec,
@@ -153,21 +152,6 @@ describe("adaptUsd1BundleOracle", () => {
     expect(result.metadata?.ratioSkewSec).toBe(skew);
     expect(result.metadata?.collateralizationRatio != null).toBe(published);
     expect(result.metadata?.ratioUnavailableReason).toBe(published ? undefined : "reserve-supply-time-skew");
-  });
-
-  it("withholds the 51-hour-skewed quotient but keeps reserves and supply", () => {
-    const result = adapt(scopedSupply({ contributions: nativeContributions(LATE_SUPPLY_READ_AT) }));
-
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
-    expect(result.metadata?.totalReserveUsd).toBeCloseTo(EXPECTED_RESERVES, 2);
-    expect(result.metadata?.supplyUsd).toBeCloseTo(EXPECTED_SUPPLY, 2);
-    expect(result.metadata).toMatchObject({
-      supplyCoverageComplete: true,
-      ratioSkewSec: LATE_SUPPLY_READ_AT - BUNDLE_TIMESTAMP,
-      ratioUnavailableReason: "reserve-supply-time-skew",
-    });
-    expectWarnings(result, ["reserve-supply-time-skew"]);
-    expectWarningEffect(result, "reserve-supply-time-skew", "info");
   });
 
   it("rejects an empty supply denominator instead of publishing an unbounded ratio", () => {

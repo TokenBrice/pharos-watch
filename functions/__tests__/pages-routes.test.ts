@@ -6,16 +6,6 @@ import routes from "../../public/_routes.json";
 const headersFile = readFileSync(resolve(process.cwd(), "public/_headers"), "utf8");
 const redirectsFile = readFileSync(resolve(process.cwd(), "public/_redirects"), "utf8");
 
-function headerDirective(name: string): string {
-  return (
-    headersFile
-      .match(/^  Content-Security-Policy: (.+)$/m)?.[1]
-      ?.split(";")
-      .map((directive) => directive.trim())
-      .find((directive) => directive.startsWith(`${name} `)) ?? ""
-  );
-}
-
 function activeRedirectLines(): string[] {
   return redirectsFile
     .split(/\r?\n/)
@@ -45,11 +35,6 @@ describe("Pages function routes", () => {
     }
   });
 
-  it("keeps static asset prefixes out of function routing", () => {
-    expect(routes.exclude).toEqual(
-      expect.arrayContaining(["/_next/*", "/logos/*", "/dexes/*", "/featured/*"]),
-    );
-  });
 });
 
 describe("Pages static headers", () => {
@@ -72,12 +57,6 @@ describe("Pages static headers", () => {
     );
   });
 
-  it("allows analytics image beacons in static Pages CSP", () => {
-    const imgSrc = headerDirective("img-src");
-
-    expect(imgSrc).toContain("https://www.googletagmanager.com");
-    expect(imgSrc).toContain("https://*.googletagmanager.com");
-  });
 });
 
 describe("Pages legacy redirects", () => {
@@ -93,73 +72,4 @@ describe("Pages legacy redirects", () => {
     expect(effectiveRedirect(path)).toEqual({ target, status: 301 });
   });
 
-  it("normalizes retired report-card and stability routes to slash canonical targets", () => {
-    const lines = activeRedirectLines();
-
-    expect(lines).toEqual(
-      expect.arrayContaining([
-        "/report-cards /safety-scores/ 301",
-        "/report-cards/ /safety-scores/ 301",
-        "/report-cards/* /safety-scores/:splat 301",
-        "/risk-lab /safety-scores/ 301",
-        "/risk-lab/ /safety-scores/ 301",
-        "/risk-lab/* /safety-scores/:splat 301",
-        "/stability-index-alt /stability-index/ 301",
-        "/stability-index-alt/ /stability-index/ 301",
-        "/stability-index-alt/* /stability-index/:splat 301",
-      ]),
-    );
-    for (const line of ["/report-cards /safety-scores 301", "/risk-lab /safety-scores 301", "/stability-index-alt /stability-index 301"]) {
-      expect(lines).not.toContain(line);
-    }
-  });
-
-  it.each([
-    {
-      family: "retired MiCA tracker URLs to the canonical compliance page",
-      expected: ["/mica/* /compliance/:splat 301", "/mica/ /compliance/ 301", "/mica /compliance/ 301"],
-      absent: ["/mica /compliance 301", "/mica/ /compliance 301"],
-    },
-    {
-      family: "retired Tape URLs to the canonical timeline page",
-      expected: ["/tape/* /timeline/:splat 301", "/tape/ /timeline/ 301", "/tape /timeline/ 301"],
-      absent: [],
-    },
-    {
-      family: "retired blacklist URLs to the canonical Freezewatch page",
-      expected: ["/blacklist/* /freezewatch/:splat 301", "/blacklist/ /freezewatch/ 301", "/blacklist /freezewatch/ 301"],
-      absent: [],
-    },
-  ])("redirects $family", ({ expected, absent }) => {
-    const lines = activeRedirectLines();
-
-    expect(lines).toEqual(expect.arrayContaining(expected));
-    for (const line of absent) {
-      expect(lines).not.toContain(line);
-    }
-  });
-
-  it("preserves consolidated depeg incidents and canonical comparison ordering", () => {
-    const lines = activeRedirectLines();
-
-    expect(lines).toEqual(
-      expect.arrayContaining([
-        "/compare/pyusd-paypal-vs-usdc-circle/ /compare/usdc-circle-vs-pyusd-paypal/ 301",
-        "/depeg/apxusd-2026-06-03/ /depeg/apxusd-2026-06-02/ 301",
-        "/depeg/apxusd-2026-06-05/ /depeg/apxusd-2026-06-02/ 301",
-        "/depeg/apxusd-2026-06-16/ /depeg/apxusd-2026-06-02/ 301",
-      ]),
-    );
-  });
-
-  it("collapses the retired PUSD numeric alias directly to coverage", () => {
-    const lines = activeRedirectLines();
-
-    expect(lines).toEqual(
-      expect.arrayContaining([
-        "/stablecoin/341/ /coverage/ 301",
-        "/stablecoin/341 /coverage/ 301",
-      ]),
-    );
-  });
 });

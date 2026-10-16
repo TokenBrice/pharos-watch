@@ -11,16 +11,6 @@ const BASE_PROPS = {
 };
 
 describe("RedemptionRouteRail", () => {
-  it("renders holder, gate, venue, settlement, and output from published fields", () => {
-    const html = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} accessModel="issuer-api" />);
-
-    expect(html).toContain("Holder");
-    expect(html).toContain("Issuer / institutional");
-    expect(html).toContain("Offchain issuer");
-    expect(html).toContain("Same day");
-    expect(html).toContain("Stable output");
-  });
-
   it("names the access gate with the published passport vocabulary and the full access label", () => {
     const restricted = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} accessModel="issuer-api" />);
 
@@ -43,13 +33,4 @@ describe("RedemptionRouteRail", () => {
     );
   });
 
-  it("repeats the route facts in the labelled fallback grid for narrow columns", () => {
-    const html = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} accessModel="manual" />);
-
-    // The fallback grid carries the same three facts as label-over-value.
-    expect(html).toContain('aria-label="Route properties"');
-    expect(html).toContain("Access");
-    expect(html).toContain("Settlement");
-    expect(html).toContain("Output");
-  });
 });

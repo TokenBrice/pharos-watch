@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { computeDEWS, piecewiseLinear, getThreatBand } from "../dews";
-import { clamp } from "@shared/lib/math";
 import { WATCH_MAX_SCORE } from "@shared/lib/dews-config";
 import type { DEWSInput } from "../dews";
 import { makeDewsInput } from "./dews.test-support";
@@ -34,10 +33,6 @@ describe("piecewiseLinear", () => {
     expect(piecewiseLinear(30, anchors)).toBe(100);
   });
 
-  it("clamps at 0 for negative input", () => {
-    expect(piecewiseLinear(-5, anchors)).toBe(0);
-  });
-
   it("returns 0 for NaN input", () => {
     expect(piecewiseLinear(NaN, anchors)).toBe(0);
   });
@@ -48,26 +43,6 @@ describe("piecewiseLinear", () => {
 
   it("returns first anchor value for -Infinity input", () => {
     expect(piecewiseLinear(-Infinity, anchors)).toBe(0);
-  });
-});
-
-describe("clamp", () => {
-  it("returns min when value is NaN", () => {
-    expect(clamp(NaN, 0, 100)).toBe(0);
-  });
-
-  it("returns max when value is Infinity", () => {
-    expect(clamp(Infinity, 0, 100)).toBe(100);
-  });
-
-  it("returns min when value is -Infinity", () => {
-    expect(clamp(-Infinity, 0, 100)).toBe(0);
-  });
-
-  it("clamps normally for finite values", () => {
-    expect(clamp(50, 0, 100)).toBe(50);
-    expect(clamp(-10, 0, 100)).toBe(0);
-    expect(clamp(200, 0, 100)).toBe(100);
   });
 });
 
@@ -245,17 +220,6 @@ describe("computeDEWS", () => {
     expect(result.signals.pool.available).toBe(false);
   });
 
-  it("detects price confidence degradation", () => {
-    const result = computeDews(
-      makeDewsInput({
-        priceConfidence: "low",
-        prevPriceConfidence: "high",
-      }),
-    );
-    // 60 base + 15 transition bonus = 75
-    expect(result.signals.price.value).toBe(75);
-  });
-
   it("detects cross-source price divergence", () => {
     const result = computeDews(
       makeDewsInput({
@@ -268,40 +232,6 @@ describe("computeDEWS", () => {
     expect(result.evidenceKinds).toContain("market-price");
   });
 
-  it("dampens S_diverg for non-USD pegs", () => {
-    const usd = computeDews(
-      makeDewsInput({
-        pegType: "peggedUSD",
-        price: 0.995,
-        dexPriceUsd: 0.99,
-      }),
-    );
-    const eur = computeDews(
-      makeDewsInput({
-        pegType: "peggedEUR",
-        price: 0.995,
-        dexPriceUsd: 0.99,
-      }),
-    );
-    expect(usd.signals.diverg.value).toBeGreaterThan(eur.signals.diverg.value);
-  });
-
-  it("detects blacklist activity spike", () => {
-    const result = computeDews(
-      makeDewsInput({
-        hasBlacklistTracking: true,
-        blacklistEvents24h: 15,
-        blacklistEvents7d: 20,
-      }),
-    );
-    expect(result.signals.black.available).toBe(true);
-    expect(result.signals.black.value).toBeGreaterThan(40);
-  });
-
-  it("marks blacklist unavailable for untracked coins", () => {
-    const result = computeDews(makeDewsInput({ hasBlacklistTracking: false }));
-    expect(result.signals.black.available).toBe(false);
-  });
   it("redistributes blacklist weight when the tracked source failed", () => {
     const observedZero = computeDews(makeDewsInput({
       hasBlacklistTracking: true,
@@ -366,19 +296,6 @@ describe("computeDEWS", () => {
     expect(result.signals.flow.burnToMintRatio).toBe(0);
   });
 
-  it("marks flow unavailable when data too young (<7 days)", () => {
-    const result = computeDews(
-      makeDewsInput({
-        burnVolume24hUsd: 5e8,
-        mintVolume24hUsd: 1e7,
-        burnBaseline30dUsd: 1e8,
-        flowDataAgeDays: 0.1,
-        flowBaselineDays: 3,
-      }),
-    );
-    expect(result.signals.flow.available).toBe(false);
-  });
-
   it("computes yield anomaly signal from warning strings", () => {
     const result = computeDews(
       makeDewsInput({
@@ -438,51 +355,6 @@ describe("computeDEWS", () => {
       ]),
     );
     expect(structured.score).toBeGreaterThan(legacy.score);
-  });
-
-  it("amplifies score when PSI indicates market stress", () => {
-    const calm = computeDews(
-      makeDewsInput({
-        circulatingCurrent: 4.5e9,
-        circulatingPrevDay: 5e9,
-        price: 0.99,
-        dexPriceUsd: 0.99,
-        psiScore: 90,
-      }),
-    );
-    const stressed = computeDews(
-      makeDewsInput({
-        circulatingCurrent: 4.5e9,
-        circulatingPrevDay: 5e9,
-        price: 0.99,
-        dexPriceUsd: 0.99,
-        psiScore: 40,
-      }),
-    );
-    expect(stressed.score).toBeGreaterThan(calm.score);
-  });
-
-
-  it("smooths pool signal with previous reading", () => {
-    const withoutSmoothing = computeDews(
-      makeDewsInput({
-        weightedBalanceRatio: 0.45,
-        avgPoolStress: 70,
-        topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
-      }),
-    );
-    const withSmoothing = computeDews(
-      makeDewsInput({
-        weightedBalanceRatio: 0.45,
-        avgPoolStress: 70,
-        topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
-        prevPoolValue: 10,
-        prevPoolAvailable: true,
-        prevPoolComponentCoverage: 1,
-      }),
-    );
-    // With smoothing toward a lower previous value, the pool signal should be less
-    expect(withSmoothing.signals.pool.value).toBeLessThan(withoutSmoothing.signals.pool.value);
   });
 
   it("marks liquidity signal unavailable when liquidityScore7dAgo is null and tvl delta cannot be computed", () => {

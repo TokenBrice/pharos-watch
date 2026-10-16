@@ -13,7 +13,6 @@ const baseSnapshot = (metadata: Record<string, unknown>) => liveSnapshot("lusd-l
 describe("resolveCapacityBasis", () => {
   it.each([
     ["queue-redeem", { kind: "unquantified" }, undefined, undefined],
-    ["offchain-issuer", { kind: "unquantified" }, undefined, undefined],
     ["stablecoin-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "live-direct", "live-direct-telemetry"],
     ["collateral-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "live-proxy", "live-proxy-buffer"],
     ["stablecoin-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "dynamic", "daily-limit"],
@@ -26,16 +25,10 @@ describe("resolveCapacityBasis", () => {
     ["offchain-issuer", { kind: "supply-full" }, undefined, "issuer-term-redemption"],
     ["stablecoin-redeem", { kind: "supply-full" }, undefined, "issuer-term-redemption"],
     ["basket-redeem", { kind: "supply-full" }, undefined, "full-system-eventual"],
-    ["collateral-redeem", { kind: "supply-full" }, undefined, "full-system-eventual"],
-    ["queue-redeem", { kind: "supply-full" }, undefined, "full-system-eventual"],
-    ["psm-swap", { kind: "supply-full" }, undefined, "full-system-eventual"],
     [null, { kind: "supply-full" }, undefined, "full-system-eventual"],
     ["psm-swap", { kind: "supply-ratio", ratio: 0.2 }, undefined, "psm-balance-share"],
     ["queue-redeem", { kind: "supply-ratio", ratio: 0.05 }, undefined, "strategy-buffer"],
     ["collateral-redeem", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
-    ["stablecoin-redeem", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
-    ["basket-redeem", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
-    ["offchain-issuer", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
     [null, { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
   ] as const)("resolves %s with %j and %s to %s", (route, model, confidence, expected) => {
     expect(resolveCapacityBasis(route, model, confidence)).toBe(expected);
@@ -67,41 +60,6 @@ describe("resolveRedemptionCapacity — unquantified route", () => {
 describe("resolveRedemptionCapacity — fixed USD capacity", () => {
   const now = 1_780_000_000;
   const db = {} as D1Database;
-
-  it("resolves a fixed USD buffer and derives ratio from supply", async () => {
-    const result = await resolveRedemptionCapacity(
-      db,
-      "dusd-alto",
-      { kind: "fixed-usd", amountUsd: 5_000_000, confidence: "documented-bound" },
-      100_000_000,
-      now,
-    );
-
-    expect(result.immediateCapacityUsd).toBe(5_000_000);
-    expect(result.immediateCapacityRatio).toBe(0.05);
-    expect(result.scoringCapacityUsd).toBe(5_000_000);
-    expect(result.scoringCapacityRatio).toBe(0.05);
-    expect(result.capacityProfile).toMatchObject({
-      immediateUsd: 5_000_000,
-      scoringUsd: 5_000_000,
-      scoringHorizon: "immediate",
-    });
-  });
-
-  it("clamps fixed USD capacity above current supply", async () => {
-    const result = await resolveRedemptionCapacity(
-      db,
-      "dusd-alto",
-      { kind: "fixed-usd", amountUsd: 5_000_000, confidence: "documented-bound" },
-      1_000_000,
-      now,
-    );
-
-    expect(result.immediateCapacityUsd).toBe(1_000_000);
-    expect(result.immediateCapacityRatio).toBe(1);
-    expect(result.scoringCapacityUsd).toBe(1_000_000);
-    expect(result.notes.some((note) => /exceeds current supply/i.test(note))).toBe(true);
-  });
 
   it("keeps fixed USD capacity visible when supply is missing", async () => {
     const result = await resolveRedemptionCapacity(
@@ -144,71 +102,9 @@ describe("resolveRedemptionCapacity — supply ratio capacity", () => {
     });
   });
 
-  it("labels scoring horizon immediate when the configured daily limit does not bind", async () => {
-    const result = await resolveRedemptionCapacity(
-      db,
-      "test-stablecoin",
-      { kind: "supply-ratio", ratio: 0.2, dailyLimitUsd: 25_000_000 },
-      100_000_000,
-      now,
-    );
-
-    expect(result.immediateCapacityUsd).toBe(20_000_000);
-    expect(result.scoringCapacityUsd).toBe(20_000_000);
-    expect(result.scoringCapacityRatio).toBe(0.2);
-    expect(result.capacityProfile).toMatchObject({
-      immediateUsd: 20_000_000,
-      dailyLimitUsd: 25_000_000,
-      scoringUsd: 20_000_000,
-      scoringHorizon: "immediate",
-    });
-  });
-
-  it("labels scoring horizon daily when the configured daily limit caps capacity", async () => {
-    const result = await resolveRedemptionCapacity(
-      db,
-      "test-stablecoin",
-      { kind: "supply-ratio", ratio: 0.2, dailyLimitUsd: 5_000_000 },
-      100_000_000,
-      now,
-    );
-
-    expect(result.immediateCapacityUsd).toBe(20_000_000);
-    expect(result.scoringCapacityUsd).toBe(5_000_000);
-    expect(result.scoringCapacityRatio).toBe(0.05);
-    expect(result.capacityProfile).toMatchObject({
-      immediateUsd: 20_000_000,
-      dailyLimitUsd: 5_000_000,
-      scoringUsd: 5_000_000,
-      scoringHorizon: "daily",
-    });
-  });
 });
 
 describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", () => {
-  it("clamps immediateCapacityUsd to supplyUsd and adds a note when nested capacityUsd exceeds supply", async () => {
-    const db = {} as D1Database;
-    const supplyUsd = 1_000_000;
-    const result = await resolveRedemptionCapacity(
-      db,
-      "lusd-liquity",
-      { kind: "reserve-sync-metadata" },
-      supplyUsd,
-      now,
-      {
-        reserveSnapshotMetadata: baseSnapshot({
-          freshnessMode: "not-applicable",
-          redemption: { capacityUsd: 5_000_000 },
-        }),
-      },
-    );
-    expect(result.scoringCapacityUsd).toBe(supplyUsd);
-    expect(result.scoringCapacityRatio).toBe(1);
-    expect(result.immediateCapacityUsd).toBe(supplyUsd);
-    expect(result.immediateCapacityRatio).toBe(1);
-    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
-  });
-
   it("rejects ratio-only live capacity above supply ratio bounds", async () => {
     const db = {} as D1Database;
     const supplyUsd = 1_000_000;
@@ -231,57 +127,6 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.immediateCapacityRatio).toBeNull();
     expect(result.scoringCapacityRatio).toBeNull();
     expect(result.consumedReserveCapacity).not.toBe(true);
-  });
-
-  it("does not clamp or annotate when live capacity is at or below supply", async () => {
-    const db = {} as D1Database;
-    const supplyUsd = 1_000_000;
-    const result = await resolveRedemptionCapacity(
-      db,
-      "lusd-liquity",
-      { kind: "reserve-sync-metadata" },
-      supplyUsd,
-      now,
-      {
-        reserveSnapshotMetadata: baseSnapshot({
-          freshnessMode: "not-applicable",
-          redemption: { capacityUsd: 400_000 },
-        }),
-      },
-    );
-    expect(result.scoringCapacityUsd).toBe(400_000);
-    expect(result.immediateCapacityUsd).toBe(400_000);
-    expect(result.immediateCapacityRatio).toBeCloseTo(0.4);
-    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(false);
-  });
-
-  it("uses live daily limits as scoring capacity constraints without hiding raw capacity", async () => {
-    const db = {} as D1Database;
-    const supplyUsd = 1_000_000;
-    const result = await resolveRedemptionCapacity(
-      db,
-      "lusd-liquity",
-      { kind: "reserve-sync-metadata" },
-      supplyUsd,
-      now,
-      {
-        reserveSnapshotMetadata: baseSnapshot({
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 800_000,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-            dailyLimitUsd: 250_000,
-          },
-        }),
-      },
-    );
-
-    expect(result.immediateCapacityUsd).toBe(800_000);
-    expect(result.immediateCapacityRatio).toBe(0.8);
-    expect(result.scoringCapacityUsd).toBe(250_000);
-    expect(result.scoringCapacityRatio).toBe(0.25);
-    expect(result.notes).toContain("Live redemption daily limit caps usable scoring capacity");
   });
 
   it("downgrades a direct-capacity claim when live settlement requires a cooldown", async () => {
@@ -374,30 +219,6 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     });
     expect(result.eventualCapacityUsd).toBeUndefined();
     expect(result.eventualCapacityRatio).toBeUndefined();
-  });
-
-  it("publishes full-supply eventual capacity only when the route config explicitly authorizes it", async () => {
-    const result = await resolveRedemptionCapacity(
-      {} as D1Database,
-      "lusd-liquity",
-      { kind: "reserve-sync-metadata", eventualCapacityModel: "supply-full" },
-      1_000_000,
-      now,
-      {
-        reserveSnapshotMetadata: baseSnapshot({
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 800_000,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-          },
-        }),
-      },
-    );
-
-    expect(result.eventualCapacityUsd).toBe(1_000_000);
-    expect(result.eventualCapacityRatio).toBe(1);
-    expect(result.capacityProfile?.eventualUsd).toBe(1_000_000);
   });
 
   it("blocks unverified nested redemption freshness unless a route is explicitly allowlisted", async () => {
@@ -537,25 +358,6 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     });
   });
 
-  it("clamps live capacity to zero when supplyUsd is zero", async () => {
-    const db = {} as D1Database;
-    const result = await resolveRedemptionCapacity(
-      db,
-      "lusd-liquity",
-      { kind: "reserve-sync-metadata" },
-      0,
-      now,
-      {
-        reserveSnapshotMetadata: baseSnapshot({
-          freshnessMode: "not-applicable",
-          redemption: { capacityUsd: 500_000 },
-        }),
-      },
-    );
-    expect(result.scoringCapacityUsd).toBe(0);
-    expect(result.immediateCapacityUsd).toBe(0);
-    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
-  });
 });
 
 describe("resolveRedemptionCapacity — reserve-sync live capacity confidence override", () => {

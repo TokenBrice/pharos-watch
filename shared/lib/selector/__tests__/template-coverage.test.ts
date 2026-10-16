@@ -5,7 +5,7 @@
  * matrix; contextKey-refined templates are post-MVP. The three axes retired at
  * `selector-v2.0` (`dependencyRisk`, `collateralQuality`, `custodyModel`) keep
  * their slot in `LOWEST_SUB_DIMENSION_KEYS` for stored snapshots but no longer
- * carry template cells; the assertions below pin that they resolve to `null`.
+ * carry template cells.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -15,7 +15,7 @@ import {
   type MergedRow,
 } from "../types";
 import { makeMergedRowWithIdentity } from "./fixture";
-import { getTemplate, renderWatchText, TEMPLATES } from "../what-to-watch-templates";
+import { getTemplate, renderWatchText } from "../what-to-watch-templates";
 import type { LiveWatchKey } from "../what-to-watch-templates";
 
 const RETIRED_WATCH_KEYS = ["dependencyRisk", "collateralQuality", "custodyModel"] as const;
@@ -65,70 +65,6 @@ describe("template coverage", () => {
       }
     }
     expect(gaps).toEqual([]);
-  });
-
-  it("retired axes resolve to null in every profile", () => {
-    for (const profile of SELECTOR_PROFILES) {
-      for (const key of RETIRED_WATCH_KEYS) {
-        expect(getTemplate(key, profile)).toBeNull();
-      }
-    }
-  });
-
-  it("oneLineExplanation prose stays under 100 chars (design §2.7 + buffer)", () => {
-    const tooLong: string[] = [];
-    for (const profile of SELECTOR_PROFILES) {
-      for (const key of LIVE_WATCH_KEYS) {
-        const text = TEMPLATES[profile][key].oneLineExplanation;
-        if (text.length > 100) {
-          tooLong.push(`${profile}/${key}: ${text.length} chars`);
-        }
-      }
-    }
-    expect(tooLong).toEqual([]);
-  });
-
-  it("renders row-specific watch text without exposing raw keys", () => {
-    const cases = [
-      renderWatchText(
-        lowest("activeDepegHistory", ["depeg-history"]),
-        "treasury",
-        makeRow({ depegEventCount: 3 }),
-      ),
-      renderWatchText(
-        lowest("pegStability", ["current-deviation"]),
-        "trading",
-        makeRow({ currentDeviationBps: -64 }),
-      ),
-      renderWatchText(
-        lowest("governanceOverride"),
-        "treasury",
-        makeRow({ canBeBlacklisted: true }),
-      ),
-      renderWatchText(
-        lowest("sourceRisk"),
-        "yield",
-        makeRow({ sourceRiskScore: 72, venueRiskTier: "high" }),
-      ),
-      renderWatchText(
-        lowest("liquidity", ["thin-tvl"]),
-        "yield",
-        makeRow({ warningSignals: ["thin-tvl"], effectiveTvlUsd: 10_000_000 }),
-      ),
-      renderWatchText(
-        lowest("decentralization"),
-        "trading",
-        makeRow({ governance: "centralized" }),
-      ),
-      renderWatchText(lowest("resilience"), "treasury", makeRow({ isRecentListing: true })),
-    ];
-
-    expect(cases[0]).toMatch(/\b3\b/);
-    expect(cases[1]).toMatch(/\b64\b/);
-    expect(cases[1]).not.toContain("-64");
-    for (const text of cases) {
-      expect(text).not.toMatch(/depeg-event-count|thin-tvl|sourceRiskScore|canBeBlacklisted|top-|strong-|weak-/);
-    }
   });
 
   it("prioritizes the selected peg warning over recent listing and other warnings", () => {

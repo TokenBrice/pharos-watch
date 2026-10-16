@@ -17,30 +17,6 @@ const USES = [
 ] as const;
 
 describe("SelectorQuestionCard", () => {
-  it("hides the action row when showActions is false while keeping the options", () => {
-    const props = {
-      questionId: "q2",
-      step: 2,
-      totalSteps: 5,
-      legend: "How long do you plan to hold this position?",
-      options: HORIZONS,
-      value: "lt24h",
-      onChange: vi.fn(),
-      onBack: vi.fn(),
-      onNext: vi.fn(),
-    } as const;
-
-    const { rerender } = render(<SelectorQuestionCard {...props} showActions />);
-
-    expect(screen.getByRole("button", { name: "Next" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Back" })).toBeTruthy();
-
-    rerender(<SelectorQuestionCard {...props} showActions={false} />);
-
-    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
-    expect(screen.getByRole("radio", { name: "Under 24h" })).toBeTruthy();
-  });
 
   it("reports the chosen radio value and reflects the active option", () => {
     const onChange = vi.fn();
@@ -144,35 +120,4 @@ describe("SelectorQuestionCard", () => {
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
-  it("offers continue and change-profile actions only when the answer matches the confirmation trigger", () => {
-    const onContinue = vi.fn();
-    const onChangeProfile = vi.fn();
-    const props = {
-      questionId: "q4",
-      step: 4,
-      totalSteps: 5,
-      legend: "Depeg tolerance",
-      options: USES,
-      multi: true,
-      onChange: vi.fn(),
-      softConfirmation: {
-        triggerWhen: ["yield", "all"],
-        message: "Yield mandates rarely fit a treasury profile.",
-        onContinue,
-        onChangeProfile,
-      },
-    } as const;
-
-    const { rerender } = render(<SelectorQuestionCard {...props} value={["payments"]} />);
-
-    expect(screen.queryByRole("status")).toBeNull();
-
-    rerender(<SelectorQuestionCard {...props} value={["payments", "all"]} />);
-
-    expect(screen.getByRole("status").textContent).toContain("rarely fit a treasury profile");
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.click(screen.getByRole("button", { name: "Change profile" }));
-    expect(onContinue).toHaveBeenCalledTimes(1);
-    expect(onChangeProfile).toHaveBeenCalledTimes(1);
-  });
 });

@@ -283,13 +283,6 @@ describe("fetchAnzenUsdzReserves", () => {
     await expect(runAnzen({ overrides: { 5: word("0x1111111111111111111111111111111111111111") } })).rejects.toThrow("spct() identity");
   });
 
-  it("does not call or use global SPCT totalSupply", async () => {
-    const { result, network } = await runAnzen();
-    const ethereumCalls = network.rpcCalls.filter((call) => call.chain === "ethereum");
-    expect(ethereumCalls.map((call) => [call.contract, call.selector])).not.toContainEqual([SPCT, "0x18160ddd"]);
-    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
-  });
-
   it("fails closed when the USDz totalSupply field is dropped from the RPC batch", async () => {
     await expect(runAnzen({ dropSelector: "0x18160ddd" })).rejects.toThrow(/total-supply|unanswered/i);
   });

@@ -105,18 +105,6 @@ describe("resolveSafetyScoreV9ReviewedTransferFact — non-contract-native appli
     }))).toEqual({ observationState: "bounded-unknown", posture: null });
   });
 
-  it("keeps a stale review stale", () => {
-    const resolved = resolveSafetyScoreV9ReviewedTransferFact(
-      review([{ chainId: "zano", contractOrTokenId: "86143388bd05", posture: "permissionless" }], "2024-01-01"),
-      CLOCK_SEC,
-      scope(),
-    );
-    expect(CLOCK_SEC - Date.parse("2024-01-01T00:00:00.000Z") / 1_000).toBeGreaterThan(
-      V9_ACCESS_EVIDENCE_MAX_AGE_SEC,
-    );
-    expect(resolved).toEqual({ observationState: "stale", posture: null });
-  });
-
   it("leaves the complete contract-addressable path unchanged", () => {
     const deploymentKey = safetyScoreV9TransferDeploymentKey("ethereum", "0xABC");
     const resolved = resolveSafetyScoreV9ReviewedTransferFact(

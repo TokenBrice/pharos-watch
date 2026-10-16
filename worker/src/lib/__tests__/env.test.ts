@@ -5,8 +5,6 @@ import {
   resolveDdrRepairTaskRunnerConfig,
   validateWorkerEnvContract,
   WORKER_ACTIVE_ENV_KEYS,
-  WORKER_OPTIONAL_ENV_KEYS,
-  WORKER_REQUIRED_ENV_KEYS,
   WORKER_RESERVED_ENV_KEYS,
 } from "../env";
 
@@ -116,8 +114,4 @@ describe("worker env key groups", () => {
     }
   });
 
-  it("derives the active set from required and optional bindings", () => {
-    expect(WORKER_ACTIVE_ENV_KEYS).toEqual([...WORKER_REQUIRED_ENV_KEYS, ...WORKER_OPTIONAL_ENV_KEYS]);
-  });
 });
-

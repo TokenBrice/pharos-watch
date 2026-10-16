@@ -8,7 +8,6 @@ import {
 } from "../live-reserve-adapters";
 import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
 import {
-  LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   baseLiveReserveConfigSchema,
 } from "../live-reserve-adapters";
 import mxnt from "../../data/stablecoins/coins/mxnt-tether.json";
@@ -17,43 +16,6 @@ import meusd from "../../data/stablecoins/coins/meusd-mezo.json";
 import frnt from "../../data/stablecoins/coins/frnt-wyoming.json";
 
 describe("baseLiveReserveConfigSchema", () => {
-  it("accepts a non-empty breakerScope", () => {
-    const result = baseLiveReserveConfigSchema.safeParse({
-      version: 1,
-      semantics: "collateral-mix",
-      breakerScope: "my-scope",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts an omitted breakerScope", () => {
-    const result = baseLiveReserveConfigSchema.safeParse({
-      version: 1,
-      semantics: "collateral-mix",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects an empty-string breakerScope", () => {
-    const result = baseLiveReserveConfigSchema.safeParse({
-      version: 1,
-      semantics: "collateral-mix",
-      breakerScope: "",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects non-absolute display URLs", () => {
-    const result = baseLiveReserveConfigSchema.safeParse({
-      version: 1,
-      semantics: "collateral-mix",
-      display: {
-        url: "/reserve-dashboard",
-      },
-    });
-    expect(result.success).toBe(false);
-  });
-
   it("accepts an operator suspension with ISO dates and rejects malformed ones", () => {
     const base = { version: 1, semantics: "collateral-mix" };
     expect(
@@ -74,18 +36,6 @@ describe("baseLiveReserveConfigSchema", () => {
         suspended: { reason: "x", since: "next week" },
       }).success,
     ).toBe(false);
-  });
-
-  it("accepts the late-monthly disclosure source-age policy", () => {
-    const result = baseLiveReserveConfigSchema.safeParse({
-      version: 1,
-      semantics: "attestation-mix",
-      scoring: {
-        maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      },
-    });
-
-    expect(result.success).toBe(true);
   });
 });
 

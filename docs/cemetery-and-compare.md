@@ -76,7 +76,7 @@ Each entry follows `DeadStablecoinSchema` (`shared/types/market.ts`):
 - narrative: optional `epitaph`; required `obituary`, `sourceUrl`, `sourceLabel`
 - optional `peakMcap`: approximate peak market cap in USD; absent when no reliable figure was curated, never zero
 - optional `contracts`: an array of `{ chain, address }` for block-explorer links in the register autopsy
-- `mechanismArchetype`: how the coin was designed to hold its peg, one of `MECHANISM_ARCHETYPE_VALUES`. It is independent of `causeOfDeath` and is the one authority for cemetery mechanism links, the register's mechanism filter and the linked-death counts on mechanism explainers. `src/lib/__tests__/mechanism-explainers-cemetery.test.ts` checks every explainer `decommissioned` entry against the archetype of the cemetery record it names. Absent means not yet classified.
+- `mechanismArchetype`: how the coin was designed to hold its peg, one of `MECHANISM_ARCHETYPE_VALUES`. It is independent of `causeOfDeath` and is the one authority for cemetery mechanism links, the register's mechanism filter and the linked-death counts on mechanism explainers. Absent means not yet classified.
 - `recordedAt`: <!-- GENERATED-START: cemetery-recorded-at-description -->UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded.<!-- GENERATED-END: cemetery-recorded-at-description --> Drives "Latest record added" and dataset `updatedAt`.
 
 Frozen rows also carry `archivedDataAvailable: true` (the `CemeteryEntry` type); curated rows leave it absent.

@@ -18,7 +18,6 @@ vi.mock("../abort", async (importOriginal) => ({
 }));
 
 import {
-  DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
   fetchBinaryWithRetry,
   fetchJsonWithRetry,
   fetchTextWithRetry,
@@ -140,9 +139,6 @@ describe("fetchWithRetry", () => {
     expect(cancel).toHaveBeenCalledOnce();
   });
 
-  it("keeps the shared consumed-body default at 16 MiB", () => {
-    expect(DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES).toBe(16 * 1024 * 1024);
-  });
 
   it("passes through configured non-ok statuses", async () => {
     const fetchMock = mockFetch([{ match: () => true, body: { error: "unprocessable" }, status: 422 }]);
@@ -285,19 +281,6 @@ describe("fetchWithRetry", () => {
     expect(sleepWithSignalMock).toHaveBeenCalledWith(5000, undefined);
   });
 
-  it("preserves fallback backoff for a negative Retry-After header", async () => {
-    mockFetch([{
-      match: () => true,
-      outcomes: [
-        { body: "rate limited", status: 429, headers: { "Retry-After": "-1" } },
-        { body: { ok: true } },
-      ],
-    }]);
-
-    await fetchWithRetry("https://example.com/token", undefined, 1);
-
-    expect(sleepWithSignalMock).toHaveBeenCalledWith(5000, undefined);
-  });
 
   it("caps provider-controlled retry delays when configured", async () => {
     const fetchMock = mockFetch([{

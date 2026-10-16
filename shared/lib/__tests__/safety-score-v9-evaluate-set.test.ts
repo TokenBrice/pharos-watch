@@ -170,10 +170,6 @@ describe("D2 ruled issuer-scoped mint-control grouping", () => {
     })),
   });
 
-  it("grades a same-issuer controller group diagnostic (low)", () => {
-    expect(resolveV9MintControlGroupSeverity(sameIssuerGroup(4))).toBe("low");
-  });
-
   it("keeps a cross-issuer shared controller capping (high)", () => {
     expect(resolveV9MintControlGroupSeverity({
       controllerIssuerKey: "issuer:circle",

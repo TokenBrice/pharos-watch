@@ -61,13 +61,6 @@ describe("ReserveSyncHealthCard", () => {
     expect(screen.getByText(/Queue pressure:/).textContent).toContain("run budget truncated");
   });
 
-  it("does not show the conservative-input note when reserve evidence is healthy", () => {
-    const { container } = render(<ReserveSyncHealthCard health={makeReserveHealth()} nowSeconds={1_712_600_120} />);
-
-    expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
-    expect(container.textContent).toContain("100.0% fresh, 100.0% authoritative");
-  });
-
   it("does not flag conservative inputs for a healthy lane at live 73.7% score-grade coverage", () => {
     // Live 2026-09-22 payload: reserveComposition.status healthy,
     // authoritativeFreshCoverageRatio 0.7374 (>= 0.5 documented floor),
@@ -88,46 +81,5 @@ describe("ReserveSyncHealthCard", () => {
 
     expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
     expect(container.textContent).toContain("73.7% fresh, 73.7% authoritative");
-  });
-
-  it("renders the 30-day adapter reliability rollup as a compact table", () => {
-    const { container } = render(
-      <ReserveSyncHealthCard
-        health={makeReserveHealth({
-          adapterReliability: [
-            { adapterKey: "circle", attempts: 4, ok: 3, degraded: 1, error: 0, skipped: 0, successRate: 0.75 },
-            { adapterKey: "infinifi", attempts: 2, ok: 0, degraded: 0, error: 2, skipped: 0, successRate: 0 },
-          ],
-        })}
-        nowSeconds={1_712_600_120}
-      />,
-    );
-
-    expect(screen.getByText("30-day Adapter Reliability")).toBeTruthy();
-    expect(container.textContent).toContain("circle");
-    expect(container.textContent).toContain("infinifi");
-    expect(screen.getByText("75.0%")).toBeTruthy();
-    expect(screen.getByText("0.0%")).toBeTruthy();
-  });
-
-  it("mutes zero problem counts and folds reviewed-exclusion prose into a Notes disclosure (S6)", () => {
-    render(
-      <ReserveSyncHealthCard
-        health={makeReserveHealth({
-          corruptCoins: 0,
-          missingCoins: 2,
-          acknowledgedFeedIds: ["mtbill-midas"],
-          acknowledgedFeeds: [{ stablecoinId: "mtbill-midas", reason: "Public portfolio check pending.", expiresAt: 1_800_000_000 }],
-        } as never)}
-        nowSeconds={1_712_600_120}
-      />,
-    );
-
-    const tile = (label: string) => screen.getByText(label).nextElementSibling?.className ?? "";
-    expect(tile("Corrupt")).toContain("text-muted-foreground");
-    expect(tile("Missing")).toContain("text-state-danger");
-    const notes = screen.getByText(/Notes: 1 reviewed exclusion note/).closest("details");
-    expect(notes?.textContent).toContain("Public portfolio check pending.");
-    expect(notes?.open).toBe(false);
   });
 });

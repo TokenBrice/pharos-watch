@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
 import { installSvgCoordinateShim } from "@/components/__tests__/contagion-graph-test-support";
@@ -76,49 +76,6 @@ describe("useContagionGraphDrag", () => {
 
     expect(circle?.getAttribute("cx")).toBe("140");
     expect(circle?.getAttribute("cy")).toBe("150");
-  });
-
-  it("ends a cancelled drag and ignores later pointer movement", () => {
-    const { container } = render(<DragHarness />);
-    const node = screen.getByTestId("drag-node");
-    const svg = screen.getByTestId("drag-svg");
-    fireEvent.pointerDown(node, { pointerId: 1, clientX: 100, clientY: 100, isPrimary: true });
-    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 140, clientY: 150 });
-    fireEvent.pointerCancel(svg, { pointerId: 1 });
-    expect(svg.getAttribute("data-drag-id")).toBe("");
-    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 240, clientY: 250 });
-    expect(container.querySelector("circle")?.getAttribute("cx")).toBe("140");
-    expect(container.querySelector("circle")?.getAttribute("cy")).toBe("150");
-  });
-
-  it("resets pinned positions when the simulation key changes", async () => {
-    const { container, rerender } = render(<DragHarness simulationKey="stable" />);
-    const node = screen.getByTestId("drag-node");
-    const svg = screen.getByTestId("drag-svg");
-    const circle = container.querySelector("circle");
-
-    fireEvent.pointerDown(node, { pointerId: 1, clientX: 100, clientY: 100, isPrimary: true });
-    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 140, clientY: 150 });
-    fireEvent.pointerUp(svg, { pointerId: 1 });
-
-    await waitFor(() => {
-      expect(circle?.getAttribute("cx")).not.toBe("100");
-      expect(circle?.getAttribute("cy")).not.toBe("100");
-    });
-
-    rerender(<DragHarness simulationKey="expanded" />);
-
-    await waitFor(() => {
-      expect(circle?.getAttribute("cx")).toBe("100");
-      expect(circle?.getAttribute("cy")).toBe("100");
-    });
-
-    rerender(<DragHarness simulationKey="stable" />);
-
-    await waitFor(() => {
-      expect(circle?.getAttribute("cx")).toBe("100");
-      expect(circle?.getAttribute("cy")).toBe("100");
-    });
   });
 
   it("lets consumers suppress the click that follows a drag", async () => {

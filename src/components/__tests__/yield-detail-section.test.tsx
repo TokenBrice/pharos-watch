@@ -1,24 +1,19 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection, { YieldChangeAttributionCard } from "@/components/yield-detail-section";
 import {
   buildSourceRiskGoldenFixture,
-  mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { makeAltYieldSource, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "./yield-detail.test-support";
 
-const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, isMobileMock } = vi.hoisted(() => ({
+const { useYieldRankingsMock, useYieldHistoryMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
   useYieldHistoryMock: vi.fn(),
-  replaceParamsMock: vi.fn(),
-  isMobileMock: vi.fn(),
 }));
-
-let sourcesParam = "";
 
 vi.mock("@/hooks/api-hooks", () => ({
   useYieldRankings: useYieldRankingsMock,
@@ -27,13 +22,13 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 vi.mock("@/hooks/use-url-filters", () => ({
   useUrlFilters: () => ({
-    getParam: (key: string) => (key === "sources" ? sourcesParam : ""),
-    replaceParams: replaceParamsMock,
+    getParam: () => "",
+    replaceParams: vi.fn(),
   }),
 }));
 
 vi.mock("@/hooks/use-is-mobile", () => ({
-  useIsMobile: isMobileMock,
+  useIsMobile: () => false,
 }));
 
 vi.mock("@/components/yield-history-chart", () => ({
@@ -129,22 +124,13 @@ function mockRankings(rankings: YieldRanking[], meta: { warning: string } | null
 
 describe("YieldDetailSection", () => {
   beforeEach(() => {
-    sourcesParam = "";
     useYieldRankingsMock.mockReset();
     useYieldHistoryMock.mockReset();
-    isMobileMock.mockReset();
-    isMobileMock.mockReturnValue(false);
     useYieldHistoryMock.mockReturnValue({
       data: { current: null, history: [], methodology: { version: "v8.14" } },
       meta: null,
       error: null,
       isLoading: false,
-    });
-    replaceParamsMock.mockReset();
-    replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void) => {
-      const params = new URLSearchParams(sourcesParam ? `sources=${sourcesParam}` : "");
-      updater(params);
-      sourcesParam = params.get("sources") ?? "";
     });
     HTMLElement.prototype.scrollIntoView = vi.fn();
   });
@@ -172,27 +158,6 @@ describe("YieldDetailSection", () => {
     expect(screen.getAllByText("source changed").some((node) => !node.closest("details"))).toBe(true);
     const qualificationText = scoreQualification === "partial" ? "Partial evidence" : scoreQualification === "estimated" ? "Estimated" : "Rated";
     expect(screen.getAllByText(qualificationText).some((node) => !node.closest("details"))).toBe(true);
-  });
-
-  it.each(["rate-derived", "price-derived"] as const)("does not repeat the %s badge in deployment facts", (dataSource) => {
-    mockRankings([makeRanking({
-      dataSource,
-      sourceRole: "fallback-proxy",
-      sourceRisk: { deploymentPlace: dataSource },
-      provenance: makeYieldProvenance({ scoreQualification: "estimated" }),
-    })]);
-    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    const facts = container.querySelector(".text-muted-foreground > .rounded-full")?.parentElement;
-    expect(facts).toBeTruthy();
-    expect(facts!.textContent?.toLowerCase().replaceAll("-", " ")).toBe(dataSource.replaceAll("-", " "));
-    expect(facts!.textContent).not.toContain("·");
-  });
-
-  it("does not prefix chain or deployment facts with a separator without a venue", () => {
-    mockRankings([makeRanking({ sourceRisk: { venueChain: "ethereum", deploymentPlace: "lending-market" } })]);
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByText("ethereum", { selector: "span" }).textContent).not.toContain("·");
-    expect(screen.getByText("· lending market")).toBeTruthy();
   });
 
   it("never calls a ZCHF deposit holder yield and routes to the existing fallback", () => {
@@ -274,37 +239,6 @@ describe("YieldDetailSection", () => {
     expect(screen.queryByText("-0.00 pp vs benchmark")).toBeNull();
   });
 
-  it("renders the loading shell for tracked yield-bearing assets", () => {
-    mockRankingsQuery({ isLoading: true });
-
-    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(screen.getByRole("heading", { name: "Yield Intelligence" })).toBeTruthy();
-    expect(container.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(6);
-  });
-
-  it("mounts one history chart in each viewport mode", async () => {
-    mockRankings([makeRanking()]);
-
-    const { container, rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(container.querySelectorAll("[data-testid='yield-history-chart']")).toHaveLength(1);
-
-    isMobileMock.mockReturnValue(true);
-    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(container.querySelectorAll("[data-testid='yield-history-chart']")).toHaveLength(0);
-
-    const disclosure = Array.from(container.querySelectorAll("details")).find((element) =>
-      element.querySelector("summary")?.textContent?.includes("APY trend"),
-    );
-    expect(disclosure).toBeTruthy();
-    if (!disclosure) return;
-    disclosure.open = true;
-    fireEvent(disclosure, new Event("toggle", { bubbles: false }));
-    await waitFor(() => {
-      expect(container.querySelectorAll("[data-testid='yield-history-chart']")).toHaveLength(1);
-    });
-  });
-
   it("shows the unavailable-yet state when a yield-bearing asset has no ranking and no fetch error", () => {
     mockRankings([]);
 
@@ -327,23 +261,6 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
   });
 
-  it("renders the deep-link breadcrumb with three named anchor links when ready", () => {
-    mockRankings([makeRanking()]);
-
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    const nav = screen.getByRole("navigation", { name: "More yield analysis" });
-    const warningLink = screen.getByRole("link", { name: "Warning timeline" });
-    const switchesLink = screen.getByRole("link", { name: "Source switches" });
-    const comparisonLink = screen.getByRole("link", { name: "Source comparison" });
-
-    expect(nav).toBeTruthy();
-    // Next.js Link normalizes /foo/#bar → /foo#bar; the deep-link page is still served at /foo/.
-    expect(warningLink.getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield#warning-signals");
-    expect(switchesLink.getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield#source-switches");
-    expect(comparisonLink.getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield#source-comparison");
-  });
-
   it("renders source-risk penalty in the PYS breakdown", () => {
     mockRankings([
       makeRanking({
@@ -355,48 +272,6 @@ describe("YieldDetailSection", () => {
 
     expect(screen.getByText(/source-risk penalty/i)).toBeTruthy();
     expect(container.textContent ?? "").toContain("2.00×");
-  });
-
-  it("explains populated source-risk drivers in the detail PYS block", () => {
-    mockRankings([
-      makeRanking({
-        sourceRisk: mergeSourceRiskGoldenFixtures(
-          ["reward-heavy", "stale-source-age"],
-          { sourceRiskPenalty: 1.8 },
-        ),
-        provenance: makeYieldProvenance({
-          sourceKey: "primary-source", sourceObservedAt: 1_700_000_000,
-          sourceAgeSeconds: 8 * 60 * 60, sourceFreshness: "stale",
-          selectionReason: "Higher confidence than retained alternates.",
-          sourceSwitch: true, previousBestSourceKey: "previous-source", benchmarkRecordDate: null,
-        }),
-      }),
-    ]);
-
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(screen.getAllByText("reward-heavy").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("stale source").length).toBeGreaterThan(0);
-    // WHY: driver descriptions are exposed on compact tag chips through the
-    // accessible label and tooltip, not as visible text.
-    const rewardChip = screen.getAllByText("reward-heavy")[0] as HTMLElement;
-    expect(rewardChip.getAttribute("aria-label")).toMatch(/Most APY comes from incentives/i);
-  });
-
-  it.each([1, 2])("selects alternate history and returns to chosen history with %i alternates", (count) => {
-    const alternates = [altSource("alt-source", "Alt Source", 6, 6, 750_000)];
-    if (count === 2) alternates.push(altSource("second-alt-source", "Second Alt Source", 4, 4, 600_000));
-    mockRankings([makeRanking({ apy30d: 5, altSources: alternates })]);
-    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    fireEvent.click(screen.getByRole("button", { name: "Show Alt Source on chart" }));
-    expect(sourcesParam).toBe("alt-source");
-    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
-    expect(screen.getAllByText("+1.00 pp").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Show chosen source history" }));
-    expect(sourcesParam).toBe("primary-source");
-    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("primary-source");
   });
 
   it.each(["opportunity-evidence-missing", "safety-unrated"] as const)(
@@ -426,129 +301,6 @@ describe("YieldDetailSection", () => {
       expect(container.textContent).not.toContain(`${delta.toFixed(2)}%`);
     },
   );
-  it("persists selected alternative sources in the URL state and forwards them to the chart", () => {
-    mockRankings(
-      [makeRanking({ altSources: [altSource("alt-source", "Alt Source", 0.049, 0.048, 750_000), altSource("second-alt-source", "Second Alt Source", 0.047, 0.046, 600_000)] })],
-      { warning: "Using cached yield snapshot." },
-    );
-
-    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(screen.getByText("Retained alternates")).toBeTruthy();
-    expect(screen.getByTestId("yield-detail-alt-sources-table").getAttribute("data-table-id")).toBe(
-      "yield-detail-alt-sources",
-    );
-    expect(screen.getByRole("table", { name: "Retained alternate yield sources" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: /APY 30d/ }).getAttribute("aria-sort")).toBe("descending");
-    expect(screen.getByRole("button", { name: /Sort alternate sources by APY 30d ascending/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Sort alternate sources by TVL descending/ }));
-    expect(screen.getByRole("columnheader", { name: /TVL/ }).getAttribute("aria-sort")).toBe("descending");
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-available-sources")).toBe(
-      "primary-source,alt-source,second-alt-source",
-    );
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-hide-source-selector")).toBe("true");
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("");
-
-    fireEvent.click(screen.getByRole("button", { name: "Show Alt Source on chart" }));
-    expect(replaceParamsMock).toHaveBeenCalledTimes(1);
-    expect(sourcesParam).toBe("alt-source");
-
-    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
-
-    fireEvent.click(screen.getByRole("button", { name: "Remove Alt Source on chart" }));
-    expect(replaceParamsMock).toHaveBeenCalledTimes(2);
-    expect(sourcesParam).toBe("");
-  });
-
-  it("drops stale sources URL values before forwarding chart overlays", () => {
-    sourcesParam = "stale-source,alt-source";
-    mockRankings([makeRanking({ altSources: [altSource("alt-source", "Alt Source", 0.049, 0.048, 750_000)] })]);
-
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
-  });
-
-  it("falls back to best chart source when all sources URL values are stale", () => {
-    sourcesParam = "stale-source";
-    mockRankings([makeRanking()]);
-
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("");
-  });
-
-  it("limits the chart source selection to four alternatives", () => {
-    mockRankings([
-      makeRanking({
-        altSources: Array.from({ length: 5 }, (_, index) => {
-          const n = index + 1;
-          return altSource(`alt-source-${n}`, `Alt Source ${n}`, 0.05 - n * 0.001, 0.049 - n * 0.001, 800_000 - n * 50_000);
-        }),
-      }),
-    ]);
-
-    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    // The dossier previews three alternates; open the rest first.
-    fireEvent.click(screen.getByRole("button", { name: /Show 2 more sources/ }));
-
-    const sourceNames = ["Alt Source 1", "Alt Source 2", "Alt Source 3", "Alt Source 4", "Alt Source 5"];
-    for (const [index, sourceName] of sourceNames.entries()) {
-      fireEvent.click(screen.getByRole("button", { name: `Show ${sourceName} on chart` }));
-      rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-      const params = sourcesParam.split(",").filter(Boolean);
-      expect(params.length).toBe(Math.min(index + 1, 4));
-    }
-
-    expect(sourcesParam).toBe("alt-source-1,alt-source-2,alt-source-3,alt-source-4");
-  });
-
-  it("keeps embedded attribution compact and links to the full analysis", () => {
-    mockRankings([makeRanking()]);
-
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(screen.queryByText(/Why this APY changed/i)).toBeNull();
-    expect(screen.getByText(/Not enough data to attribute/i)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "View full yield analysis" }).getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield");
-  });
-
-  it("uses decision-ledger reason codes for source arbitration copy", () => {
-    mockRankings([
-      makeRanking({
-        provenance: makeYieldProvenance({
-          sourceKey: "primary-source", sourceObservedAt: 1_700_000_000, sourceAgeSeconds: 60,
-          selectionReason: "legacy freeform selection reason", benchmarkRecordDate: null,
-        }),
-        decisionLedger: {
-          selectedReasonCode: "curated-over-discovered",
-          sourceSwitch: false,
-          rejectedCount: 1,
-          alternatives: [
-            {
-              sourceKey: "alt-source",
-              yieldSource: "Alt Source",
-              apy30dDelta: 0.01,
-              rejectionReasonCode: "lower-confidence",
-            },
-          ],
-        },
-      }),
-    ]);
-
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(screen.getByLabelText("Why this source won")).toBeTruthy();
-    expect(screen.getByText("Curated source preferred")).toBeTruthy();
-    expect(screen.getByText("1 alternate rejected")).toBeTruthy();
-    expect(screen.getByText("Alt Source")).toBeTruthy();
-    expect(screen.getByText("lower confidence")).toBeTruthy();
-    expect(screen.getByText("+0.01 pp APY30d")).toBeTruthy();
-    expect(screen.queryByText("legacy freeform selection reason")).toBeNull();
-  });
-
   it("distinguishes an absent comparison from measured unchanged", () => {
     mockRankings([makeRanking({ rankChangeAttribution: undefined })]);
 

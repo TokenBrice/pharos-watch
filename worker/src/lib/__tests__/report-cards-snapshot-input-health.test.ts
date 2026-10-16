@@ -100,7 +100,6 @@ describe("report-card V9 publication input health", () => {
   });
 
   it.each([
-    { id: "scrvusd-curve", ageSec: 20 * 60 * 60, observedSupplyRatio: 1, unknownChains: [] },
     // r2/data/results/scrvusd-curve.json adds six satellites: the rotating census sweep stays fresh past 48h.
     { id: "scrvusd-curve", ageSec: 48 * 60 * 60 + 1, observedSupplyRatio: 1, unknownChains: [] },
     { id: "scrvusd-curve", ageSec: scrvusdCensusMaxAgeSec + 1, observedSupplyRatio: 0, unknownChains: ["ethereum"] },

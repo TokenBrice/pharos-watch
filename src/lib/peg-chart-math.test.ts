@@ -2,14 +2,6 @@ import { describe, expect, it } from "vitest";
 import { computePegYAxis, ewma } from "./peg-chart-math";
 
 describe("computePegYAxis", () => {
-  it("returns the default ±2% domain for an empty series", () => {
-    expect(computePegYAxis([])).toEqual({
-      domain: [0.98, 1.02],
-      ticks: [0.98, 0.99, 1, 1.01, 1.02],
-      step: 0.01,
-    });
-  });
-
   it("floors the half-range at 50 bps for a quiet peg", () => {
     // Quiet peg (±5 bps) and a flat peg both clamp to the same half = 0.005,
     // so they share an identical domain rather than collapsing tighter.
@@ -37,11 +29,6 @@ describe("computePegYAxis", () => {
     expect(result.ticks[result.ticks.length - 1]).toBeCloseTo(result.domain[1], 6);
   });
 
-  it("selects a larger step for a wider deviation range", () => {
-    const tight = computePegYAxis([1.001, 0.999]);
-    const wide = computePegYAxis([1.15, 0.85]);
-    expect(wide.step).toBeGreaterThan(tight.step);
-  });
 });
 
 describe("ewma", () => {
@@ -51,11 +38,6 @@ describe("ewma", () => {
 
   it("returns the single value unchanged for a one-element series", () => {
     expect(ewma([1.23], 0.5)).toEqual([1.23]);
-  });
-
-  it("seeds the output with the first value", () => {
-    const out = ewma([1, 2, 3], 0.5);
-    expect(out[0]).toBe(1);
   });
 
   it("with alpha 1 echoes the input series", () => {

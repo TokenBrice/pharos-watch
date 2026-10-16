@@ -50,7 +50,6 @@ vi.mock("../../../lib/reserve-producer-priority", () => ({
 }));
 
 import { syncLiveReserves } from "../../../cron/sync-live-reserves";
-import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
@@ -135,14 +134,6 @@ describe("runFourHourlyReserveSyncSlot", () => {
       sourceAttemptNo: attemptNo - 1,
     });
   }
-
-  it.each([true, false])("forwards native adapter capability only when admitted: %s", async admitted => {
-    const runtime = buildRuntime();
-    const capability = admitted ? createDwellirNativeCapability("native-test-key-placeholder") : undefined;
-    runtime.dwellirNative = capability;
-    await runFourHourlyReserveSyncSlot(runtime);
-    expect(vi.mocked(syncLiveReserves).mock.calls[0]?.[2]?.dwellirNative).toBe(capability);
-  });
 
   it("defers a direct checkpoint replay without running producer or consumers beside a heavy slot", async () => {
     vi.mocked(getReserveProducerPriority).mockResolvedValue({

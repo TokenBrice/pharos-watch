@@ -2,14 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 import {
-  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_FRESHNESS_MAX_SEC,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import {
   DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE,
-  getDexMeasuredHistoryFreshnessSec,
   isOperationalDexMeasuredFailure,
   loadLatestPublishedDexMeasuredQuoteEvidence,
   materializeDexMeasuredQuoteProfile,
@@ -58,12 +56,6 @@ function fixtureProfile(
 
 
 describe("measured execution publication", () => {
-  it("retains a three-hour history window for every measured adapter", () => {
-    expect(getDexMeasuredHistoryFreshnessSec(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap)).toBe(10_800);
-    expect(getDexMeasuredHistoryFreshnessSec(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg)).toBe(10_800);
-    expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(10_800);
-  });
-
   it("classifies StableSwap transport outages as operational but not semantic drift", () => {
     expect(isOperationalDexMeasuredFailure("rpc-failure")).toBe(true);
     expect(isOperationalDexMeasuredFailure("block-timestamp-unavailable")).toBe(true);

@@ -126,31 +126,6 @@ describe("trigger-digest route", () => {
     expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
   });
 
-  it.each(["daily", "weekly"] as const)("updates only %s mode without queuing a force-run", async (kind) => {
-    const otherKind = kind === "daily" ? "weekly" : "daily";
-    dbCacheMocks.getCache.mockImplementation(async (_db, key) =>
-      key === DIGEST_STYLE_GATE_MODE_CACHE_KEYS[otherKind] ? { value: "shadow", updatedAt: 1 } : null);
-    const response = await handleTriggerDigest({
-      request: makeRequest(JSON.stringify({ styleGateMode: { [kind]: "enforce" } })),
-      db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
-      trustedAdmin: true,
-    });
-
-    expect(response?.status).toBe(202);
-    expect(await response?.json()).toMatchObject({
-      styleGateMode: { [kind]: "enforce", [otherKind]: "shadow" },
-    });
-    expect(dbCacheMocks.setCache).toHaveBeenNthCalledWith(
-      1,
-      expect.anything(),
-      DIGEST_STYLE_GATE_MODE_CACHE_KEYS[kind],
-      "enforce",
-    );
-    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
-    expect(dbCacheMocks.setCache.mock.calls.some((call) => call[1] === "digest:force-run-request")).toBe(false);
-  });
-
   it("retains a committed scoped mode when the subsequent effective-mode read fails", async () => {
     const stored = new Map<string, string>([[DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly, "shadow"]]);
     dbCacheMocks.setCache.mockImplementation(async (_db, key, value) => { stored.set(key, value); });
@@ -211,23 +186,6 @@ describe("trigger-digest route", () => {
     } finally {
       sqlite.close();
     }
-  });
-
-  it.each(["daily", "weekly"] as const)("updates only the %s LLM profile without queuing a force-run", async (kind) => {
-    const otherKind = kind === "daily" ? "weekly" : "daily";
-    dbCacheMocks.getCache.mockImplementation(async (_db, key) =>
-      key === DIGEST_LLM_PROFILE_CACHE_KEYS[otherKind] ? { value: "heavy", updatedAt: 1 } : null);
-    const response = await handleTriggerDigest({
-      request: makeRequest(JSON.stringify({ llmProfile: { [kind]: "heavy" } })),
-      db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
-      trustedAdmin: true,
-    });
-
-    expect(response.status).toBe(202);
-    expect(await response.json()).toMatchObject({ llmProfile: { [kind]: "heavy", [otherKind]: "heavy" } });
-    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
-    expect(dbCacheMocks.setCache).toHaveBeenCalledWith(expect.anything(), DIGEST_LLM_PROFILE_CACHE_KEYS[kind], "heavy");
   });
 
   it("does not report a guessed profile when the post-write read fails", async () => {

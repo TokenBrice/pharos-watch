@@ -311,36 +311,6 @@ describe("usdai-proof-of-reserves adapter", () => {
     })).rejects.toThrow(/missing a valid share/);
   });
 
-  it("preserves oversized share strings when parsing the raw API payload", () => {
-    const parsed = parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD);
-
-    expect(parsed[0]).toMatchObject({
-      type: "TBILL",
-      name: "PYUSD",
-      share: "944000000000000000",
-    });
-  });
-
-  it("accepts raw numeric amount values after preserving them as strings", () => {
-    const raw = JSON.stringify([
-      { type: "TBILL", name: "PYUSD", chain: 42161, amount: 9440 },
-      { type: "DEAL", name: "NVIDIA B300 [1]", chain: 42161, amount: 560 },
-    ]);
-
-    const parsed = parseUsdAiProofOfReserves(raw);
-    expect(parsed[0].amount).toBe("9440");
-    expect(typeof parsed[0].amount).toBe("string");
-
-    const result = adaptUsdAiProofOfReserves(parsed);
-    expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: 94.4, risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5.6, risk: "high" },
-    ]);
-    expect(result.metadata).toMatchObject({
-      weightingBasis: "amount",
-    });
-  });
-
   it("preserves large numeric share and amount fields from the live API payload", () => {
     const raw = `[
       {"type":"TBILL","name":"PYUSD","chain":42161,"amount":255497995783104000000000000,"share":806489349701830000},

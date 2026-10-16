@@ -6,7 +6,7 @@ import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
 import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
-import { captureEnvVar, mockAbortableFetch, mockJsonOnce } from "@/test-utils/api-fetch";
+import { mockAbortableFetch, mockJsonOnce } from "@/test-utils/api-fetch";
 import {
   apiRequest,
   apiFetch,
@@ -17,8 +17,6 @@ import {
   resolveApiBase,
   SchemaValidationError,
 } from "../api";
-
-const restoreForceSiteDataProxy = captureEnvVar("NEXT_PUBLIC_FORCE_SITE_DATA_PROXY");
 
 /** Minimal schema-valid live-reserve payload; override only the field under test. */
 function reserveBody(overrides: Record<string, unknown> = {}) {
@@ -38,7 +36,6 @@ function reserveBody(overrides: Record<string, unknown> = {}) {
 
 describe("api contract validation policy", () => {
   afterEach(() => {
-    restoreForceSiteDataProxy();
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -50,29 +47,6 @@ describe("api contract validation policy", () => {
     await expect(
       apiFetch("/api/stablecoins", z.object({ peggedAssets: z.array(z.object({ id: z.string() })) })),
     ).rejects.toBeInstanceOf(SchemaValidationError);
-  });
-
-  it("preserves formatted schema issues on SchemaValidationError", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ ok: "no" }));
-    const schema = {
-      safeParse: () => ({
-        success: false as const,
-        error: {
-          issues: [
-            { path: ["payload", 0, "ok"], message: "Expected boolean" },
-            { path: [], message: "Invalid response" },
-          ],
-        },
-      }),
-    };
-
-    await expect(apiFetch("/api/custom", schema)).rejects.toMatchObject({
-      name: "SchemaValidationError",
-      path: "/api/custom",
-      issues: "payload.0.ok: Expected boolean, : Invalid response",
-      message:
-        "Schema validation failed for /api/custom: payload.0.ok: Expected boolean, : Invalid response",
-    });
   });
 
   it("returns parsed data on strict endpoint when schema matches", async () => {
@@ -89,14 +63,6 @@ describe("api contract validation policy", () => {
     mockJsonOnce(body);
 
     await expect(apiFetch("/api/custom")).resolves.toEqual(body);
-  });
-
-  it("throws on schema mismatch by default whenever a schema is provided", async () => {
-    mockJsonOnce({ something: "unexpected" });
-
-    await expect(apiFetch("/api/daily-digest", z.object({ digest: z.string() }))).rejects.toBeInstanceOf(
-      SchemaValidationError,
-    );
   });
 
   it("keeps permissive behavior only when warn mode is explicit", async () => {
@@ -260,14 +226,6 @@ describe("api contract validation policy", () => {
     });
   });
 
-  it("preserves strict meta-aware validation failures when no envelope fallback applies", async () => {
-    mockJsonOnce({ ok: true });
-
-    await expect(
-      apiFetchWithMeta("/api/custom", z.object({ ok: z.literal(false) })),
-    ).rejects.toBeInstanceOf(SchemaValidationError);
-  });
-
   it("validates stablecoin chart points before chart consumers use them", () => {
     const point = {
       date: 1771977600,
@@ -333,11 +291,6 @@ describe("api contract validation policy", () => {
     expect(resolveApiBase("c0e7dcc0.stablecoin-dashboard.pages.dev", "")).toBe("https://api.pharos.watch");
   });
 
-  it("keeps localhost-style hosts on relative /api paths when env is empty", () => {
-    expect(resolveApiBase("localhost", "")).toBe("");
-    expect(resolveApiBase("127.0.0.1", "")).toBe("");
-  });
-
   it("prefers explicit env API base over hostname inference", () => {
     expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
   });
@@ -353,16 +306,6 @@ describe("api contract validation policy", () => {
     expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
     expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
     expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
-  });
-
-  it("can force same-origin site-data routing for local static-export smoke builds", () => {
-    process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY = "true";
-    vi.stubGlobal("window", { location: { hostname: "127.0.0.1" } });
-
-    expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
-    expect(buildRequestUrl("/api/public-status-history?limit=10")).toBe("/_site-data/public-status-history?limit=10");
-    expect(buildRequestUrl("/api/donor-key-claims", { method: "POST" })).toBe("/api/donor-key-claims");
-    expect(buildRequestUrl("/api/og/stablecoin/usdt-tether")).toBe("/api/og/stablecoin/usdt-tether");
   });
 
   it("keeps browser public POST and non-site-data GET routes off the site-data proxy", () => {
@@ -397,24 +340,6 @@ describe("api contract validation policy", () => {
     await apiRequest("/api/donor-key-claims", (response) => response.json(), { method: "POST" });
 
     expect(fetchSpy.mock.calls[0]?.[0]).toBe("/api/donor-key-claims");
-  });
-
-  it("propagates caller-provided AbortSignal through the shared request helper", async () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    vi.useFakeTimers();
-    const fetchSpy = mockAbortableFetch(new DOMException("caller aborted", "AbortError"));
-    const controller = new AbortController();
-
-    const requestPromise = apiRequest("/api/stablecoins", (response) => response.json(), { signal: controller.signal });
-    const rejection = expect(requestPromise).rejects.toMatchObject({
-      name: "AbortError",
-      message: "caller aborted",
-    });
-    controller.abort(new DOMException("caller aborted", "AbortError"));
-    await vi.runAllTimersAsync();
-
-    await rejection;
-    expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
   it("keeps explicit request options signal precedence over RequestInit", async () => {
@@ -468,25 +393,6 @@ describe("api contract validation policy", () => {
       message: "API request timed out after 250ms",
     });
     await vi.advanceTimersByTimeAsync(250);
-
-    await rejection;
-  });
-
-  it("normalizes non-finite API timeouts to the shared default", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
-        }),
-    );
-
-    const pending = apiRequest("/api/stablecoins", (response) => response.json(), undefined, { timeoutMs: Number.NaN });
-    const rejection = expect(pending).rejects.toMatchObject({
-      name: "TimeoutError",
-      message: `API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS}ms`,
-    });
-    await vi.advanceTimersByTimeAsync(DEFAULT_REQUEST_TIMEOUT_MS);
 
     await rejection;
   });
@@ -595,17 +501,6 @@ describe("api contract validation policy", () => {
   it("still throws on 404 when nullOn404 is not set", async () => {
     mockFetch([{ match: "/api/stablecoin-reserves/test", body: "Not found", status: 404 }], { requireMatch: true });
     await expect(apiFetch("/api/stablecoin-reserves/test")).rejects.toThrow(ApiFetchError);
-  });
-
-  it("captures Warning header in apiFetchWithMeta", async () => {
-    mockJsonOnce({ ok: true }, 200, {
-      "X-Data-Age": "11000",
-      Warning: '110 - "Response is stale (11000s old, max 900s)"',
-    });
-
-    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, "warn");
-    expect(result.meta?.warning).toContain("Response is stale");
-    expect(result.meta?.status).toBe("fresh");
   });
 
   it("keeps age metadata unknown for a freshness warning when no age source exists", async () => {

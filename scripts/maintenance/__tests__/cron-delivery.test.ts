@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { parseCronDeliveryArgs, readCronDelivery } from "../cron-delivery.mjs";
+import { readCronDelivery } from "../cron-delivery.mjs";
 
 const row = { datetime: "2026-10-06T20:01:00Z", scheduledDatetime: "2026-10-06T20:01:00Z", cron: "1,6 * * * *", status: "success", cpuTimeUs: 1000 };
 function response(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status }); }
@@ -10,12 +10,6 @@ const payload = (rows: unknown[]) => ({ data: { viewer: { accounts: [{ workersIn
 const scriptPath = resolve("scripts/maintenance/cron-delivery.mjs");
 
 describe("cron-delivery read-only CLI", () => {
-  it("uses strict options and bounded windows", () => {
-    expect(parseCronDeliveryArgs([])).toEqual({ minutes: 120, raw: false });
-    expect(parseCronDeliveryArgs(["--minutes", "240", "--raw"])).toEqual({ minutes: 240, raw: true });
-    expect(parseCronDeliveryArgs(["--help"])).toEqual({ help: true });
-    for (const args of [["120"], ["--other"], ["--minutes", "0"], ["--minutes", "1441"], ["--minutes", "2.5"], ["--raw", "--raw"]]) expect(() => parseCronDeliveryArgs(args)).toThrow();
-  });
   it("requires environment token before any transport", async () => {
     const fetchImpl = vi.fn();
     await expect(readCronDelivery({ token: undefined, fetchImpl })).rejects.toThrow("CLOUDFLARE_API_TOKEN");

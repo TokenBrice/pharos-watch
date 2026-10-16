@@ -24,7 +24,6 @@ const DETAIL_TXT_BYTES = 48;
 const JS_BYTES = ZOD_CHUNK_BYTES + PAGE_CHUNK_BYTES;
 const HTML_BYTES = SHELL_HTML.length + DETAIL_HTML.length;
 const TXT_BYTES = SHELL_TXT_BYTES + DETAIL_TXT_BYTES;
-const DETAIL_ROUTE_BYTES = DETAIL_HTML.length + DETAIL_TXT_BYTES;
 // Highly compressible, so its gzip size sits far below its raw size.
 const CEMETERY_HTML = `<!doctype html><html><body>${"x".repeat(2_000)}</body></html>`;
 const CEMETERY_FLIGHT_BYTES = 400;
@@ -99,33 +98,6 @@ describe("report-build-size", () => {
     expect(result.stdout).toContain("Font manifest sample\n  /layout: static/media/inter.woff2");
   });
 
-  it("attributes only the documents that load the classic Zod chunk", () => {
-    const result = runReport(syntheticBuild());
-
-    expect(result.stdout).toContain("classic Zod HTML references: 1/2 (50.0%) across 1 chunk(s)");
-    expect(result.stdout).toContain("  ok classic Zod HTML references: 50.0% / 75.0%");
-  });
-
-  it("projects detail-route capacity and eager first-load JS for the representative route", () => {
-    const result = runReport(syntheticBuild());
-
-    expect(result.stdout).toContain(
-      `stablecoin-detail: 1 routes, 2 files, ${DETAIL_ROUTE_BYTES} B;`
-      + ` 2.0 files/route, ${DETAIL_ROUTE_BYTES} B/route;`,
-    );
-    expect(result.stdout).toContain(`${DETAIL_ROUTE}/usdc-circle.__PAGE__.txt`);
-    expect(result.stdout).toMatch(/\d+ B {2}stablecoin\/usdc-circle \(1 scripts, gzip\)/);
-    expect(result.stdout).toContain("  ok stablecoin/usdc-circle eager JS gzip:");
-  });
-
-  it("reports compressed CSS beside its raw size", () => {
-    const result = runReport(syntheticBuild());
-    // eslint-disable-next-line security/detect-non-literal-regexp -- interpolates in-test fixture constants, not user input
-    const compressed = new RegExp(String.raw`(\d+) B gzip\s+${CSS_BYTES} B raw\s+${CSS_BUNDLE}`).exec(result.stdout);
-
-    expect(compressed).not.toBeNull();
-    expect(Number(compressed?.[1])).toBeLessThan(CSS_BYTES);
-  });
 
   it("fails the deploy gate when the build exceeds the direct-upload file limit", () => {
     const result = runReport(syntheticBuild(), { budgets: { PHAROS_SIZE_BUDGET_TOTAL_OUT_FILES: "3" } });

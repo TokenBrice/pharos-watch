@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { StablecoinObituary } from "@shared/types";
+import { FrozenDataNote } from "../frozen-data-note";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -29,5 +30,14 @@ describe("FrozenStateBanner", () => {
     expect(screen.getByText(/Abandoned/i)).toBeTruthy();
     expect(screen.getByRole("link", { name: /cemetery/i }).getAttribute("href")).toBe("/cemetery/");
     expect(screen.getByRole("link", { name: /Resolv announcement/i }).getAttribute("href")).toBe(obituary.sourceUrl);
+  });
+});
+
+describe("FrozenDataNote", () => {
+  it("states the freeze date and that collection has stopped", () => {
+    render(<FrozenDataNote frozenAt="2026-04-27" />);
+
+    expect(screen.getByText(/2026-04-27/)).toBeTruthy();
+    expect(screen.getByText(/no longer collects new metrics/i)).toBeTruthy();
   });
 });

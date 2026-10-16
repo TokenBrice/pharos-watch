@@ -2,9 +2,8 @@ import { Fragment, type ReactNode } from "react";
 import type * as RechartsModule from "recharts";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { formatReserveRiskTier, ReserveTreemap } from "@/components/reserve-treemap";
+import { ReserveTreemap } from "@/components/reserve-treemap";
 import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
-import { RISK_ACCENT_COLORS, RISK_COLORS } from "@/lib/chart-colors";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 
 // The server render never measures its container, so the treemap draws its
@@ -89,57 +88,14 @@ describe("ReserveTreemap", () => {
     expect(html).not.toContain("Other reserve slices");
   });
 
-  it("sets tile names as written, never forced to capitals", () => {
-    chart.ready = true;
-    try {
-      const html = render([SLICE("Private credit", 55, "high"), SLICE("T-bills", 45, "very-low")]);
-      expect(html).toContain(">Private credit<");
-      expect(html).toContain(">T-bills<");
-      expect(html).not.toContain("PRIVATE CREDIT");
-    } finally {
-      chart.ready = false;
-    }
-  });
-
   it("orders the accessible description by share and rounds precise shares, keeping positive dust visible", () => {
     const html = render([SLICE("Cash", 0.004, "very-low"), SLICE("thBILL", 25.9904802, "low"), SLICE("Gold carry", 74.0045198, "medium")]);
     expect(html).toContain("Reviewed reserve slices: Gold carry 74%, thBILL 25.99%, Cash &lt;0.01%");
     expect(html).not.toContain("74.0045198");
   });
 
-  it("keys exactly the tiers drawn, each swatch carrying its tile's fill and accent", () => {
-    const html = render([
-      SLICE("T-bills", 50, "very-low"),
-      SLICE("Repo", 30, "medium"),
-      SLICE("Private credit", 20, "high"),
-    ]);
-    expect(html).toContain(`>${formatReserveRiskTier("very-low")}<`);
-    expect(html).toContain(`>${formatReserveRiskTier("medium")}<`);
-    expect(html).toContain(`>${formatReserveRiskTier("high")}<`);
-    expect(html).not.toContain(`>${formatReserveRiskTier("very-high")}<`);
-    expect(html).not.toContain(`>${formatReserveRiskTier("low")}<`);
-    expect(html.match(/rounded-\[2px\]/g)).toHaveLength(3);
-    for (const risk of ["very-low", "medium", "high"] as const) {
-      expect(html).toContain(`background-color:${RISK_COLORS[risk]}`);
-      expect(html).toContain(`border-color:${RISK_ACCENT_COLORS[risk]}`);
-    }
-  });
-
-  it("keys a single-tier basket too, so its colour always has a key", () => {
-    const html = render([SLICE("Cash", 60, "very-low"), SLICE("T-bills", 40, "very-low")]);
-    expect(html).toContain(">Very low risk<");
-    expect(html.match(/rounded-\[2px\]/g)).toHaveLength(1);
-  });
-
   it("renders nothing for an empty or all-zero basket", () => {
     expect(render([])).toBe("");
     expect(render([SLICE("Cash", 0, "very-low")])).toBe("");
-  });
-
-  it("reads compact and standalone reserve-risk labels from the shared classification owner", () => {
-    expect(RESERVE_RISK_PRESENTATION["very-low"]).toEqual({
-      shortLabel: "Very low",
-      longLabel: "Very Low Risk",
-    });
   });
 });

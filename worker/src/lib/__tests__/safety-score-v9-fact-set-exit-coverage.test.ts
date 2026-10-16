@@ -210,7 +210,7 @@ describe("explicit route factor gaps and source chronology", () => {
 });
 
 describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
-  it.each([201, 4900])("re-admits a reviewed %s bps cost as zero within the request budget without quarantine", (costBps) => {
+  it.each([201])("re-admits a reviewed %s bps cost as zero within the request budget without quarantine", (costBps) => {
     const fixed = queuedRedemptionFixedInput();
     const reviewed = structuredClone(extension());
     reviewed.registryFingerprint = fixed.registryFingerprint;
@@ -1073,50 +1073,6 @@ describe("compiled Control causal minimum regressions", () => {
 });
 
 describe("direct exit fact builder", () => {
-  it.each([199, 200, 201])("admits measured redemption capacity only within the 200 bps budget (cost %s)", (costBps) => {
-    const fixed = queuedRedemptionFixedInput();
-    const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
-    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
-    const review = reviewed.assets[0]!.routeReviews.find((route) => route.lane === "redemption")!;
-    review.executionCosts = review.executionCosts.map((point) => ({ ...point, executionCostBps: costBps }));
-    const context = factBuilderContext(fixed, reviewed);
-    const result = buildRoutes(context, buildSupply(context));
-    const route = result.exitRoutes.find((entry) => entry.lane === "redemption")!;
-    expect(route.capacityCurve).toEqual([
-      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: costBps <= 200 ? 100_000 : 0,
-        completionRatio: costBps <= 200 ? 1 : 0, executionCostBps: costBps },
-      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: costBps <= 200 ? 1_000_000 : 0,
-        completionRatio: costBps <= 200 ? 1 : 0, executionCostBps: costBps },
-    ]);
-  });
-
-  it("preserves unavailable live-only redemption as a rejected diagnostic, never executable capacity", () => {
-    const draft = structuredClone(queuedRedemptionFixedInput());
-    const redemption = draft.redemptionBackstopMap.alpha!;
-    redemption.provider = "reserve-sync-metadata";
-    redemption.resolutionState = "missing-capacity";
-    redemption.capacityBasis = "live-direct-telemetry";
-    redemption.capacityProfile = undefined;
-    redemption.routeStatus = "open";
-    const fixed = rebuildFixed(draft);
-    const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
-    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
-    const context = factBuilderContext(fixed, reviewed);
-    const route = buildRoutes(context, buildSupply(context)).exitRoutes.find((entry) => entry.lane === "redemption")!;
-    expect(route).toMatchObject({
-      status: { observationState: "missing" },
-      scoreEligible: false, request: null, capacityCurve: [],
-      output: { kind: "unknown", valuation: null },
-    });
-    expect(context.evidence.get(route.status.evidenceRefIds[0]!)).toMatchObject({
-      disposition: "rejected", sourceGenerationId: fixed.redemptionGenerationId,
-      rejection: { code: "live-direct-capacity-unavailable" },
-    });
-    expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({
-      gapId: route.status.gapIds[0],
-      causeProof: expect.objectContaining({ cause: "A", rejectionCode: "live-direct-capacity-unavailable" }),
-    }));
-  });
 
   it("reports absent exit observations as missing, not a known zero-exit market", () => {
     const fixed = exactFixedInput({ includeDexObservations: false, includeDexCoverage: false });

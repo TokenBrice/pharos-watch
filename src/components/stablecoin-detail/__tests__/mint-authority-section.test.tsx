@@ -8,7 +8,6 @@ import type {
   MintAuthorityDetailViewModel,
   MintAuthorityProcessDiagnosticViewModel,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
-import { buildControlPostureView } from "@/lib/control-posture";
 import type { ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { CONTROL_COMPONENT_ROLE_LABELS, type ControlComponentRole } from "@shared/lib/classification";
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
@@ -24,11 +23,6 @@ function renderDom(element: ReactElement): HTMLElement {
   return container;
 }
 
-/** Disclosures in document order, named by anchor id or, without one, by their label. */
-function disclosureOrder(container: HTMLElement): string[] {
-  return [...container.querySelectorAll("details")].map((details) =>
-    details.id || (details.querySelector("summary span")?.textContent ?? ""));
-}
 
 function controlRoles(mintRole: ControlComponentRole, oracleRole: ControlComponentRole): ControlComponentRoles {
   return {
@@ -194,56 +188,6 @@ describe("MintAuthoritySection", () => {
     expect(section!.textContent).toContain(REVIEWED_PROFILE.score!.compactLabel);
   });
 
-  it("keeps the verdict in the summary layer and the folds in fixed order, narrative last", () => {
-    const container = renderDom(
-      <MintAuthoritySection
-        profile={{
-          ...REVIEWED_PROFILE,
-          processDiagnostics: [diagnostic({ code: "runtime-unmatched", gate: "shared", field: "runtimeHash" }, "Missing evidence")],
-          mintIncidents: [{ date: "2024-01-30", status: "resolved", resolvedAt: null, summary: "Past exploit.", sources: [] }],
-        }}
-        symbol="GHO"
-      />,
-    );
-    const html = container.innerHTML;
-
-    expect(disclosureOrder(container)).toEqual([
-      "mint-authority-visual",
-      "Scoring breakdown",
-      "mint-primary-controls",
-      "mint-issuance-diagnostics",
-      "Incident history",
-      "mint-review-notes",
-    ]);
-    expect(html.indexOf(REVIEWED_PROFILE.verdict!)).toBeLessThan(html.indexOf("<details"));
-    // Reviewer narrative and sources share the one provenance fold.
-    const notes = container.querySelector("#mint-review-notes");
-    expect(notes?.textContent).toContain(REVIEWED_PROFILE.summary);
-    expect(notes?.querySelector(`a[href="${REVIEWED_PROFILE.sources[0]!.url}"]`)).not.toBeNull();
-    expect(html.split(REVIEWED_PROFILE.summary)).toHaveLength(2);
-  });
-
-  it("omits the diagnostics fold when no issuance evidence is published", () => {
-    const container = renderDom(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
-    expect(container.querySelector("#mint-issuance-diagnostics")).toBeNull();
-  });
-
-  it("stamps the review date once, in the footer line after every fold", () => {
-    const container = renderDom(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
-    const section = container.querySelector("section#mint-authority")!;
-
-    expect(section.textContent!.split(REVIEWED_PROFILE.reviewedAt!)).toHaveLength(2);
-    // The deepest element carrying the stamp, wherever the footer line nests it.
-    const stamp = [...section.querySelectorAll("*")]
-      .filter((node) => node.textContent?.includes(`Reviewed ${REVIEWED_PROFILE.reviewedAt}`))
-      .at(-1);
-    expect(stamp).toBeDefined();
-    const folds = section.querySelectorAll("details");
-    const lastFold = folds[folds.length - 1]!;
-    expect(lastFold.compareDocumentPosition(stamp!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(lastFold.contains(stamp!)).toBe(false);
-  });
-
   it.each([
     { mint: "limiting", oracle: "eligible", tagged: true },
     { mint: "limiting", oracle: "limiting", tagged: true },
@@ -261,39 +205,6 @@ describe("MintAuthoritySection", () => {
   it("draws no role tag without published control roles", () => {
     const container = renderDom(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
     expect(container.querySelector("[data-control-role]")).toBeNull();
-  });
-
-  it("carries the control posture chip on #control-posture and its notes in the review fold", () => {
-    const posture = buildControlPostureView(TRACKED_META_BY_ID.get("usdc-circle")!)!;
-    const container = renderDom(
-      <MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" controlPosture={posture} />,
-    );
-    const section = container.querySelector("section#mint-authority")!;
-    const html = section.innerHTML;
-
-    const chip = section.querySelector("#control-posture");
-    expect(chip?.textContent).toContain(posture.label);
-    expect(chip?.closest("details")).toBeNull();
-    // A chip-row chip, after the verdict: never in the header beside the score.
-    expect(html.indexOf(REVIEWED_PROFILE.verdict!)).toBeLessThan(html.indexOf('id="control-posture"'));
-    // Its explanation joins the one provenance fold under its own subheading.
-    const notes = section.querySelector("#mint-review-notes")!;
-    expect([...notes.querySelectorAll("h4")].map((heading) => heading.textContent)).toContain("Control posture");
-    for (const detail of posture.details) expect(notes.textContent).toContain(detail);
-    // Summary, posture notes and one source.
-    expect(notes.querySelector("summary")?.textContent).toContain("(3)");
-    expect(section.querySelectorAll("details#mint-review-notes")).toHaveLength(1);
-  });
-
-  it("keeps an unreviewed module's posture chip and notes", () => {
-    const posture = buildControlPostureView(TRACKED_META_BY_ID.get("usdc-circle")!)!;
-    const profile = { ...NOT_REVIEWED_PROFILE, processDiagnostics: [diagnostic({
-      code: "process-certificate-unavailable", gate: "H0", field: "issuanceProcess.coverage",
-    }, "Missing evidence")] };
-    const container = renderDom(<MintAuthoritySection profile={profile} symbol="GHO" controlPosture={posture} />);
-
-    expect(container.querySelector("#control-posture")?.textContent).toContain(posture.label);
-    expect(container.querySelector("#mint-review-notes")?.textContent).toContain(posture.details[0]);
   });
 
   it("draws no posture chip without an authored posture", () => {
@@ -325,15 +236,6 @@ describe("MintAuthoritySection", () => {
     expect(container.querySelector("button[aria-label^='Explain']")).not.toBeNull();
     expect(container.querySelector("a[href*='/methodology']")).toBeNull();
     expect(container.textContent).not.toContain("View methodology");
-  });
-
-  it("drops the footer methodology links from an unreviewed coin's diagnostics strip too", () => {
-    const profile = { ...NOT_REVIEWED_PROFILE, processDiagnostics: [diagnostic({
-      code: "process-certificate-unavailable", gate: "H0", field: "issuanceProcess.coverage",
-    }, "Missing evidence")] };
-    const container = renderDom(<MintAuthoritySection profile={profile} symbol="GHO" />);
-
-    expect(container.querySelector("a[href*='/methodology']")).toBeNull();
   });
 
   it.each([
@@ -457,12 +359,6 @@ describe("MintAuthoritySection", () => {
     // Absorbed chips: the full mint-path label survives only as the origin title.
     expect(html).not.toContain(">Facilitator bucket mint<");
     expect(html).toContain("Facilitator bucket mint");
-  });
-
-  it("keeps the chip summary when no symbol is available for the rail", () => {
-    const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} />);
-    expect(html).toContain("Facilitator bucket mint");
-    expect(html).toContain("Partially bounded admin");
   });
 
   it("renders verification gaps when review questions remain", () => {

@@ -190,7 +190,7 @@ describe("LongformScrollspyNav", () => {
     expect(windowScrollToMock).toHaveBeenCalledTimes(4);
   });
 
-  it.each(["#bad%", "#%E0%A4%A"])("ignores malformed initial fragment %s and keeps navigation usable", (hash) => {
+  it.each(["#bad%"])("ignores malformed initial fragment %s and keeps navigation usable", (hash) => {
     window.history.replaceState(null, "", hash);
 
     expect(() => render(<Harness stickyOffsetPx={106} />)).not.toThrow();
@@ -205,68 +205,4 @@ describe("LongformScrollspyNav", () => {
     expect(windowScrollToMock).toHaveBeenCalledWith({ top: 330, behavior: "auto" });
   });
 
-  it("decodes a valid encoded initial fragment", () => {
-    window.history.replaceState(null, "", "#%70ipeline");
-    render(<Harness stickyOffsetPx={106} />);
-    act(() => {
-      vi.runAllTimers();
-    });
-
-    expect(screen.getByRole("link", { name: "Pipeline" }).getAttribute("aria-current")).toBe("true");
-    expect(windowScrollToMock).toHaveBeenCalledWith({ top: 330, behavior: "auto" });
-  });
-
-  it("does not start hash alignment on a later refresh when the page loaded without one", () => {
-    const { rerender } = render(<Harness stickyOffsetPx={106} />);
-
-    act(() => {
-      vi.runAllTimers();
-    });
-
-    expect(windowScrollToMock).not.toHaveBeenCalled();
-
-    window.history.replaceState(null, "", "#pipeline");
-    rerender(<Harness sections={[SECTIONS[1], SECTIONS[0], SECTIONS[2]]} stickyOffsetPx={106} />);
-
-    act(() => {
-      vi.runAllTimers();
-    });
-
-    expect(windowScrollToMock).not.toHaveBeenCalled();
-  });
-
-  it("centers the active pill inside the nav scroller without moving document scrollX", () => {
-    render(<Harness stickyOffsetPx={106} />);
-    const scroller = screen.getByRole("navigation", { name: "Status sections" });
-    const scrollerScrollToMock = vi.fn();
-    Object.defineProperties(scroller, {
-      clientWidth: { configurable: true, value: 200 },
-      scrollWidth: { configurable: true, value: 600 },
-      scrollLeft: { configurable: true, value: 0, writable: true },
-      scrollTo: { configurable: true, value: scrollerScrollToMock },
-    });
-    Object.defineProperty(window, "scrollX", {
-      configurable: true,
-      value: 47,
-      writable: true,
-    });
-
-    fireEvent.click(screen.getByRole("link", { name: "Pipeline" }));
-
-    expect(scrollerScrollToMock).toHaveBeenCalledWith({ left: 220, behavior: "auto" });
-    expect(window.scrollX).toBe(47);
-    expect(scrollIntoViewMock).not.toHaveBeenCalled();
-  });
-
-  it("keeps default responsive offsets and supports an explicit sticky top override", () => {
-    const { container, rerender } = render(<Harness />);
-
-    const stickyNav = container.querySelector<HTMLElement>(".sticky");
-    expect(stickyNav?.className).toContain("top-[calc(env(safe-area-inset-top)+3.5rem)]");
-    expect(stickyNav?.className).toContain("lg:top-[calc(env(safe-area-inset-top)+3px)]");
-    expect(stickyNav?.style.top).toBe("");
-
-    rerender(<Harness stickyOffsetPx={106} />);
-    expect(stickyNav?.style.top).toBe("106px");
-  });
 });

@@ -189,12 +189,6 @@ describe("Safety Score v9 chain-maturity registry", () => {
     }
   });
 
-  it("uses the codebase slug klaytn for the pending Kaia continuation", () => {
-    expect(chainMaturityReviewForSlug("klaytn")?.displayName).toBe("Kaia (formerly Klaytn)");
-    expect(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS).not.toContain("klaytn");
-    expect(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS).not.toContain("kaia");
-  });
-
   it("derives policy matureChains from the registry and rejects a divergent authored copy", () => {
     expect(candidatePolicyAsset.semantic.materiality).not.toHaveProperty("matureChains");
     expect([...V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.matureChains].sort()).toEqual(

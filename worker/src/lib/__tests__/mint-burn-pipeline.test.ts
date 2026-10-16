@@ -114,36 +114,6 @@ describe("mint-burn shared pipeline modules", () => {
     vi.clearAllMocks();
   });
 
-  it("tracks inserted vs ignored rows in insertMintBurnRows", async () => {
-    const db = makeDb();
-    vi.mocked(batchExecute).mockResolvedValueOnce(1);
-
-    const result = await insertMintBurnRows(db, [makeRow({ id: "id-1" }), makeRow({ id: "id-2" })]);
-
-    expect(result.inserted).toBe(1);
-    expect(result.ignored).toBe(1);
-  });
-
-  it("tracks affected hours on duplicate-only replay so failed materialization is retried", async () => {
-    const db = makeDb();
-    vi.mocked(batchExecute).mockReset();
-    vi.mocked(batchExecute)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(0);
-
-    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
-    const result = await persistMintBurnRows(
-      db,
-      [makeRow({ id: "id-1", direction: "mint", flow_type: "standard" })],
-      affectedHours,
-    );
-
-    expect(result.inserted).toBe(0);
-    expect(result.flowTypeChanges).toBe(0);
-    expect(result.burnTypeChanges).toBe(0);
-    expect(affectedHours.size).toBe(1);
-  });
-
   it("tracks affected hours when inserts land even if the batch includes duplicates", async () => {
     const db = makeDb();
     vi.mocked(batchExecute).mockReset();
@@ -357,25 +327,7 @@ describe("mint-burn shared pipeline modules", () => {
     });
   });
 
-  it("recomputes only affected hourly buckets", async () => {
-    const db = makeDb();
-    const rows = [
-      makeRow({ id: "id-1", direction: "mint", timestamp: 3_605 }),
-      makeRow({ id: "id-2", direction: "burn", timestamp: 3_610 }),
-      makeRow({ id: "id-3", direction: "mint", timestamp: 7_205 }),
-    ];
-
-    const affected = collectAffectedHours(rows);
-    expect(affected.size).toBe(2);
-
-    await recalcAffectedHours(db, affected);
-    // Interleaved: 2 hours × 2 stmts (delete + insert) = 4 statements in one call
-    expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(4);
-  });
-
-
-  it("excludes atomic roundtrip rows from hourly aggregation", async () => {
+  it("excludes atomic roundtrip and bridge-transfer rows from hourly aggregation", async () => {
     const { db, sqlite } = fixtures.open();
     vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
@@ -405,39 +357,6 @@ describe("mint-burn shared pipeline modules", () => {
         timestamp: 3_620,
         tx_hash: "0xroundtrip",
         flow_type: "atomic_roundtrip",
-      }),
-    ];
-
-    await insertMintBurnRows(db, rows);
-    await recalcAffectedHours(db, collectAffectedHours(rows));
-
-    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").get()).toEqual({
-      stablecoin_id: "usdt-tether",
-      chain_id: "ethereum",
-      hour_ts: 3600,
-      mint_count: 1,
-      burn_count: 1,
-      mint_unpriced_event_count: 0,
-      burn_unpriced_event_count: 0,
-      mint_volume_usd: 100,
-      burn_volume_usd: 25,
-      net_flow_usd: 75,
-    });
-  });
-
-  it("excludes bridge-transfer rows from hourly aggregation", async () => {
-    const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
-
-    const rows = [
-      makeRow({ id: "mint-standard", direction: "mint", amount_usd: 100, timestamp: 3_605, tx_hash: "0xmint-standard" }),
-      makeRow({
-        id: "burn-standard",
-        direction: "burn",
-        burn_type: "effective_burn",
-        amount_usd: 25,
-        timestamp: 3_610,
-        tx_hash: "0xburn-standard",
       }),
       makeRow({
         id: "mint-bridge",

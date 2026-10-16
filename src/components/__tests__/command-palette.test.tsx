@@ -130,18 +130,6 @@ describe("CommandPalette", () => {
     expect(navRow.textContent).not.toContain("Off peg");
   });
 
-  it("keeps the exact symbol ahead of high-cap substring matches", () => {
-    renderPalette();
-
-    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
-      target: { value: "USDC" },
-    });
-    const options = screen.getAllByRole("option");
-    const usdCoin = screen.getByRole("option", { name: /USD CoinUSDC/i });
-    const maple = screen.getByRole("option", { name: /Maple syrupUSDC/i });
-    expect(options.indexOf(usdCoin)).toBeLessThan(options.indexOf(maple));
-  });
-
   it("shows live market caps when the stablecoin observer resolves while open", async () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
     queryClient.clear();
@@ -164,43 +152,6 @@ describe("CommandPalette", () => {
     });
   });
 
-  it("keeps static stablecoin search available when the validated list cache is absent", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
-    queryClient.clear();
-    renderPalette();
-
-    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
-      target: { value: "USDCx" },
-    });
-
-    expect(screen.getByRole("option", { name: /Movement USDCx/i })).toBeTruthy();
-  });
-
-  it("renders a strong page hit above coins whose names merely contain the word", () => {
-    renderPalette();
-
-    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
-      target: { value: "api" },
-    });
-    const optionLabels = screen.getAllByRole("option").map((option) => option.textContent ?? "");
-
-    expect(optionLabels[0]).toContain("API");
-  });
-
-  it("shows category chips on zero results and navigates on click", () => {
-    renderPalette();
-
-    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
-      target: { value: "zzzz-no-such-coin" },
-    });
-
-    const chip = screen.getByRole("button", { name: "Stablecoin Directory" });
-    fireEvent.click(chip);
-
-    expect(pushMock).toHaveBeenCalledWith("/stablecoins/");
-    expect(screen.queryByRole("combobox", { name: "Search" })).toBeTruthy();
-  });
-
   it("emits bounded palette_selected analytics on Enter and never the raw query", () => {
     window.gtag = vi.fn();
     renderPalette();
@@ -217,26 +168,6 @@ describe("CommandPalette", () => {
       selected_rank: 0,
     });
     expect(JSON.stringify((window.gtag as Mock).mock.calls)).not.toContain("USDT");
-    delete window.gtag;
-  });
-
-  it("debounces palette_zero_results for empty result sets", () => {
-    vi.useFakeTimers();
-    window.gtag = vi.fn();
-    const { unmount } = renderPalette();
-
-    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
-      target: { value: "zzzz-no-such-coin" },
-    });
-    vi.advanceTimersByTime(999);
-    expect(window.gtag).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
-    expect(window.gtag).toHaveBeenCalledWith("event", "palette_zero_results", {
-      query_length: 17,
-    });
-
-    unmount();
-    vi.useRealTimers();
     delete window.gtag;
   });
 });

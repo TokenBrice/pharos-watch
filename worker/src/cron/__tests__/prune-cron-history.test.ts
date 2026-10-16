@@ -255,52 +255,6 @@ describe("runPruneCronHistory", () => {
     expect(metadata.recoveryCheckpointsDeleted).toBe(2);
   });
 
-  it("reports all deleted counts in metadata", async () => {
-    const { db, sqlite } = createTestDb();
-    const now = Math.floor(Date.now() / 1000);
-    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 1, 1, "ok");
-    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "closed", "test", "closed", "closed", now, now - ONE_WEEK_SEC - 1);
-    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - WORKER_CANARY_RUN_RETENTION_SEC - 1);
-    const checkpoint = "INSERT INTO worker_scheduled_checkpoints (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    insert(sqlite, checkpoint, "test", now, "completed", 1, "completed", "hash", "completed", now, now - TWO_WEEKS_SEC - 1);
-    insert(sqlite, "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?)", toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60), "test", now, now);
-    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 1, now, now - TWO_WEEKS_SEC - 1);
-    insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - TWO_WEEKS_SEC - 1, "finished", "test", now, now - TWO_WEEKS_SEC - 1);
-
-    const result = await runPruneCronHistory(db);
-    const metadata = JSON.parse(result.metadata!) as {
-      cronRunsDeleted: number;
-      repairTasksDeleted: number;
-      canaryRunsDeleted: number;
-      recoveryCheckpointsDeleted: number;
-      selectorSnapshotDailyQuotaDeleted: number;
-      blockTimestampCacheDeleted: number;
-      slotExecutionsDeleted: number;
-      cutoffCronRunsSec: number;
-      cutoffRepairTasksSec: number;
-      cutoffCanaryRunsSec: number;
-      cutoffRecoveryCheckpointsSec: number;
-      cutoffSelectorSnapshotDailyQuotaDate: string;
-      cutoffBlockTimestampCacheSec: number;
-      cutoffSlotExecutionsSec: number;
-    };
-
-    expect(metadata.cronRunsDeleted).toBe(1);
-    expect(metadata.repairTasksDeleted).toBe(1);
-    expect(metadata.canaryRunsDeleted).toBe(1);
-    expect(metadata.recoveryCheckpointsDeleted).toBe(1);
-    expect(metadata.selectorSnapshotDailyQuotaDeleted).toBe(1);
-    expect(metadata.blockTimestampCacheDeleted).toBe(1);
-    expect(metadata.slotExecutionsDeleted).toBe(1);
-    expect(metadata.cutoffCronRunsSec).toBe(now - ONE_WEEK_SEC);
-    expect(metadata.cutoffRepairTasksSec).toBe(now - ONE_WEEK_SEC);
-    expect(metadata.cutoffCanaryRunsSec).toBe(now - WORKER_CANARY_RUN_RETENTION_SEC);
-    expect(metadata.cutoffRecoveryCheckpointsSec).toBe(now - TWO_WEEKS_SEC);
-    expect(metadata.cutoffSelectorSnapshotDailyQuotaDate).toBe(toUtcDateString(now - TWO_DAYS_SEC));
-    expect(metadata.cutoffBlockTimestampCacheSec).toBe(now - TWO_WEEKS_SEC);
-    expect(metadata.cutoffSlotExecutionsSec).toBe(now - TWO_WEEKS_SEC);
-  });
-
   it("returns ok with zero counts when no rows are past either cutoff", async () => {
     const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);

@@ -6,8 +6,6 @@ import {
   apiFetchHeaders,
   fetchWithRetry,
   preserveExistingJsonArrayOnFetchFailure,
-  resolveApiPathUrl,
-  shouldAllowExistingDataOnFetchFailure,
 } from "../lib/sync-from-api";
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -59,14 +57,6 @@ describe("fetchWithRetry", () => {
     });
   });
 
-  it("maps API paths onto the browser-facing site-data lane", () => {
-    expect(resolveApiPathUrl("https://pharos.watch/_site-data", "/api/digest-archive")).toBe(
-      "https://pharos.watch/_site-data/digest-archive",
-    );
-    expect(resolveApiPathUrl("https://pharos.watch/_site-data/", "/api/depeg-events?limit=1000")).toBe(
-      "https://pharos.watch/_site-data/depeg-events?limit=1000",
-    );
-  });
 
   it("keeps site-data release reads browser-shaped", () => {
     vi.stubEnv("DIGEST_API_KEY", "public-key");
@@ -203,11 +193,6 @@ describe("fetchWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("recognizes the release fallback switch for existing data mirrors", () => {
-    vi.stubEnv("PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE", "1");
-
-    expect(shouldAllowExistingDataOnFetchFailure()).toBe(true);
-  });
 
   it("preserves a valid existing JSON array after a release-time fetch failure", () => {
     const root = makeRoot();

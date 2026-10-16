@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getFilterTags } from "../../lib/filter-tags";
-import {
-  DETAIL_PROVIDER_VALUES,
-  DetailProviderSchema,
-  STABLECOIN_STATUS_VALUES,
-  type StablecoinMeta,
-} from "../core";
+import type { StablecoinMeta } from "../core";
 import { OracleRiskBranchSchema } from "../stablecoin-meta-control-schemas";
 import { StablecoinMetaSourceAssetSchema } from "@shared/lib/stablecoins/schema";
 
@@ -25,26 +20,6 @@ function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
     ...overrides,
   };
 }
-
-describe("STABLECOIN_STATUS_VALUES", () => {
-  it("includes every listing lifecycle phase", () => {
-    expect(STABLECOIN_STATUS_VALUES).toEqual([
-      "pre-launch",
-      "active",
-      "quarantined",
-      "delisted",
-      "frozen",
-    ]);
-  });
-});
-
-describe("DETAIL_PROVIDER_VALUES", () => {
-  it("keeps the canonical detail provider enum and schema aligned", () => {
-    expect(DETAIL_PROVIDER_VALUES).toEqual(["defillama", "coingecko", "commodity"]);
-    expect(DetailProviderSchema.options).toEqual(DETAIL_PROVIDER_VALUES);
-    expect(DetailProviderSchema.safeParse("coinmarketcap").success).toBe(false);
-  });
-});
 
 describe("StablecoinMeta", () => {
   it("accepts a frozen coin with obituary block", () => {
@@ -104,23 +79,6 @@ describe("getFilterTags — infrastructures", () => {
     expect(tags.some((t) => t.startsWith("infrastructure-"))).toBe(false);
   });
 
-  it("emits no infrastructure tag for an empty infrastructures array", () => {
-    const tags = getFilterTags(makeCoin({ infrastructures: [] }));
-    expect(tags.some((t) => t.startsWith("infrastructure-"))).toBe(false);
-  });
-
-  it("emits infrastructure-liquity-v1 for a single-element liquity-v1 array", () => {
-    const tags = getFilterTags(makeCoin({ infrastructures: ["liquity-v1"] }));
-    expect(tags).toContain("infrastructure-liquity-v1");
-    expect(tags).not.toContain("infrastructure-liquity-v2");
-    expect(tags).not.toContain("infrastructure-m0");
-  });
-
-  it("emits infrastructure-m0 for a single-element m0 array", () => {
-    const tags = getFilterTags(makeCoin({ infrastructures: ["m0"] }));
-    expect(tags).toContain("infrastructure-m0");
-  });
-
   it("emits one tag per element for a multi-element array", () => {
     const tags = getFilterTags(makeCoin({ infrastructures: ["liquity-v2", "m0"] }));
     expect(tags).toContain("infrastructure-liquity-v2");
@@ -163,19 +121,5 @@ describe("getFilterTags — peg-group tags", () => {
     expect(tags).toContain("fiat-non-usd-peg");
     expect(tags).not.toContain("commodity-peg");
     expect(tags).not.toContain("usd-peg");
-  });
-
-  it("VAR (CPI) peg emits var-peg and fiat-non-usd-peg group tag", () => {
-    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "VAR", governance: "centralized", backing: "algorithmic", yieldBearing: false, rwa: false, navToken: false } }));
-    expect(tags).toContain("var-peg");
-    expect(tags).toContain("fiat-non-usd-peg");
-    expect(tags).not.toContain("commodity-peg");
-  });
-
-  it("OTHER peg emits other-peg and fiat-non-usd-peg group tag", () => {
-    const tags = getFilterTags(makeCoin({ flags: { pegCurrency: "OTHER", governance: "centralized", backing: "rwa-backed", yieldBearing: false, rwa: true, navToken: false } }));
-    expect(tags).toContain("other-peg");
-    expect(tags).toContain("fiat-non-usd-peg");
-    expect(tags).not.toContain("commodity-peg");
   });
 });

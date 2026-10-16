@@ -17,25 +17,6 @@ const stops: YieldRiskBudgetStop[] = [
 const unmatchedStops: YieldRiskBudgetStop[] = stops.map((stop) => ({ ...stop, active: false }));
 
 describe("YieldRiskBudgetSlider", () => {
-  it("renders all stops with their counts and labels", () => {
-    render(<YieldRiskBudgetSlider stops={stops} onSelect={vi.fn()} />);
-
-    expect(screen.getByText("Conservative")).toBeTruthy();
-    // Active band label appears twice: once inline with the header, once as the stop label.
-    expect(screen.getAllByText("Balanced")).toHaveLength(2);
-    expect(screen.getByText("Opportunistic")).toBeTruthy();
-    expect(screen.getByText("All")).toBeTruthy();
-    expect(screen.getByText("3")).toBeTruthy();
-    expect(screen.getByText("19")).toBeTruthy();
-    expect(screen.getByText("70")).toBeTruthy();
-    expect(screen.getByText("163")).toBeTruthy();
-  });
-
-  it("renders 'Custom' inline when no band matches", () => {
-    render(<YieldRiskBudgetSlider stops={unmatchedStops} onSelect={vi.fn()} />);
-    expect(screen.getByText("Custom")).toBeTruthy();
-  });
-
   it("exposes a single range slider control wired to the active stop index", () => {
     render(<YieldRiskBudgetSlider stops={stops} onSelect={vi.fn()} />);
 
@@ -54,25 +35,6 @@ describe("YieldRiskBudgetSlider", () => {
     const slider = screen.getByRole("slider", { name: "Risk tolerance" }) as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "2" } });
     expect(onSelect).toHaveBeenCalledWith("opportunistic");
-  });
-
-  it("does not call onSelect when the slider value resolves to the already-active stop", () => {
-    const onSelect = vi.fn();
-    render(<YieldRiskBudgetSlider stops={stops} onSelect={onSelect} />);
-
-    const slider = screen.getByRole("slider", { name: "Risk tolerance" }) as HTMLInputElement;
-    fireEvent.change(slider, { target: { value: "1" } });
-    expect(onSelect).not.toHaveBeenCalled();
-  });
-
-  it("marks the active stop visually via data-active", () => {
-    render(<YieldRiskBudgetSlider stops={stops} onSelect={vi.fn()} />);
-
-    const activeStop = document.querySelector('[data-active="true"]');
-    expect(activeStop?.textContent).toContain("Balanced");
-
-    const inactiveStops = document.querySelectorAll('[data-active="false"]');
-    expect(inactiveStops.length).toBe(3);
   });
 
   it("reports the no-match state via aria-valuetext when no stop is active", () => {

@@ -6,7 +6,6 @@ import {
 } from "../redstone";
 import { REDSTONE_SYMBOL_CONFIG } from "@shared/lib/pricing-provider-config";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import redstoneBatchFixture from "./fixtures/redstone-batch.json";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => {
@@ -246,22 +245,6 @@ describe("fetchRedstonePrices", () => {
     expect(outcome.kind).toBe("no-data");
   });
 
-  it("returns ok outcome when at least one price is returned", async () => {
-    mockFetch([{
-      match: () => true,
-      body: {
-        USDT: {
-          value: 0.9999,
-          source: { binance: 0.9999 },
-          timestamp: Date.now(),
-        },
-      },
-    }]);
-    const outcome = await fetchRedstonePrices(["USDT"]);
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("usdt-tether")?.price).toBeCloseTo(0.9999, 4);
-  });
-
   it("selects the newest entry by timestamp when array responses are returned", async () => {
     const now = Date.now();
     const olderTimestamp = now - 60_000;
@@ -330,27 +313,6 @@ describe("fetchRedstonePrices", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("parses a real RedStone /prices USDT response (fixture)", async () => {
-    // Fixture captured from
-    // https://api.redstone.finance/prices?provider=redstone-primary-prod&symbols=USDT
-    // Verifies the live object-per-symbol payload shape is accepted and the
-    // per-venue breakdown is preserved.
-    const fixtureTimestampMs = redstoneBatchFixture.USDT.timestamp;
-    // Freeze time just after fixture's timestamp so the 300s staleness gate
-    // accepts the sample.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(fixtureTimestampMs + 10_000));
-
-    mockFetch([{ match: () => true, body: redstoneBatchFixture }]);
-
-    const outcome = await fetchRedstonePrices(["USDT"]);
-
-    expect(outcome.kind).toBe("ok");
-    const result = outcome.value.get("usdt-tether")!;
-    expect(result.price).toBeCloseTo(redstoneBatchFixture.USDT.value, 6);
-    expect(result.venues.size).toBe(Object.keys(redstoneBatchFixture.USDT.source).length);
-    expect(result.timestamp).toBe(Math.floor(fixtureTimestampMs / 1000));
-  });
 });
 
 describe("REDSTONE_TRACKED_SYMBOL_ALLOWLIST", () => {

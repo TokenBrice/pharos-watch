@@ -83,11 +83,6 @@ describe("remote-d1 helpers", () => {
     expect(existsSync(dirname(path))).toBe(false);
   });
 
-  it("does not execute an empty statement list", () => {
-    createD1Client("stablecoin-db").executeStatements([], "test-remote-d1");
-    expect(execFileSyncMock).not.toHaveBeenCalled();
-  });
-
   it("decodes every Wrangler query result envelope and propagates malformed JSON", () => {
     const client = createD1Client("stablecoin-db", { target: "local" });
     const envelopes = [

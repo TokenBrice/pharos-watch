@@ -1,4 +1,3 @@
-import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityMap, PegCurrency } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
@@ -17,10 +16,6 @@ export interface LiquidityViewModel {
   scoredRows: LiquidityRow[];
   unratedRows: LiquidityRow[];
   summaryStats: LiquidityStatsData | null;
-}
-
-export function normalizePegFilter(value: string): PegCurrency | "all" {
-  return value === "all" || value in PEG_LABELS_SHORT ? (value as PegCurrency | "all") : "all";
 }
 
 const WARNING_DETAIL_SUFFIX = /\s*\([^()]*\)\s*$/;

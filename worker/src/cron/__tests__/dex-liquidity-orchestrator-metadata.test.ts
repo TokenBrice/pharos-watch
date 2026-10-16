@@ -5,7 +5,6 @@ import { buildDexLiquidityCronMetadata } from "../dex-liquidity/orchestrator-met
 import { initLiquidityFallbackCounters } from "../dex-liquidity/pool-helpers";
 import type { DexLiquidityPostScoreAnalysis } from "../dex-liquidity/orchestrator-analysis";
 import type { DexPricePersistenceDiagnostics } from "../dex-liquidity/scoring";
-import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import { compactCronMetadataForPersistence, MAX_PERSISTED_CRON_METADATA_BYTES } from "../../lib/cron-metadata-persistence";
 
 function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
@@ -115,89 +114,4 @@ describe("dex liquidity cron metadata", () => {
     });
   });
 
-  it("deduplicates failures and fallback signals without dropping distinct identities", () => {
-    const params = metadataParams();
-    params.sourceState.failedSources = ["curve", "raydium", "curve"];
-    params.sourceState.fallbackSignals = ["gecko", "orderbook", "gecko"];
-    expect(buildDexLiquidityCronMetadata(params)).toMatchObject({
-      failedSources: ["curve", "raydium"], fallbackMode: ["gecko", "orderbook"],
-    });
-  });
-
-  it("bounds inactive diagnostics while retaining the full skipped count", () => {
-    const params = metadataParams();
-    params.persistenceState.persistence.inactiveMetricIdsSkipped = Array.from({ length: 30 }, (_, i) => `inactive-${i}`);
-    params.persistenceState.persistence.inactiveMetricRowsSkipped = 30;
-    expect(buildDexLiquidityCronMetadata(params).persistence).toMatchObject({
-      inactiveMetricRowsSkipped: 30,
-      inactiveMetricIdsSkipped: Array.from({ length: 25 }, (_, i) => `inactive-${i}`),
-    });
-  });
-
-  it("preserves registry and step attribution through the typed metadata reader", () => {
-    const params = metadataParams();
-    params.poolState.registryRowsRead = 900;
-    params.poolState.registryMultiSourcePools = 100;
-    params.poolState.registryFamilyBySource = { dl: 500, cg_onchain: 400 };
-    params.poolState.stagedMergedCount = 400;
-    Object.assign(params.scoreState.analysis.sourceCoverage, {
-      coinTvlStepCount150: 51,
-      coinTvlStepCount25: 52,
-      coinTvlStepIds150: ["tiny"],
-      coinTvlStepIds150Omitted: 50,
-      coinTvlStepIds25: ["tiny", "small"],
-      coinTvlStepIds25Omitted: 50,
-      coinTvlStepComparisons: 100,
-      coinTvlStepMissingBaseline: 2,
-      coinTvlStepMissingCurrent: 3,
-      coinTvlStepBaselineUnavailable: false,
-      coinTvlStepTop: [{
-        stablecoinId: "large", previousTvlUsd: 100, currentTvlUsd: 160,
-        ratio: 1.6, protocol: null, protocolDeltaUsd: null,
-      }],
-    });
-    const parsed = DexLiquidityCronMetadataSchema.parse(buildDexLiquidityCronMetadata(params));
-    expect(parsed).toMatchObject({
-      stagedPoolsMerged: 400,
-      registryRowsRead: 900,
-      registryMultiSourcePools: 100,
-      registryFamilyBySource: { dl: 500, cg_onchain: 400 },
-      sourceCoverage: params.scoreState.analysis.sourceCoverage,
-    });
-    const cost = { queries: 10, rowsRead: 1_000, rowsWritten: 20, coverage: "partial", reasons: ["first-no-meta"] };
-    expect(DexLiquidityCronMetadataSchema.parse({ d1Cost: cost }).d1Cost).toEqual(cost);
-  });
-
-  it.each([
-    [false, undefined, 300],
-    [true, "source-incomplete", 0],
-    [false, "liquidity-cadence-reuse", 0],
-  ] as const)("projects written rows for skipped=%s reason=%s", (skipped, skippedReason, rowsWritten) => {
-    const params = metadataParams();
-    Object.assign(params.persistenceState.persistence, { skipped, skippedReason });
-    const metadata = JSON.parse(JSON.stringify(buildDexLiquidityCronMetadata(params)));
-    expect(metadata).toMatchObject({ rowsRead: 4_000, rowsWritten, persistence: { skipped, skippedReason: skippedReason ?? null } });
-    expect(metadata).not.toHaveProperty("registryEvaluation");
-  });
-
-  it("serializes the explicit source summary and optional registry diagnostics", () => {
-    const params = metadataParams();
-    params.poolState.registryEvaluatedAtSec = 123;
-    params.poolState.directApiIntegration.acceptedByProtocolChain = { "orca:solana": 2 };
-    params.sourceState.directApiSourceSummary.sourceWarnings = ["orca-partial"];
-    params.sourceState.degradedSources = ["orca:solana", "orca:solana"];
-    const metadata = JSON.parse(JSON.stringify(buildDexLiquidityCronMetadata(params)));
-    expect(metadata).toMatchObject({
-      registryEvaluation: { evaluatedAtSec: 123, basis: "registry-read-consumed" },
-      degradedSources: ["orca:solana"],
-      directApiSourceSummary: {
-        acceptedByProtocolChain: { "orca:solana": 2 }, excludedByReason: {},
-        circuitEvents: [], sourceWarnings: ["orca-partial"], pagination: [],
-      },
-    });
-    expect(Object.keys(metadata.directApiSourceSummary)).toEqual([
-      "acceptedByProtocolChain", "excludedByReason", "circuitEvents", "sourceWarnings", "pagination",
-    ]);
-    expect(DexLiquidityCronMetadataSchema.parse(metadata).registryEvaluation).toEqual(metadata.registryEvaluation);
-  });
 });

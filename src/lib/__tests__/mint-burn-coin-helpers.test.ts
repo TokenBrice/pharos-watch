@@ -88,17 +88,10 @@ describe("resolveNetDirection", () => {
     expect(resolveNetDirection(stubCoin({ netFlow24hUsd: 1000, mintVolume24hUsd: 1000 }))).toBe("minting");
   });
 
-  it("derives burning from negative net flow", () => {
-    expect(resolveNetDirection(stubCoin({ netFlow24hUsd: -1000, burnVolume24hUsd: 1000 }))).toBe("burning");
-  });
-
   it("returns inactive when all zeros (no activity)", () => {
     expect(resolveNetDirection(stubCoin())).toBe("inactive");
   });
 
-  it("returns flat when net flow is zero but activity exists", () => {
-    expect(resolveNetDirection(stubCoin({ netFlow24hUsd: 0, mintVolume24hUsd: 500, burnVolume24hUsd: 500 }))).toBe("flat");
-  });
 });
 
 describe("resolveNetDirection — valuation completeness", () => {

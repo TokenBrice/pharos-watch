@@ -163,7 +163,7 @@ function halfTracksAtThree(index: number, count: number): 2 | 3 | 6 {
  * two tracks the count is tiles + twins below xl and tiles alone at xl, so a
  * tile can be lone only at xl. A tile lone at two tracks renders in strip form.
  */
-export function resolveBoardGridPlacement(tileCount: number, twinCount: number): BoardGridPlacement[] {
+function resolveBoardGridPlacement(tileCount: number, twinCount: number): BoardGridPlacement[] {
   const belowXlCount = tileCount + twinCount;
   const tiles = Array.from({ length: tileCount }, (_, index): BoardGridPlacement => {
     const loneAtXl = index === tileCount - 1 && tileCount % 2 === 1;

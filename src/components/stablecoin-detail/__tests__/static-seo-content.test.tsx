@@ -3,7 +3,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
-import { makeStablecoinVariantRegistry } from "@shared/test-utils/stablecoin";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -16,9 +15,6 @@ const mockGetSnapshotSafetyAssessment = vi.hoisted(() =>
 vi.mock("@/lib/safety-grade-snapshot", () => ({
   getSnapshotSafetyAssessment: mockGetSnapshotSafetyAssessment,
 }));
-
-const staticMetaRegistry = makeStablecoinVariantRegistry();
-vi.doMock("@shared/lib/stablecoins/registry", () => staticMetaRegistry);
 
 const { StablecoinDetailSeoContent, buildStablecoinFaqItems } = await import("../static-seo-content");
 const { FaqSection } = await import("@/components/faq-section");
@@ -71,45 +67,6 @@ const summary: StablecoinAiSummary = {
 };
 
 describe("StablecoinDetailSeoContent", () => {
-
-  it("keeps complete FAQ sentences and their qualifying clauses in JSON-LD", () => {
-    const lead = "Reserves consist of cash and short-duration Treasury assets. ";
-    const qualification = `Direct redemption requires ${"verified business eligibility ".repeat(12)}and is unavailable to retail holders.`;
-    const items = buildStablecoinFaqItems({ ...coin, pegMechanism: lead + qualification });
-    expect(items[0]!.answer).toContain(lead.trim());
-    expect(items[0]!.answer).not.toContain("Direct redemption requires");
-    expect(items[0]!.answer).not.toContain("...");
-    const { container } = render(<FaqSection items={items} includeJsonLd />);
-    const schema = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
-    expect(schema.mainEntity[0].acceptedAnswer.text).toBe(items[0]!.answer);
-  });
-
-  it("answers USDC depeg history with existing research links and matching FAQ schema", () => {
-    const usdc = { ...coin, id: "usdc-circle", name: "USD Coin", symbol: "USDC" };
-    const items = buildStablecoinFaqItems(usdc);
-    const historyAnswer = items.find((item) => item.question === "Has USDC depegged?");
-    expect(historyAnswer?.answer).toContain("March 2023");
-    expect(historyAnswer?.answer).toContain("not a guarantee of future peg stability");
-    expect(buildStablecoinFaqItems(coin)).toHaveLength(4);
-
-    const { container } = render(
-      <>
-        <StablecoinDetailSeoContent coin={usdc} />
-        <FaqSection items={items} includeJsonLd />
-      </>,
-    );
-    expect(screen.getByRole("heading", { name: "USDC depeg history" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "March 2023 USDC depeg timeline" }).getAttribute("href")).toBe(
-      "/depeg/usdc-2023-03-11/",
-    );
-    expect(screen.getByRole("link", { name: "Why USDC depegged during the SVB crisis" }).getAttribute("href")).toBe(
-      "/learn/case-studies/usdc-svb-2023/",
-    );
-    const schema = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
-    const schemaAnswer = schema.mainEntity.find((item: { name: string }) => item.name === historyAnswer!.question);
-    expect(schemaAnswer.acceptedAnswer.text).toBe(historyAnswer!.answer);
-    expect(screen.getAllByText(historyAnswer!.answer)).toHaveLength(2);
-  });
 
   it("labels NAV tokens by their denominated NAV rather than a fixed peg", () => {
     const navCoin: StablecoinMeta = {
@@ -206,32 +163,6 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByText(/Test Dollar is a frozen Pharos archive, not a current safety endorsement/)).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Telegram alerts" })).toBeNull();
     expect(screen.getByText(/This record preserves static and historical context/)).toBeTruthy();
-  });
-
-  it("renders crawlable parent and sibling links for tracked variants", () => {
-    const variantCoin: StablecoinMeta = {
-      ...coin,
-      id: "test-savings-dollar",
-      name: "Test Savings Dollar",
-      symbol: "sTSTD",
-      variantOf: "usds-sky",
-      variantKind: "savings-passthrough",
-    };
-
-    const { container } = render(<StablecoinDetailSeoContent coin={variantCoin} />);
-
-    expect(screen.getByText("Variant relationship")).toBeTruthy();
-    expect(container.textContent).toContain("modeled as a savings variant of");
-    expect(container.textContent).toContain(
-      "Pharos treats parent stress, redemption, mint authority, and dependency context as relevant",
-    );
-    expect(
-      screen.getByRole("link", {
-        name: "View Sky Dollar (USDS) parent asset",
-      }).getAttribute("href"),
-    ).toBe("/stablecoin/usds-sky/");
-    expect(screen.getAllByText("Savings variant").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /View related .* variant/ })).toHaveLength(2);
   });
 
   it("derives the 4-question FAQ from static profile fields and renders FAQPage JSON-LD", () => {

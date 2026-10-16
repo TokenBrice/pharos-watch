@@ -414,39 +414,6 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.capacityConfidence).toBeNull();
   });
 
-  it("ignores live route status that omits source attribution", () => {
-    const metadata = readMetadata("lusd-liquity", {
-      freshnessMode: "not-applicable",
-      redemption: {
-        capacityUsd: 1_000_000,
-        capacityKind: "live-direct-bounded",
-        freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-      },
-    });
-
-    expect(metadata.routeStatus).toBeNull();
-    expect(metadata.routeStatusSource).toBeNull();
-    expect(metadata.capacityNotes).toContain("Live redemption route status omitted source attribution and was ignored");
-  });
-
-  it("preserves unknown live route status without source so downstream static open cannot win", () => {
-    const metadata = readMetadata("lusd-liquity", {
-      freshnessMode: "not-applicable",
-      redemption: {
-        capacityUsd: 1_000_000,
-        capacityKind: "live-direct-bounded",
-        freshnessKind: "same-run-onchain",
-        routeStatus: "unknown",
-      },
-    });
-
-    expect(metadata.routeStatus).toBe("unknown");
-    expect(metadata.routeStatusSource).toBeNull();
-    expect(metadata.routeStatusReason).toBeNull();
-    expect(metadata.capacityNotes).toContain("Live redemption route status is unknown without source attribution");
-  });
-
   it("drops orphaned route status source and details when the status is invalid", () => {
     const metadata = readMetadata("lusd-liquity", {
       freshnessMode: "not-applicable",

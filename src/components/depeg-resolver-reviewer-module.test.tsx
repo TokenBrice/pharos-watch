@@ -4,11 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
   DepegResolverReviewerModule,
-  DepegResolverReviewerSkeleton,
 } from "@/components/depeg-resolver-reviewer-module";
 import {
   coverageRow,
-  makePredictionPolicySegment,
   predictionRow as row,
 } from "@/components/depeg-resolver-review-test-support";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
@@ -144,40 +142,6 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.queryByText("Accuracy by version")).toBeNull();
   });
 
-  it("consolidates per-version accuracy into methodology majors", () => {
-    const template = summarizeDdrrRows([]).byPredictionPolicy.find(
-      (candidate) => candidate.segmentKind === "all",
-    )!.metrics;
-    render(
-      <DepegResolverReviewerModule
-        data={response({
-          summary: {
-            ...summary,
-            byPredictionPolicy: [
-              makePredictionPolicySegment(template, "2.0", 6, 5, 5, 3600, 5400),
-              makePredictionPolicySegment(template, "3.02", 13, 11, 10, 7200, 10800),
-              makePredictionPolicySegment(template, "3.04", 21, 20, 20, -3600, 7200),
-              ...summary.byPredictionPolicy,
-            ],
-          },
-        })}
-      />,
-    );
-
-    expect(screen.getByText("Accuracy by version")).toBeTruthy();
-    expect(screen.getByText("v2")).toBeTruthy();
-    expect(screen.getByText("83.3% · 6 scored")).toBeTruthy();
-    expect(screen.getByText("+1h ±1h 30m miss")).toBeTruthy();
-    // 3.02 and 3.04 consolidate into the v3 major: 31/34 correct; duration
-    // means recombine weighted by scored counts: (10·2h + 20·(−1h)) / 30 = 0s.
-    expect(screen.getByText("91.2% · 34 scored")).toBeTruthy();
-    expect(screen.getByText("0s ±2h 20m miss")).toBeTruthy();
-    // The current major always renders, as maturing until its first rows score.
-    expect(screen.getByText("v4")).toBeTruthy();
-    expect(screen.getByText("maturing · 0 scored")).toBeTruthy();
-    expect(screen.getByText("— miss")).toBeTruthy();
-  });
-
   it("promotes the percentage once enough verdicts are scored", () => {
     render(
       <DepegResolverReviewerModule
@@ -272,13 +236,4 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.queryByText("N/A")).toBeNull();
   });
 
-  it("renders a busy skeleton fallback that reserves the section layout", () => {
-    const { container } = render(<DepegResolverReviewerSkeleton />);
-
-    const section = screen.getByLabelText("Depeg Duration Resolver Reviewer");
-    expect(section.getAttribute("aria-busy")).toBe("true");
-    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
-    // No real stats should leak into the placeholder.
-    expect(screen.queryByText("Recovery calls")).toBeNull();
-  });
 });

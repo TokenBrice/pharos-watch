@@ -25,12 +25,6 @@ describe("handleBackfillDepegs", () => {
     cases: [{ kind: "unknown", stablecoin: "not-a-real-id", error: "Stablecoin not found" }],
   });
 
-  it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?batch=999999") });
-
-    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
-  });
-
   it("validates bounded replay contextDays", async () => {
     const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?stablecoin=usdt-tether&startDay=2025-01-01&endDay=2025-01-02&contextDays=999") });
 

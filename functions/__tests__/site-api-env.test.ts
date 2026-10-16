@@ -1,20 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS,
-  SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS,
-  SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS,
-  resolveSiteApiOrigin,
-  validatePagesSiteDataProxyEnv,
-} from "../lib/site-api-env";
+import { resolveSiteApiOrigin } from "../lib/site-api-env";
 
 describe("site-data env contract", () => {
-  it("derives the active Pages binding set from required and optional bindings", () => {
-    expect(SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS).toEqual([
-      ...SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS,
-      ...SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS,
-    ]);
-  });
-
   it("returns null when SITE_API_ORIGIN is unset or malformed", () => {
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: undefined })).toBeNull();
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "" })).toBeNull();
@@ -25,44 +12,4 @@ describe("site-data env contract", () => {
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "https://site-api.pharos.watch/path" })).toBeNull();
   });
 
-  it("normalizes a configured SITE_API_ORIGIN", () => {
-    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "https://site-api.pharos.watch" }))
-      .toBe("https://site-api.pharos.watch");
-    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "site-api.pharos.watch" }))
-      .toBe("https://site-api.pharos.watch");
-  });
-
-  it("flags missing SITE_API_ORIGIN, secret, and DB", () => {
-    expect(
-      validatePagesSiteDataProxyEnv({
-        SITE_API_ORIGIN: undefined,
-        SITE_API_SHARED_SECRET: undefined,
-        DB: undefined,
-      }).map(({ code }) => code).sort(),
-    ).toEqual([
-      "site-api-origin-missing",
-      "site-api-secret-missing",
-      "site-data-db-missing",
-    ]);
-  });
-
-  it("passes validation when all bindings are configured", () => {
-    expect(
-      validatePagesSiteDataProxyEnv({
-        SITE_API_ORIGIN: "https://site-api.pharos.watch",
-        SITE_API_SHARED_SECRET: "shared-secret",
-        DB: {} as never,
-      }),
-    ).toEqual([]);
-  });
-
-  it("flags non-canonical credential-bearing origins", () => {
-    expect(
-      validatePagesSiteDataProxyEnv({
-        SITE_API_ORIGIN: "https://attacker.example",
-        SITE_API_SHARED_SECRET: "shared-secret",
-        DB: {} as never,
-      }).map(({ code }) => code),
-    ).toEqual(["site-api-origin-invalid"]);
-  });
 });

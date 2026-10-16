@@ -17,7 +17,7 @@ export interface ChangelogMonthGroup {
 }
 
 /** Splits newest-first entries into the open recent weeks and older weeks grouped by month. */
-export function groupChangelogEntries(entries: readonly ChangelogEntry[], openWeeks = CHANGELOG_OPEN_WEEKS) {
+function groupChangelogEntries(entries: readonly ChangelogEntry[], openWeeks = CHANGELOG_OPEN_WEEKS) {
   const recent = entries.slice(0, openWeeks);
   const months: ChangelogMonthGroup[] = [];
   for (const entry of entries.slice(openWeeks)) {

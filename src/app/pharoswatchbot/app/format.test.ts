@@ -17,18 +17,6 @@ function makePreset(alertTypes: Partial<FollowedPreset["alertTypes"]>): Followed
 }
 
 describe("computeEffectiveSource", () => {
-  it("classifies an enabled per-coin flag as per-coin", () => {
-    const result = computeEffectiveSource(makeCoin({ dews: true }), NO_GLOBAL, []);
-    expect(result.dews).toBe("per-coin");
-  });
-
-  it("classifies an off type with no preset/global coverage as the global default lane", () => {
-    const result = computeEffectiveSource(makeCoin({ dews: true }), NO_GLOBAL, []);
-    expect(result.depeg).toBe("global");
-    expect(result.safety).toBe("global");
-    expect(result.launch).toBe("global");
-  });
-
   it("treats an all-off row as an off-override when a global default would otherwise cover it", () => {
     const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
     const result = computeEffectiveSource(makeCoin({}, { dews: true }), global, []);

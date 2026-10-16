@@ -73,9 +73,9 @@ Primary inbound surfaces:
 
 ## Maintenance Checks
 
-- `src/app/learn/mechanisms/__tests__/content.test.ts`, the existing archetype route static-param test, and `src/app/__tests__/sitemap-frozen.test.ts` cover mechanism explainer content and routing completeness.
-- `src/lib/__tests__/term-markup.test.ts` parses every string `data/ai-summaries.json` entry through the runtime term-markup parser, rejects unknown definition slugs and leftover raw markers, and ignores non-string text.
-- `src/app/learn/case-studies/__tests__/content.test.ts` checks case-study content invariants and internal links.
+- `src/app/__tests__/static-content-route-contracts.test.tsx` checks exact registered static params, including mechanism routes; `src/app/__tests__/sitemap-frozen.test.ts` checks equality with the canonical public route inventory.
+- `src/lib/__tests__/term-markup.test.ts` checks valid glossary-marker parsing and stripping to visible labels, plus AI-summary corpus integrity: known glossary slugs and no raw opening/closing markers.
+- `src/app/learn/case-studies/__tests__/content.test.ts` checks tracked-coin references, chart reachability, timeline/event-window chronology, deviation consistency, widget coin relationships, and selected event lookups; internal-link and metadata validation belongs to `check:editorial-content`.
 - `npm run check:editorial-content` validates JSON metadata/body shapes, filenames, registration, tracked/cemetery identities and internal link targets. Optional `depegEventSlug` remains a reverse-lookup key, not proof that a detail route exists.
 - `npm run check:generated-artifacts -- --only=case-study-client-index` verifies the generated client-safe case-study registry.
 - `npm run check:generated-artifacts -- --only=og-learn`, `npm run check:generated-artifacts -- --only=og-case-studies`, and `npm run check:generated-artifacts -- --only=og-editorial` verify the mechanism-explainer, case-study, and editorial OG artifacts; the full `npm run check:generated-artifacts` run covers all registered artifacts.

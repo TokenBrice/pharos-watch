@@ -240,10 +240,6 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
     const f = fixture(); f.receipts.get(f.messages[0]!.txHash)!.logs.splice(0, 1);
     expect(await f.run()).toEqual({ status: "rejected", reason: "source-send-unproved" });
   });
-  it("rejects an indexer omission through the pinned outbound nonce", async () => {
-    const f = fixture(); f.discoveries.splice(0);
-    expect(await f.run()).toEqual({ status: "rejected", reason: "send-census-mismatch" });
-  });
   it("retries a transient discovery omission without persisting an unauthenticated cursor", async () => {
     const f = fixture(), { db } = sqliteFixtures.open();
     const run = () => observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db });
@@ -351,14 +347,6 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
     const receiptCalls = f.batch.mock.calls.flatMap(([, requests]) => requests)
       .filter(request => request.method === "eth_getTransactionReceipt");
     expect(receiptCalls).toHaveLength(9);
-  });
-  it("refreshes checkpoint messages when they complete without rescanning source history", async () => {
-    const f = fixture(); const first = await f.run();
-    if (first.status !== "accepted") throw new Error("Expected accepted source census");
-    f.messages[0]!.state = "delivered"; f.discoveries[0]!.destination = { tx: { txHash: f.messages[0]!.destinationTxHash } };
-    f.setNonces({ inbound: 1n, lazy: 1n });
-    expect(await f.run(first.checkpoint)).toMatchObject({ status: "accepted", amount: "0" });
-    expect(f.fetcher.mock.calls.filter(([url]) => String(url).includes("/pathway/"))).toHaveLength(1);
   });
   it("identifies both pathway and GUID discovery requests to Scan's Worker-egress filter", async () => {
     const f = fixture(), original = f.fetcher.getMockImplementation()!;

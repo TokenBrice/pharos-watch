@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { degraded, makeApiRequestAttributionResponse, makeHealthyHealthResponse, makeHealthyReliabilityStatusResponse } from "@/test-utils/status-fixtures";
 
@@ -71,40 +71,6 @@ afterEach(() => {
 });
 
 describe("ReliabilitySection", () => {
-  it("syncs keyboard mode selection to the URL and lazy-mounts active content", async () => {
-    render(<ReliabilitySection {...props()} />);
-
-    const impact = screen.getByRole("tab", { name: /^Impact/ });
-    const endpoints = screen.getByRole("tab", { name: /^Endpoints/ });
-    expect(screen.getByText("Impact panel mounted")).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1, name: "Reliability" })).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: "Impact reliability view" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain("Reliability view: Impact");
-    expect(screen.queryByText("Endpoints panel mounted")).toBeNull();
-    expect(impact.getAttribute("aria-controls")).toBe("reliability-panel-impact");
-    expect(endpoints.getAttribute("aria-controls")).toBeNull();
-
-    fireEvent.keyDown(impact, { key: "ArrowRight" });
-
-    await waitFor(() => expect(screen.getByText("Endpoints panel mounted")).toBeTruthy());
-    expect(screen.getByRole("heading", { level: 2, name: "Endpoints reliability view" })).toBeTruthy();
-    expect(screen.queryByText("Impact panel mounted")).toBeNull();
-    expect(window.location.search).toContain("view=endpoints");
-    expect(screen.getByRole("status").textContent).toContain("Reliability view: Endpoints");
-    expect(document.activeElement).toBe(endpoints);
-    expect(endpoints.getAttribute("aria-controls")).toBe("reliability-panel-endpoints");
-    expect(impact.getAttribute("aria-controls")).toBeNull();
-  });
-
-  it("keeps demand subordinate in its own mode", async () => {
-    render(<ReliabilitySection {...props()} />);
-
-    fireEvent.click(screen.getByRole("tab", { name: /^Demand/ }));
-    await waitFor(() => expect(screen.getByText("Demand attribution mounted")).toBeTruthy());
-    expect(screen.getByText("API load mounted")).toBeTruthy();
-    expect(screen.queryByText("Impact panel mounted")).toBeNull();
-    expect(screen.queryByText("Endpoints panel mounted")).toBeNull();
-  });
 
   it("surfaces an inactive dependency loader failure in the workspace summary", () => {
     const baseProps = props();

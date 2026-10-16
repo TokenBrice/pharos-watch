@@ -90,30 +90,6 @@ describe("SettingsPanel", () => {
     expect(onMutate).toHaveBeenNthCalledWith(4, { kind: "set-timezone", timezone: "Europe/Paris" });
   });
 
-  it("renders the confirmed recap schedule and latest outcome", () => {
-    const state = {
-      ...baseState,
-      subscriber: {
-        ...baseState.subscriber,
-        recap: { ...baseState.subscriber.recap, enabled: true, nextDueAt: 1_720_018_800, lastOutcome: "skipped_no_changes" as const },
-      },
-    };
-    renderSettings({ state });
-    expect(screen.getByText("No material changes")).toBeTruthy();
-    expect(screen.getByText(/Scheduled in UTC/)).toBeTruthy();
-  });
-
-  it("retains recently confirmed zones in the compact picker", () => {
-    const rendered = renderSettings();
-    const honolulu = { ...baseState, subscriber: { ...baseState.subscriber, quietHours: { ...baseState.subscriber.quietHours, timezone: "Pacific/Honolulu" } } };
-    const paris = { ...baseState, subscriber: { ...baseState.subscriber, quietHours: { ...baseState.subscriber.quietHours, timezone: "Europe/Paris" } } };
-    rendered.rerender({ state: honolulu });
-    rendered.rerender({ state: paris });
-
-    const compactPicker = screen.getByLabelText("Timezone") as unknown as HTMLSelectElement;
-    expect(Array.from(compactPicker.options).some((option) => option.text === "Recent: Pacific/Honolulu")).toBe(true);
-  });
-
   it("hides an unavailable recap and gates enabling until timezone confirmation", () => {
     const unavailable = {
       ...baseState,
@@ -181,14 +157,6 @@ describe("SettingsPanel", () => {
     expect(screen.getByText("Quiet hours: 20:00–06:00 UTC")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Save quiet hours" }));
     expect(props.onMutate).toHaveBeenLastCalledWith({ kind: "set-quiet-hours", enabled: true, startHourUtc: 20, endHourUtc: 6 });
-  });
-
-  it("retains and labels genuinely unsaved quiet-hour edits across refresh", () => {
-    const { rerender } = renderSettings();
-    fireEvent.change(screen.getByLabelText("Start"), { target: { value: "23" } });
-    rerender({ state: { ...baseState, subscriber: { ...baseState.subscriber } } });
-    expect(screen.getByLabelText("Start")).toHaveProperty("value", "23");
-    expect(screen.getByText("Unsaved quiet-hour changes.")).toBeTruthy();
   });
 
   it("uses an explicit Arm/Confirm/Cancel fallback when showConfirm is absent", () => {

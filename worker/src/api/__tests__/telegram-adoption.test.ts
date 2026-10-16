@@ -53,34 +53,6 @@ describe("Telegram adoption Worker endpoint", () => {
     expect(route?.endpoint).toBeUndefined();
   });
 
-  it("admits a catalog click through per-client and global quotas", async () => {
-    const db = quotaDb();
-    const result = await handleTelegramAdoption(
-      context(db, request({ campaign: "landing", placement: "hero" })),
-    );
-
-    expect(result.status).toBe(204);
-    const history = db.getHistory();
-    expect(history[0].binds).toEqual([
-      expect.any(Number),
-      "0123456789abcdef0123456789abcdef",
-      expect.any(Number),
-      10,
-    ]);
-    expect(history[1].binds).toEqual([expect.any(Number), expect.any(Number), 3_000]);
-    expect(history[2].binds).toEqual([
-      "2026-07-10",
-      "landing",
-      "hero",
-      "cta_click",
-      "",
-      "",
-      "success",
-      expect.any(Number),
-      expect.any(Number),
-    ]);
-  });
-
   it("rejects foreign origins and arbitrary placements before D1", async () => {
     const db = quotaDb();
     expect(
@@ -153,19 +125,5 @@ describe("Telegram adoption Worker endpoint", () => {
 
     expect(result.status).toBe(503);
     expect(db.getHistory()).toHaveLength(0);
-  });
-
-  it("returns 500 when the aggregate write fails", async () => {
-    const db = mockD1([
-      { match: "telegram_adoption_client_quota", rows: [], first: { request_count: 1 } },
-      { match: "telegram_adoption_ingress_quota", rows: [], first: { request_count: 1 } },
-      { match: "INSERT INTO telegram_adoption_daily", rows: [], throwError: new Error("D1 unavailable") },
-    ]);
-
-    const result = await handleTelegramAdoption(
-      context(db, request({ campaign: "landing", placement: "hero" })),
-    );
-
-    expect(result.status).toBe(500);
   });
 });

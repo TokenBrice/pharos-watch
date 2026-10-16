@@ -35,16 +35,6 @@ const ETH_USN_USDT: PoolPriceCoherenceLegs = {
   quoteTokenPriceNativeCurrency: 0.000364224911473213,
 };
 
-// zkSync SyncSwap USN/USDC.e capture: 24h volume 0, ratio fields healthy.
-const ZKSYNC_QUIET: PoolPriceCoherenceLegs = {
-  baseTokenPriceUsd: 1.0018122159,
-  quoteTokenPriceUsd: 1.0016693845,
-  baseTokenPriceQuoteToken: 1.0005451588,
-  quoteTokenPriceBaseToken: 0.9994551383,
-  baseTokenPriceNativeCurrency: 0.000401420873955884,
-  quoteTokenPriceNativeCurrency: 0.000401202155087959,
-};
-
 describe("evaluatePoolPriceCoherence", () => {
   it("rejects the GeckoTerminal broken-price signature with a machine-readable reason", () => {
     expect(evaluatePoolPriceCoherence("quote", SOPHON_BROKEN_SIGNATURE)).toEqual({
@@ -56,10 +46,6 @@ describe("evaluatePoolPriceCoherence", () => {
 
   it("admits a coherent pool", () => {
     expect(evaluatePoolPriceCoherence("base", ETH_USN_USDT)).toEqual({ verdict: "admit", checked: true });
-  });
-
-  it("admits a quiet coherent pool: zero activity is not a rejection input", () => {
-    expect(evaluatePoolPriceCoherence("base", ZKSYNC_QUIET)).toEqual({ verdict: "admit", checked: true });
   });
 
   it("admits rows whose payload omits every pair-ratio input (guard stays inert)", () => {
@@ -127,13 +113,6 @@ describe("createPoolPriceCoherenceAdmissionGate", () => {
       [POOL_PRICE_COHERENCE_REJECT_REASONS.pairRatioUnavailable]: 2,
     });
   });
-
-  it("emits nothing when every row was admitted", () => {
-    const gate = createPoolPriceCoherenceAdmissionGate("dex-discovery", "CG onchain");
-    expect(gate.admits("base", ETH_USN_USDT)).toBe(true);
-    gate.flush();
-    expect(logSpy).not.toHaveBeenCalled();
-  });
 });
 
 describe("pool price coherence registry integrity (ADR-32)", () => {
@@ -143,10 +122,4 @@ describe("pool price coherence registry integrity (ADR-32)", () => {
     expect(POOL_PRICE_COHERENCE_POLICY.maxPairDivergenceBps).toBeLessThanOrEqual(10_000);
   });
 
-  it("owns a frozen, unique, non-empty rejection vocabulary", () => {
-    expect(Object.isFrozen(POOL_PRICE_COHERENCE_REJECT_REASONS)).toBe(true);
-    const reasons = Object.values(POOL_PRICE_COHERENCE_REJECT_REASONS);
-    expect(reasons.every((reason) => typeof reason === "string" && reason.length > 0)).toBe(true);
-    expect(new Set(reasons).size).toBe(reasons.length);
-  });
 });

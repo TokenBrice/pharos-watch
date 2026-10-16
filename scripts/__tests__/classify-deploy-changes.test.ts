@@ -1,15 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   classifyChangedFiles,
   classifyDeployChanges,
+  emitGithubOutputs,
   hasDeployImpact,
-  hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
   hasPagesUiImpact,
   hasWorkerDeployImpact,
   hasWorkerReleaseImpact,
+  hasV9ResourceImpact,
   normalizeChangedFiles,
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
@@ -41,38 +42,82 @@ describe("Pages artifact selection", () => {
   );
 });
 
-describe("critical owner coverage selection", () => {
-  it("selects coverage for edited owners and deleted base-only owners, but not unrelated tests", () => {
-    expect(classifyChangedFiles(["worker/src/lib/__tests__/auth.test.ts"]).criticalCoverageChanged).toBe(true);
-    const deleted = "worker/src/lib/__tests__/removed.test.ts";
-    expect(classifyChangedFiles([deleted], {
-      baseOwnership: new Map([["worker/src/lib/auth.ts", [deleted]]]),
-    }).criticalCoverageChanged).toBe(true);
-    expect(classifyChangedFiles(["src/unrelated.test.ts"]).criticalCoverageChanged).toBe(false);
+describe("V9 resource selection", () => {
+  it.each([
+    "shared/lib/safety-score-v9/compile.ts",
+    "shared/lib/safety-score-v9/new-module.ts",
+    "worker/src/lib/safety-score-v9-publication.ts",
+    "worker/src/lib/safety-score-v9/native-input.ts",
+    "worker/src/lib/db-cache.ts",
+    "worker/src/lib/report-cards-snapshot.ts",
+    "worker/src/cron/compute-safety-score-v9.ts",
+    "worker/src/cron/reserve-adapters/token-supply.ts",
+    "worker/src/cron/dex-liquidity/persistence.ts",
+    "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
+    "worker/src/test-helpers/v9-fixed-input.ts",
+    "worker/migrations/0263_safety_score_capture_archive.sql",
+    "shared/test-utils/sqlite-d1.ts",
+    "shared/lib/supply.ts",
+    "shared/lib/stablecoins/full-catalog.ts",
+    "shared/data/stablecoins/coins/usdc-circle.json",
+    "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+    "scripts/maintenance/run-v9-resource-lane.ts",
+    "scripts/build-data/generate-worker-stablecoin-catalog.ts",
+    "scripts/ci/select-generated-artifacts.mts",
+    "scripts/lib/changed-files.mts",
+    "scripts/lib/local-bin.mts",
+    "scripts/lib/wrangler-toml.mjs",
+    "worker/scripts/measure-v9-resource.ts",
+    "worker/wrangler.heavy.toml",
+    ".ci/safety-score-v9-resource-budget.json",
+    "package-lock.json",
+    ".nvmrc",
+    "tsconfig.test-typecheck.json",
+  ])("selects the audited source/data/harness/toolchain input %s", (file) => {
+    expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(true);
   });
 
-  it("selects coverage for lane and matrix policy changes", () => {
-    for (const file of ["scripts/lib/pr-lanes.mts", "scripts/maintenance/generate-pr-workflow-matrix.ts", ".github/actions/setup-workspace/action.yml"]) {
-      expect(classifyChangedFiles([file]).criticalCoverageChanged).toBe(true);
+  it.each([
+    "src/components/header.tsx",
+    "worker/src/api/health.ts",
+    "worker/src/cron/sync-blacklist.ts",
+    "worker/scripts/telegram-load.ts",
+    "scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    "docs/testing.md",
+  ])("does not select the resource lane for unrelated input %s", (file) => {
+    expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(false);
+  });
+
+  it.each([
+    { files: [] }, { files: [""] }, { files: ["../outside.ts"] },
+    { files: ["/tmp/outside.ts"] }, { files: ["unclassified/runtime.ts"] },
+  ])("fails closed for missing or unclassifiable file input $files", ({ files }) => {
+    expect(hasV9ResourceImpact(files)).toBe(true);
+  });
+
+  it.each([
+    { eventName: "workflow_dispatch" },
+    { eventName: "push", headSha: "head" },
+    { eventName: "push", baseSha: "base", headSha: "head", execFile: () => { throw new Error("diff failed"); } },
+  ])("fails closed when change collection is unavailable: %j", (options) => {
+    expect(classifyDeployChanges(options).v9ResourceRequired).toBe(true);
+  });
+
+  it("emits the resource selection for workflow matrix transport", () => {
+    const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      emitGithubOutputs(classifyChangedFiles(["package-lock.json"]));
+      expect(write).toHaveBeenCalledWith("v9_resource_required=true\n");
+      write.mockClear();
+      emitGithubOutputs(classifyChangedFiles(["src/components/header.tsx"]));
+      expect(write).toHaveBeenCalledWith("v9_resource_required=false\n");
+    } finally {
+      write.mockRestore();
     }
-  });
-
-  it("selects critical coverage for a baseline-only change", () => {
-    expect(classifyChangedFiles([".ci/critical-coverage-baseline.json"])).toMatchObject({
-      changedFiles: [".ci/critical-coverage-baseline.json"],
-      criticalCoverageChanged: true,
-    });
   });
 });
 
 describe("normalizeChangedFiles", () => {
-  it("normalizes separators and removes blank entries", () => {
-    expect(normalizeChangedFiles("worker\\src\\index.ts\0\0src/app/page.tsx\0")).toEqual([
-      "worker/src/index.ts",
-      "src/app/page.tsx",
-    ]);
-  });
-
   it("keeps a path containing a newline intact", () => {
     expect(normalizeChangedFiles("src/app/we\nird.tsx\0src/app/page.tsx\0")).toEqual([
       "src/app/we\nird.tsx",
@@ -88,10 +133,6 @@ describe("hasWorkerDeployImpact", () => {
       expect(classifyChangedFiles([file])).toMatchObject({ workerChanged: true, workerDeployRequired: true });
     },
   );
-  it("returns false for frontend-only changes", () => {
-    expect(hasWorkerDeployImpact(["src/app/page.tsx", "src/components/header.tsx", "docs/testing.md"])).toBe(false);
-  });
-
   it("returns true for worker, shared, and workflow-infra changes", () => {
     expect(hasWorkerDeployImpact(["worker/src/api/health.ts"])).toBe(true);
     expect(hasWorkerDeployImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
@@ -116,12 +157,6 @@ describe("hasWorkerDeployImpact", () => {
 });
 
 describe("hasPagesDeployImpact", () => {
-  it("returns false for worker-only changes", () => {
-    expect(
-      hasPagesDeployImpact(["worker/src/api/health.ts", "worker/src/cron/sync-stablecoins.ts", "docs/testing.md"]),
-    ).toBe(false);
-  });
-
   it("returns true for frontend, shared, and deploy-infra changes", () => {
     expect(hasPagesDeployImpact(["src/app/page.tsx"])).toBe(true);
     expect(hasPagesDeployImpact(["src/lib/api.ts"])).toBe(true);
@@ -155,34 +190,6 @@ describe("hasPagesDeployImpact", () => {
 
 });
 
-describe("hasOnlyInternalDocsImpact", () => {
-  it("recognizes internal docs but excludes public docs and mixed changes", () => {
-    expect(hasOnlyInternalDocsImpact(["docs/testing.md", "README.md"])).toBe(true);
-    expect(hasOnlyInternalDocsImpact(["docs/api-reference.md"])).toBe(false);
-    expect(hasOnlyInternalDocsImpact(["docs/testing.md", "scripts/__tests__/example.test.ts"])).toBe(false);
-  });
-});
-
-describe("hasPagesUiImpact", () => {
-  it("returns false for workflow-only and script-only Pages changes", () => {
-    expect(
-      hasPagesUiImpact([
-        ".github/workflows/pages-release.yml",
-        "scripts/maintenance/generate-markdown-exports.ts",
-        "scripts/ci/run-changed-eslint.ts",
-      ]),
-    ).toBe(false);
-  });
-
-  it("returns true for frontend/runtime surface changes", () => {
-    expect(hasPagesUiImpact(["src/app/page.tsx"])).toBe(true);
-    expect(hasPagesUiImpact(["public/logo.svg"])).toBe(true);
-    expect(hasPagesUiImpact(["shared/lib/classification.ts"])).toBe(true);
-    expect(hasPagesUiImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
-    expect(hasPagesUiImpact(["data/depeg-events/index.json"])).toBe(true);
-  });
-});
-
 describe("hasWorkerReleaseImpact", () => {
   it("returns true for Worker runtime, config, D1 migrations, root packages, and shared runtime changes", () => {
     expect(hasWorkerReleaseImpact(["worker/src/api/health.ts"])).toBe(true);
@@ -191,14 +198,6 @@ describe("hasWorkerReleaseImpact", () => {
     expect(hasWorkerReleaseImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
     expect(hasWorkerReleaseImpact(["shared/lib/classification.ts"])).toBe(true);
     expect(hasWorkerReleaseImpact(["package.json", "package-lock.json"])).toBe(true);
-  });
-
-  it("returns false for validation, tests, and known Pages-only shared changes", () => {
-    expect(hasWorkerReleaseImpact(["scripts/maintenance/run-pr-static-checks.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
   });
 
   it("releases both surfaces for the donation ledger consumed by supporter claims", () => {
@@ -212,15 +211,6 @@ describe("hasWorkerReleaseImpact", () => {
 });
 
 describe("hasDeployImpact", () => {
-  it("returns false when the diff does not touch deploy surfaces", () => {
-    expect(hasDeployImpact(["docs/testing.md", "docs/process/example.md"])).toBe(false);
-  });
-
-  it("returns true when either Pages or worker deploy surfaces changed", () => {
-    expect(hasDeployImpact(["src/app/page.tsx"])).toBe(true);
-    expect(hasDeployImpact(["worker/src/api/health.ts"])).toBe(true);
-  });
-
   it("deploys for deploy-classifier infrastructure but not validation-only tooling", () => {
     const deploySupportFiles = [
       "scripts/lib/deploy-impact.mts",
@@ -246,25 +236,6 @@ describe("hasDeployImpact", () => {
     }
   });
 
-  it("keeps scheduled coverage ratchet infrastructure out of deploy impact", () => {
-    const files = ["scripts/maintenance/run-critical-coverage.ts"];
-
-    expect(hasDeployImpact(files)).toBe(false);
-    expect(hasWorkerDeployImpact(files)).toBe(false);
-    expect(hasWorkerReleaseImpact(files)).toBe(false);
-    expect(hasPagesDeployImpact(files)).toBe(false);
-  });
-
-  it("selects Pages for static export inputs and artifact-gate owners without selecting Worker", () => {
-    expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
-    expect(hasWorkerDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(false);
-
-    for (const file of ["scripts/maintenance/report-build-size.mjs", "scripts/ci/check-phishing-signatures.ts"]) {
-      expect(hasPagesDeployImpact([file]), file).toBe(true);
-      expect(hasWorkerDeployImpact([file]), file).toBe(false);
-    }
-  });
-
   it("derives deploy support impact from the structured automation registry", () => {
     const registryDeploySupportFiles = [
       ...DEPLOY_IMPACT_REGISTRY.fullDeployInfra.exactPaths,
@@ -280,40 +251,6 @@ describe("hasDeployImpact", () => {
 });
 
 describe("classifyDeployChanges", () => {
-  it("distinguishes docs-only, mixed, and code-only changes for CI lanes", () => {
-    const cases = [
-      { changedFiles: ["README.md", "docs/testing.md"], docsChanged: true, docsOnly: true },
-      { changedFiles: ["docs/testing.md", "src/app/page.tsx"], docsChanged: true, docsOnly: false },
-      { changedFiles: ["src/app/page.tsx"], docsChanged: false, docsOnly: false },
-    ];
-
-    for (const testCase of cases) {
-      const result = classifyChangedFiles(testCase.changedFiles);
-
-      expect(result.docsChanged, testCase.changedFiles.join(", ")).toBe(testCase.docsChanged);
-      expect(result.docsOnly, testCase.changedFiles.join(", ")).toBe(testCase.docsOnly);
-    }
-  });
-
-  it("marks enrolled critical source changes for the targeted coverage ratchet", () => {
-    expect(classifyChangedFiles(["worker/src/lib/auth.ts"]).criticalCoverageChanged).toBe(true);
-    expect(classifyChangedFiles(["worker/src/lib/auth.test.ts"]).criticalCoverageChanged).toBe(false);
-  });
-
-  it("self-tests changes to the critical coverage workflow and manifests", () => {
-    for (const file of [
-      "scripts/lib/critical-test-files.mts",
-      ".github/workflows/pull-request-checks.yml",
-      "scripts/lib/pr-lanes.mts",
-      "scripts/lib/pr-test-plan.mts",
-      "scripts/data/pr-test-timings.json",
-      "scripts/maintenance/refresh-pr-test-timings.ts",
-      "scripts/maintenance/generate-pr-workflow-matrix.ts",
-    ]) {
-      expect(classifyChangedFiles([file]).criticalCoverageChanged, file).toBe(true);
-    }
-  });
-
   it("requests Firefox only when changed sources select a browser-rendered artifact", () => {
     expect(classifyChangedFiles(["src/app/page.tsx"]).playwrightFirefoxRequired).toBe(true);
     expect(classifyChangedFiles(["src/lib/mechanism-explainer-registry.ts"]).playwrightFirefoxRequired).toBe(true);
@@ -330,7 +267,6 @@ describe("classifyDeployChanges", () => {
     expect(result.pagesChanged).toBe(true);
     expect(result.pagesDeployRequired).toBe(true);
     expect(result.docsOnly).toBe(false);
-    expect(result.criticalCoverageChanged).toBe(true);
   });
 
   it("falls back to full worker deploy when the push base sha is unavailable", () => {

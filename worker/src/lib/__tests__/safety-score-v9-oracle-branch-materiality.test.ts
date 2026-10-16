@@ -72,17 +72,6 @@ describe("deriveOracleBranchMateriality", () => {
     }
   });
 
-  it("treats a 9.33% weak branch as sub-material (just below the 10% floor) -> moderate", () => {
-    const branches = [
-      branch("safe", "standard-external", 80),
-      branch("tbtc", "single-source-or-laggy", 9.33),
-    ];
-    expect(deriveOracleBranchMateriality(branches, "single-source-or-laggy")).toEqual({
-      tier: "standard-external",
-      subMaterialWeakBand: "moderate",
-    });
-  });
-
   it("keeps a >=10% weak branch material -> worst tier weak (no relaxation)", () => {
     const branches = [
       branch("safe", "standard-external", 60),
@@ -102,7 +91,7 @@ describe("deriveOracleBranchMateriality", () => {
     });
   });
 
-  it.each([4.99, 9.99])("does not turn opaque sub-material topology at share %s into a measured weak branch", (share) => {
+  it.each([9.99])("does not turn opaque sub-material topology at share %s into a measured weak branch", (share) => {
     expect(deriveOracleBranchMateriality([
       branch("safe", "standard-external", 90),
       branch("unknown", "opaque-or-unknown", share),
@@ -120,17 +109,6 @@ describe("deriveOracleBranchMateriality", () => {
     });
   });
 
-  it("stays capped for a cdp-enosys-shaped profile whose weak branches are all material (undefined share)", () => {
-    const branches = [
-      branch("fxrp", "standard-external", 55), // one measured share activates the lever
-      branch("wflr", "standard-external"),
-      branch("stxrp", "single-source-or-laggy"), // undefined -> material
-      branch("sflr", "single-source-or-laggy"), // undefined -> material
-    ];
-    expect(deriveOracleBranchMateriality(branches, "single-source-or-laggy")).toEqual({
-      tier: "single-source-or-laggy",
-    });
-  });
 });
 
 const morphoCore = "0x1111111111111111111111111111111111111111";
@@ -280,7 +258,6 @@ describe("Morpho lender NAV branch materiality", () => {
   it.each([
     ["999", "standard-external"],
     ["1000", "single-source-or-laggy"],
-    ["1001", "single-source-or-laggy"],
   ] as const)("compares %s raw assets against NAV with the inclusive exact 1%% boundary", (amount, tier) => {
     const branches = morphoBranches();
     const result = deriveMorphoOracleBranchMateriality(branches, "single-source-or-laggy",

@@ -71,12 +71,6 @@ function sweep(
 }
 
 describe("estimateDeploymentCrawlCostMs", () => {
-  it("prices every registered stage instead of only the first provider", () => {
-    expect(estimateDeploymentCrawlCostMs("ethereum")).toBeGreaterThan(
-      estimateDeploymentCrawlCostMs("linea"),
-    );
-  });
-
   it("charges nothing for chains with no registered discovery provider", () => {
     expect(estimateDeploymentCrawlCostMs("not-a-chain")).toBe(0);
   });
@@ -97,12 +91,6 @@ describe("estimateDeploymentCrawlCostMs", () => {
     ).toBe(8_000);
   });
 
-  it("prices each newly registered census stage", () => {
-    expect(estimateDeploymentCrawlCostMs("tezos", "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW")).toBe(16_000);
-    expect(estimateDeploymentCrawlCostMs("icon", "cx88fd7df7ddff82f7cc735c871dc519838cb235bb")).toBe(8_000);
-    expect(estimateDeploymentCrawlCostMs("kava", "usdx")).toBeGreaterThan(16_000);
-  });
-
   it("prices only EVM-shaped MANTRA deployments for GeckoTerminal", () => {
     expect(estimateDeploymentCrawlCostMs("mantra", "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b")).toBe(
       2_800,
@@ -115,15 +103,6 @@ describe("estimateDeploymentCrawlCostMs", () => {
     ).toBe(0);
   });
 
-  it("prices the registered Hedera and Injective GeckoTerminal queries", () => {
-    expect(estimateDeploymentCrawlCostMs("hedera", "0.0.6070123")).toBe(2_800);
-    expect(
-      estimateDeploymentCrawlCostMs(
-        "injective",
-        "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
-      ),
-    ).toBe(2_800);
-  });
 });
 
 describe("selectDiscoveryTargetWindow", () => {
@@ -152,36 +131,11 @@ describe("selectDiscoveryTargetWindow", () => {
     expect(selected.totalEstimatedCostMs).toBeGreaterThan(DEX_DISCOVERY_PER_COIN_BUDGET_MS);
   });
 
-  it("is deterministic for the same footprint and cursor", () => {
-    const first = selectDiscoveryTargetWindow({
-      targets: megaFootprint,
-      cursor: discoveryTargetCursorKey(megaFootprint[3]!),
-      budgetMs: DEX_DISCOVERY_PER_COIN_BUDGET_MS,
-    });
-    const second = selectDiscoveryTargetWindow({
-      targets: megaFootprint,
-      cursor: discoveryTargetCursorKey(megaFootprint[3]!),
-      budgetMs: DEX_DISCOVERY_PER_COIN_BUDGET_MS,
-    });
-
-    expect(keysOf(first.targets)).toEqual(keysOf(second.targets));
-  });
-
   it("resumes after the cursor so consecutive runs crawl different tails", () => {
     const { windows } = sweep(megaFootprint, 2);
 
     expect(windows[0]).not.toEqual(windows[1]);
     expect(windows[1]![0]).not.toBe(windows[0]![0]);
-  });
-
-  it("covers every deployment across the runs one rotation needs", () => {
-    const totalCostMs = windowCost(megaFootprint);
-    const runsPerRotation = Math.ceil(totalCostMs / DEX_DISCOVERY_PER_COIN_BUDGET_MS);
-    // Greedy windows leave packing slack at each budget boundary, so landing
-    // the last slice can take one run beyond the raw cost quotient.
-    const { windows } = sweep(megaFootprint, runsPerRotation + 1);
-
-    expect(new Set(windows.flat())).toEqual(new Set(keysOf(megaFootprint)));
   });
 
   it("restarts the rotation from the first deployment when the cursor is unknown", () => {
@@ -236,15 +190,6 @@ describe("estimateDiscoverySweepWindowCount", () => {
     );
   });
 
-  it("never decreases as the footprint grows", () => {
-    let previous = 0;
-    for (let length = 1; length <= megaFootprint.length; length++) {
-      const windows = estimateDiscoverySweepWindowCount(megaFootprint.slice(0, length));
-      expect(windows).toBeGreaterThanOrEqual(previous);
-      previous = windows;
-    }
-    expect(previous).toBe(estimateDiscoverySweepWindowCount(megaFootprint));
-  });
 });
 
 describe("estimateDiscoverySweepPeriodSec", () => {

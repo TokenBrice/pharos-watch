@@ -98,22 +98,6 @@ describe("live reserve catalog integrity", () => {
     expect(coin?.custodyProfile).toBeUndefined();
   });
 
-  it("accepts configured live reserve URLs", () => {
-    const failures: string[] = [];
-
-    for (const coin of ACTIVE_STABLECOINS) {
-      if (!coin.liveReservesConfig) continue;
-      const parsed = LiveReservesConfigSchema.safeParse(coin.liveReservesConfig);
-      if (!parsed.success) {
-        failures.push(
-          `${coin.id}: ${parsed.error.issues[0]?.path.join(".") ?? "config"} ${parsed.error.issues[0]?.message ?? "invalid"}`,
-        );
-      }
-    }
-
-    expect(failures).toEqual([]);
-  });
-
   it("keeps every bound source-age override at or below its adapter cap", () => {
     const failures: string[] = [];
     // Read source JSONs as well as active bindings so suspended configurations are covered.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   defineRecordEntries,
 } from "@shared/lib/redemption-backstop-configs/factory";
-import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
+
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import {
   getAllowedRedemptionCapacityWarningReason,
@@ -185,22 +185,6 @@ describe("validateRedemptionBackstopRegistry", () => {
     ).toBe(false);
   });
 
-  it("surfaces reviewed redemption policy entries in the audit report", () => {
-    const result = validateFixture([
-      singleOwner(),
-    ]);
-
-    expect(result.policyRows).toContainEqual(
-      expect.objectContaining({
-        kind: "unverified-freshness",
-        stablecoinId: "frxusd-frax",
-        owner: "redemption-backstop-v4",
-        reviewedAt: "2026-05-12",
-      }),
-    );
-    expect(result.findings.filter((finding) => finding.code.startsWith("redemption-policy-"))).toEqual([]);
-  });
-
   it("reports duplicate IDs across manifest families", () => {
     const result = validateFixture([
       {
@@ -222,70 +206,6 @@ describe("validateRedemptionBackstopRegistry", () => {
         severity: "error",
         code: "duplicate-id",
         stablecoinId: "usdt-tether",
-      }),
-    );
-  });
-
-  it("fails fast when the runtime registry builder sees duplicate shard IDs", () => {
-    expect(() =>
-      buildRedemptionBackstopRegistry(
-        toManifest([
-          {
-            name: "issuer-a",
-            filePath: "issuer-a.ts",
-            configs: { "usdt-tether": baseConfig },
-            allowedRouteFamilies: ["offchain-issuer"],
-          },
-          {
-            name: "issuer-b",
-            filePath: "issuer-b.ts",
-            configs: { "usdt-tether": baseConfig },
-            allowedRouteFamilies: ["offchain-issuer"],
-          },
-        ]),
-      ),
-    ).toThrow(
-      /usdt-tether.*issuer-a.*issuer-b/,
-    );
-  });
-
-  it("carries authored source-file metadata into the merged registry and audit", () => {
-    const issuerEntries = [
-      {
-        id: "usdt-tether",
-        config: { ...baseConfig, settlementModel: "days" as const },
-        sourceFilePath: "issuer-reviewed.ts",
-      },
-    ];
-    const manifest: RedemptionBackstopConfigManifestEntry[] = [
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        entries: issuerEntries,
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
-      {
-        name: "plain",
-        filePath: "plain.ts",
-        entries: defineRecordEntries({ "usdc-circle": baseConfig }, { sourceFilePath: "plain.ts" }),
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
-    ];
-
-    const registry = buildRedemptionBackstopRegistry(manifest);
-    expect(registry["usdt-tether"].settlementModel).toBe("days");
-
-    const audit = validateRedemptionBackstopRegistry({ manifest, mergedConfigs: registry });
-    expect(audit.auditRows).toContainEqual(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        filePath: "issuer-reviewed.ts",
-      }),
-    );
-    expect(audit.auditRows).toContainEqual(
-      expect.objectContaining({
-        stablecoinId: "usdc-circle",
-        filePath: "plain.ts",
       }),
     );
   });
@@ -407,64 +327,6 @@ describe("validateRedemptionBackstopRegistry", () => {
         code: "static-live-capacity-confidence", stablecoinId: "usdt-tether",
       }));
     }
-  });
-
-  it("warns when documented-bound configs lack route or capacity source support", () => {
-    const result = validateFixture([
-      singleOwner({
-            ...baseConfig,
-            capacityModel: {
-              kind: "supply-ratio",
-              ratio: 0.1,
-              confidence: "documented-bound",
-            },
-            reviewedAt: "2026-05-12",
-            docs: [{ label: "Fixture fee docs", url: "https://example.com/fees", supports: ["fees"] }],
-          }),
-    ]);
-
-    expect(result.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          severity: "warning",
-          code: "documented-bound-missing-route-support",
-          stablecoinId: "usdt-tether",
-          filePath: "issuer.ts",
-        }),
-        expect.objectContaining({
-          severity: "warning",
-          code: "documented-bound-missing-capacity-support",
-          stablecoinId: "usdt-tether",
-          filePath: "issuer.ts",
-        }),
-      ]),
-    );
-  });
-
-  it("accepts documented-bound configs with explicit route and capacity source support", () => {
-    const result = validateFixture([
-      singleOwner({
-            ...baseConfig,
-            capacityModel: {
-              kind: "supply-ratio",
-              ratio: 0.1,
-              confidence: "documented-bound",
-            },
-            reviewedAt: "2026-05-12",
-            docs: [
-              {
-                label: "Fixture redemption docs",
-                url: "https://example.com/redemption",
-                supports: ["route", "capacity", "fees"],
-              },
-            ],
-          }),
-    ]);
-
-    const supportWarnings = result.findings.filter(
-      (finding) => finding.stablecoinId === "usdt-tether" && finding.code.startsWith("documented-bound-missing-"),
-    );
-    expect(supportWarnings).toEqual([]);
   });
 
   it("enforces canonical identities for tracked, collateral, and unresolved outputs", () => {

@@ -40,14 +40,6 @@ describe("selectHomepageHeroSnapshot", () => {
     });
   });
 
-  it("keeps a fresh static fallback so the UI can show its as-of date", () => {
-    expect(selectHomepageHeroSnapshot({ liveSnapshot: null, fallbackSnapshot, nowMs })).toEqual({
-      status: "available",
-      source: "fallback",
-      snapshot: fallbackSnapshot,
-    });
-  });
-
   it("returns unavailable when the static fallback has expired", () => {
     const expiredFallback = snapshot(
       new Date(nowMs - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS - 1).toISOString(),

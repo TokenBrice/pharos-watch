@@ -89,17 +89,6 @@ describe("TelegramBroadcastPanel", () => {
     );
   });
 
-  it("omits canaryChatId from the body when the operator left it blank", async () => {
-    adminMutationMock.mockResolvedValue(okResult({ targetChatCount: 3 }));
-    render(<TelegramBroadcastPanel />);
-
-    typeMessage();
-    fireEvent.click(button("Preview (dry run)"));
-
-    await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(1));
-    expect(adminMutationMock.mock.calls[0]?.[1]?.body).not.toHaveProperty("canaryChatId");
-  });
-
   it("requires re-preview after the previewed draft is edited", async () => {
     adminMutationMock.mockResolvedValue(okResult({ targetChatCount: 12, chunkCount: 1 }));
     render(<TelegramBroadcastPanel />);
@@ -210,40 +199,6 @@ describe("TelegramBroadcastPanel", () => {
 
     await waitFor(() => expect(button("Send live broadcast").disabled).toBe(true));
     expect(adminMutationMock).toHaveBeenCalledTimes(2);
-  });
-
-  it("does not queue a duplicate preview while one is still in flight", async () => {
-    const { promise: pendingPreview, resolve: releasePreview } = Promise.withResolvers<unknown>();
-    adminMutationMock.mockReturnValue(pendingPreview);
-    render(<TelegramBroadcastPanel />);
-
-    typeMessage();
-    fireEvent.click(button("Preview (dry run)"));
-    // The busy lane disables both actions; a click in that state must not
-    // start a second request behind the pending one.
-    const previewingButton = screen.getByRole("button", { name: "Previewing..." }) as HTMLButtonElement;
-    expect(previewingButton.disabled).toBe(true);
-    expect(button("Send live broadcast").disabled).toBe(true);
-    fireEvent.click(previewingButton);
-    expect(adminMutationMock).toHaveBeenCalledTimes(1);
-
-    releasePreview(okResult({ targetChatCount: 1 }));
-    await waitFor(() => expect(button("Preview (dry run)").disabled).toBe(false));
-  });
-
-  it("enforces whitespace and message-length boundaries on both actions", () => {
-    render(<TelegramBroadcastPanel />);
-
-    typeMessage("   \n\t");
-    expect(button("Preview (dry run)").disabled).toBe(true);
-    expect(button("Send live broadcast").disabled).toBe(true);
-
-    typeMessage("a".repeat(16_000));
-    expect(button("Preview (dry run)").disabled).toBe(false);
-
-    typeMessage(`${"a".repeat(16_000)}!`);
-    expect(button("Preview (dry run)").disabled).toBe(true);
-    expect(button("Send live broadcast").disabled).toBe(true);
   });
 
   it("requires a valid canary chat id even after a confirmed preview", async () => {

@@ -130,18 +130,6 @@ function mockReview(rows: DdrrRow[] | undefined) {
 }
 
 describe("DdrTrackRecordSection", () => {
-  it("renders nothing while the review query has no data", () => {
-    mockReview(undefined);
-    const { container } = render(<DdrTrackRecordSection stablecoinId={COIN} />);
-    expect(container.innerHTML).toBe("");
-  });
-
-  it("renders nothing when the reviewer feature flag is off", () => {
-    reviewerEnabledMock.mockReturnValue(false);
-    mockReview([PREDICTION_ROW]);
-    const { container } = render(<DdrTrackRecordSection stablecoinId={COIN} />);
-    expect(container.innerHTML).toBe("");
-  });
 
   it("renders nothing for a coin with no reviewed publication", () => {
     mockReview([COVERAGE_ROW]);

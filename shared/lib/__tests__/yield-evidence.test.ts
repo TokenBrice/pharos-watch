@@ -56,10 +56,4 @@ describe("assessYieldEvidence", () => {
     });
   });
 
-  it("keeps complete opportunity evidence rated without changing completeness", () => {
-    expect(assessYieldEvidence(completeEvidence({ opportunityEvidenceComplete: true }))).toEqual({
-      evidenceCompleteness: 1,
-      scoreQualification: "rated",
-    });
-  });
 });

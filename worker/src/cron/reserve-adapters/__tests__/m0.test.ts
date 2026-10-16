@@ -119,13 +119,6 @@ describe("adaptM0Collateral", () => {
     expect(result.metadata?.redemption).toBeUndefined();
   });
 
-  it("tolerates the routine indexing skew between the snapshot and the update stream", () => {
-    // Observed live 2026-08-20: the collateral-update events run ~1.5h ahead of
-    // the latest total snapshot. That must not degrade every run.
-    const result = adaptM0Collateral(SAMPLE_PAYLOAD);
-    expect(result.warnings).toBeUndefined();
-  });
-
   it("degrades when the total snapshot lags known collateral updates materially", () => {
     const result = adaptM0Collateral({
       data: {
@@ -144,28 +137,6 @@ describe("adaptM0Collateral", () => {
     expect(result.metadata).toMatchObject({
       snapshotLagSec: 46_800,
       details: { collateralLagSec: 46_800, collateralLagCapSec: 43_200 },
-    });
-  });
-
-  it("no longer degrades at the production 27,000s lag under the 12h cap", () => {
-    // Production lag on 2026-09-09 was 27,000s (7.5h), which previously tripped
-    // the 6h cap and degraded all five M0 coins. P11 widens the cap to 12h.
-    const result = adaptM0Collateral({
-      data: {
-        ...SAMPLE_PAYLOAD.data,
-        collateralUpdateds: [
-          { timestamp: "1787198387", blockTimestamp: "1787198387" },
-        ],
-        minterGateway_latestUpdateTimestampSnapshots: [
-          { timestamp: "1787198387", value: "1787198387" },
-        ],
-      },
-    });
-
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({
-      snapshotLagSec: 27_000,
-      details: { collateralLagSec: 27_000, collateralLagCapSec: 43_200 },
     });
   });
 

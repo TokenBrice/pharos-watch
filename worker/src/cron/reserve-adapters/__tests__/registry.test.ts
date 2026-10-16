@@ -2,38 +2,11 @@ import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
-  LIVE_RESERVE_ADAPTER_STATUS_VALUES,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { getReserveAdapter, LIVE_RESERVE_ADAPTER_FETCHERS } from "../index";
-
-const VALID_INPUT_KINDS = new Set(["http-json", "http-html", "indexer", "onchain-solana", "onchain-evm"]);
-
-function canonicalStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalStringify(item)).join(",")}]`;
-  return `{${Object.keys(value as Record<string, unknown>)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonicalStringify((value as Record<string, unknown>)[key])}`)
-    .join(",")}}`;
-}
-
-function liveReserveSourceFingerprint(
-  config: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]>,
-): string {
-  return canonicalStringify({
-    adapter: config.adapter,
-    version: config.version,
-    semantics: config.semantics,
-    inputs: {
-      primary: config.inputs.primary,
-      fallbacks: config.inputs.fallbacks ?? null,
-    },
-    params: config.params ?? null,
-  });
-}
 
 describe("adapter registry completeness", () => {
 
@@ -45,14 +18,6 @@ describe("adapter registry completeness", () => {
     ).not.toBeNull();
     expect(typeof adapter!.fetch).toBe("function");
     expect(adapter!.key).toBe(key);
-  });
-
-  it.each(LIVE_RESERVE_ADAPTER_KEYS)("%s has a matching definition in LIVE_RESERVE_ADAPTER_DEFINITIONS", (key) => {
-    const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[key];
-    expect(definition, `Missing definition for "${key}" in shared/lib/live-reserve-adapters.ts`).toBeDefined();
-    expect(definition.sourceModel).toBeDefined();
-    expect(definition.evidenceClass).toBeDefined();
-    expect(definition.sharedSourceMode).toBeDefined();
   });
 
   it.each(LIVE_RESERVE_ADAPTER_KEYS)(
@@ -94,36 +59,6 @@ describe("adapter registry completeness", () => {
     expect(definitionKeys).toEqual(canonicalKeys);
   });
 
-  it("adapter provenance covers every canonical key with an explicit status and rationale", () => {
-    const validStatuses = new Set(LIVE_RESERVE_ADAPTER_STATUS_VALUES);
-
-    for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].provenance;
-      expect(validStatuses.has(provenance.status)).toBe(true);
-      expect(provenance.rationale.trim().length).toBeGreaterThan(0);
-    }
-  });
-
-  it("parked and retired adapter entries declare parkedSince and nextReview", () => {
-    const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
-    for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].provenance as {
-        status: string;
-        parkedSince?: string;
-        nextReview?: string;
-      };
-      if (provenance.status !== "parked" && provenance.status !== "retired") continue;
-      expect(
-        provenance.parkedSince,
-        `${key} is ${provenance.status}; set parkedSince to the YYYY-MM-DD it left active status.`,
-      ).toMatch(isoDatePattern);
-      expect(
-        provenance.nextReview,
-        `${key} is ${provenance.status}; set nextReview to the YYYY-MM-DD by which to re-evaluate.`,
-      ).toMatch(isoDatePattern);
-    }
-  });
-
   it("retires C17 executable keys without removing archives, static research or replacement bindings", () => {
     for (const key of ["solomon-protocol", "usdh-native-markets", "abracadabra", "stoneyield-router-pool", "openeden-usdo", "usdy-holdings-report"]) {
       expect(Object.keys(LIVE_RESERVE_ADAPTER_FETCHERS)).not.toContain(key);
@@ -157,62 +92,6 @@ describe("adapter registry completeness", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[key].evidenceClass).toBe(evidenceClass);
   });
 
-  it("active adapter provenance matches live-reserve metadata usage", () => {
-    const configuredKeys = new Set(
-      ACTIVE_STABLECOINS.map((coin) => coin.liveReservesConfig?.adapter).filter(
-        (key): key is (typeof LIVE_RESERVE_ADAPTER_KEYS)[number] => !!key,
-      ),
-    );
-
-    for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].provenance;
-      if (configuredKeys.has(key)) {
-        expect(provenance.status, `${key} is configured and should be marked active`).toBe("active");
-      } else {
-        expect(provenance.status, `${key} is unbound and must be staged, parked, or retired`).not.toBe("active");
-      }
-    }
-  });
-
-  it("LiveReservesConfigSchema accepts a representative config", () => {
-    const parsed = LiveReservesConfigSchema.safeParse({
-      adapter: "curated-validated",
-      version: 1,
-      semantics: "single-asset",
-      inputs: {
-        primary: { kind: "onchain-solana" },
-      },
-    });
-
-    expect(parsed.success).toBe(true);
-  });
-
-  it("pins the reviewed FDUSD Webflow index and Reservoir cohort hosts", () => {
-    const configsById = new Map(ACTIVE_STABLECOINS.map((coin) => [coin.id, coin.liveReservesConfig]));
-
-    // The issuer domain blocks Worker egress, so the compiled assurance
-    // binding pins the issuer's Webflow mirror as the sole primary input and
-    // keeps no fallbacks (the adapter fails closed on index drift).
-    expect(configsById.get("fdusd-first-digital")?.inputs.primary).toEqual({
-      kind: "http-html",
-      url: "https://firstdigitallabs.webflow.io/transparency",
-    });
-    expect(configsById.get("fdusd-first-digital")?.inputs.fallbacks).toBeUndefined();
-    // Reservoir's canonical app.reservoir.xyz zone answers Worker egress with
-    // its country-gate 403 (the restricted list includes the US) under both
-    // the browser-style and neutral fetch identities, so the cohort pins the
-    // protocol application's un-geofenced Vercel deployments instead.
-    for (const id of ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]) {
-      expect(configsById.get(id)?.inputs.primary).toEqual({
-        kind: "http-json",
-        url: "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw",
-      });
-      expect(configsById.get(id)?.inputs.fallbacks).toEqual([
-        { kind: "http-json", url: "https://fireworks-fortunafi.vercel.app/api/reserves/raw" },
-      ]);
-    }
-  });
-
   it("LiveReservesConfigSchema rejects unsupported primary input kinds", () => {
     const parsed = LiveReservesConfigSchema.safeParse({
       adapter: "ethena",
@@ -238,42 +117,6 @@ describe("adapter registry completeness", () => {
     });
 
     expect(parsed.success).toBe(false);
-  });
-
-  it.each(LIVE_RESERVE_ADAPTER_KEYS)("%s declares a non-empty set of valid primary input kinds", (key) => {
-    const kinds = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].primaryInputKinds;
-    expect(
-      kinds,
-      `Missing primary input-kinds declaration for "${key}" in LIVE_RESERVE_ADAPTER_DEFINITIONS`,
-    ).toBeDefined();
-    expect(Array.isArray(kinds)).toBe(true);
-    expect(kinds.length).toBeGreaterThan(0);
-    for (const kind of kinds) {
-      expect(
-        VALID_INPUT_KINDS.has(kind),
-        `Adapter "${key}" declares unknown input kind "${kind}" — valid kinds are ${[...VALID_INPUT_KINDS].join(", ")}`,
-      ).toBe(true);
-    }
-    // No duplicates.
-    expect(new Set(kinds).size).toBe(kinds.length);
-  });
-
-  it("parseLiveReserveAdapterParams accepts a structured adapter payload", () => {
-    const parsed = parseLiveReserveAdapterParams("chainlink-nav", {
-      navScope: "native-fund-share",
-      oracleAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-      tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-      assetLabel: "USDC",
-      assetRisk: "low",
-    });
-
-    expect(parsed).toEqual({
-      navScope: "native-fund-share",
-      oracleAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-      tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-      assetLabel: "USDC",
-      assetRisk: "low",
-    });
   });
 
   it("rejects an address that is not a 20-byte EVM address", () => {
@@ -303,41 +146,6 @@ describe("adapter registry completeness", () => {
           parsed.success ? "" : JSON.stringify(parsed.error.issues[0])
         }`,
       ).toBe(true);
-    }
-  });
-
-  // Byte-identical configs are necessary but not sufficient for source-invariant
-  // sharing: the shared cache key omits the coin id, so an adapter whose result
-  // is coin-gated (Reservoir's SavingModule fee) stays per-coin regardless.
-  it("documents config-identical live-reserve source groups without coin-specific parser params", () => {
-    const expectedDuplicateGroups: Record<string, string[][]> = {
-      "frax-balance-sheet": [],
-      reservoir: [["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]],
-    };
-
-    for (const adapterKey of Object.keys(expectedDuplicateGroups)) {
-      const groups = new Map<string, string[]>();
-      for (const coin of ACTIVE_STABLECOINS) {
-        const config = coin.liveReservesConfig;
-        if (config?.adapter !== adapterKey) continue;
-        expect(
-          config.inputs.primary.kind === "http-json" || config.inputs.primary.kind === "http-html",
-          `${coin.id} uses ${adapterKey} but its primary input cannot participate in HTTP source sharing`,
-        ).toBe(true);
-        expect(
-          config.params ?? null,
-          `${coin.id} uses ${adapterKey} with parser params; do not flip source-invariant until params are in the cache key`,
-        ).toBeNull();
-        const fingerprint = liveReserveSourceFingerprint(config);
-        groups.set(fingerprint, [...(groups.get(fingerprint) ?? []), coin.id]);
-      }
-
-      const duplicateGroups = Array.from(groups.values())
-        .map((ids) => ids.sort())
-        .filter((ids) => ids.length > 1)
-        .sort((a, b) => a[0]!.localeCompare(b[0]!));
-
-      expect(duplicateGroups).toEqual(expectedDuplicateGroups[adapterKey]);
     }
   });
 

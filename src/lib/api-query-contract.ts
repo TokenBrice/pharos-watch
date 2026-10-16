@@ -26,10 +26,6 @@ export interface FrontendStaticApiQueryDescriptor<T> extends FrontendStaticApiQu
   schema?: SchemaLikeSource<T>;
 }
 
-export type FrontendAnyApiQueryDescriptor =
-  | FrontendApiQueryDescriptor<unknown>
-  | FrontendStaticApiQueryDescriptor<unknown>;
-
 export function defineApiQuery<
   TBase extends FrontendApiQueryBaseDescriptor,
   TData,

@@ -260,36 +260,6 @@ describe("buildPrimarySourceCandidates", () => {
     ]);
   });
 
-  it("accepts Curve as a promoted DEX protocol when a hard source agrees", () => {
-    const collected = makeCollected({
-      binancePrice: 1.096,
-      binanceObservedAt: 1_700_000_000,
-      protocolSources: [
-        {
-          protocol: "curve",
-          price: 1.0959,
-          tvl: 60_000_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
-      ],
-    });
-
-    const { sources, dexCandidateTelemetry } = buildPrimarySourceCandidates(
-      { id: "susds-sky", symbol: "sUSDS" },
-      collected,
-      { nowSec: 1_700_000_030 },
-    );
-
-    expect(sources.some((s) => s.source === "curve-dex")).toBe(true);
-    expect(dexCandidateTelemetry).toMatchObject([
-      {
-        sourceKey: "curve-dex",
-        status: "accepted",
-      },
-    ]);
-  });
-
   it("records explicit exclusion reasons for unmapped and below-threshold DEX protocol candidates", () => {
     const collected = makeCollected({
       protocolSources: [

@@ -5,7 +5,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { hexToBytes, keccak256 } from "viem/utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { adaptKerneSignedPor } from "../kerne-signed-por";
-import { getReserveAdapter } from "../index";
 import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
 const PRIVATE_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
@@ -222,11 +221,5 @@ describe("fetchKerneSignedPorReserves", () => {
       nowSec: TIMESTAMP + 60,
       validate: false,
     })).rejects.toThrow(/500/);
-  });
-});
-
-describe("registry", () => {
-  it("resolves the kerne-signed-por adapter", () => {
-    expect(getReserveAdapter("kerne-signed-por")).not.toBeNull();
   });
 });

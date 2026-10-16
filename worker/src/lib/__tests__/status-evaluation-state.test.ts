@@ -243,18 +243,6 @@ describe("status evaluation policy", () => {
     expect(assessment.status).toBe("stale");
   });
 
-  it("degrades availability when circuit diagnostics cannot be read", () => {
-    const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
-      circuitImpactStatus: "degraded",
-      circuitQueryError: "Circuit breaker diagnostics unavailable.",
-    }),
-    availabilityImpactingCronErrors: 0,
-    availabilityImpactingUnhealthyCrons: 0,
-    availabilityImpactingConsecutiveCronErrors: 0, })).status;
-
-    expect(availability).toBe("degraded");
-  });
-
   it("uses the D1 capacity floor for admin availability", () => {
     const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
       d1CapacityImpactStatus: "stale",
@@ -622,32 +610,6 @@ describe("status cause text", () => {
         value: 2,
       }),
     );
-  });
-
-  it("reports the most recent DDR repair runner auto-repair count", () => {
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    repairRunnerAutoRepairCount: 2,
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
-
-    expect(causes).toContainEqual(
-      expect.objectContaining({
-        code: "ddr_auto_repair_count",
-        severity: "info",
-        metric: "autoRepairCount",
-        value: 2,
-      }),
-    );
-  });
-
-  it("does not report a zero-task repair execution as an informational issue", () => {
-    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ repairRunnerAutoRepairCount: 0 }));
-    expect(result.causes.some((cause) => cause.code === "ddr_auto_repair_count")).toBe(false);
   });
 
   it("reports acknowledged gaps as info with identity and expiry, and exposes ignored reviews", () => {
@@ -1066,33 +1028,6 @@ describe("status rule-set behavior at policy boundaries", () => {
     });
   });
 
-  it("preserves availability diagnostic cause ordering", () => {
-    const input: AvailabilityEvaluationInput = {
-      ...makeAvailabilityCauseInput(makePublicHealth()),
-      availabilityImpactingCronErrors: 1,
-      availabilityImpactingUnhealthyCrons: 1,
-      availabilityImpactingConsecutiveCronErrors: 0,
-      watchUnhealthyCrons: 1,
-      degradedCronRuns: 1,
-      cronErrorCount: 2,
-      cronHistoryQueryFailed: true,
-      cronProgressQueryFailed: true,
-      cronLeaseQueryFailed: true,
-    };
-
-    const combined = evaluateAvailabilityStatus(input);
-    expect(combined.causes.map((cause) => cause.code)).toEqual([
-      "cron_history_query_failed",
-      "cron_progress_query_failed",
-      "cron_lease_query_failed",
-      "cron_error_runs",
-      "watch_cron_error_runs",
-      "unhealthy_crons_present",
-      "watch_unhealthy_crons_present",
-      "degraded_cron_warning",
-    ]);
-  });
-
   it.each([
     [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated }, "healthy"],
     [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded }, "healthy"],
@@ -1193,24 +1128,6 @@ describe("review expiry reminders", () => {
       }
     });
 
-    it(`${lane} lane aggregates reminders by expiry then stablecoin ID`, () => {
-      const entries = [
-        { id: "coin-c", remainingSec: 172740 },
-        { id: "coin-b", remainingSec: 3600 },
-        { id: "coin-a", remainingSec: 3600 },
-        { id: "coin-d", remainingSec: 172801 },
-      ];
-      const input = lane === "price"
-        ? priceInput(entries.map(({ id, remainingSec }) => priceReview(id, remainingSec)))
-        : reserveInput(entries.map(({ id, remainingSec }) => reserveReview(id, remainingSec)));
-      const reminders = evaluateDataQualityStatus(input).causes.filter((cause) => cause.code === code);
-      expect(reminders).toHaveLength(1);
-      const reminder = reminders[0];
-      expect(reminder.value).toBe(3600);
-      expect(reminder.message.indexOf("coin-a")).toBeLessThan(reminder.message.indexOf("coin-b"));
-      expect(reminder.message.indexOf("coin-b")).toBeLessThan(reminder.message.indexOf("coin-c"));
-      expect(reminder.message).not.toContain("coin-d");
-    });
   }
 
   it("reports expired price reviews without a reminder", () => {

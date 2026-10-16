@@ -111,9 +111,4 @@ describe("RegimeBarToggle", () => {
     expect(html).toContain("PSI <span");
   });
 
-  it("renders nothing on home, where the regime line is hidden", () => {
-    fresh();
-    usePathnameMock.mockReturnValueOnce("/");
-    expect(renderToStaticMarkup(createElement(RegimeBarToggle))).toBe("");
-  });
 });

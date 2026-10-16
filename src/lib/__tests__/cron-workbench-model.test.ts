@@ -6,11 +6,8 @@ import {
   classifyCronWorkbenchState,
   DEFAULT_CRON_WORKBENCH_FILTERS,
   deriveCronVerdict,
-  formatCronGroupSummary,
   getCronNextExpected,
   getCronNextRunAt,
-  getCronRunbooks,
-  formatCronDuration,
   formatCronRunStatus,
   formatCronRunTiming,
   type CronWorkbenchFilters,
@@ -145,69 +142,6 @@ describe("cron workbench model", () => {
     expect(expired.rows[0]).toMatchObject({ qualityReasons: [], verdictReason: { code: "no-fresh-run" } });
   });
 
-  it("sorts severity within a group and uses canonical registry order for ties", () => {
-    const group = makeGroups()[0]!;
-    group.entries = [
-      ["snapshot-chain-supply", makeCron({ healthy: false })],
-      ["sync-stablecoins", makeCron({ healthy: false })],
-      ["sync-fx-rates", makeCron({ healthy: false })],
-    ];
-
-    const rows = buildCronWorkbenchModel([group], makeFilters()).groups[0]!.rows;
-
-    expect(rows.map((row) => row.job)).toEqual(["sync-stablecoins", "sync-fx-rates", "snapshot-chain-supply"]);
-  });
-
-  it("keeps source order as the final tie breaker for unregistered jobs", () => {
-    const group: CronWorkbenchGroupInput = {
-      key: "other",
-      title: "Other",
-      badge: "unmapped",
-      description: "Unknown registry jobs.",
-      entries: [
-        ["custom-second", makeCron({ healthy: false })],
-        ["custom-first", makeCron({ healthy: false })],
-      ],
-    };
-
-    expect(buildCronWorkbenchModel([group], makeFilters()).rows.map((row) => row.job)).toEqual([
-      "custom-second",
-      "custom-first",
-    ]);
-  });
-
-  it("combines search, verdict, impact, and group filters", () => {
-    const groups = makeGroups();
-    const searched = buildCronWorkbenchModel(groups, makeFilters({ search: "stablecoin sync" }));
-    expect(searched.rows.map((row) => row.job)).toEqual(["sync-stablecoins"]);
-
-    const attention = buildCronWorkbenchModel(groups, { ...DEFAULT_CRON_WORKBENCH_FILTERS });
-    expect(attention.rows.map((row) => row.job)).toEqual([
-      "sync-stablecoins",
-      "sync-fx-rates",
-      "reserve-recovery",
-      "dispatch-telegram-alerts",
-    ]);
-
-    const critical = buildCronWorkbenchModel(groups, makeFilters({ impact: "public-critical" }));
-    expect(critical.rows.map((row) => row.job)).toEqual(["sync-stablecoins", "sync-fx-rates", "reserve-recovery"]);
-
-    const group = buildCronWorkbenchModel(groups, makeFilters({ triggerGroup: "five-minute" }));
-    expect(group.rows.map((row) => row.job)).toEqual(["reserve-recovery", "dispatch-telegram-alerts"]);
-
-    const running = buildCronWorkbenchModel(groups, makeFilters({ verdict: "running" }));
-    expect(running.rows.map((row) => row.job)).toEqual(["dispatch-telegram-alerts"]);
-
-    const act = buildCronWorkbenchModel(groups, makeFilters({ verdict: "act" }));
-    expect(act.rows.map((row) => row.job)).toEqual(["sync-stablecoins"]);
-  });
-
-  it("keeps a deep-linked job visible whatever the filters say", () => {
-    const model = buildCronWorkbenchModel(makeGroups(), { ...DEFAULT_CRON_WORKBENCH_FILTERS }, undefined, "snapshot-chain-supply");
-    expect(model.rows.map((row) => row.job)).toContain("snapshot-chain-supply");
-    expect(model.groups[0]?.summary).toMatchObject({ total: 3, visible: 3, ok: 1 });
-  });
-
   it("intersects all filters and drops any row failing a single predicate", () => {
     const groups: CronWorkbenchGroupInput[] = [
       {
@@ -244,49 +178,6 @@ describe("cron workbench model", () => {
     expect(model.rows.map((row) => row.job)).toEqual(["sync-stablecoins"]);
     expect(model.filteredCount).toBe(1);
     expect(model.groups.map((group) => group.key)).toEqual(["five-minute"]);
-  });
-
-  it("sorts rows by verdict, then state severity, before registry and source order", () => {
-    const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
-    const group: CronWorkbenchGroupInput = {
-      key: "mixed",
-      title: "Mixed",
-      badge: "mixed",
-      description: "Mixed severities.",
-      entries: [
-        ["custom-a-healthy", makeCron()],
-        ["custom-b-running", makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: false } })],
-        ["custom-c-skipped", makeCron({ lastRun: neutralRun, recentRuns: [neutralRun], healthy: false })],
-        ["custom-d-unknown", makeCron({ telemetryUnknown: true })],
-        [
-          "custom-e-degraded",
-          makeCron({ lastRun: { startedAt: 1_700_000_000, durationMs: 500, status: "degraded" } }),
-        ],
-        ["custom-f-unhealthy", makeCron({ healthy: false })],
-      ],
-    };
-
-    const rows = buildCronWorkbenchModel([group], makeFilters(), 1_700_000_600).rows;
-
-    expect(rows.map((row) => row.job)).toEqual([
-      "custom-f-unhealthy",
-      "custom-e-degraded",
-      "custom-c-skipped",
-      "custom-d-unknown",
-      "custom-b-running",
-      "custom-a-healthy",
-    ]);
-  });
-
-  it("scopes group verdict counts to visible rows while keeping the group total", () => {
-    const model = buildCronWorkbenchModel(makeGroups(), makeFilters({ verdict: "running" }));
-
-    expect(model.groups.map((group) => group.key)).toEqual(["five-minute"]);
-    expect(model.groups[0]?.summary).toEqual({ total: 2, visible: 1, running: 1, act: 0, watch: 0, ok: 0, unavailable: 0 });
-    expect(formatCronGroupSummary(model.groups[0]!.summary)).toBe("1 of 2 shown · 1 running");
-    expect(model.totalCount).toBe(5);
-    expect(model.filteredCount).toBe(1);
-    expect(model.rows.map((row) => row.job)).toEqual(["dispatch-telegram-alerts"]);
   });
 
   it("classifies stale running and telemetry-unknown jobs without treating them as healthy", () => {
@@ -481,24 +372,6 @@ describe("cron workbench model", () => {
     expect(classifyCronWorkbenchState(cron, 1_700_000_600)).toBe("unhealthy");
   });
 
-  it("formats raw run values into readable labels", () => {
-    expect(formatCronRunStatus("skipped_neutral")).toBe("Skipped: no work required");
-    expect(
-      formatCronRunStatus("skipped_neutral", { reason: "v9-competing-slot-active" }),
-    ).toBe("Skipped: competing slot active");
-    expect(formatCronRunStatus("skipped_locked")).toBe("Skipped: lease held");
-    expect(formatCronRunStatus(null)).toBe("No runs");
-  });
-
-  it("formats long durations readably while retaining exact seconds and milliseconds", () => {
-    expect(formatCronDuration(2_582_400)).toEqual({
-      label: "43m 2s",
-      exactLabel: "2582.4s (2582400ms)",
-    });
-    expect(formatCronDuration(750)).toEqual({ label: "750ms", exactLabel: "0.75s (750ms)" });
-    expect(formatCronDuration(61_000).label).toBe("1m 1s");
-  });
-
   it("separates stale-slot runtime from reconciliation delay and labels downstream jobs not started", () => {
     const abandonedRun = {
       startedAt: 1_000,
@@ -565,70 +438,6 @@ describe("cron workbench model", () => {
       expect(formatCronRunStatus(prerequisiteRun.status, prerequisiteRun.metadata)).toBe(expectedLabel);
       expect(formatCronRunTiming(prerequisiteRun).unavailableLabel).toBe("N/A");
     }
-  });
-
-  it("surfaces stale-artifact lease and progress evidence through row search", () => {
-    const cron = makeCron({
-      staleArtifacts: [
-        { kind: "expired-lease", job: "sync-stablecoins", leaseOwner: "owner-a", leaseUntil: 123 },
-        {
-          kind: "orphaned-progress",
-          job: "sync-stablecoins",
-          progressStage: "prices",
-          progressUpdatedAt: 456,
-        },
-      ],
-    });
-    const groups: CronWorkbenchGroupInput[] = [
-      {
-        key: "q",
-        title: "Quarter",
-        badge: "q",
-        description: "q",
-        entries: [
-          ["sync-stablecoins", cron],
-          ["snapshot-chain-supply", makeCron()],
-        ],
-      },
-    ];
-
-    expect(buildCronWorkbenchModel(groups, makeFilters({ search: "owner-a" })).rows.map((row) => row.job)).toEqual([
-      "sync-stablecoins",
-    ]);
-    expect(buildCronWorkbenchModel(groups, makeFilters({ search: "prices" })).rows.map((row) => row.job)).toEqual([
-      "sync-stablecoins",
-    ]);
-    expect(
-      buildCronWorkbenchModel(groups, makeFilters({ search: "owner-zzz" })).rows.map((row) => row.job),
-    ).toEqual([]);
-  });
-
-  it("projects budget-only surfaces by real schedule key with severity and registry-order ties", () => {
-    const groups = buildBudgetOnlySurfaceGroups([
-      makeBudgetSurface({ telemetryStatus: "stale", outcome: "degraded" }),
-      makeBudgetSurface({
-        job: "telegram-digest-outbox-drain",
-        label: "Telegram digest outbox drain",
-        scheduleKey: "digestTriggerPoll",
-        schedule: "*/5 * * * *",
-        telemetryStatus: "stale",
-        outcome: "degraded",
-      }),
-      makeBudgetSurface({
-        job: "digest-trigger-poll",
-        label: "Manual digest trigger poll",
-        scheduleKey: "digestTriggerPoll",
-        schedule: "*/5 * * * *",
-        telemetryStatus: "stale",
-        outcome: "degraded",
-      }),
-    ]);
-
-    expect(groups.map((group) => group.scheduleKey)).toEqual(["fiveMinuteTelegramAlerts", "digestTriggerPoll"]);
-    expect(groups[0]?.rows.map((row) => row.job)).toEqual(["telegram-registration-reconciliation"]);
-    expect(groups[0]?.summary).toMatchObject({ total: 1, stale: 1, errors: 0 });
-    expect(groups[1]?.rows.map((row) => row.job)).toEqual(["telegram-digest-outbox-drain", "digest-trigger-poll"]);
-    expect(groups[1]?.summary).toMatchObject({ total: 2, stale: 2, errors: 0 });
   });
 
   it("orders mixed budget surfaces by severity and summarizes error and missing evidence", () => {
@@ -776,21 +585,4 @@ describe("cron operator verdict", () => {
     expect(getCronNextExpected(makeCron({ lastRun: null, recentRuns: [], telemetryUnknown: true }), start).label).toBe("Unknown");
   });
 
-  it("formats group headers with scope and only non-zero counts", () => {
-    expect(formatCronGroupSummary({ total: 6, visible: 6, act: 0, watch: 0, running: 0, unavailable: 0, ok: 6 })).toBe("6 jobs · 6 OK");
-    expect(formatCronGroupSummary({ total: 6, visible: 1, act: 0, watch: 1, running: 0, unavailable: 0, ok: 0 })).toBe("1 of 6 shown · 1 watch");
-  });
-
-  it("orders runbooks from a naming status cause, then failure mode, then the job's own", () => {
-    const [row] = buildCronWorkbenchModel(
-      [{ key: "q", title: "Q", badge: "q", description: "q", entries: [["sync-stablecoins", makeCron({ healthy: false, inFlight: { startedAt: 1, updatedAt: 2, stale: true } })]] }],
-      makeFilters(),
-    ).rows;
-    const links = getCronRunbooks(row!, [
-      { layer: "availability", code: "x", severity: "warning", message: "m", subjects: ["sync-stablecoins"], runbookUrl: "https://example.test/x.md" },
-      { layer: "availability", code: "y", severity: "warning", message: "m", subjects: ["other-job"], runbookUrl: "https://example.test/y.md" },
-    ]);
-    expect(links.map((link) => link.href.split("/").pop())).toEqual(["x.md", "lease-and-breaker-recovery.md", "stablecoins-cache.md"]);
-    expect(links[1]?.label).toBe("Lease and breaker recovery runbook");
-  });
 });

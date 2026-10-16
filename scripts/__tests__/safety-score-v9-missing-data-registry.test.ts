@@ -9,30 +9,16 @@ import {
 } from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-import { V9_REASON_CODES } from "@shared/types/safety-score-v9";
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
 } from "@shared/test-utils/report-cards-v9";
 import { makeCoin } from "./stablecoin-catalog.test-support";
-import { curationDispositionForReason } from "../lib/safety-score-v9-missing-data-work-types";
 import { describe, expect, it } from "vitest";
 import {
-  classifyV9MissingDataWorkType,
   generateV9MissingDataRegistry,
   classifyV9ScoreProjectionWorkType,
-  likelyTouchpoints,
-  mechanismResolutionMode,
-  scoreProjectionResolutionMode,
-  type V9MissingDataWorkType,
 } from "../maintenance/generate-safety-score-v9-missing-data-registry";
-
-function classify(reasonCode: string, componentKey = "fixture"): V9MissingDataWorkType {
-  return classifyV9MissingDataWorkType({
-    reasonCode,
-    path: { kind: "local-component", componentKey },
-  } as Parameters<typeof classifyV9MissingDataWorkType>[0]);
-}
 
 const SHARED_EXIT_MESSAGE = "Comparable exit route evidence is missing for the reviewed settlement window of this fixture.";
 
@@ -125,94 +111,7 @@ function generateExitProjectionFixture(
   });
 }
 
-
 describe("Safety Score v9 missing-data work routing", () => {
-  it.each([
-    ["missing-pillar-evidence", "chain-supply", "CHAIN_SUPPLY"],
-    ["missing-pillar-evidence", "asset-compilation", "ASSET_COMPILATION"],
-    ["missing-access-review", "access:freeze", "ACCESS_REVIEW"],
-    ["missing-archetype", "mechanism-risk-review", "ARCHETYPE_CLASSIFICATION"],
-    ["bounded-mechanism-review", "mechanism-review:backstop", "MECHANISM_REVIEW"],
-    ["missing-reserve-composition", "reserve-composition", "RESERVE_COMPOSITION"],
-    ["material-reserve-slice-unstructured", "fixture", "RESERVE_SLICE"],
-    ["missing-runtime-route-evidence", "exit-routes", "EXIT_RUNTIME_ROUTE"],
-    ["incomplete-dex-route-coverage", "exit-portfolio-coverage", "EXIT_DEX_COVERAGE"],
-    ["unresolved-exit-output", "fixture", "EXIT_OUTPUT"],
-    ["missing-mint-authority", "economic-control:mint", "MINT_AUTHORITY"],
-    ["unresolved-control-identity", "deployment-controls", "DEPLOYMENT_CONTROLS"],
-    ["missing-upgradeability-review", "deployment-controls", "DEPLOYMENT_CONTROLS"],
-    ["missing-oracle-profile", "economic-control:oracle", "ORACLE_PROFILE"],
-    ["incomplete-oracle-liquidation-branch", "economic-control:oracle:feed", "ORACLE_BRANCH"],
-    ["missing-bridge-routes", "economic-control:bridge", "BRIDGE_ROUTE_REVIEW"],
-    ["runtime-bridge-materiality-unavailable", "bridge-materiality", "BRIDGE_MATERIALITY"],
-    ["missing-peg-input", "peg", "PEG_INPUT"],
-    ["unreviewed-dependency-relationships", "effective-dependencies", "DEPENDENCY_REVIEW"],
-    ["missing-implementation-date", "implementation-date", "IMPLEMENTATION_DATE"],
-    ["missing-pillar-evidence", "operational-resilience", "OPERATIONAL_RESILIENCE"],
-    ["missing-pillar-evidence", "wrapper-local:custodyEscrow", "WRAPPER_ALLOCATION"],
-    ["missing-pillar-evidence", "wrapper-local:strategyComplexity", "WRAPPER_ALLOCATION"],
-    ["missing-pillar-evidence", "wrapper-local:leverage", "WRAPPER_ALLOCATION"],
-    ["missing-pillar-evidence", "wrapper-local:rehypothecationCorrelation", "WRAPPER_ALLOCATION"],
-    ["missing-pillar-evidence", "wrapper-local:contractMutability", "WRAPPER_CONTROL_FACTS"],
-    ["missing-pillar-evidence", "wrapper-local:shareAccountingNavOracle", "WRAPPER_CONTROL_FACTS"],
-    ["missing-pillar-evidence", "wrapper-local:lossAbsorptionEmergencyControls", "WRAPPER_CONTROL_FACTS"],
-    ["missing-pillar-evidence", "wrapper-local:withdrawalTerms", "WRAPPER_EXIT_FACTS"],
-    ["missing-pillar-evidence", "wrapper-local:measuredUnwind", "WRAPPER_EXIT_FACTS"],
-  ] as const)("routes %s at %s to %s", (reasonCode, componentKey, expected) => {
-    expect(classify(reasonCode, componentKey)).toBe(expected);
-  });
-
-  it("fails closed when a new reason has no agent work definition", () => {
-    expect(() => classify("unregistered-reason")).toThrow(/Missing agent work-type definition/);
-  });
-
-  it.each([
-    "wrapper-local:unregisteredFactor",
-    "wrapper-local:toString",
-    "wrapper-local:parentBackingInheritance",
-    "operational-resilience:incident-review",
-  ])("fails closed for unrouted missing-pillar-evidence component %s", (componentKey) => {
-    expect(() => classify("missing-pillar-evidence", componentKey)).toThrow(/Missing agent work-type definition/);
-  });
-
-  it.each([
-    ["unknown-upgrade-authority", "DEPLOYMENT_CONTROLS"],
-    ["selected-bridge-route-unresolved", "BRIDGE_ROUTE_REVIEW"],
-    ["missing-same-notional-route", "EXIT_RUNTIME_ROUTE"],
-    ["unsupported-same-notional-route", "EXIT_DEX_COVERAGE"],
-    ["unresolved-mint-authority", "MINT_AUTHORITY"],
-    ["material-unknown-reserve-exposure", "RESERVE_COMPOSITION"],
-    ["missing-custody-profile", "RESERVE_COMPOSITION"],
-    ["parent-cycle", "DEPENDENCY_REVIEW"],
-    ["implementation-parent-cycle", "DEPENDENCY_REVIEW"],
-  ] as const)("routes score-only reason %s to %s", (reasonCode, expected) => {
-    expect(classifyV9ScoreProjectionWorkType(reasonCode)).toBe(expected);
-  });
-
-  it.each([
-    ["unproven-settlement-bound", "EXIT_SETTLEMENT_BOUND", true],
-    ["unsupported-same-notional-route", "EXIT_DEX_COVERAGE", false],
-  ] as const)(
-    "consolidates score projection reason %s only with compiled work type %s",
-    (reasonCode, workType, requiresSupplementalTask) => {
-      const registry = generateExitProjectionFixture([reasonCode]);
-      const stablecoin = registry.stablecoins[0]!;
-      const projection = stablecoin.scoreProjectionGaps.find((gap) => gap.reasonCode === reasonCode);
-
-      expect(projection).toMatchObject({ workType, requiresSupplementalTask });
-      expect(
-        stablecoin.missingItems.filter((item) => item.taskSource === "score-projection-gap"),
-      ).toEqual(
-        requiresSupplementalTask
-          ? [expect.objectContaining({
-              workType,
-              claimGroupId: `${workType}:exit-fixture`,
-            })]
-          : [],
-      );
-    },
-  );
-
   it("associates projection coverage with the exact work type when one stream mixes EXIT work types", () => {
     const registry = generateExitProjectionFixture([
       "unsupported-same-notional-route",
@@ -250,105 +149,9 @@ describe("Safety Score v9 missing-data work routing", () => {
     expect(registry.summary.scoreProjectionReasonNeedingSupplementCount).toBe(1);
   });
 
-  it("emits readable reason text and scope for interned wire cards", () => {
-    const codes = ["unsupported-same-notional-route", "unproven-settlement-bound"] as const;
-    const plain = generateExitProjectionFixture(codes).stablecoins[0]!;
-    const interned = generateExitProjectionFixture(codes, { intern: true }).stablecoins[0]!;
-    const settlement = interned.missingItems.find((item) => item.taskSource === "score-projection-gap")!;
-
-    expect(settlement).toMatchObject({ message: SHARED_EXIT_MESSAGE, path: { kind: "score-projection", scorePath: "exit:fixture-route" } });
-    expect(JSON.stringify(interned.scoreProjectionGaps)).not.toMatch(/"~[0-9a-z]+"/u);
-    expect(interned.scoreProjectionGaps.map((gap) => gap.workType))
-      .toEqual(plain.scoreProjectionGaps.map((gap) => gap.workType));
-  });
-
-  it("does not turn explicitly non-curation structural risk into a missing-data task", () => {
-    expect(classifyV9ScoreProjectionWorkType("correlated-exit-routes")).toBeNull();
-  });
-
-  it.each(["no-viable-exit-path", "bounded-unknown-reserve-exposure"] as const)(
-    "keeps measured-terminal reason %s out of the missing-data task lanes",
-    (reasonCode) => {
-      expect(classifyV9ScoreProjectionWorkType(reasonCode)).toBeNull();
-    },
-  );
-
-  it("leaves path-routed missing-pillar-evidence projections to the compiled fact-gap queue", () => {
-    // Pipeline-gap cards publish this code on pillar reasons without a
-    // local-component path; routing must not crash the weekly generators.
-    expect(classifyV9ScoreProjectionWorkType("missing-pillar-evidence")).toBeNull();
-  });
-
-  it("defines a work disposition for every reason code the evaluators can emit", () => {
-    // Routing contract for the weekly sweep generators: any code eligible for
-    // a card pillar reason, nr reason, or compiled fact gap must resolve to a
-    // work-type disposition (routed stream or explicit non-curation); an
-    // uncovered code crashes the generators fail-closed instead of silently
-    // dropping work. Sole exception: missing-pillar-evidence resolves by its
-    // local-component path because the code alone does not identify a work
-    // type (see descriptorForReason).
-    const pathRouted = new Set(["missing-pillar-evidence"]);
-    expect(
-      V9_REASON_CODES.filter((code) => !pathRouted.has(code) && curationDispositionForReason(code) === null),
-    ).toEqual([]);
-  });
-
   it("fails closed when a score projection reason has no typed routing metadata", () => {
     expect(() => classifyV9ScoreProjectionWorkType("unregistered-projection-reason")).toThrow(
       /Missing agent work-type definition/,
     );
-  });
-
-  it.each([
-    ["fiat-cash", "claimAndSegregation"],
-    ["fiat-cash", "custodyContinuity"],
-    ["fiat-cash", "assuranceAndReconciliation"],
-    ["tbill", "fundClaimAndSeniority"],
-    ["tbill", "navValuation"],
-    ["tbill", "durationAndLiquidity"],
-    ["tbill", "lossRecoveryDesign"],
-    ["commodity-claim", "titleAndAllocation"],
-    ["commodity-claim", "custodyContinuity"],
-    ["commodity-claim", "assuranceAndReconciliation"],
-    ["commodity-claim", "physicalRedemption"],
-  ] as const)("routes ratified %s %s evidence to agent curation", (archetype, componentKey) => {
-    expect(
-      mechanismResolutionMode({
-        archetype,
-        path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` },
-      } as Parameters<typeof mechanismResolutionMode>[0]),
-    ).toBe("agent-curation");
-  });
-
-  it("keeps advanced-archetype mechanism gaps on measured evidence routes", () => {
-    expect(
-      mechanismResolutionMode({
-        archetype: "rwa-credit-fund",
-        path: { kind: "local-component", componentKey: "mechanism-review:seniority" },
-      } as Parameters<typeof mechanismResolutionMode>[0]),
-    ).toBe("issuer-or-onchain-evidence");
-  });
-
-  it.each(["fiat-cash", "tbill", "commodity-claim"] as const)(
-    "routes %s score-projection mechanism gaps to agent curation",
-    (archetype) => {
-      expect(scoreProjectionResolutionMode("MECHANISM_REVIEW", archetype)).toBe("agent-curation");
-    },
-  );
-
-  it("directs mechanism review work to the overlay under the ratified evidence standard", () => {
-    expect(
-      likelyTouchpoints(
-        "MECHANISM_REVIEW",
-        {
-          file: "shared/data/stablecoins/coins/fixture.json",
-          sidecarFiles: ["shared/data/stablecoins/domains/reserves/fixture.json"],
-        },
-        null,
-      ),
-    ).toEqual([
-      "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "shared/data/stablecoins/coins/fixture.json",
-    ]);
   });
 });

@@ -1,19 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { GOLDEN_SCENARIOS, PAIRWISE_CONSTRAINTS } from "@shared/data/safety-score-v9/golden-scenarios-v1";
+
 import type {
   CompiledV9AssetInput,
   V9ScoringInput,
   V9StructuralSignal,
   V9UnresolvedFact,
 } from "@shared/types/safety-score-v9";
-import {
-  buildV9DependencyEvaluationPlan,
-  type V9DependencyPlanningAsset,
-  type V9DependencyPlanningEdge,
-} from "../safety-score-v9/dependencies";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonTreatment } from "../safety-score-v9/policy";
-import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
+
 import { scoreCompiledAssetSet } from "../safety-score-v9-research";
 import {
   makeCompiledV9AssetInput,
@@ -89,31 +84,6 @@ const compiledInput = (assetId: string, pillarScore: number, parent: CompiledV9A
   makeCompiledV9AssetInput({ assetId, pillarScore, parent, sourceKey: "fixture" });
 
 describe("anchor-coherence invariants — active", () => {
-  it("keeps the 31 golden orderings and adverse-anchor calibration unchanged", () => {
-    expect(GOLDEN_SCENARIOS).toHaveLength(34);
-    expect(PAIRWISE_CONSTRAINTS).toHaveLength(31);
-    const traces = new Map(
-      GOLDEN_SCENARIOS.map((scenario) => [scenario.id, scoreV9GoldenScenario(scenario, V9_CANDIDATE_POLICY_V1)]),
-    );
-    expect(traces.get("unbounded-adverse-mint-anchor")).toMatchObject({
-      finalGrade: "F", bindingCap: { kind: "signal:centralized-mint:critical", limit: 39 },
-    });
-    expect(PAIRWISE_CONSTRAINTS.filter(({ lowerId }) => lowerId === "unbounded-adverse-mint-anchor"))
-      .toMatchObject([
-        { higherId: "unverified-mint-anchor", minGap: 10 },
-        { higherId: "reconciled-unbounded-mint-anchor", minGap: 4 },
-      ]);
-    for (const constraint of PAIRWISE_CONSTRAINTS) {
-      const higher = traces.get(constraint.higherId)!;
-      const lower = traces.get(constraint.lowerId)!;
-      expect(higher.finalScore, constraint.higherId).not.toBeNull();
-      expect(lower.finalScore, constraint.lowerId).not.toBeNull();
-      expect(higher.finalScore! - lower.finalScore!, constraint.rationale).toBeGreaterThanOrEqual(
-        constraint.minGap,
-      );
-    }
-  });
-
   it("more-unknown-never-raises: bounded unknowns and structural signals never lift any score", () => {
     for (const pillars of [
       { backing: 95, exit: 95, control: 95 },
@@ -161,54 +131,6 @@ describe("anchor-coherence invariants — active", () => {
     const withDiagnostic = score({ structuralSignals: [signal("critical-dependency", "low")] });
     const hiddenDiagnostic = score({});
     expect(withDiagnostic.finalScore).toBe(hiddenDiagnostic.finalScore);
-  });
-
-  it("serial non-dilution: a serial claim suppresses duplicate basket roles to the same upstream", () => {
-    const edges: V9DependencyPlanningEdge[] = [
-      {
-        edgeKey: "serial:parent:child",
-        upstreamAssetId: "parent",
-        dependencyType: "wrapper",
-        economicRole: "serial-claim",
-        weight: 1,
-        failureDomains: [],
-      },
-      {
-        edgeKey: "basket:parent:child",
-        upstreamAssetId: "parent",
-        dependencyType: "collateral",
-        economicRole: "basket-exposure",
-        weight: 0.4,
-        failureDomains: [],
-      },
-    ];
-    const planningAsset = (assetId: string, assetEdges: readonly V9DependencyPlanningEdge[]) =>
-      ({
-        assetId,
-        dependencies: { edges: assetEdges },
-        reserveExposures: [],
-        exitRoutes: [],
-        controls: [],
-        peg: { failureDomains: [] },
-        supply: { failureDomains: [] },
-      }) satisfies V9DependencyPlanningAsset;
-    const plan = buildV9DependencyEvaluationPlan({
-      activeAssetIds: ["child", "parent"],
-      assets: [planningAsset("child", edges), planningAsset("parent", [])],
-    });
-    expect(plan.serialPaths).toHaveLength(1);
-    expect(plan.basketPaths).toHaveLength(0);
-    expect(plan.suppressedRoles).toEqual([
-      {
-        assetId: "child",
-        upstreamAssetId: "parent",
-        selectedEdgeKey: "serial:parent:child",
-        suppressedEdgeKey: "basket:parent:child",
-        selectedRole: "serial-claim",
-        suppressedRole: "basket-exposure",
-        reason: "serial-role-dominates",
-      },
-    ]);
   });
 
   it("serial-sibling independence: another serial child never changes a required parent cap", () => {

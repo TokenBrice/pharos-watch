@@ -1,45 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "../api-query-descriptors";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
-import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import {
   StabilityIndexLightResponseSchema,
   STABILITY_INDEX_QUERY_DESCRIPTOR,
 } from "../api-query-domains/stability-light";
-import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "../api-query-domains/stability-detail";
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { getPollingWindow } from "../api-query-polling";
-
-
-const PARAMETERIZED_ARGS: Record<string, unknown[]> = {
-  stablecoinLiveSummary: ["usdc-circle"],
-  chainsDetail: ["ethereum"],
-  dexLiquidityHistory: ["usdc-circle", 90],
-  digestSnapshot: ["2026-07-09"],
-  publicStatusHistory: ["7d"],
-  latestEvents: [{ queryKey: ["events", "latest"], path: "/api/events?limit=20" }],
-  blacklistEvents: [{ queryKey: ["blacklist-events", "all"], path: "/api/blacklist?limit=50" }],
-  mintBurnFlows: [24],
-  mintBurnFlowsCoin: ["usdc-circle", 168],
-  mintBurnEvents: ["usdc-circle", { scope: "counted", limit: 25 }],
-  safetyScoreHistory: ["usdc-circle", 3650],
-  safetyScoreHistoryV2: ["usdc-circle", 3650],
-  yieldHistory: ["usdc-circle", 90, "best", null],
-  stressSignalDetail: ["usdc-circle", 30],
-  supplyHistory: ["usdc-circle", 1825],
-};
-
-type DescriptorBuilder = (...args: unknown[]) => FrontendAnyApiQueryDescriptor;
-
-function resolveEntry(entry: unknown, key: string): FrontendAnyApiQueryDescriptor {
-  if (typeof entry !== "function") return entry as FrontendAnyApiQueryDescriptor;
-  const args = PARAMETERIZED_ARGS[key];
-  expect(args, `${key} needs parity-test arguments`).toBeDefined();
-  return (entry as DescriptorBuilder)(...args);
-}
 
 describe("frontend API query descriptors", () => {
   it.each([
@@ -167,7 +137,6 @@ describe("frontend API query descriptors", () => {
     });
     expect(summary.circulating).toEqual({});
   });
-
 
   it("withholds nominal observations while retaining the separate reference", () => {
     const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
@@ -297,51 +266,6 @@ describe("frontend API query descriptors", () => {
       FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings.queryKey,
     );
   });
-
-  it("treats the build-derived yield adapter manifest as static", () => {
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).toMatchObject({
-      queryKey: ["yield-adapter-manifest"],
-      path: "/api/yield-adapter-manifest",
-      responseMode: "static",
-    });
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("producerIntervalMs");
-  });
-
-  it("aligns PSI and DEWS detail descriptors with their producer intervals", () => {
-    expect(STABILITY_INDEX_QUERY_DESCRIPTOR.producerIntervalMs).toBe(
-      STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR.producerIntervalMs,
-    );
-
-    const stressDetail = resolveEntry(
-      FRONTEND_API_QUERY_DESCRIPTORS.stressSignalDetail,
-      "stressSignalDetail",
-    );
-    if (!("producerIntervalMs" in stressDetail)) throw new Error("stressSignalDetail must be a polling descriptor");
-    expect(stressDetail.producerIntervalMs).toBe(
-      FRONTEND_API_QUERY_DESCRIPTORS.stressSignals.producerIntervalMs,
-    );
-  });
-
-
-  it.each(Object.keys(FRONTEND_API_QUERY_DESCRIPTORS))(
-    "keeps %s schema lazy and caches its loader promise",
-    async (key) => {
-      const entry = FRONTEND_API_QUERY_DESCRIPTORS[key as keyof FrontendApiQueryDescriptorRegistry];
-      const descriptor = resolveEntry(entry, key);
-      if (key === "stabilityIndex") {
-        expect(descriptor.schema).toBe(StabilityIndexLightResponseSchema);
-        return;
-      }
-
-      expect(typeof descriptor.schema, key).toBe("function");
-      const first = (descriptor.schema as () => Promise<unknown>)();
-      const second = (descriptor.schema as () => Promise<unknown>)();
-      expect(second, `${key} loader cache`).toBe(first);
-      await expect(resolveSchemaLike(descriptor.schema)).resolves.toEqual(
-        expect.objectContaining({ safeParse: expect.any(Function) }),
-      );
-    },
-  );
 
   it("accepts only report-v5 at the live V9 reader boundary", async () => {
     const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);

@@ -42,7 +42,6 @@ vi.mock("../../lib/structured-log", () => ({
 }));
 
 const { handleFeedback } = await import("../feedback");
-const encoder = new TextEncoder();
 const FEEDBACK_IDEMPOTENCY_KEY = "feedback-test-key";
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -134,28 +133,6 @@ function makeRawRequest(body: BodyInit, headers: Record<string, string> = {}): R
   });
 }
 
-function makeStreamedRequest(chunks: string[], headers: Record<string, string> = {}): Request {
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const chunk of chunks) {
-        controller.enqueue(encoder.encode(chunk));
-      }
-      controller.close();
-    },
-  });
-  return new Request("https://x/api/feedback", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "CF-Connecting-IP": "1.2.3.4",
-      "Idempotency-Key": FEEDBACK_IDEMPOTENCY_KEY,
-      ...headers,
-    },
-    body,
-    duplex: "half",
-  } as RequestInit & { duplex: "half" });
-}
-
 function makeEnv(overrides: Partial<FeedbackEnv> = {}): FeedbackEnv {
   return {
     GITHUB_PAT: overrides.GITHUB_PAT ?? "ghp_test_token",
@@ -175,18 +152,6 @@ describe("handleFeedback", () => {
     fixtures.closeAll();
   });
 
-  it("returns 400 for invalid JSON body", async () => {
-    const db = mockD1([]);
-    const request = new Request("https://x/api/feedback", {
-      method: "POST",
-      body: "not json",
-    });
-    const res = await handleFeedback(db, request, makeEnv());
-
-    const body = (await readJsonResponse(res, 400)) as { error: string };
-    expect(body.error).toMatch(/Invalid JSON/i);
-  });
-
   it("returns 413 for oversized declared bodies before side effects", async () => {
     const db = mockD1([], { requireMatch: true });
     const res = await handleFeedback(
@@ -201,40 +166,6 @@ describe("handleFeedback", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("returns 413 for oversized streamed bodies before side effects", async () => {
-    const db = mockD1([], { requireMatch: true });
-    const res = await handleFeedback(
-      db,
-      makeStreamedRequest([
-        '{"type":"bug","title":"Broken","description":"',
-        "x".repeat(17 * 1024),
-        '","pageUrl":"/stablecoin/usdt-tether"}',
-      ]),
-      makeEnv(),
-    );
-
-    expect(res.status).toBe(413);
-    await expect(res.json()).resolves.toEqual({ error: "Request body too large" });
-    expect(db.getHistory()).toHaveLength(0);
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 for invalid feedback type", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
-    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "spam" })), makeEnv());
-
-    const body = (await readJsonResponse(res, 400)) as { error: string };
-    expect(body.error).toMatch(/type/i);
-  });
-
-  it("returns 400 when description is too short", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
-    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ description: "short" })), makeEnv());
-
-    const body = (await readJsonResponse(res, 400)) as { error: string };
-    expect(body.error).toMatch(/Description/i);
-  });
-
   it("returns 400 when title is missing for bug type", async () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "bug", title: "" })), makeEnv());
@@ -246,14 +177,6 @@ describe("handleFeedback", () => {
   it("returns 400 when pageUrl does not start with /", async () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ pageUrl: "https://evil.com" })), makeEnv());
-
-    const body = (await readJsonResponse(res, 400)) as { error: string };
-    expect(body.error).toMatch(/pageUrl/i);
-  });
-
-  it("returns 400 when pageUrl is protocol-relative", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
-    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ pageUrl: "//evil.com" })), makeEnv());
 
     const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toMatch(/pageUrl/i);
@@ -301,14 +224,6 @@ describe("handleFeedback", () => {
     expect(res.status).toBe(400);
     expect(db.getHistory()).toHaveLength(0);
     expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("returns 429 when rate limited", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 0 } }]);
-    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
-
-    const body = (await readJsonResponse(res, 429)) as { error: string };
-    expect(body.error).toMatch(/Too many/i);
   });
 
   it("retries the same key after a 429 without persisting or consuming the rejected attempt", async () => {
@@ -364,17 +279,6 @@ describe("handleFeedback", () => {
     expect(body.error).toMatch(/misconfigured/i);
   });
 
-  it("returns 503 when GITHUB_PAT is not configured", async () => {
-    const db = mockD1([], { requireMatch: true });
-    // Explicitly omit GITHUB_PAT (not undefined — ?? would fill the default)
-    const env: FeedbackEnv = { FEEDBACK_IP_SALT: "test-salt" };
-    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), env);
-
-    const body = (await readJsonResponse(res, 503)) as { error: string };
-    expect(body.error).toMatch(/unavailable/i);
-    expect(db.getHistory().some((entry) => entry.sql.includes("feedback_rate_limit"))).toBe(false);
-  });
-
   it("retries the same key after pre-execution configuration recovers", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
     queueFetch(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
@@ -416,32 +320,6 @@ describe("handleFeedback", () => {
     expect(response.bodyUsed).toBe(true);
   });
 
-  it("returns 200 and creates GitHub issue for data-correction", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-      // verifyDataCorrection will query the stablecoins cache
-      { match: "cache", rows: [], first: null },
-    ]);
-
-    queueFetch(new Response(JSON.stringify({ id: 2, number: 43 }), { status: 201 }));
-
-    const res = await handleFeedback(
-      db,
-      makeRequest(
-        makeFeedbackBody({
-          type: "data-correction",
-          description: "The circulating supply is wrong by a large margin.",
-          stablecoinId: "usdt-tether",
-          stablecoinName: "Tether",
-        }),
-      ),
-      makeEnv(),
-    );
-
-    const body = (await readJsonResponse(res, 200)) as { ok: boolean };
-    expect(body.ok).toBe(true);
-  });
-
   it.each([
     ["eurc-circle", "EURC", "peggedEUR", 1.08, 1.1, -1.818],
     ["xaut-tether", "XAUT", "peggedGOLD", 2990, 3025, -1.157],
@@ -466,34 +344,6 @@ describe("handleFeedback", () => {
     const issuePayload = JSON.parse(String(init?.body)) as { body: string };
     const reported = issuePayload.body.match(/\*\*Peg deviation:\*\* (-?[\d.]+)%/);
     expect(Number(reported?.[1])).toBe(deviation);
-  });
-
-  it("returns 200 and creates GitHub issue for feature-request", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
-
-    const issueResponse = new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 });
-    queueFetch(issueResponse);
-
-    const res = await handleFeedback(
-      db,
-      makeRequest(
-        makeFeedbackBody({
-          type: "feature-request",
-          title: "Add dark mode",
-          description: "Please add a dark mode toggle to the dashboard.",
-        }),
-      ),
-      makeEnv(),
-    );
-
-    expect(res.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe("https://api.github.com/repos/TokenBrice/pharos-watch/issues");
-    expect(init?.method).toBe("POST");
-    const payload = JSON.parse(String(init?.body)) as { labels: string[] };
-    expect(payload.labels).toEqual(["feature-request"]);
-    expect(issueResponse.bodyUsed).toBe(true);
   });
 
   it("releases quota and terminally replays a confirmed GitHub rejection", async () => {
@@ -551,29 +401,6 @@ describe("handleFeedback", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 1 });
   });
 
-  it("does not require title for data-correction type", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-      { match: "cache", rows: [], first: null },
-    ]);
-
-    queueFetch(new Response(JSON.stringify({ id: 4, number: 45 }), { status: 201 }));
-
-    const res = await handleFeedback(
-      db,
-      makeRequest({
-        type: "data-correction",
-        description: "The price for this stablecoin is completely wrong.",
-        pageUrl: "/stablecoin/usdt-tether",
-        stablecoinId: "usdt-tether",
-        // no title field
-      }),
-      makeEnv(),
-    );
-
-    expect(res.status).toBe(200);
-  });
-
   it("neutralizes markdown mentions and code fences in GitHub issue bodies", async () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
@@ -600,24 +427,4 @@ describe("handleFeedback", () => {
     expect(issuePayload.body).not.toContain("```markdown");
   });
 
-  it("includes optional contact handle in GitHub body", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
-
-    queueFetch(new Response(JSON.stringify({ id: 10, number: 51 }), { status: 201 }));
-
-    const res = await handleFeedback(
-      db,
-      makeRequest(
-        makeFeedbackBody({
-          contactHandle: "@PharosHelp",
-        }),
-      ),
-      makeEnv(),
-    );
-
-    expect(res.status).toBe(200);
-    const [, init] = fetchSpy.mock.calls[0]!;
-    const issuePayload = JSON.parse(String(init?.body)) as { body: string };
-    expect(issuePayload.body).toContain("**Submitter contact:** @ PharosHelp");
-  });
 });

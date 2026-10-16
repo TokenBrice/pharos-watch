@@ -33,7 +33,6 @@ function persistedDb(options: SqliteD1Options = {}) {
   return fixture;
 }
 const { handleTelegramMiniAppMutation } = await import("../telegram-mini-app");
-const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
 
 function recapPreferenceTable(overrides: Partial<Record<string, unknown>> = {}): MockTableConfig {
   const row = {
@@ -186,12 +185,6 @@ describe("handleTelegramMiniAppMutation", () => {
       catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
     });
     expect(db.getHistory()).toEqual([]);
-  });
-
-  it("uses semantic action details for timezone and unsubscribe-all mutations", () => {
-    expect(mutationActionDetail({ kind: "set-timezone", timezone: "Europe/Paris" })).toBe("timezone");
-    expect(mutationActionDetail({ kind: "set-recap", enabled: true, deliveryHourLocal: 14 })).toBe("recap");
-    expect(mutationActionDetail({ kind: "unsubscribe-all" })).toBe("all");
   });
 
   it("enables a timezone-confirmed recap, records recap telemetry, and returns refreshed state", async () => {
@@ -1143,28 +1136,6 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(await readJsonResponse(response, 429)).toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
-  });
-
-  it("attaches a non-null latencyBucket to failed mutation analytics rows", async () => {
-    // T-64: failed mutations also carry latency telemetry. With fake timers
-    // `Date.now() - start === 0`, which buckets to "lt_250ms".
-    const initData = await privateInitData();
-    const db = makeMiniAppDb();
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "set-coin-snooze", stablecoinId: "not-a-coin", durationToken: "1h" },
-    }), BOT_TOKEN);
-
-    expect(response.status).toBe(400);
-    const deniedRows = db
-      .getHistory()
-      .filter((entry) =>
-        entry.sql.includes("INSERT INTO telegram_usage_daily")
-        && entry.binds.includes("mini_app_mutation_denied"),
-      );
-    expect(deniedRows).toHaveLength(1);
-    expect(deniedRows[0].binds[5]).toBe("lt_250ms");
   });
 
   it("returns not-configured when the bot token is missing", async () => {

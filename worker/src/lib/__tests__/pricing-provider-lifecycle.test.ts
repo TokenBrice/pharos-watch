@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   applyNonOkProviderDiagnostic,
   buildBlockedProviderDiagnostic,
-  buildNoCandidatesDiagnostic,
   buildPricingProviderDiagnostic,
 } from "../pricing-provider-lifecycle";
 import {
@@ -33,22 +32,6 @@ describe("pricing provider lifecycle helpers", () => {
       adapter: "coinmarketcapadapter",
       candidateAt: 1_800_000_000,
       replaySafe: false,
-    });
-  });
-
-  it("builds no-candidate diagnostics with the recovery shape", () => {
-    expect(buildNoCandidatesDiagnostic({
-      source: "jupiter",
-      stage: "no-candidates",
-      endpoint: "none",
-    })).toEqual({
-      source: "jupiter",
-      stage: "no-candidates",
-      endpoint: "none",
-      status: null,
-      ok: true,
-      success: true,
-      candidateCount: 0,
     });
   });
 

@@ -79,11 +79,11 @@ function formatArchiveRiskSignal(signal: DigestRiskSignal): string {
 
 export type DigestArchiveView = "all" | "daily" | "weekly";
 
-export function normalizeDigestArchiveView(value: string | null): DigestArchiveView {
+function normalizeDigestArchiveView(value: string | null): DigestArchiveView {
   return value === "daily" || value === "weekly" ? value : "all";
 }
 
-export function filterDigestArchiveEntries(
+function filterDigestArchiveEntries(
   entries: readonly DigestArchiveEntry[],
   options: {
     view: DigestArchiveView;

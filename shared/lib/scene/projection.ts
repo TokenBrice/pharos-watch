@@ -30,7 +30,7 @@ export interface SceneCell {
 /** SVG units per world unit along a horizontal axis. */
 export const SCENE_UNIT = 20;
 /** Vertical foreshortening of the 30° dimetric camera. */
-export const SCENE_Z_SCALE = 1.2247;
+const SCENE_Z_SCALE = 1.2247;
 
 export interface SceneProjection {
   name: string;

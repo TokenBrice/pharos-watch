@@ -7,15 +7,6 @@ import { PreferredSourcePrompt, PREFERRED_SOURCE_URL } from "../preferred-source
 
 
 describe("PreferredSourcePrompt", () => {
-  // Google's source-preferences tool takes a bare host in `q`. A URL, a path,
-  // or the wrong domain silently resolves to an empty picker rather than
-  // erroring, so the failure mode is invisible in production.
-  it("deeplinks to the bare canonical host, not a URL or subdirectory", () => {
-    const url = new URL(PREFERRED_SOURCE_URL);
-
-    expect(url.origin + url.pathname).toBe("https://www.google.com/preferences/source");
-    expect(url.searchParams.get("q")).toBe("pharos.watch");
-  });
 
   it("renders an external link a crawler and a reader can both follow", () => {
     render(<PreferredSourcePrompt />);

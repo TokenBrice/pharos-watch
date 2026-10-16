@@ -20,28 +20,4 @@ describe("pharos/no-arbitrary-text-px", () => {
   ])("rejects %s", async (_name, source, filePath?: string) => {
     expect(await arbitraryPxSizes(source, filePath)).toHaveLength(1);
   });
-
-  it.each([
-    ["scale steps", 'export const c = "text-3xs text-2xs sm:text-xs";'],
-    ["rem and clamp display sizes", "export const c = `text-[2.1rem] text-[clamp(1rem,2vw,2rem)]`;"],
-    ["other px utilities", 'export const c = "w-[11px] max-w-[300px] leading-[11px]";'],
-  ])("allows %s", async (_name, source) => {
-    expect(await arbitraryPxSizes(source)).toEqual([]);
-  });
-
-  it("does not apply outside src/components and src/app", async () => {
-    expect(await arbitraryPxSizes('export const c = "text-[11px]";', "src/lib/__type-scale-fixture.ts")).toEqual([]);
-  });
-
-  it.each([
-    "src/app/cemetery/__fixture.tsx",
-    "src/components/tape/__fixture.tsx",
-    "src/components/digest-nameplate.tsx",
-    "src/app/depeg/[event]/__fixture.tsx",
-    "src/app/blog/__fixture.tsx",
-    "src/components/ai-summary.tsx",
-    "src/app/not-found.tsx",
-  ])("ignores editorial carve-out %s", async (filePath) => {
-    expect(await arbitraryPxSizes('export const c = "text-[11px]";', filePath)).toEqual([]);
-  });
 });

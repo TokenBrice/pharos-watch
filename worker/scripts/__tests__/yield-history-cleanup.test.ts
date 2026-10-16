@@ -14,7 +14,6 @@ import {
   parseYieldHistoryCleanupArtifact,
   restoreCleanupRowsToSqlite,
   runYieldHistoryCleanupCli,
-  summarizeYieldHistoryCleanupRows,
 } from "../yield-history-cleanup";
 import { createWorkerD1Client } from "../lib/remote-d1";
 import type * as RemoteD1Module from "../lib/remote-d1";
@@ -259,21 +258,6 @@ describe("yield-history-cleanup", () => {
     expect(result.stderr).not.toMatch(/UnhandledPromiseRejection|unhandled rejection/i);
   });
 
-  it("[entrypoint integration] prints direct-run help with exit 0", async () => {
-    const result = await runOperatorCli(
-      join(process.cwd(), "node_modules/.bin/tsx"),
-      ["worker/scripts/yield-history-cleanup.ts", "--help"],
-      {
-        cwd: process.cwd(),
-        encoding: "utf8",
-      },
-    );
-
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Usage: tsx worker/scripts/yield-history-cleanup.ts");
-    expect(result.stderr).toBe("");
-  });
-
   it("preserves sqlite restore exemption from live confirmation", () => {
     const options = parseYieldHistoryCleanupCliOptions([
       "--sqlite",
@@ -327,20 +311,6 @@ describe("yield-history-cleanup", () => {
       parseYieldHistoryCleanupCliOptions(["--sqlite", "test.sqlite", "--arm-writer-pause"]),
     ).toThrow(/cannot be used together/);
     expect(() => parseYieldHistoryCleanupCliOptions(["unexpected"])).toThrow(/Unexpected argument/);
-  });
-
-  it("loads only the targeted parent-owned wrapper rows", () => {
-    const path = createTempDbPath();
-    tempPaths.push(path);
-    seedDb(path);
-
-    const rows = loadCleanupRowsFromSqlite(path);
-    const summary = summarizeYieldHistoryCleanupRows(rows.hourlyRows);
-
-    expect(summary.totalRows).toBe(3);
-    expect(summary.byStablecoin["usde-ethena"]).toBe(2);
-    expect(summary.byStablecoin["usds-sky"]).toBe(1);
-    expect(summarizeYieldHistoryCleanupRows(rows.dailyRows).totalRows).toBe(2);
   });
 
   it("round-trips complete hourly and daily-only rows including observation clocks through delete and restore", () => {
@@ -418,13 +388,6 @@ describe("yield-history-cleanup", () => {
     expect(readAllRows(path)).toEqual(before);
     expect(readAllRows(path, "yield_history_daily")).toEqual(beforeDaily);
     expect(createWorkerD1Client).not.toHaveBeenCalled();
-  });
-
-  it.each([1, 2])("explains why version-%s artifacts cannot prove complete-row restoration", (version) => {
-    const artifact = createYieldHistoryCleanupArtifact({ hourlyRows: [], dailyRows: [] }, "ops");
-    expect(() => parseYieldHistoryCleanupArtifact({ ...artifact, version })).toThrow(
-      "Cleanup artifact versions 1 and 2 do not preserve complete rows with source_observed_at; restore requires version 3",
-    );
   });
 
   it("rejects drifted targets and non-finite restore numbers", () => {

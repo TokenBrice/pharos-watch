@@ -27,6 +27,7 @@ import {
 } from "../lib/critical-ownership.mts";
 import { collectGitPaths, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { requireCommittedCoverageRebaseline } from "../lib/critical-coverage-rebaseline.mts";
 
 const WAIVER_REVIEW_HARD_FAIL_AGE_DAYS = 30;
 const WAIVER_REVIEW_PRINT_LIMIT = 10;
@@ -81,7 +82,7 @@ export const CRITICAL_COVERAGE_BRANCH_FLOORS: Record<string, number> = {
   "worker/src/lib/price-publication-state.ts": 40,
 };
 
-function parseCoveragePercentage(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+export function parseCoveragePercentage(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
   const raw = env[name];
   if (raw === undefined) return fallback;
   const value = Number(raw.trim());
@@ -92,7 +93,7 @@ function parseCoveragePercentage(env: NodeJS.ProcessEnv, name: string, fallback:
 }
 
 // Explicit per-file minimums for critical reliability paths.
-function getCriticalThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
+export function getCriticalThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
   return {
     "worker/src/lib/stablecoins-cache.ts": parseCoveragePercentage(
       env,
@@ -132,7 +133,7 @@ function getCriticalThresholds(env: NodeJS.ProcessEnv = process.env): Record<str
   };
 }
 
-function getCriticalBranchThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
+export function getCriticalBranchThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
   return {
     "worker/src/lib/auth.ts": parseCoveragePercentage(
       env,
@@ -330,6 +331,49 @@ export function runCriticalCoverageCompletenessGuard({
   return false;
 }
 
+function coverageBaselineCompareRef(env: NodeJS.ProcessEnv): string {
+  const ref = (env.CRITICAL_COVERAGE_COMPARE_REF ?? env.PR_BASE_SHA ?? env.GITHUB_BASE_SHA
+    ?? (env.CI ? parseChangedFileArgs([], env).base : "")).trim();
+  if (!ref || isAllZeroSha(ref)) {
+    throw new Error("Baseline decrease validation requires a nonzero comparison base. Set CRITICAL_COVERAGE_COMPARE_REF or PR_BASE_SHA to the frozen base commit.");
+  }
+  return ref;
+}
+
+export function runCriticalCoverageCompletenessCheck({
+  env = process.env,
+  fsImpl = fs,
+  execFile = execFileSync as GitExec,
+  consoleImpl = console,
+  completenessOptions = {},
+  exit = process.exit,
+}: CriticalCoverageCheckOptions = {}): boolean {
+  if (!runCriticalCoverageCompletenessGuard({ ...completenessOptions, consoleImpl, exit })) return false;
+  const baselinePath = env.CRITICAL_COVERAGE_BASELINE_FILE ?? ".ci/critical-coverage-baseline.json";
+  const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
+  if (baseline === null) return false;
+  try {
+    const compareRef = coverageBaselineCompareRef(env);
+    const threshold = parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD", 40);
+    const lineThresholds = getCriticalThresholds(env);
+    const branchThresholds = getCriticalBranchThresholds(env);
+    const lineMinimum = (source: string) => lineThresholds[source] ?? threshold;
+    const errors = validateCriticalCoverageBaseline(baseline, completenessOptions.criticalFiles ?? CRITICAL_FILES, lineMinimum);
+    if (errors.length > 0) throw new Error(`Invalid critical coverage baseline: ${errors.join("; ")}`);
+    requireCommittedCoverageRebaseline(compareRef, baselinePath, {
+      candidate: baseline as Record<string, number>,
+      lineMinimum,
+      branchMinimum: (source) => branchThresholds[source] ?? null,
+    }, execFile);
+  } catch (error) {
+    consoleImpl.error(`[coverage] ${error instanceof Error ? error.message : String(error)}`);
+    exit(1);
+    return false;
+  }
+  consoleImpl.log("[coverage] Critical coverage completeness and baseline decrease checks passed (no coverage measurement).");
+  return true;
+}
+
 export function runCriticalCoverageCheck({
   env = process.env,
   fsImpl = fs,
@@ -402,6 +446,17 @@ export function runCriticalCoverageCheck({
         return;
       }
     }
+  }
+  try {
+    requireCommittedCoverageRebaseline(coverageBaselineCompareRef(env), baselinePath, {
+      candidate: baseline as Record<string, number>,
+      lineMinimum: (file) => criticalThresholds[file] ?? threshold,
+      branchMinimum: (file) => criticalBranchThresholds[file] ?? null,
+    }, execFile);
+  } catch (error) {
+    consoleImpl.error(`[coverage] ${error instanceof Error ? error.message : String(error)}`);
+    exit(1);
+    return;
   }
   const ownershipBase = compareRef || env.PR_BASE_SHA;
   const baseOwnership = ownershipBase ? deriveBaseCriticalOwnership(ownershipBase, changedFiles, execFile) : new Map();
@@ -497,10 +552,10 @@ export function runCriticalCoverageCheck({
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  // `--completeness` runs only the enrollment/waiver guard, which needs no lcov
-  // report and is cheap enough for every non-doc PR static validation path.
+  // Enrollment, waivers and committed baseline decreases need no LCOV report,
+  // so this guard runs on every non-doc PR static validation path.
   if (process.argv.slice(2).includes("--completeness")) {
-    runCriticalCoverageCompletenessGuard();
+    runCriticalCoverageCompletenessCheck();
   } else {
     runCriticalCoverageCheck();
   }

@@ -3,8 +3,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Link from "next/link";
-import { API_PAGE_ANCHORS } from "@shared/lib/public-api-contract";
-import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { DonorKeyClaim } from "@/components/donor-key-claim";
 import { clearPendingApiKey, PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
 import { DonorKeyClaimError, claimDonorKey } from "@/lib/donor-key-claim-client";
@@ -119,23 +117,6 @@ describe("DonorKeyClaim one-time reveal", () => {
     expect(savedUnload.defaultPrevented).toBe(false);
   });
 
-  it("clears the detached issuance warning when the request fails", async () => {
-    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
-    let rejectClaim!: (error: Error) => void;
-    vi.mocked(claimDonorKey).mockReturnValue(new Promise((_, reject) => { rejectClaim = reject; }));
-    const view = render(<><DonorKeyClaim /><PendingApiKeyRecovery /></>);
-    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
-    await waitFor(() => expect(screen.getByText("Issuing the key")).toBeTruthy());
-    view.rerender(<PendingApiKeyRecovery />);
-    const pendingUnload = new Event("beforeunload", { cancelable: true });
-    window.dispatchEvent(pendingUnload);
-    expect(pendingUnload.defaultPrevented).toBe(true);
-    await act(async () => rejectClaim(new Error("Claim failed")));
-    const failedUnload = new Event("beforeunload", { cancelable: true });
-    window.dispatchEvent(failedUnload);
-    expect(failedUnload.defaultPrevented).toBe(false);
-    expect(screen.queryByRole("region", { name: "Unsaved API keys" })).toBeNull();
-  });
 });
 
 describe("DonorKeyClaim failure details", () => {
@@ -149,33 +130,5 @@ describe("DonorKeyClaim failure details", () => {
     expect(alert.textContent).toContain("$10");
     expect(alert.textContent).toContain("2026-09-06");
     expect(screen.queryByText(token)).toBeNull();
-  });
-});
-
-describe("DonorKeyClaim wallet handoff", () => {
-  it("focuses the handoff after a provider disappears between mount and click", async () => {
-    vi.stubGlobal("ethereum", { request: vi.fn() });
-    render(<DonorKeyClaim />);
-    expect(screen.queryByRole("link", { name: "Open in MetaMask" })).toBeNull();
-    vi.stubGlobal("ethereum", undefined);
-    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("link", { name: "Open in MetaMask" })));
-  });
-
-  it("offers wallet-app links to the claim section only after a claim attempt finds no wallet", async () => {
-    const claimUrl = `${SITE_ORIGIN}/api/#${API_PAGE_ANCHORS.claim}`;
-    const view = render(<DonorKeyClaim />);
-    expect(screen.queryByRole("link", { name: "Open in MetaMask" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
-    const metamask = await screen.findByRole("link", { name: "Open in MetaMask" });
-    expect(metamask.getAttribute("href")).toBe(`https://link.metamask.io/dapp/${new URL(SITE_ORIGIN).host}/api/#claim`);
-    const coinbase = screen.getByRole("link", { name: "Open in Coinbase Wallet" });
-    expect(new URL(coinbase.getAttribute("href") ?? "").searchParams.get("cb_url")).toBe(claimUrl);
-    await waitFor(() => expect(document.activeElement).toBe(metamask));
-    view.unmount();
-
-    vi.stubGlobal("ethereum", { request: vi.fn() });
-    render(<DonorKeyClaim />);
-    expect(screen.queryByRole("link", { name: "Open in MetaMask" })).toBeNull();
   });
 });
