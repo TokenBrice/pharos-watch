@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RatioSchema, ZERO_RATIO } from "../../types/ratio";
 import {
   buildHarborScene,
   harborHash,
@@ -25,7 +26,7 @@ function chain(id: string, totalUsd: number, extra: Partial<HarborChainInput> = 
     logoPath: `/chains/${id}.png`,
     totalUsd,
     change7d: 0,
-    change7dPct: 0,
+    change7dPct: ZERO_RATIO,
     stablecoinCount: 1,
     topStablecoins: [{ id: "usdt-tether", symbol: "USDT", share: 1, supplyUsd: totalUsd }],
     dominanceShare: 0,
@@ -138,9 +139,9 @@ describe("buildHarborScene edge cases", () => {
 
   it("encodes wake linearly to ±10% with a break, and new supply as 'new'", () => {
     const scene = buildHarborScene(world([
-      chain("up", 5e9, { change7dPct: 0.05 }),
-      chain("big", 4e9, { change7dPct: -0.143 }),
-      chain("flat", 3e9, { change7dPct: 0.004 }),
+      chain("up", 5e9, { change7dPct: RatioSchema.parse(0.05) }),
+      chain("big", 4e9, { change7dPct: RatioSchema.parse(-0.143) }),
+      chain("flat", 3e9, { change7dPct: RatioSchema.parse(0.004) }),
       chain("fresh", 2e9, { change7d: 2e9, change7dPct: null }),
       chain("gone", 1.5e9, { change7d: null, change7dPct: null }),
     ]));

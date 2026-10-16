@@ -226,6 +226,8 @@ For incident triage, use the [complete Telegram runbook hub](./telegram-alerts.m
 
 `shared/test-utils/telegram-mini-app-state.ts` owns session-state builders for frontend and shared contract tests; mutable-state fixtures omit its catalog.
 
+The page's cumulative native MainButton listener-count test fixes `Date.now()` so a snapshot's clock refresh cannot introduce an extra cleanup/reattach across a wall-clock second boundary. It records the live listener count at every registration and waits for the confirmed cleared-snooze state and complete listener removal, rather than stopping when the mutation request starts.
+
 - `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, group/supergroup read-only behavior, bot-token rotation overlap.
 - `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, burst-limit responses, partial-failure rollback.
 - `worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts` — real-SQLite atomic burst admission, exact retry windows, rollover, D1 failure behavior, `/forget`, and retention cleanup.

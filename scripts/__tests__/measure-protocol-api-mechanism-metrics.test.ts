@@ -309,6 +309,37 @@ describe("protocol API Artifact V2", () => {
     expect(protocolApiEvidenceFilename(artifact)).toMatch(/^2026-07-22T20-00-16\.250Z-[0-9a-f]{12}-protocol-api\.json$/);
   });
 
+  it.each([
+    ["2026-07-22T20:00:16Z", "2026-07-22T20:00:16.000Z"],
+    ["2026-07-22T20:00:16.250683Z", "2026-07-22T20:00:16.250Z"],
+    ["2026-07-22T20:00:16.000000Z", "2026-07-22T20:00:16.000Z"],
+  ])("normalizes Ethena ISO UTC timestamp %s and replays the original bytes", (statusTimestamp, observedAt) => {
+    const artifact = buildProtocolApiMeasurement("usde-ethena", usdeInputs({ statusTimestamp }), CAPTURED_AT);
+    expect(artifact.observations[0]!.observedAt).toBe(observedAt);
+    expect(artifact.snapshotObservedAt).toBe(observedAt);
+    expect(serializeProtocolApiMeasurement(replayProtocolApiMeasurement(artifact))).toBe(serializeProtocolApiMeasurement(artifact));
+  });
+
+  it.each([
+    "2026-02-30T20:00:16.000000Z",
+    "2026-07-22T24:00:00.000000Z",
+    "2026-07-22T20:00:16.000000",
+    "2026-07-22T20:00:16.000000+00:00",
+    "2026-07-22T20:00:16.000000 UTC",
+    "2026-07-22 20:00:16.000000Z",
+  ])("rejects invalid or unsupported Ethena timestamp %s", (statusTimestamp) => {
+    expect(() => buildProtocolApiMeasurement("usde-ethena", usdeInputs({ statusTimestamp }), CAPTURED_AT)).toThrow(
+      /Invalid Ethena collateralization timestamp/,
+    );
+  });
+
+  it.each([
+    ["2026-07-21T01:00:00.000000Z", /status is stale/],
+    ["2026-07-22T20:11:00.000000Z", /future/],
+  ] as const)("preserves Ethena freshness rejection for ISO UTC timestamp %s", (statusTimestamp, expected) => {
+    expect(() => buildProtocolApiMeasurement("usde-ethena", usdeInputs({ statusTimestamp }), CAPTURED_AT)).toThrow(expected);
+  });
+
   it("records adverse claims without inventing unavailable trading-risk metrics", () => {
     const artifact = buildProtocolApiMeasurement(
       "usde-ethena",

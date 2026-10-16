@@ -149,7 +149,7 @@ export async function computeSafetyScoreV9(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
-  options: { retainAcceptedReplay?: boolean; captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
+  options: { captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const catalogAdmission = assessSafetyScoreV9ResourceBudget({
@@ -190,9 +190,7 @@ export async function computeSafetyScoreV9(
   });
 
   let baseArtifact: NativeV9InputCacheArtifact;
-  const fixedInputCacheValue = options.retainAcceptedReplay === false
-    ? undefined
-    : caches.get(NATIVE_V9_INPUT_CACHE_KEY)!.value;
+  const fixedInputCacheValue = caches.get(NATIVE_V9_INPUT_CACHE_KEY)!.value;
   let v9Seed: SafetyScoreV9PegProvenanceSeed;
   try {
     v9Seed = parseSafetyScoreV9PegProvenanceSeed(

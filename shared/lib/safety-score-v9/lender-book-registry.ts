@@ -49,14 +49,17 @@ export function canonicalizeLenderBookObservation(observation: unknown): unknown
   const deployments = observation.deployments.map((deployment): Record<string, unknown> => {
     const row = deployment as Record<string, unknown>;
     let markets = row.markets;
-    if (Array.isArray(markets) && markets.every((market) => isRecord(market) && typeof market.morpho === "string" && typeof market.marketId === "string" && typeof market.account === "string")) {
-      markets = [...markets].sort((left, right) => {
-        const a = left as Record<string, string>;
-        const b = right as Record<string, string>;
-        const aKey = lenderMarketKey(row.chain as string, a.morpho!, a.marketId!, a.account!);
-        const bKey = lenderMarketKey(row.chain as string, b.morpho!, b.marketId!, b.account!);
-        return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
-      });
+    if (Array.isArray(markets)) {
+      const marketRows: unknown[] = markets;
+      if (marketRows.every((market): market is Record<string, unknown> & {
+        morpho: string; marketId: string; account: string;
+      } => isRecord(market) && typeof market.morpho === "string" && typeof market.marketId === "string" && typeof market.account === "string")) {
+        markets = [...marketRows].sort((left, right) => {
+          const aKey = lenderMarketKey(row.chain as string, left.morpho, left.marketId, left.account);
+          const bKey = lenderMarketKey(row.chain as string, right.morpho, right.marketId, right.account);
+          return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
+        });
+      }
     }
     const selectorsRead = Array.isArray(row.selectorsRead) && row.selectorsRead.every((selector) => typeof selector === "string")
       ? [...row.selectorsRead].sort()

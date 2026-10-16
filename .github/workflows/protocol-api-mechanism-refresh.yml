@@ -20,7 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        asset: [usde-ethena, usdf-falcon]
+        # US geo-restriction: Ethena redirected GitHub-hosted runners to
+        # ethena.fi/restricted on 2026-10-14; capture USDe manually in a permitted region.
+        asset: [usdf-falcon]
     concurrency:
       group: protocol-api-mechanism-refresh-${{ matrix.asset }}
       cancel-in-progress: false

@@ -132,12 +132,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@data": path.resolve(__dirname, "data"),
-      // Workerd provides this scheme in production; Node-based Vitest needs a
-      // runtime-only stand-in without changing the Worker bundle specifier.
-      "cloudflare:workers": path.resolve(
-        __dirname,
-        "worker/src/__mocks__/cloudflare-workers.ts",
-      ),
       // Stub WASM-dependent packages for vitest (Node can't handle Worker WASM imports)
       "satori/standalone": path.resolve(__dirname, "worker/src/__mocks__/satori-stub.ts"),
       "satori/yoga.wasm": path.resolve(__dirname, "worker/src/__mocks__/wasm-module-stub.ts"),

@@ -4,7 +4,7 @@ import type { MintAuthorityProfile, StablecoinLink } from "../types";
 export function collectMintAuthoritySources(profile: MintAuthorityProfile): StablecoinLink[] {
   const links: StablecoinLink[] = [];
   const append = (sources: readonly StablecoinLink[] | undefined) => {
-    if (Array.isArray(sources)) links.push(...sources);
+    if (sources !== undefined) links.push(...sources);
   };
   append(profile.review?.sources);
   append(profile.review?.noLocalIssuance?.sources);

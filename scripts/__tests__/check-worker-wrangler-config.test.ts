@@ -92,7 +92,6 @@ describe("check-worker-wrangler-config", () => {
       toml.replace('main = "src/index.heavy.ts"', 'main = "src/index.ts"'),
       toml.replace('[alias]', 'routes = []\n[alias]'),
       `${toml}\n[[ratelimits]]\nname = "HTTP"\n`,
-      toml.replace('binding = "SAFETY_SCORE_V9_WORKFLOW"', 'binding = "WRONG_WORKFLOW"'),
       toml.replace('binding = "SAFETY_CAPTURE_ARCHIVE"', 'binding = "WRONG_ARCHIVE"'),
       toml.replace('bucket_name = "pharos-measurements"', 'bucket_name = "wrong-bucket"'),
       `${toml}\n[vars]\nWORKER_V9_WORKFLOW_MODE = "shadow"\n`,
@@ -100,6 +99,14 @@ describe("check-worker-wrangler-config", () => {
     ]) {
       expect(evaluateWorkerWranglerConfig(mutation, { workerRole: "heavy" }).failed).toBe(true);
     }
+  });
+  it.each(["public", "heavy"] as const)("rejects retired Workflow bindings on %s", (workerRole) => {
+    const toml = workerRole === "public" ? VALID_CONFIG : readFileSync("worker/wrangler.heavy.toml", "utf8");
+    const report = evaluateWorkerWranglerConfig(
+      `${toml}\n[[workflows]]\nname = "safety-score-v9-publication"\nbinding = "SAFETY_SCORE_V9_WORKFLOW"\nclass_name = "SafetyScoreV9PublicationWorkflow"\n`,
+      { workerRole },
+    );
+    expect(report.issues).toContain(`${workerRole} must not declare retired Workflow bindings.`);
   });
   it("rejects accepted-capture bucket ownership on public", () => {
     const report = evaluateWorkerWranglerConfig(

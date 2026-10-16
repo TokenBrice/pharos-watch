@@ -91,10 +91,9 @@ export type ScheduledEnv = Pick<Env, "DB" | "CF_VERSION_METADATA"> &
     | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT"
     | "DONOR_KEY_CLAIM_RATE_LIMIT"
     | "SAFETY_GRADES_RATE_LIMIT"
-  >> & { SAFETY_SCORE_V9_WORKFLOW?: Workflow };
+  >>;
 
-export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY" | "GRAPH_API_KEY" | "SAFETY_SCORE_V9_WORKFLOW"> & {
-  SAFETY_SCORE_V9_WORKFLOW: Workflow;
+export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY" | "GRAPH_API_KEY"> & {
   SAFETY_CAPTURE_ARCHIVE: R2Bucket;
 };
 

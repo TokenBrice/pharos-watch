@@ -79,6 +79,8 @@ function renderSafetyMapPreview() {
       ]}
       gradeCounts={{ A: 1 }}
       totalCards={1}
+      scoredCount={1}
+      cardCount={1}
     />,
   );
 }

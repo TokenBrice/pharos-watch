@@ -90,7 +90,7 @@ export function replayHistoricalPsiForDay(
   const dewsArchiveRowCount = input.dewsByDay?.get(input.day)?.length ?? 0;
   const dewsStressBreadth = stressRequired
     ? computeHistoricalDewsStressBreadth(
-      input.day, input.supplyByCoin, input.dewsByDay ?? new Map(), input.universeCache,
+      input.day, input.supplyByCoin, input.dewsByDay ?? new Map<number, PsiHistoricalDewsRow[]>(), input.universeCache,
     )
     : null;
   const stabilityInput = {
