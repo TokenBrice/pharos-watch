@@ -36,7 +36,6 @@ describe("CI workflow scope", () => {
       expect(scheduled.jobs["v9-resource"].steps.filter(
         (step: { run?: string }) => step.run === "npm run test:v9-resource",
       )).toHaveLength(1);
-      expect(scheduled.jobs["report-failures"].needs).toContain("v9-resource");
     }
   });
 

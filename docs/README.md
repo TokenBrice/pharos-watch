@@ -85,6 +85,7 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | symptom | [Telegram rate-limit storm](./runbooks/telegram-rate-limit-storm.md) |
 | symptom | [Telegram setup wizard stuck](./runbooks/telegram-setup-wizard-stuck.md) |
 | symptom | [Telegram webhook retry and dedupe](./runbooks/telegram-webhook-retry-dedupe.md) |
+| symptom | [Workflow failure triage](./runbooks/workflow-incidents.md) |
 | symptom | [Yield benchmark fallback or stale state](./runbooks/yield-benchmark-fallback-stale.md) |
 | symptom | [Yield deterministic all-fail cooldown](./runbooks/yield-deterministic-cooldown.md) |
 | symptom | [Yield rankings stale or missing](./runbooks/yield-rankings-stale-or-missing.md) |
@@ -108,7 +109,6 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | reference | [Telegram ingress abuse-control contract](./runbooks/telegram-ingress-abuse-controls.md) |
 | reference | [Telegram read-only operator queries](./runbooks/telegram-operator-queries.md#read-only-incident-entry) |
 | reference | [Telegram webhook flood-control contract](./runbooks/telegram-webhook-ingress.md) |
-| reference | [Workflow failure reporting contract](./runbooks/workflow-incidents.md) |
 | reference | [Yield health diagnostics](./runbooks/yield-health.md) |
 
 <!-- GENERATED-END: runbook-index -->

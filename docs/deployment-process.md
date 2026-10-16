@@ -115,7 +115,7 @@ Production responsibility is split deliberately:
 
 Pages-impact/build-pipeline PRs select `pages-artifact` in `.github/workflows/pull-request-checks.yml`. Before candidate setup, the frozen PR base helper acquires/validates the latest unexpired successful-main release data; the GitHub Actions token is scoped only to that trusted step. The token-free candidate build consumes `PAGES_RELEASE_DATA_DIR` through `scripts/ci/run-pages-artifact-lane.ts`, with no live refresh or publishing. Missing base helper or expired/unavailable data yields explicit `degraded-data`: committed snapshots + offline detail bootstrap, not realistic size proof; every artifact gate remains required and invalid data fails. Protected merges independently select production surfaces. Worker mutation packages both scripts before one migration application, then proves both activations and writes verified role markers plus immutable UUID activation evidence; Pages retains artifact and release-marker proof. Static, Next compiler and Playwright caches remain separate.
 
-Deploy sequence in `.github/workflows/deploy-cloudflare.yml`: `plan → (deploy-worker ∥ pages-prepare) → pages-release → post-deploy-acceptance`, plus the terminal `report-failures` incident job, with unselected surfaces legitimately skipped. Acceptance runs for each successfully deployed surface even if another deploy failed or Worker identity re-verification fails.
+Deploy sequence in `.github/workflows/deploy-cloudflare.yml`: `plan → (deploy-worker ∥ pages-prepare) → pages-release → post-deploy-acceptance`, with unselected surfaces legitimately skipped. Acceptance runs for each successfully deployed surface even if another deploy failed or Worker identity re-verification fails.
 
 1. `plan`
    - rejects any ref other than `refs/heads/main`;
@@ -145,10 +145,6 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`: `plan → (deploy-
 5. `post-deploy-acceptance`
    - runs read-only identity and health probes for successfully deployed surfaces, with Node setup but no npm install or generated bootstrap; see [Operational Acceptance](#operational-acceptance).
    - re-verifies both scripts' SHA-tagged sole 100% versions and compares each UUID with the deploy job's output before the existing public health/Pages acceptance.
-
-6. `report-failures`
-   - runs after all deploy/acceptance dependencies using `always()` on `main`; `.github/workflows/rebuild-pages.yml` has the same terminal reporting owner after Pages preparation/release;
-   - uses `.github/actions/report-workflow-failure/action.yml` to reconcile workflow+job+step incident issues. Reporting does not roll back production or turn failed acceptance into success.
 
 The daily/manual `.github/workflows/rebuild-pages.yml` runs `pages-prepare → pages-release` on `main`, with `refresh_data: true` and no Worker deployment.
 
@@ -279,8 +275,6 @@ Scheduled artifact PR secret:
 Route share cards are no longer screenshots: data-bearing routes select the live Worker card `/api/og/page/:slug` and every other route a committed timeless card ([OG Images](./og-images.md#1-route-cards)). After a Worker deploy, `GET` each live slug and decode the PNG; `X-Og-Status: timeless` names its `X-Og-Reason`.
 The [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) and [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) pages document the append-only measurement PR paths and their freshness gates.
 
-Workflow incident reporting uses the job-scoped `github.token` for GitHub issues and requires no Telegram secrets.
-
 Repository variables used by the Pages build:
 
 - Optional: `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_PHAROS_*`
@@ -348,7 +342,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 
 ### Failure Stop and Surface Classification
 
-- A failed required step fails its job and blocks dependent deployment gates; independent Pages preparation and applicable acceptance/failure-reporting jobs can still run.
+- A failed required step fails its job and blocks dependent deployment gates; independent Pages preparation and applicable acceptance jobs can still run.
 - Pull requests own full source/test validation. The post-merge workflow reruns only the focused Worker migration/activation checks and Pages artifact checks that are adjacent to production mutation.
 - Worker deploy is skipped unless deployed Worker/runtime/config/shared inputs changed. Root package and lockfile changes conservatively deploy both surfaces.
 - Pages publish is skipped for non-publishable or test-only Pages changes.
