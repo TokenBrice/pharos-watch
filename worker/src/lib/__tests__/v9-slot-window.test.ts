@@ -124,7 +124,6 @@ describe("runV9AfterCoreWithinWindow", () => {
       V9_MEMORY_LANE_LEASE_KEY,
       expect.any(Function),
       expect.objectContaining({
-        acquisitionWait: { deadlineMs: scheduledTimeMs + 20_000 },
         ttlSec: 60,
         heartbeatSec: 15,
       }),
@@ -482,37 +481,11 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  it.each([25_000, 80_000])("bounds memory-lane acquisition and rechecks headroom after %sms", async waitMs => {
-    const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
-    vi.useFakeTimers();
-    vi.setSystemTime(scheduledTimeMs + 50_000);
-    const fixture = dbWithCoreSlot({
-      state: "finished", result_status: "ok", worker_version: "worker-v2",
-    });
-    leaseMocks.runCronWithLease.mockImplementationOnce(async (
-      _db: D1Database, _job: string,
-      callback: (input: { signal: AbortSignal }) => Promise<unknown>,
-      leaseOptions: { abortSignal: AbortSignal },
-    ) => {
-      vi.setSystemTime(Date.now() + waitMs);
-      return { status: "ok", result: await callback({ signal: leaseOptions.abortSignal }) };
-    });
-    const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
-    const result = await runV9AfterCoreWithinWindow({
-      ...options(fixture.db, scheduledTimeMs, { deadlineOffsetMs: 180_000, minimumRemainingMs: 60_000 }),
-      lane: "sync-v9-supply-attribution", currentSlotKey: "v9SupplyAttributionOffset",
-    }, run);
-    expect(leaseMocks.runCronWithLease).toHaveBeenCalledWith(
-      fixture.db, V9_MEMORY_LANE_LEASE_KEY, expect.any(Function),
-      expect.objectContaining({ acquisitionWait: { deadlineMs: scheduledTimeMs + 120_000 } }),
-    );
-    expect(result.status).toBe(waitMs === 25_000 ? "ok" : "skipped_neutral");
-    expect(run).toHaveBeenCalledTimes(waitMs === 25_000 ? 1 : 0);
-    if (waitMs === 80_000) expect(result.productivity?.reason).toBe("v9-slot-window-too-short");
-  });
-
-  it("skips neutrally when another V9 invocation already owns the memory lane", async () => {
-    const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
+  it.each([
+    { lane: "compute-safety-score-v9", currentSlotKey: "v9PublicationOffset", minute: "22" },
+    { lane: "sync-v9-supply-attribution", currentSlotKey: "v9SupplyAttributionOffset", minute: "23" },
+  ])("skips $lane immediately without waiting when publication holds the memory lane", async ({ lane, currentSlotKey, minute }) => {
+    const scheduledTimeMs = Date.parse(`2026-10-16T12:${minute}:00Z`);
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
     const fixture = dbWithCoreSlot({
@@ -526,7 +499,14 @@ describe("runV9AfterCoreWithinWindow", () => {
     const run = vi.fn();
 
     const result = await runV9AfterCoreWithinWindow(
-      options(fixture.db, scheduledTimeMs),
+      {
+        ...options(fixture.db, scheduledTimeMs, {
+          deadlineOffsetMs: 180_000,
+          minimumRemainingMs: 60_000,
+        }),
+        lane,
+        currentSlotKey,
+      },
       run,
     );
 
@@ -534,6 +514,10 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(result.productivity?.reason).toBe(
       "v9-memory-lane-active",
     );
+    expect(leaseMocks.runCronWithLease).toHaveBeenCalledTimes(1);
+    expect(leaseMocks.runCronWithLease.mock.calls[0]?.[3]).not.toHaveProperty("acquisitionWait");
+    expect(Date.now()).toBe(scheduledTimeMs + 1_000);
+    expect(vi.getTimerCount()).toBe(0);
     expect(fixture.prepare).not.toHaveBeenCalled();
     expect(run).not.toHaveBeenCalled();
   });
