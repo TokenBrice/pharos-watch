@@ -13,7 +13,7 @@ const stepSchema = z.object({
   env: z.record(z.string(), z.unknown()).default({}),
 });
 const readYaml = (path: string): unknown => parseYaml(readFileSync(resolve(process.cwd(), path), "utf8"));
-const { inputs, runs: { steps } } = z.object({
+const { runs: { steps } } = z.object({
   inputs: z.record(z.string(), z.object({ default: z.string() })),
   outputs: z.record(z.string(), z.object({ value: z.string() })),
   runs: z.object({ steps: z.array(stepSchema) }),
@@ -75,28 +75,6 @@ describe("setup-workspace caches", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
-
-
-  it("installs pinned ripgrep only on request and verifies its official sha256 before extraction", () => {
-    const install = steps.find((step) => step.name === "Install verified ripgrep")!;
-    const run = install.run!;
-    expect(inputs["install-ripgrep"].default).toBe("false");
-    expect(install.if).toBe("${{ inputs.install-ripgrep == 'true' }}");
-    expect(run).toContain("set -euo pipefail");
-    expect(run).toContain('version="15.2.0"');
-    expect(run).toContain('sha256="33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c"');
-    expect(run).toContain("https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz.sha256");
-    expect(run).toContain('package="ripgrep-${version}-x86_64-unknown-linux-musl"');
-    expect(run).toContain('curl --fail --location --silent --show-error');
-    expect(run).toContain('"https://github.com/BurntSushi/ripgrep/releases/download/${version}/${package}.tar.gz"');
-    const verify = run.indexOf(`printf '%s  %s\\n' "\${sha256}" "\${archive}" | sha256sum --check --strict`);
-    expect(verify).toBeGreaterThan(run.indexOf("curl --fail"));
-    expect(run.indexOf('tar -xzf "${archive}"')).toBeGreaterThan(verify);
-    expect(run.indexOf('sudo install -m 755 "${root}/rg" /usr/local/bin/rg')).toBeGreaterThan(verify);
-    expect(run).not.toContain("GITHUB_PATH");
-    expect(install["continue-on-error"]).toBeUndefined();
-  });
-
 
   it("publishes validated lint and compiler state before unrelated nightly guards can fail", () => {
     const workflow = z.object({ jobs: z.record(z.string(), z.object({ steps: z.array(stepSchema) })) })

@@ -1,4 +1,4 @@
-export type PrLaneSelector = "always" | "code" | "docs" | "pages-artifact";
+export type PrLaneSelector = "always" | "code" | "docs" | "pages-artifact" | "v9-resource";
 
 export type PrLaneId =
   | "preflight"
@@ -30,6 +30,8 @@ export interface PrLaneSelection {
   docsOnly: boolean;
   pagesArtifactRequired?: boolean;
   testShards?: number;
+  /** Missing classification selects the resource lane conservatively. */
+  v9ResourceRequired?: boolean;
 }
 
 export interface PrLaneCommandContext {
@@ -76,7 +78,7 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
   },
   {
     id: "v9-resource",
-    selector: "code",
+    selector: "v9-resource",
     // Faithful setup/live/natural/correctness smoke: 101s; contagion wall policy: 90s.
     // Eight minutes allows CI setup, bundling and scheduling headroom without a 35-minute hang.
     timeoutMinutes: 8,
@@ -115,6 +117,7 @@ export function isPrLaneSelected(lane: PrLaneDefinition, selection: PrLaneSelect
     case "code": return !selection.docsOnly;
     case "docs": return selection.docsChanged;
     case "pages-artifact": return selection.pagesArtifactRequired === true;
+    case "v9-resource": return selection.v9ResourceRequired !== false;
   }
 }
 

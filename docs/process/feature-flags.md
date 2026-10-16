@@ -24,7 +24,7 @@ The no-op blacklist banner control was retired on 2026-09-27 (DEC-15): its flag,
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | DDRR module below DDR on `/depeg/` and the detail DDR track-record section (emergency rollback) |
 
-`expiresAt` is enforceable: dated flags carry an `// expiresAt:` comment immediately above the flag key in `src/lib/feature-flags.ts`; undated flags have no expiry. By the deadline, either retire the flag after acceptance or extend its date with a documented retention rationale. Documentation alone does not waive expiry. `check:stale-flags` runs in affected PR structural guards and nightly/manual validation; it fails on dates today or earlier, warns 30 days ahead, and rejects an inventory with no parsed dated flags.
+Dated flags carry an `// expiresAt:` comment immediately above the flag key in `src/lib/feature-flags.ts`; undated flags have no expiry. By the deadline, either retire the flag after acceptance or extend its date with a documented retention rationale. Documentation alone does not waive expiry; flag lifecycle dates are reviewed manually.
 
 ## Flip readiness gates
 
@@ -116,11 +116,11 @@ release path runs `check:feature-flag-inlining` against the built bundle.
 Adding, renaming, or removing a flag also requires updating
 `src/lib/feature-flags.ts`, the env block in
 `.github/workflows/pages-release.yml`, this inventory, and the
-inlining/stale-flag checks as applicable.
+inlining check as applicable.
 
 ## Spec source
 
-`src/lib/feature-flags.ts` is the source of truth for flag names, defaults, and `expiresAt` — it is the only file `scripts/ci/check-stale-flags.ts` reads. This page is the durable reference for what each flag gates, its flip-readiness gate, the rollout procedure, and the retention rationale. Build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).
+`src/lib/feature-flags.ts` is the source of truth for flag names, defaults, and `expiresAt`. This page is the durable reference for what each flag gates, its flip-readiness gate, the rollout procedure, and the retention rationale. Build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).
 
 ## 2026-08-23 lifecycle review
 

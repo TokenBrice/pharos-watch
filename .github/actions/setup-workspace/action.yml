@@ -57,10 +57,6 @@ inputs:
     description: Whether to install the Playwright Firefox browser after npm dependencies are installed.
     required: false
     default: "false"
-  install-ripgrep:
-    description: Whether to install the pinned, checksum-verified ripgrep binary (Linux x64 only).
-    required: false
-    default: "false"
 
 outputs:
   workspace-artifact-name:
@@ -84,31 +80,6 @@ runs:
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         node-version: ${{ inputs.node-version }}
-
-    - name: Install verified ripgrep
-      if: ${{ inputs.install-ripgrep == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        if [[ "${RUNNER_OS}" != "Linux" || "${RUNNER_ARCH}" != "X64" ]]; then
-          echo "::error::install-ripgrep supports Linux x64 runners only (got ${RUNNER_OS}/${RUNNER_ARCH})."
-          exit 1
-        fi
-        version="15.2.0"
-        # https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz.sha256
-        sha256="33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c"
-        package="ripgrep-${version}-x86_64-unknown-linux-musl"
-        archive="${RUNNER_TEMP}/${package}.tar.gz"
-        root="${RUNNER_TEMP}/pharos-ripgrep-${version}"
-        mkdir -p "${root}"
-        curl --fail --location --silent --show-error \
-          "https://github.com/BurntSushi/ripgrep/releases/download/${version}/${package}.tar.gz" \
-          --output "${archive}"
-        printf '%s  %s\n' "${sha256}" "${archive}" | sha256sum --check --strict
-        tar -xzf "${archive}" -C "${root}" --strip-components=1 "${package}/rg"
-        # /usr/local/bin is already on the hosted runner PATH, so no environment-file write is needed (zizmor github-env).
-        sudo install -m 755 "${root}/rg" /usr/local/bin/rg
-        rg --version
 
     - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' }}
       id: cache-key

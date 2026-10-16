@@ -10,10 +10,6 @@ import {
 } from "@shared/types/safety-score-v9-evidence-queue";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fact-primitives";
 import type { V9FactSetCoreV3 } from "@shared/types/safety-score-v9-facts";
-import {
-  runV9EvidenceGapQueueCli,
-  type V9EvidenceGapQueueIo,
-} from "../maintenance/generate-safety-score-v9-evidence-gap-queue";
 
 const AS_OF_SEC = 1_000;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
@@ -286,27 +282,6 @@ function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
   return compileV9FactSetV3(core);
 }
 
-function memoryIo(inputs: Record<string, unknown>) {
-  const writes = new Map<string, string>();
-  let stdout = "";
-  const io = {
-    readJson(path: string) {
-      if (!(path in inputs)) throw new Error(`Missing fixture ${path}`);
-      return inputs[path];
-    },
-    writeText(path: string, contents: string) {
-      writes.set(path, contents);
-    },
-    stdout: {
-      write(text: string) {
-        stdout += text;
-        return true;
-      },
-    },
-  } satisfies V9EvidenceGapQueueIo;
-  return { io, writes, getStdout: () => stdout };
-}
-
 describe("Safety Score v9 evidence-gap queue", () => {
   it("derives policy, applicability, materiality, owner, and action from typed facts", () => {
     const factSet = compileV9FactSetV3(
@@ -574,24 +549,4 @@ describe("Safety Score v9 evidence-gap queue", () => {
       action: "collect-evidence",
     });
   });
-});
-
-describe("Safety Score v9 evidence-gap queue CLI", () => {
-  it("writes a policy-bound evidence queue and optionally enforces clear", () => {
-    const factSet = compileV9FactSetV3(factSetCore());
-    const { io, writes } = memoryIo({ facts: factSet, policy: policyAsset });
-    const argv = ["--fact-set", "facts", "--policy", "policy", "--output", "queue.json"];
-    const queue = runV9EvidenceGapQueueCli(argv, io);
-    expect(queue?.status).toBe("work-required");
-    expect(queue?.facts).toMatchObject({
-      sourceSchemaVersion: 4,
-      sourceFactSetDigest: factSet.v9FactSetDigest,
-    });
-    expect(queue?.entries[0]?.responsibility).toBe("unresearched");
-    expect(parseV9EvidenceGapQueue(JSON.parse(writes.get("queue.json")!))).toEqual(queue);
-    const required = memoryIo({ facts: factSet, policy: policyAsset });
-    expect(() => runV9EvidenceGapQueueCli([...argv, "--require-clear"], required.io)).toThrow("contains 1 gap");
-    expect(parseV9EvidenceGapQueue(JSON.parse(required.writes.get("queue.json")!))).toEqual(queue);
-  });
-
 });

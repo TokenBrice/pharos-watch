@@ -32,7 +32,7 @@ Select schedule/dispatch, lease/abandonment recovery, compatibility-date qualifi
 
 The assigned verifier runs checks after writers finish; implementation agents return required checks and do not independently claim validation.
 
-- Topology/runtime: `npm run check:cron-sync`, `npm run check:cron-connections`, `npm run check:cron-console-usage`, `npm run check:fetch-body-timeouts`, `npm run validate:worker-scheduled-smoke`.
+- Topology/runtime: `npm run check:cron-sync`, `npm run check:cron-connections`, `npm run check:fetch-body-timeouts`, `npm run validate:worker-scheduled-smoke`.
 - Dispatch/leases: `npx vitest run worker/src/handlers/scheduled/__tests__/scheduled-runner-contract.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts`.
 - CPU placement: `npx vitest run shared/lib/__tests__/cron-jobs.test.ts` checks declared placement and required-hourly aliases across all logical schedules; topology checks inventory both `worker/wrangler.toml` and `worker/wrangler.heavy.toml`.
 - Experiments: use only the selected branch's qualification gates. After an authorized risk-bearing deployment, observe the first relevant execution with `npm run ops:watch-worker-cron` and the status endpoint; route anomalies to the incident branch.

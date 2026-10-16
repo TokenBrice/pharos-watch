@@ -165,6 +165,7 @@ describe("isolated V9 resource execution", () => {
   }, 65_000);
 
   it("runs the resource lane once after ordinary tests settle and records its outcome", async () => {
+    fixture.changedFiles = ["worker/src/lib/safety-score-v9/resource-budget.ts"];
     const h = harness();
     let testing = false;
     const resourceCalls: string[] = [];
@@ -226,14 +227,15 @@ describe("readiness execution", () => {
       if (command.cmd.startsWith("git rev-parse")) return { status: 0, aborted: false, output: baseSha };
       if (command.cmd.startsWith("git show")) return { status: 0, aborted: false, output: "0" };
       if (command.cmd.includes("lint:changed")) return { status: 1, aborted: false, output: "> banner\nError: lint violation" };
-      if (command.cmd.includes("check:table-primitives")) throw new Error("spawn ENOENT");
+      if (command.cmd.includes("check:env-contract")) throw new Error("spawn ENOENT");
       return { status: 0, aborted: false, output: "" };
     });
     expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(1);
     expect(h.receipts[0].outcome).toBe("failed");
     expect(h.receipts[0].leaves).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "pr-static:lint:changed", status: "failed", firstError: "Error: lint violation" }),
-      expect.objectContaining({ id: "pr-static:check:table-primitives", status: "failed", firstError: "spawn ENOENT" }),
+      expect.objectContaining({ id: "pr-static:check:env-contract", status: "failed", firstError: "spawn ENOENT" }),
+      expect.objectContaining({ id: "pr-static:check:shared-types-imports", status: "passed" }),
       expect.objectContaining({ id: "pr-tests", status: "passed" }),
     ]));
     const output = h.stdout.write.mock.calls.map(([chunk]) => chunk).join("");

@@ -69,7 +69,6 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-          install-ripgrep: "true"
           workspace-artifact: none
       - name: Classify PR changes
         id: classify
@@ -89,6 +88,7 @@ jobs:
           DOCS_CHANGED: ${{ steps.classify.outputs.docs_changed }}
           DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
           PAGES_ARTIFACT_REQUIRED: ${{ steps.classify.outputs.pages_artifact_required }}
+          V9_RESOURCE_REQUIRED: ${{ steps.classify.outputs.v9_resource_required }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix
@@ -129,7 +129,6 @@ jobs:
           cache-npm: "false"
           install-deps: "false"
           install-playwright-firefox: ${{ matrix.lane == 'static-guards' && needs.prepare.outputs.playwright_firefox_required || 'false' }}
-          install-ripgrep: ${{ (matrix.lane == 'static-guards' || matrix.lane == 'docs') && 'true' || 'false' }}
           static-cache: ${{ matrix.lane == 'static-compile' && 'true' || 'false' }}
           workspace-artifact: restore
           workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}

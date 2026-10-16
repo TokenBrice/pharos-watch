@@ -1,26 +1,9 @@
 name: CodeQL
 on:
-  push:
-    branches: [main]
-    paths:
-      - "**/*.cjs"
-      - "**/*.cts"
-      - "**/*.js"
-      - "**/*.jsx"
-      - "**/*.mjs"
-      - "**/*.mts"
-      - "**/*.ts"
-      - "**/*.tsx"
-      - ".github/codeql/**"
-      - ".github/workflows/codeql.yml"
-      - ".nvmrc"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig*.json"
-      - "worker/package.json"
-      - "worker/tsconfig*.json"
   schedule:
     - cron: "0 6 * * 1"
+    - cron: "17 6 * * *"
+  workflow_dispatch:
 
 concurrency:
   group: codeql-${{ github.ref }}

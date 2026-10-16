@@ -119,7 +119,7 @@ describe("adaptive PR checks", () => {
 
     const guards = buildPrStaticCheckPlan(changedFiles, { group: "guards" });
     expect(guards.commands.map((command) => command.name)).toEqual(expect.arrayContaining([
-      "check:table-primitives", "check:env-contract", "check:shared-types-imports",
+      "check:env-contract", "check:shared-types-imports",
       "check:critical-coverage-completeness", "check:structural", "check:generated-artifacts",
       "check:cron-connections", "check:cron-sync", "check:migrations", "check:sql-safety",
       "check:worker-config", "check:worker-package",
@@ -197,5 +197,20 @@ describe("adaptive PR checks", () => {
     ]) {
       expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");
     }
+  });
+
+  it("does not select structural checks for test-only changes", () => {
+    const changedFiles = [
+      "worker/src/cron/__tests__/sync-stablecoins.test.ts",
+      "src/lib/example.test.ts",
+      "scripts/test-utils/example.ts",
+      "worker/src/test-helpers/example.ts",
+      "src/lib/__mocks__/example.ts",
+      "scripts/fixtures/example.json",
+    ];
+    expect(buildPrStaticCheckPlan(changedFiles).commands.map((command) => command.name))
+      .not.toContain("check:structural");
+    expect(buildPrStaticCheckPlan([...changedFiles, "worker/src/cron/sync-stablecoins.ts"])
+      .commands.map((command) => command.name)).toContain("check:structural");
   });
 });

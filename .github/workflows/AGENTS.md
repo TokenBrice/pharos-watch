@@ -24,7 +24,7 @@ Applies to GitHub Actions workflows and their shared workspace setup.
 ## Entrypoints & Generation
 
 - `.github/workflows/pull-request-checks.yml` owns PR lanes; `.github/workflows/deploy-cloudflare.yml` owns post-merge ordering.
-- `.github/workflows/pages-prepare.yml` owns the secret-free compile-input workspace; `.github/workflows/pages-release.yml` owns its Worker-gated refresh/build/publish. `.github/actions/setup-workspace/action.yml` owns shared setup, pinned ripgrep, and generated bootstrap inputs.
+- `.github/workflows/pages-prepare.yml` owns the secret-free compile-input workspace; `.github/workflows/pages-release.yml` owns its Worker-gated refresh/build/publish. `.github/actions/setup-workspace/action.yml` owns shared setup and generated bootstrap inputs.
 
 ## Tests
 
@@ -32,4 +32,4 @@ Applies to GitHub Actions workflows and their shared workspace setup.
 
 ## Common Checks
 
-- Full plain `npm run check:pr` on final committed state before every push; focused checks/`--plan` are feedback only. Add `npm run check:pr -- --ci-parity` for unreproduced remote failures or lockfile/setup/security-policy changes. Artifact/profile helpers: `npm run check:pages-artifact`, `npm run check:pages-release`, `npm run check:worker-config`.
+- Run `npm run check:pr` for focused authoring feedback before pushing; hosted CI is the readiness authority and local receipts are optional diagnostics. Artifact/profile helpers: `npm run check:pages-artifact`, `npm run check:pages-release`, `npm run check:worker-config`.

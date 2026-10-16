@@ -88,9 +88,9 @@ Do not create a branch, worktree, or pull request unless requested. Do not expos
 
 Use [Testing: Smallest adequate check per area](../testing.md#smallest-adequate-check-per-area) for authoring feedback, not readiness proof. Preserve nearby formatting because the repository has no canonical formatter, and finish with `git diff --check`.
 
-Before **every** authorized push, first or replacement, follow the mandatory ordered [Pre-push readiness](../testing.md#pre-push-readiness) procedure on the final committed HEAD. Require its fresh passing receipt; subsequent edits, commits, or integration invalidate that proof. Focused reruns never authorize a replacement push, and GitHub Actions remains the authoritative release gate.
+Run `npm run check:pr` for focused authoring feedback before authorized first or replacement pushes, following [Pre-push readiness](../testing.md#pre-push-readiness). Hosted CI is the readiness authority; local receipts are optional diagnostics, not a push prerequisite.
 
-For CI failures, collect every failed leaf and use the [workflow incident runbook](../runbooks/workflow-incidents.md); the readiness owner above defines the parity and replacement-push requirements.
+For CI failures, collect every failed leaf and use the [workflow incident runbook](../runbooks/workflow-incidents.md); fix all causal defects in one revision and rerun focused checks before an authorized replacement push.
 
 Passing deployment proves activation, not runtime health. Cron, scheduler, ingestion, migration, and other operationally risky changes also require the first relevant production execution or observation before being called operationally complete.
 

@@ -9,7 +9,7 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
-  it("installs each nightly Node 24 lane independently and keeps the Node 26 probe separate", () => {
+  it("installs each nightly Node 24 lane independently", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {
         needs?: string | string[];
@@ -21,7 +21,7 @@ describe("CI workflow scope", () => {
     // nightlies and lengthened the critical path (+104s median) while the npm
     // cache was already hot in every job, so each lane installs on its own.
     expect(workflow.jobs.prepare).toBeUndefined();
-    for (const job of ["full-static", "full-tests", "node26-proof"]) {
+    for (const job of ["full-static", "full-tests"]) {
       const setup = workflow.jobs[job].steps?.find(
         (step) => step.uses === "$/.github/actions/setup-workspace");
       expect(workflow.jobs[job].needs).toBeUndefined();
@@ -29,8 +29,6 @@ describe("CI workflow scope", () => {
       expect(setup?.with?.["install-deps"]).toBeUndefined();
       expect(setup?.with?.["bootstrap-history"]).toBe("true");
     }
-    expect(workflow.jobs["node26-proof"].steps?.find(
-      (step) => step.uses === "$/.github/actions/setup-workspace")?.with?.["node-version"]).toBe("26");
     const fullStatic = workflow.jobs["full-static"];
     expect(fullStatic["continue-on-error"]).toBeUndefined();
     const staticSteps = fullStatic.steps ?? [];
@@ -86,6 +84,38 @@ describe("CI workflow scope", () => {
         expect(result.stdout).toContain(command!.slice("npm run ".length));
       }
     }
+  });
+
+  it("keeps Node 26 advisory typing weekly and V9 resources unconditional only nightly", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml"));
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml"));
+    expect(nightly.jobs["node26-proof"]).toBeUndefined();
+    const probe = weekly.jobs["node26-proof"];
+    expect(probe["continue-on-error"]).toBe(true);
+    expect(probe.needs).toBeUndefined();
+    expect(probe.steps.find((step: { uses?: string }) =>
+      step.uses === "$/.github/actions/setup-workspace").with).toMatchObject({
+      "node-version": "26", "bootstrap-history": "true", "static-cache": "true",
+    });
+    expect(probe.steps.filter((step: { run?: string }) => step.run).map((step: { run: string }) => step.run))
+      .toEqual(["npm run typecheck", "npm run typecheck:worker"]);
+    expect(nightly.jobs["v9-resource"].if).toBeUndefined();
+    expect(nightly.jobs["v9-resource"].steps.filter((step: { run?: string }) =>
+      step.run === "npm run test:v9-resource")).toHaveLength(1);
+    expect(weekly.jobs["v9-resource"]).toBeUndefined();
+    expect(readRepoFile(".github/workflows/weekly-validation.yml")).not.toContain("npm run test:v9-resource");
+    expect(nightly.jobs["full-tests"].steps.some((step: { run?: string }) =>
+      step.run === "npm run test:all -- --shard=${{ matrix.shard }}/2")).toBe(true);
+  });
+
+  it("runs CodeQL daily with the existing Monday authority and manual dispatch, not pushes", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/codeql.yml"));
+    expect(workflow.on.push).toBeUndefined();
+    expect(workflow.on).toHaveProperty("workflow_dispatch");
+    expect(workflow.on.schedule).toEqual([
+      { cron: "0 6 * * 1" },
+      { cron: "17 6 * * *" },
+    ]);
   });
 
   it("restricts auxiliary production publishers to main for manual and scheduled runs", () => {

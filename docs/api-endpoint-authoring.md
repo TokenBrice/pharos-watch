@@ -65,7 +65,7 @@ For worker behavior changes, also run:
 npm run typecheck:worker
 ```
 
-Before pushing endpoint changes, follow [Pre-push readiness](./testing.md#pre-push-readiness) on the final committed state and require its fresh passing receipt:
+Before pushing endpoint changes, use [Pre-push readiness](./testing.md#pre-push-readiness) for focused authoring feedback; hosted CI is the readiness authority and local receipts are optional diagnostics:
 
 ```bash
 npm run check:pr

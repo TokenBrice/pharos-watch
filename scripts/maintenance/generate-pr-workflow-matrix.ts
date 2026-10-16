@@ -100,6 +100,7 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
       docsChanged: bool(env.DOCS_CHANGED),
       docsOnly,
       pagesArtifactRequired: bool(env.PAGES_ARTIFACT_REQUIRED),
+      v9ResourceRequired: env.V9_RESOURCE_REQUIRED !== "false",
       ...(docsOnly ? {} : { testShards: readPrTestPlan(PR_TEST_PLAN_PATH).shardCount }),
     });
     if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, outputs);

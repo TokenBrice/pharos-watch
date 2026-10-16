@@ -38,7 +38,6 @@ describe("local PR check orchestration", () => {
       "agents-doc-artifact",
       "pr-static",
       "pr-tests",
-      "v9-resource",
       "pages-artifact",
     ]);
   });
@@ -51,6 +50,16 @@ describe("local PR check orchestration", () => {
     const plan = buildPrCheckPlan(changedFiles, classification, localDefault);
     expect(plan).not.toContain("pages-artifact");
     expect(buildPrCheckPlan(changedFiles, classification, optedIn).at(-1)).toBe("pages-artifact");
+  });
+
+  it("selects resource probes only for V9 impact and fails closed when classification is unavailable", () => {
+    const changedFiles = ["worker/src/lib/safety-score-v9/resource-budget.ts"];
+    const classification = classifyChangedFiles(changedFiles);
+    expect(buildPrCheckPlan(changedFiles, classification, localDefault)).toContain("v9-resource");
+    const { v9ResourceRequired: _required, ...unclassified } = classification;
+    expect(buildPrCheckPlan(changedFiles, unclassified, localDefault)).toContain("v9-resource");
+    expect(buildPrCheckPlan(changedFiles, { ...classification, v9ResourceRequired: false }, localDefault))
+      .not.toContain("v9-resource");
   });
 
   it("scopes the gitleaks and classifier smokes to the requested base..head range", () => {

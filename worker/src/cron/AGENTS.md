@@ -27,4 +27,4 @@ Applies to worker/src/cron and its scheduled dispatch wiring.
 
 ## Common Checks
 
-- `npm run check:cron-sync`; `npm run check:cron-connections`; `npm run check:cron-console-usage`; `npm run check:fetch-body-timeouts`; `npm run validate:worker-scheduled-smoke`.
+- `npm run check:cron-sync`; `npm run check:cron-connections`; `npm run check:fetch-body-timeouts`; `npm run validate:worker-scheduled-smoke`.

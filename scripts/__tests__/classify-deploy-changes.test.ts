@@ -1,14 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   classifyChangedFiles,
   classifyDeployChanges,
+  emitGithubOutputs,
   hasDeployImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
   hasPagesUiImpact,
   hasWorkerDeployImpact,
   hasWorkerReleaseImpact,
+  hasV9ResourceImpact,
   normalizeChangedFiles,
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
@@ -38,6 +40,78 @@ describe("Pages artifact selection", () => {
       expect(classifyChangedFiles([path]).pagesArtifactRequired).toBe(false);
     },
   );
+});
+
+describe("V9 resource selection", () => {
+  it.each([
+    "shared/lib/safety-score-v9/compile.ts",
+    "shared/lib/safety-score-v9/new-module.ts",
+    "worker/src/lib/safety-score-v9-publication.ts",
+    "worker/src/lib/safety-score-v9/native-input.ts",
+    "worker/src/lib/db-cache.ts",
+    "worker/src/lib/report-cards-snapshot.ts",
+    "worker/src/cron/compute-safety-score-v9.ts",
+    "worker/src/cron/reserve-adapters/token-supply.ts",
+    "worker/src/cron/dex-liquidity/persistence.ts",
+    "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
+    "worker/src/test-helpers/v9-fixed-input.ts",
+    "worker/migrations/0263_safety_score_capture_archive.sql",
+    "shared/test-utils/sqlite-d1.ts",
+    "shared/lib/supply.ts",
+    "shared/lib/stablecoins/full-catalog.ts",
+    "shared/data/stablecoins/coins/usdc-circle.json",
+    "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+    "scripts/maintenance/run-v9-resource-lane.ts",
+    "scripts/build-data/generate-worker-stablecoin-catalog.ts",
+    "scripts/lib/wrangler-toml.mjs",
+    "worker/scripts/measure-v9-resource.ts",
+    "worker/wrangler.heavy.toml",
+    ".ci/safety-score-v9-resource-budget.json",
+    "package-lock.json",
+    ".nvmrc",
+    "tsconfig.test-typecheck.json",
+  ])("selects the audited source/data/harness/toolchain input %s", (file) => {
+    expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(true);
+  });
+
+  it.each([
+    "src/components/header.tsx",
+    "worker/src/api/health.ts",
+    "worker/src/cron/sync-blacklist.ts",
+    "worker/scripts/telegram-load.ts",
+    "scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    "docs/testing.md",
+  ])("does not select the resource lane for unrelated input %s", (file) => {
+    expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(false);
+  });
+
+  it.each([
+    { files: [] }, { files: [""] }, { files: ["../outside.ts"] },
+    { files: ["/tmp/outside.ts"] }, { files: ["unclassified/runtime.ts"] },
+  ])("fails closed for missing or unclassifiable file input $files", ({ files }) => {
+    expect(hasV9ResourceImpact(files)).toBe(true);
+  });
+
+  it.each([
+    { eventName: "workflow_dispatch" },
+    { eventName: "push", headSha: "head" },
+    { eventName: "push", baseSha: "base", headSha: "head", execFile: () => { throw new Error("diff failed"); } },
+  ])("fails closed when change collection is unavailable: %j", (options) => {
+    expect(classifyDeployChanges(options).v9ResourceRequired).toBe(true);
+  });
+
+  it("emits the resource selection for workflow matrix transport", () => {
+    const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      emitGithubOutputs(classifyChangedFiles(["package-lock.json"]));
+      expect(write).toHaveBeenCalledWith("v9_resource_required=true\n");
+      write.mockClear();
+      emitGithubOutputs(classifyChangedFiles(["src/components/header.tsx"]));
+      expect(write).toHaveBeenCalledWith("v9_resource_required=false\n");
+    } finally {
+      write.mockRestore();
+    }
+  });
 });
 
 describe("normalizeChangedFiles", () => {

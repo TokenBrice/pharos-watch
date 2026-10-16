@@ -127,7 +127,7 @@ This process index is curated, not a complete inventory. Start with [Agent Start
 | [D1 Baseline Squash Policy](./process/d1-baseline-squash-plan.md) | runbook | `d1-migration-rollout` | rehearse against two fresh D1 databases | `npm run check:migrations` |
 | [D1 Migration Authoring](./process/d1-migrations.md) | policy | `d1-migration-rollout` | add migration SQL and manifest evidence | `npm run check:migrations` |
 | [DDRR Calibration](./process/ddrr-calibration.md) | methodology | `safety-score-curation` | `npm run calibrate:ddrr -- --prod --report agents/ddrr-calibration-report.md` | semantic review; no pass/fail gate |
-| [Feature Flags](./process/feature-flags.md) | policy | none | `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev` | `npm run check:stale-flags` |
+| [Feature Flags](./process/feature-flags.md) | policy | none | `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev` | manual lifecycle review |
 | [Font Assets](./process/font-assets.md) | runbook | none | `npm run subset:fonts` | `npm run subset:fonts -- --check` |
 | [Mechanism-overlay Evidence Standard](./process/mechanism-overlay-evidence-standard.md) | methodology | `safety-score-curation` | none; apply the evidence standard | pinned-envelope replay and attributed mover review |
 | [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) | runbook | `safety-score-curation` | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset <asset>` | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-all` — strict original-byte readback; unavailable bodies fail (local/cache or signed R2 reads) |

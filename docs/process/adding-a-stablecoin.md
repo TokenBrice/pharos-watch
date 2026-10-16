@@ -844,7 +844,7 @@ Base coin files feed the gitignored `sitemap-dates` projection, which is regener
 npm run check:generated-artifacts -- --only=stablecoin-client-projections
 ```
 
-Run `check:stablecoin-data` first, then focused artifact checks. Run `npm run build` only for rendering changes or an explicit rehearsal. Before every authorized push, follow [Pre-push readiness](../testing.md#pre-push-readiness): converge all generated artifacts and run full plain `npm run check:pr` on the final committed state, requiring a fresh passing HEAD receipt. Focused checks are not readiness proof; GitHub's protected `PR gate` remains authoritative.
+Run `check:stablecoin-data` first, then focused artifact checks. Run `npm run build` only for rendering changes or an explicit rehearsal. Before an authorized push, use `npm run check:pr` for focused authoring feedback under [Pre-push readiness](../testing.md#pre-push-readiness) and keep generated artifacts with their owning source changes. Local receipts are optional diagnostics; GitHub's protected `PR gate` is the readiness authority.
 
 You can also run the individual checks directly when iterating:
 

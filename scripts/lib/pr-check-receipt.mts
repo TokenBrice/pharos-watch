@@ -17,10 +17,6 @@ export interface PrCheckReceipt {
   npm: string;
   baseSha: string;
   headSha: string;
-  /** Opt-in clean-clone proof; headSha remains the author's branch identity. */
-  mode?: "ci-parity";
-  mergeSha?: string;
-  mergeTree?: string;
   treeClean: boolean;
   flags: Record<string, unknown>;
   weakened: boolean;
@@ -37,9 +33,6 @@ const ReceiptSchema = z.object({
   npm: z.string(),
   baseSha: z.string(),
   headSha: z.string().regex(/^[a-f0-9]{40,64}$/),
-  mode: z.literal("ci-parity").optional(),
-  mergeSha: z.string().regex(/^[a-f0-9]{40,64}$/).optional(),
-  mergeTree: z.union([z.literal(""), z.string().regex(/^[a-f0-9]{40,64}$/)]).optional(),
   treeClean: z.boolean(),
   flags: z.record(z.string(), z.unknown()),
   weakened: z.boolean(),
@@ -56,7 +49,7 @@ const ReceiptSchema = z.object({
   outcome: z.enum(["passed", "failed", "incomplete"]),
 });
 
-/** Version 1 remains readable; tested-merge identity is additive and optional. */
+/** Read the optional local diagnostic receipt. */
 export function readPrCheckReceipt(path: string): PrCheckReceipt {
   return ReceiptSchema.parse(JSON.parse(readFileSync(path, "utf8")));
 }
@@ -80,8 +73,8 @@ export function explainPrCheckReceipt(checkout: PrReceiptCheckout, repoRoot = pr
       `Receipt: missing (${path})`,
       `Current HEAD: ${checkout.headSha}; tree: ${checkout.treeClean ? "clean" : "dirty"}`,
       "Remote-base freshness: unknown (no remote observation; no fetch performed).",
-      "Next action: follow docs/testing.md#pre-push-readiness on the final committed clean HEAD: converge npm run check:generated-artifacts, then run plain npm run check:pr.",
-      "Read-only explanation: no checks executed or receipt written; no push authorization. Exit 0 means explanation completed, not readiness.",
+      "Next action: run npm run check:pr for focused authoring feedback if useful; hosted CI is the readiness authority.",
+      "Read-only explanation: no checks executed or receipt written; receipts are optional local diagnostics, not push authorization.",
     ].join("\n");
   }
 
@@ -93,10 +86,9 @@ export function explainPrCheckReceipt(checkout: PrReceiptCheckout, repoRoot = pr
   if (receipt.outcome === "incomplete") limitations.push("Recorded incomplete outcome: not readiness proof.");
   if (receipt.incompleteReasons?.length) limitations.push(`Recorded incomplete reasons: ${receipt.incompleteReasons.join(", ")}.`);
   const flags = receipt.flags;
-  const nonPlain = receipt.mode === "ci-parity" || flags.noFetch === true || flags.noFetchEnv === true
-    || flags.plan === true || flags.withCoverage === true || flags.withPages === true
+  const limitedFlags = flags.noFetch === true || flags.noFetchEnv === true || flags.plan === true
     || (Array.isArray(flags.forwardedTestArgs) && flags.forwardedTestArgs.length > 0);
-  if (nonPlain) limitations.push("Recorded mode/flags are not final plain readiness; parity and opt-in lanes do not replace the final plain run.");
+  if (limitedFlags) limitations.push("Recorded flags limit local diagnostic coverage; inspect the selected checks and refs.");
   const baseDiffers = checkout.localBaseSha !== undefined && checkout.localBaseSha !== receipt.baseSha;
   if (baseDiffers) limitations.push("Recorded base differs from the locally available base; reconcile the intended base before reusing this evidence.");
   if (checkout.localBaseSha === undefined) limitations.push(`Local base ${checkout.baseRef} is unavailable; base identity cannot be compared.`);
@@ -104,15 +96,15 @@ export function explainPrCheckReceipt(checkout: PrReceiptCheckout, repoRoot = pr
   const skipped = receipt.leaves.some((leaf) => leaf.status === "skipped");
   if (skipped) limitations.push("Skipped lanes: selected checks were not completely executed.");
   const deferred = receipt.leaves.filter((leaf) => leaf.status === "deferred-to-ci");
-  const rerun = "follow docs/testing.md#pre-push-readiness on the final committed clean HEAD: converge npm run check:generated-artifacts, then run plain npm run check:pr.";
+  const rerun = "run npm run check:pr for focused authoring feedback if useful; hosted CI is the readiness authority.";
   let nextAction: string;
   if (failed.length || receipt.outcome === "failed") {
     nextAction = `Fix every failed lane${failed.length ? ` (${failed.map((leaf) => leaf.id).join(", ")})` : ""}, then ${rerun}`;
   } else if (receipt.headSha !== checkout.headSha || !checkout.treeClean || !receipt.treeClean
-    || receipt.weakened || receipt.outcome === "incomplete" || nonPlain || baseDiffers || skipped) {
+    || receipt.weakened || receipt.outcome === "incomplete" || limitedFlags || baseDiffers || skipped) {
     nextAction = `Resolve the limitations above, then ${rerun}`;
   } else {
-    nextAction = "Verify the latest remote base separately under docs/testing.md#pre-push-readiness; retain this receipt only if HEAD, clean tree and base remain unchanged. If the base or checkout changed, repeat generated convergence and plain npm run check:pr.";
+    nextAction = "Hosted CI is the readiness authority; retain this receipt only as optional local diagnostic evidence.";
   }
   if (deferred.length) nextAction += ` GitHub must still pass the deferred lanes (${deferred.map((leaf) => leaf.id).join(", ")}); deferred-to-ci is not a local failure.`;
   return [
@@ -120,10 +112,9 @@ export function explainPrCheckReceipt(checkout: PrReceiptCheckout, repoRoot = pr
     `Recorded HEAD: ${receipt.headSha}`,
     `Recorded base: ${receipt.baseSha || "(unresolved)"}`,
     `Recorded runtime: Node ${receipt.node}; npm ${receipt.npm}`,
-    `Recorded mode: ${receipt.mode ?? "plain"}; flags: ${JSON.stringify(receipt.flags)}`,
+    `Recorded flags: ${JSON.stringify(receipt.flags)}`,
     `Recorded tree: ${receipt.treeClean ? "clean" : "dirty"}; weakened: ${receipt.weakened}; outcome: ${receipt.outcome}`,
     `Recorded time: ${receipt.startedAt} -> ${receipt.finishedAt}`,
-    ...(receipt.mode === "ci-parity" ? [`Recorded tested merge: ${receipt.mergeSha ?? "(unavailable)"}; tree: ${receipt.mergeTree || "(unavailable)"}`] : []),
     `Current HEAD: ${checkout.headSha}; tree: ${checkout.treeClean ? "clean" : "dirty"}`,
     `Local base ${checkout.baseRef}: ${checkout.localBaseSha ?? "(unavailable)"} (local comparison only; original base ref is not recorded)`,
     "Lane outcomes (status | id | milliseconds | command | first actionable error):",
@@ -133,7 +124,7 @@ export function explainPrCheckReceipt(checkout: PrReceiptCheckout, repoRoot = pr
     "- Remote-base freshness: unknown (the receipt has no current remote observation; matching a cached ref is not proof; no fetch performed).",
     "- A clean tree cannot establish that no edits occurred since the recorded run.",
     `Next action: ${nextAction}`,
-    "Read-only explanation: no checks executed or receipt written; no push authorization. Exit 0 means explanation completed, not readiness.",
+    "Read-only explanation: no checks executed or receipt written; receipts are optional local diagnostics, not push authorization.",
   ].join("\n");
 }
 
@@ -141,8 +132,8 @@ export function computeReceiptOutcome(
   leaves: readonly PrCheckReceiptLeaf[],
   weakened: boolean,
 ): PrCheckReceipt["outcome"] {
-  // A failed proof is never concealed by a bypass; otherwise bypasses cannot
-  // certify readiness, even when every executed command succeeded.
+  // A failed check is never concealed by limited selection; otherwise record
+  // incomplete diagnostics even when every executed command succeeded.
   if (leaves.some((leaf) => leaf.status === "failed")) return "failed";
   if (weakened || leaves.some((leaf) => leaf.status === "skipped")) return "incomplete";
   return "passed";

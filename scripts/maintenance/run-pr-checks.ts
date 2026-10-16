@@ -5,11 +5,10 @@ import { runLocalTrustedGitleaks } from "../ci/run-gitleaks.ts";
 import { assertPinnedRuntime, readRuntimeVersions, type RuntimeVersions } from "../lib/runtime-guard.mts";
 import { computeReceiptOutcome, explainPrCheckReceipt, firstActionableError, writePrCheckReceipt, type PrCheckReceiptLeaf, type PrReceiptCheckout } from "../lib/pr-check-receipt.mts";
 import { buildPrStaticCheckPlan, prStaticLeafArgs } from "./run-pr-static-checks.ts";
-import { runCiParity } from "./run-ci-parity.ts";
 import { localBin } from "../lib/local-bin.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import { createPrTestPlan } from "../lib/pr-test-plan.mts";
-import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
+import { classifyChangedFiles, type DeployClassification } from "../ci/classify-deploy-changes.ts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import {
   createNpmScriptCommand,
@@ -51,9 +50,9 @@ export type PrCheckLane =
   | "pages-artifact";
 
 export type PrCheckClassification = Pick<
-  ReturnType<typeof classifyChangedFiles>,
+  DeployClassification,
   "docsChanged" | "docsOnly" | "pagesArtifactRequired" | "pagesChanged"
->;
+> & Partial<Pick<DeployClassification, "v9ResourceRequired">>;
 
 interface PrCheckCommand extends SpawnCommand {
   extraEnv?: Record<string, string>;
@@ -112,7 +111,8 @@ export function buildPrCheckPlan(
   if (classification.docsChanged) {
     lanes.push(...DOC_CHECK_LANES);
   }
-  lanes.push("pr-static", "pr-tests", "v9-resource");
+  lanes.push("pr-static", "pr-tests");
+  if (classification.v9ResourceRequired !== false) lanes.push("v9-resource");
   if (classification.pagesArtifactRequired && flags.withPages) lanes.push("pages-artifact");
 
   return lanes;
@@ -308,7 +308,7 @@ export async function runPrChecks(
     writeReceipt = writePrCheckReceipt,
   }: RunPrChecksOptions = {},
 ): Promise<number> {
-  // Dispatch before runtime guards, parity, fetches, selection, and the receipt-writing finally block.
+  // Dispatch before runtime guards, fetches, selection, and the receipt-writing finally block.
   if (argv.includes("--explain-receipt") || argv.some((arg) => arg.startsWith("--explain-receipt="))) {
     try {
       const { values } = parseStrictCliArgs(argv, { options: { "explain-receipt": { type: "boolean" } } });
@@ -323,10 +323,6 @@ export async function runPrChecks(
       stderr.write(`[check:pr] Receipt explanation failed: ${error instanceof Error ? error.message : String(error)}\n`);
       return error instanceof Error && "exitCode" in error && error.exitCode === 2 ? 2 : 1;
     }
-  }
-  if (argv.includes("--ci-parity")) {
-    return runCiParity(argv, { repoRoot, env, runtimeVersions, writeReceipt, now,
-      log: (message) => stdout.write(`${message}\n`) });
   }
   const startedAt = now();
   let runtime: RuntimeVersions = { node: process.version.replace(/^v/, ""), npm: "unavailable" };
@@ -348,7 +344,7 @@ export async function runPrChecks(
     if (staged) throw new Error("check:pr tests the checkout; use check:focused --staged for index-selected iteration.");
     weakened = flags.plan || flags.forwardedTestArgs.length > 0;
     if (flags.forwardedTestArgs.some((arg) => /^--plan(?:-out|-only)?(?:=|$)/.test(arg))) {
-      throw new Error("Test plan-only flags cannot certify readiness. Use check:pr --plan for a non-executing gate-wide plan.");
+      throw new Error("Test plan-only flags do not execute checks. Use check:pr --plan for a non-executing runner-wide plan.");
     }
     let baseUnverified = false;
     const noFetch = flags.noFetch || env.PHAROS_PR_NO_FETCH === "1";
@@ -362,7 +358,7 @@ export async function runPrChecks(
       } catch {
         baseUnverified = true;
       }
-      if (baseUnverified) warn("[check:pr] Warning: could not refresh origin/main; receipt cannot certify current-base readiness.");
+      if (baseUnverified) warn("[check:pr] Warning: could not refresh origin/main; local diagnostics use the available base.");
     }
     let staleBase = false;
     baseSha = await resolveBaseSha(base, env, runCommandImpl, now, {
@@ -378,7 +374,7 @@ export async function runPrChecks(
     if (!treeClean) {
       weakened = true;
       incompleteReasons.push("dirty-worktree");
-      warn("[check:pr] WARNING: dirty-worktree — tracked or untracked edits are outside the committed-range proof. Checks may run for authoring feedback, but this cannot certify HEAD readiness.");
+      warn("[check:pr] WARNING: dirty-worktree — tracked or untracked edits are outside the committed range. Checks provide authoring feedback; hosted CI is the readiness authority.");
     }
     if (checkout.requestedHeadSha !== headSha) {
       throw new Error(`--head=${head} resolves to ${checkout.requestedHeadSha}, not checked-out HEAD ${headSha}. Tests inspect the checkout; check out the requested commit first.`);
@@ -469,9 +465,9 @@ export async function runPrChecks(
       })),
       status: outcome, incompleteReasons, durationMs: Math.max(0, now() - startedAt),
     }, { json, label: "check:pr", stdout, stderr });
-    log(`[check:pr] Outcome: ${outcome}${outcome === "incomplete" ? " (weakened invocation; not readiness proof)" : ""}`);
+    log(`[check:pr] Outcome: ${outcome}${outcome === "incomplete" ? " (limited local diagnostic coverage)" : ""}`);
     if (incompleteReasons.includes("dirty-worktree")) {
-      warn("[check:pr] NOT READINESS PROOF: dirty-worktree. Commit final edits and rerun the complete gate on a clean checkout.");
+      warn("[check:pr] dirty-worktree: local receipts are optional diagnostics; hosted CI is the readiness authority.");
     }
     return outcome === "failed" ? 1 : 0;
   } catch (error) {
@@ -484,7 +480,7 @@ export async function runPrChecks(
     if (!headSha) {
       try {
         headSha = execFileSync("git", ["rev-parse", "--verify", "HEAD^{commit}"], { cwd: repoRoot, encoding: "utf8" }).trim();
-      } catch { /* Outside a Git checkout there is no commit identity to certify. */ }
+      } catch { /* Outside a Git checkout there is no commit identity to record. */ }
     }
     if (headSha) writeReceipt({
       schemaVersion: 1, ...runtime, baseSha, headSha, treeClean,

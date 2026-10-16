@@ -10,6 +10,7 @@ import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
 import { buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
+import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 
 const stepSchema = z.object({
   name: z.string().optional(), id: z.string().optional(), uses: z.string().optional(), run: z.string().optional(),
@@ -43,6 +44,7 @@ describe("PR lane manifest", () => {
     const validation = WORKFLOW.jobs.validation;
     const generator = prepare.steps.find((step) => step.id === "matrix");
     expect(generator?.run).toMatch(/^node [^\n]*generate-pr-workflow-matrix\.ts --matrix$/);
+    expect(generator?.env.V9_RESOURCE_REQUIRED).toBe("${{ steps.classify.outputs.v9_resource_required }}");
     expect(prepare.outputs?.matrix).toBe("${{ steps.matrix.outputs.matrix }}");
     expect(Object.keys(WORKFLOW.jobs)).toEqual(["secrets", "prepare", "validation", "pages-artifact", "pr-gate"]);
     expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
@@ -78,6 +80,22 @@ describe("PR lane manifest", () => {
       return [line.slice(0, separator), JSON.parse(line.slice(separator + 1))];
     }));
     expect(outputs).toEqual({ matrix: { include: matrix } });
+  });
+
+  it.each([
+    { name: "V9-impact", files: ["shared/lib/safety-score-v9/engine.ts"], selected: true },
+    { name: "unrelated", files: ["src/components/header.tsx"], selected: false },
+  ])("selects the resource lane for $name changes through the classifier", ({ files, selected }) => {
+    const classification = classifyChangedFiles(files);
+    const matrix = buildPrWorkflowMatrix({ ...classification, testShards: 4 }).include;
+    expect(matrix.some((entry) => entry.lane === "v9-resource")).toBe(selected);
+  });
+
+  it("selects the resource lane when classification is unavailable", () => {
+    const matrix = buildPrWorkflowMatrix({ docsChanged: false, docsOnly: false, testShards: 4 }).include;
+    expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
+      { lane: "v9-resource", timeout: 8 },
+    ]);
   });
 
   it("uses the same strict commands for local and sharded execution", () => {
