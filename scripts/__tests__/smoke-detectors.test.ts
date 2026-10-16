@@ -19,6 +19,7 @@ import {
   findFrameworkErrorMarker,
   getTopYieldRankingIds,
   getUnsafeHtmlCacheDirectives,
+  classifyFirstPartyAsset,
   hasExpectedAssetMime,
   isFatalRuntimeMessage,
   isExpectedYieldDeepRouteUrl,
@@ -263,6 +264,12 @@ describe("Pages asset-coherence smoke helpers", () => {
     expect(hasExpectedAssetMime("script", "text/html; charset=utf-8")).toBe(false);
     expect(hasExpectedAssetMime("style", "text/css; charset=utf-8")).toBe(true);
     expect(hasExpectedAssetMime("font", "font/woff2")).toBe(true);
+  });
+
+  it("ignores Cloudflare edge-injected /cdn-cgi/ scripts but still checks Pages scripts", () => {
+    const origin = "https://pharos.watch";
+    expect(classifyFirstPartyAsset(`${origin}/cdn-cgi/challenge-platform/scripts/jsd/main.js`, "script", origin)).toBeNull();
+    expect(classifyFirstPartyAsset(`${origin}/_next/static/chunks/app.js`, "script", origin)).toBe("script");
   });
 
   it("detects stale document directives and fatal browser signals", () => {
