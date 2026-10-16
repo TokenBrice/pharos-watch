@@ -1,4 +1,4 @@
-import { stableJsonStringifyChunksV1 } from "../stable-json";
+import { stableJsonStringifyBatchChunksV1, stableJsonStringifyChunksV1 } from "../stable-json";
 import { sha256HexFromUtf8Chunks } from "../sha256";
 import { compareText } from "./primitives";
 import type { V9PublishedEvidenceAttribution } from "./evidence";
@@ -70,9 +70,8 @@ export class ReviewEvidenceBuilder {
           (left, right) => compareText(left.url, right.url) || compareText(left.label, right.label),
         )
       : [null];
-    const evidenceKeys = sources.map((source, index) => {
-      const contentSha256 = this.digest(stableJsonStringifyChunksV1({
-        domain: "safety-score-v9.reviewed-metadata-evidence.v2",
+    const envelopes = sources.map((source) => ({
+      domain: "safety-score-v9.reviewed-metadata-evidence.v2",
         payload: {
           assetId: this.assetId,
           sourceId: args.sourceId,
@@ -84,7 +83,15 @@ export class ReviewEvidenceBuilder {
           source,
           payload: args.payload,
         },
-      }));
+    }));
+    // Source URLs alter the envelope, not the often megabyte-sized reviewed
+    // profile. Canonicalize that common payload once, without changing a byte
+    // of any source-specific evidence digest or retaining it beyond this add.
+    const canonicalEnvelopes = sources.length > 1 && args.payload !== null && typeof args.payload === "object"
+      ? stableJsonStringifyBatchChunksV1(envelopes, args.payload)
+      : envelopes.map(stableJsonStringifyChunksV1);
+    const evidenceKeys = sources.map((source, index) => {
+      const contentSha256 = this.digest(canonicalEnvelopes[index]!);
       const evidenceKey = `${args.sourceId}:${index}:${contentSha256.slice(0, 16)}`;
       this.evidence.set(evidenceKey, {
         evidenceKey,

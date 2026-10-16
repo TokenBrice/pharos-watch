@@ -7233,7 +7233,7 @@
           "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=0. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match. Scope review 2026-10-03: this asset is the exact native ERC-4626 share-token liability, whose deposit/fee share balances and totalSupply are maintained by this sole contract. Parent USDC/xDAI liabilities and independently named vaults are outside this share liability; custody/bridge receipts over escrowed shares do not create additional native vault shares. One active authored deployment and no share bridge/wrapper representation route were identified in the exact-token source and protocol inventory. The attestation completes only transfer scope, not parent liabilities, chain amounts, financial reconciliation or global control materiality.",
           "sources": [
             {
-              "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+              "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
               "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
             },
             {
@@ -7269,7 +7269,7 @@
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
             "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
           },
           {

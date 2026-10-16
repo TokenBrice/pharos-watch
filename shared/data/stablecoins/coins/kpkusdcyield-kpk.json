@@ -1,8 +1,8 @@
 {
   "id": "kpkusdcyield-kpk",
-  "name": "KPK USDC Yield V2",
+  "name": "KPK USDC Yield",
   "symbol": "KPK_USDC_Yield",
-  "oneLiner": "KPK USDC Yield V2 is a Morpho V2 USDC vault targeting incentive-rich collateral; shares accrue lending interest, absorb losses and redeem subject to liquidity.",
+  "oneLiner": "KPK USDC Yield is a Morpho V2 USDC vault targeting incentive-rich collateral; shares accrue lending interest, absorb losses and redeem subject to liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -23,7 +23,7 @@
     "rationale": "Exact Ethereum 0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13 issues a proportional operational position in Morpho lending strategies over USDC. VaultV2 exit code burns shares against available assets and recognizes losses; holder exposure differs from the fiat-cash parent. At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification.",
     "sources": [
       {
-        "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+        "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
         "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
       },
       {
@@ -56,7 +56,7 @@
   "geckoId": "kpk-usdc-yield",
   "links": [
     {
-      "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+      "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
       "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
     },
     {
@@ -75,7 +75,7 @@
   "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
-    "yieldSource": "KPK USDC Yield V2 Morpho V2 lending interest",
+    "yieldSource": "KPK USDC Yield Morpho V2 lending interest",
     "yieldType": "lending-vault"
   },
   "liveReservesConfig": {
@@ -85,7 +85,7 @@
     "breakerScope": "kpkusdcyield-kpk",
     "display": {
       "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
-      "label": "Morpho KPK USDC Yield V2"
+      "label": "Morpho KPK USDC Yield"
     },
     "inputs": {
       "primary": {

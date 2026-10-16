@@ -1,4 +1,5 @@
-function assertPlainStableJsonValue(value: unknown, path: string): void {
+function assertPlainStableJsonValue(value: unknown, path: string, sharedValue?: object): void {
+  if (value === sharedValue && sharedValue !== undefined) return;
   if (value === null || value === undefined) return;
 
   const valueType = typeof value;
@@ -29,7 +30,7 @@ function assertPlainStableJsonValue(value: unknown, path: string): void {
       if (entry === undefined) {
         throw new TypeError(`Cannot serialize undefined array entry at ${path}[${index}]`);
       }
-      assertPlainStableJsonValue(entry, `${path}[${index}]`);
+      assertPlainStableJsonValue(entry, `${path}[${index}]`, sharedValue);
     }
     return;
   }
@@ -38,14 +39,19 @@ function assertPlainStableJsonValue(value: unknown, path: string): void {
   }
   const record = value as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    assertPlainStableJsonValue(record[key], `${path}.${key}`);
+    assertPlainStableJsonValue(record[key], `${path}.${key}`, sharedValue);
   }
 }
 
 
 const CANONICAL_CHUNK_TARGET = 64 * 1024;
 
-function* stringifyCanonicalChunks(value: unknown): Generator<string> {
+interface SharedCanonicalValue {
+  value: object;
+  chunks: readonly string[];
+}
+
+function* stringifyCanonicalChunks(value: unknown, shared?: SharedCanonicalValue): Generator<string> {
   const stackValues: unknown[] = [value];
   const stackRaw: boolean[] = [false];
   // Join each bounded chunk before retaining it: concatenation ropes otherwise
@@ -56,6 +62,13 @@ function* stringifyCanonicalChunks(value: unknown): Generator<string> {
   while (stackValues.length > 0) {
     const current = stackValues.pop();
     const raw = stackRaw.pop()!;
+    if (!raw && shared !== undefined && current === shared.value) {
+      if (chunkLength > 0) yield chunk.join("");
+      chunk = [];
+      chunkLength = 0;
+      yield* shared.chunks;
+      continue;
+    }
     let fragment = "";
     if (raw) {
       fragment = current as string;
@@ -125,4 +138,21 @@ export function stableJsonStringifyV1(value: unknown): string {
 export function stableJsonStringifyChunksV1(value: unknown): Iterable<string> {
   assertPlainStableJsonValue(value, "$");
   return stringifyCanonicalChunks(value);
+}
+
+/**
+ * Canonicalize a synchronous batch whose envelopes reuse one large payload.
+ * Only that payload's bounded chunks are retained, and only for this batch;
+ * every envelope still contributes its original exact V1 bytes to its digest.
+ */
+export function stableJsonStringifyBatchChunksV1(
+  values: readonly unknown[],
+  sharedValue: object,
+): Iterable<string>[] {
+  assertPlainStableJsonValue(sharedValue, "$shared");
+  const shared = { value: sharedValue, chunks: [...stringifyCanonicalChunks(sharedValue)] };
+  return values.map((value) => {
+    assertPlainStableJsonValue(value, "$", sharedValue);
+    return stringifyCanonicalChunks(value, shared);
+  });
 }

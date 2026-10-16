@@ -7,7 +7,6 @@
  * small clock/status helpers. Runtime-neutral reviewed evidence construction
  * lives in shared/lib; Worker consumers inject native incremental SHA-256.
  */
-import { createHash } from "node:crypto";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -105,11 +104,6 @@ export const COMMON_MODE_MATERIAL_SHARE_THRESHOLD = V9_CANDIDATE_POLICY_V1.polic
 
 export const isoDateStartSec = parseBoundedDateSec;
 
-export function nativeReviewEvidenceDigest(chunks: Iterable<string>): string {
-  const hash = createHash("sha256");
-  for (const chunk of chunks) hash.update(chunk);
-  return hash.digest("hex");
-}
 
 export function confidenceForResearch(
   value: "verified" | "probable" | "manual-review" | "limited" | "unknown" | undefined,
