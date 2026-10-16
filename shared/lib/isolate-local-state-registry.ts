@@ -104,6 +104,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Strictly validated immutable extension assets are authoritative; this per-isolate WeakSet only tags already-validated frozen objects, retains no asset data, and cannot leak cross-request data or transfer admission to a different object.",
   },
   {
+    sourcePath: "worker/src/lib/safety-score-v9/fact-set-exit.ts",
+    stateNames: ["executionPolicies", "executionReviews"],
+    owner: "Safety Score V9 exit-route policy and execution-review admission",
+    kind: "cache",
+    resetOrTtl: "WeakMaps keyed by immutable fixed-input and policy object identities; capture-scoped entries are garbage-collectable, the default policy retains only its fixed reviewed registry, and all entries reset with the isolate.",
+    durableTruth: "The exact fixed input, evidence clock, validated methodology policy and bundled execution reviews are authoritative. Policy reuse also checks the input clock; distinct input/policy objects cannot inherit cached admission, so no cross-request history grows or stale capture is reused.",
+  },
+  {
     sourcePath: "worker/src/api/telegram-webhook.ts",
     stateNames: ["lastMissingBotTokenWarnAtMs"],
     owner: "Telegram webhook missing-token telemetry",
