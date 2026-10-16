@@ -32,7 +32,7 @@ Start with narrow diagnosis, not broad release gates, retries, or timeout change
 - **Generated artifact:** read [failure playbook](../../../docs/testing.md#generated-artifact-failure-playbook) and the reported registry/generator owner.
 - **Docs/test:** read routed owner anchors and the failed check's source; preserve intended behavior.
 - **Pages/Worker/deployment:** read [CI Deploy Sequence](../../../docs/deployment-process.md#ci-deploy-sequence) and the classifier-selected surface's acceptance requirements. Deployment proof and runtime health are separate.
-- **External prerequisite/transient:** collect URL, status, non-secret headers and consumed response body. Verify current dependency-advisory, provider-access and incident-alert-secret blockers against their owning testing, coverage and deployment docs; a local green repro cannot clear them.
+- **External prerequisite/transient:** collect URL, status, non-secret headers and consumed response body. Verify current dependency-advisory and provider-access blockers against their owning testing, coverage and deployment docs; a local green repro cannot clear them.
 - **Scheduled automation:** use that run/branch/issue and its owner docs for urgency/freshness, not copied cadence tables.
 - **Manual dispatch:** verify `workflow_dispatch` support. `pages-release` is call-only; dispatch its owning deploy/rebuild workflow and watch the exact new run.
 - **Authorized delegation:** use [reviewer prompts](references/subagents.md); parent owns edits, commits, pushes, retriggers and judgment.

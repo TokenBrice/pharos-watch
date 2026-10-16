@@ -771,7 +771,6 @@
         "scripts/maintenance/__tests__/fixtures/worker-memory/**",
         "scripts/maintenance/cron-delivery.mjs",
         ".github/workflows/worker-memory-monitor.yml",
-        "scripts/__tests__/report-workflow-failure.test.ts",
         "docs/runbooks/**",
         "docs/runbooks/blacklist-sync.md",
         "docs/runbooks/dated-source-age-caps.md",
@@ -803,15 +802,11 @@
         { "path": "docs/runbooks/blacklist-sync.md", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
         { "path": "docs/runbooks/review-renewal.md", "runbook": { "label": "Scoped review renewal", "kind": "procedure" } }
       ],
-      "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts scripts/__tests__/report-workflow-failure.test.ts"],
+      "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts"],
       "testOwnership": [
         {
           "sources": ["scripts/maintenance/monitor-worker-memory.ts", "scripts/maintenance/__tests__/fixtures/worker-memory/**", ".github/workflows/worker-memory-monitor.yml"],
           "tests": ["scripts/maintenance/__tests__/monitor-worker-memory.test.ts"]
-        },
-        {
-          "sources": [".github/workflows/worker-memory-monitor.yml"],
-          "tests": ["scripts/__tests__/report-workflow-failure.test.ts"]
         }
       ],
       "rules": ["Status causes, recommended actions, public-health floors, and runbooks must remain aligned."]
@@ -875,7 +870,7 @@
         { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" },
         { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
       ],
-      "background": [{"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure reporting contract", "kind": "reference" } }],
+      "background": [{"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure triage", "kind": "symptom" } }],
       "checks": ["npx vitest run scripts/__tests__", "npm run check:generated-artifacts"],
       "rules": [
         "Keep deploy-surface classification aligned with GitHub deploy behavior.",

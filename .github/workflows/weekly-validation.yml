@@ -183,29 +183,3 @@ jobs:
           path: .tmp/dependency-coverage/
           retention-days: 90
           if-no-files-found: warn
-
-  report-failures:
-    name: Report main workflow incidents
-    needs: [audit, html-fixture-age, gitleaks, all-critical-ratchet, v9-resource, telegram-load, compare-account-state, dependency-coverage]
-    if: >-
-      ${{ always() && github.ref == 'refs/heads/main' &&
-          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      actions: read
-      issues: write
-    concurrency:
-      group: workflow-incidents-${{ github.workflow }}
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/report-workflow-failure
-        with:
-          workflow-file: weekly-validation.yml
-          needs-json: ${{ toJSON(needs) }}
-          job-names-json: '{"v9-resource":"V9 resource budget"}'
-          github-token: ${{ github.token }}

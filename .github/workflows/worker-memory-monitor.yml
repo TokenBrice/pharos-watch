@@ -118,29 +118,3 @@ jobs:
             process.exitCode = 1;
           }
           NODE
-
-  report-failures:
-    name: Report main workflow incidents
-    needs: [memory]
-    if: >-
-      ${{ always() && github.ref == 'refs/heads/main' &&
-          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      actions: read
-      issues: write
-    concurrency:
-      group: workflow-incidents-${{ github.workflow }}
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/report-workflow-failure
-        with:
-          workflow-file: worker-memory-monitor.yml
-          needs-json: ${{ toJSON(needs) }}
-          job-names-json: '{"memory":"Collect Worker memory evidence"}'
-          github-token: ${{ github.token }}

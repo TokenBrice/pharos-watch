@@ -79,7 +79,7 @@ Manifest-last prevents a new manifest from advertising before its image writes a
 
 Keys live under the single-purpose `safety-map:` prefix inside the existing `SELECTOR_SNAPSHOTS` namespace — the same namespace `functions/selector-snapshot/[[path]].ts` uses. Reusing it changes account state not at all, so the weekly Cloudflare account-state drift check needs no manifest update. (R2 was rejected for this reason among others: that check normalizes `d1` and `kv_namespace` bindings only, so an R2 bucket would be unmonitored surface.)
 
-Failure surfaces as a red run and a GitHub notification. The workflow's `report-failures` job also reconciles main-branch incidents and can alert private operator Telegram on a green-to-red transition when credentials are configured. Independently, the digest watchdog checks `/safety-scores/map.json` from 07:15 UTC and raises advisory `map-producer-lag` when the manifest is not today's. On the 15-minute status lane its first check lands at 07:24, leaving about 40 minutes before the 08:05 digest. This advisory neither consumes the digest publication alert cooldown nor degrades the sentinel run; digest publication stays unblocked.
+Failure surfaces as a red run and a GitHub notification. Independently, the digest watchdog checks `/safety-scores/map.json` from 07:15 UTC and raises advisory `map-producer-lag` when the manifest is not today's. On the 15-minute status lane its first check lands at 07:24, leaving about 40 minutes before the 08:05 digest. This advisory neither consumes the digest publication alert cooldown nor degrades the sentinel run; digest publication stays unblocked.
 
 ### Pre-Digest Producer Kick
 
