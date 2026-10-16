@@ -145,7 +145,7 @@ export function adaptSgForgeCoinvertible(
   const cashRows = cashBlockStart === -1
     ? []
     : [...disclosureBlock.slice(cashBlockStart).matchAll(
-      /class="number">\s*([^<€$]+?)\s*[€$]/gi,
+      /class="number">\s*([^<\u20ac$]+?)\s*[\u20ac$]/gi,
     )];
 
   if (

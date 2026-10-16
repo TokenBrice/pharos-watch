@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { PegSummaryCoin } from "@shared/types/peg";
-import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createSlotDeadline, DEFAULT_CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
 
@@ -22,14 +21,14 @@ const mockCapturePegProvenance = vi.fn();
 const mockBuildV9PegProvenanceSeed = vi.fn();
 const mockObserveTransferMateriality = vi.fn();
 
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
-  const original = await importOriginal<typeof WorkerRuntimeRegistry>();
-  const meta = original.WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === ASSET_ID)!;
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
+  const meta = original.ACTIVE_STABLECOINS.find((coin) => coin.id === ASSET_ID)!;
   return {
     ...original,
-    WORKER_ACTIVE_STABLECOINS: [meta],
-    WORKER_ACTIVE_IDS: new Set([ASSET_ID]),
-    WORKER_ACTIVE_META_BY_ID: new Map([[ASSET_ID, meta]]),
+    ACTIVE_STABLECOINS: [meta],
+    ACTIVE_IDS: new Set([ASSET_ID]),
+    ACTIVE_META_BY_ID: new Map([[ASSET_ID, meta]]),
   };
 });
 

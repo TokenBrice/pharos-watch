@@ -7,7 +7,7 @@ import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./repo
 // the year, with both full years and abbreviated forms such as June'26.
 function rlusdReportDate(href: string): string | null {
   const filename = (decodeHtmlEntities(decodeURIComponent(href)).split("/").pop() ?? "").replace(/_/g, " ");
-  const match = filename.match(/\b(January|February|March|April|May|June|July|August|September|Sept|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[ '’-]+(20\d{2}|\d{2})(?!\d)/i);
+  const match = filename.match(/\b(January|February|March|April|May|June|July|August|September|Sept|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[ '\u2019-]+(20\d{2}|\d{2})(?!\d)/i);
   if (!match) {
     // August's filename omits the year. Only the exact reviewed artifact may
     // inherit its document-verified date; unknown month-only URLs stay closed.

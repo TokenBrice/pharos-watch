@@ -1,9 +1,9 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9BaselineExtension,
+  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { dependencyReserveSlices } from "../safety-score-v9/extension-reserves";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
@@ -33,7 +33,7 @@ const LIVE_ROWS: ReserveSlice[] = [
   { sourceKey: "fixture:token:beta", name: "Current Beta", pct: 65, risk: "low" },
 ];
 
-function classificationMeta(): SafetyScoreV9ScoringMeta {
+function classificationMeta(): V9ExtensionRegistryMeta {
   return {
     id: "alpha", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01",
     reserves: structuredClone(REVIEWED_ROWS),
@@ -55,7 +55,7 @@ function classificationMeta(): SafetyScoreV9ScoringMeta {
 }
 
 function compiledFixture(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   liveRows: ReserveSlice[],
   clockSec = CLOCK_SEC,
   liveFallbackAllowed = false,
@@ -168,7 +168,7 @@ describe("classification-qualified reserve reviews", () => {
   });
 
   it("admits USDY's current LLC holdings without attributing its exact excluded BVI/timing tail", () => {
-    const meta = { ...usdyCoin, ...usdyReserveEnvelope, id: "alpha" } as unknown as SafetyScoreV9ScoringMeta;
+    const meta = { ...usdyCoin, ...usdyReserveEnvelope, id: "alpha" } as unknown as V9ExtensionRegistryMeta;
     const usdyClockSec = Date.UTC(2026, 9, 2) / 1_000;
     const asset = compiledFixture(meta, [], usdyClockSec, true);
     const tail = 5.9490355116630695 / 100;
@@ -184,7 +184,7 @@ describe("classification-qualified reserve reviews", () => {
   });
 
   it("never promotes Alto DUSD's selected-slice evidence into an unobserved whole reserve book", () => {
-    const meta = { ...dusdCoin, ...dusdReserveEnvelope, id: "alpha" } as unknown as SafetyScoreV9ScoringMeta;
+    const meta = { ...dusdCoin, ...dusdReserveEnvelope, id: "alpha" } as unknown as V9ExtensionRegistryMeta;
     const asset = compiledFixture(meta, []);
     expect(asset.reserveExposures).toEqual([]);
     expect(asset.reserveStatus.observationState).toBe("missing");

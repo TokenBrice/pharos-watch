@@ -9,10 +9,10 @@ import {
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "./curated-single-route-supply";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
+import type { V9ExtensionRegistryMeta } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   safetyScoreV9ChainRows,
@@ -52,7 +52,7 @@ const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
 );
 
 export interface BuildSafetyScoreV9SupplyReviewOptions {
-  meta?: SafetyScoreV9ScoringMeta;
+  meta?: V9ExtensionRegistryMeta;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
 }
 
@@ -211,11 +211,11 @@ const DEFILLAMA_HYPEREVM_SUPPLY_IDENTITIES: Readonly<Record<string, {
 function canonicalProviderSupplyChainKey(
   assetId: string,
   raw: string,
-  contracts?: SafetyScoreV9ScoringMeta["contracts"],
+  contracts?: V9ExtensionRegistryMeta["contracts"],
 ): string {
   const identity = DEFILLAMA_HYPEREVM_SUPPLY_IDENTITIES[assetId];
   if (identity !== undefined && (raw === "Hyperliquid L1" || raw === "hyperliquid")) {
-    const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId);
+    const meta = ACTIVE_META_BY_ID.get(assetId);
     if (meta?.detailProvider === "defillama" && meta.llamaId === identity.llamaId &&
         (contracts ?? meta.contracts)?.some(contract => contract.chain === "hyperevm" &&
           contract.address.toLowerCase() === identity.address)) {
@@ -623,7 +623,7 @@ function admittedProviderRowExclusions(
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
   const aggregate = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
   const total = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
-  const own = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId);
+  const own = ACTIVE_META_BY_ID.get(assetId);
   // Keep original rows and aggregate; only the policy's conservation budget
   // admits their floating-point tails. No corrected or renormalised total.
   if (aggregate === null || aggregate <= 0) return [];
@@ -631,7 +631,7 @@ function admittedProviderRowExclusions(
   if (Math.abs(total - aggregate) > Math.max(policy.conservationAbsoluteToleranceUsd,
     aggregate * policy.conservationRelativeTolerance)) return [];
   return entries.flatMap(record => {
-    const target = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(record.belongsToAssetId);
+    const target = ACTIVE_META_BY_ID.get(record.belongsToAssetId);
     if (record.reviewedAtSec > fixedInput.clockSec || record.expiresAtSec <= fixedInput.clockSec ||
       record.provenance.providerAssetId !== own?.llamaId || own?.detailProvider !== "defillama" ||
       !Object.prototype.hasOwnProperty.call(rows, record.providerChainLabel) || resolveChainId(record.providerChainLabel) !== record.chainId ||
@@ -750,7 +750,7 @@ export function buildSafetyScoreV9SupplyReview(
     });
   }
 
-  const meta = options.meta ?? SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(assetId);
+  const meta = options.meta ?? ACTIVE_META_BY_ID.get(assetId);
   const chainPartitionReviews = REVIEWED_PROVIDER_CHAIN_PARTITIONS.getAll(assetId);
   const generation = options.transferMaterialityGeneration;
   const partitionPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;

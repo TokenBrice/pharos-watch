@@ -1,7 +1,6 @@
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import type { StablecoinMeta } from "@shared/types/core";
-import type * as ScoringRegistry from "@shared/lib/stablecoins/safety-score-v9-registry";
-import type * as FullRegistry from "@shared/lib/stablecoins/registry";
+import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 
 // Synthetic inventories exercise complete census and route joins, not the
@@ -58,17 +57,7 @@ export const CENSUS_FIXTURE_META_BY_ID = new Map([
 ].map(meta => [meta.id, meta]));
 
 export async function censusRegistryMock(importOriginal: <T>() => Promise<T>) {
-  const actual = await importOriginal<typeof ScoringRegistry>();
-  // Hoisted fixtures share the exact same map, including test-owned get() spies.
-  const fullRegistry = await import("@shared/lib/stablecoins/registry");
-  return {
-    ...actual,
-    SAFETY_SCORE_V9_ACTIVE_META_BY_ID: fullRegistry.ACTIVE_META_BY_ID,
-  };
-}
-
-export async function censusFullRegistryMock(importOriginal: <T>() => Promise<T>) {
-  const actual = await importOriginal<typeof FullRegistry>();
+  const actual = await importOriginal<typeof StablecoinRegistry>();
   return {
     ...actual,
     ACTIVE_META_BY_ID: new Map([...actual.ACTIVE_META_BY_ID, ...CENSUS_FIXTURE_META_BY_ID]),

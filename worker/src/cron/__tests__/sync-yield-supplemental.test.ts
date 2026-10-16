@@ -32,11 +32,6 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
 
   return mockRegistry({ stablecoins });
 });
-/* Vitest hoists mock factories: load the full-registry fixture only after its mock is registered. */
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async () => {
-  const { mockWorkerRuntimeRegistryFromFullRegistry } = await import("../../test-helpers/cron/mock-registry");
-  return mockWorkerRuntimeRegistryFromFullRegistry(await import("@shared/lib/stablecoins/registry"));
-});
 
 vi.mock("../yield-sync/sources", async () => {
   // The hoisted mock factory runs before static fixture imports initialize, so

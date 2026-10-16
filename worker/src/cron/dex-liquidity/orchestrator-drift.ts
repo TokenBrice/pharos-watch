@@ -1,5 +1,5 @@
 import { round4 } from "@shared/lib/math";
-import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult } from "./types";
 

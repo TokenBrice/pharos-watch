@@ -18,7 +18,7 @@ import {
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSec } from "./supply-attribution";
@@ -901,7 +901,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       context.fixedInput.aggregateCirculatingById[context.asset.assetId] ?? {},
     );
     const supplyToleranceUsd = Math.max(0.000001, (aggregateSupplyUsd ?? 0) * 1e-12);
-    const meta = SAFETY_SCORE_V9_ACTIVE_META_BY_ID.get(context.asset.assetId);
+    const meta = ACTIVE_META_BY_ID.get(context.asset.assetId);
     const capturedChains = new Set(Object.keys(chainSupply).map((chain) => resolveChainId(chain) ?? chain));
     const deploymentCensusComplete = [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])]
       .every((contract) => capturedChains.has(resolveChainId(contract.chain) ?? contract.chain));

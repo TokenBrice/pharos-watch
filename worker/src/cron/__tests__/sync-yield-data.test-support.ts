@@ -97,12 +97,6 @@ vi.mock("@shared/lib/stablecoins/registry", () =>
   ])),
 );
 
-// Vitest hoists factories: load the registry fixture only after its mock is registered.
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async () => {
-  const { mockWorkerRuntimeRegistryFromFullRegistry } = await import("../../test-helpers/cron/mock-registry");
-  return mockWorkerRuntimeRegistryFromFullRegistry(await import("@shared/lib/stablecoins/registry"));
-});
-
 // Stub fetch-retry to delegate to global fetch
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 

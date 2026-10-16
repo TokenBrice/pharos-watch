@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
@@ -6,7 +5,7 @@ import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
 } from "../safety-score-v9/candidate";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set";
 import {
   assessV9Publication,
@@ -54,7 +53,7 @@ function candidateFor(extension: unknown) {
   return buildSafetyScoreV9Candidate({ fixedInput, extension, publishedAtSec: fixedInput.clockSec });
 }
 
-function registryCandidate(alpha: SafetyScoreV9ScoringMeta, registryFingerprint = fixedInput.registryFingerprint) {
+function registryCandidate(alpha: V9ExtensionRegistryMeta, registryFingerprint = fixedInput.registryFingerprint) {
   return buildSafetyScoreV9Candidate({
     fixedInput,
     publishedAtSec: fixedInput.clockSec,

@@ -1,6 +1,5 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import { makeV9ThreeAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 
@@ -11,7 +10,7 @@ function roleFixture(anchorWeight = 0.001) {
     { name: "Gamma reserve", pct: 30, risk: "low" as const, coinId: "gamma", depType: "collateral" as const },
   ];
   fixedInput.liveReserveMap.alpha = slices;
-  const alpha: SafetyScoreV9ScoringMeta = {
+  const alpha: V9ExtensionRegistryMeta = {
     id: "alpha", mechanismArchetype: "tbill", reserves: slices,
     dependencies: [{ id: "beta", type: "collateral", weight: anchorWeight }],
     dependencyReview: {
@@ -21,7 +20,7 @@ function roleFixture(anchorWeight = 0.001) {
       relationships: [{ id: "beta", type: "collateral", weight: 0.001, economicRole: "control-operator", reason: "Reviewed issuance stack." }],
     },
   };
-  return { fixedInput, metaById: new Map<string, SafetyScoreV9ScoringMeta>([
+  return { fixedInput, metaById: new Map<string, V9ExtensionRegistryMeta>([
     ["alpha", alpha], ["beta", { id: "beta", mechanismArchetype: "tbill" }], ["gamma", { id: "gamma", mechanismArchetype: "tbill" }],
   ]) };
 }

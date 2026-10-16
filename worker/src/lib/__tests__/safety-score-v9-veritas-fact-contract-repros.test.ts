@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 /**
  * VERITAS fact-contract repros (VER-006/007/008/009/011/012 plus the VERITAS-II
  * mechanism-overlay expiry finding). Consolidated from six single-incident
@@ -33,6 +32,7 @@ import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import {
   buildSafetyScoreV9BaselineExtension,
   buildSafetyScoreV9BaselineExtensionFromNormalizedInput,
+  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import {
@@ -366,7 +366,7 @@ describe("VERITAS finding VER-009: oracle reasons can escape their archetype all
 describe("VERITAS finding VER-012: access gaps violate their reason owner contract", () => {
   it("keeps every ordinary access gap bound to a reason with the same owner", () => {
     const fixedInput = createReportCardsFixedInput(miniCapture.draft as unknown as ReportCardsFixedInputDraft);
-    const metaById = new Map<string, SafetyScoreV9ScoringMeta>(
+    const metaById = new Map<string, V9ExtensionRegistryMeta>(
       fixedInput.activeAssetIds.map((assetId) => [assetId, { id: assetId, mechanismArchetype: "fiat-cash" }]),
     );
     const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {

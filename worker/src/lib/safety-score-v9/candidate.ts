@@ -1,7 +1,7 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
+import type { V9ExtensionRegistryMeta } from "./extension";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import {
   evaluateValidatedV9FactSet,
@@ -501,7 +501,7 @@ export function publicDependencyMetadata(
   asset: CompiledV9FactSetV3["assets"][number],
   factSet: CompiledV9FactSetV3,
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  meta: SafetyScoreV9ScoringMeta | undefined,
+  meta: V9ExtensionRegistryMeta | undefined,
 ) {
   const live = fixedInput.liveReserveMap[asset.assetId];
   const slices = live ?? meta?.reserves ?? [];
@@ -627,7 +627,7 @@ function projectCandidatePublicationFacts(
     dependencyMetadataByAssetId: new Map(factSet.assets.map((asset) => [
       asset.assetId,
       publicDependencyMetadata(asset, factSet, input.fixedInput,
-        (input.registry?.metaById ?? SAFETY_SCORE_V9_ACTIVE_META_BY_ID).get(asset.assetId)),
+        (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
     ])),
   };
 }

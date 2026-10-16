@@ -649,8 +649,6 @@ This selection behavior is surfaced in row-level `provenance` metadata on `/api/
 
 The methodology above owns public behavior; this section owns runtime contracts.
 
-Yield configuration derives its active/pre-launch yield-bearing cohort from the generated Worker runtime projection through `worker/src/lib/worker-metadata-cohorts.ts`. Benchmark selection and price-derived eligibility use the same projected tracked metadata, including `yieldConfig.yieldType`, peg currency and NAV flags. The shared full-metadata tracked utilities retain their existing contract for other owners; projection/cohort parity tests require unchanged membership, order and selected values. This ownership cutover does not alter APY, benchmark, PYS or source-admission methodology.
-
 ### Persistence And Publication
 
 - `worker/migrations/MANIFEST.md` owns schema lineage. Apply additive migration `0265_yield_history_observation_clock.sql` before Worker readers/writers use `source_observed_at`.

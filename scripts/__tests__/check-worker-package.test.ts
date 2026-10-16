@@ -1,9 +1,30 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkWorkerPackage } from "../ci/check-worker-package";
 
 describe("check-worker-package", () => {
+  let root: string;
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "worker-package-"));
+    vi.spyOn(process, "cwd").mockReturnValue(root);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    rmSync(root, { recursive: true, force: true });
+  });
+  function emit(args: string[], source = 'export const text = "\\u20ac";') {
+    const directory = args.at(-1)!;
+    mkdirSync(join(directory, "chunks"), { recursive: true });
+    writeFileSync(join(directory, "chunks", "worker.js"), source);
+    // Maps and binary assets are not retained JavaScript source.
+    writeFileSync(join(directory, "worker.js.map"), "\u20ac");
+    writeFileSync(join(directory, "font.ttf"), "\u20ac");
+    return { status: 0 };
+  }
   it("packages both configs into distinct directories", () => {
-    const run = vi.fn((_command: string, _args: string[]) => ({ status: 0 }));
+    const run = vi.fn((_command: string, args: string[]) => emit(args));
     expect(checkWorkerPackage({ run })).toEqual({ status: 0 });
     expect(run).toHaveBeenCalledTimes(2);
     const publicArgs = run.mock.calls[0]?.[1];
@@ -15,7 +36,8 @@ describe("check-worker-package", () => {
 
   it.each([0, 1])("fails when bundle %s fails", (failedIndex) => {
     let invocation = 0;
-    const run = vi.fn(() => ({ status: invocation++ === failedIndex ? 7 : 0 }));
+    const run = vi.fn((_command: string, args: string[]) =>
+      invocation++ === failedIndex ? { status: 7 } : emit(args));
     expect(checkWorkerPackage({ run })).toEqual({ status: 7 });
     expect(run).toHaveBeenCalledTimes(failedIndex + 1);
   });
@@ -23,5 +45,33 @@ describe("check-worker-package", () => {
   it("fails closed on spawn errors or signal termination", () => {
     expect(checkWorkerPackage({ run: () => ({ error: new Error("spawn failed"), status: null }) })).toEqual({ status: 1 });
     expect(checkWorkerPackage({ run: () => ({ status: null }) })).toEqual({ status: 1 });
+  });
+
+  it.each([
+    [0, "\u0100"],
+    [0, "\u2019"],
+    [1, "\u20ac"],
+    [1, "\u2013"],
+    [1, "\u2014"],
+    [1, "\ud83d\ude00"],
+  ])("rejects non-Latin-1 script source in bundle %s (%s)", (failedIndex, character) => {
+    let invocation = 0;
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const run = vi.fn((_command: string, args: string[]) =>
+      emit(args, invocation++ === failedIndex ? `export const text = "${character}";` : undefined));
+    expect(checkWorkerPackage({ run })).toEqual({ status: 1 });
+    expect(run).toHaveBeenCalledTimes(Number(failedIndex) + 1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("Use equivalent \\uXXXX escapes"));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("docs/worker-infrastructure.md#module-initialization"));
+  });
+
+  it.each(["\u00a3", "\u00a9", "\u00ff"])("warns without failing for Latin-1 non-ASCII (%s)", (character) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const run = vi.fn((_command: string, args: string[]) =>
+      emit(args, `/*! dependency-name Copyright ${character} */`));
+    expect(checkWorkerPackage({ run })).toEqual({ status: 0 });
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("emitted origin/context:"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("dependency-name"));
   });
 });

@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
@@ -7,7 +6,7 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evid
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
@@ -44,7 +43,7 @@ import {
 describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evidence", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("keeps oracle-free archetypes not-applicable while CDP remains required", () => {
     const mintAuthority = commodityOracleMeta().mintAuthority;
-    const oracle = (mechanismArchetype: NonNullable<SafetyScoreV9ScoringMeta["mechanismArchetype"]>) => buildSafetyScoreV9BaselineExtension(exactFixedInput(), {
+    const oracle = (mechanismArchetype: NonNullable<V9ExtensionRegistryMeta["mechanismArchetype"]>) => buildSafetyScoreV9BaselineExtension(exactFixedInput(), {
       metaById: metaMap(alphaMeta({ mechanismArchetype, mintAuthority })),
     }).assets[0]!.economicControlReview?.oracle.status;
     expect(oracle("commodity-claim")).toMatchObject({ applicability: { state: "not-applicable", rationale: expect.stringContaining("no oracle- or liquidation-dependent") } });
@@ -129,7 +128,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     ["OTHER", "unreviewed:other", "other"],
   ] as const)("publishes %s peg metadata as an explicit reference", (pegCurrency, referenceKey, referenceKind) => {
     const fixed = exactFixedInput({ omitPegRow: true });
-    const flags: NonNullable<SafetyScoreV9ScoringMeta["flags"]> = pegCurrency === "nav"
+    const flags: NonNullable<V9ExtensionRegistryMeta["flags"]> = pegCurrency === "nav"
       ? { backing: "rwa-backed" as const, pegCurrency: "USD", governance: "centralized" as const, yieldBearing: true, rwa: true, navToken: true }
       : { backing: "rwa-backed" as const, pegCurrency: pegCurrency as "VAR" | "OTHER", governance: "centralized" as const, yieldBearing: false, rwa: false, navToken: false };
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta({ flags })) });
@@ -257,7 +256,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const fallback = structuredClone(noLive);
     fallback.liveToFallbackCoins = ["alpha"];
     fallback.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fallback);
-    const fallbackMeta: SafetyScoreV9ScoringMeta = { ...meta, proofOfReserves: undefined, liveReservesConfig: { adapter: "curated-validated", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "onchain-solana" } } }, mintAuthority: { ...meta.mintAuthority!, supervision: "attestation-only" as const } } as SafetyScoreV9ScoringMeta;
+    const fallbackMeta: V9ExtensionRegistryMeta = { ...meta, proofOfReserves: undefined, liveReservesConfig: { adapter: "curated-validated", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "onchain-solana" } } }, mintAuthority: { ...meta.mintAuthority!, supervision: "attestation-only" as const } } as V9ExtensionRegistryMeta;
     expect(buildSafetyScoreV9BaselineExtension(fallback, { metaById: metaMap(fallbackMeta) }).assets[0]!.reviewedStaticReserveRows).toMatchObject({ evidenceClass: "static-validated", provenance: "curated-fallback" });
     // Supplemental/live-unscored producers do not enter the legacy census.
     // That omission cannot suppress independently reviewed current composition.
@@ -272,14 +271,14 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const standalone = buildSafetyScoreV9BaselineExtension(fallback, { metaById: metaMap({ ...fallbackMeta, liveReservesConfig: undefined }) });
     expect(standalone.assets[0]!.reviewedStaticReserveRows).toMatchObject({ evidenceClass: "static-validated", provenance: "curated" });
     const configuredVariant = buildSafetyScoreV9BaselineExtension(noLive, {
-      metaById: metaMap({ ...fallbackMeta, variantOf: "beta" } as SafetyScoreV9ScoringMeta),
+      metaById: metaMap({ ...fallbackMeta, variantOf: "beta" } as V9ExtensionRegistryMeta),
     });
     expect(configuredVariant.assets[0]!.reviewedStaticReserveRows).toMatchObject({
       evidenceClass: "static-validated", provenance: "curated-fallback",
     });
     expect(compileSafetyScoreV9FactSetFromFixedInput(noLive, configuredVariant).assets[0]!.reserveExposures).toHaveLength(2);
     expect(buildSafetyScoreV9BaselineExtension(noLive, {
-      metaById: metaMap({ ...fallbackMeta, liveReservesConfig: undefined, variantOf: "beta" } as SafetyScoreV9ScoringMeta),
+      metaById: metaMap({ ...fallbackMeta, liveReservesConfig: undefined, variantOf: "beta" } as V9ExtensionRegistryMeta),
     }).assets[0]!.reviewedStaticReserveRows).toBeNull();
   });
 

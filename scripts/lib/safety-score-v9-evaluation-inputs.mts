@@ -153,9 +153,10 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/solidly-v2-deployments.ts",
   "shared/lib/solidly-v2-math.ts",
   "shared/lib/stable-json.ts",
+  "shared/lib/stablecoins/full-catalog.ts",
   "shared/lib/stablecoins/mint-bridge-ownership.ts",
   "shared/lib/stablecoins/registry-indexes.ts",
-  "shared/lib/stablecoins/safety-score-v9-registry.ts",
+  "shared/lib/stablecoins/registry.ts",
   "shared/lib/stablecoins/status.ts",
   "shared/lib/stablecoins/worker-runtime-registry.ts",
   "shared/lib/stats.ts",
@@ -310,10 +311,10 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
 ] as const;
 
 /**
- * Reviewed ledgers and runtime-imported data, including generated scoring rows.
+ * Reviewed ledgers and runtime-imported data, plus the Worker full-catalog bytes.
  * Transfer/shock registries imported during fact compilation are pinned too;
  * latest mechanism capture hash/R2 refs retain their separate manifest binding.
- * Catalog parity is guarded against the full registry, whose fingerprint remains authoritative.
+ * Catalog generator correctness is guarded by decoded-versus-source equality.
  */
 export const V9_SCORE_INPUT_DATA_PATHS = [
   "shared/data/business-calendars/reviewed.ts",
@@ -331,14 +332,14 @@ export const V9_SCORE_INPUT_DATA_PATHS = [
   "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
   "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
   "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
-  "shared/data/stablecoins/coins.safety-score-v9.generated.json",
+  "shared/data/stablecoins/canonical-order.json",
+  "shared/data/stablecoins/coins.generated.json",
+  "shared/data/stablecoins/coins.worker-full.generated.json",
   "shared/data/stablecoins/coins.worker-runtime.generated.json"
 ] as const;
 
 export const V9_EVALUATION_BUILD_SOURCE_PATHS = [
   ...V9_SCORE_EVALUATOR_SOURCE_PATHS,
   ...V9_SCORE_INPUT_DATA_PATHS,
-  // Pin the projection contract and generator alongside their generated output.
-  "shared/types/safety-score-v9-scoring-catalog.ts",
-  "scripts/maintenance/generate-safety-score-v9-scoring-catalog.ts",
+  "worker/src/lib/full-stablecoin-catalog.ts",
 ] as const;

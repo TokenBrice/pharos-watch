@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => ({
-  ...await importOriginal<typeof WorkerRuntimeRegistry>(),
-  WORKER_TRACKED_META_BY_ID: new Map([
-    ["susn-noon", { id: "susn-noon", symbol: "sUSN", pegCurrency: "USD", navToken: true, flags: { pegCurrency: "USD", navToken: true } }],
-    ["usn-noon", { id: "usn-noon", symbol: "USN", pegCurrency: "USD", flags: { pegCurrency: "USD", navToken: false } }],
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@shared/lib/stablecoins/registry")>(),
+  TRACKED_META_BY_ID: new Map([
+    ["susn-noon", { id: "susn-noon", symbol: "sUSN", flags: { pegCurrency: "USD", navToken: true } }],
+    ["usn-noon", { id: "usn-noon", symbol: "USN", flags: { pegCurrency: "USD", navToken: false } }],
   ]),
 }));
 

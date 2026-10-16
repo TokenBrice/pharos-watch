@@ -119,7 +119,7 @@ export function buildTweetText(
   const titlePrefix = digestTitle ? `${digestTitle}${editionTag}\n\n` : "";
   let text = digestText;
   if (digestTitle && text.toLowerCase().startsWith(digestTitle.toLowerCase())) {
-    text = text.slice(digestTitle.length).replace(/^[\s\n:–—-]+/, "").trim();
+    text = text.slice(digestTitle.length).replace(/^[\s\n:\u2013\u2014-]+/, "").trim();
   }
   const tagged = injectCashtags(text, digestMetadata);
   const mapSuffix = mapHook ? `\n\n${mapHook}` : "";

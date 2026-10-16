@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { WORKER_ACTIVE_IDS as ACTIVE_IDS, WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";

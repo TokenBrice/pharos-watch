@@ -389,7 +389,7 @@ describe("adaptive PR checks", () => {
   });
 
   it.each([
-    "worker/src/lib/safety-score-v9/xaut-supply-attribution-contract.ts",
+    "worker/src/lib/full-stablecoin-catalog.ts",
     "worker/src/lib/safety-score-v9/candidate.ts",
     "worker/src/lib/safety-score-v9/extension.ts",
     "worker/src/lib/safety-score-v9/fact-set.ts",

@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import type { DependencyRejectionReason } from "@shared/lib/dependency-derivation";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -19,6 +18,7 @@ import {
   conservativeDateEndSec,
   type ExtensionAsset,
   type ReserveClassification,
+  type V9ExtensionRegistryMeta,
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
@@ -118,7 +118,7 @@ interface ReviewedReserveMatch {
 
 function reviewedReserveMatches(
   liveReserves: readonly ReserveSlice[],
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   classificationMaxAgeSec = REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
 ): ReviewedReserveMatch[] {
@@ -165,7 +165,7 @@ function reviewedReserveMatches(
 
 export function dependencyReserveSlices(
   liveReserves: readonly ReserveSlice[],
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
 ): { slices: ReserveSlice[]; rejectionReasons: DependencyRejectionReason[] } {
   const reviewedMatches = reviewedReserveMatches(liveReserves, meta, clockSec);
@@ -241,7 +241,7 @@ function hasUnclassifiedResidualShape(row: ReserveSlice): boolean {
  */
 export function buildReviewedReserveClassifications(
   liveReserves: readonly ReserveSlice[],
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   classificationMaxAgeSec = REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
 ): ReserveClassification[] {
@@ -340,7 +340,7 @@ function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): Rese
 }
 
 function reportScopeApplies(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): boolean {
@@ -355,7 +355,7 @@ function reportScopeApplies(
   }));
 }
 
-function hasDirectIndependentReserveAssurance(meta: SafetyScoreV9ScoringMeta, clockSec: number, fixedInput?: Readonly<SafetyScoreV9CompilerInput>): boolean {
+function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta, clockSec: number, fixedInput?: Readonly<SafetyScoreV9CompilerInput>): boolean {
   const review = meta.reserveReview;
   const report = meta.proofOfReserves?.latestReport;
   if (!review || !report) return false;
@@ -376,7 +376,7 @@ function hasDirectIndependentReserveAssurance(meta: SafetyScoreV9ScoringMeta, cl
   );
 }
 
-function hasNamedReportFirm(meta: SafetyScoreV9ScoringMeta): boolean {
+function hasNamedReportFirm(meta: V9ExtensionRegistryMeta): boolean {
   const proof = meta.proofOfReserves;
   const report = proof?.latestReport;
   const provider = proof?.provider?.trim();
@@ -409,9 +409,9 @@ function hasNamedReportFirm(meta: SafetyScoreV9ScoringMeta): boolean {
 interface IndependentlyAttestedCompositionAdmission {
   normalizedRows: ReserveSlice[];
   sourceRows: ReserveSlice[];
-  review: NonNullable<SafetyScoreV9ScoringMeta["reserveReview"]>;
-  proof: NonNullable<SafetyScoreV9ScoringMeta["proofOfReserves"]>;
-  report: NonNullable<NonNullable<SafetyScoreV9ScoringMeta["proofOfReserves"]>["latestReport"]>;
+  review: NonNullable<V9ExtensionRegistryMeta["reserveReview"]>;
+  proof: NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>;
+  report: NonNullable<NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>["latestReport"]>;
   freshness: "fresh" | "expired";
 }
 
@@ -423,7 +423,7 @@ interface IndependentlyAttestedCompositionAdmission {
  * admission and expired-evidence emission; callers decide which rung applies.
  */
 function independentlyAttestedComposition(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): IndependentlyAttestedCompositionAdmission | null {
@@ -484,7 +484,7 @@ function independentlyAttestedComposition(
  * keep the candidate policy's confidence haircut.
  */
 export function buildSafetyScoreV9ReviewedStaticReserveRows(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
@@ -516,7 +516,7 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
  * scope and age gates, not the captured live-producer fallback census.
  */
 export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
@@ -530,7 +530,7 @@ export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
  * One whole-book admission retains original identified weights and separately
  * marked disjoint tails. The compiler resolves each tail's exact cause.
  */
-function compositionRowsWithUnknownResidual(meta: SafetyScoreV9ScoringMeta): ReserveSlice[] | null {
+function compositionRowsWithUnknownResidual(meta: V9ExtensionRegistryMeta): ReserveSlice[] | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const residualPct = review?.knownUnknownExposurePct;
@@ -576,7 +576,7 @@ function compositionRowsWithUnknownResidual(meta: SafetyScoreV9ScoringMeta): Res
  * therefore retains the policy's static-evidence confidence discount.
  */
 function buildSafetyScoreV9ReviewedCuratedReserveRows(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   provenance: "curated" | "curated-fallback",
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
@@ -653,7 +653,7 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
 }
 
 export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
@@ -667,7 +667,7 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
  * a child cannot duplicate or replace the parent's backing facts.
  */
 export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
@@ -676,7 +676,7 @@ export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
 }
 
 export function addReviewedStaticReserveEvidence(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   admitted: ReviewedStaticReserveRows | null,
   evidence: ReviewEvidenceBuilder,
   clockSec: number,
@@ -812,7 +812,7 @@ export function addReviewedStaticReserveEvidence(
 }
 
 export function addReserveClassificationEvidence(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   classifications: readonly ReserveClassification[],
   evidence: ReviewEvidenceBuilder,
 ): void {
@@ -833,7 +833,7 @@ export function addReserveClassificationEvidence(
   });
 }
 
-function selectScopedReserveObservations(meta: SafetyScoreV9ScoringMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
+function selectScopedReserveObservations(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
   const live = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation;
   const observations = meta.reserveReview?.observations ?? [];
   const observationRefs = observations.length || live ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
@@ -863,7 +863,7 @@ function selectScopedReserveObservations(meta: SafetyScoreV9ScoringMeta, fixedIn
   return observedScopes;
 }
 
-export function buildSafetyScoreV10ScopedReserveAdmissions(meta: SafetyScoreV9ScoringMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>): ReserveScopedAdmission[] {
+export function buildSafetyScoreV10ScopedReserveAdmissions(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>): ReserveScopedAdmission[] {
   if (fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservationFailure != null) {
     throw new Error(`${meta.id}: malformed-reserve-observation (producer-failed)`);
   }
@@ -884,7 +884,7 @@ export function buildSafetyScoreV10ScopedReserveAdmissions(meta: SafetyScoreV9Sc
   return admissions.sort((a, b) => compareText(a.scopeId, b.scopeId));
 }
 
-export function addScopedReserveEvidence(meta: SafetyScoreV9ScoringMeta, admissions: ReserveScopedAdmission[], fixedInput: Readonly<SafetyScoreV9CompilerInput>, evidence: ReviewEvidenceBuilder): void {
+export function addScopedReserveEvidence(meta: V9ExtensionRegistryMeta, admissions: ReserveScopedAdmission[], fixedInput: Readonly<SafetyScoreV9CompilerInput>, evidence: ReviewEvidenceBuilder): void {
   const observations = selectScopedReserveObservations(meta, fixedInput);
   for (const admission of admissions) {
     if (!admission.admitted) { admission.evidenceRefIds = []; continue; }

@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { buildSafetyScoreV9ReserveBoundFacts, SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST } from "./extension-reserve-bounds";
 import { buildSafetyScoreV10ScopedReserveAdmissions, addScopedReserveEvidence } from "./extension-reserves";
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
@@ -9,6 +8,7 @@ import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
+import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types/safety-score-v9-access-lookthrough";
 import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
@@ -17,7 +17,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, partialControlScopeSemantics, weightedReviewIsCurrent, sortV1005ProcessDiagnostics, v1005ProofIsClosed, v1005ReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID, SAFETY_SCORE_V9_REGISTRY_FINGERPRINT } from "@shared/lib/stablecoins/safety-score-v9-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   hasReviewedNoLocalIssuanceException,
   validateMintBridgeOwnership,
@@ -36,6 +36,7 @@ import type {
 } from "@shared/types/core";
 import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
 import { V1005VotingControllerSchema, createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
+import type { StablecoinMeta } from "@shared/types";
 import {
   type ReserveSlice,
 } from "@shared/types/reserves";
@@ -134,9 +135,12 @@ import {
   reviewedKeyCustody,
   type ControlOverlay,
   type ExtensionAsset,
+  type V9ExtensionRegistryMeta,
   DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
 } from "./extension-shared";
 
+// The registry-meta projection now lives beside the adapters that read it.
+export type { V9ExtensionRegistryMeta } from "./extension-shared";
 export {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
@@ -153,7 +157,7 @@ type ReviewedReserveRows = ReturnType<typeof buildSafetyScoreV9ReviewedStaticRes
  * the score-bearing static/fallback/standalone branch order.
  */
 export function resolveReviewedReserveRows(input: {
-  meta: SafetyScoreV9ScoringMeta;
+  meta: V9ExtensionRegistryMeta;
   clockSec: number;
   liveReserveRows: readonly ReserveSlice[];
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
@@ -169,7 +173,7 @@ export function resolveReviewedReserveRows(input: {
 }
 
 export interface BuildSafetyScoreV9BaselineExtensionOptions {
-  metaById?: ReadonlyMap<string, SafetyScoreV9ScoringMeta>;
+  metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
   accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
@@ -261,7 +265,7 @@ function normalizedIssuerEntity(value: string): string | null {
   return CANONICAL_ISSUER_KEY_BY_NORMALIZED_ENTITY.get(tokens.join(" ")) ?? tokens[0]!;
 }
 
-function rawIssuerKey(assetId: string, meta: SafetyScoreV9ScoringMeta): string | null {
+function rawIssuerKey(assetId: string, meta: V9ExtensionRegistryMeta): string | null {
   const geniusEntity = meta.genius?.issuerEntity;
   if (typeof geniusEntity === "string" && geniusEntity.trim().length > 0) {
     const normalized = normalizedIssuerEntity(geniusEntity);
@@ -275,7 +279,7 @@ function rawIssuerKey(assetId: string, meta: SafetyScoreV9ScoringMeta): string |
 /** Mirrors the accepted D2 matrix issuer join, including its five-hop bound. */
 export function resolveSafetyScoreV9AssetIssuerKey(
   assetId: string,
-  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta>,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
 ): string | null {
   const seen = new Set([assetId]);
   let current = assetId;
@@ -1192,7 +1196,7 @@ function adaptMintControl(
   }));
 }
 
-function assertMintBridgeOwnership(meta: SafetyScoreV9ScoringMeta): void {
+function assertMintBridgeOwnership(meta: V9ExtensionRegistryMeta): void {
   const violations = validateMintBridgeOwnership(meta, { enforce: true });
   const errors = violations.filter((violation) => violation.severity === "error");
   if (errors.length === 0) return;
@@ -1223,7 +1227,7 @@ function dependencyFailureDomains(
 
 
 function hasAdmissibleCuratedReserveComposition(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): boolean {
@@ -1234,7 +1238,7 @@ function hasAdmissibleCuratedReserveComposition(
 }
 
 function prepareDependency(
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   liveReserveSlices: readonly ReserveSlice[] | undefined,
   activeIds: ReadonlySet<string>,
   clockSec: number,
@@ -1436,7 +1440,7 @@ function prepareDependency(
   };
 }
 
-function addDependencyEvidence(meta: SafetyScoreV9ScoringMeta, evidence: ReviewEvidenceBuilder): void {
+function addDependencyEvidence(meta: V9ExtensionRegistryMeta, evidence: ReviewEvidenceBuilder): void {
   const review: DependencyReview | undefined = meta.dependencyReview;
   if (!review) return;
   evidence.add({
@@ -1450,7 +1454,7 @@ function addDependencyEvidence(meta: SafetyScoreV9ScoringMeta, evidence: ReviewE
   });
 }
 
-function addWrapperCustodyEvidence(meta: SafetyScoreV9ScoringMeta, evidence: ReviewEvidenceBuilder): void {
+function addWrapperCustodyEvidence(meta: V9ExtensionRegistryMeta, evidence: ReviewEvidenceBuilder): void {
   const review = meta.custodyProfile;
   if (!review) return;
   evidence.add({
@@ -1512,7 +1516,7 @@ function addWrapperAllocationEvidence(
   });
 }
 
-function buildAllocationScopeIdentityReview(meta: SafetyScoreV9ScoringMeta, clockSec: number): V9AllocationScopeIdentityReview {
+function buildAllocationScopeIdentityReview(meta: V9ExtensionRegistryMeta, clockSec: number): V9AllocationScopeIdentityReview {
   const deployments: V9AllocationScopeIdentityReview["deployments"] = [];
   const registeredDeploymentKeys = (meta.contracts ?? []).flatMap((contract) => {
     const chain = resolveChainId(contract.chain);
@@ -1574,7 +1578,7 @@ function buildAllocationScopeIdentityReview(meta: SafetyScoreV9ScoringMeta, cloc
 function transferMaterialScope(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
-  meta: SafetyScoreV9ScoringMeta,
+  meta: V9ExtensionRegistryMeta,
   generation: SafetyScoreV9TransferMaterialityGeneration | null,
   review: SafetyScoreV9ReviewedTransferFact | undefined,
   supplyReview: ExtensionAsset["supplyReview"],
@@ -1701,8 +1705,8 @@ function transferMaterialScope(
 // This names a directly freeze-capable active reserve upstream; it does not
 // establish transitive reach or price the reserve exposure.
 function resolveReserveSliceUpstreamAssetId(
-  meta: SafetyScoreV9ScoringMeta,
-  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta>,
+  meta: V9ExtensionRegistryMeta,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
   activeAssetIds: ReadonlySet<string>,
 ): string | null {
   let best: { assetId: string; pct: number } | null = null;
@@ -1726,8 +1730,8 @@ function resolveReserveSliceUpstreamAssetId(
 }
 
 function adaptAccessReview(
-  meta: SafetyScoreV9ScoringMeta,
-  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta>,
+  meta: V9ExtensionRegistryMeta,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
   activeAssetIds: ReadonlySet<string>,
   evidence: ReviewEvidenceBuilder,
   transferReview: SafetyScoreV9ReviewedTransferFact | undefined,
@@ -1897,6 +1901,8 @@ function adaptAccessReview(
   };
 }
 
+type PegReferenceRegistryMeta = V9ExtensionRegistryMeta & Pick<StablecoinMeta, "pegReferenceId">;
+
 const PEG_REFERENCE_ID_MARKER = ":peg-reference:";
 const PEG_REFERENCE_UNRESOLVED_PREFIX = "unresolved:peg-reference:";
 
@@ -1910,7 +1916,11 @@ function unresolvedPegReference(
   };
 }
 
-function buildOwnPegReference(meta: SafetyScoreV9ScoringMeta): ExtensionAsset["pegReference"] {
+function pegReferenceId(meta: V9ExtensionRegistryMeta): string | undefined {
+  return (meta as PegReferenceRegistryMeta).pegReferenceId;
+}
+
+function buildOwnPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegReference"] {
   // Pure NAV tokens track fund NAV by design: they have no fixed peg to
   // deviate from, so the peg fact is published not-applicable (the v8 pure
   // NAV carve-over) instead of failing on a missing peg reference.
@@ -1933,11 +1943,11 @@ function buildOwnPegReference(meta: SafetyScoreV9ScoringMeta): ExtensionAsset["p
 }
 
 function buildPegReference(
-  meta: SafetyScoreV9ScoringMeta,
-  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta>,
+  meta: V9ExtensionRegistryMeta,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
 ): ExtensionAsset["pegReference"] {
   const ownReference = buildOwnPegReference(meta);
-  const configuredReferenceId = meta.pegReferenceId;
+  const configuredReferenceId = pegReferenceId(meta);
   if (configuredReferenceId === undefined) return ownReference;
   if (meta.variantOf != null && meta.variantOf !== configuredReferenceId) {
     throw new Error(
@@ -1950,7 +1960,7 @@ function buildPegReference(
   if (!parent || parent.id !== configuredReferenceId || ownReference === null) {
     return unresolvedPegReference("unresolvable");
   }
-  if (parent.pegReferenceId === meta.id) return unresolvedPegReference("cycle");
+  if (pegReferenceId(parent) === meta.id) return unresolvedPegReference("cycle");
   return {
     ...ownReference,
     referenceKey: `${ownReference.referenceKey}${PEG_REFERENCE_ID_MARKER}${configuredReferenceId}`,
@@ -1999,7 +2009,7 @@ function latestResolvedMintIncidentAtSec(
  * alongside the other non-unknown cadences.
  */
 export function hasPublishedReserveReconciliationEvidence(
-  proof: SafetyScoreV9ScoringMeta["proofOfReserves"] | undefined,
+  proof: StablecoinMeta["proofOfReserves"] | undefined,
 ): boolean {
   // A scoped appendix is not whole-token operational/mint reconciliation.
   if (proof?.latestReport?.coverage != null) return false;
@@ -2009,8 +2019,8 @@ export function hasPublishedReserveReconciliationEvidence(
 }
 
 function adaptMintReview(
-  meta: SafetyScoreV9ScoringMeta,
-  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta>,
+  meta: V9ExtensionRegistryMeta,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
   dependencies: PreparedDependency["dependency"],
   supplyReview: ExtensionAsset["supplyReview"],
   evidence: ReviewEvidenceBuilder,
@@ -2285,14 +2295,14 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
-  const metaById = options.metaById ?? SAFETY_SCORE_V9_ACTIVE_META_BY_ID;
+  const metaById = options.metaById ?? ACTIVE_META_BY_ID;
   const reuseScopeRoot = createV9ControlExecutionScopeRootReuse();
   const reviewedTransferFacts = options.reviewedTransferFacts && createReviewedAssetRegistry({
     rows: [...options.reviewedTransferFacts.values()],
     schema: SafetyScoreV9ReviewedTransferFactSchema,
     path: "transferReviews.reviews",
   });
-  const localRegistryFingerprint = options.registryFingerprint ?? SAFETY_SCORE_V9_REGISTRY_FINGERPRINT;
+  const localRegistryFingerprint = options.registryFingerprint ?? computeReportCardsRegistryFingerprint();
   const allowRegistryMismatch = options.allowRegistryMismatch === true;
   if (!allowRegistryMismatch && localRegistryFingerprint !== fixedInput.registryFingerprint) {
     throw new Error(

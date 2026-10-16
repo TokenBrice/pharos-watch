@@ -1,4 +1,4 @@
-import { WORKER_YIELD_BEARING_STABLECOINS as YIELD_BEARING_STABLECOINS } from "../worker-metadata-cohorts";
+import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import {
   deriveYieldRegistry,
   type OnChainRateConfig,

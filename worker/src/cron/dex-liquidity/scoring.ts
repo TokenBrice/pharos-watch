@@ -1,4 +1,4 @@
-import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";

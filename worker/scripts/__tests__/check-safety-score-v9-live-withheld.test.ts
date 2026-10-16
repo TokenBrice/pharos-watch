@@ -1,4 +1,3 @@
-import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { makeAccessReview } from "@shared/lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 import { buildSafetyScoreV9AccessClaimGraph } from "../../src/lib/safety-score-v9/extension-access-lookthrough";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
@@ -7,13 +6,13 @@ import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
-import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9/extension";
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import { makeV9TwoAssetFixedInput } from "../../src/test-helpers/v9-fixed-input";
 import { buildCounterfactualPipeline, buildLiveWithheldCounterfactualReport, readmitCounterfactualAccessGraph, renderLiveWithheldCounterfactualReport } from "../check-safety-score-v9-live-withheld";
 
-function fixtureMeta(id: string, overrides: Partial<SafetyScoreV9ScoringMeta> = {}): SafetyScoreV9ScoringMeta {
+function fixtureMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
   return eligibleReserveMeta({
     id,
     mechanismArchetype: "fiat-cash",
@@ -38,7 +37,7 @@ function healthyReplay(alreadyFallback: string[] = [], withGraphs = false, nativ
     fetchedAt: fixed.clockSec - 100,
   };
   fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
-  const metaById = new Map<string, SafetyScoreV9ScoringMeta>([
+  const metaById = new Map<string, V9ExtensionRegistryMeta>([
     [
       "alpha",
       fixtureMeta("alpha", {

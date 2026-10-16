@@ -21,7 +21,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID, WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
