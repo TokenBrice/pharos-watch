@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import firmMarketsCapture from "./fixtures/dola-fixed-markets-2026-09-29.json";
+import firmLedgerCapture from "./fixtures/dola-firm-ledger-2026-10-17.json";
 import {
   resolveBaseSymbol,
   bucketForAsset,
@@ -13,7 +14,7 @@ import {
 import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
 
 function makeMarket(symbol: string, totalDebt = 1_000_000): FirmMarket {
-  return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, borrowPaused: false };
+  return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, dolaLiquidity: 0, borrowPaused: false };
 }
 
 const PSM_ADDRESS = "0x4dfd662622d766304cb539e66f893c4defa19398";
@@ -47,12 +48,14 @@ function dolaNetwork(options: {
   maxWithdraw?: bigint | null;
   sellFeeBps?: bigint | null;
   repayments?: unknown;
+  markets?: FirmMarket[];
+  marketRpc?: Record<string, bigint | null>;
 } = {}) {
   return installAdapterNetwork({
     chains: { ethereum: "https://rpc.example" },
     json: {
       [DOLA_ENDPOINT]: {
-        markets: [makeMarket("wstETH", 1_000_000)],
+        markets: options.markets ?? [makeMarket("wstETH", 1_000_000)],
         timestamp: 1_776_330_494,
       },
       [REPAYMENTS_ENDPOINT]: options.repayments ?? {
@@ -70,6 +73,7 @@ function dolaNetwork(options: {
       [`${PSM_ADDRESS}:${SELL_FEE_BPS_SELECTOR}`]: options.sellFeeBps === undefined ? 20n : options.sellFeeBps,
       [`${SUSDS_ADDRESS}:${MAX_WITHDRAW_DATA}`]:
         options.maxWithdraw === undefined ? 0n : options.maxWithdraw,
+      ...options.marketRpc,
     },
   });
 }
@@ -86,14 +90,14 @@ async function runDola(options: Parameters<typeof dolaNetwork>[0] = {}, db?: D1D
 }
 
 /** Stablecoins-cache D1 fixture keyed the way the registry publishes DOLA. */
-function dolaCacheDb(circulating: number) {
+function dolaCacheDb(circulating: number, price: number | null = 1) {
   return mockD1Strict([{
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
     matchBinds: ["stablecoins"],
     rows: [{
       key: "stablecoins",
       value: JSON.stringify({
-        peggedAssets: [{ id: "dola-inverse-finance", symbol: "DOLA", circulating: { peggedUSD: circulating } }],
+        peggedAssets: [{ id: "dola-inverse-finance", symbol: "DOLA", price, circulating: { peggedUSD: circulating } }],
       }),
       updated_at: 1_776_330_494 - 600,
     }],
@@ -200,6 +204,55 @@ describe("adaptFirmMarkets", () => {
     expect(result.metadata?.unknownExposurePct).toBeGreaterThan(98);
   });
 
+  it("nets the complete pinned FiRM idle inventory from both claims and the denominator without reserve credit", () => {
+    const gross = firmLedgerCapture._evidence.grossClaimsDola;
+    const frontier = firmLedgerCapture._evidence.frontierBadDebtDola;
+    const result = adaptFirmMarkets(firmLedgerCapture, gross, frontier);
+    const debt = firmLedgerCapture.markets.reduce((sum, market) => sum + market.totalDebt, 0);
+    const idle = firmLedgerCapture.markets.reduce((sum, market) => sum + market.dolaLiquidity, 0);
+    const net = gross - idle;
+    const residual = net - debt - frontier;
+    expect(idle).toBeCloseTo(38_462_480.39385918, 6);
+    expect(result.metadata).toMatchObject({
+      inventoryComplete: true, inventoryReconciled: true,
+      totalDebtDola: debt, grossClaimsDola: gross, firmIdleDola: idle,
+      nettedOwnDola: idle, netClaimsDola: net,
+      unclassifiedResidualUsd: residual, frontierBadDebtUsd: frontier,
+    });
+    expect(debt + frontier + residual + idle).toBeCloseTo(gross, 6);
+    expect(residual).toBeCloseTo(537_392.03701814, 6);
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")).toMatchObject({
+      name: "Unresolved issuance and backing reconciliation residual", pct: 0.7,
+      unclassifiedResidual: true, residualReason: "insufficient-evidence",
+    });
+    // One-decimal normalization assigns the ordinary rounding remainder to the largest slice.
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:lp:dola-susde")?.pct).toBe(71.5);
+    expect(result.slices.some(row => /idle|non-FiRM/i.test(row.name))).toBe(false);
+    expect(result.slices.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 1);
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+  });
+
+  it.each([undefined, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "withholds inventory netting for an unreadable market balance (%s)", (dolaLiquidity) => {
+      const result = adaptFirmMarkets({
+        markets: [{ ...makeMarket("wstETH", 60), dolaLiquidity }], timestamp: 1000,
+      }, 100);
+      expect(result.metadata?.firmIdleDola).toBeNull();
+      expect(result.metadata?.nettedOwnDola).toBe(0);
+      expect(result.metadata?.netClaimsDola).toBe(100);
+      expect(result.metadata?.unclassifiedResidualUsd).toBe(40);
+    },
+  );
+
+  it("does not clamp excessive inventory into a favorable net denominator", () => {
+    const result = adaptFirmMarkets({
+      markets: [{ ...makeMarket("wstETH", 60), dolaLiquidity: 41 }], timestamp: 1000,
+    }, 100);
+    expect(result.metadata?.inventoryReconciled).toBe(false);
+    expect(result.metadata?.nettedOwnDola).toBe(0);
+    expect(result.metadata?.unclassifiedResidualUsd).toBe(40);
+  });
+
   it("does not turn LP symbols or Yearn LP wrappers into direct stablecoin claims", () => {
     const result = adaptFirmMarkets({
       markets: [
@@ -217,7 +270,7 @@ describe("adaptFirmMarkets", () => {
     expect(result.metadata?.unknownExposurePct).toBeCloseTo(500 / 600 * 100);
   });
 
-  it("includes non-FiRM issuance in unknown exposure rather than normalizing it away", () => {
+  it("keeps unresolved issuance in unknown exposure rather than normalizing it away", () => {
     const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100);
     expect(result.metadata?.unknownExposurePct).toBe(40);
     expect(result.metadata?.frontierBadDebtUsd).toBeNull();
@@ -239,7 +292,7 @@ describe("adaptFirmMarkets", () => {
   });
 
   it.each([null, -1, Number.NaN, Number.POSITIVE_INFINITY, 41])(
-    "keeps the whole non-FiRM tail unknown for an invalid or unreconciled debt balance (%s)",
+    "keeps the whole unresolved tail unknown for an invalid or unreconciled debt balance (%s)",
     (balance) => {
       const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100, balance);
       expect(result.metadata?.frontierBadDebtUsd).toBeNull();
@@ -327,6 +380,50 @@ describe("adaptFirmMarkets", () => {
 });
 
 describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
+  it("converts provider USD circulation to face units before netting idle DOLA", async () => {
+    const { result } = await runDola({
+      markets: [{ ...makeMarket("wstETH", 1_000_000), dolaLiquidity: 400_000 }],
+    }, dolaCacheDb(1_600_000, 0.8));
+    expect(result.metadata).toMatchObject({
+      supplyUsd: 1_600_000, dolaPriceUsd: 0.8,
+      grossClaimsDola: 2_000_000, nettedOwnDola: 400_000,
+      netClaimsDola: 1_600_000, unclassifiedResidualUsd: 500_000,
+    });
+  });
+
+  it("withholds face-unit reconciliation when the cached price is unavailable", async () => {
+    const { result } = await runDola({}, dolaCacheDb(1_500_000, null));
+    expect(result.metadata?.grossClaimsDola).toBeNull();
+    expect(result.metadata?.nettedOwnDola).toBe(0);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "dola-price-unavailable", effect: "degraded" }));
+  });
+
+  it("repairs the issuer's invalid-feed zero debt and omitted inventory using both contract reads", async () => {
+    const address = "0xc0086ff652c67f43f00f0f9c69ef6c33640c8ccf";
+    const balanceData = `0x70a08231${address.slice(2).padStart(64, "0")}`;
+    const { result } = await runDola({
+      markets: [{ ...makeMarket("yv-DOLA-USR", 0), address, hasNowInvalidFeed: true, dolaLiquidity: undefined }],
+      marketRpc: {
+        [`${address}:0xfc7b9c18`]: 88_012207824144463745n,
+        [`${DOLA_ADDRESS}:${balanceData}`]: 919_458840034266274740n,
+      },
+    }, dolaCacheDb(1_500_000));
+    expect(result.metadata).toMatchObject({ maskedFeedMarkets: 1, repairedFeedMarkets: 1, inventoryComplete: true });
+    expect(result.metadata?.totalDebtDola).toBeCloseTo(88.01220782414447);
+    expect(result.metadata?.nettedOwnDola).toBeCloseTo(919.4588400342663);
+  });
+
+  it("does not treat an unreadable masked feed as zero inventory", async () => {
+    const address = "0xc0086ff652c67f43f00f0f9c69ef6c33640c8ccf";
+    const balanceData = `0x70a08231${address.slice(2).padStart(64, "0")}`;
+    const { result } = await runDola({
+      markets: [{ ...makeMarket("yv-DOLA-USR", 0), address, hasNowInvalidFeed: true }],
+      marketRpc: { [`${address}:0xfc7b9c18`]: null, [`${DOLA_ADDRESS}:${balanceData}`]: 0n },
+    }, dolaCacheDb(1_500_000));
+    expect(result.metadata).toMatchObject({ repairedFeedMarkets: 0, inventoryComplete: false, nettedOwnDola: 0 });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "dola-inventory-unreconciled", effect: "degraded" }));
+  });
+
   it("publishes the measured zero capacity without claiming the route is open", async () => {
     // The PSM has been empty since 2025-12-10. It is not paused — it has
     // nothing to pay out — so neither "open" nor "paused" is an honest claim.
