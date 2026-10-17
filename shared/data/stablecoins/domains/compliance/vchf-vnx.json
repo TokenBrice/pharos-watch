@@ -5,11 +5,11 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "ESMA interim MiCA register (updated October 7 2026): VNX Commodities AG and VNX Global Ltd not listed as EMT issuers",
+        "label": "ESMA interim MiCA register (updated October 7 2026): historical issuer VNX Commodities AG and current issuer VNX Global Ltd not listed as EMT issuers",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "FMA Liechtenstein: EMT issuance under MiCAR reserved to credit institutions and e-money institutions",
+        "label": "Historical Liechtenstein regulatory context: FMA reserves EMT issuance under MiCAR to credit institutions and e-money institutions",
         "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
       },
       {
@@ -48,7 +48,7 @@
     "licensingRegulator": "Bermuda Monetary Authority; Digital Asset Business Class M, registration no. 202605548",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "notes": "The BMA Class M license is a foreign digital-asset business license, not GENIUS approval or a registered foreign-issuer exception. Current VNX Global Ltd terms identify the issuer and cover VCHF; current transparency contracts match tracked VCHF. Older VNX Commodities AG records describe the prior structure. Terms disclose reserve categories, restrict direct minting/redemption to verified sophisticated Organizations, specify a CHF 100,000 minimum issuance request, and permit delayed or in-kind redemption under stated conditions; the issuance threshold is not asserted to be a redemption minimum. Supply figures on the checked transparency page are marked mock data and no signed monthly attestation reports are publicly linked despite a monthly-audit description. GENIUS remains pre-effective; Treasury expects January 18, 2027, subject to the enacted earlier-final-rule trigger. The September 30 SCRC procedural rule is not issuer qualification or an earlier commencement rule; the July 18, 2028 DASP deadline is separate.",
+    "notes": "The BMA Class M license is a foreign digital-asset business license, not GENIUS approval or a registered foreign-issuer exception. VNX Global Ltd. is the current Bermuda issuer; VNX Commodities AG records describe the historical structure. Current institutional documentation restricts direct minting/redemption to verified institutional customers and states a CHF 100,000 minimum transaction threshold for VCHF. Fiat redemption through direct cancellation or liquidity-pool buyback averages about one business day, subject to governing terms, eligibility, AML/ATF checks and liquidity conditions. Terms retain reserve-related delay and in-kind redemption. The issuer's audits hub publicly links Apex Fund Services Ltd.'s July and August 2026 monthly reserve attestations, with ISAE 3000 reasonable assurance; no September report was linked when retrieved October 17, 2026. The August VCHF liability table covers Stellar, Ethereum, Solana, ICP, Celo and Base, but omits the tracked Tezos, Arbitrum, Avalanche, Polygon, XRPL and Fraxtal deployments, so it does not reconcile all tracked supply. Authorization and negative-evidence findings retain their October 7, 2026 review; this correction updates issuer disclosures, not U.S. authorization. GENIUS remains pre-effective; Treasury expects January 18, 2027, subject to the enacted earlier-final-rule trigger. The September 30 SCRC procedural rule is not issuer qualification or an earlier commencement rule; the July 18, 2028 DASP deadline is separate.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act regulations proposed rule",
@@ -82,10 +82,36 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "VNX transparency: tracked VCHF contracts, illustrative supply figures and audit description",
-        "url": "https://vnx.io/transparency",
+        "label": "VNX Global current standards and contracts: VCHF deployment registry",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-17"
+      },
+      {
+        "label": "VNX Global monthly reserve attestations: July and August 2026 reports publicly linked",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/audits",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-17"
+      },
+      {
+        "label": "Apex VNX Global August 2026 reserve attestation (signed September 8, 2026)",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-17",
+        "sourceDate": "2026-09-08"
+      },
+      {
+        "label": "Apex VNX Global July 2026 reserve attestation (signed August 10, 2026)",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-17",
+        "sourceDate": "2026-08-10"
+      },
+      {
+        "label": "VNX Global institutional minting and redemption: eligibility, minimums and indicative settlement",
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-17"
       },
       {
         "label": "GENIUS Act enacted Public Law 119-27",
@@ -156,12 +182,12 @@
         }
       ]
     },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "reviewer": "Pharos VNX correction review (issue #1462)",
+    "reviewedAt": "2026-10-17",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+    "reserveDisclosureUrl": "https://vnx.gitbook.io/vnx-global/transparency/audits",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false
+    "monthlyAttestationPresent": true
   }
 }

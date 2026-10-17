@@ -17,17 +17,54 @@ import {
   reviewedIssuerApiExpansionSupplyFull,
 } from "./shared";
 
-/** Retained VNX issuer-redemption base; VCHF adds its current published fee
- *  schedule independently below. */
+/** Current VNX Global institutional route; VCHF adds its published CHF fee
+ *  components independently below. */
 const vnxGitbookBase: RedemptionBackstopConfig = {
   ...issuerBase,
   ...reviewedDirectRedemptionSupplyFull,
+  reviewedAt: "2026-10-17",
+  holderEligibility: "whitelisted-primary",
+  settlementModel: "days",
   costModel: undisclosedReviewedFee(
-    "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
+    "At-par redemption through VNX Global Ltd. for verified institutional customers; the reviewed product pages do not establish an all-in redemption cost for VGBP",
   ),
   docs: [
-    sourceRefRouteCapacity("VNX docs", "https://vnx.gitbook.io/vnx-platform/"),
-    sourceRef("VNX website", "https://vnx.li/", ["route"]),
+    sourceRef(
+      "VNX Global institutional minting and redemption (reviewed 2026-10-17)",
+      "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+      ["route", "capacity", "access", "settlement"],
+    ),
+    sourceRef(
+      "VNX Global stablecoins and conditional at-par redemption",
+      "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins",
+      ["route", "capacity", "access", "settlement"],
+    ),
+    sourceRef("VNX Global website", "https://vnx.io/", ["route"]),
+  ],
+  v9RouteReviewTerms: {
+    settlementModel: "days",
+    scoringDisposition: "bounded-terms-gap",
+    missingScoringFields: ["capacity", "settlement", "cost"],
+    rationale:
+      "The institutional product pages establish verified-customer access and a CHF/GBP 100,000 minimum transaction threshold, but no executable same-notional capacity floor or complete all-in cost. Fiat to the customer bank averages approximately one business day; eligibility, AML/ATF checks, operational controls and liquidity conditions still apply. An average is not a binding completion maximum or an unconditional settlement SLA.",
+    reviewedAt: "2026-10-17",
+    docs: [
+      sourceRef(
+        "VNX Global institutional minting and redemption",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+        ["route", "capacity", "access", "settlement"],
+      ),
+      sourceRef(
+        "VNX Global stablecoins: governing terms and liquidity conditions",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins",
+        ["route", "capacity", "access", "settlement"],
+      ),
+    ],
+  },
+  notes: [
+    "Pharos VNX correction review (issue #1462), 2026-10-17: VNX Global Ltd. is the current Bermuda-licensed issuer. The institutional route is for verified institutional customers only; VCHF and VGBP have minimum transaction thresholds of CHF 100,000 and GBP 100,000 respectively. The config schema supports only a USD numeric minimum, so no native-currency threshold is relabelled as minRedeemUsd.",
+    "Redemption is customer-initiated at face value, through direct cancellation against reserves or buyback into VNX's liquidity pool. Fiat to the customer's bank averages approximately one business day. Optional external-provider crypto conversion is a separate approximately three-hour leg, not the modeled fiat endpoint or an unconditional completion guarantee.",
+    "Conditional eligibility, AML/ATF and liquidity controls remain operative. Daily redemptions above 10% of supply trigger liquidity-position review and emergency reserve-tranche access; that threshold is not a redemption capacity ceiling or funded executable liquidity. Supply-full remains an eventual issuer-term model only, with capacity, settlement and all-in cost withheld from scoring until separately bound.",
   ],
 };
 
@@ -59,7 +96,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   ...expandIds(["vgbp-vnx"], vnxGitbookBase),
   "vchf-vnx": {
     ...vnxGitbookBase,
-    reviewedAt: "2026-10-09",
+    reviewedAt: "2026-10-17",
     costModel: {
       ...documentedVariableFee(
         "VNX Global Terms Annex III(C) charges CHF 30 for a CHF SWIFT withdrawal from the platform account. The separate 3% unused-funds charge depends on cumulative account funding above USD 100,000-equivalent and less than 75% usage; Annex III(A)'s 2% conversion fee applies to a separate instructed service. Account-history, payout-rail, network and third-party charges remain scenario-dependent and unbounded.",
@@ -70,7 +107,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     docs: [
       ...vnxGitbookBase.docs!,
       sourceRef(
-        "VNX Global current VCHF terms and fee schedule (reviewed 2026-10-09)",
+        "VNX Global current VCHF terms and fee schedule (fee review retained 2026-10-09)",
         "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
         ["route", "fees", "access", "settlement"],
       ),
@@ -81,8 +118,9 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ),
     ],
     notes: [
-      "Sol curation campaign 2026-10-09 (Lane52Vnx), observed 2026-10-09T10:35:08Z: current terms name VNX Global Ltd., separately from the legacy VNX Commodities AG platform. Section 3.2 restricts direct issuance/redemption to verified organizations classified as sophisticated customers and permits reserve-related delay and in-kind redemption. These clauses do not establish an unconditional settlement SLA, complete cash output or currently executable capacity.",
-      "Re-reviewed 2026-10-09: the CHF 30 component binds one CHF SWIFT account withdrawal, not every possible VCHF payout rail. No feeBpsMax, minFeeUsd, gasOrBridgeCostUsd or all-in ceiling is authored. Captured CHF/USD conversion is now supported, but the existing B/cost gap remains until the scored account history, rail, payout count and remaining charges are bound.",
+      ...vnxGitbookBase.notes!,
+      "Pharos VNX correction review (issue #1462), 2026-10-17: the current institutional documentation complements the governing VNX Global terms, previously reviewed 2026-10-09. Those terms permit reserve-related delay and in-kind redemption. No unconditional settlement SLA, complete cash output or currently executable capacity is inferred.",
+      "Fee review retained 2026-10-09: the CHF 30 component binds one CHF SWIFT account withdrawal, not every possible VCHF payout rail. The separate 3% unused-funds charge remains account-history-dependent. No feeBpsMax, minFeeUsd, gasOrBridgeCostUsd or all-in ceiling is authored; the account history, rail, payout count and remaining charges are unbound.",
     ],
   },
   "tryb-bilira": {

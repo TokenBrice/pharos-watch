@@ -275175,6 +275175,186 @@
       ],
       "nextReviewTrigger": "Event: Exact Arc root/adapter runtime-source binding plus exhaustive current reachable positions/adapters/borrow/collateral, idle/totalAssets/expected-supply conservation and all required allocation scopes. Re-review only on receipt of the named prerequisite or a changed public exact source/configuration; elapsed time alone is not promotion.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:vchf-vnx",
+      "taskIds": [
+        "V9G-be08cf3e69b47376",
+        "V9G-833fcef14669a14e"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "evidence": [
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf (period end 2026-08-31; signed 2026-09-08; retrieved 2026-10-17)",
+        "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf (period end 2026-07-31; signed 2026-08-10; retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits (retrieved 2026-10-17; July and August only)",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts (retrieved 2026-10-17)"
+      ],
+      "rationale": "Supersedes the current-evidence premise, not the historical provenance, of the 2026-09-21 and early 2026-10-01 source-search decisions; later October scoped-report deferrals remain valid. Reuse only observed historical task bindings, not invented fresh census IDs. Genuine July and August Apex ISAE 3000 reasonable-assurance examinations establish solely cash reserves at named Bermuda Commercial Bank in VNX Global Ltd.'s separately maintained accounts. August VCHF covered liabilities are CHF 2,035,934.72 versus CHF 2,035,962.35 cash. Whole-VCHF composition and assurance remain deferred because the six-chain covered book is not reconciled to every retained legacy deployment and current liability. No September report is published in the reviewed archive. Owner: VNX Global Ltd. for the complete current deployment/liability/migration join. No closure is claimed before replay.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
+        "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "vchf-vnx:gap:reserve-composition",
+        "vchf-vnx:gap:mechanism-review:assuranceAndReconciliation"
+      ],
+      "nextReviewTrigger": "On issuer publication of a complete current deployment/liability/migration join or a verified current economic partition plus covered/excluded-book reconciliation. Another scoped monthly report alone cannot close the perimeter.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:vchf-vnx",
+      "taskIds": [
+        "V9G-be5f904161bdb876",
+        "V9G-cd9fcdee2281a994"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "evidence": [
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf (sections 2.1 and 3.2; retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins (retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption (retrieved 2026-10-17)",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf (period end 2026-08-31; signed 2026-09-08)"
+      ],
+      "rationale": "Exact-asset review reuses observed October 7/11 historical task bindings; no fresh generated census ID is claimed. The early October claim that no downloadable report was exposed is superseded by the genuine Apex reports, while later whole-book custody/assurance deferrals remain valid. Replace the obsolete weak whole-token claim based on historical Liechtenstein FRT terms with limited current Global Stablecoin claimAndSegregation. Global Terms grant verified sophisticated organizations a personal contractual redemption right, and current docs describe segregated currency-matched reserves externally anchored by Apex. Current issuer is VNX Global Ltd., Bermuda, registration 202605548, BMA Class M under DABA 2018. Whole-group completion remains deferred: legacy-deployment/current-book reconciliation, custody continuity and insolvency priority remain unproved. Reserve-related delay and in-kind redemption clauses remain in force; approximate processing times are not guarantees.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "vchf-vnx:gap:mechanism-review:custodyContinuity",
+        "vchf-vnx:gap:mechanism-review:assuranceAndReconciliation"
+      ],
+      "nextReviewTrigger": "VNX Global Ltd. supplies a complete current retained-deployment liability/migration join and enforceable bank-failure, successor-custody and holder-priority protections. Bind any fresh task IDs only from the regenerated capture census.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:vgbp-vnx",
+      "taskIds": [],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "evidence": [
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf (sections 2.1 and 3.2; retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins (retrieved 2026-10-17)",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf (period end 2026-08-31; signed 2026-09-08)",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts (retrieved 2026-10-17)"
+      ],
+      "rationale": "Proactive re-admission input; no fresh generated task ID or closure is claimed. Author limited current contractual claim/segregation and limited named-bank custody for VGBP. Apex independently reconciles tracked Solana, Celo and Base liabilities of GBP 126,595.48 to GBP 126,596.33 cash at Bermuda Commercial Bank account ending 5514 in VNX Global Ltd.'s name, separately maintained from operating accounts. Unknown insolvency priority, failure/replacement protections and untracked Ethereum report coverage are not promoted. Omit assuranceAndReconciliation from the overlay so the compiler's domain report-scope admission remains authoritative. Terms still restrict direct-redemption eligibility and permit reserve-related delay and in-kind redemption.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "vgbp-vnx:gap:mechanism-review:claimAndSegregation",
+        "vgbp-vnx:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Fresh re-admitted-asset replay/census after the October 17 UTC review day elapses; re-review on changed issuer terms, bank custody or deployment coverage. Do not infer unobserved historical Ethereum liabilities are zero.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "OPERATIONAL_RESILIENCE:vchf-vnx",
+      "taskIds": [],
+      "workType": "OPERATIONAL_RESILIENCE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "evidence": [
+        "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf (period end 2026-07-31; signed 2026-08-10)",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf (period end 2026-08-31; signed 2026-09-08)",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits (retrieved 2026-10-17)"
+      ],
+      "rationale": "Correct source confidence to independent-assurance and anchor at least two full months of exact-token live history as of 2026-10-17 to observed July 31 circulation, not issuer inception. This establishes eligibility only. Whole-book independently verified reconciliation continuity, realized throughput, stress recovery and incident-free history remain unestablished; reserveReconciliation stays null and incidentReview remains not-reviewed. July/August reports cannot certify retained legacy deployments, and the archive has no September report. No fresh generated task ID or closure is claimed. Owner: VNX Global Ltd. for complete scope and realized performance evidence.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/operational-resilience-overlays-v1.json"
+      ],
+      "sentinels": [
+        "vchf-vnx:gap:operational-resilience"
+      ],
+      "nextReviewTrigger": "Complete current liability scope with independently verified report continuity, or exact-asset realized throughput/stress/incident evidence. Replayed age eligibility must not be interpreted as operational-performance credit.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "OPERATIONAL_RESILIENCE:vgbp-vnx",
+      "taskIds": [],
+      "workType": "OPERATIONAL_RESILIENCE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "evidence": [
+        "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf (period end 2026-07-31; signed 2026-08-10)",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf (period end 2026-08-31; signed 2026-09-08)",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts (retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits (retrieved 2026-10-17)"
+      ],
+      "rationale": "Add an evidence-backed re-admission overlay: July and August independent Apex reports establish at least two full months of exact-token live history as of 2026-10-17, eligibility only. Preserve null throughput and whole-book reconciliation, empty stress episodes and not-reviewed incidents. Three tracked chains match Apex, but the issuer registry also names Ethereum outside its table; no pinned historical Ethereum-zero observation or current all-deployment continuity is asserted. No September report is published. No fresh generated task ID or closure is claimed. Owner: VNX Global Ltd. for complete scope and realized performance evidence.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/operational-resilience-overlays-v1.json"
+      ],
+      "sentinels": [
+        "vgbp-vnx:gap:operational-resilience"
+      ],
+      "nextReviewTrigger": "Pinned historical/current Ethereum-liability closure with complete scope-matched independent report continuity, or exact-asset realized throughput/stress/incident evidence. Bind fresh task IDs only after generating the re-admitted census.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:vchf-vnx",
+      "taskIds": [
+        "V9G-f049a40ff654bb66"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "evidence": [
+        "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf (period end 2026-07-31; signed 2026-08-10)",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf (period end 2026-08-31; signed 2026-09-08)",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits (retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption (retrieved 2026-10-17)"
+      ],
+      "rationale": "Refresh the dated October 7 reconciliation disposition: July and August reports plus the current archive establish genuine monthly scoped Apex examinations, and current issuer docs describe daily reconciliation and M-of-N mint/burn controls with at least two signatories. These sources do not establish independently verified reconciliation of all retained VCHF liabilities or all-contract signer independence. Retain the whole-book C reconciliation gap, without claiming that monthly reports or the covered-book bank are undisclosed. The August report period remains August 31, signed September 8; no September report is published. Reuse the observed historical task ID only; factsClosed stays zero. Owner: VNX Global Ltd. for the complete scope-matched reconciliation and controls proof.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        "vchf-vnx:gap:economic-control:mint::reconciliation"
+      ],
+      "nextReviewTrigger": "A complete current retained-deployment/off-chain liability join with independent scope-matched recurring reconciliation; the operational multisignature summary alone does not certify exact contract controls.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:vchf-vnx",
+      "taskIds": [
+        "V9G-c5989453e530aa5a"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "evidence": [
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf (sections 3.2 and 6, Annex III; retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption (retrieved 2026-10-17)",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins (retrieved 2026-10-17)"
+      ],
+      "rationale": "Current Global Stablecoin docs now clearly describe verified institutional customer redemption with a CHF 100,000 minimum, direct cancellation against reserves or liquidity-pool buyback, approximate one-business-day fiat payout and optional external-provider crypto conversion. The current issuer is VNX Global Ltd., Bermuda, not the historical Liechtenstein FRT issuer. This supersedes using legacy vnx.li-only evidence as the current route description; it does not establish migration or eligibility for every legacy issuance cohort. Keep cost B uw-vchf-vnx-f9f0e4372b4f1498 unchanged: CHF 30 SWIFT is partial, the separate 3% unused-funds charge is account-history-dependent, and other applicable deductions and payout cardinality are not completely bounded. Terms still permit reserve-related delay and in-kind redemption, so approximate timings are not guarantees. No runtime execution, capacity or closure is asserted. Owner: VNX Global Ltd. and the route producer for the complete scenario/fee/settlement witness.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "vchf-vnx:gap:exit-route:redemption:redemption:c92414a3-68db-495a-bf34-ec8533d1224b:redemption:vchf-vnx:offchain-issuer:cost"
+      ],
+      "nextReviewTrigger": "Complete issuer all-in route-specific deductions and legacy/current cohort eligibility, or a fresh exact-request net-output/cost observation with admitted FX, actual payout rail and account-history scenario; historical producer generation in the sentinel must be rebound by the next real capture.",
+      "factsClosed": 0
     }
   ]
 }
