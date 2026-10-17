@@ -1,18 +1,12 @@
 # Mint/Burn Flow Tracker
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Methodology Versioning · Cron Schedule · Constants & Thresholds · Contract Configurations · Raw Token Conservation · Sync Algorithm · Shared Ingestion Pipeline Boundaries · Scoring · Valuation Completeness · Retention · Database Schema · API Endpoints · Cron Metadata Fields · Frontend · Error Handling & Edge Cases · Testing · Future Work.
+> **Agent navigation** — Read the needed contract: Registry ownership · Open USD coverage review · Raw Token Conservation · Sync Algorithm · Scoring · Valuation Completeness · Retention · API Endpoints · Valuation Completeness Rendering · Circuit Breaker Separation. The registry owns the changing source roster; source and operator references use absolute URLs so this public page remains navigable.
 
 On-chain mint and burn event tracker for stablecoins on their **configured issuance chains** via Alchemy-first JSON-RPC (reviewed scheduled Dwellir fallback on Ethereum/Arbitrum/Base). Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion runs in two lanes: a critical 30-minute lane for major coverage and an offset extended 30-minute lane for long-tail backlog drain.
 
 Product scope note: the public `/flows` page now surfaces the configured issuance scope plus per-coin `coverage` metadata so partial history, lagging sync, or unknown current chain-head states are visible to users instead of implied as complete market-wide coverage. Current production scope is Ethereum for most tracked assets, with USDai tracked on native Arbitrum and Base Dollar tracked on native Base as their canonical issuance/redemption chains.
 
-BUIDL Ethereum coverage includes both registered share-class contracts, `0x7712c34205737192402172409a8f7ccef8aa2aec` and `0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041`. DefiLlama's [reviewed issuance configuration](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/peggedData/peggedData.ts#L5159) sums both tokens in Ethereum supply. Both use six decimals, zero-address Transfer events, and the existing 21,900,000 default coverage floor; this floor is not a verified deployment block. The added contract requires its own bootstrap/backfill and a new extended-lane production execution before coverage can be accepted as current.
-
-BRSRV Ethereum coverage uses the primary six-decimal fund-share token and its verified proxy creation at block 25,590,451 (2026-07-22; [creation receipt](https://etherscan.io/tx/0x2eef66c3a1df6f83f1230fc67074103675653df308a0437439fb36b5344bc0a1)). The extended config counts zero-address `Transfer` events only, avoiding duplicate `Issue` and `TxShares` logs. The existing 10,000-token dust cutoff applies. The [fund prospectus](https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf) permits new shares from both subscriptions and dividend reinvestment, so recorded minting is share creation, not necessarily new investor cash. Configured Ethereum flow coverage does not establish Tempo/Solana history, off-chain register completeness, financial reconciliation or automatic raw-token conservation admission. Bootstrap/backfill and a fresh extended-lane production execution are required before this history can be considered current.
-
-CHFSAFO Ethereum flow coverage starts at its verified register-creation block 24,540,949 on 26 February 2026 ([creation transaction](https://eth.blockscout.com/tx/0x6d98798a86bde1112b6b3b905ddb86d7c4969278f6e69cc732bd988aa004c22a)). It uses the catalogued five-decimal native ERC-20 register and standard zero-address Transfer events. This configured-chain scope excludes its seven other native registers; creation precedes the issuer-published 3 March 2026 product launch. New configuration requires bootstrap/backfill and a fresh extended-lane execution before production history can be considered current.
-
-GLDon Ethereum flow coverage uses its catalogued 18-decimal token, created and initialized at block 23,984,676 (10 December 2025; [creation transaction](https://etherscan.io/tx/0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1)). The extended config counts zero-address `Transfer` events with the existing 10-token commodity dust cutoff and binds the custom OndoOFT `0x6d119ebada730583ef8dc7b8506fa317a374796a` for LayerZero bridge classification, rather than treating cross-chain burns/mints as organic issuance. BSC, Solana and HyperEVM remain outside configured flow scope. Bootstrap/backfill and a fresh extended-lane production execution are required before this Ethereum history can be considered current.
+Configured contracts, exact start blocks, decoder/bridge bindings and dust thresholds are owned by `MINT_BURN_CONFIG_SPECS` in `worker/src/lib/mint-burn-contracts-data.ts`, not a release roster here. A configured start is not observed history: bootstrap/backfill and a fresh lane execution must establish current coverage. Other native deployments are not implicitly included. Fund-share mints can represent dividend reinvestment as well as subscriptions; token creation is not necessarily new investor cash.
 
 The `/flows` page also renders a Flow Receipt directly under the printer/shredder overview. The receipt uses the existing 24-hour coin rows and 7-day hourly buckets to show printed, shredded, and net tracked flow totals, the top 24-hour minter and burner, and the current coverage/lag state. Its labels deliberately describe observed configured-chain events; they do not claim complete market-wide supply creation or redemption.
 
@@ -37,58 +31,24 @@ Mint and burn events measure token creation and destruction, not investor intent
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
-The `v6.26` source-roster release adds reviewed Ethereum BRSRV, CHFSAFO and GLDon issuance readers to the extended lane. Their exact start blocks, thresholds and GLDon OFT binding are owned by the contract registry; other native deployments are not implicitly covered. Pressure formulas, closed-hour windows, valuation and gauge weighting are unchanged. Activation is provisionally **2026-10-16 00:00 UTC (`1792108800`)**, to be re-dated at release. Configured history requires completed scans/backfill and coverage maturity before it establishes observed flows.
-
-The v6.25 release publishes one-sided bounds on partially valued nets. When exactly one side of a window is partial, the known net is a proven floor (only mints unpriced) or ceiling (only burns unpriced); pages render it as an explicit `≥`/`≤` value instead of a bare NR. The aggregate 24h direction now includes partial coins' known subtotals in its proven range. Pressure, gauge weighting, FTQ and event-time pricing are unchanged; activation is provisional until release.
-
-The v6.24 release aligns aggregate and per-coin windows to N closed UTC hours ending at the current hour boundary, excluding the open hour without dropping the oldest hour's valuation debt. Verified CCTP V2 destination recipient/fee mints leave issuance while unrelated same-transaction flow stays counted. Actual observation-clock admission governs historical pricing, and whole-hour retention plus post-materialization cursor advancement preserves all siblings needed for repair. Pressure formulas and gauge weights are unchanged; existing pruned evidence and overadvanced historical cursors are not automatically repaired.
-
-**Release obligations recorded 2026-10-10:** for v6.24, fixed-clock input/output comparison and owner review of changed flow outcomes remain release gates; fresh admitted producer observations and production resource evidence are separate prerequisites. Replay cannot reconstruct pruned mint evidence, and none of these requirements asserts completed repair or production health.
-
-Earlier release history lives in `shared/data/methodology-changelogs/mint-burn-flow/`; keep this document focused on the current contract.
+The [public changelog](https://pharos.watch/methodology/mint-burn-flow-changelog/) owns releases and activation records. Current semantics are defined below: closed-hour windows, event-time valuation, verified bridge exclusions and one-sided partial-net bounds. Fixed-clock input/output comparison and owner review of changed outcomes, fresh admitted producer observations and separate production resource evidence are release prerequisites, not claims of completed repair or health. Replay cannot reconstruct pruned event evidence or automatically repair overadvanced historical cursors.
 
 ---
 
 ## Cron Schedule
 
-- **Critical lane pattern:** logical `4,34 * * * *`, deployed as hourly physical aliases `4 * * * *` and `34 * * * *` (every 30 minutes, offset at :04/:34)
-- **Extended lane pattern:** logical `18,48 * * * *`, deployed as hourly physical aliases `18 * * * *` and `48 * * * *` (every 30 minutes, offset at :18/:48 — placed ahead of the fenced V9 publication slot at :22/:52 to keep the minute-long extended scan clear of the DEX/V9 publication chain). The aliases preserve cadence and slot identity while qualifying each invocation for Cloudflare's hourly Cron CPU class; the combined expression was retired after same-version production runs repeatedly exhausted the sub-hourly 30-second class and were reconciled as `platform-abandoned`.
-- **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated 6-hourly trigger (`3 */6 * * *`); `sync-dex-discovery` runs on a dedicated 2-hourly trigger (`6 */2 * * *`).
-- **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
-- **Provider:** Alchemy first; admitted Dwellir fallback on Ethereum/Arbitrum/Base only (see [RPC fallback policy](#circuit-breaker-separation))
-- **File:** `worker/src/cron/sync-mint-burn.ts`
-- **Registration:** cron declared in `worker/wrangler.toml`; `worker/src/handlers/scheduled.ts` dispatches the isolated slots through `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts`, `worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts`, and the shared `worker/src/handlers/scheduled/mint-burn-slot.ts`
-- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `lane`, `jobName`, `nullPricesHealed`, and per-config coverage-frontier diagnostics when scans are partial.
-- **Operator notes:** internal ingestion process notes are kept outside the public documentation archive.
+The critical and extended lanes run independently every half hour on isolated triggers. The critical job retains `sync-mint-burn` for freshness and escalation; `sync-mint-burn-extended` has its own rotation/run-state key and warning-only backlog semantics. Alchemy is first; only the [reviewed scheduled fallback](#circuit-breaker-separation) is available.
 
-Lane policy:
-- `sync-mint-burn` = critical lane. Uses the existing job id so freshness alerts and API freshness remain keyed to the major-symbol path.
-- `sync-mint-burn-extended` = extended lane. Uses its own `mint_burn_run_state.job` key and warning-only coverage semantics so long-tail backlog churn does not escalate the critical lane to `error`.
+Extended placement precedes the `:22/:52` Safety Score fence to avoid overlapping its publication chain. Each physical alias is hourly: combining aliases into one sub-hourly expression would reduce Cloudflare's CPU class to 30 seconds, the exhaustion mode recorded as `platform-abandoned`. The [schedule and dispatch owner](https://github.com/TokenBrice/pharos-watch/blob/main/docs/worker-infrastructure.md#cron-scheduling) owns expressions; [per-job timeouts](https://github.com/TokenBrice/pharos-watch/blob/main/docs/worker-and-api-limits.md#per-job-cron-timeouts) own runtime ceilings.
 
-UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders that targeted banner and suppresses the generic stale-data banner for the same query so users do not see duplicate amber warnings describing the same freshness condition. Cached fallback API responses now preserve only freshness-derived headers; a transient live-query failure no longer emits an extra generic `Warning` while the cached dataset is still inside the public 60-minute freshness window.
-
+`syncMintBurn()` returns actual inserted rows as `itemCount`, plus status and bounded lane/config coverage diagnostics. When a targeted sync warning exists, the UI suppresses a duplicate generic stale banner. Cached fallback preserves freshness-derived headers, not an extra transient-query warning while the dataset is fresh.
 ---
 
 ## Constants & Thresholds
 
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `dustThreshold` | 10,000 default (token-native); lower per-config overrides where unit economics require them (e.g. 10 for precious-metal tokens, 100 for BD) — the registry is authoritative | Events below this amount are discarded |
-| `EVM_SAFETY_MARGIN_BLOCKS` | 75 | Safety margin when advancing sync state to chain head, derived as `ceil(900s indexing safety / 12s block time)` |
-| `FLOW_INTENSITY_DENOMINATOR_SCALE` | 0.3 | Pressure-shift denominator = 30% of baseline daily absolute flow |
-| `FLOW_INTENSITY_DENOMINATOR_FLOOR_USD` | $1,000,000 | Minimum pressure-shift denominator |
-| `FLOW_INTENSITY_Z_MULTIPLIER` | 50 | Z-score amplification in the pressure-shift formula |
-| Pressure-shift clamp range | -100 to +100 | Signed baseline-relative score output range |
-| `FLOW_INTENSITY_MIN_DATA_DAYS` | 7 | Days of history required before pressure shift returns a value |
-| `MIN_ACTIVITY_USD` | 50,000 | 24h absolute flow below this returns NR pressure shift |
-| `FLIGHT_TO_QUALITY_FLOW_THRESHOLD_USD` | $100,000,000 | Strict net-flow threshold on both sides for flight-to-quality |
-| `MAX_SCAN_RANGE` | 50K | Max block range per contract per cycle |
-| `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
-| Subrequest budget | 200 per cron run | Global RPC request budget, including fallback attempts |
-| Per-config request cap | 60 critical, 150 bridge-aware critical, 25 extended | Prevents one hot config from consuming the full lane while allowing high-volume bridge-aware critical configs to finish batched tx-context classification |
-| Runtime self-budget | 9 minutes, with a 60-second minimum next-config window | Stops starting new configs before the 10-minute cron wrapper timeout so the run can persist controlled metadata and resume on the next slot |
-| Config tier policy | `critical` / `extended` | Critical and extended lanes run on separate cron schedules; each config also has a per-config request cap |
-| Coverage lag threshold | public freshness window by chain block cadence, capped at 10K blocks | Marks established per-coin coverage `lagging` once current block progress exceeds the public freshness cadence |
+The contract registry owns per-config dust thresholds, start blocks and lane selection. Dust is measured in token-native units; configured overrides are necessary where unit economics differ. Established coverage becomes lagging against the public freshness cadence translated to chain blocks, capped at 10K blocks.
+
+The [Scoring](#scoring) section owns pressure/activity/flight-to-quality parameters. The [operational budget table](https://github.com/TokenBrice/pharos-watch/blob/main/docs/worker-and-api-limits.md#mint-burn-and-producer-metadata-budgets) owns global/per-config request caps, scan limits, self-deadline and indexing-safety behavior; they are not additive per-contract allowances.
 
 ---
 
@@ -131,16 +91,7 @@ Events are also classified by `flow_type` (`standard`, `bridge_transfer`, `atomi
 
 Open USD (`ousd-open-standard`, issued by Bridge) is distinct from Origin Dollar (`ousd-origin-protocol`). The [issuer's reserve page](https://reserves.bridge.xyz/ousd) binds its Ethereum, Base, Tempo and Solana deployments. The extended lane indexes Ethereum and Base with six decimals, canonical zero-address `Transfer` events and a 10,000-token dust threshold ($10,000 at peg). Both use explicit primary-contract configs and reviewed code-deployment bounds, rather than the default Ethereum coverage floor. Small test mints/burns are deliberately below the economic-flow cutoff.
 
-Archive reads from `https://eth-mainnet.g.alchemy.com/v2/` and `https://base-mainnet.g.alchemy.com/v2/`, authenticated with `ALCHEMY_API_KEY`, established code absence at `startBlock - 1` and presence at `startBlock` on 2026-09-30 at 16:26 UTC. Ethereum starts at block **25,137,271** (2026-05-20); Base starts at **48,631,941** (2026-07-14). These are high-confidence deployment bounds, not claims that issuance began at deployment. The first Ethereum mint in the initial 50,000-block window was block 25,153,426, transaction `0x9ad6f66779dd7d07db46ed4fab8132cc3ed91e1b724ab8fb32fa93a6e4f55a7f`; no Base mint appeared in its initial window.
-
-The following actual log samples were read at 16:28 UTC. All have topic0 `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`, three topics and a single data-word amount. Mint uses zero `topics[1]`; burn uses zero `topics[2]`. Custom issuer events are not additionally counted.
-
-| Chain | Direction | Block | Transaction | Raw amount (6 decimals) |
-| --- | --- | --- | --- | --- |
-| Ethereum | Mint | 25,999,541 | [0x30bd12db49f8452a8f200193b01141c10639980d2a07a4e13f718a12b2bc510d](https://etherscan.io/tx/0x30bd12db49f8452a8f200193b01141c10639980d2a07a4e13f718a12b2bc510d) | 10,000,000 |
-| Ethereum | Burn | 26,042,405 | [0xe12e0ac6bc884084a7a9035d5baab554f8308b486f8d794c00ec5ebb9dbfb038](https://etherscan.io/tx/0xe12e0ac6bc884084a7a9035d5baab554f8308b486f8d794c00ec5ebb9dbfb038) | 10,000,000 |
-| Base | Mint | 51,904,411 | [0x67ab7ed88340ff982cc5ac9012293cbf5f9da10143fc91842243b338eb28ccee](https://basescan.org/tx/0x67ab7ed88340ff982cc5ac9012293cbf5f9da10143fc91842243b338eb28ccee) | 100,000,000 |
-| Base | Burn | 51,921,642 | [0xe3ff268dec284704fc138efe008cd4dbb4a8f38cdb22f817b406e7a5da8860cc](https://basescan.org/tx/0xe3ff268dec284704fc138efe008cd4dbb4a8f38cdb22f817b406e7a5da8860cc) | 11,230,000 |
+Reviewed deployment bounds are config-specific, not the default Ethereum coverage floor; their provenance belongs with the registry and [reviewed conservation sidecar](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/lib/mint-burn-conservation-reviewed.json). The decoder counts exactly one canonical zero-address `Transfer` per mint/burn, not duplicate custom issuer events.
 
 **Intentional chain gaps:** Tempo is the dominant issuance chain (about 91% of supply). Although `chain-registry.ts` declares Tempo Dwellir archive state/full log history, mint/burn requires an Alchemy-first endpoint (`ALCHEMY_CHAINS` excludes Tempo), and its reviewed Dwellir fallback allowlist includes only Ethereum/Arbitrum/Base. Revisit Tempo routing only after reviewing TIP-20 event semantics and deployment history for admission. Solana is also excluded: the lane has no Solana supply-event decoder or RPC ingestion path. Its trigger is a supported Solana mint/burn adapter. No bridge-detection hints were added without verified CCIP, CCTP or LayerZero attribution.
 
@@ -156,7 +107,7 @@ The public flows table describes configured issuance chains, and the per-coin AP
 
 `shared/lib/reviewed-protocol-internal-flows.ts` holds individually reviewed events that moved tokens inside an issuer's own balance sheet, each with its block timestamp. `persistMintBurnRows()` applies it through `applyReviewedProtocolInternalFlows()` (`worker/src/lib/mint-burn-pipeline/reviewed-protocol-flows.ts`) after atomic-roundtrip detection, in both the cron and `npx tsx worker/scripts/one-shot-backfill.ts backfill-mint-burn --execute --allow-atomic-import` paths, so a replay over the event's block rewrites the stored row and recalculates its hourly bucket. Matching requires the exact event id (chain, transaction hash, log index), stablecoin, chain, direction, and the reviewed token amount; a row whose amount drifts keeps its normal classification. There is no address-level rule. The homepage Biggest Supply Moves card reads the same registry and leaves a coin out of its week-over-week ranking while a reviewed event sits inside the comparison (see [Homepage](https://pharos.watch/)).
 
-The reviewed registry owns the event inventory and its evidence. USDai's September 23, 2026 burn of 128,895,244.1 tokens (block 508,237,173) is the documented example: the sUSDai vault funded USD.AI's escrow-admin Safe through two strategy transfers, then the hub's `withdraw()` burned USDai and paid 128,895,243.0 PYUSD. The loan-reserve series rose by the burned amount while TVL stayed near $609.05M. Because ordinary redemption uses the same path, exclusion is per event, not per address. `reviewedProtocolInternal` in persistence results counts rows tagged during a run.
+The reviewed registry owns exact event identity, evidence and original timestamps. The USDai example is a vault-to-loan deployment burn rather than a holder cash-out; identical contract paths can also redeem, so exclusion remains per event, never per address. `reviewedProtocolInternal` counts tagged rows.
 
 ### Event Detection
 
@@ -206,47 +157,22 @@ Evidence uses existing `cache` rows at `mint-burn:conservation:<configKey>`, wit
 
 A verified native mismatch fences cursor advancement and immediately degrades the affected run so the same range can be retried. The fence is also a write barrier: a conservation-fenced attempt (verified mismatch, unreliable raw-log/boundary evidence, or parser correspondence failure) persists no rows into `mint_burn_events`, so rows whose event set was never conservation-verified cannot outlive the fence — a later clean retry that covers the range writes only the rows it re-observed, and its persisted-row readback verifies exactly those. Invalid raw identity or parser/stored-row correspondence evidence is likewise not allowed to advance as a clean scan. Pure audit capability/budget unavailability does not independently stall otherwise valid ingestion or count as an ingestion API error; separate conservation counters expose audit failures and unavailable attempts. The operator verdict stays unverified, and existing partial-coverage, timestamp, bridge-context and persistence rules continue to govern progress.
 
-The operator view reads cached evidence only, displays each latest audited range separately, and never treats the old timestamp-less circulating-supply delta as a critical ingestion verdict. See [Status Dashboard: Mint/Burn Reconciliation Card](./status-dashboard.md#mintburn-reconciliation-card). The public mint/burn methodology and its version are unchanged because event cutoffs, classifications, counts, valuation and flow formulas are unchanged.
+The operator view reads cached evidence only, displays each latest audited range separately, and never treats the old timestamp-less circulating-supply delta as a critical ingestion verdict. The [public status dashboard](https://pharos.watch/status/) presents these diagnostics; conservation does not change event cutoffs, classifications, counts, valuation or flow formulas.
 
 ## Sync Algorithm
 
-1. **Load sync state** — batch query `mint_burn_sync_state` for all lane-selected contract keys. Falls back to `startBlock - 1` for new configs.
-2. **Apply runtime policy** — filter disabled configs (`MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`), select the requested lane (`critical`, `extended`, or `all`), rotate start index from the lane-specific `mint_burn_run_state.job`, front-load critical configs inside mixed/all runs, and assign a per-config request cap inside the global budget. The cron runner reserves a 9-minute self-budget inside the 10-minute wrapper timeout and skips the remaining config tail once fewer than 60 seconds remain for starting another config.
-   - Extended runs reserve the minimum log-query cost for the first `ceil(enabledConfigs / 2)` rotated configs before assigning hot-config headroom. The 200-request ceiling, 25-request per-config cap and 10-request pressure reserve stay unchanged; the next run starts at the first capacity-deferred config. Provider failures and runtime exhaustion still surface as incomplete coverage.
-3. **Skip deferred configs** — remove active `mint_burn_config_deferral` rows (`deferred_until > now`). A config gets a one-hour grace period when `apiErrors > 5` and coverage is below 0.8 or unavailable, preventing chronic failures from consuming healthy configs' budget.
-4. **Get chain head** — ordered Alchemy-first `eth_blockNumber` failover per chain. Cache each successful head by endpoint URL inside that run's chain context, including the initial head read. Event scans reuse only their own provider's observed ceiling; a fallback never inherits Alchemy's higher head. The map is discarded after the run, so scans do not pay another head request per event/config or reuse a prior run's observation.
-5. **Load price evidence** — read the tracked IDs' `supply_history` prices that carry a recorded `price_observed_at` (migration `0253`; rows without it are not evidence) and their `price_cache` rows projected with the actual observation clock (`observed_at`, else the writer's effective `updated_at`), source and observation mode. Rows with an unusable price, a missing/invalid clock, or a clock after the read are not evidence.
-6. **For each contract config:**
-   - Skip if `fromBlock > chainHead` or the lane/global budget is exhausted.
-   - For each event definition, call Alchemy `eth_getLogs` with adaptive recursive splitting. Admitted dual-provider scans bound each endpoint by its own budgeted head; a lagging provider cannot prove the tail. On failure, Dwellir resumes at the proven frontier in at most 10,000-block pages; Alchemy retains its 50,000-block window.
-   - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge activity so a single config cannot monopolize the lane.
-   - Resolve block timestamps — batch `eth_getBlockByNumber` for unique non-dust candidate blocks using local + persistent (`block_timestamp_cache`) caches bound to the logs' block hashes. Missing/mismatching cached hashes are refetched; conflicting returned hashes hold the frontier. Dust-only blocks need no timestamp.
-   - Parse logs per event definition: decode amount (respecting decimals), discard amounts below `dustThreshold`, derive counterparty, value through admitted evidence (null if unavailable), and initialize `flow_type='standard'`.
-   - Cron and admin share per-log decode retry state: the first two failures hold the frontier; observation three quarantines with `amount-decode-retry-exhausted`, excludes only that row and permits progress. Admin diagnostics count decode drops separately and in total drops; valid peers persist.
-   - Event-time pricing contract (DEC-08, v6.23): a price values an event only when `abs(priceObservedAt - eventTimestamp) <= 86_400` seconds, boundaries inclusive, and it passes the `historical_backfill` peg-plausibility validation the historical price-repair scanner applies. The `supply_history` snapshot is tried first, admitted only through its recorded `price_observed_at` (the published price's actual observation time written by `snapshot-supply`), never through its UTC day label; among in-window snapshots the one observed closest to the event wins. `snapshot-supply` stores a price only when `isObservedPrice` holds, so a nominal par reference never enters the daily history, and legacy, prior-Worker and admin-backfill rows (NULL clock) never value an event. Otherwise a `price_cache` observation is admitted when it is also replay-safe (`isReplaySafePriceSource`) and an actual observation (`isObservedPrice`, so a nominal par reference never counts); legacy `protocol-redeem` rows of nominal-par routes (`protocolParProvider.matches`) are par written before the nominal cutover and never count. It is stamped with its own observation time (`price_source=price-cache-event-window`), never the run time. When both a snapshot and a cache observation qualify, the one observed closest to the event wins (a tie keeps the snapshot). With no admissible evidence the row stays NULL; a current quote never values an old event. Assets observed less than daily (NAV tokens over weekends and holidays) therefore leave events unpriced, and their hours `partial`, whenever the latest observation is more than 24 hours from the event. Rows written before v6.23 may carry the retired `price-cache-current` label with a run-time `price_timestamp`.
-   - Resolve transaction/receipt context in 20-hash chunks (`TX_CONTEXT_BATCH_CONCURRENCY = 3`), with serialized endpoint failover inside each batch and no added concurrency. Receipt log hashes must match the scanned transaction's block hash; mismatches remain unavailable. Hash-bound caches prevent cross-fork reuse.
-   - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
-   - Timestamp and bridge-classification phases receive the cron lane deadline; when the 9-minute self-budget is reached they stop adding remote work and surface ordinary partial-frontier diagnostics instead of relying on the outer 10-minute cron timeout.
-   - If a bridge-enabled config cannot resolve required transaction and receipt context for a parsed transaction, rows from that transaction are withheld from persistence for that run while resolved rows in the same window can still publish. These shortfalls remain in `bridgeClassification` diagnostics and keep the sync cursor at the safe retry frontier instead of counting unresolved rows as economic flow.
-   - Malformed transaction, receipt, or explorer-log payloads are quarantined at the provider boundary. They contribute a named classification shortfall while valid peers in the same batch continue.
-   - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id, chain_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction and their totals match within `ROUNDTRIP_AMOUNT_TOLERANCE` (0.5%). Rows with an empty `tx_hash` are defensively skipped.
-   - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`. Cron callers pass the wrapper `AbortSignal` into insert/classification batches so timeout or lease-loss cancellation stops before large D1 persistence chunks continue.
-   - Stage the next `mint_burn_sync_state.last_block` frontier (do not commit it before hourly materialization):
-     - If every event definition completed and timestamps are fully resolved:
-       - If events found: advance to `maxBlockSeen`.
-       - If no events: advance to `max(fromBlock - 1, min(scanTo, chainHead - safetyMarginBlocks))`, never beyond the scanned range.
-     - If event, timestamp, bridge-context, or still-retryable decode coverage is partial: advance only to the shared safe coverage frontier (`min(scannedToBlock, earliestMissingTimestamp-1, earliestDeferredRow-1, earliestDecodeFailure-1)`).
-     - If no safe frontier exists for the config in that run: do not advance. A decode row that reaches its bounded retry limit is quarantined per row and no longer holds this frontier.
-7. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, rebuild `mint_burn_hourly` from `mint_burn_events` in an atomic per-hour delete+insert pair. Count only standard mints and standard `effective_burn` rows; bridge, review-required, atomic-roundtrip and protocol-internal flow does not contribute.
-   - Recalc runs inside a `finally` block so it still fires after partial-run failures. Only a successful recalc commits the staged config cursors. Failure holds every staged cursor for idempotent replay; duplicate-only `INSERT OR IGNORE` replays still collect their affected hours. The critical lane downgrades `status=ok` to `status=degraded` and surfaces `recalcFailed: true` plus `recalcError: <message>`. Cancellation likewise holds cursors. The cron abort signal is passed into this recalc path and into post-run null-price healing / roundtrip sweep recalcs.
-8. **Auto-heal recent NULL prices** — on non-error runs, list the coins with `amount_usd IS NULL` events in the last 48 hours, drop coins with no evidence that could value any of them (`hasMintBurnEventPriceEvidenceSince`: no usable snapshot or cache observation observed after the lookback start minus 24h), then take up to 500 of the remaining coins' NULL rows, value them with the same `resolveMintBurnEventPrice()` admission parse uses (`price_source=supply-history-heal` or `price_cache_heal`, stamped with the evidence's observation time), update `amount_usd/price_*`, and re-aggregate only newly affected hourly buckets.
-   - Replay-safe provenance alone is not enough: a cache observation outside ±24h of the event is rejected. Skipping evidence-less coins keeps their permanently unpriceable rows from filling the 500-row budget ahead of healable coins. When nothing qualifies, `amount_usd` stays NULL for `backfill-mint-burn-prices` rather than being valued from a stale snapshot or a later quote; this deliberately grows the historical repair backlog.
-   - Cron metadata now includes both `nullPricesHealed` and `nullPriceBacklog` (`recent`, `historical`) so operators can distinguish live healable gaps from older debt.
-   - If the backlog metadata read remains unavailable after D1 overload retries, the completed ingestion run continues with an explicit unavailable marker and warning; it never fabricates a zero backlog.
-9. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
-10. **Escalate degraded runs** — the critical lane emits `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`. The extended lane keeps the same observability metadata but does not escalate long-tail backlog pressure to `error`.
-11. **Sweep cross-run roundtrips** — on non-error runs, query up to 200 `(tx_hash, stablecoin_id, chain_id)` groups within the last 7 days where both mint and burn directions exist but `flow_type = 'standard'`. Reclassify to `atomic_roundtrip` and re-aggregate affected hourly buckets. This catches roundtrips where the mint and burn were ingested in separate cron runs. The HAVING clause mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` from the in-memory detector so partial same-tx groups (e.g. mint 100 / burn 50) are not mis-tagged as atomic roundtrips.
-12. **Invalidate flow API caches** — successful runs (`ok` or `degraded`) purge the versioned `FLOW_CACHE_PREFIX` range. Critical/manual-all runs purge `mint-burn-flows:v4:*`; only the scheduled critical sidecar republishes aggregate windows `24` and `168`. Extended runs purge only `mint-burn-flows:v4:coin:*`, preserving the gauge until the next critical publication. Per-coin requests rebuild against freshly written buckets.
+`syncMintBurn()` in `worker/src/cron/sync-mint-burn.ts` orchestrates ingestion; `completeMintBurnRun()` in `worker/src/cron/mint-burn/run-completion.ts` owns terminal materialization and post-run work.
+
+| Boundary | Invariant |
+| --- | --- |
+| Selection and progress | Lane-specific cursors rotate enabled configs. Extended admission reserves minimum scan cost for half the rotated roster before hot-config headroom; the next run resumes at the first capacity-deferred config. Error deferrals protect healthy work. Deadline/budget stops are incomplete coverage, not successful emptiness. |
+| Provider frontier | Alchemy-first scans and admitted fallback each use that endpoint's own observed head, cached only within this run. Fallback cannot inherit a higher incumbent head. Adaptive splitting retains only a proven contiguous prefix. Timestamp/receipt caches bind to the event's block hash; mismatches hold the frontier. Dust-only blocks need no timestamp. |
+| Decode/classification | The first two amount-decode failures hold below the row; the third observation quarantines only it as `amount-decode-retry-exhausted`. Valid peers persist. Required unresolved bridge transaction/receipt context withholds that transaction, not its healthy peers, and keeps the safe retry frontier. Malformed provider members are quarantined separately. |
+| Event-time valuation | Use only actual price observations within inclusive ±24h of the event and passing historical peg plausibility. `supply_history` requires recorded `price_observed_at`, never the UTC day label. Cache evidence must also be replay-safe and observed, never nominal par (including old nominal `protocol-redeem`). Closest qualifying observation wins; ties keep the snapshot. Missing/invalid/future clocks and old unclocked history cannot value an event. Persist the evidence clock, not run time; absent evidence leaves NULL, including NAV weekends/holidays. |
+| Persistence and cursor commit | Deterministic event IDs make inserts idempotent. Stage, but do not commit, frontiers until affected hours materialize. Complete scans advance to the last event, or the bounded indexing-safe empty frontier. Partial scans stop before the earliest uncovered log/timestamp/context/retryable decode, never beyond the covered range. No safe frontier means no advance. |
+| Materialization | Recalculate each affected hour from stored events with atomic delete+insert, counting only standard mints/effective burns. Recalc runs in `finally`, including partial failure and duplicate-only replay. Only successful recalc commits staged cursors monotonically; recalc failure or cancellation holds all staged cursors and reports failure (`recalcFailed`/`recalcError`, critical ok → degraded). Abort signals cover persistence, recalc and post-run work. |
+| Repair and terminal status | Non-error runs heal bounded recent NULL-price debt through the same event-time admission, skipping evidence-less coins so they cannot starve healable rows. Older/unhealable debt remains for operator repair. Backlog read failure is unavailable, never zero. Cross-run roundtrip sweeps recalculate changed hours. Critical coverage/API failures escalate with streaks; extended backlog stays warning-only. Active progress keeps stage/budget observability live. |
+| API caches | Successful ok/degraded runs invalidate versioned flow caches. Critical/manual-all purge the full `FLOW_CACHE_PREFIX`; the scheduled critical sidecar republishes aggregate 24h/7d windows. Extended purges only coin responses, preserving the gauge until critical publication. |
 
 **Counterparty resolution (default):** mints read `topics[2]` (recipient), burns read `topics[1]` (sender); a config's `counterpartyEncoding` override changes the slot (see Event Detection).
 
@@ -256,23 +182,9 @@ The operator view reads cached evidence only, displays each latest audited range
 
 ## Shared Ingestion Pipeline Boundaries
 
-Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a single ingestion pipeline under `worker/src/lib/mint-burn-pipeline/`.
+Cron and admin backfill share `worker/src/lib/mint-burn-pipeline/` parsing, classification, event-time price resolution, persistence, hourly materialization and decode retries. Neither entrypoint imports the other. Both use monotonic-max sync-state commits; a partial replay cannot regress or overadvance a cursor. The [operator path](#operator-cli-backfill-mint-burn) additionally aborts an incomplete chunk instead of committing its resolved subset.
 
-| Module | Responsibility |
-|--------|----------------|
-| `types.ts` | Shared ingestion row/context/counter types and sync-state mode union |
-| `parse.ts` | `parseMintBurnLogs()`; values each event through the shared event-time admission in `context.ts` |
-| `roundtrip-detection.ts` | Same-transaction `(tx_hash, stablecoin_id, chain_id)` atomic roundtrip detection for `flow_type` tagging |
-| `classification.ts` | Bridge-aware burn classification and transaction-context loading |
-| `context.ts` | Price evidence loaders (`supply_history` series, `price_cache` observation projection) and `resolveMintBurnEventPrice()`, the ±24h event-time admission shared by parse and heal |
-| `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
-| `price-heal.ts` | Auto-heal recent NULL-price rows through the shared event-time admission and return affected hours |
-| `roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection (7-day window, 200-group limit per run) |
-| `sync-state.ts` | Sync-state key helpers plus mode-specific upserts; cron and backfill both use `monotonic-max` so a partial run cannot regress the stored frontier (`replace` remains available but has no production caller) |
-
-Implementation invariant: `worker/scripts/backfills/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
-
-`mint_burn_events.flow_type` is orthogonal to `burn_type`: `burn_type` still classifies burns as economic vs bridge/review, while `flow_type` applies to both mints and burns and marks tx-level bridge noise as `bridge_transfer`, same-transaction mint+burn noise as `atomic_roundtrip`, and reviewed issuer-internal movements as `protocol_internal`. Large-flow Tape projection skips `bridge_transfer` and `protocol_internal` rows; the Tape row already projected for the September 23 USDai burn before the review remains, because it records a burn that did occur.
+`flow_type` is orthogonal to burn classification: bridge, atomic-roundtrip and individually reviewed protocol-internal events stay outside economic aggregates. Raw conservation still sees them. Tape excludes bridge/protocol-internal rows, but a previously projected reviewed burn remains a true historical event; reclassification is not evidence that it never happened.
 
 Cron metadata includes `atomicRoundtripsDetected`, an observability counter for how many rows were tagged during the run.
 
@@ -468,7 +380,7 @@ These headings remain stable for feature-document navigation. The exhaustive HTT
 
 All API totals and series use closed UTC hours: `end=floor(now/3600)*3600`, `start=end-hours*3600`, with buckets in `[start,end)`. Responses publish `window: {start,end,semantics:"closed-utc-hours"}`; the open current hour is excluded. Aggregate chart hours vary, but coin counts, volumes, pressure and largest events use 24 closed hours ending at the same boundary; 7d/30d/90d nets share that end. Hourly retention cannot reconstruct rolling raw-event fragments.
 
-Parameters, response fields, cache/freshness behavior, and errors are canonical in [Operator runbook: `GET /api/mint-burn-flows`](./api-reference.md#get-apimint-burn-flows).
+Parameters, response fields, cache/freshness behavior and errors are canonical in the [HTTP reference](https://github.com/TokenBrice/pharos-watch/blob/main/docs/api-reference.md#get-apimint-burn-flows).
 
 Aggregate mode constrains configured `(stablecoin_id, chain_id)` pairs in SQL and selects the deterministic largest 24-hour event per coin there; the Worker does not materialize the full event day to compute that field.
 
@@ -478,96 +390,50 @@ Each aggregate coin row publishes `pressureShiftScore` as the sole baseline-rela
 
 The event feed exposes the recent classified, valuation-aware ledger for one stablecoin. Safely settled, aggregated, and Tape-projected rows remain available for at least 8 days; the separate hourly aggregate keeps 90 days of public flow history. The detail-page history deliberately uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
 
-Filters, cursor/offset pagination, ordering, response fields, cache/freshness behavior, and errors are canonical in [Operator runbook: `GET /api/mint-burn-events`](./api-reference.md#get-apimint-burn-events).
+Filters, pagination, ordering, response fields, cache/freshness behavior and errors are canonical in the [HTTP reference](https://github.com/TokenBrice/pharos-watch/blob/main/docs/api-reference.md#get-apimint-burn-events).
 
 ### Operator CLI: backfill-mint-burn-prices
 
 The recent cron path auto-heals bounded NULL-price debt; this operator path handles older history. Stored snapshots use actual observation clocks within inclusive ±24h of the event, including nearby UTC days; historical-provider fallback accepts only the exact UTC event day. Neither path invents a clock, current spot or peg-par price. Definitive no-source results become irreducible, transient failures remain retryable, and recovered rows stay `pending_aggregate` until affected hours are rebuilt and verified. Interrupted runs resume aggregate verification before new valuation work.
 
-Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [Operator runbook: historical mint/burn prices](./runbooks/one-shot-backfills.md#backfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence; live aggregate replacement also requires the [atomic import availability gate](./runbooks/one-shot-backfills.md#transport-safety).
+Operator auth, dry-run/confirmation/bookmark/idempotency and execution requirements have one owner in the [historical price-repair runbook](https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/one-shot-backfills.md#backfill-mint-burn-prices) and [integrity repair sequence](https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/mint-burn-integrity.md#historical-price-debt). Live aggregate replacement requires the [atomic-import availability gate](https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/one-shot-backfills.md#transport-safety).
 
 ### Operator CLI: backfill-mint-burn
 
 Operator ingestion shares parsing, classification, persistence, aggregation and bounded decode retries with cron, but aborts the current chunk on incomplete logs, timestamps or bridge context rather than persisting its resolved subset. Default/live-tip scans anchor to parsed events or the bounded indexing-safe empty frontier; explicit finalized historical chunks may advance fully. Decode failures hold below their block until success or third-observation quarantine; valid peers persist. Every committed cursor follows successful hourly materialization.
 
-Operator CLI arguments and execution/atomic-import guards, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [Operator runbook: mint/burn ingestion](./runbooks/one-shot-backfills.md#backfill-mint-burn).
+Operator arguments, execution/atomic-import guards, selection/range parameters, progression, counters and errors are canonical in the [ingestion runbook](https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/one-shot-backfills.md#backfill-mint-burn).
 
 ### Operator CLI: reclassify-atomic-roundtrips
 
 This bounded repair applies the shared 0.5% same-transaction amount-tolerance rule in both directions: newly recognized mint/burn pairs become atomic roundtrips, while old atomic tags that fail the tolerance return to standard flow. Every affected hourly bucket is recalculated before a batch reports completion.
 
-Operator CLI arguments and execution/atomic-import guards, scope parameters, batch progression, counters, and errors are canonical in [Operator runbook: roundtrip reclassification](./runbooks/one-shot-backfills.md#reclassify-atomic-roundtrips).
+Operator arguments, execution/atomic-import guards, scope, batch progression, counters and errors are canonical in the [roundtrip-reclassification runbook](https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/one-shot-backfills.md#reclassify-atomic-roundtrips).
 
 ---
 
 
 ## Cron Metadata Fields
 
-`syncMintBurn(...)` stores a JSON `metadata` blob on every run row in `cron_runs`. Operators consume it via `/api/status` and the merge-gate metadata checks. Current notable fields:
+`completeMintBurnRun()` owns bounded cron metadata: actual throughput, selected lane/job, source/config coverage, API/bridge shortfalls, decode/roundtrip diagnostics, recalc outcome, request/deadline stops and NULL-price debt. Full per-config drilldown lives separately under its cache key, not in a second field catalog here.
 
-| Field | Type | Meaning |
-|-------|------|---------|
-| `lane` | `"critical" \| "extended" \| "all"` | Selected ingestion lane |
-| `jobName` | string | Lane-specific run-state job key |
-| `rowsRead`, `rowsParsed`, `rowsInserted`, `rowsIgnored`, `rowsDropped` | number | Ingestion throughput counters |
-| `sourceCoverage` | object | `contractsProcessed`, `contractsSkipped`, `contractsEnabled`, `contractsDisabled`, `contractsTotal` |
-| `configSamples[]`, `configBreakdownSummary`, `laggingConfigs[]` | mixed | Per-config diagnostics; the full breakdown is persisted separately under `runDrilldownCacheKey` |
-| `apiErrors` | number | Provider errors observed while collecting configured contracts |
-| `atomicRoundtripsDetected` | number | Rows tagged in-memory this run |
-| `bridgeClassification.txContextShortfalls` | number | Transaction/receipt context lookup shortfalls for bridge-enabled configs |
-| `bridgeClassification.deferredRows` | number | Parsed rows excluded from economic flow because bridge classification context was unavailable |
-| `nullPricesHealed` | number | Rows valued by ±24h event-time admission using clocked `supply_history` or replay-safe `price_cache` evidence (48h heal window) |
-| `degradedSignal`, `degradedStreak`, `coverageRatio` | mixed | Critical-lane health signals |
-| `recalcFailed` | boolean | `true` when `recalcAffectedHours` threw during the run's `finally` block; critical lane downgrades `ok → degraded` when this is set |
-| `recalcError` | string (optional) | Error message captured from the failed recalc call |
-| `nullPriceBacklogRecent` | number \| null | Count inside the 48h auto-heal window, or `null` when the backlog read is unavailable |
-| `nullPriceBacklogHistorical` | number \| null | Count of older NULL-valued rows, or `null` when the backlog read is unavailable |
-| `roundtripsBacklogSaturated` | boolean | `true` when the cross-run roundtrip sweep hit its per-run limit and more candidate groups likely remain in the 7-day lookback window |
-| `nullPriceBacklogAvailable` | boolean | `false` when the retried backlog metadata read failed; `nullPriceBacklog` and its count projections are unavailable rather than zero |
-| `nullPriceBacklogError` | string (optional) | Bounded failure detail for an unavailable backlog metadata read |
-| `budgetUsed` | number | RPC subrequests consumed by this run (emitted via `withBudgetMetadata`) |
-| `budgetLimit` | number | Global subrequest budget for the run (default 200) |
-
+Parsed rows are not inserted rows. NULL backlog counts with `nullPriceBacklogAvailable: false` mean a failed retried read, not no debt. `recalcFailed` means cursors did not commit even if event inserts succeeded. A saturated sweep can leave backlog beyond this run. These distinctions govern repair; metadata field definitions are source-owned.
 ---
 
 ## Frontend
 
 ### Page
 
-**Route:** `/flows`
-**File:** `src/app/flows/page.tsx`
-
-Four sections, followed by a Timeline link:
-1. **Hero Overview** — net-direction hero with the baseline-relative Bank Run Gauge, a literal 24h Minting Pressure gauge, and flight-to-quality badge. Headline copy is derived from aggregate `Net Flow 24h` direction plus the Bank Run Gauge pressure state; it does not imply cross-asset breadth unless a separate breadth signal is added.
-2. **Per-Coin Flows** — sortable table with `Pressure vs 30D`, net 24h/7d, mint/burn volumes, and largest USD-valued event
-3. **Aggregate Flows** — Recharts composed chart with 24h/7d/30d toggle; missing buckets render as gaps, remain unavailable in its accessible table, and are excluded from rolling averages
-4. **Flow Interpretation + Mint/Burn Flow FAQ** — explanatory guidance and the mint/burn FAQ
-
+The public [Flows page](https://pharos.watch/flows/) separates raw net direction from baseline-relative pressure and literal mint/burn balance. The receipt uses observed configured-chain 24h totals and 7d hourly buckets, not whole-market issuance. Leaders rank only displayable USD-valued nets/events. Missing chart buckets remain gaps in plots and accessible tables and do not enter rolling averages. Headline direction plus gauge pressure does not imply cross-asset breadth.
 The page then links to the Timeline for all mint/burn events.
 
 ### Hooks
 
-**File:** `src/hooks/use-mint-burn-flows.ts`
-
-| Hook | Endpoint | Stale Time | Notes |
-|------|----------|-----------|-------|
-| `useMintBurnFlows(hours?)` | `/api/mint-burn-flows` | `CRON_MINT_BURN` | Aggregate mode, no coin filter |
-| `mintBurnFlowsCoinQueryOptions(id, hours?)` | `/api/mint-burn-flows?stablecoin=` | `CRON_MINT_BURN` | Per-coin query options (a factory, not a hook — used via `useQueries`), enabled only when ID truthy |
-| `useMintBurnEvents(id, opts?)` | `/api/mint-burn-events?stablecoin=` | `CRON_MINT_BURN` | Paginated event feed |
-
-All hooks use Zod schema validation for aggregate and per-coin responses (`MintBurnFlowsResponseSchema`, `MintBurnPerCoinResponseSchema`).
+`src/hooks/use-mint-burn-flows.ts` shares aggregate/per-coin query options and event-feed hooks. Both response modes are schema-validated; stale-time configuration follows the lane cadence rather than duplicating freshness rules in components.
 
 ### Components
 
-| Component | File | Description |
-|-----------|------|-------------|
-| `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Overview shell used by `/flows`; renders the printer/shredder scene, a neutral-ink headline, the Bank Run Gauge band (card tinted only at the published `STRESS`/`CRISIS` bands; a `CAUTIOUS` worsening shows an amber chip), literal 24h minting-pressure gauge, and a `FlowReceiptBand` below a dashed tear-line carrying the 24h/7d mint/burn/net receipt tiles plus scope, top minter/burner, and coverage summary. |
-| `FlowReceiptBand` | `src/components/flow-receipt-band.tsx` | Receipt-styled sub-component rendered inside `FlowBrrrOverview`. Shows 24h/7d printed/shredded/net tiles, with the full `/flows` mode including scope caveat, top minter/burner, coverage pills, and any sync warning. |
-| `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: net-mint/net-burn bars, cumulative line, rolling-net band, and hourly tooltip. Missing hourly or daily buckets break the plotted series and render as `—` in the accessible table instead of becoming measured zeroes. |
-| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, net30d, net90d, largest USD-valued event, pressure (net30d/net90d columns hidden below lg/xl). Responsive column hiding; incomplete 30d/90d windows are marked `partial` because their values cover only the observed portion; `Pressure vs 30D` header uses the shared methodology-hint trigger. |
-| `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
-| `MintingPressureGauge` | `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge used by both the aggregate overview and stablecoin detail summary cards |
-| `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit net windows, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge, plus contextual methodology hints / footer links for the flow model. Its 30d/90d cells use the API coverage flags and mark incomplete windows `partial`, matching the per-coin table. |
+Overview, table, chart and detail consumers share valuation/display helpers instead of re-deriving missing-data rules. Detail/table long windows mark incomplete coverage `partial`; gauge tint follows published stress bands, not the sign of net flow. The stablecoin detail card uses the same literal 24h minting-pressure gauge as the overview.
 
 ### Valuation Completeness Rendering
 
@@ -615,35 +481,3 @@ Blacklist and mint/burn have independent circuit breakers:
 An Alchemy outage does not block blacklist sync, and vice versa. Each circuit breaker opens after consecutive failures and probes independently.
 
 `mint-burn-pipeline/rpc.ts` owns `MINT_BURN_DWELLIR_FALLBACK_CHAINS` (Ethereum/Arbitrum/Base only): scheduled contexts pass their already-admitted `chainRpcs` map; each call tries Alchemy before Dwellir. Fallback requires archive state and full log history, independently of global log eligibility (Ethereum remains excluded there). Unadmitted or `DWELLIR_ROUTING_DISABLED_CHAINS`-disabled routes keep the single Alchemy URL, incumbent windows and budgets; request/admin paths never acquire Dwellir. Heads, logs, hash-checked timestamps/receipts and conservation boundaries share this order. Each endpoint's own budgeted head bounds its log frontier; a lagging fallback cannot prove the tail. Dwellir pages clamp to registry `maxLogBlockSpan` (10,000); failed pages retain only the proven contiguous frontier. Registered auth and per-member metering cover every physical Dwellir request, including bounded unexecuted-batch retries. Existing subrequest caps/deadlines and receipt concurrency remain unchanged. Global state/log placement does not widen this lane's allowlist.
-
----
-
-## Testing
-
-**Files:**
-- `worker/src/lib/__tests__/mint-burn-scoring.test.ts` — pressure-shift formula, gauge bands, composite gauge, flight-to-quality
-- `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` — shared parse/classification/persistence/sync-state behavior parity
-- `worker/src/cron/__tests__/sync-mint-burn.test.ts` — cron ingestion orchestration and degraded-mode handling
-- `worker/scripts/backfills/__tests__/backfill-mint-burn.test.ts` — operator backfill chunking, `done/nextFromBlock`, and sync-state progression
-- `worker/src/api/__tests__/mint-burn-flows.test.ts` — API response shape validation plus burning/improving regression coverage
-- `shared/lib/__tests__/mint-burn-signals.test.ts` — shared direction/pressure/composite interpretation coverage
-
-**Coverage:**
-- Pressure shift: null for < 7 days, neutral at baseline, clamping at -100/+100, floor denominator
-- Gauge bands: correct band for all score ranges
-- Composite gauge: mcap-weighted average, skips null, returns null when all null
-- Flight-to-quality: $100M activation, intensity formula, edge cases
-- Pipeline convergence: inserted-vs-ignored accounting, bridge/effective/review burn counters, affected-hour recomputation, sync-state mode semantics
-- Backfill chunking: `done=false` and `nextFromBlock` emitted when `maxChunks` stops before target range
-- API: aggregate vs per-coin response shapes against Zod schemas, 404 for unknown coin
-- Coverage/freshness: aggregate `hours` leaves 24h coin fields unchanged, current UTC day excluded from baseline, deterministic largest-event selection on ties, and `amount_usd IS NULL` rows excluded from the USD largest-event column
-
----
-
-## Future Work
-
-Current production scope already spans configured issuance chains. Planned next expansions:
-
-- **Additional EVM chains:** add more native issuance configs + chain-specific scan policies after reliability gates are met
-- **Tron support:** USDT Issue/Redeem topic groundwork exists; ingestion path is not wired yet
-- **Curve Finance detection:** DEX-level flow tracking

@@ -12,9 +12,7 @@ Supplemental family evidence is missing, malformed, empty, or expired. The publi
 
 ## Impact
 
-Core publication can continue with reduced optional protocol-API/RPC coverage. A fresh empty family row is valid evidence with zero candidates. Only a wholly absent lane (`missing-cache` and zero sources) is treated as unprovisioned; one missing family alongside fresh families reports partial coverage. The hourly catch-up can provision it when its newest-marker gate is due. Acceptance is per-family: six hours by default (1.5× the four-hour producer cadence), 48 hours for daily Pendle. Pendle cadence/backoff skips are neutral while retained evidence remains in budget.
-
-Use the [publication-quality contract](../yield-intelligence.md#persistence-and-publication) to distinguish completion from required-family failures and Pendle-only advisory loss. Stale candidates remain excluded while the admin supplemental tile diagnoses missing breadth; vaults.fyi is retired, so no missing-family alarm should require its cache.
+Core publication can continue with reduced optional coverage; [publication quality](../yield-intelligence.md#persistence-and-publication) distinguishes required-family failures from Pendle-only advisory loss. Read empty, absent and retained outcomes under [Common Causes](#common-causes); acceptance expires per family at six hours by default and 48 hours for daily Pendle.
 
 Aave refreshes three pinned Aave V3 reserves on every successful run: Ethereum USDC, Arbitrum USDT, and Base USDC, plus three rotating tracked-contract targets. Six targets run in two concurrency-three batches within the unchanged 28-second deadline. A successful generation replaces the family snapshot; old rotation windows are not accumulated or renewed with substituted timestamps. Failed/degraded fetches retain the prior snapshot under the usual rules. Rotating targets are discovery probes, not a promise of listed reserves or continuous coverage.
 
@@ -46,21 +44,17 @@ ORDER BY rows DESC;
 
 ## Common Causes
 
-- All supplemental families emitted zero candidates. The cron publishes explicit empty rows for successful families; the loader treats the all-empty current snapshot as valid with zero supplemental candidates.
-- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `sourceCoverage.supplementalFallbackMode` as `partial-family-cache` instead of dropping independent coverage. The live family list comes from `SUPPLEMENTAL_SOURCE_FAMILY_KEYS`; retired vaults rows are not a required input.
-- One successful per-family run emitted zero candidates. That family may intentionally publish an empty per-family cache to clear a previous non-empty family snapshot.
-- Optional protocol APIs timed out inside the family budget.
-- Optional RPC families exhausted their family budget or missed many chain targets.
-- The cache payload became malformed or older than the supplemental freshness window.
-- One family's upstream fetch failed mid-run (HTTP/parse failure or exhausted pagination). The family skips its cache write, retains the previous snapshot (`retained-previous` in the run-outcome row), and is named in `degradedFamilies` instead of publishing a fresh empty row.
-- The Pendle lane skipped neutrally (`skipped-not-due` inside its 24h cadence, or `skipped-backoff` while a recorded 429 window is active). Both are healthy while the retained row is inside its 48h budget; inspect `yield:supplemental-sources:v1:pendle-backoff` for the parsed replenish window and expect `pendle-rate-limited-backoff` in `degradedFamilyReasons` only once the retained row leaves the budget.
-- Inspect the backoff row's `source` and deadline rather than retrying Pendle: minute-limit responses need not use the weekly reset. `resolvePendleRateLimitBackoff` selects the longest applicable reset/Retry-After delay.
+- A successful zero-candidate family publishes an explicit empty row and can clear that family's stale candidates. All-empty surviving families remain valid available evidence. `SUPPLEMENTAL_SOURCE_FAMILY_KEYS` owns required membership; retired vaults rows are not inputs.
+- A malformed, stale or missing family is excluded independently (`partial-family-cache`), not a reason to discard other fresh families. Only wholly absent `missing-cache` plus zero sources is unprovisioned; hourly catch-up can provision it once due.
+- HTTP/parse/pagination failure or family-budget exhaustion retains the previous snapshot (`retained-previous`) and names `degradedFamilies`; it must not publish a fresh empty result. Optional RPC targets may also exhaust their fair share; inspect family summaries.
+- Pendle's free API uses no bearer header; `fetchPendleMarketSources` owns pagination, not a fixed one-page-per-chain assumption. Its 24h cadence yields `skipped-not-due`; recorded 429 backoff yields `skipped-backoff`. Both are neutral only while the retained row is within 48h; expiry emits `pendle-rate-limited-backoff`.
+- Inspect `yield:supplemental-sources:v1:pendle-backoff` source/deadline rather than forcing retries. `resolvePendleRateLimitBackoff` chooses the longest applicable Retry-After/reset delay: weekly reset applies to weekly exhaustion or absent quota evidence, with a seven-day bound and 24h default without usable headers. Unreadable/persist-failed gate state is logged and permits ungated fetching, not a false persisted-backoff claim.
 - `setCacheIfNewer` skipped the write because a newer snapshot already existed.
 
 ## Remediation
 
-- If the latest supplemental run is a single `empty-snapshot`, verify that successful family rows were published. The resulting all-empty family snapshot is valid and should remain available with zero supplemental candidates until the next 4-hour run.
-- If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented. Do not move heavy family fetches onto the post-V9 publisher.
+- For `empty-snapshot`, verify successful family markers using [Validation](#validation); do not interpret zero candidates as a failed write.
+- For family-dominated misses, inspect `sourceCoverage.sourceFamilySummaries` status/raw/emitted counts, budgets, miss reasons and bounded examples; `sourceFamilyCounts` counts candidates. Keep heavy fetches off the publisher.
 - If the job is stale due to a stuck lease, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-supplemental`, and verify the next four-hour run.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 

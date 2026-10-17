@@ -14,7 +14,7 @@ Applies to `functions/`.
 - Production `functions/_site-data/` hosts require `SITE_API_ORIGIN` and forward `SITE_API_SHARED_SECRET`; `site-api.pharos.watch` is not a browser surface.
 - Keep Pages env contracts aligned with `functions/lib/ops-env.ts`, `functions/lib/site-api-env.ts`, and `.env.example`.
 - Do not import `worker/src/`; shared cross-runtime policy belongs in `shared/lib/`.
-- For `functions/selector-snapshot/`, read `docs/screener-picker-page.md`; canonical batching lives in `functions/lib/selector-canonical-snapshot.ts`.
+- For `functions/selector-snapshot/`, read `docs/screener-page.md#snapshot-sharing`; canonical batching lives in `functions/lib/selector-canonical-snapshot.ts`.
 
 ## Common Checks
 

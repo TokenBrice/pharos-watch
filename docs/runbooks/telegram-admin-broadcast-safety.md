@@ -50,12 +50,12 @@ Use a private operator chat that is safe to receive the real notice. Live execut
 ## Post-Send Monitoring
 
 1. Watch `telegramBot.pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.pendingNearTtlCount`, and `retryErrorClassCounts` for at least two five-minute runs.
-2. If rate limits appear, stop additional broadcasts and follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
-3. If pending age approaches 45 minutes, follow [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
+2. If rate limits appear, stop additional broadcasts and follow [rate-limit storm](./telegram-no-delivery.md#rate-limit-storm).
+3. If pending age approaches 45 minutes, follow [backlog and expiration](./telegram-no-delivery.md#backlog-and-expiration).
 
 ## Cross-References
 
 - [`docs/api-reference-admin.md`](../api-reference-admin.md) section `POST /api/admin-telegram-broadcast`.
 - [`docs/telegram-alerts.md`](../telegram-alerts.md) section Pending Delivery Queue.
-- [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
-- [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
+- [Delivery backlog](./telegram-no-delivery.md#backlog-and-expiration).
+- [Rate-limit storm](./telegram-no-delivery.md#rate-limit-storm).

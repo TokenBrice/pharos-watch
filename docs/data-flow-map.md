@@ -6,7 +6,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 `external source -> worker cron / sync -> D1 table or cache key -> API endpoint -> frontend hook -> page(s)`
 
-> **Agent navigation** — [Market and supply](#market-and-supply-flows) · [Risk and reserves](#risk-and-reserve-flows) · [Publications and consumers](#publication-and-consumer-flows) · [Measured DEX execution](#measured-dex-execution-flow) · [Safety Score publication](#safety-score-publication-flow) · [Scheduling](#scheduling-backbone) · [Freshness](#freshness-contract-frontend) · [Notes](#notes).
+> **Agent navigation** — [Market and supply](#market-and-supply-flows) · [Risk and reserves](#risk-and-reserve-flows) · [Publications and consumers](#publication-and-consumer-flows) · [Measured DEX execution](#measured-dex-execution-flow) · [Safety Score publication](#safety-score-publication-flow) · [Scheduling](#scheduling-backbone) · [Freshness](#freshness-contract-frontend) · [Notes](#notes) · [Internal DEWS publication](#dews-internal-publication-contract).
 
 ## Core Flows
 
@@ -55,136 +55,24 @@ Choose a bounded domain table below; each retains the source → producer → st
 
 ### Measured DEX execution flow
 
-The DEX flow has an additive measured-execution subflow. Pinned Uniswap
-V3 on Ethereum, Polygon, Arbitrum, and Celo, PancakeSwap V3, and Base Aerodrome Slipstream QuoterV2/factory RPC
-reads, reviewed Curve CryptoSwap `get_dy` pools,
-the active Ethereum hook-free Uniswap V4 PoolManager/StateView/Quoter adapter,
-the exact Ethereum legacy Curve 3pool StableSwap `get_dy(int128,int128,uint256)`
-deployment enter `worker/src/cron/measured-execution/` through the isolated
-`sync-cl-exit-depth` job. The native Solana and Tron measured lanes were
-retired at Liquidity Score v6.0. Curve CryptoSwap activation verifies pinned runtime
-code/dependency identities and the on-chain `coins(i)` order before active
-quotes can become score-eligible. The legacy 3pool path separately binds the
-pool and main-registry runtime hashes, registry LP token, registry and pool
-token order, and token decimals at the quote block. Its two counter-stablecoin
-directions are joined atomically, so a partial packet falls back to the existing
-reserve simulation instead of satisfying physical-pool coverage. The measured
-packet remains diagnostic until both directions have three complete and three
-successful fresh cycles. External pool
-metadata therefore cannot choose physical quote indices alone. The prior
-retained-pool target generation is
-stored in `dex_measured_execution_targets`; raw proof and validated quote
-profiles are generation-fenced in `dex_measured_execution_quotes`. Score-bearing
-active EVM quotes run at `:05/:20/:35/:50` through the original and supplemental
-public slots, sharing one whole-asset cursor, global job lease and active surfaces.
-Each generation records its actual producer schedule/path; per-run proof and
-request budgets remain unchanged. Native diagnostics retain the original
-`:05/:35` cadence, and the isolated shadow EVM lane still runs daily at 08:10 UTC.
-Quote generations write
-only measured outcomes and real failures; a target-count and target-ID digest
-proves omitted `budget-deferred` outcomes so readers can reconstruct them.
+`dex_pool_registry` → hourly source-stage graph → `dex_measured_execution_targets` → isolated `sync-cl-exit-depth` → generation-fenced `dex_measured_execution_quotes` → DEX scoring → next target inventory.
 
-Positively empty V4 pool-state proofs are persisted as dense failed outcomes, isolated by active/shadow surface. Before RPC admission the latest accepted outcome can quarantine a target for two measured intervals, preserving its original observation clock on reuse. At expiry it is probed again; a later success clears the quarantine. Empty observations become quality findings without publishing a profile/capacity or weakening deterministic-failure/LKG blocking.
+Only admitted active quote evidence enters scoring/physical-pool completeness; shadow diagnostics do not. Targets and quotes are generation-bound, and the consumer never treats missing/deferred work as observed zero. Exact AMM fallback remains independently admissible.
 
-The hourly `:10` source stage carries the active target graph into its exact bounded
-D1 handoff. At `:16`, `sync-dex-liquidity` consumes a published prior active quote
-generation and refreshes prices, scores, and the next active target inventory
-hourly. The `:46` path reuses the exact current score
-generation without rewriting DEX surfaces. Proof-free profiles and explicit
-capability gates remain available through the existing DEX API before charts runs
-serially. Mature fresh last-known-good profiles can remain route-only across a
-temporary liquidity shortlist rotation, without re-entering aggregate liquidity
-inputs; for the 3pool the route compiler reconstructs both sibling
-directions from the same retained packet or admits neither. A measured target
-rotation or quote failure leaves an independently complete exact AMM model
-available instead of attaching a measurement gate to that fallback; unrelated
-capability gates and actual measured/exact conflicts still fail closed. Only
-active measured EVM profiles enter the P4 capacity compiler and physical-pool completeness
-denominator; shadow measured adapters retain `activation-pending` and cannot
-satisfy completeness.
-
-The daily EVM onboarding lane stays live until every C01–C03 writer has an accepted deployed disposition, including the six Curve observers' funded capacity re-decision. Direct Binance/Coinbase/Kraken depth telemetry and the dormant Kraken exact-request observer are retired; CoinGecko Tickers now supplies exchange price/flow evidence only, not synthetic orderbook pools. Redemption-lane ERC-4626 execution remains separate. `dex_pool_registry` remains pool-observation authority; the obsolete `dex_pool_staging` status growth-clock reference is removed, but its DDL survives until a separately operated export/bookmark/drop release and later approved squash. Measured retention keeps its four-hour floor; abandoned active candidates need exact completed invocation and no live owner/lease/reference proof, with physical-row-bounded oldest-first draining.
-The Ethereum hook-free V4 cohort enters P4 only after the EVM join revalidates
-the pinned runtimes, PoolManager bindings, exact PoolId state, and current quote;
-hooked pools remain unsupported. Base, BSC, Arbitrum, Polygon and Tempo V4
-still collect reviewed exact shadow evidence without scoring admission.
-Unichain V4 and Hybra/XSwap V3 measured identities are retired; ordinary discovery
-continues. The persisted catalog reader revalidates current reviewed lane membership
-before quote admission, preserving named non-observed exclusions for old pointers.
-Hooked candidate metadata remains permanent negative identity/collision evidence.
+Stage/consumer ordering and resource coupling: [Cron Scheduling](./worker-infrastructure.md#cron-scheduling). Adapter identities, proof joins, last-known-good eligibility and the score contract: [DEX Liquidity Score](./dex-liquidity.md#dex-liquidity-score) and its [implementation appendix](./process/dex-liquidity-appendix.md). Capacity/activation/rollback: [measured-execution capacity](./process/worker-infrastructure-appendix.md#measured-execution-capacity-expansion). This map does not authorize a new adapter or cohort.
 
 ### Safety Score publication flow
 
-The private `report-cards:fixed-input:exact` row is the deterministic compiler-input bridge. Cache envelope v2 carries the native V9 schema-v4 capture (`model: "v9-input"`), containing the current compiler inputs and V9 evaluation-build identity. The retained `report-cards-input:v1:` generation prefix is a format namespace, not a V8-shaped rating schema.
+The attribution producer reads the previous preparation's identity-linked source projection, observes supply before the next fixed scoring clock, and stores a private generation. The next `prepare-safety-score-v9-input` writes `report-cards:fixed-input:exact` against admitted DEX evidence; compiler admission joins that input and compatible attribution → atomic canonical publication, health and compact accepted read models → API/consumer projections.
 
-Since Safety Score 10.05, inline mint sidecars also carry class execution certificates, full authorization/member censuses, typed authority/economic-provenance graphs, voting control and optional operational issuance. Existing merged catalog capture and registry fingerprint bind those proof inputs; there is no external runtime certificate registry. The compiler expands each member once per profile and retains one asset-level `issuanceFacts` object; native rows carry matching `issuanceFactsRef`, not copies. Public `breakdowns.control.issuanceSummary` contains compact governance/process scalar/count/screen metadata and aggregated diagnostics with whole-group counts, full sparse control refs and at most three sampled path/member/evidence exemplars. Component `controlDetails` do not repeat full process objects. The UI reads the summary once, matches full control refs and labels samples non-exhaustive; wrappers transmit parent risk through existing dependencies, never copied H certificates. See [mint methodology](./mint-authority-scoring.md#execution-classes-typed-roots-and-diagnostics-1005) and [catalog authoring](./stablecoin-data.md#governed-issuance-and-cap-semantics-review).
+The capture precedes the consumer's fixed scoring clock; preparation follows an admitted DEX generation and publication consumes those exact identities. Leases, source/version admission and ordering are owned by [Cron Scheduling](./worker-infrastructure.md#cron-scheduling), not by an independent schedule in this map.
 
-Safety Score V9 supply attribution runs on the dedicated `+8` trigger, exact input preparation runs serially on `16,46` after an admitted DEX result or last-accepted-generation recovery, and canonical compilation runs at `22,52`. Lane ordering, leases, capture-clock ordering, and the publication-admission fences are owned by [Worker Infrastructure: Cron Scheduling](./worker-infrastructure.md#cron-scheduling).
+- [Canonical publication](./process/report-cards-appendix.md#canonical-publication) owns accepted/held writes, compact projections, replay base/delta, generation fences and unavailable-current versus held-display behavior.
+- [Supply attribution and in-flight accounting](./process/report-cards-appendix.md#supply-attribution-and-in-flight-accounting) owns complete observer inventories, conservation, clocks and per-asset admission. Its producer capture does not authorize network fan-out in the compiler.
+- [Mint execution classes, typed roots and diagnostics](./mint-authority-scoring.md#execution-classes-typed-roots-and-diagnostics-1005) owns issuance certificates/censuses and the bounded public projection; the map does not duplicate those proofs.
+- [Publication journal and movement attribution](./report-cards.md#publication-journal-and-movement-attribution) owns the best-effort journal/attempt lineage. It is not an alternative accepted publication or replay source.
 
-The accepted publisher atomically writes private `report-cards:v9:accepted-baseline:v1` and `report-cards:v9:lender-collateral:v1` read models with the canonical artifacts. Preparation subsets the complete eligible lender inventory against current-registry token identities; comparison uses the compact baseline, including held accepted health. Each loader makes one singleton-rooted SELECT for projection/health, server-extracted envelope identity and accepted-state presence witnesses, including both replay rows and published last-attempt. Neither preparation nor pre-compile comparison decodes the prior publication or falls back to it. Missing/invalid baselines fail at `publication-gate` before compile with a recorded failed attempt and unchanged accepted rows; lender-source failures preserve unavailable/class fallback. Bootstrap requires every accepted witness absent. Writer seeding must precede strict readers; [recovery](./runbooks/cron-slot-abandonment.md#safety-score-accepted-projection-recovery) reverts the reader change on current head and reseeds through normal acceptance, never manual projection edits.
-
-Canonical compilation atomically retains the accepted base envelope at `report-cards:v9:accepted-replay-base:v1` and a compressed enrichment delta at `report-cards:v9:accepted-replay:v1`, alongside the accepted publication. The delta binds supply attribution, bounded evidence/supply journals, peg provenance, and transfer materiality to that exact generation. Only one accepted pair is retained; the offline scenario plan reassembles it rather than reading a prepare-time base that may already have advanced.
-
-Replay-delta serialization is fail-soft for canonical cards: a warning leaves both retained rows at their prior generation while the publication advances, so offline plan fails closed on that generation mismatch. Capture identity assertions remain fatal.
-
-After canonical accepted or held persistence, the heavy publisher separately writes best-effort compact attribution evidence: change-only accepted per-coin rows in `safety_score_publication_journal` and accepted/held lineage rows in `safety_score_publication_attempts`. Journal failures surface in cron `journal.status` without failing publication. Both tables are prospective (no pre-deployment backfill), retain 120 days through `prune-cron-history`, and support the [read-only movement ledger](./scripts.md#safety-score-movement-ledger); they do not replace the replay base/delta or alter the Safety formula. See [publication journal](./report-cards.md#publication-journal-and-movement-attribution) for identity, retention and migration 0262 ordering.
-
-Input preparation also writes `safety-score-v9:supply-attribution-source:v1` atomically with the exact input. This bounded projection contains capture identity, clocks, the active attribution cohort, and its aggregate/chain supply and NAV/reference-price rows. The `+8` producer consumes this projection instead of inflating and normalizing the multi-megabyte compiler input merely to observe a handful of attribution assets; a missing, malformed, or stale projection fails closed without RPC fan-out.
-
-The compiler validates fixed-input, peg-provenance, methodology, and evaluation-build identities, then evaluates V9 and writes the accepted `report-cards:v9` publication with matching health. Global or identity-level failures hold the prior accepted publication. Future supply-attribution packets are not admitted: compilation continues with attribution omitted and, while bounded capture-control readiness applies, `attribution-pending` provenance, subject to normal publication gates. Admitted packets are revalidated per asset against current identities, inventory, observation clocks and supply. A producer generation whose only rejection is XAUT `transparency-stale` is cron-healthy with diagnostic rejected-asset metadata because it observed the expected inventory and retained bounded aggregate-only fallback; unavailable sources, invalid payloads, identity drift, RPC gaps, and reconciliation failures remain blocking producer-health rejections, except `deployment-state-unavailable` or `deployment-observation-window-insufficient` outcomes with persisted incomplete-bootstrap progress after authenticated cursor advancement and no hard-evidence failure. Asset-local producer failures do not freeze unrelated ratings while at least 90% of active assets remain unaffected, and tolerated partial publications remain cron-healthy while surfacing affected assets in metadata.
-The V9 compiler captures DEX, redemption, and live-reserve load health before
-fallback filtering. Immediately before canonical persistence, an acceptance
-fence combines those global source states, the existing active-result and
-rated-count floors, and newly binding producer-failed deterioration against
-the last accepted V9 envelope. Producer-failed deterioration becomes a global
-hold only when fewer than 90% of active assets remain unaffected; isolated
-failures above that healthy-coverage floor do not freeze unrelated ratings.
-The accepted publication and current health commit atomically. A held attempt
-updates `report-cards:v9:publication-health` and `report-cards:v9:last-attempt`,
-leaving accepted ratings and timestamps unchanged. The store rejects a held
-identity that does not match the retained publication. If the accepted ledger cannot be read, the runner
-records an isolated failed-attempt diagnostic without mutating publication or
-health.
-The V9-only supply-attribution enrichment may also bind an aggregate asset supply
-to a reviewed route-ID inventory. The wM observer requires the complete deployment
-packet owned by `worker/src/lib/safety-score-v9/supply-attribution-contract.ts`,
-verifies pinned runtime/controller identities at fixed-clock blocks or slots,
-and conserves aggregate supply while allocating it across routes. The Centrifuge
-observer applies the same all-or-nothing rule only to the allowlisted JTRSY and
-ACRDX burn/mint inventories: it binds every official EVM deployment to exact
-runtime code, a non-proxy implementation slot, and the authorized Centrifuge
-Spoke, then binds the official Token-2022 Solana mint to its exact direct
-authority in one finalized context. Because a finalized Solana bank context can
-land on a skipped slot, the observer anchors that context to the newest produced
-finalized block within the prior 64 slots before binding its block time and hash.
-RPC acquisition fails over across the two Solana public cluster aliases, Pocket
-Network's public gateway, and PublicNode while preserving the same strict packet.
-It never admits lock/mint or adapter
-inventories whose `totalSupply()` sums could double-count backing. The XAUT observer
-binds the configured Tether transparency disclosure to one finalized Ethereum
-token/treasury/adapter observation and the complete reviewed XAUt0
-representation-group inventory. The issuer's `totalAuthorized - notIssued`
-amount is admitted as circulating liabilities only when finalized
-`totalSupply()` minus treasury `balanceOf()` equals it (unissued treasury
-inventory is not a liability) and quarantined supply is zero. It emits one non-group canonical row and
-one pooled group row carrying the exact locked share of circulating liabilities
-and common failure domains, without claiming destination-chain shares. Any
-missing, duplicate, stale, skewed, issuer/on-chain-mismatched,
-identity-mismatched, inventory-mismatched, materially unresolved, or
-non-conserving packet fails closed; V8 and public payloads remain unchanged.
-Reserve sync may carry a nested V9-only exact route attempt into the
-redemption-backstop preload and then the V9 extension. The first such path is
-FPI's Controller Pool observation, which is bound to the same successful issuer
-collateral adapter result and one pinned Ethereum block. Accepted and rejected
-attempts remain outside public V8 reserve, redemption, and report-card payload
-semantics.
-`GET /api/report-cards/v9` exposes the canonical, fully identified V9
-publication. The active frontend, yield, Telegram, chain analytics, and
-V9-compatible history all consume that publication directly. Held V9 remains
-available only as the last accepted API/UI snapshot with explicit held
-metadata. Current-data consumers, organic safety alerts, and organic history
-writes fail closed without falling back to V8; independent depeg and incident
-pipelines continue.
+`GET /api/report-cards/v9` serves the last accepted canonical publication with its identity/health. Active frontend, yield, Telegram, chain analytics and V9-compatible history consume it directly; current-data consumers, organic alerts and history fail closed rather than substituting V8. Independent depeg/incident pipelines continue when Safety Score publication is held.
 
 ## Scheduling Backbone
 
@@ -203,17 +91,13 @@ Freshness badges use producer `updatedAt` as their canonical clock and classify 
 
 ## Notes
 
-- **Core aggregate boundary**: `shared/data/stablecoins/listing-decisions.json` classifies the catalog, while `shared/lib/stablecoins/aggregate-registry.ts` projects active `core-stablecoin` and `cash-equivalent` entries for monetary aggregates. PSI, digest market/supply totals, current homepage market cap, chain totals/history, and non-USD share consume that projection. Depeg, DEWS, price, per-asset history, and digest risk-signal lanes continue monitoring every active listing, including variants and stable-value investments. Client ranking filters use the compact `listingClass` field in `coins.client.list.generated.json`, not the full decision ledger. New PSI and digest snapshots identify the aggregate boundary as `core-stablecoins-v1` so consumers can distinguish legacy rows.
-- **DEX price bridge**: The hourly DEX consumer rebuilds `dex_prices.price_sources_json` from retained priced pools after dedupe, caps, scoring filters and unit normalization, plus independently admitted price-only ticker observations. Ticker weight uses observed USD flow × source confidence, never TVL/depth attribution; `source_total_tvl` sums genuine pool TVL only. The quarter-hourly pricing cron reads protocol aggregates via `loadDexPriceSources()` and promotes at most one source per protocol: `fluid-dex`, `balancer-dex`, `curve-dex` (weight 3), and `uniswap-v3-dex`, `uniswap-v4-dex`, `raydium-dex`, `orca-dex`, `meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex` (weight 2). Protocol sources require corroboration or no non-DEX voices; the overlapping `dex-promoted` aggregate (weight 1) is withheld whenever a promoted protocol candidate passes freshness/TVL validation, even if later excluded for lack of corroboration. The aggregate fallback enters only when no protocol candidate clears those pre-corroboration checks; ticker-only zero-TVL prices cannot clear the unchanged DEX trust floors. Source/merge skips and frozen registry evaluation are recorded in logs/cron metadata.
-- **Abort-aware high-volume publication**: DEX liquidity and DEWS persistence pass the cron `AbortSignal` into chunked D1 batches, retrying D1 operations, and final freshness-sentinel guards. If timeout or lease-loss aborts the run after a partial batch, the run fails before publishing `freshness:dex-liquidity`, `freshness:dews`, or the exact DEWS publication pointer. Durable DEWS consumers, canaries, and freshness reporting use the pointer rather than raw `MAX(computed_at)` rows.
-- Cache passthrough endpoints include freshness metadata via `_meta` and/or `X-Data-Age`.
-- Chain profile pages read a single authoritative Worker payload: `GET /api/chains?chain=<id>` returns both the summary card and the `chainDetail` composition through `useChainDetail`. The page no longer re-aggregates `/api/stablecoins` or reconciles two independently refreshed snapshots.
-- `chain_supply_history` is an actively collected, forward-only internal baseline, not a live `/api/chains` input. Collection continues; public history/chart activation requires scope, provenance and bounded capacity approval with an explicit UTC baseline strictly after 2026-04-08. Post-fix dates and the latest completion marker do not certify older archive rows. Retain prebaseline rows internally and represent missing days as gaps.
-- `/api/dex-liquidity` is meta-aware on the frontend: the page uses worker freshness metadata (and degraded-run `Warning` headers) rather than client fetch time to assess staleness.
-- Liquidity history remains public evidence with `coverageClass` / `coverageConfidence`, including weak observations. Admission is purpose-specific: trend baselines (including DEWS weekly anchors) require positive TVL, confidence ≥0.5 and the caller's date tolerance (36h for weekly anchors); durability and digest comparisons retain their ≥0.75 rules. An inadmissible DEWS historical anchor is unavailable, not zero risk. These rules do not promote source-shadow collectors or retag stored history.
-- `dex_liquidity_history` is retained for the public 365-day history window; older daily snapshots are pruned during successful `sync-dex-liquidity` persistence instead of living as an indefinite research archive.
-- Transient measured-execution, scoring-stage, liquidity-run, price-run, and pool-staging rows are pruned by their owning producers in bounded oldest-first D1 passes. Cleanup telemetry is additive to cron metadata and cleanup failure cannot invalidate an already successful publication.
-- Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `shared/lib/api-endpoints/`.
-- The stablecoins cache loader distinguishes `ok`, `degraded`, and `error` states. Operator-facing or published consumers (`/status`, daily digest, safety snapshot) now fail closed on non-`ok` cache reads instead of treating broken cache state as an empty valid dataset.
-- `consensusSources` flows from the price-consensus cron stage through the `stablecoins` cache → `/api/stablecoins` and `/api/peg-summary` → `useStablecoins` / `usePegSummary` hooks → `PriceTransparencyCard` on the detail page and `CoverageBadge` source-count enrichment on the coverage page.
-- `priceSourceConfidenceProfile` flows from DEX-inclusive primary pricing through the `stablecoins` cache and `/api/stablecoins`. It is omitted for non-DEX prices and currently remains a data/API transparency field rather than a UI dependency.
+- **Core aggregate boundary:** `shared/data/stablecoins/listing-decisions.json` classifies the catalog; `shared/lib/stablecoins/aggregate-registry.ts` projects active `core-stablecoin` and `cash-equivalent` entries for monetary aggregates. PSI, digest market/supply totals, homepage market cap, chain totals/history and non-USD share use that projection. Risk/price/per-asset-history lanes continue monitoring every active listing, including variants and stable-value investments. Compact client `listingClass` supports filtering without loading the decision ledger. New PSI/digest snapshots name `core-stablecoins-v1` to distinguish legacy rows.
+- **Abort-aware publication:** DEX and DEWS pass the cron signal through chunked/retrying D1 persistence and final sentinel guards. A partial aborted write cannot advance `freshness:dex-liquidity`, `freshness:dews` or the exact DEWS publication pointer. Durable DEWS consumers use the pointer, never raw `MAX(computed_at)`.
+- **Cache state fails closed:** the stablecoins loader distinguishes `ok`, `degraded` and `error`. Status, digest and safety-snapshot consumers reject non-`ok` reads; broken state is not an empty valid dataset. Cache passthrough exposes `_meta`/`X-Data-Age`; admin/backfill descriptors bypass edge cache.
+- **Domain owner boundaries:** [pricing](./pricing-pipeline.md) owns the DEX price bridge/consensus provenance; [DEX](./dex-liquidity.md) owns historical coverage admission, public retention and bounded producer cleanup; [chain health](./chain-health.md) owns authoritative chain payloads, and [supply collection](./supply-snapshot.md#chain_supply_history) owns forward-only history/baseline activation. Producer cleanup failure cannot invalidate an already successful publication.
+- **Price transparency edges:** `consensusSources` flows through `stablecoins` → `/api/stablecoins` and `/api/peg-summary` → coin/peg hooks → detail transparency and coverage source counts. `priceSourceConfidenceProfile` flows through `/api/stablecoins` for DEX-inclusive primary prices; it is absent for non-DEX prices and is not a UI dependency.
+
+### DEWS internal publication contract
+
+- **DEWS storage:** DEWS stores sparse rolling `stress_signals` (7 days), current `stress_signals_latest`, two exact generations in `stress_signal_publication_rows`, and daily `stress_signal_history` (365 days). Age/orphan pruning exempts frozen IDs. Daily history is atomically resealed to the admitted ID set, excluding frozen/quarantined historical ownership. Explicit zero circulating supply retires current and rolling rows; absent circulating buckets skip rather than retire. Pointer and durable `surface_publication_generations` proof commit together only after exact latest/buffer row-count validation; rejected dependency-held generations do not advance pointer or freshness. Per-asset quarantine removes only its latest materialization, preserving prior history and accepted buffers. Public semantics: [DEWS](./dews.md).
+- **DEWS run health:** Run health separates `sourceFailures`, `degradedSources`, `sourceCoverage` and `validationFailures`. Peer publication with asset quarantine is `ok` plus quality `dews-asset-inputs-quarantined`, IDs/count/decode diagnostics; `malformedCoreInputRows` is not a cohort failure. Dependency holds use `dews-cohort-dependency-unavailable`; empty admission uses `dews-no-publishable-assets`; neither advances freshness. `dependencies.dexLiquidity` distinguishes source loss from catch-up. `dependencies.stablecoins` and `.psi` retain generation, original clock, age, budget and reason. Foundational stablecoins must be within cadence+runtime (inclusive); invalid/stale foundational cache stops before persistence. Stale DEX or mint/burn and failed PSI read hold publication. Stale yield-rankings (producer interval+runtime) records `yield-rankings-freshness` but retains evidence rather than zeroing it. Invalid/stale PSI omits optional amplification without a hold, avoiding a DEWS/PSI deadlock; absent sample is unavailable. Smoothing reads only accepted-pointer-bound previous rows no older than `DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC`.

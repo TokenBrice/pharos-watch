@@ -123,7 +123,7 @@
           "oklch(84% 0.09 259)",
           "oklch(94% 0.03 259)"
         ],
-        "note": "Owner-ratified 2026-07-02: the Score-tier B band is the one sanctioned exception to the green-to-red state ramp (blue-500 tint family in shared/lib/report-card-core.ts). Grade badges only - never state chips or controls."
+        "note": "The Score-tier B band uses the info-blue family from shared/lib/classification/grades.ts. Grade badges only, never state chips or controls."
       }
     },
     "typographyMeta": {
@@ -137,11 +137,11 @@
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Card and sub-section headings. Geist Sans 600."
+        "purpose": "Card and sub-section headings. System sans 600."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "UI text and prose. Geist Sans 400, 14px base."
+        "purpose": "UI text and prose. System sans 400, 14px base."
       },
       "numeric": {
         "displayName": "Numeric",
@@ -149,7 +149,11 @@
       },
       "label": {
         "displayName": "Label / Kicker",
-        "purpose": "Uppercase eyebrows over data groups. Geist Sans 600, 0.12em tracking."
+        "purpose": "Sentence-case section, card and field labels. System sans 600, normal tracking."
+      },
+      "eyebrow": {
+        "displayName": "Eyebrow",
+        "purpose": "At most one short uppercase route/hero eyebrow. System sans 600, 0.08em tracking."
       }
     },
     "shadows": [
@@ -211,16 +215,16 @@
       "kind": "card",
       "refersTo": "card",
       "description": "The canonical surface. Fill + 1px hairline, no resting shadow; lifts on hover.",
-      "html": "<div class=\"ds-card\"><p class=\"ds-card-kicker\">MARKET COHORTS</p><p class=\"ds-card-title\">Peg Health</p><p class=\"ds-card-body\">387 active stablecoins within band.</p></div>",
-      "css": ".ds-card { background: var(--card-bg, #fff); border: 1px solid var(--card-border, oklch(0.922 0 0)); border-radius: 12px; box-shadow: none; padding: 20px; transition: box-shadow 160ms cubic-bezier(0.22,1,0.36,1), transform 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-card:hover { border-color: oklch(0.145 0 0 / 0.2); box-shadow: 0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%); transform: translateY(-2px); } .ds-card-kicker { margin: 0 0 8px; font-family: 'Geist Sans', system-ui, sans-serif; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: oklch(0.52 0.007 260); } .ds-card-title { margin: 0 0 6px; font-family: 'Geist Sans', system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; color: oklch(0.145 0 0); } .ds-card-body { margin: 0; font-family: 'Geist Sans', system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; color: oklch(0.4 0.009 260); }"
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-kicker\">Market cohorts</p><p class=\"ds-card-title\">Peg health</p><p class=\"ds-card-body\">Tracked stablecoins within band.</p></div>",
+      "css": ".ds-card { background: var(--card-bg, #fff); border: 1px solid var(--card-border, oklch(0.922 0 0)); border-radius: 12px; box-shadow: none; padding: 20px; transition: box-shadow 160ms cubic-bezier(0.22,1,0.36,1), transform 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-card:hover { border-color: oklch(0.145 0 0 / 0.2); box-shadow: 0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%); transform: translateY(-2px); } .ds-card-kicker { margin: 0 0 8px; font-family: system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; text-transform: none; letter-spacing: normal; color: oklch(0.52 0.007 260); } .ds-card-title { margin: 0 0 6px; font-family: system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; color: oklch(0.145 0 0); } .ds-card-body { margin: 0; font-family: system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; color: oklch(0.4 0.009 260); }"
     },
     {
       "name": "Hero Metric",
       "kind": "custom",
       "refersTo": "hero-metric",
-      "description": "The headline market figure — the one place frost-blue carries a number.",
-      "html": "<div class=\"ds-hero-metric\"><span class=\"ds-hero-metric-label\">Total Market Cap</span><span class=\"ds-hero-metric-value\">$352.16B</span></div>",
-      "css": ".ds-hero-metric { display: flex; flex-direction: column; gap: 10px; } .ds-hero-metric-label { font-family: 'Geist Sans', system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; color: oklch(0.52 0.007 260); } .ds-hero-metric-value { font-family: 'JetBrains Mono', SFMono-Regular, ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; font-size: 2.45rem; font-weight: 600; line-height: 1; letter-spacing: -0.02em; color: #4bc4de; }"
+      "description": "The headline market figure in neutral ink; semantic state is the only reason to color a figure.",
+      "html": "<div class=\"ds-hero-metric\"><span class=\"ds-hero-metric-label\">Total market cap</span><span class=\"ds-hero-metric-value\">$352.16B</span></div>",
+      "css": ".ds-hero-metric { display: flex; flex-direction: column; gap: 10px; } .ds-hero-metric-label { font-family: system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; color: oklch(0.52 0.007 260); } .ds-hero-metric-value { font-family: 'JetBrains Mono', SFMono-Regular, ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; font-size: 2.45rem; font-weight: 600; line-height: 1; letter-spacing: -0.02em; color: oklch(0.145 0 0); }"
     },
     {
       "name": "Numeric Cell",
@@ -234,77 +238,17 @@
       "name": "Control Pill (default + active)",
       "kind": "chip",
       "refersTo": "control-pill",
-      "description": "The primary interactive control on data surfaces. Active is a quiet near-black ink fill — frost-blue never enters controls.",
+      "description": "Compact data controls. Active uses elevated-neutral fill, primary text and a hairline ring, never solid ink or frost-blue.",
       "html": "<button class=\"ds-pill\">All chains</button> <button class=\"ds-pill ds-pill-active\" aria-pressed=\"true\">Ethereum</button>",
-      "css": ".ds-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 8px 12px; border: 1px solid var(--control-pill-border, oklch(0.87 0.01 255 / 0.78)); border-radius: 9999px; background: var(--control-pill-bg, oklch(1 0 0 / 0.78)); font-family: 'Geist Sans', system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; color: oklch(0.4 0.009 260); cursor: pointer; transition: color 160ms cubic-bezier(0.22,1,0.36,1), background-color 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-pill:hover { color: oklch(0.145 0 0); background: oklch(0.96 0.004 255); } .ds-pill:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--surface-base, oklch(0.985 0 0)), 0 0 0 4px oklch(0.64 0.18 248 / 0.6); } .ds-pill-active { background: oklch(0.19 0.01 255); color: oklch(0.985 0 0); border-color: transparent; box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.1), 0 8px 20px oklch(0 0 0 / 0.18); }"
+      "css": ".ds-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 8px 12px; border: 1px solid var(--control-pill-border, oklch(0.87 0.01 255 / 0.78)); border-radius: 9999px; background: var(--control-pill-bg, oklch(1 0 0 / 0.78)); font-family: system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; color: oklch(0.4 0.009 260); cursor: pointer; transition: color 160ms cubic-bezier(0.22,1,0.36,1), background-color 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-pill:hover { color: oklch(0.145 0 0); background: oklch(0.96 0.004 255); } .ds-pill:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--surface-base, oklch(0.985 0 0)), 0 0 0 4px oklch(0.64 0.18 248 / 0.6); } .ds-pill-active { background: var(--control-pill-active-bg, oklch(0.91 0.005 260)); color: var(--control-pill-active-text, oklch(0.145 0 0)); border-color: var(--control-pill-active-ring, oklch(0.19 0.01 255 / 0.3)); box-shadow: none; }"
     },
     {
       "name": "Top Nav",
       "kind": "nav",
       "refersTo": "card",
-      "description": "Global frosted top bar (≥lg); content runs full-width beneath. Active menu is neutral — not frost. Replaced the watch-column sidebar.",
-      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-brand\">Pharos</span><span class=\"ds-nav-links\"><b class=\"ds-nav-on\">Terminal</b> Track Monitor Analyze Docs Resources</span><span class=\"ds-nav-search\">Search ⌘K</span></header>",
-      "css": ".ds-nav { display: flex; align-items: center; gap: 20px; height: 56px; padding: 0 20px; border-bottom: 1px solid oklch(0.85 0.008 255 / 0.7); background: oklch(0.985 0 0 / 0.85); backdrop-filter: blur(12px); } .ds-nav-brand { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: oklch(0.145 0 0); } .ds-nav-links { display: inline-flex; gap: 10px; font-family: 'Geist Sans', system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; color: oklch(0.52 0.007 260); align-items: center; } .ds-nav-on { color: oklch(0.145 0 0); background: oklch(0.95 0.004 260); border-radius: 6px; padding: 4px 10px; font-weight: 500; } .ds-nav-search { margin-left: auto; font-family: 'Geist Sans', system-ui, sans-serif; font-size: 0.8125rem; color: oklch(0.52 0.007 260); padding: 6px 12px; border: 1px solid oklch(0.87 0.01 255 / 0.7); border-radius: 8px; }"
+      "description": "Global frosted top bar (≥lg), neutral active menu and full-width content. Menu contents belong to src/lib/nav-config.ts.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-brand\">Pharos</span><span class=\"ds-nav-links\"><b class=\"ds-nav-on\">Overview</b> Markets Risk Analyze Learn Reference</span><span class=\"ds-nav-search\">Search ⌘K</span></header>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 20px; height: 56px; padding: 0 20px; border-bottom: 1px solid oklch(0.85 0.008 255 / 0.7); background: oklch(0.985 0 0 / 0.85); backdrop-filter: blur(12px); } .ds-nav-brand { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: oklch(0.145 0 0); } .ds-nav-links { display: inline-flex; gap: 10px; font-family: system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; color: oklch(0.52 0.007 260); align-items: center; } .ds-nav-on { color: oklch(0.145 0 0); background: oklch(0.95 0.004 260); border-radius: 6px; padding: 4px 10px; font-weight: 500; } .ds-nav-search { margin-left: auto; font-family: system-ui, sans-serif; font-size: 0.8125rem; color: oklch(0.52 0.007 260); padding: 6px 12px; border: 1px solid oklch(0.87 0.01 255 / 0.7); border-radius: 8px; }"
     }
-  ],
-  "narrative": {
-    "northStar": "The Lighthouse Watch",
-    "overview": "Pharos is a lighthouse — it watches every peg so the user doesn't have to. The interface is a calm, dense instrument for crypto-native practitioners: a Bloomberg Terminal scoped to stablecoins. It earns trust through completeness and precision, not decoration. Color stays still by default; what moves is the **frost-blue beam** (`#4bc4de`, sampled from the Figma \"Market Pulse\" frame), which lights live data and the lighthouse metaphor. Everything else is neutral, flat, and tabular.\n\nThis is the as-built system after the designer's Figma redesign. It is **light-default** with a full dark theme. The redesign delivered a global **top-nav** (the old left \"watch column\" sidebar is retired), ABC Whyte Inktrap as the licensed ink-trap display face (with Bricolage Grotesque as the tracked fallback), JetBrains Mono for every figure, flat cards, and a two-mode density (spacious default / compact). **Frost-blue and the drawn lighthouse/nautical identity were deliberately kept** — they are the brand, per PRODUCT.md's \"Pharos is a lighthouse — _draw it_.\" Density is calibrated by surface tier: discovery breathes, the analytics core holds default, power-user tables compress.\n\nIt explicitly rejects the Web3-marketing aesthetic (purple gradients, glassmorphism, buzzwords), corporate-fintech blandness, and the generic-SaaS dashboard of interchangeable KPI tiles. Cards are flat. Accents are semantic. The lighthouse is the only metaphor, and it is drawn, not decorated.\n\n> **Brand mark vs. drawn identity (2026-07-31).** The Pharos **brand mark** is now a star/beacon emblem — a circular disc carrying a radiant star over an upward beam — and it is deliberately **not** a small lighthouse. Everything else on this page still describes the drawn lighthouse/nautical identity, which is unchanged and stays. The two now diverge on purpose: the mark is the identity at avatar scale, the drawn lighthouse is the identity in the product. This is a deliberate split, not drift — do not \"reconcile\" one to the other.\n\n**Source of truth.** This file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-context.md` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`. The Figma inventory lives in `agents/figma-redesign/`. Regenerate this file (`/impeccable document`) when tokens or the homepage composition change.",
-    "keyCharacteristics": [
-      "Light-default financial dashboard with a parallel dark theme; semantic tokens switch, hues don't.",
-      "One brand color (frost-blue); it lights live data and the lighthouse/nautical metaphor — not chrome.",
-      "Flat cards: fill + hairline border, no resting shadow. Depth is a hover response, not a default.",
-      "Mono + tabular + slashed-zero on every digit-bearing cell.",
-      "Global top-nav, full-width content (no sidebar); fixed rem type scale; two-mode density.",
-      "Color is reinforced with structure and iconography; never the sole signal."
-    ],
-    "rules": [
-      {
-        "name": "The One Beam Rule",
-        "body": "Frost-blue lights live data and the drawn lighthouse metaphor — not chrome, not the global nav, never a gradient or background. Its rarity is what makes it read as a signal.",
-        "section": "colors"
-      },
-      {
-        "name": "The Semantic-Color Rule",
-        "body": "Color encodes state, never identity or decoration. If a color isn't carrying a risk band, a data series, or the beam, it shouldn't be saturated. Inactive states never take a full-saturation accent.",
-        "section": "colors"
-      },
-      {
-        "name": "The Tabular-Figure Rule",
-        "body": "Numbers always use `.pharos-numeric` (JetBrains Mono + `tabular-nums slashed-zero`). Proportional digits in a data column are a bug — columns must align on the decimal and the zero must never read as an O.",
-        "section": "typography"
-      },
-      {
-        "name": "The Fixed-Scale Rule",
-        "body": "Headings use the fixed rem scale, not fluid `clamp()` (digest/editorial display is the carve-out). A heading that shrinks inside a panel looks worse, not designed. The viewport changes layout, not type size.",
-        "section": "typography"
-      },
-      {
-        "name": "The Flat-By-Default Rule",
-        "body": "Surfaces are flat at rest. A shadow appears only as a response to state — hover, overlay, or a deliberately featured block. If a card has a drop shadow sitting still, it's wrong. Nested cards are forbidden.",
-        "section": "elevation"
-      }
-    ],
-    "dos": [
-      "Do reserve frost-blue (`#4bc4de`) for live data and the drawn lighthouse metaphor — the One Beam Rule.",
-      "Do render every digit with `.pharos-numeric` (JetBrains Mono, `tabular-nums slashed-zero`).",
-      "Do keep cards flat: `surface-overlay` fill + 1px `border-default`, `shadow: none` at rest; lift only on hover.",
-      "Do encode state with the semantic ramp (severity / PSI / DEWS / score) and reinforce it with structure or an icon — never color alone.",
-      "Do draw new metaphors (every shape encodes a data field; inline SVG, semantic vars, reduced-motion-gated) — and keep the underlying data table as the workbench beneath the hero.",
-      "Do use the fixed rem type scale for headings; keep informational text at or above `text-muted-foreground/70` for WCAG AA.",
-      "Do gate every animation behind `prefers-reduced-motion`."
-    ],
-    "donts": [
-      "Don't reintroduce the left \"watch column\" sidebar — the global desktop nav is the full-width top-nav.",
-      "Don't use `border-left`/`border-right` greater than 1px as a colored accent stripe on card chrome — it's reserved for data-driven indicators (depeg severity, detail hero accents).",
-      "Don't ship Web3-marketing tropes: purple gradients, glassmorphism, gradient text, or buzzwords.",
-      "Don't fall into corporate-fintech blandness or the generic-SaaS grid of interchangeable KPI tiles and big empty cards.",
-      "Don't reskin DefiLlama or a generic trading-terminal clone.",
-      "Don't soften data surfaces with mascots or chunky illustrations; keep the practitioner register inside the data.",
-      "Don't give frost-blue (or any full-saturation accent) to controls, inactive states, the top-nav, or decoration.",
-      "Don't put a resting drop shadow on a card, or nest a card inside a card.",
-      "Don't use fluid `clamp()` headings (outside digest/editorial) or proportional figures in a data column.",
-      "Don't reorder the homepage bands or introduce a new serif outside the authored editorial carve-out."
-    ]
-  }
+  ]
 }

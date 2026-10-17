@@ -33,17 +33,6 @@ Route-specific contracts use descriptive filenames such as `homepage.md`, `*-pag
 rg -n '/route-name/|src/app/route-name' docs
 ```
 
-## Route Contracts
-
-- [api-page.md](./api-page.md) - public API access and reference pages
-- [cemetery-and-compare.md](./cemetery-and-compare.md) - cemetery and compare surfaces
-- [depeg-page.md](./depeg-page.md) - depeg and recovery incident board, hero contract, and event archive routing
-- [portfolio-page.md](./portfolio-page.md) - personal stablecoin risk workspace
-- [upcoming-page.md](./upcoming-page.md) - pre-launch stablecoin tracker
-- [homepage.md](./homepage.md) and [about-page.md](./about-page.md) - dashboard and product/source overview
-- [coverage-page.md](./coverage-page.md) and [feedback-pipeline.md](./feedback-pipeline.md) - coverage availability and feedback delivery
-- [compliance-page.md](./compliance-page.md) - compliance workbench; regime evidence is owned by [mica-tracker.md](./mica-tracker.md) and [genius-tracker.md](./genius-tracker.md)
-
 ## Cross-Cutting Contracts
 
 - [api-reference.md](./api-reference.md) - public integration routes, schemas, authentication, and cache policy, rendered as the Reference tab of `/api/`; [api-reference-admin.md](./api-reference-admin.md) is the internal operator-route companion and is not published through `/docs/`
@@ -73,26 +62,19 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | symptom | [Blocked digest edition](./runbooks/blocked-digest-edition.md) |
 | symptom | [Scheduled delivery stall](./runbooks/cron-delivery-stall.md) |
 | symptom | [Cron slot abandonment](./runbooks/cron-slot-abandonment.md) |
-| symptom | [D1 connectivity failure](./runbooks/db-connectivity.md) |
+| symptom | [D1 connectivity, capacity and telemetry pressure](./runbooks/db-connectivity.md) |
 | symptom | [Mint/burn integrity diagnosis](./runbooks/mint-burn-integrity.md) |
 | symptom | [Stablecoin cache or publication failure](./runbooks/stablecoins-cache.md) |
-| symptom | [Telegram backlog and expiration risk](./runbooks/telegram-backlog-expiration.md) |
-| symptom | [Telegram bot-wide delivery outage](./runbooks/telegram-bot-wide-outage.md) |
 | symptom | [Telegram digest outbox recovery](./runbooks/telegram-digest-outbox.md) |
 | symptom | [Telegram Mini App auth failures](./runbooks/telegram-mini-app-auth-failures.md) |
-| symptom | [Telegram alerts not delivering](./runbooks/telegram-no-delivery.md) |
+| symptom | [Telegram delivery, backlog and bot-wide outages](./runbooks/telegram-no-delivery.md) |
 | symptom | [Telegram preset resolution failure](./runbooks/telegram-preset-resolution-failure.md) |
-| symptom | [Telegram rate-limit storm](./runbooks/telegram-rate-limit-storm.md) |
-| symptom | [Telegram setup wizard stuck](./runbooks/telegram-setup-wizard-stuck.md) |
-| symptom | [Telegram webhook retry and dedupe](./runbooks/telegram-webhook-retry-dedupe.md) |
+| symptom | [Telegram ingress, abuse controls, retries and setup incidents](./runbooks/telegram-webhook-retry-dedupe.md) |
 | symptom | [Workflow failure triage](./runbooks/workflow-incidents.md) |
 | symptom | [Yield benchmark fallback or stale state](./runbooks/yield-benchmark-fallback-stale.md) |
-| symptom | [Yield deterministic all-fail cooldown](./runbooks/yield-deterministic-cooldown.md) |
 | symptom | [Yield rankings stale or missing](./runbooks/yield-rankings-stale-or-missing.md) |
 | symptom | [Yield supplemental snapshot failure](./runbooks/yield-supplemental-snapshot.md) |
 | procedure | [Safe Browsing flag response](./incident-response/safe-browsing-flag.md) |
-| procedure | [D1 capacity pressure and runtime experiments](./runbooks/d1-capacity-and-runtime-experiments.md) |
-| procedure | [D1 telemetry kill switch](./runbooks/d1-telemetry-kill-switch.md) |
 | procedure | [Dated-source scheduled renewal boundaries](./runbooks/dated-source-age-caps.md#scheduled-boundaries) |
 | procedure | [Reviewed depeg artifact removal](./runbooks/depeg-artifact-removal.md) |
 | procedure | [Depeg lifecycle review](./runbooks/depeg-lifecycle-review.md) |
@@ -106,10 +88,8 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | procedure | [Telegram secret rotation](./runbooks/telegram-secret-rotation.md) |
 | procedure | [Yield history cleanup and writer pause](./runbooks/yield-history-cleanup-writer-pause.md) |
 | reference | [Telegram adoption report queries](./runbooks/telegram-adoption-report.md) |
-| reference | [Telegram ingress abuse-control contract](./runbooks/telegram-ingress-abuse-controls.md) |
 | reference | [Telegram read-only operator queries](./runbooks/telegram-operator-queries.md#read-only-incident-entry) |
-| reference | [Telegram webhook flood-control contract](./runbooks/telegram-webhook-ingress.md) |
-| reference | [Yield health diagnostics](./runbooks/yield-health.md) |
+| reference | [Yield health and deterministic all-fail cooldown diagnostics](./runbooks/yield-health.md) |
 
 <!-- GENERATED-END: runbook-index -->
 
@@ -123,6 +103,12 @@ Historical Markdown timeline files are intentionally not maintained.
 
 ## Documentation Rules
 
+- **R1 — Keep contracts timeless.** Put dated history in changelogs, immutable git pins or sidecars.
+- **R2 — State semantics, not copies.** Generated blocks are the only sanctioned copies of source-owned values.
+- **R3 — Give each contract one authority.** Route any live appendix contract through the ownership registry.
+- **R4 — Keep public docs self-contained.** Link only to public-manifest sources or absolute URLs.
+- **R5 — State status and acceptance once.** Link every other mention to that authority.
+- Enforce R1–R5 through review, not an additional lint or doc-sync gate.
 - Keep durable behavior and non-obvious invariants; omit restatements of component trees and implementation order that source makes obvious.
 - Do not hardcode volatile inventory counts or exhaustive file lists. Link to the owning registry or generate the view.
 - Give any doc at or above roughly 50 KB or 400 lines a top `Agent navigation` block (short heading list with grep hints) so agents section-read instead of loading it wholesale; the ~1,500-line rule for `docs/api-reference.md` stays the hard case.

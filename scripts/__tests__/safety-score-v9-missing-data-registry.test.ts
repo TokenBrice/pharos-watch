@@ -24,29 +24,30 @@ const SHARED_EXIT_MESSAGE = "Comparable exit route evidence is missing for the r
 
 function generateExitProjectionFixture(
   reasonCodes: readonly ("unproven-settlement-bound" | "unsupported-same-notional-route")[],
-  options: { intern?: boolean } = {},
+  options: { intern?: boolean; gapCount?: number; contextKeys?: readonly string[] } = {},
 ) {
   const assetId = "exit-fixture";
   const core = coreFixture();
   const asset = minimalAsset(assetId);
   const gapId = `${assetId}:gap:exit-portfolio-coverage`;
-  asset.gaps = [
+  const gapCount = options.gapCount ?? options.contextKeys?.length ?? 1;
+  asset.gaps = Array.from({ length: gapCount }, (_, index) =>
     createV9FactGap({
-      gapId,
+      gapId: gapCount === 1 ? gapId : `${gapId}:${"measured-deployment-".repeat(16)}${String(index).padStart(3, "0")}`,
       reasonCode: "incomplete-dex-route-coverage",
       ownerDomain: "exit",
       policyRuleId: "v9.exit.same-notional-route",
       observationState: "bounded-unknown",
-      path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
+      path: { kind: "local-component", componentKey: options.contextKeys?.[index] ?? "exit-portfolio-coverage" },
       message: "Reviewed DEX pools do not all carry score-eligible exact route observations.",
       evidenceRefIds: ["evidence:base"],
     }),
-  ];
+  );
   asset.exitStatus = createV9FactStatus({
     applicability: requiredV9Applicability("v9.exit.same-notional-route"),
     observationState: "bounded-unknown",
     evidenceRefIds: ["evidence:base"],
-    gapIds: [gapId],
+    gapIds: asset.gaps.map(gap => gap.gapId),
   });
   const compiledFacts = compileNativeV3FactSet({
     ...core,
@@ -112,6 +113,48 @@ function generateExitProjectionFixture(
 }
 
 describe("Safety Score v9 missing-data work routing", () => {
+  it("stores shared contexts once without changing compiled or supplemental task context", () => {
+    const registry = generateExitProjectionFixture(["unsupported-same-notional-route", "unproven-settlement-bound"]);
+    const stablecoin = registry.stablecoins[0]!;
+    expect(registry.schemaVersion).toBe(2);
+    expect(stablecoin.missingItems.map(item => item.taskSource))
+      .toEqual(["compiled-fact-gap", "score-projection-gap"]);
+    const refs = stablecoin.missingItems.map(item => item.currentFactContextRef);
+    expect(new Set(refs).size).toBe(1);
+    expect(Object.keys(stablecoin.currentFactContexts)).toEqual([refs[0]]);
+    for (const item of stablecoin.missingItems) {
+      expect(item).not.toHaveProperty("currentFactContext");
+      expect(stablecoin.currentFactContexts[item.currentFactContextRef]).toMatchObject({
+        exitStatus: { gapIds: ["exit-fixture:gap:exit-portfolio-coverage"] },
+        routes: [],
+      });
+    }
+  });
+
+  it("keeps distinct path-scoped contexts within one work type, including explicit null", () => {
+    const registry = generateExitProjectionFixture([], {
+      contextKeys: ["exit-portfolio-coverage", "unrecognized-exit-component"],
+    });
+    const stablecoin = registry.stablecoins[0]!;
+    expect(new Set(stablecoin.missingItems.map(item => item.workType)).size).toBe(1);
+    expect(new Set(stablecoin.missingItems.map(item => item.currentFactContextRef)).size).toBe(2);
+    expect(Object.values(stablecoin.currentFactContexts)).toContain(null);
+    expect(Object.values(stablecoin.currentFactContexts)).toContainEqual(expect.objectContaining({ routes: [] }));
+  });
+
+  it("keeps serialized growth linear when many gaps share a growing whole-asset context", () => {
+    const small = generateExitProjectionFixture([], { gapCount: 16 });
+    const large = generateExitProjectionFixture([], { gapCount: 64 });
+    const smallBytes = Buffer.byteLength(JSON.stringify(small));
+    const largeBytes = Buffer.byteLength(JSON.stringify(large));
+    expect(large.summary.openItemCount).toBe(4 * small.summary.openItemCount);
+    expect(largeBytes).toBeLessThan(5 * smallBytes);
+    expect(largeBytes).toBeLessThan(500_000);
+    const stablecoin = large.stablecoins[0]!;
+    expect(Object.keys(stablecoin.currentFactContexts)).toHaveLength(1);
+    expect(new Set(stablecoin.missingItems.map(item => item.currentFactContextRef)).size).toBe(1);
+  });
+
   it("associates projection coverage with the exact work type when one stream mixes EXIT work types", () => {
     const registry = generateExitProjectionFixture([
       "unsupported-same-notional-route",

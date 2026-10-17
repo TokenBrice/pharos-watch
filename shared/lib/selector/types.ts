@@ -6,7 +6,7 @@
  * derived via `(typeof X_VALUES)[number]` so adding a value is a one-file
  * change and cross-profile typos surface at compile time.
  *
- * Binding: see `docs/screener-picker-page.md` for the maintained type contract.
+ * Binding: see `docs/screener-page.md#input-and-engine-contract` for the maintained type contract.
  */
 import type {
   BluechipGrade,

@@ -69,7 +69,7 @@ npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --replay <journal-path
 
 ## Capture storage and expiry
 
-Capture storage, retention, and fail-closed replay are owned by [Safety Score V9 Readiness](./safety-score-v9-readiness.md): see [Mechanism capture storage](./safety-score-v9-readiness.md#mechanism-capture-storage) and [Replay and expiry](./safety-score-v9-readiness.md#replay-and-expiry).
+Capture storage, retention, and fail-closed replay are owned by [Mechanism Capture Storage and Replay](./safety-score-v9-readiness.md): see [Mechanism capture storage](./safety-score-v9-readiness.md#mechanism-capture-storage) and [Replay and expiry](./safety-score-v9-readiness.md#replay-and-expiry).
 
 ## Related
 

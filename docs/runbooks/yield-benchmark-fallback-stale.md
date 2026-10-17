@@ -15,9 +15,9 @@ Yield rows still publish, but benchmark provenance shows a fallback or retained 
 
 ## Impact
 
-Rankings are usually available, but benchmark-relative interpretation can be degraded. Inspect publisher completion and input quality using the [shared entry checks](./yield-health.md#first-checks). The [benchmark threshold row](./yield-health.md#threshold-table) owns the independent fetch and observation-age limits, defined in `shared/lib/yield-benchmark-freshness.ts`; a frozen upstream cannot become healthy merely because fetching succeeds. Non-USD fallback or stale evidence raises `risk-free-rate:<KEY>:<reason>` independently. Past either freshness bound, affected rows are benchmark-stale and PYS is NR.
+Benchmark-relative interpretation follows the [benchmark registry](../yield-intelligence.md#benchmark-registry) and [operator thresholds](./yield-health.md#threshold-table); inspect each used key's `risk-free-rate:<KEY>:<reason>`, not fetch success alone. Under the v8.43 hurdle re-base, a degraded USD reference disables rebase and makes affected non-USD PYS estimated (`reference-benchmark-degraded`), while a stale reference makes it NR (`benchmark-stale`); [publication semantics](../yield-intelligence.md#persistence-and-publication) remain separate from input quality.
 
-The v8.43 hurdle re-base consumes the USD reference only while it classifies healthy on its own feed evidence. A degraded reference nulls `usdBenchmarkRate`, so affected non-USD rows publish an estimated PYS with the `reference-benchmark-degraded` warning; a stale reference makes them NR (`benchmark-stale`). Documented proxy selection (`benchmarkSelectionMode: "fallback-usd"`) is a methodology choice, not a degraded feed: it is reported as `proxySelectionRowCount` / `benchmarkIsProxy` and never degrades the benchmark entry or the row by itself.
+Documented `benchmarkSelectionMode: "fallback-usd"` is a proxy policy, not degraded feed evidence; `proxySelectionRowCount` / `benchmarkIsProxy` do not by themselves degrade a row or benchmark.
 
 ## First Checks
 
@@ -34,11 +34,7 @@ ORDER BY key;
 
 Use the [shared cron-history SELECT](./yield-health.md#read-only-d1-snippets) with jobs `fetch-tbill-rate` and `sync-yield-data`, newest 10 runs.
 
-```sql
-SELECT key, updated_at, substr(value, 1, 1200) AS value_prefix
-FROM cache
-WHERE key = 'yield-rankings';
-```
+Inspect the rankings prefix with the [shared cache SELECT](./yield-health.md#read-only-d1-snippets) before comparing row benchmark provenance.
 
 ## Common Causes
 

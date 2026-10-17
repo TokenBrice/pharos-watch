@@ -1,9 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
+import { getVerifiedDocFiles } from "../lib/doc-files.mts";
 import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
 
@@ -97,19 +98,25 @@ describe("doc-ownership registry integrity", () => {
       if (bounded) expect(reference.anchor, `${path} requires a bounded anchor`).toBeTruthy();
     }
   });
+  it("routes every verified doc under docs through a primary or background reference", () => {
+    const routedDocs = new Set(mappings.flatMap((mapping) => [
+      ...mapping.docs,
+      ...(mapping.background ?? []),
+    ]).map((reference) => normalizeDoc(reference).path));
+    const unrouted = getVerifiedDocFiles(REPO_ROOT)
+      .map((path) => relative(REPO_ROOT, path))
+      .filter((path) => path.startsWith("docs/") && !routedDocs.has(path));
+    expect(unrouted, "Every verified doc needs a docs/background owner, not just a source glob").toEqual([]);
+  });
   it("keeps primary Markdown sections within 25KB and ratchets legacy exceptions", () => {
     // Existing out-of-scope sections only. Remove entries once bounded; new
     // primary sections must stay within 25KB.
     const legacySectionCeilings: Record<string, number> = {
-      "docs/supply-snapshot.md#supply-pipeline": 38_212,
       // Release B added nullable flow/supply/PSI, nominal-price, and audit-verdict
       // wire contracts; the 2026-10-07 hardening added served-generation yield
       // identity, PSI omission arrays, and scheduler liveness. Retain its ratchet.
       "docs/api-reference.md#public-endpoints": 44_368,
-      "docs/telegram-alerts.md#commands": 33_389,
-      "docs/digest-pipeline.md#generation": 43_892,
-      // Main's env-interface, scripts, and status backend exceptions no longer
-      // apply after bounded routing/restructuring; retain the default 25KB cap.
+      "docs/digest-pipeline.md#generation": 32_770,
     };
     const remainingExceptions = new Set(Object.keys(legacySectionCeilings));
     const domainIds = [

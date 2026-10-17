@@ -44,4 +44,4 @@ Operational consequence:
 
 ## Maintenance
 
-Adding, removing or publicly listing a PSI historical asset is an intentional maintainer decision. [Stablecoin Data Registry](./stablecoin-data.md#editing-rules) requires PSI, depeg and supply-history continuity checks before removal. Metadata eligibility does not imply available observations, complete supply history or catalog promotion.
+Adding, removing or publicly listing a PSI historical asset is an intentional maintainer decision. The [Stablecoin Data Registry](https://github.com/TokenBrice/pharos-watch/blob/main/docs/stablecoin-data.md#editing-rules) requires PSI, depeg and supply-history continuity checks before removal. Metadata eligibility does not imply available observations, complete supply history or catalog promotion.

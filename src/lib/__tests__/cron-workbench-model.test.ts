@@ -8,6 +8,7 @@ import {
   deriveCronVerdict,
   getCronNextExpected,
   getCronNextRunAt,
+  getCronRunbooks,
   formatCronRunStatus,
   formatCronRunTiming,
   type CronWorkbenchFilters,
@@ -77,6 +78,22 @@ function makeBudgetSurface(overrides: Partial<BudgetOnlySurfaceStatus> = {}): Bu
 }
 
 describe("cron workbench model", () => {
+  it.each(["dispatch-telegram-alerts", "telegram-degradation-watchdog"])(
+    "routes %s to the consolidated delivery runbook with a filename-derived label",
+    (job) => {
+      const group = makeGroups()[1]!;
+      group.entries = [[job, makeCron()]];
+      const model = buildCronWorkbenchModel([group], makeFilters(), 1_700_000_100);
+
+      expect(getCronRunbooks(model.rows[0]!)).toEqual([
+        {
+          href: expect.stringContaining("/docs/runbooks/telegram-no-delivery.md"),
+          label: "Telegram no delivery runbook",
+        },
+      ]);
+    },
+  );
+
   it("preserves trigger-group boundaries and summarizes each complete group", () => {
     const model = buildCronWorkbenchModel(makeGroups(), makeFilters());
 

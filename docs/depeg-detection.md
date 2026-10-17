@@ -2,7 +2,7 @@
 
 Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minutes within `sync-stablecoins` and writes admitted, unsuppressed onsets to `depeg_pending`. Stage 2 runs immediately after; promotion requires at least 15 minutes beyond the full trigger threshold and the applicable source-trust rule.
 
-> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Build-time event archive · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails.
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Build-time event archive · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails.
 
 ## Methodology Versioning
 
@@ -17,7 +17,7 @@ The shared `v6.33` release of 2026-10-08 changes only DEWS weekly DEX-history ad
 
 ## Downstream: Depeg Duration Resolver
 
-Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), which resolves them into canonical incidents and, under current DDRv4 (the lock contract was introduced in DDRv3), freezes one public prediction or no-call when an active incident reaches forecast readiness (`score >0.75`, strictly) or the first healthy run at/after the 72h backstop. DDR does not run its own detection — it inherits the clean confirmed-event stream described here. If the incident recovers or receives reliable terminal evidence before a healthy DDR lock, DDRR records `resolved_before_prediction` or `terminal_before_prediction` instead of creating a retroactive forecast. See [depeg-resolver.md](./depeg-resolver.md).
+Confirmed events feed DDR's canonical incidents and immutable public forecasts or no-calls; DDR does not detect depegs independently or issue retroactive forecasts after a pre-lock resolution. See the [live forecast and grading board](https://pharos.watch/depeg/). The forecast-lock contract is owned by `docs/depeg-resolver.md`, not this detector.
 
 ## Thresholds & Constants
 
@@ -47,43 +47,18 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 
 ## Database Schema
 
+Exact DDL and indexes are owned by `worker/migrations/0000_baseline.sql` plus the
+active tail in `worker/migrations/MANIFEST.md`. The baseline alone is not the
+cumulative schema: `0232_depeg_recovery_continuity.sql` adds recovery continuity,
+`0252_depeg_audit_verdict_vocabulary.sql` guards audit verdicts, and
+`0255_depeg_trusted_price_coverage.sql` adds nullable trusted-price coverage.
+The semantics below distinguish recovery, unobserved time and immutable audit evidence.
+
 ### depeg_events
 
-```sql
-CREATE TABLE IF NOT EXISTS depeg_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  stablecoin_id TEXT NOT NULL,
-  symbol TEXT NOT NULL,
-  peg_type TEXT NOT NULL,
-  direction TEXT NOT NULL,              -- "above" | "below"
-  peak_deviation_bps INTEGER NOT NULL,
-  started_at INTEGER NOT NULL,          -- Unix seconds
-  ended_at INTEGER,                     -- NULL = ongoing
-  start_price REAL NOT NULL,
-  peak_price REAL,
-  recovery_price REAL,
-  peg_reference REAL NOT NULL,
-  source TEXT NOT NULL DEFAULT 'live',  -- "live" | "backfill"
-  confirmation_sources TEXT,            -- JSON/provenance for promoted pending rows
-  pending_reason TEXT,                  -- reason flags carried from depeg_pending
-  close_reason TEXT,                    -- why the row closed, NULL for open/legacy rows
-  recovery_first_seen_at INTEGER,       -- first qualifying recovery observation, NULL outside recovery confirmation
-  recovery_last_seen_at INTEGER,        -- most recent consecutive qualifying recovery observation
-  price_coverage_json TEXT,             -- recorded trusted off-peg [start,end] intervals; NULL = uninstrumented legacy
-  last_trusted_price_at INTEGER,        -- latest trusted off-peg endpoint, never a guessed history boundary
-  price_coverage_gap_started_at INTEGER -- first run observing loss of coverage, NULL outside a current gap
-);
-
-CREATE INDEX idx_depeg_stablecoin ON depeg_events(stablecoin_id);
-CREATE INDEX idx_depeg_started ON depeg_events(started_at DESC);
-```
-
-Uniqueness and open-event indexes:
-
-```sql
-CREATE UNIQUE INDEX idx_depeg_unique ON depeg_events(stablecoin_id, started_at, source);
-CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NULL;
-```
+Confirmed live/backfill rows retain coin/peg/direction identity, onset and nullable
+closure, observed peak prices, confirmation provenance and trusted-price coverage.
+Uniqueness is `(stablecoin_id, started_at, source)`; open rows have `ended_at = NULL`.
 
 `close_reason` distinguishes real recovery from non-recovery terminal boundaries:
 
@@ -100,64 +75,14 @@ Current deviation and reference are independent of circulating supply: any obser
 
 ### depeg_pending
 
-```sql
-CREATE TABLE IF NOT EXISTS depeg_pending (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  stablecoin_id TEXT NOT NULL,
-  symbol TEXT NOT NULL,
-  peg_type TEXT NOT NULL,
-  direction TEXT NOT NULL,
-  first_seen_bps INTEGER NOT NULL,
-  first_seen_at INTEGER NOT NULL,
-  first_price REAL NOT NULL,
-  peg_reference REAL NOT NULL,
-  reason TEXT NOT NULL DEFAULT 'large-cap', -- includes "confirmation-window" plus optional trust/severity flags
-  last_seen_bps INTEGER,
-  last_seen_at INTEGER,
-  last_price REAL,
-  peak_seen_bps INTEGER,
-  peak_price REAL,
-  updated_at INTEGER
-);
-
-CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
-```
-
-One row per coin maximum. Holds depeg candidates awaiting confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema and follow-on changes through migration 0227 were squashed into `0000_baseline.sql` on 2026-07-30, so their individual migration files no longer exist. The active migration tail starts at `0228_depeg_resolver_incident_closed_pre_lock.sql`; `0232_depeg_recovery_continuity.sql` adds the nullable recovery-continuity endpoint and `0233_ddr_lock_opportunity_attempt_key.sql` adds resolver audit idempotency. Use `worker/migrations/MANIFEST.md` for the full sequence and field ownership.
+At most one candidate per coin holds its first/last/peak observations, quote
+reference, direction, peg identity and trust/severity reasons until a terminal
+confirmation decision. Continuity rules below govern whether onset is preserved.
 
 ### depeg_pending_outcomes (migration 0126)
 
-```sql
-CREATE TABLE IF NOT EXISTS depeg_pending_outcomes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  pending_id INTEGER,                   -- source depeg_pending.id, already deleted by the time the row lands
-  stablecoin_id TEXT NOT NULL,
-  symbol TEXT NOT NULL,
-  peg_type TEXT NOT NULL,
-  direction TEXT NOT NULL,
-  reason TEXT NOT NULL,                 -- pending-row reason flags carried through
-  first_seen_bps INTEGER NOT NULL,
-  first_seen_at INTEGER NOT NULL,
-  first_price REAL NOT NULL,
-  last_seen_bps INTEGER,
-  last_seen_at INTEGER,
-  last_price REAL,
-  peak_seen_bps INTEGER,
-  peak_price REAL,
-  peg_reference REAL NOT NULL,
-  outcome TEXT NOT NULL CHECK (outcome IN ('promoted', 'rejected', 'expired', 'recovered', 'superseded', 'unconfirmed-severe')),
-  outcome_at INTEGER NOT NULL,
-  confirming_sources TEXT,              -- `+`-joined canonical confirmation keys, NULL when empty
-  opposing_sources TEXT,
-  unavailable_sources TEXT,
-  circuit_open_sources TEXT,
-  final_decision_reason TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
-
-CREATE INDEX idx_depeg_pending_outcomes_pending_id ON depeg_pending_outcomes(pending_id);
-CREATE INDEX idx_depeg_pending_outcomes_stablecoin_time ON depeg_pending_outcomes(stablecoin_id, outcome_at DESC);
-```
+The append-only outcome schema is in the baseline; `outcome` distinguishes
+`promoted`, `rejected`, `expired`, `recovered`, `superseded` and `unconfirmed-severe`.
 
 Append-only terminal ledger for every candidate that leaves `depeg_pending`. Each row is written in the same batch that deletes the pending row (`buildOutcomeAndDeleteStmts()` in `worker/src/cron/pending-depeg-confirmation.ts`), so the candidate transition and its evidence land together. Because `depeg_pending` holds at most one row per coin and is deleted on every terminal path, this is the only record of candidates that never became events -- rejections, expiries, recoveries, and rows superseded by an already-open event leave no trace in `depeg_events`.
 
@@ -183,7 +108,8 @@ Retention policy: `depeg_backfill_runs` is a backfill audit archive kept forever
 
 ### Non-USD threshold cleanup (folded into baseline)
 
-Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD threshold was raised from 100 to 150. This was a pre-squash migration now folded into `0000_baseline.sql`.
+Historical non-USD rows below the current 150 bps threshold are excluded by the
+baseline cleanup; threshold history belongs to the structured methodology changelog.
 
 ### Build-time event archive
 
@@ -191,7 +117,7 @@ The Pages build snapshot is maintained by `scripts/maintenance/sync-depeg-events
 
 Synchronization follows the API cursor until exhaustion, not a display-sized page cap. An outstanding cursor at the 1,000-page safety ceiling, an empty continuation page, or a unique-event count that disagrees with the initial API total is a `SnapshotIntegrityError` before any output write. Fetch-failure fallback cannot turn these integrity failures into successful refreshes; the Pages release wrapper retains the committed directory on producer failure. Published static-page preservation checks remain in force.
 
-Every successful sync also writes `data/depeg-events/metadata/capture.json`: the SHA-256 identity of the exact yearly shard bytes, event count, API total when supplied, source URL, methodology label, and observation start/end clocks. Capture metadata lives in a subdirectory so top-level JSON archive enumeration sees only the route index and event shards; synchronization removes the superseded top-level `capture.json`. Keeping metadata within the archive directory also preserves the Pages release wrapper's directory-level copy and replacement; the release archive allowlist admits only this metadata directory and its capture file, not arbitrary metadata contents. Dataset generation validates this identity before using the ledger; legacy shards without a capture must be synchronized first. The ledger is a current capture, not a reconstruction of event peaks or recoveries at an older market snapshot's clock. Dated `depeg-history` exports therefore publish explicitly retrospective windowed history with this capture's provenance (see [Surface Split](./api-reference.md#surface-split)).
+Every successful sync also writes `data/depeg-events/metadata/capture.json`: the SHA-256 identity of the exact yearly shard bytes, event count, API total when supplied, source URL, methodology label, and observation start/end clocks. Capture metadata lives in a subdirectory so top-level JSON archive enumeration sees only the route index and event shards; synchronization removes the superseded top-level `capture.json`. Keeping metadata within the archive directory also preserves the Pages release wrapper's directory-level copy and replacement; the release archive allowlist admits only this metadata directory and its capture file, not arbitrary metadata contents. Dataset generation validates this identity before using the ledger; legacy shards without a capture must be synchronized first. The ledger is a current capture, not a reconstruction of event peaks or recoveries at an older market snapshot's clock. Dated `depeg-history` exports therefore publish explicitly retrospective windowed history with this capture's provenance, not as-of market observations; the [public API guide](https://pharos.watch/api/) explains the surface split.
 
 ## Cron Scheduling
 
@@ -279,7 +205,7 @@ Whenever a row is written to `depeg_pending`, the worker now upserts directional
 - same direction after a gap greater than 1200 seconds: reset first/last/peak fields to the new observation; the blind interval cannot count toward confirmation
 - opposite direction: reset the row as a new incident instead of preserving stale first-seen direction metadata
 
-The 1200-second continuity tolerance is bounded from both sides. A production sample of five consecutive `sync-stablecoins` invocations captured on 2026-08-07 measured start-to-start gaps of 932, 932, 868, and 907 seconds (range 868-932, or -32/+32 seconds around the declared 900-second schedule). The tolerance therefore **cannot** equal one producer interval: three of those four ordinary gaps exceed 900 seconds, so a 900-second tolerance would reset `first_seen_at` on almost every observation, leave `last_seen_at - first_seen_at` permanently at zero, and prevent the 15-minute confirmation window from ever completing — silently disabling depeg confirmation rather than tightening it. The tolerance also stays below two producer intervals so that a genuinely missed run (~1800 seconds) still resets the episode, which is the property this rule exists to enforce: a blind interval must never prove persistence.
+The 1200-second continuity tolerance allows ordinary producer jitter beyond the 900-second schedule but remains below two intervals. A missed run must reset onset: a blind interval cannot prove persistence.
 
 Detection persistence commits all mutations for one stablecoin as one ordered atomic transition, then proceeds to the next asset.
 
@@ -389,7 +315,7 @@ Replay now drops recomputed episodes that reviewed data or an existing live row 
 - **Reviewed suppression.** An episode whose inclusive `[startedAt, endedAt]` interval overlaps a matching registry entry for the same coin and direction is skipped.
 - **Live overlap.** An episode that overlaps an existing `source='live'` row of the same coin and direction (`episodeStart <= liveEnd && liveStart <= episodeEnd`, inclusive; an open row collapses to its start second) is skipped. Live detection polls at minute cadence while replay consumes hourly samples, so same-side overlapping windows are one market episode counted twice; intervals one second apart are disjoint.
 
-Both rules run before the dry-run/apply split, so the preview, `expectedEventCount`/`expectedFingerprint`, and the inserted rows stay mutually consistent. Each skip logs a `backfill-depegs-episode-skipped` event with `skipReason: reviewed-suppression` or `live-overlap`. Neither rule deletes anything by itself: the replayed window's delete still removes stale `source='backfill'` rows, live rows are never removed by replay, and the skip only prevents the twin from being re-inserted. A read-only production dry-run of the live-overlap rule found 85 overlapping live/backfill pairs across 52 distinct backfill rows on 21 coins.
+Both rules run before the dry-run/apply split, so the preview, `expectedEventCount`/`expectedFingerprint`, and the inserted rows stay mutually consistent. Each skip logs `backfill-depegs-episode-skipped` with `skipReason: reviewed-suppression` or `live-overlap`. Neither rule deletes anything by itself: the replayed window's delete still removes stale `source='backfill'` rows, live rows are never removed by replay, and the skip only prevents the twin from being re-inserted.
 
 Mutating backfills now persist replay-run status and event provenance. Backfilled rows receive replay version, provider roster, quote mode, peg-reference source, supply source, confirmation policy, confidence tier, and compact public provenance. Existing rows without provenance are still accepted by API mappers and PegScore.
 
@@ -399,7 +325,7 @@ When DefiLlama returns no historical rows, replay applies the live `$1M` event f
 
 Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. In that native-fiat mode, replay uses daily points plus a two-point confirmation window across 36 hours before opening a normal event, while still preserving extreme single-point crashes of `>= 5000 bps`. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
 
-`npx tsx worker/scripts/one-shot-backfill.ts backfill-depegs --query 'dry-run=true'` also accepts `startDay` / `endDay` for bounded replay audits, plus optional `contextDays` to widen the replay pad around that UTC window. The job compares only the overlapping stored `source='backfill'` rows; live replacement additionally requires `--execute --allow-atomic-import` and a coordinated [maintenance window](./runbooks/one-shot-backfills.md#transport-safety).
+`npx tsx worker/scripts/one-shot-backfill.ts backfill-depegs --query 'dry-run=true'` also accepts `startDay` / `endDay` for bounded replay audits, plus optional `contextDays` to widen the replay pad around that UTC window. The job compares only overlapping stored `source='backfill'` rows; live replacement additionally requires `--execute --allow-atomic-import` and a coordinated maintenance window acknowledging temporary D1 unavailability. Transport and interruption handling are owned by `docs/runbooks/one-shot-backfills.md#transport-safety`.
 For commodity-pegged assets, the peer-median reference fetch is bounded to the same replay pad and only fetches the needed gold or silver source family instead of rebuilding full hourly history for every tracked commodity token.
 Commodity lookup series and their current-rate fallback stay in per-ounce units until a single final `commodityOunces` conversion. Missing historical spot data therefore uses the current per-ounce rate times the token weight once, never an already per-token fallback weighted again. If neither a historical series anchor nor a current commodity reference is available, replay skips the coin as `missing-fx-reference` and preserves its existing events.
 
@@ -430,11 +356,11 @@ Matching is inclusive interval overlap between the recomputed episode `[startedA
 
 The module validates the corpus at import time and fails closed. `shared/data/depegs/__tests__/backfill-replay-suppressions.test.ts` additionally guards tracked coin ids, the shared direction vocabulary, ordered integer windows, `https` evidence URLs, `YYYY-MM-DD` review dates, non-overlapping same-coin/same-direction windows, and the behavioral contract of the seeded USN windows.
 
-To add an entry: establish from primary evidence that the stored episode is an artifact (no economic-size on-chain trade, pool mids at peg), set the window to the union of the stored episode and its dust/recovery transactions plus a ±2h margin (hourly CoinGecko samples move episode edges by up to an hour), cite the evidence URLs with the review date, then re-run the integrity suite. Add the entry **before** deleting the matching `source='backfill'` rows, so a later replay cannot re-persist them. The seeded entries are the four `usn-noon` `above` windows for 2025-10-07, 2025-12-27/28, 2026-02-14, and 2026-03-02, where on-chain forensics found no economic-size USN trade above 1.0011 and pool mids stayed near $1.000.
+Registry edits and primary-evidence review belong to `docs/runbooks/depeg-artifact-removal.md#recording-the-verdict`; the seeded reviewed windows live in the registry, not a second list here.
 
 ### Operator runbook
 
-Artifact-event removal is an operator procedure with a hard ordering constraint: the registry and the live-overlap skip must be deployed before the delete, and the review previews with `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true'` before `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=<ids>' --execute --allow-atomic-import` and `npx tsx scripts/maintenance/sync-depeg-events.ts --api-url https://api.pharos.watch --allow-archive-shrink`. The full sequence, the reviewed Noon USN id set (`49235,49236,49237,24424,83782`), and the registry-entry steps live in [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
+Reviewed artifact removal deploys suppression and live-overlap protection **before** deleting rows, then rebuilds PSI and preserves published URL redirects. Sealed DDR predictions require append-only repair instead of direct deletion. The command sequence, complete-id comparison and interruption handling are owned by `docs/runbooks/depeg-artifact-removal.md`.
 
 ## Event Lifecycle
 
@@ -483,83 +409,22 @@ Orphan cleanup:
 - `source` must be `"live"` or `"backfill"` (an invalid value throws)
 - `closeReason` is `null` for open/legacy rows or one of the validated terminal reason strings above
 
-Frontend type (defined in `shared/types/market.ts`, re-exported through `shared/types/index.ts`):
-
-```typescript
-interface DepegEvent {
-  id: number
-  stablecoinId: string
-  symbol: string
-  pegType: string
-  direction: "above" | "below"
-  peakDeviationBps: number
-  startedAt: number
-  endedAt: number | null
-  startPrice: number
-  peakPrice: number | null
-  recoveryPrice: number | null
-  pegReference: number
-  source: "live" | "backfill"
-  constituentEventCount?: number
-  confirmationSources: string | null
-  pendingReason: string | null
-  closeReason:
-    | "recovered-primary"
-    | "recovered-dex"
-    | "recovered-native"
-    | "coverage-lost-supply"
-    | "superseded-direction"
-    | "orphan-tracking-removed"
-    | null
-  priceCoverage?: DepegPriceCoverage | null
-  provenance?: {
-    sourceKind?: string | null
-    replayRunId?: string | null
-    replayVersion?: string | null
-    sourcePriceProviders?: string[] | null
-    quoteMode?: string | null
-    pegReferenceSource?: string | null
-    supplySource?: string | null
-    confirmationPolicy?: string | null
-    confirmationPointCount?: number | null
-    confidenceTier?: string | null
-    auditVerdict?: DepegAuditVerdict | null
-    pegScoreEligible?: boolean | null
-    updatedAt?: number | null
-  } | null
-}
-```
+`DepegEventSchema` and inferred `DepegEvent` in `shared/types/market.ts` own the
+public shape, including nullable coverage and compact provenance. Legacy rows
+without provenance remain valid; absence is not a positive audit verdict.
 
 ## API
 
 ### GET /api/depeg-events
 
-Query params:
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | string | -- | Filter by `stablecoin_id` |
-| `active` | string | -- | If `"true"`, only events where `ended_at IS NULL` |
-| `limit` | number | 100 | Max results; out-of-range values outside `1..1000` are rejected |
-| `offset` | number | 0 | Pagination offset; values outside `0..50000` are rejected |
-| `cursor` | string | -- | Keyset pagination cursor; advance via the response `nextCursor`. Cannot be combined with a non-zero `offset` |
-| `includePending` | string | `false` | If `"true"`, add a `pending` array of unconfirmed candidates to the response |
-| `includeTotal` | string | `true` | If `"false"`, skip the COUNT query; `total` is an observed lower bound and `totalExact` is `false`. Empty offset pages report `0`, never the requested offset. |
+The [public API guide](https://pharos.watch/api/) and `docs/api-reference.md#get-apidepeg-events`
+own query parameters, pagination, response schemas and defaults. This endpoint
+projects canonical public incidents; optional pending rows remain unconfirmed.
 
 Malformed booleans, pagination values, and cursors return `400` before projection reads. Valid requests return `503` for unreadable (`incident-projection-read-failed`) or malformed (`incident-projection-invalid`) canonical projections; raw history is never substituted. A successfully read empty projection remains available.
 
-Response:
-
-```text
-{
-  "events": [{ "...DepegEvent fields..." }],
-  "total": 42,
-  "totalExact": true,
-  "nextCursor": "..." | null,
-  "pending": [{ "...DepegPendingIncident fields (only when includePending=true)..." }],
-  "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000, "isCurrent": true }
-}
-```
+Responses carry events, pagination/count precision and methodology provenance,
+plus pending candidates only when requested. Unknown coverage remains explicit.
 
 `total` counts public incident rows, not necessarily individual threshold crossings. The endpoint does not emit derived `counts`; clients sum `constituentEventCount` across the fully loaded incident history for threshold-crossing totals.
 
@@ -573,91 +438,41 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 
 ## Frontend
 
-### Hook: useInfiniteDepegEvents / useActiveDepegEvents (`use-depeg-events.ts`)
-
-- `useInfiniteDepegEvents({ stablecoinId?, activeOnly?, includePending?, autoLoadAll? })` fetches `/api/depeg-events` with optional `?stablecoin=` filter (shared options built by `depegEventsInfiniteQueryOptions(...)`); `useActiveDepegEvents(...)` wraps it with `activeOnly` preset
-- TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
-- Pages through `/api/depeg-events?limit=100&cursor=...`, advancing via the response `nextCursor`; oversized `limit` values are rejected rather than silently clamped
-- `/depeg` uses the unfiltered infinite hook for the global recent-events feed
-- Pending tracker rows retain the validated shared `DepegPendingIncident` shape (`pending`, including `availableConfirmationCategories`); the client copies/sorts by absolute peak deviation then newest first-seen time, without alias normalization.
-- `/depeg/<event>/` static pages form a grow-only permanent archive: every confirmed event starting at or after the archive epoch (2026-01-01, `DEPEG_ARCHIVE_EPOCH_SECONDS`) with an absolute peak deviation at or above the 5.0% static-page threshold keeps its page permanently, plus pinned authored incidents such as USDC 2023 from before the epoch. Published event URLs never become unhandled 404s (the former 12-newest recency window churned already-ranked pages to 404). `sync-depeg-events.ts` carries previously published static rows forward when a live reclassification would drop them below the page threshold, then verifies that no archived slug disappeared; an operator must explicitly supply the reviewed `--allow-archive-shrink` override for an intentional removal. The release SEO gate separately compares the new build with the currently deployed sitemap, covering refresh-only routes that have not reached the checked-in snapshot: each deployed event must remain submitted or receive a direct 301 to its surviving submitted incident when the resolver consolidates fragments. A reviewed artifact removal is the other sanctioned shrink path: `sync-depeg-events --allow-archive-shrink` retires the rows and `public/_redirects` supplies the one-hop 301s, so a published `/depeg/<slug>/` URL never 404s (the three retired Noon USN slugs redirect to `/stablecoin/usn-noon/`; see the operator runbook above). The full event table remains available through the API, live tracker, stablecoin detail history, and feeds; sub-threshold feed entries link back to the relevant stablecoin history anchor instead of consuming Cloudflare Pages files.
-- When multiple static events share the same stablecoin, UTC date, and direction, their detail pages add the precise UTC start time to metadata, H1, event metrics, and adjacent navigation. They also render a factual time/deviation/duration/recovery synopsis and use the canonical URL as the `NewsArticle.@id`, preventing materially separate observations from presenting as identical search documents.
-- Stablecoin detail pages use the filtered infinite hook with `autoLoadAll` so the hero can read the full recorded-event `total` while the history table hydrates every page in the background
-
-### Component: DepegFeed (`depeg-feed.tsx`)
-
-- Responsive recent-events feed with progressive history pagination
-- Sorted ongoing-first, then by `startedAt` DESC
-- Shows: logo, symbol, peak deviation colored by severity (green <50bps, amber 50-200bps, orange 200-500bps, red >=500bps), direction badge, LIVE pulsing indicator if ongoing, date, duration
-- Click navigates to `/stablecoin/{id}`
-
-### Depeg dashboard stat context
-
-`DepegOutlookHero` (`src/components/depeg-outlook-hero.tsx`) uses the shared contextual methodology pattern on its key figures (`Active depegs`, `Holding peg`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology. It replaced the route's earlier stat-card stack; route composition is owned by [depeg-page.md](./depeg-page.md).
-
-### Component: DepegHistory (`depeg-history.tsx`)
-
-- Stablecoin-detail depeg history table backed by the filtered infinite hook
-- Separates public incidents from raw threshold crossings using the API `total` and, once fully loaded, the sum of per-incident `constituentEventCount`
-- Shows a coverage-aware recent 90-day peg percentage alongside observed days, incident count, and threshold-crossing count; pre-coverage days are not silently treated as stable
-- Shows the PegScore coverage anchor and whether it came from a reviewed replay or an assumed asset-age/first-observation fallback
-- Background-hydrates the full per-coin history, then paginates the rendered table client-side at 25 rows per page
-- Summary metrics: recorded incidents, threshold crossings, worst deviation, current streak (days at peg or "Depegged now")
-- Table columns: Date, Direction (badge), Peak Deviation (signed, colored), Duration (or "Ongoing"), Start Price, Peak Price, Recovery Price
-- Uses `computePegStability()` once the full per-coin history has loaded
+The [Depeg & Recovery board](https://pharos.watch/depeg/) separates live incidents,
+forecast grading and resolved history. The [permanent archive](https://pharos.watch/depeg/archive/)
+retains qualifying published event URLs; sub-threshold detections remain in the
+API and per-coin history. Route/crawl contracts live in `docs/depeg-page.md#event-history-and-crawlability`;
+detail-history presentation lives in `docs/stablecoin-detail-page.md`.
 
 ## Peg Stability Metrics (`peg-stability.ts`)
 
-| Metric | Description |
-|--------|-------------|
-| `pegPct` | Percentage of tracked history at peg (merges overlapping intervals) |
-| `trackingSpan` | Human-readable span ("3y 8mo", "45d") |
-| `limited` | `true` if < 7 days history |
-| `currentStreakDays` | Days since last event ended |
-| `depeggedNow` | Boolean (any ongoing event?) |
-
-**Window divergence (deliberate).** `computePegStability()` measures over the coin's *full* available chart/event history and does not call `coinTrackingStart()`, so it never applies PegScore's 4-year lookback clamp. Published PegScore, `/api/peg-summary`, and the detail-page hero (`trackingSpanDays`, `pegPct`) all use the clamped 4-year window. The two therefore disagree for coins with more than four years of history — display-side spans and time-at-peg can be longer than the scored ones, and neither number is wrong. Today only `currentStreakDays`, `depeggedNow`, and `worstDeviationBps` from this helper reach the UI (`src/components/depeg-history.tsx`), so the `pegPct` / `trackingSpan` divergence is not currently visible side by side; keep it in mind before surfacing `pegPct` or `trackingSpan` next to a published PegScore.
+`computePegStability()` in `src/lib/peg-stability.ts` supports detail-history
+streak/current-event metrics over full available history. It does not use
+PegScore's four-year clamp; do not present its full-history occupancy/span as
+the scored window.
 
 ## Peg Score (`peg-score.ts`)
 
-Used in report cards. Formula:
+The [public PegScore methodology](https://pharos.watch/methodology/#pegscore-dews-methodology)
+owns the formula and components; `shared/lib/peg-score.ts` owns execution.
+Detection contributes eligible episodes, observed price intervals and audit provenance:
 
-```
-knownSpanSec = spanSec - unknownCoverageSeconds
-pegPct = knownSpanSec > 0 ? (1 - totalObservedDepegSec / knownSpanSec) * 100 : null
-severityScore = max(0, 100 - sum of per-event penalties)
-  per-event penalty = max(durationPenalty, magnitudeFloor) * eventSeverityWeight
-    durationPenalty = (peakBps/100) * (durationDays/30) * recencyWeight   (durationDays capped at 90)
-    magnitudeFloor  = (peakBps/2000) * recencyWeight
-spreadPenalty = min(15, (stddev of (|peakBps| × eventSeverityWeight) / 1000) * 15)
-activeDepegPenalty = if current trusted off-peg observation: min(50, max(5, |peakBps| / 50))
-
-pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
-```
-
-The quality gate uses `PEG_SCORE_EXCLUDED_AUDIT_VERDICTS` from `shared/types/depeg-audit.ts`: `false_positive` and `disputed` are excluded. `no_data` remains eligible for PegScore but is excluded by DDR's separate `DDR_INELIGIBLE_AUDIT_VERDICTS` policy. As of v6.30, unknown non-null verdicts fail closed in direct scoring and SQL recomputation, and archived/V9 parsing rejects them without coercion to null. Null legacy verdicts remain eligible. Included events with `confidenceTier = "low"` retain time-at-peg impact but receive a 0.5 severity/spread weight. Quality counters expose changed score inputs.
-
-**Tracking window**: `coinTrackingStart()` first honors a reviewed `pegScoreCoverage.startDate` when an operator has
-verified replay plus continuous live coverage. Otherwise it prefers a curated launch date, then the
-earliest first-seen anchor from `getFirstSeenDates()`, which merges the coin's earliest `supply_history` snapshot
-with its first durable Pharos valid-price observation and keeps whichever is earlier. This gives priced assets
-without supply-history coverage a real age anchor instead of leaving
-them unrated indefinitely without claiming that unverified pre-observation time was incident-free. PegScore still
-requires at least 7 days after excluding unknown event spans. If none of those anchors exists, a coin with depeg events falls back to the
-earliest event; a coin with no anchor and no events returns `pegScore = null`.
-
-The API also computes a coverage-aware 90-day companion window. Its denominator starts at the later of 90 days ago
-or the tracking anchor, and it excludes replay rows audited as false positives or disputed. The result reports
-observed days, incident count, raw threshold-crossing count, peg percentage, and whether the window is coverage-limited.
-
-**Magnitude floor**: Every depeg event carries a minimum severity penalty proportional
-to its peak deviation, regardless of how brief. This prevents hundreds of short
-high-magnitude depegs from being scored as nearly free.
-
-**Active depeg penalty**: Floor of 5, scales at `|peakBps| / 50`, capped at 50.
-A 500 bps currently observed depeg costs 10 points; 2500+ bps hits the cap. An open lifecycle alone cannot activate this penalty: a recorded trusted off-peg observation must have no explicit gap and be no older than 1200 seconds. Historical peaks still contribute the magnitude floor and spread even when current coverage is unavailable.
-
-Returns `null` if fewer than 7 known days remain after subtracting unknown event spans; occupancy is also `null` if no known time remains. The legacy tracking-age field still reports the full anchor span. The 7–30 day "Early score" label described on /methodology and /depeg is not currently rendered.
+- `false_positive` and `disputed` events are excluded. `no_data` remains eligible
+  here but is excluded by DDR's separate policy. Unknown non-null verdicts fail
+  closed; null legacy verdicts remain eligible. Low-confidence events retain
+  occupancy impact with half-weight severity/spread; quality counters expose this.
+- `coinTrackingStart()` honors reviewed replay/continuous-live coverage first,
+  otherwise launch date, then the earliest supply or durable valid-price anchor.
+  Without these, the earliest event is the fallback; no anchor or events means NR.
+  An assumed age anchor does not prove earlier incident-free coverage.
+- Scoring uses the four-year clamp and requires seven known days after unknown
+  event spans are removed. Fully blind occupancy is null, never 100% at peg.
+- The 90-day companion starts at the later of its window boundary or tracking
+  anchor and reports observed days, incidents, threshold crossings, peg percentage
+  and coverage limitation under the same audit exclusions.
+- An open lifecycle alone cannot activate the current-depeg penalty: it needs a
+  trusted off-peg observation, no explicit gap and age ≤1200 seconds. Historical
+  observed peaks still contribute severity/spread when current coverage is unavailable.
 
 ## Edge Cases & Guardrails
 

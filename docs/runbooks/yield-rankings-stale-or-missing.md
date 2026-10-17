@@ -19,15 +19,13 @@ Rankings, PYS, provenance, and detail panels may be stale or unavailable. Histor
 
 Start with the [shared read-only Yield Health checks](./yield-health.md#first-checks), focusing on ranking freshness and `sync-yield-data` metadata and leases. Also check `/status/` for public cache/probe impact and the admin Endpoint probes for `/api/yield-rankings`, then read `GET https://api.pharos.watch/api/yield-rankings`. Use [Source Decision Evidence](#source-decision-evidence) below for generation and per-asset queries.
 
-Inspect `_meta` using the [response-time freshness contract](../yield-intelligence.md#persistence-and-publication) and [wire fields](../yield-intelligence.md#public-wire-contract); compare publication-age status with the [operator threshold table](./yield-health.md#threshold-table). Source and anchor aging is independent: publishing a new cache does not refresh upstream observations.
+Use the [publication contract](../yield-intelligence.md#persistence-and-publication), [wire fields](../yield-intelligence.md#public-wire-contract) and [operator thresholds](./yield-health.md#threshold-table) to compare response-time `_meta`, source/anchor age and independent safety age. Inspect `metadata.reason` separately from `metadata.quality.reasons` / `advisoryReasons`.
 
-For publication completion versus input-quality findings and the degraded streak, use the [publisher contract](../yield-intelligence.md#persistence-and-publication). Inspect concrete `metadata.quality.reasons` / `advisoryReasons` and `metadata.reason`, not a removed top-level `fallbackMode`.
-
-Check `freshness:yield-data` against `yield-rankings`: sentinel `generationId` / `updated_at` must match rankings `publication.generationId` / publication time after any applied publication, even with quality findings. `/api/status` and `/api/health` publish yield `generationId` / `publishedAt`, or null for legacy/fallback evidence. Do not confuse served yield age with the last clean run or the independent safety clock.
+Readback must match `freshness:yield-data` generation/time to rankings `publication.generationId` / publication time, including applied publications with quality findings. Status/health generation/time may be null for legacy/fallback evidence; last clean cron time is not served publication age.
 
 ## Source Decision Evidence
 
-`GET /api/yield-source-decisions`, the admin-only read path that joined generations and decisions in one response, was retired on 2026-08-09. Every table it read is unchanged and still written by each publication run, so the same evidence is assembled from the `yield_publication_generations` and `yield_source_decisions` snippets in [Read-Only D1 Snippets](#read-only-d1-snippets) below, plus the typed alternates for one asset:
+There is no `/api/yield-source-decisions` endpoint. Assemble bounded evidence from the [shared generation SELECT](./yield-health.md#read-only-d1-snippets), the decision queries below, and typed alternates for one asset:
 
 ```sql
 SELECT generation_id, stablecoin_id, alt_source_key, alt_yield_source,
@@ -38,8 +36,7 @@ WHERE stablecoin_id = '<stablecoin_id>'
 ORDER BY recorded_at DESC, alt_source_key ASC;
 ```
 
-Filter generations by `state IN ('staged', 'published', 'failed')` to reproduce the endpoint's `state` filter. Keep result sets small; the retired endpoint capped both generation and decision reads at 25 rows for a reason.
-`failure_reason` on generation rows uses a stable vocabulary; besides ordinary `failed` publishes, a persist-stage abort finalizes the batch as `aborted`, and a staged row older than one hour is pruned to `failed` / `abandoned-staged` by the retention rule.
+Keep generation/decision reads bounded (normally 10/25 rows) and distinguish staged, published and failed state. The [publication contract](../yield-intelligence.md#persistence-and-publication) owns abort, abandoned-staging and losing-generation semantics.
 
 ## Read-Only D1 Snippets
 
@@ -67,12 +64,7 @@ ORDER BY updated_at ASC
 LIMIT 20;
 ```
 
-```sql
-SELECT generation_id, started_at, state, ranking_count, source_row_count, best_row_count, failure_reason
-FROM yield_publication_generations
-ORDER BY started_at DESC
-LIMIT 10;
-```
+For generation identity, state, counts and `failure_reason`, run the [shared generation SELECT](./yield-health.md#read-only-d1-snippets), newest 10 rows, alongside the asset-specific queries below.
 
 ```sql
 SELECT stablecoin_id, selected_source_key, selected_confidence_tier, selected_data_source,
@@ -95,7 +87,7 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 
 `/yield/` showing every row as Safety NR — blank scatter chart, `—` hero PYS, zeroed risk-tolerance bands — while APYs still populate is the *safety hydration* failure mode, not a rankings-cache failure. The read path hydrates safety from the live V9 publication only when the identity stamped into the `yield-rankings` cache is evaluator-compatible with it (`safetyScorePublicationIdentitiesAreComparable`). Every scoring deploy rotates the evaluation-build digest, so a mismatch window is expected after each rollout until the next hourly `sync-yield-data` publish.
 
-Since 2026-08-19 the API bridges that window itself: an incompatible or unavailable live publication can use the cached payload's own publish-time safety values (`yield-safety-hydration-stale`, `provenance.liveSafetyHydration.fallback: "publish-time-snapshot"`). The 24-hour stale-coherent budget applies independently to yield and safety evidence publications; missing safety time is not refreshed from cache time. A usable fallback alone does not emit an HTTP `Warning`, but publication aging still does above the two-hour boundary.
+An incompatible or unavailable live publication can use publish-time safety (`yield-safety-hydration-stale`, `provenance.liveSafetyHydration.fallback: "publish-time-snapshot"`) only within the [original-clock failure contract](../yield-intelligence.md#failure-semantics). Missing safety time is not renewed from cache time. Fallback alone emits no HTTP Warning; publication aging still does above two hours.
 `provenance.liveSafetyHydration.reason` joins every applicable reason, including the upstream snapshot's own cause. Fallback coverage does not count `cached-publish` safety merely because a stored score exists; qualifying non-default `opportunity-safety` rows still count under `countRowSafetyCoverage`.
 
 Investigate only when `/api/health` is `degraded` with a `yield-safety-unrated-serving:<reason>` warning — that means the public surface is actually serving NR safety:
@@ -124,11 +116,9 @@ Comparability requires equal model, schema version, methodology version, `evalua
 - `sync-yield-data` is stale, failing, or stuck behind an active lease.
 - The cache publication guard skipped overwrite because the new payload failed schema validation, had duplicate IDs, or shrank severely versus the previous cache.
 - Core inputs were degraded: safety snapshot coverage below threshold, retained/stale benchmark fallback, unavailable DeFiLlama pools, deterministic on-chain outage without alternative coverage, or supplemental source loss reducing coverage.
-- D1 rows were staged but cache publication failed or CAS-skipped because a newer cache already exists; the generation remains `failed`, public cache stays on the previous good generation, and generation-aware history rows remain hidden.
-  A compare-and-swap skip now logs a `publication-skipped` event and reports the progress stage `publication-skipped` instead of `publication-complete`; the previous published generation is retained.
-
-- The run resolved no yield-bearing coins and returned `degraded` with metadata reason `no-yield-bearing-coins` — an empty cohort is no longer a healthy run.
-- No usable published Safety Score V9 generation exists for the run: either nothing is readable, or the publication is held and its accepted generation has left the stale-coherent window. The run defers before source resolution with metadata reason `safety-snapshot-unavailable:<upstream reason>` — for example `safety-snapshot-unavailable:v9-publication-held` — and carries `safetySnapshotHeld` plus `acceptedPublicationAgeSeconds`. An unusable snapshot forces `NR` on every evaluated row, so the run cannot publish a ranking row: yield sources, DL pools, and publication are not implicated, and the previous published generation stays intact. A *held* publication inside the window is the opposite case, not this one: the run publishes against the accepted generation the report-card route still serves and reports `safety-snapshot:v9-publication-held` as a degradation reason.
+- Staged rows and `publication-skipped` progress/event evidence indicate schema/cache/CAS failure; compare the winning published generation under [publication semantics](../yield-intelligence.md#persistence-and-publication), never promote losing rows.
+- `no-yield-bearing-coins` is a degraded empty-cohort failure, not success.
+- `safety-snapshot-unavailable:<upstream reason>` defers before source resolution, preserving the prior generation. Inspect `safetySnapshotHeld` and `acceptedPublicationAgeSeconds`: a held accepted generation inside budget is usable and reports an advisory instead, while sparse coverage remains a separate quality finding.
 - Authoritative history publication cutoff lookup failed. Readable history remains available with `_meta.status: "stale"`, `reason: "publication-cutoff-unavailable"`, and `Cache-Control: no-store`, even if cache metadata supplies a fallback cap. An unavailable authority is not a fresh history claim.
 
 ## Remediation
@@ -138,7 +128,7 @@ Comparability requires equal model, schema version, methodology version, `evalua
 - If metadata shows `reason: "previous-yield-rankings-cache-invalid"` or publication guard failure, do not delete the cache blindly. Preserve the last good payload for rollback/debugging and identify whether the failure came from payload schema, severe shrink, duplicate ranking IDs, or a generation `failure_reason`.
 - For `metadata.reason: "safety-snapshot-unavailable:<reason>"`, inspect upstream `report-cards:v9`, `report-cards:v9:publication-health`, and producer runs. Yield defers until accepted evidence is usable. `safety-snapshot-held` in `metadata.quality.advisoryReasons` instead means publication used the accepted generation inside its budget; actual sparse coverage is a separate quality finding.
 - If the degraded reason points to benchmarks, use [`yield-benchmark-fallback-stale.md`](./yield-benchmark-fallback-stale.md).
-- If the degraded reason points to deterministic on-chain cooldown or all-fail state, use [`yield-deterministic-cooldown.md`](./yield-deterministic-cooldown.md).
+- For deterministic all-fail/cooldown evidence, follow [Deterministic All-Fail Cooldown](./yield-health.md#deterministic-all-fail-cooldown).
 - If supplemental source coverage dropped, use [`yield-supplemental-snapshot.md`](./yield-supplemental-snapshot.md).
 - Coverage reasons `yield-publication:coverage-regression:<tracked|opportunity|total>` are non-blocking alarms, including direct-to-modeled substitution. Do not mistake them for a held generation. Empty total, total below `ceil(previous * 0.4)` for a prior count of at least five, and common-input holds still retain the previous publication.
 

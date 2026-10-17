@@ -55,7 +55,7 @@ function jsonOk(body: unknown): Response {
  * read-modify-write counters are not atomic across isolates/colos. It is
  * reserved before the canonical recomputation so over-quota requests never
  * reach the expensive work, and refunded when that recomputation fails.
- * Accepted residual risk and KV cost ceiling: see docs/screener-picker-page.md.
+ * Accepted residual risk and KV cost ceiling: see docs/screener-page.md#snapshot-sharing.
  */
 const POST_RATE_LIMIT_WINDOW_MS = 60_000;
 const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;

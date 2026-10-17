@@ -36,7 +36,7 @@ An unresolved mechanism review preserves delisted, variant, credit-fund and NAV/
 
 An in-scope asset must make a stable-value claim that users can test through an ordinary transfer, trade, redemption, or modeled NAV path. It must also have a distinct, verifiable identity and enough public evidence to explain the issuer, backing, peg mechanism, and holder exit.
 
-Active additions and pre-launch promotions must pass the existing runtime price and market-cap gate documented in [Adding a Stablecoin](./process/adding-a-stablecoin.md#1a-hard-runtime-data-gate-for-active-assets). The research packet must identify an accepted price path and a positive circulating-supply or market-cap path. The static catalog check also verifies that active metadata identifies a supported cache-admission path. These checks are process and code invariants; there is no separate admission-receipt registry.
+Before active admission or pre-launch promotion, reviewers must demonstrate a fetchable current price and a positive circulating-supply or market-cap path for the exact asset. The research packet records both sources and observations; catalog validation separately checks that the metadata identifies a supported live-data path. A filled profile or static page alone does not establish admission, and there is no separate admission-receipt registry.
 
 The following are out of scope:
 
@@ -79,7 +79,7 @@ Only active rows enter ordinary live producers and score recomputation. Quaranti
 
 Quarantine is operational, not punitive. A quarantine review records `changedAt`, a concrete reason, and `reviewBy`. The review date creates an explicit manual follow-up; extensions require another dated review. Reactivation requires a positive supply or market-cap path, the normal active-admission checks, and a new lifecycle review. Missing price coverage alone is worked as a pricing issue while the asset remains active.
 
-JLTXX's `bootstrapForSupplyAdmission` authorization expired at **2026-10-10T00:00:00Z** and was removed without re-authorization. Removal fails closed: JLTXX remains quarantined, excluded from ordinary supply and reserve producers, and ineligible for automatic prerequisite recovery. It preserves semantic fingerprints and consumed attempts; retained evidence and the separate operator-only staged capture do not approve admission. Re-admission still requires reviewed legal/native-share perimeter and decimals, pinned native shares, matched reserve attempt, reviewed NAV/block skew, fresh identity-bound CUSIP 46655R119/class 4397/JLTXX NAV/class assets under five-day source/48-hour fetch gates, ≤0.5% scope reconciliation, runtime price/market-cap PASS and an explicit lifecycle review. Class AUM is not circulating market cap, reserve allocation or executable capacity.
+Reserve-only bootstrap or staged capture never authorizes listing. Expiry/removal fails closed without resetting consumed attempts or refreshing retained evidence. Re-admission still requires reviewed legal/native-share identity and amount encoding, matched and current supply/reserve/NAV observations within the source's freshness, block-skew and reconciliation gates, a runtime price/market-cap PASS and an explicit lifecycle review. Class assets are not circulating market cap, reserve allocation or executable capacity.
 
 An expired authored bootstrap field fails `check:stablecoin-data` until removed or explicitly re-authorized from reviewed source evidence. Recovery exposes `supplyAdmissionBootstrapExpired` IDs even under producer-priority or lease deferral. These diagnostics withhold expired authorization; they do not reopen collection, reset a consumed fingerprint or approve listing.
 
@@ -87,7 +87,7 @@ A missing live price does not by itself move an active asset to quarantine or de
 
 Delist when the instrument itself fails scope, including account-only balances, private contractual-par notes, misleading provider artifacts, or assets without a meaningful transferable or redemption claim. A delisted record requires a dated reason and public source.
 
-Freeze only a previously active stablecoin that has effectively ended or failed and whose historical market record belongs in the cemetery. [Freezing a Tracked Stablecoin](./freezing-stablecoins.md) owns that procedure.
+Freeze only a previously active stablecoin that has effectively ended or failed and whose historical market record belongs in the cemetery. Record the freeze date and sourced obituary, preserve its identity and historical data as a read-only archive, and remove it from live collection and aggregates.
 
 ## Ongoing Runtime Review
 
@@ -131,9 +131,9 @@ For a full cemetery removal authorized by the lifecycle owner, remove the catalo
 
 A curated cemetery record in `shared/data/dead-stablecoins.json` follows the cemetery's owner-approved rules:
 
-- **Inclusion.** A new record needs a public market and a primary public source that documents its failure or discontinuation (an issuer or protocol announcement, governance record, official docs or status page, regulator, court or registry filing, or on-chain record); reputable press may be linked only when it documents the same event, and market-data listings, provider "ended" markers, launch or fundraising articles and general wikis never qualify. There is no size floor; peak market cap is recorded when known. Records curated before 2026-10 do not all meet this bar; [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record) describes what the page claims for the archive as a whole.
+- **Inclusion.** A new record needs a public market and a primary public source that documents its failure or discontinuation (an issuer or protocol announcement, governance record, official docs or status page, regulator, court or registry filing, or on-chain record); reputable press may be linked only when it documents the same event, and market-data listings, provider "ended" markers, launch or fundraising articles and general wikis never qualify. There is no size floor; peak market cap is recorded when known. Older archive records do not all meet this stricter bar: each links a public source, but some link the best available context for a coin that faded without an announcement. The archive as a whole must not be described as primary-source evidence.
 - **Primary cause.** Each record carries one primary cause: the root reason the coin failed or its issuance and operation ended, whether or not it lost its peg. Triggers such as runs, exploits or orders are described in the obituary.
 
-Every new curated record carries `recordedAt`, the UTC `YYYY-MM-DD` date on which it entered Pharos (not the death date), and a `mechanismArchetype` describing how the coin was designed to hold its peg. [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record) owns the full field contract.
+Every new curated record carries `recordedAt`, the UTC `YYYY-MM-DD` date on which it entered Pharos (not the death date), and a `mechanismArchetype` describing how the coin was designed to hold its peg. Retain a stable identity, sourced obituary and valid death date; omit peak market cap when reliable evidence is unavailable rather than recording zero.
 
-The complete implementation procedure for new assets is [Adding a Stablecoin](./process/adding-a-stablecoin.md). Catalog structure and generated artifacts are documented in [Stablecoin Data Registry](./stablecoin-data.md).
+For a new asset, complete identity and source research, classify its instrument and lifecycle, pass the active-admission gate when applicable, and record each editorial or downstream-coverage decision or intentional gap. Update the catalog and listing decision together, regenerate their derived artifacts, validate the resulting lifecycle and live-data coverage, and verify the deployed public surfaces.

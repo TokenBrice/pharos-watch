@@ -1,182 +1,39 @@
 # Feedback Pipeline
 
-In-app feedback collection that routes all submissions to GitHub Issues.
-
----
-
-## Overview
-
-The feedback pipeline has four layers:
-
-1. **`FeedbackButton`** — floating desktop/global trigger rendered in the root layout
-2. **`MobileUtilityDock`** — mobile-only dock that can also open the feedback modal
-3. **`FeedbackModal`** — dialog with a type selector, context banner, and form fields
-4. **`POST /api/feedback`** — Cloudflare Worker endpoint that validates, rate-limits, and forwards to GitHub
-
-Two contextual triggers also mount `FeedbackModal` directly with `defaultType="data-correction"` and a `stablecoinId`: the stablecoin detail hero (`src/app/stablecoin/[id]/detail-content.tsx`) and the Show Your Work panel's "Discrepancy? Report it" link (`src/components/show-your-work-panel.tsx`). They are the only entry points that attach a stablecoin, so they are the only ones that reach auto-verification.
-
-Inside the worker route, the handler is intentionally split into focused modules:
-
-- `worker/src/api/feedback/request.ts` for JSON parsing, business-rule validation, canonical ID normalization, and rate-limit / env policy checks
-- `worker/src/api/feedback/verification.ts` for auto-verification snapshots from the normalized stablecoins cache payload
-- `worker/src/api/feedback/submission.ts` plus `github.ts` / `format.ts` for GitHub routing and payload assembly
-
----
+In-app feedback routes to public GitHub Issues, not a private support inbox. `worker/src/api/feedback/` separates request/env policy, verification and GitHub submission/formatting. The request schema and API reference own validation/HTTP details, not copied prop/SQL/title tables here.
 
 ## Frontend Components
 
-### `FeedbackButton` (`src/components/feedback-button.tsx`)
+`FeedbackButton`, `MobileUtilityDock` and `FeedbackModal` are global/contextual entrypoints. Global triggers are absent on `/` and feedback is hidden on `/api/` so key requests cannot enter public Issues. Stablecoin hero and Show Your Work contextual triggers attach a canonical stablecoin for data-correction verification; global feedback does not.
 
-A small, quiet fixed-position ghost button (32px tall, muted text on the background surface, no brand fill) mounted globally in `src/app/layout.tsx`, shown on `sm+` viewports (`hidden ... sm:flex`), at `bottom-4 right-4 z-50`, so it stays discoverable without covering content or out-ranking page data. It returns `null` on `/` and `/api/`, and opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` returns `null` on `/`; on `/api/` it retains scroll-to-top but omits feedback so API-key requests do not enter public GitHub issues.
+The accessible dialog collects bug, data-correction or feature-request context and displays server errors inline. Optional contact handles are published in the resulting issue; disclose this before submission. A successful write shows thank-you state. Honeypot input is unfocusable/hidden from accessibility; nonempty traps are silently accepted but discarded.
 
-```tsx
-<FeedbackButton />
-```
-
-### `MobileUtilityDock` (`src/components/mobile-utility-dock.tsx`)
-
-Mounted globally in `src/app/layout.tsx` alongside `FeedbackButton`.
-
-- Mobile only (`sm:hidden`)
-- Shows a compact, neutral (card-surface, muted glyph) feedback trigger after modest scroll depth
-- Opens the same `FeedbackModal` component with default type `"bug"`
-
-### `FeedbackModal` (`src/components/feedback-modal.tsx`)
-
-A shadcn `Dialog` with three feedback modes selected via a segmented tab control.
-
-**Props:**
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `open` | `boolean` | — | Controlled open state |
-| `onOpenChange` | `(open: boolean) => void` | — | Open state callback |
-| `defaultType` | `FeedbackType` | `"bug"` | Pre-selected feedback type |
-| `stablecoinId` | `string` | — | Passed to the API for auto-verification |
-| `stablecoinName` | `string` | — | Shown in the context banner |
-| `pegValue` | `string` | — | Shown in the context banner |
-
-**Feedback types:**
-
-| Value | Label | Fields |
-|-------|-------|--------|
-| `"bug"` | Bug Report | Title (required), Description |
-| `"data-correction"` | Data Correction | Description, Expected Value (optional) |
-| `"feature-request"` | Feature Request | Title (required), Description |
-
-**Context banner** — when `stablecoinName` or `pageUrl` is available, a muted banner above the form shows the stablecoin name, current value, and current page path. This gives maintainers the submission context without users needing to copy-paste it.
-
-**Validation (client-side):**
-
-- Description: 10–2000 characters
-- Title: 3–100 characters (required for `bug` and `feature-request`)
-- Contact handle (optional): empty, or 2–100 characters
-- Submit button is disabled until all three pass
-
-**Honeypot:** a hidden `website` input (off-screen, `tabIndex=-1`, `aria-hidden`) is sent as an empty string. If the worker receives a non-empty `website` value, the submission is silently accepted but discarded.
-
-**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json` and a collision-resistant `Idempotency-Key`. The modal retains the same key when retrying the same serialized payload, except it clears the key on any HTTP `500` response, including an explicit GitHub rejection or a pre-execution idempotency-reservation failure. A changed payload also creates a new key. Ambiguous execution outcomes (`503`) and network failures retain the key. On Pharos production and Pages preview hosts the request resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. Optional contact handles are echoed publicly in the created GitHub issue. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
-
----
+Submit a collision-resistant Idempotency-Key. Retry the same serialized payload with the same key; changed payload gets a new key. HTTP 500 clears it (explicit GitHub rejection or pre-execution reservation failure); network failures and ambiguous 503 retain it. Production/preview uses the public API lane; local/explicit base settings follow `src/lib/api.ts`, not route-specific URL guesses.
 
 ## API Endpoint
 
-### `POST /api/feedback`
+[POST /api/feedback](./api-reference.md#post-apifeedback) owns authoritative request, validation, headers and error semantics. Valid requests require an idempotency key. Conflicting/in-flight reuse can return 409. Unknown GitHub execution returns 503 with `X-Execution-Certainty: unknown`; replaying the same key replays uncertainty without invoking GitHub again. Reconcile that outcome before submitting a new key: never turn timeout ambiguity into duplicate issues.
 
-The authoritative request, validation, idempotency, response-header, and error contract lives in [API Reference: `POST /api/feedback`](./api-reference.md#post-apifeedback). In particular, otherwise-valid submissions require an `Idempotency-Key`; conflicting or in-flight reuse can return `409`, while an ambiguous GitHub execution outcome returns `503` with `X-Execution-Certainty: unknown`. Retrying that outcome with the same key replays the unknown result without invoking GitHub again; reconcile it before submitting a new key. This document owns the UI and internal processing flow, not a second HTTP contract copy.
+### Rate limiting And Privacy
 
-#### Rate limiting
+[Worker/API limits](./worker-and-api-limits.md) generated feedback block and `shared/lib/ops-limits.ts` own numeric window/budget/retention. `worker/migrations/0000_baseline.sql` owns D1 schema; do not mirror SQL here.
 
-Implemented in D1 via the `feedback_rate_limit` table. Logic:
+Use trusted `CF-Connecting-IP`, falling back to unknown, never client-controlled X-Forwarded-For. Store only the salted truncated SHA-256 bucket, not raw IP. Admission is atomic; exhausted budget returns 429 and old buckets prune nonblocking. Current submissions write directly to GitHub, not a durable per-submission D1 store. Any future persistence needs an explicit privacy/retention contract first.
 
-1. The client IP is taken from `CF-Connecting-IP`, falling back to `"unknown"`. `X-Forwarded-For` is deliberately not consulted — trusting that client-controlled header would let a caller rotate the rate-limit bucket.
-2. The IP is hashed: `SHA-256(ip + FEEDBACK_IP_SALT)`, truncated to 32 hex characters.
-3. A single SQL statement atomically inserts only when the 10-minute count is below 3:
-   - `INSERT INTO ... SELECT ... WHERE (SELECT COUNT(*)) < 3`
-4. If no row is inserted, the endpoint returns `429 Too Many Submissions`.
-5. Rows older than 3600 seconds are pruned in a non-blocking fire-and-forget call.
+### Auto-verification
 
-**D1 schema** (`feedback_rate_limit` is created by `worker/migrations/0000_baseline.sql`):
+Only a data correction with valid attached stablecoin can verify. Read normalized stablecoins cache, nullable USD supply, price, cached peg type/reference and producer age. `verification.ts` owns arithmetic and shared threshold/reference helpers; DefiLlama list supply is already USD. Missing supply is explicitly unavailable, not zero; a finite observed zero remains measured. Commodity normalization uses reviewed metadata, and rate source is disclosed.
 
-```sql
-CREATE TABLE IF NOT EXISTS feedback_rate_limit (
-  ip_hash      TEXT    NOT NULL,
-  submitted_at INTEGER NOT NULL   -- Unix timestamp (seconds)
-);
+- `verified: confirmed`: a positive cached price is at/beyond the shared depeg threshold. This confirms observed deviation, not that the user's asserted correction is proven true.
+- `verified: unconfirmed`: missing/nonpositive price, missing reference or deviation below threshold; never proof the report is wrong.
+- `verified: pending`: verification did not run/complete, including no attached asset, missing cache row or unavailable cache.
 
-CREATE INDEX IF NOT EXISTS idx_feedback_rate_limit_ip
-  ON feedback_rate_limit(ip_hash, submitted_at);
-```
+Embed a dated-at-submission snapshot in the issue. Cached rates may include fallbacks; threshold/rate-source lookup may use tracked peg currency only when cached peg normalization fails. Snapshot age/evidence must not be presented as a live independent check.
 
-The current runtime path creates the GitHub issue directly and does not persist one row per submission. If durable feedback persistence returns, define its privacy model and retention window before re-enabling writes.
+### GitHub Triage
 
-#### Auto-verification (data corrections)
-
-When `type === "data-correction"` and a valid `stablecoinId` is provided, the worker pulls the `stablecoins` cache row from D1 and computes a snapshot:
-
-| Output | Source |
-|--------|--------|
-| Cached price | `coin.price` from the normalized stablecoins cache payload (`N/A` when absent) |
-| USD circulating market cap | `getCirculatingRawOrNull(coin)` from the normalized cache payload; DefiLlama list values are already USD-denominated. Always emitted: null renders `N/A (supply unavailable)`; observed zero still formats |
-| Peg deviation | `((price - pegReference) / pegReference) * 100` using the cached coin's peg type |
-| Peg reference | `getPegReference(coin.pegType, rates, meta?.commodityOunces)`, annotated with its rate source (`FX`, `median`, or `fallback`) |
-| Depeg threshold | `getDepegThresholdBps()` for the normalized peg type, in bps |
-| Cache age | `now - cache.updatedAt` in seconds |
-| Verification result | `⚠️ Confirmed` or `✅ Unconfirmed`, matching the label below |
-
-The verification result produces one of three GitHub labels:
-
-| Label | Meaning |
-|-------|---------|
-| `verified: confirmed` | A positive cached price is at or beyond the configured depeg threshold: 100 bps for USD pegs or 150 bps for non-USD pegs |
-| `verified: unconfirmed` | Price is absent/non-positive, no peg reference could be derived for the tracked peg (deviation is then reported as `N/A`), or the absolute deviation is below the applicable threshold — the data is not confirmed wrong |
-| `verified: pending` | Verification did not run or could not complete — no stablecoin was attached to the submission, the coin is missing from the cache payload, or the cache was unavailable at submission time |
-
-The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot (at time of submission) ---**` section.
-
-Peg references use the cached coin's peg type and `derivePegRates()` rates, including cached fallbacks; tracked metadata supplies `commodityOunces`. Only threshold/rate-source lookup falls back to tracked peg currency when peg-type normalization fails.
-
-#### GitHub routing
-
-| Type | Destination | Labels |
-|------|-------------|--------|
-| `"bug"` | GitHub Issue | `["bug"]` |
-| `"data-correction"` | GitHub Issue | `["data-correction", "<verified-label>"]` |
-| `"feature-request"` | GitHub Issue | `["feature-request"]` |
-
-**Issue title format:**
-
-| Type | Title |
-|------|-------|
-| `"bug"` | `[Bug] <title>` |
-| `"data-correction"` | `[Data Correction] <optional stablecoinName prefix><first 60 chars of normalized description>` with `...` only when the normalized description exceeds 60 characters |
-| `"feature-request"` | `[Feature Request] <title>` |
-
-**Issue body fields:**
-
-- Type
-- Stablecoin (name + ID, if provided)
-- Page URL
-- Current value (`pegValue`, if provided)
-- Submitter contact (`contactHandle`, if provided)
-- Description
-- Expected value / source (`expectedValue`, if provided)
-- Auto-verification snapshot (data corrections only)
-- Footer: `*Submitted via Pharos feedback widget*`
-
-User-supplied strings are normalized before the GitHub write:
-
-- `stablecoinName` and `pageUrl` have newlines stripped and length caps applied in `worker/src/api/feedback/format.ts`
-- issue titles are length-validated by the request schema / handler rules
-- `description` and `expectedValue` are trimmed, CRLF/NUL-normalized, `@` mentions are defanged as `@ `, and long backtick runs are escaped before the values are placed in fenced text blocks
+Bug/feature issues receive their type labels; data corrections also receive the verification label. `format.ts` owns canonical title/body assembly and caps. Normalize newlines, trim CRLF/NUL, defang mentions and escape long backtick runs before fencing user text; user input must not create unsolicited mentions or break issue structure. Preserve asset/page/value/expected-source/contact context where supplied, with public-contact disclosure.
 
 ## Environment Variables
 
-Set in `worker/wrangler.toml` (non-secret) or via Cloudflare dashboard / `wrangler secret put` (secrets):
-
-| Variable | Type | Required | Description |
-|----------|------|----------|-------------|
-| `GITHUB_PAT` | Secret | Yes | Personal access token with `repo` scope (write Issues); the same token also dispatches the Safety Score map workflow ([Safety Score Map](./safety-score-map.md#provisioning)) |
-| `FEEDBACK_IP_SALT` | Secret | Yes | Random string used to hash IPs before storage |
-
-Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503.
+`GITHUB_PAT` and `FEEDBACK_IP_SALT` are required secrets; absence of either returns 503, never unsalted storage or fake success. The GitHub token also supports Safety Score map dispatch: [provisioning](./safety-score-map.md#provisioning) owns permissions. Worker config owns nonsecret settings; no secret values belong in docs or logs.

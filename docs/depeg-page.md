@@ -151,9 +151,7 @@ An absent live deviation or DEWS reading yields a neutral `unknown` status, neve
 known live, pending, floor, warning and danger states retain precedence. Nullable peg-health,
 DEWS and deviation metrics sort last in both directions, separately from observed zero.
 
-Its multi-column grid starts at `lg`, not `md`. The six minimum column tracks plus gaps need roughly
-820px, and a 768px viewport leaves rows about 734px, which clipped the last column with no horizontal
-access. Below `lg` the rows use the stacked card grammar, which preserves every field.
+The multi-column grid starts at `lg`; below it, stacked cards preserve every field.
 
 ### URL filter contract
 
@@ -169,12 +167,10 @@ Unrelated query parameters are preserved by the shared hook.
 
 ## Forecast Grading
 
-`DepegResolverReviewerModule` sits in a `#forecast-grading` section directly after the control
-board, **collapsed by default**; the collapsed state unmounts the module rather than hiding it, so
-the DOM cost goes with it. A `#forecast-grading` URL (on load or `hashchange`, including the hero's
-track-record link) opens it and re-aligns the anchor once the ledger mounts. An earlier layout
-placed it, collapsed, after the history handoff, where readers could not find it; an open ledger
-under the worklist then buried the board. Board-adjacent placement plus hash-open avoids both.
+`DepegResolverReviewerModule` sits in `#forecast-grading` directly after the control
+board, **collapsed by default** and unmounted while collapsed. A `#forecast-grading`
+URL (on load or `hashchange`, including the hero's track-record link) opens it and
+re-aligns the anchor once the ledger mounts.
 
 Its query is not gated by disclosure state: the hero needs `summary.headline`
 on first paint. DDR and DDRR feature flags gate the query, section, freshness
@@ -195,6 +191,23 @@ Indexability does not depend on the inline archive: `generateStaticParams()` in
 `src/app/depeg/[event]/page.tsx`, the per-event entries in `src/app/sitemap.ts`, and the archive
 route's own sitemap entry each stand alone. Keep the archive server-rendered — a client-fetched or
 JS-only list would silently drop the link hub.
+
+Permanent `/depeg/<event>/` pages cover confirmed events starting at or after
+2026-01-01 (`DEPEG_ARCHIVE_EPOCH_SECONDS`) with absolute peak deviation ≥5.0%,
+plus pinned authored pre-epoch incidents such as USDC 2023. The archive is grow-only:
+`sync-depeg-events.ts` carries previously published rows forward even if reclassification
+puts them below threshold and rejects disappearing slugs without the reviewed
+`--allow-archive-shrink` override. The release SEO gate also compares the deployed
+sitemap, including refresh-only routes absent from the checked-in snapshot. Every
+published URL must remain submitted or receive a direct 301 to its surviving
+submitted incident when DDR consolidates fragments. Reviewed artifact removals use
+the shrink override plus one-hop redirects in `public/_redirects`; follow
+[artifact removal](./runbooks/depeg-artifact-removal.md#removal-sequence).
+
+Events sharing a coin, UTC date and direction include their exact UTC start time in
+metadata, H1, metrics and adjacent navigation. Each has a factual synopsis and its
+canonical URL as `NewsArticle.@id`. Sub-threshold feed rows link to the stablecoin
+history anchor; the API, tracker, detail history and feeds retain the full event table.
 
 ---
 

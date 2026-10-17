@@ -341,10 +341,26 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       throw new Error(`Missing fact, card, or catalog source for active asset ${assetId}`);
     const openEntries = entriesById.get(assetId) ?? [];
     const supplyUsd = asset.supply.circulatingUsd;
+    // Preserve path-scoped context, but serialize each distinct context once.
+    // Repeating whole asset surfaces on every task makes output quadratic.
+    const currentFactContexts: Record<string, unknown> = {};
+    const contextRefsByScope = new Map<string, string>();
+    const contextForTask = (scope: string, buildContext: () => unknown) => {
+      let ref = contextRefsByScope.get(scope);
+      if (ref === undefined) {
+        const context = buildContext() ?? null;
+        ref = `V9C-${createHash("sha256").update(JSON.stringify(context)).digest("hex")}`;
+        currentFactContexts[ref] = context;
+        contextRefsByScope.set(scope, ref);
+      }
+      return { context: currentFactContexts[ref], ref };
+    };
     const factItems = openEntries.map((entry) => {
       const descriptor = descriptorForReason(entry.reasonCode, entry.path);
       const workType = workTypeForDescriptor(descriptor);
-      const context = descriptor.context(asset);
+      const { context, ref: currentFactContextRef } = contextForTask(
+        `fact:${JSON.stringify(entry.path)}`, () => descriptor.context(asset),
+      );
       const resolutionMode = resolutionModeFor(workType, entry, context);
       const claimGroupId = `${workType}:${assetId}`;
       allItems.push({ workType, resolutionMode, claimGroupId, taskSource: "compiled-fact-gap" });
@@ -387,7 +403,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         treatment: entry.treatment,
         critical: entry.critical,
         likelyTouchpoints: likelyTouchpoints(workType, source, context),
-        currentFactContext: context,
+        currentFactContextRef,
         existingEvidence,
         policyBinding: {
           queueAction: entry.action,
@@ -409,7 +425,9 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       .map((reason) => {
         const workType = reason.workType;
         const descriptor = WORK_TYPES[workType];
-        const context = descriptor.context(asset);
+        const { context, ref: currentFactContextRef } = contextForTask(
+          `score:${workType}`, () => descriptor.context(asset),
+        );
         const resolutionMode = scoreProjectionResolutionMode(workType, asset.archetype);
         // A card-aggregate reason exposes no component identity (wave-7
         // anomaly class: krwq/eur0): curation lanes cannot act on it without
@@ -459,7 +477,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
           treatment: "score-projection",
           critical: false,
           likelyTouchpoints: likelyTouchpoints(workType, source, context),
-          currentFactContext: context,
+          currentFactContextRef,
           existingEvidence,
           policyBinding: {
             queueAction: null,
@@ -513,6 +531,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       canonicalSupplyUsd: supplyUsd,
       sourceFiles,
       currentScore: cardScoreProjection(card),
+      currentFactContexts,
       missingDataSummary: {
         openItemCount: items.length,
         claimGroupCount: claimGroups.size,
@@ -542,7 +561,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   const claimGroupCount = new Set(allItems.map((item) => item.claimGroupId)).size;
   const warnings = mechanismOverlayCaptureDayWarnings(candidate.asOfSec);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     title: "Safety Score v9 missing-data registry",
     purpose: "agent-checklist-for-full-evidence-scoring",
     snapshot: {
@@ -575,6 +594,8 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         "Compiled fact tasks identify whether evidence is measured adverse, issuer-undisclosed, integration-missing, producer-failed, or method-unsupported. Score-projection-only tasks carry null because they have no compiled fact-gap responsibility.",
       pointInTimeWarning:
         "This registry is bound to one immutable production replay. Regenerate it after coordinated data batches; resolved task IDs disappear and new gaps receive new IDs.",
+      factContextBinding:
+        "Resolve each task's currentFactContextRef in its stablecoin's currentFactContexts table. Distinct path-scoped contexts are stored once by content digest; task routing and claim groups do not change.",
     },
     agentProtocol: {
       claim:

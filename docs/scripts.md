@@ -1,6 +1,6 @@
 # Scripts
 
-> **Agent navigation** — Grep `^##` / `^###` or a command name, then read only the matched section: [Overview](#overview) · [Map refresh](#safety-score-map-refresh) · [Daily social](#daily-social-posters) · [Operator CLI contract](#operator-cli-contract) (movement ledger, historical archive, DEX acceptance) · [Capture-time replay](#safety-score-capture-time-replay) · [D1 insights](#d1-insights-capture) (Telegram adoption) · [Routing index](#routing-index) (validation, artifacts, release, smoke, curation, direct tools) · [Operational notes](#operational-notes) (credentials, mutation, destinations, hook) · [Safe usage](#safe-usage-guidelines).
+> **Agent navigation** — Read the matching section, not the whole book: [Overview](#overview) · [Map refresh](#safety-score-map-refresh) · [Daily social](#daily-social-posters) · [Operator CLI contract](#operator-cli-contract) (ledger, archive, DEX acceptance) · [Capture-time replay](#safety-score-capture-time-replay) · [D1 insights](#d1-insights-capture) · [Routing index](#routing-index) (validation, artifacts, release, smoke, curation) · [Operational notes](#operational-notes) (credentials, mutation, destinations, workspace) · [Safe usage](#safe-usage-guidelines).
 
 ## Overview
 
@@ -38,9 +38,7 @@ For these scripts, `--dry-run` means no mutation: a command may read local state
 
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll an `process.argv` loop. The many existing hand-rolled parsers stay as they are; convert one only when that script is already being edited for another reason, so parser migration never becomes a standalone churn commit.
 
-`npm run measure:v9-resource -- --profile=compute|heavy-warm --runs=N` runs the offline V9 full-path Node diagnostic with current `post-p2` phases, heavy Wrangler alias/minification/name retention and Wrangler's installed esbuild. `--guard` requires complete phases, correctness/bytes and natural 128 MiB success, automatically enforcing the checked-in policy if present or explicitly reporting `policy: "unqualified"` if absent. An existing invalid/mismatched file fails closed. `--policy=PATH` additionally requires the file to exist. Without either flag, memory failures are diagnostic results; harness failures exit `1`, invalid arguments exit `2`. No remote reads/writes/deployments occur. See [V9 resource lane](./testing.md#v9-resource-lane) for the current approximately 119 MiB calibration blocker.
-
-The diagnostic entry is [`worker/scripts/measure-v9-resource.ts`](../worker/scripts/measure-v9-resource.ts), keeping Worker-source imports on the Worker tooling side of ADR-2. `npm run calibrate:v9-resource -- --runs=5` uses [`worker/scripts/calibrate-v9-resource.ts`](../worker/scripts/calibrate-v9-resource.ts) to collect five live+natural compute reports, print the policy diff and write `.tmp/safety-score-v9-resource/proposed-policy.json` only. It never applies the proposal or writes `.ci/`; policy changes require reviewed evidence and cannot exceed 112 MiB. A `--runs=1` smoke is unqualified.
+`measure:v9-resource`, `calibrate:v9-resource` and `test:v9-resource` are Worker-bound offline tools; [Testing: V9 resource lane](./testing.md#v9-resource-lane) is their sole guard, proposal-only calibration, qualification and failure-evidence contract. Read the supported entrypoint help for options; these tools neither deploy nor mutate remote state.
 
 `npm run ops:worker-memory -- [--from <timezone-qualified ISO> --to <timezone-qualified ISO>] [--out-dir <path>]` is a strict, read-only Cloudflare GraphQL collector for `stablecoin-heavy` and `stablecoin-api`; it mutates only local evidence files. Export `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN` (Account Analytics: Read) and **`CLOUDFLARE_ACCOUNT_ID` explicitly**, even if the ignored `.env.local` lacks the account ID. There is no account/token flag or OAuth discovery. Bounds are paired, increasing, non-future and ≤48 hours; default is the previous complete UTC day plus today, ending 900 seconds behind now. Help exits `0`, invalid usage `2`; heavy kills or unavailable/stale required evidence exit `1` **after retaining evidence**. Public kills and incomplete public broad samples are report-only initially.
 
@@ -51,44 +49,23 @@ Schema-v1 outputs are `report.json`, `report.md`, `samples.ndjson`, `exceeded-me
 | Verification CLI | Selection contract |
 | --- | --- |
 | `lint:changed` | Repeatable `--file <path>`, `--staged`, or `--base <ref> [--head <ref>]` are exclusive selection modes. Explicit file/staged modes override PR range environment. Without flags or PR range environment, selects staged, unstaged and untracked working-tree files. Deleted paths are skipped; staged selection still reads working-tree contents. Forward ESLint options after `--`. |
-| `check:focused` | Repeatable `--file`, `--staged`, or `--base` selects the authoritative file set forwarded to lint. `--plan-only` performs no checks. Unmapped paths report `routing-incomplete` and exit `1`, even in plan mode; an empty mapped plan reports `intentional-no-check`, not verification. Narrowed related-test plans fail when no tests are selected; cron/scheduler owner suites stay broad unless measured closure justifies narrowing. |
+| `check:focused` | Repeatable `--file`, `--staged`, or a `--base`/`--head` range (`--base-ref`/`--head-ref` aliases) selects the file set forwarded to lint. It synthesizes shared PR baseline checks plus exceptional authored ownership checks. `--plan-only` executes none; unmapped paths fail with `routing-incomplete`, mapped empty plans are not verification and zero related tests fails. |
 | `check:pr:static` | Retains the explicit base/head range for child lint; rejects `--staged` rather than silently discarding it. Use `check:focused -- --staged` for index-selected checks. |
-| `check:generated-artifacts` | Explicit uncheckable IDs, including mixed `--only` requests, fail before execution with lifecycle and generation guidance. Adaptive callers filter via the registry's shared checkability selector; empty plans skip rather than imply freshness. |
+| `check:generated-artifacts` | Automatic drift selection excludes `checkable: false` and `ciDriftCheck: false`. Explicit `--only` may check the latter, but any uncheckable ID rejects the entire request before execution. Empty automatic plans skip, not certify freshness. |
 
 ### Safety Score movement ledger
 
-`worker/scripts/safety-score-movement-ledger.ts` reports score or grade changes from the [publication journal](./report-cards.md#publication-journal-and-movement-attribution). Run from the repository root; recommended cadence is **weekly**, while the 120-day evidence window and pre-window baselines are still retained:
-
-```bash
-npx tsx worker/scripts/safety-score-movement-ledger.ts \
-  --from 2026-10-01 --to 2026-10-08 \
-  --output agents/safety-score-movements/2026-10-01-2026-10-08
-```
-
-`--from` / `--to` are required UTC `YYYY-MM-DD` dates; the window is `[from,to)` and at most 120 days. `--output` is a required local filename prefix; it creates parent directories and writes `<prefix>.md` and `<prefix>.json`. `--database` defaults to `stablecoin-db`. The script performs only remote D1 `SELECT`s through `createRemoteD1Client()` using Wrangler `--remote --command <SQL> --json`, never `--file` or production writes. It keyset-paginates change rows and attempts, loads each changed coin's latest retained pre-window baseline, and includes one attempt before/after the window for hold context. Failed/malformed query envelopes fail instead of becoming empty evidence.
+[`safety-score-movement-ledger.ts`](../worker/scripts/safety-score-movement-ledger.ts) reads the [publication journal](./report-cards.md#publication-journal-and-movement-attribution) with remote D1 `SELECT`s only, never production writes or file imports. Run its `--help` from the root for UTC half-open window, output and database options. Review weekly while the 120-day window and pre-window baselines remain retained; malformed query envelopes fail, never become empty evidence.
 
 The ledger counts only score/grade changes, not every compact diagnostic change. First sight without a prior retained baseline is reported in `missingBaselineCoinIds`, not counted as movement. Identity changes take precedence as `release` (non-comparable methodology/policy/build, **not causal proof**). Same-identity changes in pipeline-gap or partial-evidence state classify as `operational`. Persistent partial evidence remains context and does not override an included-pillar, peg, or cap movement; unexplained movement adjacent to a hold is operational. Otherwise the largest observed absolute pillar delta or pillar availability change supplies `data:<pillar>`, with all secondary/null deltas retained. Peg-only and cap-only changes have explicit labels; adjacent holds remain linked context. Remaining edges are `data:unattributed`. The JSON retains before/after compact cards, identities, lineage and hold codes; retained change-only observations cannot replace a full frozen-input replay or prove that missing edges did not occur.
 
 ### Safety Score historical capture archive
 
-`worker/scripts/export-safety-score-capture-archive.ts` reads the [accepted capture archive](./report-cards.md#accepted-capture-archive-and-historical-replay). Run from the repository root:
+[`export-safety-score-capture-archive.ts`](../worker/scripts/export-safety-score-capture-archive.ts) owns `list`, `boundary` and `export` syntax; use its `--help` from the root. All modes read D1 only; export reads signed R2 or supplied local object bytes and writes local artifacts. [Accepted capture archive](./report-cards.md#accepted-capture-archive-and-historical-replay) owns retention and artifact semantics; the [equivalence harness](./process/safety-score-equivalence-harness.md#historical-release-and-data-separation) owns restoration/replay.
 
-```bash
-npx tsx worker/scripts/export-safety-score-capture-archive.ts list \
-  --from 2026-10-01 --to 2026-10-08 --gaps
-npx tsx worker/scripts/export-safety-score-capture-archive.ts boundary \
-  --before-time 2026-10-08T12:00:00Z
-npx tsx worker/scripts/export-safety-score-capture-archive.ts export \
-  --generation '<generation_id>' --output agents/v9-captures/historical.raw.json \
-  --cards-output agents/v9-captures/historical.accepted.json
-```
+For intraday release comparison, use the exact deployment instant with `boundary --before-time`; date-only means UTC midnight. Identity boundaries are retrospective predecessors of already archived transitions, not future release markers, and missing archive rows cannot establish the last production generation. Export checks exact hash/bytes, schema, clocks and identities before emitting cache rows; the capture CLI must still admit the paired native envelopes. Optional decoded cards are not a full replay artifact.
 
-- All modes use read-only D1 `SELECT`s through `createWorkerD1Client()`, defaulting to remote `stablecoin-db`; `--local` selects Wrangler's local D1 instead, and `--database` selects another configured database. Failed/malformed envelopes fail closed. No remote writes or `--file` SQL are issued by this CLI.
-- `list` requires increasing UTC `YYYY-MM-DD` dates, includes `[from,to)`, and permits at most 180 days. JSON includes each index row's generation, clocks, methodology/policy/build identity, object key/checksum/bytes, and the uniform `180-day-captures-lifecycle` policy label. This names external account state: enabled rule `180d-capture-cleanup` on `pharos-measurements`, prefix `captures/`, 180-day deletion, verified **2026-10-08**. The migration/CLI do not create or continuously verify it. There are no hot/daily/boundary sampling tiers.
-- Optional `list --gaps` also reports retained **accepted** publication attempts in `[from,to)` with no archive index row, including unchanged accepted publications that have no change-only card journal entries. Each gap carries attempt/generation/clock and methodology/policy/build identity. It excludes held attempts and keyset-paginates evidence. The attempt journal is best effort and retained for 120 days: absent/pruned attempts, an index-present expired/missing object, and missing history outside that evidence window are not detected by this query. Empty `gaps` is not a complete archive-coverage certificate.
-- `boundary --before-time <instant>` returns the maximum archived publication clock strictly before a validated nonnegative integer Unix timestamp or ISO-8601 UTC timestamp ending in `Z` (seconds with optional one-to-three fractional digits). Use the exact deployment instant for intraday releases; `--before YYYY-MM-DD` still selects strictly before UTC midnight. The options are mutually exclusive. `--before methodology:<version>`, `policy:<sha256>` and `build:<sha256>` retrospectively return the predecessor of the most recent **already archived** transition into that identity, not a future release boundary. Missing predecessors fail; missing archive rows cannot establish the exact last production generation or release time. Ordering is `published_at,generation_id`, including deterministic timestamp ties.
-- `export` requires `--generation` and `--output`. It reads the indexed R2 object using the existing signed measurement client (`CLOUDFLARE_ACCOUNT_ID`, `R2_MEASUREMENTS_ACCESS_KEY_ID`, `R2_MEASUREMENTS_SECRET_ACCESS_KEY`), verifies exact object SHA-256/byte count, schema, index identity, paired retention clocks and the accepted cards' native codec/identity, then writes the one-successful-result/two-cache-row JSON shape consumed by `report-cards:capture-fixed-input --accepted-cache-export`. The capture CLI still verifies the base/delta envelopes and binding before restoring them; archive export does not substitute for that admission step.
-- Optional `--cards-output` writes the decoded accepted publication JSON, not its compressed cache envelope and not a full replay artifact. Optional `--source-dir` reads exact object bytes from `<dir>/<r2_key>` instead of R2; it needs no R2 credentials and works with either D1 target. Both output files must be distinct; parent directories are created.
+`list --gaps` exposes retained accepted attempts with no index row, including unchanged publications, not just card movements. The attempt journal is best effort and shorter-lived than object retention: absent/pruned attempts, missing objects with an index and unindexed orphans are not covered. Empty gaps is never a complete-archive certificate. External R2 lifecycle must be reverified under [release prerequisites](./deployment-process.md#first-heavy-deployment-prerequisites-adr-38); the CLI/migration neither creates nor continuously verifies it.
 
 The [historical release/data separation procedure](./process/safety-score-equivalence-harness.md#historical-release-and-data-separation) includes local D1 fixture loading and the explicit lightweight projections needed to compare accepted cards with replay output. Archive creation is best effort, starts when the writer is deployed, and can leave permanent failed/skipped gaps once mutable accepted rows are overwritten. `--gaps` makes retained journal-observable omissions visible; it does not repair them or discover unindexed R2 orphans. No historical captures are invented or backfilled.
 
@@ -97,17 +74,9 @@ The [historical release/data separation procedure](./process/safety-score-equiva
 
 `worker/scripts/dex-liquidity-acceptance-capture.ts` archives short-lived DEX operational evidence for offline acceptance reporting. **Capture daily, report weekly**: `cron_runs` is pruned after seven days, so a weekly-only pull has no safety margin. This is an operator cadence, not a deployed scheduler.
 
-```bash
-npx tsx worker/scripts/dex-liquidity-acceptance-capture.ts capture
-npx tsx worker/scripts/dex-liquidity-acceptance-capture.ts capture \
-  --from 2026-10-01 --to 2026-10-04 --out agents/dex-acceptance/2026-10-04
-npx tsx worker/scripts/dex-liquidity-acceptance-capture.ts report \
-  --input agents/dex-acceptance --from 2026-10-01 --to 2026-10-08
-```
+Use [`dex-liquidity-acceptance-capture.ts`](../worker/scripts/dex-liquidity-acceptance-capture.ts) `--help` for `capture`/`report` options and output defaults. Capture reads remote D1 only; overlapping trailing windows protect against source pruning. Report reads saved captures offline, rejects mixed databases, deduplicates run identities and requires seven complete UTC days.
 
-- **`capture`** reads remote D1 with the same read-only `--remote --command <SQL> --json` client (no `--file` or D1 mutation), default database `stablecoin-db`. Its default trailing three-day window gives overlapping opportunities before pruning; explicit increasing past windows may span at most seven days. Dates or timezone-qualified ISO timestamps are accepted. Default output is `agents/dex-acceptance/<UTC capture date>/`, resolved against the repository root; `--out` accepts another directory or an absolute path.
-- Each schema-v1 `capture-<timestamp>.json` preserves remote clock, database/window, exact SQL, local query time, raw Wrangler envelopes, row counts, query limits/truncation and failures. It captures daily history/flips, all publication/source-stage/discovery cron rows and prior productive version anchors, registry age/source/identity diagnostics, manifests, retained generation-row projections and current coverage. Registry/current reads are sequential live snapshots, **not an as-of transaction**. A failed/truncated query still writes the partial packet and exits unsuccessfully; an unavailable remote clock is fatal. Capture files use exclusive creation, not overwrite.
-- **`report`** is offline: recursively reads `capture-*.json` under `--input` (default `agents/dex-acceptance`), rejects mixed databases, deduplicates overlapping run IDs using the latest capture, and writes `scorecard-<from>-<to>.md` / `.json` into `--out` (default input directory). The default window is the seven complete UTC days ending at midnight on the latest capture date; explicit windows must also span exactly seven complete UTC days. `--database` belongs only to capture and `--input` only to report.
+Capture files are exclusive-create evidence packets with raw query envelopes, timing, limits/truncation and failures. Required-query failure/truncation retains partial evidence and exits unsuccessfully; missing remote clock is fatal. Sequential current/registry reads are **not** an as-of transaction.
 
 The report separates the **unchanged legacy handover targets** from **prospective evidence**. Legacy daily flips require both day endpoints strictly above $1M and strict `>1.5x` / `<0.5x` steps, bucketed by **day0**; the day1 endpoint is needed beyond the half-open report window. Prospective material moves use inclusive `>=1.25x` / `<=0.80x` **or** an absolute delta `>=$1M`, with separate eligible pair coin-day denominators, below-$1M/hourly return diagnostics, zero/new/missing-observation transitions, method/build cohorts, route funnel/selection/continuity, and active-catalog/observed/rated/score-bearing-route coverage. Retained generation rows are preferred; top-five fallback is explicitly a censored lower bound, never a complete hourly census.
 
@@ -131,30 +100,7 @@ Use `jq '(.fixedInput // .).clockSec'` to read either export shape. The [equival
 
 Use `npm run ops:d1-insights -- --dry-run` to preview the default read-only Wrangler calls. Without `--dry-run`, the helper captures `7d` reads, `30d` reads, and `30d` time for `stablecoin-db`, then writes `agents/d1-insights-<timestamp>.json`.
 
-Report shape:
-
-```json
-{
-  "generatedAt": "2026-06-04T00:00:00.000Z",
-  "database": "stablecoin-db",
-  "captures": [
-    {
-      "period": "30d",
-      "sortBy": "reads",
-      "rows": [
-        {
-          "query": "SELECT /* pharos:example */ ...",
-          "_pharos": {
-            "sqlFingerprint": "0123456789abcdef",
-            "sqlComment": "pharos:example",
-            "sourcePaths": ["worker/src/api/example.ts"]
-          }
-        }
-      ]
-    }
-  ]
-}
-```
+Supported selection options and the report schema are owned by [`capture-d1-insights.mjs`](../scripts/maintenance/capture-d1-insights.mjs); use its help instead of copying output JSON into this page.
 
 Compare captures before and after an infrastructure change by `period`, `sortBy`, `_pharos.sqlFingerprint`, and `_pharos.sourcePaths`. Keep generated reports under `agents/` unless a durable methodology or source change requires documentation.
 
@@ -170,27 +116,22 @@ Root [`package.json`](../package.json) owns command names and composition. Use `
 
 ### Validation Command Index
 
-[`package.json`](../package.json) owns the live commands and their composition; use supported entrypoint help or inspect its source for flags. [Testing: Commands](./testing.md#commands) owns lane behavior, not this discoverability index. Implementation-only changes to runners do not require a copied command or option roster here; behavior, operations, methodology and data-source policy still require their owning documentation.
+[`package.json`](../package.json) owns live commands/composition; use supported entrypoint help or inspect source for flags. The authoring hierarchy is [focused selection → owning Vitest → optional broader PR feedback → exact generated-artifact diagnosis](./testing.md#smallest-adequate-check-per-area). Hosted CI is readiness authority, not any interchangeable local static/structural runner. [Testing: Commands](./testing.md#commands) owns lane behavior; the CLI table above owns selection modes.
 
 ### Build And Generated Artifacts
 
-The stablecoin client projection generator counts the public cemetery as curated dead records plus frozen tracked profiles. Its lightweight generated cemetery count is shared by About copy and root metadata; it is not the curated-only source count.
+Generated clocks intentionally differ: coin sitemap `lastmod` follows the newest owned source commit; docs modification uses committer time and creation uses author time. [`sitemap-source-paths.mts`](../scripts/lib/sitemap-source-paths.mts) and the [public-doc manifest](../shared/lib/public-doc-manifest.json) own input families. Cemetery projection semantics come from the client-projection generator, not a copied inventory here.
 
-The Git-history-derived projections publish different clocks on purpose. A coin profile's sitemap `lastmod` uses the newest source commit across its base coin file, owned research sidecars and shared detail-page sources. Docs metadata uses committer time for `dateModified` and author time for `dateCreated`. Artifact selection is declared in `scripts/lib/automation-registry.mjs`: sitemap source families come from `scripts/lib/sitemap-source-paths.mts`, while public-doc paths are derived from `shared/lib/public-doc-manifest.json`. Update the owning inventory when adding an uncovered family or public doc; do not maintain a second roster in the registry.
+[`automation-registry.mjs`](../scripts/lib/automation-registry.mjs) owns artifact inputs/outputs, dependencies, lifecycle, bootstrap and drift eligibility. `compile-input` and `post-refresh` run in standalone prebuild; production splits them so live detail acquisition occurs once after the Worker gate. `maintenance-only` is explicit. Offline bootstrap materializes ignored compile/serve inputs and valid empty detail envelopes without network/credentials. Setup transports these outputs and rejects modified tracked/checkable or unexpectedly untracked nonignored outputs; regenerate and commit tracked repairs with their sources. The registry has no automatic-staging contract or Git hook.
 
-Use `package.json` for artifact commands and `scripts/lib/automation-registry.mjs` for dependencies, lifecycle, outputs, and checkability. Lifecycles are `compile-input`, `post-refresh`, and `maintenance-only`; standalone `prebuild` runs the first two, while Pages splits preparation/release for one live snapshot acquisition. Offline bootstrap writes empty detail envelopes before credentials/fetch and materializes ignored compile/serve inputs, including the changelog barrel, case-study client index, and `/llms.txt`. Setup transports those outputs with the workspace and rejects changed tracked checkable outputs and nonignored registered outputs absent from Git, including after restore; regenerate and commit tracked repairs with their sources. See [release ordering](./deployment-process.md#ci-deploy-sequence).
+Automatic selection matches source/output changes and propagates dependencies, then filters `checkable` and `ciDriftCheck`. Explicit `--only` can still check a `ciDriftCheck: false` projection. Registry `requiredBrowsers` owns browser setup.
 
-Scene artifacts share the scene kit's build libraries: `scripts/lib/scene-atlas.ts` (logo atlas WebP, manifest and input signature) and `scripts/lib/scene-og.ts` (CSS-module document, token closure, Firefox render and document-hash signature). `build-cemetery-logo-atlas.ts` and `build-og-cemetery.ts` are configurations over them, and both registry units list the kit paths as sources: [Scene Kit](./data-visualization.md#scene-kit).
-
-Artifact selection matches source and output paths, then propagates dependencies; automatic check plans still filter uncheckable artifacts. Registry `requiredBrowsers` (default `[]`) drives Firefox setup in `scripts/ci/classify-deploy-changes.ts`, not generic OG paths.
-
-The V9 evaluation-build manifest pins the offline candidate runtime import graph, including fixed-input normalization, extension construction, fact-set compilation, evaluation/projection, reviewed score-input data and the Worker catalog decoder. Capture-only network observers/producers and build-time generators are excluded, not evaluation-time fact compilers. Exact-input/fact digests bind admitted capture output; mechanism capture hash/R2 refs and native capture/build matching remain unchanged. Catalog data must be generated first; transport equality tests guard generator correctness.
-
-The incident runtime projection generator and Worker share runtime-neutral reviewed-registry admission/digests (`shared/lib/safety-score-v9/reviewed-registry.ts`) and evidence construction (`shared/lib/safety-score-v9/review-evidence.ts`), with the research-evidence wire authority in `shared/types/safety-score-v9-research-evidence.ts`. Worker evaluation injects native incremental SHA-256; build-time projection uses the shared portable streaming hasher. Each projected negative review carries only `[contentSha256, url]` per sorted source (the digest covers the full reviewed payload); the Worker rebuilds the constant-shaped evidence rows, so canonical evidence identities are unchanged while the module stays within the 128 MiB publication guard. Generators do not receive a Worker-import waiver.
-
-OpenAPI generation preserves normalized stablecoin items and discriminated reserve bounded facts through explicit output schemas, without changing runtime normalization. Empty nested array-item schemas fail generation rather than silently accepting arbitrary values.
-
-Public endpoint narratives are authored once as endpoint descriptions in the public API artifact catalog (`scripts/lib/public-api-artifact-catalog.ts`). OpenAPI and Postman carry the full narrative; the generated API-reference block shows a first-sentence preview and links to the OpenAPI contract. Use absolute `https://pharos.watch/...` documentation links so exported descriptions work outside the site. Supplemental routes and source-backed methodology examples remain in `generate-api-reference.ts`.
+| Artifact family | Read its owner |
+| --- | --- |
+| Scene atlas/OG composition | [Scene Kit](./data-visualization.md#scene-kit), `scripts/lib/scene-atlas.ts` and `scripts/lib/scene-og.ts` |
+| V9 evaluation-build identity | `scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts`; exact runtime import/input graph, not capture-only observers |
+| Incident runtime projection/evidence digest | `shared/lib/safety-score-v9/reviewed-registry.ts`, `review-evidence.ts` and `shared/types/safety-score-v9-research-evidence.ts`; shared admission, not a Worker-import waiver |
+| OpenAPI/Postman/reference narrative | `scripts/lib/public-api-artifact-catalog.ts`; full external narrative and generated first-sentence reference preview. Author portable absolute `https://pharos.watch/...` links. Schema generation rejects empty nested array-item contracts. |
 
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
@@ -202,21 +143,11 @@ Build and release ordering is documented in [Deployment Process](./deployment-pr
 
 Use [Pre-push readiness](./testing.md#pre-push-readiness) for local feedback and optional receipt diagnostics, and [release policy](./deployment-process.md#release-snapshot-state-machine) for deployment gates. Hosted CI is the readiness authority. [Boundary waivers](./process/boundary-waivers.md) retain their reviewed scope. Focused, filtered and plan-only checks are authoring feedback; unmapped production paths are routing failures.
 
-[`scripts/lib/pr-test-selection.mts`](../scripts/lib/pr-test-selection.mts) owns changed-file test selection, with always-run sets in [`scripts/lib/critical-test-files.mts`](../scripts/lib/critical-test-files.mts); [`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) partitions sorted unique paths round-robin into deterministic unweighted shards and serializes the plan. Adaptive selection retains four shards for up to 800 selected files and eight above that threshold. [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption; PR tests do not collect timing telemetry or use measured scheduling weights.
+[Testing: CI Pipeline](./testing.md#ci-pipeline) owns adaptive selection, deterministic round-robin plans and hosted consumption; `npm test` is the canonical full suite. [Testing: V9 resource lane](./testing.md#v9-resource-lane) owns resource guard/calibration evidence. [Boundary waivers](./process/boundary-waivers.md) and the [focused hierarchy](./testing.md#smallest-adequate-check-per-area) own import exceptions and authoring checks.
 
-`npm run test:v9-resource` invokes [`run-v9-resource-lane.ts`](../scripts/maintenance/run-v9-resource-lane.ts): the unsharded V9-impact PR lane shared with unconditional nightly/manual validation and selected serial local feedback. It runs the faithful compute `--guard` (natural 128 MiB, complete live phases, correctness/bytes, auto-enforcing any qualified policy) and independent 256 MiB contagion matrix. Until qualification, phase limits are not enforced and `policy: "unqualified"` is explicit. Invocation-bound `.tmp/safety-score-v9-resource/report.json` must be complete without violations and the named contagion case must pass in fresh `.tmp/v9-resource-lane/vitest.json`; optional historical capture checks may skip. Ordinary tests/coverage suppress ambient probe opt-in. See [V9 resource lane](./testing.md#v9-resource-lane) for proposal-only calibration, 30-day artifacts and failure classification.
+[`check-unused-code.ts`](../scripts/ci/check-unused-code.ts) owns export-consumption analysis. Property/literal member uses are narrow; escaping/computed namespaces and dynamic imports stay conservative and report uncertainty. Review newly exposed exports individually. Scanner fixtures use external temp roots, never this checkout. Keep useful test-only corpora in `*.test-support.ts`, not production DEBT or external-consumer exemptions; empty debt is not deletion proof. [Testing's commit-scoped deletion policy](./testing.md#ci-pipeline) applies.
 
-Critical ownership reads base-revision Git blobs by declared byte length, so NULs and multibyte text cannot shift later records. Import-boundary checks include literal dynamic imports and retain only the reviewed waiver. Use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area) for focused selection and preview.
-
-`check:unused-code` credits namespace property reads, literal-key reads and literal `vi.spyOn`/`jest.spyOn` members individually; default imports consume only `default`, and side-effect imports preserve reachability without consuming named exports. Computed or escaping namespace uses retain conservative whole-module consumption and print their source/target in the audit. Dynamic import results and unqualified import types remain conservative, with aggregate audit counts. Newly exposed exports require individual review, not a blanket allowlist. Scanner fixtures must use external temporary workspace roots, never the repository root.
-
-Useful test-only evidence belongs in recognized `*.test-support.ts` files, not production module DEBT or external-consumer blind spots. The matched Safety Score invariant corpus lives beside its importing shared test and remains outside the product evaluation-build manifest. Preserve its evidence when relocating it.
-
-Structured-log conversions must preserve console-only versus durable-event semantics, including failure counters, terminal `logCronRun` persistence, and already-authored durable events.
-
-`check:script-entrypoints` includes `.mts` files in forward command scanning, reverse candidates and reverse references; declaration files are not runnable candidates. Markdown still receives stale-command checks but cannot retain an otherwise unreferenced script. The reverse check remains a textual-reference audit, not an executable import graph: policy-retained operator tools remain valid, and mutually referring disconnected scripts are not proven reachable.
-
-`check:editorial-content` runs inside `check:structural` (including selected PR guards and nightly structural validation). It validates authored methodology/weekly changelog and case-study JSON metadata, body shapes, registry membership, filenames and internal routes/identities, plus Dependency Map editorial JSON. The ADR-3 version factory remains the methodology authority; JSON imports do not add Zod to runtime consumers or change rendering.
+`check:script-entrypoints` covers `.mts` and excludes declarations; textual reverse references are not an executable graph, and Markdown cannot retain a disconnected tool. `check:editorial-content` is a structural guard; [blog/changelog publishing](./process/blog-publishing.md#changelog) and [ADR-3](./architecture.md#adr-3) own editorial/methodology policy. Structured-log refactors preserve console versus durable-event distinctions and terminal failure accounting.
 
 ### Smoke And Operations
 
@@ -234,9 +165,7 @@ Use `package.json`'s `audit:*`, `candidates:*`, and `calibrate:*` commands; repo
 
 `npm run audit:mint-authority-review` prints Markdown by default; add `-- --json --report agents/mint-authority-review/audit.json` for a saved JSON report or `-- --report agents/mint-authority-review/audit.md` for Markdown. The CLI uses the shared coverage-audit parser/runner (`--json` / `--markdown`, `--report <path>`); the former `--format` / `--out` flags are removed. `--generated-at <iso>` pins the capture timestamp. `--live --live-limit <n>` adds an advisory source-URL probe appendix to Markdown only (default limit 50); JSON never probes sources.
 
-These are permanent human review tools, not latent scoring engines. Dispositions do not admit a provider, route, dependency edge, or yield source. DIA price-provider probing and the mint-authority scanner POC are retired; use primary-source native-control review with `audit:mint-authority-review` and `audit:mint-bridge-ownership` instead of generated unknown scanner output.
-
-The shadow-era replay summary and fixed July B1 historical DEX root-ledger entrypoints are retired (2026-10-08), including direct current-tree support for archived runbooks. Historical reproduction uses the source checkout and exact input/registry/census/clock/output pins of the archived investigation; Git source alone does not guarantee an exact rerun. Permanent replay/diff/movers remain supported, but worklist/expiry tools are not replacements for the retired renderer.
+Audits and drafts are human-review evidence, not scoring engines or admission authority. Historical investigations require their recorded source/input/registry/clock pins; Git source alone does not establish reproducibility, and modern replay/queue tools are not format-equivalent substitutes for retired research output.
 
 - `audit:price-source-depth` proposes conditional coverage lifts, not measured new sources or independent trust. Retain both report-card and stablecoin input identities/clocks with the next audit; independent snapshots need not share a publication generation.
 - `audit:coverage -- --domain=redemption-coverage` always evaluates reviewed-disposition findings. `--check` changes presentation only: a reviewed nonzero backlog can pass either mode, while missing/invalid/stale dispositions fail either mode. `--strict-active-gaps` separately escalates inferred active gaps; a disposition never configures a redemption route.
@@ -246,7 +175,7 @@ The shadow-era replay summary and fixed July B1 historical DEX root-ledger entry
 
 `npm run audit:live-reserve-config-changes -- --base <ref>` compares working-tree semantic fingerprints to an explicit deployed/PR base offline, printing changed IDs and both digests as JSON; missing recovery fetchers fail. New/removed bindings and display/scoring edits are excluded. It shares runtime's pure selector; tests are git-independent. Bounds/acceptance: [config recovery](process/live-reserves-appendix.md#deploy-time-configuration-recovery).
 
-`scripts/maintenance/refresh-independent-assurance-reports.ts` registers MYRC's offline extraction via `scripts/lib/independent-assurance-profiles/myrc.ts`. [MYRC reserve verification](process/live-reserves-appendix.md#fund-and-issuer-transparency-feeds) owns distinct cash/fund rows, shared reconciliation tolerances, excluded circulation, exact-PDF/extraction provenance and examined-balance clocks.
+Independent-assurance extraction and publisher provenance are owned by [Live Reserves](./live-reserves.md), with source profiles under `scripts/lib/independent-assurance-profiles/`.
 
 `npm run audit:mint-burn-conservation-admission -- --ids <csv> --out <dir>` runs the production raw-token conservation audit over a frozen per-chain window (timestamp-driven by default; `--window-blocks` overrides) for every config of the requested stablecoin ids; semantics and the reviewed-identity sidecar are owned by [Mint/Burn Flows: Raw Token Conservation](./mint-burn-flows.md#raw-token-conservation). It journals every JSON-RPC exchange to `<out>/journal.jsonl` with URLs redacted to origin and chain path (never the API key), reproduces records offline with `--replay <journal.jsonl>`, and — given reviewer semantic files via `--semantic-dir` — emits `sidecar-draft.json` entries (`--emit-sidecar-draft`) that `--merge-into-sidecar` merges into the committed sidecar. The command exits 1 when any audited window is not `ok`; journals and drafts stay under `agents/`.
 
@@ -258,9 +187,7 @@ Worklist and pre-expiry supply come from the exact replay's retained nullable su
 
 USDe/USDf manual capture and reviewed weekly protocol-API automation are permanent non-publishing evidence tooling. Strict replay reports canonical V2 / original-byte hash-verified normalized-only V1 / unavailable separately; unavailable access or bodies fail. Replay may perform signed R2 GETs and cache verified bytes; network-free use requires local original bytes/cache. fxSAVE's standalone local capture stays incomplete/N/A; its reviewed dossier already attaches parent evidence at a separate immutable clock/block, not new local CDP credit.
 
-The real-A distribution calibration analyzer and aggregation-rescore wrapper are retired (2026-10-08). Historical source/fixture lineage remains in Git; authored reports remain archival evidence, not current approval. Operators lose distribution, uncertainty-ledger, capture-stability, causal-attribution, histogram/pileup and stale-trace-rescore formats; replay/diff/movers are not format-equivalent replacements.
-
-Replay, diff, movers, sensitivity, anchor calibration, live-withheld and DDRR calibration are permanent operator tools for the active model under stable V9 namespaces, never alternate publishers. Replay defaults to captured redemption bytes; `--rederive-current-redemption` is an explicit current-curation scenario. Diff proves normalized score-output equality only, with malformed/duplicate cards rejected and activation identity checked separately. Anchor report schema 2 removes unused pending-ruling fields/option while preserving failed diagnostic exits. Sensitivity perturbations stay research-only; golden baseline invariants remain authoritative tests.
+Replay/diff/movers, sensitivity, anchor and DDRR calibration remain non-publishing model tools; [the equivalence harness](./process/safety-score-equivalence-harness.md) owns admission, identity and equality limitations. Replay uses captured redemption by default; `--rederive-current-redemption` explicitly asks a current-curation scenario. Sensitivity is research-only, and golden invariants remain authoritative. Diff equality is normalized score-output equality, not activation or full-artifact identity proof.
 
 Annotation and AI-summary candidate request deadlines remain active through JSON body consumption. Annotation collection uses fixed 14-day windows and serial cursor pagination, bounded to 25 pages and 30 seconds per source with a 6-second request/body timeout. Partial results retain explicit incomplete coverage. Full queues, digest, and logs are immutable Actions artifacts retained for 90 days; issue excerpts link to those artifacts.
 
@@ -305,15 +232,7 @@ D1 Insights captures are the specific exception documented above: they write `ag
 
 The npm `prepare` script runs `scripts/maintenance/prepare-workspace.ts`. Local installs materialize bootstrap-safe generated inputs, then the history-derived projections with `npm run bootstrap:generated:history`. GitHub Actions skips implicit preparation and uses `.github/actions/setup-workspace/action.yml`, opting into full-history projections per job with `bootstrap-history`. `PHAROS_PREPARE_BOOTSTRAP=1` forces ordinary bootstrap in CI without enabling history bootstrap.
 
-There is no repository pre-commit or pre-push hook. Existing clones that previously installed the retired artifact hook should remove only that local setting:
-
-```bash
-if [ "$(git config --local --get core.hooksPath)" = ".githooks" ]; then
-  git config --local --unset core.hooksPath
-fi
-```
-
-Other custom hook paths remain user-owned. Generated freshness is enforced by hosted checks, not automatic staging; use explicit generation and `npm run check:generated-artifacts` for local convergence. [Pre-push readiness](./testing.md#pre-push-readiness) defines local feedback and hosted readiness authority.
+There is no repository pre-commit or pre-push hook. Custom hook paths remain user-owned. Generated freshness is enforced by hosted checks, not automatic staging; use explicit generation and `npm run check:generated-artifacts` for local convergence. [Pre-push readiness](./testing.md#pre-push-readiness) defines local feedback and hosted readiness authority.
 
 ### Release Ownership
 

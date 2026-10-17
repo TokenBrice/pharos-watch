@@ -14,7 +14,7 @@ const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
 // One cohort authority for the registry, stored generation, and journal loader.
 // 96 * 2 maximum-sized journal records, including IDs and 128-byte map keys,
 // fit below 256 KiB. The generation reserves 9 KiB per ordinary packet plus
-// 128 KiB for a large census; see docs/report-cards.md resource measurements.
+// 128 KiB for a large census; see docs/worker-and-api-limits.md#safety-score-production-budgets.
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS = 96;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 256 * 1_024;
 export const SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES = 1_024 * 1_024;

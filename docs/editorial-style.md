@@ -1,6 +1,6 @@
 # Pharos Editorial Style
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Voice · No machine tells · Neutral but compelling · Pointed only when the evidence closes the case · Clear, informative, descriptive · Claim safety · Banned constructions · Punctuation and labels · Registers by surface · Exemplars · Scope and enforcement · Final edit · Machine-readable policy.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Voice · No machine tells · Neutral but compelling · Pointed only when the evidence closes the case · Clear, informative, descriptive · Claim safety · Banned constructions · Punctuation and labels · Registers by surface · Exemplars · Scope and enforcement · Machine-readable policy.
 
 Version 1.2. This is the sole style authority for Pharos-owned prose. Surface prompts, agent skills, and lints derive from it; none may add or relax a voice rule locally. Surface-specific factual and structural rules (lead selection, anti-repetition, length contracts) live in the register table here and in each surface's factual contract.
 
@@ -168,16 +168,6 @@ The closing line is legal because it is arithmetic against the issuer's own clai
 - Applies to Pharos-owned prose on surfaces that run runtime style scanning. Unregistered documentation and source families are not implicitly covered. Out of scope: quoted source text and external titles, user-submitted content, donor messages, issuer-provided text, code, identifiers, formulas, JSON keys, URLs, version strings.
 - Runtime digests default to `shadow`: style findings are telemetry-only and legacy clause-dash stripping remains active. In `enforce`, hard model-owned findings get at most one corrective retry within time/token budgets; unresolved findings block delivery, with no punctuation repair. `worker/src/lib/digest-style-gate.ts` owns the per-kind cache override. Wrapper-owned failures skip and alert only that channel in either mode, never respend the model.
 - Published editions carry the style version and policy hash that produced them. Editions authored before this policy carry no version and are surfaced as `pre-policy` at read time; archives are never edited or retroactively tagged.
-
-## Final edit
-
-1. What is the strongest fact, and does it appear early?
-2. Does every conclusion have a visible number, source, mechanism, or precedent behind it?
-3. Have I explained what the data means instead of repeating what the interface shows?
-4. Can I remove a metaphor, contrast flip, hedge, or closing slogan without losing information? If the last sentence is removable, remove it.
-5. Do the sentence lengths and openings vary when read aloud?
-6. Did I nickname the asset? Did a metric act like a person?
-7. Would the sharpest line survive a skeptical fact-check, and does it still work with the names and figures removed? If it does, it is generic; cut it.
 
 ## Machine-readable policy
 

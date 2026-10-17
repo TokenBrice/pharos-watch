@@ -1,6 +1,6 @@
 # Safety Score V9 Equivalence Harness
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: When to use it · Why the replay is a fair test · Prerequisites · (a) Export a production capture · [Historical release and data separation](#historical-release-and-data-separation) · [Local D1 and offline-object exercise](#local-d1-and-offline-object-exercise) · (b) Replay a capture at a given commit · (c) Diff a baseline replay against a candidate replay · (d) Pre-activation sweep · (e) Post-deploy first-cycle check · Triaging a non-empty diff · Artifact hygiene · Worked example · Related.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: When to use it · Why the replay is a fair test · Prerequisites · (a) Export a production capture · [Historical release and data separation](#historical-release-and-data-separation) · [Local D1 and offline-object exercise](#local-d1-and-offline-object-exercise) · (b) Replay a capture at a given commit · (c) Diff a baseline replay against a candidate replay · (d) Pre-activation sweep · (e) Post-deploy first-cycle check · Triaging a non-empty diff · Artifact hygiene · [Optional worked-example diagnostics](#worked-example) · Related.
 
 Operational procedure for proving that a code change either leaves published Safety Score V9 output unchanged or moves only a reviewed, declared set of grades.
 
@@ -319,7 +319,7 @@ Transfer reviews are loaded from the same ref and separately digest-bound to
 avoid future-dated live reviews; policy, other V9 overlays, and evaluation-build
 identity remain checkout-owned. Retain the original publication and evaluator
 revision for a production-result comparison. See the recovered capture mapping
-and digest limitations in [V9 readiness](./safety-score-v9-readiness.md#recovered-capture-time-registries).
+and digest limitations in [Mechanism Capture Storage and Replay](./safety-score-v9-readiness.md#recovered-capture-time-registries).
 
 `--normalized-only` retains the plain normalized export for current-curation
 workflows such as the expiry sweep. It cannot be combined with `--registry-ref`.
@@ -525,75 +525,9 @@ They still stay untracked. All harness artifacts live under `agents/v9-captures/
 
 ## Worked example
 
-The toolchain has a credential-free self-test that exercises steps (b) and (c) end to end against the committed two-asset regression fixture. Run it before spending a production capture — it proves the replay is deterministic and the diff CLI is wired correctly.
+This optional diagnostic checks replay/diff wiring without production credentials; it is not a release preflight or production-equivalence gate. The executable cases in `worker/scripts/__tests__/diff-safety-score-v9-replays.test.ts` own matching artifacts, score drift, same-grade movement and grade flips. Run that focused test when diagnosing the CLI.
 
-```sh
-mkdir -p agents/v9-captures
-npx tsx -e "
-import { writeFileSync } from 'node:fs';
-import miniCapture from './worker/src/lib/__tests__/fixtures/safety-score-v9-rateable-mini-capture.json';
-import { createReportCardsFixedInput } from './worker/src/test-helpers/report-cards-fixed-input';
-writeFileSync('agents/v9-captures/selftest-input.json', JSON.stringify(createReportCardsFixedInput(miniCapture.draft as never), null, 2));
-"
-clock_sec="$(jq -r .clockSec agents/v9-captures/selftest-input.json)"
-```
-
-Two independent replays of that input at one commit:
-
-```sh
-# The fixture's clock is frozen while curation advances, so the future-review
-# gate must be waived here — for this self-test only, never for a production capture.
-npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-a.json --published-at "${clock_sec}" --allow-future-reviews
-npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-b.json --published-at "${clock_sec}" --allow-future-reviews
-jq '.pipeline.candidate.cards | length' agents/v9-captures/selftest-a.json
-```
-
-```
-2
-```
-
-Both artifacts should share one SHA-256; compare full bytes separately from the normalized diff.
-
-```sh
-cmp agents/v9-captures/selftest-a.json agents/v9-captures/selftest-b.json
-npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-a.json \
-  --candidate agents/v9-captures/selftest-b.json --assert-empty
-```
-
-```
-EMPTY DIFF — normalized score-output equality (activation identity checked separately)
-```
-
-A minimal card projection demonstrates a one-point same-grade move without forging a full replay's trace/digest bindings:
-
-```sh
-jq -n '{pipeline:{candidate:{cards:[{id:"selftest-asset",score:20,grade:"F",ratingStatus:"rated"}]}}}' \
-  > agents/v9-captures/selftest-baseline-projection.json
-jq '.pipeline.candidate.cards[0].score -= 1' \
-  agents/v9-captures/selftest-baseline-projection.json > agents/v9-captures/selftest-drift.json
-npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-baseline-projection.json \
-  --candidate agents/v9-captures/selftest-drift.json --assert-empty
-```
-
-```
-DIFF: 1 entries
-{"assetId":"selftest-asset","path":"cards[selftest-asset].score","baseline":20,"candidate":19}
-```
-
-Exit code 1. The same projection pair under the grade-stability gate passes because both cards retain their grade and rating status:
-
-```sh
-npm run safety-score-v9:diff -- --baseline agents/v9-captures/selftest-baseline-projection.json \
-  --candidate agents/v9-captures/selftest-drift.json --assert-grade-stable
-```
-
-```
-drift entries: 1; grade flips: 0
-```
-
-The fixture is a frozen two-asset sample built for pipeline coverage, not a rating sample; its grades and scores carry no meaning outside this self-test. A production sweep runs the identical commands against a real capture and its full asset set.
+For replay wiring, the committed `worker/src/lib/__tests__/fixtures/safety-score-v9-rateable-mini-capture.json` is a frozen two-asset pipeline fixture, not a rating sample. Any fixture-only future-review override must never carry into a production capture. Real acceptance uses [production capture/replay/diff](#when-to-use-it), the two-capture activation gate and the [post-deploy first-cycle check](#e-post-deploy-first-cycle-check); a passing diagnostic replaces none of them.
 
 ## Related
 

@@ -1,194 +1,57 @@
 # Coverage Page Contract
 
-Contract for the public `/coverage/` route. This page explains which Pharos features are available per active stablecoin and gives users both count coverage and market-cap coverage.
-
----
-
-## Purpose
-
-The coverage page answers two questions:
-
-1. Which Pharos features are available for a given stablecoin right now?
-2. How broad is each feature across the tracked universe, by both coin count and tracked market cap?
-
-The page is intentionally product-facing, not admin-facing. It should describe user-visible coverage, not internal cron health.
-
----
-
-## Route Shape
-
-- **Route:** `/coverage/`
-- **Server shell:** `src/app/coverage/page.tsx`
-- **Client implementation:** `src/app/coverage/client.tsx`
-- **Error boundary:** `src/app/coverage/error.tsx`
-- **Core helpers:** `src/lib/coverage-matrix-model.ts`, `src/lib/coverage.ts`, `src/lib/coverage/*`
-- **Structured data:** `src/app/coverage/page.tsx` emits the static methodological `Dataset` descriptor through a JSON-LD `<script>` in the page shell; `FaqSection includeJsonLd` in `src/app/coverage/client.tsx` owns FAQ JSON-LD. The Dataset descriptor is metadata-only: it inlines the Pharos `Organization` for `creator` / `publisher`, includes the Pharos data license URL, a `urn:pharos:dataset:coverage` identifier, and `sameAs` pointing at `/coverage/`, while deliberately avoiding live metric values or private `/_site-data/*` URLs.
-
-The page uses `createClientFeaturePage(...)`, which wraps the route in the shared feature-page shell for public client-heavy surfaces. It remains indexable like the rest of the public feature routes.
-
----
-
-## Coverage Dimensions
-
-The matrix currently exposes these columns:
-
-- `Price & Depeg`
-- `Safety Score`
-- `DEX Price`
-- `Reserve View`
-- `Redemption Backstop`
-- `Yield`
-- `Flows`
-- `Freezable Status`
-- `MiCA`
-- `GENIUS`
-- `Dependency Map`
-- `Mint Authority`
-
-Status semantics are intentionally user-facing:
-
-- `Price & Depeg`: `Tracked`, `Price only` (NAV-priced assets), or `Missing`
-- `Safety Score`: `Rated` or `NR`
-- `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `Not Covered`, `Unknown`, or `Data n/a`
-- `Reserve View`: `Score-grade`, `Configured`, `Checking`, `Curated-Validated`, `Proof`, `Curated`, `Estimated`, or `None`
-- query-backed columns can also emit `Data n/a` while an upstream dataset is unavailable
-- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, `Heur.`, `Resolved`, `Config.`, `Impaired`, `Not Covered`, or `Data n/a`
-- `Yield`: `Ranked`, `Gap`, or `Data n/a`
-- `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Unknown`, `Disabled`, `Not Covered`, or `Data n/a`
-- `Freezable Status`: `Live`, `Yes`, `Upstream`, `Possible`, `No`, or `Data n/a`
-- `MiCA`: `Authorized`, `Pending`, `Transitional`, `Non-Comp.`, `Out Scope`, or `Not Assessed`
-- `GENIUS`: `PPSI Approved`, `State Qualified`, `Filing Pending`, `Issuer Intent`, `None Found`, `Not Applicable`, `Unknown`, or `Not Assessed`
-- `Dependency Map`: `Both`, `Dep.`, `Hub`, `No deps`, `Gap`, or `Data n/a`
-- `Mint Authority`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`, with optional score-band breakdowns
-
-### Dependency Map Coverage
-
-`hasAuthoredDependencyEvidence` is a compact boolean generated from the full catalog: it is true when a coin has `variantOf`, a nonempty manual `dependencies` list, or a reserve slice with `coinId`. The client list does not ship dependency lists or reserve evidence.
-
-Published graph roles take precedence. For a coin with no published edges, authored evidence or published `card.dependencyCoverage[]` rows produces `Gap`; published coverage reasons appear in its detail text. A coin absent from the report-card snapshot is also a gap. `resolved-none` (`No deps`) requires a report-card row, no published graph role, no authored dependency evidence, and no published coverage rows. It means no tracked dependency has been identified by these inputs, not proof that the asset has no external dependencies. Missing report-card data for the whole page remains `Data n/a`, not `No deps`.
-
-### Mint Authority Coverage
-
-Mint Authority coverage counts curated review breadth first, then appends posture-band breakdowns from the published mint component. The curation-route buckets stay curated because they describe which review path an asset is on; only the `score-*` buckets read the publication. `Unknown` means no compact mint-authority review is available; stablecoin detail pages always render the Mint Authority section, showing an explicit `Not reviewed by Pharos` / `Mint control posture: NR` state when no reviewed data exists, while score-oriented aggregate surfaces treat the row as `NR`.
-
-Authority posture bands belong in detail text/tooltips only; do not add posture buckets to the coverage headline, risk ranking, or default sort. Score-band chips use `Hardened`, `Governed`, `Managed`, `Concentrated`, `Exposed`, and `NR`.
-
----
+Public `/coverage/` explains per-active-asset feature availability and count/market-cap reach, not admin cron health. `src/app/coverage/` owns the static shell/client/error boundary. `src/hooks/use-coverage-page-model.ts` composes `src/lib/coverage-matrix-model.ts`; resolvers under `src/lib/coverage/` own status labels and meanings, exported by `src/lib/coverage.ts`. Do not duplicate their inventories.
 
 ## Source Of Truth Per Column
 
-The page deliberately mixes structural coverage and live dataset coverage. The implementation entrypoint is `src/hooks/use-coverage-page-model.ts`, which wraps `src/lib/coverage-matrix-model.ts`, builds one `CoverageRow` per active stablecoin, and resolves each column through the feature modules under `src/lib/coverage/`.
+The base is `CLIENT_ACTIVE_STABLECOINS`. Static classification is joined to canonical-ID live datasets, not guessed from metadata presence:
 
-| Column                | Hook / field used on `/coverage/`                                                                                                                                                                                                                          | Notes                                                                                                                                                                                                                                                                                                                                                                                                     |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Price & Depeg`       | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `ACTIVE_STABLECOINS[*].flags.navToken`                                                                                                                                       | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic. The headline summary is stricter: it counts only rows with at least 3 consensus price sources.                                                                                                                                                                                          |
-| `Safety Score`        | `useReportCardsV9().data.cards[].score`                                                                                                                                                                                                             | Coverage is `Rated` only when the report card has a non-null overall score.                                                                                                                                                                                                                                                                                                                               |
-| `DEX Price`           | `useDexLiquidity().data[id].coverageClass`                                                                                                                                                                                                                 | User-facing badge labels are mapped from liquidity `coverageClass`.                                                                                                                                                                                                                                                                                                                                       |
-| `Reserve View`        | `ACTIVE_STABLECOINS[*].liveReserveAdapter` (projected from server-only `liveReservesConfig.adapter`); `reportCard.backingFromLiveReserves`; otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | `shared/lib/live-reserve-display.ts` owns detail badge classes. The row shows `Score-grade` when the current report-card snapshot used accepted live reserves, even if the detail badge remains `Proof`. A live-class adapter without accepted input shows `Configured`; a missing report-card dataset shows `Data n/a`, including curated/estimated rows. |
-| `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                                                                                                                                                  | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`, resolved-but-unscored routes render as `Resolved`, impaired routes render as `Impaired`, and low-confidence heuristic routes render as `Heur.`; none count as covered in the headline metric.                              |
-| `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                                                                                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                                                                                                                                                                     |
-| `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                                                                                                                                                          | Mirrors the configured issuance-chain mint/burn coverage state exposed on `/flows`. Quiet assets can prove mature windows from completed block-scan span when no retained event row remains, so aggregate retention does not regress established coverage to `Bootstr.`.                                                                                                                              |
-| `Freezable Status`    | `getResolvedBlacklistStatus(coin.id)` from `shared/lib/blacklist-status.ts`, reading the reviewed client-registry `blacklistStatus`; `BLACKLIST_STABLECOINS` only upgrades direct-true assets into the `Live` event-tracker bucket                                                                 | Reviewed freeze/blacklist exposure across every active stablecoin. `Live` means direct freeze controls plus live FreezeWatch event tracking; `Yes`, `Upstream`, `Possible`, and `No` are reviewed status states and all count as available coverage.                                                                                                                                                       |
-| `MiCA`                | `coins.compliance.generated.json[*].mica`, joined to active client-registry IDs                                                                                                                                                                                                       | Static compliance sidecar metadata from the dedicated compliance projection; the compact client list does not contain compliance profiles. `Authorized`, `Pending`, `Transitional`, `Non-Comp.`, and `Out Scope` are reviewed assessment states and count as assessed coverage. Missing metadata renders `Not Assessed` and is the coverage gap; it must not be interpreted as in scope, out of scope, authorized, or non-compliant. |
-| `GENIUS`              | `coins.compliance.generated.json[*].genius.authorizationStatus`, joined to active client-registry IDs                                                                                                                                                              | Static GENIUS implementation-watch metadata generated from compliance sidecars. `PPSI Approved`, `State Qualified`, `Filing Pending`, `Issuer Intent`, `None Found`, `Not Applicable`, and `Unknown` are reviewed assessment states and count as assessed coverage. Missing metadata renders `Not Assessed`. |
-| `Dependency Map` | `coin.hasAuthoredDependencyEvidence` from the compact client list, `useReportCardsV9().data.cards[].dependencyCoverage`, and `useReportCardsV9().data.dependencyGraph.edges` | `buildV9DependencyCoverageFacts(...)` filters graph edges to live report-card IDs and classifies published graph roles first. Zero-edge authored evidence or published coverage rows are an unmapped gap; `No deps` has the narrower semantics documented above. The page does not fall back to the static graph when report-card data is unavailable; it emits `Data n/a`. |
-| `Mint Authority`      | `coin.mintAuthoritySummary` from the slim client registry projection (curation routes) plus the published mint component (`cards[].breakdowns.control.components`) | Reviewed statuses count as available; `Unknown` does not. Missing report-card data preserves the curated route bucket but makes the score dimension `Data n/a`, not `NR`. |
+- Peg summary owns observed pricing/depeg coverage; NAV assets intentionally have price-only semantics. Headline corroboration requires source depth, not merely a row.
+- Report-card publication owns overall rating, live-reserve use, dependency graph/coverage and mint score components. Static mint summaries independently own curation breadth.
+- DEX, redemption, yield and mint/burn resolvers use their respective published snapshots. Yield means current ranking inclusion, not theoretical eligibility. Mature flow windows may be proved by completed scan span even when event retention empties.
+- Reviewed freeze status owns exposure; event-tracker membership only upgrades directly freezable assets to Live. All reviewed exposure states count as assessed, including No, not just direct controls.
+- Generated compliance sidecar projection owns MiCA/GENIUS assessments. Reviewed Unknown/out-of-scope/noncompliant states count as assessed; absent metadata is Not Assessed and implies no legal verdict.
+- Supply weights come from `/api/stablecoins` with `getCirculatingRawOrNull()`. Missing assets/buckets are unavailable, never a valid zero. Labels derive from shared classification.
 
-Reserve reader provenance is projected only from non-suspended `liveReservesConfig` bindings. Both client list and detail metadata omit `liveReserveAdapter` when the source config is suspended, so the coverage resolver uses the ordinary curated/estimated fallback (or `None` if no fallback exists), never `Proof` or `Configured` solely because a disabled reader remains in the source/audit catalog.
+### Dependency Map Coverage
 
-Additional page-level sources:
+Compact `hasAuthoredDependencyEvidence` records variant parent, authored dependencies or reserve `coinId` evidence without shipping full evidence. Published graph roles take precedence, filtering edges to live report-card IDs. Without an edge, authored evidence or published dependency-coverage rows means Gap; missing per-coin report-card row is also a gap. Published reasons remain visible.
 
-| Page element                                                                               | Source                                                                                                                                |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Base coin universe                                                                         | `ACTIVE_STABLECOINS` (the `CLIENT_ACTIVE_STABLECOINS` alias) from `@shared/lib/stablecoins/client-registry`                           |
-| Market-cap weights                                                                         | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRawOrNull()` on the cached list payload; a coin absent from the payload is marked market-cap unavailable and never summed as a valid `$0`                              |
-| Peg/backing/governance labels in each row                                                  | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps                                 |
-| Pricing-source tiles                                                                       | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `buildCoverageMatrixModel(...)` |
-| Snapshot insight cards (`Source target`, `Widest reach`, `Tightest reach`, `Cap skew`) | Derived from the same per-feature summaries and per-row source-depth counts used by the feature snapshot rows                         |
-| Safety Score input coverage                                                             | Canonical report-card publication via `useReportCardsV9()`, summarized by `buildDataCoverageModel(...)`                            |
+No deps (`resolved-none`) requires a report-card row, no graph role, no authored evidence and no coverage rows. It means no tracked dependency identified by those inputs, not absence of external dependencies. Whole-publication failure is Data n/a, never static-graph fallback or No deps.
 
----
+### Reserve And Mint Distinctions
+
+Reserve Score-grade means accepted live reserves actually entered report-card collateral scoring. Configured, Checking, Curated-Validated, Proof, Curated and Estimated describe different reader/detail states, not headline score coverage. Missing publication makes the reserve dimension Data n/a even with curated fallback. Only non-suspended configs project reader bindings; disabled sources fall back to curated/estimated/None, never Proof/Configured solely because a reader remains in an audit catalog. `shared/lib/live-reserve-display.ts` owns detail badge presentation.
+
+Mint headline measures curated review breadth. Published posture bands are a separate detail dimension, never headline/risk/default-sort buckets. Unknown means no compact review, not an adverse score. Missing report-card dataset preserves curation but makes score Data n/a rather than NR. Missing individual score after a loaded publication is NR; stablecoin detail still shows its explicit unreviewed/NR section.
 
 ## Feature Snapshot
 
-The feature snapshot leads the page. It is the first stop for users who want to understand total Pharos coverage before drilling into individual assets. It is framed as the route's signature full-width hero under the shared [Feature-page heroes](./design-language.md#feature-page-heroes) rule: a compact header strip carries the frost-blue "One Beam" = the active-coin universe count, with neutral `.pharos-numeric` avg-reach % and tracked-surfaces sub-metrics, and the stacked-bar breadth chart reads as the drawn metaphor full-width beneath.
+Count and market-cap denominators name the full active or feature-eligible population, not paginated rows. Headline and breakdown intentionally differ:
 
-Every row shows:
+- Reserve headline counts score-grade live inputs, not every detail reserve view.
+- Redemption headline counts strong modeled coverage; heuristic, resolved-unscored, configured-unrated and impaired rows remain in breakdowns without being counted as strong.
+- Price headline requires at least three observed consensus sources; a matrix Tracked row may have fewer.
+- Freezable coverage includes every reviewed exposure state across the active universe, not just live event tracking.
 
-- a headline count aligned to the feature's summary rule
-- a stacked count bar showing status segments against the active-coin denominator, using the same color vocabulary as the breakdown chips
-- percent of tracked coins, or the feature-specific eligible coin set when a feature only applies to a subset
-- percent of tracked market cap, or the feature-specific eligible market cap when a feature only applies to a subset
-- compact per-feature breakdown chips
-- direct link to the underlying surface when one exists
-
-For `Reserve View`, the headline metric intentionally emphasizes score-grade live reserve inputs only. `Configured`, `Curated-Validated`, `Proof`, curated, and estimated reserve views still appear in the breakdown so the row distinguishes detail-page reserve coverage from live reserve data that actually entered report-card collateral scoring.
-
-For `Redemption Backstop`, the headline metric intentionally emphasizes strong redemption coverage only. Low-confidence heuristic routes, resolved-but-unscored routes, configured-but-unrated routes, and impaired routes still appear in the breakdown so the row does not imply the modeled registry disappeared.
-
-For `Price & Depeg`, the headline metric intentionally emphasizes breadth with corroborated pricing. A coin still renders `Tracked` in the matrix with fewer than 3 sources, but the feature snapshot headline only counts rows whose `consensusSources` depth is at least 3.
-
-For `Freezable Status`, the headline metric is resolved-status coverage across the active universe. The breakdown distinguishes `Live` FreezeWatch event-tracked assets from direct `Yes`, `Upstream`, `Possible`, and `No` states; it no longer treats only direct-blacklistable assets as the denominator.
-
-Breakdowns are intentionally dense and should stay short:
-
-- DEX: `primary / mixed / fallback / legacy / data n/a`
-- Reserve view: `score-grade / configured / checking / curated-validated / proof / curated / estimated`
-- Redemption: `heuristic / resolved / configured / impaired / issuer / psm / queue / collateral / stable / basket / data n/a`
-- Flows: `full / partial / lagging / bootstrapping / unknown / data n/a`
-- Price: `tracked / price-only`
-- Freezable status: `live / yes / upstream / possible / no`
-- MiCA: `authorized / pending / transitional / non-compliant / out-of-scope / not assessed`
-- GENIUS: `ppsi approved / state qualified / filing pending / issuer intent / none found / not applicable / unknown / not assessed`
-- Mint Authority: `no privileged / governed / multisig / issuer/backend / bridge / inherited / unknown / score-hardened / score-governed / score-managed / score-concentrated / score-exposed / score-nr`
+Source-depth tiles/filters share observed `sourceCount` with row detail. Market-source/authoritative-override categories remain distinct. Override-only data does not create a market-source card. Input-coverage explanations name the actual missing-data owner (issuer reporting cadence, for example), not a generic Pharos delay; a held publication replaces counts with hold context.
 
 ### Unavailable versus uncovered
 
-`Data n/a` is neither covered nor uncovered: it leaves feature count/cap denominators and ordinary gap filters, except the intentionally inclusive `No Dependency` filter. All-unavailable features render null reach and cannot win insight tiles. Source-depth counts and filters require observed `sourceCount`; omitted sources stay unknown, while an explicit empty array measures zero. Cap aggregation carries observation counts/completeness: partial ratios/subtotals name **known market cap**, no observations render `n/a`, and observed zero remains `$0` (a zero-denominator ratio is still `n/a`). Cap skew requires both count and cap shares; without a measured candidate it renders `n/a`.
+Data n/a is neither covered nor uncovered: exclude it from feature count/cap denominators and ordinary gap filters, except intentionally inclusive No Dependency (Gap or Data n/a, not no upstream dependencies). All-unavailable features have null reach and cannot win insight tiles.
 
-Market-cap reach also remains `n/a` when uncovered rows have observed cap but no covered row has an observed cap: a known denominator cannot manufacture a zero numerator beside an unavailable covered subtotal.
-
-#### Source count enrichment
-
-When `consensusSources` data is available from the peg-summary API, the "Tracked" badge shows a source count suffix: "Tracked (5 sources)" (or "Tracked (5)" in compact mode). Tooltip expands to show confidence level and source names (e.g., "High confidence — CoinGecko, DefiLlama, RedStone"). The feature snapshot breakdown adds a secondary source-depth distribution: `5+ sources: N · 3-4: N · 1-2: N`. The snapshot header also includes a compact `Source target` tile for the `>=3` candidate-source count and market-cap reach.
-
-If a feature gains richer user-facing states, update the relevant resolver under `src/lib/coverage/`, its export surface in `src/lib/coverage.ts`, and this document.
-
----
+Omitted source arrays/counts mean unknown; explicit empty arrays measure zero. Cap aggregation carries observation count/completeness. Partial subtotals/ratios say known market cap; no observations is n/a; measured zero stays $0 while zero-denominator ratios remain n/a. Cap skew requires measured count and cap shares; no valid candidate means n/a. An observed uncovered denominator cannot manufacture a zero covered numerator when no covered row has observed cap.
 
 ## UX Contract
 
-- The feature snapshot comes first and answers the breadth question before the page shifts into source context and per-coin inspection.
-- The expandable Safety Score input-coverage card follows the feature snapshot. Its collapsed view shows evaluated inputs and missing-data ownership, or publication-hold context in place of the counts when the publication is held; its disclosure retains owner explanations (naming the actual cause — e.g. the issuer's reporting cadence for `published-evidence-expired`, not an implied Pharos delay — rather than a generic catch-all), per-pillar counts, and missing-input reasons.
-- The pricing-source card renders after the Safety Score input-coverage card only when market-source counts are nonempty. Authoritative overrides appear within that card when present; an override-only snapshot does not render the card.
-- Search filters by name and ticker.
-- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`). `No Dependency` now means unresolved dependency-map coverage (`Gap` or `Data n/a`), not "no upstream dependency."
-- The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
-- Default sort is descending live market cap. The sort control stays a grouped `<select>` but is reskinned to the pill/token visual; discrete quick filters use `pharos-control-pill`, and every digit-bearing cell uses `.pharos-numeric`.
-- Search (`q`), quick filter (`filter`), sort (`sort`), and page (`page`) are URL-backed, so a filtered or paged view is shareable; defaults are omitted from the URL and any filter, search, or sort change returns to page 1.
-- The matrix renders through the shared `ReferenceTable` (`src/components/reference-table.tsx`): 20 rows per page, a sticky header, compact density, and a footer count (`Showing a–b of N coins · Page x of y · filtered from M`).
-- Below a 64rem container (container query, not a JS breakpoint), the matrix renders scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states; cards page with the table and use `content-visibility: auto`.
-- From `md` upward, the full comparison table renders with the first column sticky.
-- The per-coin matrix renders after the pricing-source card and is explicitly positioned as the asset-level drill-down surface.
-- A compact `CoverageLensSummary` block sits above the matrix to show the active search/filter lens and the tracked market-cap share currently in view.
-- The status legend remains an inline disclosure above the matrix; there is no separate full-page explainer block.
-- Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view. Liquidity producer failures served with saved data use the refresh-failure notice, while source or quality findings use the data-quality notice; an older snapshot still takes precedence. Advisory details remain available in the message tooltip without putting machine-readable flags in the banner body.
+Search/filter/sort/page use URL state; defaults are omitted and lens changes reset page one. Default sorting is descending live cap. The strict Reserves lens matches score-grade live only, not proof/curated validation. Shared paginated table/cards must show the same eligible set and full filtered count; cards expose remaining statuses through accessible expansion. The active lens and cap share describe that set, not visible page rows.
 
-The page should continue to render meaningfully when some live datasets are temporarily unavailable. Structural coverage survives partial feature-query failures, but an unavailable stablecoins snapshot shows the error card and withholds the matrix.
+Shared freshness notices cover every contributing live family without discarding structural coverage when optional queries fail. Retained liquidity distinguishes producer-refresh failure from source/quality warnings; older snapshot notices take precedence. Advisory detail may explain reasons without dumping machine flags into banner text. Stablecoins-source unavailability shows the error card and withholds the matrix rather than inventing cap weights.
 
 ## Structured Data Contract
 
-The `/coverage/` page emits a conservative `Dataset` JSON-LD node for the visible coverage matrix. The descriptor is static and methodological: it names the coverage fields, links the page to the public API documentation/catalog, and intentionally omits live metric values, `DataDownload` entries, `dateModified`, and `/_site-data/*` proxy URLs.
-
----
+The static indexable shell uses `createClientFeaturePage()`. Dataset JSON-LD is conservative/methodological: organization creator/publisher, license, `urn:pharos:dataset:coverage`, public page/API links and coverage fields. No live metrics, DataDownload, dateModified or private `/_site-data/*` URLs. Client `FaqSection includeJsonLd` owns FAQ schema.
 
 ## Update Rules
 
-Update this page when any of the following change:
-
-- a new user-facing feature becomes per-coin and has partial coverage
-- an existing feature changes its coverage source of truth
-- a status label or meaning changes
-- the table gains or loses a column
-
-If the change also affects route inventory, update [Architecture](./architecture.md) and the [Documentation Index](./README.md).
+Change resolver, export and this contract together when status meaning, provenance, headline/denominator or feature coverage changes. Canonical source modules own label rosters and column order; do not copy them here. Route changes also update sitemap/metadata and owning architecture references.

@@ -7,21 +7,9 @@ what shipped, what's next, and why.
 
 ## Architecture
 
-- **Registry:** `src/data/blog/index.ts` — one `BlogPost` per post (the single
-  source of truth).
-- **Post bodies:** `src/data/blog/posts/<slug>.md` — Markdown, rendered by
-  `src/app/blog/[slug]/page.tsx` (react-markdown, `remarkGfm` + `rehypeSlug` — no
-  heading autolinks, unlike `/docs`).
-- **Hub:** `src/app/blog/page.tsx` lists posts newest-first.
-- **Publication line:** post headers credit Pharos and link to `/about/#editorial-ai-policy`, matching the Article-family organization author. The visible published date comes from the registry, not git modification time; it makes no human-review claim.
-- **Feed:** `src/app/feed/blog.xml/route.ts` → `/feed/blog.xml` (the legacy
-  extensionless `/feed/blog` path is a `_redirects` 301).
-- **Homepage banner:** `src/components/home-blog-banner.tsx` hides the latest
-  post once its age exceeds `FRESH_DAYS` (14), evaluated at build time
-  (zero client JS). Future-dated registry entries are not hidden.
-- **Typography:** article bodies use the Georgia `font-serif` editorial register
-  (the authored-editorial carve-out in `DESIGN.md`; page chrome stays sans). No
-  frost-blue anywhere in blog chrome (One Beam Rule).
+[`BLOG_POSTS` and `BlogPost`](../../src/data/blog/index.ts) own metadata; bodies live in `src/data/blog/posts/<slug>.md`. The registry drives the hub, feed, sitemap and post metadata. Publication dates are authored metadata, not Git modification times or claims of human review.
+
+Post headers credit Pharos and link to `/about/#editorial-ai-policy`. Article bodies use the Georgia editorial register; page chrome stays sans and obeys the One Beam Rule in [DESIGN.md](../../DESIGN.md).
 
 ## Publish a post
 
@@ -45,29 +33,13 @@ what shipped, what's next, and why.
    npx vitest run src/app/feed src/app/__tests__/sitemap-frozen.test.ts
    ```
 4. **Commit** the post + registry.
-   `src/data/blog/**` is wired into `GIT_DATE_SCAN_PATHS`
-   (`generate-sitemap-dates.ts`), so the gitignored `sitemap-dates` projection
-   picks the new post up automatically — locally on the next
-   `npm run bootstrap:generated:history`, and in production during the release
-   build. There is no separate settle step.
+   History-derived sitemap dates materialize through `npm run bootstrap:generated:history` locally and during release; there is no separate settle step.
 5. **Push** via the normal protected-main PR path. Registry dates are metadata,
    not a publication embargo; deploy the entry when it should become public.
 
 ## Notes
 
-- **Social image:** a post with `coverImage` uses that asset for Open Graph and
-  Twitter metadata as well as the article and hub card. A post without one
-  falls back to the shared `public/og-blog.png` card with the "Blog" kicker.
-  Cover images are authored assets; Pharos does not generate per-post cards.
-- **llms.txt:** `public/llms.txt` currently omits the `/blog/` hub and
-  `/feed/blog.xml`; adding them would require a change to
-  `scripts/maintenance/generate-llms-txt.ts` first. Publishing never forces an
-  llms.txt regeneration.
-- **Discovery** is wired once and needs no per-post work: the sitemap and
-  the RSS feed enumerate posts straight from the
-  registry; the command palette searches that registry and links to individual
-  posts. The nav `Resources` menu's `Updates` column and footer link the hub;
-  the feed `<link>` in `layout.tsx` points to `/feed/blog.xml`.
+Cover images are authored, reviewed assets; the optional cover contract is specified in [Publish a post](#publish-a-post). Publishing needs no per-post discovery wiring or forced llms.txt regeneration; change the owning generator if its inventory needs to change.
 
 ## Changelog
 

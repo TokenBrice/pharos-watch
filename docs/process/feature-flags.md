@@ -14,7 +14,7 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 
 Each flag's default and `expiresAt` are owned by `src/lib/feature-flags.ts`; read them there rather than from this page.
 
-The no-op blacklist banner control was retired on 2026-09-27 (DEC-15): its flag, getter, lifecycle metadata and Pages workflow input are removed. The blacklist summary API and seven-day per-coin counters remain available. Removing the former GitHub repository Variable is a separate authorized operations action, not a completed part of this code change. Dated lifecycle reviews below are historical records, not the current inventory.
+The flag source owns the active inventory; the table below describes its user-facing surfaces. Removal of a no-longer-consumed GitHub Variable is a separately authorized operator action, not an automatic consequence of a code change.
 
 | Flag                                         | Gates                                                                               |
 | -------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -33,7 +33,7 @@ What must be true before turning each flag on in production:
 ### `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`
 
 - [x] Magnitude-aware `getTrendClass` lands behind the flag (`src/lib/stablecoin-detail-hero-view-model.ts`).
-- [x] WCAG AA contrast spot-check on the calm/warn/severe text tokens (light + dark themes): the 2026-07-29 CLI review of the flag-selected muted, green, amber, orange, and red tokens found a 4.78:1 minimum on light surfaces and 7.23:1 minimum on dark surfaces.
+- [x] WCAG AA contrast spot-check on calm/warn/severe tokens in light and dark themes: [immutable CLI review](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/process/feature-flags.md#2026-07-29-lifecycle-review). This does not close human visual acceptance.
 - [ ] Visual review on USDC + USDe + a coin with an active depeg.
 
 ### `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`
@@ -43,15 +43,7 @@ What must be true before turning each flag on in production:
 
 ## 2026-07-29 lifecycle review
 
-All three August 1 flags remain default-off. Their automated checks pass, but
-they must not be inlined until the remaining human or real-device validation
-has been completed.
-
-| Flag | Owner | Evidence reviewed 2026-07-29 | Reason retained | Next review |
-| --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | tokenbrice | CLI WCAG review passes AA for all flag-selected text tokens (minimum 4.78:1 light, 7.23:1 dark); retained `src/lib/__tests__/severity-colors.test.ts` coverage checks the default thresholds, not the flag-enabled palette. | A human must visually review USDC, USDe, and a coin with an active depeg before the default-off path can be removed. | 2026-09-01 |
-| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | tokenbrice | `src/components/stablecoin-detail/__tests__/mobile-sticky-summary.test.tsx` verifies height publication; `src/components/__tests__/longform-scrollspy-nav.test.tsx` verifies the reactive `scroll-margin-top` calculation. | A real device must verify mounted-summary scrollspy behavior in iOS Safari and Android Chrome. | 2026-09-01 |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | tokenbrice | Historical rendering/suppression and aggregation tests were retired with the unmounted banner and hook. | Configuration retirement is a separate owner decision; there is no current render site. | 2026-09-01 |
+Historical review: [immutable record](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/process/feature-flags.md#2026-07-29-lifecycle-review). Current acceptance is governed by [approved retirement gates](#2026-10-08-approved-retirement-gates), not that review's inventory or dates.
 
 ### `NEXT_PUBLIC_PHAROS_HERO_VERDICT`
 
@@ -65,9 +57,12 @@ The overlay, its flag/getter, chart legends and exclusive browser Tape reads hav
 
 ### 2026-10-08 approved retirement gates
 
-Quiet deviations and mobile sticky summary remain gated until tokenbrice or a named reviewer accepts the exact build by **2026-11-15**. Quiet review covers USDC, USDe and a real incident in light/dark and narrow/wide home, table, depeg and hero views, including severity/trend boundaries. Sticky review requires iOS Safari and Android Chrome device/browser/SHA receipts for cold hashes, anchors, lazy folds, toolbar collapse, rotation, long text, 200% zoom and genuine missing-price/grade cases. Its viewport-only observation and height cleanup must be proven before deletion; source tests or an older enabled build do not certify device acceptance.
+| Temporary controls | Retention / acceptance contract |
+| --- | --- |
+| Quiet deviations + mobile sticky summary | Keep gated until tokenbrice or a named reviewer accepts the exact build by **2026-11-15**. Quiet review covers USDC, USDe and a real incident in light/dark and narrow/wide home, table, depeg and hero views, including severity/trend boundaries. Sticky review needs iOS Safari and Android Chrome device/browser/SHA receipts for cold hashes, anchors, lazy folds, toolbar collapse, rotation, long text, 200% zoom and genuinely missing price/grade; prove viewport-only observation and height cleanup. Source tests or older enabled builds do not certify device acceptance. |
+| DDR + DDRR rollback | Keep both until **30 consecutive deployed rollback-free days** on an accepted semantic baseline, a current DDR snapshot and at least one stored DDRR assessment are evidenced. The [approved historical gate](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/process/feature-flags.md#2026-10-08-approved-retirement-gates) sets October 28 as the earliest conditional closure only if September 28 deployment is proven; later deployment, semantic changes or rollback restart the window. Missing, empty, stale and failed reads remain distinct. |
 
-Both DDR/DDRR rollback controls remain until **30 consecutive deployed rollback-free days** on an accepted semantic baseline, a current DDR snapshot and at least one stored DDRR assessment are evidenced. The earliest possible closure is **2026-10-28**, conditional on a proven September 28 deployment; a later deployment, semantic change or rollback restarts the window. Missing, empty, stale and failed reads stay distinct. Lifecycle expiry dates are review deadlines, not automatic evidence or removal authority.
+Lifecycle expiry dates are review deadlines, not automatic evidence or removal authority.
 
 After acceptance, remove each flag, getter, alternate branch and matching Pages build input in the same change. Retain permanent `heroVerdict`, shared query infrastructure and backend chronology. The generic inlining/stale guards currently cover the four remaining temporary flags; accepting a valid inventory with no temporary entries is the final shared-checker cutover after all four close, not permission to skip missing-source or lifecycle validation.
 
@@ -124,30 +119,4 @@ inlining check as applicable.
 
 ## 2026-08-23 lifecycle review
 
-All six dated flags were moved from `2026-09-01` to `2026-12-01`. None was
-flipped and none was deleted, because in every case the documented blocker is
-work this review could not perform. `expiresAt` permits exactly two outcomes
-past the date — flip and inline the on-path, or record why the flag is retained
-— and this is the second.
-
-This is a dated deferral, not a resolution. The four default-off flags are still
-waiting on the same human and real-device validation recorded on 2026-07-29; no
-new evidence was gathered, so inlining any of them would have shipped an
-unreviewed on-path. `CHART_ANNOTATIONS` additionally still lacks a curation
-owner and cadence, which is a product decision rather than a QA task.
-
-The two default-on resolver flags are emergency rollback levers, and the case
-for keeping them strengthened rather than weakened: DDR methodology `4.3`
-(continuous observation windows and reason-authoritative recovery labels) ships
-in this release and changes how onset and recovery windows are confirmed.
-Removing the rollback path for `/depeg/` in the same release that changes its
-confirmation semantics would remove the mitigation exactly when it is most
-likely to be needed.
-
-| Flag | Reason retained 2026-08-23 | Next review |
-| --- | --- | --- |
-| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | Human visual review of USDC, USDe, and an active depeg still outstanding. | 2026-12-01 |
-| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | Real-device iOS Safari and Android Chrome scrollspy review still outstanding. | 2026-12-01 |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Configuration retained; the unmounted banner and hook have since been removed. Retirement requires a separate owner decision. | 2026-12-01 |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER` | Rollback lever for `/depeg/` retained through the DDR 4.3 continuity release. | 2026-12-01 |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Rollback lever for the DDRR module retained through the DDR 4.3 continuity release. | 2026-12-01 |
+Historical deferral: [immutable record](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/process/feature-flags.md#2026-08-23-lifecycle-review). Current defaults and review deadlines come from `FEATURE_FLAGS` and `FEATURE_FLAG_LIFECYCLE`; unresolved acceptance stays in [approved retirement gates](#2026-10-08-approved-retirement-gates).

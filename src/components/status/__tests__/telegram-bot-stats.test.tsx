@@ -142,7 +142,7 @@ describe("TelegramBotStats", () => {
     expect(screen.getByText(/30-minute policy threshold/)).toBeTruthy();
     expect(screen.getByText(/watchdog threshold remains backend-owned/i)).toBeTruthy();
     expect(screen.getByRole("link", { name: /Backlog expiration runbook/i }).getAttribute("href")).toContain(
-      "telegram-backlog-expiration.md",
+      "telegram-no-delivery.md#backlog-and-expiration",
     );
   });
 

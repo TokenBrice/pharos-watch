@@ -248,14 +248,14 @@ function buildRecoveryLinks(input: {
   if (input.backlogAssessment === "attention") {
     links.push({
       label: "Backlog expiration runbook",
-      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-backlog-expiration.md`,
+      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-no-delivery.md#backlog-and-expiration`,
       external: true,
     });
   }
   if (input.rateLimited) {
     links.push({
       label: "Rate-limit runbook",
-      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-rate-limit-storm.md`,
+      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-no-delivery.md#rate-limit-storm`,
       external: true,
     });
   }

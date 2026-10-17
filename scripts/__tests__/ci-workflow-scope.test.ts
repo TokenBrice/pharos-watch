@@ -427,25 +427,26 @@ describe("CI workflow scope", () => {
 
 });
 
-it("runs secret scanning from trusted base code and policy before checking out PR content", () => {
+it("snapshots trusted base code and policy before PR checkout and scans both modes afterward", () => {
   const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml"));
   const steps = workflow.jobs.secrets.steps;
   const checkouts = steps.filter((step: { uses?: string }) => step.uses?.startsWith("actions/checkout@"));
   expect(checkouts[0].with.ref).toBe("${{ github.event.pull_request.base.sha }}");
   const snapshot = steps.findIndex((step: { run?: string }) => step.run?.includes('--snapshot-trusted="$RUNNER_TEMP/trusted-gitleaks"'));
-  const scanner = steps.findIndex((step: { run?: string }) => step.run?.includes('run-gitleaks.ts" --range --policy-root='));
+  const scanner = steps.findIndex((step: { run?: string }) => step.run?.includes('run-gitleaks.ts" --range --tree --policy-root='));
   expect(snapshot).toBeGreaterThan(steps.indexOf(checkouts[0]));
-  expect(snapshot).toBeLessThan(scanner);
-  expect(scanner).toBeGreaterThan(steps.indexOf(checkouts[0]));
-  expect(scanner).toBeLessThan(steps.indexOf(checkouts[1]));
+  expect(snapshot).toBeLessThan(steps.indexOf(checkouts[1]));
+  expect(scanner).toBeGreaterThan(steps.indexOf(checkouts[1]));
+  expect(steps[scanner].run).toContain('git fetch --no-tags origin "${GITLEAKS_HEAD_REF}"');
   expect(steps[scanner].env.GITLEAKS_HEAD_REF).toBe("${{ github.event.pull_request.head.sha }}");
 });
 
 it("scans PR merge-resolution lines for the full PR range including historical merges", () => {
   const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml"));
   const steps = workflow.jobs.secrets.steps;
-  const tree = steps.findIndex((step: { run?: string }) => step.run?.includes('run-gitleaks.ts" --tree'));
-  expect(tree).toBeGreaterThan(-1);
+  const trustedScans = steps.filter((step: { run?: string }) => step.run?.includes('run-gitleaks.ts" --range --tree'));
+  expect(trustedScans).toHaveLength(1);
+  const tree = steps.indexOf(trustedScans[0]);
   expect(steps[tree].env.GITLEAKS_BASE_REF).toBe("${{ github.event.pull_request.base.sha }}");
   expect(steps[tree].env.GITLEAKS_HEAD_REF).toBe("${{ github.event.pull_request.head.sha }}");
   expect(steps[tree].run).toContain('--policy-root="$RUNNER_TEMP/trusted-gitleaks"');

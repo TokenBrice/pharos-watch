@@ -143,8 +143,8 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     factoryAddress: "0x4b2ab38dbf28d31d467aa8993f6c2585981d6804",
     expectedFactoryCodeHash: "0x98cde3564f540d7529feb2c697e2d79b85e3bc864d088ebe09fd5dcfc60a5c0e",
   },
-  // Official address sources and 2026-10-05 pinned deployment receipts:
-  // docs/dex-liquidity.md, Wave 4 QuoterV2 shadow deployment packet.
+  // Official address provenance and collection/admission boundary:
+  // docs/process/dex-liquidity-appendix.md#wave-4-reviewed-v3-fork-shadow-collection-2026-10-05
   {
     adapterProfileId: "hyperswap-v3-quoter-v2",
     protocol: "hyperswap-v3",
