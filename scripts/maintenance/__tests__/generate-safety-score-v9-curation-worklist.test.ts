@@ -1,3 +1,4 @@
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { V9_REASON_CODES } from "@shared/types/safety-score-v9";
 import { describe, expect, it } from "vitest";
 import {
@@ -5,6 +6,14 @@ import {
 } from "../../lib/safety-score-v9-missing-data-work-types";
 import { classifyV9CurationWorklistStream } from "../generate-safety-score-v9-missing-data-registry";
 import { renderCurationWorklist } from "../generate-safety-score-v9-curation-worklist.mjs";
+
+const agentProtocol = {
+  claim: "Registry claim instruction.",
+  collisionAvoidance: "Registry collision-avoidance instruction.",
+  evidenceStandard: "Registry evidence-standard instruction.",
+  verification: "Registry verification instruction.",
+  editPolicy: "Registry edit-policy instruction.",
+};
 
 describe("Safety Score v9 curation worklist routing", () => {
 
@@ -35,6 +44,30 @@ describe("Safety Score v9 curation worklist routing", () => {
     );
   });
 
+  it("renders the registry agent protocol verbatim and the current redemption methodology version", () => {
+    const replay = {
+      pipeline: {
+        candidate: { cards: [] },
+        evaluatedSet: { assets: [] },
+      },
+    };
+    const registry = {
+      agentProtocol,
+      summary: { stablecoinCount: 0, warnings: [] },
+      stablecoins: [],
+    };
+    const markdown = renderCurationWorklist(replay, registry, "capture.json");
+    const protocol = markdown.split("## Protocol for agents\n\n")[1].split("\n\nItem ID format:")[0];
+    expect(protocol).toBe([
+      `1. ${agentProtocol.claim}`,
+      `2. ${agentProtocol.collisionAvoidance}`,
+      `3. ${agentProtocol.evidenceStandard}`,
+      `4. ${agentProtocol.verification}`,
+      `5. ${agentProtocol.editPolicy}`,
+    ].join("\n"));
+    expect(markdown).toContain(`redemption methodology v${REDEMPTION_BACKSTOP_METHODOLOGY_VERSION} derives`);
+    expect(markdown).not.toContain("redemption methodology v4.18");
+  });
 
   it("renders mixed known, null, missing and zero supplies without false coverage or smallest-asset ordering", () => {
     const supplies = [
@@ -66,6 +99,7 @@ describe("Safety Score v9 curation worklist routing", () => {
       },
     };
     const registry = {
+      agentProtocol,
       summary: { stablecoinCount: 4, warnings: [] },
       stablecoins: supplies.map(({ id }) => ({ assetId: id, missingItems: [] })),
     };

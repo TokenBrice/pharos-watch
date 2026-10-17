@@ -16,14 +16,14 @@ Applies to scripts, excluding worker-bound tooling under worker/scripts.
 ## Invariants
 
 - New `process.argv` readers must use `parseStrictCliArgs` or receive an explicit policy exemption; `check:cli-args-policy` enforces enrollment.
-- Registered outputs, dependency phases, lifecycle, checkability, and `autoStage` belong to the artifact registry; do not hand-edit or normalize generated outputs.
+- Registered outputs, dependency phases, lifecycle, and checkability belong to the artifact registry; do not hand-edit or normalize generated outputs.
 - State-changing scripts preserve documented dry-run semantics: reads are allowed, filesystem or remote mutation is not.
 
 ## Entrypoints & Generation
 
 - `scripts/ci/` contains merge/release guardrails; `scripts/maintenance/` contains generators, audits, and operator tooling.
 - `scripts/lib/cli-args.mjs` owns strict parsing; `scripts/lib/automation-registry.mjs` owns generated-artifact routing.
-- Use `npm run check:generated-artifacts` for freshness and `npm run sync:staged-artifacts` for registry-selected `autoStage` outputs.
+- Use `npm run bootstrap:generated` for compile/serve inputs; regenerate affected tracked artifacts explicitly and use `npm run check:generated-artifacts` for freshness.
 
 ## Tests
 

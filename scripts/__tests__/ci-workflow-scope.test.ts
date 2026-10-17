@@ -9,6 +9,19 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
+  it("transports ignored compile/serve inputs without an unused Next cache branch", () => {
+    const action = parseYaml(readRepoFile(".github/actions/setup-workspace/action.yml"));
+    expect(action.inputs["next-cache"]).toBeUndefined();
+    expect(action.inputs["next-cache-save"]).toBeUndefined();
+    expect(action.runs.steps.some((step: { with?: { path?: string } }) => step.with?.path === ".next/cache"))
+      .toBe(false);
+    const packageStep = action.runs.steps.find((step: { name?: string }) => step.name === "Package required workspace");
+    const paths = packageStep.env.WORKSPACE_PATHS.trim().split("\n");
+    expect(paths).toEqual(expect.arrayContaining([
+      "public/llms.txt", "src/lib/case-study-client-index.ts", "src/data/changelogs/index.ts",
+    ]));
+  });
+
   it("installs each nightly Node 24 lane independently", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {
@@ -131,10 +144,42 @@ describe("CI workflow scope", () => {
     for (const job of [scenarios.jobs.scenarios, map.jobs.plan]) {
       expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
     }
-    expect(map.jobs.render.needs).toBe("plan");
-    expect(map.jobs.render.if).toBe(
-      "${{ github.ref == 'refs/heads/main' && needs.plan.outputs.should_render == 'true' }}",
-    );
+    expect(scenarios.on.schedule).toEqual([{ cron: "17 2 * * *" }]);
+    expect(Object.keys(map.jobs)).toEqual(["plan"]);
+    const steps = map.jobs.plan.steps as Array<{
+      name?: string; id?: string; if?: string; uses?: string; run?: string;
+      with?: Record<string, string>; env?: Record<string, string>;
+    }>;
+    expect(steps.filter((step) => step.uses?.startsWith("actions/checkout@"))).toHaveLength(1);
+    expect(steps.some((step) => step.uses?.startsWith("actions/download-artifact@"))).toBe(false);
+    const setups = steps.filter((step) => step.uses === "$/.github/actions/setup-workspace");
+    expect(setups).toHaveLength(2);
+    expect(setups[0].if).toBeUndefined();
+    expect(setups[0].with).toMatchObject({
+      "browser-cache": "false", "bootstrap-generated": "false", "install-playwright-firefox": "false",
+    });
+    expect(setups[1].if).toBe("${{ steps.plan.outputs.should_render == 'true' }}");
+    expect(setups[1].with).toMatchObject({
+      "install-deps": "false", "browser-cache": "true", "install-playwright-firefox": "true",
+    });
+    const planIndex = steps.findIndex((step) => step.id === "plan");
+    expect(steps.indexOf(setups[1])).toBeGreaterThan(planIndex);
+    for (const name of [
+      "Bootstrap render inputs", "Verify render credentials", "Render and validate publication files",
+      "Upload the rendered map", "Publish in commit-marker order and verify readback",
+    ]) {
+      expect(steps.find((step) => step.name === name)?.if)
+        .toBe("${{ steps.plan.outputs.should_render == 'true' }}");
+    }
+    for (const phase of ["render", "publish"]) {
+      const step = steps.find((step) => step.run?.includes(`publish-safety-score-map.ts ${phase}`));
+      expect(step?.env?.PLAN_TOKEN).toBe("${{ steps.plan.outputs.plan_token }}");
+      expect(step?.run).toContain('--plan-token="${PLAN_TOKEN}"');
+    }
+    const summaries = steps.filter((step) => step.run?.includes("publish-safety-score-map.ts summary"));
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].if).toBe("${{ always() && steps.plan.outcome == 'success' }}");
+    expect(steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@"))).toHaveLength(1);
   });
 
   it("builds Pages without the Next compiler cache and consolidates artifact checks", () => {
@@ -212,7 +257,17 @@ describe("CI workflow scope", () => {
     expect(rebuild.jobs["pages-prepare"].uses).toBe("$/.github/workflows/pages-prepare.yml");
     expect(rebuild.jobs["pages-release"].needs).toBe("pages-prepare");
     expect(rebuild.jobs["pages-release"].uses).toBe(deploy.jobs["pages-release"].uses);
-    expect(rebuild.jobs["pages-release"].with.refresh_data).toBe(true);
+    expect(rebuild.jobs["pages-release"].with.refresh_data).toBeUndefined();
+    expect(deploy.jobs["pages-release"].with.refresh_data).toBeUndefined();
+    expect(release.on.workflow_call.inputs.refresh_data).toBeUndefined();
+    const releaseSteps = release.jobs["pages-release"].steps as Array<{
+      name?: string; if?: string; run?: string;
+    }>;
+    const refresh = releaseSteps.find((step) => step.name === "Refresh API-backed release data")!;
+    expect(refresh.if).toBeUndefined();
+    expect(refresh.run).toBe("node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
+    expect(releaseSteps.some((step) => step.name === "Validate release-data refresh result")).toBe(false);
+    expect(releaseSteps.some((step) => step.run?.includes("PAGES_REFRESH_RESULT_PATH"))).toBe(false);
 
     expect(prepare.jobs["pages-prepare"].environment).toBeUndefined();
     expect(prepare.on.workflow_call?.secrets).toBeUndefined();
@@ -326,18 +381,19 @@ describe("CI workflow scope", () => {
         outputs?: Record<string, string>;
         permissions?: Record<string, string>;
         steps?: Array<{
-          env?: Record<string, string>; id?: string; name?: string; run?: string;
+          env?: Record<string, string>; id?: string; name?: string; run?: string; if?: string;
           uses?: string; with?: Record<string, string>;
         }>;
       }>;
     };
     const job = workflow.jobs["post-deploy-acceptance"];
-    const acceptance = job.steps?.find((step) => step.id === "acceptance");
+    const acceptance = job.steps?.find((step) => step.name === "Record deployment identity and operational acceptance");
 
     expect(job.needs).toEqual(["plan", "deploy-worker", "pages-release"]);
     expect(job.environment).toBeUndefined();
     expect(job.permissions).toEqual({ contents: "read" });
-    expect(job.outputs).toEqual({ outcome: "${{ steps.acceptance.outputs.outcome }}" });
+    expect(job.outputs).toBeUndefined();
+    expect(acceptance?.if).toBe("${{ always() }}");
     expect(acceptance?.run).toContain("scripts/ci/run-post-deploy-acceptance.ts");
     expect(workflow.jobs["deploy-worker"].outputs).toEqual({
       worker_version: "${{ steps.verify-worker-deployment.outputs.worker_version }}",
@@ -352,12 +408,9 @@ describe("CI workflow scope", () => {
     expect(job.steps?.find((step) => step.id === "verify-heavy-identity")?.run).toBe(
       workflow.jobs["deploy-worker"].steps?.find((step) => step.id === "verify-heavy-deployment")?.run,
     );
-    const heavyMatch = job.steps?.find((step) => step.name === "Require unchanged heavy activation identity");
-    expect(heavyMatch?.env).toMatchObject({
-      EXPECTED_HEAVY_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
-      OBSERVED_HEAVY_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
-    });
-    expect(heavyMatch?.run).toContain('test "${EXPECTED_HEAVY_VERSION}" = "${OBSERVED_HEAVY_VERSION}"');
+    const heavyIdentity = job.steps?.find((step) => step.id === "verify-heavy-identity");
+    expect(heavyIdentity?.if).toBe("${{ always() && needs.deploy-worker.result == 'success' }}");
+    expect(job.steps?.some((step) => step.name === "Require unchanged heavy activation identity")).toBe(false);
     const setup = job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
     expect(setup?.with).toMatchObject({
       "install-deps": "false", "cache-npm": "false", "bootstrap-generated": "false",
@@ -367,6 +420,8 @@ describe("CI workflow scope", () => {
       EXPECTED_PAGES_COMMIT: "${{ github.sha }}",
       EXPECTED_WORKER_VERSION: "${{ needs.deploy-worker.outputs.worker_version }}",
       OBSERVED_WORKER_VERSION: "${{ steps.verify-worker-identity.outputs.worker_version }}",
+      EXPECTED_HEAVY_WORKER_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
+      OBSERVED_HEAVY_WORKER_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
     });
   });
 

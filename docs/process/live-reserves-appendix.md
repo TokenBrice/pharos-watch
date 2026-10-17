@@ -688,7 +688,7 @@ Six terminal bindings were removed: `dusd-fluid`, `eurr-stablr`, `usdr-stablr`, 
 
 `parked` and `retired` descriptors require `parkedSince` and `nextReview` dates. Registry tests enforce those fields, not automatic expiry or activation. Owners explicitly decide revival or retirement at review; a passed date never authorizes a new binding. Staged entries can carry their own human-enforced blocker/date.
 
-StoneYield's executable retirement leaves its adverse backing ledger unresolved at `.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json`. BSC block 119927831 reported SUSDC supply 10,020,010, deposits 10, rewards 10,020,000 and USDC balance 0.05; observed router/Venus/idle assets were approximately 10.0487 against STUSD supply 2,894,743.271428093 (coverage 0.0000034886429716375584). The stUSD/sUSDC liability and USDC/vUSDC instrument contradictions require separate curation; code removal does not resolve them.
+StoneYield's executable retirement leaves its adverse backing ledger unresolved at `.github/artifacts/safety-score-missing-data-reviewed-ledger.json`. BSC block 119927831 reported SUSDC supply 10,020,010, deposits 10, rewards 10,020,000 and USDC balance 0.05; observed router/Venus/idle assets were approximately 10.0487 against STUSD supply 2,894,743.271428093 (coverage 0.0000034886429716375584). The stUSD/sUSDC liability and USDC/vUSDC instrument contradictions require separate curation; code removal does not resolve them.
 
 ### Collateral positions and credit vaults
 

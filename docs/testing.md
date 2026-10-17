@@ -45,7 +45,7 @@ Receipt outcomes and publication interpretation are owned by [Pre-push readiness
 
 `npm run check:pr -- --plan` prints selected lanes/commands, test files and CI partitions, critical owners, refs, and limitations without executing checks or fetching. Test discovery may import modules. Its skipped leaves make the optional diagnostic receipt incomplete. `--json` selects the machine-readable local report, with progress on stderr; its execution `status` matches the receipt outcome, including `incomplete` for dirty or weakened runs. Neither output is readiness authority.
 
-`check:bootstrap` separately rehearses clean committed-state bootstrap, and `check:release` is an optional production-build/Worker-bundle rehearsal, not the [protected release path](./deployment-process.md#release-snapshot-state-machine).
+`check:release` is an optional production-build/Worker-bundle rehearsal, not the [protected release path](./deployment-process.md#release-snapshot-state-machine).
 
 `npm run ci:census -- --since=YYYY-MM-DD [--until=YYYY-MM-DD] [--cut=YYYY-MM-DD] [--out=<path.json>]` uses authenticated `gh` for GET-only workflow/run/attempt/job evidence; it writes JSON and `<path.json>.md` when requested, otherwise prints both. It distinguishes latest run-ID conclusions from retained executions, censored branches, and annotation-backed cancellation classes; UTC cohorts are descriptive, not causal attribution. Failure categories require owner classification. Source: [`ci-failure-census.ts`](../scripts/maintenance/ci-failure-census.ts).
 

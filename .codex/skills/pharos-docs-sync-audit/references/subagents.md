@@ -51,7 +51,7 @@ Depth is `light` for timeline archives (check only current/latest behavior and c
 
 ### Verifier contract
 
-The read-only verifier checks semantic claims against opened source. CI already owns file paths (`npm run check:doc-source-paths`), internal links (`npm run check:verified-doc-links`), methodology version strings (`npm run check:doc-sync`), the generated agent mirror, and generated API artifacts (`npm run check:generated-artifacts -- --only=api-reference,openapi,postman`); do not report those. In scope are formulas/thresholds/bands/defaults, mutable enumerations, environment names, D1 schema, cron cadence/budgets, hand-written API fields/status/cache behavior, conditionals, and function/module behavior. Ignore rationale, roadmap/history, and style. Treat docs as hypotheses; no source evidence means no finding.
+The read-only verifier checks semantic claims against opened source. CI already owns file paths and internal links (`npm run check:verified-doc-links`), methodology version strings (`npm run check:doc-sync`), and generated API artifacts (`npm run check:generated-artifacts -- --only=api-reference,openapi,postman`); do not report those. In scope are formulas/thresholds/bands/defaults, mutable enumerations, environment names, D1 schema, cron cadence/budgets, hand-written API fields/status/cache behavior, conditionals, and function/module behavior. Ignore rationale, roadmap/history, and style. Treat docs as hypotheses; no source evidence means no finding.
 
 Return structured data in this shape:
 

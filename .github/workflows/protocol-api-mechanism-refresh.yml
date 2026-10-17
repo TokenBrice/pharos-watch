@@ -135,9 +135,6 @@ jobs:
           BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"
           ARTIFACT_TMP="$(mktemp -d)"
           trap 'rm -rf "$ARTIFACT_TMP"' EXIT
-          EMPTY_HOOKS="$ARTIFACT_TMP/empty-git-hooks"
-          mkdir -p "$EMPTY_HOOKS"
-          git config core.hooksPath "$EMPTY_HOOKS"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Bundle the verifier and its import closure from trusted main before

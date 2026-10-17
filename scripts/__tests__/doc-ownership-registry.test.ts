@@ -105,7 +105,7 @@ describe("doc-ownership registry integrity", () => {
       // Release B added nullable flow/supply/PSI, nominal-price, and audit-verdict
       // wire contracts; the 2026-10-07 hardening added served-generation yield
       // identity, PSI omission arrays, and scheduler liveness. Retain its ratchet.
-      "docs/api-reference.md#public-endpoints": 47_460,
+      "docs/api-reference.md#public-endpoints": 44_368,
       "docs/telegram-alerts.md#commands": 33_389,
       "docs/digest-pipeline.md#generation": 43_892,
       // Main's env-interface, scripts, and status backend exceptions no longer

@@ -134,7 +134,6 @@ function generatedArtifact(definition) {
   }
   return {
     ...definition,
-    autoStage: definition.autoStage ?? false,
     checkable: definition.checkable ?? true,
     requiredBrowsers: definition.requiredBrowsers ?? [],
     sourcePaths: uniqueSorted([definition.script, ...(definition.sourcePaths ?? [])]),
@@ -152,7 +151,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     bootstrap: true,
     outputPaths: ["shared/data/stablecoins/coins.generated.json"],
     phase: 0,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
     sourcePaths: [
       "shared/data/stablecoins/coins/**",
@@ -166,12 +164,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "runbook-index",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/generate-runbook-index.ts --check",
     command: "node --import tsx scripts/maintenance/generate-runbook-index.ts",
     outputPaths: ["docs/README.md"],
     phase: 0,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-runbook-index.ts",
     sourcePaths: [
       "docs/doc-ownership.json",
@@ -190,20 +186,20 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkable: false,
     outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
     phase: 0,
-    reproducibility: "git-history-derived",
+    requiresGitHistory: true,
     script: "scripts/maintenance/generate-sitemap-dates.ts",
     sourcePaths: SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
   }),
   generatedArtifact({
     id: "case-study-client-index",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
     command: "tsx scripts/maintenance/generate-case-study-client-index.ts",
     bootstrap: true,
     dependsOn: ["stablecoin-client-registry"],
     outputPaths: ["src/lib/case-study-client-index.ts"],
     phase: 2,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-case-study-client-index.ts",
     sourcePaths: ["src/lib/case-studies/**", "shared/data/dead-stablecoins.json", "shared/data/stablecoins/coins.client.list.generated.json"],
   }),
@@ -215,7 +211,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkable: false,
     outputPaths: ["src/generated/docs-metadata.json", "src/generated/docs-metadata.json.d.ts"],
     phase: 0,
-    reproducibility: "git-history-derived",
+    requiresGitHistory: true,
     script: "scripts/maintenance/generate-docs-metadata.ts",
     sourcePaths: [...PUBLIC_DOC_SOURCE_PATHS, "shared/lib/public-doc-manifest.json", "shared/lib/public-docs.ts"],
   }),
@@ -223,8 +219,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "depeg-event-search-data",
     buildLifecycle: "post-refresh",
     ciDriftCheck: false,
-    // No autoStage: every output below is gitignored by `/src/generated/*`
-    // since 0b76714f03 untracked them. Staging them aborts the commit.
     checkCommand: "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
     command: "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
     bootstrap: true,
@@ -235,7 +229,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "src/generated/depeg-event-search-data.json.d.ts",
     ],
     phase: 0,
-    reproducibility: "pinned-input",
     script: "scripts/maintenance/generate-depeg-event-search-data.ts",
     sourcePaths: ["data/depeg-events/**", "src/lib/depeg-event-config.ts"],
   }),
@@ -251,9 +244,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "public/postman/pharos-api.postman_environment.json",
     ],
     phase: 0,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-postman-collection.ts",
-    sourcePaths: ["scripts/lib/public-api-artifact-catalog.ts"],
+    sourcePaths: ["scripts/lib/public-api-artifact-catalog.ts", "shared/lib/chains/health.ts"],
   }),
   generatedArtifact({
     id: "openapi",
@@ -264,9 +256,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     bootstrap: true,
     outputPaths: ["public/openapi.json"],
     phase: 0,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-openapi-spec.ts",
-    sourcePaths: ["scripts/lib/public-api-artifact-catalog.ts"],
+    sourcePaths: ["scripts/lib/public-api-artifact-catalog.ts", "shared/lib/chains/health.ts"],
   }),
   generatedArtifact({
     id: "world-map",
@@ -277,32 +268,27 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     bootstrap: true,
     outputPaths: ["public/maps/world-countries.svg"],
     phase: 0,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/build-world-map-svg.ts",
     sourcePaths: ["scripts/data/m49-to-iso2.ts", "scripts/data/world-countries-110m.json"],
   }),
   generatedArtifact({
     id: "mint-burn-conservation-runtime",
     buildLifecycle: "compile-input",
-    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-mint-burn-conservation-runtime.ts --check",
     command: "tsx scripts/maintenance/generate-mint-burn-conservation-runtime.ts",
     outputPaths: ["worker/src/lib/mint-burn-conservation-runtime.generated.json"],
     phase: 0,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-mint-burn-conservation-runtime.ts",
     sourcePaths: ["worker/src/lib/mint-burn-conservation-reviewed.json"],
   }),
   generatedArtifact({
     id: "safety-score-v9-shock-coverage-registry",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
     bootstrap: true,
     outputPaths: ["shared/data/safety-score-v9/shock-coverage-measurements-v1.json"],
     phase: 0,
-    reproducibility: "pinned-input",
     script: "scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
     sourcePaths: [
       "shared/data/safety-score-v9/mechanism-measurements/**/*-shock-coverage.json",
@@ -312,7 +298,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "safety-score-v9-evaluation-build",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     bootstrap: true,
@@ -320,7 +305,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["stablecoin-worker-full-catalog", "safety-score-v9-incident-runtime"],
     outputPaths: ["shared/data/safety-score-v9/evaluation-build-manifest-v1.ts"],
     phase: 2,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     sourcePaths: [
       ...V9_EVALUATION_BUILD_SOURCE_PATHS,
@@ -340,7 +324,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["stablecoin-catalog"],
     outputPaths: ["shared/data/stablecoins/report-card-registry-fingerprint.generated.ts"],
     phase: 1,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-report-card-registry-fingerprint.ts",
     sourcePaths: [
       "scripts/lib/report-card-registry-fingerprint.ts",
@@ -364,7 +347,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["stablecoin-catalog"],
     outputPaths: ["shared/data/stablecoins/legacy-llama-redirects.generated.json"],
     phase: 1,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-legacy-stablecoin-redirects.ts",
     sourcePaths: [
       "shared/data/stablecoins/coins.generated.json",
@@ -389,7 +371,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/data/stablecoins/coins.worker-runtime.generated.json",
     ],
     phase: 1,
-    reproducibility: "deterministic",
     script: "scripts/build-data/build-client-registry.mjs",
     sourcePaths: [
       "shared/data/stablecoins/canonical-order.json",
@@ -408,7 +389,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: [],
     outputPaths: ["shared/data/safety-score-v9/incident-runtime-v1.generated.json"],
     phase: 1,
-    reproducibility: "deterministic",
     script: "scripts/build-data/generate-safety-score-v9-incident-runtime.ts",
     sourcePaths: [
       "shared/data/safety-score-v9/incident-reviews-v1.json",
@@ -429,7 +409,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["stablecoin-catalog"],
     outputPaths: ["shared/data/stablecoins/coins.worker-full.generated.json"],
     phase: 1,
-    reproducibility: "deterministic",
     script: "scripts/build-data/generate-worker-stablecoin-catalog.ts",
     sourcePaths: ["shared/data/stablecoins/coins.generated.json"],
   }),
@@ -446,7 +425,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "src/generated/stablecoin-static-data.ts",
     ],
     phase: 1,
-    reproducibility: "deterministic",
     script: "scripts/build-data/generate-stablecoin-client-projections.ts",
     sourcePaths: [
       "shared/data/dead-stablecoins.json",
@@ -471,7 +449,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["stablecoin-catalog"],
     outputPaths: ["src/generated/stablecoin-detail-snapshots"],
     phase: 1,
-    reproducibility: "network-derived",
     script: "scripts/build-data/build-stablecoin-detail-snapshots.ts",
     sourcePaths: [
       "scripts/lib/sync-from-api.ts",
@@ -490,13 +467,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "cemetery-dataset",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",
     dependsOn: ["report-card-registry-fingerprint"],
     outputPaths: ["public/datasets/stablecoin-cemetery.csv", "public/datasets/stablecoin-cemetery.json"],
     phase: 2,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-cemetery-dataset.ts",
     sourcePaths: [
       "data/logos.json",
@@ -508,7 +483,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "cemetery-logo-atlas",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/build-cemetery-logo-atlas.ts --check",
     command: "node --import tsx scripts/maintenance/build-cemetery-logo-atlas.ts",
     // Frozen cemetery rows come from the generated catalog projection.
@@ -519,7 +493,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "src/lib/cemetery-logo-atlas.generated.json",
     ],
     phase: 2,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/build-cemetery-logo-atlas.ts",
     sourcePaths: [
       "data/logos.json",
@@ -535,25 +508,24 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "public-datasets",
     buildLifecycle: "maintenance-only",
-    autoStage: false,
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],
     outputPaths: ["public/_redirects", "public/datasets/**", "src/lib/datasets/public-dataset-current.ts"],
     phase: 2,
-    reproducibility: "network-derived",
     script: "scripts/maintenance/generate-public-datasets.ts",
     sourcePaths: ["data/depeg-events/**", "scripts/lib/depeg-ledger-capture.ts", "scripts/lib/public-dataset-artifacts.ts", "shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
   }),
   generatedArtifact({
     id: "llms-txt",
     buildLifecycle: "post-refresh",
+    ciDriftCheck: false,
+    bootstrap: true,
     checkCommand: "tsx scripts/maintenance/generate-llms-txt.ts --check",
     command: "tsx scripts/maintenance/generate-llms-txt.ts",
     dependsOn: ["report-card-registry-fingerprint"],
     outputPaths: ["public/llms.txt"],
     phase: 2,
-    reproducibility: "network-derived",
     script: "scripts/maintenance/generate-llms-txt.ts",
     sourcePaths: [
       "data/digests.json",
@@ -572,19 +544,16 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["openapi"],
     outputPaths: ["docs/api-reference.md"],
     phase: 2,
-    reproducibility: "mixed",
     script: "scripts/maintenance/generate-api-reference.ts",
     sourcePaths: ["public/openapi.json"],
   }),
   generatedArtifact({
     id: "cron-doc-view",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/generate-cron-doc-view.ts --check",
     command: "node --import tsx scripts/maintenance/generate-cron-doc-view.ts",
     outputPaths: ["docs/worker-infrastructure.md"],
     phase: 0,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-cron-doc-view.ts",
     sourcePaths: [
       "shared/lib/cron-jobs.ts",
@@ -601,25 +570,23 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "changelog-registry",
-    buildLifecycle: "maintenance-only",
-    autoStage: true,
+    buildLifecycle: "compile-input",
+    ciDriftCheck: false,
+    bootstrap: true,
     checkCommand: "node --import tsx scripts/maintenance/generate-changelog-registry.ts --check",
     command: "node --import tsx scripts/maintenance/generate-changelog-registry.ts",
     outputPaths: ["src/data/changelogs/index.ts"],
     phase: 2,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-changelog-registry.ts",
     sourcePaths: ["src/data/changelogs/*.json", "src/data/changelogs/*.ts"],
   }),
   generatedArtifact({
     id: "editorial-style",
     buildLifecycle: "compile-input",
-    autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/generate-editorial-style.ts --check",
     command: "node --import tsx scripts/maintenance/generate-editorial-style.ts",
     outputPaths: ["shared/lib/editorial-style.generated.ts"],
     phase: 2,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-editorial-style.ts",
     sourcePaths: ["docs/editorial-style.md"],
   }),
@@ -631,7 +598,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     command: "node scripts/maintenance/build-og-editorial.mjs",
     outputPaths: ["public/og-editorial-*.png", "scripts/maintenance/state/og-editorial-signatures.json"],
     phase: 3,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-editorial.mjs",
     sourcePaths: [
       "scripts/lib/og-image-checks.mts",
@@ -671,7 +637,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "scripts/maintenance/state/og-route-timeless-signatures.json",
     ],
     phase: 3,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-route-timeless.ts",
     sourcePaths: [
       "public/pharos-mark-on-light.svg",
@@ -696,7 +661,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "scripts/maintenance/state/og-learn-signatures.json",
     ],
     phase: 3,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-learn-images.ts",
     sourcePaths: [
       "scripts/lib/og-image-checks.mts",
@@ -717,7 +681,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["cemetery-dataset"],
     outputPaths: ["public/og-learn-case-*.png", "scripts/maintenance/state/og-case-study-signatures.json"],
     phase: 3,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-case-studies.ts",
     sourcePaths: [
       "data/logos.json",
@@ -734,7 +697,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "og-cemetery",
     requiredBrowsers: [],
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/build-og-cemetery.ts --check",
     command: "node --import tsx scripts/maintenance/build-og-cemetery.ts",
     // The card embeds the committed logo atlas, so it regenerates after the atlas does. Freshness is an input
@@ -742,7 +704,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     dependsOn: ["cemetery-logo-atlas"],
     outputPaths: ["public/og-cemetery.png", "scripts/maintenance/state/og-cemetery-signature.json"],
     phase: 3,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-cemetery.ts",
     sourcePaths: [
       "public/logos/atlas/cemetery-atlas.webp",
@@ -773,12 +734,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "compact-logos",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/generate-compact-logos.ts --check",
     command: "node --import tsx scripts/maintenance/generate-compact-logos.ts",
     outputPaths: ["public/logos/compact/**", "src/lib/logo-variants.generated.json"],
     phase: 3,
-    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-compact-logos.ts",
     sourcePaths: ["public/logos/*.{png,jpg,jpeg,webp}"],
   }),
@@ -810,30 +769,6 @@ function assertKnownGeneratedArtifactBuildLifecycles(lifecycles) {
   if (unknownLifecycles.length > 0) {
     throw new Error(`Unknown generated artifact build lifecycle(s): ${unknownLifecycles.join(", ")}`);
   }
-}
-
-/**
- * Split selected artifact ids into those the pre-commit hook may regenerate and
- * stage on its own, and those a human must handle. Network-derived artifacts,
- * browser-rendered OG images, and gitignored outputs are normally manual: a
- * commit hook must not make network calls, take minutes, or stage nothing.
- * Offline-safe generators that preserve checked-in data may opt in explicitly.
- *
- * @param {readonly string[]} ids
- * @returns {{ autoStage: string[], manual: string[] }}
- */
-export function selectAutoStageArtifactIds(ids) {
-  assertKnownGeneratedArtifactIds([...ids]);
-  const selected = new Set(ids);
-  const autoStage = [];
-  const manual = [];
-
-  for (const artifact of GENERATED_ARTIFACT_REGISTRY) {
-    if (!selected.has(artifact.id)) continue;
-    (artifact.autoStage === true ? autoStage : manual).push(artifact.id);
-  }
-
-  return { autoStage, manual };
 }
 
 /** @param {readonly string[]} ids */
@@ -868,10 +803,11 @@ export function selectGeneratedArtifacts({
     const uncheckable = GENERATED_ARTIFACT_REGISTRY.filter((artifact) => only.includes(artifact.id) && artifact.checkable === false);
     if (uncheckable.length > 0) {
       const details = uncheckable.map((artifact) => {
-        const remedy = artifact.reproducibility === "git-history-derived"
+        const remedy = artifact.requiresGitHistory
           ? "fetch full Git history, then run npm run bootstrap:generated:history"
           : `run node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=${artifact.id}`;
-        return `${artifact.id} (${artifact.buildLifecycle}; ${artifact.reproducibility}): ${remedy}`;
+        const origin = artifact.requiresGitHistory ? "; git-history-derived" : "";
+        return `${artifact.id} (${artifact.buildLifecycle}${origin}): ${remedy}`;
       });
       throw new CliUsageError(`Cannot check build-time artifact(s): ${details.join("; ")}. Remove these IDs from --only; no checks were executed.`);
     }

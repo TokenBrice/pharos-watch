@@ -1,5 +1,6 @@
 import { type EndpointKey } from "@shared/lib/api-endpoints/definitions";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { PEG_COVERAGE_COMPOSITE_MIN } from "@shared/lib/chains/health";
 import { definePublicArtifact, type PublicArtifactInput } from "./public-api-artifact-catalog-builders";
 import type { PublicApiResponseSchemaName } from "./public-api-response-schemas";
 
@@ -229,7 +230,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "health",
     summary: "Health check",
-    description: "No-key health check for the public API host.",
+    description: "No-key availability canary for the public API host; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts carry nullable `generationId` / `publishedAt` from the served-generation sentinel; `cache-quality-degraded: yield-data:safety-snapshot-coverage` fires only below 0.75 coverage, held safety is `yield-safety-publish-time-fallback:safety-snapshot-held` inside both 24h clocks and `yield-safety-unrated-serving:safety-snapshot-held` beyond them, and unreadable or mismatched publication health fails closed as `yield-safety-availability-unknown`. Adds `headline`/`components`.",
     tags: ["Health"],
     responseSchema: "HealthResponse",
     postman: {
@@ -239,7 +240,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stablecoins",
     summary: "List stablecoins",
-    description: "Current stablecoin list with supply, price, peg, chain distribution, and freshness headers. `_meta` publishes the generation, assessment time and effective fresh/degraded budgets; cache TTL and SWR are bounded by the remaining fresh runway.",
+    description: "Current stablecoin list with supply, price, peg, chain distribution, FX context, and freshness headers. `_meta` publishes the generation, assessment time and effective fresh/degraded budgets; cache TTL and SWR are bounded by the remaining fresh runway. Since 2026-09-28, `StablecoinListResponse.peggedAssets[].chainCirculating` preserves unobserved `current`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth` values as `null` instead of the legacy projected `0`; omitted historical keys also mean unavailable. Explicit observed zero remains `0`. Consumers must not interpret unavailable chain observations as redemptions, mints, or a complete distribution denominator. Also since 2026-09-28 (pricing v6.38), nominal par routes carry par in `nominalPriceReference` (`{ price, source: \"protocol-par\", mode: \"nominal_reference\" }`) instead of a high-confidence `protocol-redeem` price stamped with the sync clock; non-USD par adds optional `fxReferenceType` (`fresh` or `static`) and `fxObservedAt` (the FX reference's own source time, `null` when unknown). A fresh market quote that depeg detection rates authoritative stays the published `price`; otherwise `price` is par with `priceSource` `protocol-par`, `priceObservedAtMode` `nominal_reference`, and `priceConfidence`, `priceObservedAt` and `priceUpdatedAt` `null`. Such a price is a nominal reference, not an observation.",
     tags: ["Stablecoins"],
     responseSchema: "StablecoinListResponse",
     postman: {
@@ -250,7 +251,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "stablecoin-detail",
     responseSchema: "StablecoinDetailResponse",
     summary: "Stablecoin detail",
-    description: "Full per-coin analytics dossier for a canonical Pharos stablecoin ID.",
+    description: "Full current/historical per-coin analytics dossier for a canonical Pharos stablecoin ID. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/#get-api-stablecoins).",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
   },
@@ -258,14 +259,14 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "stablecoin-summary",
     responseSchema: "StablecoinSummaryResponse",
     summary: "Stablecoin summary",
-    description: "Lightweight per-coin price and aggregate supply snapshot.",
+    description: "Lightweight per-coin price and aggregate supply snapshot. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/#get-api-stablecoins).",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
   },
   {
     key: "stablecoin-reserves",
     summary: "Stablecoin reserves",
-    description: "Live or fallback reserve composition for live-reserve-enabled assets.",
+    description: "Live or fallback reserve composition and reviewed provenance for live-reserve-enabled assets. Since 2026-09-27 the freshness verdict carries its policy values: `sync.freshness` publishes the assessment clock (`assessedAt`), judged generation (`fetchedAt`, `attemptId`), fetch age against the route's fetch budget, and, for verified source timestamps, source age against the effective source budget with the cap that set it; `provenance.scoringRejectionReasons` lists the admission gates behind `scoringEligible`. Both are additive optional fields, and unjudged or legacy values are `null`. Also since 2026-09-27, supply-comparing reserve snapshots publish `metadata.liabilityScope` (reviewed included/excluded chains with reasons), `supplyCoverageComplete`, `reserveObservedAt`, `supplyObservedAt`, and `ratioSkewSec`, and `metadata.collateralizationRatio` is omitted with `metadata.ratioUnavailableReason` when liability coverage or reserve/supply time identity is not established. USD1 now publishes `collateralizationRatio` over its reviewed issuer-native perimeter; the former USD1 `fundBackingTotalRatio` and `details.fundScope` fields are removed.",
     tags: ["Stablecoins", "Reserves"],
     responseSchema: "StablecoinReservesResponse",
     parameters: [STABLECOIN_ID_PARAM],
@@ -283,14 +284,14 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "peg-summary",
     summary: "Peg summary",
-    description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary.",
+    description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary. Since v6.31, `unknownCoverageSeconds` excludes merged blind spans from occupancy/penalties; wholly blind `pegPct`/`recent90d.pegPct` stay null. Recent `observedDays` excludes blind spans (`coverageLimited`). `currentDeviationBps`/`pegReference` ignore the $1M floor. `coinsAtPeg` uses raw canonical thresholds; row deviations stay rounded. Optional nullable `observationStartedAt`: earliest observed history, without PegScore age/audit/four-year clamps.",
     tags: ["Peg Monitoring"],
     responseSchema: "PegSummaryResponse",
   },
   {
     key: "depeg-events",
     summary: "Depeg incidents",
-    description: "Historical and active depeg incidents with constituent threshold-crossing counts, filterable by stablecoin.",
+    description: "Historical and active depeg incidents with constituent threshold-crossing counts, filterable by asset, state, and review verdict. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across pages for threshold-crossing totals. Audit verdicts (2026-09-28): confirmed/repaired/false_positive/disputed/no_data/null; unknowns rejected. v6.31 optional `priceCoverage`: off-peg `intervals` and `atParIntervals` ([startSec,endSec][]), nullable-second `lastTrustedObservationAt`/`gapStartedAt`, three-state `lastObservationKind`. Unrecorded spans are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.",
     tags: ["Peg Monitoring"],
     responseSchema: "DepegEventsResponse",
     parameters: [
@@ -324,8 +325,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "events",
     summary: "Tape events",
-    description:
-      "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination.",
+    description: "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination; cursor pagination is preferred for long result sets. `droppedRows` is the number of queried database rows rejected because they did not match the response schema; a non-zero value means the returned event set is incomplete, while `total` still counts those queried rows.",
     tags: ["Risk"],
     responseSchema: "TapeEventsResponse",
     parameters: [
@@ -411,21 +411,21 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "bluechip-ratings",
     summary: "Bluechip ratings",
-    description: "Safety ratings from bluechip.org for covered stablecoins.",
+    description: "Safety ratings from bluechip.org joined to Pharos identities for covered stablecoins.",
     tags: ["Risk"],
     responseSchema: "BluechipRatingsResponse",
   },
   {
     key: "dex-liquidity",
     summary: "DEX liquidity",
-    description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata.",
+    description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata. Volume, activity and NR follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability-dec-19-active-since-v69). Empty datasets retain the confirmed producer output clock; absent authority publishes unavailable freshness, never request time.",
     tags: ["Liquidity"],
     responseSchema: "DexLiquidityResponse",
   },
   {
     key: "dex-liquidity-history",
     summary: "DEX liquidity history",
-    description: "Historical liquidity-score data for a stablecoin.",
+    description: "Bounded historical liquidity-score data for a stablecoin. `volume24h` and `score` follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability-dec-19-active-since-v69).",
     tags: ["Liquidity", "History"],
     responseSchema: "DexLiquidityHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, DEX_LIQUIDITY_HISTORY_DAYS_PARAM],
@@ -438,7 +438,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "report-cards-v9",
     summary: "Safety Score V9 report cards",
-    description: "Canonical API schema-7 Safety Score report cards from the accepted internal schema-6 publication. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR.",
+    description: "Canonical API schema-7 Safety Score report cards from the accepted internal schema-6 publication. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "ReportCardsV9Response",
   },
@@ -446,7 +446,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "safety-grades",
     summary: "Safety Score grades (no key)",
     description:
-      "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR.",
+      "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "SafetyGradesResponse",
     postman: {
@@ -457,7 +457,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "dependency-graph-v1",
     summary: "Dependency graph (no key)",
     description:
-      "Free schema-2 projection of the accepted V9 publication: publication-bound node supply, nullable grades, ratingStatus, compact partialEvidence, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held.",
+      "Free schema-2 projection of the accepted V9 publication: publication-bound node supply, nullable grades, ratingStatus, compact partialEvidence, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "DependencyGraphResponse",
     postman: { noAuth: true },
@@ -466,7 +466,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "dependency-scenarios",
     summary: "Modeled dependency scenarios (no key)",
     description:
-      "Offline schema-2 production-evaluator scenarios from a V9 publication. Published and modeled rows preserve ratingStatus, compact partialEvidence, nullable grades and null deltas for unavailable scores. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two hours, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores.",
+      "Offline schema-2 production-evaluator scenarios from a V9 publication, refreshed daily. Published and modeled rows preserve ratingStatus, compact partialEvidence, nullable grades and null deltas for unavailable scores. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two days, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "DependencyScenariosResponse",
     postman: { noAuth: true },
@@ -475,7 +475,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "depeg-resolver",
     summary: "Depeg Duration Resolver",
     description:
-      "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood.",
+      "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood. Since 2026-09-28, unknown audit verdicts fail closed; DDR excludes false_positive/disputed/no_data, PegScore only false_positive/disputed. Null keeps legacy eligibility.",
     tags: ["Risk", "Peg Monitoring"],
     responseSchema: "DdrResponse",
   },
@@ -508,7 +508,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stability-index",
     summary: "Pharos Stability Index",
-    description: "Latest Pharos Stability Index with optional detail payload and history. Successful partial samples retain unpriced-event diagnostics and optional current.inputDegradation.supplyUnavailableIds/trendUnavailableIds from the stored snapshot. Unavailable current supply is omitted from denominators and contributors; unusable aggregate market-cap or paired trend inputs preserve the previous sample rather than inventing zero.",
+    description: "Latest Pharos Stability Index with optional detail payload and history. Since 2026-09-28 (PSI v3.64), daily snapshots persist all-null components as null rather than zero. Observed zero remains numeric zero; partial components average only observations and disclose `dailyProvenance.componentSampleCounts`. All-day score averaging and mixed-version breakdown are retained; `componentsUnavailable` identifies unavailable components. Legacy rows without counts remain unknown, not assumed complete. Successful partial samples retain unpriced-event diagnostics and, since PSI v3.66, optional `current.inputDegradation.supplyUnavailableIds` / `trendUnavailableIds` from the stored snapshot. Unavailable current supply is omitted from denominators and contributors; unusable aggregate market-cap or paired trend inputs preserve the previous sample rather than inventing zero.",
     tags: ["Risk"],
     responseSchema: "StabilityIndexResponse",
     parameters: [
@@ -522,13 +522,12 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     postman: {
       name: "Stability index",
       query: { detail: "true" },
-      description: "Latest Pharos Stability Index with detail payload and history.",
     },
   },
   {
     key: "blacklist",
     summary: "Blacklist events",
-    description: "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
+    description: "Normalized issuer freeze, unfreeze, blacklist, and destruction events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
     tags: ["Blacklist"],
     responseSchema: "BlacklistResponse",
     parameters: [
@@ -603,7 +602,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "mint-burn-flows",
     summary: "Mint and burn flows",
-    description: "Mint/burn flow aggregates for the selected window.",
+    description: "Mint/burn flow aggregates and pressure for closed UTC hours, not a rolling partial-hour window. `window` publishes `[start,end)` boundaries and `semantics: closed-utc-hours`; `end` is the current UTC hour boundary, excluding the open hour. Requested `hours` controls the aggregate series or per-coin totals; aggregate coin interpretation stays 24h, and 7d/30d/90d nets share that end. Signed nets are `null` when matching `valuation` is `partial`; gross volumes remain known-valuation lower bounds. Direction is withheld unless missing valuation cannot change it; pressure requires a complete 24h window and non-partial baseline. `gauge.score` re-weights over published pressures; `partialValuationInputs`, `partialValuationMcapUsd` and `scoredMcapUsd` disclose withheld weighted inputs and bound the full-cohort score by `(scoredMcapUsd·score ± 100·partialValuationMcapUsd) / (scoredMcapUsd + partialValuationMcapUsd)`. Flight-to-quality is withheld unless exact or provably inactive. Legacy `unknown` valuation keeps labelled nets until those buckets age out.",
     tags: ["Flows"],
     responseSchema: "MintBurnFlowsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, HOURS_PARAM],
@@ -614,7 +613,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "mint-burn-events",
     summary: "Mint and burn events",
-    description: "Individual mint/burn events for supported stablecoins.",
+    description: "Normalized issuance event stream for supported stablecoins with cursor or offset pagination. Since 2026-09-28 (mint-burn-flow v6.23) `amountUsd` is set only from a price whose actual observation time is within 24 hours either side of the event, and `priceTimestamp` is that observation time: `priceSource` `supply-history-daily` / `supply-history-heal` for a daily snapshot price with a recorded observation clock (never its day label; nominal par is never stored), `price-cache-event-window` / `price_cache_heal` for a replay-safe observed cache price (never a legacy `protocol-redeem` par row of a nominal-par route); the candidate observed closest to the event wins. Events without such evidence keep `amountUsd: null`; this includes NAV tokens whose latest observation is more than 24 hours from the event (for example over weekends). Older rows may still carry `price-cache-current` with a run-time `priceTimestamp`, or `supply-history-daily` with the snapshot day as `priceTimestamp`.",
     tags: ["Flows"],
     responseSchema: "MintBurnEventsResponse",
     parameters: [
@@ -747,7 +746,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "chains",
     summary: "Chains",
-    description: "Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for full per-chain coin detail rows. `_meta` discloses assessment time and the route's 1800/3600-second freshness bands; an unavailable or degraded Safety Score dependency can also downgrade the verdict. Cache lifetime is bounded by remaining fresh runway.",
+    description: "Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for full per-chain coin detail rows. `_meta` discloses assessment time and the route's 1800/3600-second freshness bands; an unavailable or degraded Safety Score dependency can also downgrade the verdict. Cache lifetime is bounded by remaining fresh runway. Since 2026-09-27 chain accounting is raw: `chainAttributedTotalUsd` is the unclamped sum of the published chain rows (previously capped at `globalTotalUsd`), each `dominanceShare` is `totalUsd / globalTotalUsd` without rescaling (shares can sum above 1 when chain rows over-attribute supply), `attributionDiscrepancyUsd` is the signed `chainAttributedTotalUsd - globalTotalUsd`, `unattributedTotalUsd` is its positive residual, and `dominanceGeometryTotalUsd` (`max(global, attributed)`) is a bar-geometry denominator, never a share label. `supplyCoverage` and per-chain `unavailableSupplyObservationCount` count unobserved aggregate and chain supply excluded from those totals. Since Chain Health v1.6, zero peg coverage publishes `healthFactors.pegStability: null`; partial coverage publishes the observed-only factor with `pegStabilityCoverage`. Since v1.7, `healthScore`/`healthBand` also publish for partial coverage with `pegStabilityCoverage.coverage >= " + PEG_COVERAGE_COMPOSITE_MIN + "`; below that they are null. `neutralImputedSupplyUsd` is zero for new payloads; old cached payloads retain their original methodology. Since 2026-09-28 the unused V8 fields `_meta.dependencies.reportCards.inputsStale` and `_meta.dependencies.reportCards.staleInputs` are removed from the public contract; dependency status, age, and reason are unchanged.",
     tags: ["Chains"],
     responseSchema: "ChainsResponse",
     parameters: [CHAIN_QUERY_PARAM],
@@ -756,7 +755,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "non-usd-share",
     responseSchema: "NonUsdShareResponse",
     summary: "Non-USD share",
-    description: "Historical non-USD peg share series for market-structure views.",
+    description: "Current and historical market share of tracked non-USD peg groups for market-structure views.",
     tags: ["Market Structure", "History"],
     parameters: [NON_USD_SHARE_DAYS_PARAM],
     postman: {
@@ -778,7 +777,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "safety-score-history",
     summary: "Safety score history",
-    description: "Long-range safety-score history for a stablecoin.",
+    description: "Legacy bounded long-range safety-score history for a stablecoin.",
     tags: ["Risk", "History"],
     responseSchema: "SafetyScoreHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SAFETY_SCORE_HISTORY_DAYS_PARAM],
@@ -805,12 +804,11 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "daily-digest",
     summary: "Daily digest",
-    description: "Latest AI-generated stablecoin market digest.",
+    description: "Latest AI-generated stablecoin market digest. With no eligible edition, all eleven response fields are explicitly null.",
     tags: ["Digest"],
     responseSchema: "DailyDigestResponse",
     postman: {
       order: 5,
-      description: "Latest AI-generated market digest.",
     },
   },
   {
@@ -870,7 +868,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "snapshot-day",
     summary: "Public snapshot for a single day",
     description:
-      "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers.",
+      "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served unchanged with identity, ETag, and public, immutable, max-age=1y cache headers. Archive validation also applies to coin projections; live producers remain strict. Pre-9.15 cards may retain nullable `stressStateDigest`. Report7 uses recorded pre-10.11 routes and methodology-specific witness/obligation counts; see [historical contracts](https://pharos.watch/docs/report-cards/#report-schema-v8).",
     tags: ["Digest", "History"],
     parameters: [
       DATE_PATH_PARAM,
@@ -905,7 +903,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "public-status-history",
     summary: "Public status history",
-    description: "Public status timeline for the Pharos system.",
+    description: "Bounded, public-safe status timeline for the Pharos system.",
     tags: ["Status"],
     responseSchema: "PublicStatusHistoryResponse",
     parameters: [
@@ -924,7 +922,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "telegram-pulse",
     summary: "Telegram pulse",
-    description: "Lightweight public telemetry for Telegram alert surfaces.",
+    description: "Lightweight public Telegram adoption and delivery-health aggregates.",
     tags: ["Status"],
     responseSchema: "TelegramPulseResponse",
     postman: {

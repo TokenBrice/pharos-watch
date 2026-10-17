@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -255,12 +255,10 @@ describe("run-post-deploy-acceptance CLI", () => {
     ["expected deploy identity is missing", undefined, WORKER_VERSION, 1],
     ["active API version changed", WORKER_VERSION, "another-version", 1],
   ])("preserves the Worker identity gate when %s", async (_case, expected, observed, expectedExit) => {
-    const outputPath = join(summaryDir(), "github-output.txt");
-    vi.spyOn(console, "log").mockImplementation(() => {});
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const exitCode = await runPostDeployAcceptanceCli(
       {
         NODE_ENV: "test",
-        GITHUB_OUTPUT: outputPath,
         PAGES_DEPLOYED: "false",
         WORKER_DEPLOYED: "true",
         EXPECTED_WORKER_VERSION: expected,
@@ -269,40 +267,36 @@ describe("run-post-deploy-acceptance CLI", () => {
       dependencies(),
     );
     expect(exitCode).toBe(expectedExit);
-    const outputs = Object.fromEntries(readFileSync(outputPath, "utf8").trim().split("\n").map((line) => {
-      const [key, ...value] = line.split("=");
-      return [key, value.join("=")];
-    }));
-    expect(outputs.outcome).toBe(expectedExit === 0 ? "passed" : "failed");
+    const { acceptance } = JSON.parse(String(log.mock.calls[0][0]));
+    expect(acceptance.outcome).toBe(expectedExit === 0 ? "passed" : "failed");
     if (expectedExit === 0) {
-      expect(outputs.failure_kind).toBeUndefined();
-      expect(outputs.reason).toBeUndefined();
+      expect(acceptance.failureKind).toBeUndefined();
     } else {
-      expect(outputs.failure_kind).toBe("deployment");
-      expect(outputs.reason).toContain("worker active version");
+      expect(acceptance.failureKind).toBe("deployment");
+      expect(acceptance.reason).toContain("worker active version");
     }
   });
 
-  it("returns a failing exit code and records the failed outcome for a failed probe", async () => {
+  it("returns a failing exit code and summarizes failed probes without writing Actions outputs", async () => {
     const workDir = summaryDir();
     vi.spyOn(console, "log").mockImplementation(() => {});
     const outputPath = join(workDir, "github-output.txt");
+    const summaryPath = join(workDir, "summary.md");
 
     const exitCode = await runPostDeployAcceptanceCli(
-      { GITHUB_OUTPUT: outputPath, NODE_ENV: "test", PAGES_DEPLOYED: "false", WORKER_DEPLOYED: "true",
+      { GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath, NODE_ENV: "test", PAGES_DEPLOYED: "false", WORKER_DEPLOYED: "true",
         EXPECTED_WORKER_VERSION: WORKER_VERSION, OBSERVED_WORKER_VERSION: WORKER_VERSION },
       dependencies({ health: workerHealth({ ok: false, payload: null, status: 502 }) }),
     );
 
     expect(exitCode).toBe(1);
-    const outputs = Object.fromEntries(readFileSync(outputPath, "utf8").trim().split("\n").map((line) => {
-      const [key, ...value] = line.split("=");
-      return [key, value.join("=")];
-    }));
-    expect(outputs).toMatchObject({ outcome: "failed", failure_kind: "operational" });
-    expect(outputs.reason.startsWith("activated; operational acceptance failed")).toBe(true);
-    expect(outputs.reason).toContain("worker-health");
-    expect(outputs.reason).toContain("unreadable");
-    expect(outputs.reason).toContain("502");
+    expect(existsSync(outputPath)).toBe(false);
+    const summary = readFileSync(summaryPath, "utf8");
+    expect(summary).toContain("- Outcome: failed");
+    expect(summary).toContain("activated; operational acceptance failed");
+    expect(summary).toContain("worker-health");
+    expect(summary).toContain("unreadable");
+    expect(summary).toContain("502");
+    expect(summary).toContain("| Probe | Surface | Outcome | Evidence |");
   });
 });

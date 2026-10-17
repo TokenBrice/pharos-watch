@@ -23,7 +23,7 @@
  * bytes), never by re-encoding. `--check` recomputes that signature and the
  * manifest, and verifies the committed WebP still hashes to the value
  * recorded when it was written. Default mode is a no-op when the check
- * passes, so the pre-commit hook never churns the WebP on another OS;
+ * passes, avoiding WebP churn on another OS;
  * `--force` re-renders anyway.
  *
  *   npm run logos:cemetery-atlas

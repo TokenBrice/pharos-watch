@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DependencyScenarioArtifactSchema, DependencyScenariosResponseSchema, dependencyScenarioFreshness, DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC, DEPENDENCY_SCENARIOS_CACHE_PREFIX } from "@shared/types/dependency-scenarios";
+import { DependencyScenarioArtifactSchema, DependencyScenariosResponseSchema, dependencyScenarioFreshness, DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC, DEPENDENCY_SCENARIOS_INTERVAL_MS, DEPENDENCY_SCENARIOS_CACHE_PREFIX } from "@shared/types/dependency-scenarios";
 import type { DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { chunkDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
@@ -30,6 +30,11 @@ function database(value: string | null = JSON.stringify(artifact())) {
   ]);
 }
 describe("dependency scenario artifact and freshness", () => {
+  it("keeps the daily producer and two-interval freshness authority aligned", () => {
+    expect(DEPENDENCY_SCENARIOS_INTERVAL_MS).toBe(86_400_000);
+    expect(DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC).toBe(172_800);
+    expect(DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC * 1000).toBe(2 * DEPENDENCY_SCENARIOS_INTERVAL_MS);
+  });
   it("preserves valid NR and rejects inconsistent score deltas or invented NR scores", () => {
     expect(DependencyScenarioArtifactSchema.parse(artifact()).scenarios[0]!.results[1]!.modeledScore).toBeNull();
     const invalid = artifact();
@@ -53,6 +58,8 @@ describe("dependency scenario artifact and freshness", () => {
   it("accepts the freshness-budget boundary but never calls another generation current", () => {
     expect(dependencyScenarioFreshness(artifact(), "accepted-1", 1000 + DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC)).toEqual({ status: "current", reason: null, ageSec: DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC, budgetSec: DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC, sourcePublicationGenerationId: "accepted-1", acceptedPublicationGenerationId: "accepted-1" });
     expect(dependencyScenarioFreshness(artifact(), "accepted-2", 1100)).toMatchObject({ status: "earlier-generation", reason: "source-generation-mismatch", ageSec: 100, sourcePublicationGenerationId: "accepted-1", acceptedPublicationGenerationId: "accepted-2" });
+    expect(dependencyScenarioFreshness(artifact(), "accepted-1", 1000 + 86_400)).toMatchObject({ status: "current", ageSec: 86_400 });
+    expect(dependencyScenarioFreshness(artifact(), "accepted-2", 1000 + 86_400)).toMatchObject({ status: "earlier-generation", reason: "source-generation-mismatch", ageSec: 86_400 });
     expect(dependencyScenarioFreshness(artifact(), "accepted-1", 1001 + DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC)).toMatchObject({ status: "stale", reason: "artifact-outside-freshness-budget" });
     expect(dependencyScenarioFreshness(artifact(), "accepted-2", 1001 + DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC)).toMatchObject({ status: "stale", reason: "artifact-outside-freshness-budget" });
     expect(dependencyScenarioFreshness(artifact(), "accepted-1", 999)).toMatchObject({ status: "unavailable", reason: "artifact-clock-in-future" });

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { collectStagedFiles } from "../lib/changed-files.mts";
 import { ALWAYS_RUN_TEST_FILES, parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import {
   createPrStaticLeafCommand,
@@ -68,6 +69,19 @@ describe("adaptive PR checks", () => {
       { id: "catalog", sourcePaths: ["data/**"], outputPaths: ["generated/*.json"] },
       { id: "index", sourcePaths: ["scripts/index.ts"], dependsOn: ["catalog"] },
     ])).toEqual(["catalog", "index"]);
+  });
+
+  it("selects an artifact when a registered source is staged for deletion", () => {
+    const execFile = vi.fn((_file: string, args: readonly string[]) =>
+      args.includes("--cached") ? "shared/lib/safety-score-v9/formula.ts\0" : "",
+    );
+    const stagedFiles = collectStagedFiles({ cwd: "/repo", execFile: execFile as never });
+    expect(selectChangedGeneratedArtifactIds(stagedFiles)).toContain("safety-score-v9-evaluation-build");
+    expect(execFile).toHaveBeenCalledWith(
+      "git",
+      ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACMRD", "-z"],
+      { cwd: "/repo", encoding: "utf8" },
+    );
   });
 
   it("keeps ignored bootstrap projections out of automatic PR drift checks", () => {

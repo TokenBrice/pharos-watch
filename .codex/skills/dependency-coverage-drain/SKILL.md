@@ -13,12 +13,11 @@ The queue is permanent research intake, not a shadow graph. Keep it separate fro
 
 ## Required Context
 
-Read routed docs and scoped instructions, `docs/dependency-map.md`, `docs/runbooks/dependency-network.md`, and `docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json`. Inspect the emitting queues in `scripts/maintenance/generate-dependency-coverage-audit.ts`, admission rules in `shared/lib/dependency-derivation.ts`, and reviews in `shared/data/coverage-dispositions/dependency-target-dispositions.ts`.
+Read routed docs and scoped instructions, [coverage semantics](../../../docs/dependency-map.md#dependency-coverage-audit), and the runbook's [commands](../../../docs/runbooks/dependency-network.md#scope-and-commands) and [reviewed-ledger contract](../../../docs/runbooks/dependency-network.md#monthly-drain-and-reviewed-ledger). In `docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json`, read only the current claim groups and their decision history to derive the latest status; do not preload the whole ledger. Inspect the emitting queues in `scripts/maintenance/generate-dependency-coverage-audit.ts`, admission rules in `shared/lib/dependency-derivation.ts`, and reviews in `shared/data/coverage-dispositions/dependency-target-dispositions.ts`.
 
 Use the `reserve-research` skill (`.codex/skills/reserve-research/SKILL.md`) for reserve evidence, provenance, custody, backing dependencies, and source freshness. Read the relevant adapter and authored reserves before changing a claim. Verified docs own durable policy; `/agents/` holds scratch evidence only.
 
-Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
-Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+For pinned RPC reads and provenance, follow [Pinned On-Chain Evidence](../../../docs/process/agent-artifacts.md#pinned-on-chain-evidence).
 
 ## Queue Snapshot
 
@@ -59,7 +58,7 @@ Resolve an item as `evidence-refreshed`, `retargeted`, or `withheld`; use `defer
 
 ### 3. Preserve reviewed history
 
-Append a dated decision in `docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json` for each reviewed claim group. Use stable `claimGroupId`, `taskIds` (NC IDs when available), dependent/upstream IDs, queue/work type, resolution mode, status, decision, reviewer, `reviewedAt`, evidence with access dates, rationale, change references, sentinels, facts closed and next review trigger. `reviewedAt` dates an actual review, never a reminder or audit regeneration. Seed entries remain `open` with null review fields until reviewed.
+Append a dated decision for each reviewed claim group using the [reviewed-ledger fields and rules](../../../docs/runbooks/dependency-network.md#monthly-drain-and-reviewed-ledger). Seed entries remain open until actually reviewed; audit regeneration is not a review.
 
 Preserve prior decisions when a row reopens; append a new decision rather than deleting history. Record a concrete next-review date or event for deferrals. Report the oldest unresolved first-seen date and oldest reviewed deferral; do not refresh dates to hide queue age.
 

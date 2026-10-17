@@ -215,6 +215,33 @@ describe("run-gitleaks", () => {
     expect(buildGitleaksMergeResolutionInput({ execFile }).toString()).toBe(`${source}\n`);
   });
 
+  it("omits large deleted bodies without dropping added or untracked worktree bytes", () => {
+    const repo = mkdtempSync(join(tmpdir(), "gitleaks-worktree-relocation-"));
+    const git = (args: string[], options: { encoding: "utf8" } = { encoding: "utf8" }) =>
+      execFileSync("git", args, { ...options, cwd: repo });
+    try {
+      git(["init", "--quiet"]);
+      git(["config", "user.email", "scanner-test@example.com"]);
+      git(["config", "user.name", "Scanner Test"]);
+      writeRepoFile(repo, "ledger.json", `${"reviewed public evidence\n".repeat(60_000)}`);
+      writeRepoFile(repo, "changed.ts", "original\n");
+      git(["add", "."]);
+      git(["commit", "--quiet", "-m", "fixture"]);
+      rmSync(join(repo, "ledger.json"));
+      writeRepoFile(repo, "changed.ts", "original\nnew tracked bytes\n");
+      writeRepoFile(repo, "relocated/ledger.json", "new untracked bytes\n");
+      vi.spyOn(process, "cwd").mockReturnValue(repo);
+      const input = buildGitleaksWorktreeInput({
+        execFile: (_file, args, options) => git(args, options),
+      }).toString();
+      expect(input).toContain("new tracked bytes\n");
+      expect(input).toContain("FILE:relocated/ledger.json\nnew untracked bytes\n");
+      expect(input).not.toContain("reviewed public evidence");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
   it("extracts resolution-only lines introduced by historical merges inside the scan range", () => {
     const repo = mkdtempSync(join(tmpdir(), "gitleaks-merge-history-"));
     const git = (args: string[]) =>

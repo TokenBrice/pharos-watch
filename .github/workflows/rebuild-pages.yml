@@ -24,7 +24,6 @@ jobs:
     uses: $/.github/workflows/pages-release.yml
     with:
       workspace_artifact_name: ${{ needs.pages-prepare.outputs.workspace_artifact_name }}
-      refresh_data: true
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

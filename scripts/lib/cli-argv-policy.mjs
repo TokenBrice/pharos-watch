@@ -127,7 +127,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/run-changed-eslint.ts", "test"),
     exempt("scripts/ci/run-gitleaks.ts", "test"),
     exempt("scripts/ci/select-generated-artifacts.mts", "read-only"),
-    exempt("scripts/ci/sync-staged-generated-artifacts.mts", "build"),
     exempt("scripts/ci/verify-dependency-audit.ts", "read-only"),
     exempt(
       "scripts/lib/mechanism-measurement/upload.ts",
@@ -192,7 +191,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
       "Reads remote D1 adoption telemetry and writes a local generated-document block; no production mutation.",
     ),
     exempt("scripts/maintenance/run-all-tests.ts", "test"),
-    exempt("scripts/maintenance/run-bootstrap-rehearsal.ts", "test"),
     exempt("scripts/maintenance/run-coverage-audit.ts", "read-only"),
     exempt("scripts/maintenance/run-critical-contracts.ts", "test"),
     exempt("scripts/maintenance/run-critical-coverage.ts", "test"),

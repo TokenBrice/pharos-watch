@@ -12,8 +12,7 @@ Read `docs/editorial-style.md`; its `technical-evidence` register governs prose.
 
 This is permanent editorial intake, not a pending chart feature. The live chart overlay is retired; keep the curated corpus, review decisions, deferrals, legacy backup, and downloaded snapshots. A reviewed corpus edit does not restore the overlay or authorize automatic publication. Hosted artifacts expire, so retain the reviewer handoff separately.
 
-Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
-Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+For pinned RPC reads and provenance, follow [Pinned On-Chain Evidence](../../../docs/process/agent-artifacts.md#pinned-on-chain-evidence).
 
 ## Recover The Backlog
 

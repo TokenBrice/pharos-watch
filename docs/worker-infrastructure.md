@@ -210,7 +210,9 @@ Regenerate only the schedule inventory with `node --import tsx scripts/maintenan
 
 ### Remote D1 Inspection
 
-Inspect production D1 with `wrangler d1 execute --remote --command "SELECT …"` and never with `--file`: `--file` is submitted through the D1 **import** API, so a read-only probe reports `changed_db: true` and holds a database-level import lock that blocks Worker writes for its duration. `scripts/maintenance/watch-worker-cron.mjs` (`d1Select`) already uses `--command` and is the reference.
+From `worker/`, run `npx --no-install wrangler d1 execute stablecoin-db --remote --json --command "SELECT ..."`; root invocation with global `--config worker/wrangler.toml` is valid, but worker-cwd avoids config/auth ambiguity. Never use `--file`: D1's **import** API reports `changed_db: true` even for SELECT and locks Worker writes for its duration. `scripts/maintenance/watch-worker-cron.mjs` (`d1Select`) is the reference.
+
+A 7403 account-unauthorized failure supplies no rows, not evidence of missing/zero state. Successful SELECT is observation-time database evidence, not an on-chain pin or authority to release quarantined values.
 
 ---
 

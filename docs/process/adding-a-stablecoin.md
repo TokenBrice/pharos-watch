@@ -505,9 +505,9 @@ artifact inventory and each unit's command live in `GENERATED_ARTIFACT_REGISTRY`
 (`scripts/lib/automation-registry.mjs`). Catalog edits also rotate the checked-in Safety Score
 evaluation-build manifest, even without a new overlay; `public/llms.txt` changes when its catalog
 output changes. Cemetery units cover cemetery rows only, so a live addition leaves them
-byte-identical; the pre-commit hook stages only selected units marked `autoStage`.
+byte-identical; regenerate affected tracked units explicitly and commit them with their sources.
 
-These are artifact owners, not per-specialist steps. The coordinator owns Phase 7 generation; bootstrap excludes `llms-txt`, so run its separate generator after active catalog changes.
+These are artifact owners, not per-specialist steps. The coordinator owns Phase 7 generation; bootstrap includes the ignored `llms-txt` compile/serve output, which post-refresh generation rebuilds after live data updates.
 
 | Artifact | Owning generator | Notes |
 | --- | --- | --- |
@@ -749,7 +749,7 @@ Notes:
 - `data/logos.json` keys are canonical stablecoin IDs today, though some values still point at legacy numeric filenames such as `/logos/1-usdt.svg`. Ignore that for new work.
 - `scripts/maintenance/fetch-logos.ts` preserves canonical local `/logos/...` entries over provider images; CoinGecko fills entries without a local logo.
 - If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
-- Oversized tracked logos (over 64px in either dimension and over 2500 bytes) also need a compact 32x32 WebP derivative. These are checked-in generated artifacts owned by the `compact-logos` registry entry: staging a `public/logos/*.{png,jpg,jpeg,webp}` source regenerates and stages `public/logos/compact/**` plus `src/lib/logo-variants.generated.json` automatically via the pre-commit hook, `npm run logos:compact` regenerates them manually (pruning orphans), and `npm run check:generated-artifacts -- --only=compact-logos` verifies freshness. Two source logos sharing one basename (for example `foo.png` and `foo.jpg`) collide on `compact/foo.webp` and are rejected — keep basenames unique.
+- Oversized tracked logos (over 64px in either dimension and over 2500 bytes) also need a compact 32x32 WebP derivative. These are checked-in generated artifacts owned by the `compact-logos` registry entry: after changing a `public/logos/*.{png,jpg,jpeg,webp}` source, run `npm run logos:compact` to regenerate `public/logos/compact/**` plus `src/lib/logo-variants.generated.json` and prune orphans, then commit affected outputs with the source. `npm run check:generated-artifacts -- --only=compact-logos` verifies freshness. Two source logos sharing one basename (for example `foo.png` and `foo.jpg`) collide on `compact/foo.webp` and are rejected — keep basenames unique.
 
 ### 6b. Editorial summary
 

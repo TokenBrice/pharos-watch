@@ -13,7 +13,6 @@ const WORKER_RELEASE_EXCLUDED_PATHS = new Set<string>(DEPLOY_IMPACT_REGISTRY.wor
 const WORKER_RELEASE_EXACT_PATHS = new Set<string>(DEPLOY_IMPACT_REGISTRY.workerRelease.exactPaths);
 const WORKER_SHARED_EXCLUDED_PATHS = new Set<string>(DEPLOY_IMPACT_REGISTRY.worker.sharedExcludedPaths ?? []);
 const WORKER_RELEASE_SHARED_EXCLUDED_PATHS = new Set<string>(DEPLOY_IMPACT_REGISTRY.workerRelease.sharedExcludedPaths);
-const PAGES_UI_EXACT_PATHS = new Set<string>(["next.config.ts", "package.json", "package-lock.json"]);
 const DOCS_ONLY_EXCLUDED_PATHS = new Set<string>(["docs/editorial-style.md"]);
 const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefixes;
 const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
@@ -88,14 +87,6 @@ export function hasPagesDeployImpact(files: readonly string[]): boolean {
 
 export function hasPagesPublishImpact(files: readonly string[]): boolean {
   return files.some((file) => !isTestPath(file) && isPagesImpactPath(file));
-}
-
-export function hasPagesUiImpact(files: readonly string[]): boolean {
-  return files.some(
-    (file) =>
-      !isTestPath(file) &&
-      (PAGES_UI_EXACT_PATHS.has(file) || PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix))),
-  );
 }
 
 export function hasOnlyInternalDocsImpact(files: readonly string[]): boolean {

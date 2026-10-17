@@ -147,7 +147,7 @@ The generator is a configuration over the scene kit's `scripts/lib/scene-og.ts` 
 
 Freshness is an input signature, not a pixel comparison. `scripts/maintenance/state/og-cemetery-signature.json` records the SHA-256 of the rendered document and the hash of the PNG written from it. `--check` rebuilds the document (no browser) and verifies both hashes and the PNG dimensions. It gives the same result on every platform. Write mode is a no-op while the check passes; `--force` re-renders anyway.
 
-It is the registered `og-cemetery` generated artifact. It is auto-staged by the pre-commit hook and depends on `cemetery-logo-atlas`, so adding a death or changing a cemetery logo regenerates it. Its sources are the dead-coin data and frozen catalog, the cemetery modules, the plot-map model, geometry, scene, shapes and CSS module, the scene kit (`shared/lib/scene/`, `src/components/scene/`, `scripts/lib/scene-og.ts`), the atlas, the design tokens and the fonts.
+It is the registered `og-cemetery` generated artifact and depends on `cemetery-logo-atlas`; regenerate it explicitly after adding a death or changing a cemetery logo. Its sources are the dead-coin data and frozen catalog, the cemetery modules, the plot-map model, geometry, scene, shapes and CSS module, the scene kit (`shared/lib/scene/`, `src/components/scene/`, `scripts/lib/scene-og.ts`), the atlas, the design tokens and the fonts.
 
 ### How to renew
 

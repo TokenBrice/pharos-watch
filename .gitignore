@@ -148,3 +148,8 @@ output/playwright/
 .superpowers/
 
 __pycache__/
+
+# Bootstrap-owned compile/serve projections
+/public/llms.txt
+/src/lib/case-study-client-index.ts
+/src/data/changelogs/index.ts

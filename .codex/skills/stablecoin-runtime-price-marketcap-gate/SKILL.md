@@ -10,8 +10,7 @@ This is a hard pre-edit gate for active stablecoin additions and pre-launch prom
 
 Pre-launch entries are exempt until promotion.
 
-Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
-Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+For pinned RPC reads and provenance, follow [Pinned On-Chain Evidence](../../../docs/process/agent-artifacts.md#pinned-on-chain-evidence).
 
 ## Inputs
 

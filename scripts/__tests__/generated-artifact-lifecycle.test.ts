@@ -39,6 +39,15 @@ describe("generated artifact lifecycle", () => {
     expect(registry.flatMap((artifact) => artifact.outputPaths)).not.toContain("AGENTS.md");
     expect(registry.flatMap((artifact) => artifact.outputPaths)).not.toContain("CLAUDE.md");
   });
+
+  it("materializes ignored compile and serve inputs during bootstrap and their Pages phases", () => {
+    const bootstrap = selectedIds({ bootstrap: true });
+    const compile = selectedIds({ buildLifecycles: ["compile-input"] });
+    const postRefresh = selectedIds({ buildLifecycles: ["post-refresh"] });
+    expect(bootstrap).toEqual(expect.arrayContaining(["case-study-client-index", "changelog-registry", "llms-txt"]));
+    expect(compile).toEqual(expect.arrayContaining(["case-study-client-index", "changelog-registry"]));
+    expect(postRefresh).toContain("llms-txt");
+  });
 });
 
 describe("check-mode artifact selection", () => {
@@ -47,6 +56,7 @@ describe("check-mode artifact selection", () => {
       "stablecoin-catalog", "postman", "openapi", "world-map", "report-card-registry-fingerprint",
       "legacy-stablecoin-redirects", "stablecoin-client-registry", "stablecoin-worker-full-catalog",
       "stablecoin-client-projections", "depeg-event-search-data",
+      "case-study-client-index", "llms-txt", "changelog-registry",
     ];
     expect(registry.filter((artifact) => artifact.ciDriftCheck === false).map((artifact) => artifact.id).sort())
       .toEqual([...projections].sort());

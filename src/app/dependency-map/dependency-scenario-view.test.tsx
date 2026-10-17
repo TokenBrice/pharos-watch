@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DependencyScenarioArtifact, DependencyScenariosResponse } from "@shared/types/dependency-scenarios";
+import { DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC, type DependencyScenarioArtifact, type DependencyScenariosResponse } from "@shared/types/dependency-scenarios";
 import { projectDependencyGraph } from "@shared/types/dependency-graph";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { DependencyExposureResults } from "./dependency-exposure-results";
@@ -16,7 +16,7 @@ function response(): DependencyScenariosResponse {
   return { artifact: { schemaVersion: 2, sourcePublicationGenerationId: "pub", sourceBaseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, methodologyVersion: "10.01", evaluationBuildDigest: "b".repeat(64), computedAtSec: 900, cohort: { rootIds: ["root"], selection: "Top direct exposure" }, scenarios: [
     { id: "limit", rootId: "root", shock: { kind: "score-limit", assetId: "root", dimension: "final", limit: 20 }, assumptions: ["Final score capped at 20."], results: [row, { ...row, assetId: "dependent", minHop: 1 }], failures: [] },
     { id: "mint", rootId: "root", shock: { kind: "mint-control-compromise", assetId: "root" }, assumptions: ["Reviewed mint authority compromised."], results: [{ ...row, modeledRatingStatus: "not-rated", modeledScore: null, modeledGrade: "NR", deltaScore: null }, { ...row, assetId: "dependent", modeledRatingStatus: "not-rated", modeledScore: null, modeledGrade: "NR", deltaScore: null, minHop: 1 }], failures: [] },
-  ] }, freshness: { status: "current", reason: null, ageSec: 100, budgetSec: 7200, sourcePublicationGenerationId: "pub", acceptedPublicationGenerationId: "pub" } };
+  ] }, freshness: { status: "current", reason: null, ageSec: 100, budgetSec: DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC, sourcePublicationGenerationId: "pub", acceptedPublicationGenerationId: "pub" } };
 }
 function surface(roots = ["root"]) {
   const full = makeReportCardsV9Response({ cards: [makeV9Card({ id: "root" }), makeV9Card({ id: "dependent" })] });
@@ -33,6 +33,7 @@ describe("modeled dependency results", () => {
     render(surface());
     const panel = screen.getByRole("region", { name: "Modeled Safety Score results" });
     expect(within(panel).getAllByText("B → F")).toHaveLength(2);
+    expect(within(panel).getByText(/freshness budget 48 hours/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Scenario type"), { target: { value: "mint" } });
     expect(within(panel).getAllByText("B → NR")).toHaveLength(2);
     expect(within(panel).getByText("Reviewed mint authority compromised.")).toBeTruthy();
@@ -96,7 +97,7 @@ describe("modeled dependency results", () => {
   });
   it("fails closed on elapsed budget, a failed refetch and a future artifact clock", () => {
     const data = response();
-    for (const selected of [selectDependencyScenario(data, ["root"], "", "pub", false, 8101), selectDependencyScenario(data, ["root"], "", "pub", true, 1000), selectDependencyScenario(data, ["root"], "", "pub", false, 899)]) {
+    for (const selected of [selectDependencyScenario(data, ["root"], "", "pub", false, 901 + DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC), selectDependencyScenario(data, ["root"], "", "pub", true, 1000), selectDependencyScenario(data, ["root"], "", "pub", false, 899)]) {
       expect(selected.showNumbers).toBe(false);
       const view = render(<DependencyScenarioChange selection={selected} assetId="dependent" />);
       expect(view.container.textContent).not.toContain("-60");

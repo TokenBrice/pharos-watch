@@ -445,7 +445,8 @@ function addedHunkLines(diff: string, combined: boolean): string[] {
 export function buildGitleaksWorktreeInput({
   execFile = execFileSync,
 }: { execFile?: (file: string, args: string[], options: { encoding: "utf8" }) => string } = {}): Buffer {
-  const diff = execFile("git", ["diff", "--no-ext-diff", "--unified=0", "HEAD", "--"], { encoding: "utf8" });
+  // Deleted files contribute no added bytes; avoid buffering their full old bodies.
+  const diff = execFile("git", ["diff", "--no-ext-diff", "--diff-filter=d", "--unified=0", "HEAD", "--"], { encoding: "utf8" });
   const addedLines = addedHunkLines(diff, false);
   const untracked = execFile("git", ["ls-files", "--others", "--exclude-standard"], { encoding: "utf8" })
     .split(/\r?\n/g)
@@ -631,7 +632,7 @@ export function runGitleaksConfigSelfTest(
       `bridge-meta:eurot-token-teknoloji:${["c4d94e69af", "7b57c052ce"].join("")}`,
       `bridge-meta:tgbp-tokenised:${["8564a2ec79", "9484aab123"].join("")}`,
     ];
-    const ledgerPath = ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json";
+    const ledgerPath = ".github/artifacts/safety-score-missing-data-reviewed-ledger.json";
     const publicControls = [
       // Keep unrelated credentials detectable in every scheduleKey owner.
       ...[
@@ -691,7 +692,7 @@ export function runGitleaksConfigSelfTest(
         "shared/data/stablecoins/coins/mhyper-midas.json",
         "shared/data/stablecoins/domains/compliance/mtbill-midas.json",
         "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
-        ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json",
+        ledgerPath,
       ].map((path) => ({
         path,
         value: { url: `https://3475141875-files.gitbook.io/a.pdf?alt=media&token=${midasProspectusUuid}` },
@@ -709,7 +710,7 @@ export function runGitleaksConfigSelfTest(
         value: { leg: gldtLeg },
       },
       {
-        path: ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json",
+        path: ledgerPath,
         value: { evidence: `token0/token1 -> ${uniXautPair}; getReserves0x0902f1ac` },
       },
       ...researchUuids.map((uuid) => ({
