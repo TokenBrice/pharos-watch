@@ -21,9 +21,9 @@ Applies to reusable product components under `src/components/`.
 
 ## Tests
 
-- Tests live in `src/components/__tests__/` or beside the component; accessibility coverage runs with `npm run test:a11y`.
+- Tests live in `src/components/__tests__/` or beside the component.
 
 ## Common checks
 
 - Run `npm run check:shared-types-imports` as applicable.
-- Run focused component tests plus `npm run test:a11y` for interaction, semantic, or visualization changes.
+- Run focused component tests for interaction, semantic, or visualization changes.

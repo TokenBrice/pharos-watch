@@ -29,7 +29,6 @@ const baseTestExcludes = [
   ".next/**",
   "out/**",
   "coverage/**",
-  "tests/visual/**",
 ];
 
 // These node-root suites depend on per-file process isolation (module-level
