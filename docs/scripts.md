@@ -162,7 +162,7 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/maintenance/report-telegram-adoption.ts` | Read-only remote D1 reporter; refreshes the local generated adoption block in [`telegram-alerts.md`](./telegram-alerts.md) and prints JSON. Seven-day activity uses subscriber `last_active_at`; `configuredWatchersDaily` uses the latest lifecycle snapshot with `configuredWatchersSnapshotAt`, both nullable when absent. No activity-window substitution or production mutation; planning-cost/4.1 reporting is retired without a measured decision. |
+| `scripts/maintenance/report-telegram-adoption.ts` | Read-only remote D1 reporter; refreshes the local generated adoption block in [`runbooks/telegram-adoption-report.md`](./runbooks/telegram-adoption-report.md) and prints JSON. Seven-day activity uses subscriber `last_active_at`; `configuredWatchersDaily` uses the latest lifecycle snapshot with `configuredWatchersSnapshotAt`, both nullable when absent. No activity-window substitution or production mutation; planning-cost/4.1 reporting is retired without a measured decision. |
 
 ## Routing Index
 

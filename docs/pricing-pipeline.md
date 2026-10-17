@@ -239,7 +239,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 3. [Supply Snapshot](./supply-snapshot.md#supply-pipeline), [Depeg Detection](./depeg-detection.md#stage-2----confirmation), [Pharos Stability Index](./stability-index.md#cron--storage), or [Blacklist Tracker](./blacklist-tracker.md#blacklist-sync-state-semantics) when the corresponding pipeline semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
 5. `shared/lib/methodology-versions/registry.ts` and the matching entry under `shared/data/methodology-changelogs/pricing-pipeline/` if methodology semantics changed
-6. [about-page.md](./about-page.md) and `src/lib/about-content.ts` when externally visible data sources change
+6. [About Pharos](https://pharos.watch/about/) and `src/lib/about-content.ts` when externally visible data sources change
 
 ## Treasury Benchmark Rates
 

@@ -6,7 +6,7 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 - **Runtime source:** `shared/lib/chains/health.ts` (the canonical implementation; no compatibility shim is retained)
 - **Version source:** `shared/lib/methodology-versions/registry.ts` (shared constants: `shared/lib/methodology-versions/constants.ts`)
 - **API source:** `worker/src/api/chains.ts`
-- **Route contract:** [chains-page.md](./chains-page.md)
+- **Product route:** [Chain Health](https://pharos.watch/chains/)
 - **Public changelog route:** `/methodology/chain-health-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/chain-health/`
 

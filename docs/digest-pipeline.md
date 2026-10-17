@@ -519,9 +519,9 @@ npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.co
 The scheduled/manual Pages refresh runs digest sync inside `.github/workflows/pages-release.yml`:
 
 1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Code releases via `deploy-cloudflare.yml` now also pass `refresh_data: true`, so a merge no longer regresses digest detail pages, the sitemap, and the RSS feed to the committed snapshot's age until the next scheduled rebuild.
-2. The refresh step is fail-open: if any sync command fails, or the refreshed digest archive has fewer entries than the committed snapshot (grow-only guard), the job restores the committed `data/digests.json`, `data/depeg-events/` index and yearly shards, and `public/datasets` and continues the build with a step-summary warning instead of failing the deploy.
+2. Refresh failures use producer-scoped fallbacks: digest sync failure or archive shrink retains committed `data/digests.json`; depeg sync failure retains committed index/yearly shards; public-dataset failure rolls back only `public/datasets`. Total producer failure or failed public-dataset rollback stops the release (`shouldFailReleaseRefresh`); otherwise the build continues with warnings and still enforces the scores-latest mirror's two-day age limit.
 3. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
-4. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot and remains the safety net if a fail-open deploy shipped the committed snapshot.
+4. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot and provides another refresh opportunity after a release used a scoped fallback.
 
 Because the committed snapshot is the fail-open fallback, refresh it roughly monthly (`npx tsx scripts/maintenance/sync-digests.ts --api-url https://api.pharos.watch --output data/digests.json` with `DIGEST_API_KEY` set, then commit) so a fallback build is never more than a few weeks stale.
 
