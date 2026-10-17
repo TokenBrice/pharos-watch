@@ -1,13 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CaseStudyContentSchema, WeeklyContentSchema } from "../lib/editorial-content";
-import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks";
+import { buildPrStaticCheckPlan, STRUCTURAL_CHECKS } from "../maintenance/run-pr-static-checks";
 
 const load = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));
 describe("authored editorial JSON", () => {
   it("wires authored JSON validation into the owning structural guard", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
-    expect(packageJson.scripts["check:structural"].split(" && ")).toContain("npm run check:editorial-content");
+    expect(packageJson.scripts["check:structural"]).toBe("node --import tsx scripts/maintenance/run-pr-static-checks.ts --structural");
+    expect(STRUCTURAL_CHECKS).toContain("check:editorial-content");
     expect(packageJson.scripts["check:editorial-content"]).toContain("scripts/ci/check-editorial-content.ts");
     for (const path of ["shared/data/methodology-changelogs/safety-score/v10.json", "src/data/changelogs/2026-08-02.json", "src/lib/case-studies/usdc-svb-2023.json", "src/app/dependency-map/content.json"]) {
       expect(buildPrStaticCheckPlan([path], { group: "guards" }).commands.map((command) => command.name)).toContain("check:structural");

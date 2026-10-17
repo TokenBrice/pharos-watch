@@ -847,6 +847,7 @@
         "package-lock.json",
         "worker/package.json",
         ".gitignore",
+        ".gitleaks.toml",
         ".gitleaksignore",
         "functions/**",
         "next.config.ts",
@@ -1071,7 +1072,7 @@
       ],
       "alsoRead": ["shared/AGENTS.md"],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:generated-artifacts"],
-      "rules": ["Use @shared/lib/... and @shared/types... for shared runtime imports; avoid relative cross-boundary imports."]
+      "rules": ["Use @shared/lib/... and @shared/types... for imports across runtime boundaries into root shared/; within production shared/lib/, use relative imports instead of @shared/* aliases."]
     },
     {
       "id": "documentation",

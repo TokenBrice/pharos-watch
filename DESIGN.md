@@ -3,7 +3,7 @@ name: Pharos
 description: Stablecoin intelligence as a calm, dense instrument — a lighthouse that watches every peg.
 colors:
   frost-blue: "#4bc4de"
-  control-ink: "oklch(0.19 0.01 255)"
+  control-active: "oklch(0.91 0.005 260)"
   surface-base: "oklch(0.985 0 0)"
   surface-raised: "oklch(0.97 0 0)"
   surface-overlay: "oklch(1 0 0)"
@@ -92,8 +92,8 @@ components:
     padding: "8px 12px"
     height: "36px"
   control-pill-active:
-    backgroundColor: "{colors.control-ink}"
-    textColor: "{colors.surface-base}"
+    backgroundColor: "{colors.control-active}"
+    textColor: "{colors.text-primary}"
     rounded: "{rounded.full}"
     padding: "8px 12px"
     height: "36px"
@@ -118,7 +118,7 @@ It explicitly rejects the Web3-marketing aesthetic (purple gradients, glassmorph
 > the mark is the identity at avatar scale, the drawn lighthouse is the identity in the product.
 > This is a deliberate split, not drift — do not "reconcile" one to the other.
 
-**Source of truth.** This file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-language.md#context` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`. The Figma inventory lives in `agents/figma-redesign/`. Regenerate this file (`/impeccable document`) when tokens or the homepage composition change.
+**Source of truth.** This hand-maintained file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-language.md#context` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`.
 
 > **History:** a Figma handoff proposed retiring frost-blue for a neutral/Radix palette; the owner's final call (2026-06-27) **kept frost-blue + the lighthouse identity** and neutralized only the global nav (sidebar → top-nav). This doc reflects that decision and the shipped code, not the superseded retirement proposal.
 
@@ -153,7 +153,7 @@ One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue
 
 ### Neutral
 
-- **Ink** (`oklch(0.145 0 0)`, `text-primary`): Primary text and the near-black `control-ink` active-control fill.
+- **Ink** (`oklch(0.145 0 0)`, `text-primary`): Primary text, including selected controls; selected-control fills use the elevated-neutral `--control-pill-active-bg`, never solid ink.
 - **Secondary / Tertiary Ink** (`oklch(0.4 0.009 260)` / `oklch(0.52 0.007 260)`): Labels, captions, muted metadata. Floor for informational text is `text-muted-foreground/70` — never lighter (WCAG 1.4.3).
 - **Surfaces** — Base (`oklch(0.985 0 0)`, page), Raised (`oklch(0.97 0 0)`, table headers / toolbars), Overlay (`oklch(1 0 0)`, cards & modals).
 - **Borders** — Subtle (`oklch(0.97 0 0)`), Default (`oklch(0.922 0 0)`), Strong (`oklch(0.87 0 0)`): a three-step separator hierarchy carrying most of the structure in a shadowless system.
@@ -230,7 +230,7 @@ The primary interactive control on data surfaces is the pill, not a heavy CTA. F
 
 - **Default:** `.pharos-control-pill` is `rounded-full` with `px-3 py-2`; `.pharos-toggle-pill` is `rounded-xl` with `px-3 py-1.5`. Both: 1px border, min-height 36px, muted text on translucent fill.
 - **Hover:** Text → primary ink; fill warms toward `--interactive-hover`.
-- **Active / On:** Near-black fill (`control-ink`), inverse text, transparent border — a quiet, confident selected state. Density toggle (spacious/compact) and lens/range controls use this language.
+- **Active / On:** Elevated-neutral fill (`--control-pill-active-bg`), primary text (`--control-pill-active-text`), and a hairline ring (`--control-pill-active-ring`) — never a solid ink fill. Density toggle (spacious/compact) and lens/range controls use this language.
 
 ### Tables (the workbench)
 

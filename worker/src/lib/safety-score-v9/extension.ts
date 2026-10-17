@@ -179,6 +179,12 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   /**
+   * Replay-only projection: build these assets while retaining the full input's
+   * active set, dependency diagnostics, source generations and identity.
+   * Omit for the complete production extension.
+   */
+  assetIds?: ReadonlySet<string>;
+  /**
    * Replay-only operator override. The registry fingerprint check exists so a
    * production publication can never score a capture against a registry it was
    * not captured from. An equivalence replay deliberately does exactly that when
@@ -2423,7 +2429,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       redemptionMaxAgeSec: V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-redemption-backstops"] * 2,
       documentedTermsMaxAgeSec: SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec,
     },
-    assets: fixedInput.activeAssetIds.map((assetId) => {
+    assets: (options.assetIds === undefined
+      ? fixedInput.activeAssetIds
+      : fixedInput.activeAssetIds.filter((assetId) => options.assetIds!.has(assetId))).map((assetId) => {
       // Asset-local admission boundary (R8): a curation, adapter, or
       // point-in-time failure below — including the future-review guards — is
       // recorded on a conservative stub naming the failing field and reason.

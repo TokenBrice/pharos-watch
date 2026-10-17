@@ -40,6 +40,8 @@ export function pagesArtifactEnvironment(env: Partial<NodeJS.ProcessEnv>, previo
     NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
     ...Object.fromEntries(PUBLIC_FLAGS.map((flag) => [`NEXT_PUBLIC_PHAROS_${flag}`, env[`NEXT_PUBLIC_PHAROS_${flag}`] ?? ""])),
     PHAROS_RELEASE_PR_TYPECHECKED: "1",
+    // Never inherit a replay waiver for degraded data or offline rehearsal.
+    PHAROS_PAGES_REPLAY: "",
     PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP: "",
     PHAROS_DETAIL_SNAPSHOT_CHECK: "1",
     PUBLIC_DATASETS_API_URL: "",
@@ -101,7 +103,11 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     const result: PagesArtifactResult = retained
       ? { dataStatus: "release-snapshot", artifactName: retained.name }
       : { dataStatus: "degraded-data" };
-    if (retained) overlayPagesReleaseData(repoRoot, retained.archive, join(temporary, "overlay"), false);
+    if (retained) {
+      overlayPagesReleaseData(repoRoot, retained.archive, join(temporary, "overlay"), false);
+      // Only validated trusted-main release data may waive wall-clock age.
+      env.PHAROS_PAGES_REPLAY = "1";
+    }
     report("## Pages artifact input provenance");
     report(`- Data status: \`${result.dataStatus}\``);
     if (retained) report(`- Release artifact: \`${retained.name}\``);

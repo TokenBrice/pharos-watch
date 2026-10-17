@@ -2,11 +2,12 @@ import { makeAccessReview } from "@shared/lib/__tests__/safety-score-v9-access-l
 import { buildSafetyScoreV9AccessClaimGraph } from "../../src/lib/safety-score-v9/extension-access-lookthrough";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { computeNativeDexLiquidityPayloadFingerprint, normalizeNativeV9Input, normalizeSafetyScoreV9CompilerInput } from "../../src/lib/safety-score-v9/native-input";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9/extension";
+import * as extensionBuilder from "../../src/lib/safety-score-v9/extension";
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import { makeV9TwoAssetFixedInput } from "../../src/test-helpers/v9-fixed-input";
@@ -91,6 +92,65 @@ function healthyReplay(alreadyFallback: string[] = [], withGraphs = false, nativ
 }
 
 describe("buildLiveWithheldCounterfactualReport", () => {
+  it("builds only the target while preserving full-rebuild pipeline and report output", () => {
+    const { replay, metaById, fixedInput } = healthyReplay([], true, true);
+    const draft = structuredClone(fixedInput);
+    delete draft.liveReserveMap.alpha;
+    delete draft.liveReserveProvenanceMap.alpha;
+    draft.liveToFallbackCoins.push("alpha");
+    const counterfactual = normalizeSafetyScoreV9CompilerInput({ ...draft, baseInputGenerationId: undefined });
+    const original = extensionBuilder.buildSafetyScoreV9BaselineExtensionFromNormalizedInput;
+    const rebuild = vi.spyOn(extensionBuilder, "buildSafetyScoreV9BaselineExtensionFromNormalizedInput");
+    try {
+      const optimized = buildCounterfactualPipeline(replay, counterfactual, "alpha", metaById);
+      expect(rebuild).toHaveBeenCalledTimes(1);
+      expect([...rebuild.mock.calls[0]![1]!.assetIds!]).toEqual(["alpha"]);
+      expect(rebuild.mock.results[0]!.value.assets).toHaveLength(1);
+      const report = buildLiveWithheldCounterfactualReport(replay, metaById);
+      // Force the former full-cohort rebuild without duplicating the transform.
+      rebuild.mockImplementation((input, options) => original(input, { ...options, assetIds: undefined }));
+      expect(buildCounterfactualPipeline(replay, counterfactual, "alpha", metaById)).toEqual(optimized);
+      expect(buildLiveWithheldCounterfactualReport(replay, metaById)).toEqual(report);
+      expect(replay.pipeline.fixedInput.liveReserveMap.alpha).toBeDefined();
+    } finally {
+      rebuild.mockRestore();
+    }
+  });
+
+  it("projects the exact full asset slice without losing cohort dependency cycles", () => {
+    const { fixedInput, metaById } = healthyReplay([], true, true);
+    const input = normalizeSafetyScoreV9CompilerInput({
+      ...fixedInput, liveReserveMap: {}, liveReserveProvenanceMap: {}, baseInputGenerationId: undefined,
+    });
+    for (const [id, upstream] of [["alpha", "beta"], ["beta", "alpha"]]) {
+      metaById.set(id!, fixtureMeta(id!, {
+        dependencies: [{ id: upstream!, weight: 1, type: "wrapper" }],
+        dependencyReview: {
+          reviewedAt: "2026-10-07",
+          reviewer: "Fixture reviewer",
+          confidence: "verified",
+          sources: [{ label: "Cycle review", url: "https://example.com/dependencies/cycle" }],
+          rationale: "Mutual serial claims exercise full-cohort cycle diagnosis.",
+          relationships: [{
+            id: upstream!, weight: 1, type: "wrapper", economicRole: "serial-claim",
+            reason: "Mutual serial claim for cycle handling.",
+          }],
+        },
+      }));
+    }
+    const options = { metaById, allowRegistryMismatch: true };
+    const full = extensionBuilder.buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, options);
+    const selected = extensionBuilder.buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, {
+      ...options, assetIds: new Set([input.activeAssetIds[0]!]),
+    });
+    expect(selected).toEqual({ ...full, assets: full.assets.filter((asset) => asset.assetId === "alpha") });
+    expect(selected.assets[0]!.dependencies?.diagnostics).toMatchObject({
+      graphState: "cycle", sccMemberAssetIds: ["alpha", "beta"],
+    });
+    expect(JSON.stringify(extensionBuilder.buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, options)))
+      .toBe(JSON.stringify(full));
+  });
+
   it("re-admits retained reviewed graphs identically to a fresh build at the frozen clock", () => {
     const clockSec = Date.parse("2026-10-08T06:00:00Z") / 1_000;
     const review = makeAccessReview("alpha", new Date((clockSec - 100) * 1_000).toISOString());

@@ -77,6 +77,42 @@ const PARALLEL_STATIC_CHECKS = new Set([
   "check:generated-artifacts",
 ]);
 
+export const STRUCTURAL_CHECKS = [
+  "check:provider-resilience",
+  "check:fetch-body-timeouts",
+  "check:runtime-reachability",
+  "check:architecture-boundaries",
+  "check:script-entrypoints",
+  "check:cli-args-policy",
+  "check:dependency-review-gaps",
+  "check:editorial-content",
+  "check:unused-code",
+  "check:sensitive-page-copy",
+  "check:agent-skills",
+] as const;
+
+async function runStructuralChecks({
+  runCommandImpl = runSpawnCommand,
+  stdout = process.stdout,
+}: Pick<PrStaticCheckOptions, "runCommandImpl" | "stdout"> = {}): Promise<number> {
+  const log = (message: string) => stdout.write(`[check:structural] ${message}\n`);
+  const result = await runParallelExecutionUnits(
+    STRUCTURAL_CHECKS.map((name) => createExecutionUnit([createNpmScriptCommand(name)])),
+    {
+      continueOnError: true,
+      maxParallel: 1,
+      reporter: { start: (command) => log(command) },
+      runCommandImpl,
+    },
+  );
+  for (const outcome of result.results) {
+    const command = outcome.unit.commands[0];
+    log(`${command.scriptName}: ${outcome.status === 0 ? "passed" : formatNpmFailure(outcome)}`);
+  }
+  log(`${result.results.filter((outcome) => outcome.status === 0).length}/${STRUCTURAL_CHECKS.length} guards passed.`);
+  return result.status === 0 ? 0 : 1;
+}
+
 function hasProductionStructuralImpact(changedFiles: readonly string[]): boolean {
   return changedFiles.some((file) => {
     const isStructuralPath =
@@ -234,6 +270,10 @@ export async function runPrStaticChecks({
   stderr = process.stderr,
   stdout = process.stdout,
 }: PrStaticCheckOptions = {}): Promise<number> {
+  if (argv.includes("--structural")) {
+    if (argv.length !== 1) throw new Error("--structural cannot be combined with other options.");
+    return runStructuralChecks({ runCommandImpl, stdout });
+  }
   const startedAt = Date.now();
   const { base, head, rest, staged } = parseChangedFileArgs(argv, env);
   if (staged) throw new Error("check:pr:static requires a --base/--head range; use check:focused --staged for index-selected checks.");

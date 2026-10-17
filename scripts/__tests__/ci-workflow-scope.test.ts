@@ -164,6 +164,12 @@ describe("CI workflow scope", () => {
     expect(steps.filter((step) => step.env?.SITE_API_SHARED_SECRET != null)).toHaveLength(1);
   });
 
+  it.each(["deploy-cloudflare.yml", "pages-release.yml", "rebuild-pages.yml", "pages-prepare.yml"])(
+    "never enables the PR snapshot replay age waiver in %s", (workflow) => {
+      expect(readRepoFile(`.github/workflows/${workflow}`)).not.toContain("PHAROS_PAGES_REPLAY");
+    },
+  );
+
   it("rejects absent bulk credentials before running release generators", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
     const build = workflow.jobs["pages-release"].steps.find(

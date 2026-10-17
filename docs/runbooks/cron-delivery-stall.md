@@ -27,7 +27,7 @@ For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron
 
 ## Recovery
 
-No automatic schedule PUT/reset is permitted. Do not reset leases, checkpoints or cron rows. The external GitHub monitor runs every 15 minutes, including dispatch, and upserts one open incident issue before failing on stall/unavailability or transport/schema failure. It is not a ten-minute external SLA.
+No automatic schedule PUT/reset is permitted. Do not reset leases, checkpoints or cron rows. The external GitHub monitor declares `*/15 * * * *` UTC plus manual dispatch, but delivery is best-effort (30-day review: median gap ~4.7 h), not a ten-minute external SLA. It upserts one open incident issue before failing on stall/unavailability or transport/schema failure.
 
 A platform delivery stall may recover without a configuration change. Keep observing platform events and successive live requests. Close the incident only after actual starts resume for the affected role and affected producer/publication evidence is current; other independent blockers may remain. An operator-directed schedule change requires a reviewed Cloudflare/deployment procedure and preserved before/after evidence, never an in-dashboard repair button.
 

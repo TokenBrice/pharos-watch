@@ -10,6 +10,7 @@ import { V9AccessClaimGraphSchema } from "@shared/types/safety-score-v9-access-l
 import type { SafetyScoreV9FactSetExtensionV2 } from "../src/lib/safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,
+  buildSafetyScoreV9BaselineExtensionFromNormalizedInput,
   type V9ExtensionRegistryMeta,
 } from "../src/lib/safety-score-v9/extension";
 import {
@@ -95,7 +96,6 @@ const ReplaySchema = z
   .loose();
 
 type Replay = z.infer<typeof ReplaySchema>;
-type ReplayFixedInput = Replay["pipeline"]["fixedInput"];
 type ReplayCard = Replay["pipeline"]["candidate"]["cards"][number];
 type FallbackTier = "static" | "audited-fallback" | "curated-fallback" | "none";
 
@@ -141,10 +141,10 @@ function fallbackTier(
 }
 
 function withLiveReserveWithheld(
-  fixedInputValue: ReplayFixedInput,
+  fixedInputValue: SafetyScoreV9CompilerInput,
   assetId: string,
 ): SafetyScoreV9CompilerInput {
-  const draft = structuredClone(normalizeSafetyScoreV9CompilerInput(fixedInputValue)) as Record<string, unknown> & {
+  const draft = structuredClone(fixedInputValue) as Record<string, unknown> & {
     liveReserveMap: Record<string, unknown>;
     liveReserveProvenanceMap: Record<string, unknown>;
     liveToFallbackCoins: string[];
@@ -210,9 +210,13 @@ export function buildCounterfactualPipeline(
       delete (narrowFixedInput as { baseInputGenerationId?: string }).baseInputGenerationId;
       rebuiltFixedInput = narrowFixedInput;
     }
-    const rebuilt = buildSafetyScoreV9BaselineExtension(rebuiltFixedInput, {
+    const rebuildExtension = hasGraphs
+      ? buildSafetyScoreV9BaselineExtensionFromNormalizedInput
+      : buildSafetyScoreV9BaselineExtension;
+    const rebuilt = rebuildExtension(rebuiltFixedInput, {
       allowRegistryMismatch: true,
       metaById,
+      ...(hasGraphs ? { assetIds: new Set([assetId]) } : {}),
     });
     const target = rebuilt.assets.find((asset) => asset.assetId === assetId);
     if (!target) {
@@ -279,6 +283,7 @@ export function buildLiveWithheldCounterfactualReport(
     "fallback-pipeline-gap": 0, "unchanged-or-upgrade": 0,
   };
   let assessedCount = 0;
+  let normalizedInput: SafetyScoreV9CompilerInput | undefined;
 
   for (const assetId of fixedInput.activeAssetIds) {
     const meta = metaById.get(assetId);
@@ -297,7 +302,7 @@ export function buildLiveWithheldCounterfactualReport(
     }
     const counterfactual = buildCounterfactualPipeline(
       replay,
-      withLiveReserveWithheld(fixedInput, assetId),
+      withLiveReserveWithheld(normalizedInput ??= normalizeSafetyScoreV9CompilerInput(fixedInput), assetId),
       assetId,
       metaById,
     );

@@ -434,7 +434,7 @@ To add an entry: establish from primary evidence that the stored episode is an a
 
 ### Operator runbook
 
-Artifact-event removal is an operator procedure with a hard ordering constraint: the registry and the live-overlap skip must be deployed before the delete, and the review previews with `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true'` before `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=<ids>' --execute --allow-atomic-import` and `npm run sync-depeg-events -- --allow-archive-shrink`. The full sequence, the reviewed Noon USN id set (`49235,49236,49237,24424,83782`), and the registry-entry steps live in [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
+Artifact-event removal is an operator procedure with a hard ordering constraint: the registry and the live-overlap skip must be deployed before the delete, and the review previews with `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true'` before `npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=<ids>' --execute --allow-atomic-import` and `npx tsx scripts/maintenance/sync-depeg-events.ts --api-url https://api.pharos.watch --allow-archive-shrink`. The full sequence, the reviewed Noon USN id set (`49235,49236,49237,24424,83782`), and the registry-entry steps live in [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
 
 ## Event Lifecycle
 

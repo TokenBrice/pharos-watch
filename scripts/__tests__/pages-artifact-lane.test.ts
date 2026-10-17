@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { pagesArtifactEnvironment, runPagesArtifactLane } from "../ci/run-pages-artifact-lane.ts";
-import { createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
+import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
 
 const spawn = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async (importOriginal) => ({
@@ -36,13 +36,14 @@ describe("Pages artifact input profile", () => {
       PUBLIC_DATASETS_API_URL: "https://not-allowed.example", API_BASE_URL: "https://not-allowed.example",
       PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP: "1", PHAROS_DETAIL_SNAPSHOT_CHECK: "0",
       SEO_PREVIOUS_SITEMAP_URL: "https://not-allowed.example/sitemap.xml",
+      PHAROS_PAGES_REPLAY: "1",
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "false", NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: "true",
     });
     expect(env).toMatchObject({
       NODE_ENV: "production", NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
       NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: "true", PHAROS_DETAIL_SNAPSHOT_CHECK: "1",
       PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP: "", PUBLIC_DATASETS_API_URL: "", API_BASE_URL: "",
-      SEO_PREVIOUS_SITEMAP_URL: "",
+      SEO_PREVIOUS_SITEMAP_URL: "", PHAROS_PAGES_REPLAY: "",
     });
     expect(pagesArtifactEnvironment({}, "https://explicit.example/sitemap.xml").SEO_PREVIOUS_SITEMAP_URL).toBe("https://explicit.example/sitemap.xml");
   });
@@ -51,6 +52,7 @@ describe("Pages artifact input profile", () => {
     const root = mkdtempSync(join(tmpdir(), "pharos-pages-child-env-"));
     try {
       dataFixture(root);
+      vi.stubEnv("PHAROS_PAGES_REPLAY", "1");
       for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
         vi.stubEnv(name, "test-credential");
       }
@@ -62,10 +64,44 @@ describe("Pages artifact input profile", () => {
       for (const call of spawn.mock.calls) {
         const childEnv = call[2].env as NodeJS.ProcessEnv;
         expect(childEnv.NODE_ENV).toBe("production");
+        expect(childEnv.PHAROS_PAGES_REPLAY).toBe("");
         for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
           expect(childEnv).not.toHaveProperty(name);
         }
       }
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("waives only wall-clock age after validating and overlaying retained release data", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-retained-replay-"));
+    try {
+      const release = join(root, "release");
+      const candidate = join(root, "candidate");
+      const acquisition = join(root, "acquisition");
+      dataFixture(release);
+      dataFixture(candidate);
+      const artifactName = `pages-release-data-${"a".repeat(40)}`;
+      createPagesReleaseDataArchive(release, join(acquisition, PAGES_RELEASE_DATA_ARCHIVE));
+      write(acquisition, "release-data-result.json", JSON.stringify({
+        schemaVersion: 1, dataStatus: "release-snapshot", artifactName,
+      }));
+      vi.stubEnv("PAGES_RELEASE_DATA_DIR", acquisition);
+      spawn.mockReset();
+      spawn.mockReturnValue({ status: 0, signal: null });
+      await expect(runPagesArtifactLane({ repoRoot: candidate })).resolves.toEqual({
+        dataStatus: "release-snapshot", artifactName,
+      });
+      expect(spawn.mock.calls.length).toBeGreaterThan(0);
+      for (const call of spawn.mock.calls) expect(call[2].env.PHAROS_PAGES_REPLAY).toBe("1");
+
+      // Corruption must fail before any generator/build receives the waiver.
+      write(acquisition, PAGES_RELEASE_DATA_ARCHIVE, "corrupt archive");
+      spawn.mockClear();
+      await expect(runPagesArtifactLane({ repoRoot: candidate })).rejects.toThrow();
+      expect(spawn).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllEnvs();
       rmSync(root, { recursive: true, force: true });

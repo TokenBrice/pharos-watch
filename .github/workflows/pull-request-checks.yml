@@ -228,6 +228,8 @@ jobs:
           workspace-artifact: restore
           workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
       - name: Replay release data and enforce Pages artifact gates
+        # The runner enables PHAROS_PAGES_REPLAY only after trusted retained-data
+        # validation; degraded snapshots keep the production age assertion.
         env:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
           PR_LANE_ID: pages-artifact

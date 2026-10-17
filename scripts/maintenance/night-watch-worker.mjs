@@ -1,15 +1,25 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { register as registerCommonJs } from "tsx/cjs/api";
+import { register as registerEsm } from "tsx/esm/api";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
 import { getCronQualityReasons } from "../../shared/lib/cron-quality-reasons.ts";
 import {
   collectWorkerCronSnapshot,
   WORKER_WATCH_DEFAULTS,
 } from "./watch-worker-cron.mjs";
+
+registerCommonJs();
+registerEsm();
+const { CRON_JOB_DEFINITIONS, CRON_CONNECTION_BUDGET_ENTRIES } = await import("../../shared/lib/cron-jobs.ts");
+const {
+  SCHEDULED_SLOT_PLANS,
+  SHARED_SCHEDULED_JOB_IDENTITIES,
+  isConditionallyAdmittedScheduledTask,
+} = await import("../../shared/lib/scheduled-runner-registry.ts");
 
 const DEFAULT_API_URL = WORKER_WATCH_DEFAULTS.apiUrl;
 const DEFAULT_ADMIN_API_URL = WORKER_WATCH_DEFAULTS.adminApiUrl;
@@ -24,7 +34,6 @@ const CYCLE_MS = 4 * 60 * 60 * 1000;
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT_DIR = resolve(dirname(__filename), "../..");
-const REGISTRY_FIXTURE = resolve(ROOT_DIR, "scripts/lib/night-watch-registry-fixture.json");
 
 function usage() {
   return [
@@ -267,59 +276,12 @@ function childProcessErrorMessage(error) {
 }
 
 function loadScheduleMatrix() {
-  const source = `
-    import { CRON_JOB_DEFINITIONS, CRON_CONNECTION_BUDGET_ENTRIES } from "./shared/lib/cron-jobs.ts";
-    import { SCHEDULED_SLOT_PLANS, SHARED_SCHEDULED_JOB_IDENTITIES } from "./shared/lib/scheduled-runner-registry.ts";
-    console.log(JSON.stringify({ cronJobs: CRON_JOB_DEFINITIONS, budgetEntries: CRON_CONNECTION_BUDGET_ENTRIES, slotPlans: SCHEDULED_SLOT_PLANS, sharedJobPaths: SHARED_SCHEDULED_JOB_IDENTITIES }));
-  `;
-  const stdout = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", source], {
-    cwd: ROOT_DIR,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    maxBuffer: 8 * 1024 * 1024,
-  });
-  const scheduleMatrix = JSON.parse(stdout);
-  const registryFixture = JSON.parse(readFileSync(REGISTRY_FIXTURE, "utf8"));
-  assertNightWatchRegistryFixture(scheduleMatrix, registryFixture);
-  return { ...scheduleMatrix, registryFixture };
-}
-
-function sorted(values) {
-  return [...values].sort((left, right) => String(left).localeCompare(String(right)));
-}
-
-function sameStringList(left, right) {
-  return JSON.stringify(sorted(left)) === JSON.stringify(sorted(right));
-}
-
-export function assertNightWatchRegistryFixture(scheduleMatrix, fixture) {
-  const issues = [];
-  const slotKeys = Object.keys(scheduleMatrix.slotPlans ?? {});
-  const jobIds = (scheduleMatrix.cronJobs ?? []).map((job) => job.job);
-  const trackedJobs = new Set(jobIds);
-  const budgetOnlySurfaces = (scheduleMatrix.budgetEntries ?? [])
-    .filter((entry) => !trackedJobs.has(entry.job))
-    .map((entry) => entry.job);
-
-  if (!sameStringList(slotKeys, fixture.slotKeys ?? [])) issues.push("slotKeys");
-  if (!sameStringList(jobIds, fixture.jobIds ?? [])) issues.push("jobIds");
-  if (!sameStringList(budgetOnlySurfaces, fixture.budgetOnlySurfaces ?? [])) issues.push("budgetOnlySurfaces");
-
-  const actualShared = scheduleMatrix.sharedJobPaths ?? {};
-  const expectedShared = fixture.sharedJobPaths ?? {};
-  if (!sameStringList(Object.keys(actualShared), Object.keys(expectedShared))) {
-    issues.push("sharedJobPaths");
-  } else {
-    for (const job of Object.keys(expectedShared)) {
-      if (!sameStringList(actualShared[job] ?? [], expectedShared[job] ?? [])) issues.push(`sharedJobPaths.${job}`);
-    }
-  }
-
-  if (issues.length > 0) {
-    throw new Error(
-      `Night Watch registry fixture drift (${issues.join(", ")}). Review the registry change and update scripts/lib/night-watch-registry-fixture.json explicitly.`,
-    );
-  }
+  return {
+    cronJobs: CRON_JOB_DEFINITIONS,
+    budgetEntries: CRON_CONNECTION_BUDGET_ENTRIES,
+    slotPlans: SCHEDULED_SLOT_PLANS,
+    sharedJobPaths: SHARED_SCHEDULED_JOB_IDENTITIES,
+  };
 }
 
 function latestBy(items, keyFn, timeFn) {
@@ -418,7 +380,6 @@ export function buildNightWatchCoverage(scheduleMatrix, snapshots, window) {
   );
   const statusPayload = findLatestStatusPayload(snapshots);
   const statusCrons = statusPayload?.crons && typeof statusPayload.crons === "object" ? statusPayload.crons : {};
-  const conditionalPaths = new Set(scheduleMatrix.registryFixture?.conditionalJobPaths ?? []);
   const hasD1 = snapshots.some((snapshot) => snapshot.mode === "d1");
   const jobDefinitionById = new Map(scheduleMatrix.cronJobs.map((job) => [job.job, job]));
   const dueByScheduleKey = new Map(
@@ -439,7 +400,8 @@ export function buildNightWatchCoverage(scheduleMatrix, snapshots, window) {
       const statusRun = statusCrons[jobId]?.lastRun;
       const statusInWindow = epochInWindow(statusRun?.startedAt, startSec, endSec);
       const sharedPath = (scheduleMatrix.sharedJobPaths?.[jobId]?.length ?? 0) > 1;
-      const expectedDue = conditionalPaths.has(pathKey) ? 0 : due.length;
+      const conditional = isConditionallyAdmittedScheduledTask(plan.scheduleKey, jobId);
+      const expectedDue = conditional ? 0 : due.length;
       const observedSlots = new Set(pathRuns.map((run) => Number(run.slot_started_at))).size;
       const evidenceGrade = latestRun
         ? "confirmed"
@@ -465,8 +427,8 @@ export function buildNightWatchCoverage(scheduleMatrix, snapshots, window) {
         latestStartedAt: latestRun?.started_at ?? (!sharedPath && statusInWindow ? statusRun?.startedAt : null) ?? null,
         notes: evidenceGrade === "code-only"
           ? `missing ${Math.max(0, expectedDue - observedSlots)} of ${expectedDue} due execution(s)`
-          : conditionalPaths.has(pathKey)
-            ? "conditional path; no invocation expected without a force request"
+          : conditional
+            ? "conditional path; no invocation expected without admission evidence"
             : "",
       };
     });

@@ -14,8 +14,12 @@ procedure every Tuesday at 05:45 UTC (and on manual dispatch) with the deploy
 pipeline's Cloudflare credentials. It updates or creates the "Safety Score curation
 expiry sweep" issue with bounded live-withheld/expiry/Dependencies/Backing excerpts
 and registry counts. Only the full missing-data registry is retained as a 30-day
-artifact; full queue/report files are not uploaded. Generator/projection failures
-fail the run, but green generation does not attest cache freshness.
+artifact; full queue/report files are not uploaded. Replay and each of the four
+reports have separate timed workflow steps and status outputs. The live-withheld
+step has a 15-minute ceiling inside the unchanged 25-minute job budget, leaving
+time for issue/artifact publication when that report times out. Missing status
+outputs count as failures. Generator/projection failures fail the run, but green
+generation does not attest cache freshness.
 Draining complete queues stays operator work — follow the steps below.
 
 **Operator contract:** the sweep operator reviews and drains the `DEP`/`RESV`,
@@ -273,22 +277,34 @@ they are never silently dropped. Reserve-dependent graph joins are evaluated aga
 the counterfactual facts, not copied supply weights. Graph-free captured overlays
 retain the existing isolated target-rebuild behavior.
 
-The October 6, 2026 sweep's `Access graph must match the admitted clock and input
-generation` failure is reproducible offline: replacing only the target asset in a
-captured extension left other graphs at the original generation; native-input
-narrowing additionally stamped the target with a one-asset generation. This was a
-counterfactual transform defect, not evidence that the production capture itself was
-incoherent. Graph-bearing native replays now rebuild the target using the full input,
-which costs more than the graph-free one-asset rebuild; no admission gate is relaxed.
+The October 6, 2026 sweep's generation mismatch came from leaving untouched graphs at
+the source generation and stamping the target with a one-asset generation. Commit
+`1f4064f47` corrected admission but rebuilt every asset's baseline extension for every
+withheld producer. Run `38401069568` then spent at least 23 minutes 18 seconds in
+live-withheld before the 25-minute job timeout (12:59:02 to 13:22:20 UTC).
 
-The executable sweep contract in
-`worker/scripts/__tests__/curation-expiry-sweep-cli.test.ts` reads the workflow's capture
-and generation commands and executes their actual entrypoints against a one-asset
-frozen cache export. It covers normalization, replay, all four reports, shared
-clock/fact-set identity, and the summary output/diff/PR permission boundary. The
-worklist routing test derives completeness from the producer's `V9_REASON_CODES`;
-the live-withheld tests cover native/legacy multi-asset graphs, fresh-build
-equivalence, invalid graph rejection, and capture-time overlay preservation.
+Graph-bearing counterfactuals now build only the selected extension asset while
+retaining the **full** active set, dependency-cycle diagnosis, source generations and
+input identity. The source compiler input is normalized once and reused; each
+isolated withheld input still receives its own canonical identity validation.
+The rest of the captured extension stays unchanged except for graph generation
+re-admission. Compilation/evaluation still runs over the whole cohort: withholding
+all producers together would change dependency semantics.
+
+On the retained 396-asset `20261013-0512` capture, an isolated USDT extension rebuild
+measured 2,254 ms for the full cohort versus 33 ms for the selected asset (67.6x for
+that phase), with exact selected-slice JSON equality. This is local phase timing,
+not an end-to-end hosted-run guarantee. The report is expected to finish within its
+15-minute step budget; do not raise the job ceiling to mask another regression.
+Acceptance requires one completed post-merge scheduled sweep with all five generator
+statuses and summary projection successful, plus the issue and registry artifact.
+A local replay or manual dispatch alone does not close scheduled-run acceptance.
+
+The live-withheld tests compare the optimized pipeline and report against the former
+full-cohort rebuild, including captured graphs, and assert selected-asset equality
+with full-cohort dependency-cycle diagnostics. They also cover native/legacy graphs,
+invalid graph rejection and capture-time overlay preservation. Workflow tests check
+the five isolated steps, timeout failure propagation, and summary permission boundary.
 
 Assets already present in `liveToFallbackCoins` are excluded: their producer
 silence is already realized in this capture and is owned by the worklist/expiry

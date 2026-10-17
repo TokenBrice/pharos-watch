@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CONDITIONALLY_ADMITTED_SCHEDULED_TASKS } from "../../shared/lib/scheduled-runner-registry";
 import {
   buildNightWatchCoverage,
   collectD1Snapshot,
@@ -68,6 +69,23 @@ function scheduleMatrix() {
       },
     },
   };
+}
+
+function unobservedPathCoverage(scheduleKey: string, job: string) {
+  return buildNightWatchCoverage({
+    cronJobs: [{ job, scheduleKey }],
+    budgetEntries: [],
+    slotPlans: {
+      [scheduleKey]: {
+        scheduleKey,
+        schedule: "*/15 * * * *",
+        jobChains: [[job]],
+      },
+    },
+  }, [{ mode: "d1" }], {
+    start: generatedAt,
+    end: "2026-06-24T10:15:00.000Z",
+  });
 }
 
 function evidence() {
@@ -138,6 +156,53 @@ type TestEvidence = Omit<ReturnType<typeof evidence>, "snapshots"> & {
 };
 
 describe("night-watch-worker", () => {
+  it.each(CONDITIONALLY_ADMITTED_SCHEDULED_TASKS)(
+    "does not grade unadmitted conditional path $scheduleKey:$job as missing",
+    ({ scheduleKey, job }) => {
+      const coverage = unobservedPathCoverage(scheduleKey, job);
+
+      expect(coverage.jobPaths).toEqual([expect.objectContaining({
+        pathKey: `${scheduleKey}:${job}`,
+        expectedDue: 0,
+        observedSlots: 0,
+        evidenceGrade: "not-due",
+        notes: "conditional path; no invocation expected without admission evidence",
+      })]);
+      expect(coverage.jobs).toEqual([expect.objectContaining({
+        job,
+        expectedDue: 0,
+        evidenceGrade: "not-due",
+        notes: "",
+      })]);
+    },
+  );
+
+  it.each([
+    { scheduleKey: "quarterHourly", job: "sync-stablecoins" },
+    { scheduleKey: "daily0800Utc", job: "snapshot-psi" },
+    { scheduleKey: "daily0800Utc", job: "snapshot-public-dataset" },
+    { scheduleKey: "fourHourlyYieldSupplemental", job: "sync-yield-supplemental" },
+    { scheduleKey: "daily0800Utc", job: "fetch-tbill-rate" },
+    { scheduleKey: "daily0805Utc", job: "daily-digest" },
+    { scheduleKey: "daily0810Utc", job: "weekly-recap" },
+  ])("still grades unobserved unconditional path $scheduleKey:$job as missing", ({ scheduleKey, job }) => {
+    const coverage = unobservedPathCoverage(scheduleKey, job);
+
+    expect(coverage.jobPaths).toEqual([expect.objectContaining({
+      pathKey: `${scheduleKey}:${job}`,
+      expectedDue: 2,
+      observedSlots: 0,
+      evidenceGrade: "code-only",
+      notes: "missing 2 of 2 due execution(s)",
+    })]);
+    expect(coverage.jobs).toEqual([expect.objectContaining({
+      job,
+      expectedDue: 2,
+      evidenceGrade: "code-only",
+      notes: "missing 2 of 2 due execution(s)",
+    })]);
+  });
+
   it("does not count stale latest rows as in-window coverage", () => {
     const testEvidence = evidence();
     const snapshot = testEvidence.snapshots[0]! as Omit<(typeof testEvidence.snapshots)[number], "recentRuns"> & {

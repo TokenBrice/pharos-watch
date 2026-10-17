@@ -44,39 +44,89 @@ jobs:
             --exact-cache-export agents/sweep/capture.raw.json \
             --output agents/sweep/capture.json --normalized-only
           echo "clock_sec=$(jq -r .clockSec agents/sweep/capture.json)" >> "$GITHUB_OUTPUT"
-      - name: Replay and generate the curation queues and missing-data registry
-        id: generate
+      - name: Replay the frozen production input
+        id: replay
+        continue-on-error: true
         env:
           CLOCK_SEC: ${{ steps.capture.outputs.clock_sec }}
         shell: bash
         run: |
           set +e
-          # --allow-registry-mismatch: HEAD curation legitimately postdates the
-          # captured registry fingerprint; the sweep reads worklist items, not
-          # score equivalence.
+          # HEAD curation may postdate the capture; this is not score equivalence.
           npm run safety-score-v9:replay -- \
             --input agents/sweep/capture.json \
             --output agents/sweep/replay.json \
             --published-at "$CLOCK_SEC" \
             --allow-registry-mismatch --rederive-current-redemption 2>&1 | tee agents/sweep/replay-command.log
-          replay_status=${PIPESTATUS[0]}
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Generate the curation worklist
+        id: worklist
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
           npm run safety-score-v9:curation-worklist -- \
             --replay agents/sweep/replay.json \
             --output agents/sweep/worklist.md 2>&1 | tee agents/sweep/worklist-command.log
-          worklist_status=${PIPESTATUS[0]}
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Generate the reserve expiry queue
+        id: queue
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
           npm run safety-score-v9:expiry-queue -- \
             --replay agents/sweep/replay.json \
             --output agents/sweep/expiry-queue.md 2>&1 | tee agents/sweep/queue-command.log
-          queue_status=${PIPESTATUS[0]}
-          npm run safety-score-v9:live-withheld -- \
-            --replay agents/sweep/replay.json \
-            --output agents/sweep/live-withheld.md 2>&1 | tee agents/sweep/live-withheld-command.log
-          live_withheld_status=${PIPESTATUS[0]}
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Generate the typed missing-data registry
+        id: registry
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
           npm run safety-score-v9:missing-data-registry -- \
             --replay agents/sweep/replay.json \
             --policy shared/data/safety-score-v9/methodology-policy-candidate-v1.json \
             --output agents/sweep/missing-data-registry.json 2>&1 | tee agents/sweep/missing-data-registry-command.log
-          registry_status=${PIPESTATUS[0]}
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Generate the live-withheld counterfactual report
+        id: live_withheld
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        timeout-minutes: 15
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm run safety-score-v9:live-withheld -- \
+            --replay agents/sweep/replay.json \
+            --output agents/sweep/live-withheld.md 2>&1 | tee agents/sweep/live-withheld-command.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Collect generator statuses and project the registry summary
+        id: generate
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        env:
+          replay_status: ${{ steps.replay.outputs.status || '1' }}
+          worklist_status: ${{ steps.worklist.outputs.status || '1' }}
+          queue_status: ${{ steps.queue.outputs.status || '1' }}
+          live_withheld_status: ${{ steps.live_withheld.outputs.status || '1' }}
+          registry_status: ${{ steps.registry.outputs.status || '1' }}
+        shell: bash
+        run: |
+          set +e
           projection_status=1
           if [ "$registry_status" = 0 ]; then
             jq '{
