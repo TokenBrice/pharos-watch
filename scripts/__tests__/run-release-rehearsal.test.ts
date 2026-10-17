@@ -9,6 +9,12 @@ import { checkWorkerPackage } from "../ci/check-worker-package.ts";
 import { runReleaseRehearsal } from "../maintenance/run-release-rehearsal.ts";
 
 describe("offline release rehearsal", () => {
+  it("uses committed offline inputs rather than enabling trusted retained-data replay", async () => {
+    const runPages = vi.fn(async () => ({ dataStatus: "degraded-data" as const }));
+    await runReleaseRehearsal({}, { runPages, runCommand: () => 0, report: () => {} });
+    expect(runPages).toHaveBeenCalledWith({ acquireReleaseData: false, preserveTypecheck: true });
+  });
+
   it.each(["check:migrations", "check:worker-package"])("fails closed when %s fails", async (failure) => {
     const calls: string[] = [];
     await expect(runReleaseRehearsal({}, {

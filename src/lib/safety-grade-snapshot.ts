@@ -31,7 +31,10 @@ function assertCurrentPublicDatasetFresh(
   const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const snapshotUtc = Date.parse(`${snapshotDate}T00:00:00Z`);
   const ageDays = (todayUtc - snapshotUtc) / 86_400_000;
-  if (!Number.isInteger(ageDays) || ageDays < 0 || ageDays > PUBLIC_DATASET_MAX_AGE_DAYS) {
+  // Trusted PR release-data replay proves build integrity, not today's data age.
+  // Invalid or future snapshot dates still fail, including in replay context.
+  if (!Number.isInteger(ageDays) || ageDays < 0
+    || (ageDays > PUBLIC_DATASET_MAX_AGE_DAYS && process.env.PHAROS_PAGES_REPLAY !== "1")) {
     throw new Error(
       `Public scores-latest mirror is stale (${snapshotDate}); `
       + `expected a snapshot no more than ${PUBLIC_DATASET_MAX_AGE_DAYS} days old`,

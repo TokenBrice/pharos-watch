@@ -47,6 +47,8 @@ export async function runReleaseRehearsal(
     ? `[release-rehearsal] Published archive continuity enabled: ${PAGES_PREVIOUS_SITEMAP_URL}`
     : "[release-rehearsal] Published archive continuity skipped (offline; opt in with --live-continuity).");
   // Next typechecks the exact regenerated build inputs, as in a standalone build.
+  // No trusted retained release data is acquired, so the PR replay age waiver
+  // stays disabled: rehearsal still requires a fresh committed scores mirror.
   await runPages({
     acquireReleaseData: false,
     preserveTypecheck: true,
