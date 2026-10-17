@@ -40,7 +40,7 @@ const REASON =
   "CoinGecko last-trade print artifact: no economic-size on-chain USN trade executed above 1.0011 in the window; pool mids stayed ~$1.000.";
 
 /**
- * Reviewed suppression windows for the Noon USN upside artifacts. Windows span
+ * Reviewed suppression windows for Noon USN upside and DOLA two-sided artifacts. Windows span
  * the union of the stored episode, its dust/recovery transactions, and a ±2h
  * margin: CoinGecko's current history has already moved episode edges and peaks
  * by up to ~1h versus the captured samples (see evidence), and hourly sample
@@ -99,6 +99,32 @@ export const BACKFILL_REPLAY_SUPPRESSIONS: readonly BackfillReplaySuppression[] 
       "https://www.coingecko.com/en/coins/noon-usn",
     ],
     reviewedAt: REVIEWED_AT,
+  },
+  {
+    coinId: "dola-inverse-finance",
+    direction: "below",
+    windowStart: 1_707_602_628, // 2024-02-10T22:03:48Z (stored start − 2h)
+    windowEnd: 1_707_660_185, // 2024-02-11T14:03:05Z (stored end + 2h)
+    reason:
+      "CoinGecko last-trade print artifact: one 0.101649 DOLA sample with no further sample for ~12h; no observed venue printed below 0.96 in the window and a 44,133 DOLA Curve DOLA/FRAXBP trade executed at 0.995317 (block 19201299).",
+    evidenceUrls: [
+      "https://etherscan.io/tx/0xd993da53705884ec3fab6b6262f52ebbab570858bcf345830b7f387a5de12474",
+      "https://www.coingecko.com/en/coins/dola-usd",
+    ],
+    reviewedAt: "2026-10-17",
+  },
+  {
+    coinId: "dola-inverse-finance",
+    direction: "above",
+    windowStart: 1_678_780_927, // 2023-03-14T08:02:07Z (stored start − 2h)
+    windowEnd: 1_678_806_236, // 2023-03-14T15:03:56Z (stored end + 2h)
+    reason:
+      "CoinGecko last-trade print artifact: 1.540/1.568/1.645 DOLA samples between 09:57Z and 12:01Z; executed Curve trades in the same window printed 0.9953-0.9965 (20,000 DOLA -> 19,910.22 USDC at block 16826133).",
+    evidenceUrls: [
+      "https://etherscan.io/tx/0x47a9e16ccb59edd396a26ca5ef15978db8c6074393f0e4e3611e79cf6fbdedb1",
+      "https://www.coingecko.com/en/coins/dola-usd",
+    ],
+    reviewedAt: "2026-10-17",
   },
 ];
 
