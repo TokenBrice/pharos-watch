@@ -1,10 +1,699 @@
 [
   {
+    "date": "2026-10-17",
+    "title": "USD1 Leads A Split Flow Tape",
+    "text": "USD1 net burned $14.39M at a -100 pressure reading while USDat minted a net $4.45M at +100. The Bank Run Gauge sits at -8; a print of -15 or lower would move flow stress to the front.",
+    "extended": "USD1 net burned $14.39M in the 24 hours to 08:05 UTC, a mint/burn pressure reading of -100 against its 30-day baseline. fxUSD printed the same -100 on $3.18M of net burns. USDat moved the opposite way, reading +100 on $4.45M of net mints. These readings measure each token's issuance pace against its own history; they do not establish holder withdrawals or any loss of backing.\n\nThe aggregate flow tape was calmer than those three readings. The Bank Run Gauge rose to -8, NEUTRAL, from -16.6, though its valuation runs on partial data. Ethereum logged +$19.24M of net flow across tracked coins, against -$3.59M on Arbitrum. USDT's seven-day supply decline narrowed to $674.58M from the $824.16M reported in the last edition, short of the $910M follow-through mark; outstanding supply is $183.35B.\n\napxUSD traded at $0.986, 137 bps below peg, up from 72 bps a day earlier and past the 100 bps level the last edition flagged. DEWS moved the $305.46M token from CALM to WATCH on cross-source divergence. Avalon's USDA keeps its stored 3,098 bps reading, unchanged, because no live price is available. A Bank Run Gauge print of -15 or lower would put flow stress at the front of the next edition.",
+    "generatedAt": 1792224322,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 235,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-16",
+    "title": "USDT Sheds $824M In A Week",
+    "text": "USDT supply fell $824.16M in seven days, under half a percent of its float, while USDA (alpha partner) widened to 264 bps from 89. Next trigger: a $45M one-day move in PYUSD.",
+    "extended": "Tether's USDT supply fell $824.16M over seven days to $183.46B. That was the largest weekly move among tracked stablecoins and less than half a percent of its outstanding tokens. It sits 3% below its April 26 record of $189.76B; the figure counts tokens outstanding and does not show who redeemed. The blacklist tape logged 35 events affecting $16.34M, the largest of them USDT blacklistings on Tron of $3.16M and $3.05M.\n\nTotal stablecoin market cap fell $1.31B on the week to $321.48B, 0.29% under the Digest-window high set two days ago. USDe net burned $39.44M in 24 hours for a pressure reading of -100, matched by AUSD and fxUSD on $3.79M and $1.84M. Aggregate net flow across tracked coins ran -$162.80M on Ethereum and -$59.95M on Arbitrum. The Bank Run Gauge read -16.6, CAUTIOUS, on partial valuation data.\n\nUSDA (alpha partner) widened to 264 bps below peg from 89 on $85.59M, the only depeg the change log marks as worse; pmUSD narrowed to 3,240 bps from 3,374. USDA (Avalon) is still carried at a stored 3,098 bps on $145.56M with no live price. DEWS counts six coins in ALERT, up from five, with AUDm and cgUSD entering on price confidence; USDai scores highest at 45 on $265.68M.\n\nPYUSD shed $33.65M of supply in a day against $49.43M on the week, and a $45M session would turn that drift into rotation. A USDT seven-day decline beyond $910M would give the supply story follow-through. apxUSD, 20 hours into a depeg at 72 bps below peg on $321.84M, becomes a firmer peg-stress signal at 100 bps.",
+    "generatedAt": 1792137963,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 234,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-15",
+    "title": "USDC Adds $76M Against The Week",
+    "text": "USDC added $76.19M in a day after its market cap fell $1.03B over seven days. msUSD widened to 1,150 bps below peg; the next marker is a $25M XAUT session.",
+    "extended": "USDC added $76.19M of supply in the latest 24 hours after a week in which its market cap fell $1.03B to $72.80B, the largest weekly move among tracked stablecoins. On the supply-velocity series the seven-day decline is $913.62M, so the daily gain offsets about 8% of it. The figures count tokens outstanding; they do not show who redeemed. USDC sits 9% below its April high of $79.75B.\n\nThree depegs widened. Metronome's msUSD, which fell to about $0.44 on 2 September on oracle-latency underbacking, traded at $0.885, 1,150 bps below peg against 1,121 yesterday. BRZ widened to 181 bps from 141, and WARS to 595 bps from 559. Avalon's USDA remains an ongoing critical depeg at its stored 3,098 bps on $145.56M, with no live price and no change since the last edition.\n\nThe blacklist tape logged 76 events touching at least $17.31M, 32 of them with no disclosed amount; the largest listed entries were USDT on Tron at $1.50M and $1.36M. Yesterday's USDC markers, $165M in a day and $2B on the week, both went unmet. Next trigger: XAUT, up $19.84M in a day against $4.67M on the week, needs a $25M session for the gain to read as rotation rather than drift.",
+    "generatedAt": 1792051535,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 233,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-14",
+    "title": "pmUSD Narrows To 3,379 Bps",
+    "text": "pmUSD sits 3,379 bps below peg at $0.662, 164 bps tighter on the day, while the DEWS ALERT count fell to 4 from 10. A $165M USDC session would turn its daily reversal into rotation.",
+    "extended": "pmUSD traded at $0.662 in the latest sample, 3,379 bps below peg and 164 bps tighter than yesterday's reading. Among depegs with a live price, it is the largest by market impact. The $62.02M token has recovered roughly half the distance from its 6,902 bps peak. Its Safety Score stays F (20), with exit at 35 and a missing same-notional redemption route among the cited reasons.\n\nUSDC supply rose $128.72M in a day against a $653.92M decline over seven days on the supply-velocity series. Its market cap is $1.19B lower on the week at $73.10B, 8% below its April high. These figures count tokens outstanding and do not identify whose capital moved. USD1 and FDUSD net burned $16.27M and $5.79M, yet the Bank Run Gauge reads 0.0, neutral, up from -24.9.\n\nDEWS stress eased across the board: the ALERT count fell to 4 from 10, and the single WARNING cleared. Avalon's USDA, still in ALERT at a score of 39, is carried at its stored 3,098 bps deviation on $145.56M, with no live price and no material change. A separate USDA token with $86.29M of supply widened to 102 bps from 64. PSI read 91.6 on the 07:56 UTC sample, a fifth BEDROCK day.\n\nYesterday's calls split. USDe's +$30.82M session cleared its $20M line, while the $2B USDC weekly threshold and the Gauge's -30 level both went unmet. A USDC move of $165M or more in one session would take the reversal from drift to rotation; USDS, down $45.71M in a day, faces a $60M equivalent.",
+    "generatedAt": 1791965160,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 232,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-13",
+    "title": "USD1 Net Burns $13.69M",
+    "text": "USD1 read -100 against its 30-day baseline on $13.69M of net burns, and the Bank Run Gauge fell to -24.9, below 9 October's -19.4. A print of -30 or lower would make flow stress the next lead candidate.",
+    "extended": "USD1 posted a mint/burn pressure reading of -100 against its 30-day baseline on $13.69M of net burns over 24 hours, the only negative maximum on the tape. The Bank Run Gauge fell to -24.9 from -13.0, inside its CAUTIOUS band and below the -19.4 printed on 9 October, clearing the -15 level yesterday's edition set as its trigger. Flight-to-quality is inactive.\n\nThe offsets were smaller. U and CHFAU each read +100 on net mints of $6.49M and $4.80M, a combined $11.29M against USD1's single burn. USD1's token supply is $182.06M lower over seven days, $5.53M of it in the latest day. Ethereum showed -$176.42M of net flow across tracked coins; Arbitrum, at +$910.42K, was the only one of the three listed chains with a net mint.\n\nUSDC's weekly supply decline reached $1.51B, leaving $72.80B outstanding, 9% below its April high, though only $53.65M of that came in the last day. The figures count tokens outstanding and do not identify who redeemed. PSI eased to 91.3 for a fourth BEDROCK day, its trend term reflecting a 0.37% weekly fall in total market cap to $322.42B.\n\nDEWS lists nine coins in ALERT or WARNING, up from five, with HBD alone in WARNING at a score of 61 on cross-source divergence. Avalon's USDA is still carried at a stored 3,098 bps deviation across $145.56M, live price unavailable; pmUSD narrowed to 3,543 bps from 3,793. If USDe adds $20M or more in one session after today's +$12.62M, its reversal of a $197.23M weekly decline becomes rotation.",
+    "generatedAt": 1791878838,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 231,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-12-weekly",
+    "title": "USDe Yield Flag Holds As Supply Slips",
+    "text": "USDe held the week's top yield flag at 5.03% APY as its market cap slid to $4.75B. USDC was the largest supply mover on five days, -$1.15B on a trailing basis. PSI stayed BEDROCK, 88.6 to 92.5.",
+    "extended": "USDe carried the week's top risk flag: a yield warning at 5.03% APY on 2026-10-07, with no corroborating opportunity evidence, on a $4.97B market cap. The flag appeared in all seven daily editions. Over that span, APY eased from 5.06% to 4.93% and market cap fell to $4.75B by 2026-10-12. PSI stayed in BEDROCK throughout, ranging from 88.6 to 92.5 and closing at 92.1 against a 91 open. Its 91.1 midpoint sat 2.1 points below the prior week.\n\nUSDC was the largest supply mover on five of seven days, each time to the downside. Its trailing weekly change widened from -$507.45M on 2026-10-06 to -$1.17B on 2026-10-10 and stood at -$1.15B on 2026-10-12. USDT held the top spot only on 2026-10-07 and 2026-10-08, at +$482.55M and +$527.86M. The USDC figures measure net token burning; the data does not establish who redeemed or why.\n\nThe Bank Run Gauge midpoint rose to -1.8 from -11.8, although the low of -19.4 came on 2026-10-09, the same day PSI hit 88.6. apxUSD resolved a 372 bps discount on 2026-10-10 after 159 hours. DEWS still moved it from CALM to WATCH three times on cross-source divergence, while A7A5 moved from WATCH to CALM on three readings. USDA at 3098 bps and pmUSD at 5181 bps remain standing depegs carried over from before the week.\n\nWeekly market cap is unavailable because supply coverage was incomplete. USDe recorded a $53.89M net burn at -100 intensity on 2026-10-09, in line with its falling market cap; the burn alone does not establish investor withdrawals. Active depeg observations rose to 150 from 138. Blacklist events held at 168, and the known USD subtotal climbed to $53.21M from $36.04M on partial valuation, led by a $9.43M USDC blacklist on Base. No grade movers were recorded, and A tier holds 76.9% of the $338.0B known mapped supply.\n\nDaily triggers went 7 hit and 7 missed, a 50% hit share, with 2 pending and 5 unavailable for lack of evidence. Next week will decide whether USDC's trailing weekly change stays beyond -$1B. A USDe market cap below $4.75B would extend a decline that has run every day since 2026-10-07.",
+    "generatedAt": 1791798000,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "weekly",
+    "editionNumber": 31,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-12",
+    "title": "AUSD Leads Three Flow Shifts",
+    "text": "AUSD's pressure score hit -98 and USD1's -82 on $6.84M of combined net burns, while the Bank Run Gauge fell to -13 from -3. A print at -15 or lower makes flow stress the next lead.",
+    "extended": "AUSD recorded the largest mint/burn pressure shift on the tape, -98 against its 30-day baseline, on $2.53M of net burns over 24 hours. USD1 followed at -82 with $4.31M net burned. stUSDS moved the other way at +89 on $3.78M net minted. The Bank Run Gauge fell to -13 from -3, inside its CAUTIOUS band and above the -19.4 printed on 9 October.\n\nThe dollar sums are modest. AUSD and USD1 together burned a net $6.84M, against a $1.15B seven-day contraction in USDC supply to $73.03B. Pressure scores measure each coin's departure from its own baseline, and gauge valuation is running on partial data, so the readings flag a change in pace. The burns alone do not establish redemptions or lost backing.\n\nPSI eased to 92.1 from 92.3, a third day in BEDROCK, with severity at 0.02. USDA's last stored reading remains 3,098 bps below peg on $145.56M, with no live price available. pmUSD narrowed to 3,793 bps at $0.621 from 3,847. The DEWS ALERT count rose to five from four, with MOVEUSD scoring 36 on pool balance drift.\n\nNext trigger: a gauge print at -15 or lower would put flow stress back near the 9 October low and make it a lead candidate. stUSDS carries the accelerating signal, and a second day of net minting there would keep the 24-hour tape split between issuance and burns. DAI's +$20.86M daily reversal needs a $30M session to count as rotation.",
+    "generatedAt": 1791792376,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 230,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-11",
+    "title": "USDC's Burn Slows To $13.42M",
+    "text": "USDC is down $1.10B on the week, but the last day took only $13.42M while USDD net minted $199.43M. A Bank Run Gauge print of -15 or lower would shift the story to flow stress.",
+    "extended": "USDC's token supply fell $1.10B over seven days to $73.10B, the largest 7-day decrease in Pharos supply data, yet only $13.42M of that came in the latest 24 hours. The daily print is roughly one-twelfth of the week's average pace. The data records fewer tokens outstanding; it does not establish who redeemed or why. USDC now sits 8% below its April high of $79.75B.\n\nThe day's larger on-chain flow ran the other way. USDD net minted $199.43M over 24 hours, a pressure reading of 100 against its 30-day baseline and nearly 15 times USDC's daily decline. Net flow on Ethereum came to +$320.27M across tracked coins. USDe burned a net $21.61M at a reading of -100. The Bank Run Gauge printed -3, neutral, with no flight-to-quality flag.\n\nPeg stress widened at the margin. pmUSD slipped to 3847 bps below peg at $0.615, from 3735 bps yesterday, on a $57.61M float; USDA stays 3098 bps below peg on its stored peak, with live price unavailable, across $145.56M. DEWS moved ALUSD from WATCH to ALERT on cross-source divergence, holding the ALERT count at six. PSI rose to 92.5, a second BEDROCK day.\n\nNext trigger: a Bank Run Gauge reading of -15 or lower, a level it breached on 9 October at -19.4, would move flow stress to the front of the tape. USDD's next 24-hour print will decide whether $199.43M was a single issuance or the start of a sustained series of mints.",
+    "generatedAt": 1791705939,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 229,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-10",
+    "title": "apxUSD Closes A 159-Hour Depeg",
+    "text": "apxUSD is back at peg after a 372 bps trough on $309.70M of supply, and its Safety Score is still F (31). USDC's $1.17B weekly contraction exceeds the whole market's $418M decline.",
+    "extended": "apxUSD closed a 159-hour depeg on $309.70M of supply, the only resolution recorded in the past 24 hours. The token had traded as far as 372 bps below $1 and was still 100 bps off at the previous edition. Its Safety Score remains F (31), with exit at 64.9 and backing at 44.3. No grade movement was logged in the last 48 hours.\n\npmUSD narrowed to 3,735 bps below peg at $0.626, from 4,060 bps, while USDA (Avalon) holds a stored 3,098 bps on $145.56M with no live price and no material change. USDC's weekly contraction reached $1.17B, leaving it at $73.01B. Total stablecoin market cap fell $418.28M over the same week to $322.31B, so the rest of the tracked set added roughly $750M.\n\nMint and burn flows ran in both directions. USDe posted net burns of $25.14M and AUSD $9.05M, against $9.87M of net EURC minting, and the Bank Run Gauge read -7.2, up from -19.4 on 10-09. PSI returned to BEDROCK at 91.3 after a day in STEADY. A Gauge reading of -15 or lower would put outflow stress back at the top of the candidate list.",
+    "generatedAt": 1791619579,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 228,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-09",
+    "title": "USDC Burns $455M In A Day",
+    "text": "USDC burned $455.28M in a day, 44% of a $1.04B weekly contraction, while total stablecoin supply is still up $366.60M on the week. A $570M single-day USDC print is the next line.",
+    "extended": "USDC's outstanding supply fell $455.28M in the past 24 hours, about 44% of the $1.04B it has shed over seven days on the supply-velocity series. Measured by market cap, USDC is the week's largest mover at -$809.11M. That leaves it at $73.22B, 8% below its April 11 peak of $79.75B. The ledger records burns; it does not identify who redeemed or why.\n\nOther dollar tokens contracted alongside it. USD1 lost $84.43M in a day and holds a DEWS ALERT score of 37, with its mint/burn flow component at 100. USDe burned a net $53.89M, and USDS swung from a $192.22M weekly gain to an $83.34M daily decline. Ethereum logged $285.18M of net burns. The Bank Run Gauge reads -19.4, CAUTIOUS, with no flight-to-quality flag.\n\nAggregate supply has not followed. Total stablecoin market cap is $322.74B, up $366.60M on the week and 0.48% below the Digest-window high set two days ago, while PYUSD and XAUT added $43.12M and $36.57M in a day. PSI stands at 88.6, its lowest in 225 days of Digest tracking, though measured depeg severity is only 0.03.\n\nUSDA (Avalon) remains an ongoing critical depeg, carried at its stored 3,098 bps reading with no live price, on $145.56M of supply. The next USDC test is a single-day contraction of $570M or more, which would turn a week of drift into an active rotation. USD1's equivalent line is $110M.",
+    "generatedAt": 1791533175,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 227,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-08",
+    "title": "PSI Falls To A Tracking Low",
+    "text": "PSI reads 90.7, its lowest in 224 days of tracking, with total market cap 0.20% under its high. Breadth supplies 6.81 points of drag; depeg severity supplies 0.03.",
+    "extended": "The Pharos Stability Index read 90.7 on the 07:56 UTC sample, the lowest in 224 days of Digest tracking, while total stablecoin market cap stood at $323.65B, 0.20% below the window high set a day earlier. Breadth accounts for 6.81 points of drag out of a possible 17. Weighted depeg severity accounts for 0.03 of 68, and its largest input is pathUSD at 39 bps on $71.65M.\n\nThe count of stressed coins supports that reading. DEWS shows 15 coins at ALERT or above, up from 12 a day earlier, with HBD alone in DANGER at a score of 85 on $33.65M. On $311.19M of supply, apxUSD moved from CALM to WATCH on cross-source divergence and trades at $0.991, 88 bps below peg. Avalon's USDA is still carried at its stored 3,098 bps deviation on $145.56M, with no live price.\n\nSupply figures run the other way. USDT added $527.86M over seven days while USDC contracted $409.36M, and USD1 lost $34.09M of its $37.24M weekly decline in the last day alone. Next trigger: a USD1 move of $45M or more in one session, which would show the burn compounding rather than fading.",
+    "generatedAt": 1791446725,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 226,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-07",
+    "title": "USDT Adds $482.55M On The Week",
+    "text": "USDT supply rose $482.55M in seven days to $184.30B while USDC shed $141.55M in one. A USDC day of $180M or more would mark rotation rather than drift.",
+    "extended": "USDT added $482.55M of supply over seven days, the largest weekly move among tracked stablecoins, lifting it to $184.30B. The gain is modest against USDT's own history: it is under 6% of the $8.46B weekly record set 1,603 days ago, and the token still sits 3% below its $189.76B peak of April 26. The figure counts tokens outstanding; it does not identify who supplied the capital.\n\nUSDC moved the other way. Its supply fell $141.55M in one day, leaving its seven-day change at +$715.58K. PYUSD shed $18.99M in a day after a $166.78M weekly rise, while RLUSD added $31.80M. Aggregate capitalisation still reached $324.31B, above the $323.97B Digest-window high recorded a day earlier, so the 24-hour moves reshuffled issuer weights without shrinking the total.\n\nDEWS lists 11 coins at ALERT or above. HBD is the only one in DANGER, at a score of 85 driven by cross-source divergence, on $33.65M of supply. USDA from Avalon remains marked 3098 bps below peg on its last stored reading, with no live price, on $145.56M. USD1 posted mint/burn intensity of 100 against its 30-day baseline on $9.50M net, and its supply rose $24.39M in a day.\n\nThe Bank Run Gauge rose to 18.9 from 13.1, inside its HEALTHY band, and PSI stayed in BEDROCK at 91.6 for a 90th day. The next test sits with USDC: a single-day move of $180M or more would turn this week's supply shuffle from drift into rotation between the two largest issuers.",
+    "generatedAt": 1791360364,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 225,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-06",
+    "title": "pmUSD Narrows On Split Feeds",
+    "text": "pmUSD sits at $0.474, 5,257 bps off peg and 122 bps better than yesterday, but DEWS scores its cross-source divergence at 100. PSI fell to 91, its lowest in 222 days of tracking.",
+    "extended": "pmUSD priced at $0.474 this morning, 5,257 bps below its dollar peg and 122 bps narrower than yesterday's 5,379 bps, against a 6,902 bps peak. DEWS holds the $44.46M token in ALERT at a score of 37, with cross-source divergence at the maximum 100 and pool balance drift at 66. The sources behind that $0.474 print disagree, so one narrower reading is thin evidence of repair.\n\nPSI fell to 91 from 93 at the last daily snapshot, its lowest since the Digest began 222 days ago, while extending a 90-day BEDROCK streak. Severity is 0.03, so breadth at 6.75 accounts for the decline; coins in DEWS ALERT or worse rose to 12 from 7. Avalon's USDA remains listed 3,098 bps below peg on a stored peak, with no live price, across $145.56M.\n\nThe Bank Run Gauge moved to 13.1 from -14.5. stcUSD netted $9.19M of mints, and CHFAU burned a net $3.48M while sitting in DEWS ALERT at 45. USDC supply is $507.45M lower over seven days at $74.34B. Next trigger: a pmUSD reading of 6,050 bps off peg would mark renewed widening. An RLUSD daily move of $25M, following today's +$19.73M, would make its reversal a rotation story.",
+    "generatedAt": 1791273927,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 224,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-05-weekly",
+    "title": "apxUSD Clears 3,159 bps, Then Slips Again",
+    "text": "apxUSD ended a 3,159 bps depeg after 2,527 hours on 2026-09-30, then opened a 111 bps gap by 2026-10-03. USDC led supply declines on all seven days as total cap rose 0.81%.",
+    "extended": "apxUSD closed a 3,159 bps discount on 2026-09-30 after 2,527 hours below peg, the week's largest depeg by market impact at 990.4 on a $313.53M market cap. The recovery lasted about three days. On 2026-10-03 apxUSD logged a 122 bps episode that resolved after 54 hours and a fresh 111 bps gap that stayed active, and DEWS moved the coin from CALM to WATCH at a score of 18 on cross-source divergence. PSI went from 94 to 93, with a low of 92.6 on 2026-10-03, and stayed in BEDROCK on all seven days.\n\nUSDe carried the most persistent flag. It posted a yield warning on all seven daily readings, between 4.91% and 5.12% APY on a market cap near $4.91B, and each reading was tagged opportunity-evidence-missing. USDe also printed -100 mint/burn intensity on three consecutive days from 2026-09-29, with net burns of $27.38M, $11.50M and $36.75M. Those three burns total $75.63M, under 2% of USDe supply, and the inputs do not show whether they reflect redemptions or routine issuer operations.\n\nDepeg counts moved against the apxUSD story. Active observations fell to 138 from 157 while unique signals rose to 13 from 8, so the week produced more distinct breaks and fewer repeat readings of old ones. The standing cases, USDA at 3,098 bps on $145.58M and pmUSD at 5,524 bps on $42.37M, both predate 2026-09-29. Blacklist activity rose to 168 events and $36.04M from 136 and $26.17M, led by a $6.03M USDT action on Tron on 2026-10-01.\n\nAggregate market cap rose 0.81% to $323.27B, although USDC was the largest supply mover on all seven daily readings. Every one of those USDC readings was negative, ranging from -$942.45M to -$2.28B on 2026-10-02. The figures measure USDC token contraction; they do not establish redemptions or capital flight. The Bank Run Gauge bottomed at -23.6 on 2026-10-01, and its midpoint fell to -11.8 from -1.2 the prior week. Grade transitions held at 0 for a second week.\n\nThe week's daily triggers scored 3 hits against 13 misses, a 19% hit share, with 2 pending and 3 unavailable for lack of evidence. Next week will show whether apxUSD's active 111 bps gap closes; a reading wider than 122 bps or a DEWS score above 18 would point the other way. A sixth straight USDe reading above 5% APY without corroborating evidence would keep that flag on the leaderboard.",
+    "generatedAt": 1791187800,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "weekly",
+    "editionNumber": 30,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-05",
+    "title": "EURC Burns $6.59M Net",
+    "text": "EURC net burns hit $6.59M in 24h, a -100 pressure reading, as the Bank Run Gauge fell from 4.1 to -14.5. reUSD minted $3.64M the other way.",
+    "extended": "EURC recorded a net burn of $6.59M in the 24 hours to 08:05 UTC, scoring -100 on pressure intensity against its 30-day baseline. Across the tracked set, the Bank Run Gauge fell from 4.1 to -14.5, back into CAUTIOUS, while the flight-to-quality flag stayed off. The burn counts tokens retired on-chain; the evidence does not attribute it to holder withdrawals.\n\nFlows ran the other way at two smaller issuers. reUSD minted a net $3.64M at an intensity of 100, and syrupUSDT added $633.69K at 97. The gauge reading sits above the -27.6 printed on 28 September and short of the -25 level the previous edition flagged. USDC remains the largest weekly mover at -$1.22B, now $74.03B, yet total supply of $323.27B is 0.01% below its Digest-window high.\n\nOn the depeg board, pmUSD trades at $0.462, 5379 bps below peg on a $43.41M market cap, and USDA's stored 3098 bps reading on $145.56M is unchanged with no live price available. PSI stands at 93, its 90th straight day in BEDROCK. The next trigger sits with PYUSD, which shed $11.34M yesterday after adding $170.62M over the week: a single-day move of $15M or more would turn that reversal into a rotation.",
+    "generatedAt": 1791187537,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 223,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-04",
+    "title": "USDf Adds $198.76M In A Day",
+    "text": "USDf posted $198.76M of net issuance in 24 hours, about an eighth of its $1.62B market cap, as the Bank Run Gauge reads 4.1 after six daily readings below -15.",
+    "extended": "USDf recorded $198.76M of net on-chain issuance in the 24 hours to 08:05 UTC, an intensity reading of 100 against its 30-day baseline and the largest pressure shift in today's mint/burn data. Against a $1.62B market cap, that is roughly an eighth of supply in one window. The feed measures token issuance; it does not show who minted or why. Net flow across every tracked coin on Ethereum was $372.39M.\n\nThe Bank Run Gauge reads 4.1, neutral, after readings between -15.8 and -27.6 from September 27 to October 2. USDC remains the largest weekly mover, down $1.23B over seven days to $74.20B, 7% below its April high of $79.75B, though its one-day change was only -$4.39M. Total stablecoin supply still rose $577.66M on the week to $323.29B.\n\nUSDA's last stored deviation of 3,098 bps below peg is unchanged on $145.56M of market cap, with no live price available. pmUSD narrowed to 5,399 bps from 5,524, trading at $0.460. DEWS moved BUCK from CALM to WATCH on price confidence. If the Gauge drops to -10 or lower, outflow pressure would overtake USDf's issuance as the lead candidate.",
+    "generatedAt": 1791101158,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 222,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-03",
+    "title": "USDC's Weekly Burn Slows",
+    "text": "USDC is down $1.20B on the week but removed only $53.75M in the latest day, while total stablecoin market cap reached $322.03B. Next trigger: apxUSD reaching 150 bps off peg, from 111 now.",
+    "extended": "USDC supply fell $1.20B over seven days to $74.27B, yet the latest day removed only $53.75M. USDC is now 7% below its April 11 high of $79.75B. Total stablecoin market cap still rose $434.84M on the week to $322.03B, above the $321.94B Digest-window high set a day earlier. On a baseline covering 235 of 247 core coins, other tokens therefore added roughly $1.6B net.\n\nThe Bank Run Gauge read 1.2, neutral, after -17.8 a day earlier and -27.6 on September 28, with no flight-to-quality flag. Ethereum logged $150.77M of net mints over 24 hours. USDf net minted $16.86M and USDe net burned $11.61M; each reading sits at the extreme of its pressure scale against a 30-day baseline. Those figures measure token supply and do not establish redemptions.\n\nDEWS counts 10 coins at ALERT or worse, up from 4 yesterday. pmUSD widened to 5,524 bps below peg from 5,411, and USDA, with a $145.56M market cap and no live price, holds a stored peak deviation of 3,098 bps. apxUSD, a $310.77M coin graded F, reopened a depeg two hours ago and trades at $0.989, 111 bps below peg. A move to 150 bps would make it the next peg-stress lead.",
+    "generatedAt": 1791014728,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 221,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-02",
+    "title": "USDC Shrinks, Market Cap Barely Moves",
+    "text": "USDC's supply fell $2.28B in seven days while total stablecoin market cap slipped only $443.5M; USDT and PYUSD added $399.76M between them in a single day.",
+    "extended": "USDC's outstanding supply fell $2.28B over seven days to $74.16B, the largest weekly move among tracked coins and 7% below its April 11 high of $79.75B. Total stablecoin market cap fell only $443.5M over the same window. By subtraction, that leaves roughly $1.8B of net issuance elsewhere, on a baseline covering 238 of 248 core coins. The data record fewer USDC tokens; nothing here establishes why.\n\nPart of that offset is visible in the daily figures. USDT added $294.04M in one day against $387.15M for the week, and PYUSD added $105.72M against $130.02M; both are accelerating. On-chain, USDf netted $101.71M of mints over 24 hours while RLUSD netted $112.42M of burns, and Arbitrum led chains at +$95.05M net. The Bank Run Gauge improved to -17.8 from -23.6 and remains in its CAUTIOUS band.\n\nPSI read 93.2, extending a 90-day BEDROCK streak, while the DEWS count of coins at ALERT rose to 9 from 7. Avalon's USDA remains critical at a stored peak of 3,098 bps below peg, with no live price available, on $145.56M of supply. Next trigger: a seven-day USDC decline beyond $3B would make this a sustained contraction rather than one large week, and a Gauge reading of -25 or lower would put flow stress at the front.",
+    "generatedAt": 1790928365,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 220,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-10-01",
+    "title": "USDe Net Burns Reach $36.75M",
+    "text": "USDe retired $36.75M net in 24 hours and the Bank Run Gauge fell to -23.6. apxUSD sits 108 bps below peg; 150 bps is the level that would make it a stronger peg-stress signal.",
+    "extended": "USDe recorded $36.75M of net burns in the 24 hours to 08:05 UTC, a pressure reading of -100 against its 30-day baseline. RLUSD added $9.93M of net burns at the same reading. The Bank Run Gauge fell from -15.8 to -23.6, short of the -35 level set in the last edition, with no flight-to-quality flag. Ethereum accounted for $164.75M of net burns; the flow data counts tokens retired and does not identify who redeemed.\n\nUSDC's market cap is down $1.26B over seven days to $74.17B, 7% below its April high, and the one-day decline slowed to $74.19M. Total stablecoin capitalisation still rose $185.17M on the week to $320.93B, 0.20% below the Digest-window high set four days ago, with XAUT adding $721.98M. Avalon's USDA is still carried at 3,098 bps below peg, a stored figure with no live price.\n\nDEWS counted 11 coins at ALERT or above, up from 6 a day earlier. Blacklists covered $24.77M across 95 events, the largest a $6.03M USDT freeze on Tron. PSI eased to 93.1 from 93.6, its lowest reading since 23 September and still BEDROCK. apxUSD, a $313.75M coin graded F, moved to WATCH at 108 bps below peg. A move to 150 bps would make it the stronger peg-stress signal for the next edition.",
+    "generatedAt": 1790841917,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 219,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-30",
+    "title": "apxUSD Recovers, Grade Stays F",
+    "text": "apxUSD's depeg closed after 2,527 hours and a 3,159 bps trough, yet its safety grade is still F at 30. USDC supply fell $1.35B in a week; next trigger is a $10M one-day USDe move.",
+    "extended": "apxUSD's depeg closed with a positively classified recovery in the last 24 hours, ending a 2,527-hour event that reached 3,159 bps below peg at its worst. The token carries $313.53M of market cap and sat 102 bps below peg yesterday. The price recovery left its Pharos safety grade unchanged at F, score 30, flagged for correlated exit routes; no grade movers were recorded in the last 48 hours.\n\nUSDC supply fell $1.35B over seven days to $74.51B, 7% below its April high of $79.75B. The one-day decline slowed to $6.99M, and a token count alone establishes no withdrawals. Total stablecoin market cap fell only $28.26M in the week to $321.06B, so gains elsewhere, XAUT's $705.26M among them, offset nearly all of it. Avalon's USDA keeps a stored 3,098 bps deviation with no live price and no material change.\n\nThe Bank Run Gauge stands at -15.8, cautious, up from -27.6 on September 28, with no flight-to-quality flag. USDe posted net burns of $11.50M over 24 hours, and its supply fell $6.73M in a day, reversing a $7.66M weekly gain. OUSG netted $6.72M of mints. A USDe supply move of $10M or more in a single session would turn that reversal into rotation.",
+    "generatedAt": 1790755520,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 218,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-29",
+    "title": "USDC Sheds $942M In A Week",
+    "text": "USDC's supply fell $942.45M in seven days while total stablecoin market cap moved only $29.40M. XAUT added $483.73M in a single day. Next trigger: a $605M XAUT day.",
+    "extended": "USDC's supply fell $942.45M over seven days to $74.80B, the largest weekly move on the board, while total stablecoin market cap slipped only $29.40M in the same window. On that baseline, which covers 242 of 247 core coins, the other tokens added roughly $913M net. USDC now sits 6% below its $79.75B record of April 11. The burn count alone does not identify the holders behind it or their reasons.\n\nXAUT added $619.60M over the week, and $483.73M of that arrived in a single day, clearing the $340M one-day mark set in the previous edition. Ethereum carried +$464.78M of net mint/burn flow over 24 hours, consistent with that issuance, though the chain figure does not name the token. USDS reversed, shedding $22.49M on the day after adding $157.60M across the week.\n\nThe Bank Run Gauge recovered to -16.4 from -27.6 and remains CAUTIOUS. USDe netted -$27.38M and USD3 +$16.92M, each at the limit of its 30-day pressure scale. USDA stays critical on a stored 3,098 bps reading with no live price available. Next trigger: an XAUT one-day move of $605M or more would turn a steady supply climb into a rotation-scale move, and a USDC weekly decline past $1B would give the contraction follow-through.",
+    "generatedAt": 1790669174,
+    "llm": {
+      "servedModel": "claude-opus-5-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 217,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-28-weekly",
+    "title": "Five Yield Flags, Gauge Ends At -27.6",
+    "text": "USDT's 4.9% APY on $183.51B led the week's risk board by roughly 37x, with four more yield flags behind it. PSI rose from 93 to 94.1 inside BEDROCK, while the Bank Run Gauge closed at -27.6, its low for the week.",
+    "extended": "USDT carried the week's largest single signal: a 4.9% APY reading on 24 September against a 7-day average of 4.78% and a 30-day average of 4.7%, tagged tvl-outflow on $183.51B of market cap. Its severity score of 183,531 ran roughly 37 times the next leaderboard item, USDe at 4,973. PSI opened the week at 93, its floor, and finished at 94.1 after touching 94.3, inside BEDROCK on all seven days and 1.2 points above the prior week's midpoint.\n\nThe thread across the week was yield anomalies logged without corroborating flow evidence. USDT drew warnings on the 22nd, 23rd and 24th, each tagged tvl-outflow, with the reading moving from 4.79% to 4.9%. USDe drew four, from 4.73% on the 26th to 4.84% on the 28th, each tagged opportunity-evidence-missing while its market cap grew from $4.91B to $4.95B.\n\nThree of the week's yield flags pointed the other way. PYUSD printed 3.81% against a 30-day average of 6.15%, XAUT 1.3% against 1.96%, and USDTB 2.64% against 4.58% on $520.54M. Aggregate stress eased as well: 137 active depeg observations against 156 a week earlier, 8 unique signals in both weeks, and zero grade transitions for a second week. Every critical depeg was inherited, apxUSD at 3,159 bps on $310.81M, MSUSD at 5,561 bps and pmUSD at 5,442 bps, none new to this week.\n\nUSDC ran the supply story in both directions, adding $786.31M on the 22nd into a 7-day gain of $1.95B, then reversing $1.20B in one session on the 27th to leave +$968.07M over the trailing week. Market cap closed at $320.55B, up 0.05% across the seven sessions and 0.50% on the prior week. Blacklisting concentrated into fewer, larger actions: 134 events for $26.16M versus 160 events for $24.79M, the biggest a $3.14M USDT freeze on Tron. The Bank Run Gauge midpoint improved to 0.2 from -10.9, then the reading closed at -27.6, its low for the week.\n\nDaily triggers resolved badly: 4 hit and 12 missed for a 25% hit share, with 4 pending and 1 where the evidence could not settle an outcome. The first test next week is whether the gauge reading climbs back above zero from -27.6 or extends lower; the second is whether USDC's 7-day net supply turns negative after the $1.20B single-day reversal.",
+    "generatedAt": 1790583000,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "weekly",
+    "editionNumber": 29,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-28",
+    "title": "Flow Gauge Deepens To -27.6",
+    "text": "The Bank Run Gauge has traveled 36 points in two sessions while PSI moved 0.2. Ethereum carried -$109.47M of net 24h flow; stUSDS posted the sharpest pressure shift against its 30-day baseline at -100 on net -$8.92M.",
+    "extended": "The Bank Run Gauge fell to -27.6 and stays in CAUTIOUS, a second consecutive decline and a 36-point move from +8.6 two sessions ago. Ethereum accounted for -$109.47M of net 24h flow against +$1.40M on Arbitrum. stUSDS showed the sharpest pressure shift versus its 30-day baseline at -100, on net -$8.92M of measured supply change; U ran the opposite way at +100 on $7.00M. The flight-to-quality flag is inactive.\n\nPSI eased to 94.1 from 94.2, its ninetieth day in BEDROCK, with severity at 0.03 and breadth at 5.52. Across the same two sessions in which the gauge traveled 36 points, the index moved 0.2, which is the distance between a flow measure and a price-weighted one. Nineteen depegs remain active: apxUSD is unchanged at a stored 3,159 bps on $310.81M, dated to the June STRC drawdown.\n\n**Stress breadth** DEWS ALERT+ doubled to 8 from 4, and WATCH rose to 99 from 92. ALUSD crossed from WATCH to ALERT at score 36 on cross-source divergence, while KAG holds ALERT at 38 on $228.54M with liquidity erosion at 80. MSUSD entered the top candidate set at a stored 5,561 bps on $45.61M, traced to oracle-latency underbacking on 2 September.\n\nXAUT added $269.85M of token supply in a day against +$218.38M across the week, and USDC's +$798.52M weekly print leaves it 6% below its April peak of $79.75B. A gauge reading of -35 or lower would put flow stress ahead of the chronic depegs as the primary signal; a single-day XAUT move of $340M or more would make that supply story a reallocation rather than drift.",
+    "generatedAt": 1790582769,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 216,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-27",
+    "title": "pmUSD Widens, Gauge Turns Cautious",
+    "text": "pmUSD quotes $0.444, 5,555 bps below peg against 5,349 yesterday, while the Bank Run Gauge fell to -16.7 from +20.3 on 24 September. Next trigger: a gauge print of -25 or lower.",
+    "extended": "pmUSD widened to 5,555 basis points below peg, quoting $0.444 against 5,349 bps yesterday, on a $41.77M market cap that has been detached for 148 days; its Pharos card reads F, with an exit score of 35 and an unsupported same-notional redemption route. apxUSD also widened, to 181 bps at $0.982, still carrying the unresolved STRC drawdown that took it near $0.89 in June.\n\nUSDA, the largest active deviation by holder exposure at 3,098 bps on $145.58M, is unchanged. The flow side moved more. The Bank Run Gauge fell to -16.7, CAUTIOUS, down 37 points from the +20.3 recorded on 24 September. USDTB showed the sharpest shift against its 30-day baseline, intensity 100 on $14.99M of net mints; Ethereum took +$81.39M net over the 24-hour window.\n\nUSDC's +$2.15B week to $76.50B contains a -$1.20B single day. PSI at 94.3 extends a 90-day BEDROCK streak, and total stablecoin market cap of $321.56B sits just above the $320.63B high set a day earlier. DEWS alerts fell from seven to two. If the gauge prints -25 or lower at the next reading, flow stress takes over from supply rotation as the leading signal.",
+    "generatedAt": 1790496355,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 215,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-26",
+    "title": "PYUSD Flow Outruns Its Week",
+    "text": "PYUSD took in $51.09M net over 24 hours at pressure intensity 100 against its 30-day baseline, after adding $1.37M across the prior seven days. The Bank Run Gauge held at 8.6, neutral.",
+    "extended": "PYUSD took in $51.09M of net issuance over the 24 hours to 08:05 UTC, a pressure reading of 100 against its 30-day baseline, and the supply pipeline agrees: +$57.11M in one day against +$1.37M across the prior seven. The Bank Run Gauge printed 8.6 and flight-to-quality stayed inactive, which places the move on the creation side rather than the redemption side.\n\nUSDC added $1.14B over seven days to $75.57B, the largest weekly mover on the tape and still 5% under its April high of $79.75B. PYUSD put on roughly a twentieth of that in a single session, which is the less ordinary of the two facts. USDT decelerated to +$31.99M on the day against +$631.16M for the week, and Ethereum absorbed +$363.97M net across all issuers.\n\nNineteen depegs remain active and none resolved in the last 24 hours. USDA's largest listing holds 3,098 bps below peg on day 269 with no material change, while a separate USDA market widened to 1,214 bps at $0.878. pmUSD narrowed to 5,349 bps from 5,571 at $0.465, and apxUSD trades $0.985, 146 bps off, unresolved since the STRC drawdown in early June.\n\n**Stress bands** DEWS held 7 ALERT+ names against 5 band changes, with MOVEUSD the elevated case at score 37 on $114.82M of cap, driven by liquidity erosion at 85; its DEX composite fell from 22 to 8 on a snapshot the pipeline flags unverified. PSI eased to 93.9 from 94, a 90-day BEDROCK streak intact. A $75M one-day PYUSD supply move next session turns this from drift into rotation.",
+    "generatedAt": 1790409954,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 214,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-25",
+    "title": "USDT Accelerates As USDC Reverses",
+    "text": "Tether added $208.10M in 24 hours while USDC gave back $694.86M of its $1.45B week. PAXG lost its A grade across $1.86B of supply. Next test: a second $265M USDT day.",
+    "extended": "Tether added $208.10M in 24 hours, two thirds of its $307.57M weekly gain, while USDC shed $694.86M in a day against a $1.45B weekly build. Between them the two largest issuers ran a combined outflow of roughly $487M, yet total supply holds at $320.27B, 0.06% under the Digest-window high of $320.46B set two days ago. Ethereum accounted for +$323.51M of net 24h flow.\n\n**Grade movers** PAXG fell from A (83) to B- (69) across $1.86B of supply, flagged for correlated exit routes and a partial reserve review. It scored 84.2 on backing and 82.15 on exit and still landed at 69, because the limited-evidence ceiling binds before the components do. KAG rose from F (18) to D (46) on $237.86M, and gtUSDC and gtUSDCp both reached A- (80), each held there by a parent cap.\n\nSix coins sit at ALERT or above in DEWS after five band changes, with BD moving from WATCH to ALERT at score 40 on price confidence. pmUSD narrowed to 5,571 bps below peg at $0.443 and still scores ALERT 43. USDA remains 3,098 bps below peg on $145.58M with no material change since the previous edition. PSI reads 94 on day 90 of BEDROCK. A second USDT session above $265M of net supply would make this two-issuer split a rotation rather than a one-day divergence.",
+    "generatedAt": 1790323546,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 213,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-24",
+    "title": "USDC Outgrows The Whole Market",
+    "text": "USDC added $1.76B over seven days while the whole stablecoin market added $1.59B, on a baseline covering 226 of 247 coins. One-day issuance was $406.76M; another $510M session would mark rotation.",
+    "extended": "USDC added $406.76M in a single session and $1.76B across the week, lifting its market cap to $75.55B. That weekly figure exceeds the $1.59B added by the entire stablecoin market over the same seven days, on a baseline covering 226 of 247 core coins; the arithmetic implies net contraction somewhere else in the tape. USDC is still 5% under its April 11 high of $79.75B.\n\nPYUSD is the counterweight, shedding $106.98M in a day against $88.46M over the week, an accelerating outflow from a coin graded B (70) with a clean exit score. RLUSD ran net redemptions of $42.89M over 24 hours. The Bank Run Gauge improved to 20.3 from 9.7 with no flight-to-quality flag, which places the pressure in specific names rather than across the market.\n\npmUSD widened from 5,193 to 5,604 bps below peg at $0.440 on $41.31M, its V9 card still F (0) on an unsupported same-notional redemption route. USDA is unchanged at 3,098 bps on $145.58M, with live price unavailable. PSI held at 93.5, day 90 of the BEDROCK streak. Next marker: another USDC session of at least $510M in net issuance would turn this week's drift into measurable rotation.",
+    "generatedAt": 1790237147,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 212,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-23",
+    "title": "USDA Widens 2,849 Basis Points",
+    "text": "USDA moved from 249 to 3,098 basis points below peg since the last edition, on $145.58M of market cap, and its live price feed is unavailable. PSI still reads 93 on a 90-day BEDROCK streak.",
+    "extended": "USDA now reads 3,098 basis points below peg against 249 bps in the previous edition, on $145.58M of market cap, giving it the highest depeg impact score on the tape at 451. The reading is a stored one: the live price feed for the coin is unavailable, and every USDA ticker in the Safety Map grades F, one of them flagged for an unavailable peg price with adverse history. The direction is established; the exact print is provisional.\n\nThe rest of the depeg tape moved the same way. pmUSD widened from 4,809 to 5,193 bps and trades at $0.481 on $44.92M, day 144 of an unresolved break, and MSUSD went from 1,119 to 1,194 bps on $45.67M. Twenty-one depegs are active and none resolved in 24 hours. PSI still printed 93 on a 90-day BEDROCK streak with severity at 0.04, and its three named severity contributors, LUSD, XAGm and VCHF, are all under $27M in market cap.\n\nFlows were smaller than the peg damage. USDe, USDY and TRYB each hit maximum negative pressure against their 30-day baselines, worth -$10.20M, -$10.00M and -$6.93M, while the Bank Run Gauge improved to 9.7 with no flight-to-quality flag. Total supply stands at $320.46B, level with the Digest-window record set a day earlier. DAI added $37.81M in a day versus $26.60M across the week; another single session above $50M would make that reallocation rather than drift.",
+    "generatedAt": 1790150725,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 211,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-22",
+    "title": "USDC Adds $786M In One Day",
+    "text": "Of USDC's $1.95B weekly build, $786M landed in the last session, while 21 depegs stayed open and PSI held 93 on its 90th BEDROCK day. Next trigger: a repeat above $985M in a single day.",
+    "extended": "USDC added $786.31M in a single session, about 40% of its $1.95B seven-day build, and the one-day pace is accelerating against that weekly run rate. Supply now stands at $75.63B, some 5% below the $79.75B high set on 11 April. Ethereum took $143.93M of net mint flow, arbitrum $15.83M. DAI ran the other way, down $26.82M on the day.\n\nNone of that reached the peg data. Twenty-one depegs are still active and none resolved in the last 24 hours. apxUSD narrowed to 163 bps at $0.983 on $310.91M of market cap, unresolved since the June STRC drawdown dragged it near $0.89. MSUSD widened to 1119 bps from 1083. pmUSD, on day 143, sits 4809 bps below peg against 5134 yesterday.\n\nPSI holds 93 on its 90th straight BEDROCK day, severity 0.04. The three coins driving that severity, EURS, LUSD and VCHF, carry roughly $37M between them against a $320.39B market, which is how 21 open depegs sit under a bedrock print. Aggregate supply is within a fraction of a percent of the $319.71B Digest-window high set 16 days ago.\n\n**Stress bands ease** DEWS ALERT names fell from seven to four across five band changes in 24 hours, though KAU still scores 41 on $318.79M of market cap, driven by cross-source divergence and liquidity erosion. The Bank Run Gauge returned to 1.0 from -11.4 and flight-to-quality is inactive. A second day of USDC issuance above $985M would mark rotation rather than drift; a gauge reading of -10 or lower moves flow stress to the front of the tape.",
+    "generatedAt": 1790064340,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 210,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-21-weekly",
+    "title": "USDT Yield Leads, USDC Round-Trips A Billion",
+    "text": "USDT's yield warning hit 4.81% APY on four of seven sessions with TVL leaving $183.29B. USDC redeemed over $1B twice yet ended down only $76.01M. Blacklists fell to 129 events from 656. PSI held BEDROCK.",
+    "extended": "USDT's yield warning was the week's largest unsuppressed signal, printing on four of seven sessions and closing 09-21 at 4.81% APY against a 30-day average of 4.66% on $183.29B of supply. Each print carried a tvl-outflow driver, a quoted rate rising while deposits left. PSI stayed inside BEDROCK on all seven days, 92.2 to 92.9, and the 92.5 weekly midpoint sits 0.7 above the prior week's 91.8.\n\nUSDC ran the thread through the middle of the week. Supply accelerated lower on 09-18 at -$1.05B and again on 09-20 at -$1.09B, with USDC the largest weekly mover on three separate days. The seven-day net still came to -$76.01M, and 09-21 added +$901.94M back. Two sessions above $1B of redemptions that net to almost nothing describe rotation between venues at a $74.37B float, though the 09-15 yield reading of 3.29% APY against a 30-day average of 4.78% gives holders less reason to sit still.\n\nBlacklist enforcement moved the opposite way, down roughly 80% by count. Actions fell to 129 events worth $20.54M from 656 events and $40.06M a week earlier, the largest single item $2.95M of USDT on Tron. Active depeg observations eased to 137 from 152 while unique signals held at 8, so the same short list was re-observed daily. pmUSD remained the standing critical case at 5485 bps below peg on $48.06M, carried in from prior weeks alongside USDA, USDX and cNGN.\n\nAggregate supply barely moved, $319.59B to $318.94B, a 0.20% decline. The visible damage sat in tokenized treasuries: BUIDL shed $421.81M over seven days, USTB fell from B to C on $526.73M with yield at 2.32% APY against a 30-day average of 6.02%, and ONyc dropped out of the graded set at $105.78M. XAUT climbed to A- at $2.71B despite yield at 0.61%. Five grade transitions followed a week with none. The Bank Run Gauge bottomed at -41 on 09-16, midpoint -12.0 against -9.7.\n\nDaily triggers resolved 2 hit, 15 missed, 1 expired and 3 pending, a weak score driven by thresholds that assumed the USDC outflow would persist past 09-20 when it reversed inside a session. The first test next week is whether USDC prints a third move beyond $1B in either direction, which would convert a flat seven-day net into a trend. The second is whether USDT's tvl-outflow flag reaches a fifth consecutive session above 4.80% APY, and the third is whether a second treasury-backed name follows USTB down a tier.",
+    "generatedAt": 1789978200,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "weekly",
+    "editionNumber": 28,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-21",
+    "title": "Treasuries Shed Supply, Then Grade",
+    "text": "BUIDL is down $421.81M in seven days to $2.31B, 37% below its July peak, while USTB slid from B (71) to C (58) on $526.73M. Total stablecoin supply barely moved at $318.94B.",
+    "extended": "BUIDL has shed $421.81M over seven days to $2.31B, leaving BlackRock's tokenized treasury fund 37% below the $3.69B it carried on 13 July. The withdrawal left no mark on the aggregate: total stablecoin supply sits at $318.94B, up $570.67M on the week and 0.24% under its Digest-window high. USDC added $901.94M in one day, most of its $990.59M weekly gain.\n\n**Grade movers** USTB fell from B (71) to C (58) across $526.73M of supply in the last 48 hours, with backing scored at 76.6 against an exit score of 42.5. ONyc went from D (48) to unrated on $105.78M, cited for insufficient evidence and missing reserve composition. BUIDL itself holds a C (55), capped at that level by unresolved bridge control identity rather than by backing, which scores 76.2.\n\npmUSD sits 5,134 bps below peg at $0.487 on $45.70M of supply, day 142 and unchanged. apxUSD trades at $0.980, 194 bps off, unresolved since the June STRC drawdown. DEWS counts five ALERT coins against seven yesterday, and PSI reads 92.3 on its 90th consecutive BEDROCK day. USDe gave back $7.90M in a session against a $265.54M weekly build; a $10M single-day move would reclassify that drift as rotation.",
+    "generatedAt": 1789977924,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 209,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-20",
+    "title": "USDC's Week Undone In A Day",
+    "text": "A $1.09B single-day outflow against a seven-day net of -$76.01M: the prior six sessions had added roughly $1B. Total cap held at $318.76B. Another $1B day turns drift into rotation.",
+    "extended": "USDC shed $1.09B of supply in a single day, against a seven-day net change of only -$76.01M. The arithmetic implies the preceding six sessions added close to $1.0B, so one session unwound a week of accumulation. Total stablecoin market cap held at $318.76B, up $233.38M over the week and 0.30% below the Digest-window high set 14 days ago.\n\nPSI printed 92.2, down from 92.7 and the lowest reading since 14 September, with the 89-day BEDROCK streak intact. Severity of 0.04 still comes from small caps: LUSD at 106 bps on $26.41M, VCHF at 625 bps on $2.66M. DEWS ALERT membership went from four coins to seven, led by VCRED at score 52 on price confidence and liquidity erosion.\n\npmUSD widened again to 5,124 bps below peg at $0.488, day 141, with no supported same-notional redemption route in its V9 file. USDT's best quoted yield of 4.82% sits above its 4.68% seven-day average and carries a TVL-outflow flag; the 24-hour mint and burn record shows nothing on USDT to corroborate it.\n\nThe next test is USDC itself. A second session of $1B or more leaving would confirm rotation rather than a single redemption batch, and the Bank Run Gauge at -11.8 has room before flow stress becomes the larger story. BUIDL's -$421.81M week, now $2.31B and 37% below its July high, remains the largest seven-day contraction.",
+    "generatedAt": 1789891523,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 208,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-19",
+    "title": "BUIDL Sheds $422M, Market Flat",
+    "text": "BlackRock's tokenized fund shed $421.81M over seven days to $2.31B while total stablecoin cap rose $326.81M. USDC added $315.49M in a day. Next threshold: $470M of weekly BUIDL outflow.",
+    "extended": "BlackRock's BUIDL lost $421.81M of supply over seven days, closing at $2.31B, the largest weekly contraction on the tape. Total stablecoin market cap rose $326.81M over the same week to $318.86B, 0.27% under the Digest-window high of $319.71B set 13 days ago. One tokenized treasury product absorbed a redemption the aggregate never registered; BUIDL now sits 37% below its July peak of $3.69B.\n\nThe offsetting flow came from USDC, which added $315.49M in a day against a seven-day change of -$25.59M, a reversal. PYUSD added $27.43M and DAI $17.13M, and Ethereum booked +$233.88M in net mint and burn. Against that, USDG ran -$36.09M with a pressure reading of -100 versus its 30-day baseline, and the Bank Run Gauge moved from +6.0 to -11.4 [CAUTIOUS].\n\npmUSD widened 45 bps to 5,094 bps below peg at $0.491 on $46.12M, day 140, still graded F on an unsupported redemption route. apxUSD improved to 210 bps at $0.979, off the $0.89 low it reached during the June STRC drawdown. PSI registered 92.9 against 92.8 yesterday, an 88th consecutive BEDROCK day, with DEWS holding 5 ALERT names and the WATCH band widening from 97 coins to 104. Another $48M of weekly BUIDL outflow clears $470M and makes this follow-through rather than a single redemption week; a $395M one-day USDC print would reclassify yesterday's bounce as rotation.",
+    "generatedAt": 1789805153,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 207,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-18",
+    "title": "pmUSD Halves With No Exit Route",
+    "text": "pmUSD trades at $0.495, 5049 bps below par and 536 bps wider than the previous edition, on an F safety score of 0 with no supported redemption route. USDC shed $1.05B in a day against a $353M weekly net.",
+    "extended": "pmUSD trades at $0.495, 5049 basis points below par and 536 bps wider than at the previous edition. The token carries an F safety score of 0 under V9 methodology, with an exit component of 35 and no supported same-notional redemption route, which is the mechanical reason a deviation running 139 days has not closed. Market cap is $46.53M against a peak deviation of 6902 bps.\n\nUSDC redeemed $1.05B in a single day against a net decline of $353.13M over seven days, so mints earlier in the week absorbed most of the gross outflow. Supply now stands at $73.86B, 7% below the $79.75B high set on 11 April. Total stablecoin market cap is $318.22B, up $16.84M on the week and 0.47% under the Digest-window record.\n\nPSI ticked up a tenth to 92.3 and extended its BEDROCK streak to 87 days, which is what a $46.53M dislocation looks like inside a $318.22B market. DEWS counted 5 ALERT bands against 4 yesterday; USDA widened from 888 to 974 bps and scores ALERT 39 on cross-source divergence of 100. XAUT added $27.49M in a day on a $76.78M week. A single session above $35M would move gold-linked supply from drift into rotation.",
+    "generatedAt": 1789718754,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 206,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-17",
+    "title": "USDf Mints While Peers Burn",
+    "text": "USDf drew $32.04M of net mints at maximum pressure intensity while wM and FRXUSD burned at -100. The Bank Run Gauge recovered to -14.5 from -41.0; a return to -20 puts flow stress ahead of USDC's $766M weekly drain.",
+    "extended": "USDf took in $32.04M of net mints over 24 hours, a pressure reading of 100 against its own 30-day baseline and the largest single-coin flow shift on today's tape. Two coins ran the other way at equal intensity: wM shed $4.00M and FRXUSD $3.11M, both at -100. Ethereum carried +$74.66M net across all issuers, while Base finished effectively flat at -$8.34K.\n\nThe Bank Run Gauge reads -14.5 and CAUTIOUS, recovered from -41.0 a day earlier, with no flight-to-quality flag set. Against that, USDC is down $765.69M over seven days to $73.75B, about 95% of the $806.61M shaved from the $318.52B aggregate, which now sits 0.37% below the Digest-window high set 11 days ago. PSI printed 92.6, day 86 of BEDROCK.\n\nUSDf's inflow landed in a coin the safety desk grades F at 39, capped because its oracle control topology cannot be resolved. DEWS moved AUDD, AUDm, AUDX and avUSD from CALM to WATCH, leaving five coins at ALERT and 101 at WATCH. pmUSD narrowed to 4,513 bps below peg at $0.549 on day 138. A gauge print of -20 or worse at the next snapshot would put flow stress ahead of supply rotation as the lead signal.",
+    "generatedAt": 1789632353,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 205,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-16",
+    "title": "Market Down $880M, USDC $837M",
+    "text": "Total stablecoin supply fell $880.53M over seven days; USDC alone fell $837.39M to $73.79B. The Bank Run Gauge moved from 0 to -41 STRESS, and USDS lost $195M in one day against a $164M week.",
+    "extended": "USDC shed $837.39M over seven days, leaving $73.79B, and the entire stablecoin market shed $880.53M in the same window. One issuer therefore accounts for 95% of a market-wide contraction that still leaves total supply at $318.61B, 0.35% below the Digest-window high set ten days ago. The redemption is large in isolation and small against USDC's own record week of $6.55B.\n\nThe Bank Run Gauge moved from 0 to -41 and into STRESS, its weakest print in the seven-day trajectory, with no flight-to-quality flag attached. Ethereum carried -$583.84M of net flow. EURC redeemed $9.81M net and fxUSD $3.59M against their 30-day baselines, while BOLD took in $2.50M. USDS lost $195.16M in a single day, exceeding its $164.09M seven-day decline.\n\n**Peg tape**\n\nNineteen depegs remain active. pmUSD trades at $0.486, 5142 bps below peg and narrower than yesterday's 5485 bps. apxUSD widened to 269 bps at $0.973, unresolved since the June 2 STRC drawdown first took it to about $0.89. DEWS counts five ALERT names after EURm crossed up from WATCH on cross-source divergence. Next trigger: another $245M single-day USDS redemption, which would move that outflow from drift to rotation.",
+    "generatedAt": 1789545947,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 204,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-15",
+    "title": "PMUSD Deviation Widens 920 Basis Points",
+    "text": "PMUSD trades at $0.452, 5,485 bps below peg after widening 920 bps since the previous edition, with $48.06M of float marked at less than half. Above it, USDe added $291.27M on the week and PSI printed 92.6.",
+    "extended": "PMUSD traded at $0.452 in the latest sample, 5,485 bps below peg and 920 bps wider than the 4,565 bps carried in the previous edition. The float is $48.06M and the episode is now 3,271 hours old, with a peak deviation of 6,902 bps still above today's print. Pharos grades PMUSD F at 0, exit capacity 35, on an unsupported same notional redemption route.\n\n**Where the flow went**\n\nAbove that line, the session was about allocation. USDe added $291.27M over seven days to $4.68B, including $75.95M of net mints in 24 hours at maximum pressure intensity versus its 30-day baseline. PYUSD reversed in a single day, +$101.34M against a weekly figure of -$16.01M. Ethereum took +$277.04M net. The Bank Run Gauge read 0 with no flight-to-quality flag.\n\nPSI printed 92.6 against 92.2 yesterday, an 84th consecutive BEDROCK day, with severity at 0.04 because the 19 active depegs sit in small caps: LUSD, 100 bps on $26.44M, is the top severity contributor. DEWS cut its WATCH count from 106 to 90 and held ALERT at five, VCRED highest at score 50. If USDe's seven-day supply move clears $330M at the next snapshot, the mint side has follow-through; a PMUSD print at 6,325 bps would mark the next step down.",
+    "generatedAt": 1789459546,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 203,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-14-weekly",
+    "title": "USDS Yield Repeats As Blacklists Multiply",
+    "text": "USDS carried a 5.33% APY warning against a 5.67% 30-day average for a third straight week. PSI closed at 92 in BEDROCK, and blacklist events jumped to 650 from 55, affecting $38.03M.",
+    "extended": "The largest unsuppressed risk item of the week was a yield reading rather than a price break. USDS carried a warning at 5.33% APY on 10 September against a 30-day average of 5.67%, scoring severity 6711.7 on $6.69B of supply, with the opportunity-evidence-missing flag attached for a third consecutive week. PSI opened at 91.2 on 8 September, peaked at 92.6 and closed at 92, never leaving BEDROCK, and the weekly midpoint of 91.8 sat 0.1 above the prior week.\n\nUSDC set the week's rhythm as the largest single supply mover on six of seven days. Issuance ran first, +$781.92M on 8 September, +$700.15M on the 9th and +$446.58M on the 10th, before the direction flipped to -$335.00M on the 11th, -$315.77M on the 13th and a -$370.16M seven-day reading on the 14th. USDS absorbed part of that, adding $39.73M on the final day after an accelerating -$304.11M print on 11 September.\n\nDepeg pressure eased while enforcement did the opposite. Active depeg observations fell to 133 from 153 and unique signals to 8 from 10, with grade transitions at zero for a second week. Blacklist events rose to 650 from 55, affecting $38.03M against $27.80M, concentrated on 12 September when USDT on Ethereum recorded $11.83M and $7.51M actions. The Bank Run Gauge bottomed at -22.8 the same day and its midpoint fell to -9.0 from -0.5; the gauge tracks redemption pressure rather than enforcement, so read the overlap as timing rather than causation.\n\nCapital barely moved in aggregate: market cap ran $319.33B to $319.42B, up 0.03% across the week and down 0.06% against the prior week's $319.63B. PYUSD burned $55.99M on 9 September while USDe minted $58.66M the same day. The two critical depegs, USDA at 3098 bps with impact 601 and pmUSD at 5492 bps on $42.32M, are both carryovers from before the week. A7A5 changed DEWS state five times between $467.33M and $456.45M on four different drivers, a 2% supply drift generating five classifications.\n\nDaily triggers resolved 4 hit, 11 missed, 2 expired and 4 pending, a weak conversion rate that mostly reflects calls on depeg resolution that never came. Next week decides whether the USDS 7-day average of 5.44% keeps converging down toward the 5.33% spot reading, and whether blacklist volume returns below 100 events.",
+    "generatedAt": 1789373400,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "weekly",
+    "editionNumber": 27,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-14",
+    "title": "USDC Redeems, USDS Absorbs",
+    "text": "USDC's supply fell $370.16M over seven days to $74.33B while total stablecoin capitalisation slipped just $90.59M, leaving roughly $280M of that redemption offset by issuance elsewhere. USDS added $39.73M in a single day.",
+    "extended": "USDC's supply fell $370.16M over seven days to $74.33B, the largest weekly decline among tracked coins and about 7% below its $79.75B April peak. Total stablecoin capitalisation gave up only $90.59M in the same week, to $319.42B, which leaves roughly $280M of that redemption offset by issuance elsewhere. The total sits 0.09% under its Digest-window high, set eight days ago.\n\nSome of the destination is visible. USDS added $39.73M in a day against $77.39M over the week, accelerating. USD1 took in a net $13.49M at maximum pressure intensity versus its 30-day baseline, while FDUSD sent $3.49M out at the opposite extreme. Ethereum booked $240.18M of net inflow. The Bank Run Gauge improved to -3.3 from -8.6, and the flight-to-quality flag stayed inactive.\n\nPeg stress stays concentrated in small issuers. pmUSD is 4,565 bps below peg at $0.543 on a $51.28M cap, wider than yesterday. apxUSD sits 219 bps out at $0.978, unresolved since the STRC drawdown took it near $0.89 in June, and still pays 14.21% APY. If USDS clears $50M in a single day at the next snapshot, the rotation out of USDC has a destination rather than an inference.",
+    "generatedAt": 1789373121,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 202,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-13",
+    "title": "USDC Down $316M, Cap Holds",
+    "text": "USDC's supply fell $315.77M over seven days to $74.40B while total stablecoin cap rose $142M to $319.63B, within 0.03% of its Digest-window high. Three new mint/burn pressure shifts landed overnight.",
+    "extended": "USDC's supply fell $315.77M over the past seven days to $74.40B, the largest weekly decline on the tape and roughly 7% below its $79.75B peak set on 11 April. Total stablecoin market cap finished the same week $142.14M higher at $319.63B, within 0.03% of the Digest-window record set seven days ago. On the aggregate numbers, that money rotated rather than left.\n\nThree mint/burn pressure shifts entered the candidate set overnight. stUSDS ran -100 intensity against its 30-day baseline on -$5.76M net; USD1 and M both ran +100, on +$4.50M and +$999.92K respectively. The Bank Run Gauge improved to -8.6 and reads NEUTRAL, up from -22.8, with flight-to-quality inactive. Ethereum accounted for +$154.37M of net 24h chain flow.\n\nPYUSD's contraction continued at -$6.63M on the day against -$149.58M over the week, decelerating. DAI and USDS both reversed: DAI +$14.28M in a day versus -$36.24M on the week, USDS -$7.60M versus +$75.68M. PSI held at 92.6 for an 82nd consecutive BEDROCK day, its severity carried by LUSD at 97 bps, EURS at 266 bps and VNXAU at 330 bps, none above $30M in market cap.\n\n**Peg tape**\nPeg stress is unchanged where it counts: pmUSD sits 4,517 bps below peg at $0.548 on $51.54M, and apxUSD is 217 bps out at $0.978, unresolved since the STRC drawdown drove it to about $0.89 in June. DEWS now counts 7 ALERT coins against 6 yesterday. If USDC's seven-day move clears $350M of contraction at the next snapshot, the rotation has follow-through; DAI and USD1 are where the offsetting flow has landed so far.",
+    "generatedAt": 1789286739,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 201,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-12",
+    "title": "USDC Down A Week, Up A Day",
+    "text": "USDC ended the week $296.67M lighter at $74.44B, then took $216.99M back in 24 hours. USDS added $273.73M in a single day. Total supply barely moved at $319.66B.",
+    "extended": "USDC ended the week $296.67M smaller at $74.44B, the largest seven-day supply move on the tape, and $216.99M of new supply arrived in the last 24 hours. The week's contraction therefore sits entirely in the sessions before yesterday. Against USDC's largest single-week change of $6.55B, set 1,275 days ago, this week's $297M is a rounding line.\n\nUSDS moved the other way, adding $273.73M in one day against $65.56M over seven, which means the preceding sessions were net negative for it as well. Both coins sit in the A tier that holds 81.0% of $333.2B in mapped supply, so the money rotated between graded issuers rather than out of them. Total market cap held at $319.66B, up $202.52M on the week.\n\nThe flow tape is less settled than the aggregate. The Bank Run Gauge weakened from -5.9 to -22.8 and reads CAUTIOUS, with Ethereum at -$24.58M net over 24 hours and RLUSD shedding $4.00M. DEWS holds six coins at ALERT or above, ALUSD the newest at a score of 38 on cross-source divergence. PSI at 92.3 extends an 81-day BEDROCK streak.\n\npmUSD remains the largest live peg break by impact, narrower at 4,512 bps below peg and $0.549 on $51.55M of market cap, while Alpha Partner's USDA widened to 800 bps. If USDS adds at least $345M again in the next session, yesterday's inflow reads as rotation rather than drift.",
+    "generatedAt": 1789200340,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 200,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-11",
+    "title": "USDS Outflow Outruns Its Week",
+    "text": "USDS lost $304.11M in a day against a 7-day net of -$226.02M, so the prior six sessions had added roughly $78M. Best APY has slipped to 5.31% from a 30-day average of 5.64%. Next test: a $385M single-day move.",
+    "extended": "USDS supply fell $304.11M over the past day, against a net seven-day decline of $226.02M. The arithmetic puts the prior six sessions at roughly $78M of net accumulation, and all of it left in one session. Pharos classifies the velocity as accelerating. USDS holds an A- grade at 80 on a $6.61B market cap.\n\nBest available USDS yield reads 5.31%, below a 7-day average of 5.41% and a 30-day average of 5.64%. The compression preceded the withdrawal, which is sequence rather than proven cause. USDC remains the largest weekly mover at -$335.00M, leaving $74.16B, about 7% below its April 11 high of $79.75B.\n\nFlows ran the other way elsewhere. USDe drew $96.76M of net mints at a maximum pressure reading of 100, and Ethereum carried $122.87M of net inflow across issuers. Total stablecoin market cap held at $319.20B, down $37.37M on the week and 0.16% under the Digest-window high set five days ago. pmUSD stays critical at 5492 bps below peg, $0.451, on $42.32M of float.\n\nDEWS counts 11 coins at ALERT or worse, one more than yesterday, though four of five band changes in 24 hours were improvements, including ALUSD from ALERT to WATCH. PSI at 91.4 is down 0.2 on the day and extends the BEDROCK run to 80 sessions. A single-day USDS move of $385M or more would turn this week's drift into documented rotation.",
+    "generatedAt": 1789113932,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 199,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-10",
+    "title": "USDT Enforcement Concentrates On Tron",
+    "text": "459 blacklist and destroy events touched $4.63M of USDT in 24 hours, and two Tron destroys carried $3.43M of it. USDC shed $79.24M in a day against a +$618.75M week.",
+    "extended": "USDT enforcement actions numbered 459 over the last 24 hours, affecting $4.63M, and the five largest all sat on Tron. Two destroy actions carried $2.30M and $1.13M between them, which leaves the other 457 events splitting roughly $1.2M, the biggest a $264.68K blacklist. Value concentrated in one issuer, one chain, and two transactions.\n\nUSDC moved the other way across horizons: down $79.24M in a single day against +$618.75M over seven, a reversal in velocity. It is still the largest weekly mover at +$446.58M to $74.31B, some 7% below the $79.75B set in April. RLUSD ran the opposite pressure, net -$15.70M in 24 hours at maximum negative intensity versus its 30-day baseline.\n\nThe Bank Run Gauge weakened to -10.8 from -1.8, back in CAUTIOUS, with no flight-to-quality flag, while Ethereum absorbed +$150.67M net. Peg stress remains chronic rather than fresh: apxUSD trades at $0.972, 277 bps below peg on day 86 of the dislocation that began with the STRC drawdown in June, and Avalon's USDA narrowed from 3,098 bps to 248 bps.\n\n**Index and triggers**\n\nPSI at 91.9 extends the BEDROCK run to 79 days, and total market cap of $319.46B sits 0.08% under the Digest-window high set four days ago. DEWS ALERT+ names fell to 9 from 13, though BRL1 and BRLm both entered WATCH on liquidity erosion. Next trigger: a $100M single-day move in USDC supply, which would reclassify this week from drift to rotation.",
+    "generatedAt": 1789027564,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 198,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-09",
+    "title": "USDe Mints As PYUSD Redeems",
+    "text": "USDe absorbed $58.66M in net mints over 24h at maximum pressure intensity while PYUSD burned $55.99M. The two largest flow shifts on the tape cancel to $2.67M. Bank Run Gauge back to -1.8 from -10.0.",
+    "extended": "USDe absorbed $58.66M in net mints over the past 24 hours, a pressure reading of 100 against its own 30-day baseline. PYUSD went the other way by almost exactly as much, burning $55.99M at an intensity of -100. The two largest flow shifts on the tape cancel to $2.67M net. Ethereum carried +$309.20M across all issuers, and the Bank Run Gauge closed at -1.8, NEUTRAL, from -10.0 yesterday.\n\nThe redemption side has a supply record behind it. PYUSD shed $48.12M in a day against $75.34M across the week, a decline that is accelerating. USDG ran the opposite way, adding $73.95M in one session out of $83.76M for the week, so nearly the whole weekly gain landed yesterday. USDC is still the largest seven-day mover at +$700.15M to $74.40B, 7% under its April high of $79.75B.\n\nStress readings eased elsewhere. DEWS counts 12 coins at ALERT against 14 yesterday, CALM rises to 127 from 112, and all five band changes in the last 24 hours moved down. PSI at 91.4 extends the BEDROCK run to 78 days. Avalon's USDA is unchanged at 3,098 bps below peg on $145.58M, day 252. If the gauge slides back to -10 or lower next session, flow stress replaces allocation as the lead signal, and whether USDe's mint pace holds against PYUSD's accelerating burn decides which way it leans.",
+    "generatedAt": 1788941115,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 197,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-08",
+    "title": "XAUT Loses Yield And Supply",
+    "text": "XAUT's yield fell to 1.18% APY against a 4.95% 30-day average, and $15.29M of its $17.66M weekly outflow left in one session. USDC's +$782M week still sizes the tape; PSI 91.2 is the lowest since 30 August.",
+    "extended": "XAUT's quoted yield fell to 1.18% APY, against a 7-day average of 2.76% and a 30-day average of 4.95%, on $2.70B of market cap. The reading carries benchmark-degraded and negative-trend flags, so part of that decline is likely measurement rather than demand. Supply history is consistent with the direction: XAUT lost $15.29M in a single day out of $17.66M over the full week.\n\n**USDC's week** USDC added $781.92M over seven days to $74.34B, the largest weekly supply move on the tape, and gave back $105.15M of it in the latest session. That leaves the token 7% below its 11 April peak of $79.75B. Total stablecoin market cap is $319.33B, 0.12% under the Digest-window high set two days ago, with Ethereum taking $94.77M of net 24h flow.\n\nAvalon's USDA is recorded 3,098 bps below peg on $145.58M of market cap, with no live price available and no material change since the previous edition. apxUSD trades at $0.968, 314 bps off, unresolved since the 2 June STRC drawdown took it to roughly $0.89. DEWS ALERT counts rose from 12 to 15, ALUSD crossing up from WATCH on cross-source divergence scored 99.\n\nPSI printed 91.2 against 91.6 yesterday, the first time it has been this low since 30 August, with severity at 0.04 and the BEDROCK streak at 77 days. If USDC moves $135M or more in one day, daily flow stops being a rounding error against the $782M week. XAUT's next daily supply print decides whether one session carried the whole month's exit.",
+    "generatedAt": 1788854743,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 196,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-07-weekly",
+    "title": "USDS Yield Round Trip Tops Six Flags",
+    "text": "USDS printed 3.94%, then 2.35%, then 5.52% inside four days on $6.67B, heading six yield warnings. USDC supply added $775.15M in a day, PSI held BEDROCK at 91.7, and 133 depeg observations reduced to 10 chronic signals.",
+    "extended": "USDS carried the week's heaviest risk reading at severity 6717.8: 3.94% APY on 1 September against a 7-day average of 5.94% and a 30-day average of 6.14%, on $6.67B of market cap. The print fell to 2.35% by 3 September, then held between 5.40% and 5.56% for the last four days as the attached flag shifted from tvl-outflow to opportunity-evidence-missing. PSI opened at its weakest level of 91.5, peaked at 92.6 and closed at 91.7, inside BEDROCK all seven days, with the 91.8 midpoint 0.2 below the prior week.\n\nSix of the seven new risk items were yield warnings: USDe at 4.64%, PYUSD at 3.82% against a 7-day 7.05%, XAUT at 1.81% against a 30-day 5.06%, USDY at 3.6% and unrated for safety, EURSAFO at 2.15% on stale data. All six carried a trend or data-quality qualifier, so none stands alone as evidence that sector funding costs reset. A reading that runs 3.94%, 2.35%, then 5.52% inside four days is a measurement question before it is a payout question.\n\nUSDC ran the other way, adding $775.15M in a single day on 4 September, leading the weekly mover table on four separate days and finishing at +$728.22M. A7A5 moved WATCH to CALM twice on $453.05M, with crvUSD and CUSD also settling at CALM. The Bank Run Gauge midpoint fell to -0.4 from 18.2 the prior week, with a -26.1 low on 1 September.\n\nMarket cap rose from $318.24B to $319.63B, 0.26% above last week's close. USTB was the only non-USDC name to lead the mover list, at +$637.75M on 2 September. PYUSD swung -$62.91M on 2 September to +$54.40M on 3 September, while USDe printed +$58.25M and +$61.14M at full intensity. Blacklist events fell to 55 from 437, while dollars affected rose to $27.80M from $19.28M, mostly USDT on Tron including one $6.41M freeze.\n\nThe 133 active depeg observations reduce to 10 unique signals, all inherited from earlier weeks: USDA at 3,098 bps on $145.58M, pmUSD at 5,166 bps, MSUSD at 5,017 bps, apxUSD at 359 bps on $311.58M. Zero grade transitions were recorded, and the A tier holds 83.1% of $331.3B in mapped supply across 320 graded coins. Daily triggers closed 5 hit, 12 missed and 4 pending, with most misses in calls that chronic spreads would resolve rather than simply persist. Next week decides whether USDS holds above 5.40% or retests 2.35%; the other thresholds are BRLV, BRZ or BUCK crossing from WATCH scores of 18 to 20 into ALERT.",
+    "generatedAt": 1788768600,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "weekly",
+    "editionNumber": 26,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-07",
+    "title": "Avalon USDA Widens To 3,098 bps",
+    "text": "Avalon's USDA is 3,098 bps below peg, a 2,794 bps widening since the last edition on $145.58M of market cap, with no live price feed. A second issuer's USDA sits 597 bps off at $81.98M. PSI held 91.7.",
+    "extended": "Avalon's USDA is marked 3,098 basis points below peg against $145.58M of market cap, a widening of 2,794 bps since the previous edition. The figure is a stored peak rather than a live quote, because the price feed is unavailable, which is part of why the V9 report card grades the coin F (0) on peg-price-unavailable adverse history. The event is 6,011 hours old.\n\nA second USDA, from an unrelated issuer, moved from 565 to 597 basis points off peg on $81.98M. Between them, $227.6M of market cap trades under the same four letters and two failing V9 grades. The chronic names went the other way: pmUSD narrowed to 4,868 bps from 5,177, and MSUSD to 3,785 bps from 5,017.\n\nPSI held at 91.7, its 76th consecutive day in BEDROCK, with severity at 0.03. Its top severity contributors are LUSD at 97 bps and VNXAU at 395 bps, so 19 active depegs concentrated below $150M of market cap contribute little to the score. apxUSD, unresolved since the June 2 STRC drawdown took it to roughly $0.89, sits 326 bps below par at $312.90M.\n\nUSDC took in $728.22M over seven days and gave back $84.68M in the last one, on a $74.66B base; total stablecoin supply stands at $319.63B, 0.03% below the Digest-window high set yesterday. A single session of $110M or more in USDC would turn this week's build from drift into rotation.",
+    "generatedAt": 1788768346,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 195,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-06",
+    "title": "apxUSD Widens, Gauge Turns Cautious",
+    "text": "apxUSD is 314 bps below peg on $314M of float, up from 289 yesterday and unresolved since the 2 June STRC drawdown. The Bank Run Gauge fell from 9.2 to -14.8 on flows of barely $1M.",
+    "extended": "apxUSD widened to 314 basis points below peg from 289 a day earlier, and at $314.08M of market cap it is the largest of today's deteriorating pegs. The price is $0.968. The depeg traces to the STRC drawdown of 2 June, when apxUSD printed near $0.89, and it has not resolved since. Pharos grades it F at zero, exit score 45.3, with correlated exit routes flagged.\n\npmUSD widened again, to 5,177 bps below peg at $0.482 on $45.32M of supply, an ongoing critical event with no change in character. MSUSD narrowed from 5,240 to 5,017 bps, and the Avalon USDA line came in from 3,098 to 304 bps, a move large enough to warrant a second reading before anyone calls it a recovery. Nineteen depegs remain active and none resolved in 24 hours.\n\n**Gauge turns cautious**\n\nThe Bank Run Gauge fell from 9.2 to -14.8 and into CAUTIOUS, while the flows behind it stayed small: M at net -$200K, USDai at +$1.13M, RLUSD at +$1.36M. Those pressure scores measure deviation from a 30-day baseline, so a $200K net burn can register at maximum intensity. Ethereum net inflows were +$114.36M across the same window.\n\nPSI held at 91.9 for a 75th day in BEDROCK, severity 0.04, with total supply at $319.71B, marginally above the Digest-window high set yesterday. Twelve coins sit at DEWS ALERT, unchanged in count. If the gauge reaches -20 or lower at the next reading, flow stress takes over from peg stress as the leading signal, with M's pressure the most likely source.",
+    "generatedAt": 1788681947,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 194,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-05",
+    "title": "PYUSD Gives Back Its Week",
+    "text": "PYUSD lost $143.82M in a day against a $77.80M seven-day build, while USDC added $364.51M. DEWS ALERT count tripled from 4 to 13. Next test: whether USDC's weekly total clears $580M.",
+    "extended": "PYUSD shed $143.82M in one day, more than erasing the $77.80M it had added over the previous seven. USDC ran the other way, adding $364.51M in a day and $520.89M on the week to reach $74.75B, still 6% below its April peak of $79.75B. Total supply of $319.65B is up $791.79M over seven days, consistent with rotation between issuers rather than withdrawal from the sector.\n\n**Stress breadth** DEWS band counts shifted: CALM fell from 133 coins to 109, WATCH rose to 121, and ALERT tripled from 4 to 13 within 24 hours. The named drivers are cross-source divergence and price confidence rather than realised depegs. The five disclosed ALERT names hold $141.5M between them, under 40% of what USDC added yesterday.\n\nNineteen depegs remain active and none resolved in the last 24 hours. USDA is still 3,098 bps below peg on $145.58M, unchanged since the previous edition. pmUSD narrowed to 5,133 bps from 5,166, priced at $0.487, with an ALERT score of 44 and an F safety grade. PSI eased to 91.7 from 92.6, its 74th day in BEDROCK, and the Bank Run Gauge fell to 9.2, still neutral.\n\nThe next trigger is USDC's weekly total: a seven-day build above $580M at the following snapshot makes this follow-through rather than a single day's mint. A second consecutive session of PYUSD redemptions would do the same for today's reversal.",
+    "generatedAt": 1788595575,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
+    "digestType": "daily",
+    "editionNumber": 193,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
     "date": "2026-09-04",
     "title": "USDC's Week Lands In One Day",
     "text": "USDC added $775.15M in a session, more than its $562.28M seven-day net, which puts the prior six days at roughly $213M negative. Supply $74.46B, 7% under April's peak.",
     "extended": "USDC added $775.15M in a single session, more than the $562.28M it added across the whole week. The arithmetic leaves the preceding six days at roughly $213M net negative, so the week's growth arrived in one sitting. Supply stands at $74.46B, 7% below the $79.75B high set on 11 April. Ethereum took $560.06M of net on-chain flow.\n\nPYUSD ran the same way, up $102.55M on the day against $245.77M for the week, while USDS shed $45.05M. Total stablecoin supply is $319.43B, fractionally above the $319.03B Digest-window high set six days ago. PSI rose to 92.6 from 92.3, a 73rd consecutive BEDROCK day, with severity at 0.03 and breadth at 6.59.\n\nUSDA holds 3098 bps below peg on $145.58M with no live price available. pmUSD widened to 5166 bps at $0.483 and MSUSD to 5238 bps at $0.476, while apxUSD narrowed to 283 bps at $0.971, still unresolved since the 2 June STRC drawdown. DEWS counts nine ALERT coins against six yesterday, with the WATCH band up to 113 from 90. A second USDC session at or above $970M would make this rotation; below that, it stays one large mint.",
     "generatedAt": 1788509126,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
     "digestType": "daily",
     "editionNumber": 192,
     "editorialStyleVersion": "1.2",
@@ -16,6 +705,9 @@
     "text": "MSUSD widened 927 bps in a day to 5,070 bps off peg, $0.493 on $23.7M of supply, Safety score 0. RLUSD added $271M in a week and lost eight points of DEX liquidity score while its pool TVL rose.",
     "extended": "MSUSD trades at $0.493, 5,070 basis points below peg and 927 bps wider than the previous edition, within 491 bps of its 5,561 bps peak. Its Pharos Safety score (V9, 3 September) reads 0: no published reserve composition, no same-notional redemption route. pmUSD widened on the same tape, to 4,953 bps at $0.505. Two coins holding $71.1M between them are now trading near half of par.\n\n**Supply and depth.** RLUSD added $270.73M over seven days to $2.38B, a market cap at its Digest-window high and short of the record $360.84M week set ten days ago. Its DEX liquidity score fell from 56 to 48 while pool TVL rose 1.9% to $154.56M on mixed coverage; the TVL change alone accounts for roughly +0.1 points, so the composite decline came from the other components.\n\nPSI reads 91.7, a 72nd consecutive day in BEDROCK, with severity at 0.03 despite 19 active depegs; the index weights by market cap and the stressed names are small. Four coins sit at ALERT in DEWS, none above $31M. PYUSD ran $54.40M of net flow in 24 hours at maximum pressure intensity: if the Bank Run Gauge drops from -10.1 to -20, flow stress replaces peg stress as the lead signal.",
     "generatedAt": 1788422769,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
     "digestType": "daily",
     "editionNumber": 191,
     "editorialStyleVersion": "1.2",
@@ -27,6 +719,9 @@
     "text": "USTB's 7d supply change is +$637.75M, matching its entire current market cap and doubling its prior weekly record. The whole market added $477.16M over the same week.",
     "extended": "USTB's supply series shows +$637.75M over seven days, a figure identical to its current market cap of $637.75M and roughly double its previous largest weekly change of $321.57M, recorded 10 days ago. The match between the weekly move and the full float points to a series that restarted rather than $638M of fresh issuance. Either reading leaves USTB 40% below its $1.06B peak from 20 May.\n\nThe whole stablecoin market added $477.16M over the same week, so one issuer's seven days exceeded the market's by $161M. The offsets are visible elsewhere: USDG has shed $178.20M over the week, $126.31M of that in the past day, and BUIDL is down $49.73M in a day. Total supply of $318.04B sits 0.31% below the Digest-window high set four days ago.\n\nAt the top of the tape, day flows run the other way. USDC added $214.70M in 24 hours against a flat week, USDe added $112.50M on $61.14M of net mints, and PYUSD lost $91.48M with mint/burn pressure at -100 versus its 30-day baseline. The Bank Run Gauge recovered to 23.8 from -26.1 yesterday.\n\n**Peg tape** Nineteen depegs remain active. apxUSD narrowed to 324 bps below par at $0.967, day 78 after the STRC drawdown that took it near $0.89. USDA widened from 460 to 504 bps, and DEWS holds seven names at ALERT after ALUSD was promoted from WATCH on cross-source divergence. PSI is unchanged at 91.6, its 71st day in BEDROCK. A second USDC session above $270M would mark rotation rather than a one-day rebalance.",
     "generatedAt": 1788336362,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
     "digestType": "daily",
     "editionNumber": 190,
     "editorialStyleVersion": "1.2",
@@ -38,6 +733,9 @@
     "text": "One day brought $17.15M of DAI against $11.71M for the whole trailing week, and its DEX pools gained 11.4% TVL while the liquidity score slid 73 to 62. A $25M single-day print turns drift into rotation.",
     "extended": "DAI added $17.15M in a single day against $11.71M for the entire trailing week, so yesterday supplied the week and then some. The pools tell a less flattering version: DAI's DEX liquidity composite slid from 73 to 62 while pool TVL climbed 11.4% to $233.73M, a depth move that on its own accounts for roughly half a point upward.\n\nA pool that gains $23.85M of depth and sheds eleven points of score is not describing a drain; it is describing coverage marked mixed and a component measuring something other than dollars. DAI holds an A- at 80, sitting inside the 14 A-tier coins that carry 82.4% of mapped supply. This is a confidence question, not a solvency one.\n\nUSDC shed $337.35M over seven days to $73.54B, still 8% under its April peak of $79.75B. USDe pulled in $58.25M net with pressure intensity pinned at 100, while Ethereum ran $36.75M negative on the day and the Bank Run Gauge sat at -26.1, CAUTIOUS. Total supply of $318.24B is 0.25% below the Digest-window high set three days ago.\n\napxUSD widened from 301 to 359 bps at $0.964, day 77 of the STRC drawdown that first took it to $0.89 in June. GUSD closed a 108-hour, 201 bps excursion. DEWS cut ALERTs from 12 to eight but printed a WARNING in GGBR at 57. PSI held 91.5 on its seventieth BEDROCK day. Clear $25M of DAI in one session and the drift becomes rotation.",
     "generatedAt": 1788249945,
+    "llm": {
+      "servedModel": "claude-opus-5"
+    },
     "digestType": "daily",
     "editionNumber": 189
   },

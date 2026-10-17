@@ -430,9 +430,9 @@ Expected:
 - `http://site-api.pharos.watch/...` returns `308` to the matching `https://site-api.pharos.watch/...`
 - no plaintext HTTP request reaches Worker auth or app handlers anymore
 
-### Workspace route verification
+### Operator smoke verification
 
-The automated coverage of the operator workspace routes is `npm run test:ops-browser`, documented in [Testing & Linting](./testing.md). It runs against the local static export with fixture API responses, so it validates the workspace routes, layout, and accessibility only — it does not exercise this document's Access applications, service tokens, or CORS boundary, which stay covered by the checks above and by `npm run test:smoke-ops`.
+Run `npm run test:smoke-ops` alongside the checks above to verify the live operator boundary. These checks do not validate workspace layout or accessibility.
 
 ---
 

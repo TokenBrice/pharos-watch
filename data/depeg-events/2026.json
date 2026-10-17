@@ -1,5 +1,46 @@
 [
   {
+    "id": 90805,
+    "stablecoinId": "apxusd-apyx",
+    "symbol": "apxUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -230,
+    "startedAt": 1792065693,
+    "endedAt": null,
+    "startPrice": 0.9890987198271314,
+    "peakPrice": 0.9770038117,
+    "recoveryPrice": null,
+    "pegReference": 1,
+    "source": "live",
+    "confirmationSources": "temporal:15m+primary:coingecko+primary:dex:curve+primary:dex:orca+primary:dex:pancakeswap+primary:protocol:curve+dex:dl+dex:direct_api+dex:cg_onchain",
+    "pendingReason": "confirmation-window",
+    "closeReason": null,
+    "priceCoverage": {
+      "intervals": [
+        [
+          1792067485,
+          1792086378
+        ],
+        [
+          1792088152,
+          1792089963
+        ],
+        [
+          1792091817,
+          1792232134
+        ]
+      ],
+      "atParIntervals": [],
+      "lastObservationKind": "trusted-off-peg",
+      "lastTrustedObservationAt": 1792232134,
+      "gapStartedAt": null
+    },
+    "provenance": null,
+    "constituentEventCount": 1,
+    "slug": "apxusd-2026-10-15"
+  },
+  {
     "id": 90804,
     "stablecoinId": "wars-argentine-peso",
     "symbol": "WARS",
@@ -2291,10 +2332,110 @@
         [
           1792044052,
           1792044052
+        ],
+        [
+          1792045848,
+          1792045848
+        ],
+        [
+          1792047683,
+          1792047683
+        ],
+        [
+          1792049471,
+          1792049471
+        ],
+        [
+          1792051277,
+          1792051277
+        ],
+        [
+          1792053095,
+          1792053095
+        ],
+        [
+          1792054870,
+          1792054870
+        ],
+        [
+          1792056659,
+          1792056659
+        ],
+        [
+          1792058483,
+          1792058483
+        ],
+        [
+          1792060259,
+          1792060259
+        ],
+        [
+          1792062078,
+          1792062078
+        ],
+        [
+          1792063869,
+          1792063869
+        ],
+        [
+          1792065693,
+          1792065693
+        ],
+        [
+          1792067477,
+          1792067477
+        ],
+        [
+          1792069267,
+          1792069267
+        ],
+        [
+          1792071067,
+          1792071067
+        ],
+        [
+          1792072882,
+          1792072882
+        ],
+        [
+          1792074678,
+          1792074678
+        ],
+        [
+          1792076501,
+          1792076501
+        ],
+        [
+          1792078282,
+          1792078282
+        ],
+        [
+          1792080077,
+          1792080077
+        ],
+        [
+          1792081872,
+          1792081872
+        ],
+        [
+          1792083697,
+          1792083697
+        ],
+        [
+          1792085474,
+          1792085474
+        ],
+        [
+          1792087321,
+          1792087321
+        ],
+        [
+          1792089086,
+          1792089086
         ]
       ],
-      "lastObservationKind": "trusted-at-par",
-      "lastTrustedObservationAt": 1792044052,
+      "lastObservationKind": "blind",
+      "lastTrustedObservationAt": 1792089086,
       "gapStartedAt": 1791573375
     },
     "provenance": null,
@@ -3668,12 +3809,20 @@
         ],
         [
           1792018839,
-          1792044052
+          1792089963
+        ],
+        [
+          1792091817,
+          1792189940
+        ],
+        [
+          1792191637,
+          1792232134
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792044052,
+      "lastTrustedObservationAt": 1792232134,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -3793,12 +3942,20 @@
         ],
         [
           1792018839,
-          1792044052
+          1792086378
+        ],
+        [
+          1792088152,
+          1792089963
+        ],
+        [
+          1792091817,
+          1792232134
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792044052,
+      "lastTrustedObservationAt": 1792232134,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -4122,12 +4279,20 @@
         ],
         [
           1791993706,
-          1792044052
+          1792089963
+        ],
+        [
+          1792091817,
+          1792185434
+        ],
+        [
+          1792187224,
+          1792232134
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792044052,
+      "lastTrustedObservationAt": 1792232134,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -4567,12 +4732,20 @@
         ],
         [
           1792042242,
-          1792044052
+          1792089963
+        ],
+        [
+          1792091817,
+          1792221341
+        ],
+        [
+          1792224041,
+          1792232134
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792044052,
+      "lastTrustedObservationAt": 1792232134,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -8186,12 +8359,32 @@
         ],
         [
           1792018839,
-          1792044052
+          1792086378
+        ],
+        [
+          1792088152,
+          1792089963
+        ],
+        [
+          1792091817,
+          1792116956
+        ],
+        [
+          1792118759,
+          1792140398
+        ],
+        [
+          1792142198,
+          1792175546
+        ],
+        [
+          1792180948,
+          1792232134
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792044052,
+      "lastTrustedObservationAt": 1792232134,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -8299,12 +8492,20 @@
         ],
         [
           1792018839,
-          1792044052
+          1792089963
+        ],
+        [
+          1792091817,
+          1792189940
+        ],
+        [
+          1792191637,
+          1792232134
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792044052,
+      "lastTrustedObservationAt": 1792232134,
       "gapStartedAt": null
     },
     "provenance": null,

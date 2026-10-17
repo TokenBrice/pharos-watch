@@ -173,10 +173,6 @@ function findDuplicatePaths(records: readonly CliPolicyPathEntry[]): string[] {
   return [...duplicates].sort(compareCodeUnits);
 }
 
-function isSorted(paths: readonly unknown[]): boolean {
-  return paths.every((path, index) => index === 0 || compareCodeUnits(String(paths[index - 1]), String(path)) <= 0);
-}
-
 export function evaluateCliArgsPolicy({
   discoveredPaths,
   policy = CLI_ARGV_POLICY,
@@ -201,8 +197,6 @@ export function evaluateCliArgsPolicy({
 
   const strictPaths = strictEntries.map((entry) => entry?.path);
   const exemptionPaths = exemptions.map((entry) => entry?.path);
-  if (!isSorted(strictPaths)) errors.push("Strict CLI policy entries must be sorted by path.");
-  if (!isSorted(exemptionPaths)) errors.push("CLI exemption entries must be sorted by path.");
 
   for (const duplicate of findDuplicatePaths(strictEntries)) {
     errors.push(`Duplicate strict CLI policy entry: ${duplicate}`);

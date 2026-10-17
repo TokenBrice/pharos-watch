@@ -14,7 +14,7 @@ Applies to `shared/data/stablecoins/`.
 - Edit base metadata in `shared/data/stablecoins/coins/`; edit research-domain fields only in `shared/data/stablecoins/domains/`. Never duplicate a domain-owned field in the base file or split coupled fields across both sources.
 - `shared/lib/stablecoins/schema.ts` defines domain field ownership. Sidecar IDs must match base coin IDs, and sidecars never live under `shared/data/stablecoins/coins/`.
 - Never hand-edit generated outputs. After source edits, follow `docs/stablecoin-data.md` § “Editing Rules”; its output inventory is authoritative.
-- Author only non-default flags: omit `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false`; `backing` and `governance` remain required. `npm run check:stablecoin-data` enforces omission.
+- Default flags may be omitted or authored explicitly: `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` are supplied by the schema when absent; `backing` and `governance` remain required. `npm run check:stablecoin-data` validates parsed values, not default-key omission.
 - Keep `shared/data/stablecoins/canonical-order.json` aligned with the catalog, and add contracts only after source verification.
 - Keep relationships that reserve composition can express out of manual `dependencies`; manual-only relationships require sourced `dependencyReview`.
 

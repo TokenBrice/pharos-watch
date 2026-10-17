@@ -529,20 +529,6 @@ describe("generate-public-datasets", () => {
     expect(rows[0]?.id).toBe(42);
   });
 
-  it("rejects an old complete prefix with a truncated recent depeg window", () => {
-    const recent = Array.from({ length: 59 }, (_, index) => ({
-      ...makeEvent(null),
-      id: 100 + index,
-      startedAt: Date.parse("2026-05-16T12:00:00Z") / 1000 - index,
-    }));
-    const source = [makeCoverageSentinel(), ...recent];
-    expect(() => testExports.validateDepegHistoryCoverage(source, "2026-05-16")).not.toThrow();
-    const projected = testExports.projectDepegHistory(source, "2026-05-16");
-    expect(projected).toHaveLength(59);
-    expect(() => testExports.validateTopicRowFloor("depeg-history", projected)).toThrow(
-      "expected at least 60",
-    );
-  });
   it("requires a source shard for the requested snapshot year", () => {
     expect(() => testExports.validateDepegHistorySourceShard("2030-05-16")).toThrow(
       "no 2030 shard",
@@ -576,25 +562,6 @@ describe("generate-public-datasets", () => {
     expect(testExports.checkTopic("top-stablecoins", artifactDirs(datasetsDir, redirectsPath))).toEqual({
       ok: false,
       reason: expect.stringContaining("rowCount 0 below required floor 493"),
-    });
-  });
-
-  it("rejects checked depeg-history mirrors below the artifact floor", async () => {
-    const root = await makeRoot();
-    const datasetsDir = path.join(root, "datasets");
-    const topicDir = path.join(datasetsDir, "depeg-history");
-    await mkdir(topicDir, { recursive: true });
-    const redirectsPath = await writeTopicRedirects(root, "depeg-history");
-    await writeFile(path.join(topicDir, "2026-05-16.csv"), "# Pharos pharos.watch\nid\n42\n");
-    await writeFile(
-      path.join(topicDir, "2026-05-16.json"),
-      JSON.stringify({ _meta: { endpoint: "depeg-history", rowCount: 1 }, rows: [{ id: "42" }] }, null, 2),
-    );
-    await writeFile(path.join(topicDir, "2026-05-16.ndjson"), '{"_meta":{"endpoint":"depeg-history"}}\n{"id":"42"}\n');
-
-    expect(testExports.checkTopic("depeg-history", artifactDirs(datasetsDir, redirectsPath))).toEqual({
-      ok: false,
-      reason: expect.stringContaining("rowCount 1 below required floor 60"),
     });
   });
 

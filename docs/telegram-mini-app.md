@@ -236,10 +236,8 @@ The page's cumulative native MainButton listener-count test fixes `Date.now()` s
 - `src/app/pharoswatchbot/app/page.test.tsx` / `use-telegram-main-button.test.ts` — client preview/post-launch rendering, confirmed mutation timing, stale-refresh recovery, stale-auth relaunch, suggestion navigation, timezone selection, and native listener transitions/SDK replacement.
 - `src/app/pharoswatchbot/app/use-mini-app-view.test.ts` — `?startapp=` payload/view round-trip for the stale-auth relaunch payload encoder.
 - `src/app/pharoswatchbot/app/telegram-theme.test.ts` / `telegram-sdk.test.ts` — WCAG contrast normalization, hostile light/dark Telegram palettes, CSS variable publication, fallback clearing, viewport, and safe-area behavior.
-- `tests/visual/telegram-mini-app-launch.spec.ts` — standalone/signed launch behavior, 320 px control sizing, and an authenticated hostile-theme axe color-contrast fixture.
-- `tests/visual/telegram-mini-app-a11y.spec.ts` — deterministic signed sessions for populated Home, Watchlist, Presets, and Settings panels plus group read-only, stale-auth, failed-refresh, mutation-error, and forgotten states. The bounded matrix covers 320 px light/safe-area, 390 px tall dark/reduced-motion/200% root-text-resize, and 360 px exceptional-state fixtures without multiplying every state across every device condition. Axe uses the shared WCAG 2.2 AA tags and node-level waiver policy; semantic assertions also cover keyboard tab movement, focus visibility, touch height, stale-snapshot mutation lockout/recovery, status announcements, disabled read-only actions, and horizontal reflow.
 
-The automated `200%` case changes the root font size and is a text-resize/reflow proxy, not a claim of full browser-zoom coverage. Before a release that changes Mini App layout, theme, auth, or mutations, an operator still verifies a real Telegram session:
+Before a release that changes Mini App layout, theme, auth, or mutations, an operator verifies a real Telegram session:
 
 1. Open a populated private session on current Telegram iOS, Android, and Desktop in light and dark appearance.
 2. Visit all four panels; use VoiceOver or TalkBack on one mobile client and keyboard-only navigation on Desktop, including arrow-key tab movement and visible focus.

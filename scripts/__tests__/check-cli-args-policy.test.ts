@@ -65,6 +65,23 @@ describe("check-cli-args-policy", () => {
     }
   });
 
+  it("accepts unsorted strict and exempt entries without changing parser enforcement", () => {
+    const strictPaths = ["scripts/maintenance/z-operator.mjs", "scripts/maintenance/a-operator.mjs"];
+    const exemptPaths = ["scripts/ci/z-report.mjs", "scripts/ci/a-report.mjs"];
+    const parserSource = 'import { parseStrictCliArgs } from "../lib/cli-args.mjs"; parseStrictCliArgs(process.argv);';
+    const result = evaluateCliArgsPolicy({
+      discoveredPaths: [...strictPaths, ...exemptPaths],
+      policy: {
+        strict: strictPaths.map((path) => ({ path, parserPath: path })),
+        exemptions: exemptPaths.map((path) => ({ path, category: "read-only", reason: EXEMPTION_REASON })),
+      },
+      readSource: createSourceReader(Object.fromEntries(strictPaths.map((path) => [path, parserSource]))),
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.counts).toEqual({ discovered: 4, strict: 2, exempt: 2 });
+  });
+
   it.each(["comment", "string"])("rejects wrapper import and call spoofed in a %s", (kind) => {
     const path = "scripts/maintenance/operator.mjs";
     const spoof = 'import { parseStrictCliArgs } from "../lib/cli-args.mjs"; parseStrictCliArgs(process.argv);';

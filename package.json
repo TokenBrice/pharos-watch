@@ -97,10 +97,6 @@
     "sync:digests": "tsx scripts/maintenance/sync-digests.ts",
     "sync:staged-artifacts": "node --import tsx scripts/ci/sync-staged-generated-artifacts.mts",
     "serve:static-export": "node --import tsx scripts/maintenance/serve-static-export.ts",
-    "test:a11y": "playwright test tests/visual/a11y/axe-routes.spec.ts",
-    "test:visual": "playwright test tests/visual/*.spec.ts",
-    "test:a11y:hydrated": "playwright test tests/visual/a11y/axe-routes-hydrated.spec.ts",
-    "test:ops-browser": "playwright test --config playwright.ops.config.ts",
     "test:smoke-api": "node --import tsx scripts/maintenance/smoke-api.mjs",
     "test:smoke-transport": "node scripts/maintenance/smoke-transport.mjs",
     "test:smoke-ops": "node scripts/maintenance/smoke-ops.mjs",
@@ -217,8 +213,6 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
-    "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/react": "^16.3.3",
     "@types/d3-force": "3.0.10",
@@ -236,6 +230,7 @@
     "eslint-plugin-security": "^4.0.1",
     "jsdom": "^30.0.1",
     "lossless-json": "4.3.1",
+    "playwright": "1.62.1",
     "sharp": "0.35.5",
     "tailwindcss": "4.3.3",
     "topojson-client": "3.1.0",

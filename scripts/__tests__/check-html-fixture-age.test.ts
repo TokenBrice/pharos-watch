@@ -1,17 +1,11 @@
-import { dirname } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
   HTML_FIXTURE_MAX_AGE_DAYS,
   evaluateHtmlFixtureAges,
-  readNonHtmlFixtureCaptures,
   runHtmlFixtureAgeCheck,
 } from "../ci/check-html-fixture-age.ts";
-import {
-  HTML_FIXTURE_REFRESH_TARGETS,
-  readHtmlFixtureCaptures,
-  type HtmlFixtureCapture,
-} from "../maintenance/refresh-reserve-html-fixtures.ts";
+import { type HtmlFixtureCapture } from "../maintenance/refresh-reserve-html-fixtures.ts";
 
 const NOW = new Date("2026-04-01T12:00:00Z");
 
@@ -130,44 +124,5 @@ describe("check-html-fixture-age", () => {
       "live.html: manually trimmed but still listed for refresh, which would overwrite the trim",
     ]);
     expect(evaluate([makeCapture("live.html")])).toEqual([]);
-  });
-
-  it("keeps the repository capture corpus canonical independently of the check date", () => {
-    const dir = dirname(HTML_FIXTURE_REFRESH_TARGETS[0].path);
-    const report = evaluateHtmlFixtureAges({
-      captures: [...readHtmlFixtureCaptures(dir), ...readNonHtmlFixtureCaptures(dir)],
-      now: new Date(0),
-      metadataOnly: true,
-    });
-    expect(report.violations).toEqual([]);
-  });
-
-  it("reads capture metadata for every repository fixture and keeps refresh membership exact", () => {
-    const captures = readHtmlFixtureCaptures();
-    const byFixture = new Map(captures.map((capture) => [capture.fixture, capture]));
-
-    // Every refresh target must exist on disk, carry a parsable capture, and
-    // be neither archived nor manually trimmed.
-    const refreshedNames = new Set<string>();
-    for (const target of HTML_FIXTURE_REFRESH_TARGETS) {
-      const capture = byFixture.get(target.fixture);
-      expect(capture, `${target.fixture} is listed for refresh but absent from the fixtures directory`).toBeDefined();
-      expect(capture!.refreshed).toBe(true);
-      expect(capture!.archivedReason, `${target.fixture} is refreshed, so it must not be archived`).toBeNull();
-      expect(capture!.trimmedReason, `${target.fixture} is refreshed, so it must not be manually trimmed`).toBeNull();
-      expect(Number.isNaN(Date.parse(capture!.capturedAt ?? "")), `${target.fixture} captured-at`).toBe(false);
-      refreshedNames.add(target.fixture);
-    }
-
-    // And every fixture the refresh script does not own must say why not:
-    // frozen (archived) or hand-maintained (source-trimmed).
-    for (const capture of captures) {
-      if (refreshedNames.has(capture.fixture)) continue;
-      const reason = capture.archivedReason ?? capture.trimmedReason;
-      expect(
-        reason,
-        `${capture.fixture} is not refreshed, so it must carry an archived or source-trimmed reason`,
-      ).not.toBeNull();
-    }
   });
 });

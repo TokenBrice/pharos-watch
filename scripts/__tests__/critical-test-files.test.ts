@@ -6,7 +6,7 @@ describe("critical execution contracts", () => {
   it("rejects missing, non-test and multiply-owned mandatory files", () => {
     expect(() => assertExecutableTestFiles(["src/missing.test.ts"], { exists: () => false })).toThrow("src/missing.test.ts");
     expect(() => assertExecutableTestFiles(["src/source.ts"], { exists: () => true })).toThrow("src/source.ts");
-    expect(() => assertExecutableTestFiles(["tests/visual/page.spec.ts"], { exists: () => true })).toThrow("tests/visual/page.spec.ts");
+    expect(() => assertExecutableTestFiles(["tests/browser/page.spec.ts"], { exists: () => true })).toThrow("tests/browser/page.spec.ts");
     const project = { name: "duplicate", include: ["src/**/*.test.ts"], exclude: [] };
     expect(() => assertExecutableTestFiles(["src/owner.test.ts"], { exists: () => true, projects: [project, project] })).toThrow("found 2");
   });

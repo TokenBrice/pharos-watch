@@ -173,11 +173,11 @@ In coordinated additions, specialists return their portion of this packet and la
 - target per-coin registry file
 - lifecycle status: active or pre-launch
 - `flags.backing`
-- `flags.pegCurrency` (schema default `"USD"` — omit when USD)
+- `flags.pegCurrency` (schema default `"USD"` — may omit when USD)
 - `flags.governance`
-- `flags.yieldBearing` (schema default `false` — omit when false)
-- `flags.rwa` (schema default `false` — omit when false)
-- `flags.navToken` (schema default `false` — omit when false)
+- `flags.yieldBearing` (schema default `false` — may omit when false)
+- `flags.rwa` (schema default `false` — may omit when false)
+- `flags.navToken` (schema default `false` — may omit when false)
 - `collateral`
 - `pegMechanism`
 - `links`
@@ -257,7 +257,7 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 
 - `flags.backing` should describe the actual reserve base, not the marketing story.
 - `structured-tranche` is reserved for runtime opportunity rows such as Royco Dawn senior/junior vaults. Do not use it for ordinary static stablecoin metadata unless the tracked asset is itself a tranche wrapper.
-- Author only the flags that differ from the schema defaults. `StablecoinFlagsSchema` supplies `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` when the key is absent, so the parsed record and every generated aggregate still carry explicit values. `backing` and `governance` have no default and are always required.
+- Flags that equal schema defaults may be omitted or authored explicitly. `StablecoinFlagsSchema` supplies `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` when the key is absent, so the parsed record and every generated aggregate still carry explicit values. `backing` and `governance` have no default and are always required.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer descriptive control-posture label, not a Safety Score input.
 - Every coin — including pre-launch — requires a `blacklistabilityReview` with sources or an explicit `sourceFreeRationale`. Its `reviewedStatus` is the canonical verdict and accepts `true`, `false`, `"possible"`, or `"inherited"`; `check:stablecoin-data` fails on any entry without one. Use `"inherited"` for tracked parent or wrapper exposure, full CEX custody, or reserve exposure that strictly exceeds 50% under the FreezeWatch policy rather than a direct holder-control surface. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch.
 - `mintAuthority` is curated metadata that feeds Safety Score V9 Economic Control facts and its published mint component. The separate Mint Authority scoring engine is retired. This metadata does not create selector exclusions. Require reviewed primary-source/control evidence, and do not use it as a workaround for blacklistability/freezability review. Active variants require an explicit `mintAuthority` review, normally `wrapped-or-variant-inherited` with `inheritedFrom` set to `variantOf`, so inherited mint risk cannot silently become an unresolved V9 gap.

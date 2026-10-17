@@ -853,8 +853,6 @@
         "eslint.config.mjs",
         "eslint.typed.config.mjs",
         "eslint-suppressions.json",
-        "playwright.config.ts",
-        "playwright.ops.config.ts",
         "postcss.config.mjs",
         "tsconfig*.json",
         "vitest.config.ts",
