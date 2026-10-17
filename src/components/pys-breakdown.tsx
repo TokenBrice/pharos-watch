@@ -491,13 +491,16 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
 
 export function PysBreakdown(props: PysBreakdownProps) {
   if (props.score === null) {
-    return (
+    const nullScore = (
       <NullPysScore
         mode={props.mode}
         toneClass={props.toneClass}
         pysNullReason={props.pysNullReason}
       />
     );
+    return props.mode === "inline"
+      ? <TooltipProvider delayDuration={220}>{nullScore}</TooltipProvider>
+      : nullScore;
   }
 
   if (props.mode === "popover") {

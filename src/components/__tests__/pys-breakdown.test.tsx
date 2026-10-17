@@ -120,6 +120,21 @@ describe("PysBreakdown", () => {
     },
   );
 
+  it("renders apyUSD's unrated inline score without an ancestor tooltip provider", () => {
+    render(<PysBreakdown {...baseProps({
+      score: null,
+      pysNullReason: "opportunity-evidence-missing",
+      apy30d: 15.013108123558393,
+      safetyScore: 17,
+    })} />);
+
+    const trigger = screen.getByLabelText(
+      "Pharos Yield Score unavailable: Critical market-risk evidence for this external opportunity is missing, so the score is not rated.",
+    );
+    expect(trigger.textContent).toBe("—");
+    expect(trigger.getAttribute("data-slot")).toBe("tooltip-trigger");
+  });
+
   it("renders bare em dash with no tooltip when score is null and no nullReason is provided", () => {
     const { container } = renderWithProvider(baseProps({ mode: "inline", score: null }));
 
