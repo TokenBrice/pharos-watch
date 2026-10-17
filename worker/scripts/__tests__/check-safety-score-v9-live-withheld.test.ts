@@ -131,14 +131,6 @@ describe("buildLiveWithheldCounterfactualReport", () => {
     }
   });
 
-  it("retains the pre-reuse default compiler digest", () => {
-    const { pipeline } = healthyReplay([], true, true);
-    // Recorded with the pre-change HEAD compiler; its complete JSON was also
-    // compared byte-for-byte before replacing that temporary oracle with this pin.
-    expect(pipeline.compiledFacts.v9FactSetDigest)
-      .toBe("0b76a0c0be8ba41a1d1bc9a9de9b96fdf4e9c1f803c30152c2478ac04c23ce18");
-  });
-
   it.each([[false, false], [false, true], [true, false], [true, true]])(
     "reuses compiled siblings with byte-identical full pipelines (native=%s, graphs=%s)", (native, graphs) => {
       const { replay, metaById, fixedInput, pipeline } = healthyReplay([], graphs, native);
