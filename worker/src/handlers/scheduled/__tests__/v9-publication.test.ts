@@ -82,7 +82,7 @@ describe("V9 publication scheduling", () => {
     } as unknown as ScheduledRuntimeContext["env"];
     mocks.computeSafetyScoreV9.mockResolvedValue({ status: "ok", metadata: JSON.stringify(metadata) });
     mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_options, run) =>
-      run(new AbortController().signal, { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 10_000 }));
+      run(new AbortController().signal, { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 25_000 }));
     return { scheduledRuntime };
   }
 
@@ -120,7 +120,7 @@ describe("V9 publication scheduling", () => {
         slotStartedAt: scheduledRuntime.slotStartedAt,
         workerVersion: "worker-v1",
         deadlineOffsetMs: 3 * 60_000,
-        minimumRemainingMs: 10_000,
+        minimumRemainingMs: 25_000,
         lane: "compute-safety-score-v9",
         currentSlotKey: "v9PublicationOffset",
       }),
@@ -136,7 +136,7 @@ describe("V9 publication scheduling", () => {
       workerMetadata: scheduledRuntime.env.CF_VERSION_METADATA,
       captureArchiveBucket: scheduledRuntime.env.SAFETY_CAPTURE_ARCHIVE,
       captureArchiveContext: scheduledRuntime.ctx,
-      executionWindow: { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 10_000 },
+      executionWindow: { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 25_000 },
     });
   });
 

@@ -230,6 +230,54 @@ describe("computeSafetyScoreV9", () => {
     });
   });
 
+  it("skips publication neutrally when intake leaves less than floor plus reserve", async () => {
+    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined, {
+      executionWindow: { slotStartedAtSec: Math.floor(Date.now() / 1_000),
+        deadlineMs: Date.now() + 20_000, minimumRemainingMs: 25_000 },
+    });
+    expect(result.status).toBe("skipped_neutral");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "v9-slot-window-too-short", stage: "publication-admission", minimumRemainingMs: 25_000,
+    });
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it("retains the real failing phase, timings and abort cause in compact cron metadata", async () => {
+    const caller = new AbortController();
+    mocks.runPublication.mockImplementationOnce(async () => {
+      caller.abort(new DOMException("slot expired", "TimeoutError"));
+      return {
+        status: "failed", attemptId: "attempt", stage: "compile",
+        code: "safety-score-v9-publication-compile-TimeoutError", message: "slot expired",
+        abortCause: { source: "caller", name: "TimeoutError", message: "slot expired" },
+        phaseElapsedMs: { enrichment: 10, baselineLoad: 20, compile: 165_000, assess: null,
+          serialize: null, persist: null, journal: null, archive: null },
+        phaseTimingBasis: "workers-io-boundary-attributed",
+        journal: { status: "skipped", reason: "publication-failed", rows: 0 },
+        captureArchive: { status: "skipped", reason: "publication-failed" },
+      };
+    });
+    const result = await computeSafetyScoreV9({} as D1Database, caller.signal);
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata).toMatchObject({
+      reason: "v9-publication-failed:safety-score-v9-publication-compile-TimeoutError",
+      publication: { status: "failed", stage: "compile",
+        abortCause: { source: "caller", name: "TimeoutError" },
+        phaseElapsedMs: { compile: 165_000, persist: null } },
+    });
+    const compacted = compactCronMetadataForPersistence(JSON.stringify({
+      ...metadata, padding: "x".repeat(70_000),
+    }));
+    expect(compacted.compacted).toBe(true);
+    expect(JSON.parse(compacted.metadata!)).toMatchObject({ diagnostics: {
+      publication: { stage: "compile" },
+      publicationAbortCause: { source: "caller", name: "TimeoutError" },
+      publicationPhaseElapsedMs: { compile: 165_000, persist: null },
+      publicationPhaseTimingBasis: "workers-io-boundary-attributed",
+    } });
+  });
+
   it("v10.01 second preparation keeps captured proof identity and rejects subsequent proof substitution", async () => {
     const failure = createRuntimeGapVerdict({
       assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",

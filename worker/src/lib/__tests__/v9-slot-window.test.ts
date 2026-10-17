@@ -18,6 +18,8 @@ vi.mock("../d1-overload-retry", () => ({
 import {
   runV9AfterCoreWithinWindow,
   V9_MEMORY_LANE_LEASE_KEY,
+  V9_EXECUTION_WINDOW_POLICY,
+  getV9ExecutionDeadlineMs,
   waitForV9MemoryLaneRelease,
   type V9ExecutionWindow,
 } from "../v9-slot-window";
@@ -128,6 +130,45 @@ describe("runV9AfterCoreWithinWindow", () => {
         heartbeatSec: 15,
       }),
     );
+  });
+
+  it("retains the :25 publication boundary and lease tail ahead of :28 DDR", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:22:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot({ state: "finished", result_status: "ok", worker_version: "worker-v2" });
+    const run = vi.fn(async (_signal: AbortSignal, _window: V9ExecutionWindow) => ({ status: "ok" as const }));
+    await runV9AfterCoreWithinWindow(options(fixture.db, scheduledTimeMs, V9_EXECUTION_WINDOW_POLICY.publication), run);
+    expect(V9_EXECUTION_WINDOW_POLICY.publication).toEqual({ deadlineOffsetMs: 180_000, minimumRemainingMs: 25_000 });
+    expect(V9_EXECUTION_WINDOW_POLICY.supplyAttribution.minimumRemainingMs).toBe(60_000);
+    expect(run.mock.calls[0]![1].deadlineMs).toBe(Date.parse("2026-07-26T12:25:00Z"));
+    const leaseOptions = leaseMocks.runCronWithLease.mock.calls[0]![3];
+    expect(leaseOptions).toMatchObject({ ttlSec: 210, heartbeatSec: 15 });
+    const finalHeartbeatMs = Date.parse("2026-07-26T12:23:45Z");
+    const ddrStartsAtMs = Date.parse("2026-07-26T12:28:00Z");
+    expect(finalHeartbeatMs + leaseOptions.ttlSec * 1_000).toBeLessThan(ddrStartsAtMs);
+    // A 240s window renews a 270s lease: this same abandoned owner would
+    // newly suppress the DDR attempt, which shares the lease and does not wait.
+    expect(finalHeartbeatMs + (leaseOptions.ttlSec + 60) * 1_000).toBeGreaterThan(ddrStartsAtMs);
+    expect(getV9ExecutionDeadlineMs(scheduledTimeMs, 240_000)).toBe(Date.parse("2026-07-26T12:26:00Z"));
+    expect(getV9ExecutionDeadlineMs(Date.parse("2026-07-26T12:29:00Z"), 240_000)).toBe(Date.parse("2026-07-26T12:30:00Z"));
+  });
+
+  it("skips a late publication neutrally when floor plus settlement reserve cannot fit", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:22:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 160_000);
+    const fixture = dbWithCoreSlot({ state: "finished", result_status: "ok", worker_version: "worker-v2" });
+    const run = vi.fn();
+    const result = await runV9AfterCoreWithinWindow(
+      options(fixture.db, scheduledTimeMs, V9_EXECUTION_WINDOW_POLICY.publication), run,
+    );
+    expect(result).toMatchObject({ status: "skipped_neutral" });
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "v9-slot-window-too-short", remainingMs: 20_000, minimumRemainingMs: 25_000,
+    });
+    expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
   });
 
   it("allows a compiler run longer than the former 60-second window", async () => {

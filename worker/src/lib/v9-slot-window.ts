@@ -53,7 +53,8 @@ const V9_MEMORY_LANE_POLL_MS = 1_000;
 const V9_MEMORY_LANE_TTL_MARGIN_SEC = 30;
 
 export const V9_EXECUTION_WINDOW_POLICY = {
-  publication: { deadlineOffsetMs: 3 * 60_000, minimumRemainingMs: 10_000 },
+  // 10s usable publisher floor plus its 15s persistence/settlement reserve.
+  publication: { deadlineOffsetMs: 3 * 60_000, minimumRemainingMs: 25_000 },
   supplyAttribution: { deadlineOffsetMs: 3 * 60_000, minimumRemainingMs: 60_000 },
 } as const;
 
@@ -329,8 +330,8 @@ export async function runV9AfterCoreWithinWindow(
       },
       {
         abortSignal: timeout.signal,
-        // Contention skips neutrally: waiting attribution can overlap the
-        // :22/:52 publication and exhaust its 120-second publication deadline.
+        // Contention skips neutrally: waiting attribution could occupy the
+        // publisher's inherited pre-quarter execution window.
         ttlSec:
           Math.ceil(effectiveWindowMs / 1_000) +
           V9_MEMORY_LANE_TTL_MARGIN_SEC,
