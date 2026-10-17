@@ -148,6 +148,7 @@ output/playwright/
 .superpowers/
 
 __pycache__/
+/test-results/
 
 # Bootstrap-owned compile/serve projections
 /public/llms.txt
