@@ -12,11 +12,14 @@ import type * as PublicationStore from "../safety-score-v9/publication-store";
 import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs } from "../safety-score-v9/publication-runner";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
   build: vi.fn(),
   loadBaseline: vi.fn(),
+  loadIdentity: vi.fn(),
+  loadHealth: vi.fn(),
   persist: vi.fn(),
   persistAttempt: vi.fn(),
   persistAlertEnvelope: vi.fn(),
@@ -36,19 +39,23 @@ vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => (
   >(),
   assessV9Publication: mocks.assess,
 }));
-vi.mock("../safety-score-v9/publication-store", async (importOriginal) => ({
-  ...await importOriginal<typeof PublicationStore>(),
-  persistSafetyScoreV9Publication: mocks.persist,
-  persistSafetyScoreV9PublicationAttempt: mocks.persistAttempt,
-}));
+vi.mock("../safety-score-v9/publication-store", async (importOriginal) => {
+  const original = await importOriginal<typeof PublicationStore>();
+  mocks.loadIdentity.mockImplementation(original.loadSafetyScoreV9PublicationIdentityEnvelope);
+  mocks.loadHealth.mockImplementation(original.loadSafetyScoreV9PublicationHealth);
+  return {
+    ...original,
+    persistSafetyScoreV9Publication: mocks.persist,
+    persistSafetyScoreV9PublicationAttempt: mocks.persistAttempt,
+    loadSafetyScoreV9PublicationIdentityEnvelope: mocks.loadIdentity,
+    loadSafetyScoreV9PublicationHealth: mocks.loadHealth,
+  };
+});
 vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal) => ({
   ...await importOriginal<typeof AcceptedProjectionReaders>(),
   loadSafetyScoreV9AcceptedBaselineState: mocks.loadBaseline,
 }));
 
-const { runSafetyScoreV9Publication } = await import(
-  "../safety-score-v9/publication-runner"
-);
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
 
 function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = false) {
@@ -181,6 +188,8 @@ describe("Safety Score V9 publication runner", () => {
       bridgeJoinDiagnostics: [],
     });
     mocks.loadBaseline.mockReset().mockResolvedValue({ kind: "bootstrap", health: null });
+    mocks.loadIdentity.mockClear();
+    mocks.loadHealth.mockClear();
     mocks.persist.mockReset().mockResolvedValue(null);
     mocks.persistAttempt.mockReset().mockResolvedValue(undefined);
     mocks.persistAlertEnvelope.mockReset().mockResolvedValue(undefined);
@@ -691,23 +700,255 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
-  it("returns an aborted failure without attempting a follow-up ledger write", async () => {
+  it("retains caller cancellation and persists the failed attempt with an independent signal", async () => {
     const controller = new AbortController();
     controller.abort(new DOMException("cancelled", "AbortError"));
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
+    try {
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, signal: controller.signal });
+      expect(result).toMatchObject({
+        status: "failed", stage: "base-input",
+        abortCause: { source: "caller", name: "AbortError", message: "cancelled" },
+      });
+      expect(mocks.persistAttempt.mock.calls[0]![1].signal.aborted).toBe(false);
+      expect(await store.loadSafetyScoreV9FailedPublicationAttempt(db)).toMatchObject({
+        outcome: "failed", failure: {
+          stage: "base-input", abortCause: { source: "caller", name: "AbortError" },
+          phaseElapsedMs: { compile: null },
+        },
+      });
+    } finally { sqlite.close(); }
+  });
 
+  it("does not mislabel a string caller cancellation as a publication timeout", async () => {
     const result = await runSafetyScoreV9Publication({
-      db: {} as D1Database,
-      fixedInput,
-      signal: controller.signal,
-      prepareFixedInput: async (_input, signal) => {
-        throw signal.reason;
-      },
+      db: {} as D1Database, fixedInput, signal: AbortSignal.abort("caller cancelled"),
     });
-
     expect(result).toMatchObject({
-      status: "failed",
-      stage: "aborted",
+      status: "failed", stage: "base-input",
+      abortCause: { source: "caller", name: "AbortError", message: "caller cancelled" },
     });
-    expect(mocks.persistAttempt).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [undefined, 120_000],
+    [240_000, 225_000],
+    [180_000, 165_000],
+    [25_000, 10_000],
+    [24_999, 0],
+    [0, 0],
+    [-1, 0],
+  ])("derives the usable budget from remaining %s ms without extending the floor", (remaining, expected) => {
+    expect(getSafetyScoreV9PublicationBudgetMs(1_000, remaining === undefined ? undefined : 1_000 + remaining)).toBe(expected);
+  });
+
+  it("refuses a slot below the usable floor before enrichment or compilation", async () => {
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database, fixedInput, publicationDeadlineMs: Date.now() + 24_000,
+    });
+    expect(result).toMatchObject({
+      status: "failed", stage: "base-input", abortCause: { source: "publication-deadline" },
+      message: "Insufficient publication window after settlement reserve",
+    });
+    expect(mocks.build).not.toHaveBeenCalled();
+    expect(mocks.persistAttempt).toHaveBeenCalledOnce();
+  });
+
+  it("uses more than 120 seconds when the inherited window authorizes it and records every phase", async () => {
+    const clock = vi.spyOn(Date, "now");
+    const start = Date.now();
+    clock.mockReturnValue(start);
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    try {
+      mocks.build.mockImplementationOnce(() => {
+        clock.mockReturnValue(start + 125_000);
+        return { candidate: makeWorkerSafetyScoreV9Publication({
+          baseInputGenerationId: fixedInput.baseInputGenerationId, publishedAtSec: fixedInput.clockSec,
+        }), quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [] };
+      });
+      const result = await runSafetyScoreV9Publication({
+        db: {} as D1Database, fixedInput, publicationDeadlineMs: start + 240_000,
+      });
+      expect(timeout).toHaveBeenNthCalledWith(1, 225_000);
+      expect(result).toMatchObject({ status: "published", phaseElapsedMs: {
+        enrichment: 0, baselineLoad: 0, compile: 125_000, assess: 0,
+        serialize: 0, persist: 0, journal: 0, archive: 0,
+      }, abortCause: null, phaseTimingBasis: "workers-io-boundary-attributed" });
+    } finally { clock.mockRestore(); timeout.mockRestore(); }
+  });
+
+  it("keeps compile as the failing phase when synchronous work overruns the deadline", async () => {
+    const clock = vi.spyOn(Date, "now");
+    const start = Date.now();
+    clock.mockReturnValue(start);
+    const pipeline = mocks.build.getMockImplementation()!();
+    mocks.build.mockImplementationOnce(() => {
+      clock.mockReturnValue(start + 166_000);
+      return pipeline;
+    });
+    try {
+      const result = await runSafetyScoreV9Publication({
+        db: {} as D1Database, fixedInput, publicationDeadlineMs: start + 180_000,
+      });
+      expect(result).toMatchObject({ status: "failed", stage: "compile",
+        code: "safety-score-v9-publication-compile-TimeoutError",
+        phaseElapsedMs: { compile: 166_000, assess: null },
+        abortCause: { source: "publication-deadline", name: "TimeoutError" },
+      });
+      expect(mocks.persistAttempt).toHaveBeenCalledOnce();
+      expect(mocks.persist).not.toHaveBeenCalled();
+    } finally { clock.mockRestore(); }
+  });
+
+  it("preserves the enrichment phase when the actual timeout signal aborts", async () => {
+    const timeout = new AbortController();
+    const timer = vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(timeout.signal);
+    try {
+      const result = await runSafetyScoreV9Publication({
+        db: {} as D1Database, fixedInput,
+        prepareFixedInput: async () => {
+          timeout.abort(new DOMException("deadline", "TimeoutError"));
+          throw timeout.signal.reason;
+        },
+      });
+      expect(result).toMatchObject({ status: "failed", stage: "v9-enrichment",
+        phaseElapsedMs: { enrichment: expect.any(Number), baselineLoad: null },
+        abortCause: { source: "publication-deadline", name: "TimeoutError", message: "deadline" },
+      });
+      expect(mocks.persistAttempt.mock.calls[0]![1].signal.aborted).toBe(false);
+    } finally { timer.mockRestore(); }
+  });
+
+  it("reports published with a warning when cancellation follows the canonical batch commit", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const caller = new AbortController();
+    const batch = db.batch.bind(db);
+    const batchSpy = vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      const result = await batch(statements);
+      caller.abort(new DOMException("cancelled after commit", "AbortError"));
+      return result;
+    });
+    mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+    try {
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, signal: caller.signal });
+      expect(result).toMatchObject({ status: "published",
+        publicationGenerationId: mocks.build.mock.results[0]!.value.candidate.publicationGenerationId,
+        warnings: ["publication-committed-before-post-commit-failure"],
+        abortCause: { source: "caller" }, phaseElapsedMs: { persist: expect.any(Number) },
+      });
+      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
+      expect(mocks.persistAttempt).not.toHaveBeenCalled();
+    } finally { batchSpy.mockRestore(); sqlite.close(); }
+  });
+
+  it("keeps an accepted publication published when archive cancellation is non-fatal", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const caller = new AbortController();
+    mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+    const put = vi.fn(async () => {
+      caller.abort(new DOMException("archive cancelled", "AbortError"));
+      return { key: "stored" };
+    });
+    try {
+      const result = await runSafetyScoreV9Publication({
+        db, fixedInput, fixedInputCacheValue: "exact-base", signal: caller.signal,
+        captureArchiveBucket: { put } as unknown as R2Bucket,
+      });
+      expect(result).toMatchObject({
+        status: "published", warnings: ["publication-committed-before-abort"],
+        postCommitFailure: { stage: "archive", message: "archive cancelled" },
+        abortCause: { source: "caller", name: "AbortError" },
+        phaseElapsedMs: { journal: expect.any(Number), archive: expect.any(Number) },
+      });
+      expect(mocks.persistAttempt).not.toHaveBeenCalled();
+    } finally { sqlite.close(); }
+  });
+
+  it("recovers an exact committed identity after a non-abort lost batch response", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const batch = db.batch.bind(db);
+    const batchSpy = vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      await batch(statements);
+      throw new Error("D1 response lost after commit");
+    });
+    mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+    try {
+      const result = await runSafetyScoreV9Publication({ db, fixedInput });
+      expect(result).toMatchObject({
+        status: "published", abortCause: null,
+        warnings: ["publication-committed-before-post-commit-failure"],
+        postCommitFailure: { stage: "publication-write", message: "D1 response lost after commit" },
+        phaseTimingBasis: "workers-io-boundary-attributed",
+      });
+      const recoverySignal = mocks.loadIdentity.mock.calls[0]![1];
+      expect(recoverySignal).toBeInstanceOf(AbortSignal);
+      expect(recoverySignal!.aborted).toBe(false);
+      expect(mocks.loadHealth.mock.calls[0]![1]).toBe(recoverySignal);
+      expect(mocks.persistAttempt).not.toHaveBeenCalled();
+    } finally {
+      batchSpy.mockRestore(); sqlite.close();
+    }
+  });
+
+  it("honors the independent signal before and after the compact identity read", async () => {
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const controller = new AbortController();
+    const first = vi.fn(async () => {
+      controller.abort(new DOMException("recovery budget expired", "TimeoutError"));
+      return null;
+    });
+    const prepare = vi.fn(() => ({ bind: () => ({ first }) }));
+    const db = { prepare } as unknown as D1Database;
+    await expect(store.loadSafetyScoreV9PublicationIdentityEnvelope(db, controller.signal))
+      .rejects.toThrow("recovery budget expired");
+    first.mockClear(); prepare.mockClear();
+    await expect(store.loadSafetyScoreV9PublicationIdentityEnvelope(db, controller.signal))
+      .rejects.toThrow("recovery budget expired");
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("retains acknowledged held state when cancellation interrupts the later journal", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const caller = new AbortController();
+    mocks.assess.mockReturnValue({ decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: [] });
+    mocks.persist.mockImplementationOnce(async (database, input) => {
+      const result = await store.persistSafetyScoreV9Publication(database, input);
+      caller.abort(new DOMException("journal cancelled", "AbortError"));
+      return result;
+    });
+    try {
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, signal: caller.signal });
+      expect(result).toMatchObject({
+        status: "held", warnings: ["held-state-committed-before-journal-failure"],
+        abortCause: { source: "caller" },
+        journal: { status: "skipped", reason: "post-commit-interrupted" },
+      });
+      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("held");
+      expect(mocks.persistAttempt).not.toHaveBeenCalled();
+    } finally { sqlite.close(); }
+  });
+
+  it("does not treat an older accepted identity as a successful aborted write", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const caller = new AbortController();
+    try {
+      await store.persistSafetyScoreV9Publication(db, currentInput(makeWorkerSafetyScoreV9Publication({
+        publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior",
+      })));
+      mocks.persist.mockImplementationOnce(async () => {
+        caller.abort(new DOMException("cancelled before commit", "AbortError"));
+        throw caller.signal.reason;
+      });
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, signal: caller.signal });
+      expect(result).toMatchObject({ status: "failed", stage: "publication-write", abortCause: { source: "caller" } });
+      expect(mocks.persistAttempt).toHaveBeenCalledOnce();
+    } finally { sqlite.close(); }
   });
 });

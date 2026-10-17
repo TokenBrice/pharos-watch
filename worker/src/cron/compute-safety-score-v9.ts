@@ -357,6 +357,23 @@ export async function computeSafetyScoreV9(
     }
   }
 
+  if (options.executionWindow !== undefined) {
+    // Intake consumes the same absolute window; recheck before publisher
+    // admission so a slow input load remains a neutral not-started attempt.
+    const remainingMs = options.executionWindow.deadlineMs - Date.now();
+    if (remainingMs < options.executionWindow.minimumRemainingMs) {
+      return createCronResult({
+        status: "skipped_neutral", itemCount: 0,
+        metadata: {
+          stage: "publication-admission", reason: "v9-slot-window-too-short",
+          remainingMs: Math.max(0, remainingMs),
+          minimumRemainingMs: options.executionWindow.minimumRemainingMs,
+        },
+        productivity: { productive: false, reason: "v9-slot-window-too-short" },
+      });
+    }
+  }
+
   let supplyAttributionGenerationState:
     Record<string, unknown> = { status: "not-due" };
   const publication = await runSafetyScoreV9Publication({
@@ -467,9 +484,8 @@ export async function computeSafetyScoreV9(
     },
     signal,
   });
-  // Caller cancellation during best-effort post-commit archiving cannot erase
-  // the already accepted publication or its captureArchive outcome metadata.
-  if (publication.status !== "published") throwIfAborted(signal);
+  // Preserve the runner's terminal phase/abort evidence, including an identity-
+  // confirmed commit. Do not replace it with an unstructured caller exception.
   if (!signal?.aborted) await reportProgress?.({
     stage: "publication-settled",
     message: `V9 publication ${publication.status}`,
@@ -534,6 +550,12 @@ export async function computeSafetyScoreV9(
       supplyAttributionGeneration: supplyAttributionGenerationState,
       resourcePressure: resourceAdmission.resourcePressure,
       publication: publicationDiagnostics,
+      // Top-level scalar maps survive the bounded >64 KiB compactor, which
+      // deliberately does not retain objects nested inside publication.
+      publicationPhaseElapsedMs: publication.phaseElapsedMs,
+      publicationPhaseTimingBasis: publication.phaseTimingBasis,
+      publicationAbortCause: publication.abortCause,
+      ...(publication.status !== "failed" ? { publicationPostCommitFailure: publication.postCommitFailure } : {}),
       journal: publication.journal,
       captureArchive: publication.captureArchive,
     }),

@@ -1,4 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_MINIMUM_RATEABLE_ASSETS } from "@shared/types/safety-score-v9-coverage";
 import type {
@@ -6,6 +7,7 @@ import type {
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import {
   normalizeSafetyScoreV9CompilerInput,
   withNormalizedV9JournalProjections,
@@ -24,6 +26,10 @@ import {
 import {
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
+  loadSafetyScoreV9PublicationIdentityEnvelope,
+  loadSafetyScoreV9PublicationHealth,
+  type V9PublicationPhaseElapsedMs,
+  type V9PublicationAbortCause,
   type V9PublicationAttempt,
 } from "./publication-store";
 import type { V9AssetQuarantine } from "./fact-set";
@@ -38,17 +44,19 @@ import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./
 import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from "./capture-archive";
 import { buildSafetyScoreV9AcceptedProjections } from "./accepted-projections";
 
+// Only non-scheduled callers use this bounded fallback.
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
+// Initial headroom for up to two 5s independent operations (commit check and
+// failed-attempt write) plus 5s cron settlement, not a measured persistence p99.
+export const SAFETY_SCORE_V9_PUBLICATION_SETTLEMENT_RESERVE_MS = 15_000;
+export const SAFETY_SCORE_V9_PUBLICATION_MINIMUM_BUDGET_MS = 10_000;
+const SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS = 5_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
   "safety-score-v9-publication";
 
-type SafetyScoreV9PublicationFailureStage =
-  | "base-input"
-  | "v9-enrichment"
-  | "compile"
-  | "publication-gate"
-  | "publication-write"
-  | "aborted";
+type SafetyScoreV9PublicationFailureStage = Exclude<
+  NonNullable<V9PublicationAttempt["failure"]>["stage"], "aborted"
+>;
 
 export interface RunSafetyScoreV9PublicationInput {
   db: D1Database;
@@ -80,7 +88,7 @@ export interface RunSafetyScoreV9PublicationInput {
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
 }
 
-export type SafetyScoreV9PublicationRunResult =
+export type SafetyScoreV9PublicationRunResult = (
   | {
       status: "published";
       attemptId: string;
@@ -92,6 +100,8 @@ export type SafetyScoreV9PublicationRunResult =
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
       journal: SafetyScoreJournalResult;
       captureArchive: SafetyScoreCaptureArchiveResult;
+      warnings: string[];
+      postCommitFailure: { stage: SafetyScoreV9PublicationFailureStage; code: string; message: string } | null;
     }
   | {
       status: "held";
@@ -109,6 +119,8 @@ export type SafetyScoreV9PublicationRunResult =
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
       journal: SafetyScoreJournalResult;
       captureArchive: SafetyScoreCaptureArchiveResult;
+      warnings: string[];
+      postCommitFailure: { stage: SafetyScoreV9PublicationFailureStage; code: string; message: string } | null;
     }
   | {
       status: "failed";
@@ -118,6 +130,10 @@ export type SafetyScoreV9PublicationRunResult =
       message: string;
       journal: SafetyScoreJournalResult;
       captureArchive: SafetyScoreCaptureArchiveResult;
+    }) & {
+      phaseElapsedMs: V9PublicationPhaseElapsedMs;
+      phaseTimingBasis: "workers-io-boundary-attributed";
+      abortCause: V9PublicationAbortCause | null;
     };
 
 function sameBaseInput(
@@ -199,11 +215,30 @@ function safeFailure(
   };
 }
 
-function combinedPublicationSignal(signal?: AbortSignal): AbortSignal {
-  const timeout = AbortSignal.timeout(
-    SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS,
-  );
-  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+export function getSafetyScoreV9PublicationBudgetMs(
+  nowMs: number,
+  inheritedDeadlineMs?: number,
+): number {
+  // The fallback bounds non-scheduled callers; it is not a scheduled ceiling.
+  const availableMs = inheritedDeadlineMs === undefined
+    ? SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS
+    : inheritedDeadlineMs - nowMs - SAFETY_SCORE_V9_PUBLICATION_SETTLEMENT_RESERVE_MS;
+  // Refuse late admission instead of extending a caller's absolute deadline.
+  return availableMs >= SAFETY_SCORE_V9_PUBLICATION_MINIMUM_BUDGET_MS
+    ? Math.floor(availableMs) : 0;
+}
+
+async function withIndependentPublicationBudget<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const signal = AbortSignal.timeout(SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    operation(signal).then(resolve, reject).finally(() => {
+      signal.removeEventListener("abort", onAbort);
+    });
+  });
 }
 
 function heldPublicationHealth(args: {
@@ -269,11 +304,9 @@ async function persistFailedPublicationAttempt(args: {
   db: D1Database;
   attemptedAtSec: number;
   failure: NonNullable<V9PublicationAttempt["failure"]>;
-  signal: AbortSignal;
 }): Promise<void> {
-  if (args.signal.aborted) return;
   try {
-    await persistSafetyScoreV9PublicationAttempt(args.db, {
+    await withIndependentPublicationBudget((signal) => persistSafetyScoreV9PublicationAttempt(args.db, {
       publicationAttempt: publicationAttempt({
         attemptedAtSec: args.attemptedAtSec,
         outcome: "failed",
@@ -283,8 +316,8 @@ async function persistFailedPublicationAttempt(args: {
         failure: args.failure,
       }),
       publicationClockSec: args.attemptedAtSec,
-      signal: args.signal,
-    });
+      signal,
+    }));
   } catch (error) {
     logWorkerEvent({
       scope: "lib",
@@ -406,13 +439,55 @@ export async function runSafetyScoreV9Publication(
   let stage: SafetyScoreV9PublicationFailureStage = "base-input";
   let attemptedAtSec = fallbackNowSec();
   let attemptId = `${SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX}:${attemptedAtSec}`;
-  const publicationDeadlineMs = Math.min(
-    Date.now() + SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS,
-    input.publicationDeadlineMs ?? Number.POSITIVE_INFINITY,
-  );
-  const publicationSignal = combinedPublicationSignal(input.signal);
+  const startedAtMs = Date.now();
+  const budgetMs = getSafetyScoreV9PublicationBudgetMs(startedAtMs, input.publicationDeadlineMs);
+  const publicationDeadlineMs = startedAtMs + budgetMs;
+  const timeoutSignal = AbortSignal.timeout(budgetMs);
+  const publicationSignal = input.signal ? AbortSignal.any([input.signal, timeoutSignal]) : timeoutSignal;
+  // Production Workers clocks advance at I/O boundaries, not during pure CPU
+  // work. These deltas are attribution hints, not CPU-phase measurements.
+  const phaseElapsedMs: V9PublicationPhaseElapsedMs = {
+    enrichment: null, baselineLoad: null, compile: null, assess: null,
+    serialize: null, persist: null, journal: null, archive: null,
+  };
+  let activePhase: keyof V9PublicationPhaseElapsedMs | null = null;
+  let phaseStartedAtMs = startedAtMs;
+  let committed = false;
+  let pendingPublished: Extract<SafetyScoreV9PublicationRunResult, { status: "published" }> | null = null;
+  let pendingIdentity: SafetyScoreV9PublicationIdentity | null = null;
+  let pendingClockSec: number | null = null;
+  const finishPhase = () => {
+    if (activePhase !== null) {
+      phaseElapsedMs[activePhase] = Math.max(0, Date.now() - phaseStartedAtMs);
+      activePhase = null;
+    }
+  };
+  const abortCause = (): V9PublicationAbortCause | null => {
+    const source = publicationSignal.aborted
+      ? input.signal?.aborted && publicationSignal.reason === input.signal.reason ? "caller" : "publication-deadline"
+      : Date.now() >= publicationDeadlineMs ? "publication-deadline" : null;
+    if (source === null) return null;
+    const reason: unknown = source === "caller" ? input.signal?.reason : timeoutSignal.reason;
+    return {
+      source,
+      name: (reason instanceof Error ? reason.name : source === "caller" ? "AbortError" : "TimeoutError").slice(0, 80),
+      message: (reason === undefined ? "Publication deadline exhausted" : toErrorMessage(reason)).slice(0, 500),
+    };
+  };
+  const beginPhase = (nextStage: SafetyScoreV9PublicationFailureStage, phase: keyof V9PublicationPhaseElapsedMs) => {
+    finishPhase();
+    // Check while the previous stage is still active: a synchronous compile
+    // overrun must remain a compile failure, not be attributed to assessment.
+    if (publicationSignal.aborted) throw publicationSignal.reason;
+    if (Date.now() >= publicationDeadlineMs) throw new DOMException("Publication deadline exhausted", "TimeoutError");
+    stage = nextStage;
+    activePhase = phase;
+    phaseStartedAtMs = Date.now();
+  };
 
   try {
+    if (publicationSignal.aborted) throw publicationSignal.reason;
+    if (budgetMs === 0) throw new DOMException("Insufficient publication window after settlement reserve", "TimeoutError");
     if (
       input.nowSec !== undefined &&
       (!Number.isInteger(input.nowSec) || input.nowSec < 0)
@@ -427,7 +502,7 @@ export async function runSafetyScoreV9Publication(
     attemptedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     attemptId = `${SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX}:${attemptedAtSec}`;
 
-    stage = "v9-enrichment";
+    beginPhase("v9-enrichment", "enrichment");
     if (input.prepareFixedInput) {
       const prepared = await input.prepareFixedInput(fixedInput, publicationSignal);
       const preparedFixedInput = input.preparedFixedInputAlreadyNormalized
@@ -443,7 +518,7 @@ export async function runSafetyScoreV9Publication(
       fixedInput = preparedFixedInput;
     }
 
-    stage = "publication-gate";
+    beginPhase("publication-gate", "baselineLoad");
     const acceptedState = await loadSafetyScoreV9AcceptedBaselineState(input.db, publicationSignal);
     if (acceptedState.kind === "unavailable") {
       throw new SafetyScoreV9AcceptedBaselineProjectionError(acceptedState.reason);
@@ -451,7 +526,7 @@ export async function runSafetyScoreV9Publication(
     const acceptedPublication = acceptedState.kind === "accepted" ? acceptedState.projection.baseline : null;
     const previousHealth = acceptedState.health;
 
-    stage = "compile";
+    beginPhase("compile", "compile");
     const pipeline = buildSafetyScoreV9PublicationFromNormalizedInput({
       fixedInput,
       publishedAtSec: fixedInput.clockSec,
@@ -464,7 +539,7 @@ export async function runSafetyScoreV9Publication(
       publication.completeness.ratedCount,
     );
 
-    stage = "publication-gate";
+    beginPhase("assess", "assess");
     let assessment;
     try {
       logPublicationGenerationDeltas(publication, acceptedPublication);
@@ -497,6 +572,7 @@ export async function runSafetyScoreV9Publication(
     }
 
     if (assessment.decision === "hold") {
+      beginPhase("publication-write", "persist");
       await persistSafetyScoreV9Publication(input.db, {
         publicationHealth: heldPublicationHealth({
           attemptedAtSec: fixedInput.clockSec,
@@ -514,15 +590,39 @@ export async function runSafetyScoreV9Publication(
         publicationClockSec: fixedInput.clockSec,
         signal: publicationSignal,
       });
-      const journal = await journalSafetyScorePublication({
-        db: input.db, publication, fixedInput, attemptId, attemptedAtSec,
-        outcome: "held", holdReasons: assessment.reasons,
-        transferMaterialityGenerationId: input.transferMaterialityGeneration?.generationId ?? null,
-        signal: publicationSignal,
-      });
+      let journal: SafetyScoreJournalResult = { status: "skipped", reason: "post-commit-interrupted", rows: 0 };
+      let postCommitFailure: { stage: SafetyScoreV9PublicationFailureStage; code: string; message: string } | null = null;
+      try {
+        beginPhase("journal", "journal");
+        journal = await journalSafetyScorePublication({
+          db: input.db, publication, fixedInput, attemptId, attemptedAtSec,
+          outcome: "held", holdReasons: assessment.reasons,
+          transferMaterialityGenerationId: input.transferMaterialityGeneration?.generationId ?? null,
+          signal: publicationSignal,
+        });
+      } catch (error) {
+        postCommitFailure = { stage, ...safeFailure(error, stage) };
+      }
+      finishPhase();
+      const cause = abortCause();
+      if (postCommitFailure === null && cause !== null) {
+        postCommitFailure = { stage, ...safeFailure(publicationSignal.reason, stage) };
+      }
+      if (postCommitFailure !== null) {
+        logWorkerEvent({
+          scope: "lib", level: "warn", event: "safety_score_v9_held_journal_interrupted",
+          job: "compute-safety-score-v9", message: "Held publication state retained after journal interruption",
+          metadata: { abortCause: cause, ...postCommitFailure },
+        });
+      }
       return {
         status: "held",
         attemptId,
+        phaseElapsedMs,
+        phaseTimingBasis: "workers-io-boundary-attributed",
+        abortCause: cause,
+        warnings: postCommitFailure === null ? [] : ["held-state-committed-before-journal-failure"],
+        postCommitFailure,
         journal,
         captureArchive: { status: "skipped", reason: "publication-held" },
         attemptedPublicationGenerationId:
@@ -543,7 +643,7 @@ export async function runSafetyScoreV9Publication(
         "Accepted Safety Score v9 input does not match the publication base generation",
       );
     }
-    stage = "publication-write";
+    beginPhase("serialize", "serialize");
     const partial = assessment.affectedAssetIds.length > 0;
     let replayCaptureValue: string | undefined;
     if (input.fixedInputCacheValue !== undefined) {
@@ -563,6 +663,22 @@ export async function runSafetyScoreV9Publication(
         });
       }
     }
+    beginPhase("publication-write", "persist");
+    pendingIdentity = buildSafetyScoreV9PublicationIdentity(publication);
+    pendingClockSec = fixedInput.clockSec;
+    pendingPublished = {
+      status: "published", attemptId,
+      publicationGenerationId: publication.publicationGenerationId,
+      candidateId: publication.candidateId,
+      outcome: partial ? "partial" : "clean",
+      quarantines: pipeline.quarantines,
+      affectedAssetIds: assessment.affectedAssetIds,
+      bridgeJoinDiagnostics: pipeline.bridgeJoinDiagnostics ?? [],
+      journal: { status: "skipped", reason: "post-commit-interrupted", rows: 0 },
+      captureArchive: { status: "skipped", reason: "post-commit-interrupted" },
+      warnings: [], postCommitFailure: null, phaseElapsedMs, abortCause: null,
+      phaseTimingBasis: "workers-io-boundary-attributed",
+    };
     const acceptedCacheRows = await persistSafetyScoreV9Publication(input.db, {
       publication,
       buildAcceptedProjections: buildSafetyScoreV9AcceptedProjections,
@@ -591,6 +707,9 @@ export async function runSafetyScoreV9Publication(
       publicationClockSec: fixedInput.clockSec,
       signal: publicationSignal,
     });
+    committed = true;
+    finishPhase();
+    stage = "alert-envelope";
     try {
       // Thin alert-lane projection of the publication just accepted. The
       // response is already in memory here, so this is the one place the
@@ -616,46 +735,89 @@ export async function runSafetyScoreV9Publication(
         metadata: { error: String(error).slice(0, 200) },
       });
     }
+    beginPhase("journal", "journal");
     const journal = await journalSafetyScorePublication({
       db: input.db, publication, fixedInput, attemptId, attemptedAtSec,
       outcome: "accepted",
       transferMaterialityGenerationId: input.transferMaterialityGeneration?.generationId ?? null,
       signal: publicationSignal,
     });
+    pendingPublished.journal = journal;
+    beginPhase("archive", "archive");
     const captureArchive = await archiveSafetyScoreCapture({
       db: input.db, bucket: input.captureArchiveBucket, publication,
       cacheRows: acceptedCacheRows, signal: publicationSignal,
       deadlineMs: publicationDeadlineMs, ctx: input.captureArchiveContext,
     });
-    return {
-      status: "published",
-      attemptId,
-      journal,
-      captureArchive,
-      publicationGenerationId: publication.publicationGenerationId,
-      candidateId: publication.candidateId,
-      outcome: partial ? "partial" : "clean",
-      quarantines: pipeline.quarantines,
-      affectedAssetIds: assessment.affectedAssetIds,
-      bridgeJoinDiagnostics: pipeline.bridgeJoinDiagnostics ?? [],
-    };
+    finishPhase();
+    pendingPublished.captureArchive = captureArchive;
+    pendingPublished.abortCause = abortCause();
+    if (pendingPublished.abortCause !== null) {
+      pendingPublished.warnings.push("publication-committed-before-abort");
+      pendingPublished.postCommitFailure = {
+        stage, ...safeFailure(publicationSignal.reason ?? new DOMException("Publication deadline exhausted", "TimeoutError"), stage),
+      };
+      logWorkerEvent({
+        scope: "lib", level: "warn", event: "safety_score_v9_post_commit_interrupted",
+        job: "compute-safety-score-v9", message: "Canonical publication committed before cancellation",
+        metadata: { publicationGenerationId: publication.publicationGenerationId, stage, abortCause: pendingPublished.abortCause },
+      });
+    }
+    return pendingPublished;
   } catch (error) {
-    const failureStage: SafetyScoreV9PublicationFailureStage =
-      publicationSignal.aborted ? "aborted" : stage;
-    const failure = safeFailure(error, failureStage);
+    finishPhase();
+    const cause = abortCause();
+    // D1 can commit before a failed acknowledgment (including a non-abort
+    // transport error). Confirm the exact identity and current health using a
+    // fresh bounded signal; an exception alone establishes neither outcome.
+    if (!committed && pendingPublished !== null) {
+      try {
+        const [identity, health] = await withIndependentPublicationBudget((signal) => Promise.all([
+          loadSafetyScoreV9PublicationIdentityEnvelope(input.db, signal),
+          loadSafetyScoreV9PublicationHealth(input.db, signal),
+        ]));
+        committed = identity !== null && pendingIdentity !== null &&
+          safetyScorePublicationIdentitiesMatch(identity, pendingIdentity) &&
+          health?.status === "current" && health.acceptedAtSec === pendingClockSec &&
+          health.acceptedPublicationGenerationId === pendingPublished.publicationGenerationId;
+      } catch (recoveryError) {
+        logWorkerEvent({
+          scope: "lib", level: "warn", event: "safety_score_v9_commit_check_failed",
+          message: "Could not establish accepted publication identity after persistence failure",
+          metadata: { error: toErrorMessage(recoveryError).slice(0, 200) },
+        });
+      }
+    }
+    if (committed && pendingPublished !== null) {
+      pendingPublished.abortCause = cause;
+      pendingPublished.warnings.push("publication-committed-before-post-commit-failure");
+      pendingPublished.postCommitFailure = { stage, ...safeFailure(error, stage) };
+      logWorkerEvent({
+        scope: "lib", level: "warn", event: "safety_score_v9_post_commit_interrupted",
+        job: "compute-safety-score-v9", message: "Canonical publication retained after post-commit failure",
+        metadata: { publicationGenerationId: pendingPublished.publicationGenerationId, stage, abortCause: cause, error: toErrorMessage(error).slice(0, 200) },
+      });
+      return pendingPublished;
+    }
+    const failure = safeFailure(error, stage);
     await persistFailedPublicationAttempt({
       db: input.db,
       attemptedAtSec,
       failure: {
-        stage: failureStage,
+        stage,
+        phaseElapsedMs,
+        phaseTimingBasis: "workers-io-boundary-attributed",
+        abortCause: cause,
         ...failure,
       },
-      signal: publicationSignal,
     });
     return {
       status: "failed",
       attemptId,
-      stage: failureStage,
+      stage,
+      phaseElapsedMs,
+      phaseTimingBasis: "workers-io-boundary-attributed",
+      abortCause: cause,
       journal: { status: "skipped", reason: "publication-failed", rows: 0 },
       captureArchive: { status: "skipped", reason: "publication-failed" },
       ...failure,

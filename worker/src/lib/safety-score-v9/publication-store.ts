@@ -57,6 +57,24 @@ const V9StoredAssetQuarantineSchema = z
     message: V9QuarantineMessageSchema.optional(),
   })
   .strict();
+const V9PublicationPhaseElapsedMsSchema = z.object({
+  enrichment: z.number().nonnegative().nullable(),
+  baselineLoad: z.number().nonnegative().nullable(),
+  compile: z.number().nonnegative().nullable(),
+  assess: z.number().nonnegative().nullable(),
+  serialize: z.number().nonnegative().nullable(),
+  persist: z.number().nonnegative().nullable(),
+  journal: z.number().nonnegative().nullable(),
+  archive: z.number().nonnegative().nullable(),
+}).strict();
+export type V9PublicationPhaseElapsedMs = z.infer<typeof V9PublicationPhaseElapsedMsSchema>;
+const V9PublicationAbortCauseSchema = z.object({
+  source: z.enum(["caller", "publication-deadline"]),
+  name: z.string().min(1).max(80),
+  message: z.string().max(500),
+}).strict();
+export type V9PublicationAbortCause = z.infer<typeof V9PublicationAbortCauseSchema>;
+
 const V9PublicationAttemptFailureSchema = z
   .object({
     stage: z.enum([
@@ -65,10 +83,18 @@ const V9PublicationAttemptFailureSchema = z
       "compile",
       "publication-gate",
       "publication-write",
+      "assess",
+      "serialize",
+      "journal",
+      "archive",
+      "alert-envelope",
       "aborted",
     ]),
     code: z.string().min(1).max(160),
     message: z.string().min(1).max(500),
+    phaseElapsedMs: V9PublicationPhaseElapsedMsSchema.optional(),
+    phaseTimingBasis: z.literal("workers-io-boundary-attributed").optional(),
+    abortCause: V9PublicationAbortCauseSchema.nullable().optional(),
   })
   .strict();
 
@@ -291,11 +317,14 @@ export async function loadSafetyScoreV9Publication(
  */
 export async function loadSafetyScoreV9PublicationIdentityEnvelope(
   db: D1Database,
+  signal?: AbortSignal,
 ): Promise<SafetyScoreV9PublicationIdentity | null> {
+  throwIfAborted(signal);
   const row = await db
     .prepare("SELECT json_extract(value, '$.identity') AS publication_identity FROM cache WHERE key = ?")
     .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication)
     .first<{ publication_identity: string | null }>();
+  throwIfAborted(signal);
   if (!row?.publication_identity) return null;
   try {
     return publicationIdentityFromStorageEnvelope(JSON.parse(row.publication_identity));
