@@ -119,6 +119,10 @@ function inspectBranchState(
       );
     }
     if (options.stage === "prepare-branch") {
+      requireSuccess(
+        run("git", ["update-ref", "-d", `refs/remotes/origin/${branch}`]),
+        "Missing mechanism refresh tracking ref cleanup",
+      );
       requireSuccess(run("git", ["checkout", "-B", branch, "origin/main"]), "Mechanism refresh branch checkout");
     }
     return;
@@ -140,6 +144,12 @@ function inspectBranchState(
     }
     return;
   }
+  if (closedUnmergedCount !== 0) {
+    throw githubError(
+      "Closed unmerged mechanism refresh",
+      `${branch} has closed-unmerged PR history; refusing to recreate it.`,
+    );
+  }
 
   requireSuccess(
     run("git", ["fetch", "origin", `${branch}:refs/remotes/origin/${branch}`]),
@@ -147,6 +157,36 @@ function inspectBranchState(
   );
   const ancestor = run("git", ["merge-base", "--is-ancestor", `origin/${branch}`, "origin/main"]);
   if (ancestor.status !== 0) {
+    const mergedText = requireSuccess(
+      run("gh", [
+        "pr", "list", "--repo", repository, "--state", "merged", "--base", "main", "--head", branch,
+        "--limit", "100", "--json", "headRefOid",
+      ]),
+      "Merged mechanism refresh PR lookup",
+    );
+    const mergedPrs = JSON.parse(mergedText) as Array<{ headRefOid: string }>;
+    const branchHead = requireSuccess(
+      run("git", ["rev-parse", `origin/${branch}`]),
+      "Mechanism refresh branch head lookup",
+    ).trim();
+    // A historical merge of the same branch name cannot authorize deleting
+    // later, unreviewed commits. Match the current tip to the merged PR head.
+    if (ancestor.status === 1 && mergedPrs.some((entry) => entry.headRefOid === branchHead)) {
+      requireSuccess(
+        run("gh", ["api", "--method", "DELETE", `repos/${repository}/git/refs/heads/${branch}`]),
+        "Merged mechanism refresh branch deletion",
+      );
+      // The next force-with-lease push must expect a missing remote branch,
+      // not the now-deleted tip left in this checkout's remote-tracking ref.
+      requireSuccess(
+        run("git", ["update-ref", "-d", `refs/remotes/origin/${branch}`]),
+        "Merged mechanism refresh tracking ref cleanup",
+      );
+      if (options.stage === "prepare-branch") {
+        requireSuccess(run("git", ["checkout", "-B", branch, "origin/main"]), "Mechanism refresh branch checkout");
+      }
+      return;
+    }
     throw githubError(
       "Unowned mechanism refresh history",
       `${branch} has unmerged commits but no open PR; refusing to overwrite it.`,

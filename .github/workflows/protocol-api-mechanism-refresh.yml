@@ -17,6 +17,9 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
+    permissions:
+      contents: write # Delete only this target's branch after a confirmed merge.
+      pull-requests: read
     strategy:
       fail-fast: false
       matrix:
