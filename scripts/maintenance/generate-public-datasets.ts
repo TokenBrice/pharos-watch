@@ -79,7 +79,10 @@ const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
 const MAX_CURRENT_DATASET_AGE_DAYS = 2;
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   "top-stablecoins": 493,
-  "depeg-history": 60,
+  // A quiet market legitimately shrinks this rolling 90-day window (300 -> 60 -> 0 as stricter
+  // confirmation cut monthly events below ten). Truncation is caught instead by the full-ledger
+  // capture count, window coverage, and source-shard checks.
+  "depeg-history": 0,
   "scores-latest": 493,
   "peg-mechanism-distribution": 99,
 };
