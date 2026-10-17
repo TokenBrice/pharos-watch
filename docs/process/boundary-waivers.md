@@ -17,11 +17,10 @@ The sole reviewed frontend→worker waiver is listed in `FRONTEND_TO_WORKER_WAIV
 
 - **Waiver ID:** `frozen-invariants-lifecycle-registry-check`
 - **Status:** Long-lived. No active retirement plan.
-- **Reason:** The freeze runbook requires asserting that frozen stablecoin IDs are absent from every independent registry that participates in lifecycle surfaces — worker-side registries (`MINT_BURN_CONFIG_SPECS`, `CONTRACT_CONFIGS`, `YIELD_POOL_MAP`) and the frontend `STATIC_COMPARE_PAIRS` fixture. The check is intentionally cross-layer because that is exactly what it validates.
+- **Reason:** The freeze runbook requires asserting that frozen stablecoin IDs are absent from independent lifecycle registries. This checker owns the worker-side `MINT_BURN_CONFIG_SPECS` and `CONTRACT_CONFIGS`, shared Bluechip slugs, and frontend `STATIC_COMPARE_PAIRS`; runtime tests separately own yield registries, snapshot membership and lifecycle partitioning. The remaining check is intentionally cross-layer because that is exactly what it validates.
 - **What was tried:** Promoting the source registries into `shared/` was evaluated:
   - `MINT_BURN_CONFIG_SPECS` uses `requireChainConfig()` and Worker helpers from `mint-burn-contracts-helpers.ts`; `cctpBridgeDetection()` resolves tracked contracts through `tracked-contract-resolution`. An ID-only mirror would duplicate the source of truth.
   - `CONTRACT_CONFIGS` is constructed from `CONTRACT_CONFIG_SPECS` via `resolveBlacklistContractConfig`, which uses the same worker-resolution path.
-  - `YIELD_POOL_MAP` is a pure `Record<string,string>`, but moving it to `shared/` would not remove the script's remaining mint/burn and blacklist Worker imports.
   - In each case the refactor expands the change surface dramatically without removing the architectural exception.
 - **Mitigations:**
   - The waiver list in `eslint.config.mjs` contains only this reviewed file; adding another requires a documented architectural review on this page.

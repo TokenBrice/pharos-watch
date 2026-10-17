@@ -74,6 +74,8 @@ describe("ESLint config ratchets", () => {
     }
   });
 
+  // Cold type-aware ESLint builds the project watch program before either probe;
+  // coverage runs have taken ~35s, beyond the shared 20s test budget.
   it("blocks unsafe external-data operations while permitting a reviewed unknown decoder", async () => {
     const typedEslint = new ESLint({
       cache: false,
@@ -102,5 +104,5 @@ describe("ESLint config ratchets", () => {
       ).toBe(true);
     }
     expect(safeResult?.messages.filter((message) => message.severity === 2)).toEqual([]);
-  });
+  }, 60_000);
 });
