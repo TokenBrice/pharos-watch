@@ -6,7 +6,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 import { execFileSync } from "node:child_process";
-import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { PR_DOC_COMMANDS, PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
 import { buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
@@ -37,7 +37,6 @@ describe("PR lane manifest", () => {
       "tests",
       "v9-resource",
       "pages-artifact",
-      "docs",
       "gate",
     ]);
     const prepare = WORKFLOW.jobs.prepare;
@@ -49,7 +48,7 @@ describe("PR lane manifest", () => {
     expect(Object.keys(WORKFLOW.jobs)).toEqual(["secrets", "prepare", "validation", "pages-artifact", "pr-gate"]);
     expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
     expect(Object.keys(prepare.outputs ?? {})).toEqual([
-      "docs_changed", "docs_only", "docs_inline_succeeded", "matrix",
+      "docs_only", "docs_inline_succeeded", "matrix",
       "playwright_firefox_required", "pages_artifact_required", "workspace_artifact_name",
     ]);
     expect(validation.needs).toBe("prepare");
@@ -60,9 +59,19 @@ describe("PR lane manifest", () => {
     expect(runner?.env.PR_LANE_SHARD_COUNT).toBe("${{ matrix.shardCount }}");
   });
 
+  it("keeps docs-only checks inline without scheduling validation jobs", () => {
+    expect(buildPrWorkflowMatrix({ docsOnly: true }).include).toEqual([]);
+    const docs = WORKFLOW.jobs.prepare.steps.find((step) => step.id === "docs");
+    expect(docs?.env.PR_LANE_ID).toBe("docs-inline");
+    expect(PR_DOC_COMMANDS.map((command) => command.id)).toEqual([
+      "verified-doc-links", "doc-source-paths", "doc-sync",
+      "doc-ownership-invariants", "agents-doc-artifact",
+    ]);
+  });
+
   it.each([4, 8])("generates %i planned test shards in the validation matrix", (testShards) => {
     const selection = {
-      docsChanged: true, docsOnly: false, testShards,
+      docsOnly: false, testShards,
     };
     const matrix = buildPrWorkflowMatrix(selection).include;
     expect(matrix.filter((entry) => entry.lane === "tests")).toEqual(
@@ -74,7 +83,10 @@ describe("PR lane manifest", () => {
       { lane: "v9-resource", timeout: 8 },
     ]);
     expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["static-compile", "static-guards"]);
-    expect(matrix.at(-1)?.lane).toBe("docs");
+    expect(matrix.map((entry) => entry.lane)).not.toContain("docs");
+    expect(matrix).toHaveLength(testShards + 3);
+    expect(buildPrWorkflowMatrix({ ...classifyChangedFiles(["README.md", "src/app/page.tsx"]), testShards }).include
+      .map((entry) => entry.lane)).not.toContain("docs");
     const outputs = Object.fromEntries(formatPrWorkflowOutputs(selection).trim().split("\n").map((line) => {
       const separator = line.indexOf("=");
       return [line.slice(0, separator), JSON.parse(line.slice(separator + 1))];
@@ -92,7 +104,7 @@ describe("PR lane manifest", () => {
   });
 
   it("selects the resource lane when classification is unavailable", () => {
-    const matrix = buildPrWorkflowMatrix({ docsChanged: false, docsOnly: false, testShards: 4 }).include;
+    const matrix = buildPrWorkflowMatrix({ docsOnly: false, testShards: 4 }).include;
     expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
       { lane: "v9-resource", timeout: 8 },
     ]);
@@ -116,7 +128,7 @@ describe("PR lane manifest", () => {
   });
 
   it("rejects invalid test fan-out instead of dropping selected tests", () => {
-    const selection = { docsChanged: false, docsOnly: false };
+    const selection = { docsOnly: false };
     for (const shards of [0, -1, 1.5, 9]) {
       expect(() => buildPrWorkflowMatrix({ ...selection, testShards: shards })).toThrow(/shard/);
     }

@@ -53,7 +53,6 @@ jobs:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     outputs:
-      docs_changed: ${{ steps.classify.outputs.docs_changed }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
       docs_inline_succeeded: ${{ steps.docs.outcome == 'success' }}
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -85,7 +84,6 @@ jobs:
       - name: Generate validation matrix
         id: matrix
         env:
-          DOCS_CHANGED: ${{ steps.classify.outputs.docs_changed }}
           DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
           PAGES_ARTIFACT_REQUIRED: ${{ steps.classify.outputs.pages_artifact_required }}
           V9_RESOURCE_REQUIRED: ${{ steps.classify.outputs.v9_resource_required }}
@@ -96,7 +94,7 @@ jobs:
         id: docs
         if: ${{ steps.classify.outputs.docs_only == 'true' }}
         env:
-          PR_LANE_ID: docs
+          PR_LANE_ID: docs-inline
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
@@ -137,7 +135,6 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_LANE_ID: ${{ matrix.lane }}
-          PR_SKIP_DOC_SYNC: ${{ matrix.skipDocSync }}
           PR_LANE_SHARD: ${{ matrix.shard }}
           PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
           PR_TEST_PLAN_FILE: ${{ matrix.lane == 'tests' && '.tmp/pr-test-plan.json' || '' }}

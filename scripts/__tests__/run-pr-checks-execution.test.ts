@@ -193,6 +193,27 @@ describe("isolated V9 resource execution", () => {
 });
 
 describe("readiness execution", () => {
+  it("executes mixed-PR docs as static leaves and propagates a docs failure", async () => {
+    fixture.changedFiles = ["README.md", "src/app/page.tsx"];
+    const h = harness();
+    h.runCommandImpl.mockImplementation(async (command) => ({
+      status: command.cmd === "npm run check:doc-source-paths" ? 1 : 0,
+      aborted: false,
+      output: command.cmd.startsWith("git rev-parse") ? baseSha : command.cmd.startsWith("git show") ? "0" : "",
+    }));
+    expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(1);
+    const executed = h.receipts[0].leaves.filter((leaf) => leaf.id.startsWith("pr-static:"));
+    expect(executed).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "pr-static:check:verified-doc-links", status: "passed" }),
+      expect.objectContaining({ id: "pr-static:check:doc-source-paths", status: "failed" }),
+      expect.objectContaining({ id: "pr-static:check:doc-sync", status: "passed" }),
+      expect.objectContaining({ id: "pr-static:doc-ownership-invariants", status: "passed", command: "npm exec -- vitest run scripts/__tests__/doc-ownership-registry.test.ts" }),
+      expect.objectContaining({ id: "pr-static:agents-doc-artifact", status: "passed" }),
+    ]));
+    expect(h.runCommandImpl.mock.calls.filter(([command]) => command.cmd === "npm run check:doc-sync")).toHaveLength(1);
+    expect(h.receipts[0].outcome).toBe("failed");
+  });
+
   it("plans every selected command and test partition without executing a gate", async () => {
     const h = harness();
     expect(await runPrChecks(["--plan", `--base=${baseSha}`], testEnv, h.options)).toBe(0);

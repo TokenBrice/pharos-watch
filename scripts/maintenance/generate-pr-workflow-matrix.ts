@@ -6,6 +6,7 @@ import { assertCliUsage, parseStrictCliArgs, runDirectCli } from "../lib/cli-arg
 import { PR_TEST_PLAN_PATH, readPrTestPlan } from "../lib/pr-test-plan.mts";
 import {
   PR_LANES,
+  PR_DOC_COMMANDS,
   buildPrLaneCommandArgs,
   getPrLane,
   isPrLaneSelected,
@@ -17,15 +18,12 @@ export interface WorkflowMatrixEntry {
   lane: PrLaneId;
   shard?: number;
   shardCount?: number;
-  skipDocSync?: boolean;
   timeout: number;
 }
 
 export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: WorkflowMatrixEntry[] } {
   const include: WorkflowMatrixEntry[] = [];
   if (selection.docsOnly) return { include };
-  // The docs lane owns doc-sync for mixed docs/source PRs.
-  const docsLaneSelected = isPrLaneSelected(getPrLane("docs"), selection);
   for (const lane of PR_LANES) {
     if (["preflight", "pages-artifact", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
     const shards = lane.id === "tests" ? selection.testShards ?? 4 : 1;
@@ -36,7 +34,6 @@ export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: Wo
       include.push({
         lane: lane.id,
         ...(lane.shards ? { shard, shardCount: shards } : {}),
-        ...(lane.id === "static-guards" && docsLaneSelected ? { skipDocSync: true } : {}),
         timeout: lane.timeoutMinutes,
       });
     }
@@ -52,18 +49,17 @@ function bool(value: string | undefined): boolean {
   return value === "true";
 }
 
-function runLane(laneId: PrLaneId, env: NodeJS.ProcessEnv): number {
-  const lane = getPrLane(laneId);
+function runLane(laneId: PrLaneId | "docs-inline", env: NodeJS.ProcessEnv): number {
+  const commands = laneId === "docs-inline" ? PR_DOC_COMMANDS : getPrLane(laneId).commands;
   const shard = env.PR_LANE_SHARD ? Number(env.PR_LANE_SHARD) : undefined;
   const shardCount = env.PR_LANE_SHARD_COUNT ? Number(env.PR_LANE_SHARD_COUNT) : undefined;
-  for (const command of lane.commands) {
+  for (const command of commands) {
     const program = command.program === "npm" ? "npm" : process.execPath;
     const result = spawnSync(program, buildPrLaneCommandArgs(command, {
       base: env.PR_BASE_SHA,
       head: env.PR_HEAD_SHA,
       shard,
       shardCount,
-      skipDocSync: bool(env.PR_SKIP_DOC_SYNC),
     }), { env, stdio: "inherit" });
     if (result.error) throw result.error;
     if (result.status !== 0) return result.status ?? 1;
@@ -97,7 +93,6 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
   if (values.matrix) {
     const docsOnly = bool(env.DOCS_ONLY);
     const outputs = formatPrWorkflowOutputs({
-      docsChanged: bool(env.DOCS_CHANGED),
       docsOnly,
       pagesArtifactRequired: bool(env.PAGES_ARTIFACT_REQUIRED),
       v9ResourceRequired: env.V9_RESOURCE_REQUIRED !== "false",
@@ -108,7 +103,7 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
     return 0;
   }
   if (values.classify) return runClassify(env);
-  return runLane(env.PR_LANE_ID as PrLaneId, env);
+  return runLane(env.PR_LANE_ID as PrLaneId | "docs-inline", env);
 }
 
 runDirectCli(import.meta.url, () => {

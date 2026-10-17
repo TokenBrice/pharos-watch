@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { ALWAYS_RUN_TEST_FILES, parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import {
+  createPrStaticLeafCommand,
   buildPrStaticCheckPlan,
   partitionPrStaticCheckPlan,
   runPrStaticChecks,
@@ -94,17 +95,15 @@ describe("adaptive PR checks", () => {
     ["worker/src/cron/x.ts", "worker/src/cron/__tests__/x.test.ts"],
     ["scripts/ci/check-provider-resilience.ts"],
   ].map((changedFiles) => ({ changedFiles })))("partitions the unchanged static plan for $changedFiles into disjoint compile and guards groups", ({ changedFiles }) => {
-    for (const skipDocSync of [false, true]) {
-      const full = buildPrStaticCheckPlan(changedFiles, { skipDocSync });
-      const compile = buildPrStaticCheckPlan(changedFiles, { skipDocSync, group: "compile" });
-      const guards = buildPrStaticCheckPlan(changedFiles, { skipDocSync, group: "guards" });
-      expect([...compile.commands, ...guards.commands].sort((left, right) => left.name.localeCompare(right.name)))
-        .toEqual([...full.commands].sort((left, right) => left.name.localeCompare(right.name)));
-      expect(compile.classification).toEqual(full.classification);
-      expect(guards.classification).toEqual(full.classification);
-      expect(guards.commands.some((guard) => compile.commands.some((command) => command.name === guard.name)))
-        .toBe(false);
-    }
+    const full = buildPrStaticCheckPlan(changedFiles);
+    const compile = buildPrStaticCheckPlan(changedFiles, { group: "compile" });
+    const guards = buildPrStaticCheckPlan(changedFiles, { group: "guards" });
+    expect([...compile.commands, ...guards.commands].sort((left, right) => left.name.localeCompare(right.name)))
+      .toEqual([...full.commands].sort((left, right) => left.name.localeCompare(right.name)));
+    expect(compile.classification).toEqual(full.classification);
+    expect(guards.classification).toEqual(full.classification);
+    expect(guards.commands.some((guard) => compile.commands.some((command) => command.name === guard.name)))
+      .toBe(false);
   });
 
   it("keeps both compilers concurrent while moving every non-compile check to guards", () => {
@@ -134,13 +133,13 @@ describe("adaptive PR checks", () => {
     const stderr = { write: vi.fn<(chunk: string) => unknown>() };
     const runCommandImpl = vi.fn(async (_command: { scriptName: string }, _env?: Record<string, string>) => ({ status: 0, aborted: false, output: "" }));
     await expect(runPrStaticChecks({
-      argv: ["--json", `--group=${group}`, "--skip-doc-sync", "--base=HEAD", "--head=HEAD"],
+      argv: ["--json", `--group=${group}`, "--base=HEAD", "--head=HEAD"],
       env: process.env,
       runCommandImpl,
       stderr,
       stdout,
     })).resolves.toBe(0);
-    const expected = buildPrStaticCheckPlan([], { group, skipDocSync: true }).commands;
+    const expected = buildPrStaticCheckPlan([], { group }).commands;
     expect(runCommandImpl.mock.calls.map(([command]) => command.scriptName).sort())
       .toEqual(expected.map((command) => command.name).sort());
     const report = JSON.parse(stdout.write.mock.calls.map(([chunk]) => chunk).join(""));
@@ -169,6 +168,32 @@ describe("adaptive PR checks", () => {
       runCommandImpl,
     })).rejects.toThrow(/Unknown --group value.*Expected compile or guards/);
     expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
+  it("moves all five mixed-PR docs checks into guards with one doc-sync owner", () => {
+    const files = ["README.md", "src/app/page.tsx"];
+    const guards = buildPrStaticCheckPlan(files, { group: "guards" }).commands;
+    const docs = guards.filter((command) => command.manifestCommand);
+    expect(docs.map((command) => createPrStaticLeafCommand(command, []).args)).toEqual([
+      ["run", "check:verified-doc-links"],
+      ["run", "check:doc-source-paths"],
+      ["run", "check:doc-sync"],
+      ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"],
+      ["run", "check:generated-artifacts", "--", "--only=agents-doc"],
+    ]);
+    expect(guards.filter((command) => command.name === "check:doc-sync")).toHaveLength(1);
+    expect(buildPrStaticCheckPlan(files, { group: "compile" }).commands.some((command) => command.manifestCommand)).toBe(false);
+    const sourceOnly = buildPrStaticCheckPlan(["src/app/page.tsx"], { group: "guards" }).commands;
+    expect(sourceOnly.filter((command) => command.name === "check:doc-sync")).toHaveLength(1);
+    expect(sourceOnly.some((command) => command.manifestCommand)).toBe(false);
+    expect(buildPrStaticCheckPlan(["docs/editorial-style.md"]).commands.some((command) => command.manifestCommand)).toBe(false);
+  });
+
+  it("does not run the agents mirror checker twice when docs also select generated artifacts", () => {
+    const guards = buildPrStaticCheckPlan(["CLAUDE.md", "src/app/page.tsx"], { group: "guards" }).commands;
+    expect(guards.filter((command) => command.name === "agents-doc-artifact")).toHaveLength(1);
+    expect(guards.find((command) => command.name === "check:generated-artifacts")?.args?.join(",") ?? "")
+      .not.toContain("agents-doc");
   });
 
   it.each([

@@ -8,6 +8,7 @@ import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.
 import {
   createExecutionUnit,
   createNpmScriptCommand,
+  createSpawnCommand,
   runParallelExecutionUnits,
   runSpawnCommand,
   type CommandImplementation,
@@ -25,6 +26,7 @@ import {
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
+import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
@@ -57,6 +59,7 @@ interface PrStaticCheckOptions {
 interface PrStaticCheckCommand {
   name: string;
   args?: string[];
+  manifestCommand?: PrLaneCommandDefinition;
 }
 
 export type PrStaticCheckGroup = "compile" | "guards";
@@ -107,7 +110,7 @@ export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckComma
 
 export function buildPrStaticCheckPlan(
   changedFiles: readonly string[],
-  { skipDocSync = false, group }: { skipDocSync?: boolean; group?: PrStaticCheckGroup } = {},
+  { group }: { group?: PrStaticCheckGroup } = {},
 ) {
   const classification = classifyChangedFiles(changedFiles);
   const commands: PrStaticCheckCommand[] = [
@@ -133,10 +136,12 @@ export function buildPrStaticCheckPlan(
     commands.push({ name: "check:html-fixture-metadata" });
   }
 
-  // `skipDocSync` is the composition-context option passed by `check:pr` and
-  // the CI matrix when the docs lane already owns `check:doc-sync` in the same
-  // plan; standalone runs never set it, so source-owned docs stay validated.
-  if (!skipDocSync && hasOwnedDocsImpact(changedFiles)) {
+  if (classification.docsChanged) {
+    commands.push(...PR_DOC_COMMANDS.map((command) => ({
+      name: command.args[0] === "run" && command.id !== "agents-doc-artifact" ? command.args[1] : command.id,
+      manifestCommand: command,
+    })));
+  } else if (hasOwnedDocsImpact(changedFiles)) {
     commands.push({ name: "check:doc-sync" });
   }
 
@@ -155,7 +160,9 @@ export function buildPrStaticCheckPlan(
   // could leave the V9 evaluation-build manifest stale and still pass the PR
   // gate — the Wave-1 fix wave did exactly that, and only the release discovery
   // gate caught it.
-  const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles));
+  const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles))
+    // The shared docs command already checks this artifact in this workspace.
+    .filter((id) => !classification.docsChanged || id !== "agents-doc");
   if (artifactIds.length > 0) {
     commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
   }
@@ -212,6 +219,14 @@ export function prStaticLeafArgs(
   return [...(command.args ?? [])];
 }
 
+/** Preserve direct npm exec docs checks alongside npm-script static leaves. */
+export function createPrStaticLeafCommand(command: PrStaticCheckCommand, args: readonly string[]): NpmScriptCommand {
+  if (command.manifestCommand) {
+    return { ...createSpawnCommand("npm", command.manifestCommand.args), scriptName: command.name };
+  }
+  return createNpmScriptCommand(command.name, args);
+}
+
 export async function runPrStaticChecks({
   argv = process.argv.slice(2),
   env = process.env,
@@ -223,24 +238,22 @@ export async function runPrStaticChecks({
   const { base, head, rest, staged } = parseChangedFileArgs(argv, env);
   if (staged) throw new Error("check:pr:static requires a --base/--head range; use check:focused --staged for index-selected checks.");
   const json = rest.includes("--json");
-  const skipDocSync = rest.includes("--skip-doc-sync");
   const groupOption = rest.find((arg) => arg.startsWith("--group="));
   const groupValue = groupOption?.slice("--group=".length);
   if (groupValue !== undefined && groupValue !== "compile" && groupValue !== "guards") {
     throw new Error(`Unknown --group value: ${groupValue}. Expected compile or guards.`);
   }
   const group: PrStaticCheckGroup | undefined = groupValue;
-  const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== "--skip-doc-sync" && arg !== groupOption);
+  const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== groupOption);
   if (unknownOptions.length > 0) throw new Error(`Unknown option(s): ${unknownOptions.join(", ")}`);
   const changedFiles = collectChangedFiles({ base, head });
-  const { classification, commands } = buildPrStaticCheckPlan(changedFiles, { skipDocSync, group });
+  const { classification, commands } = buildPrStaticCheckPlan(changedFiles, { group });
   const logOutput = json ? stderr : stdout;
   const log = (message: string) => logOutput.write(message + "\n");
   log(
     `[check:pr:static] ${changedFiles.length} changed file(s); ` +
       `pages=${classification.pagesChanged}, worker=${classification.workerChanged}` +
-      `${group ? `, group=${group}` : ""}` +
-      `${skipDocSync ? ", doc-sync owned by the docs lane" : ""}.`,
+      `${group ? `, group=${group}` : ""}.`,
   );
   const runnableCommands = commands.map((command) => ({
     ...command,
@@ -254,7 +267,7 @@ export async function runPrStaticChecks({
   };
   const laneReports: GateLaneReport[] = runnableCommands.map((command) => ({
     id: command.name,
-    command: createNpmScriptCommand(command.name, command.args ?? []).cmd,
+    command: createPrStaticLeafCommand(command, command.args ?? []).cmd,
     status: "skipped",
     durationMs: 0,
     failureTail: "",
@@ -262,7 +275,7 @@ export async function runPrStaticChecks({
   const laneIndexes = new WeakMap<NpmScriptCommand, number>();
   const createTrackedCommand = (command: PrStaticCheckCommand): NpmScriptCommand => {
     const index = runnableCommands.findIndex((candidate) => candidate === command);
-    const npmCommand = createNpmScriptCommand(command.name, command.args ?? []);
+    const npmCommand = createPrStaticLeafCommand(command, command.args ?? []);
     const trackedCommand = json ? { ...npmCommand, captureOutput: true } : npmCommand;
     laneIndexes.set(trackedCommand, index);
     return trackedCommand;

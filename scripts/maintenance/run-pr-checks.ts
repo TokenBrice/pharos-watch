@@ -4,14 +4,13 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { runLocalTrustedGitleaks } from "../ci/run-gitleaks.ts";
 import { assertPinnedRuntime, readRuntimeVersions, type RuntimeVersions } from "../lib/runtime-guard.mts";
 import { computeReceiptOutcome, explainPrCheckReceipt, firstActionableError, writePrCheckReceipt, type PrCheckReceiptLeaf, type PrReceiptCheckout } from "../lib/pr-check-receipt.mts";
-import { buildPrStaticCheckPlan, prStaticLeafArgs } from "./run-pr-static-checks.ts";
+import { buildPrStaticCheckPlan, createPrStaticLeafCommand, prStaticLeafArgs } from "./run-pr-static-checks.ts";
 import { localBin } from "../lib/local-bin.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import { createPrTestPlan } from "../lib/pr-test-plan.mts";
 import { classifyChangedFiles, type DeployClassification } from "../ci/classify-deploy-changes.ts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import {
-  createNpmScriptCommand,
   createSpawnCommand,
   runSpawnCommand,
   type CommandImplementation,
@@ -22,10 +21,10 @@ import {
   reportGateResult,
   type OutputWriter,
 } from "../lib/report-violations.mts";
-import { buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { PR_DOC_COMMANDS, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 
-const DOC_CHECK_LANES = getPrLane("docs").commands.map((command) => command.id as PrCheckLane);
+const DOC_CHECK_LANES = PR_DOC_COMMANDS.map((command) => command.id as PrCheckLane);
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface PrCheckFlags {
@@ -108,9 +107,6 @@ export function buildPrCheckPlan(
     return [...lanes, ...DOC_CHECK_LANES];
   }
 
-  if (classification.docsChanged) {
-    lanes.push(...DOC_CHECK_LANES);
-  }
   lanes.push("pr-static", "pr-tests");
   if (classification.v9ResourceRequired !== false) lanes.push("v9-resource");
   if (classification.pagesArtifactRequired && flags.withPages) lanes.push("pages-artifact");
@@ -177,13 +173,11 @@ async function resolveBaseSha(
 
 export function createLaneCommand(
   lane: PrCheckLane,
-  { base, forwardedTestArgs, head, resolvedBaseSha, skipDocSync }: {
+  { base, forwardedTestArgs, head, resolvedBaseSha }: {
     base: string;
     forwardedTestArgs: readonly string[];
     head: string;
     resolvedBaseSha: string;
-    /** Set when the docs lane in the same composed plan owns `check:doc-sync`. */
-    skipDocSync?: boolean;
   },
 ): PrCheckCommand {
   const withLane = (command: SpawnCommand, extraEnv?: Record<string, string>): PrCheckCommand => ({
@@ -195,24 +189,21 @@ export function createLaneCommand(
   // Local check:pr runs the ungrouped static command, preserving its full plan.
   const manifestCommand = lane === "pr-static"
     ? { ...getPrLane("static-compile").commands[0], id: "pr-static", args: ["run", "check:pr:static", "--"] }
-    : getPrLane(
+    : (DOC_CHECK_LANES.includes(lane) ? PR_DOC_COMMANDS : getPrLane(
         ["classifier-smoke", "gitleaks"].includes(lane)
           ? "preflight"
-          : DOC_CHECK_LANES.includes(lane)
-            ? "docs"
-            : lane === "pr-tests"
-              ? "tests"
-              : lane === "v9-resource"
-                ? "v9-resource"
-                : "pages-artifact",
-      ).commands.find((command) => command.id === lane);
+          : lane === "pr-tests"
+            ? "tests"
+            : lane === "v9-resource"
+              ? "v9-resource"
+              : "pages-artifact",
+      ).commands).find((command) => command.id === lane);
   if (!manifestCommand) throw new Error(`Missing PR lane command: ${lane}`);
   const command = manifestCommand.program === "npm"
     ? createSpawnCommand("npm", buildPrLaneCommandArgs(manifestCommand, {
         base,
         forwardedTestArgs,
         head,
-        skipDocSync,
       }))
     : createSpawnCommand("node", buildPrLaneCommandArgs(manifestCommand));
 
@@ -281,11 +272,11 @@ function selectPlanTestFiles(base: string, changedFiles: readonly string[], env:
 }
 
 function expandStaticLeaves(
-  commands: readonly PrCheckCommand[], changedFiles: readonly string[], base: string, head: string, skipDocSync: boolean,
+  commands: readonly PrCheckCommand[], changedFiles: readonly string[], base: string, head: string,
 ): PrCheckCommand[] {
   return commands.flatMap((command) => command.lane !== "pr-static" ? [command] :
-    buildPrStaticCheckPlan(changedFiles, { skipDocSync }).commands.map((leaf) => ({
-      ...createNpmScriptCommand(leaf.name, prStaticLeafArgs(leaf, { base, head })),
+    buildPrStaticCheckPlan(changedFiles).commands.map((leaf) => ({
+      ...createPrStaticLeafCommand(leaf, prStaticLeafArgs(leaf, { base, head })),
       lane: `pr-static:${leaf.name}`,
       extraEnv: { PR_BASE_SHA: base, PR_HEAD_SHA: head },
     })));
@@ -383,12 +374,13 @@ export async function runPrChecks(
     const changedFiles = collectChangedFiles({ base: baseSha, head: headSha, cwd: repoRoot });
     const classification = classifyChangedFiles(changedFiles);
     const lanes = buildPrCheckPlan(changedFiles, classification, flags);
-    const skipDocSync = lanes.includes("doc-sync");
-    const context = { base: baseSha, forwardedTestArgs: flags.forwardedTestArgs, head: headSha, resolvedBaseSha: baseSha, skipDocSync };
-    const commands = expandStaticLeaves(lanes.map((lane) => createLaneCommand(lane, context)), changedFiles, baseSha, headSha, skipDocSync);
+    const context = { base: baseSha, forwardedTestArgs: flags.forwardedTestArgs, head: headSha, resolvedBaseSha: baseSha };
+    const commands = expandStaticLeaves(lanes.map((lane) => createLaneCommand(lane, context)), changedFiles, baseSha, headSha);
     // Keep omissions explicit without inventing an executed parent static leaf.
     // The selected Pages lane stays required on GitHub when not opted into locally.
     for (const lane of [...DOC_CHECK_LANES, "pr-tests", "v9-resource", "pages-artifact"] as const) {
+      // Mixed-PR docs checks are represented by their expanded static leaves.
+      if (classification.docsChanged && !classification.docsOnly && DOC_CHECK_LANES.includes(lane)) continue;
       if (!lanes.includes(lane)) leaves.push({
         id: lane, command: createLaneCommand(lane, context).cmd,
         status: lane === "pages-artifact" && classification.pagesArtifactRequired ? "deferred-to-ci" : "not-selected",

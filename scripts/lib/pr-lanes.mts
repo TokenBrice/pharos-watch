@@ -1,4 +1,4 @@
-export type PrLaneSelector = "always" | "code" | "docs" | "pages-artifact" | "v9-resource";
+export type PrLaneSelector = "always" | "code" | "pages-artifact" | "v9-resource";
 
 export type PrLaneId =
   | "preflight"
@@ -7,7 +7,6 @@ export type PrLaneId =
   | "tests"
   | "v9-resource"
   | "pages-artifact"
-  | "docs"
   | "gate";
 
 export interface PrLaneDefinition {
@@ -26,7 +25,6 @@ export interface PrLaneCommandDefinition {
 }
 
 export interface PrLaneSelection {
-  docsChanged: boolean;
   docsOnly: boolean;
   pagesArtifactRequired?: boolean;
   testShards?: number;
@@ -40,12 +38,16 @@ export interface PrLaneCommandContext {
   head?: string;
   shard?: number;
   shardCount?: number;
-  /**
-   * When docs owns doc-sync in the same composed plan, guards (or the local
-   * ungrouped static command) skips its duplicate. Compile never runs doc-sync.
-   */
-  skipDocSync?: boolean;
 }
+
+/** Shared by docs-only inline validation and mixed-PR static guards. */
+export const PR_DOC_COMMANDS: readonly PrLaneCommandDefinition[] = [
+  { id: "verified-doc-links", program: "npm", args: ["run", "check:verified-doc-links"] },
+  { id: "doc-source-paths", program: "npm", args: ["run", "check:doc-source-paths"] },
+  { id: "doc-sync", program: "npm", args: ["run", "check:doc-sync"] },
+  { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] },
+  { id: "agents-doc-artifact", program: "npm", args: ["run", "check:generated-artifacts", "--", "--only=agents-doc"] },
+];
 
 export const PR_LANES: readonly PrLaneDefinition[] = [
   {
@@ -90,18 +92,6 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     timeoutMinutes: 20,
     commands: [{ id: "pages-artifact", program: "npm", args: ["run", "check:pages-artifact"] }],
   },
-  {
-    id: "docs",
-    selector: "docs",
-    timeoutMinutes: 15,
-    commands: [
-      { id: "verified-doc-links", program: "npm", args: ["run", "check:verified-doc-links"] },
-      { id: "doc-source-paths", program: "npm", args: ["run", "check:doc-source-paths"] },
-      { id: "doc-sync", program: "npm", args: ["run", "check:doc-sync"] },
-      { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] },
-      { id: "agents-doc-artifact", program: "npm", args: ["run", "check:generated-artifacts", "--", "--only=agents-doc"] },
-    ],
-  },
   { id: "gate", selector: "always", timeoutMinutes: 5, commands: [] },
 ] as const;
 
@@ -115,7 +105,6 @@ export function isPrLaneSelected(lane: PrLaneDefinition, selection: PrLaneSelect
   switch (lane.selector) {
     case "always": return true;
     case "code": return !selection.docsOnly;
-    case "docs": return selection.docsChanged;
     case "pages-artifact": return selection.pagesArtifactRequired === true;
     case "v9-resource": return selection.v9ResourceRequired !== false;
   }
@@ -142,7 +131,6 @@ export function buildPrLaneCommandArgs(
     case "pr-static-guards":
       if (context.base) args.push(`--base=${context.base}`);
       if (context.head) args.push(`--head=${context.head}`);
-      if (context.skipDocSync && command.id !== "pr-static-compile") args.push("--skip-doc-sync");
       break;
   }
   return args;

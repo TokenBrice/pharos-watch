@@ -24,18 +24,13 @@ describe("local PR check orchestration", () => {
     ]);
   });
 
-  it("adds docs checks to the normal lanes for mixed docs changes", () => {
+  it("delegates mixed docs checks to the static plan instead of separate local lanes", () => {
     const changedFiles = ["README.md", "src/app/page.tsx"];
     const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), optedIn);
 
     expect(plan).toEqual([
       "classifier-smoke",
       "gitleaks",
-      "verified-doc-links",
-      "doc-source-paths",
-      "doc-sync",
-      "doc-ownership-invariants",
-      "agents-doc-artifact",
       "pr-static",
       "pr-tests",
       "pages-artifact",
