@@ -7,6 +7,7 @@ import {
   buildPrStaticCheckPlan,
   partitionPrStaticCheckPlan,
   runPrStaticChecks,
+  STRUCTURAL_CHECKS,
 } from "../maintenance/run-pr-static-checks.ts";
 describe("adaptive PR checks", () => {
   it("unions changed Vitest files with the critical contract set", () => {
@@ -237,5 +238,77 @@ describe("adaptive PR checks", () => {
       .not.toContain("check:structural");
     expect(buildPrStaticCheckPlan([...changedFiles, "worker/src/cron/sync-stablecoins.ts"])
       .commands.map((command) => command.name)).toContain("check:structural");
+  });
+
+  it("retains every structural guard in order", () => {
+    expect(STRUCTURAL_CHECKS).toEqual([
+      "check:provider-resilience",
+      "check:fetch-body-timeouts",
+      "check:runtime-reachability",
+      "check:architecture-boundaries",
+      "check:script-entrypoints",
+      "check:cli-args-policy",
+      "check:dependency-review-gaps",
+      "check:editorial-content",
+      "check:unused-code",
+      "check:sensitive-page-copy",
+      "check:agent-skills",
+    ]);
+  });
+
+  it.each([[], [0, 7, 10], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]].map((failedIndexes) => ({ failedIndexes })))(
+    "collects every structural outcome sequentially when failures occur at $failedIndexes",
+    async ({ failedIndexes }) => {
+      const calls: string[] = [];
+      const output: string[] = [];
+      let active = 0;
+      let maxActive = 0;
+      const code = await runPrStaticChecks({
+        argv: ["--structural"],
+        stdout: { write: (text: string) => { output.push(text); return true; } },
+        runCommandImpl: async (command) => {
+          const index = calls.length;
+          calls.push(command.scriptName);
+          active += 1;
+          maxActive = Math.max(maxActive, active);
+          await Promise.resolve();
+          active -= 1;
+          return failedIndexes.includes(index) ? index + 1 : 0;
+        },
+      });
+      expect(calls).toEqual(STRUCTURAL_CHECKS);
+      expect(maxActive).toBe(1);
+      expect(code).toBe(failedIndexes.length === 0 ? 0 : 1);
+      for (const [index, name] of STRUCTURAL_CHECKS.entries()) {
+        expect(output.join("")).toContain(failedIndexes.includes(index)
+          ? `${name}: npm run ${name} failed (exit ${index + 1}).`
+          : `${name}: passed`);
+      }
+      expect(output.join("")).toContain(`${11 - failedIndexes.length}/11 guards passed.`);
+    },
+  );
+
+  it("continues structural checks after a thrown command failure", async () => {
+    const output: string[] = [];
+    const runCommandImpl = vi.fn()
+      .mockRejectedValueOnce(new Error("spawn failed"))
+      .mockResolvedValue(0);
+    expect(await runPrStaticChecks({
+      argv: ["--structural"],
+      runCommandImpl,
+      stdout: { write: (text: string) => { output.push(text); return true; } },
+    })).toBe(1);
+    expect(runCommandImpl).toHaveBeenCalledTimes(11);
+    expect(output.join("")).toContain("check:provider-resilience: npm run check:provider-resilience failed (exit 1).");
+    expect(output.join("")).toContain("check:agent-skills: passed");
+  });
+
+  it("rejects range or output options in structural-only mode before executing guards", async () => {
+    const runCommandImpl = vi.fn();
+    await expect(runPrStaticChecks({
+      argv: ["--structural", "--json"],
+      runCommandImpl,
+    })).rejects.toThrow("--structural cannot be combined");
+    expect(runCommandImpl).not.toHaveBeenCalled();
   });
 });

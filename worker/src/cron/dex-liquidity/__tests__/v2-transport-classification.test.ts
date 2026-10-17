@@ -178,18 +178,19 @@ describe("EVM V2 verification transport classification", () => {
   });
 
   it("carries one network-only retry and a bounded deadline on every verification request", async () => {
-    const harness = makeEnrichment({});
-    const beforeMs = Date.now();
-    await harness.run();
-    const afterMs = Date.now();
+    vi.useFakeTimers();
+    try {
+      const nowMs = Date.now();
+      const harness = makeEnrichment({});
+      await harness.run();
 
-    expect(harness.fetchMulticall).toHaveBeenCalled();
-    for (const call of harness.fetchMulticall.mock.calls) {
-      expect(call[3]?.maxRetries).toBe(1);
-      const deadlineMs = call[3]?.deadlineMs;
-      expect(typeof deadlineMs).toBe("number");
-      expect(deadlineMs!).toBeGreaterThanOrEqual(beforeMs);
-      expect(deadlineMs!).toBeLessThanOrEqual(afterMs + V2_ENRICHMENT_MAX_WALL_MS);
+      expect(harness.fetchMulticall).toHaveBeenCalled();
+      for (const call of harness.fetchMulticall.mock.calls) {
+        expect(call[3]?.maxRetries).toBe(1);
+        expect(call[3]?.deadlineMs).toBe(nowMs + V2_ENRICHMENT_MAX_WALL_MS);
+      }
+    } finally {
+      vi.useRealTimers();
     }
   });
 
