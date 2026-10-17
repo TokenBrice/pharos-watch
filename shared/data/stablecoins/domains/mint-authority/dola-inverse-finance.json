@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "DOLA's INV-governed 48-hour Timelock operator can mint durable supply without a posted-collateral check or numeric token cap. Four enabled minters remain verified: FiRM and PSM Feds have governance-raiseable ceilings, Frontier Fed has uncapped local expansion into its cToken, and the atomic flash minter repays and burns within one transaction. Under D14 the least-constrained durable operator path determines the unbounded category; neither cToken accounting claims nor flash issuance establish new external backing.",
+    "summary": "DOLA's INV-governed 48-hour Timelock operator can raw-mint durable supply to any recipient without a posted-collateral check or numeric token cap. FiRM and the enabled PSM Fed have governance-raiseable issuance ceilings; the flash minter is limited and must repay and burn within one transaction. Frontier has no local numeric ceiling, but mints into a fixed cToken with borrowing paused and matching shares held by the Fed; chair-only unbounded chosen-recipient extraction is not established. The operator independently establishes aggregate unbounded economics, while incomplete process certificates and a positively traced voting-control failure prevent governance-process qualification. Immutability refers only to Ethereum DOLA bytecode, not minter membership or downstream administration.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -25,7 +25,7 @@
       {
         "date": "2022-04-02",
         "status": "resolved",
-        "summary": "Inverse Finance's Anchor/Frontier oracle-manipulation incident let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route.",
+        "summary": "The April 2022 Anchor lending-market oracle-manipulation exploit inflated INV collateral value, enabling DOLA borrowing and withdrawal from Anchor pools and leaving bad debt. It was not a demonstrated DOLA minter-key compromise or bypass of token mint authorization.",
         "sources": [
           {
             "label": "CoinDesk: Inverse Finance exploit",
@@ -34,6 +34,10 @@
           {
             "label": "BlockSec: Inverse oracle manipulation analysis",
             "url": "https://blocksecteam.medium.com/price-oracle-manipulation-attack-on-inverse-finance-a5544218ea91"
+          },
+          {
+            "label": "Inverse Finance Frontier/Anchor: price manipulation incidents (reviewed 2026-10-17)",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/legacy-products/frontier-anchor.md"
           }
         ]
       }
@@ -82,9 +86,9 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095807,
-        "capDescription": "Global supplyCeiling() is 100000000000000000000000000000. Verified expansion requires Fed Chair and respects global and per-market ceilings; gov alone can change both ceilings. The governance Timelock can raise the bounds, while the chair cannot.",
+        "observedAt": "2026-10-17",
+        "observedBlock": 26214783,
+        "capDescription": "Global supplyCeiling() is 100000000000000000000000000000 raw units (1e29), or 100 billion DOLA. Proposal 332 deprecated the restrictive global ceiling by setting this high value; the source still checks it and per-market ceilings. Expansion is chair-only into registered, non-borrow-paused markets within their ceilings. Only gov can change global and per-market ceilings, so the Timelock can raise them while the chair cannot.",
         "sources": [
           {
             "label": "Inverse DOLA Fed docs",
@@ -93,9 +97,21 @@
           {
             "label": "Verified FiRM Fed issuance and ceiling setters",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b34548b865ad66a2b046cb82e59ee43f75b90fd"
+          },
+          {
+            "label": "Inverse governance proposal 332: Deprecate the FiRM Fed Global Ceiling",
+            "url": "https://www.inverse.finance/governance/proposals/mills/332"
+          },
+          {
+            "label": "Proposal 332 execution, Ethereum block 23849639",
+            "url": "https://etherscan.io/tx/0xd18ded7ac8f5c6e04a3951ac63cd23dbc50e9d8ae7beaa54f7eae37910f0df1d"
+          },
+          {
+            "label": "Ethereum pinned block 26214783 (2026-10-17T20:51:59Z)",
+            "url": "https://eth.blockscout.com/block/26214783"
           }
         ],
-        "evidence": "At Ethereum block 26095807, DOLA.minters(0x2b34548b865ad66a2b046cb82e59ee43f75b90fd) returned true. gov() returned the operator Timelock and chair() returned 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8, a 2-of-6 Safe. Issuer docs state Fed Chair can execute expansions and contractions within governance-approved parameters."
+        "evidence": "At Ethereum block 26214783 (2026-10-17T20:51:59Z), DOLA.minters(0x2b34548b865ad66a2b046cb82e59ee43f75b90fd) returned true; gov() was the operator Timelock and chair() was 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8, a 2-of-6 Safe. supplyCeiling() returned 1e29 raw, equal to 100 billion DOLA at 18 decimals. Proposal 332, titled Deprecate the FiRM Fed Global Ceiling, executed changeSupplyCeiling at Ethereum block 23849639 (2025-11-21T20:06:11Z). Verified expansion still enforces the global and isolated market ceilings and requires a DBR-registered, non-borrow-paused target; chair attempts to raise the global ceiling revert ONLY GOV. Issuer docs describe chair operations within governance-approved parameters."
       },
       {
         "chain": "ethereum",
@@ -108,9 +124,9 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095807,
-        "capDescription": "Verified Frontier Fed expansion has no local numeric supply ceiling: the chair mints DOLA into its cToken. At the pinned block, the cToken mint pause is false and expansion(0) from the chair succeeds. Closing new borrower loans does not revoke this Fed mint permission.",
+        "observedAt": "2026-10-17",
+        "observedBlock": 26214783,
+        "capDescription": "Frontier expansion has no local numeric supply ceiling: the chair raw-mints DOLA into a fixed cToken and the Fed receives matching shares. Borrowing is paused, while cToken minting is not. Only the Timelock admin can unpause borrowing or reduce reserves. Outside shareholders can redeem finite existing claims; contraction burns principal and takeProfit pays only the fixed gov recipient. These facts do not establish chair-only unbounded chosen-recipient extraction or a collateral cap.",
         "sources": [
           {
             "label": "Inverse DOLA Fed docs",
@@ -119,9 +135,25 @@
           {
             "label": "Verified Frontier Fed issuance source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7"
+          },
+          {
+            "label": "Verified Frontier cToken: shares, redemption and admin-only reserve reduction",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7fcb7dac61ee35b3d4a51117a7c58d53f0a8a670"
+          },
+          {
+            "label": "Verified Frontier Comptroller implementation: borrowing pause and admin-only unpause",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x48c5e896d241afd1aee73ae19259a2e234256a85"
+          },
+          {
+            "label": "Ethereum pinned block 26214783 (2026-10-17T20:51:59Z)",
+            "url": "https://eth.blockscout.com/block/26214783"
+          },
+          {
+            "label": "Ethereum historical block 26113566 (2026-10-03T18:20:11Z)",
+            "url": "https://eth.blockscout.com/block/26113566"
           }
         ],
-        "evidence": "At Ethereum block 26095807, DOLA.minters(0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7) returned true, gov() returned the operator Timelock and chair() returned 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8. ctoken() returned 0x7fcb7dac61ee35b3d4a51117a7c58d53f0a8a670, whose Comptroller 0x4dcf7407ae5c07f8681e1659f626e114a7667339 returned false for mintGuardianPaused(ctoken). expansion(0) from the chair succeeded in eth_call. Source has no local supply-ceiling check; a zero-amount simulation is not a claim that every arbitrary amount will succeed."
+        "evidence": "At Ethereum block 26214783 (2026-10-17T20:51:59Z), DOLA.minters(0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7) returned true; gov() was the operator Timelock and chair() was 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8. ctoken() was 0x7fcb7dac61ee35b3d4a51117a7c58d53f0a8a670, administered by the Timelock and using Comptroller 0x4dcf7407ae5c07f8681e1659f626e114a7667339. borrowGuardianPaused(ctoken) was true and mintGuardianPaused(ctoken) false, also on historical reread at block 26113566 (2026-10-03T18:20:11Z). The Fed held 14276409703519891 of 14280358259046231 cToken shares, approximately 99.97235%; outside holders had 3948555526340 finite shares. Verified Fed.sol expansion has no local ceiling and deposits only into the fixed cToken, receiving matching shares; it exposes no cToken share-transfer or arbitrary-call function. In a counterfactual sequential simulation based on block 26214783, chair expansion(1e30) succeeded, an existing shareholder redeemed only its finite claim, chair borrowing reverted borrow is paused, and contraction(1e30) burned the principal. This is simulated execution, not a mined transaction or exhaustive closure certificate. Verified Comptroller _setBorrowPaused permits only admin to unpause; cToken _reduceReservesFresh is admin-only and pays admin. takeProfit is permissionless but source-fixes its recipient to gov, not a chair-chosen address. Existing finite redemptions and fixed-recipient profit transfers must not be described as universally requiring a new Timelock execution."
       },
       {
         "chain": "ethereum",
@@ -134,9 +166,9 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095807,
-        "capDescription": "supplyCap() returned 10000000000000000000000000 (10 million DOLA). Verified expansion is chair-only and constrained by supplyCap; setSupplyCap is governance-only, so the governance Timelock can raise the bound while the chair cannot.",
+        "observedAt": "2026-10-17",
+        "observedBlock": 26214783,
+        "capDescription": "The enabled PSM Fed has a 10 million DOLA supplyCap, raiseable only by governance, and chair-only expansion into its immutable PSM. At the fresh pin it had supplied 200,000 idle DOLA to that PSM, which held no USDS. This is capped issuance inventory, not funded holder-redemption capacity; the issuer-documented other Fed generation is not an enabled minter.",
         "sources": [
           {
             "label": "Inverse DOLA Fed docs",
@@ -145,9 +177,21 @@
           {
             "label": "Verified PSM Fed issuance and cap setter",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc"
+          },
+          {
+            "label": "Verified PSM linked to the enabled Fed",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d02f2841afa3cc20435a8c804c24deac5f30dfa"
+          },
+          {
+            "label": "Inverse PSM documentation: separate Fed and PSM generation (reviewed 2026-10-17)",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module"
+          },
+          {
+            "label": "Ethereum pinned block 26214783 (2026-10-17T20:51:59Z)",
+            "url": "https://eth.blockscout.com/block/26214783"
           }
         ],
-        "evidence": "At Ethereum block 26095807, DOLA.minters(0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc) returned true. gov() returned the operator Timelock and chair() returned 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8. The issuer API identifies this address as PSM Fed."
+        "evidence": "At Ethereum block 26214783 (2026-10-17T20:51:59Z), DOLA.minters(0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc) returned true; gov() was the operator Timelock and chair() was 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8. This enabled Fed's psm() was 0x1d02f2841afa3cc20435a8c804c24deac5f30dfa, supply() was 200000000000000000000000 raw (200,000 DOLA), and supplyCap() was 10000000000000000000000000 raw (10 million DOLA). That PSM held 200,000 DOLA, zero USDS and zero sUSDS; its accounted supply(), getTotalReserves() and sUSDS maxWithdraw were zero. The issuer-documented Fed 0x400510611bcbf9171f0e548f1c3dca7159e60d28 instead points to PSM 0x4dfd662622d766304cb539e66f893c4defa19398 and DOLA.minters(documented Fed) returned false at the same pin. Verified enabled-Fed expansion is chair-only, cap-limited and fixed to its constructor-bound PSM; only governance can raise supplyCap. The two generations are not interchangeable evidence of enabled mint authority or funded exits."
       },
       {
         "chain": "ethereum",
@@ -186,7 +230,7 @@
           "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/governance-overview"
         },
         {
-          "label": "Verified Frontier Fed: chair-only uncapped expansion",
+          "label": "Verified Frontier Fed: fixed-market expansion, contraction burn and fixed-recipient profit",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7"
         },
         {
@@ -196,11 +240,47 @@
         {
           "label": "Ethereum pinned block 26113566",
           "url": "https://eth.blockscout.com/block/26113566"
+        },
+        {
+          "label": "Ethereum pinned block 26214783 (2026-10-17T20:51:59Z)",
+          "url": "https://eth.blockscout.com/block/26214783"
+        },
+        {
+          "label": "Ethereum verification block 26214981 (2026-10-17T21:31:47Z)",
+          "url": "https://eth.blockscout.com/block/26214981"
+        },
+        {
+          "label": "Verified GovernorMills: quorum, proposal snapshots and vote support",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6"
+        },
+        {
+          "label": "INVEscrow beneficiary and delegation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x502a7759809bd673cd39a0055beed44b40eaac98"
+        },
+        {
+          "label": "INVEscrow 0x53039: pinned beneficiary and xINV balance subject",
+          "url": "https://eth.blockscout.com/address/0x53039ef2274f9bb4852632ecb48c6dd9ebf5edf5"
+        },
+        {
+          "label": "Escrow beneficiary Safe 0x495886",
+          "url": "https://eth.blockscout.com/address/0x495886947eace9788360f46be55c758f92ecd074"
+        },
+        {
+          "label": "xINV: delegation, checkpoints and exchange rate",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1637e4e9941d55703a7a5e7807d6ada3f7dcd61b"
+        },
+        {
+          "label": "Inverse contract registry: Inverse Deployer affiliation (reviewed 2026-10-17)",
+          "url": "https://docs.inverse.watch/cheat-sheets/contracts.md"
+        },
+        {
+          "label": "Inverse DOLA Feds: on-chain issuance and accounting mechanism (reviewed 2026-10-17)",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds.md"
         }
       ],
-      "evidence": "Rechecked all native paths at Ethereum block 26097135 on 2026-10-01. Full-history AddMinter/RemoveMinter logs returned 54 events and 29 candidates; pinned mapping reads confirmed the same four enabled minters. operator() remains 0x926df14a23be491164dcf93f4c468a50ef659d5b with delay() 172800 seconds. A read-only mint(operator, 1e18) simulation from that operator succeeds, and verified token source imposes no collateral or numeric cap. Frontier expansion(1e18) from its chair also succeeds, depositing minted DOLA into a cToken without adding external collateral. FiRM's global ceiling remains 100000000000000000000000000000 raw units and PSM's supplyCap remains 10000000000000000000000000; their governance setters can raise those limits. Flash maxFlashLimit remains 5000000000000000000000000 with the Timelock as owner, and verified flash source retrieves and burns the issued amount before returning. D14 resolves the prior 2026-10-01 cap-mapping question as unbounded based on the durable operator path, separately from adjustable Fed ceilings and atomic flash issuance. Historical mint incidents are retained. D14/D29 sweep 2026-10-03 at Ethereum block 26113566 (hash 0x8ee5bf8702023bb24470045b03b62f22fe10f1c46654ea9e79377e5dac7193b9): Frontier remains an enabled native minter with chair 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8 and gov Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b. The chair Safe has threshold 2 and six enumerated owners. Verified expansion(amount) is chair-only, mints DOLA into the Fed and deposits that newly minted DOLA into its cToken, with no local ceiling or external collateral deposit. A non-token-governor Safe root therefore retains durable unbacked expansion without a local governance timelock; the operator's 48-hour delay does not cover it. D29 fails G1 and the per-path 172800-second minimum. Complete Fed/chair/cToken/Comptroller executionScope closure is not certified. Existing AddMinter/RemoveMinter enumeration supports discoverability but not closure. D14 stays unbounded and the derived-consistent fallback stays unbounded-adverse; the historical incident is resolved, not active.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Historical review at Ethereum block 26097135 (2026-10-01T11:21:35Z) enumerated 54 AddMinter/RemoveMinter events and 29 candidates, confirming four enabled minters. operator() was 0x926df14a23be491164dcf93f4c468a50ef659d5b with delay() 172800 seconds; a read-only mint(operator,1e18) call as operator succeeded without collateral or a numeric token cap. Frontier chair expansion(1e18) deposited minted DOLA into its fixed cToken. FiRM's ceiling was 1e29 raw, PSM's cap 1e25 raw and flash maxFlashLimit 5e24 raw, with governance setters and mandatory atomic flash repayment/burn. The historical 2026-10-03 sweep at Ethereum block 26113566 (2026-10-03T18:20:11Z; hash 0x8ee5bf8702023bb24470045b03b62f22fe10f1c46654ea9e79377e5dac7193b9) confirmed Frontier's enabled mapping, Timelock gov, 2-of-6 chair Safe and uncapped fixed-cToken expansion, but did not certify complete Fed/chair/cToken/Comptroller execution reach. Fresh review at Ethereum block 26214783 (2026-10-17T20:51:59Z; hash 0xd8de05d65dd285a6482739aeee16a7ee5a9a492fb9d8a0f0edf784957f94caee) confirmed the same native minter census and operator. Source-reviewed mint(to,amount) and a read-only operator mint to a chosen outside recipient for 1e30 raw establish aggregate unbounded economics independently of Frontier; impersonating the authorized operator does not bypass its governance or delay. Frontier borrowing was paused at both the historical sweep and fresh pin; the Fed holds matching shares for fixed-market expansions, contraction burns principal, outside suppliers redeem finite claims and takeProfit pays fixed gov. Chair-only unbounded chosen-recipient extraction is not established, so the prior non-token-governor Safe/G1 accusation is withdrawn rather than replaced by a collateral-cap claim. Governance-process rungs remain denied because complete execution certificates and a typed authority graph are absent AND D32 positively fails: at block 26214783, independently verified at Ethereum block 26214981 (2026-10-17T21:31:47Z; hash 0x694cea66e87f898336b470261d904d40e4386b0abfd6895c39f67180a100119f), INVEscrow 0x53039ef2274f9bb4852632ecb48c6dd9ebf5edf5 has beneficiary Safe 0x495886947eace9788360f46be55c758f92ecd074, a separate 2-of-3 controller, while xINV.delegates(escrow) is EOA 0x3fcb35a1cbfb6007f9bc638d388958bc4550cb28, not one of its owners. Its 6412508715301415641032 raw xINV at exchangeRateCurrent 7829257361229428580 supplies approximately 50,205.18 INV-equivalent votes, exceeding quorumVotes() of 24,000. The caster is positively identified as Inverse Deployer and a Fed-chair Safe owner; the beneficiary Safe's ultimate beneficial ownership is not established. GovernorMills requires forVotes >= quorum and forVotes > againstVotes, so this is sufficient affirmative power absent sufficient opposition, not an unconditional majority. The beneficiary can revoke delegation, but revocable other-holder casting still fails D32; this finding is not inferred from zero direct balances or concentration alone. Reconciliation is reviewed not-applicable for this protocol-native CDP/delegated-Fed issuance mechanism rather than an off-chain issuer reserve-attestation workflow. Public Fed supply/globalSupply/supplies counters, market debt and expansion/contraction events provide on-chain accounting, not demonstrated recurring whole-native-supply-to-backing reconciliation including operator-direct issuance and bad debt. No continuous/periodic reconciliation or prudential/financial-attestation supervision credit is claimed. Ethereum DOLA bytecode immutability does not make operator/minter membership or downstream administration immutable. Aggregate economics and derived-consistent fallback remain unbounded and unbounded-adverse; the retained lending-oracle incident is historical and resolved, not an active minter compromise.",
+      "reviewer": "DOLA dispute review 2026-10-17",
+      "reviewedAt": "2026-10-17",
       "disposition": "scoreable"
     }
   }

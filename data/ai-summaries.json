@@ -2009,34 +2009,86 @@
     ]
   },
   "dola-inverse-finance": {
-    "title": "Rebuilt on FiRM, Concentrated in sUSDe",
-    "text": "DOLA is Inverse Finance's {{term:cdp}}CDP{{/term}}-style stablecoin minted through FiRM's fixed-rate lending markets, with a USDS {{term:psm}}PSM{{/term}} as its peg floor. The April 2022 oracle-manipulation exploit that let an attacker borrow DOLA against manipulated collateral left scars that became load-bearing, and the protocol rebuilt on FiRM's organic borrower demand rather than token emissions. The collateral base has become anything but diversified: sUSDe makes up roughly four-fifths of the backing, with sUSDS most of the rest, a concentration that effectively chains DOLA's fate to Ethena's synthetic dollar even though the backing pillar grades between the other two. The {{grade}} overall grade is instead set by the exit pillar, the weakest of the three, where the PSM backstop is real but thin against the peg history: hundreds of brief sub-peg blips and a worst deviation that once approached total collapse remain the asterisk on every metric. The sDOLA {{term:yield-bearing}}yield{{/term}} remains the quiet attraction, sourced from actual borrower interest, and supply changes require an INV vote plus a 48-hour timelock, which is why economic control holds up. The Fantom and BSC representations still carry a holder-burn primitive with no minter delay. DOLA is minted from overcollateralized FiRM loans with {{term:liquidation}}liquidation{{/term}} backstops, and its central trade-off is that those backstops now sit downstream of one issuer.",
-    "updatedAt": "2026-09-07",
+    "title": "FiRM Lending With Uncapped Mint Authority",
+    "text": "DOLA is Inverse Finance's {{term:cdp}}CDP{{/term}}-style dollar, issued through FiRM's fixed-rate lending markets and permissioned minters. Its {{grade}} overall grade is constrained by economic control, the weakest pillar, where mint authority is binding. The 48-hour Timelock operator can mint to any recipient without a collateral check or numeric token cap. The Frontier Fed chair can expand into a fixed cToken without that delay, but borrowing there is paused and chair-only extraction to a chosen recipient has not been established. In Ethereum FiRM markets on October 17, 2026, roughly three-quarters of drawn debt was secured by DOLA-sUSDe Curve LP collateral, including Yearn-wrapped positions. About three-quarters of that pool's normalized value was DOLA itself, so this is circular collateral exposure, not three-quarters external sUSDe backing. Both reviewed USDS {{term:psm}}PSM{{/term}} deployments held no USDS or sUSDS at the same checkpoint, leaving no funded PSM redemption capacity. The roughly 10% Curve dislocation on March 22, 2026 was real; the near-$0.10 February 2024 feed print was an artifact. FiRM's lending and liquidation mechanisms do not constrain every authorized mint path.",
+    "updatedAt": "2026-10-17",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07",
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-10-17",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-09-07"
+        "factsAsOf": "2026-10-17"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Inverse FiRM markets: Ethereum drawn-debt denominator, observed 2026-10-17T20:52:45Z",
+        "url": "https://www.inverse.finance/api/f2/fixed-markets"
+      },
+      {
+        "label": "Ethereum block 26214783, 2026-10-17T20:51:59Z: LP constituents and both PSM reserve checkpoints",
+        "url": "https://etherscan.io/block/26214783"
+      },
+      {
+        "label": "DOLA verified mint logic; operator reviewed at Ethereum block 26214783 on 2026-10-17",
+        "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+      },
+      {
+        "label": "Frontier Fed fixed-recipient expansion; Ethereum block 26214981, 2026-10-17T21:31:47Z",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7"
+      },
+      {
+        "label": "Inverse USDS PSM mechanics and deployment identities",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module"
+      },
+      {
+        "label": "March 22 Curve dislocation: Ethereum block 24710180, 2026-03-22T02:51:59Z",
+        "url": "https://etherscan.io/block/24710180"
+      },
+      {
+        "label": "February 2024 artifact cross-check: Curve trade near $0.995 at block 19201299, 2024-02-11T00:35:47Z",
+        "url": "https://etherscan.io/tx/0xd993da53705884ec3fab6b6262f52ebbab570858bcf345830b7f387a5de12474"
+      },
+      {
+        "label": "Pharos live Safety Score publication reviewed 2026-10-17",
+        "url": "https://pharos.watch/_site-data/report-cards/v9"
       }
     ]
   },
   "sdola-inverse-finance": {
     "title": "DOLA With an Exchange Rate",
-    "text": "sDOLA is the ERC-4626 wrapper around DOLA's savings account, which means the stablecoin risk is still DOLA and the extra product risk is the exchange-rate wrapper sitting on top. FiRM borrowing revenue is converted through the DBR-DOLA auction and compounded into a rising DOLA:sDOLA exchange rate, so the yield is tied to borrower demand rather than token emissions. The wrapper does not create new base DOLA supply, but holders still inherit DOLA's CDP collateral mix, governance, and any upstream stress in the parent peg. Cross-chain deployments on Base, Optimism, Arbitrum, and Berachain are Chainlink CCIP burn-mint representations with Ethereum as the source of truth, so the bridge path is part of the exit math on those chains. The {{grade}} overall grade is capped at the parent DOLA rating.",
-    "updatedAt": "2026-09-07",
+    "text": "sDOLA is the ERC-4626 wrapper around DOLA's savings account, which means the stablecoin risk is still DOLA and the extra product risk is the exchange-rate wrapper sitting on top. FiRM borrowing revenue is converted through the DBR-DOLA auction and compounded into a rising DOLA:sDOLA exchange rate, so the yield is tied to borrower demand rather than token emissions. The wrapper does not create new base DOLA supply, but holders still inherit DOLA's CDP collateral mix, governance, and any upstream stress in the parent peg. Minting, unwrapping, and yield accrual operate on Ethereum. Governance mill 396, executed August 11, 2026, shut the Chainlink CCIP lanes to Base, Optimism, Arbitrum, and Berachain; those receipt contracts are historical deployments, not live bridge destinations. The {{grade}} overall grade is capped at the parent DOLA rating. Unwrapping has no lock-up but returns DOLA rather than dollars, leaving the parent peg and exit liquidity as the durable constraint.",
+    "updatedAt": "2026-10-17",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07",
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-10-17",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-09-07"
+        "factsAsOf": "2026-10-17"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Inverse sDOLA mechanics and mill 396 CCIP shutdown, reviewed 2026-10-17",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "Inverse cross-chain guide: historical sDOLA receipt deployments, reviewed 2026-10-17",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide"
+      },
+      {
+        "label": "Pinned sDOLA implementation: deposit/share accounting and DOLA withdrawal",
+        "url": "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol"
+      },
+      {
+        "label": "Pharos live Safety Score publication reviewed 2026-10-17",
+        "url": "https://pharos.watch/_site-data/report-cards/v9"
       }
     ]
   },

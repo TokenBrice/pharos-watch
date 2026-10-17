@@ -405,7 +405,9 @@ export function MintAuthoritySection({
   const hasRail = Boolean(symbol) && railControls.length > 0 && profile.mintPathShortLabel !== "Unknown";
   const hasSpectrum = score != null && score.bandKey != null && score.bandKey !== "nr";
   const scoreTriggerLabel = score
-    ? `Mint Authority Score ${score.scoreLabel}, ${score.bandLabel}. Explain methodology.`
+    ? score.publicationAvailable
+      ? `Mint Authority Score ${score.scoreLabel}, ${score.bandLabel}. Explain methodology.`
+      : "Mint score unavailable. Explain methodology."
     : undefined;
   const mintRole = controlRoles?.components.find((component) => component.kind === "mint")?.role ?? null;
   const unresolvedQuestions = profile.unresolvedQuestions ?? [];

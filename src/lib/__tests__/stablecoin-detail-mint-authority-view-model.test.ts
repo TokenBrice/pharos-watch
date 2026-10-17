@@ -37,6 +37,30 @@ function makeControlCoin(control: MintAuthorityClientControlSummary): Stablecoin
 }
 
 describe("mint-authority detail view-model builder", () => {
+  it("keeps unavailable publication distinct from a settled unrated component", () => {
+    const coin = makeControlCoin({
+      label: "Minter", role: "direct-minter", authorityType: "contract", directMintAbility: "direct",
+    });
+    const unavailable = buildMintAuthorityDetailViewModel(coin);
+    expect(unavailable.score).toMatchObject({
+      publicationAvailable: false, score: null, compactLabel: "Mint score unavailable", bandLabel: "Unavailable",
+    });
+    expect(unavailable.verdict).not.toContain("Not rated");
+    expect(unavailable.verdict).toContain("mint");
+    const unrated = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [] });
+    expect(unrated.score).toMatchObject({
+      publicationAvailable: true, score: null, compactLabel: "NR", bandLabel: "NR",
+    });
+    expect(unrated.verdict).toMatch(/^Not rated —/);
+    const rated = buildMintAuthorityDetailViewModel(coin, {
+      mint: { score: 35, posture: "unbounded-adverse" }, caps: [],
+    });
+    expect(rated.score).toMatchObject({
+      publicationAvailable: true, score: 35, compactLabel: "35 · Exposed", bandLabel: "Exposed",
+    });
+    expect(rated.verdict).toMatch(/^Exposed —/);
+  });
+
   it("uses only compact mint-authority summaries for client detail presentation", () => {
     const fullCoin = TRACKED_META_BY_ID.get("usdc-circle");
     expect(fullCoin?.mintAuthority).toBeDefined();
@@ -275,7 +299,7 @@ describe("mint-authority detail view-model builder", () => {
     expect(viewModel.controls[0]).toMatchObject(expected);
     // Control rows are curated descriptions; the score and band come from the
     // publication, which these fixtures do not carry.
-    expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
+    expect(viewModel.score).toMatchObject({ publicationAvailable: false, score: null, bandLabel: "Unavailable" });
   });
 
   it("keeps the mint-incident callout on the detail card", () => {

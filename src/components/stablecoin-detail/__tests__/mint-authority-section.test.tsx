@@ -95,6 +95,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
     },
   ],
   score: {
+    publicationAvailable: true,
     score: 70,
     scoreLabel: "70/100",
     compactLabel: "70 · Governed",
@@ -114,6 +115,23 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
 };
 
 describe("MintAuthoritySection", () => {
+  it("does not turn missing publication into a not-rated verdict or NR badge", () => {
+    const coin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("usdc-circle")!);
+    const profile = buildMintAuthorityDetailViewModel(coin);
+    const dom = renderDom(<MintAuthoritySection profile={profile} symbol={coin.symbol} />);
+    expect(dom.textContent).toContain("Mint score unavailable");
+    expect(dom.textContent).not.toContain("Not rated");
+    expect(dom.querySelector("[aria-label='Mint score unavailable. Explain methodology.']")).not.toBeNull();
+    expect(dom.innerHTML).not.toContain("NR, NR");
+
+    const settled = renderDom(<MintAuthoritySection
+      profile={buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [] })}
+      symbol={coin.symbol}
+    />);
+    expect(settled.textContent).toContain("Not rated");
+    expect(settled.textContent).not.toContain("Mint score unavailable");
+  });
+
   it("renders a published active issuance incident as a failed gate, not missing evidence", () => {
     const coin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("usdc-circle")!);
     const profile = buildMintAuthorityDetailViewModel(coin, {

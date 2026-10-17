@@ -18,7 +18,12 @@ import {
 } from "@shared/lib/public-docs";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { resolveAiSummaryClaims } from "@shared/lib/ai-summary-claims";
+import {
+  AI_SUMMARY_UNAVAILABLE_NOTICE,
+  hasAvailableAiSummaryClaims,
+  resolveAiSummaryClaims,
+} from "@shared/lib/ai-summary-claims";
+import { stripTermMarkup } from "../../src/lib/term-markup";
 import type {
   DigestContentEntry,
   StablecoinAiSummariesById,
@@ -82,9 +87,11 @@ export function renderStablecoinDetail(
   ];
 
   if (summary?.text) {
-    // Build-time export has no live values: registered claim tokens print the
-    // unresolved fallback rather than raw placeholders.
-    parts.push(`## Overview\n\n${resolveAiSummaryClaims(summary.text, summary.claimTokens).text}`);
+    // Markdown never hydrates, so do not publish claims without live inputs.
+    const overview = hasAvailableAiSummaryClaims(summary.text, summary.claimTokens)
+      ? stripTermMarkup(resolveAiSummaryClaims(summary.text, summary.claimTokens).text)
+      : AI_SUMMARY_UNAVAILABLE_NOTICE;
+    parts.push(`## Overview\n\n${overview}`);
   }
 
   const collateral = cleanMarkdownText(coin.collateral);

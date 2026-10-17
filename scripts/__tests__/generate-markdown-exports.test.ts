@@ -53,7 +53,7 @@ describe("stablecoin markdown", () => {
     }
   });
 
-  it("prints the unresolved fallback for registered claim tokens instead of raw placeholders", () => {
+  it("withholds registered live claims instead of asserting unavailable grades", () => {
     const md = renderStablecoinDetail("xsgd-straitsx", {
       "xsgd-straitsx": {
         title: "Summary",
@@ -62,8 +62,21 @@ describe("stablecoin markdown", () => {
         claimTokens: [{ token: "grade", placeholder: "{{grade}}", source: "report-card.grade", factsAsOf: "2026-09-01" }],
       },
     });
-    expect(md).toContain("Holds a N/A grade.");
+    expect(md).toContain("The current Safety Score and live assessment are available on the interactive page.");
+    expect(md).not.toContain("Holds a N/A grade.");
     expect(md).not.toContain("{{grade}}");
+  });
+
+  it("retains glossary labels without exporting internal markup", () => {
+    const md = renderStablecoinDetail("xsgd-straitsx", {
+      "xsgd-straitsx": {
+        title: "Summary",
+        text: "Holders use {{term:redemption}}redemption{{/term}} at par.",
+        updatedAt: "2026-09-01",
+      },
+    });
+    expect(md).toContain("Holders use redemption at par.");
+    expect(md).not.toContain("{{");
   });
 
   it("iterates unique routes with matching profiles for a small registry", () => {

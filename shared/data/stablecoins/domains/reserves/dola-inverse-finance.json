@@ -4,7 +4,7 @@
     {
       "sourceKey": "dola-inverse:lp:dola-susde",
       "name": "DOLA-sUSDe LP-secured debt (undecomposed)",
-      "pct": 51.7,
+      "pct": 71.39872,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
@@ -19,22 +19,24 @@
     },
     {
       "sourceKey": "dola-inverse:unattributed",
-      "name": "Unclassified non-FiRM issuance residual (excluding verified Frontier bad debt)",
-      "pct": 31.456297,
+      "name": "Unresolved issuance and backing reconciliation residual",
+      "pct": 0.720407,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Inverse Finance issuance outside measured FiRM debt",
+      "issuerOrObligor": "Inverse Finance claims outside measured FiRM debt after own-token inventory netting",
       "riskFactors": [
         "counterparty",
         "credit",
         "liquidity"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence"
     },
     {
       "sourceKey": "dola-inverse:lp:dola-susds",
       "name": "DOLA-sUSDS LP-secured debt (undecomposed)",
-      "pct": 5.7,
+      "pct": 7.768836,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
@@ -50,7 +52,7 @@
     {
       "sourceKey": "dola-inverse:lp:sdola-scrvusd",
       "name": "sDOLA-scrvUSD LP-secured debt (undecomposed)",
-      "pct": 4.2,
+      "pct": 6.082236,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
@@ -66,7 +68,7 @@
     {
       "sourceKey": "dola-inverse:lp:reusd-sdola",
       "name": "reUSD-sDOLA LP-secured debt (undecomposed)",
-      "pct": 2.7,
+      "pct": 6.675994,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
@@ -81,7 +83,7 @@
     },
     {
       "name": "ETH / Liquid staking (wstETH, WETH)",
-      "pct": 0.6,
+      "pct": 0.922381,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ETH and liquid staking tokens (Lido wstETH, WETH)",
@@ -95,7 +97,7 @@
     },
     {
       "name": "Governance tokens (INV, CRV, CVX)",
-      "pct": 0.5,
+      "pct": 0.641849,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Inverse Finance (INV), Curve (CRV), and Convex (CVX) governance tokens",
@@ -109,7 +111,7 @@
     },
     {
       "name": "sUSDe collateral",
-      "pct": 0.4,
+      "pct": 0.586793,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -128,7 +130,7 @@
     },
     {
       "name": "BTC (WBTC, cbBTC)",
-      "pct": 0.2,
+      "pct": 0.331537,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Wrapped BTC custodians (WBTC, Coinbase cbBTC)",
@@ -143,8 +145,8 @@
     },
     {
       "sourceKey": "dola-inverse:frontier-bad-debt",
-      "name": "Verified Frontier bad debt (October 2, 2026)",
-      "pct": 2.543703,
+      "name": "Verified Frontier bad debt",
+      "pct": 3.707194,
       "risk": "very-high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Inverse Finance deprecated Frontier lending protocol bad debt",
@@ -154,15 +156,57 @@
         "liquidity"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:sinvusd",
+      "name": "sinvUSD collateral (sINV-backed stablecoin vault)",
+      "pct": 0.040938,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance sINV-backed invUSD vault",
+      "riskFactors": ["market", "smart-contract", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:ysybold",
+      "name": "ysyBOLD collateral",
+      "pct": 1.122963,
+      "risk": "medium",
+      "coinId": "ybold-yearn",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Yearn staked yBOLD vault",
+      "riskFactors": ["smart-contract", "liquidity", "market"]
+    },
+    {
+      "sourceKey": "dola-inverse:dai",
+      "name": "DAI collateral",
+      "pct": 0.000035,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky DAI",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity"]
+    },
+    {
+      "sourceKey": "dola-inverse:lp:dola-usr",
+      "name": "DOLA-USR LP-secured debt (undecomposed)",
+      "pct": 0.000118,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol owner-session-4 reserve decisions 2026-10-02 (ReserveDecisions)",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "DOLA dispute review 2026-10-17",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Inverse Finance FiRM markets API (accessed 2026-09-29; saved issuer capture)",
+        "label": "Inverse Finance 49-market census, observed 2026-10-17T21:31:34Z; debt and DOLA balances independently pinned on Ethereum block 26214950 (2026-10-17T21:25:35Z)",
         "url": "https://www.inverse.finance/api/f2/fixed-markets"
       },
       {
@@ -174,83 +218,105 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
       },
       {
-        "label": "Inverse Finance official bad-debt API; Frontier-specific balance at block 26104682 (October 2, 2026)",
+        "label": "Inverse Finance issuer bad-debt checkpoint: Frontier 2,765,404.930738723 DOLA, block 26214507, timestamp 1792267022418; observed 2026-10-17",
         "url": "https://www.inverse.finance/api/transparency/repayments-v2?v=3"
       },
       {
-        "label": "Inverse Finance Fed overview API (fetched October 2, 2026; distinct Frontier supply and borrow counters)",
+        "label": "Inverse Finance Fed issuance counters; independently reconciled on Ethereum block 26214950, hash 0xec84a901aefd0259ee70016b88ff45ccfe3a9e16c2561db0e1b49eebd0bd6f61",
         "url": "https://www.inverse.finance/api/transparency/fed-overview"
+      },
+      {
+        "label": "DOLA token totalSupply and balanceOf all 49 FiRM markets; Ethereum block 26214950, 2026-10-17T21:25:35Z, observed 2026-10-17T21:32:25Z",
+        "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#readContract"
+      },
+      {
+        "label": "FiRM Fed supplies(market) completeness witness equals globalSupply; Ethereum block 26214950, observed 2026-10-17T21:32:25Z",
+        "url": "https://etherscan.io/address/0x2b34548b865ad66a2b046cb82e59ee43f75b90fd#readContract"
       }
     ],
-    "rationale": "Owner ruling 7 splits the original 34% unattributed non-FiRM issuance without asserting the entire tail is measured unsafe. Official repayments-v2 API fetched October 2 reports Frontier-specific bad debt 2,762,518.5942272837 DOLA at block 26104682 (timestamp 1790944612564), distinct from the Fed overview's Frontier circulating borrow counter 2,761,767.883082971. Dividing verified Frontier bad debt by the retained $108,602,244.08936833 September 29 supply denominator gives 2.543703%; the remaining 31.456297% is unclassified unknown. The retained FiRM slices come from the saved September 29 issuer payload; the freshly fetched fixed-markets API also reports current FiRM debt but does not identify this non-FiRM tail. This temporally mixed illustrative catalog split is not a synchronized current reserve valuation or a supply override. The October 2 review date records the bad-debt read, not a refresh of September 29 composition. LP debt remains undecomposed and no external stablecoin constituents are inferred. Only the verified Frontier slice supports measured unsafe attribution; the unidentified remainder must be bounded-unknown.",
-    "compositionBasis": "Retained September 29 FiRM debt and $108,602,244.08936833 supply denominator; original 34% non-FiRM tail split using October 2 official Frontier bad debt, with explicit temporal mismatch",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "D-1/D-4/D-5: Ethereum block 26214950 (2026-10-17T21:25:35Z), independently observed 2026-10-17T21:32:25Z, gives 113,058,118.240939048310629383 minted DOLA, 71,292,840.879323003036446379 FiRM debt and 38,462,480.393859181931889876 idle DOLA across all 49 markets. Fed per-market supplies sum exactly to globalSupply 109,754,203.482632377452169839; debt plus idle exceeds that issuance by 1,117.790549807516166416. Under existing symmetric-netting policy, exclude the same idle own-token amount from claims and the denominator, leaving 74,595,637.847079866378739507 face-value net claims. Idle DOLA receives no external reserve credit. The separate issuer Frontier bad-debt checkpoint contributes 2,765,404.930738723 DOLA; the remaining 537,392.03701814 is unresolved, not non-FiRM or measured bad debt. The checkpoint clocks differ and the shares describe a reviewed debt-weighted claim map, not independent collateral TVL or a complete net-solvency attestation. Invalid-feed yv-USR debt 88.012207824144463745 and its idle inventory are included from direct contract reads. Both old/new PSM reserve observations are zero, so no USDS backing is inferred (D-6). LP collateral and circular DOLA/sDOLA constituents remain undecomposed.",
+    "compositionBasis": "Ethereum block 26214950 canonical minted DOLA less the complete 49-market idle DOLA census; debt-weighted face claims, separate issuer Frontier checkpoint block 26214507; public provider circulation unchanged",
+    "compositionAsOf": "2026-10-17",
     "scope": "full-composition",
-    "knownUnknownExposure": "64.3% remains undecomposed LP-secured debt; 31.456297% is unclassified non-FiRM issuance after separating 2.543703% verified Frontier bad debt. No favourable backing or measured danger is inferred for the unknown residual.",
-    "knownUnknownExposurePct": 95.756297,
+    "knownUnknownExposure": "91.925904% is undecomposed LP-secured debt and 0.720407% remains unresolved after symmetric own-token netting and the separate 3.707194% Frontier bad-debt allocation. Issuance/inventory conservation is not a complete external-asset or circular-LP net-solvency model.",
+    "knownUnknownExposurePct": 92.646311,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "DOLA-sUSDe LP-secured debt (undecomposed)",
-        "pct": 51.7,
+        "pct": 71.39872,
         "disposition": "basket-needs-split",
         "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "Unclassified non-FiRM issuance residual (excluding verified Frontier bad debt)",
-        "pct": 31.456297,
+        "reserveName": "Unresolved issuance and backing reconciliation residual",
+        "pct": 0.720407,
         "disposition": "insufficient-evidence",
-        "rationale": "Original 34% tail less the separately verified Frontier bad-debt slice; no measured collateral breakdown exists for the remainder, which must be charged as bounded-unknown, not measured unsafe. Sol curation campaign 2026-10-09 (Lane42Inverse), observed 2026-10-09T10:35:59Z: the Fed overview separately reports supply, circulating borrowing, idle DOLA and venue positions, while DOLA Feds documentation describes FiRM, Frontier and PSM issuance. Those counters do not reconcile this exact residual to independent backing after undrawn issuance and circular DOLA claims are netted. The historical weight, composition clock and unknown classification are retained."
+        "rationale": "D-1: publicly reproducible FiRM idle inventory has been netted symmetrically, not classified as undisclosed backing. This remaining face-value reconciliation residual includes other issuance/legacy claims and accounting excess; complete independent asset attribution is unestablished. No favorable reserve quality or measured bad-debt status is inferred."
       },
       {
         "reserveIndex": 2,
         "reserveName": "DOLA-sUSDS LP-secured debt (undecomposed)",
-        "pct": 5.7,
+        "pct": 7.768836,
         "disposition": "basket-needs-split",
         "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
       },
       {
         "reserveIndex": 3,
         "reserveName": "sDOLA-scrvUSD LP-secured debt (undecomposed)",
-        "pct": 4.2,
+        "pct": 6.082236,
         "disposition": "basket-needs-split",
         "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
       },
       {
         "reserveIndex": 4,
         "reserveName": "reUSD-sDOLA LP-secured debt (undecomposed)",
-        "pct": 2.7,
+        "pct": 6.675994,
         "disposition": "basket-needs-split",
         "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
       },
       {
         "reserveIndex": 5,
         "reserveName": "ETH / Liquid staking (wstETH, WETH)",
-        "pct": 0.6,
+        "pct": 0.922381,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This directly identified cryptoasset category is not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "Governance tokens (INV, CRV, CVX)",
-        "pct": 0.5,
+        "pct": 0.641849,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This directly identified cryptoasset category is not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 8,
         "reserveName": "BTC (WBTC, cbBTC)",
-        "pct": 0.2,
+        "pct": 0.331537,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This directly identified cryptoasset category is not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 9,
-        "reserveName": "Verified Frontier bad debt (October 2, 2026)",
-        "pct": 2.543703,
+        "reserveName": "Verified Frontier bad debt",
+        "pct": 3.707194,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Official API independently identifies this Frontier bad-debt amount; this measured adverse credit exposure is not a tracked stablecoin dependency and is not the entire original non-FiRM tail."
+        "rationale": "The issuer's separately dated repayments checkpoint identifies Frontier bad debt, not the entire unresolved claim tail. This measured adverse credit exposure is not a tracked stablecoin dependency; no enforceable recovery horizon or maturity is established."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "sinvUSD collateral (sINV-backed stablecoin vault)",
+        "pct": 0.040938,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The identified sINV-backed invUSD vault is not a tracked stablecoin dependency; its governance-token-backed claim remains a protocol position."
+      },
+      {
+        "reserveIndex": 13,
+        "reserveName": "DOLA-USR LP-secured debt (undecomposed)",
+        "pct": 0.000118,
+        "disposition": "basket-needs-split",
+        "rationale": "D-4: direct yv-USR market totalDebt at Ethereum block 26214950 survives the issuer API invalid-feed zero override. LP and Yearn conversion remain undecomposed; no direct USR holding or tracked issuer edge is inferred."
       }
     ]
   }

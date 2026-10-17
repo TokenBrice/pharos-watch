@@ -1,0 +1,582 @@
+{
+  "_evidence": {
+    "review": "DOLA dispute review 2026-10-17",
+    "source": "verify-VerifyBacking.md independently re-derived Ethereum ledger",
+    "chain": "ethereum",
+    "block": 26214950,
+    "blockHash": "0xec84a901aefd0259ee70016b88ff45ccfe3a9e16c2561db0e1b49eebd0bd6f61",
+    "blockTimestamp": "2026-10-17T21:25:35Z",
+    "observedAt": "2026-10-17T21:32:25Z",
+    "grossClaimsDola": 113058118.24093905,
+    "firmSupplyDola": 109754203.48263238,
+    "frontierBadDebtDola": 2765404.930738723,
+    "frontierCheckpointBlock": 26214507,
+    "frontierCheckpointTimestamp": 1792267022418,
+    "note": "Normalized 49-market RPC census; symbol and borrow flags retained from the historical capture where present. Repayments is a distinct issuer checkpoint, not same-pin debt."
+  },
+  "timestamp": 1792272424141,
+  "markets": [
+    {
+      "name": "WETH",
+      "address": "0x63df5e23db45a2066508318f172ba45b9cd37035",
+      "underlying": {
+        "symbol": "WETH"
+      },
+      "totalDebt": 53861.34619429935,
+      "dolaLiquidity": 1936233.28499123,
+      "fedSupplyDola": 1990000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "stETH",
+      "address": "0x743a502cf0e213f6fee56cd9c6b03de7fa951dcf",
+      "underlying": {
+        "symbol": "stETH"
+      },
+      "totalDebt": 2400.0,
+      "dolaLiquidity": 214574.44695227296,
+      "fedSupplyDola": 216974.44695227296,
+      "borrowPaused": true
+    },
+    {
+      "name": "gOHM",
+      "address": "0x7cd3ab8354289bef52c84c2bf0a54e3608e66b37",
+      "underlying": {
+        "symbol": "gOHM"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 11066.469520878154,
+      "fedSupplyDola": 11062.356080788824,
+      "borrowPaused": true
+    },
+    {
+      "name": "CRV",
+      "address": "0x63fad99705a255fe2d500e498dbb3a9ae5aa1ee8",
+      "underlying": {
+        "symbol": "CRV"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 500000.0,
+      "fedSupplyDola": 500000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "cvxCRV",
+      "address": "0x3474ad0e3a9775c9f68b415a7a9880b0cab9397a",
+      "underlying": {
+        "symbol": "cvxCRV"
+      },
+      "totalDebt": 94352.64762321633,
+      "dolaLiquidity": 435617.8905174496,
+      "fedSupplyDola": 529939.2232802701,
+      "borrowPaused": false
+    },
+    {
+      "name": "INV",
+      "address": "0xb516247596ca36bf32876199fbdcad6b3322330b",
+      "underlying": {
+        "symbol": "INV"
+      },
+      "totalDebt": 131813.30369484995,
+      "dolaLiquidity": 152706.61461137253,
+      "fedSupplyDola": 284500.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "cvxFXS",
+      "address": "0x93685185666c8d34ad4c574b3dbf41231bbfb31b",
+      "underlying": {
+        "symbol": "cvxFXS"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "st-yCRV",
+      "address": "0x27b6c301fd441f3345d61b7a4245e1f823c3f9c4",
+      "underlying": {
+        "symbol": "st-yCRV"
+      },
+      "totalDebt": 112305.25713505942,
+      "dolaLiquidity": 59369.56073324697,
+      "fedSupplyDola": 171643.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "DAI",
+      "address": "0x0971b1690d101169bfca4715897ad3a9b3c39b26",
+      "underlying": {
+        "symbol": "DAI"
+      },
+      "totalDebt": 26.23169332263704,
+      "dolaLiquidity": 30.76830667736296,
+      "fedSupplyDola": 57.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "CVX",
+      "address": "0xdc2265cbd15bed67b5f2c0b82e23fce4a07ddf6b",
+      "underlying": {
+        "symbol": "CVX"
+      },
+      "totalDebt": 140319.86414029225,
+      "dolaLiquidity": 411284.1756308074,
+      "fedSupplyDola": 551604.0397710997,
+      "borrowPaused": false
+    },
+    {
+      "name": "wstETH",
+      "address": "0x3fd3dabb9f9480621c8a111603d3ba70f17550bc",
+      "underlying": {
+        "symbol": "wstETH"
+      },
+      "totalDebt": 631794.2800233618,
+      "dolaLiquidity": 1358207.0144604803,
+      "fedSupplyDola": 1990000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "WBTC",
+      "address": "0x48ba574edf0bc4e2e40b529863aaa6a67c264e7c",
+      "underlying": {
+        "symbol": "WBTC"
+      },
+      "totalDebt": 138977.33598152758,
+      "dolaLiquidity": 1851724.7792613267,
+      "fedSupplyDola": 1990000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "st-yETH",
+      "address": "0x0c0bb843fabda441edefb93331cfff8ec92bd168",
+      "underlying": {
+        "symbol": "st-yETH"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 460000.0,
+      "fedSupplyDola": 460000.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "sFRAX",
+      "address": "0xfea3a862ee4b3f9b6015581d6d2d25af816c54f1",
+      "underlying": {
+        "symbol": "sFRAX"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "COMP",
+      "address": "0x29fe42f4f71ba5b9a7aae794468e7ca4128a93b8",
+      "underlying": {
+        "symbol": "COMP"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "sUSDe",
+      "address": "0x79ef6d28c41e47a588e2f2ffb4140eb6d952aec4",
+      "underlying": {
+        "symbol": "sUSDe"
+      },
+      "totalDebt": 437722.29957580566,
+      "dolaLiquidity": 163277.70042419434,
+      "fedSupplyDola": 601000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "crvUSD-DOLA",
+      "address": "0x6a522f3bd3fda15e74180953f203cf55aa6c631e",
+      "underlying": {
+        "symbol": "DOLA-crvUSD lp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 54988.936514909394,
+      "fedSupplyDola": 54988.936514909394,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-crvUSD-DOLA",
+      "address": "0xe85943e280776254ee6c9801553b93f10ef4c99c",
+      "underlying": {
+        "symbol": "yv-DOLA-crvUSD lp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "cbBTC",
+      "address": "0x2a256306d8ba899e33b01e495982656884ac77ff",
+      "underlying": {
+        "symbol": "cbBTC"
+      },
+      "totalDebt": 108334.9800357788,
+      "dolaLiquidity": 1033562.0575308634,
+      "fedSupplyDola": 1141897.0375666423,
+      "borrowPaused": false
+    },
+    {
+      "name": "FraxPyUSD-DOLA",
+      "address": "0x4797a68c8feb383c3372c0e098533acf8ed95b26",
+      "underlying": {
+        "symbol": "DOLA-FRAX-PYUSD",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-FraxPyUSD-DOLA",
+      "address": "0xf013d998d4cf7f45547958094f1eee75ca43c4f5",
+      "underlying": {
+        "symbol": "yv-DOLA-FraxPyUSD lp",
+        "isLP": true
+      },
+      "totalDebt": 3.502442e-12,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 3.502442e-12,
+      "borrowPaused": true
+    },
+    {
+      "name": "FraxBP-DOLA",
+      "address": "0x87df9a00f0e4908e61756d2fcb348adf95ce72ea",
+      "underlying": {
+        "symbol": "DOLA-FRAXBP",
+        "isLP": true
+      },
+      "totalDebt": 6.25e-13,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 6.25e-13,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-FraxBP-DOLA",
+      "address": "0x8205be13cc245740f9ea23dc88a9b56206bec0e3",
+      "underlying": {
+        "symbol": "yv-DOLA-FraxBP lp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-27MAR25",
+      "address": "0x0dfe3d04536a74dd532dd0cef5005ba14c5f4112",
+      "underlying": {
+        "symbol": "PT-sUSDe-27MAR25"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "sUSDe-DOLA",
+      "address": "0xb427fc22561f3963b04202f9bb5bcebd76c14a99",
+      "underlying": {
+        "symbol": "DOLA-sUSDe clp",
+        "isLP": true
+      },
+      "totalDebt": 41937391.942659736,
+      "dolaLiquidity": 16383608.057340266,
+      "fedSupplyDola": 58321000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-sUSDe-DOLA",
+      "address": "0x4e264618dc015219cd83dbc53b31251d73c2db1a",
+      "underlying": {
+        "symbol": "yv-DOLA-sUSDe",
+        "isLP": true
+      },
+      "totalDebt": 11322938.90383395,
+      "dolaLiquidity": 1927061.0961660496,
+      "fedSupplyDola": 13250000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "sUSDS-DOLA",
+      "address": "0xd68d3a44d46dd50bfeba8cca544717b76e7c4b29",
+      "underlying": {
+        "symbol": "DOLA-sUSDS clp",
+        "isLP": true
+      },
+      "totalDebt": 4907274.852525456,
+      "dolaLiquidity": 5882725.147474544,
+      "fedSupplyDola": 10790000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-sUSDS-DOLA",
+      "address": "0x4a33bafa8a31e4ec9649f65646022cad1957808b",
+      "underlying": {
+        "symbol": "yv-DOLA-sUSDS",
+        "isLP": true
+      },
+      "totalDebt": 887938.1123872987,
+      "dolaLiquidity": 3202061.8876127014,
+      "fedSupplyDola": 4090000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "scrvUSD-DOLA",
+      "address": "0x2fed508aac87c0e6f0b647fe83164a7aa6eb2fc9",
+      "underlying": {
+        "symbol": "DOLA-scrvUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-scrvUSD-DOLA",
+      "address": "0x5bb8f6aacff2971b42f9fe6945d24726a2541cf2",
+      "underlying": {
+        "symbol": "yv-DOLA-scrvUSD",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "scrvUSD-sDOLA-convex",
+      "address": "0x63d27fc9d463ed727676367d3f818999962737e8",
+      "underlying": {
+        "symbol": "sDOLA-scrvUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-scrvUSD-sDOLA",
+      "address": "0xb8bc1e9c0a2d445bc39d2a745f47619e954dd565",
+      "underlying": {
+        "symbol": "yv-sDOLA-scrvUSD",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 30000.696492826482,
+      "fedSupplyDola": 30000.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "deUSD-DOLA",
+      "address": "0xb907dcc926b5991a149d04cb7c0a4a25dc2d8f9a",
+      "underlying": {
+        "symbol": "DOLA-deUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 7.890188813e-09,
+      "fedSupplyDola": 7.890188813e-09,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-deUSD-DOLA",
+      "address": "0x4f5ea72d932f554f08e97cb78dd25f8aae43c08e",
+      "underlying": {
+        "symbol": "yv-DOLA-deUSD",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "USR-DOLA",
+      "address": "0x3ac5cebc7a417db619b85660e4f284f5643dfd5e",
+      "underlying": {
+        "symbol": "DOLA-USR clp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-USR-DOLA",
+      "address": "0xc0086ff652c67f43f00f0f9c69ef6c33640c8ccf",
+      "underlying": {
+        "symbol": "yv-DOLA-USR",
+        "isLP": true
+      },
+      "totalDebt": 88.01220782414447,
+      "dolaLiquidity": 919.4588400342662,
+      "fedSupplyDola": 1000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "PT-sUSDe-29MAY25",
+      "address": "0x2d4788893de7a4fb42106d9db36b65463428fbd9",
+      "underlying": {
+        "symbol": "PT-sUSDe-29MAY25"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-31JUL25",
+      "address": "0xf85ed61dfd00bcd89ae0a6085b062a261e222db2",
+      "underlying": {
+        "symbol": "PT-sUSDe-31JUL25"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 28537.4424663863,
+      "fedSupplyDola": 28537.4424663863,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-25SEP25",
+      "address": "0x607370d051b70f66dd2efb7a6c03ad0c3871dcc5",
+      "underlying": {
+        "symbol": "PT-sUSDe-25SEP25"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-USDe-25SEP25",
+      "address": "0xb686f195ecfb7cbdfc16d7d17cf12f500709c867",
+      "underlying": {
+        "symbol": "PT-USDe-25SEP25"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 52.201851646471944,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-27NOV25",
+      "address": "0x223f21a27f290972cba4e25c8e351ef2937fbe68",
+      "underlying": {
+        "symbol": "PT-sUSDe-27NOV25"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-USDe-27NOV25",
+      "address": "0xf706289d0324a5e86c33ce54689a6f34cfd4b11f",
+      "underlying": {
+        "symbol": "PT-USDe-27NOV25"
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": true
+    },
+    {
+      "name": "wstUSR-DOLA",
+      "address": "0xe4d47ef77ac2c3fa4019cd169ac1dd9e27cb12e4",
+      "underlying": {
+        "symbol": "DOLA-wstUSR clp",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 680000.0,
+      "fedSupplyDola": 680000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-wstUSR-DOLA",
+      "address": "0x28684485369f7478f42aaa62660123ab5d573537",
+      "underlying": {
+        "symbol": "yv-DOLA-wstUSR",
+        "isLP": true
+      },
+      "totalDebt": 0.0,
+      "dolaLiquidity": 0.0,
+      "fedSupplyDola": 0.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "scrvUSD-sDOLA",
+      "address": "0xc45e9c231ab5d9bd3f1131e7901b100d8d236c4d",
+      "underlying": {
+        "symbol": "sDOLA-scrvUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 4537082.536445276,
+      "dolaLiquidity": 363089.6793249612,
+      "fedSupplyDola": 4900000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "reUSD-sDOLA",
+      "address": "0xf9287c29cb888f4834b7d2757a833d509e7f9d9a",
+      "underlying": {
+        "symbol": "reUSD-sDOLA clp",
+        "isLP": true
+      },
+      "totalDebt": 2489999.998888889,
+      "dolaLiquidity": 0.001111111111172985,
+      "fedSupplyDola": 2490000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-reUSD-sDOLA",
+      "address": "0x1fd4985cdd57bdb1ed646b10b7952fcd58946916",
+      "underlying": {
+        "symbol": "yv-reUSD-sDOLA",
+        "isLP": true
+      },
+      "totalDebt": 2489999.9959647837,
+      "dolaLiquidity": 0.00403521643782408,
+      "fedSupplyDola": 2490000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "sinvUSD",
+      "address": "0x3542b39dcedc01f82c6e7af0eec424726d019eaa",
+      "underlying": {
+        "symbol": "sinvUSD"
+      },
+      "totalDebt": 30537.83945853802,
+      "dolaLiquidity": 169462.16054146198,
+      "fedSupplyDola": 200000.0,
+      "borrowPaused": false
+    },
+    {
+      "name": "ysyBOLD",
+      "address": "0xa95605313eb4544f784e699de93e9232dbfcf02d",
+      "underlying": {
+        "symbol": "ysyBOLD"
+      },
+      "totalDebt": 837681.1388537406,
+      "dolaLiquidity": 1152318.8611462594,
+      "fedSupplyDola": 1990000.0,
+      "borrowPaused": false
+    }
+  ]
+}

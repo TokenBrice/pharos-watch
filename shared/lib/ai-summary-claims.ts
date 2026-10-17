@@ -20,6 +20,30 @@ export interface ResolvedAiSummaryClaims {
 const CLAIM_PLACEHOLDER_PATTERN = /\{\{(?:grade|score|supplyUsd)\}\}/g;
 const ISO_DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+export const AI_SUMMARY_UNAVAILABLE_NOTICE =
+  "The current Safety Score and live assessment are available on the interactive page.";
+
+/** Static outputs must not turn missing live inputs into editorial claims. */
+export function hasAvailableAiSummaryClaims(
+  text: string,
+  tokens: readonly AiSummaryClaimToken[] | undefined,
+  values: AiSummaryClaimValues = {},
+): boolean {
+  const placeholders = text.match(CLAIM_PLACEHOLDER_PATTERN) ?? [];
+  if (placeholders.length === 0) return true;
+  if (validateAiSummaryClaimTokens(text, tokens).length > 0) return false;
+
+  return placeholders.every((placeholder) => {
+    const claim = tokens?.find((entry) => entry.placeholder === placeholder);
+    if (!claim) return false;
+    const value = values[claim.source];
+    if (claim.token === "grade") return ReportCardGradeSchema.safeParse(value).success;
+    return typeof value === "number"
+      && Number.isFinite(value)
+      && (claim.token !== "supplyUsd" || value >= 0);
+  });
+}
+
 function formatSupplyUsd(value: number): string {
   if (!Number.isFinite(value) || value < 0) return "N/A";
   const scales = [

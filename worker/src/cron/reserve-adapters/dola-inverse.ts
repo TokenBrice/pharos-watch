@@ -29,6 +29,9 @@ export interface FirmMarket {
   underlying: { symbol: string; isLP?: boolean };
   totalDebt: number;
   borrowPaused: boolean;
+  address?: string;
+  dolaLiquidity?: number;
+  hasNowInvalidFeed?: boolean;
 }
 
 interface FirmMarketsResponse {
@@ -116,7 +119,7 @@ function lpSymbol(market: FirmMarket): string | null {
 
 export function adaptFirmMarkets(
   payload: FirmMarketsResponse,
-  supplyUsd?: number,
+  grossClaimsDola?: number,
   frontierBadDebtBalance?: number | null,
 ): AdapterResult {
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.timestamp);
@@ -150,9 +153,21 @@ export function adaptFirmMarkets(
     trackedStableValues.set(symbol, (trackedStableValues.get(symbol) ?? 0) + value);
   }
   const trackedStableTotal = Array.from(trackedStableValues.values()).reduce((sum, value) => sum + value, 0);
-  const unattributedUsd = supplyUsd != null ? Math.max(0, supplyUsd - totalDebt) : 0;
+  // Own DOLA is not external backing. Remove exactly the same measured amount
+  // from the gross claim map and liability denominator, including idle markets.
+  // Missing inventory is not a zero balance and cannot authorize netting.
+  const inventoryComplete = payload.markets.length > 0 && payload.markets.every(
+    (market) => Number.isFinite(market.dolaLiquidity) && market.dolaLiquidity! >= 0,
+  );
+  const firmIdleDola = inventoryComplete
+    ? payload.markets.reduce((sum, market) => sum + market.dolaLiquidity!, 0) : null;
+  const inventoryReconciled = firmIdleDola != null && grossClaimsDola != null
+    && grossClaimsDola - firmIdleDola >= totalDebt;
+  const nettedOwnDola = inventoryReconciled ? firmIdleDola : 0;
+  const netClaimsDola = grossClaimsDola != null ? grossClaimsDola - nettedOwnDola : null;
+  const unattributedUsd = netClaimsDola != null ? Math.max(0, netClaimsDola - totalDebt) : 0;
   const frontierBadDebtUsd = frontierBadDebtBalance != null && Number.isFinite(frontierBadDebtBalance)
-    && frontierBadDebtBalance >= 0 && supplyUsd != null && frontierBadDebtBalance <= unattributedUsd
+    && frontierBadDebtBalance >= 0 && netClaimsDola != null && frontierBadDebtBalance <= unattributedUsd
     ? frontierBadDebtBalance : null;
   const unclassifiedResidualUsd = unattributedUsd - (frontierBadDebtUsd ?? 0);
 
@@ -165,7 +180,7 @@ export function adaptFirmMarkets(
     },
     {
       sourceKey: "dola-inverse:unattributed",
-      name: "Unclassified non-FiRM issuance residual",
+      name: "Unresolved issuance and backing reconciliation residual",
       value: unclassifiedResidualUsd,
       risk: "high",
       assetClass: "other",
@@ -248,13 +263,19 @@ export function adaptFirmMarkets(
             "firm-markets-api",
             "FiRM markets payload did not expose a trustworthy source timestamp",
           )),
-      totalReserveUsd: totalDebt,
-      ...(supplyUsd != null ? { supplyUsd } : {}),
+      totalDebtDola: totalDebt,
+      grossClaimsDola: grossClaimsDola ?? null,
+      firmIdleDola,
+      inventoryComplete,
+      inventoryReconciled,
+      nettedOwnDola,
+      netClaimsDola,
+      claimBasis: "DOLA face-value debt allocation; own-token inventory symmetrically excluded, not external collateral TVL",
       frontierBadDebtUsd,
-      unclassifiedResidualUsd: supplyUsd == null ? null : unclassifiedResidualUsd,
+      unclassifiedResidualUsd: netClaimsDola == null ? null : unclassifiedResidualUsd,
       unclassifiedResidualDisposition: "insufficient-evidence",
-      unknownExposurePct: supplyUsd != null
-        ? (unknownDebt + unclassifiedResidualUsd) / Math.max(totalDebt, supplyUsd) * 100
+      unknownExposurePct: netClaimsDola != null
+        ? (unknownDebt + unclassifiedResidualUsd) / Math.max(totalDebt, netClaimsDola) * 100
         : 100,
     },
   };
@@ -388,6 +409,47 @@ async function readFrontierBadDebt(
     return null;
   }
 }
+
+/** Invalid-feed API rows mask debt and omit inventory; repair both, never infer zero. */
+async function readFirmInventory(
+  payload: FirmMarketsResponse,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<{ payload: FirmMarketsResponse; maskedMarkets: number; repairedMarkets: number }> {
+  const onchain = makeOnchainCallers({ chain: "ethereum" }, { signal, ctx });
+  let maskedMarkets = 0;
+  let repairedMarkets = 0;
+  const markets: FirmMarket[] = [];
+  for (const market of payload.markets) {
+    if (!market.hasNowInvalidFeed) {
+      markets.push(market);
+      continue;
+    }
+    maskedMarkets++;
+    let repaired: FirmMarket = { ...market, dolaLiquidity: undefined };
+    if (market.address && /^0x[0-9a-fA-F]{40}$/.test(market.address)) {
+      try {
+        // Sequential after the existing FiRM/PSM requests have consumed bodies.
+        const debt = await onchain.uint256(market.address, "0xfc7b9c18");
+        const idle = await onchain.uint256(
+          INVERSE_PSM_DOLA_ADDRESS, encodeAddressCallData("0x70a08231", market.address),
+        );
+        if (debt != null && idle != null && debt >= 0n && idle >= 0n) {
+          const totalDebt = decimalNumberFromBigInt(debt, 18);
+          const dolaLiquidity = decimalNumberFromBigInt(idle, 18);
+          if (Number.isFinite(totalDebt) && Number.isFinite(dolaLiquidity)) {
+            repaired = { ...market, totalDebt, dolaLiquidity };
+            repairedMarkets++;
+          }
+        }
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+      }
+    }
+    markets.push(repaired);
+  }
+  return { payload: { ...payload, markets }, maskedMarkets, repairedMarkets };
+}
 export async function fetchDolaInverseReserves(
   coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
@@ -403,6 +465,7 @@ export async function fetchDolaInverseReserves(
   // Finish consuming FiRM and RPC response bodies before adding another request
   // to the trigger-wide connection budget.
   const repayments = await readFrontierBadDebt(signal, ctx);
+  const inventory = await readFirmInventory(payload, signal, ctx);
   const repaymentTimestamp = parseTimestampLikeToUnixSeconds(repayments?.timestamp);
   const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
   const maxRepaymentAgeSec = config.scoring?.maxSourceAgeSec
@@ -417,18 +480,32 @@ export async function fetchDolaInverseReserves(
     : undefined;
   const circulatingUsd = getCirculatingRawOrNull(supplyCoin);
   const supplyUsd = circulatingUsd !== null && circulatingUsd > 0 ? circulatingUsd : undefined;
-  const adapted = adaptFirmMarkets(payload, supplyUsd, frontierBadDebtBalance);
-  const warnings: LiveReserveWarning[] = listUnexpectedDolaAssets(payload).map((asset) => reserveDegradedWarning(
+  // Provider circulation is already USD-valued. Convert to DOLA face units
+  // before subtracting token balances; do not alter public supply ingestion.
+  const dolaPriceUsd = supplyCoin?.price;
+  const grossClaimsDola = supplyUsd != null && dolaPriceUsd != null
+    && Number.isFinite(dolaPriceUsd) && dolaPriceUsd > 0 ? supplyUsd / dolaPriceUsd : undefined;
+  const adapted = adaptFirmMarkets(inventory.payload, grossClaimsDola, frontierBadDebtBalance);
+  const warnings: LiveReserveWarning[] = listUnexpectedDolaAssets(inventory.payload).map((asset) => reserveDegradedWarning(
     "unknown-asset",
     `DOLA FiRM asset bucketed into other: ${asset}`,
   ));
   if (supplyUsd == null) {
-    warnings.push(reserveDegradedWarning("dola-supply-unavailable", "Fresh circulating supply unavailable; non-FiRM exposure cannot be measured"));
+    warnings.push(reserveDegradedWarning("dola-supply-unavailable", "Fresh circulating supply unavailable; whole-token claims cannot be measured"));
+  }
+  if (supplyUsd != null && grossClaimsDola == null) {
+    warnings.push(reserveDegradedWarning("dola-price-unavailable", "DOLA price unavailable; provider USD circulation cannot be reconciled to token-unit debt and inventory"));
+  }
+  if (!adapted.metadata?.inventoryComplete || (grossClaimsDola != null && !adapted.metadata?.inventoryReconciled)) {
+    warnings.push(reserveDegradedWarning(
+      "dola-inventory-unreconciled",
+      "Complete FiRM idle inventory did not reconcile to gross claims and debt; own-token netting withheld and unresolved claims retained",
+    ));
   }
   if (supplyUsd != null && adapted.metadata?.frontierBadDebtUsd == null) {
     warnings.push(reserveInfoWarning(
       "dola-frontier-bad-debt-unavailable",
-      "Frontier repayments did not yield a fresh finite balance within non-FiRM issuance; the whole residual remains insufficient-evidence",
+      "Frontier repayments did not yield a fresh finite balance within unresolved claims; the whole residual remains insufficient-evidence",
     ));
   }
   if (psm == null) {
@@ -445,6 +522,11 @@ export async function fetchDolaInverseReserves(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...adapted.metadata,
+      ...(supplyUsd != null ? { supplyUsd } : {}),
+      ...(grossClaimsDola != null ? { dolaPriceUsd } : {}),
+      maskedFeedMarkets: inventory.maskedMarkets,
+      repairedFeedMarkets: inventory.repairedMarkets,
+      inventoryConservationScope: "All returned FiRM markets, including zero-debt markets; invalid-feed rows require same-run debt and DOLA balance repair. No independent Fed-globalSupply completeness witness or circular-LP net-solvency claim.",
       ...(adapted.metadata?.frontierBadDebtUsd != null
         ? { frontierBadDebtTimestamp: repaymentTimestamp, frontierBadDebtBlock: repayments?.lastBlock }
         : {}),

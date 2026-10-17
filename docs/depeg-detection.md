@@ -354,6 +354,8 @@ This keeps confirmed historical crashes visible without weakening the stricter l
 
 Matching is inclusive interval overlap between the recomputed episode `[startedAt, endedAt ?? startedAt]` and the entry window, scoped to `(coinId, direction)`.
 
+An episode is an artifact only when no executed trade on any observed venue printed at the stored deviation. Historical backfill admits a single sample for sub-$1B assets, so a thin venue that genuinely traded at the deviation is a real print and must not be suppressed; a deep-pool state quote at par does not by itself refute a thin-venue trade.
+
 The module validates the corpus at import time and fails closed. `shared/data/depegs/__tests__/backfill-replay-suppressions.test.ts` additionally guards tracked coin ids, the shared direction vocabulary, ordered integer windows, `https` evidence URLs, `YYYY-MM-DD` review dates, non-overlapping same-coin/same-direction windows, and the behavioral contract of the seeded USN windows.
 
 Registry edits and primary-evidence review belong to `docs/runbooks/depeg-artifact-removal.md#recording-the-verdict`; the seeded reviewed windows live in the registry, not a second list here.

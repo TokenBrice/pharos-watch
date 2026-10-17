@@ -2,13 +2,13 @@
   "id": "dola-inverse-finance",
   "name": "Dola",
   "symbol": "DOLA",
-  "oneLiner": "DOLA is Inverse Finance's CDP-style stablecoin minted against overcollateralized loans in the FiRM lending protocol, with USDS as a peg backstop.",
+  "oneLiner": "DOLA is Inverse Finance's CDP-style dollar issued through FiRM lending and a USDS PSM rail, with permissioned mint authority outside collateralized borrowing.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
-  "pegMechanism": "DOLA is minted through Inverse Finance FiRM Fed and PSM Fed facilities, with legacy Frontier Fed liquidity winding down. Supply expands or contracts through governed lending-market and PSM rails rather than the old DEX Liquidity Fed model.",
+  "collateral": "Overcollateralized FiRM loans, predominantly secured by DOLA-paired stablecoin LP tokens; these debt claims are not wholly external stablecoin reserves. Permissioned operator minting is not collateral-gated. The USDS PSM is a swap rail; both reviewed deployments held no USDS or sUSDS at Ethereum block 26214783 (2026-10-17T20:51:59Z).",
+  "pegMechanism": "FiRM Fed issuance supports fixed-rate collateralized borrowing, while the PSM provides a USDS swap rail. Frontier is deprecated, with no new borrowing; its Fed shrinks as legacy bad debt is repaid but remains an authorized minter. The 48-hour Timelock operator can also mint without a collateral check or numeric token cap.",
   "mechanismArchetype": "cdp",
   "llamaId": "15",
   "detailProvider": "defillama",
@@ -79,6 +79,16 @@
       "type": "warning",
       "title": "Historical oracle-manipulation incident",
       "message": "Inverse Finance suffered an April 2022 oracle-manipulation exploit that let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route."
+    },
+    {
+      "type": "info",
+      "title": "Polygon fxDOLA representation",
+      "message": "The listed Polygon contract is fxDOLA, the FxPortal representation of Ethereum DOLA, not native Polygon issuance. Its symbol and 18 decimals were confirmed at Polygon block 95710090 (2026-10-17T20:54:42Z)."
+    },
+    {
+      "type": "warning",
+      "title": "Legacy third-party bridge representations",
+      "message": "The BSC and Fantom contracts are legacy Multichain/Anyswap representations; Avalanche is also retained as a legacy third-party bridge representation. All three had outstanding supply in the October 17, 2026 review. Their token balances do not establish a live bridge, solvent backing, or redemption at par."
     }
   ],
   "liveReservesConfig": {

@@ -57468,8 +57468,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T10:42:38Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane42Inverse)",
+      "reviewedAt": "2026-10-17T21:32:25Z",
+      "reviewer": "DOLA dispute review 2026-10-17",
       "sources": [
         {
           "url": "https://www.inverse.finance/api/transparency/fed-overview",
@@ -57477,7 +57477,7 @@
           "datumAsOf": null,
           "location": "fedOverviews: FiRM, Frontier and historical AMM issuance counters",
           "excerpt": "FiRM Fed: supply 105564203.48263238; circSupply 73177584.29602282; idleDolaBalance 0.",
-          "assertion": "Issuer distinguishes Fed issuance and borrower debt, but does not reconcile the captured non-FiRM issuance residual to a complete independent backing portfolio."
+          "assertion": "Historical issuance and debt counters are distinct. The aggregate idleDolaBalance field is not a census of balances held by FiRM markets and cannot establish zero market inventory."
         },
         {
           "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds.md",
@@ -57493,7 +57493,15 @@
           "datumAsOf": null,
           "location": "How DOLA Is Created; Feds: How DOLA Reaches the Market",
           "excerpt": "the FiRM Fed pre-mints DOLA into each market in anticipation of borrowing demand, up to governance-approved limits.",
-          "assertion": "Pre-minted market inventory and borrowed circulating DOLA differ. Broad collateralization statements do not give the dated whole-book identity/denominator reconciliation required to classify the exact captured residual."
+          "assertion": "Pre-minted market inventory and borrowed DOLA differ; identified own-token inventory is now netted symmetrically rather than attributed to issuer nondisclosure."
+        },
+        {
+          "url": "https://etherscan.io/address/0x2b34548b865ad66a2b046cb82e59ee43f75b90fd",
+          "observedAt": "2026-10-17T21:32:25Z",
+          "datumAsOf": "2026-10-17T21:25:35Z",
+          "location": "Ethereum block 26214950, hash 0xec84a901aefd0259ee70016b88ff45ccfe3a9e16c2561db0e1b49eebd0bd6f61; 49 market supplies, totalDebt and DOLA balanceOf calls",
+          "excerpt": "FiRM supplied 109754203.482632377452169839; market debt 71292840.879323003036446379; idle DOLA 38462480.393859181931889876; debt plus idle minus supplied 1117.790549807516166416.",
+          "assertion": "D-1/D-4: identifiable idle DOLA is public protocol inventory, not non-FiRM issuance or external backing. Symmetric netting leaves a much smaller unresolved claim residual; no complete independent asset book is established."
         }
       ],
       "searchedSurfaces": [
@@ -57505,7 +57513,7 @@
         "https://www.inverse.finance/api/f2/fixed-markets",
         "https://www.inverse.finance/api/transparency/repayments-v2?v=3"
       ],
-      "rationale": "Research of current official issuance counters and Fed mechanism documentation does not disclose an identity- and denominator-reconciled collateral breakdown for the exact captured reserve remainder. Supply minus FiRM borrower debt is not an independent-asset census: undrawn issuance, own DOLA holdings and circular LP claims require netting. Neither the entire residual nor its unverified parts are promoted to measured bad debt or favourable backing. Historical sidecar weights and composition/review clocks remain unchanged."
+      "rationale": "D-1 corrects Pharos's supply-minus-debt attribution: the complete public FiRM census identifies 38,462,480.393859181931889876 idle DOLA at Ethereum block 26214950, now excluded from both claims and denominator without reserve credit. It is not issuer nondisclosure. This classification applies only to the surviving 537,392.03701814 face-value residual after netting and the separately checkpointed Frontier bad-debt allocation. Other issuance/legacy claims and accounting excess are not a complete independent-asset attribution; circular LP claims remain separately undecomposed. The October 17 sidecar replaces the historical mixed-date weights, but is a debt-weighted claim map, not whole-system net-solvency proof."
     },
     {
       "id": "campaign-lane42-susdai-public-loan-maturity",
@@ -65579,8 +65587,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-10T23:35:12Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (L71DOLA)",
+      "reviewedAt": "2026-10-17T21:32:25Z",
+      "reviewer": "DOLA dispute review 2026-10-17",
       "sources": [
         {
           "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola.md",
@@ -65596,7 +65604,7 @@
           "datumAsOf": null,
           "location": "markets[] totalDebt, collateral and underlying fields",
           "excerpt": "totalDebt; collateral; underlying",
-          "assertion": "The successfully retrieved issuer dataset enumerates FiRM markets and debt, not complete net backing of all outstanding DOLA including idle pre-mints, PSM and legacy issuance."
+          "assertion": "The issuer dataset supplies per-market debt and idle balances where feeds remain valid; invalid-feed rows require direct repair. These public inventory facts must be consumed before assigning a residual, but do not supply a complete independent external-asset book."
         },
         {
           "url": "https://www.inverse.finance/api/transparency/fed-overview",
@@ -65604,7 +65612,15 @@
           "datumAsOf": null,
           "location": "fedOverviews[] supply, circSupply, borrows and venue positions",
           "excerpt": "FiRM Fed; Frontier Fed; supply; circSupply; borrows",
-          "assertion": "Issuer counters distinguish issuance from circulating borrowing but do not reconcile a whole-token net reserve composition with circular DOLA positions removed."
+          "assertion": "Issuer counters distinguish issuance from borrowing. They do not by themselves establish net external assets after circular LP claims and legacy positions are reconciled."
+        },
+        {
+          "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4",
+          "observedAt": "2026-10-17T21:32:25Z",
+          "datumAsOf": "2026-10-17T21:25:35Z",
+          "location": "Ethereum block 26214950, hash 0xec84a901aefd0259ee70016b88ff45ccfe3a9e16c2561db0e1b49eebd0bd6f61; totalSupply and all 49 market balances/debts",
+          "excerpt": "Minted DOLA 113058118.240939048310629383; idle FiRM DOLA 38462480.393859181931889876; reviewed-net face claims 74595637.847079866378739507.",
+          "assertion": "D-1: publicly reproducible inventory conservation supports symmetric own-token netting under existing policy. It does not establish LP external constituents, recoverable legacy assets or a complete circular-claim net-solvency model."
         }
       ],
       "searchedSurfaces": [
@@ -65612,7 +65628,7 @@
         "https://www.inverse.finance/api/f2/fixed-markets",
         "https://www.inverse.finance/api/transparency/fed-overview"
       ],
-      "rationale": "Current successfully retrieved FiRM and Fed disclosures provide market debt and issuance counters, but no complete same-checkpoint reserve composition for all DOLA liabilities after idle pre-mints, legacy debt and circular DOLA/LP claims are netted. Existing temporally mixed September 29/October 2 sidecar is probable and remains unchanged; no new weights or whole-composition credit are inferred."
+      "rationale": "The October 17 pinned issuance/inventory census resolves the FiRM idle-inventory attribution and updates the curated claim weights under existing symmetric-netting policy. Publicly identifiable inventory is not an issuer-disclosure gap and receives no reserve credit. The surviving C scope is narrower: complete independent asset attribution and liability-netting for undecomposed circular LP collateral and legacy/other claims remain unestablished. The issuer's gross FiRM TVL/debt ratio is not a same-pin whole-system net external-backing ratio. No private issuer answer is needed to consume the public inventory evidence, and no whole-composition solvency credit is inferred."
     },
     {
       "id": "campaign-l71-v9g-86c822c42a210378",

@@ -1,10 +1,30 @@
 {
   "id": "dola-inverse-finance",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Fantom DOLA contract",
+        "label": "Pharos deployment-materiality scoping rule",
+        "url": "https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md"
+      },
+      {
+        "label": "Avalanche AnyswapV6ERC20 verified source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x221743dc9e954be4f86844649bf19b43d6f8366d"
+      },
+      {
+        "label": "Canonical Ethereum DOLA immutable holder logic",
+        "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+      },
+      {
+        "label": "Pharos reported deployment supply (observed 2026-10-17)",
+        "url": "https://api.pharos.watch/api/stablecoin/dola-inverse-finance"
+      },
+      {
+        "label": "BSC enabled AnyswapV6Router source",
+        "url": "https://bscscan.com/address/0x58892974758a4013377a45fad698d2ff1f08d98e#code"
+      },
+      {
+        "label": "Historical Fantom DOLA contract (retired explorer; current source unavailable)",
         "url": "https://ftmscan.com/address/0x3129662808bec728a27ab6a6b9afd3cbaca8a43c#code"
       },
       {
@@ -20,21 +40,29 @@
         "url": "https://bsc-dataseed.binance.org"
       }
     ],
-    "evidence": "At Fantom block 122527611 on 2026-07-15, tracked DOLA 0x3129662808bec728a27ab6a6b9afd3cbaca8a43c returned owner() and getAllMinters() = 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE with delayMinter() = 0; eth_call of burn(0x0000000000000000000000000000000000000001, 0) from that address succeeded. At BSC block 110192504, tracked DOLA 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 returned owner() = 0xF7Da4bC9B7A6bB3653221aE333a9d2a2C2d5BdA7, getAllMinters() = 0x58892974758A4013377A45fad698D2FF1F08d98E, and delayMinter() = 0; burn of an unrelated holder from that minter and setMinter of an unrelated address from the owner both succeeded in eth_call. These material tracked deployments have direct arbitrary holder-burn control with no observed minter delay. Rechecked BSC at block 125135317 on 2026-10-01: owner() and getAllMinters() retain those distinct addresses, isMinter(0x58892974758a4013377a45fad698d2ff1f08d98e) returns true, and burn(address(1),0) from that minter succeeds while an unrelated caller reverts FORBIDDEN. This zero-amount simulation verifies the privileged arbitrary-holder burn surface without mutating any holder balance; no current Fantom observation is implied.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "G1-1/G1-2: docs/blacklist-tracker.md defines deployment scope as 'A control on a deployment below that share of circulating supply is recorded in the review evidence but does not set the verdict'; semantic.materiality.deploymentMaterialSharePct is 10%. The Pharos supply observation at Unix 1792269954 on 2026-10-17 reports Ethereum 96.103869%, BSC 1.592130%, Fantom 0.411624% and Avalanche 0.055162%; the latter three total 2.058916%, not material deployments under that rule. Canonical Ethereum DOLA's verified immutable source has no blacklist, pause, forced transfer, privileged holder burn or upgrade hook; burn(uint256) burns only msg.sender. Its existence is independently pinned by the creation receipt at Ethereum block 11915875 (2021-02-23T21:39:17Z), and its fixed runtime was re-read at block 26214783 (2026-10-17T20:51:59Z; A-4). Peripheral controls remain disclosed, not erased: at BSC block 128237994 (2026-10-17T20:55:49Z), isMinter(0x58892974758a4013377a45fad698d2ff1f08d98e) was true and burn(address(1),0) impersonating that minter succeeded, but this address is an AnyswapV6Router contract, not an EOA. Its external burn routes use the caller's balance, so impersonating the router does not prove arbitrary-holder burn reach from its actual external callers. At BSC block 128241702 (2026-10-17T21:23:37Z; A-5), DELAY() was 172800 seconds and pendingMinter/delayMinter were zero: zero means no pending minter change, while new minters require two-day set/apply admission. At Fantom block 123720210 (2026-10-17T20:53:24Z), owner/listed minter 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe had empty runtime and an authorized burn(address(1),0) succeeded; this proves a peripheral authorization surface, not key availability or destruction of a nonzero victim balance. Avalanche's verified AnyswapV6ERC20 source also retains privileged mint/burn and mutable admission (A-5, block 97826123, 2026-10-17T21:23:32Z), but its sub-threshold deployment does not set the asset verdict.",
+    "reviewer": "DOLA dispute review 2026-10-17",
+    "reviewedAt": "2026-10-17"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Inverse FiRM's Pessimistic Price Oracles use the lower of the current Chainlink collateral price and a 48-hour trailing low before market-specific collateral and liquidation parameters. A historical low is not evidence of an independent fallback provider.",
+    "tier": "standard-external",
+    "summary": "G1-3/G1-4: standard-external ('a standard external feed') replaces redundant-with-failover ('redundant feeds with automatic failover'; stablecoin-detail-oracle-client.ts). At Ethereum block 26214792 (2026-10-17T20:53:59Z), the dominant DOLA-paired Curve LP and Yearn-LP markets used Chainlink-derived USDe pricing, a fixed-$1 DOLA input, Curve virtual price and a guardian-operated FeedSwitchV2, not automatic outage failover. These two markets accounted for 74.706516% of issuer-reported FiRM debt, with constituent debts confirmed at that block; the denominator is the issuer API observation at Unix milliseconds 1792270364354, not a complete pinned debt census. PPO returns min(current price, today's/yesterday's recorded low divided by collateral factor) for nonzero collateral factor; this bounds borrowing power by min(current price times collateral factor, recorded low), rather than applying the collateral factor after a simple trailing-low minimum. Zero collateral factor bypasses damping; missing daily observations do not form an exact rolling 48-hour minimum. Other market-specific feed configurations remain incompletely reviewed.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "DOLA is borrowed from isolated FiRM markets whose collateral types have separately governed collateral factors, liquidation factors, incentives, borrow caps, and oracle configurations. The markets share the documented Pessimistic Price Oracle and FiRM liquidation architecture, so they are represented as one common mechanism branch rather than unsupported per-market parameter estimates.",
+      "reviewedAt": "2026-10-17",
+      "reviewer": "DOLA dispute review 2026-10-17",
+      "rationale": "G1-3/G1-4: FiRM's isolated borrower markets require collateral-pricing branches. Ethereum block 26214792 (2026-10-17T20:53:59Z) resolves the dominant sUSDe-DOLA Curve LP and Yearn-wrapped LP feed paths separately from the common PPO and liquidation architecture retained for other markets. The common architecture is not a complete per-market feed census, and the issuer API debt denominator is separately observed rather than inferred from those two pinned markets.",
       "sources": [
+        {
+          "label": "FiRM Oracle verified source (Ethereum 26214792, 2026-10-17)",
+          "url": "https://etherscan.io/address/0xabe146cf570fd27ddd985895ce9b138a7110cce8#code"
+        },
+        {
+          "label": "Issuer FiRM market debt observation (2026-10-17)",
+          "url": "https://www.inverse.finance/api/f2/fixed-markets"
+        },
         {
           "label": "Inverse FiRM documentation",
           "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
@@ -49,10 +77,22 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 data research",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "DOLA dispute review 2026-10-17",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "FiRM Oracle verified source (Ethereum 26214792, 2026-10-17)",
+        "url": "https://etherscan.io/address/0xabe146cf570fd27ddd985895ce9b138a7110cce8#code"
+      },
+      {
+        "label": "CurveLPPessimisticFeed verified source",
+        "url": "https://etherscan.io/address/0xe741c804ca2e26a0aa5511a6018119cd6991aaa5#code"
+      },
+      {
+        "label": "FeedSwitchV2 guardian-operated alternative",
+        "url": "https://etherscan.io/address/0x3326a10a83b77faae29aedbb8aaeb18e5872624d#code"
+      },
       {
         "label": "Inverse FiRM docs",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
@@ -66,18 +106,18 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
       },
       {
-        "label": "Inverse FiRM security: current Chainlink price and 48-hour trailing low",
+        "label": "Inverse FiRM security: simplified historical-low explanation",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm/firm-security-and-safety"
       }
     ],
     "branches": [
       {
         "id": "firm-isolated-markets",
-        "label": "FiRM isolated collateral markets",
-        "tier": "redundant-with-failover",
-        "summary": "Governance-approved FiRM markets share conservative current-versus-trailing-low price selection, isolated collateral escrows, and third-party liquidation against market-specific risk parameters.",
+        "label": "Other FiRM markets: common PPO architecture",
+        "tier": "standard-external",
+        "summary": "G1-4: the common Oracle source at Ethereum block 26214792 (2026-10-17T20:53:59Z) dampens borrowing power using today's and yesterday's recorded lows and collateral factor. This branch preserves the documented isolated-market mechanics outside the separately reviewed dominant LP pair; it does not certify every remaining market's feed or fallback.",
         "collateralAssets": [
-          "Governance-approved FiRM collateral markets"
+          "Other governance-approved FiRM collateral markets"
         ],
         "chains": [
           "ethereum"
@@ -85,8 +125,11 @@
         "feeds": [
           {
             "provider": "Inverse Pessimistic Price Oracle",
-            "path": "Current Chainlink collateral price and 48-hour trailing low -> lower collateral value -> FiRM market",
+            "path": "Configured external collateral feed -> min(current price, recorded daily low * 10000 / collateralFactorBps) for nonzero collateral factor -> FiRM market; zero collateral factor bypasses damping",
+            "address": "0xabe146cf570fd27ddd985895ce9b138a7110cce8",
             "chain": "ethereum",
+            "observedAt": "2026-10-17",
+            "observedBlock": 26214792,
             "failureDomainKeys": [
               "inverse-oracle-configuration",
               "chainlink",
@@ -94,11 +137,12 @@
             ]
           }
         ],
-        "fallbackBehavior": "Issuer security documentation describes the lower of the current Chainlink price and a 48-hour trailing low. This establishes conservative temporal price selection, not an independently sourced oracle failover; per-market configurations remain subject to separate verification.",
-        "observedAt": "2026-07-14",
+        "fallbackBehavior": "G1-4: today's and yesterday's recorded daily lows bound borrowing power, not an exact rolling 48-hour price history or an independent fallback provider. No automatic failover is established by the common PPO source; per-market configurations outside the separately reviewed LP pair remain subject to verification.",
+        "observedAt": "2026-10-17",
+        "observedBlock": 26214792,
         "collateralParameters": [
           {
-            "asset": "Governance-approved FiRM collateral markets",
+            "asset": "Other governance-approved FiRM collateral markets",
             "note": "Each isolated market has governance-set collateral factor, liquidation factor, liquidation incentive, supply ceiling, and daily borrow limits; values differ by collateral and are not collapsed into one estimate."
           }
         ],
@@ -114,6 +158,10 @@
           "ethereum"
         ],
         "sources": [
+          {
+            "label": "FiRM Oracle verified source (Ethereum 26214792, 2026-10-17)",
+            "url": "https://etherscan.io/address/0xabe146cf570fd27ddd985895ce9b138a7110cce8#code"
+          },
           {
             "label": "Inverse core concepts",
             "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
@@ -131,8 +179,165 @@
             "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
           },
           {
-            "label": "Inverse FiRM security: current Chainlink price and 48-hour trailing low",
+            "label": "Inverse FiRM security: simplified historical-low explanation",
             "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm/firm-security-and-safety"
+          }
+        ]
+      },
+      {
+        "id": "firm-susde-dola-curve-lp",
+        "label": "FiRM sUSDe-DOLA Curve LP and Yearn LP markets",
+        "tier": "standard-external",
+        "summary": "G1-3: at Ethereum block 26214792 (2026-10-17T20:53:59Z), markets 0xb427fc22561f3963b04202f9bb5bcebd76c14a99 and 0x4e264618dc015219cd83dbc53b31251d73c2db1a held 53,260,330.84649369 DOLA debt, 74.706516% of the issuer API total 71,292,751.61883225 (observed Unix milliseconds 1792270364354). LP pricing combines Curve virtual price with min(USDe-related external feed, fixed-$1 DOLA); the Yearn feed additionally applies collateralToAsset. The manual guardian alternative is real, but it is not automatic failover.",
+        "collateralAssets": [
+          "sUSDe-DOLA Curve LP (0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef)",
+          "Yearn sUSDe-DOLA LP (0x1fc80cfcf5b345b904a0fb36d4222196ed9eb8a5)"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Inverse CurveLPPessimisticFeed",
+            "path": "min(FeedSwitchV2 USDe price, DolaFixedPriceFeed $1) * Curve pool get_virtual_price() / 1e18 -> common FiRM PPO",
+            "address": "0xe741c804ca2e26a0aa5511a6018119cd6991aaa5",
+            "chain": "ethereum",
+            "observedAt": "2026-10-17",
+            "observedBlock": 26214792,
+            "failureDomainKeys": [
+              "curve",
+              "inverse-oracle-configuration",
+              "inverse-dola-fixed-price",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Inverse CurveLPYearnV2Feed",
+            "path": "CurveLPPessimisticFeed 0xe741c804ca2e26a0aa5511a6018119cd6991aaa5 * Yearn collateralToAsset -> common FiRM PPO",
+            "address": "0x2dc3ceb337a7b62831f4f27688aacfbb9b4c0afa",
+            "chain": "ethereum",
+            "observedAt": "2026-10-17",
+            "observedBlock": 26214792,
+            "failureDomainKeys": [
+              "yearn",
+              "curve",
+              "inverse-oracle-configuration",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink through guardian-operated Inverse FeedSwitchV2",
+            "path": "Selected primary 0x925e67e8ca0dd45f59e4945e99745f265410b873 wraps Chainlink USDe/USD 0x3e7d1eab13ad0104d2750b8863b489d65364e32d; guardian alternative 0x6277cb27232f35c75d3d908b26f3670e7d167400 divides sUSDe/USD by on-chain sUSDe/USDe conversion",
+            "address": "0x3326a10a83b77faae29aedbb8aaeb18e5872624d",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "observedAt": "2026-10-17",
+            "observedBlock": 26214792,
+            "failureDomainKeys": [
+              "chainlink",
+              "ethena",
+              "inverse-oracle-guardians",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Inverse DolaFixedPriceFeed",
+            "path": "Constant 1e18 USD with current block timestamp; not an observed DOLA/USD market or depeg price",
+            "address": "0x5cb542eb054f81b8fa1760c077f44aa80271c75d",
+            "chain": "ethereum",
+            "observedAt": "2026-10-17",
+            "observedBlock": 26214792,
+            "failureDomainKeys": [
+              "inverse-dola-fixed-price",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "G1-3: FeedSwitchV2 toggleFeedSwitch() is guardian-only; timelockPeriod() = 0, but latestRoundData() follows the selected feed, not automatic outage detection. The primary wrapper has hasFallback() = false and assetToUsdFallback() = zero; the alternative sUSDe computation also uses Chainlink infrastructure. CurveLPPessimisticFeed requires both coin inputs and propagates their older timestamp: a reverting/stale input does not automatically select an independent alternative. Hence standard-external ('a standard external feed'), not redundant-with-failover ('redundant feeds with automatic failover').",
+        "observedAt": "2026-10-17",
+        "observedBlock": 26214792,
+        "collateralParameters": [
+          {
+            "asset": "sUSDe-DOLA Curve LP (0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef)",
+            "maximumLtvPct": 92,
+            "note": "MintOnchainA active-market evidence: market 0xb427fc22561f3963b04202f9bb5bcebd76c14a99 returned collateralFactorBps = 9200 at Ethereum block 26214783 (2026-10-17T20:51:59Z). Liquidation factors, incentives, supply ceilings and daily borrow limits remain separately governed parameters; no unreviewed numeric values are inferred here."
+          },
+          {
+            "asset": "Yearn sUSDe-DOLA LP (0x1fc80cfcf5b345b904a0fb36d4222196ed9eb8a5)",
+            "maximumLtvPct": 92,
+            "note": "MintOnchainA active-market evidence: market 0x4e264618dc015219cd83dbc53b31251d73c2db1a returned collateralFactorBps = 9200 at Ethereum block 26214783 (2026-10-17T20:51:59Z). The Yearn wrapper's collateralToAsset conversion is part of the separately pinned feed path, not additional borrower collateral or a separate loss backstop."
+          }
+        ],
+        "liquidationMechanism": "The reviewed FiRM market source and common documented liquidation architecture apply to these isolated LP markets: third-party liquidators repay DOLA debt against eligible undercollateralized positions and receive collateral plus the market-specific incentive. Depleted DBR can first trigger permissionless replenishment that adds debt until liquidation eligibility. The source-reviewed borrower credit gate is collateral value times collateralFactorBps / 10000 (Ethereum block 26214783, 2026-10-17T20:51:59Z; MintOnchainA active-market review).",
+        "liquidationDelaySec": 0,
+        "backstop": "The common FiRM documentation describes jrDOLA as a voluntary first-loss vault that may be slashed for governance-approved market shortfalls before protocol reserves. This branch does not independently establish currently funded jrDOLA capacity or exact coverage of either LP market; those amounts and coverage remain unverified, not zero or guaranteed.",
+        "shutdownOrBadDebtBehavior": "These remain isolated FiRM borrower markets under the common documented bad-debt architecture. Selected covered shortfalls may slash jrDOLA before protocol reserves, but the LP-feed review does not establish a global DOLA shutdown, an automatic holder settlement path, or guaranteed recovery of either market's bad debt. Zero liquidationDelaySec denotes no additional protocol waiting period in the retained common liquidation mechanism, not assured keeper execution or collateral liquidity.",
+        "debtSharePct": 74.706516,
+        "failureDomainKeys": [
+          "inverse-governance",
+          "inverse-oracle-configuration",
+          "inverse-oracle-guardians",
+          "inverse-dola-fixed-price",
+          "inverse-liquidators",
+          "inverse-jrdola",
+          "chainlink",
+          "ethena",
+          "curve",
+          "yearn",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Curve LP FiRM market verified borrower and liquidation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb427fc22561f3963b04202f9bb5bcebd76c14a99"
+          },
+          {
+            "label": "Yearn LP FiRM market verified borrower and liquidation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e264618dc015219cd83dbc53b31251d73c2db1a"
+          },
+          {
+            "label": "Inverse core concepts: common FiRM liquidation and bad debt",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
+          },
+          {
+            "label": "Inverse DBR liquidation documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dbr"
+          },
+          {
+            "label": "Inverse risk parameter frameworks",
+            "url": "https://docs.inverse.finance/risk-working-group-digest/security/frameworks"
+          },
+          {
+            "label": "Inverse jrDOLA first-loss documentation (coverage not independently certified)",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+          },
+          {
+            "label": "Issuer fixed-market API debt denominator (2026-10-17)",
+            "url": "https://www.inverse.finance/api/f2/fixed-markets"
+          },
+          {
+            "label": "CurveLPPessimisticFeed verified source",
+            "url": "https://etherscan.io/address/0xe741c804ca2e26a0aa5511a6018119cd6991aaa5#code"
+          },
+          {
+            "label": "CurveLPYearnV2Feed verified source",
+            "url": "https://etherscan.io/address/0x2dc3ceb337a7b62831f4f27688aacfbb9b4c0afa#code"
+          },
+          {
+            "label": "DolaFixedPriceFeed verified source",
+            "url": "https://etherscan.io/address/0x5cb542eb054f81b8fa1760c077f44aa80271c75d#code"
+          },
+          {
+            "label": "Guardian-operated FeedSwitchV2 verified source",
+            "url": "https://etherscan.io/address/0x3326a10a83b77faae29aedbb8aaeb18e5872624d#code"
+          },
+          {
+            "label": "USDeBeforeMaturityFeed guardian alternative",
+            "url": "https://etherscan.io/address/0x6277cb27232f35c75d3d908b26f3670e7d167400#code"
+          },
+          {
+            "label": "FiRM Oracle verified source",
+            "url": "https://etherscan.io/address/0xabe146cf570fd27ddd985895ce9b138a7110cce8#code"
           }
         ]
       }
@@ -140,9 +345,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "The tracked DOLA deployments include Ethereum native issuance, Arbitrum, Base and Optimism canonical bridge representations, Polygon FxPortal, and third-party BSC, Avalanche and legacy Multichain Fantom representations. Inverse's former CCIP lanes carried sDOLA and sINV, not these DOLA contracts, and are now shut down.",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "G1-5/G1-6 and A-5/A-6/A-7: tracked DOLA includes Ethereum native issuance, Arbitrum/Base/Optimism canonical representations, Polygon FxPortal, and legacy Anyswap/Multichain receipts on BSC, Avalanche and Fantom. Fresh 2026-10-17 pins resolve active router/MPC or direct-minter privileges on the legacy receipts; nonzero supply is not proof of a live bridge, locked backing or at-par redemption. Polygon's token manager is a child tunnel with FxChild upstream. Current issuer documentation says former CCIP lanes carried sDOLA/sINV, not these DOLA deployments, and are shut down; that documentary shutdown claim is distinct from the pinned token-controller observations.",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "DOLA dispute review 2026-10-17",
     "confidence": "verified",
     "protocols": [
       {
@@ -176,12 +381,20 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native DOLA on Ethereum: minting is controlled by the token operator, a Compound Timelock (48h delay) administered by INV-token GovernorBravo, per the verified mint-authority review (2026-07-16). No bridge mints this deployment.",
+        "reviewNote": "A-8: at Ethereum block 26214783 (2026-10-17T20:51:59Z), native DOLA operator() was Compound Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b, delay() = 172800 seconds (48 hours), with admin() = verified GovernorMills 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6, not GovernorBravo. No bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-17",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "sources": [
+          {
+            "label": "Timelock verified source (Ethereum 26214783, 2026-10-17)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x926df14a23be491164dcf93f4c468a50ef659d5b"
+          },
+          {
+            "label": "GovernorMills verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6"
+          },
           {
             "label": "Inverse Finance Docs",
             "url": "https://docs.inverse.finance/"
@@ -191,7 +404,7 @@
             "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4"
           }
         ],
-        "observedBlock": 25570879
+        "observedBlock": 26214783
       },
       {
         "id": "arbitrum:0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
@@ -299,36 +512,37 @@
         "id": "fantom:0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
         "destinationChain": "fantom",
         "contractAddress": "0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
-        "protocol": "Multichain (legacy, post-exploit frozen)",
+        "protocol": "Multichain (ceased legacy service; local minter still enabled)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller re-verified 2026-07-28 on independent Fantom RPCs (rpcapi.fantom.network and fantom.drpc.org): token name 'Dola USD Stablecoin', symbol DOLA, 18 decimals; owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe with empty bytecode. Same Multichain DepositAddress/DcrmAddress as reviewed Multichain USDC/fUSDT Fantom rows. Multichain ceased 2023, frozen-legacy representation.",
+        "reviewNote": "A-6/G1-6: at Fantom block 123720373 (2026-10-17T21:22:49Z), owner()/vault()/sole listed and enabled minter remained code-empty 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe. Direct mint(recipient,10^30) from that address returned true without a cross-chain proof; a disclosed code-only override at the authority EOA observed recipient and totalSupply increases of 1T local receipts without changing token code/storage. Multichain ceased service in July 2023, but that does not revoke this on-chain issuance privilege. Historical shared-DCRM attribution is not a fresh proof of key custody or availability. Exact verified token source and role-change delay remain unavailable (DELAY() reverted); neither live bridging nor locked backing nor at-par redemption is established by the outstanding 463,779.4278239825 nominal receipts.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-28",
-        "observedBlock": 122537978,
+        "observedAt": "2026-10-17",
+        "observedBlock": 123720373,
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "fantom",
         "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
         "failureDomainKeys": [
-          "protocol:multichain"
+          "protocol:multichain",
+          "contract:fantom:0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe"
         ],
         "sources": [
           {
-            "label": "FTMScan DOLA token",
+            "label": "Historical FTMScan DOLA identity (retired explorer; source not freshly verified)",
             "url": "https://ftmscan.com/token/0x3129662808bec728a27ab6a6b9afd3cbaca8a43c"
           },
           {
-            "label": "Fantom RPC owner() re-read (rpcapi.fantom.network)",
+            "label": "Fantom pinned controller and mint calls (block 123720373, 2026-10-17)",
             "url": "https://rpcapi.fantom.network"
           },
           {
-            "label": "Fantom independent RPC owner() corroboration (drpc)",
-            "url": "https://fantom.drpc.org"
+            "label": "Multichain cessation announcement reported July 2023",
+            "url": "https://www.coindesk.com/business/2023/07/14/crypto-bridging-protocol-multichain-ceases-operations"
           }
         ]
       },
@@ -336,34 +550,45 @@
         "id": "bsc:0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
         "destinationChain": "bsc",
         "contractAddress": "0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
-        "protocol": "BSC DOLA (Safe-owned representation)",
+        "protocol": "Anyswap/Multichain BSC legacy receipt (MPC-controlled router)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Historical block 111009503 identified owner Safe 0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7 as 3-of-6. Re-verification on 2026-10-01 at BSC block 125056745 confirms that Safe's threshold and six owners, but getAllMinters() identifies 0x58892974758a4013377a45fad698d2ff1f08d98e as the token's actual minter with delayMinter() = 0. The owner/admin identity must not be substituted for that minter; signer attribution remains unverified.",
+        "reviewNote": "A-5/G1-2/G1-6/G1-7: at BSC block 128241702 (2026-10-17T21:23:37Z), sole listed minter AnyswapV6Router 0x58892974758a4013377a45fad698d2ff1f08d98e was enabled; router mpc() = code-empty 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964. Verified anySwapIn is onlyMPC and invokes token mint without a source-lock proof, collateral check, local amount cap or exercise delay. A no-override sequential counterfactual at that base block confirmed 1T receipts minted to an arbitrary recipient; simulated child 128241703 (2026-10-17T21:23:49Z) is not a mined observation. Owner/vault Safe 0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7 remains 3-of-6 with empty modules, but is not an enabled token minter: it controls admission, revocation and immediate changeVault, not the active MPC signing threshold. DELAY() = 172800 seconds for new set/applyMinter admission; pendingMinter/delayMinter = zero means no pending change. Router-only burn impersonation does not bypass its external caller constraints. Human signer/key attribution, live bridge service, Ethereum locked backing and at-par receipt redemption remain unverified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-17",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "bsc",
-        "controllerAddress": "0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7",
+        "controllerAddress": "0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964",
         "failureDomainKeys": [
+          "protocol:multichain",
+          "contract:bsc:0x58892974758a4013377a45fad698d2ff1f08d98e",
+          "contract:bsc:0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964",
           "contract:bsc:0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7"
         ],
         "sources": [
           {
-            "label": "DOLA on BscScan (owner verified 2026-07-20)",
-            "url": "https://bscscan.com/address/0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840"
+            "label": "AnyswapV6ERC20 verified source (BSC 128241702, 2026-10-17)",
+            "url": "https://bscscan.com/address/0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840#code"
+          },
+          {
+            "label": "AnyswapV6Router onlyMPC mint path",
+            "url": "https://bscscan.com/address/0x58892974758a4013377a45fad698d2ff1f08d98e#code"
+          },
+          {
+            "label": "BSC pinned controller and counterfactual mint reads",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
           },
           {
             "label": "Inverse Finance Docs",
             "url": "https://docs.inverse.finance/"
           }
         ],
-        "observedBlock": 111009503
+        "observedBlock": 128241702
       },
       {
         "id": "polygon:0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c",
@@ -378,20 +603,26 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Polygon 2026-07-20 (block 90544401): token 0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c reports name 'Dola USD Stablecoin (FXERC20)', symbol fxDOLA, and is a 45-byte minimal-proxy clone of the FXERC20 template 0xad87e3b217c66b0d45deafbc540330d300811b94, the Polygon FxPortal child-token pattern, whose mint/burn authority is structurally the FxChild contract 0x8397259c983751daf40400790063935a11afa28a (the canonical Polygon FxChild predeploy); admin getters on the template revert, consistent with the FxPortal design.",
+        "reviewNote": "A-7/G1-5: at Polygon block 95711245 (2026-10-17T21:23:35Z), DOLA fxManager() = FxERC20ChildTunnel 0xd531cf2142d9b9dc8b077df3c4e93b46e7cf879a, the immediate token mint/burn manager. The tunnel's fxChild() = 0x8397259c983751daf40400790063935a11afa28a is its upstream message-authentication hop, and fxRootTunnel() = 0x0cc2caed31490b546c741bd93dbba8ab387f7f2c on Ethereum. Verified incoming-message code requires caller FxChild and the exact root sender before minting the mapped child token; rootToChildToken(Ethereum DOLA) resolves this deployment and the initialized root cannot be overwritten by the one-time setter. The token remains a fixed FXERC20 clone; no arbitrary owner-mint path is established by impersonating the authorized tunnel.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "polygon",
         "controllerAddress": "0x8397259c983751daf40400790063935a11afa28a",
         "failureDomainKeys": [
           "protocol:polygon-fxportal",
-          "contract:polygon:0x8397259c983751daf40400790063935a11afa28a"
+          "contract:polygon:0xd531cf2142d9b9dc8b077df3c4e93b46e7cf879a",
+          "contract:polygon:0x8397259c983751daf40400790063935a11afa28a",
+          "contract:ethereum:0x0cc2caed31490b546c741bd93dbba8ab387f7f2c"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 90544401,
+        "observedAt": "2026-10-17",
+        "observedBlock": 95711245,
         "sources": [
           {
-            "label": "fxDOLA on Polygonscan (verified 2026-07-20)",
+            "label": "fxDOLA on Polygonscan (Polygon 95711245, 2026-10-17)",
             "url": "https://polygonscan.com/address/0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c"
+          },
+          {
+            "label": "FxERC20ChildTunnel verified authentication and mint path",
+            "url": "https://polygonscan.com/address/0xd531cf2142d9b9dc8b077df3c4e93b46e7cf879a#code"
           },
           {
             "label": "Polygon FxPortal docs",
@@ -405,26 +636,37 @@
         "destinationChain": "avalanche",
         "canonicalChain": "ethereum",
         "contractAddress": "0x221743dc9e954be4f86844649bf19b43d6f8366d",
-        "protocol": "Avalanche DOLA (Safe-owned representation)",
+        "protocol": "Anyswap/Multichain Avalanche legacy receipt (MPC-controlled router)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Avalanche block 96511276 on 2026-10-01, DOLA owner() returned Safe 0x1a927b237a57421c414eb511a33c4b82c2718677, whose threshold and owners remain 3-of-4. getAllMinters() returned 0xd86eee98e7d6726a1701f004f747e5ce3e48e87c and delayMinter() returned 0. The owner/admin identity must not be substituted for the actual token minter; signer attribution remains unverified.",
+        "reviewNote": "A-5/G1-6/G1-7: at Avalanche block 97826123 (2026-10-17T21:23:32Z), sole listed and enabled minter was AnyswapV6Router 0xd86eee98e7d6726a1701f004f747e5ce3e48e87c under code-empty mpc() 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964. Verified onlyMPC anySwapIn calls token mint without a source-lock proof, collateral check, local amount cap or exercise delay; an MPC-to-router 1T arbitrary-recipient counterfactual succeeded at that pin. Sequential simulation was unsupported here, so no sequential effect receipt is claimed. Owner/vault Safe 0x1a927b237a57421c414eb511a33c4b82c2718677 is 3-of-4 with empty modules, but is not an enabled token minter: it remains a minter-admission/revocation and immediate changeVault authority, not proof of the active MPC quorum. New minter set/apply admission requires two days; zero pendingMinter/delayMinter means no pending change. Outstanding nominal supply does not establish a live bridge, locked Ethereum backing or at-par redemption; human signer attribution and key availability remain unverified.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "avalanche",
-        "controllerAddress": "0x1a927b237a57421c414eb511a33c4b82c2718677",
+        "controllerAddress": "0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964",
         "failureDomainKeys": [
+          "protocol:multichain",
+          "contract:avalanche:0xd86eee98e7d6726a1701f004f747e5ce3e48e87c",
+          "contract:avalanche:0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964",
           "contract:avalanche:0x1a927b237a57421c414eb511a33c4b82c2718677"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 90761741,
+        "observedAt": "2026-10-17",
+        "observedBlock": 97826123,
         "sources": [
           {
-            "label": "DOLA on Snowscan (owner verified 2026-07-20)",
-            "url": "https://snowscan.xyz/address/0x221743dc9e954be4f86844649bf19b43d6f8366d"
+            "label": "AnyswapV6ERC20 verified source (Avalanche 97826123, 2026-10-17)",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x221743dc9e954be4f86844649bf19b43d6f8366d"
+          },
+          {
+            "label": "AnyswapV6Router onlyMPC mint path",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd86eee98e7d6726a1701f004f747e5ce3e48e87c"
+          },
+          {
+            "label": "Avalanche pinned controller and counterfactual mint reads",
+            "url": "https://avax-mainnet.g.alchemy.com/v2/"
           },
           {
             "label": "Inverse Finance Docs",

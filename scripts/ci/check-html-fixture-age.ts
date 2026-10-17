@@ -105,6 +105,8 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "captured 2026-09-30 from Ripio's official HubSpot attestation index (payload capturedAt 2026-09-30, June 30 reports); JSON cannot carry an HTML-comment capture header",
   "lido-earnusd-pinned-state.json":
     "Ethereum state pinned at block 26122344 (blockTimestamp 1791157259, 2026-10-05) with code hashes; age is the pinned block, JSON cannot carry an HTML-comment capture header",
+  "dola-firm-ledger-2026-10-17.json":
+    "Immutable Ethereum block 26214950 (2026-10-17T21:25:35Z) FiRM 49-market debt/idle-inventory/Fed-supply census observed 2026-10-17T21:32:25Z; freezes the idle-inventory netting and invalid-feed repair regression, not refreshable current state; JSON cannot carry an HTML-comment capture header",
   "apyusd-observer-pinned.json":
     "Immutable Ethereum block 26143056 RPC capture accessed 2026-10-07T22:22:48.313985+00:00 from https://eth-mainnet.public.blastapi.io; freezes UnlockReceipt funding, vesting delivery and controller guard words for historical behavioral replay, not refreshable current capacity.",
   "forest-road-observer-pinned.json":
