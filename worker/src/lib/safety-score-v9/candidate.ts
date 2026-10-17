@@ -39,6 +39,7 @@ import {
   type SafetyScoreV9FactSetExtensionV2,
   type SafetyScoreV9FactCompilationResult,
   type V9AssetQuarantine,
+  type SafetyScoreV9LiveWithheldCompilation,
 } from "./fact-set";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./extension";
 import type { BuildSafetyScoreV9BaselineExtensionOptions } from "./extension";
@@ -166,6 +167,11 @@ export interface BuildSafetyScoreV9CandidateInput {
    */
   allowRegistryMismatch?: boolean;
   registry?: Pick<BuildSafetyScoreV9BaselineExtensionOptions, "metaById" | "registryFingerprint" | "reviewedTransferFacts">;
+  /** Operator-only reuse context; never supplied by the production publisher. */
+  liveWithheldCompilation?: {
+    source: SafetyScoreV9LiveWithheldCompilation;
+    assetId: string;
+  };
 }
 
 export interface BuildSafetyScoreV9CandidateFromNormalizedInput extends Omit<
@@ -692,13 +698,14 @@ function buildSafetyScoreV9CandidatePipeline(
         : [{ assetId: asset.assetId, ...diagnostics }];
     })
     .sort((left, right) => compareText(left.assetId, right.assetId));
+  const compileFacts = (extension: SafetyScoreV9FactSetExtensionV2, failures?: ReadonlyMap<string, string>) =>
+    input.liveWithheldCompilation === undefined
+      ? compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixedInput, extension, failures, !retainIntermediates)
+      : input.liveWithheldCompilation.source.compile(
+        fixedInput, extension, input.liveWithheldCompilation.assetId, failures, !retainIntermediates,
+      );
   let compilation: SafetyScoreV9FactCompilationResult | null =
-    compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
-      fixedInput,
-      extension,
-      undefined,
-      !retainIntermediates,
-    );
+    compileFacts(extension);
   let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
@@ -748,12 +755,7 @@ function buildSafetyScoreV9CandidatePipeline(
       for (const [assetId, message] of failed) evaluationFailures.set(assetId, message);
       const retryExtension = extension ?? materializeCandidateExtension(input);
       compilation =
-        compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
-          fixedInput,
-          retryExtension,
-          evaluationFailures,
-          !retainIntermediates,
-        );
+        compileFacts(retryExtension, evaluationFailures);
       compiledFacts = compilation.factSet;
       quarantines = compilation.quarantines;
       publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, input);

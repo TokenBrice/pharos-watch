@@ -1,13 +1,21 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { z } from "zod";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { V9Grade } from "@shared/types/safety-score-v9";
+import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9GradeSchema } from "@shared/types/safety-score-v9";
 import { V9RatingStatusSchema } from "@shared/types/safety-score-v9-causes";
 import { V9AccessClaimGraphSchema } from "@shared/types/safety-score-v9-access-lookthrough";
-import type { SafetyScoreV9FactSetExtensionV2 } from "../src/lib/safety-score-v9/fact-set";
+import {
+  createSafetyScoreV9LiveWithheldCompilation,
+  type SafetyScoreV9FactSetExtensionV2,
+  type SafetyScoreV9LiveWithheldCompilation,
+} from "../src/lib/safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,
   buildSafetyScoreV9BaselineExtensionFromNormalizedInput,
@@ -29,7 +37,9 @@ import {
   writeCliHelpIfRequested,
 } from "../../scripts/lib/cli-args.mjs";
 
-const USAGE = `Usage: npm run safety-score-v9:live-withheld -- --replay <path> [--output <path>]`;
+const USAGE = `Usage: npm run safety-score-v9:live-withheld -- --replay <path> [--output <path>] [--workers 1|2|3]
+       npm run safety-score-v9:live-withheld -- --replay <path> --shard <i/n> [--output <shard.json>]
+       npm run safety-score-v9:live-withheld -- --merge <shard.json> --merge <shard.json> [--output <path>]`;
 
 const ReplaySchema = z
   .object({
@@ -50,6 +60,7 @@ const ReplaySchema = z
             liveToFallbackCoins: z.array(z.string()).default([]),
           })
           .loose(),
+        extension: z.unknown().optional(),
         candidate: z
           .object({
             publishedAtSec: z.number().int().nonnegative(),
@@ -114,10 +125,117 @@ export interface LiveWithheldRow {
 }
 
 export interface LiveWithheldReport {
+  status: "complete" | "partial";
+  failedAssets: { assetId: string; reasonCode: "counterfactual-evaluation-failed"; errorClass: "V9AssetEvaluationError"; message: string }[];
   clockSec: number;
   rows: LiveWithheldRow[];
   assessedCount: number;
   excludedCounts: Record<"no-live" | "already-fallback" | "baseline-pipeline-gap" | "fallback-pipeline-gap" | "unchanged-or-upgrade", number>;
+}
+
+export interface LiveWithheldShardSelection {
+  index: number;
+  count: number;
+}
+
+const ShardResultSchema = z.object({
+  shard: z.object({
+    index: z.number().int().nonnegative(),
+    count: z.number().int().positive(),
+    baseInputGenerationId: z.string().min(1),
+    activeAssetIds: z.array(z.string().min(1)),
+  }),
+  report: z.object({
+    status: z.enum(["complete", "partial"]),
+    failedAssets: z.array(z.object({
+      assetId: z.string().min(1),
+      reasonCode: z.literal("counterfactual-evaluation-failed"),
+      errorClass: z.literal("V9AssetEvaluationError"),
+      message: z.string().min(1),
+    })),
+    clockSec: z.number().int().nonnegative(),
+    assessedCount: z.number().int().nonnegative(),
+    excludedCounts: z.object({
+      "no-live": z.number().int().nonnegative(),
+      "already-fallback": z.number().int().nonnegative(),
+      "baseline-pipeline-gap": z.number().int().nonnegative(),
+      "fallback-pipeline-gap": z.number().int().nonnegative(),
+      "unchanged-or-upgrade": z.number().int().nonnegative(),
+    }),
+    rows: z.array(z.object({
+      assetId: z.string().min(1),
+      supplyUsd: z.number().finite().nonnegative().nullable(),
+      supplyAvailability: z.enum(["observed", "unavailable"]),
+      supplyUnavailableReason: z.enum(["null-supply", "missing-supply"]).nullable(),
+      liveScore: z.number().finite().nullable(),
+      liveGrade: V9GradeSchema,
+      fallbackScore: z.number().finite().nullable(),
+      fallbackGrade: V9GradeSchema,
+      fallbackTier: z.enum(["static", "audited-fallback", "curated-fallback", "none"]),
+      fallbackEvidenceCeiling: z.number().finite().nullable(),
+      fallbackBindingCapKind: z.string().nullable(),
+    })),
+  }),
+});
+
+export type LiveWithheldShardResult = z.infer<typeof ShardResultSchema>;
+
+function compareReportRows(left: LiveWithheldRow, right: LiveWithheldRow): number {
+  return left.supplyUsd === null
+    ? right.supplyUsd === null ? left.assetId.localeCompare(right.assetId) : -1
+    : right.supplyUsd === null ? 1 : right.supplyUsd - left.supplyUsd || left.assetId.localeCompare(right.assetId);
+}
+
+/** Admit a complete, non-overlapping set of shards from one frozen replay. */
+export function mergeLiveWithheldCounterfactualReports(values: readonly unknown[]): LiveWithheldReport {
+  const shards = values.map(value => ShardResultSchema.parse(value));
+  const first = shards[0];
+  if (first === undefined || shards.length !== first.shard.count) {
+    throw new Error("Live-withheld merge requires every shard");
+  }
+  const indices = new Set<number>();
+  const rows = new Set<string>();
+  const activeAssetIds = [...first.shard.activeAssetIds].sort();
+  const sourceIds = JSON.stringify(activeAssetIds);
+  if (new Set(activeAssetIds).size !== activeAssetIds.length) throw new Error("Duplicate replay asset IDs in shard");
+  const report: LiveWithheldReport = {
+    status: "complete",
+    failedAssets: [],
+    clockSec: first.report.clockSec,
+    rows: [],
+    assessedCount: 0,
+    excludedCounts: { "no-live": 0, "already-fallback": 0, "baseline-pipeline-gap": 0, "fallback-pipeline-gap": 0, "unchanged-or-upgrade": 0 },
+  };
+  for (const { shard, report: part } of shards) {
+    if (shard.count !== first.shard.count || shard.index >= shard.count || indices.has(shard.index) ||
+        shard.baseInputGenerationId !== first.shard.baseInputGenerationId || part.clockSec !== report.clockSec ||
+        JSON.stringify([...shard.activeAssetIds].sort()) !== sourceIds) {
+      throw new Error("Live-withheld shards overlap or come from different replay inputs");
+    }
+    indices.add(shard.index);
+    const assigned = new Set(activeAssetIds.filter((_, index) => index % shard.count === shard.index));
+    if (part.status !== (part.failedAssets.length === 0 ? "complete" : "partial")) {
+      throw new Error("Live-withheld shard status does not match its failed assets");
+    }
+    for (const failure of part.failedAssets) {
+      if (!assigned.has(failure.assetId) || rows.has(failure.assetId)) throw new Error(`Unexpected failed shard row ${failure.assetId}`);
+      rows.add(failure.assetId);
+      report.failedAssets.push(failure);
+    }
+    for (const row of part.rows) {
+      if (!assigned.has(row.assetId) || rows.has(row.assetId)) throw new Error(`Unexpected live-withheld shard row ${row.assetId}`);
+      rows.add(row.assetId);
+      report.rows.push(row);
+    }
+    report.assessedCount += part.assessedCount;
+    for (const reason of Object.keys(report.excludedCounts) as (keyof LiveWithheldReport["excludedCounts"])[]) {
+      report.excludedCounts[reason] += part.excludedCounts[reason];
+    }
+  }
+  report.rows.sort(compareReportRows);
+  report.failedAssets.sort((left, right) => left.assetId.localeCompare(right.assetId));
+  report.status = report.failedAssets.length === 0 ? "complete" : "partial";
+  return report;
 }
 
 function cardForAsset(cards: readonly ReplayCard[], assetId: string): ReplayCard {
@@ -184,8 +302,9 @@ export function buildCounterfactualPipeline(
   fixedInput: SafetyScoreV9CompilerInput,
   assetId: string,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
+  compilation?: SafetyScoreV9LiveWithheldCompilation,
 ): SafetyScoreV9CandidatePipelineResult {
-  const replayExtension = (replay.pipeline as unknown as { extension?: unknown }).extension;
+  const replayExtension = compilation?.extension ?? replay.pipeline.extension;
   let extension: unknown;
   if (replayExtension === undefined) {
     extension = buildSafetyScoreV9BaselineExtension(fixedInput, {
@@ -193,7 +312,9 @@ export function buildCounterfactualPipeline(
       metaById,
     });
   } else {
-    const original = structuredClone(replayExtension) as SafetyScoreV9FactSetExtensionV2;
+    const original = compilation === undefined
+      ? structuredClone(replayExtension) as SafetyScoreV9FactSetExtensionV2
+      : { ...compilation.extension, assets: [...compilation.extension.assets] };
     if (!Array.isArray(original.assets)) throw new Error("Replay extension has no asset set");
     let rebuiltFixedInput = fixedInput;
     const hasGraphs = original.assets.some((asset) => asset.accessReview?.freeze.claimGraph !== undefined);
@@ -240,8 +361,13 @@ export function buildCounterfactualPipeline(
           ...asset.componentEvidence.filter((entry) => entry.componentKey.startsWith("access:")),
         ];
       }
-      next.accessReview!.freeze.claimGraph = admitted;
-      return next;
+      return {
+        ...next,
+        accessReview: {
+          ...next.accessReview!,
+          freeze: { ...next.accessReview!.freeze, claimGraph: admitted },
+        },
+      };
     });
     extension = original;
   }
@@ -249,6 +375,7 @@ export function buildCounterfactualPipeline(
     fixedInput,
     extension,
     publishedAtSec: replay.pipeline.candidate.publishedAtSec,
+    ...(compilation === undefined ? {} : { liveWithheldCompilation: { source: compilation, assetId } }),
   });
 }
 
@@ -272,20 +399,33 @@ function supplyByAssetId(replay: Replay): ReadonlyMap<string, Pick<LiveWithheldR
 export function buildLiveWithheldCounterfactualReport(
   replayValue: Replay,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta> = ACTIVE_META_BY_ID,
+  options: { onProgress?: (message: string) => void; shard?: LiveWithheldShardSelection } = {},
 ): LiveWithheldReport {
   const replay = ReplaySchema.parse(replayValue);
+  const startedAt = performance.now();
   const { fixedInput, candidate } = replay.pipeline;
+  const shard = options.shard;
+  if (shard !== undefined && (!Number.isInteger(shard.index) || !Number.isInteger(shard.count) ||
+      shard.count < 1 || shard.index < 0 || shard.index >= shard.count)) {
+    throw new Error("Live-withheld shard must satisfy 0 <= index < count");
+  }
+  const selected = shard === undefined ? undefined
+    : new Set([...fixedInput.activeAssetIds].sort().filter((_, index) => index % shard.count === shard.index));
   const alreadyFallback = new Set(fixedInput.liveToFallbackCoins);
   const supplies = supplyByAssetId(replay);
   const rows: LiveWithheldRow[] = [];
+  const failedAssets: LiveWithheldReport["failedAssets"] = [];
   const excludedCounts: LiveWithheldReport["excludedCounts"] = {
     "no-live": 0, "already-fallback": 0, "baseline-pipeline-gap": 0,
     "fallback-pipeline-gap": 0, "unchanged-or-upgrade": 0,
   };
   let assessedCount = 0;
   let normalizedInput: SafetyScoreV9CompilerInput | undefined;
+  let compilation: SafetyScoreV9LiveWithheldCompilation | undefined;
+  let completedCount = 0;
 
   for (const assetId of fixedInput.activeAssetIds) {
+    if (selected !== undefined && !selected.has(assetId)) continue;
     const meta = metaById.get(assetId);
     if (!meta) throw new Error(`Replay active asset ${assetId} is missing registry metadata`);
     const liveRows = fixedInput.liveReserveMap[assetId];
@@ -300,12 +440,29 @@ export function buildLiveWithheldCounterfactualReport(
       excludedCounts["baseline-pipeline-gap"]++;
       continue;
     }
-    const counterfactual = buildCounterfactualPipeline(
-      replay,
-      withLiveReserveWithheld(normalizedInput ??= normalizeSafetyScoreV9CompilerInput(fixedInput), assetId),
-      assetId,
-      metaById,
-    );
+    const assetStartedAt = performance.now();
+    options.onProgress?.(`live-withheld-counterfactual: start asset=${assetId} completed=${completedCount} elapsedMs=${Math.round(assetStartedAt - startedAt)}`);
+    normalizedInput ??= normalizeSafetyScoreV9CompilerInput(fixedInput);
+    if (replay.pipeline.extension !== undefined) {
+      compilation ??= createSafetyScoreV9LiveWithheldCompilation(normalizedInput, replay.pipeline.extension);
+    }
+    let counterfactual: SafetyScoreV9CandidatePipelineResult;
+    try {
+      counterfactual = buildCounterfactualPipeline(
+        replay, withLiveReserveWithheld(normalizedInput, assetId), assetId, metaById, compilation,
+      );
+    } catch (error) {
+      if (!(error instanceof V9AssetEvaluationError)) throw error;
+      failedAssets.push({
+        assetId, reasonCode: "counterfactual-evaluation-failed",
+        errorClass: "V9AssetEvaluationError", message: error.message,
+      });
+      completedCount++;
+      options.onProgress?.(`live-withheld-counterfactual: failed asset=${assetId} completed=${completedCount} assetMs=${Math.round(performance.now() - assetStartedAt)} elapsedMs=${Math.round(performance.now() - startedAt)} errorClass=${error.name} message=${error.message}`);
+      continue;
+    }
+    completedCount++;
+    options.onProgress?.(`live-withheld-counterfactual: complete asset=${assetId} completed=${completedCount} assetMs=${Math.round(performance.now() - assetStartedAt)} elapsedMs=${Math.round(performance.now() - startedAt)}`);
     const fallbackCard = counterfactual.candidate.cards.find((card) => card.id === assetId);
     if (!fallbackCard) throw new Error(`Counterfactual candidate has no card for active asset ${assetId}`);
     if (fallbackCard.ratingStatus === "pipeline-gap" || fallbackCard.grade === null) {
@@ -337,10 +494,10 @@ export function buildLiveWithheldCounterfactualReport(
     });
   }
 
-  rows.sort((left, right) => left.supplyUsd === null
-    ? right.supplyUsd === null ? left.assetId.localeCompare(right.assetId) : -1
-    : right.supplyUsd === null ? 1 : right.supplyUsd - left.supplyUsd || left.assetId.localeCompare(right.assetId));
-  return { clockSec: fixedInput.clockSec, rows, assessedCount, excludedCounts };
+  rows.sort(compareReportRows);
+  failedAssets.sort((left, right) => left.assetId.localeCompare(right.assetId));
+  return { status: failedAssets.length === 0 ? "complete" : "partial", failedAssets,
+    clockSec: fixedInput.clockSec, rows, assessedCount, excludedCounts };
 }
 
 function displayScore(score: number | null): string {
@@ -356,6 +513,15 @@ export function renderLiveWithheldCounterfactualReport(report: LiveWithheldRepor
     `Excluded findings: ${Object.entries(report.excludedCounts).map(([reason, count]) => `${reason}=${count}`).join(", ")}.`,
     "Assessed counts include unchanged/upgraded outcomes; exclusions are not feed-health evidence.",
     "",
+    ...(report.status === "partial" ? [
+      `Report status: **partial**. Failed counterfactuals: ${report.failedAssets.length}. Failed assets are not a healthy-feed claim.`,
+      "",
+      "| Failed asset | Reason code | Error class | Message |",
+      "|---|---|---|---|",
+      ...report.failedAssets.map(failure =>
+        `| ${failure.assetId} | ${failure.reasonCode} | ${failure.errorClass} | ${failure.message.replaceAll("|", "\\|").replace(/[\r\n]+/g, " ")} |`),
+      "",
+    ] : []),
     rows.length === 0
       ? "No assessed eligible strict grade downgrades. Excluded assets are not a healthy-feed claim."
       : "| Asset | Supply (USD) | Live | If producer silent | Fallback tier | Evidence ceiling | Counterfactual binding cap |",
@@ -372,24 +538,92 @@ export function renderLiveWithheldCounterfactualReport(report: LiveWithheldRepor
   return lines.join("\n");
 }
 
+async function runReportWorkers(replayPath: string, count: number): Promise<LiveWithheldReport> {
+  const directory = mkdtempSync(join(tmpdir(), "pharos-live-withheld-"));
+  const children = Array.from({ length: count }, (_, index) => {
+    const output = join(directory, `shard-${index}.json`);
+    const child = spawn(process.execPath, [
+      ...process.execArgv, "--max-old-space-size=2048", process.argv[1]!,
+      "--replay", replayPath, "--shard", `${index + 1}/${count}`, "--output", output,
+    ], { stdio: ["ignore", "inherit", "inherit"] });
+    const result = new Promise<LiveWithheldShardResult>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("exit", (code, signal) => {
+        if (code !== 0) {
+          reject(new Error(`Live-withheld shard ${index + 1}/${count} failed: ${signal ?? code}`));
+          return;
+        }
+        try {
+          resolve(ShardResultSchema.parse(JSON.parse(readFileSync(output, "utf8"))));
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    return { child, result };
+  });
+  try {
+    return mergeLiveWithheldCounterfactualReports(await Promise.all(children.map(({ result }) => result)));
+  } catch (error) {
+    for (const { child } of children) child.kill();
+    await Promise.allSettled(children.map(({ result }) => result));
+    throw error;
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 async function main(): Promise<void> {
+  const startedAt = performance.now();
   const { values } = parseStrictCliArgs(process.argv.slice(2), {
     options: {
       replay: { type: "string" },
       output: { type: "string" },
+      workers: { type: "string" },
+      shard: { type: "string" },
+      merge: { type: "string", multiple: true },
     },
+    conflicts: [["workers", "shard"], ["merge", "replay"], ["merge", "workers"], ["merge", "shard"]],
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
-  assertCliUsage(typeof values.replay === "string", "--replay is required");
-  const replay = ReplaySchema.parse(JSON.parse(readFileSync(String(values.replay), "utf8")));
-  const report = buildLiveWithheldCounterfactualReport(replay);
-  const markdown = renderLiveWithheldCounterfactualReport(report);
-  if (typeof values.output === "string") {
-    writeFileSync(values.output, markdown, "utf8");
+  assertCliUsage(typeof values.replay === "string" || Array.isArray(values.merge), "--replay or --merge is required");
+  const workers = values.workers === undefined ? 1 : Number(values.workers);
+  assertCliUsage(workers === 1 || workers === 2 || workers === 3, "--workers must be 1, 2 or 3");
+  let report: LiveWithheldReport;
+  let shardResult: LiveWithheldShardResult | undefined;
+  if (Array.isArray(values.merge)) {
+    report = mergeLiveWithheldCounterfactualReports(values.merge.map(path => JSON.parse(readFileSync(String(path), "utf8"))));
+  } else if (workers > 1) {
+    report = await runReportWorkers(String(values.replay), workers);
   } else {
-    process.stdout.write(markdown);
+    const match = typeof values.shard === "string" ? /^([1-9][0-9]*)\/([1-9][0-9]*)$/.exec(values.shard) : null;
+    assertCliUsage(values.shard === undefined || match !== null, "--shard must be i/n (one-based)");
+    const shard = match === null ? undefined : { index: Number(match[1]) - 1, count: Number(match[2]) };
+    assertCliUsage(shard === undefined || (Number.isSafeInteger(shard.count) && shard.index < shard.count), "--shard must satisfy 1 <= i <= n");
+    const replay = ReplaySchema.parse(JSON.parse(readFileSync(String(values.replay), "utf8")));
+    report = buildLiveWithheldCounterfactualReport(replay, ACTIVE_META_BY_ID, {
+      onProgress: message => console.error(shard === undefined ? message : `shard=${shard.index + 1}/${shard.count} ${message}`),
+      ...(shard === undefined ? {} : { shard }),
+    });
+    if (shard !== undefined) {
+      shardResult = { shard: { ...shard, baseInputGenerationId: replay.pipeline.fixedInput.baseInputGenerationId,
+        activeAssetIds: [...replay.pipeline.fixedInput.activeAssetIds].sort() }, report };
+    }
   }
-  console.error(`live-withheld-counterfactual: ${report.rows.length} grade drop(s); assessed=${report.assessedCount}; excluded=${JSON.stringify(report.excludedCounts)}`);
+  const output = shardResult === undefined ? renderLiveWithheldCounterfactualReport(report) : `${JSON.stringify(shardResult)}\n`;
+  if (typeof values.output === "string") {
+    writeFileSync(values.output, output, "utf8");
+  } else {
+    process.stdout.write(output);
+  }
+  console.error(`live-withheld-counterfactual: status=${report.status}; ${report.rows.length} grade drop(s); assessed=${report.assessedCount}; failed=${JSON.stringify(report.failedAssets.map(failure => failure.assetId))}; excluded=${JSON.stringify(report.excludedCounts)}; elapsedMs=${Math.round(performance.now() - startedAt)}; maxRssKiB=${process.resourceUsage().maxRSS}`);
+  // A shard's failures are judged only after the complete shard set is merged.
+  // Mixed outcomes publish an explicitly partial queue; no successful assessment
+  // anywhere in the report is still a failed generator.
+  if (shardResult === undefined && report.failedAssets.length > 0 &&
+      report.assessedCount === 0 && report.excludedCounts["fallback-pipeline-gap"] === 0) {
+    process.exitCode = 1;
+  }
 }
 
 if (process.argv[1]?.endsWith("check-safety-score-v9-live-withheld.ts")) {

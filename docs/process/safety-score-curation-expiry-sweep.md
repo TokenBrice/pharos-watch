@@ -18,7 +18,7 @@ artifact; full queue/report files are not uploaded. Replay and each of the four
 reports have separate timed workflow steps and status outputs. The live-withheld
 step has a 15-minute ceiling inside the unchanged 25-minute job budget, leaving
 time for issue/artifact publication when that report times out. Missing status
-outputs count as failures. Generator/projection failures fail the run, but green
+outputs count as failures. Generator failures fail the run, but green
 generation does not attest cache freshness.
 Draining complete queues stays operator work — follow the steps below.
 
@@ -72,9 +72,9 @@ reads worklist items rather than score equivalence.
 
 This permanent operator workflow explicitly requests a current-redemption scenario.
 Ordinary replay retains captured observations by default; scenario replay cannot use
-accepted/embedded-registry captures or `--registry-ref`. The workflow tracks summary
-`jq` projection status along with every generator; failed projection fails the run
-and prevents the summary PR. No scoring/publication authority is implied.
+accepted/embedded-registry captures or `--registry-ref`. The workflow tracks every
+generator's status; generator failures fail the run. No scoring/publication authority
+is implied.
 
 ## 3. Generate the worklist
 
@@ -227,19 +227,15 @@ Finish every reviewed claim group as exactly one of:
   intermediate state never replaces the three-outcome decision itself.
 
 Append the decision to
-`.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json`. Each
+`.github/artifacts/safety-score-missing-data-reviewed-ledger.json`. Each
 entry uses the field roster declared in that file and links the stable claim-group and
 task IDs to evidence, sentinels, review trigger, and `factsClosed`. Never remove an old
 decision when a task disappears or returns; append another decision. This ledger is
 authored review provenance and is not replaced when the generated registry refreshes.
 
-The workflow commits only the compact projection at
-`.github/artifacts/safety-score-missing-data-registry-summary.json` through
-the existing automated-refresh PR helper. It lives outside `.github/workflows/`
-because the automation token has no `workflow` scope, and GitHub rejects token
-pushes that touch that directory. The full multi-megabyte registry stays in
-the workflow artifact. The compact snapshot is intentionally not `autoStage`: its
-input is a fresh production capture that a pre-commit hook cannot reproduce.
+The full registry remains a credentialed maintenance artifact from the fresh
+production capture. The sweep does not commit an aggregate snapshot or open a
+snapshot PR; the issue and retained registry artifact are its outputs.
 
 ## 5. Check the live-withheld counterfactual
 
@@ -283,28 +279,68 @@ the source generation and stamping the target with a one-asset generation. Commi
 withheld producer. Run `38401069568` then spent at least 23 minutes 18 seconds in
 live-withheld before the 25-minute job timeout (12:59:02 to 13:22:20 UTC).
 
-Graph-bearing counterfactuals now build only the selected extension asset while
-retaining the **full** active set, dependency-cycle diagnosis, source generations and
-input identity. The source compiler input is normalized once and reused; each
-isolated withheld input still receives its own canonical identity validation.
-The rest of the captured extension stays unchanged except for graph generation
-re-admission. Compilation/evaluation still runs over the whole cohort: withholding
-all producers together would change dependency semantics.
+Graph-bearing counterfactuals build only the selected extension asset while retaining
+the **full** active set and dependency-cycle context. The operator-only compiler
+context admits the captured extension and compiles the current-code baseline once.
+Each isolated withheld input still receives its own canonical identity validation.
+Untouched compiled assets are reused only after checking that every other input and
+overlay stayed unchanged; their cohort research evidence hashes and graph generation
+IDs are rebound before full fact-set admission. The target, quarantined assets, and
+assets affected by changed parent deployment identities use ordinary compilation.
+The full dependency plan, common-mode membership, evaluation, public projection, and
+quarantine/retry behavior still run for every scenario. Production does not enable
+this reuse path. Withholding all producers together would change dependency semantics.
 
-On the retained 396-asset `20261013-0512` capture, an isolated USDT extension rebuild
-measured 2,254 ms for the full cohort versus 33 ms for the selected asset (67.6x for
-that phase), with exact selected-slice JSON equality. This is local phase timing,
-not an end-to-end hosted-run guarantee. The report is expected to finish within its
-15-minute step budget; do not raise the job ceiling to mask another regression.
+The selected-extension optimization alone did not suffice: run `39038600589` reached
+96 full response-render passes in 15 minutes, then timed out without writing the
+report; it had no per-asset progress labels. A CPU-profiled retained-capture USDT
+scenario spent 14.67 s in full-cohort compilation versus 0.324 s in the selected
+extension. Unprofiled warm scenarios measured 5.44–5.90 s before compilation reuse
+versus 3.47–4.87 s afterward, with byte-identical full pipeline JSON for USDT, USDC,
+DAI, USDe and the Wintermute lender.
+
+The workflow runs three isolated shard subprocesses (`--workers 3`), each with a
+2 GiB V8 heap ceiling, on the public repository's 4-vCPU / 16-GiB runner. A complete
+two-worker local run finished in 434.5 s (7m14.5s): 217 isolated scenarios, 172 assessed,
+44 fallback pipeline gaps and one explicit evaluation failure, producing 56 grade
+drops. The workers peaked at 1,813,588 and 1,810,756 KiB RSS and the coordinator at
+481,464 KiB; even three workers at the measured peak fit a conservative 7-GiB
+envelope. Using the observed hosted/local per-scenario ratio, three workers estimate
+roughly eight minutes on the hosted runner; this remains an estimate until dispatch.
+This keeps captures and full reports local rather than adding artifact transfers.
+Shards partition the sorted active asset IDs, never the scoring cohort.
+`--shard i/n` emits a JSON shard;
+repeat `--merge <shard.json>` to validate and merge a complete shard set. Missing,
+duplicate or mixed-capture shards fail. Merged Markdown is byte-identical to the
+unsharded report. Each asset logs start/completion/failure and elapsed milliseconds;
+the CLI summary also logs total duration and peak RSS.
+The three-worker smoke retained the full 396-asset scoring cohort and selected six
+eligible counterfactuals: 19.1 s versus 31.5 s unsharded, with byte-identical merged
+Markdown including the partial-failure row. This timing subset is not the full run.
+
+An unrecoverable `V9AssetEvaluationError` is isolated by this report only: it records
+the withheld asset, `counterfactual-evaluation-failed`, error class and message, then
+continues. The top-level report status becomes **partial**, with the failed-asset
+table before the grade-drop rows so the sweep issue's bounded excerpt includes it.
+Mixed outcomes exit zero (the status collector therefore records generator status
+zero); this means a usable, explicitly partial queue, not complete assessment.
+All attempted counterfactuals failing, malformed baseline input, or another generator
+error still exits nonzero. A shard's all-failed result is judged only after merging,
+so one empty/unassessable partition cannot discard successful sibling partitions.
+Production evaluator and quarantine semantics are unchanged. Keep failed assets open
+for an owner investigation; never interpret their absence from grade drops as feed
+health. Do not raise the unchanged 15-minute step ceiling to mask a regression.
 Acceptance requires one completed post-merge scheduled sweep with all five generator
-statuses and summary projection successful, plus the issue and registry artifact.
+statuses successful, plus the issue and registry artifact.
 A local replay or manual dispatch alone does not close scheduled-run acceptance.
 
 The live-withheld tests compare the optimized pipeline and report against the former
 full-cohort rebuild, including captured graphs, and assert selected-asset equality
 with full-cohort dependency-cycle diagnostics. They also cover native/legacy graphs,
-invalid graph rejection and capture-time overlay preservation. Workflow tests check
-the five isolated steps, timeout failure propagation, and summary permission boundary.
+invalid graph rejection and capture-time overlay preservation. The evidence queue
+also traverses the lender book, accepted-source and latest-attempt statuses so their
+gaps are not falsely rejected as unreferenced. Workflow tests check the five isolated
+steps and timeout failure propagation.
 
 Assets already present in `liveToFallbackCoins` are excluded: their producer
 silence is already realized in this capture and is owned by the worklist/expiry

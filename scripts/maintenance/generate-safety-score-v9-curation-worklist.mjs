@@ -10,6 +10,7 @@
 // (The .ts imports resolve through tsconfig paths, so run via the npm script's
 // `node --import tsx` — bare `node` cannot resolve @shared/lib.)
 import { readFileSync, writeFileSync } from "node:fs";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "../../shared/lib/methodology-versions/constants.ts";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources.ts";
 import {
   classifyV9CurationWorklistStream,
@@ -54,7 +55,7 @@ const STREAMS = [
     key: "EXIT",
     title: "Exit — same-notional route evidence",
     ceiling: "cause-scoped route factors; no missing-data cap",
-    fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v4.18 derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) unresolved-exit-output routes: set `outputAssets` on the asset's entry in shared/lib/redemption-backstop-configs/ — tracked stablecoin ids for stable-single/stable-basket, canonical asset:<symbol> keys for collateral; ONLY when the documented rail names the output (config notes/docs are the source; schema validates shape), (c) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted). Captures with producer-embedded observations pick up outputAssets on the next production capture. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
+    fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v" + REDEMPTION_BACKSTOP_METHODOLOGY_VERSION + " derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) unresolved-exit-output routes: set `outputAssets` on the asset's entry in shared/lib/redemption-backstop-configs/ — tracked stablecoin ids for stable-single/stable-basket, canonical asset:<symbol> keys for collateral; ONLY when the documented rail names the output (config notes/docs are the source; schema validates shape), (c) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted). Captures with producer-embedded observations pick up outputAssets on the next production capture. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
   },
   {
     key: "PEG",
@@ -170,12 +171,9 @@ lines.push("```");
 lines.push("");
 lines.push("## Protocol for agents");
 lines.push("");
-lines.push("1. **Claim** a contiguous block of unchecked items (top of a stream, P0 first) in the swarm session log (`results/curation-swarm-session-*.md`), and **check prior batch reports first**: an item another batch recorded as an evidence blocker must not be re-ground — carry the blocker forward instead.");
-lines.push("2. **Ownership**: re-check `git status` on the target coin file immediately before editing; skip any file dirty from another lane and record the skip. Skipped-by-collision items are NOT done — the coordinator sweeps them into a later batch.");
-lines.push("3. **Fix** per the stream's how-to. Evidence must be sourced and cited (primary sources, review date, reviewer); NO fabricated values, NO manual supply overrides. If a source doesn't exist, record `BLOCKED(<why>)` in your batch report — dead ends are findings, and refusing to author is the correct outcome (see the MECH stream).");
-lines.push("4. **Verify** locally: per-file schema parse for touched records + focused vitest suites. Expect `check:stablecoin-data` to report stale generated artifacts mid-batch — that is by design; do NOT regenerate registry/generated artifacts during a parallel batch (coordinator/measurement time only).");
-lines.push("5. **Commit** in thematic batches after the coordinator reviews the combined diff (descriptive subject + body).");
-lines.push("6. **Re-measure** (coordinator, periodically — not per item): registry regen → fresh replay → regenerate this file. Items whose codes cleared disappear; never hand-edit generated rows.");
+for (const [index, instruction] of Object.values(registry.agentProtocol).entries()) {
+  lines.push(`${index + 1}. ${instruction}`);
+}
 lines.push("");
 lines.push("Item ID format: `STREAM-assetId`. An item is DONE when none of its listed reason codes appear for the asset in a fresh replay.");
 lines.push("");

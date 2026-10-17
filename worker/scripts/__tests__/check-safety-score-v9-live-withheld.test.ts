@@ -9,9 +9,11 @@ import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-card
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9/extension";
 import * as extensionBuilder from "../../src/lib/safety-score-v9/extension";
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
+import { createSafetyScoreV9LiveWithheldCompilation } from "../../src/lib/safety-score-v9/fact-set";
+import * as evaluator from "@shared/lib/safety-score-v9/evaluate-set";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import { makeV9TwoAssetFixedInput } from "../../src/test-helpers/v9-fixed-input";
-import { buildCounterfactualPipeline, buildLiveWithheldCounterfactualReport, readmitCounterfactualAccessGraph, renderLiveWithheldCounterfactualReport } from "../check-safety-score-v9-live-withheld";
+import { buildCounterfactualPipeline, buildLiveWithheldCounterfactualReport, mergeLiveWithheldCounterfactualReports, readmitCounterfactualAccessGraph, renderLiveWithheldCounterfactualReport, type LiveWithheldShardResult } from "../check-safety-score-v9-live-withheld";
 
 function fixtureMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
   return eligibleReserveMeta({
@@ -92,6 +94,152 @@ function healthyReplay(alreadyFallback: string[] = [], withGraphs = false, nativ
 }
 
 describe("buildLiveWithheldCounterfactualReport", () => {
+  it("publishes explicit partial coverage after an unrecoverable per-asset evaluation error", () => {
+    const { replay, metaById } = healthyReplay([], true, true);
+    const evaluate = evaluator.evaluateValidatedV9FactSet;
+    const mock = vi.spyOn(evaluator, "evaluateValidatedV9FactSet").mockImplementation((facts, policy, interventions) => {
+      const alpha = facts.assets.find(asset => asset.assetId === "alpha")!;
+      if (!alpha.reserveExposures.some(exposure => exposure.provenance === "live")) {
+        throw new evaluator.V9AssetEvaluationError("alpha", new Error("Fixture parent lacks wrapper-local facts"));
+      }
+      return evaluate(facts, policy, interventions);
+    });
+    try {
+      const report = buildLiveWithheldCounterfactualReport(replay, metaById);
+      expect(report.status).toBe("partial");
+      expect(report.assessedCount).toBe(1);
+      expect(report.failedAssets).toEqual([{
+        assetId: "alpha", reasonCode: "counterfactual-evaluation-failed", errorClass: "V9AssetEvaluationError",
+        message: "Safety Score v9 asset alpha evaluation failed: Fixture parent lacks wrapper-local facts",
+      }]);
+      const markdown = renderLiveWithheldCounterfactualReport(report);
+      expect(markdown).toContain("Report status: **partial**");
+      expect(markdown.indexOf("| alpha | counterfactual-evaluation-failed")).toBeLessThan(1600);
+      const shards = [0, 1].map(index => ({
+        shard: { index, count: 2, baseInputGenerationId: replay.pipeline.fixedInput.baseInputGenerationId,
+          activeAssetIds: replay.pipeline.fixedInput.activeAssetIds },
+        report: buildLiveWithheldCounterfactualReport(replay, metaById, { shard: { index, count: 2 } }),
+      }));
+      expect(mergeLiveWithheldCounterfactualReports(shards)).toEqual(report);
+      mock.mockImplementation(() => { throw new evaluator.V9AssetEvaluationError("alpha", new Error("Every scenario fails")); });
+      const failed = buildLiveWithheldCounterfactualReport(replay, metaById);
+      expect(failed.status).toBe("partial");
+      expect(failed.failedAssets).toHaveLength(2);
+      expect(failed.assessedCount).toBe(0);
+    } finally {
+      mock.mockRestore();
+    }
+  });
+
+  it("retains the pre-reuse default compiler digest", () => {
+    const { pipeline } = healthyReplay([], true, true);
+    // Recorded with the pre-change HEAD compiler; its complete JSON was also
+    // compared byte-for-byte before replacing that temporary oracle with this pin.
+    expect(pipeline.compiledFacts.v9FactSetDigest)
+      .toBe("0b76a0c0be8ba41a1d1bc9a9de9b96fdf4e9c1f803c30152c2478ac04c23ce18");
+  });
+
+  it.each([[false, false], [false, true], [true, false], [true, true]])(
+    "reuses compiled siblings with byte-identical full pipelines (native=%s, graphs=%s)", (native, graphs) => {
+      const { replay, metaById, fixedInput, pipeline } = healthyReplay([], graphs, native);
+      const source = createSafetyScoreV9LiveWithheldCompilation(fixedInput, pipeline.extension);
+      for (const assetId of fixedInput.activeAssetIds) {
+        const draft = structuredClone(fixedInput);
+        delete draft.liveReserveMap[assetId];
+        delete draft.liveReserveProvenanceMap[assetId];
+        draft.liveToFallbackCoins.push(assetId);
+        const input = normalizeSafetyScoreV9CompilerInput({ ...draft, baseInputGenerationId: undefined });
+        const full = buildCounterfactualPipeline(replay, input, assetId, metaById);
+        const reused = buildCounterfactualPipeline(replay, input, assetId, metaById, source);
+        expect(JSON.stringify(reused)).toBe(JSON.stringify(full));
+      }
+    },
+  );
+
+  it("preserves evaluation quarantine/recompilation rather than reusing a failed sibling", () => {
+    const { replay, metaById, fixedInput, pipeline } = healthyReplay([], true, true);
+    const source = createSafetyScoreV9LiveWithheldCompilation(fixedInput, pipeline.extension);
+    const draft = structuredClone(fixedInput);
+    delete draft.liveReserveMap.alpha;
+    delete draft.liveReserveProvenanceMap.alpha;
+    draft.liveToFallbackCoins.push("alpha");
+    const input = normalizeSafetyScoreV9CompilerInput({ ...draft, baseInputGenerationId: undefined });
+    const evaluate = evaluator.evaluateValidatedV9FactSet;
+    const mock = vi.spyOn(evaluator, "evaluateValidatedV9FactSet");
+    try {
+      mock.mockImplementationOnce(() => { throw new evaluator.V9AssetEvaluationError("beta", new Error("Fixture evaluation defect")); })
+        .mockImplementation(evaluate);
+      const full = buildCounterfactualPipeline(replay, input, "alpha", metaById);
+      mock.mockImplementationOnce(() => { throw new evaluator.V9AssetEvaluationError("beta", new Error("Fixture evaluation defect")); });
+      const reused = buildCounterfactualPipeline(replay, input, "alpha", metaById, source);
+      expect(reused.quarantines).toContainEqual(expect.objectContaining({ assetId: "beta", code: "evaluation-failed" }));
+      expect(JSON.stringify(reused)).toBe(JSON.stringify(full));
+    } finally {
+      mock.mockRestore();
+    }
+  });
+
+  it("rejects reuse when another producer or retained overlay changed", () => {
+    const { fixedInput, pipeline } = healthyReplay([], true, true);
+    const source = createSafetyScoreV9LiveWithheldCompilation(fixedInput, pipeline.extension);
+    const input = normalizeSafetyScoreV9CompilerInput({
+      ...fixedInput, baseInputGenerationId: undefined, liveReserveMap: {}, liveReserveProvenanceMap: {},
+      liveToFallbackCoins: ["alpha", "beta"],
+    });
+    expect(() => source.compile(input, structuredClone(pipeline.extension), "alpha"))
+      .toThrow("exactly one withheld reserve producer");
+  });
+
+  it("keeps upstream dependency propagation identical to full compilation", () => {
+    const { fixedInput, metaById } = healthyReplay();
+    metaById.set("alpha", fixtureMeta("alpha", {
+      dependencies: [{ id: "beta", weight: 1, type: "wrapper" }],
+      dependencyReview: {
+        reviewedAt: "2026-10-07", reviewer: "Fixture reviewer", confidence: "verified",
+        sources: [{ label: "Parent claim", url: "https://example.com/dependencies/parent" }],
+        rationale: "The exact serial claim is reviewed.",
+        relationships: [{ id: "beta", weight: 1, type: "wrapper", economicRole: "serial-claim",
+          reason: "Reviewed parent claim." }],
+      },
+    }));
+    const extension = buildSafetyScoreV9BaselineExtension(fixedInput, { allowRegistryMismatch: true, metaById });
+    const pipeline = buildSafetyScoreV9Candidate({ fixedInput, extension, publishedAtSec: fixedInput.clockSec });
+    const replay = JSON.parse(JSON.stringify({ pipeline }));
+    const source = createSafetyScoreV9LiveWithheldCompilation(fixedInput, extension);
+    const draft = structuredClone(fixedInput);
+    delete draft.liveReserveMap.beta;
+    delete draft.liveReserveProvenanceMap.beta;
+    draft.liveToFallbackCoins.push("beta");
+    const input = normalizeSafetyScoreV9CompilerInput({ ...draft, baseInputGenerationId: undefined });
+    const full = buildCounterfactualPipeline(replay, input, "beta", metaById);
+    const reused = buildCounterfactualPipeline(replay, input, "beta", metaById, source);
+    expect(reused.compiledFacts.assets.find(asset => asset.assetId === "alpha")!.dependencies.edges)
+      .toContainEqual(expect.objectContaining({ upstreamAssetId: "beta" }));
+    expect(JSON.stringify(reused)).toBe(JSON.stringify(full));
+  });
+
+  it("merges deterministic shards into identical report bytes, including unknown and zero supplies", () => {
+    const { replay, metaById } = healthyReplay([], true, true);
+    replay.pipeline.evaluatedSet.assets[0]!.stressState!.exitPortfolio!.circulatingUsd = null;
+    replay.pipeline.evaluatedSet.assets[1]!.stressState!.exitPortfolio!.circulatingUsd = 0;
+    // Input order must not affect shard membership.
+    replay.pipeline.fixedInput.activeAssetIds.reverse();
+    const full = buildLiveWithheldCounterfactualReport(replay, metaById);
+    const shards: LiveWithheldShardResult[] = [0, 1].map(index => ({
+      shard: { index, count: 2, baseInputGenerationId: replay.pipeline.fixedInput.baseInputGenerationId,
+        activeAssetIds: replay.pipeline.fixedInput.activeAssetIds },
+      report: buildLiveWithheldCounterfactualReport(replay, metaById, { shard: { index, count: 2 } }),
+    }));
+    expect(mergeLiveWithheldCounterfactualReports([...shards].reverse())).toEqual(full);
+    expect(renderLiveWithheldCounterfactualReport(mergeLiveWithheldCounterfactualReports(shards)))
+      .toBe(renderLiveWithheldCounterfactualReport(full));
+    expect(() => mergeLiveWithheldCounterfactualReports(shards.slice(0, 1))).toThrow("every shard");
+    expect(() => mergeLiveWithheldCounterfactualReports([shards[0], shards[0]])).toThrow("overlap");
+    const differentClock = structuredClone(shards);
+    differentClock[1]!.report.clockSec++;
+    expect(() => mergeLiveWithheldCounterfactualReports(differentClock)).toThrow("different replay");
+  });
+
   it("builds only the target while preserving full-rebuild pipeline and report output", () => {
     const { replay, metaById, fixedInput } = healthyReplay([], true, true);
     const draft = structuredClone(fixedInput);
