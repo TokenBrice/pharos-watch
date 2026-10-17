@@ -367,20 +367,25 @@ describe("handleStablecoinDetail", () => {
 
   it.each([buildFreshnessMeta(0, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail").freshBudgetSec + 1, 5 * 60 * 60])("refreshes an aged %ss detail before responding to the first visitor", async (age) => {
     const now = Math.floor(Date.now() / 1000);
-    const { db, sqlite } = fixtures.open();
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .run("detail:usdt-tether", makeDLDetailBody(), now - age);
-    const freshBody = makeDLDetailBody({ tokens: [
-      { date: now, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
-    ] });
-    queueFetch(new Response(freshBody, { status: 200 }));
-    const ctx = makeCtx();
-    const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
-    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
-    expect(response.headers.get("Warning")).toBeNull();
-    expect(await response.json()).toMatchObject(JSON.parse(freshBody));
-    await Promise.all(ctx.waitUntilPromises);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("detail:usdt-tether", makeDLDetailBody(), now - age);
+      const freshBody = makeDLDetailBody({ tokens: [
+        { date: now, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
+      ] });
+      queueFetch(new Response(freshBody, { status: 200 }));
+      const ctx = makeCtx();
+      const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+      expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
+      expect(response.headers.get("Warning")).toBeNull();
+      expect(await response.json()).toMatchObject(JSON.parse(freshBody));
+      await Promise.all(ctx.waitUntilPromises);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("retains an aged detail with its warning when synchronous refresh fails", async () => {
