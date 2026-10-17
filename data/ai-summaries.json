@@ -2499,16 +2499,36 @@
     ]
   },
   "vchf-vnx": {
-    "title": "VNX Franc, Reserve Report Stuck at 2024",
-    "text": "VNX's VCHF is a CHF-redeemable token launched under Liechtenstein's TVTG Blockchain Act, and its evidence trail has stopped moving. The newest reserve report is an AREVA agreed-upon-procedures check as of 31 December 2024, which confirmed aggregate CHF-value coverage in unnamed bank or securities custody accounts without disclosing holdings or category split; the 2025 AREVA cycle covered VNX Gold only, so the fiat series is more than eighteen months stale and outside the freshness bound. Since then VNX suspended exchange operations on 30 June 2026, allowed withdrawals to whitelisted destinations only through July, and moved issuance from VNX Commodities AG to Bermuda-licensed VNX Global Ltd, while circulating VCHF fell to a fraction of the 2024 attested figure. Pharos scores the issuer-controlled mint stack as a constraint on economic control across twelve chains, backing rests on a stale aggregate, and the exit pillar is held back: {{term:redemption}}redemption{{/term}} is eligibility-gated, no comparable on-chain route is supported, and pricing confidence is low. The compliance sidecar marks it non-compliant under MiCA as an e-money token. Regulation on paper does not make the reserve legible, and a franc rail whose last reserve check predates its own operational suspension is running on trust.",
-    "updatedAt": "2026-10-06",
+    "title": "Six Chains Attested, Avalanche Left Out",
+    "text": "VCHF is a Swiss franc token issued by VNX Global Ltd., a Bermuda company holding a Class M digital asset business licence from the Bermuda Monetary Authority. Issuance moved there from Liechtenstein's VNX Commodities AG, whose vnx.li platform suspended exchange operations on 30 June 2026. The reserve evidence is now monthly. Apex Fund Services' August 2026 {{term:attestation}}attestation{{/term}}, a reasonable-assurance engagement under ISAE 3000, found CHF 2,035,962 of cash in a designated Bermuda Commercial Bank account against 2,035,935 VCHF outstanding on Ethereum, Solana, Base, Celo, Stellar and the Internet Computer, with a random mid-month test added to the month-end check. Two limits remain. The whole reserve sits with one bank, and the liability table omits legacy deployments that still carry supply, chiefly about 547,000 VCHF on Avalanche, most of it in a single unidentified wallet. Direct {{term:redemption}}redemption{{/term}} runs through verified institutional accounts with a CHF 100,000 minimum and about one business day to settle, so smaller holders depend on secondary-market liquidity. That record supports a {{grade}} overall grade. The durable constraint is scope: the attestation covers the six-chain float, while Pharos supply data also counts the uncovered deployments.",
+    "updatedAt": "2026-10-17",
     "authoredBy": "ai",
-    "model": "claude-sonnet-5-5",
-    "factsAsOf": "2026-10-06",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-17",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-10-17"
+      }
+    ],
     "sources": [
       {
-        "label": "AREVA VNX reserve report as of December 31, 2024",
-        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        "label": "Apex Fund Services: VNX Global stablecoin reserve attestation as of 31 August 2026",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+      },
+      {
+        "label": "VNX Global: audits and attestation reports",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
+      },
+      {
+        "label": "VNX Global: minting and redemption",
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption"
+      },
+      {
+        "label": "VNX Global: standards and contracts",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
       }
     ]
   },
@@ -3519,16 +3539,20 @@
     ]
   },
   "vgbp-vnx": {
-    "title": "Twenty Pounds in Existence",
-    "text": "VNX's Liechtenstein-licensed pound was always a thin market; by the data's account it is now not a market at all. Pharos quarantined VGBP on 2026-07-19 after DefiLlama's supply feed reported zero circulating tokens, a condition no active listing can survive. The formal scaffolding that once flattered it reads differently in this light: the latest AREVA fiat-series report, dated end-2024 and never refreshed since, attested a grand total of 20.00 VGBP in existence, while issuance quietly migrated from VNX Commodities AG to a Bermuda-licensed VNX Global entity that report does not cover. Same-day issuer {{term:redemption}}redemption{{/term}} and TVTG licensing remain on paper, but a sterling rail with no measurable supply and a stalled {{term:attestation}}attestation{{/term}} cycle is settlement infrastructure for settlements that are not happening. The UK regulatory wildcard now cuts the other way: if banks ever bring serious sterling liquidity on-chain, they will arrive to find the first mover already gone quiet. VGBP stays in quarantine until someone shows up holding it.",
-    "updatedAt": "2026-08-11",
+    "title": "A Sterling Float Barely Above One Redemption Ticket",
+    "text": "VGBP is VNX Global's pound sterling token, issued under the same Bermuda Class M licence and reserve programme as VCHF. Pharos quarantined it in July 2026 when DefiLlama reported no circulating supply, then re-admitted it in October once the feed again showed about 126,600 VGBP on Solana, Celo and Base. That figure matches Apex Fund Services' August 2026 {{term:attestation}}attestation{{/term}} to the token: GBP 126,596 of cash in a designated Bermuda Commercial Bank account against 126,595 VGBP outstanding, an excess of under one pound. Unlike the VCHF report, the VGBP liability table covers every deployment Pharos tracks. Size is the binding fact. VNX sets a GBP 100,000 minimum per institutional transaction, so a single direct {{term:redemption}}redemption{{/term}} at the threshold would retire about four fifths of the float. Direct exits are limited to verified institutional customers and settle in about one business day. The durable constraint is concentration: one bank holds the reserve, and one ticket-sized client could empty it.",
+    "updatedAt": "2026-10-17",
     "authoredBy": "ai",
-    "model": "claude-fable-5",
-    "factsAsOf": "2026-08-11",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-17",
     "sources": [
       {
-        "label": "AREVA VNX reserve report as of December 31, 2024",
-        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        "label": "Apex Fund Services: VNX Global stablecoin reserve attestation as of 31 August 2026",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+      },
+      {
+        "label": "VNX Global: minting and redemption",
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption"
       },
       {
         "label": "DefiLlama stablecoin detail for VGBP",

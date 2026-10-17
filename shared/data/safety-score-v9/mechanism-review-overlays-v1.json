@@ -3336,35 +3336,80 @@
     {
       "assetId": "vchf-vnx",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-01",
+      "reviewedAt": "2026-10-17",
       "sources": [
         {
-          "label": "VNX FRT terms (no holder right, no contractual commitment, and VNX Gold-based reserve formation)",
-          "url": "https://vnx-terms.s3.amazonaws.com/VNX-FRT-Terms.pdf"
+          "label": "VNX Global Terms, current issuer and personal contractual stablecoin redemption right, sections 2.1 and 3.2 (retrieved 2026-10-17)",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
         },
         {
-          "label": "VNX exchange-operations suspension notice",
-          "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
+          "label": "VNX Global stablecoins: currency-matched segregated reserves and conditional at-par redemption (retrieved 2026-10-17)",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins"
         },
         {
-          "label": "Apex August 2026 scoped VCHF cash-reserve examination",
+          "label": "VNX Global institutional minting and redemption, eligibility and controls (retrieved 2026-10-17)",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption"
+        },
+        {
+          "label": "Apex ISAE 3000 reasonable-assurance examination, period end 2026-08-31, signed 2026-09-08",
           "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
         },
         {
-          "label": "Current VNX Global legal terms (Stablecoins distinct from legacy FRTs)",
-          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
+          "label": "VNX Global current deployment registry, including Tezos outside the Apex VCHF table (retrieved 2026-10-17)",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
+        },
+        {
+          "label": "VNX Global monthly Apex report archive: July and August 2026 only (retrieved 2026-10-17)",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
         }
       ],
-      "notes": "VNX's FRT terms (re-read in full 2026-07-20) state that for every FRT (VEUR/VCHF/VGBP) in circulation VNX holds an equivalent reserve on behalf of users, but that 'FRT itself does not represent a right', that 'VNX makes no (contractual) commitments to Users in relation to FRT', that users cannot claim exchange into VNX Gold, and that holding FRT only conveys the ability to request a TT exchange service after registering a VNX account; the terms also describe the FRT reserve as initially comprised of VNX Gold rather than franc-denominated deposits. This affirmative denial of a holder claim keeps claimAndSegregation at weak. VNX's notice (read 2026-07-20) confirms platform exchange operations were suspended June 30, 2026 at 18:00 CET with withdrawals to whitelisted wallets/bank accounts only until July 31, 2026; this is an operational wind-down of the redemption venue, not evidence of custodian failure. custodyContinuity is deliberately left bounded: no source located names any bank or securities custodian for VCHF reserves (the terms reference only unnamed 'banking partners'), no multiple-custodian, allocation, no-rehypothecation, or failure-continuity arrangement is documented, and the only third-party reserve document (AREVA's agreed-upon-procedures report as of 2024-12-31, published 2025-02-05) is stale, was retrievable only as a scanned image PDF with no text layer (no OCR tooling available in this environment), and in any case predates the exchange suspension - so no current custody evidence exists to tier this component. NOT established: a current reserve attestation, custodian or banking-partner identity, per-custodian allocation, no-rehypothecation or failure-continuity mechanics, or a holder reserve claim. R2 scope correction: new July/August 2026 Apex reports and Global legal terms were recovered through dynamic transparency-page inspection. Current Global Stablecoins have a restricted personal contractual redemption right and cash reserve at BCB; legacy FRT terms are a distinct regime. No component grade or original review date is refreshed until complete deployment/issuer migration scope is established.",
+      "notes": "Pharos VNX correction review (issue #1462), 2026-10-17. Current issuer VNX Global Ltd. is a Bermuda exempted company, registration 202605548, holding a BMA Class M licence under DABA 2018. Global Terms section 3.2 grants a personal contractual redemption right to verified organizations classified as sophisticated customers; section 2.1 prohibits commingling of customer fiat. Current institutional docs describe currency-matched segregated reserves and at-par direct cancellation or liquidity-pool buyback, with CHF 100,000 minimum, customer eligibility and compliance conditions. These current terms supersede the previous whole-token weak claim based on historical VNX Commodities AG FRT terms and the legacy platform suspension: those were a distinct regime, not proof that current Global Stablecoins deny a holder claim. Limited claimAndSegregation recognizes the documented restricted current claim without asserting universal holder eligibility, insolvency priority or migration of every retained legacy deployment. The Apex August examination (2026-08-31 and random 2026-08-14 testing times; signed 2026-09-08) independently reconciles CHF 2,035,934.72 covered liabilities to CHF 2,035,962.35 cash at Bermuda Commercial Bank account ending 5557, separately maintained from operating accounts. It covers Stellar, Ethereum, Solana, ICP, Celo and Base, not Tezos, Arbitrum, Avalanche, Polygon, XRPL or Fraxtal. Named custody and cash composition are established for that covered book, but a complete current legacy-deployment liability/migration join, insolvency priority and bank-failure/successor-custody arrangement are not. custodyContinuity therefore remains unavailable for whole VCHF. assuranceAndReconciliation is omitted: the compiler owns report-scope admission; this overlay grants no whole-token assurance or collateralization measurement. July and August reports are genuine independent attestations, not financial-statement audits; no September report is published in the reviewed archive. Global Terms still permit reserve-related redemption delay and in-kind redemption; the approximate one-business-day flow is not an unconditional settlement bound.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "weak"
+          "quality": "limited"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "Historical legacy FRT custody continuity remains unavailable. New primary evidence fetched 2026-10-01: August 31 Apex report names Bermuda Commercial Bank and separately maintained VNX Global CHF reserve accounts for Stellar, Ethereum, Solana, ICP, Celo and Base VCHF. No complete legacy-deployment liability join, no-rehypothecation package, insolvency priority or custodian succession terms is established. Named bank is therefore no longer an unknown for the covered reserve; complete continuity remains bounded.",
+          "rationale": "Apex establishes the named Bermuda Commercial Bank CHF reserve account and operating-account separation at August testing times. It does not reconcile all retained VCHF deployments or establish holder insolvency priority, bank-failure continuity or successor-custody terms. These specific whole-component gaps, not an unknown bank or an absent monthly attestation, remain open.",
           "sourceUrl": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+        }
+      }
+    },
+    {
+      "assetId": "vgbp-vnx",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-10-17",
+      "sources": [
+        {
+          "label": "VNX Global Terms, sections 2.1 and 3.2, current issuer and restricted personal contractual redemption right (retrieved 2026-10-17)",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
+        },
+        {
+          "label": "VNX Global current stablecoin reserves and conditional at-par redemption (retrieved 2026-10-17)",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins"
+        },
+        {
+          "label": "VNX Global institutional redemption eligibility and controls (retrieved 2026-10-17)",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption"
+        },
+        {
+          "label": "Apex August VGBP cash-reserve examination, period end 2026-08-31, signed 2026-09-08",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+        },
+        {
+          "label": "VNX Global VGBP deployment registry, including untracked Ethereum (retrieved 2026-10-17)",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
+        }
+      ],
+      "notes": "Pharos VNX correction review (issue #1462), 2026-10-17. VGBP is issued by VNX Global Ltd., Bermuda, registration 202605548, under its BMA Class M DABA licence, not by the historical Liechtenstein FRT issuer. Global Terms section 3.2 establishes personal contractual redemption for verified sophisticated organizations; current docs describe at-par cancellation against the reserve or discretionary liquidity-pool buyback, GBP 100,000 minimum and compliance prerequisites. This documented restricted claim plus named independent reserve evidence supports limited claimAndSegregation, not universal eligibility or proven insolvency priority. Apex's ISAE 3000 reasonable-assurance report covers Solana, Celo and Base VGBP at 2026-08-31 and 2026-08-14, signed 2026-09-08: GBP 126,595.48 liabilities versus GBP 126,596.33 solely cash at Bermuda Commercial Bank account ending 5514 in VNX Global Ltd.'s name, separately maintained from operating accounts. This supports limited named-bank custodyContinuity; no bank-failure, successor-custody or holder-priority terms were established. The issuer registry also lists Ethereum outside the attested table; no unobserved liability amount or historical zero is inferred. assuranceAndReconciliation is omitted so the compiler uses the domain report and its admitted tracked-book scope rather than an overlay whole-token upgrade. Reserve-related delays and in-kind redemption remain permitted by the Global Terms; approximate fiat/crypto processing times are not settlement guarantees. No throughput, stress performance or collateralization ratio is invented.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
         }
       }
     },

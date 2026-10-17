@@ -11792,37 +11792,36 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "reviewedAt": "2026-10-17T00:00:00Z",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
       "sources": [
         {
           "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
+          "observedAt": "2026-10-17T00:00:00Z",
           "datumAsOf": "2026-08-31",
-          "location": "Sections 2.1-2.3",
+          "location": "Sections 1.2 and 2.1-2.4; report signed 2026-09-08",
           "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
-          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+          "assertion": "At the August 31 and August 14 testing times, VNX Global Ltd.'s six-chain covered VCHF book has CHF 2,035,934.72 liabilities versus CHF 2,035,962.35 solely cash at Bermuda Commercial Bank, separately maintained from operating accounts; this is not a current all-deployment composition join."
         },
         {
-          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-          "observedAt": "2026-10-03T23:19:52Z",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts",
+          "observedAt": "2026-10-17T00:00:00Z",
           "datumAsOf": null,
           "location": "Overview and VCHF contract registry",
           "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
-          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+          "assertion": "The current registry additionally lists Tezos outside the six-chain Apex VCHF table. It does not reconcile the retained Arbitrum, Avalanche, Polygon, XRPL or Fraxtal deployments to the attested current liability book."
         }
       ],
       "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.io/swiss-franc",
-        "https://faq.vnx.io/en/",
-        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits",
+        "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf",
         "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
         "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
-        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
       ],
-      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+      "rationale": "Reviewed/retrieved 2026-10-17 at date granularity (UTC midnight normalization). Current VNX Global Ltd. cash composition and named Bermuda Commercial Bank custody are disclosed and independently examined for the six-chain covered book; the report period remains 2026-08-31, signed 2026-09-08, not the retrieval date. Whole-VCHF composition remains bounded because neither the report nor the current registry supplies a complete current liability/deployment/migration join for all retained deployments. This is not an AREVA-only or no-monthly-attestation gap: genuine July and August Apex reports are published. The reviewed archive has no September report. Promote whole-book composition only on issuer disclosure reconciling every retained liability or a verified complete current economic partition and covered/excluded-book join."
     },
     {
       "id": "uw-vchf-vnx-87b280d41e0226d5",
@@ -11837,37 +11836,36 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "reviewedAt": "2026-10-17T00:00:00Z",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
       "sources": [
         {
           "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
+          "observedAt": "2026-10-17T00:00:00Z",
           "datumAsOf": "2026-08-31",
-          "location": "Sections 2.1-2.3",
+          "location": "Sections 1.1-1.2 and 2.1-2.4; report signed 2026-09-08",
           "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
-          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+          "assertion": "Apex independently reconciles the six-chain VCHF cash-reserve book at August 31 and August 14 testing times. It does not establish independent reconciliation of every retained legacy deployment or continuous mint-to-reserve reconciliation."
         },
         {
-          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-          "observedAt": "2026-10-03T23:19:52Z",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts",
+          "observedAt": "2026-10-17T00:00:00Z",
           "datumAsOf": null,
           "location": "Overview and VCHF contract registry",
           "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
-          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+          "assertion": "Current VNX Global deployment disclosure includes Tezos outside the Apex table and supplies no complete legacy-deployment/current-book migration reconciliation."
         }
       ],
       "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.io/swiss-franc",
-        "https://faq.vnx.io/en/",
-        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits",
+        "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf",
         "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
         "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
-        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
       ],
-      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+      "rationale": "Reviewed/retrieved 2026-10-17 at date granularity (UTC midnight normalization). VNX Global's current minting-and-redemption docs describe daily bank/on-chain/internal-ledger reconciliation and M-of-N mint/burn controls with at least two signatories; the July and August Apex examinations independently test the named six-chain covered book. These are genuine current disclosures, not missing monthly attestations, but issuer-described daily controls do not establish independently verified whole-VCHF reconciliation across every retained liability. The August report period is 2026-08-31, signed 2026-09-08; no September report is published in the reviewed archive. Retain this specific whole-liability reconciliation gap until the issuer supplies a complete deployment/migration join and independent scope-matched reconciliation; do not infer all-contract signing independence or control certification from the operational summary."
     },
     {
       "id": "uw-vchf-vnx-559f1e6d00625760",
@@ -11882,37 +11880,36 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "reviewedAt": "2026-10-17T00:00:00Z",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
       "sources": [
         {
           "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
+          "observedAt": "2026-10-17T00:00:00Z",
           "datumAsOf": "2026-08-31",
-          "location": "Sections 2.1-2.3",
+          "location": "Sections 1.1-1.2 and 2.1-2.4; report signed 2026-09-08",
           "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
-          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+          "assertion": "Apex provides ISAE 3000 reasonable assurance on the six-chain covered VCHF cash-reserve book, not a financial-statement audit or a reconciliation of every retained VCHF deployment."
         },
         {
-          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-          "observedAt": "2026-10-03T23:19:52Z",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts",
+          "observedAt": "2026-10-17T00:00:00Z",
           "datumAsOf": null,
           "location": "Overview and VCHF contract registry",
           "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
-          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+          "assertion": "Tezos is registry-listed but omitted from Apex's VCHF liability table; the current disclosure does not bridge all retained legacy deployments into the covered book."
         }
       ],
       "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.io/swiss-franc",
-        "https://faq.vnx.io/en/",
-        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/stablecoins",
+        "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits",
+        "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf",
         "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
         "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
-        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
       ],
-      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+      "rationale": "Reviewed/retrieved 2026-10-17 at date granularity (UTC midnight normalization). Genuine July and August Apex ISAE 3000 reasonable-assurance reserve-to-liability examinations supersede any historical claim that only a 2024 AREVA report exists. August 31 is the latest published report period, signed September 8; the reviewed archive has no September report. Whole-VCHF assurance remains bounded specifically because the examined six-chain book is not joined to every retained deployment and its current liabilities. No current whole-book partition, complete covered/excluded-liability join or legacy migration reconciliation is disclosed. Leave assuranceAndReconciliation out of the mechanism overlay and let the compiler enforce report-scope admission; promote whole-token assurance only when that missing current scope is proved, not merely when another scoped monthly PDF appears."
     },
     {
       "id": "uw-vnxau-vnx-3e0cd4acdd66e9ad",

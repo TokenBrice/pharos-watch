@@ -15,12 +15,8 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "VNX docs",
-        "url": "https://vnx.gitbook.io/vnx-platform/"
-      },
-      {
-        "label": "VNX website",
-        "url": "https://vnx.li/"
+        "label": "VNX Global standards and contracts",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
       }
     ],
     "routes": [

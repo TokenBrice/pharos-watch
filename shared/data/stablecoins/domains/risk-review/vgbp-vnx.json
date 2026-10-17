@@ -18,18 +18,18 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "VGBP is natively issued on Base, Celo, and Solana through VNX-controlled VNXCToken and SPL mint authorities. The reviewed Base and Celo proxy, VNXManager, and VNXProxyAdmin sources, plus the Solana SPL mint, expose no on-chain bridge machinery, so there are no bridge controls or representation routes in Bridge Risk. VNX's historical platform \"bridging services\" were an undocumented off-chain operational path and withdrawals ended after June 30, 2026; its exact historical semantics and common-mode controls remain unresolved.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex VNX mint-bridge boundary review",
+    "summary": "VGBP is natively issued on Base, Celo, and Solana. The pinned August 16, 2026 reviews below identified chain-local VNXCToken and SPL mint authorities without on-chain bridge machinery. Current VNX Global documentation describes a separate issuer-operated burn-and-mint transfer service under its signing quorum, with no wrapped representation. That operational rail does not establish an external message-validation network, a new token contract, or freshly verified controller permissions; the existing native route observations remain dated August 16, 2026.",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "Pharos VNX correction review (issue #1462)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "VNX supported blockchains notice",
-        "url": "https://vnx.li/strategic-focus-on-supported-blockchains/"
+        "label": "VNX Global authoritative VGBP contract registry (reviewed October 17, 2026)",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
       },
       {
-        "label": "VNX exchange-operations suspension and bridging notice",
-        "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
+        "label": "VNX Global issuer-operated burn-and-mint bridge service (reviewed October 17, 2026)",
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/products/bridge"
       },
       {
         "label": "VNX EVM smart-contract repository",

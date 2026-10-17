@@ -2,24 +2,15 @@
   "id": "vgbp-vnx",
   "name": "VNX British Pound",
   "symbol": "VGBP",
-  "status": "quarantined",
-  "listingStatusReview": {
-    "changedAt": "2026-07-19",
-    "reason": "DefiLlama's stablecoin supply feed currently reports no circulating VGBP supply, so VGBP cannot satisfy Pharos' exact active supply-publication contract without an ad hoc supply override.",
-    "reviewBy": "2026-08-19",
-    "source": {
-      "label": "DefiLlama stablecoin detail for VGBP",
-      "url": "https://stablecoins.llama.fi/stablecoin/292"
-    }
-  },
-  "oneLiner": "VGBP is VNX's issuer-redeemable pound sterling token, backed at the latest published report date by an aggregate GBP-value reserve of undisclosed composition.",
+  "status": "active",
+  "oneLiner": "VGBP is VNX Global Ltd.'s institutional GBP token, backed by Apex-attested GBP cash at Bermuda Commercial Bank.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
     "governance": "centralized"
   },
-  "collateral": "Aggregate GBP-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
-  "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent GBP value",
+  "collateral": "GBP cash held by VNX Global Ltd. in a designated reserve account at Bermuda Commercial Bank, separately maintained from operating accounts; Apex's August 2026 attestation reconciles GBP 126,596.33 of cash to GBP 126,595.48 of VGBP liabilities on Solana, Celo, and Base",
+  "pegMechanism": "VNX Global Ltd. mints VGBP against GBP funding and offers at-par redemption to verified institutional customers. The published minimum transaction threshold is GBP 100,000; fiat settlement averages approximately one business day through direct cancellation against reserves or issuer buyback, subject to eligibility, compliance, liquidity conditions, and the VNX Global Terms",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "292",
   "detailProvider": "defillama",
@@ -27,21 +18,33 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://vnx.li/"
+      "url": "https://vnx.io/"
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/VNX_Platform"
+      "url": "https://x.com/VNX_Global"
     },
     {
       "label": "Docs",
-      "url": "https://vnx.gitbook.io/vnx-platform/"
+      "url": "https://vnx.gitbook.io/vnx-global"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
+    },
+    {
+      "label": "Current VGBP Platform",
+      "url": "https://vnx.io/british-pound"
+    },
+    {
+      "label": "VNX Global Terms",
+      "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
     }
   ],
   "jurisdiction": {
-    "country": "Liechtenstein",
-    "regulator": "FMA",
-    "license": "TVTG (Blockchain Act)"
+    "country": "Bermuda",
+    "regulator": "BMA",
+    "license": "Class M digital asset business licence under DABA 2018 (registration no. 202605548)"
   },
   "contracts": [
     {
@@ -68,8 +71,8 @@
     "semantics": "single-asset",
     "breakerScope": "vgbp-vnx",
     "display": {
-      "url": "https://vnx.li/",
-      "label": "VNX Platform"
+      "url": "https://vnx.gitbook.io/vnx-global/transparency/audits",
+      "label": "VNX Global reserve attestations"
     },
     "inputs": {
       "primary": {
@@ -79,34 +82,34 @@
       }
     },
     "params": {
-      "label": "Aggregate GBP-value reserve (composition undisclosed)",
-      "risk": "very-high"
+      "label": "GBP cash at Bermuda Commercial Bank",
+      "risk": "medium"
     }
   },
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf",
-    "provider": "AREVA General Auditing and Trust Company Limited (fiat-token series stalled: the 2025-12-31 AREVA cycle covered VNXAU gold only, so this 2024-12-31 report remains the newest fiat artefact ~19 months on; it attested a VGBP supply of just 20.00 tokens, and issuance has since migrated from VNX Commodities AG to Bermuda-licensed VNX Global Ltd)",
+    "type": "attestation",
+    "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+    "provider": "Apex Fund Services Ltd. (ISAE 3000 reasonable-assurance examination of VNX Global Ltd.'s currency-matched cash reserves and covered stablecoin liabilities)",
     "attestorTier": "niche",
-    "cadence": "ad-hoc",
-    "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Bermuda",
     "latestReport": {
-      "periodEnd": "2024-12-31",
-      "publishedAt": "2025-02-05",
-      "assuranceMethod": "agreed-upon-procedures",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-08",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "AREVA VNX reserve report as of December 31, 2024",
-          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+          "label": "Apex VNX Global reserve attestation as of August 31, 2026 (signed September 8, 2026)",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
         },
         {
-          "label": "AREVA licences and registrations",
-          "url": "https://www.areva.li/en/"
+          "label": "VNX Global monthly independent attestation reports",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
         }
       ]
     }

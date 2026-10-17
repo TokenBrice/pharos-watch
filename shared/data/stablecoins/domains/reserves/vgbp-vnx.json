@@ -2,78 +2,75 @@
   "id": "vgbp-vnx",
   "reserves": [
     {
-      "name": "Aggregate GBP-value reserve (composition undisclosed)",
+      "name": "GBP cash at Bermuda Commercial Bank",
       "pct": 100,
-      "risk": "very-high",
-      "assetClass": "other",
-      "issuerOrObligor": "VNX Commodities AG and undisclosed reserve issuers or counterparties",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "legal", "market"],
+      "risk": "medium",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Bermuda Commercial Bank",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "Pharos VNX correction review (issue #1462)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AREVA VNX reserve report as of December 31, 2024",
-        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        "label": "Apex VNX Global reserve attestation as of August 31, 2026",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
       },
       {
-        "label": "VNX Reserves Management Policy",
-        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
+        "label": "Apex VNX Global reserve attestation as of July 31, 2026",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf"
       },
       {
-        "label": "VNX current transparency page",
-        "url": "https://vnx.li/transparency/"
+        "label": "VNX Global monthly independent attestation reports",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
       }
     ],
-    "rationale": "AREVA reconciled the December 31, 2024 circulating VGBP liability to at least the same aggregate GBP value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VGBP reserve report.",
-    "compositionBasis": "AREVA aggregate reserve-value reconciliation and VNX non-binding reserve policy",
-    "compositionAsOf": "2024-12-31",
+    "rationale": "Apex's ISAE 3000 reasonable-assurance examination reconciled GBP 126,595.48 of VGBP liabilities across all three tracked deployments (Solana, Celo, and Base) to GBP 126,596.33 of cash in VNX Global Ltd.'s designated GBP reserve account ending 5514 at Bermuda Commercial Bank on August 31 and August 14, 2026. The July report records the same reserve and liability totals. Reserves consisted solely of GBP cash and were separately maintained from operating accounts, with no cross-currency netting. The 100% bank-deposit slice uses a conservative medium legacy risk tier because the canonical reserve-asset risk map has no GBP bank-cash entry and the balance is concentrated at one bank; this tier does not replace the structured backing facts.",
+    "compositionBasis": "Apex ISAE 3000 examination of the complete VGBP cash reserve and Solana/Celo/Base liabilities",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserve value is reported only as an aggregate. The bank-account versus securities-custody allocation, underlying holdings, issuers, maturities, custodians, and liquidity terms are undisclosed.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "No reserve-composition residual is undisclosed at the report dates. The report does not establish a hard withdrawal-time maximum, bankruptcy remoteness, deposit-protection coverage, or rehypothecation terms, and gives no assurance over balances after its testing times. The issuer-listed Ethereum deployment is outside both the tracked VGBP contracts and the report's covered liabilities.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Aggregate GBP-value reserve (composition undisclosed)",
+        "reserveName": "GBP cash at Bermuda Commercial Bank",
         "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The AUP report confirms aggregate GBP-value coverage but does not disclose reserve constituents or weights."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The entire reserve is GBP bank cash at Bermuda Commercial Bank, not a tracked stablecoin or a dependency on another Pharos asset."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed bank and securities custody counterparties",
-        "role": "custodian"
-      },
-      {
-        "name": "VNX Commodities AG",
-        "role": "other",
-        "jurisdiction": "Liechtenstein"
+        "name": "Bermuda Commercial Bank",
+        "role": "bank",
+        "sharePct": 100,
+        "jurisdiction": "Bermuda"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "Pharos VNX correction review (issue #1462)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AREVA VNX reserve report as of December 31, 2024",
-        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        "label": "Apex VNX Global reserve attestation as of August 31, 2026",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
       },
       {
-        "label": "VNX Reserves Management Policy",
-        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
+        "label": "Apex VNX Global reserve attestation as of July 31, 2026",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf"
       }
     ],
-    "uncertainty": "The AUP report confirms aggregate GBP-value coverage in bank or securities custody accounts but does not name providers, disclose provider shares, establish segregation or bankruptcy remoteness, or state rehypothecation terms.",
-    "knownUnknownExposurePct": 100
+    "uncertainty": "Apex identified VNX Global Ltd.'s sole GBP reserve bank and verified that the designated reserve account was separately maintained from operating accounts at the testing times. Account separation does not establish bankruptcy remoteness or a prohibition on rehypothecation; both remain unknown. Bank credit, operational and availability risks remain, and the report provides no assurance for later dates.",
+    "knownUnknownExposurePct": 0
   }
 }

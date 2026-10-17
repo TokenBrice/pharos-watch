@@ -2,96 +2,113 @@
   "id": "vchf-vnx",
   "reserves": [
     {
-      "name": "Aggregate CHF-value reserve (composition undisclosed)",
+      "name": "Unreconciled whole-token reserve allocation (Apex cash subset documented)",
       "pct": 100,
-      "risk": "very-high",
-      "assetClass": "other",
-      "issuerOrObligor": "VNX Commodities AG and undisclosed reserve counterparties",
-      "riskFactors": [
-        "legal",
-        "custody",
-        "liquidity",
-        "concentration"
-      ],
+      "risk": "medium",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence",
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28; Kimi T41 unknown-reduction wave-2 re-verification 2026-07-30",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "Pharos VNX correction review (issue #1462)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AREVA VNX reserve report as of December 31, 2024",
-        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        "label": "Apex VNX Global August 2026 reserve attestation",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
       },
       {
-        "label": "VNX Reserves Management Policy",
-        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
+        "label": "Apex VNX Global July 2026 reserve attestation",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf"
       },
       {
-        "label": "VNX current transparency page",
-        "url": "https://vnx.li/transparency/"
+        "label": "VNX Global monthly reserve attestations (retrieved October 17, 2026)",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
       },
       {
-        "label": "VNX exchange-operations suspension notice",
-        "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
+        "label": "VNX Global current standards and contracts (retrieved October 17, 2026)",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
+      },
+      {
+        "label": "Avalanche pinned RPC: block 94159927, August 31, 2026 23:59:55 UTC",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      },
+      {
+        "label": "Arbitrum pinned RPC: block 500455223, August 31, 2026 23:59:59 UTC",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Polygon pinned RPC: block 93010514, August 31, 2026 23:59:58 UTC",
+        "url": "https://api-polygon-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Fraxtal pinned RPC: block 40705044, August 31, 2026 23:59:59 UTC",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Tezos VCHF historical ledger balances at level 14748075",
+        "url": "https://api.tzkt.io/v1/bigmaps/609954/historical_keys/14748075?limit=100"
+      },
+      {
+        "label": "Tezos block 14748075: August 31, 2026 23:59:55 UTC",
+        "url": "https://api.tzkt.io/v1/blocks/14748075"
+      },
+      {
+        "label": "XRPL archival RPC: gateway_balances and complete account_lines at ledger 106677545",
+        "url": "https://s2.ripple.com:51234/"
       }
     ],
-    "rationale": "AREVA reconciled the December 31, 2024 circulating VCHF liability to at least the same aggregate CHF value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VCHF reserve report. Write-time re-open 2026-07-28: AREVA year-end 2024 reserve report PDF URL and VNX reserves management policy still load; transparency page shows asset figures as of 24.03.2026 for VNX suite but no VCHF instrument-weight table dual-corroborated \u2192 ku=100 retained for VCHF composition split. Write-time re-open 2026-07-30: transparency page header now reads 'VNX Assets as of 30.12.2025' and shows VCHF token circulation only (no reserve amount, composition table, or instrument data); the newest listed FRT audit report remains the AREVA AUP as of 31.12.2024. Direct URL probes for a 31.12.2025 report under VNX's wp-content uploads naming convention return 404, and Wayback snapshots of the transparency page through 2026-07-25 show no newer FRT report, so no post-2024 reserve attestation exists during the wind-down (exchange operations suspended 2026-06-30, withdrawals to whitelisted destinations only until 2026-07-31; rwa.xyz shows ~2.30M VCHF supply as of 2026-07-30 versus 9.46M attested at 2024-12-31). ku=100 retained.",
-    "compositionBasis": "AREVA aggregate reserve-value reconciliation and VNX non-binding reserve policy",
-    "compositionAsOf": "2024-12-31",
+    "rationale": "The authored slice is a 100% unclassified whole-token reserve allocation because current whole-book coverage and reserve weights are not established. Apex's ISAE 3000 reasonable-assurance examination separately identifies CHF 2,035,962.35 solely in cash in VNX Global Ltd.'s designated CHF reserve account ending 5557 at Bermuda Commercial Bank, separately maintained from operating accounts, against CHF 2,035,934.72 of covered outstanding VCHF at August 31, 2026 23:59:59 UTC. That cash-only, segregated subset covers Stellar, Ethereum, Solana, ICP, Celo and Base; it is not complete reserve evidence for all tracked VCHF. The July report corroborates the same cash-only structure, with CHF 2,363,527.85 against CHF 2,363,500.22 at July 31. The diagnostic coverage denominator records Ethereum net of the 9,900 frozen tokens excluded by Apex; their legal extinguishment or current economically owed status is not established. Tezos, Arbitrum, Avalanche, Polygon, XRPL and Fraxtal are absent from the attested liability table. Legacy supply observations are context about excluded liabilities only: pinned totalSupply() reads using npm run research:dwellir-rpc give Avalanche 546,986.70877, Arbitrum 166.8765, Polygon 1,577.05199 and Fraxtal 371.37006 VCHF. Tezos's six active historical ledger balances at level 14748075 sum to 3.04882 VCHF (18 decimals); deleted/inactive keys are excluded. XRPL gateway_balances and complete account_lines at validated ledger 106677545 show zero VCHF obligations/balances, with no pagination marker. These legacy balances total 549,105.05614 VCHF, but token quantities do not establish reserve asset values or bank-asset percentages. No currentBookPartition is authored: there is no matched captured B4 book census or current exclusion determination. The report's current whole-token liability share remains unknown, so its cash composition is retained as separate evidence rather than an authored bank-deposit slice. No reportScopeId is attached to the whole-book residual. The CHF 27.63 attested excess is not assigned to legacy claims. The residual carries no asset class, obligor or tracked dependency; its required medium display-risk field supplies no affirmative cash or bank-deposit allocation. No maximum withdrawal horizon is evidenced. Avalanche's unidentified address 0x21097a336E7A63ba30A93429Efe5C2ae42BA2827 held 536,393.203982589285442413 VCHF at the same pin; no treasury exclusion or beneficial owner is inferred. RPC provenance, observed October 17, 2026: Avalanche block 94159927, hash 0x3772b9d348435e811e4d08049c171cb832dd76e3cfeabd3f9fb5581d53479a90, time 23:59:55 UTC, observed 09:18:56.697 UTC; Arbitrum block 500455223, hash 0x1f20144622f24a328045752256c3bd53b1cc4b655e1b94711a307f53e2cbbf73, time 23:59:59 UTC, observed 09:20:45.496 UTC; Polygon block 93010514, hash 0x757a01f01f2cc62ad8382cf882d83dd47ea9c196332207a7dd2c646125d6daaf, time 23:59:58 UTC, observed 09:20:45.486 UTC; Fraxtal block 40705044, hash 0x795a19015a9c4c68e3727f1fe4c289df793bb4507ccd3c44a9d975f5ad08db6a, time 23:59:59 UTC, observed 09:18:46.611 UTC. Tezos level 14748075, hash BLj2Qqwa8SpcGBZWnwm2MqgQ3ukrGmaaPhRhN1H1Y96fLrCDhac, time 23:59:55 UTC. XRPL ledger 106677545, hash 546C7E890D06D3B1105F85CA5E85FAF5E364E2D96D8E615E362F95BDA91B61CD, time 23:59:51 UTC, observed 09:21:13 UTC; all block times are August 31, 2026. Tezos historical records and XRPL account_lines were retrieved October 17, 2026. The closest preceding blocks/ledger are used; their at-most-eight-second offset from the report checkpoint is disclosed, not asserted to be a simultaneous financial attestation.",
+    "compositionBasis": "Unclassified whole-token allocation: Apex establishes a cash-only segregated subset, but its liability scope is not reconciled to the current whole book",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserve value is reported only as an aggregate. The bank-account versus securities-custody allocation, underlying holdings, issuers, maturities, custodians, and liquidity terms are undisclosed.",
+    "knownUnknownExposure": "The whole-token reserve allocation remains unclassified. Apex identifies CHF 2,035,962.35 cash at Bermuda Commercial Bank against CHF 2,035,934.72 of covered VCHF on six deployments, with accounts separately maintained from operations. Backing and custody continuity for excluded legacy deployments remain unreconciled, and no matched current book partition establishes the attested subset's whole-token share. The pinned legacy census documents excluded liabilities only, not reserve weights; no partial cash percentage or whole-token cash credit is inferred.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Aggregate CHF-value reserve (composition undisclosed)",
+        "reserveName": "Unreconciled whole-token reserve allocation (Apex cash subset documented)",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The AUP report confirms aggregate CHF-value coverage but does not disclose reserve constituents or weights."
+        "rationale": "The report's cash-only subset cannot establish whole-token composition without a current matched liability partition and reconciled legacy exclusions. The whole-book slice remains unclassified, with no asset-class or counterparty allocation."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed banks and securities custodians",
-        "role": "custodian"
-      },
-      {
-        "name": "VNX Commodities AG",
-        "role": "other",
-        "jurisdiction": "Liechtenstein"
-      },
-      {
-        "name": "Bermuda Commercial Bank (VNX Global Ltd. covered VCHF reserve)",
+        "name": "Bermuda Commercial Bank",
         "role": "bank",
+        "jurisdiction": "Bermuda"
+      },
+      {
+        "name": "VNX Global Ltd.",
+        "role": "other",
         "jurisdiction": "Bermuda"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (R2WMisc13)",
+    "reviewedAt": "2026-10-17",
+    "reviewer": "Pharos VNX correction review (issue #1462)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AREVA VNX reserve report as of December 31, 2024",
-        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
-      },
-      {
-        "label": "VNX current transparency page",
-        "url": "https://vnx.li/transparency/"
-      },
-      {
-        "label": "Apex VNX Global reserve attestation for August 2026",
+        "label": "Apex VNX Global August 2026 reserve attestation",
         "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+      },
+      {
+        "label": "Apex VNX Global July 2026 reserve attestation",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf"
+      },
+      {
+        "label": "VNX Global monthly reserve attestations (retrieved October 17, 2026)",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
       }
     ],
-    "uncertainty": "The August 31, 2026 Apex report names Bermuda Commercial Bank and VNX Global Ltd. for CHF cash reserves, separately maintained from operating accounts. Its covered VCHF liabilities are Stellar, Ethereum, Solana, ICP, Celo and Base; Tezos, Arbitrum, Avalanche, Polygon, XRPL and Fraxtal are not included in its liability table. The historical undisclosed-bank and VNX Commodities rows are retained for that unjoined legacy scope; no provider share is inferred. Whole-catalog segregation, insolvency priority, rehypothecation and custodian-failure/succession terms remain unknown. This report establishes named custody for its covered liabilities, not complete continuity safeguards or reconciled coverage of all 12 catalog deployments. At August 31, 2026 23:59:59 UTC, the report compares CHF 2,035,962.35 cash with 2,035,934.72 covered VCHF outstanding and in circulation after a 9,900.00 frozen-token deduction on Ethereum. Its footnotes link generic chain explorers rather than exact token/account identifiers; the frozen account, all legacy-book joins, current treasury/frozen exclusions and current economic liability partition remain unverified. These historical CHF amounts are not current USD coverage shares.",
-    "knownUnknownExposurePct": 100
+    "uncertainty": "Apex inspected bank statements and independent bank confirmations for designated CHF account ending 5557, held in VNX Global Ltd.'s name at Bermuda Commercial Bank. It assessed separate maintenance from operating accounts and identified cash-only reserves for the six covered deployments at the August testing times. This establishes segregation within that attested scope; whole-token segregation remains unknown because custody and reserve continuity for excluded legacy liabilities are unreconciled. Provider shares and a whole-token unknown-exposure percentage are omitted: no current book partition or reserve asset allocation across covered and legacy claims is established. Bankruptcy remoteness, holder insolvency priority, rehypothecation, and bank-failure/succession arrangements remain unestablished by this examination. The report expressly retains bank credit, operational and availability risks and gives no assurance on subsequent reserve levels."
   }
 }

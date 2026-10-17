@@ -2,14 +2,14 @@
   "id": "vchf-vnx",
   "name": "VNX Swiss Franc",
   "symbol": "VCHF",
-  "oneLiner": "VCHF is VNX's issuer-redeemable Swiss franc token, backed at the latest published report date by an aggregate CHF-value reserve of undisclosed composition.",
+  "oneLiner": "VCHF is VNX Global Ltd.'s institutional CHF token with Apex-attested bank cash reserves; coverage of legacy deployments remains unreconciled.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CHF",
     "governance": "centralized"
   },
-  "collateral": "Aggregate CHF-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
-  "pegMechanism": "The current VNX Global platform offers CHF-denominated VCHF issuance and redemption to verified organizations classified as sophisticated customers. Its terms allow redemption delays for reserve illiquidity, unavailability or loss and permit in-kind reserve assets. Fiat withdrawal carries a CHF 30 SWIFT fee and may incur a separate account-history-dependent unused-funds fee; these are not an all-in USD redemption quote. This current platform is distinct from VNX Commodities AG's suspended legacy vnx.li exchange.",
+  "collateral": "Apex's August 2026 examination identifies CHF 2,035,962.35 cash in VNX Global Ltd.'s designated reserve account at Bermuda Commercial Bank, separately maintained from operating accounts, against CHF 2,035,934.72 of covered VCHF liabilities. Its liability table covers Stellar, Ethereum, Solana, ICP, Celo and Base, excluding the tracked Tezos, Arbitrum, Avalanche, Polygon, XRPL and Fraxtal deployments; backing of that legacy supply remains unreconciled.",
+  "pegMechanism": "Bermuda-licensed VNX Global Ltd. offers verified institutional customers at-par CHF issuance and redemption with a CHF 100,000 minimum transaction threshold. Redemption uses direct cancellation against reserves or buyback into VNX's liquidity pool, with fiat to the customer's bank averaging about one business day, subject to eligibility, AML/ATF checks, operational controls and liquidity conditions. Governing terms permit reserve-related delay and in-kind redemption. Fiat withdrawal carries a CHF 30 SWIFT fee and may incur a separate account-history-dependent unused-funds fee, rather than an all-in USD redemption quote. The current VNX Global platform is distinct from VNX Commodities AG's suspended legacy vnx.li exchange.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "157",
   "detailProvider": "defillama",
@@ -18,15 +18,19 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://vnx.li/"
+      "url": "https://vnx.io/"
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/VNX_Platform"
+      "url": "https://x.com/VNX_Global"
     },
     {
       "label": "Docs",
-      "url": "https://vnx.gitbook.io/vnx-platform/"
+      "url": "https://vnx.gitbook.io/vnx-global"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
     },
     {
       "label": "Current VCHF Platform",
@@ -38,9 +42,9 @@
     }
   ],
   "jurisdiction": {
-    "country": "Liechtenstein",
-    "regulator": "FMA",
-    "license": "TVTG (Blockchain Act)"
+    "country": "Bermuda",
+    "regulator": "BMA",
+    "license": "Class M digital asset business licence under DABA 2018 (registration no. 202605548)"
   },
   "contracts": [
     {
@@ -107,7 +111,7 @@
       "decimals": 7
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
@@ -115,8 +119,8 @@
     "semantics": "single-asset",
     "breakerScope": "vchf-vnx",
     "display": {
-      "url": "https://vnx.li/",
-      "label": "VNX Platform"
+      "url": "https://vnx.gitbook.io/vnx-global/transparency/audits",
+      "label": "VNX Global reserve attestations"
     },
     "inputs": {
       "primary": {
@@ -126,36 +130,278 @@
       }
     },
     "params": {
-      "label": "Aggregate CHF-value reserve (composition undisclosed)",
-      "risk": "very-high"
+      "label": "Unreconciled whole-token reserve allocation (Apex cash subset documented)",
+      "risk": "medium"
     }
   },
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf",
-    "provider": "AREVA General Auditing and Trust Company Limited (fiat-token series stalled: the 2025-12-31 AREVA cycle covered VNXAU gold only, so this 2024-12-31 report remains the newest fiat artefact ~19 months on; issuance has since migrated from VNX Commodities AG to Bermuda-licensed VNX Global Ltd)",
+    "type": "attestation",
+    "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+    "provider": "Apex Fund Services Ltd.",
     "attestorTier": "niche",
-    "cadence": "ad-hoc",
-    "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Bermuda",
     "latestReport": {
-      "periodEnd": "2024-12-31",
-      "publishedAt": "2025-02-05",
-      "assuranceMethod": "agreed-upon-procedures",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-08",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "AREVA VNX reserve report as of December 31, 2024",
-          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+          "label": "Apex VNX Global August 2026 reserve attestation (signed September 8, 2026)",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
         },
         {
-          "label": "AREVA licences and registrations",
-          "url": "https://www.areva.li/en/"
+          "label": "Apex VNX Global July 2026 reserve attestation",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf"
+        },
+        {
+          "label": "VNX Global monthly reserve attestations (retrieved October 17, 2026)",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
         }
-      ]
+      ],
+      "coverage": {
+        "scopeId": "vnx-global-vchf-2026-08-31-covered-chf-book",
+        "liabilityBookKey": "vnx-global-ltd:vchf:apex-covered-chf-book",
+        "deploymentRefs": [
+          "stellar:VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+          "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+          "solana:AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch",
+          "icp:ly36x-wiaaa-aaaai-aqj7q-cai",
+          "celo:0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+          "base:0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
+        ],
+        "liabilityExclusions": [
+          {
+            "id": "legacy-tezos-outside-apex-scope",
+            "identity": {
+              "deploymentRef": "tezos:KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq",
+              "bookKey": "vnx-global-ltd:vchf:unreconciled-legacy-deployments",
+              "account": null
+            },
+            "kind": "legacy",
+            "reason": "Tracked Tezos deployment is absent from the August Apex liability table; its reserve continuity and economically owed status are not reconciled by this report.",
+            "amount": null,
+            "currency": "CHF",
+            "unitBasis": "nominal-chf-at-par-vchf",
+            "asOfSec": 1788220799,
+            "source": {
+              "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+              "accessedAtSec": 1792232481,
+              "sha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+            },
+            "economicallyOwed": null
+          },
+          {
+            "id": "legacy-arbitrum-outside-apex-scope",
+            "identity": {
+              "deploymentRef": "arbitrum:0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969",
+              "bookKey": "vnx-global-ltd:vchf:unreconciled-legacy-deployments",
+              "account": null
+            },
+            "kind": "legacy",
+            "reason": "Tracked Arbitrum deployment is absent from the August Apex liability table; its reserve continuity and economically owed status are not reconciled by this report.",
+            "amount": null,
+            "currency": "CHF",
+            "unitBasis": "nominal-chf-at-par-vchf",
+            "asOfSec": 1788220799,
+            "source": {
+              "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+              "accessedAtSec": 1792232481,
+              "sha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+            },
+            "economicallyOwed": null
+          },
+          {
+            "id": "legacy-avalanche-outside-apex-scope",
+            "identity": {
+              "deploymentRef": "avalanche:0x228a48df6819ccc2eca01e2192ebafffdad56c19",
+              "bookKey": "vnx-global-ltd:vchf:unreconciled-legacy-deployments",
+              "account": null
+            },
+            "kind": "legacy",
+            "reason": "Tracked Avalanche deployment is absent from the August Apex liability table; its reserve continuity and economically owed status are not reconciled by this report.",
+            "amount": null,
+            "currency": "CHF",
+            "unitBasis": "nominal-chf-at-par-vchf",
+            "asOfSec": 1788220799,
+            "source": {
+              "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+              "accessedAtSec": 1792232481,
+              "sha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+            },
+            "economicallyOwed": null
+          },
+          {
+            "id": "legacy-polygon-outside-apex-scope",
+            "identity": {
+              "deploymentRef": "polygon:0xcdb3867935247049e87c38ea270edd305d84c9ae",
+              "bookKey": "vnx-global-ltd:vchf:unreconciled-legacy-deployments",
+              "account": null
+            },
+            "kind": "legacy",
+            "reason": "Tracked Polygon deployment is absent from the August Apex liability table; its reserve continuity and economically owed status are not reconciled by this report.",
+            "amount": null,
+            "currency": "CHF",
+            "unitBasis": "nominal-chf-at-par-vchf",
+            "asOfSec": 1788220799,
+            "source": {
+              "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+              "accessedAtSec": 1792232481,
+              "sha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+            },
+            "economicallyOwed": null
+          },
+          {
+            "id": "legacy-xrpl-outside-apex-scope",
+            "identity": {
+              "deploymentRef": "xrpl:VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+              "bookKey": "vnx-global-ltd:vchf:unreconciled-legacy-deployments",
+              "account": null
+            },
+            "kind": "legacy",
+            "reason": "Tracked XRPL deployment is absent from the August Apex liability table; its reserve continuity and economically owed status are not reconciled by this report.",
+            "amount": null,
+            "currency": "CHF",
+            "unitBasis": "nominal-chf-at-par-vchf",
+            "asOfSec": 1788220799,
+            "source": {
+              "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+              "accessedAtSec": 1792232481,
+              "sha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+            },
+            "economicallyOwed": null
+          },
+          {
+            "id": "legacy-fraxtal-outside-apex-scope",
+            "identity": {
+              "deploymentRef": "fraxtal:0x418126bb59457afdba1ecf376f97400b4157425d",
+              "bookKey": "vnx-global-ltd:vchf:unreconciled-legacy-deployments",
+              "account": null
+            },
+            "kind": "legacy",
+            "reason": "Tracked Fraxtal deployment is absent from the August Apex liability table; its reserve continuity and economically owed status are not reconciled by this report.",
+            "amount": null,
+            "currency": "CHF",
+            "unitBasis": "nominal-chf-at-par-vchf",
+            "asOfSec": 1788220799,
+            "source": {
+              "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+              "accessedAtSec": 1792232481,
+              "sha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+            },
+            "economicallyOwed": null
+          },
+          {
+            "id": "ethereum-frozen-excluded-by-apex",
+            "identity": {
+              "deploymentRef": "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+              "bookKey": "vnx-global-ltd:vchf:apex-excluded-frozen-ethereum",
+              "account": null
+            },
+            "kind": "frozen",
+            "reason": "Apex deducts 9,900 frozen Ethereum VCHF, described as incapable of transfer or redemption, from the covered outstanding total. This does not establish legal extinguishment or a current economically owed determination.",
+            "amount": "9900",
+            "currency": "CHF",
+            "unitBasis": "nominal-chf-at-par-vchf",
+            "asOfSec": 1788220799,
+            "source": {
+              "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=5",
+              "accessedAtSec": 1792232481,
+              "sha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+            },
+            "economicallyOwed": null
+          }
+        ],
+        "denominator": {
+          "periodEnd": "2026-08-31",
+          "asOfSec": 1788220799,
+          "currency": "CHF",
+          "unitBasis": "nominal-chf-at-par-vchf",
+          "decimals": null,
+          "totalCoveredLiabilities": "2035934.72",
+          "included": [
+            {
+              "identity": {
+                "deploymentRef": "stellar:VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+                "bookKey": "vnx-global-ltd:vchf:apex-covered-chf-book",
+                "account": null
+              },
+              "amount": "7292.81",
+              "evidenceRefIds": ["https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=5"]
+            },
+            {
+              "identity": {
+                "deploymentRef": "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+                "bookKey": "vnx-global-ltd:vchf:apex-covered-chf-book",
+                "account": null
+              },
+              "amount": "16207.57",
+              "evidenceRefIds": ["https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=5"]
+            },
+            {
+              "identity": {
+                "deploymentRef": "solana:AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch",
+                "bookKey": "vnx-global-ltd:vchf:apex-covered-chf-book",
+                "account": null
+              },
+              "amount": "1083377.87",
+              "evidenceRefIds": ["https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=5"]
+            },
+            {
+              "identity": {
+                "deploymentRef": "icp:ly36x-wiaaa-aaaai-aqj7q-cai",
+                "bookKey": "vnx-global-ltd:vchf:apex-covered-chf-book",
+                "account": null
+              },
+              "amount": "322284.98",
+              "evidenceRefIds": ["https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=5"]
+            },
+            {
+              "identity": {
+                "deploymentRef": "celo:0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+                "bookKey": "vnx-global-ltd:vchf:apex-covered-chf-book",
+                "account": null
+              },
+              "amount": "13611.33",
+              "evidenceRefIds": ["https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=6"]
+            },
+            {
+              "identity": {
+                "deploymentRef": "base:0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8",
+                "bookKey": "vnx-global-ltd:vchf:apex-covered-chf-book",
+                "account": null
+              },
+              "amount": "593160.16",
+              "evidenceRefIds": ["https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=6"]
+            }
+          ],
+          "excluded": [
+            "legacy-tezos-outside-apex-scope",
+            "legacy-arbitrum-outside-apex-scope",
+            "legacy-avalanche-outside-apex-scope",
+            "legacy-polygon-outside-apex-scope",
+            "legacy-xrpl-outside-apex-scope",
+            "legacy-fraxtal-outside-apex-scope",
+            "ethereum-frozen-excluded-by-apex"
+          ],
+          "completeness": "complete",
+          "evidenceRefIds": [
+            "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=5",
+            "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=6",
+            "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf#page=7"
+          ],
+          "sourceSha256": "dcddccc89d69f64859471c52a7ca45702dd9061ce31f3807b7888e05b20575be"
+        },
+        "reconciliationWithinScope": "full",
+        "assetsAsOfSec": 1788220799,
+        "reviewedAtSec": 1792232481,
+        "confidence": "verified"
+      }
     }
   },
   "launchDate": "2022-12-02"

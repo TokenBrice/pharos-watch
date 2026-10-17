@@ -12727,27 +12727,78 @@
     },
     {
       "assetId": "vchf-vnx",
-      "reviewedAt": "2026-10-03T23:18:49Z",
-      "expiresAt": "2027-10-03T23:00:00Z",
-      "reviewer": "W1R75 primary-source unknown-wave research",
-      "notes": "Lower bound of live token history from exact-token dated evidence as of 2026-08-31; not an inception estimate. No throughput, stress recovery, independently verified reconciliation continuity, or incident-free history is asserted.",
+      "reviewedAt": "2026-10-17T00:00:00Z",
+      "expiresAt": "2027-10-17T00:00:00Z",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "notes": "Review date 2026-10-17, represented at UTC date granularity. Exact VCHF live-history eligibility is conservatively at least two complete months from the July 31, 2026 observed circulation to the review date, not an inception estimate. Apex's July report was signed 2026-08-10; its August report covers 2026-08-31 and random 2026-08-14 and was signed 2026-09-08. Both are ISAE 3000 reasonable-assurance examinations of the named covered stablecoins and cash reserves at Bermuda Commercial Bank, not financial-statement audits or issuer-only assertions. VNX Global Ltd. is the current Bermuda issuer; this evidence is not a continuation claim for the historical Liechtenstein FRT regime. The current archive lists only July and August as retrieved 2026-10-17; no September report is published. reserveReconciliation remains null because the reports do not reconcile all retained VCHF legacy-deployment liabilities or their current migration into the six-chain covered book. Reported daily reconciliation and M-of-N controls are not independently verified whole-book continuity. No throughput, stress recovery or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "dated-live-token-evidence",
-          "label": "Exact VCHF covered-token report; not issuer inception",
-          "publisher": "VNX Global Ltd / Apex Fund Services Ltd",
+          "label": "Exact VCHF covered-token examination, period end 2026-08-31; not issuer inception",
+          "publisher": "Apex Fund Services Ltd. for VNX Global Ltd.",
           "publishedAt": "2026-09-08",
           "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-          "confidence": "issuer-reported"
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "july-live-token-evidence",
+          "label": "Exact VCHF covered-token examination, period end 2026-07-31; not issuer inception",
+          "publisher": "Apex Fund Services Ltd. for VNX Global Ltd.",
+          "publishedAt": "2026-08-10",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf",
+          "confidence": "independent-assurance"
         }
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 1,
-          "observedAt": "2026-10-03",
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-17",
           "treatment": "eligibility-only",
           "sourceIds": [
-            "dated-live-token-evidence"
+            "dated-live-token-evidence",
+            "july-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "vgbp-vnx",
+      "reviewedAt": "2026-10-17T00:00:00Z",
+      "expiresAt": "2027-10-17T00:00:00Z",
+      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "notes": "Review date 2026-10-17, represented at UTC date granularity. At least two complete months of exact VGBP live-token history are established conservatively by July 31, 2026 circulation observed in the Apex report signed 2026-08-10, corroborated by the August 31 report signed 2026-09-08. This is eligibility only, not inception or operational-performance credit. The reports independently reconcile Solana, Celo and Base VGBP liabilities of GBP 126,595.48 to GBP 126,596.33 cash at Bermuda Commercial Bank account ending 5514, separately maintained in VNX Global Ltd.'s name. They provide ISAE 3000 reasonable assurance at the specified testing times, not a financial-statement audit or current whole-book continuity. Those three tracked chains are covered; Ethereum listed in the current issuer registry is outside the report and no pinned historical Ethereum-zero observation is asserted here. reserveReconciliation therefore remains null conservatively; the domain's tracked-book assurance remains independently evaluated by the compiler. The current archive retrieved 2026-10-17 lists July and August only, not September. No throughput, stress recovery or incident-free history is established, and approximate redemption processing targets do not prove performance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Exact VGBP covered-token examination, period end 2026-08-31; not issuer inception",
+          "publisher": "Apex Fund Services Ltd. for VNX Global Ltd.",
+          "publishedAt": "2026-09-08",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "july-live-token-evidence",
+          "label": "Exact VGBP covered-token examination, period end 2026-07-31; not issuer inception",
+          "publisher": "Apex Fund Services Ltd. for VNX Global Ltd.",
+          "publishedAt": "2026-08-10",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf",
+          "confidence": "independent-assurance"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-17",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence",
+            "july-live-token-evidence"
           ]
         }
       },
