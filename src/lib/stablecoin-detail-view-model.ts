@@ -83,7 +83,7 @@ export function buildStablecoinDetailViewModel({
     coin,
     reportCard
       ? { mint: readV9CardMintComponent(reportCard), caps: reportCard.caps, issuanceSummary: readV9CardIssuanceSummary(reportCard) }
-      : { mint: null, caps: [] },
+      : reportCards.data ? { mint: null, caps: [] } : null,
   );
   const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
     ? featureAvailability.stressSignal.band

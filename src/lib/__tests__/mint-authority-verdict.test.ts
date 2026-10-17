@@ -70,6 +70,12 @@ describe("describeMintGateControls", () => {
 });
 
 describe("buildMintAuthorityVerdict", () => {
+  it("retains reviewed path and posture without an unrated verdict when publication is unavailable", () => {
+    expect(buildMintAuthorityVerdict({
+      ...BASE, bandLabel: null, scoreUnavailable: true,
+    })).toBe("The issuer mints XUSD directly; supply is unbounded but reconciled or supervised.");
+  });
+
 
   it("states inheritance for wrappers and omits the control clause where it does not describe minting", () => {
     expect(buildMintAuthorityVerdict({

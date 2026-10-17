@@ -17,6 +17,8 @@ export interface MintAuthorityVerdictInput {
   symbol: string;
   /** Published posture band label ("Managed"); null when the component is NR. */
   bandLabel: string | null;
+  /** Omit the rating prefix while the current publication is unavailable. */
+  scoreUnavailable?: boolean;
   mintPath: MintAuthorityMintPath;
   authorityPosture: MintAuthorityPosture;
   controls: readonly MintAuthorityVerdictControl[];
@@ -160,8 +162,11 @@ export function describeMintGateControls(
 }
 
 export function buildMintAuthorityVerdict(input: MintAuthorityVerdictInput): string {
-  const prefix = `${input.bandLabel ?? "Not rated"} —`;
-  const path = PATH_PHRASES[input.mintPath](input.symbol, input.parentSymbol);
+  const prefix = input.scoreUnavailable ? "" : `${input.bandLabel ?? "Not rated"} — `;
+  const pathPhrase = PATH_PHRASES[input.mintPath](input.symbol, input.parentSymbol);
+  const path = input.scoreUnavailable && !pathPhrase.startsWith(input.symbol)
+    ? pathPhrase.charAt(0).toUpperCase() + pathPhrase.slice(1)
+    : pathPhrase;
   const gate = PATHS_WITHOUT_CONTROL_CLAUSE[input.mintPath]
     ? null
     : describeMintGateControls(input.controls, input.controlsTruncated);
@@ -169,9 +174,9 @@ export function buildMintAuthorityVerdict(input: MintAuthorityVerdictInput): str
 
   // Longest first; shed the controls clause, then the posture, to stay inside the verdict budget.
   const candidates = [
-    gate ? `${prefix} ${path}, controlled by ${gate}; ${posture}.` : null,
-    `${prefix} ${path}; ${posture}.`,
-    `${prefix} ${path}.`,
+    gate ? `${prefix}${path}, controlled by ${gate}; ${posture}.` : null,
+    `${prefix}${path}; ${posture}.`,
+    `${prefix}${path}.`,
   ].filter((candidate): candidate is string => candidate !== null);
   return candidates.find((candidate) => countSummaryWords(candidate) <= SUMMARY_VERDICT_MAX_WORDS) ?? candidates.at(-1)!;
 }

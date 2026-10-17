@@ -67,6 +67,22 @@ const summary: StablecoinAiSummary = {
 };
 
 describe("StablecoinDetailSeoContent", () => {
+  it("withholds assertive live-claim prose while retaining summary provenance and profile facts", () => {
+    const { container } = render(<StablecoinDetailSeoContent coin={coin} summary={{
+      ...summary,
+      text: "The {{grade}} overall grade is set by the exit pillar.",
+      claimTokens: [{
+        token: "grade", placeholder: "{{grade}}", source: "report-card.grade", factsAsOf: "2026-05-02",
+      }],
+    }} />);
+    expect(container.textContent).toContain("The current Safety Score and live assessment are available on the interactive page.");
+    expect(container.textContent).not.toContain("N/A overall grade");
+    expect(container.textContent).not.toContain("set by the exit pillar");
+    expect(container.textContent).toContain("reviewed by @TokenBrice on May 2, 2026");
+    expect(container.querySelector('a[href="https://example.com/docs"]')).not.toBeNull();
+    expect(container.textContent).toContain(coin.collateral);
+  });
+
 
   it("labels NAV tokens by their denominated NAV rather than a fixed peg", () => {
     const navCoin: StablecoinMeta = {

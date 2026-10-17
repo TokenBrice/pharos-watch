@@ -94,6 +94,8 @@ export interface MintAuthorityDetailIncidentViewModel {
  * component, its posture band, and the structural caps the posture raised.
  */
 export interface MintAuthorityDetailScoreViewModel {
+  /** Missing publication is unavailable, not a settled NR component. */
+  publicationAvailable: boolean;
   score: number | null;
   scoreLabel: string;
   compactLabel: string;
@@ -363,17 +365,21 @@ export interface PublishedMintCap {
 function buildMintAuthorityScoreViewModel(
   display: MintAuthorityScoreDisplay,
   caps: readonly PublishedMintCap[],
+  publicationAvailable: boolean,
 ): MintAuthorityDetailScoreViewModel {
   return {
+    publicationAvailable,
     score: display.score,
-    scoreLabel: display.scoreLabel,
-    compactLabel: display.compactLabel,
+    scoreLabel: publicationAvailable ? display.scoreLabel : "Unavailable",
+    compactLabel: publicationAvailable ? display.compactLabel : "Mint score unavailable",
     bandKey: display.bandKey,
-    bandLabel: display.bandLabel,
+    bandLabel: publicationAvailable ? display.bandLabel : "Unavailable",
     postureLabel: labelFromMap(display.posture, AUTHORITY_POSTURE_LABELS),
     badgeClassName: display.badgeClassName,
     textClassName: display.textClassName,
-    detail: display.detail,
+    detail: publicationAvailable
+      ? display.detail
+      : "The current Safety Score publication is unavailable; reviewed mint authority evidence remains available.",
     caps: caps
       .filter((cap) => Object.hasOwn(MINT_CAP_KIND_LABELS, cap.kind))
       .map((cap) => ({
@@ -510,7 +516,7 @@ export function buildMintAuthorityDetailViewModel(
     };
   });
   const scoreDisplay = resolveMintAuthorityScoreDisplay(published?.mint);
-  const score = buildMintAuthorityScoreViewModel(scoreDisplay, published?.caps ?? []);
+  const score = buildMintAuthorityScoreViewModel(scoreDisplay, published?.caps ?? [], published != null);
   const parentId = candidate.inheritedFrom ?? null;
   const inheritedFrom = parentId
     ? {
@@ -531,6 +537,7 @@ export function buildMintAuthorityDetailViewModel(
     verdict: candidate.headline ?? buildMintAuthorityVerdict({
       symbol: coin.symbol,
       bandLabel: scoreDisplay.bandKey === "nr" ? null : scoreDisplay.bandLabel,
+      scoreUnavailable: !score.publicationAvailable,
       mintPath: candidate.mintPath,
       authorityPosture: candidate.authorityPosture,
       controls,

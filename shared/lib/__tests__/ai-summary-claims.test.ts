@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { resolveAiSummaryClaims, validateAiSummaryClaimTokens } from "../ai-summary-claims";
+import { hasAvailableAiSummaryClaims, resolveAiSummaryClaims, validateAiSummaryClaimTokens } from "../ai-summary-claims";
 import type { AiSummaryClaimToken } from "../../types/editorial";
 import { ReportCardGradeSchema } from "../../types/report-card-grade";
 
@@ -13,6 +13,38 @@ const gradeToken: AiSummaryClaimToken = {
 };
 
 describe("AI summary claim tokens", () => {
+  it("admits static prose and glossary markup without requiring live inputs", () => {
+    expect(hasAvailableAiSummaryClaims("Unknown grade is N/A; use {{term:cdp}}CDPs{{/term}}.", undefined)).toBe(true);
+  });
+
+  it("withholds supported placeholders with absent or unregistered values", () => {
+    expect(hasAvailableAiSummaryClaims("Grade {{grade}}.", [gradeToken])).toBe(false);
+    expect(hasAvailableAiSummaryClaims("Grade {{grade}}.", undefined, { "report-card.grade": "D" })).toBe(false);
+    expect(hasAvailableAiSummaryClaims("Grade {{grade}}.", [gradeToken], { "report-card.grade": null })).toBe(false);
+  });
+
+  it.each(ReportCardGradeSchema.options)("admits an available %s grade without interpreting it as absence", (grade) => {
+    expect(hasAvailableAiSummaryClaims("Grade {{grade}}.", [gradeToken], { "report-card.grade": grade })).toBe(true);
+  });
+
+  it("requires every present live claim, including finite score and observed zero supply", () => {
+    const tokens: AiSummaryClaimToken[] = [
+      { token: "score", placeholder: "{{score}}", source: "report-card.score", factsAsOf: "2026-09-01" },
+      { token: "supplyUsd", placeholder: "{{supplyUsd}}", source: "stablecoin.circulating-usd", factsAsOf: "2026-09-01" },
+    ];
+    const text = "Score {{score}}; supply {{supplyUsd}}.";
+    expect(hasAvailableAiSummaryClaims(text, tokens, {
+      "report-card.score": 0, "stablecoin.circulating-usd": 0,
+    })).toBe(true);
+    expect(hasAvailableAiSummaryClaims(text, tokens, { "report-card.score": 45 })).toBe(false);
+    expect(hasAvailableAiSummaryClaims(text, tokens, {
+      "report-card.score": Number.NaN, "stablecoin.circulating-usd": 0,
+    })).toBe(false);
+    expect(hasAvailableAiSummaryClaims(text, tokens, {
+      "report-card.score": 45, "stablecoin.circulating-usd": -1,
+    })).toBe(false);
+  });
+
   it.each(ReportCardGradeSchema.options)("preserves the published %s grade, including not-rated", (grade) => {
     expect(resolveAiSummaryClaims("Grade {{grade}}.", [gradeToken], {
       "report-card.grade": grade,

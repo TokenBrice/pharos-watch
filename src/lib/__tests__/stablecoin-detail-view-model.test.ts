@@ -14,6 +14,7 @@ import { buildDetailMarketSnapshot, buildDetailPegPriceSnapshot, buildDetailStal
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { deriveDataHealth } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
+import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 
 function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
   return makePegSummaryCoinBase({
@@ -807,6 +808,22 @@ describe("stablecoin detail view-model builder", () => {
 });
 
 describe("detail published mint evidence integration", () => {
+  it("passes publication availability through without confusing a missing component with a missing request result", () => {
+    const coin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("usdc-circle")!);
+    const params = makeReadyDetailParams({ id: coin.id, coin });
+    const unavailable = buildStablecoinDetailViewModel(params);
+    expect(unavailable.status).toBe("ready");
+    if (unavailable.status !== "ready") throw new Error("Expected a ready detail fixture");
+    expect(unavailable.mintAuthority.score?.compactLabel).toBe("Mint score unavailable");
+    expect(unavailable.mintAuthority.verdict).not.toContain("Not rated");
+    params.queries.reportCards.data = { cards: [] } as never;
+    const settled = buildStablecoinDetailViewModel(params);
+    expect(settled.status).toBe("ready");
+    if (settled.status !== "ready") throw new Error("Expected a ready detail fixture");
+    expect(settled.mintAuthority.score?.compactLabel).toBe("NR");
+    expect(settled.mintAuthority.verdict).toMatch(/^Not rated —/);
+  });
+
   it("keeps process-level screen diagnostics in the ready page even when the mint component is NR", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const card = makeV9Card({ id: coin.id });
