@@ -69,6 +69,59 @@ describe("rendered documentation links", () => {
     expect(errors[1]).toContain("target file does not exist");
   });
 
+  it("rejects canonical public docs URLs whose source is not published", () => {
+    const root = makeRoot();
+    writeText(root, "docs/mint-authority-scoring.md", "# Mint Authority Scoring");
+    writeText(root, "docs/source.md", "[private](https://pharos.watch/docs/mint-authority-scoring/#scoring)");
+    expect(collectLinkViolations([`${root}/docs/source.md`], root)).toEqual([
+      'docs/source.md -> https://pharos.watch/docs/mint-authority-scoring/#scoring: unknown public documentation slug "mint-authority-scoring"',
+    ]);
+  });
+
+  it("rejects canonical public docs URLs with missing heading anchors", () => {
+    const root = makeRoot();
+    writeText(root, "docs/depeg-detection.md", "# Depeg Detection\n\n## Stage 2 -- Confirmation");
+    writeText(root, "docs/source.md", "[bad](https://pharos.watch/docs/depeg-detection/#stage-2-confirmation)");
+    expect(collectLinkViolations([`${root}/docs/source.md`], root)).toEqual([
+      'docs/source.md -> https://pharos.watch/docs/depeg-detection/#stage-2-confirmation: missing heading anchor "#stage-2-confirmation" in docs/depeg-detection.md',
+    ]);
+  });
+
+  it("accepts registered public docs URLs with renderer-compatible anchors or no fragment", () => {
+    const root = makeRoot();
+    writeText(root, "docs/depeg-detection.md", "# Depeg Detection\n\n## Stage 2 -- Confirmation");
+    writeText(root, "docs/source.md", [
+      "[valid](https://pharos.watch/docs/depeg-detection/#stage-2----confirmation)",
+      "[page](https://pharos.watch/docs/depeg-detection/)",
+      "[query](https://pharos.watch/docs/depeg-detection/?ref=guide#stage-2----confirmation)",
+      "[no trailing slash](https://pharos.watch/docs/depeg-detection#stage-2----confirmation)",
+    ].join("\n"));
+    expect(collectLinkViolations([`${root}/docs/source.md`], root)).toEqual([]);
+  });
+
+  it("checks public anchors after title removal without changing relative-link anchors", () => {
+    const root = makeRoot();
+    writeText(root, "docs/depeg-detection.md", "# Repeated\n\n## Repeated");
+    writeText(root, "docs/source.md", [
+      "[relative](depeg-detection.md#repeated-1)",
+      "[public](https://pharos.watch/docs/depeg-detection/#repeated)",
+      "[removed title](https://pharos.watch/docs/depeg-detection/#repeated-1)",
+    ].join("\n"));
+    expect(collectLinkViolations([`${root}/docs/source.md`], root)).toEqual([
+      'docs/source.md -> https://pharos.watch/docs/depeg-detection/#repeated-1: missing heading anchor "#repeated-1" in docs/depeg-detection.md',
+    ]);
+  });
+
+  it("leaves other HTTPS URLs external", () => {
+    const root = makeRoot();
+    writeText(root, "docs/source.md", [
+      "[external](https://example.com/docs/unknown/#missing)",
+      "[other Pharos page](https://pharos.watch/methodology/#missing)",
+      "[different host](https://pharos.watch.example.com/docs/unknown/#missing)",
+    ].join("\n"));
+    expect(collectLinkViolations([`${root}/docs/source.md`], root)).toEqual([]);
+  });
+
 });
 
 describe("documentation source paths", () => {

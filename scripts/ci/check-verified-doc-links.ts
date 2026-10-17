@@ -7,6 +7,7 @@ import { getVerifiedDocFiles, iterInlineCodeSpans, splitLines } from "../lib/doc
 import { reportViolations } from "../lib/report-violations.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
+import { PUBLIC_DOC_BY_SLUG, preparePublicDocMarkdown } from "../../shared/lib/public-docs.ts";
 
 const NAVIGATION_SCAN_LINES = 20;
 const ROOT_PATH_PREFIXES = [
@@ -235,9 +236,22 @@ export function collectLinkViolations(filePaths: readonly string[], repoRoot: st
     const content = readFileSync(filePath, "utf8");
 
     for (const target of collectMarkdownReferences(content).links) {
-      if (!target || isExternalTarget(target)) continue;
+      if (!target) continue;
+      const publicDocLink = /^https:\/\/pharos\.watch\/docs\/([^/?#]+)/.exec(target);
+      if (!publicDocLink && isExternalTarget(target)) continue;
 
-      const resolvedTarget = resolveDocTarget(filePath, target, repoRoot);
+      const publicDoc = publicDocLink ? PUBLIC_DOC_BY_SLUG.get(publicDocLink[1]) : undefined;
+      if (publicDocLink && !publicDoc) {
+        errors.push(`${relative(repoRoot, filePath)} -> ${target}: unknown public documentation slug "${publicDocLink[1]}"`);
+        continue;
+      }
+
+      const resolvedTarget = publicDoc
+        ? {
+          filePath: resolve(repoRoot, "docs", publicDoc.source),
+          fragment: target.split("#", 2)[1]?.trim() || null,
+        }
+        : resolveDocTarget(filePath, target, repoRoot);
       const repoRelative = relative(repoRoot, resolvedTarget.filePath).replaceAll("\\", "/");
       if (repoRelative === ".." || repoRelative.startsWith("../") || isAbsolute(repoRelative)) {
         errors.push(`${relative(repoRoot, filePath)} -> ${target}: absolute path is outside the repo`);
@@ -250,11 +264,14 @@ export function collectLinkViolations(filePaths: readonly string[], repoRoot: st
 
       if (!resolvedTarget.fragment) continue;
 
-      if (!anchorCache.has(resolvedTarget.filePath)) {
-        anchorCache.set(resolvedTarget.filePath, collectMarkdownReferences(readFileSync(resolvedTarget.filePath, "utf8")).anchors);
+      const anchorCacheKey = publicDoc ? `public:${resolvedTarget.filePath}` : resolvedTarget.filePath;
+      if (!anchorCache.has(anchorCacheKey)) {
+        const markdown = readFileSync(resolvedTarget.filePath, "utf8");
+        const renderedMarkdown = publicDoc ? preparePublicDocMarkdown(markdown, { stripTitle: true }) : markdown;
+        anchorCache.set(anchorCacheKey, collectMarkdownReferences(renderedMarkdown).anchors);
       }
 
-      const anchors = anchorCache.get(resolvedTarget.filePath);
+      const anchors = anchorCache.get(anchorCacheKey);
       if (!anchors || !anchors.has(resolvedTarget.fragment)) {
         errors.push(
           `${relative(repoRoot, filePath)} -> ${target}: missing heading anchor "#${resolvedTarget.fragment}" in ${relative(repoRoot, resolvedTarget.filePath)}`,
