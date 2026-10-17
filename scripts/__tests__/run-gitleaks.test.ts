@@ -306,6 +306,9 @@ describe("run-gitleaks", () => {
     for (const path of [
       "scripts/maintenance/run-worker-smoke.mjs",
       "worker/src/lib/__tests__/v9-slot-window.test.ts",
+      "shared/lib/cron-jobs.ts",
+      "shared/lib/__tests__/cron-jobs.test.ts",
+      "scripts/ci/check-cron-connection-budget.test.ts",
     ]) {
       expect(reports[1]).toContainEqual({ File: path, StartLine: 1, RuleID: "aws-access-token" });
       expect(reports[2]).toContainEqual({ File: path, StartLine: 1, RuleID: "generic-api-key" });

@@ -1,3 +1,18 @@
+# Reviewed scheduler fixtures: every finding below is the public
+# v9SupplyAttributionOffset scheduleKey, not a credential. Keep commit/path/rule/line
+# fingerprints exact; do not exempt these files from future credential detection.
+107b5bd12778f6117c0795eb480749199c988c77:src/components/status/__tests__/scheduler-liveness.test.tsx:generic-api-key:37
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:worker/src/api/__tests__/status.test-support.ts:generic-api-key:69
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:shared/test-utils/health-fixtures.ts:generic-api-key:21
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:scripts/__tests__/ci-workflow-scope.test.ts:generic-api-key:412
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:scripts/__tests__/ci-workflow-scope.test.ts:generic-api-key:435
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:worker/src/lib/__tests__/public-health.test-support.ts:generic-api-key:121
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:src/components/status/__tests__/scheduler-liveness.test.tsx:generic-api-key:17
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:worker/src/lib/__tests__/scheduler-liveness.test.ts:generic-api-key:64
+8c6c9fbda8f8fcb965eb8e97974eb633a2ff09df:src/components/status/__tests__/scheduler-liveness.test.tsx:generic-api-key:34
+3f481cd5bd1dba4e97e19bb74b5ce6d5e19dbd34:worker/src/handlers/scheduled/__tests__/v9-supply-attribution.test.ts:generic-api-key:64
+ba51b8fcc37671cedf1a6099021a3dc988653910:worker/src/handlers/scheduled/__tests__/v9-supply-attribution.test.ts:generic-api-key:64
+
 01d8c5f7b6b975500597dfb2042ace25e9aa5371:src/app/safety-scores/data-coverage-view-model.ts:generic-api-key:98
 01d8c5f7b6b975500597dfb2042ace25e9aa5371:src/app/safety-scores/data-coverage-view-model.ts:generic-api-key:104
 036023b2f9a5c0b8f61a55da6ffd6f5a2074fb18:worker/src/cron/reserve-adapters/__tests__/fixtures/frax-balance-sheet.json:generic-api-key:1

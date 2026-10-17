@@ -631,6 +631,12 @@ export function runGitleaksConfigSelfTest(
     ];
     const ledgerPath = ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json";
     const publicControls = [
+      // Keep unrelated credentials detectable in every scheduleKey owner.
+      ...[
+        "shared/lib/cron-jobs.ts",
+        "shared/lib/__tests__/cron-jobs.test.ts",
+        "scripts/ci/check-cron-connection-budget.test.ts",
+      ].map((path) => ({ path, value: { scheduleKey: "quarterHourly" } })),
       {
         path: "src/lib/case-studies/buidl-tokenized-tbill-2025.json",
         value: { metaDescription: [
