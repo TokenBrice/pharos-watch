@@ -63,8 +63,8 @@ describe("production scores-latest freshness assertion", () => {
       PUBLIC_DATASET_MAX_AGE_DAYS: 2,
       PUBLIC_DATASET_CURRENT_EXPORTS: { "scores-latest": { rows: [] } },
     }));
-    const module = import("@/lib/safety-grade-snapshot");
-    if (allowed) await expect(module).resolves.toHaveProperty("getSnapshotSafetyAssessment");
-    else await expect(module).rejects.toThrow("Public scores-latest mirror is stale");
+    const snapshotModule = import("@/lib/safety-grade-snapshot");
+    if (allowed) await expect(snapshotModule).resolves.toHaveProperty("getSnapshotSafetyAssessment");
+    else await expect(snapshotModule).rejects.toThrow("Public scores-latest mirror is stale");
   });
 });
