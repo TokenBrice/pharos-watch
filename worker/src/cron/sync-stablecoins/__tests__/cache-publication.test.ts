@@ -162,7 +162,6 @@ describe("validateAndWriteStablecoinsCache", () => {
           throwError: new Error("response-ready write failed"),
         },
       ],
-      { requireMatch: true },
     );
 
     const result = await validateAndWriteStablecoinsCache(
@@ -242,7 +241,6 @@ describe("validateAndWriteStablecoinsCache", () => {
           runMeta: { changes: 1 },
         },
       ],
-      { requireMatch: true },
     );
 
     const result = await validateAndWriteStablecoinsCache(

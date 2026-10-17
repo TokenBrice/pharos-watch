@@ -147,7 +147,6 @@ describe("handleNonUsdShare", () => {
           ],
         },
       ],
-      { requireMatch: true },
     );
 
     const res = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share"));
@@ -239,7 +238,6 @@ describe("handleNonUsdShare", () => {
           ],
         },
       ],
-      { requireMatch: true },
     );
 
     const res = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share?days=5000"));

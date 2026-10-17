@@ -60,7 +60,7 @@ function cron(status: CronRunStatus = "ok", ageSec = 120, metadata?: Record<stri
 }
 
 function makeDb(rows: Record<string, unknown>[]) {
-  return mockD1([{ match: "yield-rankings", rows }], { requireMatch: true });
+  return mockD1([{ match: "yield-rankings", rows }]);
 }
 
 describe("loadYieldHealthSummary", () => {
@@ -1069,7 +1069,6 @@ describe("loadYieldHealthSummary", () => {
             })],
           },
         ],
-        { requireMatch: true },
       ),
       NOW,
       { "sync-yield-data": cron() },
@@ -1092,7 +1091,7 @@ describe("loadYieldHealthSummary", () => {
       { match: "yield-rankings", rows: [yieldCacheRow("yield-rankings", NOW - 10, {
         rankings: [], provenance: { safetySnapshot: { safetyScoreIdentity: stampedSafetyIdentity(), publishedAt: NOW - 10 } },
       })] },
-    ], { requireMatch: true }), NOW, {});
+    ]), NOW, {});
     expect(summary.liveSafetyHydration).toMatchObject({ status: "stale", reason: "safety-score-index-invalid", fallback: null });
   });
 
@@ -1102,7 +1101,7 @@ describe("loadYieldHealthSummary", () => {
       { match: "yield-rankings", rows: [yieldCacheRow("yield-rankings", NOW - 10, {
         rankings: [], provenance: { safetySnapshot: { safetyScoreIdentity: stampedSafetyIdentity(), publishedAt: NOW - 86401 } },
       })] },
-    ], { requireMatch: true }), NOW, {});
+    ]), NOW, {});
     expect(summary.liveSafetyHydration).toMatchObject({ status: "stale", fallback: null, cachedAgeSec: 10, safetyAgeSec: 86401 });
   });
 });

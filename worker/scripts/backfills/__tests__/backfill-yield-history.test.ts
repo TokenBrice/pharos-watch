@@ -112,7 +112,7 @@ describe("handleBackfillYieldHistory", () => {
 
   it("skips unavailable protocol observations without writing history", async () => {
     vi.mocked(fetchZephyrZysSource).mockResolvedValueOnce(null);
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const url = makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol");
     const res = await handleBackfillYieldHistory({
       db, url, trustedAdmin: true, request: makeApiRequest(url.toString(), { adminKey: "secret" }),

@@ -43,10 +43,8 @@ export interface PrLaneCommandContext {
 /** Shared by docs-only inline validation and mixed-PR static guards. */
 export const PR_DOC_COMMANDS: readonly PrLaneCommandDefinition[] = [
   { id: "verified-doc-links", program: "npm", args: ["run", "check:verified-doc-links"] },
-  { id: "doc-source-paths", program: "npm", args: ["run", "check:doc-source-paths"] },
   { id: "doc-sync", program: "npm", args: ["run", "check:doc-sync"] },
   { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] },
-  { id: "agents-doc-artifact", program: "npm", args: ["run", "check:generated-artifacts", "--", "--only=agents-doc"] },
 ];
 
 export const PR_LANES: readonly PrLaneDefinition[] = [

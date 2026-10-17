@@ -65,7 +65,6 @@ const USER_FACING_CONTRACT_TEST_FILES: string[] = [
 export const ALWAYS_RUN_TEST_FILES: string[] = [
   ...new Set([
     ...CRITICAL_CONTRACT_TEST_FILES,
-    ...GLOBAL_INVARIANT_TEST_FILES,
     ...USER_FACING_CONTRACT_TEST_FILES,
   ]),
 ];

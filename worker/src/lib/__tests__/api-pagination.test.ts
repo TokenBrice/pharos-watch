@@ -122,7 +122,7 @@ describe("parsePaginatedEventParams cursor validation", () => {
 describe("fetchPaginatedEvents cursor WHERE clause", () => {
   it("rejects an unknown table", async () => {
     await expect(
-      fetchPaginatedEvents<Row, Row>(mockD1([], { requireMatch: true }), {
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
         tableName: "not_a_table",
         orderBy: "started_at DESC",
         conditions: [],
@@ -136,7 +136,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
 
   it("rejects an index that is not allowlisted for the selected table", async () => {
     await expect(
-      fetchPaginatedEvents<Row, Row>(mockD1([], { requireMatch: true }), {
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
         tableName: "blacklist_events",
         indexName: "idx_untrusted_runtime_input",
         orderBy: "timestamp DESC, id DESC",
@@ -153,7 +153,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
     const db = mockD1([
       { match: "COUNT(*) as total", rows: [{ total: 0 }] },
       { match: "FROM blacklist_events INDEXED BY", rows: [] },
-    ], { requireMatch: true });
+    ]);
     await fetchPaginatedEvents<Row, Row>(db, {
       tableName: "blacklist_events",
       indexName: "idx_blacklist_events_public_date_page",
@@ -173,7 +173,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
 
   it("rejects a cursor config referencing a non-allowlisted column", async () => {
     await expect(
-      fetchPaginatedEvents<Row, Row>(mockD1([], { requireMatch: true }), {
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
         tableName: "depeg_events",
         orderBy: "started_at DESC",
         conditions: [],
@@ -242,7 +242,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
       { id: 2, started_at: 200, stablecoin: "usdc" },
       { id: 1, started_at: 100, stablecoin: "usdc" },
     ];
-    const more = mockD1([{ match: "FROM depeg_events", rows }], { requireMatch: true });
+    const more = mockD1([{ match: "FROM depeg_events", rows }]);
     const moreResult = await fetchPaginatedEvents<Row, Row>(more, {
       tableName: "depeg_events",
       orderBy: "started_at DESC, id DESC",
@@ -258,7 +258,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
     expect(moreResult.events).toHaveLength(2);
     expect(JSON.parse(atob(moreResult.nextCursor!))).toEqual({ v: 1, values: [200, 2] });
 
-    const short = mockD1([{ match: "FROM depeg_events", rows: rows.slice(0, 1) }], { requireMatch: true });
+    const short = mockD1([{ match: "FROM depeg_events", rows: rows.slice(0, 1) }]);
     const shortResult = await fetchPaginatedEvents<Row, Row>(short, {
       tableName: "depeg_events",
       orderBy: "started_at DESC, id DESC",
@@ -277,7 +277,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
 
   it("rejects invalid order clauses and unsafe query comments", async () => {
     await expect(
-      fetchPaginatedEvents<Row, Row>(mockD1([], { requireMatch: true }), {
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
         tableName: "depeg_events",
         orderBy: "started_at DESC NULLS LAST",
         conditions: [],
@@ -289,7 +289,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
     ).rejects.toThrow(/Invalid orderBy/);
 
     await expect(
-      fetchPaginatedEvents<Row, Row>(mockD1([], { requireMatch: true }), {
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
         tableName: "depeg_events",
         orderBy: "started_at DESC",
         queryComment: "unsafe comment",
@@ -308,7 +308,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
       { id: 2, started_at: 200, stablecoin: "usdc" },
       { id: 1, started_at: 100, stablecoin: "usdc" },
     ];
-    const db = mockD1([{ match: "FROM depeg_events", rows }], { requireMatch: true });
+    const db = mockD1([{ match: "FROM depeg_events", rows }]);
     const result = await fetchPaginatedEvents<Row, Row>(db, {
       tableName: "depeg_events",
       orderBy: "started_at DESC, id DESC",
@@ -328,7 +328,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
   });
 
   it.each([0, 50_000])("does not infer population from an empty uncounted page at offset %s", async (offset) => {
-    const db = mockD1([{ match: "FROM depeg_events", rows: [] }], { requireMatch: true });
+    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
     const result = await fetchPaginatedEvents<Row, Row>(db, {
       tableName: "depeg_events",
       orderBy: "started_at DESC, id DESC",
@@ -365,7 +365,7 @@ describe("buildPaginatedEventResponse", () => {
       { match: "COUNT(*) as total FROM depeg_events", rows: [{ total: 1 }] },
       { match: "FROM depeg_events", rows: [{ id: 1, started_at: 100, stablecoin: "usdc" }] },
       { match: "as started_at FROM cron_runs", rows: [{ started_at: 1_700_000_000 }] },
-    ], { requireMatch: true });
+    ]);
     const response = await buildPaginatedEventResponse<Row, Row>(db, {
       ...baseConfig,
       searchParams: params("limit=10"),
@@ -383,7 +383,7 @@ describe("buildPaginatedEventResponse", () => {
       { match: "COUNT(*) as total FROM depeg_events", rows: [{ total: 2 }] },
       { match: "FROM depeg_events", rows: [{ id: 2, started_at: 200, stablecoin: "usdc" }] },
       { match: "as started_at FROM cron_runs", rows: [] },
-    ], { requireMatch: true });
+    ]);
     const cursor = encodeJsonCursor({ v: 1, values: [300, 3] });
     const response = await buildPaginatedEventResponse<Row, Row, { symbols: string[] }>(db, {
       ...baseConfig,
@@ -399,7 +399,7 @@ describe("buildPaginatedEventResponse", () => {
   });
 
   it("short-circuits with the parse error response on an invalid cursor", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const response = await buildPaginatedEventResponse<Row, Row>(db, {
       ...baseConfig,
       searchParams: params("cursor=%%%bad%%%"),

@@ -14,11 +14,14 @@ import {
   makeWorkerV9Card,
   makeWorkerV9Pillars,
 } from "../../test-helpers/report-cards-v9";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import { handleYieldRankings } from "../yield-rankings-cache";
 import { makeTelegramYieldCachePayload } from "./telegram-yield.test-support";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const mocks = vi.hoisted(() => ({
   loadActiveSafetyScoreSource: vi.fn(),
@@ -72,7 +75,6 @@ function makeTopChainsDb(updatedAt: number) {
         },
       },
     ],
-    { requireMatch: true },
   );
 }
 
@@ -125,18 +127,14 @@ describe("buildBriefMessage", () => {
   });
 
   it("selects the daily brief rather than a newer weekly digest", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const insert = sqlite.prepare(`INSERT INTO daily_digest
-        (generated_at, digest_text, input_data, digest_meta) VALUES (?, ?, '{}', ?)`);
-      insert.run(100, "daily chosen", null);
-      insert.run(200, "weekly excluded", '{"type":"weekly"}');
-      const message = await buildBriefMessage(db);
-      expect(message).toContain("daily chosen");
-      expect(message).not.toContain("weekly excluded");
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO daily_digest
+      (generated_at, digest_text, input_data, digest_meta) VALUES (?, ?, '{}', ?)`);
+    insert.run(100, "daily chosen", null);
+    insert.run(200, "weekly excluded", '{"type":"weekly"}');
+    const message = await buildBriefMessage(db);
+    expect(message).toContain("daily chosen");
+    expect(message).not.toContain("weekly excluded");
   });
 
   it("caps structured sections and suppresses fallback text", async () => {
@@ -209,25 +207,21 @@ describe("buildTopMessage", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T12:00:00Z"));
 
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const insert = sqlite.prepare(`INSERT INTO depeg_events
-        (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at,
-         ended_at, start_price, peak_price, peg_reference)
-        VALUES (?, ?, 'peggedUSD', 'below', ?, 1, ?, ?, ?, 1)`);
-      insert.run("usdc-circle", "USDC", 180, null, 0.99, 0.982);
-      insert.run("dai-makerdao", "DAI", 100, null, 0.99, null);
-      insert.run("usdt-tether", "USDT", 900, 2, 0.91, 0.90);
-      const message = await buildTopMessage(db, "depeg");
-      expect(message).toContain("1. USDC");
-      expect(message).toContain("below peg 1.8%");
-      expect(message).toContain("price $0.9820");
-      expect(message).toContain("2. DAI");
-      expect(message).toContain("price $0.9900");
-      expect(message).not.toContain("USDT");
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at,
+       ended_at, start_price, peak_price, peg_reference)
+      VALUES (?, ?, 'peggedUSD', 'below', ?, 1, ?, ?, ?, 1)`);
+    insert.run("usdc-circle", "USDC", 180, null, 0.99, 0.982);
+    insert.run("dai-makerdao", "DAI", 100, null, 0.99, null);
+    insert.run("usdt-tether", "USDT", 900, 2, 0.91, 0.90);
+    const message = await buildTopMessage(db, "depeg");
+    expect(message).toContain("1. USDC");
+    expect(message).toContain("below peg 1.8%");
+    expect(message).toContain("price $0.9820");
+    expect(message).toContain("2. DAI");
+    expect(message).toContain("price $0.9900");
+    expect(message).not.toContain("USDT");
   });
 
   it("builds /top dews only from the exact published generation", async () => {
@@ -278,14 +272,14 @@ describe("buildTopMessage", () => {
   });
 
   it("falls back to usage text for unknown /top views", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
 
     await expect(buildTopMessage(db, "unknown")).resolves.toBe("Usage: /top depeg|dews|yield|liquidity|chains|safety");
     expect(db.getHistory()).toEqual([]);
   });
 
   it("uses canonical served yield scores and per-row reasons for rated, unrated, stale and incomplete rows", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = fixtures.open();
     const nowSec = Math.floor(Date.now() / 1000);
     const source = activeV9();
     mocks.loadActiveSafetyScoreSource.mockResolvedValue(source);
@@ -307,55 +301,47 @@ describe("buildTopMessage", () => {
         provenance: makeYieldProvenance({ sourceObservedAt: nowSec, sourceAgeSeconds: 0 }),
       }),
     ], source.snapshot.safetyScoreIdentity);
-    try {
-      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
-        .run(JSON.stringify(payload), nowSec);
-      // Raw persisted rows are intentionally not the served projection.
-      sqlite.prepare(`INSERT INTO yield_data
-        (stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d,
-         yield_source, yield_type, data_source, updated_at, pharos_yield_score, publication_state)
-        VALUES ('staged', 'staged', 'STAGED', 1, 99, 99, 99, 'staged', 'lending', 'defillama', ?, 999, 'staged')`)
-        .run(nowSec);
-      const response = await handleYieldRankings(db);
-      expect(response.status).toBe(200);
-      const canonical = YieldRankingsResponseSchema.parse(await response.json());
-      const message = await buildTopMessage(db, "yield");
-      expect(canonical.rankings.find((row) => row.id === "usdc-circle")?.pharosYieldScore).toBeGreaterThan(0);
-      expect(canonical.rankings.find((row) => row.id === "usdt-tether")?.safetyGrade).toBe("NR");
-      expect(canonical.rankings.find((row) => row.id === "eurc-circle")?.pysNullReason).toBe("source-stale");
-      expect(canonical.rankings.find((row) => row.id === "dai-makerdao")?.pysNullReason).toBe("opportunity-evidence-missing");
-      expect(message).toContain("Top risk-adjusted yields");
-      expect(message).not.toContain("Top yields (PYS unavailable");
-      expect(message).not.toContain("STAGED");
-      canonical.rankings.forEach((row, index) => {
-        const score = row.pharosYieldScore == null
-          ? `unavailable (${row.pysNullReason ?? "safety-unrated"})`
-          : String(Math.round(row.pharosYieldScore));
-        expect(message).toContain(`${index + 1}. ${row.symbol} — ${row.apy30d.toFixed(2)}% 30d, PYS ${score}`);
-      });
-    } finally {
-      sqlite.close();
-    }
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
+      .run(JSON.stringify(payload), nowSec);
+    // Raw persisted rows are intentionally not the served projection.
+    sqlite.prepare(`INSERT INTO yield_data
+      (stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d,
+       yield_source, yield_type, data_source, updated_at, pharos_yield_score, publication_state)
+      VALUES ('staged', 'staged', 'STAGED', 1, 99, 99, 99, 'staged', 'lending', 'defillama', ?, 999, 'staged')`)
+      .run(nowSec);
+    const response = await handleYieldRankings(db);
+    expect(response.status).toBe(200);
+    const canonical = YieldRankingsResponseSchema.parse(await response.json());
+    const message = await buildTopMessage(db, "yield");
+    expect(canonical.rankings.find((row) => row.id === "usdc-circle")?.pharosYieldScore).toBeGreaterThan(0);
+    expect(canonical.rankings.find((row) => row.id === "usdt-tether")?.safetyGrade).toBe("NR");
+    expect(canonical.rankings.find((row) => row.id === "eurc-circle")?.pysNullReason).toBe("source-stale");
+    expect(canonical.rankings.find((row) => row.id === "dai-makerdao")?.pysNullReason).toBe("opportunity-evidence-missing");
+    expect(message).toContain("Top risk-adjusted yields");
+    expect(message).not.toContain("Top yields (PYS unavailable");
+    expect(message).not.toContain("STAGED");
+    canonical.rankings.forEach((row, index) => {
+      const score = row.pharosYieldScore == null
+        ? `unavailable (${row.pysNullReason ?? "safety-unrated"})`
+        : String(Math.round(row.pharosYieldScore));
+      expect(message).toContain(`${index + 1}. ${row.symbol} — ${row.apy30d.toFixed(2)}% 30d, PYS ${score}`);
+    });
   });
 
   it("derives global yield unavailability from the served rows rather than the model name", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = fixtures.open();
     const nowSec = Math.floor(Date.now() / 1000);
     const source = activeV9();
-    try {
-      const payload = makeTelegramYieldCachePayload(nowSec, [makeYieldRanking({
-        yieldType: "nav-appreciation",
-        provenance: makeYieldProvenance({ sourceObservedAt: nowSec - 7 * 86400, sourceAgeSeconds: 7 * 86400 }),
-      })], source.snapshot.safetyScoreIdentity);
-      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
-        .run(JSON.stringify(payload), nowSec);
-      const message = await buildTopMessage(db, "yield");
-      expect(message).toContain("Top yields (PYS unavailable)");
-      expect(message).toContain("PYS unavailable (source-stale)");
-      expect(message).not.toContain("expected model");
-    } finally {
-      sqlite.close();
-    }
+    const payload = makeTelegramYieldCachePayload(nowSec, [makeYieldRanking({
+      yieldType: "nav-appreciation",
+      provenance: makeYieldProvenance({ sourceObservedAt: nowSec - 7 * 86400, sourceAgeSeconds: 7 * 86400 }),
+    })], source.snapshot.safetyScoreIdentity);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
+      .run(JSON.stringify(payload), nowSec);
+    const message = await buildTopMessage(db, "yield");
+    expect(message).toContain("Top yields (PYS unavailable)");
+    expect(message).toContain("PYS unavailable (source-stale)");
+    expect(message).not.toContain("expected model");
   });
 
   it("derives chain health from the canonical V9 publication", async () => {
@@ -376,7 +362,7 @@ describe("buildTopMessage", () => {
     });
     const updatedAt = Math.floor(Date.now() / 1000);
     const chainsDb = makeTopChainsDb(updatedAt);
-    const yieldDb = mockD1([], { requireMatch: false });
+    const yieldDb = mockD1([]);
 
     const [chainsMessage, yieldMessage] = await Promise.all([
       buildTopMessage(chainsDb, "chains"),
@@ -395,7 +381,7 @@ describe("buildTopMessage", () => {
   });
 
   it("reads /top safety only from the canonical V9 source", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
 
     const message = await buildTopMessage(db, "safety");
 
@@ -411,7 +397,7 @@ describe("buildTopMessage", () => {
       snapshot: null,
       detail: "missing",
     });
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
 
     await expect(buildTopMessage(db, "safety")).resolves.toBe("Safety scores are temporarily unavailable.");
     await expect(buildWhyMessage(db, "usdc-circle")).resolves.toBe("Safety Score is temporarily unavailable.");
@@ -419,7 +405,7 @@ describe("buildTopMessage", () => {
   });
 
   it("includes canonical V9 provenance in /why without on-demand recomputation", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
 
     const message = await buildWhyMessage(db, "usdc-circle");
 

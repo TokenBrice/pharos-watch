@@ -118,7 +118,7 @@ describe("handleBlacklistSummary", () => {
           updated_at: now - 60,
         }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const res = await handleBlacklistSummary(db);
     const body = await res.json() as typeof payload;
@@ -138,7 +138,7 @@ describe("handleBlacklistSummary", () => {
         value: JSON.stringify({ version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
         updated_at: now,
       }],
-    }], { requireMatch: true });
+    }]);
     const response = await handleBlacklistSummary(db);
     expect(await response.json()).toEqual(payload);
     expect(response.headers.get("Cache-Control")).toBe("no-store");

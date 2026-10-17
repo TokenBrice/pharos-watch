@@ -275,7 +275,7 @@ describe("handleBackfillDEWS", () => {
         { stablecoin_id: "usdt-tether", snapshot_date: day - 14 * 86400, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49 },
         { stablecoin_id: "usdt-tether", snapshot_date: evaluation, liquidity_score: 80, total_tvl_usd: 200, coverage_confidence: 0.5 },
       ] },
-    ], { requireMatch: true });
+    ]);
     const request = makeApiRequest("/api/backfill-dews", { adminKey: "secret" });
     await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true, request });
     expect(computeDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({

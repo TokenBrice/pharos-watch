@@ -24,7 +24,6 @@ type RegistryMapping = {
 };
 type RegistryExclusion = { reason: string; sources: string[] };
 type OwnershipRegistry = {
-  baseDocs?: string[];
   exclusions?: RegistryExclusion[];
   mappings?: RegistryMapping[];
   taskFamilies?: unknown;
@@ -61,6 +60,12 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
 }
 
 describe("doc-ownership registry integrity", () => {
+  it("keeps unconditional root guidance and hints out of the routing model", () => {
+    expect(ownership).not.toHaveProperty("baseDocs");
+    expect(ownership).not.toHaveProperty("coreRules");
+    for (const mapping of mappings) expect(mapping, mapping.id).not.toHaveProperty("hints");
+  });
+
   it("authors only exceptional checks, leaving baseline selectors authoritative", () => {
     for (const mapping of mappings) {
       for (const command of mapping.checks ?? []) {
@@ -72,7 +77,6 @@ describe("doc-ownership registry integrity", () => {
   });
 
   const references: Array<{ path: string; anchor?: string }> = [
-    ...(ownership.baseDocs ?? []).map((path) => ({ path })),
     ...mappings.flatMap((mapping) => [
       ...mapping.docs.map(normalizeDoc),
       ...(mapping.background ?? []).map(normalizeDoc),

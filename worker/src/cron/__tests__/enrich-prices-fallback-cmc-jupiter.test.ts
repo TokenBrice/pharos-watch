@@ -475,7 +475,7 @@ describe("enrichMissingPrices", () => {
       makePeggedAsset({ id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0 }),
     ];
 
-    const db = makeEnrichPricesDb([{ match: "cache", rows: [], first: null }], { requireMatch: true });
+    const db = makeEnrichPricesDb([{ match: "cache", rows: [], first: null }]);
 
     await expect(runJupiterPass(assets, undefined, db)).resolves.toEqual({
       resolved: 0,

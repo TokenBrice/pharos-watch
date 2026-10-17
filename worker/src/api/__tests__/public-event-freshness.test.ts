@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { TapeEventsResponseSchema } from "@shared/types/tape-event";
 import { makeBlacklistRow, makeDepegRow, makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { handleBlacklist } from "../blacklist";
@@ -9,6 +9,9 @@ import { handleMintBurnEvents } from "../mint-burn-events";
 import { handleEvents } from "../events";
 import { handleSafetyScoreHistory } from "../safety-score-history";
 import { handleSafetyScoreHistoryV2 } from "../safety-score-history-v2";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const NOW = 1_800_000_000;
 const tapeRow = {
@@ -72,37 +75,29 @@ for (const feed of feeds) {
 }
 
 it.each([handleSafetyScoreHistory, handleSafetyScoreHistoryV2])("does not refresh safety history from an empty result", async (handler) => {
-  const { sqlite, db } = createLatestSchemaSqlite();
-  try {
-    const response = await handler(db, new URL("https://x/api/safety-score-history?stablecoin=usdt-tether"));
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
-    expect(response.headers.get("X-Data-Freshness")).toBe("stale");
-  } finally {
-    sqlite.close();
-  }
+  const { db } = fixtures.open();
+  const response = await handler(db, new URL("https://x/api/safety-score-history?stablecoin=usdt-tether"));
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+  expect(response.headers.get("X-Data-Freshness")).toBe("stale");
 });
 
 it("keeps a stalled producer stale after its successful run ages out of retained history", async () => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW * 1000);
-  const { sqlite, db } = createLatestSchemaSqlite();
-  try {
-    const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, 1, 'ok')");
-    for (const job of ["project-tape", "sync-stablecoins", "sync-blacklist", "sync-mint-burn"]) {
-      insert.run(job, NOW - 8 * 86_400);
-    }
-    sqlite.prepare("DELETE FROM cron_runs WHERE started_at < ?").run(NOW - 7 * 86_400);
-    for (const feed of feeds) {
-      const response = await feed.handler(db, new URL(`https://x/api/${feed.name}?${feed.query}`));
-      expect(response.status).toBe(200);
-      expect(await response.json()).toMatchObject({ events: [] });
-      expect(response.headers.get("Cache-Control")).toBe("no-store");
-      expect(response.headers.get("X-Data-Freshness")).toBe("stale");
-      expect(response.headers.get("X-Data-Freshness-Reason")).toBe("producer-history-missing");
-    }
-  } finally {
-    sqlite.close();
+  const { sqlite, db } = fixtures.open();
+  const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, 1, 'ok')");
+  for (const job of ["project-tape", "sync-stablecoins", "sync-blacklist", "sync-mint-burn"]) {
+    insert.run(job, NOW - 8 * 86_400);
+  }
+  sqlite.prepare("DELETE FROM cron_runs WHERE started_at < ?").run(NOW - 7 * 86_400);
+  for (const feed of feeds) {
+    const response = await feed.handler(db, new URL(`https://x/api/${feed.name}?${feed.query}`));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ events: [] });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Freshness")).toBe("stale");
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe("producer-history-missing");
   }
 });

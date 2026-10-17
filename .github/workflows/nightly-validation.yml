@@ -53,6 +53,12 @@ jobs:
       - run: npm run check:structural
         id: structural
         if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+      - run: npm run check:unused-code
+        id: unused-code
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+      - run: npm run check:sensitive-page-copy
+        id: sensitive-page-copy
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - name: Report mandatory static outcomes
         if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
         env:
@@ -62,6 +68,8 @@ jobs:
           TYPED_LINT_OUTCOME: ${{ steps.lint-typed.outcome }}
           TEST_TYPES_OUTCOME: ${{ steps.typecheck-tests.outcome }}
           STRUCTURAL_OUTCOME: ${{ steps.structural.outcome }}
+          UNUSED_CODE_OUTCOME: ${{ steps.unused-code.outcome }}
+          SENSITIVE_COPY_OUTCOME: ${{ steps.sensitive-page-copy.outcome }}
         run: |
           failed=()
           for leaf in \
@@ -70,7 +78,9 @@ jobs:
             "typecheck:worker:$WORKER_OUTCOME" \
             "lint:typed:$TYPED_LINT_OUTCOME" \
             "typecheck:tests:$TEST_TYPES_OUTCOME" \
-            "check:structural:$STRUCTURAL_OUTCOME"; do
+            "check:structural:$STRUCTURAL_OUTCOME" \
+            "check:unused-code:$UNUSED_CODE_OUTCOME" \
+            "check:sensitive-page-copy:$SENSITIVE_COPY_OUTCOME"; do
             outcome="${leaf##*:}"
             command="${leaf%:*}"
             printf '%s: %s\n' "$command" "$outcome"
@@ -99,7 +109,7 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-      - run: npm run test:all -- --shard=${{ matrix.shard }}/2
+      - run: npm test -- --shard=${{ matrix.shard }}/2
 
   v9-resource:
     name: V9 resource budget

@@ -53,7 +53,6 @@ Run the focused checks for route metadata changes:
 
 ```bash
 npm run check:doc-sync
-npm run check:doc-source-paths
 npm run check:verified-doc-links
 npm run check:generated-artifacts
 npm run test:critical-contracts

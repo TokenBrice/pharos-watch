@@ -1,8 +1,11 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleDigestSnapshot } from "../digest-snapshot";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const nowSec = Math.floor(Date.now() / 1000);
 const todayStr = new Date(nowSec * 1000).toISOString().slice(0, 10);
@@ -140,49 +143,41 @@ describe("handleDigestSnapshot", () => {
 
   it("orders snapshot depeg events by absolute deviation", async () => {
     const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
-        .run(dayStart + 3600, JSON.stringify({ totalMcapUsd: 100e9 }));
-      const insert = sqlite.prepare(`INSERT INTO depeg_events
-        (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
-        VALUES (?, 'TEST', 'peggedUSD', ?, ?, ?, ?, 1, 1)`);
-      insert.run("small", "above", 100, dayStart, null);
-      insert.run("negative", "below", -900, dayStart - 100, null);
-      insert.run("positive", "above", 500, dayStart, null);
-      insert.run("future", "below", -2000, dayStart + 86400, null);
-      insert.run("closed", "below", -3000, dayStart - 1000, dayStart - 1);
-      const body = await readJsonResponse<{ depegEvents: { stablecoinId: string; peakDeviationBps: number }[] }>(
-        await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`)), 200);
-      expect(body.depegEvents.map((event) => [event.stablecoinId, event.peakDeviationBps]))
-        .toEqual([["negative", -900], ["positive", 500], ["small", 100]]);
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+      .run(dayStart + 3600, JSON.stringify({ totalMcapUsd: 100e9 }));
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
+      VALUES (?, 'TEST', 'peggedUSD', ?, ?, ?, ?, 1, 1)`);
+    insert.run("small", "above", 100, dayStart, null);
+    insert.run("negative", "below", -900, dayStart - 100, null);
+    insert.run("positive", "above", 500, dayStart, null);
+    insert.run("future", "below", -2000, dayStart + 86400, null);
+    insert.run("closed", "below", -3000, dayStart - 1000, dayStart - 1);
+    const body = await readJsonResponse<{ depegEvents: { stablecoinId: string; peakDeviationBps: number }[] }>(
+      await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`)), 200);
+    expect(body.depegEvents.map((event) => [event.stablecoinId, event.peakDeviationBps]))
+      .toEqual([["negative", -900], ["positive", 500], ["small", 100]]);
   });
 
   it("counts the full daily blacklist cohort beyond the 50-row sample with partial valuation", async () => {
     const day = Date.parse("2026-10-01T00:00:00Z") / 1000;
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
-        .run(day + 3600, JSON.stringify({ totalMcapUsd: 100e9 }));
-      const insert = sqlite.prepare(`INSERT INTO blacklist_events
-        (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
-         timestamp, amount_usd_at_event, amount_status, explorer_tx_url, explorer_address_url, suppression_reason)
-        VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'blacklist', ?, ?, 1, ?, ?, 'resolved', '', '', ?)`);
-      for (let i = 0; i < 52; i++) insert.run(`event-${i}`, `address-${i}`, `tx-${i}`, day + i, i < 50 ? 10 : null, null);
-      insert.run("suppressed", "other", "other", day + 60, 1000, "duplicate");
-      insert.run("outside", "outside", "outside", day + 86400, 1000, null);
-      const body = await readJsonResponse<{
-        blacklistEvents: Array<{ address: string }>;
-        blacklistSummary: { totalEvents: number; knownAmountUsd: number | null; valuedEvents: number; unavailableAmountEvents: number };
-      }>(await handleDigestSnapshot(db, new URL("https://x/api/digest-snapshot?date=2026-10-01")), 200);
-      expect(body.blacklistEvents).toHaveLength(50);
-      expect(body.blacklistEvents[0].address).toBe("address-51");
-      expect(body.blacklistSummary).toEqual({ totalEvents: 52, knownAmountUsd: 500, valuedEvents: 50, unavailableAmountEvents: 2 });
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+      .run(day + 3600, JSON.stringify({ totalMcapUsd: 100e9 }));
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, amount_status, explorer_tx_url, explorer_address_url, suppression_reason)
+      VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'blacklist', ?, ?, 1, ?, ?, 'resolved', '', '', ?)`);
+    for (let i = 0; i < 52; i++) insert.run(`event-${i}`, `address-${i}`, `tx-${i}`, day + i, i < 50 ? 10 : null, null);
+    insert.run("suppressed", "other", "other", day + 60, 1000, "duplicate");
+    insert.run("outside", "outside", "outside", day + 86400, 1000, null);
+    const body = await readJsonResponse<{
+      blacklistEvents: Array<{ address: string }>;
+      blacklistSummary: { totalEvents: number; knownAmountUsd: number | null; valuedEvents: number; unavailableAmountEvents: number };
+    }>(await handleDigestSnapshot(db, new URL("https://x/api/digest-snapshot?date=2026-10-01")), 200);
+    expect(body.blacklistEvents).toHaveLength(50);
+    expect(body.blacklistEvents[0].address).toBe("address-51");
+    expect(body.blacklistSummary).toEqual({ totalEvents: 52, knownAmountUsd: 500, valuedEvents: 50, unavailableAmountEvents: 2 });
   });
 });

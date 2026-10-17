@@ -26,7 +26,7 @@ describe("handleSafetyGrades", () => {
       { id: "nr", score: null, grade: "NR" as const, ratingStatus: "not-rated" as const, partialEvidence: null },
     ];
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: { ...base, cards: grades } });
-    const response = await handleSafetyGrades(mockD1([], { requireMatch: true }));
+    const response = await handleSafetyGrades(mockD1([]));
     const body = SafetyGradesResponseSchema.parse(await response.json());
     expect(body.schemaVersion).toBe(1);
     expect(body.grades).toEqual(grades);
@@ -38,7 +38,7 @@ describe("handleSafetyGrades", () => {
       ...snapshot, cards: snapshot.cards.map(({ id, score, grade, ratingStatus, partialEvidence }) => ({ id, score, grade, ratingStatus, partialEvidence })),
     } });
 
-    const response = await handleSafetyGrades(mockD1([], { requireMatch: true }));
+    const response = await handleSafetyGrades(mockD1([]));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Safety-Score-Status")).toBe("current");
@@ -64,7 +64,7 @@ describe("handleSafetyGrades", () => {
     });
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
 
-    const response = await handleSafetyGrades(mockD1([], { requireMatch: true }));
+    const response = await handleSafetyGrades(mockD1([]));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
@@ -80,7 +80,7 @@ describe("handleSafetyGrades", () => {
       detail: "Canonical Safety Score V9 publication is unavailable",
     });
 
-    const response = await handleSafetyGrades(mockD1([], { requireMatch: true }));
+    const response = await handleSafetyGrades(mockD1([]));
 
     expect(response.status).toBe(503);
   });

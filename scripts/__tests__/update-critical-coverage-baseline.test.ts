@@ -30,10 +30,10 @@ function fixture() {
   const files = new Map([["coverage/lcov.info", lcov], [baselinePath, baseline]]);
   const writeFileSync = vi.fn();
   const mkdirSync = vi.fn();
-  const run = (argv: string[] = []) => {
+  const run = (argv: string[] = [], env: NodeJS.ProcessEnv = testEnv()) => {
     files.set(recordPath, JSON.stringify(record));
     updateCriticalCoverageBaseline({
-      argv, env: testEnv(), criticalFiles: [source], now,
+      argv, env, criticalFiles: [source], now,
       fsImpl: {
         ...mockFsImpl({
           existsSync: (path) => files.has(path),
@@ -57,6 +57,15 @@ describe("critical coverage baseline maintenance", () => {
   it("lowers a floor only with a reviewed record matching the base and measured LCOV", () => {
     const f = fixture();
     f.run([`--rebaseline=${recordPath}`]);
+    expect(JSON.parse(String(f.writeFileSync.mock.calls[0][1])).files).toEqual({ [source]: 80 });
+  });
+
+  it("uses the checker's fixed floors instead of retired per-file environment overrides", () => {
+    const f = fixture();
+    f.run([`--rebaseline=${recordPath}`], testEnv({
+      CRITICAL_COVERAGE_THRESHOLD_AUTH: "0",
+      CRITICAL_COVERAGE_BRANCH_THRESHOLD_AUTH: "0",
+    }));
     expect(JSON.parse(String(f.writeFileSync.mock.calls[0][1])).files).toEqual({ [source]: 80 });
   });
 

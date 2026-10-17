@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegCohortHistoryChart } from "@/app/alt-pegs/alt-peg-cohort-history-chart";
 import { Tooltip } from "recharts";
 import type { ReactElement } from "react";
@@ -42,9 +42,6 @@ vi.mock("@/components/chart-primitives/axes", async (importOriginal) => {
 });
 
 describe("AltPegCohortHistoryChart", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   beforeEach(() => {
     chartState.ready = false;

@@ -24,19 +24,19 @@ describe("doc-sync Worker runtime documentation", () => {
   });
 
   it.each([
-    ["compatibility_date", '"wrong-date"'],
-    ["compatibility_flags", "[]"],
-    ["preview_urls", "false"],
-    ["minify", "false"],
-    ["keep_names", "false"],
-    ['"#pharos-full-catalog"', '"./wrong-catalog.ts"'],
-    ["cpu_ms", "1"],
-    ["enabled", "false"],
-    ["head_sampling_rate", "1"],
-    ["invocation_logs", "false"],
-  ])("rejects documented runtime drift in %s", (key, value) => {
+    ["compatibility_date", /^compatibility_date\s*=.*$/gm, '"wrong-date"'],
+    ["compatibility_flags", /^compatibility_flags\s*=.*$/gm, "[]"],
+    ["preview_urls", /^preview_urls\s*=.*$/gm, "false"],
+    ["minify", /^minify\s*=.*$/gm, "false"],
+    ["keep_names", /^keep_names\s*=.*$/gm, "false"],
+    ['"#pharos-full-catalog"', /^"#pharos-full-catalog"\s*=.*$/gm, '"./wrong-catalog.ts"'],
+    ["cpu_ms", /^cpu_ms\s*=.*$/gm, "1"],
+    ["enabled", /^enabled\s*=.*$/gm, "false"],
+    ["head_sampling_rate", /^head_sampling_rate\s*=.*$/gm, "1"],
+    ["invocation_logs", /^invocation_logs\s*=.*$/gm, "false"],
+  ])("rejects documented runtime drift in %s", (key, pattern, value) => {
     const failures = checkWithOverrides({
-      [RUNTIME_DOC]: runtimeDoc.replace(new RegExp(`^${key}\\s*=.*$`, "gm"), `${key} = ${value}`),
+      [RUNTIME_DOC]: runtimeDoc.replace(pattern, `${key} = ${value}`),
     });
     expect(failures.some((failure) => failure.file === RUNTIME_DOC && failure.label.startsWith("runtime configuration "))).toBe(true);
   });

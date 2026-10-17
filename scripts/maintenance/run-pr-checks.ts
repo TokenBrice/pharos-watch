@@ -39,10 +39,8 @@ export type PrCheckLane =
   | "classifier-smoke"
   | "gitleaks"
   | "verified-doc-links"
-  | "doc-source-paths"
   | "doc-sync"
   | "doc-ownership-invariants"
-  | "agents-doc-artifact"
   | "pr-static"
   | "pr-tests"
   | "v9-resource"
@@ -223,10 +221,8 @@ export function createLaneCommand(
         `--base=${resolvedBaseSha}`, `--head=${head}`,
       ]));
     case "verified-doc-links":
-    case "doc-source-paths":
     case "doc-sync":
     case "doc-ownership-invariants":
-    case "agents-doc-artifact":
       return withLane(command, { PR_BASE_SHA: resolvedBaseSha, PR_HEAD_SHA: head });
     case "pr-static":
     case "v9-resource":

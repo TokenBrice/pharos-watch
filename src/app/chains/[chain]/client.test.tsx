@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ImgHTMLAttributes, ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RatioSchema } from "@shared/types/ratio";
 import { ChainProfileClient } from "./client";
 import { makeChain, makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
@@ -64,9 +64,6 @@ describe("ChainProfileClient", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState());
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders the missing-chain fallback when the requested chain is absent", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({

@@ -1,5 +1,5 @@
 import { pendingDisambiguationTable } from "./telegram-rows.test-support";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,
   handleTelegramWebhook,
@@ -14,7 +14,10 @@ import {
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
 } from "./telegram-webhook.test-support";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 
 describe("handleTelegramWebhook", () => {
@@ -22,30 +25,26 @@ describe("handleTelegramWebhook", () => {
   it.each([
     "branch", "custom-types", "custom-target", "awaiting-ticker", "confirm-recommended", "confirm-custom",
   ])("restarts an active %s wizard through one stored /start mutation", async (step) => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      await handleTelegramWebhook(db, makeWebhookRequest(123, "/start", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
-      sqlite.prepare("UPDATE telegram_pending_disambiguation SET action_payload = ? WHERE chat_id = '123'")
-        .run(JSON.stringify({ step, alertTypes: ["dews"], target: null }));
-      const response = await handleTelegramWebhook(
-        db, makeWebhookRequest(123, "/start", "test-secret", { updateId: 2 }), "test-secret", "bot-token",
-      );
-      expect(response.status).toBe(200);
-      expect(latestSendMessageBody().text).toContain("Welcome to PharosWatchBot");
-      const pending = sqlite.prepare("SELECT action_type, action_payload FROM telegram_pending_disambiguation WHERE chat_id = '123'").get() as {
-        action_type: string; action_payload: string;
-      };
-      expect(pending.action_type).toBe("setup-step");
-      expect(JSON.parse(pending.action_payload)).toMatchObject({ step: "branch", alertTypes: [], target: null });
-      const operation = sqlite.prepare("SELECT intent_kind, intent_payload, mutation_applied_at FROM telegram_processed_updates WHERE update_id = 2").get() as {
-        intent_kind: string; intent_payload: string; mutation_applied_at: number | null;
-      };
-      expect(operation.intent_kind).toBe("command:start");
-      expect(JSON.parse(operation.intent_payload).payload).toMatchObject({ clearPending: true, stage: "setup-intro" });
-      expect(operation.mutation_applied_at).not.toBeNull();
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/start", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
+    sqlite.prepare("UPDATE telegram_pending_disambiguation SET action_payload = ? WHERE chat_id = '123'")
+      .run(JSON.stringify({ step, alertTypes: ["dews"], target: null }));
+    const response = await handleTelegramWebhook(
+      db, makeWebhookRequest(123, "/start", "test-secret", { updateId: 2 }), "test-secret", "bot-token",
+    );
+    expect(response.status).toBe(200);
+    expect(latestSendMessageBody().text).toContain("Welcome to PharosWatchBot");
+    const pending = sqlite.prepare("SELECT action_type, action_payload FROM telegram_pending_disambiguation WHERE chat_id = '123'").get() as {
+      action_type: string; action_payload: string;
+    };
+    expect(pending.action_type).toBe("setup-step");
+    expect(JSON.parse(pending.action_payload)).toMatchObject({ step: "branch", alertTypes: [], target: null });
+    const operation = sqlite.prepare("SELECT intent_kind, intent_payload, mutation_applied_at FROM telegram_processed_updates WHERE update_id = 2").get() as {
+      intent_kind: string; intent_payload: string; mutation_applied_at: number | null;
+    };
+    expect(operation.intent_kind).toBe("command:start");
+    expect(JSON.parse(operation.intent_payload).payload).toMatchObject({ clearPending: true, stage: "setup-intro" });
+    expect(operation.mutation_applied_at).not.toBeNull();
   });
 
   it.each([
@@ -54,32 +53,28 @@ describe("handleTelegramWebhook", () => {
   ])(
     "replaces pending state with subscription deep link %s after %s",
     async (payload, initialCommand) => {
-      const { sqlite, db } = createLatestSchemaSqlite();
-      try {
-        await handleTelegramWebhook(db, makeWebhookRequest(123, initialCommand, "test-secret", { updateId: 1 }), "test-secret", "bot-token");
-        const response = await handleTelegramWebhook(
-          db, makeWebhookRequest(123, `/start ${payload}`, "test-secret", { updateId: 2 }), "test-secret", "bot-token",
-        );
-        expect(response.status).toBe(200);
-        expect(latestSendMessageBody().text).not.toContain("Something went wrong");
-        const operation = sqlite.prepare("SELECT intent_kind, intent_payload, mutation_applied_at FROM telegram_processed_updates WHERE update_id = 2").get() as {
-          intent_kind: string; intent_payload: string; mutation_applied_at: number | null;
-        };
-        expect(operation.intent_kind).not.toBe("pending:clear-and-run");
-        expect(JSON.parse(operation.intent_payload).payload).toMatchObject({ clearPending: true });
-        expect(operation.mutation_applied_at).not.toBeNull();
-        if (payload === "sub_depeg_all") {
-          expect(latestSendMessageBody().text).toContain("Confirm");
-          expect(sqlite.prepare("SELECT action_type FROM telegram_pending_disambiguation WHERE chat_id = '123'").get())
-            .toEqual({ action_type: "confirm-bulk" });
-        } else {
-          expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation WHERE chat_id = '123'").get())
-            .toEqual({ count: 0 });
-          expect(sqlite.prepare("SELECT stablecoin_id, alert_depeg FROM telegram_subscriptions WHERE chat_id = '123'").get())
-            .toEqual({ stablecoin_id: "usdc-circle", alert_depeg: 1 });
-        }
-      } finally {
-        sqlite.close();
+      const { sqlite, db } = fixtures.open();
+      await handleTelegramWebhook(db, makeWebhookRequest(123, initialCommand, "test-secret", { updateId: 1 }), "test-secret", "bot-token");
+      const response = await handleTelegramWebhook(
+        db, makeWebhookRequest(123, `/start ${payload}`, "test-secret", { updateId: 2 }), "test-secret", "bot-token",
+      );
+      expect(response.status).toBe(200);
+      expect(latestSendMessageBody().text).not.toContain("Something went wrong");
+      const operation = sqlite.prepare("SELECT intent_kind, intent_payload, mutation_applied_at FROM telegram_processed_updates WHERE update_id = 2").get() as {
+        intent_kind: string; intent_payload: string; mutation_applied_at: number | null;
+      };
+      expect(operation.intent_kind).not.toBe("pending:clear-and-run");
+      expect(JSON.parse(operation.intent_payload).payload).toMatchObject({ clearPending: true });
+      expect(operation.mutation_applied_at).not.toBeNull();
+      if (payload === "sub_depeg_all") {
+        expect(latestSendMessageBody().text).toContain("Confirm");
+        expect(sqlite.prepare("SELECT action_type FROM telegram_pending_disambiguation WHERE chat_id = '123'").get())
+          .toEqual({ action_type: "confirm-bulk" });
+      } else {
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation WHERE chat_id = '123'").get())
+          .toEqual({ count: 0 });
+        expect(sqlite.prepare("SELECT stablecoin_id, alert_depeg FROM telegram_subscriptions WHERE chat_id = '123'").get())
+          .toEqual({ stablecoin_id: "usdc-circle", alert_depeg: 1 });
       }
     },
   );

@@ -11,8 +11,6 @@ Applies to `worker/`.
 - Safety Score: `docs/report-cards.md#v10-model`, `docs/process/safety-score-equivalence-harness.md` § “When to use it”, and `docs/process/safety-score-curation-expiry-sweep.md` § “1. Capture the current production input”.
 - DEX work: `docs/dex-liquidity.md` § “Discovery Cron”; Telegram/digest work: `docs/telegram-architecture.md` § “Seam overview” and `docs/digest-pipeline.md` § “Overview”.
 
-Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>`.
-
 ## Rules
 
 - Do not read `Env` bindings at module initialization; derive runtime config inside request or scheduled contexts.

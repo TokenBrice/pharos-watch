@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { createElement, useLayoutEffect } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCompareSelection } from "@/hooks/use-compare-selection";
 import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
 import { isUrlFilterClearValue, useUrlFilters } from "@/hooks/use-url-filters";
@@ -28,9 +28,6 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("isUrlFilterClearValue", () => {
   it.each([

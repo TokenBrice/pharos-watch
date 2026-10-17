@@ -27,6 +27,7 @@ import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
+import { SENSITIVE_COPY_ROOTS } from "../ci/check-sensitive-page-copy.ts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
@@ -65,6 +66,7 @@ interface PrStaticCheckCommand {
 export type PrStaticCheckGroup = "compile" | "guards";
 
 const COMPILE_STATIC_CHECKS: Record<string, true> = {
+  lint: true,
   "lint:changed": true,
   typecheck: true,
   "typecheck:worker": true,
@@ -86,8 +88,6 @@ export const STRUCTURAL_CHECKS = [
   "check:cli-args-policy",
   "check:dependency-review-gaps",
   "check:editorial-content",
-  "check:unused-code",
-  "check:sensitive-page-copy",
   "check:agent-skills",
 ] as const;
 
@@ -150,10 +150,9 @@ export function buildPrStaticCheckPlan(
 ) {
   const { classification, commands: baselineChecks } = selectPrBaselineChecks(changedFiles);
   const commands: PrStaticCheckCommand[] = [
-    { name: "lint:changed" },
+    { name: changedFiles.some((file) => file === "eslint.config.mjs") ? "lint" : "lint:changed" },
     { name: "typecheck" },
     { name: "check:env-contract" },
-    { name: "check:shared-types-imports" },
     { name: "check:critical-coverage-completeness" },
   ];
 
@@ -170,6 +169,12 @@ export function buildPrStaticCheckPlan(
     file === "scripts/maintenance/refresh-reserve-html-fixtures.ts"
   )) {
     commands.push({ name: "check:html-fixture-metadata" });
+  }
+  if (changedFiles.some((file) =>
+    SENSITIVE_COPY_ROOTS.some((root) => file === root || file.startsWith(`${root}/`)) ||
+    file === "scripts/ci/check-sensitive-page-copy.ts"
+  )) {
+    commands.push({ name: "check:sensitive-page-copy" });
   }
   commands.push(...baselineChecks);
 
@@ -194,7 +199,7 @@ export function selectPrBaselineChecks(changedFiles: readonly string[]) {
   const commands: PrStaticCheckCommand[] = [];
   if (classification.docsChanged) {
     commands.push(...PR_DOC_COMMANDS.map((command) => ({
-      name: command.args[0] === "run" && command.id !== "agents-doc-artifact" ? command.args[1] : command.id,
+      name: command.args[0] === "run" ? command.args[1] : command.id,
       manifestCommand: command,
     })));
   } else if (hasOwnedDocsImpact(changedFiles)) {
@@ -204,8 +209,7 @@ export function selectPrBaselineChecks(changedFiles: readonly string[]) {
   if (classification.pagesChanged) {
     commands.push({ name: "check:site-csp-sync" }, { name: "check:stablecoin-data" });
   }
-  const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles))
-    .filter((id) => !classification.docsChanged || id !== "agents-doc");
+  const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles));
   if (artifactIds.length > 0) {
     commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
   }
@@ -213,7 +217,6 @@ export function selectPrBaselineChecks(changedFiles: readonly string[]) {
     commands.push(
       { name: "typecheck:worker" },
       { name: "check:cron-connections" },
-      { name: "check:cron-sync" },
       { name: "check:migrations" },
       { name: "check:sql-safety" },
       { name: "check:worker-config" },

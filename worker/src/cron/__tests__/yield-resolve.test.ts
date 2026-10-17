@@ -156,7 +156,7 @@ describe("tracked optional source anchors", () => {
           },
         ],
       },
-    ], { requireMatch: true });
+    ]);
 
     const rows = await loadTier1PrevRateRows(db, ["usde-ethena", "100"], sevenDaysAgoSec);
 

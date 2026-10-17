@@ -422,10 +422,6 @@ export function makeApiRequestAttributionResponse(
   };
 }
 
-export function makeFullyHealthyCurrentStatusResponse(): StatusResponse {
-  return makeHealthyStatusResponse();
-}
-
 export function makeMaintenanceDebtStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
   const cause = {
     code: "ddr_repair_debt_present",
@@ -718,7 +714,7 @@ export function makeCurrentStatusDashboardInputs(
 ): StatusDashboardModelFixtureInputs {
   const updatedAt = STATUS_FIXTURE_NOW_MS - 10_000;
   const base: StatusDashboardModelFixtureInputs = {
-    data: makeFullyHealthyCurrentStatusResponse(),
+    data: makeHealthyStatusResponse(),
     healthData: makeHealthyHealthResponse(),
     probes: [
       { path: "/fixture/status", status: 200, latencyMs: 75, semanticStatus: "healthy" },

@@ -37,6 +37,7 @@ describe("CI workflow scope", () => {
     expect(staticSteps.filter((step) => step.run?.startsWith("npm run ")).map((step) => step.run)).toEqual([
       "npm run lint", "npm run typecheck", "npm run typecheck:worker",
       "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
+      "npm run check:unused-code", "npm run check:sensitive-page-copy",
     ]);
     // Every mandatory command runs independently once the workspace is ready,
     // so one red step cannot mask the remaining mandatory outcomes.
@@ -49,7 +50,7 @@ describe("CI workflow scope", () => {
     for (const command of ["lint", "typecheck", "typecheck:worker"]) {
       expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeLessThan(save);
     }
-    for (const command of ["lint:typed", "typecheck:tests", "check:structural"]) {
+    for (const command of ["lint:typed", "typecheck:tests", "check:structural", "check:unused-code", "check:sensitive-page-copy"]) {
       expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeGreaterThan(save);
     }
     // The cache publishes only fully validated lint and compiler state.
@@ -68,7 +69,7 @@ describe("CI workflow scope", () => {
     expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
       staticSteps.findIndex((step) => step.run === "npm run check:structural"));
     const outcomeEnv = Object.entries(aggregate!.env ?? {});
-    expect(outcomeEnv).toHaveLength(6);
+    expect(outcomeEnv).toHaveLength(8);
     for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
       const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
       for (const [key, expression] of outcomeEnv) {
@@ -105,7 +106,7 @@ describe("CI workflow scope", () => {
     expect(weekly.jobs["v9-resource"]).toBeUndefined();
     expect(readRepoFile(".github/workflows/weekly-validation.yml")).not.toContain("npm run test:v9-resource");
     expect(nightly.jobs["full-tests"].steps.some((step: { run?: string }) =>
-      step.run === "npm run test:all -- --shard=${{ matrix.shard }}/2")).toBe(true);
+      step.run === "npm test -- --shard=${{ matrix.shard }}/2")).toBe(true);
   });
 
   it("runs CodeQL daily with the existing Monday authority and manual dispatch, not pushes", () => {
@@ -417,21 +418,20 @@ it("runs the mechanism-refresh verifier only from a trusted snapshot inside the 
   const tokenStep = steps.find((step) => step.env?.GH_TOKEN?.includes("MECHANISM_REFRESH_GITHUB_TOKEN"));
   expect(tokenStep).toBeDefined();
   const run = tokenStep!.run!;
-  const snapshot = run.indexOf("cp scripts/ci/verify-mechanism-refresh-diff.ts");
+  const snapshot = run.indexOf("node_modules/.bin/esbuild scripts/ci/verify-mechanism-refresh-diff.ts");
   const prepareBranch = run.indexOf("--stage prepare-branch");
   expect(snapshot).toBeGreaterThanOrEqual(0);
   expect(snapshot).toBeLessThan(prepareBranch);
+  expect(run).toContain("--bundle --platform=node --format=esm --external:playwright");
   // After prepare-branch switches the worktree to the automation branch, every
   // verifier invocation must resolve outside the mutable worktree.
   for (const line of run.split("\n")) {
-    if (!line.includes("verify-mechanism-refresh-diff.ts") || line.includes("cp ")) continue;
+    if (!line.includes("verify-mechanism-refresh-diff.ts") || line.includes("esbuild ")) continue;
     expect(line).toContain("$TRUSTED_VERIFIER/");
   }
-  // The snapshot must carry each of the verifier's own relative imports.
-  const verifier = readRepoFile("scripts/ci/verify-mechanism-refresh-diff.ts");
-  const imports = [...verifier.matchAll(/from "\.\.\/lib\/([^"]+)"/g)].map((match) => match[1]);
-  expect(imports.length).toBeGreaterThan(0);
-  for (const lib of imports) expect(run).toContain(`scripts/lib/${lib}`);
+  // Bundling includes the protocol replay/comparison dependency closure too,
+  // without resolving any imports from the unreviewed checkout afterwards.
+  expect(run).toContain('--outfile="$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts"');
 });
 
 it("scopes protocol archive read credentials to trusted capture and strict replay only", () => {

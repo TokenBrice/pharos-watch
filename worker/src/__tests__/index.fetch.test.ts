@@ -114,7 +114,7 @@ describe("worker.fetch", () => {
     const { ctx, waits } = makeExecutionContext();
     const env = makeEnv({
       ...overrides,
-      DB: database ?? mockD1(await validKeyDbTables(), { requireMatch: true }),
+      DB: database ?? mockD1(await validKeyDbTables()),
     });
     const response = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {
@@ -254,7 +254,6 @@ describe("worker.fetch", () => {
               ),
               ...makeRequestAttributionTables(),
             ],
-            { requireMatch: true },
           ),
         ),
       expected: {
@@ -326,7 +325,7 @@ describe("worker.fetch", () => {
   });
 
   it("hides mutating admin endpoints on the public API host", async () => {
-    const env = makeEnv({ DB: mockD1(await validKeyDbTables(), { requireMatch: true }) });
+    const env = makeEnv({ DB: mockD1(await validKeyDbTables()) });
     const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
@@ -388,7 +387,7 @@ describe("worker.fetch", () => {
       headers: { "Content-Type": "application/json" },
     }));
 
-    const env = makeEnv({ DB: mockD1(await validKeyDbTables(), { requireMatch: true }) });
+    const env = makeEnv({ DB: mockD1(await validKeyDbTables()) });
     const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
@@ -486,7 +485,7 @@ describe("worker.fetch", () => {
     const env = makeEnv({
       DB: mockD1([
         ...makeRequestAttributionTables(),
-      ], { requireMatch: true }),
+      ]),
     });
     const { ctx, waits } = makeExecutionContext();
 
@@ -545,7 +544,7 @@ describe("worker.fetch", () => {
 
   it("hides admin endpoints on the public API host before API-key auth", async () => {
     const env = makeEnv({
-      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+      DB: mockD1(await validKeyDbTables()),
     });
     const { ctx } = makeExecutionContext();
 
@@ -577,7 +576,7 @@ describe("worker.fetch", () => {
 
   it("hides malformed admin-like public paths without probing API-key auth", async () => {
     const env = makeEnv({
-      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+      DB: mockD1(await validKeyDbTables()),
     });
     const { ctx } = makeExecutionContext();
 
@@ -596,7 +595,7 @@ describe("worker.fetch", () => {
 
   it("does not let a valid public API key reach admin routes on the public host", async () => {
     const env = makeEnv({
-      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
+      DB: mockD1(await validKeyDbTables()),
     });
     const { ctx } = makeExecutionContext();
 
@@ -794,7 +793,7 @@ describe("worker.fetch", () => {
     }
 
     tables.push(...makeRequestAttributionTables({ includeApiKey: testCase.dependency === "rate-limit" }));
-    return mockD1(tables, { requireMatch: true });
+    return mockD1(tables);
   }
 
   it.each(apiKeyDependencyFailureCases)(
@@ -812,7 +811,7 @@ describe("worker.fetch", () => {
           headers: { "Content-Type": "application/json" },
         }));
 
-        const warmDb = mockD1(await validKeyDbTables(), { requireMatch: true });
+        const warmDb = mockD1(await validKeyDbTables());
         const warm = await performStablecoinsFetch("GET", warmDb, attributionDisabled);
         expect(warm.response.status).toBe(200);
         await expect(warm.response.json()).resolves.toEqual({ cached: true, warm: 1 });
@@ -868,7 +867,7 @@ describe("worker.fetch", () => {
     cacheMatch.mockClear();
     cacheMatch.mockResolvedValue(undefined);
     const db = expired
-      ? mockD1([makeApiKeyPrefixLookupError(VALID_KEY_PREFIX, new Error("auth unavailable"))], { requireMatch: true })
+      ? mockD1([makeApiKeyPrefixLookupError(VALID_KEY_PREFIX, new Error("auth unavailable"))])
       : mockD1(await validKeyDbTables([{
           match: "cache",
           rows: [],
@@ -918,7 +917,7 @@ describe("worker.fetch", () => {
           runMeta: { changes: 1 },
         },
         ...makeRequestAttributionTables({ includeApiKey: true }),
-      ], { requireMatch: true }),
+      ]),
     });
     const { ctx: firstCtx, waits: firstWaits } = makeExecutionContext();
     const firstRes = await worker.fetch(

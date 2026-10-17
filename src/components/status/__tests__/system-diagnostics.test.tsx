@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { SystemDiagnostics } from "../system-diagnostics";
 
-afterEach(cleanup);
 
 describe("SystemDiagnostics discrepancy evidence", () => {
   it("renders unreadable status authority as an unavailable comparison", () => {

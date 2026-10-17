@@ -46,7 +46,6 @@ interface PathFamilyRule {
   checks: string[];
   docs: DocReference[];
   hardRules: string[];
-  hints: string[];
   id: string;
   label: string;
   risk: string;
@@ -74,7 +73,6 @@ interface ChangeContract {
   };
   docs: DocReference[];
   hardRules: string[];
-  hints: string[];
   mappings: MatchedMapping[];
   scopedContext: string[];
   source: ChangeSource;
@@ -389,7 +387,7 @@ export function classifyChangedFiles(files: readonly string[]): ChangeContract {
 
 function classifyChangedFilesWithSource(files: readonly string[], source: ChangeSource): ChangeContract {
   const changedFiles = normalizeChangedFiles(files);
-  const { PATH_FAMILIES, DEFAULT_BASE_DOCS, CORE_RULES } = getRoutingRegistry();
+  const { PATH_FAMILIES } = getRoutingRegistry();
   const matchedFamilies = PATH_FAMILIES.map((family) => ({
     ...family,
     matchedFiles: changedFiles.filter((file) => fileMatchesRule(file, family)),
@@ -401,7 +399,6 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
   const fallbackFamilies = matchedFamilies.filter((family) => family.tier === "fallback");
   const rankedDocs = uniqueDocs([
     ...specificFamilies.flatMap((family) => family.docs),
-    ...DEFAULT_BASE_DOCS.map((path) => ({ path })),
     ...fallbackFamilies.flatMap((family) => family.docs),
   ]);
   const docs = changedFiles.length === 1
@@ -417,8 +414,7 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
     ...matchedFamilies.flatMap((family) => family.scopedContext),
   ]);
   const checks = unique(matchedFamilies.flatMap((family) => family.checks));
-  const hardRules = unique([...CORE_RULES, ...matchedFamilies.flatMap((family) => family.hardRules)]);
-  const hints = unique(matchedFamilies.flatMap((family) => family.hints));
+  const hardRules = unique(matchedFamilies.flatMap((family) => family.hardRules));
   const warnings = buildWarnings(changedFiles);
   const ownedFiles = new Set(matchedFamilies.flatMap((family) => family.matchedFiles));
   const unmappedPaths = changedFiles.filter((file) => !ownedFiles.has(file));
@@ -437,7 +433,6 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
     },
     docs,
     hardRules,
-    hints,
     mappings: matchedFamilies.map((family) => ({
       id: family.id,
       label: family.label,
@@ -1230,9 +1225,6 @@ function buildWarnings(changedFiles: readonly string[]): string[] {
   if (changedFiles.some((file) => file.startsWith("worker/migrations/"))) {
     warnings.push("D1 migrations are applied before the new Worker is live; keep them backward-compatible.");
   }
-  if (changedFiles.some((file) => file === "AGENTS.md" || file === "CLAUDE.md")) {
-    warnings.push("AGENTS.md is generated from CLAUDE.md; edit CLAUDE.md and run node --import tsx scripts/maintenance/generate-agents-doc.ts.");
-  }
   if (changedFiles.some((file) => file.startsWith("shared/data/stablecoins/"))) {
     warnings.push("Stablecoin data changes must not introduce manual supply overrides.");
   }
@@ -1303,10 +1295,6 @@ export function formatContract(
     sections.push("", "Also relevant:", formatBullets(contract.background.map(formatDocReference), { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
-  if (contract.hints.length > 0) {
-    sections.push("", "Hints:", formatBullets(contract.hints, { limit: mode === "stop" ? 4 : Number.POSITIVE_INFINITY }));
-  }
-
   if (contract.checks.length > 0) {
     sections.push(
       "",
@@ -1319,7 +1307,7 @@ export function formatContract(
     sections.push("", "Warnings:", formatBullets(contract.warnings, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
-  sections.push("", "Core rules:", formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
+  sections.push("", "Rules:", formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
 
   if (contract.deploy.deployImpact) {
     sections.push(

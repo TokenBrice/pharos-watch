@@ -107,7 +107,7 @@ Production responsibility is split deliberately:
 
 - Validation workflow ownership and lane composition are documented in [Testing: CI Pipeline](./testing.md#ci-pipeline).
 - `.github/workflows/pull-request-checks.yml` selects the unsharded `v9-resource` lane for the audited evaluator/catalog dependencies plus conservative shared/Worker library, data, setup-migration, resource-harness, bundler and toolchain input families. Unrelated frontend, API and most cron edits skip it. Missing or unclassifiable inputs select it fail-closed; the selected lane remains required.
-- `.github/workflows/nightly-validation.yml` retains unconditional V9 resource-budget validation and the two-shard `test:all` backstop, alongside mandatory static validation.
+- `.github/workflows/nightly-validation.yml` retains unconditional V9 resource-budget validation and the two-shard `npm test` backstop, alongside mandatory static validation.
 - `.github/workflows/weekly-validation.yml` owns the advisory Node 26 root/Worker typecheck probe; it no longer duplicates the nightly V9 resource run.
 - `.github/workflows/codeql.yml` runs daily at 06:17 UTC, retaining its Monday 06:00 UTC schedule and manual dispatch rather than scanning every `main` push.
 - `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.

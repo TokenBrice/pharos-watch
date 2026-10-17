@@ -265,67 +265,6 @@ function reportFailedCommand(result: ExecutionResult, label?: string, reporter?:
   else console.error(`[${label}] FAILED: ${result.failedCmd} exited with status ${result.status}${result.error ? `: ${result.error.message}` : ""}`);
 }
 
-export async function runCommandBatches<TCommand extends RunnerCommand>(
-  batches: Array<Array<ExecutionUnit<TCommand>>>,
-  {
-    getCommandEnv = () => ({}),
-    getCommandText: getBatchCommandText = getCommandText,
-    label,
-    reporter,
-    runCommandImpl,
-  }: Omit<ExecutionOptions<TCommand>, "signal"> = {},
-): Promise<ExecutionResult> {
-  for (const batch of batches) {
-    if (batch.length === 1) {
-      const result = await runExecutionUnit(batch[0], {
-        getCommandEnv,
-        getCommandText: getBatchCommandText,
-        label,
-        reporter,
-        runCommandImpl,
-      });
-      if (result.status !== 0) {
-        reportFailedCommand(result, label, reporter);
-        return result;
-      }
-      continue;
-    }
-
-    if (!reporter) console.log(`[${label}] Running ${batch.length} independent command groups in parallel.`);
-    const controllers = batch.map(() => new AbortController());
-    const pending = new Map(
-      batch.map((unit, index) => [
-        index,
-        runExecutionUnit(unit, {
-          getCommandEnv,
-          getCommandText: getBatchCommandText,
-          label,
-          reporter,
-          runCommandImpl,
-          signal: controllers[index].signal,
-        }).then((result) => ({ index, result })),
-      ]),
-    );
-
-    try {
-      while (pending.size > 0) {
-        const settled = await Promise.race(pending.values());
-        pending.delete(settled.index);
-
-        if (settled.result.status !== 0) {
-          reportFailedCommand(settled.result, label, reporter);
-          return settled.result;
-        }
-      }
-    } finally {
-      for (const [index] of pending) controllers[index].abort();
-      await Promise.allSettled(pending.values());
-    }
-  }
-
-  return { status: 0, failedCmd: null, aborted: false };
-}
-
 export async function runParallelExecutionUnits<
   TCommand extends RunnerCommand,
   TUnit extends ExecutionUnit<TCommand>,

@@ -10,6 +10,7 @@ import {
   buildPreToolUseHookOutput,
   classifyChangedFiles,
   findShellCommandViolation,
+  formatContract,
 } from "../ci/pharos-change-contract.ts";
 import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
@@ -68,7 +69,7 @@ describe("representative --file routing", () => {
   it("caps single-path guidance while preserving ranked overflow in background", () => {
     const originalLength = PATH_FAMILIES.length;
     const family = {
-      background: [], checks: [], hardRules: [], hints: [], scopedContext: [],
+      background: [], checks: [], hardRules: [], scopedContext: [],
       sourceGlobs: ["audit-overflow.fixture"], tier: "specific" as const,
     };
     PATH_FAMILIES.push(
@@ -96,9 +97,31 @@ describe("representative --file routing", () => {
     expect(JSON.parse(result.stdout).checks).not.toContain("npm run check:structural");
   });
 
-  it.each(["--base", "--base-ref"])("accepts %s with the shared head spelling", (baseFlag) => {
+  it("returns only routed docs and rules without unconditional onboarding or hints", () => {
+    const contract = route("functions/social-posts/example.ts");
+    expect(docKeys(contract)).not.toContain("docs/process/agent-start-here.md");
+    expect(contract.hardRules).toContain("Keep the dated manifest immutable.");
+    expect(contract.hardRules).not.toContain("Keep Tailwind classes as static strings.");
+    expect(contract).not.toHaveProperty("hints");
+    expect(formatContract(contract)).not.toContain("Hints:");
+  });
+
+  it("loads one authored root through the Claude import without mirror warnings", () => {
+    expect(readFileSync("CLAUDE.md", "utf8")).toBe("@AGENTS.md\n");
+    const root = readFileSync("AGENTS.md", "utf8");
+    expect(root).toContain("<!-- BEGIN:nextjs-agent-rules -->");
+    expect(root).toContain("<!-- END:nextjs-agent-rules -->");
+    const contract = route("AGENTS.md");
+    expect(contract.hardRules).toContain("Root AGENTS.md is the single authored instruction file; CLAUDE.md imports it.");
+    expect(contract.warnings).toEqual([]);
+  });
+
+  it.each([
+    ["--base", "--head"], ["--base", "--head-ref"],
+    ["--base-ref", "--head"], ["--base-ref", "--head-ref"],
+  ])("accepts range aliases %s and %s", (baseFlag, headFlag) => {
     const result = spawnSync(process.execPath,
-      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", baseFlag, "HEAD", "--head", "HEAD", "--json"],
+      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", baseFlag, "HEAD", headFlag, "HEAD", "--json"],
       { encoding: "utf8" });
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ changedFiles: [], source: "base/head range" });

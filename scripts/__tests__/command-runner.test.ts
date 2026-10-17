@@ -8,7 +8,6 @@ import type { CommandResult, SpawnCommand } from "../lib/command-runner.mts";
 import {
   createExecutionUnit,
   createSpawnCommand,
-  runCommandBatches,
   runParallelExecutionUnits,
   runShellCommand,
   runSpawnCommand,
@@ -19,7 +18,7 @@ afterEach(() => {
 });
 
 describe("command runner", () => {
-  it.each(["batches", "parallel"])("settles aborted siblings after a rejecting runner in %s", async (coordinator) => {
+  it("settles aborted siblings after a rejecting parallel runner", async () => {
     const error = new Error("runner rejected");
     let settled = false;
     const units = [createExecutionUnit(["throw"]), createExecutionUnit(["wait"])];
@@ -34,14 +33,12 @@ describe("command runner", () => {
         });
       },
     };
-    const result = coordinator === "batches"
-      ? await runCommandBatches([units], options)
-      : await runParallelExecutionUnits(units, options);
+    const result = await runParallelExecutionUnits(units, options);
     expect(result).toMatchObject({ status: 1, failedCmd: "throw", error });
     expect(settled).toBe(true);
   });
 
-  it.each(["batches", "parallel"])("kills a real sibling before returning a missing-executable failure in %s", async (coordinator) => {
+  it("kills a real parallel sibling before returning a missing-executable failure", async () => {
     const root = mkdtempSync(join(tmpdir(), "command-cleanup-"));
     const server = createServer();
     const teardown = new AbortController();
@@ -78,9 +75,7 @@ describe("command runner", () => {
           return siblingResult;
         },
       };
-      const result = coordinator === "batches"
-        ? await runCommandBatches([units], options)
-        : await runParallelExecutionUnits(units, options);
+      const result = await runParallelExecutionUnits(units, options);
       expect(result).toMatchObject({ status: 1, failedCmd: missing.cmd, error: { code: "ENOENT" } });
       // runSpawnCommand settles a successfully spawned child on close, not on abort.
       expect(siblingResult).toMatchObject({ status: 130, aborted: true, signal: "SIGTERM" });
@@ -108,55 +103,6 @@ describe("command runner", () => {
     expect(result.failures).toHaveLength(1);
     expect(result.results.map((entry) => entry.status)).toEqual([1, 0]);
     expect(remove).toHaveBeenCalledWith("abort", expect.any(Function));
-  });
-
-  it("reports serial failures and returns the failed status", async () => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const calls: string[] = [];
-    const result = await runCommandBatches([[createExecutionUnit(["first", "second"])]], {
-      label: "gate",
-      runCommandImpl: (cmd) => {
-        calls.push(cmd);
-        return { status: cmd === "first" ? 7 : 0, aborted: false };
-      },
-    });
-
-    expect(result).toEqual({ status: 7, failedCmd: "first", aborted: false });
-    expect(calls).toEqual(["first"]);
-    expect(errorSpy).toHaveBeenCalledWith("[gate] FAILED: first exited with status 7");
-  });
-
-  it("aborts pending sibling groups after the first parallel failure", async () => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const calls: string[] = [];
-    const aborted: string[] = [];
-    const result = await runCommandBatches(
-      [[createExecutionUnit(["fail", "never"]), createExecutionUnit(["wait-a"]), createExecutionUnit(["wait-b"])]],
-      {
-        label: "parallel",
-        runCommandImpl: (cmd, _extraEnv, { signal } = {}) => {
-          calls.push(cmd);
-
-          if (cmd === "fail") {
-            return Promise.resolve({ status: 5, aborted: false });
-          }
-
-          return new Promise((resolve) => {
-            signal?.addEventListener("abort", () => {
-              aborted.push(cmd);
-              resolve({ status: 130, aborted: true });
-            });
-          });
-        },
-      },
-    );
-
-    expect(result).toEqual({ status: 5, failedCmd: "fail", aborted: false });
-    expect(calls).toEqual(["fail", "wait-a", "wait-b"]);
-    expect(aborted).toEqual(["wait-a", "wait-b"]);
-    expect(errorSpy).toHaveBeenCalledWith("[parallel] FAILED: fail exited with status 5");
   });
 
   it("returns every independent result without terminating after failures", async () => {

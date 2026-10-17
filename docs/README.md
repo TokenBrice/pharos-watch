@@ -159,9 +159,9 @@ Use the checks relevant to the change:
 
 ```bash
 npm run check:verified-doc-links
-npm run check:doc-source-paths
 npm run check:doc-sync
-npm run check:generated-artifacts -- --only=agents-doc
 ```
+
+`check:verified-doc-links` validates both documentation links and cited source paths.
 
 Generated API and public artifacts have their own checks in `package.json` and `scripts/lib/automation-registry.mjs`.

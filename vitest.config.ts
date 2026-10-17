@@ -115,15 +115,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      exclude: [
-        ...configDefaults.exclude,
-        ...worktreeExcludes,
-        ".claude/**",
-        "agents/**",
-        ".next/**",
-        "out/**",
-        "coverage/**",
-      ],
+      exclude: baseTestExcludes,
     },
   },
   resolve: {

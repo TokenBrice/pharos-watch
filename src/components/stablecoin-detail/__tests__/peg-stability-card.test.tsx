@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, render, within } from "@testing-library/react";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
@@ -27,7 +27,6 @@ beforeAll(() => {
   );
 });
 
-afterEach(cleanup);
 
 /** A positive liquidation claim ("liquidates", "or liquidated"), not a statement that none exists. */
 const LIQUIDATION_CLAIM = /\bliquidat(?:e|es|ed)\b/i;

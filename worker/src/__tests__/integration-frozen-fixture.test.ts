@@ -60,7 +60,7 @@ describe("frozen lifecycle consumers", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ configKey: "ethereum-0x0000000000000000000000000000000000000001" }),
     });
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const response = await handleBackfillMintBurn({
       db, request, url: new URL(request.url), trustedAdmin: true, alchemyApiKey: "alchemy-key",
     });
@@ -87,7 +87,7 @@ describe("frozen lifecycle consumers", () => {
     const db = mockD1([
       { match: "FROM reserve_composition", matchBinds: ["fixture-frozen"], rows: [] },
       { match: "FROM reserve_sync_state", matchBinds: ["fixture-frozen"], rows: [] },
-    ], { requireMatch: true });
+    ]);
     const response = await handleStablecoinReserves(db, "fixture-frozen");
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({

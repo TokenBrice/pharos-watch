@@ -19,7 +19,7 @@ Feature ideas should usually start in [GitHub Discussions](https://github.com/To
 3. Keep the change narrow. Avoid unrelated refactors, generated churn, or formatting sweeps.
 4. Update the matching docs when behavior, API contracts, methodology, data sources, or pipeline ownership changes.
 
-Important project rules. The full cross-cutting set is the Hard Rules section of [CLAUDE.md](./CLAUDE.md); these are the ones an outside change trips on most often:
+Important project rules. The full cross-cutting set is the Hard Rules section of [AGENTS.md](./AGENTS.md); these are the ones an outside change trips on most often:
 
 - Tailwind classes must be static strings.
 - DefiLlama list-endpoint supply values are already USD-denominated; do not multiply them by price, and never replace DefiLlama list supply with manual, on-chain, CoinMarketCap, or DEX values. A supplemental supply path is allowed only through an existing explicit, documented, fail-closed, double-count-safe admission path; see [docs/stablecoin-data.md](./docs/stablecoin-data.md).
@@ -37,22 +37,7 @@ Worker/API changes require Cloudflare Worker bindings and provider credentials. 
 
 ## Checks
 
-For narrow changes, run the focused check for the area you touched. Common commands:
-
-```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run check:generated-artifacts
-```
-
-GitHub's protected `PR gate` is the authoritative release check. For a committed production-bound change, maintainers can run the adaptive local contract with:
-
-```bash
-npm run check:pr -- --base=origin/main
-```
-
-Use `npm run check:release` only when a local Pages build and Worker bundle rehearsal is useful. Neither command replaces the protected PR gate.
+Use [Testing: Smallest adequate check per area](./docs/testing.md#smallest-adequate-check-per-area) for focused authoring checks and their limits. GitHub's protected `PR gate` is the authoritative release check.
 
 `docs-metadata` and `sitemap-dates` are gitignored build-time artifacts derived from commit history. `npm install` materializes them locally; CI jobs that need them opt in through the `bootstrap-history` input on `setup-workspace`.
 

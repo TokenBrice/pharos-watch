@@ -60,7 +60,7 @@ interface GitleaksOptions {
   fullHistory: boolean;
   headRef: string;
   lenientPlatform: boolean;
-  mode: "tree" | "worktree" | "range";
+  mode: "tree" | "worktree" | "range" | "range-tree";
   snapshotTrusted?: string;
   policyRoot?: string;
   trustedRoot?: string;
@@ -97,7 +97,9 @@ function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): Gitleaks
     seen.add(token.name);
   }
   const modes = ["range", "tree", "worktree", "local-trusted", "snapshot-trusted"].filter((name) => seen.has(name));
-  if (modes.length > 1) throw new Error("Select only one Gitleaks mode");
+  if (modes.length > 1 && !(modes.length === 2 && values.range && values.tree)) {
+    throw new Error("Select only one Gitleaks mode (or combine --range --tree)");
+  }
   if (!values["local-trusted"] && (seen.has("base") || seen.has("head"))) {
     throw new Error("--base and --head require --local-trusted");
   }
@@ -107,7 +109,7 @@ function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): Gitleaks
       throw new Error("--local-trusted cannot override or skip trusted policy");
     }
   }
-  const mode = values.worktree ? "worktree" : values.tree ? "tree" : "range";
+  const mode = values.range && values.tree ? "range-tree" : values.worktree ? "worktree" : values.tree ? "tree" : "range";
   const baseRef = values.base ?? env.GITLEAKS_BASE_REF ?? "origin/main";
   const headRef = values.head ?? env.GITLEAKS_HEAD_REF ?? "HEAD";
   const directory = (value: string | undefined) => {
@@ -858,7 +860,7 @@ export async function runGitleaks({
   const options = parseOptions(argv, env);
   if (options.help) {
     console.log("Usage: run-gitleaks.ts --local-trusted --base=<sha> --head=<sha>\n" +
-      "Or: --range | --tree | --worktree [--policy-root=<dir>]\n" +
+      "Or: --range [--tree] | --tree | --worktree [--policy-root=<dir>]\n" +
       "Snapshot: --snapshot-trusted=<dir>; candidate: --range --candidate-policy --trusted-root=<dir>\n" +
       "Local trusted exits: 0 clean, 1 findings, 2 usage/setup error. CI additionally scans its synthetic PR merge.");
     return { status: 0 };
@@ -899,45 +901,38 @@ export async function runGitleaks({
   // stdin lanes carry exactly the bytes the range scan cannot see: uncommitted edits (worktree) or
   // the lines a merge resolution introduced in neither parent's history (tree). Anything flagged in
   // those bytes is new and has no fingerprint to hide behind.
-  const stdinMode = options.mode === "worktree" || options.mode === "tree";
-  const args = stdinMode
-    ? [
-        "stdin",
-        "--no-banner",
-        "--redact",
-        "--exit-code",
-        "1",
-        "--config=.gitleaks.toml",
-        "--gitleaks-ignore-path=.gitleaksignore",
-      ]
-    : options.fullHistory
-      ? ["git", "--no-banner", "--redact", "--verbose", "--exit-code", "1", "."]
-      : [
-          "git",
-          "--no-banner",
-          "--redact",
-          "--verbose",
-          "--exit-code",
-          "1",
-          `--log-opts=--no-merges ${options.baseRef}..${options.headRef}`,
-          ".",
-        ];
-  if (options.policyRoot) {
-    // Explicit flags prevent the target checkout's config/ignore from influencing
-    // either history or stdin scans. Git and merge-resolution inputs stay in cwd.
-    const policyArgs = [
-      `--config=${resolve(options.policyRoot, ".gitleaks.toml")}`,
-      `--gitleaks-ignore-path=${resolve(options.policyRoot, ".gitleaksignore")}`,
-    ];
-    if (stdinMode) args.splice(5, 2, ...policyArgs);
-    else args.splice(args.length - 1, 0, ...policyArgs);
+  let status = 0;
+  const modes = options.mode === "range-tree" ? ["range", "tree"] as const : [options.mode];
+  for (const mode of modes) {
+    const stdinMode = mode === "worktree" || mode === "tree";
+    const args = stdinMode
+      ? [
+          "stdin", "--no-banner", "--redact", "--exit-code", "1",
+          "--config=.gitleaks.toml", "--gitleaks-ignore-path=.gitleaksignore",
+        ]
+      : options.fullHistory
+        ? ["git", "--no-banner", "--redact", "--verbose", "--exit-code", "1", "."]
+        : [
+            "git", "--no-banner", "--redact", "--verbose", "--exit-code", "1",
+            `--log-opts=--no-merges ${options.baseRef}..${options.headRef}`, ".",
+          ];
+    if (options.policyRoot) {
+      // Never let the candidate checkout influence either trusted scan's policy.
+      const policyArgs = [
+        `--config=${resolve(options.policyRoot, ".gitleaks.toml")}`,
+        `--gitleaks-ignore-path=${resolve(options.policyRoot, ".gitleaksignore")}`,
+      ];
+      if (stdinMode) args.splice(5, 2, ...policyArgs);
+      else args.splice(args.length - 1, 0, ...policyArgs);
+    }
+    const result = runBinary(binaryPath, args, {
+      ...(mode === "worktree" ? { input: buildWorktreeInput() } : {}),
+      ...(mode === "tree" ? { input: buildMergeResolutionInput({ baseRef: options.baseRef, headRef: options.headRef }) } : {}),
+      stdio: stdinMode ? ["pipe", "inherit", "inherit"] : "inherit",
+    });
+    status ||= result.status ?? 1;
   }
-  const result = runBinary(binaryPath, args, {
-    ...(options.mode === "worktree" ? { input: buildWorktreeInput() } : {}),
-    ...(options.mode === "tree" ? { input: buildMergeResolutionInput({ baseRef: options.baseRef, headRef: options.headRef }) } : {}),
-    stdio: stdinMode ? ["pipe", "inherit", "inherit"] : "inherit",
-  });
-  return { status: result.status ?? 1 };
+  return { status };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ImgHTMLAttributes } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeChain } from "@/hooks/__tests__/chain-profile-fixtures";
 import { DominanceBreakdown } from "./dominance-breakdown";
 
@@ -14,9 +14,6 @@ vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt ?? ""} />,
 }));
 
-afterEach(() => {
-  cleanup();
-});
 
 // The bar is the only div[role="img"]; legend icons are <img> elements.
 function dominanceBarLabel(container: HTMLElement) {

@@ -137,11 +137,11 @@ describe("isolated V9 resource execution", () => {
     expect(() => assertFaithfulResourceReport({ ...faithful, policy: "unqualified" }, "previous-run")).toThrow("unqualified-resource-policy-applied");
   });
 
-  it("keeps admission covered without probes under test:all despite ambient opt-in", () => {
+  it("keeps admission covered without probes under npm test despite ambient opt-in", () => {
     const directory = mkdtempSync(`${tmpdir()}/pharos-resource-default-off-`);
     const output = resolve(directory, "vitest.json");
     try {
-      execFileSync("npm", ["run", "test:all", "--", RESOURCE_TEST_FILE,
+      execFileSync("npm", ["test", "--", RESOURCE_TEST_FILE,
         "--maxWorkers=1", "--no-file-parallelism", "--reporter=json", `--outputFile=${output}`,
         "--coverage.enabled", "--coverage.include=worker/src/lib/safety-score-v9/resource-budget.ts",
         "--coverage.reporter=json", `--coverage.reportsDirectory=${directory}`,
@@ -197,18 +197,16 @@ describe("readiness execution", () => {
     fixture.changedFiles = ["README.md", "src/app/page.tsx"];
     const h = harness();
     h.runCommandImpl.mockImplementation(async (command) => ({
-      status: command.cmd === "npm run check:doc-source-paths" ? 1 : 0,
+      status: command.cmd === "npm run check:verified-doc-links" ? 1 : 0,
       aborted: false,
       output: command.cmd.startsWith("git rev-parse") ? baseSha : command.cmd.startsWith("git show") ? "0" : "",
     }));
     expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(1);
     const executed = h.receipts[0].leaves.filter((leaf) => leaf.id.startsWith("pr-static:"));
     expect(executed).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "pr-static:check:verified-doc-links", status: "passed" }),
-      expect.objectContaining({ id: "pr-static:check:doc-source-paths", status: "failed" }),
+      expect.objectContaining({ id: "pr-static:check:verified-doc-links", status: "failed" }),
       expect.objectContaining({ id: "pr-static:check:doc-sync", status: "passed" }),
       expect.objectContaining({ id: "pr-static:doc-ownership-invariants", status: "passed", command: "npm exec -- vitest run scripts/__tests__/doc-ownership-registry.test.ts" }),
-      expect.objectContaining({ id: "pr-static:agents-doc-artifact", status: "passed" }),
     ]));
     expect(h.runCommandImpl.mock.calls.filter(([command]) => command.cmd === "npm run check:doc-sync")).toHaveLength(1);
     expect(h.receipts[0].outcome).toBe("failed");
@@ -256,7 +254,7 @@ describe("readiness execution", () => {
     expect(h.receipts[0].leaves).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "pr-static:lint:changed", status: "failed", firstError: "Error: lint violation" }),
       expect.objectContaining({ id: "pr-static:check:env-contract", status: "failed", firstError: "spawn ENOENT" }),
-      expect.objectContaining({ id: "pr-static:check:shared-types-imports", status: "passed" }),
+      expect.objectContaining({ id: "pr-static:check:critical-coverage-completeness", status: "passed" }),
       expect.objectContaining({ id: "pr-tests", status: "passed" }),
     ]));
     const output = h.stdout.write.mock.calls.map(([chunk]) => chunk).join("");

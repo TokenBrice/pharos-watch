@@ -1,16 +1,23 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import {
+  isSameProtocolApiSourceSnapshot,
+  replayProtocolApiMeasurement,
+} from "../lib/mechanism-measurement/protocol-api";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const USAGE = `Usage: node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts \\
-  --asset <id> --stage <validate-branch|prepare-branch|verify-diff>
+  --asset <id> --stage <validate-branch|prepare-branch|restore-artifacts|verify-diff> [--artifacts-dir <path>]
 
 Validates ownership of an automated protocol API refresh branch, prepares that
-branch when requested, or verifies that its pull-request diff is append-only.`;
+branch, restores captured artifacts without replacing identical snapshots, or
+verifies that its pull-request diff is append-only.`;
 
-type VerificationStage = "validate-branch" | "prepare-branch" | "verify-diff";
+type VerificationStage = "validate-branch" | "prepare-branch" | "restore-artifacts" | "verify-diff";
 
 interface CommandResult {
   status: number;
@@ -20,6 +27,7 @@ interface CommandResult {
 export interface MechanismRefreshVerifierOptions {
   asset: string;
   stage: VerificationStage;
+  artifactsDir?: string;
 }
 
 interface MechanismRefreshVerifierDependencies {
@@ -51,14 +59,25 @@ export function parseMechanismRefreshVerifierArgs(
     options: {
       asset: { type: "string" },
       stage: { type: "string" },
+      "artifacts-dir": { type: "string" },
     },
   });
   if (values.help === true) return { help: true };
   assertCliUsage(typeof values.asset === "string" && values.asset.length > 0, "--asset is required");
   assertCliUsage(
-    values.stage === "validate-branch" || values.stage === "prepare-branch" || values.stage === "verify-diff",
-    "--stage must be validate-branch, prepare-branch, or verify-diff",
+    values.stage === "validate-branch" || values.stage === "prepare-branch"
+      || values.stage === "restore-artifacts" || values.stage === "verify-diff",
+    "--stage must be validate-branch, prepare-branch, restore-artifacts, or verify-diff",
   );
+  const artifactsDir = values["artifacts-dir"];
+  if (values.stage === "restore-artifacts") {
+    assertCliUsage(
+      typeof artifactsDir === "string" && artifactsDir.length > 0,
+      "--artifacts-dir is required only for restore-artifacts",
+    );
+    return { asset: values.asset, help: false, stage: values.stage, artifactsDir };
+  }
+  assertCliUsage(artifactsDir === undefined, "--artifacts-dir is required only for restore-artifacts");
   return { asset: values.asset, help: false, stage: values.stage };
 }
 
@@ -82,6 +101,31 @@ export function verifyAppendOnlyMechanismRefreshDiff(
     if (!path?.startsWith(`${root}/`) || !path.endsWith("-protocol-api.json")) {
       throw githubError("Unexpected mechanism PR diff", `${path} is outside the target artifact set.`);
     }
+  }
+}
+
+export function restoreMechanismRefreshArtifacts(asset: string, artifactsDir: string, cwd = process.cwd()): void {
+  const root = `shared/data/safety-score-v9/mechanism-measurements/${asset}`;
+  const capturedRoot = join(artifactsDir, root);
+  for (const entry of readdirSync(capturedRoot, { recursive: true, withFileTypes: true })) {
+    if (entry.isDirectory()) continue;
+    const source = join(entry.parentPath, entry.name);
+    const path = join(root, relative(capturedRoot, source));
+    if (!entry.isFile() || !path.endsWith("-protocol-api.json")) {
+      throw githubError("Unexpected mechanism artifact", `${path} is not a target protocol API artifact.`);
+    }
+    const incoming = replayProtocolApiMeasurement(JSON.parse(readFileSync(source, "utf8")));
+    const destination = join(cwd, path);
+    if (existsSync(destination)) {
+      const existing = replayProtocolApiMeasurement(JSON.parse(readFileSync(destination, "utf8")));
+      if (!isSameProtocolApiSourceSnapshot(existing, incoming)) {
+        throw githubError("Conflicting mechanism artifact", `${path} exists with different source content or derivation.`);
+      }
+      // Preserve immutable first-capture metadata already present in the PR.
+      continue;
+    }
+    mkdirSync(dirname(destination), { recursive: true });
+    copyFileSync(source, destination);
   }
 }
 
@@ -201,6 +245,11 @@ export function verifyMechanismRefresh(
   options: MechanismRefreshVerifierOptions,
   dependencies: MechanismRefreshVerifierDependencies = {},
 ): void {
+  if (options.stage === "restore-artifacts") {
+    if (!options.artifactsDir) throw new Error("--artifacts-dir is required for restore-artifacts");
+    restoreMechanismRefreshArtifacts(options.asset, options.artifactsDir, dependencies.cwd);
+    return;
+  }
   if (options.stage === "verify-diff") {
     verifyAppendOnlyMechanismRefreshDiff(options.asset, dependencies);
     return;

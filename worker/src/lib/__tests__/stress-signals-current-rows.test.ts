@@ -32,7 +32,6 @@ function row(
 }
 function mockD1(
   tables: MockTableConfig[],
-  _options?: { requireMatch?: boolean },
 ) {
   return createMockD1(tables, { assertMatchesUsed: true });
 }
@@ -68,7 +67,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: rows.map((entry) => ({ ...entry })),
       },
-    ], { requireMatch: true });
+    ]);
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "ok",
@@ -94,7 +93,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: [{ ...row("usdc-circle", completedAt) }],
       },
-    ], { requireMatch: true });
+    ]);
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "unavailable",
@@ -119,7 +118,7 @@ describe("stress-signal current-row helpers", () => {
         match: "pharos:stress-signals:legacy-latest-all",
         rows: [{ ...row("usdt-tether", nowSec - 120, 12) }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -133,7 +132,7 @@ describe("stress-signal current-row helpers", () => {
       { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [], first: null },
       { match: "pharos:stress-signals:latest-all", rows: [staleLatest] },
       { match: "pharos:stress-signals:legacy-latest-all", rows: [], throwError: new Error("D1 unavailable") },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300, onReadError });
 
@@ -150,7 +149,7 @@ describe("stress-signal current-row helpers", () => {
       { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [pointer], first: pointer },
       { match: "pharos:stress-signals:latest-one", matchBinds: ["usdt-tether", completedAt], rows: [older], first: older },
       { match: "pharos:stress-signals:published-exact-one", matchBinds: ["usdt-tether", completedAt], rows: [], throwError: new Error("D1 exhausted") },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRowForCoin(db, "usdt-tether", nowSec, { staleAfterSec: 300, onReadError });
 
@@ -165,7 +164,7 @@ describe("stress-signal current-row helpers", () => {
       { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [], first: null },
       { match: "pharos:stress-signals:latest-one", matchBinds: ["usdt-tether"], rows: [staleLatest], first: staleLatest },
       { match: "pharos:stress-signals:legacy-latest-one", rows: [], throwError: new Error("D1 unavailable") },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRowForCoin(db, "usdt-tether", nowSec, { staleAfterSec: 300, onReadError });
 
@@ -192,7 +191,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: latestRows.map((latestRow) => ({ ...latestRow })),
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -225,7 +224,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: canonicalRows.map((canonicalRow) => ({ ...canonicalRow })),
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -253,7 +252,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: [{ ...row("usdt-tether", completedAt) }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -284,7 +283,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [],
         throwError: new Error("D1 unavailable"),
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300, onReadError });
 
@@ -314,7 +313,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: [{ ...canonical }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -343,7 +342,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: [{ ...canonical }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -376,7 +375,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [],
         first: null,
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRowForCoin(
       db,
@@ -416,7 +415,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [],
         first: null,
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRowForCoin(
       db,
@@ -448,7 +447,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [fresh],
         first: fresh,
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRowForCoin(
       db,
@@ -487,7 +486,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [canonical],
         first: canonical,
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRowForCoin(
       db,
@@ -525,7 +524,7 @@ describe("stress-signal current-row helpers", () => {
           updated_at: nowSec - 60,
         },
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -540,7 +539,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [],
         throwError: new Error("D1 unavailable"),
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadStressSignalCurrentRowForCoin(
       db,
@@ -567,7 +566,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: [],
       },
-    ], { requireMatch: true });
+    ]);
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "unavailable",
@@ -592,7 +591,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: rows.map((entry) => ({ ...entry })),
       },
-    ], { requireMatch: true });
+    ]);
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "ok",
@@ -618,7 +617,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: rows.map((entry) => ({ ...entry })),
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadTelegramDewsCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -641,7 +640,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: [completedAt],
         rows: rows.map((entry) => ({ ...entry })),
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadPreviousStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
@@ -655,7 +654,7 @@ describe("stress-signal current-row helpers", () => {
         matchBinds: ["dews:published-generation"],
         rows: [],
       },
-    ], { requireMatch: true });
+    ]);
 
     const loaded = await loadPublishedStressSignalGeneration(db, nowSec);
 
@@ -679,7 +678,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [],
         throwError: new Error("D1 exhausted"),
       },
-    ], { requireMatch: true });
+    ]);
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "unavailable",
@@ -695,7 +694,7 @@ describe("stress-signal current-row helpers", () => {
       { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [pointer] },
       { match: "pharos:stress-signals:published-exact", matchBinds: [completedAt],
         rows: [row("usdt-tether", completedAt), row("substituted", completedAt)] },
-    ], { requireMatch: true });
+    ]);
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toMatchObject({ status: "unavailable" });
   });
 
@@ -708,7 +707,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [row("usdt-tether", completedAt), row("wrong-latest", completedAt)] },
       { match: "pharos:stress-signals:published-exact-all", matchBinds: [completedAt],
         rows: [row("usdt-tether", completedAt), row("wrong-canonical", completedAt)] },
-    ], { requireMatch: true });
+    ]);
     expect((await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 })).results).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { buildDependencyHubsModel, type DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import { DependencyMapBasinList } from "@/components/dependency-map-basin-list";
@@ -10,7 +10,6 @@ import { DependencyHubsBoard } from "./dependency-hubs-board";
 import { useDependencyExposureWorkspace } from "./dependency-exposure-workspace";
 
 vi.mock("@/components/contagion-graph-root", () => ({ ContagionGraph: () => <div /> }));
-afterEach(cleanup);
 const cards = [
   { id: "usds-sky", name: "USDS", symbol: "USDS", grade: "A" as const },
   { id: "susds-sky", name: "Savings USDS", symbol: "sUSDS", grade: "A" as const },

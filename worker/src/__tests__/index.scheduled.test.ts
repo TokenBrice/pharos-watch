@@ -512,7 +512,7 @@ describe("worker.scheduled", () => {
       { match: "FROM cron_slot_executions", rows: [] },
       { match: "FROM stability_index WHERE computed_at", rows: [{ present: 1 }], first: { present: 1 } },
       { match: "FROM public_snapshots WHERE snapshot_date", rows: [{ present: 1 }], first: { present: 1 } },
-    ], { requireMatch: true });
+    ]);
     const env = createWorkerEnv({
       DB: db,
       CORS_ORIGIN: "https://pharos.watch",

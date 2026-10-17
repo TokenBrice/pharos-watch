@@ -93,70 +93,19 @@ export function parseCoveragePercentage(env: NodeJS.ProcessEnv, name: string, fa
 }
 
 // Explicit per-file minimums for critical reliability paths.
-export function getCriticalThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
-  return {
-    "worker/src/lib/stablecoins-cache.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE",
-      50,
-    ),
-    "worker/src/lib/auth.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_AUTH", 70),
-    "worker/src/lib/evm-rpc.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_EVM_RPC", 70),
-    "worker/src/lib/safety-scores.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES",
-      40,
-    ),
-    "worker/src/handlers/scheduled.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_SCHEDULED", 40),
-    "worker/src/cron/daily-digest.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST",
-      40,
-    ),
-    "worker/src/api/stablecoin-detail.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL",
-      30,
-    ),
-    "worker/src/api/health.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_HEALTH", 60),
-    "worker/src/api/status.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_STATUS", 40),
-    "worker/src/cron/dex-liquidity/orchestrator.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR",
-      55,
-    ),
-    "worker/src/lib/api-pagination.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION",
-      70,
-    ),
-  };
-}
-
-export function getCriticalBranchThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
-  return {
-    "worker/src/lib/auth.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_AUTH",
-      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/auth.ts"],
-    ),
-    "worker/src/lib/evm-rpc.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_EVM_RPC",
-      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/evm-rpc.ts"],
-    ),
-    "worker/src/lib/safety-scores.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_SAFETY_SCORES",
-      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/safety-scores.ts"],
-    ),
-    "worker/src/lib/price-publication-state.ts": parseCoveragePercentage(
-      env,
-      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_PRICE_PUBLICATION_STATE",
-      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/price-publication-state.ts"],
-    ),
-  };
-}
+export const CRITICAL_COVERAGE_LINE_FLOORS: Record<string, number> = {
+  "worker/src/lib/stablecoins-cache.ts": 50,
+  "worker/src/lib/auth.ts": 70,
+  "worker/src/lib/evm-rpc.ts": 70,
+  "worker/src/lib/safety-scores.ts": 40,
+  "worker/src/handlers/scheduled.ts": 40,
+  "worker/src/cron/daily-digest.ts": 40,
+  "worker/src/api/stablecoin-detail.ts": 30,
+  "worker/src/api/health.ts": 60,
+  "worker/src/api/status.ts": 40,
+  "worker/src/cron/dex-liquidity/orchestrator.ts": 55,
+  "worker/src/lib/api-pagination.ts": 70,
+};
 
 export function parseChangedFilesFromEnv(env: NodeJS.ProcessEnv = process.env): string[] {
   const raw = env.CRITICAL_COVERAGE_CHANGED_FILES;
@@ -355,15 +304,13 @@ export function runCriticalCoverageCompletenessCheck({
   try {
     const compareRef = coverageBaselineCompareRef(env);
     const threshold = parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD", 40);
-    const lineThresholds = getCriticalThresholds(env);
-    const branchThresholds = getCriticalBranchThresholds(env);
-    const lineMinimum = (source: string) => lineThresholds[source] ?? threshold;
+    const lineMinimum = (source: string) => CRITICAL_COVERAGE_LINE_FLOORS[source] ?? threshold;
     const errors = validateCriticalCoverageBaseline(baseline, completenessOptions.criticalFiles ?? CRITICAL_FILES, lineMinimum);
     if (errors.length > 0) throw new Error(`Invalid critical coverage baseline: ${errors.join("; ")}`);
     requireCommittedCoverageRebaseline(compareRef, baselinePath, {
       candidate: baseline as Record<string, number>,
       lineMinimum,
-      branchMinimum: (source) => branchThresholds[source] ?? null,
+      branchMinimum: (source) => CRITICAL_COVERAGE_BRANCH_FLOORS[source] ?? null,
     }, execFile);
   } catch (error) {
     consoleImpl.error(`[coverage] ${error instanceof Error ? error.message : String(error)}`);
@@ -384,13 +331,9 @@ export function runCriticalCoverageCheck({
 }: CriticalCoverageCheckOptions = {}): void {
   let threshold: number;
   let ratchetTolerance: number;
-  let criticalThresholds: Record<string, number>;
-  let criticalBranchThresholds: Record<string, number>;
   try {
     threshold = parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD", 40);
     ratchetTolerance = parseCoveragePercentage(env, "CRITICAL_COVERAGE_RATCHET_TOLERANCE", 0);
-    criticalThresholds = getCriticalThresholds(env);
-    criticalBranchThresholds = getCriticalBranchThresholds(env);
   } catch (error) {
     consoleImpl.error(`[coverage] Invalid coverage environment: ${error instanceof Error ? error.message : String(error)}`);
     exit(1);
@@ -418,7 +361,7 @@ export function runCriticalCoverageCheck({
     const baselineErrors = validateCriticalCoverageBaseline(
       baseline,
       completenessOptions.criticalFiles ?? CRITICAL_FILES,
-      (file) => Number.isFinite(criticalThresholds[file]) ? criticalThresholds[file] : threshold,
+      (file) => CRITICAL_COVERAGE_LINE_FLOORS[file] ?? threshold,
     );
     if (baselineErrors.length > 0) {
       consoleImpl.error("[coverage] Invalid critical coverage baseline:");
@@ -450,8 +393,8 @@ export function runCriticalCoverageCheck({
   try {
     requireCommittedCoverageRebaseline(coverageBaselineCompareRef(env), baselinePath, {
       candidate: baseline as Record<string, number>,
-      lineMinimum: (file) => criticalThresholds[file] ?? threshold,
-      branchMinimum: (file) => criticalBranchThresholds[file] ?? null,
+      lineMinimum: (file) => CRITICAL_COVERAGE_LINE_FLOORS[file] ?? threshold,
+      branchMinimum: (file) => CRITICAL_COVERAGE_BRANCH_FLOORS[file] ?? null,
     }, execFile);
   } catch (error) {
     consoleImpl.error(`[coverage] ${error instanceof Error ? error.message : String(error)}`);
@@ -461,8 +404,8 @@ export function runCriticalCoverageCheck({
   const ownershipBase = compareRef || env.PR_BASE_SHA;
   const baseOwnership = ownershipBase ? deriveBaseCriticalOwnership(ownershipBase, changedFiles, execFile) : new Map();
   const touchedCritical = selectChangedCriticalSources(changedFiles, baseOwnership);
-  // A plumbing-only diff has no touched source to scope, matching the shard's
-  // fallback to a full include set. Local/manual runs also keep full coverage.
+  // A plumbing-only diff has no touched source to scope, so measure the full
+  // include set. Local/manual runs also keep full coverage.
   const coverageScope = ratchetAll || touchedCritical.length === 0 ? CRITICAL_FILES : touchedCritical;
   let failed = false;
   consoleImpl.log(`[coverage] Critical file line coverage threshold: ${threshold.toFixed(1)}%`);
@@ -476,11 +419,6 @@ export function runCriticalCoverageCheck({
     }
   }
 
-  function thresholdForFile(file: string): number {
-    const override = criticalThresholds[file];
-    return Number.isFinite(override) ? override : threshold;
-  }
-
   for (const file of coverageScope) {
     const cov = findCoverageFor(file, parsed);
     if (!cov) {
@@ -489,7 +427,7 @@ export function runCriticalCoverageCheck({
       continue;
     }
 
-    const fileThreshold = thresholdForFile(file);
+    const fileThreshold = CRITICAL_COVERAGE_LINE_FLOORS[file] ?? threshold;
     const line = `${cov.pct.toFixed(1)}% (${cov.lh}/${cov.lf})`;
     if (cov.pct < fileThreshold) {
       failed = true;
@@ -498,7 +436,7 @@ export function runCriticalCoverageCheck({
       consoleImpl.log(`[coverage] PASS ${file}: ${line} (threshold ${fileThreshold.toFixed(1)}%)`);
     }
 
-    const branchThreshold = criticalBranchThresholds[file];
+    const branchThreshold = CRITICAL_COVERAGE_BRANCH_FLOORS[file];
     if (Number.isFinite(branchThreshold)) {
       if (!Number.isFinite(cov.branchPct)) {
         failed = true;

@@ -75,7 +75,7 @@ describe("watchlist import confirmation retry", () => {
           preference_generation: 6,
         }],
       },
-    ], { requireMatch: true });
+    ]);
     const requests: Array<Record<string, unknown>> = [];
     mockFetch([{
       match: "https://api.telegram.org/bottoken/sendMessage",

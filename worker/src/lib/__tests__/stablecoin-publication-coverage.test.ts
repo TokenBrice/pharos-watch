@@ -307,7 +307,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       match: "JOIN supply_history", rows: [
         { stablecoin_id: "missing", snapshot_date: nowSec - 11 * 86400, circulating_usd: 32_686_926.18 },
       ],
-    }], { requireMatch: true });
+    }]);
     await seedAbsentActivePriceCoverageMarketCaps(db, coverage, nowSec);
     expect(coverage.missingActiveAssets[0]).toMatchObject({
       marketCapUsd: null, lastKnownMarketCapUsd: 32_686_926.18,
@@ -318,7 +318,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       lastKnownMarketCapUsd: 32_686_926.18, lastKnownMarketCapObservedAt: nowSec - 11 * 86400,
       lastKnownMarketCapSource: "supply_history",
     });
-    const noReadDb = mockD1([], { requireMatch: true });
+    const noReadDb = mockD1([]);
     const prepare = vi.spyOn(noReadDb, "prepare");
     await seedAbsentActivePriceCoverageMarketCaps(noReadDb, next, nowSec + 900);
     expect(prepare).not.toHaveBeenCalled();
@@ -553,7 +553,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     const db = mockD1([{
       match: "activePriceCoverage", rows: [],
       first: { started_at: nowSec, metadata: JSON.stringify({ activePriceCoverage: persistedCoverage }) },
-    }], { requireMatch: true });
+    }]);
     const result = await loadPreviousStablecoinActivePriceCoverage(db, nowSec + 900);
     expect(result.status).toBe("ok");
     if (result.status !== "ok") throw new Error("Expected readable verbose continuity");
@@ -590,7 +590,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
           },
         }),
       },
-    }], { requireMatch: true });
+    }]);
 
     await expect(loadPreviousStablecoinActivePriceCoverage(db, 1_700_000_000)).resolves.toMatchObject({
       status: "ok",

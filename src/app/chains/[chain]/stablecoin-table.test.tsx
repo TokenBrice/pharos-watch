@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RatioSchema } from "@shared/types/ratio";
 import { makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
@@ -22,9 +22,6 @@ describe("Chain detail StablecoinTable", () => {
     push.mockReset();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders the filtered table with its caption and coin supply values", () => {
     render(

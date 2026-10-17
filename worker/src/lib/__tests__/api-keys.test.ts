@@ -69,7 +69,6 @@ describe("api key helpers", () => {
           }),
         }),
       ],
-      { requireMatch: true },
     );
 
     await expect(authenticateApiKey(db, null, pepper)).resolves.toEqual({ kind: "missing" });
@@ -119,7 +118,6 @@ describe("api key helpers", () => {
           runMeta: { changes: 1 },
         },
       ],
-      { requireMatch: true },
     );
 
     const created = await createApiKey(
@@ -191,7 +189,7 @@ describe("api key helpers", () => {
     const normalized = normalizeCreateInput(body);
     expect(normalized).toBeInstanceOf(Response);
     expect((normalized as Response).status).toBe(400);
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const created = await createApiKey(db, "pepper", body, 222);
     expect(created).toBeInstanceOf(Response);
     expect((created as Response).status).toBe(400);
@@ -218,7 +216,6 @@ describe("api key helpers", () => {
           runMeta: { changes: 1 },
         },
       ],
-      { requireMatch: true },
     );
 
     const created = await createApiKey(
@@ -251,7 +248,6 @@ describe("api key helpers", () => {
           },
         }),
       ],
-      { requireMatch: true },
     );
 
     const updated = await updateApiKey(db, 7, { expiresAt: null }, 2_000);
@@ -305,7 +301,6 @@ describe("api key helpers", () => {
           runMeta: { changes: 0 },
         },
       ],
-      { requireMatch: true },
     );
 
     const response = await checkApiKeyRateLimit(db, 7, 3, 600);
@@ -377,7 +372,6 @@ describe("api key helpers", () => {
           runMeta: { changes: 1 },
         },
       ],
-      { requireMatch: true },
     );
 
     const key = {
@@ -418,7 +412,6 @@ describe("api key helpers", () => {
           throwError: new Error("d1 unavailable"),
         },
       ],
-      { requireMatch: true },
     );
     const succeedingDb = mockD1(
       [
@@ -428,7 +421,6 @@ describe("api key helpers", () => {
           runMeta: { changes: 1 },
         },
       ],
-      { requireMatch: true },
     );
 
     await expect(recordApiKeyUsage(failingDb, key, "/api/stablecoins", 1_000)).rejects.toThrow("d1 unavailable");
@@ -447,7 +439,6 @@ describe("api key helpers", () => {
     // First call: prefix not found (miss)
     const dbMiss = mockD1(
       [makeApiKeyPrefixLookup({ prefix })],
-      { requireMatch: true },
     );
 
     await expect(authenticateApiKey(dbMiss, `ph_live_${prefix}_${secret}`, pepper)).resolves.toEqual({
@@ -470,7 +461,6 @@ describe("api key helpers", () => {
           }),
         }),
       ],
-      { requireMatch: true },
     );
 
     // Must hit DB again (not return cached null)
@@ -494,11 +484,9 @@ describe("api key helpers", () => {
     });
     const dbHit = mockD1(
       [makeApiKeyPrefixLookup({ prefix, row: cachedRow })],
-      { requireMatch: true },
     );
     const dbUnavailable = mockD1(
       [makeApiKeyPrefixLookupError(prefix, new Error("lookup failed"))],
-      { requireMatch: true },
     );
 
     await expect(authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper)).resolves.toMatchObject({
@@ -539,11 +527,9 @@ describe("api key helpers", () => {
           first: null,
         },
       ],
-      { requireMatch: true },
     );
     const dbUnavailable = mockD1(
       [makeApiKeyPrefixLookupError(prefix, new Error("lookup failed"))],
-      { requireMatch: true },
     );
 
     await expect(authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper)).resolves.toMatchObject({
@@ -583,7 +569,6 @@ describe("api key helpers", () => {
     for (const row of Object.values(rows)) {
       const dbHit = mockD1(
         [makeApiKeyPrefixLookup({ prefix: row.key_prefix, row })],
-        { requireMatch: true },
       );
       await expect(authenticateApiKey(dbHit, `ph_live_${row.key_prefix}_${secret}`, pepper)).resolves.toMatchObject({ kind: "valid" });
     }
@@ -617,11 +602,9 @@ describe("api key helpers", () => {
     });
     const dbHit = mockD1(
       [makeApiKeyPrefixLookup({ prefix, row: cachedRow })],
-      { requireMatch: true },
     );
     const dbUnavailable = mockD1(
       [makeApiKeyPrefixLookupError(prefix, new Error("lookup failed"))],
-      { requireMatch: true },
     );
 
     await expect(authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper)).resolves.toMatchObject({
@@ -648,7 +631,6 @@ describe("api key helpers", () => {
         secret,
         row: { name: "Legacy" },
       }),
-      { requireMatch: true },
     );
 
     const result = await authenticateApiKey(db, `ph_live_${prefix}_${secret}`, newPepper, oldPepper, 1_000);
@@ -675,7 +657,6 @@ describe("api key helpers", () => {
         row: { name: "Legacy" },
         update: { throwError: new Error("rehash failed") },
       }),
-      { requireMatch: true },
     );
 
     await expect(
@@ -749,7 +730,7 @@ describe("api key helpers", () => {
       makeApiKeyPrefixLookup({ prefix: "new-0", row }),
       makeApiKeyPrefixLookup({ prefix: "new-1", row }),
       makeApiKeyPrefixLookup({ prefix: "new-2", row }),
-    ], { requireMatch: true });
+    ]);
 
     const state = getApiKeyRuntimeState();
     for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES - 1; i++) {
@@ -797,7 +778,7 @@ describe("api key helpers", () => {
         rows: [],
         runMeta: { changes: 1 },
       },
-    ], { requireMatch: true });
+    ]);
 
     const state = getApiKeyRuntimeState();
     for (let i = 1; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES; i++) {
@@ -848,7 +829,6 @@ describe("api key helpers", () => {
           runMeta: { changes: 1 },
         },
       ],
-      { requireMatch: true },
     );
 
     const created = await createApiKey(db, "pepper", { name: "Audited" }, 333);

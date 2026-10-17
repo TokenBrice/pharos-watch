@@ -1,10 +1,21 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { verifyAppendOnlyMechanismRefreshDiff, verifyMechanismRefresh } from "../ci/verify-mechanism-refresh-diff";
+import {
+  parseMechanismRefreshVerifierArgs,
+  restoreMechanismRefreshArtifacts,
+  verifyAppendOnlyMechanismRefreshDiff,
+  verifyMechanismRefresh,
+} from "../ci/verify-mechanism-refresh-diff";
+import {
+  buildProtocolApiMeasurement,
+  FALCON_TRANSPARENCY_URL,
+  protocolApiEvidenceFilename,
+  serializeProtocolApiMeasurement,
+} from "../lib/mechanism-measurement/protocol-api";
 
 const TSX_LOADER = import.meta.resolve("tsx");
 const TSCONFIG = resolve("tsconfig.json");
@@ -53,6 +64,110 @@ describe("mechanism refresh append-only verifier", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("mechanism refresh captured artifact handoff", () => {
+  const asset = "usdf-falcon";
+  const branch = `automated/protocol-api-mechanism-refresh/${asset}`;
+  const evidenceRoot = `shared/data/safety-score-v9/mechanism-measurements/${asset}`;
+
+  function artifact(capturedAt: string, supply = "90") {
+    return buildProtocolApiMeasurement(asset, [{
+      sourceId: "falcon-transparency",
+      url: FALCON_TRANSPARENCY_URL,
+      rawBody: Buffer.from(JSON.stringify({
+        snapshot_date: 1784750400, tvl: "100",
+        usdf: { supply, insurance_fund: "1", reserves: { ceffu: { stablecoins: "105" } },
+          venues: {}, breakdown: { assets: [{ label: "USDC", ceffu: "100" }] } },
+      })),
+      headers: { date: capturedAt },
+    }], new Date(capturedAt));
+  }
+
+  it.each([false, true])(
+    "runs the real workflow handoff for an open PR (new snapshot: %s)",
+    (newSnapshot) => {
+      const root = mkdtempSync(join(tmpdir(), "pharos-mechanism-handoff-"));
+      const cwd = join(root, "work");
+      mkdirSync(cwd);
+      const git = (...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: "pipe" });
+      const original = artifact("2026-07-22T20:05:00.000Z");
+      const incoming = artifact("2026-07-22T21:05:00.000Z", newSnapshot ? "91" : "90");
+      const originalPath = `${evidenceRoot}/${protocolApiEvidenceFilename(original)}`;
+      const incomingPath = `${evidenceRoot}/${protocolApiEvidenceFilename(incoming)}`;
+      try {
+        git("init", "-qb", "main");
+        git("config", "user.email", "fixture@example.test");
+        git("config", "user.name", "Fixture");
+        write(cwd, "base.txt", "base\n");
+        git("add", "base.txt");
+        git("commit", "-qm", "base");
+        git("checkout", "-qb", branch);
+        write(cwd, originalPath, serializeProtocolApiMeasurement(original));
+        git("add", originalPath);
+        git("commit", "-qm", "existing snapshot");
+        execFileSync("git", ["init", "--bare", "-q", join(root, "remote.git")]);
+        git("remote", "add", "origin", join(root, "remote.git"));
+        git("push", "-q", "origin", "main", branch);
+        git("checkout", "-q", "main");
+        // Match a checkout without a pre-fetched automation tracking ref.
+        git("update-ref", "-d", `refs/remotes/origin/${branch}`);
+        write(cwd, incomingPath, serializeProtocolApiMeasurement(incoming));
+        symlinkSync(resolve("scripts"), join(cwd, "scripts"), "dir");
+        symlinkSync(resolve("node_modules"), join(cwd, "node_modules"), "dir");
+        write(cwd, "bin/gh", '#!/bin/sh\nprintf \'[{"state":"OPEN","mergedAt":null}]\\n\'\n');
+        execFileSync("chmod", ["+x", join(cwd, "bin/gh")]);
+
+        const workflow = parseYaml(readFileSync(resolve(".github/workflows/protocol-api-mechanism-refresh.yml"), "utf8"));
+        const step = workflow.jobs.refresh.steps.find((candidate: { name?: string }) => candidate.name === "Open or update refresh PR");
+        // Execute the authored shell through checkout, rebase, restoration and
+        // the no-change exit; stop before commit/push/PR publication.
+        const prefix = step.run.slice(0, step.run.indexOf("git commit \\\n"));
+        expect(prefix).toContain("--stage restore-artifacts");
+        const result = spawnSync("bash", ["-c", prefix], {
+          cwd, encoding: "utf8",
+          env: { ...process.env, ASSET_ID: asset, GITHUB_REPOSITORY: "TokenBrice/pharos-watch",
+            PATH: `${join(cwd, "bin")}:${process.env.PATH}`, TSX_TSCONFIG_PATH: TSCONFIG },
+        });
+        expect(result.status, result.stdout + result.stderr).toBe(0);
+        expect(git("branch", "--show-current").trim()).toBe(branch);
+        expect(readFileSync(join(cwd, originalPath), "utf8")).toBe(serializeProtocolApiMeasurement(original));
+        if (newSnapshot) {
+          expect(git("diff", "--cached", "--name-status")).toBe(`A\t${incomingPath}\n`);
+          expect(readFileSync(join(cwd, incomingPath), "utf8")).toBe(serializeProtocolApiMeasurement(incoming));
+        } else {
+          expect(result.stdout).toContain("No new usdf-falcon protocol API snapshot beyond the existing refresh PR.");
+          expect(git("diff", "--cached", "--name-status")).toBe("");
+        }
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("refuses a conflicting snapshot at an existing path without overwriting it", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-mechanism-conflict-"));
+    const original = artifact("2026-07-22T20:05:00.000Z");
+    const incoming = artifact("2026-07-22T21:05:00.000Z", "91");
+    const path = `${evidenceRoot}/${protocolApiEvidenceFilename(original)}`;
+    try {
+      write(root, path, serializeProtocolApiMeasurement(original));
+      write(join(root, "captures"), path, serializeProtocolApiMeasurement(incoming));
+      expect(() => restoreMechanismRefreshArtifacts(asset, join(root, "captures"), root))
+        .toThrow("Conflicting mechanism artifact");
+      expect(readFileSync(join(root, path), "utf8")).toBe(serializeProtocolApiMeasurement(original));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("requires an artifact directory only for restoration", () => {
+    expect(() => parseMechanismRefreshVerifierArgs(["--asset", asset, "--stage", "restore-artifacts"]))
+      .toThrow("--artifacts-dir is required only for restore-artifacts");
+    expect(() => parseMechanismRefreshVerifierArgs([
+      "--asset", asset, "--stage", "prepare-branch", "--artifacts-dir", "/tmp/captures",
+    ])).toThrow("--artifacts-dir is required only for restore-artifacts");
   });
 });
 
@@ -195,6 +310,13 @@ describe("mechanism refresh branch lifecycle", () => {
     verifyMechanismRefresh({ asset, stage: "prepare-branch" }, { repository, run });
     expect(run).toHaveBeenCalledWith("git", checkoutMainArgs);
     expect(run).toHaveBeenCalledWith("git", deleteTrackingArgs);
+    expect(run).not.toHaveBeenCalledWith("gh", deleteArgs);
+  });
+
+  it("prepares a first refresh with no branch or PR history", () => {
+    const run = branchRunner({ remoteStatus: 2, history: [] });
+    verifyMechanismRefresh({ asset, stage: "prepare-branch" }, { repository, run });
+    expect(run).toHaveBeenCalledWith("git", checkoutMainArgs);
     expect(run).not.toHaveBeenCalledWith("gh", deleteArgs);
   });
 

@@ -4,7 +4,7 @@ Use this page for repository work in omp, Claude Code, Codex, or another compati
 
 ## 1. Before Touching Files
 
-Read the root `AGENTS.md` or `CLAUDE.md` first. For non-trivial work, locate a likely file and route every planned path before editing:
+Read the root `AGENTS.md` first (`CLAUDE.md` imports it for Claude Code). For non-trivial work, locate a likely file and route every planned path before editing:
 
 ```bash
 npm run agent:route -- --file <path>
@@ -18,21 +18,19 @@ npm run agent:route -- \
   --file docs/worker-and-api-limits.md
 ```
 
-Read the route's required entry docs and anchors plus every returned scoped `AGENTS.md`, following the read-order contract below; then inspect the source entrypoint and its local imports. Code, schemas, registries, and checked runtime data win when prose disagrees. Author root guidance in `CLAUDE.md`; root `AGENTS.md` is generated and must not be edited by hand.
+Read the route's required entry docs and anchors plus every returned scoped `AGENTS.md`, following the read-order contract below; then inspect the source entrypoint and its local imports. Author root guidance directly in `AGENTS.md`.
 
 Use native read, grep, glob, and edit tools first. Use Bash for real commands. If a harness rejects a shell command because a native tool shadows it, switch tools and never retry the same command.
 
 ## 2. Route A Task
 
-The machine-readable routing source of truth is [`doc-ownership.json`](../doc-ownership.json). Its `mappings` array is the only authored source-to-document model; the registry loader derives the runtime path-family projection from it. Each mapping declares an id, label, risk, source globs, exact docs, and optional background references, scoped context, rules, checks, `testOwnership`, and hints. A document reference is either a path string or `{ "path": "...", "anchor": "..." }`; long documents use verified heading anchors. Generic Worker/shared routes and sensitive owners carry baseline typing, lint, and generated-artifact obligations. `testOwnership` adds explicit suites for contracts invisible to the import graph, such as closure inventories and capture schemas; consult the live mapping rather than inferring ownership from imports alone.
+The machine-readable routing source of truth is [`doc-ownership.json`](../doc-ownership.json). Its `mappings` array is the only authored source-to-document model; the registry loader derives the runtime path-family projection from it. Each mapping declares an id, label, risk, source globs, exact docs, and optional background references, scoped context, rules, checks, and `testOwnership`. A document reference is either a path string or `{ "path": "...", "anchor": "..." }`; long documents use verified heading anchors. Focused plans synthesize baseline typing, lint, and generated-artifact checks from the shared PR selector, then add mapping-specific checks. `testOwnership` adds explicit suites for contracts invisible to the import graph, such as closure inventories and capture schemas; consult the live mapping rather than inferring ownership from imports alone.
 
-The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`. Its `--file` input accepts repository-relative paths, `./` paths, absolute paths under the repository, and absolute paths under the current linked worktree; separators are normalized before routing. A missing explicit path is routed as a planned new file with a warning; add repeatable `--new-file` to suppress those warnings for the invocation. Selection precedence is `--file` > `--staged` > `--base-ref`/`--head-ref` flags > `PHAROS_CHANGE_CONTRACT_*_REF` environment range > working tree.
-
-Router and focused-check range flags are not interchangeable. Consult `npm run agent:route -- --help` for routing and `npm run check:focused -- --help` for focused execution; use each command's current help rather than copying the other's range options.
+The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`. Its `--file` input accepts repository-relative paths, `./` paths, absolute paths under the repository, and absolute paths under the current linked worktree; separators are normalized before routing. A missing explicit path is routed as a planned new file with a warning; add repeatable `--new-file` to suppress those warnings for the invocation. Selection precedence is `--file` > `--staged` > range flags > `PHAROS_CHANGE_CONTRACT_*_REF` environment range > working tree. Both `agent:route` and `check:focused` accept `--base`/`--base-ref` and `--head`/`--head-ref` aliases.
 
 Routing rejects unknown options, missing values, invalid hook modes, and failed Git selections instead of reporting an empty successful contract. Git-based selection retains deletions and both sides of renames; commands that require existing files filter those paths only when executing. Ordinary text and JSON output include every required doc, check, and rule; SessionStart remains a bounded hint and explicitly reports unavailable Git evidence.
 
-Single-path `Read first` is capped at six entries; overflow remains in `Also relevant`. Domain mappings for reserves, yield, route contracts, and compliance add ownership and rules without adding broad test trees. The reviewed mapping cap is 29 (DEC-14); maintain the one registry rather than introducing another source inventory. Primary Markdown sections must remain at most 25 KB, measured in UTF-8 bytes from their heading through the next heading of the same or higher level (or the entire file for unanchored references). The registry test retains explicit byte ceilings for legacy oversized sections: these exceptions must shrink, never grow, and must be removed when a section fits the budget or is no longer routed as primary. New domain owners cannot use legacy exceptions.
+Single-path `Read first` is capped at six entries; overflow remains in `Also relevant`. Domain mappings for reserves, yield, route contracts, and compliance add ownership and rules without adding broad test trees. Primary Markdown sections must remain at most 25 KB, measured in UTF-8 bytes from their heading through the next heading of the same or higher level (or the entire file for unanchored references). The registry test retains explicit byte ceilings for legacy oversized sections: these exceptions must shrink, never grow, and must be removed when a section fits the budget or is no longer routed as primary. New domain owners cannot use legacy exceptions.
 
 Every verified document, including process pages and runbooks, must appear in an existing mapping's `docs` or `background` references; the generic `docs/**` fallback alone is not a source owner. Widen the existing source families instead of adding mappings. The live-reserves, DEX-liquidity, Worker-infrastructure, Safety Score, and pricing guides keep their current contracts below 40 KB, with detailed implementation and historical decisions in linked `docs/process/*-appendix.md` pages. Preserve the original content and migrate moved anchors, routing references, and generated-block consumers together; appendices are background detail, not a second behavioral authority.
 
@@ -70,7 +68,7 @@ Use [`docs/README.md`](../README.md) to choose between public reference, enginee
 
 ## 3. Core Repository Rules
 
-The repository's working rules and hard rules are owned by the root [`CLAUDE.md`](../../CLAUDE.md) and its generated `AGENTS.md` mirror — supply and import contracts, static Tailwind classes, cron hook polling windows, the six-connection trigger budget, and migration ordering. The root rules are authoritative; read them before editing. This page does not repeat them.
+The repository's working rules and hard rules are owned by the root [`AGENTS.md`](../../AGENTS.md) — supply and import contracts, static Tailwind classes, cron hook polling windows, the six-connection trigger budget, and migration ordering. `CLAUDE.md` imports that single authored file. The root rules are authoritative; read them before editing. This page does not repeat them.
 
 ## 4. Scratch Work
 

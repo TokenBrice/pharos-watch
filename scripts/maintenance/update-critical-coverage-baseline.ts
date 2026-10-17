@@ -8,7 +8,7 @@ import {
   findCoverageFor,
   parseLcov,
 } from "../lib/critical-coverage.mjs";
-import { getCriticalBranchThresholds, getCriticalThresholds, parseCoveragePercentage } from "../ci/check-critical-coverage.ts";
+import { CRITICAL_COVERAGE_BRANCH_FLOORS, CRITICAL_COVERAGE_LINE_FLOORS, parseCoveragePercentage } from "../ci/check-critical-coverage.ts";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
   REBASELINE_DIRECTORY,
@@ -65,12 +65,10 @@ export function updateCriticalCoverageBaseline({
   }
   if (typeof recordPath === "string") {
     const threshold = parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD", 40);
-    const lineThresholds = getCriticalThresholds(env);
-    const branchThresholds = getCriticalBranchThresholds(env);
     const context = {
       previous, candidate: files, now,
-      lineMinimum: (source: string) => lineThresholds[source] ?? threshold,
-      branchMinimum: (source: string) => branchThresholds[source] ?? null,
+      lineMinimum: (source: string) => CRITICAL_COVERAGE_LINE_FLOORS[source] ?? threshold,
+      branchMinimum: (source: string) => CRITICAL_COVERAGE_BRANCH_FLOORS[source] ?? null,
     };
     const value: unknown = JSON.parse(fsImpl.readFileSync(recordPath, "utf8"));
     const record = validateCriticalCoverageRebaseline(value, context);

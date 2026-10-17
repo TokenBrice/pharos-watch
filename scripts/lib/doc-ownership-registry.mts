@@ -3,7 +3,7 @@
  *
  * `docs/doc-ownership.json#mappings` is the only hand-maintained routing model.
  * Each mapping owns identity, risk, source globs, exact docs (optionally with a
- * heading anchor), focused checks, short hard rules, scoped context, and hints.
+ * heading anchor), focused checks, short hard rules, and scoped context.
  * This module validates nothing policy-specific; it normalizes those records,
  * exposes their source globs through one matcher, and derives the family-shaped
  * projection used by the change contract. That keeps matching and output compatibility centralized
@@ -47,7 +47,6 @@ interface RawMapping {
   background?: RawDocReference[];
   checks?: string[];
   docs: RawDocReference[];
-  hints?: string[];
   id: string;
   label: string;
   risk: "low" | "medium" | "high";
@@ -58,8 +57,6 @@ interface RawMapping {
 }
 
 export interface DocOwnershipRegistry {
-  baseDocs?: string[];
-  coreRules?: string[];
   mappings?: RawMapping[];
 }
 
@@ -68,7 +65,6 @@ export interface PathFamily {
   checks: string[];
   docs: DocReference[];
   hardRules: string[];
-  hints: string[];
   id: string;
   label: string;
   risk: "low" | "medium" | "high";
@@ -137,7 +133,6 @@ function normalizeMapping(mapping: RawMapping): PathFamily {
     checks: mapping.checks ?? [],
     docs,
     hardRules: mapping.rules ?? [],
-    hints: mapping.hints ?? [],
     id: mapping.id,
     label: mapping.label,
     risk: mapping.risk,
@@ -153,8 +148,6 @@ export function matchesOwnershipGlob(file: string, pattern: string): boolean {
 
 const registry = readDocOwnership();
 
-export const DEFAULT_BASE_DOCS: string[] = registry.baseDocs ?? [];
-export const CORE_RULES: string[] = registry.coreRules ?? [];
 export const PATH_FAMILIES: PathFamily[] = (registry.mappings ?? []).map(normalizeMapping);
 export const DECLARED_TEST_OWNERSHIP: DeclaredTestOwnership[] = (registry.mappings ?? [])
   .flatMap((mapping) => mapping.testOwnership ?? []);

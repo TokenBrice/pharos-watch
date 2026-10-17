@@ -2,14 +2,6 @@
   "version": 2,
   "status": "canonical",
   "purpose": "Canonical source-to-document routing for agents and change checks. Code, schemas, registries, and checked runtime data remain authoritative for behavior.",
-  "baseDocs": ["docs/process/agent-start-here.md"],
-  "coreRules": [
-    "Prefer the smallest root-cause fix; avoid unrelated refactors.",
-    "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.",
-    "Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides; supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe. Reviewed chain-dropout repair/quarantine is a permitted supplemental path under docs/architecture.md#adr-8 clause (c).",
-    "Keep Tailwind classes as static strings.",
-    "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."
-  ],
   "mappings": [
     {
       "id": "daily-social-posts",
@@ -112,8 +104,7 @@
         "Do not add ad hoc supply overrides outside documented fail-closed admission paths.",
         "Failure scenarios: only the maintainer approves exact content, and any edit invalidates its content hash; drafts never publish in production.",
         "Failure-scenario verification is pinned and read-only; changed and unavailable rows require maintainer review, and unregistered falsifiers stay explicitly unchecked."
-      ],
-      "hints": ["Update methodology docs only when scoring or classification semantics change."]
+      ]
     },
     {
       "id": "pricing-pipeline",
@@ -154,8 +145,7 @@
       "rules": [
         "Consume or cancel failed fetch bodies before opening more Worker fetches.",
         "Do not multiply DefiLlama list-endpoint supply by price."
-      ],
-      "hints": ["Structured methodology history lives under shared/data/methodology-changelogs/pricing-pipeline/."]
+      ]
     },
     {
       "id": "live-reserves",
@@ -627,8 +617,7 @@
         { "path": "docs/runbooks/mint-burn-integrity.md", "runbook": { "label": "Mint/burn integrity diagnosis", "kind": "symptom" } }
       ],
       "checks": ["npx vitest run shared/lib worker/src/lib"],
-      "rules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
-      "hints": ["Structured methodology changelogs live under shared/data/methodology-changelogs/; update the matching entry for semantic changes."]
+      "rules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."]
     },
     {
       "id": "safety-score-v9",
@@ -877,8 +866,7 @@
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" },
         { "path": "docs/scripts.md", "anchor": "operational-notes" }
       ],
-      "checks": ["npx vitest run scripts/__tests__"],
-      "hints": ["Read generated-artifact or operational guidance only when the script touches those contracts.", "Use check:focused -- --file <path> to select affected generated artifacts; script tests retain source-reading and CLI contracts."]
+      "checks": ["npx vitest run scripts/__tests__"]
     },
     {
       "id": "agent-hooks-process",
@@ -895,7 +883,6 @@
         "docs/process/agent-artifacts.md",
         "scripts/ci/pharos-change-contract.ts",
         "scripts/lib/doc-ownership-registry.mts",
-        "scripts/maintenance/generate-agents-doc.ts",
         "scripts/maintenance/setup-agent-hooks.ts",
         "scripts/maintenance/sync-agent-skills.mjs",
         "docs/doc-ownership.json"
@@ -903,7 +890,7 @@
       "docs": ["docs/process/agent-start-here.md", { "path": "docs/process/agent-artifacts.md", "anchor": "harness-configuration" }, { "path": "docs/process/agent-artifacts.md", "anchor": "agent-skills" }],
       "checks": ["npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
       "rules": [
-        "Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync; an already-loaded AGENTS.md supplies the root rules, and CLAUDE.md is the edit target only for root guidance changes.",
+        "Root AGENTS.md is the single authored instruction file; CLAUDE.md imports it.",
         "Temporary agent output belongs in ignored scratch locations, not committed docs."
       ]
     },
@@ -1012,7 +999,6 @@
       ],
       "alsoRead": ["src/AGENTS.md"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
-      "hints": ["Use check:focused -- --file <path> for related tests on frontend modules; non-module changes retain directory coverage."],
       "checks": ["npx vitest run src"]
     },
     {

@@ -42,7 +42,7 @@ describe("handleSafetyScoreHistoryV2", () => {
         rows: [v9BoundaryRow()],
       },
       { match: "cron_runs", rows: [] },
-    ], { requireMatch: true });
+    ]);
 
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -92,7 +92,7 @@ describe("handleSafetyScoreHistoryV2", () => {
         }],
       },
       { match: "cron_runs", rows: [] },
-    ], { requireMatch: true });
+    ]);
 
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -130,7 +130,7 @@ describe("handleSafetyScoreHistoryV2", () => {
         ],
       },
       { match: "cron_runs", rows: [] },
-    ], { requireMatch: true });
+    ]);
 
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -149,7 +149,7 @@ describe("handleSafetyScoreHistoryV2", () => {
         match: "FROM safety_score_history_v2",
         rows: [{ ...v9BoundaryRow(), model: "v8" as const }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -178,7 +178,7 @@ describe("handleSafetyScoreHistoryV2", () => {
     ["malformed days", "?stablecoin=usdc-circle&days=abc", 400, "Invalid days: must be a number"],
     ["out-of-range days", "?stablecoin=usdc-circle&days=99999", 400, "Invalid days: must be between 1 and 3650"],
   ])("rejects %s before database work", async (_name, query, status, message) => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const response = await handleSafetyScoreHistoryV2(
       db,
       new URL(`https://x/api/safety-score-history-v2${query}`),

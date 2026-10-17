@@ -150,7 +150,6 @@ function makeDb(prevExchangeRate = 1.0) {
       },
       { match: "supply_history", rows: [] },
     ],
-    { requireMatch: false },
   );
 }
 

@@ -42,7 +42,7 @@ describe("DEWS hydration timestamp admission", () => {
         row("overlap", RUN_AT + 120), row("allowed", RUN_AT + 180), row("future", RUN_AT + 181),
       ] },
       { match: "FROM dex_liquidity_publication_generations", rows: [], first: null },
-    ], { requireMatch: true });
+    ]);
     const hydrated = await hydrateDexLiquidity({
       db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
     });
@@ -61,7 +61,7 @@ describe("DEWS hydration timestamp admission", () => {
     const db = mockD1([{ match: "FROM dex_liquidity_history", rows: [
       { stablecoin_id: "test", snapshot_date: target - distance, liquidity_score: 73, total_tvl_usd: tvl, coverage_confidence: confidence },
       { stablecoin_id: "test", snapshot_date: target, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49 },
-    ] }], { requireMatch: true });
+    ] }]);
     const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
     expect(hydrated.liqHist7dMap.get("test")).toEqual(admitted ? { score: 73, tvl: 100, date: target - distance } : undefined);
     expect(db.getHistory()[0].binds).toEqual([RUN_AT - 8.5 * 86400]);

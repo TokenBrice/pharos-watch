@@ -8,6 +8,8 @@ vi.mock("node:child_process", () => ({
   execFileSync: execFileSyncMock,
 }));
 
+import { createRemoteD1Client } from "../../worker/scripts/lib/remote-d1";
+
 const { createD1Client, sqlString } = await import("../lib/remote-d1");
 
 describe("remote-d1 helpers", () => {
@@ -102,6 +104,54 @@ describe("remote-d1 helpers", () => {
     expect(client.query("SELECT id FROM assets")).toEqual([]);
     execFileSyncMock.mockReturnValueOnce("not JSON");
     expect(() => client.query("SELECT id FROM assets")).toThrow(SyntaxError);
+  });
+
+  it("executes Worker wrapper queries without shell interpolation from the Worker root", () => {
+    const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue("/tmp/not-pharos/worker/scripts");
+    const client = createRemoteD1Client("stablecoin-db");
+    const rows = client.query("SELECT 1");
+
+    expect(rows).toEqual([]);
+    cwdSpy.mockRestore();
+    expect(execFileSyncMock).toHaveBeenCalledWith(
+      "npx",
+      ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--command", "SELECT 1", "--json"],
+      expect.objectContaining({
+        cwd: expect.stringMatching(/\/worker$/),
+        encoding: "utf8",
+        stdio: "pipe",
+      }),
+    );
+  });
+
+  it("executes SQL files without shell interpolation and removes temp directories", () => {
+    const client = createRemoteD1Client("stablecoin-db");
+    let sqlFileContents = "";
+    execFileSyncMock.mockImplementation(((_command: string, args: string[]) => {
+      sqlFileContents = readFileSync(args[args.length - 2]!, "utf8");
+      return "[]";
+    }) as typeof execFileSyncMock);
+
+    client.executeStatements(["SELECT 1;"], "worker-remote-d1-test");
+
+    const call = execFileSyncMock.mock.calls[0] as unknown[] | undefined;
+    const args = call?.[1] as string[] | undefined;
+    const fileArg = args?.[args.length - 2];
+    expect(args).toBeDefined();
+    expect(args).toEqual([
+      "wrangler",
+      "d1",
+      "execute",
+      "stablecoin-db",
+      "--remote",
+      "--file",
+      expect.stringMatching(/worker-remote-d1-test-.+\/statements\.sql$/),
+      "--json",
+    ]);
+    expect(fileArg).toBeTypeOf("string");
+    // Test-owned path captured from the mocked wrangler invocation.
+    expect(existsSync(dirname(fileArg as string))).toBe(false);
+    expect(sqlFileContents).toBe("SELECT 1;");
   });
 
   it("escapes SQL string literals", () => {

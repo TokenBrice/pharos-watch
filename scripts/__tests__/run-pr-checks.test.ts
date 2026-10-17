@@ -17,10 +17,8 @@ describe("local PR check orchestration", () => {
       "classifier-smoke",
       "gitleaks",
       "verified-doc-links",
-      "doc-source-paths",
       "doc-sync",
       "doc-ownership-invariants",
-      "agents-doc-artifact",
     ]);
   });
 

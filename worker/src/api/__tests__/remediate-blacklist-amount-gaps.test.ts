@@ -57,7 +57,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         first: { price: 1.2, updated_at: Math.floor(Date.now() / 1000) }, allowUnused: true },
       { match: "UPDATE blacklist_events", rows: [], runMeta: { changes: 1 } },
       { match: "DELETE FROM cache WHERE key = ?", rows: [], runMeta: { changes: 1 } },
-    ], { requireMatch: true });
+    ]);
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
       method: "POST", adminKey: "secret-key", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chainId: "avalanche", stablecoin: "EURC", dryRun: false }),
@@ -73,7 +73,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
   });
 
   it.each([true, false])("rejects explicit Tron remediation before reads or writes (dryRun=%s)", async (dryRun) => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db,
       url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?chainId=tron&dryRun=${dryRun}`),
@@ -93,7 +93,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     const db = mockD1([
       { match: "FROM blacklist_events", rows: [] },
       { match: "DELETE FROM cache", rows: [] },
-    ], { requireMatch: true });
+    ]);
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db,
       url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?dryRun=${dryRun}`),
@@ -226,7 +226,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
           config_key: null,
         }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
       method: "POST",
@@ -271,7 +271,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
           config_key: ["bsc", "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"].join("-"),
         }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
       method: "POST",
@@ -298,7 +298,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         match: "FROM blacklist_events",
         rows: [],
       },
-    ], { requireMatch: true });
+    ]);
 
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps?onlyMissingProvenance=true", {
       method: "POST",
@@ -323,7 +323,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         match: "FROM blacklist_events",
         rows: [],
       },
-    ], { requireMatch: true });
+    ]);
 
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
       method: "POST",
@@ -378,7 +378,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         rows: [],
         runMeta: { changes: 1 },
       },
-    ], { requireMatch: true });
+    ]);
 
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
       method: "POST",
@@ -467,7 +467,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         rows: [],
         runMeta: { changes: 1 },
       },
-    ], { requireMatch: true });
+    ]);
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
       method: "POST",
       adminKey: "secret-key",

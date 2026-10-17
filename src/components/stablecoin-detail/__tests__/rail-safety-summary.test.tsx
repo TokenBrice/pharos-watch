@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { RailSafetySummary } from "../rail-safety-summary";
 import type { HeroSignalRailItem } from "../hero-card-metrics";
 
@@ -30,9 +30,6 @@ function dewsRow(): HTMLElement {
 }
 
 describe("RailSafetySummary", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("states why a NAV token has no DEWS reading instead of a bare dash", () => {
     render(<RailSafetySummary items={signals({ grade: "B+", dews: "—" })} navToken />);

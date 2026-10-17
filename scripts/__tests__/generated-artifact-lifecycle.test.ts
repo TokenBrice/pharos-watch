@@ -34,6 +34,11 @@ describe("generated artifact lifecycle", () => {
     expect(registry.filter((artifact) => artifact.bootstrap).flatMap((artifact) => artifact.outputPaths)
       .filter((path) => /[*?\[\]{}]/.test(path))).toEqual([]);
   });
+
+  it("leaves authored root instructions outside generated artifact ownership", () => {
+    expect(registry.flatMap((artifact) => artifact.outputPaths)).not.toContain("AGENTS.md");
+    expect(registry.flatMap((artifact) => artifact.outputPaths)).not.toContain("CLAUDE.md");
+  });
 });
 
 describe("check-mode artifact selection", () => {
@@ -45,8 +50,8 @@ describe("check-mode artifact selection", () => {
     ];
     expect(registry.filter((artifact) => artifact.ciDriftCheck === false).map((artifact) => artifact.id).sort())
       .toEqual([...projections].sort());
-    expect(selectCheckableArtifactIds([...projections, "agents-doc", "safety-score-v9-evaluation-build"]))
-      .toEqual(["agents-doc", "safety-score-v9-evaluation-build"]);
+    expect(selectCheckableArtifactIds([...projections, "runbook-index", "safety-score-v9-evaluation-build"]))
+      .toEqual(["runbook-index", "safety-score-v9-evaluation-build"]);
     for (const id of projections) {
       expect(registry.find((artifact) => artifact.id === id)).toMatchObject({ bootstrap: true, checkable: true });
       expect(selectGeneratedArtifacts({ check: true, only: [id] }).map((artifact) => artifact.id)).toContain(id);

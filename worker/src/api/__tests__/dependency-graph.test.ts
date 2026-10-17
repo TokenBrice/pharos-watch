@@ -50,7 +50,7 @@ describe("dependency graph projection", () => {
   it("preserves accepted edges and publication-bound zero, null, role and coverage facts", async () => {
     const snapshot = fixturePublication();
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
-    const response = await handleDependencyGraph(mockD1([], { requireMatch: true }));
+    const response = await handleDependencyGraph(mockD1([]));
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Safety-Score-Status")).toBe("current");
     const body = DependencyGraphResponseSchema.parse(await response.json());
@@ -117,7 +117,7 @@ describe("dependency graph projection", () => {
     const current = fixturePublication();
     const snapshot = { ...current, publicationHealth: { ...current.publicationHealth, status: "held" as const, attemptedAtSec: current.updatedAt + 1800, heldSinceSec: current.updatedAt + 1800, reasons: [{ code: "dex-stale" as const }] } };
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
-    const response = await handleDependencyGraph(mockD1([], { requireMatch: true }));
+    const response = await handleDependencyGraph(mockD1([]));
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
@@ -130,7 +130,7 @@ describe("dependency graph projection", () => {
 
   it("fails closed without an accepted publication", async () => {
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "error", detail: "Canonical Safety Score V9 publication is unavailable" });
-    const response = await handleDependencyGraph(mockD1([], { requireMatch: true }));
+    const response = await handleDependencyGraph(mockD1([]));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ error: "Canonical Safety Score V9 publication is unavailable" });
     expect(getPublicApiAccess("/api/dependency-graph/v1")).toBe("exempt");

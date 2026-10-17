@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { SharedFailureDomainsBoard } from "./shared-failure-domains-board";
 import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
 import type { SupplyOf } from "@shared/lib/dependency-exposure";
@@ -10,7 +10,6 @@ const supplyOf: SupplyOf = id => ({ usd: id === "a" ? 100 : 50, asOf: 1790726400
 const cards = [{ id: "a", name: "Alpha", symbol: "AAA" }, { id: "b", name: "Beta", symbol: "BBB" }];
 const groups: SharedFailureDomainGroups = [{ id: "mint-control:operator", kind: "mint-control", key: "operator", memberAssetIds: ["a", "b"], pricedEffectsIncomplete: true, pricedEffects: [{ assetId: "a", capIndices: [0], deploymentAdjustmentIndices: [0], resolvedCaps: [{ kind: "mint-integrity", limit: 55 }], resolvedAdjustments: [{ scoreBefore: 80, scoreAfter: 72, adjustmentPoints: 8 }] }] }];
 
-afterEach(cleanup);
 
 describe("SharedFailureDomainsBoard", () => {
   it("distinguishes unpublished domains from an empty published census", () => {

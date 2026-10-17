@@ -28,7 +28,7 @@ Historical plans, one-off audits, exploratory research, point-in-time calibratio
 - **Evidence:** a verified doc or commit SHA, never ignored `agents/` scratch alone; if missing, write "approval record unavailable".
 - **Acceptance close-out:** whoever ships a record with production gates records `Acceptance:` pending/accepted/failed plus evidence; unknown stays `not recorded`.
 - **Cron ceilings:** alias/accounting-only changes adding no logical work, fetch surface, or connection pressure get a dated note on `CRON_GROWTH_HEADROOM_POLICY`, not a new ADR; other ceiling crossings still require an ADR per [Cron Trigger Budget Policy](./cron-trigger-policy.md#current-growth-gate).
-- **Required co-updates:** in the same change, update quick-nav, reciprocal relation lines, the owning doc, and `docs/doc-ownership.json` ADR background anchors for governed code areas. Update `CLAUDE.md` only if a hard rule changes, then regenerate `AGENTS.md`.
+- **Required co-updates:** in the same change, update quick-nav, reciprocal relation lines, the owning doc, and `docs/doc-ownership.json` ADR background anchors for governed code areas. Update root `AGENTS.md` only if a hard rule changes; `CLAUDE.md` remains a one-line `@AGENTS.md` import.
 - **Forbidden in records:** release targets, incident telemetry, and per-application notes.
 
 ## Cleanup Rule
@@ -206,7 +206,7 @@ Tracked hooks are intentionally limited to deterministic Git policy under `.gith
 PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
 ```
 
-The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The former `agent:doctor` posture check was removed; agent-infrastructure drift is reviewed by hand. Root `AGENTS.md` is generated from `CLAUDE.md`; detect stale output with `npm run check:generated-artifacts -- --only=agents-doc`.
+The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The former `agent:doctor` posture check was removed; agent-infrastructure drift is reviewed by hand. Root `AGENTS.md` is the single authored instruction file; `CLAUDE.md` is a one-line `@AGENTS.md` import.
 
 Canonical Codex matchers include `Bash` and `apply_patch`, retaining captured `exec_command` compatibility. `npm run agent:setup` reports installed/current configuration and recorded per-hook enablement only. Feature or managed-policy overrides and actual invocation remain unverified until a safe call in the active harness; use `/hooks` to review disabled hooks. Disabled or unrecorded state does not change setup's installation exit status. Hooks remain a per-checkout opt-in; rerun the opt-in command in each worktree.
 

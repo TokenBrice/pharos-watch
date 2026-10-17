@@ -19,7 +19,7 @@ describe("digest style gate mode resolution", () => {
     const db = mockD1([
       modeTable("daily", "blocking"),
       modeTable("weekly", "enforce"),
-    ], { requireMatch: true });
+    ]);
 
     await expect(resolveDigestStyleGateMode(db, "daily")).resolves.toBe("shadow");
     await expect(resolveDigestStyleGateMode(db, "weekly")).resolves.toBe("enforce");
@@ -29,7 +29,7 @@ describe("digest style gate mode resolution", () => {
     const db = mockD1([
       modeTable("daily", "enforce"),
       modeTable("weekly", null),
-    ], { requireMatch: true });
+    ]);
 
     await expect(resolveDigestStyleGateMode(db, "daily")).resolves.toBe("enforce");
     await expect(resolveDigestStyleGateMode(db, "weekly")).resolves.toBe("shadow");

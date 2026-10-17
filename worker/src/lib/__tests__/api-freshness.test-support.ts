@@ -14,5 +14,5 @@ export function freshnessDb(options: {
     { match: "FROM dex_liquidity", rows: [{ age: options.tableAge ?? null }] },
     { match: "FROM yield_data", rows: [{ age: options.tableAge ?? null }] },
     { match: "GROUP BY job", rows: options.cronRows ?? [], throwError: options.cronError },
-  ], { requireMatch: true });
+  ]);
 }

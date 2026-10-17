@@ -25,5 +25,5 @@ Applies to reusable product components under `src/components/`.
 
 ## Common checks
 
-- Run `npm run check:shared-types-imports` as applicable.
+- Run `npm run lint:changed` for shared import boundaries.
 - Run focused component tests for interaction, semantic, or visualization changes.

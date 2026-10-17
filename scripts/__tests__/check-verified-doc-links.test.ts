@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
 
-import { collectAdrNavigationViolations, collectLinkViolations, collectNavigationBlockViolations } from "../ci/check-verified-doc-links.ts";
+import { collectAdrNavigationViolations, collectLinkViolations, collectNavigationBlockViolations, collectSourcePathViolations } from "../ci/check-verified-doc-links.ts";
 import { createTempRepoTracker } from "./helpers/test-state";
 
 const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-doc-navigation");
@@ -68,4 +69,28 @@ describe("rendered documentation links", () => {
     expect(errors[1]).toContain("target file does not exist");
   });
 
+});
+
+describe("documentation source paths", () => {
+  it("checks current paths, suffixes and placeholders within the supplied root", () => {
+    const root = makeRoot();
+    writeText(root, "src/present.ts", "");
+    writeText(root, "docs/source.md", "`src/present.ts:12:3` `src/missing.ts#section` `src/*.ts` `src/<name>.ts`");
+    expect(collectSourcePathViolations([`${root}/docs/source.md`], root)).toEqual([
+      "docs/source.md:1: src/missing.ts does not exist",
+    ]);
+  });
+
+  it("resolves historical references in the supplied repository, not the checkout", () => {
+    const root = makeRoot();
+    writeText(root, "src/historical.ts", "export {};");
+    execFileSync("git", ["init", "--quiet"], { cwd: root });
+    execFileSync("git", ["add", "."], { cwd: root });
+    execFileSync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "--quiet", "-m", "fixture"], { cwd: root });
+    const revision = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+    writeText(root, "docs/source.md", `\`git:${revision}:src/historical.ts\` \`git:${revision}:src/absent.ts\``);
+    expect(collectSourcePathViolations([`${root}/docs/source.md`], root)).toEqual([
+      `docs/source.md:1: ${revision}:src/absent.ts does not exist`,
+    ]);
+  });
 });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { makeMiniAppState } from "@shared/test-utils/telegram-mini-app-state";
 import { PresetsPanel } from "./PresetsPanel";
 
@@ -11,7 +11,6 @@ const state = makeMiniAppState({
   catalog: { recommendedPresets: [{ id: "usd-top25", label: "USD Top 25" }], searchableCoins: [] },
 });
 
-afterEach(cleanup);
 
 describe("PresetsPanel", () => {
   it("keeps the final enabled alert family on and directs the user to Unfollow", () => {
