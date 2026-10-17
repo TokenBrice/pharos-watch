@@ -27,22 +27,17 @@ jobs:
           node-version: "24.16.0"
       - name: Snapshot the trusted base scanner and policy
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --snapshot-trusted="$RUNNER_TEMP/trusted-gitleaks"
-      - name: Scan PR commits with the trusted base scanner and policy
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan PR commits and merge-resolution lines with the trusted scanner and policy
         env:
           GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
           GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
           git fetch --no-tags origin "${GITLEAKS_HEAD_REF}"
-          node "$RUNNER_TEMP/trusted-gitleaks/scripts/ci/run-gitleaks.ts" --range --policy-root="$RUNNER_TEMP/trusted-gitleaks"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Scan the PR merge-resolution lines with the trusted scanner and policy
-        env:
-          GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
-          GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
-        run: node "$RUNNER_TEMP/trusted-gitleaks/scripts/ci/run-gitleaks.ts" --tree --policy-root="$RUNNER_TEMP/trusted-gitleaks"
+          node "$RUNNER_TEMP/trusted-gitleaks/scripts/ci/run-gitleaks.ts" --range --tree --policy-root="$RUNNER_TEMP/trusted-gitleaks"
       - name: Check changed candidate scanner and policy
         env:
           GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
