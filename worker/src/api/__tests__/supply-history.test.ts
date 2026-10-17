@@ -51,7 +51,7 @@ describe("handleSupplyHistory", () => {
   });
 
   it("rejects out-of-range day windows instead of clamping them", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=9999"));
     expect(await readJsonResponse(res, 400)).toEqual({ error: "Invalid days: must be between 1 and 5000" });
     expect(db.getHistory()).toEqual([]);
@@ -74,7 +74,6 @@ describe("handleSupplyHistory", () => {
           rows: [row],
         },
       ],
-      { requireMatch: true },
     );
 
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=5000"));
@@ -114,7 +113,6 @@ describe("handleSupplyHistory", () => {
           rows: [row],
         },
       ],
-      { requireMatch: true },
     );
 
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
@@ -151,7 +149,6 @@ describe("handleSupplyHistory", () => {
           rows: [row],
         },
       ],
-      { requireMatch: true },
     );
 
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));

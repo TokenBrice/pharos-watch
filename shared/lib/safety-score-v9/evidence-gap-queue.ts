@@ -54,6 +54,11 @@ function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
     ...asset.reserveExposures.flatMap((exposure) => [exposure.status, ...Object.values(exposure.factorStatuses ?? {})]),
     ...asset.reserveResiduals.map((residual) => residual.status),
     ...(asset.reserveBoundFacts ?? []).map(row => row.status),
+    ...(asset.lenderBook ? [
+      asset.lenderBook.status,
+      ...(asset.lenderBook.acceptedSourceStatus ? [asset.lenderBook.acceptedSourceStatus] : []),
+      ...(asset.lenderBook.latestAttemptStatus ? [asset.lenderBook.latestAttemptStatus] : []),
+    ] : []),
     asset.exitStatus,
     ...asset.exitRoutes.flatMap((route) => [route.status, route.output.status, ...Object.values(route.factorStatuses ?? {})]),
     asset.controlStatus,

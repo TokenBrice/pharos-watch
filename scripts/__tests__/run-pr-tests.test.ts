@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPrTestPlan } from "../lib/pr-test-plan.mts";
+import { createPrTestPlan, readPrTestPlan } from "../lib/pr-test-plan.mts";
 import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mts";
 import { runPrTests } from "../maintenance/run-pr-tests";
 
@@ -35,12 +35,26 @@ describe("PR test runner prepared plans", () => {
   it("executes only the requested prepared files without rerunning selection or native Vitest sharding", () => {
     const path = planPath();
     const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"];
-    const plan = createPrTestPlan("base", files, {});
+    const plan = createPrTestPlan("base", files);
     writeFileSync(path, JSON.stringify(plan));
     const spawn = selectingSpawn();
     expect(runPrTests({ argv: ["--base=base", "--shard=2/4", "--reporter=dot"], env: { ...env, PR_TEST_PLAN_FILE: path }, spawn: spawn as never })).toBe(0);
     expect(spawn).toHaveBeenCalledTimes(1);
     expect(spawn.mock.calls[0][1]).toEqual(["run", ...plan.shards[1], "--reporter=dot"]);
+  });
+
+  it("uses the same deterministic partitions for local shards and prepared plans", () => {
+    const path = planPath();
+    const prepare = selectingSpawn();
+    expect(runPrTests({ argv: ["--plan-out", path], env, spawn: prepare as never })).toBe(0);
+    expect(prepare.mock.calls.some(([, args]) => args[0] === "run")).toBe(false);
+    const plan = readPrTestPlan(path);
+    expect(plan.shardCount).toBe(4);
+    for (let shard = 1; shard <= plan.shardCount; shard++) {
+      const spawn = selectingSpawn();
+      expect(runPrTests({ argv: [`--shard=${shard}/${plan.shardCount}`], env, spawn: spawn as never })).toBe(0);
+      expect(spawn.mock.calls.find(([, args]) => args[0] === "run")?.[1]).toEqual(["run", ...plan.shards[shard - 1]]);
+    }
   });
 
   it("fails closed on missing/malformed plans, missing coordinates, and mismatched base/count", () => {
@@ -50,7 +64,7 @@ describe("PR test runner prepared plans", () => {
     expect(() => runPrTests({ ...options, argv: ["--shard=1/4"] })).toThrow();
     writeFileSync(path, "{}");
     expect(() => runPrTests({ ...options, argv: ["--shard=1/4"] })).toThrow();
-    writeFileSync(path, JSON.stringify(createPrTestPlan("base", ["scripts/__tests__/run-pr-tests.test.ts"], {})));
+    writeFileSync(path, JSON.stringify(createPrTestPlan("base", ["scripts/__tests__/run-pr-tests.test.ts"])));
     expect(() => runPrTests({ ...options, argv: [] })).toThrow("requires --shard");
     expect(() => runPrTests({ ...options, argv: ["--shard=1/8"] })).toThrow("does not match");
     expect(() => runPrTests({ ...options, argv: ["--base=other", "--shard=1/4"] })).toThrow("does not match");
@@ -59,7 +73,7 @@ describe("PR test runner prepared plans", () => {
 
   it("never turns an empty prepared shard into an unrestricted test run", () => {
     const path = planPath();
-    writeFileSync(path, JSON.stringify(createPrTestPlan("base", ["scripts/__tests__/run-pr-tests.test.ts"], {})));
+    writeFileSync(path, JSON.stringify(createPrTestPlan("base", ["scripts/__tests__/run-pr-tests.test.ts"])));
     const spawn = selectingSpawn();
     expect(runPrTests({ argv: ["--shard=4/4"], env: { ...env, PR_TEST_PLAN_FILE: path }, spawn: spawn as never })).toBe(0);
     expect(spawn).not.toHaveBeenCalled();

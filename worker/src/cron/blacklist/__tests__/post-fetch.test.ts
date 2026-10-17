@@ -125,7 +125,7 @@ describe("processFetchedBlacklistRows", () => {
         match: "SELECT * FROM blacklist_events",
         rows: [duplicateRow as unknown as Record<string, unknown>],
       },
-    ], { requireMatch: true });
+    ]);
     vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
       updated: 1,
       failed: 0,
@@ -159,7 +159,7 @@ describe("processFetchedBlacklistRows", () => {
     const db = mockD1([
       { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicateRow.id }] },
       { match: "SELECT * FROM blacklist_events", rows: [duplicateRow as unknown as Record<string, unknown>] },
-    ], { requireMatch: true });
+    ]);
     vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
       updated: 0,
       failed: 0,
@@ -191,7 +191,7 @@ describe("processFetchedBlacklistRows", () => {
         match: "SELECT * FROM blacklist_events",
         rows: [],
       },
-    ], { requireMatch: true });
+    ]);
     const batchSizes: number[] = [];
     const originalBatch = db.batch.bind(db);
     db.batch = (async (statements: D1PreparedStatement[]) => {
@@ -243,7 +243,7 @@ describe("processFetchedBlacklistRows", () => {
         match: "SELECT * FROM blacklist_events",
         rows: [unblacklistRow as unknown as Record<string, unknown>],
       },
-    ], { requireMatch: true });
+    ]);
     vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
       updated: 0,
       failed: 0,
@@ -281,7 +281,7 @@ describe("processFetchedBlacklistRows", () => {
         match: "SELECT id FROM blacklist_events WHERE id IN",
         rows: [],
       },
-    ], { requireMatch: true });
+    ]);
     vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
     vi.mocked(insertBlacklistRows).mockResolvedValue(2);
     vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
@@ -311,7 +311,7 @@ describe("processFetchedBlacklistRows", () => {
     const db = mockD1([
       { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicate.id }] },
       { match: "SELECT * FROM blacklist_events", rows: [{ ...duplicate }] },
-    ], { requireMatch: true });
+    ]);
     const batch = vi.spyOn(db, "batch");
     vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
     vi.mocked(insertBlacklistRows).mockImplementation(async () => {

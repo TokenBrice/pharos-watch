@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { FailureScenario, FailureScenarioStage } from "@shared/types/failure-scenarios";
 import {
   findSummaryBudgetViolations,
@@ -88,7 +88,6 @@ function expectSummaryBudget(container: HTMLElement, scenario: FailureScenario) 
   expect(findSummaryBudgetViolations(body.textContent ?? "", Number.POSITIVE_INFINITY)).toEqual([]);
 }
 
-afterEach(cleanup);
 
 describe("coin-agnostic failure scenarios", () => {
   it("shows the approved reviewer and reviewed date without expiry wording", () => {

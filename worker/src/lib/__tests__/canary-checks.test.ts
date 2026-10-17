@@ -833,7 +833,7 @@ describe("worker data invariant canaries", () => {
   });
 
   it("does not turn absent required aggregates into measured zero findings", async () => {
-    const db = mockD1([], { requireMatch: false });
+    const db = mockD1([]);
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
     for (const checkId of ["blacklist-null-identity", "dex-liquidity-current-publication"]) {
       expect(summary.results.find((result) => result.checkId === checkId)).toMatchObject({
@@ -844,7 +844,7 @@ describe("worker data invariant canaries", () => {
   it.each(["off", "shadow"] as const)(
     "returns the empty compatibility shape without querying retained rows in %s mode",
     async (mode) => {
-      const db = mockD1([], { requireMatch: true });
+      const db = mockD1([]);
 
       const status = await loadCanaryStatus(db, NOW + 60, mode);
 

@@ -25,7 +25,7 @@ Prefer a read-only production/cache snapshot. The cache key is
 `yield-coverage-audit`; status also exposes a bounded view through
 `yieldHealth.coverageAudit`.
 
-Use an already authenticated read-only path, for example:
+Use an already authenticated read-only path. Run this example from `worker/`, where the Wrangler configuration lives:
 
 ```bash
 npx wrangler d1 execute stablecoin-db --remote --command "select key, value, updated_at from cache where key = 'yield-coverage-audit';"
@@ -42,16 +42,7 @@ D1 inspection SELECT-only; do not manually mutate production D1 or dispositions.
 Record date, `reportedAt`, counts, and whether evidence is production, local,
 or fixture-derived.
 
-Record `queueBudgetBasis`: new reports use `post-disposition` unresolved counts
-before truncation. Read budgets from `COVERAGE_AUDIT_QUEUE_BUDGET` in
-`worker/src/lib/status/yield-health.ts`; the source file wins. Dead-pin items count once; suppressed reviewed work does not.
-Record `queueTotals.totalItemCount`, `publishedItemCount`, `truncatedItemCount`,
-and `byKindScope`: `full-visible` names pre-cap by-kind counts; legacy
-`published-sample` counts are not full totals. Visible = published + truncated;
-candidate = visible + suppressed. Status and report queues are bounded samples;
-read their limits from `COVERAGE_AUDIT_QUEUE_ITEM_LIMIT` in the status owner and
-`OPERATOR_QUEUE_ITEM_LIMIT` in the audit producer, not as full counts. The admin queue is permanently DISPLAY-ONLY (`queueDisplayOnly: true`), with no disposition UI/API.
-Missing or malformed supply cache defers the audit and preserves the prior report.
+For queue accounting, suppression, display caps, and operator-note decisions, read [Coverage Audit Queue](../../../docs/yield-intelligence-operations.md#coverage-audit-queue); for budget interpretation and unavailable supply, use [Yield Health first checks](../../../docs/runbooks/yield-health.md#first-checks) and [remediation](../../../docs/runbooks/yield-health.md#remediation). Record the full pre-cap totals and their basis, not bounded samples. The queue is display-only; never write dispositions or mutate D1 to drain it.
 
 ## Decision Workflow
 
@@ -71,10 +62,7 @@ Handle queue items by `kind`:
 - `source-family-adapter`: require a reusable protocol-native API/on-chain
   adapter shape. Do not add one-off scrapers for pages without stable machine
   payloads.
-- Historical `quarantine-ready-to-restore`: the empty reprobe producer has retired.
-  Preserve historical decoding/dispositions until a named fresh report and full
-  pre-cap zero-current-kind evidence close the reader floor. Do not re-enable
-  generic scrvUSD/USTB readers or excluded K3/HedgeCore gross pool pins.
+- Historical `quarantine-ready-to-restore`: follow [retired-reader boundaries](../../../docs/yield-intelligence.md#tier-1-on-chain-reads) and [coverage-audit remediation](../../../docs/runbooks/yield-health.md#remediation) before interpreting retained items.
 - `unmatched-high-tvl-pool` / `missing-protocol`: a high-TVL stablecoin pool or
   protocol has no local coverage mapping. Decide venue map, allowlist, or
   adapter candidacy. Record a documented intentional gap; do not leave the
@@ -90,10 +78,7 @@ Handle queue items by `kind`:
   publication gate, safety gate, stale benchmark, or intentional gap. Do not
   force coverage around a guard without written rationale.
 
-The BIMA consumed variant and dormant CETES/vaults.fyi sources are retired.
-Base USBD and CETES catalog identity/quarantine remain unchanged; Banxico stays.
-BIMA stale-item clearance requires a new normal monthly report or separately
-authorized leased refresh, verified by `reportedAt`, not an hourly yield run.
+For retired BIMA, CETES, or vaults.fyi candidates, read the [protocol-native source owner](../../../docs/yield-intelligence.md#tier-25-protocol-native-yield-apis). Prove stale-item clearance through [recompute after a coverage drain](../../../docs/runbooks/yield-health.md#recompute-after-a-coverage-drain), not an hourly publication.
 
 The kind list above mirrors `YieldCoverageAuditQueueItemKind` in
 `shared/types/status/yield-liquidity.ts`. The source file wins; triage any
@@ -145,13 +130,7 @@ Reject or defer when:
 
 ## Documentation and Versioning
 
-Update routed docs when the source roster, benchmark registry, publication
-gates, queue shape, or methodology-visible behavior changes. New providers
-also update `docs/about-page.md`; methodology changes update the owning UI/doc,
-`shared/lib/methodology-versions/constants.ts`, and the structured
-`shared/data/methodology-changelogs/yield-methodology/` entry, following ADR-3 in
-`docs/architecture.md`. Read the current numeric version from source and choose
-a strictly greater numeric value with at most two decimal digits.
+Update routed owners for source/config, queue, or publication changes. Follow [Methodology Versioning](../../../docs/yield-intelligence.md#methodology-versioning) and [ADR-3](../../../docs/architecture.md#adr-3) only when methodology changes; new providers also update `docs/about-page.md`.
 
 ## Validation
 

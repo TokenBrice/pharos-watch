@@ -6,7 +6,7 @@ import {
   makeCurrentStatusDashboardInputs,
   makeDegradedPublicHealthResponse,
   makeDegradedPublicImpactStatusResponse,
-  makeFullyHealthyCurrentStatusResponse,
+  makeHealthyStatusResponse,
   makeHealthyHealthResponse,
   makeMaintenanceDebtStatusResponse,
   makePublicationFailureStatusResponse,
@@ -38,7 +38,7 @@ describe("status review fixtures", () => {
     const scenarios = [
       {
         name: "healthy",
-        data: makeFullyHealthyCurrentStatusResponse(),
+        data: makeHealthyStatusResponse(),
         healthData: makeHealthyHealthResponse(),
         expected: {
           states: ["healthy", "healthy", "healthy", "current", "no-action"],

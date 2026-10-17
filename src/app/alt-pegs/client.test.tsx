@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeAltPegCoin } from "@shared/test-utils/stablecoin";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const refetchMock = vi.fn();
@@ -73,16 +73,6 @@ vi.mock("@/app/alt-pegs/alt-peg-cohort-history-chart", () => ({
   AltPegCohortHistoryChart: (props: Omit<Parameters<typeof ChartStub>[0], "kind">) => <ChartStub {...props} kind="cohorts" />,
 }));
 
-function makeCoin(id: string, marketCap: number) {
-  return makeStablecoin({
-    id,
-    name: id,
-    symbol: id.toUpperCase(),
-    pegMechanism: "",
-    supplySource: "test",
-    circulating: { usd: marketCap },
-  });
-}
 
 function expectFocusSearch(expected: { view?: string | null; chart?: string | null; range?: string | null }) {
   const params = new URLSearchParams(window.location.search);
@@ -92,9 +82,6 @@ function expectFocusSearch(expected: { view?: string | null; chart?: string | nu
 }
 
 describe("AltPegsClient", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   beforeEach(() => {
     window.history.replaceState(null, "", "/alt-pegs/");
@@ -102,9 +89,9 @@ describe("AltPegsClient", () => {
     useStablecoinsMock.mockReturnValue({
       data: {
         peggedAssets: [
-          makeCoin("eurc-circle", 60_000_000),
-          makeCoin("paxg-paxos", 20_000_000),
-          makeCoin("usdc-circle", 100_000_000),
+          makeAltPegCoin("eurc-circle", 60_000_000),
+          makeAltPegCoin("paxg-paxos", 20_000_000),
+          makeAltPegCoin("usdc-circle", 100_000_000),
         ],
       },
       isLoading: false,
@@ -228,7 +215,7 @@ describe("AltPegsClient", () => {
   it("retains an unknown-supply cohort without formatting its segment as $0", () => {
     useStablecoinsMock.mockReturnValue({
       ...useStablecoinsMock(),
-      data: { peggedAssets: [makeCoin("usdc-circle", 100), { ...makeCoin("eurs-stasis", 0), circulating: {} }] },
+      data: { peggedAssets: [makeAltPegCoin("usdc-circle", 100), { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} }] },
     });
     render(<AltPegsClient />);
     const mix = screen.getByRole("region", { name: "All alt-peg mix" });
@@ -243,7 +230,7 @@ describe("AltPegsClient", () => {
     useStablecoinsMock.mockReturnValue({
       ...useStablecoinsMock(),
       data: { peggedAssets: [
-        makeCoin("eurc-circle", 100), { ...makeCoin("eurs-stasis", 0), circulating: {} },
+        makeAltPegCoin("eurc-circle", 100), { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} },
       ] },
     });
     render(<AltPegsClient />);

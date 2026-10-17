@@ -114,7 +114,7 @@ regexes = [
 paths = [
   '''(?:^|/)shared/data/(?:stablecoins|safety-score-v9)/.*\.json$''',
   '''(?:^|/)data/ai-summaries\.json$''',
-  '''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
+  '''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
 ]
 
 # Reviewed 2026-10-02 against the issuers' public documentation hrefs. These
@@ -130,7 +130,7 @@ paths = [
   '''(?:^|/)shared/data/stablecoins/coins/mhyper-midas\.json$''',
   '''(?:^|/)shared/data/stablecoins/domains/compliance/mtbill-midas\.json$''',
   '''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized\.ts$''',
-  '''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
+  '''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
 ]
 
 [[allowlists]]
@@ -228,7 +228,7 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
 regexes = ['''^UNI0x1f9840a85d5af5bf1d1762f925bdaddc4201f984/XAUT0x68749665ff8d2d112fa859aa293f07a622782f38$''']
-paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+paths = ['''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
 
 # The recorded Orca Whirlpool and Raydium CLMM quote fixtures pin the pool and
 # token-mint pubkeys read at slot 449058549. Solana base58 account keys are
@@ -401,17 +401,6 @@ paths = [
   '''(?:^|/)worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools\.test\.ts$''',
 ]
 
-# The recorded Raydium fixture contains public pool/mint accounts plus opaque
-# binary account data. Only the two reviewed mint values are exempted.
-[[allowlists]]
-description = "Public mint ids in the recorded Raydium measured-execution fixture"
-targetRules = ["generic-api-key"]
-condition = "AND"
-regexTarget = "secret"
-regexes = [
-  '''^(?:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp|EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)$''',
-]
-paths = ['''(?:^|/)worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27\.json$''']
 # DEX price-source registry keys (`<protocol>-dex`) are public pricing-lane identifiers
 # that the primary-price-collector fixtures pair with `sourceKey:`. The rule pins the
 # reviewed key shape to that one test file; any other high-entropy value there fails.
@@ -479,7 +468,7 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
 regexes = ['''^(?:1249bd80-ea7f-4447-a7f3-ba2b5e21fd9d|923bdc63-98c3-49d7-92cc-f9e7c760d575|27dc0f4e-6882-4188-b46b-6f0b65f8ef9c|a2fe3d9b-b81f-4e23-b40d-0b3aa3178646|937d6687-03b4-4c9b-a525-5f180793a6a2|79d5fd49-deae-41b4-a809-9e1afaa02f32|19d915b4-356f-4abd-a4b2-d331515adc22|54e9714e-c65f-4b0c-8bcf-c7869956dd20)\.?$''']
-paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+paths = ['''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
 
 # Slash-joined prose terms in reviewed ledger rationales ("Token Terms:
 # funding/basis/leverage", "API books, supply/borrow/idle counters") are not keys.
@@ -489,7 +478,7 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
 regexes = ['''^(?:funding/basis/leverage|supply/borrow/idle)$''']
-paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+paths = ['''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
 
 # Reviewed public GitBook download links cited in compliance sidecars
 # (2026-10-07 MiCA/GENIUS sweep): Midas product terms and KIDs, Matrixdock STBT
@@ -574,7 +563,7 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
 regexes = ['''^(?:f8213d7cc261751b055f|1ef645130fda84cf9841)\.?$''']
-paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+paths = ['''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
 
 # ACCESS_REVIEW claim groups cite the public asset ids registered in
 # shared/data/stablecoins/coins/{senpyusdprimev2-sentora,senrlusdv2-sentora}.json.
@@ -584,7 +573,7 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
 regexes = ['''^(?:senpyusdprimev2-sentora|senrlusdv2-sentora)$''']
-paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+paths = ['''(?:^|/)\.github/(?:workflows/)?artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
 
 # CHFSAFO's public Stellar contract is registered in
 # shared/data/stablecoins/coins/chfsafo-spiko.json and pinned by this fixture.

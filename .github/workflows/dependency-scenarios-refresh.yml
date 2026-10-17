@@ -4,7 +4,7 @@ name: Dependency Scenarios Refresh
 # Existing stablecoin-db cache stores immutable artifacts, then a latest commit marker.
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "17 2 * * *"
   workflow_dispatch:
 
 permissions:

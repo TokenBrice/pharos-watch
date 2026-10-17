@@ -8,6 +8,12 @@ import {
   findDocContractDrift,
   renderDocContractBlock,
 } from "../lib/doc-sync/contract-blocks";
+import {
+  ISOLATE_LOCAL_STATE_DOC_END,
+  ISOLATE_LOCAL_STATE_DOC_START,
+  renderIsolateLocalStateDocumentation,
+} from "@shared/lib/isolate-local-state-registry";
+import { renderOperatorOriginAccessEnvBlock } from "@shared/lib/env-contract";
 const ROOT = resolve(import.meta.dirname, "../..");
 
 function readDocument(file: string): string {
@@ -35,6 +41,45 @@ describe("generated documentation contract blocks", () => {
     for (const extra of [renderDocContractBlock(block), docContractStartMarker(block.id), docContractEndMarker(block.id)]) {
       const drift = findDocContractDrift((file) => documents.get(file)! + (file === block.file ? extra : ""));
       expect(drift.map((entry) => entry.id)).toContain(block.id);
+    }
+  });
+  it.each([
+    {
+      id: "env contract",
+      file: "docs/operator-origin-access.md",
+      startMarker: "<!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:BEGIN -->",
+      endMarker: "<!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:END -->",
+      content: `\n${renderOperatorOriginAccessEnvBlock()}\n`,
+    },
+    {
+      id: "isolate-local state registry",
+      file: "docs/process/worker-infrastructure-appendix.md",
+      startMarker: ISOLATE_LOCAL_STATE_DOC_START,
+      endMarker: ISOLATE_LOCAL_STATE_DOC_END,
+      content: renderIsolateLocalStateDocumentation().slice(
+        ISOLATE_LOCAL_STATE_DOC_START.length,
+        -ISOLATE_LOCAL_STATE_DOC_END.length,
+      ),
+    },
+  ])("compares $id with its existing explicit markers", ({ content, ...markers }) => {
+    const region = { ...markers, expected: `${markers.startMarker}${content}${markers.endMarker}` };
+    const compare = (document: string) => findDocContractDrift(() => document, [region]);
+    expect(compare(`before\n${region.expected}\nafter`)).toEqual([]);
+    expect(compare(`${markers.startMarker}stale${markers.endMarker}`)).toEqual([
+      expect.objectContaining({ id: region.id, found: `${markers.startMarker}stale${markers.endMarker}` }),
+    ]);
+    for (const document of [
+      "",
+      markers.startMarker,
+      markers.endMarker,
+      `${markers.endMarker}${markers.startMarker}`,
+      `${region.expected}${region.expected}`,
+      `${region.expected}${markers.startMarker}`,
+      `${region.expected}${markers.endMarker}`,
+    ]) {
+      expect(compare(document)).toEqual([
+        { file: region.file, id: region.id, expected: region.expected, found: null },
+      ]);
     }
   });
 

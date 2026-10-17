@@ -1,1 +1,0 @@
-../../../.codex/skills/stablecoin-data-audit/SKILL.md

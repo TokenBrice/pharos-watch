@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { appendFileSync, closeSync, constants, existsSync, fstatSync, mkdirSync, openSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 import {
   hasDeployImpact,
@@ -12,13 +13,9 @@ import {
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
 import { collectGitPaths } from "../lib/changed-files.mts";
-import {
-  CORE_RULES,
-  DEFAULT_BASE_DOCS,
-  PATH_FAMILIES,
-  matchesOwnershipGlob,
-  type DocReference,
-} from "../lib/doc-ownership-registry.mts";
+import type { DocReference } from "../lib/doc-ownership-registry.mts";
+import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
+import type * as FocusedChecks from "../maintenance/run-focused-checks.ts";
 import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import {
   GIT_GLOBAL_FLAG_OPTIONS,
@@ -49,7 +46,6 @@ interface PathFamilyRule {
   checks: string[];
   docs: DocReference[];
   hardRules: string[];
-  hints: string[];
   id: string;
   label: string;
   risk: string;
@@ -77,7 +73,6 @@ interface ChangeContract {
   };
   docs: DocReference[];
   hardRules: string[];
-  hints: string[];
   mappings: MatchedMapping[];
   scopedContext: string[];
   source: ChangeSource;
@@ -162,9 +157,11 @@ const PROTECTED_WRITE_RULES: ReadonlyArray<{ label: string; test: (file: string)
   },
 ];
 
-const TYPED_PATH_FAMILIES = PATH_FAMILIES as PathFamilyRule[];
-const TYPED_DEFAULT_BASE_DOCS = DEFAULT_BASE_DOCS as string[];
-const TYPED_CORE_RULES = CORE_RULES as string[];
+const require = createRequire(import.meta.url);
+let routingRegistry: typeof RoutingRegistry | undefined;
+function getRoutingRegistry() {
+  return routingRegistry ??= require("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+}
 
 class ExplicitPathError extends Error {}
 
@@ -222,7 +219,7 @@ function policyPaths(value: unknown, cwd: string): string[] {
 }
 
 function fileMatchesRule(file: string, rule: PathFamilyRule): boolean {
-  return rule.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob));
+  return rule.sourceGlobs.some((glob) => getRoutingRegistry().matchesOwnershipGlob(file, glob));
 }
 
 function compareFamilyRisk(a: PathFamilyRule, b: PathFamilyRule): number {
@@ -390,7 +387,8 @@ export function classifyChangedFiles(files: readonly string[]): ChangeContract {
 
 function classifyChangedFilesWithSource(files: readonly string[], source: ChangeSource): ChangeContract {
   const changedFiles = normalizeChangedFiles(files);
-  const matchedFamilies = TYPED_PATH_FAMILIES.map((family) => ({
+  const { PATH_FAMILIES } = getRoutingRegistry();
+  const matchedFamilies = PATH_FAMILIES.map((family) => ({
     ...family,
     matchedFiles: changedFiles.filter((file) => fileMatchesRule(file, family)),
   }))
@@ -401,7 +399,6 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
   const fallbackFamilies = matchedFamilies.filter((family) => family.tier === "fallback");
   const rankedDocs = uniqueDocs([
     ...specificFamilies.flatMap((family) => family.docs),
-    ...TYPED_DEFAULT_BASE_DOCS.map((path) => ({ path })),
     ...fallbackFamilies.flatMap((family) => family.docs),
   ]);
   const docs = changedFiles.length === 1
@@ -417,8 +414,7 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
     ...matchedFamilies.flatMap((family) => family.scopedContext),
   ]);
   const checks = unique(matchedFamilies.flatMap((family) => family.checks));
-  const hardRules = unique([...TYPED_CORE_RULES, ...matchedFamilies.flatMap((family) => family.hardRules)]);
-  const hints = unique(matchedFamilies.flatMap((family) => family.hints));
+  const hardRules = unique(matchedFamilies.flatMap((family) => family.hardRules));
   const warnings = buildWarnings(changedFiles);
   const ownedFiles = new Set(matchedFamilies.flatMap((family) => family.matchedFiles));
   const unmappedPaths = changedFiles.filter((file) => !ownedFiles.has(file));
@@ -437,7 +433,6 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
     },
     docs,
     hardRules,
-    hints,
     mappings: matchedFamilies.map((family) => ({
       id: family.id,
       label: family.label,
@@ -1230,9 +1225,6 @@ function buildWarnings(changedFiles: readonly string[]): string[] {
   if (changedFiles.some((file) => file.startsWith("worker/migrations/"))) {
     warnings.push("D1 migrations are applied before the new Worker is live; keep them backward-compatible.");
   }
-  if (changedFiles.some((file) => file === "AGENTS.md" || file === "CLAUDE.md")) {
-    warnings.push("AGENTS.md is generated from CLAUDE.md; edit CLAUDE.md and run node --import tsx scripts/maintenance/generate-agents-doc.ts.");
-  }
   if (changedFiles.some((file) => file.startsWith("shared/data/stablecoins/"))) {
     warnings.push("Stablecoin data changes must not introduce manual supply overrides.");
   }
@@ -1303,10 +1295,6 @@ export function formatContract(
     sections.push("", "Also relevant:", formatBullets(contract.background.map(formatDocReference), { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
-  if (contract.hints.length > 0) {
-    sections.push("", "Hints:", formatBullets(contract.hints, { limit: mode === "stop" ? 4 : Number.POSITIVE_INFINITY }));
-  }
-
   if (contract.checks.length > 0) {
     sections.push(
       "",
@@ -1319,7 +1307,7 @@ export function formatContract(
     sections.push("", "Warnings:", formatBullets(contract.warnings, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
-  sections.push("", "Core rules:", formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
+  sections.push("", "Rules:", formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
 
   if (contract.deploy.deployImpact) {
     sections.push(
@@ -1528,12 +1516,14 @@ export function buildPermissionRequestHookOutput(hookInput: UnknownRecord = {}) 
 }
 
 function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options: CliOptions } {
-  const { values } = parseStrictCliArgs(argv, { options: {
+  const { values } = parseStrictCliArgs(argv, { conflicts: [["base", "base-ref"], ["head", "head-ref"]], options: {
     json: { type: "boolean" },
     diagnostics: { type: "boolean" },
     "new-file": { type: "boolean", multiple: true },
     staged: { type: "boolean" },
     hook: { type: "string" },
+    base: { type: "string" },
+    head: { type: "string" },
     "base-ref": { type: "string" },
     "head-ref": { type: "string" },
     file: { type: "string", multiple: true },
@@ -1546,8 +1536,8 @@ function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options:
     explicitFiles: (values.file ?? []) as string[],
     options: {
       allowMissing: Array.isArray(values["new-file"]) && values["new-file"].some(Boolean),
-      baseRef: values["base-ref"] as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
-      headRef: values["head-ref"] as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
+      baseRef: (values.base ?? values["base-ref"]) as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
+      headRef: (values.head ?? values["head-ref"]) as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
       diagnostics: values.diagnostics === true,
       format: values.json === true ? "json" : "text",
       help: values.help === true,
@@ -1575,8 +1565,8 @@ Options:
   --diagnostics            Append safe per-hook diagnostics when a hook is selected
   --staged                Classify staged files only
   --new-file              Suppress missing explicit-file warnings (repeatable)
-  --base-ref <ref>        Classify git diff base...head
-  --head-ref <ref>        Classify git diff base...head
+  --base, --base-ref <ref> Classify git diff base...head
+  --head, --head-ref <ref> Classify git diff base...head
   --file <path>           Classify an explicit file path; repeatable
   --hook=session-start    Emit compact SessionStart hook JSON
   --hook=pre-tool-use     Emit hard-block hook JSON for unsafe tool calls
@@ -1628,7 +1618,7 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
       appendHookDiagnostic(hookMode, hookInput, violation, false);
     }
-    console.log(JSON.stringify(buildPreToolUseHookOutput(hookInput)));
+    console.log(JSON.stringify(violation ? buildToolDenyOutput(violation.reason, "PreToolUse") : {}));
     return;
   }
 
@@ -1637,7 +1627,7 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
       appendHookDiagnostic(hookMode, hookInput, violation, false);
     }
-    console.log(JSON.stringify(buildPermissionRequestHookOutput(hookInput)));
+    console.log(JSON.stringify(violation ? buildPermissionRequestDenyOutput(violation.reason) : {}));
     return;
   }
 
@@ -1689,6 +1679,9 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     console.log(JSON.stringify(buildSessionStartHookOutput(contract)));
     return;
   }
+  const { buildFocusedCheckPlan } = require("../maintenance/run-focused-checks.ts") as typeof FocusedChecks;
+  contract.checks = buildFocusedCheckPlan(changedFiles).checks.map((check) => check.command);
+
 
   if (options.format === "json") {
     console.log(JSON.stringify(contract, null, 2));

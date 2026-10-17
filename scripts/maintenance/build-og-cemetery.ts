@@ -20,7 +20,7 @@
  * Freshness is judged on an INPUT signature, never by re-rendering: Firefox and libvips output differs across
  * platforms. `--check` rebuilds that document (no browser) and compares its SHA-256 with the signature, then verifies
  * the committed PNG still hashes to the value recorded when it was written. Default mode is a no-op when the check
- * passes, so the pre-commit hook never churns the PNG on another OS; `--force` re-renders anyway. Rendering uses
+ * passes, avoiding PNG churn on another OS; `--force` re-renders anyway. Rendering uses
  * Playwright Firefox (the other OG generators' browser) at 1440 px CSS width and 2× device pixels, downscaled to
  * 1200×630 with sharp.
  *

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -156,9 +156,6 @@ describe("ScreenerClient freshness notices", () => {
     setDefaultMocks();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("keeps the global data gate tied to the primary stablecoin rows", () => {
     const stablecoinsError = new Error("stablecoin list unavailable");

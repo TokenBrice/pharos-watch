@@ -7,8 +7,7 @@ description: Verify CoinGecko identity, discover missing stablecoin chain covera
 
 Choose one mode: `verify`, `populate`, or `discover`. Read the coin’s base file in `shared/data/stablecoins/coins/`, `shared/types/chain-identity.ts`, and [chain-resolution.md](references/chain-resolution.md). The base file owns scalar identity and `contracts`; generated projections are read-only. `verify` writes nothing. `populate` may patch only independently verified `contracts[]` entries and never overwrites curated rows or other base-file fields. `discover` writes only a candidates list under `agents/`.
 
-Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
-Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+For pinned RPC reads and provenance, follow [Pinned On-Chain Evidence](../../../docs/process/agent-artifacts.md#pinned-on-chain-evidence).
 
 ## Shared Rules
 

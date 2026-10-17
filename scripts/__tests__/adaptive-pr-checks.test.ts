@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { collectStagedFiles } from "../lib/changed-files.mts";
 import { ALWAYS_RUN_TEST_FILES, parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import {
   createPrStaticLeafCommand,
@@ -9,6 +10,7 @@ import {
   runPrStaticChecks,
   STRUCTURAL_CHECKS,
 } from "../maintenance/run-pr-static-checks.ts";
+import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 describe("adaptive PR checks", () => {
   it("unions changed Vitest files with the critical contract set", () => {
     const listed = parseVitestFileList("[node] src/a.test.ts\n[worker] worker/a.spec.ts\n");
@@ -69,6 +71,30 @@ describe("adaptive PR checks", () => {
     ])).toEqual(["catalog", "index"]);
   });
 
+  it("selects an artifact when a registered source is staged for deletion", () => {
+    const execFile = vi.fn((_file: string, args: readonly string[]) =>
+      args.includes("--cached") ? "shared/lib/safety-score-v9/formula.ts\0" : "",
+    );
+    const stagedFiles = collectStagedFiles({ cwd: "/repo", execFile: execFile as never });
+    expect(selectChangedGeneratedArtifactIds(stagedFiles)).toContain("safety-score-v9-evaluation-build");
+    expect(execFile).toHaveBeenCalledWith(
+      "git",
+      ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACMRD", "-z"],
+      { cwd: "/repo", encoding: "utf8" },
+    );
+  });
+
+  it("keeps ignored bootstrap projections out of automatic PR drift checks", () => {
+    const files = ["scripts/maintenance/generate-postman-collection.ts", "shared/data/stablecoins/coins/usdc-circle.json"];
+    const changed = selectChangedGeneratedArtifactIds(files);
+    expect(changed).toEqual(expect.arrayContaining(["postman", "stablecoin-catalog"]));
+    const automatic = selectCheckableArtifactIds(changed);
+    expect(automatic).not.toContain("postman");
+    expect(automatic).not.toContain("stablecoin-catalog");
+    expect(buildPrStaticCheckPlan(files).commands.find((command) => command.name === "check:generated-artifacts")?.args)
+      .toEqual(automatic.length ? [`--only=${automatic.join(",")}`] : undefined);
+  });
+
   // Ordinary internal docs do not select a checkable artifact; generated output
   // paths such as the API reference still require their owning freshness check.
   it.each([
@@ -119,13 +145,13 @@ describe("adaptive PR checks", () => {
 
     const guards = buildPrStaticCheckPlan(changedFiles, { group: "guards" });
     expect(guards.commands.map((command) => command.name)).toEqual(expect.arrayContaining([
-      "check:env-contract", "check:shared-types-imports",
+      "check:env-contract",
       "check:critical-coverage-completeness", "check:structural", "check:generated-artifacts",
-      "check:cron-connections", "check:cron-sync", "check:migrations", "check:sql-safety",
+      "check:cron-connections", "check:migrations", "check:sql-safety",
       "check:worker-config", "check:worker-package",
     ]));
     expect(partitionPrStaticCheckPlan(guards.commands).parallel.map((command) => command.name)).toEqual([
-      "check:structural", "check:generated-artifacts",
+      "check:generated-artifacts", "check:structural",
     ]);
   });
 
@@ -171,16 +197,14 @@ describe("adaptive PR checks", () => {
     expect(runCommandImpl).not.toHaveBeenCalled();
   });
 
-  it("moves all five mixed-PR docs checks into guards with one doc-sync owner", () => {
+  it("moves the shared mixed-PR docs checks into guards with one doc-sync owner", () => {
     const files = ["README.md", "src/app/page.tsx"];
     const guards = buildPrStaticCheckPlan(files, { group: "guards" }).commands;
     const docs = guards.filter((command) => command.manifestCommand);
     expect(docs.map((command) => createPrStaticLeafCommand(command, []).args)).toEqual([
       ["run", "check:verified-doc-links"],
-      ["run", "check:doc-source-paths"],
       ["run", "check:doc-sync"],
       ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"],
-      ["run", "check:generated-artifacts", "--", "--only=agents-doc"],
     ]);
     expect(guards.filter((command) => command.name === "check:doc-sync")).toHaveLength(1);
     expect(buildPrStaticCheckPlan(files, { group: "compile" }).commands.some((command) => command.manifestCommand)).toBe(false);
@@ -190,12 +214,6 @@ describe("adaptive PR checks", () => {
     expect(buildPrStaticCheckPlan(["docs/editorial-style.md"]).commands.some((command) => command.manifestCommand)).toBe(false);
   });
 
-  it("does not run the agents mirror checker twice when docs also select generated artifacts", () => {
-    const guards = buildPrStaticCheckPlan(["CLAUDE.md", "src/app/page.tsx"], { group: "guards" }).commands;
-    expect(guards.filter((command) => command.name === "agents-doc-artifact")).toHaveLength(1);
-    expect(guards.find((command) => command.name === "check:generated-artifacts")?.args?.join(",") ?? "")
-      .not.toContain("agents-doc");
-  });
 
   it.each([
     "worker/src/lib/full-stablecoin-catalog.ts",
@@ -225,6 +243,32 @@ describe("adaptive PR checks", () => {
     }
   });
 
+  it("retains cron topology validation without duplicating its cron-sync evaluator", () => {
+    const names = buildPrStaticCheckPlan(["worker/src/cron/sync-stablecoins.ts"]).commands.map((command) => command.name);
+    expect(names).toContain("check:cron-connections");
+    expect(names).not.toContain("check:cron-sync");
+  });
+
+  it.each([
+    "src/app/api/page.tsx", "src/app/funding/page.tsx", "src/app/pharoswatchbot/page.tsx",
+    "src/components/funding/funding-chart.tsx", "scripts/ci/check-sensitive-page-copy.ts",
+  ])("selects sensitive copy validation for %s", (path) => {
+    expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:sensitive-page-copy");
+  });
+
+  it("keeps unused-code nightly-only and unrelated copy out of PR guards", () => {
+    expect(STRUCTURAL_CHECKS).not.toContain("check:unused-code");
+    expect(STRUCTURAL_CHECKS).not.toContain("check:sensitive-page-copy");
+    expect(buildPrStaticCheckPlan(["src/app/page.tsx"]).commands.map((command) => command.name))
+      .not.toContain("check:sensitive-page-copy");
+  });
+
+  it("runs full-repository lint when the boundary policy changes", () => {
+    const names = buildPrStaticCheckPlan(["eslint.config.mjs"], { group: "compile" }).commands.map((command) => command.name);
+    expect(names).toContain("lint");
+    expect(names).not.toContain("lint:changed");
+  });
+
   it("does not select structural checks for test-only changes", () => {
     const changedFiles = [
       "worker/src/cron/__tests__/sync-stablecoins.test.ts",
@@ -250,13 +294,11 @@ describe("adaptive PR checks", () => {
       "check:cli-args-policy",
       "check:dependency-review-gaps",
       "check:editorial-content",
-      "check:unused-code",
-      "check:sensitive-page-copy",
       "check:agent-skills",
     ]);
   });
 
-  it.each([[], [0, 7, 10], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]].map((failedIndexes) => ({ failedIndexes })))(
+  it.each([[], [0, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]].map((failedIndexes) => ({ failedIndexes })))(
     "collects every structural outcome sequentially when failures occur at $failedIndexes",
     async ({ failedIndexes }) => {
       const calls: string[] = [];
@@ -284,7 +326,7 @@ describe("adaptive PR checks", () => {
           ? `${name}: npm run ${name} failed (exit ${index + 1}).`
           : `${name}: passed`);
       }
-      expect(output.join("")).toContain(`${11 - failedIndexes.length}/11 guards passed.`);
+      expect(output.join("")).toContain(`${STRUCTURAL_CHECKS.length - failedIndexes.length}/${STRUCTURAL_CHECKS.length} guards passed.`);
     },
   );
 
@@ -298,7 +340,7 @@ describe("adaptive PR checks", () => {
       runCommandImpl,
       stdout: { write: (text: string) => { output.push(text); return true; } },
     })).toBe(1);
-    expect(runCommandImpl).toHaveBeenCalledTimes(11);
+    expect(runCommandImpl).toHaveBeenCalledTimes(STRUCTURAL_CHECKS.length);
     expect(output.join("")).toContain("check:provider-resilience: npm run check:provider-resilience failed (exit 1).");
     expect(output.join("")).toContain("check:agent-skills: passed");
   });

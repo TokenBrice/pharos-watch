@@ -30,18 +30,11 @@ const {
 }));
 
 vi.mock("next/dynamic", () => ({
-  default: (loader: () => unknown) => {
-    const source = String(loader);
-    if (source.includes("stablecoin-table")) {
-      function MockStablecoinTable(props: Record<string, unknown>) {
-        stablecoinTablePropsMock(props);
-        return <div data-testid="stablecoin-table" />;
-      }
-
-      return MockStablecoinTable;
-    }
-
-    return () => null;
+  default: () => {
+    return function MockStablecoinTable(props: Record<string, unknown>) {
+      stablecoinTablePropsMock(props);
+      return <div data-testid="stablecoin-table" />;
+    };
   },
 }));
 

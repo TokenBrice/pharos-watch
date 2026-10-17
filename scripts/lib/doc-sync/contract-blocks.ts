@@ -35,6 +35,14 @@ export interface DocContractBlock {
   readonly value: string;
 }
 
+export interface DocContractRegion {
+  readonly id: string;
+  readonly file: string;
+  readonly startMarker: string;
+  readonly endMarker: string;
+  readonly expected: string;
+}
+
 export interface DocContractDrift {
   readonly file: string;
   readonly id: string;
@@ -185,23 +193,31 @@ export const DOC_CONTRACT_BLOCKS: readonly DocContractBlock[] = [
 
 export function findDocContractDrift(
   readDocument: (file: string) => string,
+  regions: readonly DocContractRegion[] = DOC_CONTRACT_BLOCKS.map((block) => ({
+    id: block.id,
+    file: block.file,
+    startMarker: docContractStartMarker(block.id),
+    endMarker: docContractEndMarker(block.id),
+    expected: renderDocContractBlock(block),
+  })),
 ): DocContractDrift[] {
   const documents = new Map<string, string>();
   const drift: DocContractDrift[] = [];
 
-  for (const block of DOC_CONTRACT_BLOCKS) {
-    const document = documents.get(block.file) ?? readDocument(block.file);
-    documents.set(block.file, document);
-    const expected = renderDocContractBlock(block);
-    const start = document.indexOf(docContractStartMarker(block.id));
-    const end = document.indexOf(docContractEndMarker(block.id), Math.max(0, start));
-    const uniqueMarkers = document.indexOf(docContractStartMarker(block.id), start + 1) === -1
-      && document.indexOf(docContractEndMarker(block.id)) === end
-      && document.indexOf(docContractEndMarker(block.id), end + 1) === -1;
+  for (const region of regions) {
+    const document = documents.get(region.file) ?? readDocument(region.file);
+    documents.set(region.file, document);
+    const start = document.indexOf(region.startMarker);
+    const end = document.indexOf(region.endMarker, Math.max(0, start));
+    const uniqueMarkers = document.indexOf(region.startMarker, start + 1) === -1
+      && document.indexOf(region.endMarker) === end
+      && document.indexOf(region.endMarker, end + 1) === -1;
     const found = start >= 0 && end >= start && uniqueMarkers
-      ? document.slice(start, end + docContractEndMarker(block.id).length)
+      ? document.slice(start, end + region.endMarker.length)
       : null;
-    if (found !== expected) drift.push({ file: block.file, id: block.id, expected, found });
+    if (found !== region.expected) {
+      drift.push({ file: region.file, id: region.id, expected: region.expected, found });
+    }
   }
 
   return drift;

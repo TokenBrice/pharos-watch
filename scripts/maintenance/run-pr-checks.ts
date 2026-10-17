@@ -39,10 +39,8 @@ export type PrCheckLane =
   | "classifier-smoke"
   | "gitleaks"
   | "verified-doc-links"
-  | "doc-source-paths"
   | "doc-sync"
   | "doc-ownership-invariants"
-  | "agents-doc-artifact"
   | "pr-static"
   | "pr-tests"
   | "v9-resource"
@@ -223,10 +221,8 @@ export function createLaneCommand(
         `--base=${resolvedBaseSha}`, `--head=${head}`,
       ]));
     case "verified-doc-links":
-    case "doc-source-paths":
     case "doc-sync":
     case "doc-ownership-invariants":
-    case "agents-doc-artifact":
       return withLane(command, { PR_BASE_SHA: resolvedBaseSha, PR_HEAD_SHA: head });
     case "pr-static":
     case "v9-resource":
@@ -400,7 +396,7 @@ export async function runPrChecks(
       for (const leaf of leaves.filter((candidate) => candidate.status === "deferred-to-ci")) {
         log(`[check:pr] ${leaf.id}: deferred to the GitHub PR gate (run locally with --with-pages).`);
       }
-      log("[check:pr] PLAN ONLY: no checks executed; not readiness proof. Test discovery may import modules. No fetch, clean install/bootstrap assertion, merge checkout, CI artifact transport or production acceptance. Timing history is scheduling telemetry, not a runtime SLA.");
+      log("[check:pr] PLAN ONLY: no checks executed; not readiness proof. Test discovery may import modules. No fetch, clean install/bootstrap assertion, merge checkout, CI artifact transport or production acceptance.");
       leaves.push(...commands.map((command): PrCheckReceiptLeaf => ({
         id: command.lane, command: command.cmd, status: "skipped", durationMs: 0,
       })));

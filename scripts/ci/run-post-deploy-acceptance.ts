@@ -171,13 +171,6 @@ export async function runPostDeployAcceptanceCli(
 
   console.log(JSON.stringify({ probes: run.probes, acceptance: run.acceptance }, null, 2));
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, run.summary);
-  if (env.GITHUB_OUTPUT) {
-    appendFileSync(env.GITHUB_OUTPUT, `outcome=${run.acceptance.outcome}\n`);
-    if (run.acceptance.failureKind) {
-      appendFileSync(env.GITHUB_OUTPUT, `failure_kind=${run.acceptance.failureKind}\n`
-        + `reason=${run.acceptance.reason.replace(/[\r\n]/g, " ")}\n`);
-    }
-  }
   return run.exitCode;
 }
 

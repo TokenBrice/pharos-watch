@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { DependencyHero } from "./dependency-hero";
 import { useDependencyExposureWorkspace } from "./dependency-exposure-workspace";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
@@ -16,7 +16,6 @@ function Harness({ publishedEdges, supply }: { publishedEdges: ReportCardsV9Depe
   const model = buildDependencyHubsModel({ cards, edges: publishedEdges, mcapMap });
   return <DependencyHero workspace={workspace} model={model} cards={cards} dependencyEdges={publishedEdges} mcapMap={mcapMap} methodologyVersion="9.94" publishedAt={1790716625} />;
 }
-afterEach(cleanup);
 describe("DependencyHero availability", () => {
   it("does not fabricate USD for an empty graph or unavailable supply", () => {
     const empty = render(<Harness publishedEdges={[]} supply={null} />);

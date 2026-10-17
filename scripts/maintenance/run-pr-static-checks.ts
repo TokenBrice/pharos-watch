@@ -27,6 +27,7 @@ import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
+import { SENSITIVE_COPY_ROOTS } from "../ci/check-sensitive-page-copy.ts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
@@ -65,6 +66,7 @@ interface PrStaticCheckCommand {
 export type PrStaticCheckGroup = "compile" | "guards";
 
 const COMPILE_STATIC_CHECKS: Record<string, true> = {
+  lint: true,
   "lint:changed": true,
   typecheck: true,
   "typecheck:worker": true,
@@ -86,8 +88,6 @@ export const STRUCTURAL_CHECKS = [
   "check:cli-args-policy",
   "check:dependency-review-gaps",
   "check:editorial-content",
-  "check:unused-code",
-  "check:sensitive-page-copy",
   "check:agent-skills",
 ] as const;
 
@@ -148,12 +148,11 @@ export function buildPrStaticCheckPlan(
   changedFiles: readonly string[],
   { group }: { group?: PrStaticCheckGroup } = {},
 ) {
-  const classification = classifyChangedFiles(changedFiles);
+  const { classification, commands: baselineChecks } = selectPrBaselineChecks(changedFiles);
   const commands: PrStaticCheckCommand[] = [
-    { name: "lint:changed" },
+    { name: changedFiles.some((file) => file === "eslint.config.mjs") ? "lint" : "lint:changed" },
     { name: "typecheck" },
     { name: "check:env-contract" },
-    { name: "check:shared-types-imports" },
     { name: "check:critical-coverage-completeness" },
   ];
 
@@ -171,53 +170,19 @@ export function buildPrStaticCheckPlan(
   )) {
     commands.push({ name: "check:html-fixture-metadata" });
   }
-
-  if (classification.docsChanged) {
-    commands.push(...PR_DOC_COMMANDS.map((command) => ({
-      name: command.args[0] === "run" && command.id !== "agents-doc-artifact" ? command.args[1] : command.id,
-      manifestCommand: command,
-    })));
-  } else if (hasOwnedDocsImpact(changedFiles)) {
-    commands.push({ name: "check:doc-sync" });
+  if (changedFiles.some((file) =>
+    SENSITIVE_COPY_ROOTS.some((root) => file === root || file.startsWith(`${root}/`)) ||
+    file === "scripts/ci/check-sensitive-page-copy.ts"
+  )) {
+    commands.push({ name: "check:sensitive-page-copy" });
   }
+  commands.push(...baselineChecks);
+
 
   if (hasProductionStructuralImpact(changedFiles)) {
     commands.push({ name: "check:structural" });
   }
 
-  if (classification.pagesChanged) {
-    commands.push({ name: "check:site-csp-sync" }, { name: "check:stablecoin-data" });
-  }
-
-  // A generated artifact must be regenerated in the same commit as the source
-  // it is derived from, whatever lane that source lives in. This selection used
-  // to sit inside the `pagesChanged` branch, so a commit that only touched
-  // `shared/lib/safety-score-v9/**` or `worker/src/lib/safety-score-v9*.ts`
-  // could leave the V9 evaluation-build manifest stale and still pass the PR
-  // gate — the Wave-1 fix wave did exactly that, and only the release discovery
-  // gate caught it.
-  const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles))
-    // The shared docs command already checks this artifact in this workspace.
-    .filter((id) => !classification.docsChanged || id !== "agents-doc");
-  if (artifactIds.length > 0) {
-    commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
-  }
-
-  if (classification.workerChanged) {
-    commands.push(
-      { name: "typecheck:worker" },
-      { name: "check:cron-connections" },
-      { name: "check:cron-sync" },
-      { name: "check:migrations" },
-      { name: "check:sql-safety" },
-      { name: "check:worker-config" },
-      { name: "check:worker-package" },
-    );
-  }
-
-  if (hasTelegramLoadGuardImpact(changedFiles)) {
-    commands.push({ name: "check:telegram-load" });
-  }
 
   // Select the complete plan first: grouping changes scheduling, not ownership.
   return {
@@ -226,6 +191,42 @@ export function buildPrStaticCheckPlan(
       ? commands.filter((command) => Boolean(COMPILE_STATIC_CHECKS[command.name]) === (group === "compile"))
       : commands,
   };
+}
+
+/** Shared selector inventory for PR and focused authoring checks; never includes structural guards. */
+export function selectPrBaselineChecks(changedFiles: readonly string[]) {
+  const classification = classifyChangedFiles(changedFiles);
+  const commands: PrStaticCheckCommand[] = [];
+  if (classification.docsChanged) {
+    commands.push(...PR_DOC_COMMANDS.map((command) => ({
+      name: command.args[0] === "run" ? command.args[1] : command.id,
+      manifestCommand: command,
+    })));
+  } else if (hasOwnedDocsImpact(changedFiles)) {
+    commands.push({ name: "check:doc-sync" });
+  }
+
+  if (classification.pagesChanged) {
+    commands.push({ name: "check:site-csp-sync" }, { name: "check:stablecoin-data" });
+  }
+  const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles));
+  if (artifactIds.length > 0) {
+    commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
+  }
+  if (classification.workerChanged) {
+    commands.push(
+      { name: "typecheck:worker" },
+      { name: "check:cron-connections" },
+      { name: "check:migrations" },
+      { name: "check:sql-safety" },
+      { name: "check:worker-config" },
+      { name: "check:worker-package" },
+    );
+  }
+  if (hasTelegramLoadGuardImpact(changedFiles)) {
+    commands.push({ name: "check:telegram-load" });
+  }
+  return { classification, commands };
 }
 
 export function resolvePrDependencyAuditBase(

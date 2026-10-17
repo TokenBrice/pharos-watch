@@ -8,14 +8,14 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
 import type { StablecoinMeta } from "@shared/types";
 import { runDirectCli } from "../lib/cli-args.mjs";
-import { toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
+import { parseCoverageAuditCliArgs, runCoverageAuditCli, toPositiveInt } from "../lib/coverage-audit-cli";
 
 type AuditFormat = "markdown" | "json";
 
 interface Options {
   generatedAt: string;
   format: AuditFormat;
-  outputPath: string | null;
+  reportPath: string | null;
   live: boolean;
   liveLimit: number;
 }
@@ -25,8 +25,9 @@ function usage(): string {
     "Usage: tsx scripts/maintenance/generate-mint-authority-review-audit.ts [options]",
     "",
     "Options:",
-    "  --format <markdown|json>  Output format (default markdown)",
-    "  --out <path>              Write output to a file instead of stdout",
+    "  --json                    Output JSON instead of Markdown",
+    "  --markdown                Output Markdown (default)",
+    "  --report <path>            Write output to a file instead of stdout",
     "  --generated-at <iso>      Override generatedAt timestamp",
     "  --live                    Probe source URLs after static audit generation",
     "  --live-limit <n>          Maximum URLs to probe when --live is set (default 50)",
@@ -35,43 +36,26 @@ function usage(): string {
 }
 
 export function parseArgs(argv: string[], now = new Date()): Options {
-  const options: Options = {
-    generatedAt: now.toISOString(),
-    format: "markdown",
-    outputPath: null,
-    live: false,
-    liveLimit: 50,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--format") {
-      const format = argv[++index] as AuditFormat | undefined;
-      if (format !== "markdown" && format !== "json") {
-        throw new Error("--format must be markdown or json");
-      }
-      options.format = format;
-    } else if (arg === "--out") {
-      const outputPath = argv[++index];
-      if (!outputPath) throw new Error("--out requires a path");
-      options.outputPath = outputPath;
-    } else if (arg === "--generated-at") {
-      const generatedAt = argv[++index];
-      if (!generatedAt) throw new Error("--generated-at requires an ISO timestamp");
-      options.generatedAt = generatedAt;
-    } else if (arg === "--live") {
-      options.live = true;
-    } else if (arg === "--live-limit") {
-      options.liveLimit = toPositiveInt(argv[++index] ?? "", "--live-limit");
-    } else if (arg === "--help" || arg === "-h") {
-      process.stdout.write(`${usage()}\n`);
-      process.exit(0);
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
-    }
-  }
-
-  return options;
+  return parseCoverageAuditCliArgs(argv, {
+    createOptions: (): Options => ({
+      generatedAt: now.toISOString(),
+      format: "markdown",
+      reportPath: null,
+      live: false,
+      liveLimit: 50,
+    }),
+    includeGeneratedAt: true,
+    usage,
+    options: [
+      { flag: "--live", kind: "boolean", apply: (options) => { options.live = true; } },
+      {
+        flag: "--live-limit",
+        kind: "value",
+        missingMessage: "--live-limit must be a positive integer",
+        apply: (options, value) => { options.liveLimit = toPositiveInt(value!, "--live-limit"); },
+      },
+    ],
+  });
 }
 
 export function uniqueMintAuthoritySourceUrls(coins: readonly StablecoinMeta[] = TRACKED_STABLECOINS): string[] {
@@ -123,28 +107,23 @@ export async function runCli(
   argv = process.argv.slice(2),
   stdout: Pick<NodeJS.WriteStream, "write"> = process.stdout,
 ): Promise<number> {
-  const options = parseArgs(argv);
-  const audit = buildMintAuthorityReviewAudit({
-    coins: TRACKED_STABLECOINS,
-    generatedAt: options.generatedAt,
+  let liveAppendix = "";
+  return runCoverageAuditCli(argv, {
+    parse: parseArgs,
+    build: async (options) => {
+      const audit = buildMintAuthorityReviewAudit({
+        coins: TRACKED_STABLECOINS,
+        generatedAt: options.generatedAt,
+      });
+      if (options.live && options.format === "markdown") {
+        liveAppendix = await buildLiveAppendix(options.liveLimit);
+      }
+      return audit;
+    },
+    renderMarkdown: (audit) => `${renderMintAuthorityReviewAuditMarkdown(audit)}\n${liveAppendix}`,
+    stdout,
+    writeMessage: (target) => `Wrote Mint Authority review audit to ${target}`,
   });
-  let output =
-    options.format === "json"
-      ? `${JSON.stringify(audit, null, 2)}\n`
-      : `${renderMintAuthorityReviewAuditMarkdown(audit)}\n`;
-
-  if (options.live && options.format === "markdown") {
-    output += await buildLiveAppendix(options.liveLimit);
-  }
-
-  if (options.outputPath) {
-    const target = writeOutputFile(options.outputPath, output);
-    stdout.write(`Wrote Mint Authority review audit to ${target}\n`);
-    return 0;
-  }
-
-  stdout.write(output);
-  return 0;
 }
 
 runDirectCli(import.meta.url, async () => {

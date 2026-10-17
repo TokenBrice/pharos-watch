@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 import {
   collectSourceEnvKeys,
   parseWorkerEnvInterfaceBindings,
-  parseWorkerEnvInterfaceKeys,
   parseWranglerWorkerConfigBindings,
 } from "../ci/check-env-contract";
 
@@ -44,7 +43,7 @@ describe("check-env-contract worker Env parser", () => {
 
   it("fails closed when worker env.ts does not export Env", () => {
     withTempEnvSource("export interface NotEnv { API_KEY: string; }\n", (filePath) => {
-      expect(() => parseWorkerEnvInterfaceKeys(filePath)).toThrow(/missing export interface Env/);
+      expect(() => parseWorkerEnvInterfaceBindings(filePath)).toThrow(/missing export interface Env/);
     });
   });
 });

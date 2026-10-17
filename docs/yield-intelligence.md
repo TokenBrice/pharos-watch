@@ -737,7 +737,6 @@ After methodology, source, schema, or public-contract changes, run the focused t
 
 ```bash
 npm run check:doc-sync
-npm run check:doc-source-paths
 npm run check:verified-doc-links
 npm run check:cron-sync
 npm run check:cron-connections

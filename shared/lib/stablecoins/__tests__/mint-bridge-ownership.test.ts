@@ -6,7 +6,6 @@ import type {
   ContractDeployment,
   MintAuthorityControl,
   MintAuthorityProfile,
-  StablecoinMeta,
 } from "../../../types/core";
 import { describe, expect, it } from "vitest";
 import { parseStablecoinMetaAssets } from "../schema";
@@ -110,9 +109,6 @@ function contractsFor(routeIds: readonly string[]): ContractDeployment[] {
   });
 }
 
-function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
-  return makeStablecoinMeta(overrides);
-}
 
 function bridgeControl(
   overrides: Partial<BridgeRouteControl> = {},
@@ -228,7 +224,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
     expect(() =>
       parseStablecoinMetaAssets(
         [
-          makeCoin({
+          makeStablecoinMeta({
             contracts: contractsFor([BASE_ROUTE]),
             mintAuthority: makeMintProfile({
               controls: [makeMintControl({ deploymentRefs: [representation.id] })],
@@ -254,7 +250,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
         deploymentRefs: [route.id],
       }),
     );
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor(routes.map((route) => route.id)),
       mintAuthority: makeMintProfile({
         controls,
@@ -277,7 +273,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
       makeRoute(ARBITRUM_ROUTE),
       makeRoute(BASE_ROUTE, { canonicalChain: "arbitrum", destinationChain: "base" }),
     ];
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor(routes.map((route) => route.id)),
       mintAuthority: makeMintProfile({
         controls: [makeMintControl({ deploymentRefs: [ARBITRUM_ROUTE] })],
@@ -298,7 +294,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
     "requires bridge-mint when a reviewed %s route has structured coverage",
     (issuanceModel) => {
       const route = representationRoute(BASE_ROUTE, { issuanceModel });
-      const meta = makeCoin({
+      const meta = makeStablecoinMeta({
         contracts: contractsFor([BASE_ROUTE]),
         bridgeRouteRisk: makeBridgeProfile([route], [
           bridgeControl({
@@ -321,7 +317,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
 
   it("accepts structured representation coverage when a control names the bridge-mint holder", () => {
     const route = representationRoute(BASE_ROUTE);
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor([BASE_ROUTE]),
       bridgeRouteRisk: makeBridgeProfile([route], [
         bridgeControl({
@@ -337,7 +333,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
 
   it("keeps the conservative fallback when no structured control references a representation route", () => {
     const route = representationRoute(BASE_ROUTE);
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor([BASE_ROUTE]),
       bridgeRouteRisk: makeBridgeProfile([route]),
     });
@@ -347,7 +343,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
 
   it("does not require bridge-mint for a native-issuance route with structured admin coverage", () => {
     const route = makeRoute(BASE_ROUTE);
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor([BASE_ROUTE]),
       bridgeRouteRisk: makeBridgeProfile([route], [
         bridgeControl({
@@ -366,7 +362,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
       reviewDisposition: "unresolved",
       reviewNote: "The route review has not identified its transfer-rail controls yet.",
     });
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor([BASE_ROUTE]),
       bridgeRouteRisk: makeBridgeProfile([route], [
         bridgeControl({
@@ -382,7 +378,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
 
   it("allows one Safe to have distinct native-mint and bridge capabilities", () => {
     const sharedAddress = "0xcccccccccccccccccccccccccccccccccccccccc";
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor([ARBITRUM_ROUTE]),
       mintAuthority: makeMintProfile({
         controls: [
@@ -408,7 +404,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
 
   it("rejects the same bridge capability authored in both modules", () => {
     const sharedAddress = "0xdddddddddddddddddddddddddddddddddddddddd";
-    const meta = makeCoin({
+    const meta = makeStablecoinMeta({
       contracts: contractsFor([ARBITRUM_ROUTE]),
       mintAuthority: makeMintProfile({
         controls: [
@@ -453,7 +449,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
       rationale: "This wrapper creates no local canonical liabilities and inherits issuance from its parent.",
       sources: [SOURCE],
     };
-    const validMeta = makeCoin({
+    const validMeta = makeStablecoinMeta({
       id: "fixture-wrapper",
       contracts,
       mintAuthority: {

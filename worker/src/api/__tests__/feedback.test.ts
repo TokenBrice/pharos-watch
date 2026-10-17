@@ -153,7 +153,7 @@ describe("handleFeedback", () => {
   });
 
   it("returns 413 for oversized declared bodies before side effects", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const res = await handleFeedback(
       db,
       makeRawRequest(JSON.stringify(makeFeedbackBody()), { "Content-Length": String(17 * 1024) }),
@@ -192,7 +192,7 @@ describe("handleFeedback", () => {
   });
 
   it("requires a well-formed idempotency key only after payload validation", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const missingKeyRequest = makeJsonRequest("https://x/api/feedback", makeFeedbackBody(), {
       headers: { "CF-Connecting-IP": "1.2.3.4" },
     });
@@ -208,7 +208,7 @@ describe("handleFeedback", () => {
   });
 
   it("silently accepts honeypot submissions", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ website: "I am a bot" })), makeEnv());
 
     const body = (await readJsonResponse(res, 200)) as { ok: boolean };
@@ -218,7 +218,7 @@ describe("handleFeedback", () => {
   });
 
   it("rejects oversized honeypot fields before side effects", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ website: "x".repeat(301) })), makeEnv());
 
     expect(res.status).toBe(400);

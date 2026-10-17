@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { buildPipelineModeSummaries } from "@/lib/pipeline-workspace-model";
@@ -9,7 +9,6 @@ import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 const legacy = { totalAssets: 567, lastSync: 100,
   confidenceDistribution: { high: 115, "single-source": 325, low: 20, fallback: 1 },
   sourceDistribution: { missing: 106 } };
-afterEach(cleanup);
 describe("price source health scope", () => {
   it("labels old payloads as cache-wide instead of claiming active scope", () => {
     render(<PriceSourceHealthCard health={PriceSourceHealthSchema.parse(legacy)} nowSeconds={100} />);

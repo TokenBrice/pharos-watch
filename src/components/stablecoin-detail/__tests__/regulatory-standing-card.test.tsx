@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // src/components/stablecoin-detail/__tests__/regulatory-standing-card.test.tsx
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
 import type { GeniusProfile, MicaProfile, StablecoinMeta } from "@shared/types";
 import { RegulatoryStandingCard } from "../regulatory-standing-card";
 import {
@@ -70,7 +70,6 @@ function hasToneClass(element: Element | null, toneClass: string): boolean {
   return false;
 }
 
-afterEach(cleanup);
 
 describe("RegulatoryStandingCard", () => {
   const [attestation, redemptionPolicy, reserveDisclosure] = ISSUER_DISCLOSURES;

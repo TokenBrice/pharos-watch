@@ -2,9 +2,41 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CaseStudyContentSchema, WeeklyContentSchema } from "../lib/editorial-content";
 import { buildPrStaticCheckPlan, STRUCTURAL_CHECKS } from "../maintenance/run-pr-static-checks";
+import { checkEditorialContent } from "../ci/check-editorial-content";
+import { withTempRepo } from "./helpers/test-state";
 
 const load = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));
 describe("authored editorial JSON", () => {
+  it("discovers nested authored JSON and TypeScript with the existing editorial exclusions", () => {
+    withTempRepo("pharos-editorial-content", {
+      "shared/data/stablecoins/coins/demo.json": "{}",
+      "public/datasets/stablecoin-cemetery.json": "{\"rows\":[]}",
+      "shared/lib/methodology-versions/registry.ts": "export {};",
+      "shared/lib/methodology-versions/depeg-resolver.ts": "export {};",
+      "shared/lib/methodology-versions/mint-authority.ts": "export {};",
+      "shared/data/methodology-changelogs/index.ts": "export {};",
+      "src/data/changelogs/index.ts": "export {};",
+      "src/lib/case-studies/index.ts": "export {};",
+      "src/lib/case-studies/nested/prose.ts": "export {};",
+      "src/lib/case-studies/nested/unregistered.json": "{}",
+      "src/lib/case-studies/__mocks__/prose.ts": "export {};",
+      "src/lib/case-studies/node_modules/prose.ts": "export {};",
+      "src/lib/case-studies/__tests__/ignored.json": "not JSON",
+      "src/lib/case-studies/.hidden/ignored.json": "not JSON",
+      "src/lib/case-studies/.ignored.json": "not JSON",
+      "src/lib/case-studies/ignored.md": "Not authored JSON content.",
+      "src/app/dependency-map/content.json": readFileSync("src/app/dependency-map/content.json", "utf8"),
+      "src/lib/dependency-exposure-content.json": readFileSync("src/lib/dependency-exposure-content.json", "utf8"),
+    }, (cwd) => {
+      const issues = checkEditorialContent(cwd);
+      for (const path of ["nested/prose.ts", "__mocks__/prose.ts", "node_modules/prose.ts"]) {
+        expect(issues).toContain(`src/lib/case-studies/${path}: Prose must be authored as JSON, not TypeScript`);
+      }
+      expect(issues).toContain("src/lib/case-studies/nested/unregistered.json: Content source is not registered");
+      expect(issues.some((issue) => issue.includes("ignored"))).toBe(false);
+    });
+  });
+
   it("wires authored JSON validation into the owning structural guard", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["check:structural"]).toBe("node --import tsx scripts/maintenance/run-pr-static-checks.ts --structural");

@@ -143,7 +143,7 @@ Legacy GENIUS-only dates whose semantics were not established are preserved as `
 
 ## Sourcing & source kinds
 
-Map token → legal issuer entity → public posture. This mapping is manual and not cleanly API-able; treat it like the `reserve-research` / `compliance-research` editorial workflows.
+Map token → legal issuer entity → public posture. Confirm every source names this token's issuer, not merely an affiliate or general license. Assign [applicability](#applicability) first and apply the [authorization criteria](#authorization-status); unresolved scope, issuer, or redemption obligations leave the row unassessed rather than guessed. This mapping is manual and not cleanly API-able; treat it like the `reserve-research` / `compliance-research` editorial workflows.
 
 `GeniusReference.sourceKind`, in descending authority for U.S. authorization claims:
 

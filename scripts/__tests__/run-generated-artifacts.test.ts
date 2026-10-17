@@ -8,7 +8,7 @@ import {
 } from "../maintenance/run-generated-artifacts";
 
 describe("generated-artifact runner lifecycle selection", () => {
-  it.each(["sitemap-dates", "agents-doc,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
+  it.each(["sitemap-dates", "runbook-index,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
     const cwd = mkdtempSync(join(tmpdir(), "pharos-uncheckable-"));
     try {
       const result = spawnSync(process.execPath, [
@@ -24,7 +24,7 @@ describe("generated-artifact runner lifecycle selection", () => {
     }
   });
 
-  it.each(["sitemap-dates", "agents-doc,sitemap-dates"])("rejects explicit uncheckable selection %s before any child executes", async (ids) => {
+  it.each(["sitemap-dates", "runbook-index,sitemap-dates"])("rejects explicit uncheckable selection %s before any child executes", async (ids) => {
     const runCommandImpl = vi.fn(async () => 0);
     await expect(runGeneratedArtifacts({ argv: ["--check", `--only=${ids}`], runCommandImpl }))
       .rejects.toThrow(/sitemap-dates.*git-history-derived.*bootstrap:generated:history/);
@@ -35,7 +35,7 @@ describe("generated-artifact runner lifecycle selection", () => {
     const log = vi.fn();
     const runCommandImpl = vi.fn(async () => 0);
     const result = await runGeneratedArtifacts({
-      argv: ["--check", "--only=agents-doc", "--phase=2"], log, runCommandImpl,
+      argv: ["--check", "--only=runbook-index", "--phase=2"], log, runCommandImpl,
     });
     expect(result).toMatchObject({ status: 0, results: [] });
     expect(runCommandImpl).not.toHaveBeenCalled();

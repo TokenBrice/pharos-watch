@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 
-const fixtures = createLatestSchemaFixtureTracker();
+const fixtures = createLatestSchemaFixtureTracker({ uncached: true });
 afterEach(() => fixtures.closeAll());
 
 function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
@@ -14,19 +12,18 @@ function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
 }
 
 function discoverTelegramChatIdTablesFromMigrations(): string[] {
-  const migrationDir = join(process.cwd(), "worker/migrations");
-  const tables = new Set<string>();
-  for (const file of readdirSync(migrationDir)) {
-    if (!file.endsWith(".sql")) continue;
-    const sql = readFileSync(join(migrationDir, file), "utf8");
-    const createTablePattern = /CREATE TABLE IF NOT EXISTS\s+(telegram_[a-z0-9_]+)\s*\(([\s\S]*?)\);/giu;
-    for (const match of sql.matchAll(createTablePattern)) {
-      const table = match[1];
-      const body = match[2] ?? "";
-      if (table && /\bchat_id\b/iu.test(body)) tables.add(table);
-    }
-  }
-  return [...tables].sort();
+  const { sqlite } = fixtures.open();
+  const tables = sqlite.prepare(`
+    SELECT tables.name
+    FROM sqlite_master AS tables
+    WHERE tables.type = 'table'
+      AND tables.name GLOB 'telegram_*'
+      AND EXISTS (
+        SELECT 1 FROM pragma_table_info(tables.name) WHERE name = 'chat_id'
+      )
+    ORDER BY tables.name
+  `).all() as { name: string }[];
+  return tables.map((table) => table.name);
 }
 
 function collectTelegramTablesFromSql(history: Array<{ sql: string }>): Set<string> {

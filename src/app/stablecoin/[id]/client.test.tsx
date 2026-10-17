@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { useRef } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createContagionSnapshotMock,
   createDepegEventsMock,
@@ -186,9 +186,6 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
 
   it.each([
@@ -518,9 +515,6 @@ describe("StablecoinDetailClient (frozen S14)", () => {
     useStablecoinDetailViewModelMock.mockReset();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("keeps the reduced dossier: DEWS reads frozen archive and no placeholder claims a missing review", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -571,9 +565,6 @@ describe("StablecoinDetailClient (frozen)", () => {
     useStablecoinDetailViewModelMock.mockReset();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders the FrozenStateBanner alongside the hero when status === frozen", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;

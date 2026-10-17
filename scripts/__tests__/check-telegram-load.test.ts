@@ -31,6 +31,18 @@ describe("Telegram load simulation", () => {
     report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
   });
 
+  it("derives each target's recap contention from its retained risk-burst scenario", () => {
+    const combined = buildTelegramLoadCheckReport({ targets: [1_000, 5_000], skipQueryPlans: true });
+    for (const target of [1_000, 5_000]) {
+      const scenarios = combined.scenarios.filter((scenario) => scenario.targetActiveWatchers === target);
+      expect(scenarios).toHaveLength(6);
+      const riskBurst = scenarios.find((scenario) => scenario.scenarioId === "market-wide-burst")!;
+      expect(combined.recapScenarios.filter((scenario) => scenario.targetRecipients === target)).toEqual(
+        simulateTelegramRecapLoadScenarios(target, { riskBurstChunks: riskBurst.messageChunks }),
+      );
+    }
+  });
+
   it("classifies the required 5000-watcher SLO across planning and delivery", () => {
     const requiredScenarios = report.scenarios.filter((scenario) =>
       scenario.scenarioId === "single-depeg" ||

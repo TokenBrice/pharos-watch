@@ -9,7 +9,7 @@ Read `docs/editorial-style.md` before writing; its `technical-evidence` register
 
 Choose regime `genius`, `mica`, or `both`. Read the coin’s base entry and the matching sidecar under `shared/data/stablecoins/domains/compliance` if present. Compliance fields belong only in that sidecar; create it when absent, following `docs/process/stablecoin-research-sidecars.md` and `shared/lib/stablecoins/schema.ts`.
 
-For `genius`, read `docs/genius-tracker.md`, `shared/lib/compliance-regime-state.ts`, and [genius.md](references/genius.md). For `mica`, read `docs/mica-tracker.md` and [mica.md](references/mica.md). In `both` mode, research each regime independently; do not infer one status from the other.
+For `genius`, read `docs/genius-tracker.md` (including [source rules](../../../docs/genius-tracker.md#sourcing--source-kinds)) and `shared/lib/compliance-regime-state.ts`. For `mica`, read `docs/mica-tracker.md` (including [source rules](../../../docs/mica-tracker.md#data-sourcing--maintenance)). In `both` mode, research each regime independently; do not infer one status from the other.
 
 ## Workflow
 
@@ -50,14 +50,14 @@ Prompt the researcher to read the base coin, the existing compliance sidecar, `s
 
 1. Decide whether the regime applies; a sourced exclusion is an assessment (`assessed=true`). Use `assessed=false` when the evidence cannot support a row, not as a substitute for missing research.
 2. Classify the result as `no-change`, `correct`, `add-new-row`, `remove-row`, or `unable-to-verify`; preserve good fields and explain uncertainty.
-3. Use the regime’s primary-source order in [genius.md](references/genius.md) and [mica.md](references/mica.md), map token → legal issuer → exact public posture, and record consulted URLs with what each showed.
-4. Return `id`, `mica`, `genius`, and optional `notes`. Each regime object returns `assessed`, `changeKind`, `consequential`, `confidence`, `summary`, and `proposedJson`; set `consequential=true` for a new/upgraded authorization claim, status escalation, removal, or downgrade of an existing strong claim. `proposedJson` is compact JSON for the full candidate object only for a correction or new row, otherwise `""`. A proposed GENIUS object includes reviewer `Pharos compliance research` and `reviewedAt` set to the review date; MiCA has no reviewer/date fields.
+3. Follow the [GENIUS](../../../docs/genius-tracker.md#sourcing--source-kinds) or [MiCA](../../../docs/mica-tracker.md#data-sourcing--maintenance) primary-source order, map token → legal issuer → exact public posture, and record consulted URLs with what each showed.
+4. Return the `research` / `regimeProposal` envelopes in [batch-schema.md](references/batch-schema.md). Set `consequential=true` for a new/upgraded authorization claim, status escalation, removal, or downgrade of an existing strong claim. Supply full candidate JSON only for a correction or new row, otherwise `""`. A proposed GENIUS object includes reviewer `Pharos compliance research` and `reviewedAt` set to the review date; MiCA has no reviewer/date fields.
 
 Use the response envelopes in [batch-schema.md](references/batch-schema.md); before any edit, parse candidate JSON with the regime schema in `shared/types/stablecoin-meta-compliance-schemas.ts`, then validate the proposed sidecar with `StablecoinComplianceSidecarSchema` and the merged coin with `StablecoinMetaAssetSchema` from `shared/lib/stablecoins/schema.ts`. The repository check validates files on disk after the approved write and regeneration; it does not accept scratch candidates.
 
 ### Adjudication contract
 
-The verifier independently reopens the base and sidecar, checks every proposed URL and highest-stakes authorization claim against primary sources, confirms the issuer is this token’s issuer, and checks current enums/cross-field rules. Default to rejection for unsupported upgrades. For each regime return one of `confirm-no-change`, `apply-correction`, `flag-for-approval`, `reject-proposal`, `unable-to-verify`, or `not-applicable`, plus `safeToAutoApply`, `isNewRow`, `finalJson`, `changeSummary`, and concrete `issues`.
+The verifier independently reopens the base and sidecar, checks every proposed URL and highest-stakes authorization claim against primary sources, confirms the issuer is this token’s issuer, and checks current enums/cross-field rules. Default to rejection for unsupported upgrades. Return the `verify` / `regimeVerdict` envelopes in [batch-schema.md](references/batch-schema.md), with concrete issues.
 
 Set `safeToAutoApply=true` only for a non-empty candidate editing an existing row, with no removal or downgrade, and no stronger authorization escalation unless that claim was already present and equally or better sourced. Limit it to reference refinement, descriptive fields, a more-conservative enum correction, or a date refresh. New rows need explicit approval covering their addition; prior cohort authorization that explicitly includes new rows satisfies this requirement. `unable-to-verify` makes no change and needs more research. Treat the flag as advisory, never as permission.
 

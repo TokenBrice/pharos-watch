@@ -7,11 +7,6 @@ on:
         description: Exact prepared workspace artifact name supplied by pages-prepare.
         required: true
         type: string
-      refresh_data:
-        description: Refresh API-backed release data before building.
-        required: false
-        default: false
-        type: boolean
     secrets:
       CLOUDFLARE_API_TOKEN:
         required: true
@@ -67,34 +62,13 @@ jobs:
           path: ${{ runner.temp }}/pharos-pages-workspace
       - name: Restore prepared production workspace
         run: tar --zstd -xf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" --same-permissions
-      - name: Resolve release-data refresh result path
-        # runner.temp is not available in job-level env; export it per step.
-        run: echo "PAGES_REFRESH_RESULT_PATH=${RUNNER_TEMP}/pages-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/result.json" >> "$GITHUB_ENV"
       - name: Refresh API-backed release data
-        id: refresh-data
-        if: ${{ inputs.refresh_data }}
         env:
           DIGEST_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           DEPEG_EVENTS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_REQUIRE_API: "1"
         run: node --import tsx scripts/maintenance/refresh-pages-release-data.ts
-      - name: Validate release-data refresh result
-        if: ${{ always() && inputs.refresh_data && steps.refresh-data.outcome != 'skipped' }}
-        run: |
-          node <<'NODE'
-          const { readFileSync } = require("node:fs");
-          const result = JSON.parse(readFileSync(process.env.PAGES_REFRESH_RESULT_PATH, "utf8"));
-          const allFailed =
-            !result.digests?.ok && !result.depegEvents?.ok && !result.publicDatasets?.ok;
-          const rollbackFailed =
-            result.publicDatasets?.ok === false && result.publicDatasets?.rolledBack !== true;
-          if (allFailed || rollbackFailed) {
-            throw new Error(
-              `Release-data refresh gate failed: ${JSON.stringify({ allFailed, rollbackFailed })}`,
-            );
-          }
-          NODE
       - name: Build clean production export
         # Production builds deliberately start without a restored .next/cache.
         # A stale Webpack/PostCSS entry can otherwise pair new Tailwind class
@@ -150,27 +124,12 @@ jobs:
           total_files="$(find out -type f | wc -l | tr -d ' ')"
           output_size="$(du -sh out | awk '{print $1}')"
           TOTAL_FILES="${total_files}" OUTPUT_SIZE="${output_size}" node <<'NODE'
-          const { appendFileSync, existsSync, readFileSync } = require("node:fs");
-          const result = existsSync(process.env.PAGES_REFRESH_RESULT_PATH)
-            ? JSON.parse(readFileSync(process.env.PAGES_REFRESH_RESULT_PATH, "utf8"))
-            : null;
-          const allOk = result
-            ? result.digests?.ok === true
-              && result.depegEvents?.ok === true
-              && result.publicDatasets?.ok === true
-            : null;
-          const refreshSummary = result
-            ? [
-                `- Data refreshed: \`${allOk}\``,
-                `- Refresh producers: digest=\`${result.digests?.ok === true}\`, depeg=\`${result.depegEvents?.ok === true}\`, public datasets=\`${result.publicDatasets?.ok === true}\``,
-              ]
-            : ["- Data refreshed: `not requested`"];
+          const { appendFileSync } = require("node:fs");
           appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
             "## Pages release",
             "",
             `- Commit: \`${process.env.GITHUB_SHA}\``,
             `- Output: ${process.env.TOTAL_FILES} files, ${process.env.OUTPUT_SIZE}`,
-            ...refreshSummary,
             `- Run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             "- Rollback: select the prior successful deployment in Cloudflare Pages deployment history.",
             "",

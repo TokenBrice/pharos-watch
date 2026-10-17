@@ -49,7 +49,7 @@ describe("writeStatusRawSnapshot", () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
       first: { value: JSON.stringify({ version: 1, producedAt, raw: minimalRawStatus() }), updated_at: updatedAt },
-    }], { requireMatch: true });
+    }]);
     expect(await loadStatusRawSnapshot(db, NOW)).toMatchObject(kind === "fresh"
       ? { kind, ageSec: 0 }
       : { kind, ageSec: null, error: "future-timestamp" });
@@ -64,7 +64,7 @@ describe("writeStatusRawSnapshot", () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
       first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw }), updated_at: NOW },
-    }], { requireMatch: true });
+    }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
       kind: "unreadable", error: "status raw snapshot cron cohort mismatch",
     });
@@ -91,7 +91,7 @@ describe("writeStatusRawSnapshot", () => {
         value: JSON.stringify({ version: 1, producedAt: NOW, raw: minimalRawStatus() }),
         updated_at: NOW,
       },
-    }], { requireMatch: true });
+    }]);
 
     const snapshot = await loadStatusRawSnapshot(db, NOW + 30);
 
@@ -119,7 +119,7 @@ describe("writeStatusRawSnapshot", () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
       first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw: { ...minimalRawStatus(), ...overrides } }), updated_at: NOW },
-    }], { requireMatch: true });
+    }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
       kind: "unreadable", error: "invalid status raw snapshot payload",
     });
@@ -133,7 +133,7 @@ describe("writeStatusRawSnapshot", () => {
         version: 1, producedAt: NOW,
         raw: { ...raw, crons: { ...raw.crons, "sync-stablecoins": {} } },
       }), updated_at: NOW },
-    }], { requireMatch: true });
+    }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({ kind: "unreadable" });
   });
 
@@ -143,7 +143,7 @@ describe("writeStatusRawSnapshot", () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
       first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw }), updated_at: NOW },
-    }], { requireMatch: true });
+    }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({ kind: "fresh", raw: { budgetOnlySurfaces: [] } });
   });
 
@@ -159,7 +159,7 @@ describe("writeStatusRawSnapshot", () => {
         }),
         updated_at: NOW,
       },
-    }], { requireMatch: true });
+    }]);
 
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
       kind: "unreadable",

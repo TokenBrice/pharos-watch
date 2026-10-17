@@ -72,7 +72,6 @@ describe("api key handlers", () => {
           ],
         },
       ],
-      { requireMatch: true },
     );
 
     const response = await handleApiKeys(
@@ -108,7 +107,6 @@ describe("api key handlers", () => {
           first: { count: 2 },
         },
       ],
-      { requireMatch: true },
     );
 
     vi.useFakeTimers();
@@ -195,7 +193,6 @@ describe("api key handlers", () => {
           rows: [],
         },
       ],
-      { requireMatch: true },
     );
 
     const response = await handleApiKeyUpdate(
@@ -248,7 +245,6 @@ describe("api key handlers", () => {
           postMutationRow: null,
         }),
       ],
-      { requireMatch: true },
     );
 
     const response = await handleApiKeyRotate(
@@ -286,7 +282,6 @@ describe("api key handlers", () => {
         }),
         ...makeRequestAttributionTables(),
       ],
-      { requireMatch: true },
     );
     const { ctx, waits } = makeExecutionContext();
 

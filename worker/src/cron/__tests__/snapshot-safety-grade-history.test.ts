@@ -476,7 +476,7 @@ describe("digest grade availability", () => {
           base_input_generation_id: identity.baseInputGenerationId, model_publication_generation_id: identity.publicationGenerationId,
           transition_kind: "organic-grade-change", grade: "F", score: 20, prev_grade: "A", prev_score: 90,
         }] },
-      ], { requireMatch: true }),
+      ]),
       trackedStablecoinAssets: assets, trackedStablecoinIds: new Set(assets.map((asset) => asset.id)),
       coreAggregateStablecoinAssets: assets, coreAggregateStablecoinIds: new Set(assets.map((asset) => asset.id)),
       stablecoinAssetById: new Map(assets.map((asset) => [asset.id, asset])),

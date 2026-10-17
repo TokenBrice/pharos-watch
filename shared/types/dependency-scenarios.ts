@@ -4,8 +4,8 @@ import { V9GradeSchema } from "./safety-score-v9";
 import { BaseInputGenerationIdSchema, Sha256Schema, ScoreSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields } from "./safety-score-v9-causes";
 
-export const DEPENDENCY_SCENARIOS_INTERVAL_MS = 3_600_000;
-export const DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC = 7_200;
+export const DEPENDENCY_SCENARIOS_INTERVAL_MS = 86_400_000;
+export const DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC = 172_800;
 export const DEPENDENCY_SCENARIOS_CACHE_PREFIX = "dependency-scenarios:v2:";
 export const DependencyScenarioArtifactSchema = z.object({
   schemaVersion: z.literal(2),

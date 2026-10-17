@@ -2,8 +2,8 @@
 /**
  * Generate the unified editorial OG image template per content category.
  *
- * One PNG per kicker (Daily Digest, Depeg Briefing, Methodology, About, Learn,
- * Stablecoin Profile). The layout is identical across all
+ * One PNG per kicker (Daily Digest, Depeg Briefing, Methodology, About, Learn).
+ * The layout is identical across all
  * outputs; only the kicker varies. Wired by metadata in the corresponding
  * routes.
  *
@@ -46,7 +46,6 @@ const CARDS = [
   { kicker: "Methodology", title: "How Pharos grades the peg", file: "og-editorial-methodology.png" },
   { kicker: "About", title: "About Pharos", file: "og-editorial-about.png" },
   { kicker: "Learn", title: "Stablecoin mechanisms", file: "og-editorial-learn.png" },
-  { kicker: "Stablecoin Profile", title: "Stablecoin Profile", file: "og-editorial-profile.png" },
 ];
 
 // Editorial template matching the current light product shell. Wordmark,

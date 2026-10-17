@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { computeDependencyExposure, useDependencyExposureMode } from "@/hooks/use-dependency-exposure-mode";
 import { readDependencyExposureUrl, resetDependencyExposureUrl, writeDependencyExposureUrl } from "@/lib/dependency-exposure-url";
@@ -19,7 +19,6 @@ function publication() {
   ] } }));
 }
 const roots = ["root"];
-afterEach(cleanup);
 
 describe("Exposure mode", () => {
   it("distinguishes unpublished USD from a published zero and qualifies partial known totals", () => {

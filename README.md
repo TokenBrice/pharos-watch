@@ -85,14 +85,7 @@ For local tunnel or cross-origin `next dev` testing, set `NEXT_ALLOWED_DEV_ORIGI
 
 Local Next.js and scripts that explicitly load credentials use the ignored root `.env.local`; [`.env.example`](./.env.example) is generated from the env contract and documents variable names plus non-secret defaults, never secret values. Check only whether a required name is present, and never print or copy its value. Worker runtime secrets remain in Cloudflare/Wrangler-managed bindings rather than local environment files.
 
-Useful checks:
-
-```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run check:pr -- --base=origin/main
-```
+For focused authoring checks, use [Testing: Smallest adequate check per area](./docs/testing.md#smallest-adequate-check-per-area).
 
 Use `npm install` instead of `npm ci` only when intentionally changing dependencies.
 

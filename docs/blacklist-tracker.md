@@ -368,7 +368,6 @@ When changing blacklist coverage or behavior:
 6. Run:
 
    ```bash
-   npm run check:doc-source-paths
    npm run check:verified-doc-links
    npm run check:generated-artifacts -- --only=api-reference
    npm run check:cron-connections

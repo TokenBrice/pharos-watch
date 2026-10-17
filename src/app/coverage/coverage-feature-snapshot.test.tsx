@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { buildCoverageFeatureSummary, buildCoverageRow, COVERAGE_FEATURES } from "@/lib/coverage";
 import type { CoverageFeatureSummary } from "@/lib/coverage";
 import { CoverageFeatureSnapshotRow } from "@/components/coverage/coverage-feature-snapshot";
 import { CoverageFeatureSnapshotCard } from "@/components/coverage/coverage-page-sections";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
-afterEach(cleanup);
 
 describe("CoverageFeatureSnapshotRow", () => {
   it("uses only mint-authority route buckets for stacked-bar semantics", () => {

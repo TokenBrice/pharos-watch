@@ -38,8 +38,6 @@ export interface MockD1Database extends D1Database {
 export interface MockD1Options {
   /** Match normalized SQL exactly and require every executed statement to match. */
   strict?: boolean;
-  /** @deprecated mockD1 requires matches by default. Kept for compatibility with shared test fixtures. */
-  requireMatch?: boolean;
   /** Match normalized SQL exactly instead of substring search. */
   strictSql?: boolean;
   /** Inject a named failure when a statement contains this SQL fragment. */

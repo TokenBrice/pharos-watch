@@ -7,8 +7,6 @@ Applies to `shared/`; `shared/data/stablecoins/AGENTS.md` is the more specific s
 - `docs/architecture.md` § “File Tree Guide” and § “TypeScript Target Constraints”.
 - `docs/classification.md` for stablecoin or taxonomy work; `docs/methodology-page.md` for scoring work.
 
-Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>`.
-
 ## Rules and owners
 
 - `shared/lib/` is runtime-neutral, compiles under root and Worker targets, and must not import frontend or Worker-only modules.

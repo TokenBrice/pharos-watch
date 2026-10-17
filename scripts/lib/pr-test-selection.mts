@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import { matchesGlob } from "node:path";
 import { CRITICAL_OWNERSHIP } from "./critical-coverage.mjs";
 import { assertExecutableTestFiles, collectOwningTests, normalizeOwnershipPath, type CriticalOwnership } from "./critical-ownership.mts";
 import { ALWAYS_RUN_TEST_FILES } from "./critical-test-files.mts";
@@ -34,8 +33,4 @@ export function selectPrTestFiles(
   const files = [...selected].map(normalizeOwnershipPath).sort();
   assertExecutableTestFiles(files, { exists });
   return files;
-}
-
-export function isTestFile(path: string): boolean {
-  return matchesGlob(path, "**/*.{test,spec}.{js,jsx,ts,tsx,mjs,mts,cjs,cts}");
 }

@@ -7,7 +7,7 @@ describe("queryBlacklistGapMetrics", () => {
     const db = mockD1([
       { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
       { match: "blacklist-gap-aggregate", rows: [], first: null },
-    ], { requireMatch: true });
+    ]);
     await expect(queryBlacklistGapMetrics(db, 1_700_000_000, {
       includeDistributions: false,
       cacheTtlSec: 300,
@@ -45,7 +45,7 @@ describe("queryBlacklistGapMetrics", () => {
           { amount_source: "unavailable", n: 7 },
         ],
       },
-    ], { requireMatch: true });
+    ]);
 
     const result = await queryBlacklistGapMetrics(db, 1_700_000_000, 86_400);
 
@@ -86,7 +86,7 @@ describe("queryBlacklistGapMetrics", () => {
           unrecoverable: 3,
         },
       },
-    ], { requireMatch: true });
+    ]);
 
     const result = await queryBlacklistGapMetrics(db, 1_700_000_000, {
       recentWindowSec: 86_400,
@@ -127,7 +127,7 @@ describe("queryBlacklistGapMetrics", () => {
           updated_at: 1_700_000_000 - 60,
         }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const result = await queryBlacklistGapMetrics(db, 1_700_000_000, {
       recentWindowSec: 86_400,
@@ -170,7 +170,7 @@ describe("queryBlacklistGapMetrics", () => {
           updated_at: 1_700_000_000 - 120,
         }],
       },
-    ], { requireMatch: true });
+    ]);
 
     const result = await queryBlacklistGapMetrics(db, 1_700_000_000, {
       recentWindowSec: 86_400,
@@ -215,7 +215,7 @@ describe("queryBlacklistGapMetrics", () => {
         ],
       },
       { match: "blacklist-gap-metrics-cache-write", rows: [] },
-    ], { requireMatch: true });
+    ]);
 
     const result = await materializeBlacklistGapMetrics(db, 1_700_000_000, 86_400, 1_699_999_000);
 

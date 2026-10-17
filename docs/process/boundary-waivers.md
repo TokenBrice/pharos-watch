@@ -17,7 +17,7 @@ The sole reviewed frontend→worker waiver is listed in `FRONTEND_TO_WORKER_WAIV
 
 - **Waiver ID:** `frozen-invariants-lifecycle-registry-check`
 - **Status:** Long-lived. No active retirement plan.
-- **Reason:** The freeze runbook requires asserting that frozen stablecoin IDs are absent from independent lifecycle registries. This checker owns the worker-side `MINT_BURN_CONFIG_SPECS` and `CONTRACT_CONFIGS`, shared Bluechip slugs, and frontend `STATIC_COMPARE_PAIRS`; runtime tests separately own yield registries, snapshot membership and lifecycle partitioning. The remaining check is intentionally cross-layer because that is exactly what it validates.
+- **Reason:** The freeze runbook requires asserting that frozen stablecoin IDs are absent from independent lifecycle registries. This checker owns the worker-side `MINT_BURN_CONFIG_SPECS` and `CONTRACT_CONFIGS` and shared Bluechip slugs, and explicitly calls the frontend `assertStaticComparePairs()` assertion for `STATIC_COMPARE_PAIRS` (also called eagerly by production comparison-page construction). Runtime tests separately own yield registries, snapshot membership and lifecycle partitioning. The remaining check is intentionally cross-layer because that is exactly what it validates.
 - **What was tried:** Promoting the source registries into `shared/` was evaluated:
   - `MINT_BURN_CONFIG_SPECS` uses `requireChainConfig()` and Worker helpers from `mint-burn-contracts-helpers.ts`; `cctpBridgeDetection()` resolves tracked contracts through `tracked-contract-resolution`. An ID-only mirror would duplicate the source of truth.
   - `CONTRACT_CONFIGS` is constructed from `CONTRACT_CONFIG_SPECS` via `resolveBlacklistContractConfig`, which uses the same worker-resolution path.

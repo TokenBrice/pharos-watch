@@ -64,8 +64,8 @@ describe("PR lane manifest", () => {
     const docs = WORKFLOW.jobs.prepare.steps.find((step) => step.id === "docs");
     expect(docs?.env.PR_LANE_ID).toBe("docs-inline");
     expect(PR_DOC_COMMANDS.map((command) => command.id)).toEqual([
-      "verified-doc-links", "doc-source-paths", "doc-sync",
-      "doc-ownership-invariants", "agents-doc-artifact",
+      "verified-doc-links", "doc-sync",
+      "doc-ownership-invariants",
     ]);
   });
 

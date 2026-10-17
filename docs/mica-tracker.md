@@ -181,8 +181,8 @@ No new infrastructure — these primitives already exist.
 
 This is the dominant cost, not the code.
 
-- **Sources of truth:** ESMA register of authorized entities; EBA registers of EMT/ART issuers; national authority registers (ACPR REGAFI, BaFin, DNB/AFM, MFSA, CBI, Bank of Lithuania).
-- **Mapping is manual:** token → issuer entity → authorization is not cleanly API-able. Treat like the existing `reserve-research` / `resilience-classify` editorial workflows.
+- **Primary-source order:** ESMA authorized-entity register > EBA EMT/ART issuer and significant-token registers > national competent-authority registers (ACPR REGAFI, BaFin, DNB/AFM, MFSA, CBI, Bank of Lithuania) > issuer whitepapers or authorization disclosures > EU venue restriction/delisting notices.
+- **Mapping is manual:** token → issuer entity → authorization is not cleanly API-able. Confirm the registered entity issues this exact token, not an affiliate; treat like the existing `reserve-research` / `resilience-classify` editorial workflows. Apply the [status criteria](#status-criteria), including register evidence for authorization and high-confidence, token-specific evidence for every assessment.
 - **Backfill scope:** Prioritize EUR coins, major EU-traded USD coins, existing structured `mica` metadata, and records whose licenses mention MiCA. Assets without structured metadata remain unassessed, not implicitly out of scope; use the live compliance surface or source metadata for current status totals.
 - **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Periodic refresh against the registers runs through the `compliance-research` skill (`mica` regime).
 

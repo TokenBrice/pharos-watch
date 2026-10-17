@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, renderHook } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
 import { useTelegramMainButton, type UseTelegramMainButtonArgs } from "./use-telegram-main-button";
 
-afterEach(cleanup);
 
 it("keeps exactly one native listener across handler, activity, SDK and unmount transitions", () => {
   const button = () => {

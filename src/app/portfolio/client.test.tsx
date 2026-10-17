@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
 import type { ReportCardsV9Response } from "@shared/types";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -121,9 +121,6 @@ function basePortfolioState(): typeof portfolioState {
 }
 
 describe("PortfolioClient URL sync", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   beforeEach(() => {
     portfolioState = basePortfolioState();

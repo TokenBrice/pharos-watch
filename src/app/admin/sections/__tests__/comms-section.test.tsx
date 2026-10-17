@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { CommsSection } from "../comms-section";
 
-afterEach(cleanup);
 
 describe("CommsSection", () => {
 

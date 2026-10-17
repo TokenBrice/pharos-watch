@@ -24,7 +24,6 @@ type RegistryMapping = {
 };
 type RegistryExclusion = { reason: string; sources: string[] };
 type OwnershipRegistry = {
-  baseDocs?: string[];
   exclusions?: RegistryExclusion[];
   mappings?: RegistryMapping[];
   taskFamilies?: unknown;
@@ -61,8 +60,23 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
 }
 
 describe("doc-ownership registry integrity", () => {
+  it("keeps unconditional root guidance and hints out of the routing model", () => {
+    expect(ownership).not.toHaveProperty("baseDocs");
+    expect(ownership).not.toHaveProperty("coreRules");
+    for (const mapping of mappings) expect(mapping, mapping.id).not.toHaveProperty("hints");
+  });
+
+  it("authors only exceptional checks, leaving baseline selectors authoritative", () => {
+    for (const mapping of mappings) {
+      for (const command of mapping.checks ?? []) {
+        expect(command, mapping.id).not.toMatch(/^npm run (?:lint:changed|typecheck(?::worker)?|check:(?:stablecoin-data|site-csp-sync|cron-sync|cron-connections|migrations|telegram-load|doc-sync|generated-artifacts))(?: |$)/);
+      }
+    }
+    expect(mappings.find((mapping) => mapping.id === "stablecoin-registry")?.checks)
+      .toContain("npm run check:failure-scenarios");
+  });
+
   const references: Array<{ path: string; anchor?: string }> = [
-    ...(ownership.baseDocs ?? []).map((path) => ({ path })),
     ...mappings.flatMap((mapping) => [
       ...mapping.docs.map(normalizeDoc),
       ...(mapping.background ?? []).map(normalizeDoc),
@@ -91,7 +105,7 @@ describe("doc-ownership registry integrity", () => {
       // Release B added nullable flow/supply/PSI, nominal-price, and audit-verdict
       // wire contracts; the 2026-10-07 hardening added served-generation yield
       // identity, PSI omission arrays, and scheduler liveness. Retain its ratchet.
-      "docs/api-reference.md#public-endpoints": 47_460,
+      "docs/api-reference.md#public-endpoints": 44_368,
       "docs/telegram-alerts.md#commands": 33_389,
       "docs/digest-pipeline.md#generation": 43_892,
       // Main's env-interface, scripts, and status backend exceptions no longer

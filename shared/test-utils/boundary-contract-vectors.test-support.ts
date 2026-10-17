@@ -9,7 +9,6 @@ export const NUMERIC_INPUT_STATES = [
   { state: "positive", value: 100 },
 ] as const;
 
-export const SCAN_INPUT_STATES = ["exhausted", "capped", "failed", "decode-gap", "complete-empty"] as const;
 export const READ_INPUT_STATES = ["confirmed-absent", "failed-read"] as const;
 
 export const CLOCK_NOW_SEC = 1_800_000_000;

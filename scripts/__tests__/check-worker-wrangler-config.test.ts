@@ -93,18 +93,23 @@ describe("check-worker-wrangler-config", () => {
     expect(report.issues).toContain('public must not declare retired WORKER_V9_WORKFLOW_MODE.');
   });
 
-  it("rejects a compatibility-date mismatch between the source-owned Worker roles", () => {
+  it.each([
+    ["compatibility_date", /^compatibility_date\s*=.*$/m, 'compatibility_date = "2026-10-08"'],
+    ["compatibility_flags", /^compatibility_flags\s*=.*$/m, 'compatibility_flags = ["nodejs_compat"]'],
+    ["minify", /^minify\s*=.*$/m, "minify = false"],
+    ["keep_names", /^keep_names\s*=.*$/m, "keep_names = false"],
+  ])("rejects paired runtime drift in %s without reading documentation", (key, pattern, replacement) => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-paired-date-test-"));
     try {
       const publicPath = join(directory, "public.toml");
       const heavyPath = join(directory, "heavy.toml");
       writeFileSync(publicPath, readFileSync("worker/wrangler.toml", "utf8"));
       writeFileSync(heavyPath, readFileSync("worker/wrangler.heavy.toml", "utf8").replace(
-        /^compatibility_date\s*=\s*"[^"]+"/m, 'compatibility_date = "2026-10-08"',
+        pattern, replacement,
       ));
       const report = checkWorkerWranglerConfig(publicPath, heavyPath);
       expect(report.failed).toBe(true);
-      expect(report.issues.some((issue) => issue.includes("Paired runtime configuration differs") && issue.includes("compatibility_date"))).toBe(true);
+      expect(report.issues.some((issue) => issue.includes("Paired runtime configuration differs") && issue.includes(key))).toBe(true);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

@@ -135,37 +135,37 @@ jobs:
           BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"
           ARTIFACT_TMP="$(mktemp -d)"
           trap 'rm -rf "$ARTIFACT_TMP"' EXIT
-          EMPTY_HOOKS="$ARTIFACT_TMP/empty-git-hooks"
-          mkdir -p "$EMPTY_HOOKS"
-          git config core.hooksPath "$EMPTY_HOOKS"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Snapshot the verifier and its imports from the trusted default-branch
-          # checkout before prepare-branch switches the worktree to the automation
-          # branch: relative scripts/ paths resolve against that unreviewed branch
-          # afterwards, and no branch-controlled code may run while the automation
-          # token is in the step environment.
+          # Bundle the verifier and its import closure from trusted main before
+          # switching the worktree. No branch-controlled code may run while the
+          # automation token is in the step environment.
           TRUSTED_VERIFIER="$ARTIFACT_TMP/trusted-verifier"
-          mkdir -p "$TRUSTED_VERIFIER/scripts/ci" "$TRUSTED_VERIFIER/scripts/lib"
-          cp scripts/ci/verify-mechanism-refresh-diff.ts "$TRUSTED_VERIFIER/scripts/ci/"
-          cp scripts/lib/cli-args.mjs scripts/lib/smoke-runtime.mjs "$TRUSTED_VERIFIER/scripts/lib/"
+          mkdir -p "$TRUSTED_VERIFIER/scripts/ci"
+          # smoke-runtime's unused browser loader is tree-shaken; do not bundle
+          # its optional Playwright browser dependency graph.
+          node_modules/.bin/esbuild scripts/ci/verify-mechanism-refresh-diff.ts \
+            --bundle --platform=node --format=esm --external:playwright \
+            --outfile="$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts"
           NEW_FILES="$(git ls-files --others --exclude-standard -- "$ROOT")"
           while IFS= read -r path; do
             [ -z "$path" ] && continue
             mkdir -p "$ARTIFACT_TMP/$(dirname "$path")"
-            cp "$path" "$ARTIFACT_TMP/$path"
+            mv "$path" "$ARTIFACT_TMP/$path"
           done <<< "$NEW_FILES"
 
           node --import tsx "$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts" --asset "$ASSET_ID" --stage prepare-branch
           node --import tsx "$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts" --asset "$ASSET_ID" --stage verify-diff
 
-          while IFS= read -r path; do
-            [ -z "$path" ] && continue
-            mkdir -p "$(dirname "$path")"
-            cp "$ARTIFACT_TMP/$path" "$path"
-          done <<< "$NEW_FILES"
+          node --import tsx "$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts" \
+            --asset "$ASSET_ID" --stage restore-artifacts --artifacts-dir "$ARTIFACT_TMP"
 
           git add -- "$ROOT"
+          node --import tsx "$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts" --asset "$ASSET_ID" --stage verify-diff
+          if git diff --cached --quiet -- "$ROOT"; then
+            echo "No new ${ASSET_ID} protocol API snapshot beyond the existing refresh PR."
+            exit 0
+          fi
           git commit \
             -m "chore(v9): refresh ${ASSET_ID} protocol API evidence" \
             -m "Capture append-only producer evidence without changing mechanism overlays or score identity."

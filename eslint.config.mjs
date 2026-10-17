@@ -83,6 +83,38 @@ const deletedSupplyHelperNames = {
 
 const pharosBoundaryPlugin = {
   rules: {
+    "shared-types-imports": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          broad: "Import runtime values from @shared/types/<submodule>; reserve @shared/types for import type.",
+          dependency: "shared/types modules must not import shared/lib modules.",
+        },
+      },
+      create(context) {
+        const filename = context.filename;
+        const inSharedTypes = isWithinPath(resolve(process.cwd(), "shared/types"), filename)
+          && !filename.replaceAll("\\", "/").includes("/__tests__/")
+          && !/\.test\.tsx?$/.test(filename);
+        function check(node) {
+          const specifier = staticImportSpecifier(node);
+          if (!specifier) return;
+          if (node.type === "ImportDeclaration" && specifier === "@shared/types"
+            && node.importKind !== "type"
+            && node.specifiers.some((item) => item.type === "ImportSpecifier" && item.importKind !== "type")) {
+            context.report({ node, messageId: "broad" });
+          }
+          if (inSharedTypes && (
+            specifier === "@shared/lib" || specifier.startsWith("@shared/lib/")
+            || (specifier.startsWith(".") && isWithinPath(resolve(process.cwd(), "shared/lib"), resolve(dirname(filename), specifier)))
+          )) {
+            context.report({ node, messageId: "dependency" });
+          }
+        }
+        return { ImportDeclaration: check, ExportNamedDeclaration: check, ExportAllDeclaration: check };
+      },
+    },
     "no-zero-coercing-supply-helpers": {
       meta: {
         type: "problem",
@@ -389,6 +421,11 @@ const eslintConfig = defineConfig([
         },
       ],
     },
+  },
+  {
+    files: ["{functions,shared,src,scripts}/**/*.{ts,tsx}", "worker/src/**/*.{ts,tsx}"],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: { "pharos/shared-types-imports": "error" },
   },
   {
     files: NON_WORKER_SOURCE_GLOBS,

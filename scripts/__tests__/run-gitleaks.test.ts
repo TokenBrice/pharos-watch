@@ -115,6 +115,32 @@ describe("run-gitleaks", () => {
     }
   });
 
+  it.each([[0, 0, 0], [1, 0, 1], [0, 1, 1]])(
+    "shares one policy self-test across range=%i and tree=%i scans",
+    async (rangeStatus, treeStatus, status) => {
+      const resolution = Buffer.from("merge resolution bytes");
+      const buildMergeResolutionInput = vi.fn(() => resolution);
+      const runBinary = vi.fn((_binary: string, args: string[], _options: Record<string, unknown>) => ({
+        status: args[0] === "dir" ? selfTestScanStatus(args) : args[0] === "git" ? rangeStatus : treeStatus,
+      }));
+      await expect(runGitleaks({
+        argv: ["--range", "--tree", "--policy-root=/trusted"],
+        env: { GITLEAKS_BASE_REF: "frozen-base", GITLEAKS_HEAD_REF: "frozen-head", NODE_ENV: "test" },
+        ensureBinary: async () => "/fake/gitleaks", platformKey: "linux-x64",
+        runBinary, buildMergeResolutionInput,
+      })).resolves.toEqual({ status });
+      expect(runBinary.mock.calls.map(([, args]) => args[0])).toEqual(["dir", "dir", "dir", "git", "stdin"]);
+      const scans = runBinary.mock.calls.slice(3);
+      for (const [, args] of scans) {
+        expect(args).toContain("--config=/trusted/.gitleaks.toml");
+        expect(args).toContain("--gitleaks-ignore-path=/trusted/.gitleaksignore");
+      }
+      expect(scans[0][1]).toContain("--log-opts=--no-merges frozen-base..frozen-head");
+      expect(scans[1][2]).toMatchObject({ input: resolution });
+      expect(buildMergeResolutionInput).toHaveBeenCalledWith({ baseRef: "frozen-base", headRef: "frozen-head" });
+    },
+  );
+
   it("fails closed for nonzero scans, spawn errors, and signal termination", async () => {
     for (const [scanResult, status] of [[{ status: 9 }, 9], [{ error: new Error("spawn failed") }, 1], [{ status: null }, 1]] as const) {
       const runBinary = vi.fn((_binary: string, args: string[]): { status?: number | null; error?: unknown } =>
@@ -187,6 +213,33 @@ describe("run-gitleaks", () => {
     const execFile = (_file: string, args: string[]) =>
       args.includes("--parents") ? "head parent\n" : args.includes("--merges") ? "historical-merge\n" : combined;
     expect(buildGitleaksMergeResolutionInput({ execFile }).toString()).toBe(`${source}\n`);
+  });
+
+  it("omits large deleted bodies without dropping added or untracked worktree bytes", () => {
+    const repo = mkdtempSync(join(tmpdir(), "gitleaks-worktree-relocation-"));
+    const git = (args: string[], options: { encoding: "utf8" } = { encoding: "utf8" }) =>
+      execFileSync("git", args, { ...options, cwd: repo });
+    try {
+      git(["init", "--quiet"]);
+      git(["config", "user.email", "scanner-test@example.com"]);
+      git(["config", "user.name", "Scanner Test"]);
+      writeRepoFile(repo, "ledger.json", `${"reviewed public evidence\n".repeat(60_000)}`);
+      writeRepoFile(repo, "changed.ts", "original\n");
+      git(["add", "."]);
+      git(["commit", "--quiet", "-m", "fixture"]);
+      rmSync(join(repo, "ledger.json"));
+      writeRepoFile(repo, "changed.ts", "original\nnew tracked bytes\n");
+      writeRepoFile(repo, "relocated/ledger.json", "new untracked bytes\n");
+      vi.spyOn(process, "cwd").mockReturnValue(repo);
+      const input = buildGitleaksWorktreeInput({
+        execFile: (_file, args, options) => git(args, options),
+      }).toString();
+      expect(input).toContain("new tracked bytes\n");
+      expect(input).toContain("FILE:relocated/ledger.json\nnew untracked bytes\n");
+      expect(input).not.toContain("reviewed public evidence");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 
   it("extracts resolution-only lines introduced by historical merges inside the scan range", () => {

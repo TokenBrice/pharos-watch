@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { baseState, makeMiniAppState, makeSubscribedCoin } from "@shared/test-utils/telegram-mini-app-state";
 import type { StatusPanelProps } from "./StatusPanel";
 import { StatusPanel } from "./StatusPanel";
@@ -23,7 +23,6 @@ function renderStatus(overrides: Partial<StatusPanelProps> = {}): StatusPanelPro
   return props;
 }
 
-afterEach(cleanup);
 
 describe("StatusPanel", () => {
   const disabledGlobals = { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false };

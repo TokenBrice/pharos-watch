@@ -20,15 +20,3 @@ export function mockAbortableFetch(fallbackReason: DOMException) {
       }),
   );
 }
-
-/** Snapshot an env var and return the teardown that restores (or deletes) it. */
-export function captureEnvVar(key: string): () => void {
-  const original = process.env[key];
-  return () => {
-    if (original === undefined) {
-      delete process.env[key];
-    } else {
-      process.env[key] = original;
-    }
-  };
-}

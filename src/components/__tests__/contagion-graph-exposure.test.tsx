@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ContagionGraph } from "@/components/contagion-graph-root";
 import { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 import { footprintViewBox, upstreamArrowPoint, type ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
@@ -32,7 +32,6 @@ beforeEach(() => {
   installSvgCoordinateShim();
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: !query.includes("reduced-motion"), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 });
-afterEach(cleanup);
 
 describe("controlled exposure graph", () => {
   it.each(["B", null] as const)("retains %s partial-evidence qualifications in edge-free roots and both inspection panels", (grade) => {

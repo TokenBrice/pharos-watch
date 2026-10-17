@@ -36,7 +36,6 @@ export function buildPrepareWorkspaceCommands(env: PrepareWorkspaceEnv = process
   const commands: PrepareWorkspaceCommand[] = [];
   const ci = isCiEnvironment(env);
   const forceBootstrap = isTruthy(env.PHAROS_PREPARE_BOOTSTRAP);
-  const skipHooks = isTruthy(env.PHAROS_PREPARE_SKIP_GIT_HOOKS);
 
   if (!ci || forceBootstrap) {
     commands.push(["npm", ["run", "bootstrap:generated"]]);
@@ -50,10 +49,6 @@ export function buildPrepareWorkspaceCommands(env: PrepareWorkspaceEnv = process
     commands.push(["npm", ["run", "bootstrap:generated:history"]]);
   }
 
-  if (!ci && !skipHooks) {
-    commands.push(["git", ["config", "core.hooksPath", ".githooks"]]);
-  }
-
   return commands;
 }
 
@@ -63,7 +58,7 @@ export function runPrepareWorkspace({ env = process.env, runCommand = spawnSync 
   const commands = buildPrepareWorkspaceCommands(env);
 
   if (commands.length === 0) {
-    console.log("[prepare] CI environment detected; skipping local bootstrap and git-hook setup.");
+    console.log("[prepare] CI environment detected; skipping local bootstrap.");
     console.log("[prepare] GitHub Actions runs bootstrap:generated explicitly through setup-workspace.");
     return { status: 0 };
   }

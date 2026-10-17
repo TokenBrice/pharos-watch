@@ -2,6 +2,62 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
+import { collectOpenApiRoutes, END_MARKER, loadOpenapi, renderGeneratedBlock, replaceGeneratedBlock, START_MARKER } from "../maintenance/generate-api-reference.ts";
+import { PUBLIC_API_ARTIFACT_ENDPOINTS } from "../lib/public-api-artifact-catalog";
+
+describe("API reference generated markers", () => {
+  it("replaces current markers without changing authored prose", () => {
+    expect(replaceGeneratedBlock(`before\n${START_MARKER}\nstale\n${END_MARKER}\nafter`, "fresh"))
+      .toBe("before\nfresh\nafter");
+  });
+
+  it.each([
+    "no generated markers",
+    `${START_MARKER}\nmissing end`,
+    `missing start\n${END_MARKER}`,
+    `${END_MARKER}\nreversed\n${START_MARKER}`,
+    "<!-- GENERATED-START: public-endpoints-quick-reference -->\nlegacy\n<!-- GENERATED-END: public-endpoints-quick-reference -->",
+  ])("rejects missing, reversed, or retired markers: %s", (doc) => {
+    expect(() => replaceGeneratedBlock(doc, "fresh")).toThrow("Could not find a valid generated block");
+  });
+});
+
+describe("API reference endpoint narratives", () => {
+  it("uses catalog descriptions through OpenAPI without a second operation inventory", () => {
+    const spec = loadOpenapi();
+    const routes = collectOpenApiRoutes(spec);
+    const rendered = renderGeneratedBlock(spec);
+    for (const endpoint of PUBLIC_API_ARTIFACT_ENDPOINTS) {
+      const route = routes.find((candidate) => candidate.path === endpoint.path);
+      expect(route?.description).toBe(endpoint.description);
+      expect(rendered).toContain(endpoint.description.split(/(?<=[.!?])\s/, 1)[0]);
+      expect(endpoint.description).not.toMatch(/\]\((?:\.\/|#)/);
+    }
+  });
+
+  it("keeps the Markdown preview compact while linking to the full OpenAPI narrative", () => {
+    const spec = loadOpenapi();
+    const path = spec.paths["/api/stablecoins"] as { get: { description: string } };
+    path.get.description = "One endpoint preview. Detailed contract retained only in the exported description.";
+    const rendered = renderGeneratedBlock(spec);
+    expect(rendered).toContain("One endpoint preview. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1stablecoins/get)");
+    expect(rendered).not.toContain("Detailed contract retained only in the exported description.");
+    expect(collectOpenApiRoutes(spec).find((route) => route.path === "/api/stablecoins")?.description)
+      .toBe(path.get.description);
+  });
+
+  it("accepts an operation's narrative and identity directly from OpenAPI", () => {
+    const spec = { paths: { "/api/stablecoins": { get: {
+      operationId: "catalogIdentity", description: "One authored endpoint narrative.",
+    } } } };
+    expect(collectOpenApiRoutes(spec)[0]).toMatchObject({
+      operationId: "catalogIdentity", description: "One authored endpoint narrative.",
+    });
+    expect(() => collectOpenApiRoutes({ paths: { "/api/stablecoins": { get: {
+      operationId: "catalogIdentity",
+    } } } })).toThrow("Missing description for GET /api/stablecoins");
+  });
+});
 
 describe("generate-api-reference check mode", () => {
   it.each([

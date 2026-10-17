@@ -8,8 +8,6 @@ Applies to `functions/`.
 - Safety map handlers `functions/safety-scores/map.json.ts` and `functions/safety-scores/map.png.ts`: see `docs/safety-score-map.md` § “Serving”; test `functions/__tests__/safety-map-png.test.ts`.
 - Security surfaces: `docs/security-governance.md` § “CSP posture” and `docs/incident-response/safe-browsing-flag.md` § “Step 5 — Harden, ship, verify”.
 
-Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>`.
-
 ## Rules
 
 - Pages Functions own same-origin proxy behavior for browser-facing website and operator lanes.

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { DependencyWatershed } from "@/components/dependency-watershed/dependency-watershed";
 import { DependencyMapBasinList } from "@/components/dependency-map-basin-list";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
@@ -27,7 +27,6 @@ const edges: ReportCardsV9DependencyEdge[] = [
 ];
 const labelOf = (id: string) => id.toUpperCase();
 
-afterEach(cleanup);
 
 describe("DependencyWatershed", () => {
   it("renders an interactive group with named hub buttons and hidden decoration", () => {

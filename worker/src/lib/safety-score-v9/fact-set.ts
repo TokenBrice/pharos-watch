@@ -7,6 +7,7 @@ import {
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   V9AssetFactsV3Schema,
   V9EffectiveDependenciesV3Schema,
@@ -95,6 +96,17 @@ function quarantineFailureMessage(error: unknown): string {
 export interface SafetyScoreV9FactCompilationResult {
   factSet: Readonly<CompiledV9FactSetV3>;
   quarantines: readonly V9AssetQuarantine[];
+}
+
+export interface SafetyScoreV9LiveWithheldCompilation {
+  extension: Readonly<SafetyScoreV9FactSetExtensionV2>;
+  compile(
+    fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+    extension: SafetyScoreV9FactSetExtensionV2,
+    assetId: string,
+    evaluationFailures?: ReadonlyMap<string, string>,
+    consumeExtensionAssets?: boolean,
+  ): Readonly<SafetyScoreV9FactCompilationResult>;
 }
 const materializedExtensions = new WeakSet<object>();
 
@@ -597,6 +609,16 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
   evaluationFailures: ReadonlyMap<string, string> = new Map(),
   consumeExtensionAssets = false,
 ): Readonly<SafetyScoreV9FactCompilationResult> {
+  return compileSafetyScoreV9FactSetWithIsolation(fixedInput, extension, evaluationFailures, consumeExtensionAssets);
+}
+
+function compileSafetyScoreV9FactSetWithIsolation(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  extension: SafetyScoreV9FactSetExtensionV2,
+  evaluationFailures: ReadonlyMap<string, string>,
+  consumeExtensionAssets: boolean,
+  reuseAsset?: (asset: AssetExtension, researchPayloadSha256: string) => V9AssetFactsV3 | undefined,
+): Readonly<SafetyScoreV9FactCompilationResult> {
   if (!materializedExtensions.has(extension)) {
     throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
   }
@@ -639,9 +661,11 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
   for (let index = 0; index < extension.assets.length; index++) {
     const asset = extension.assets[index]!;
     const evaluationFailure = evaluationFailures.get(asset.assetId);
-    outcomes[index] = evaluationFailure === undefined
-      ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256, parentDeploymentKeys)
-      : evaluationQuarantineOutcome(fixedInput, extension, asset, researchPayloadSha256, evaluationFailure);
+    const reused = evaluationFailure === undefined ? reuseAsset?.(asset, researchPayloadSha256) : undefined;
+    outcomes[index] = reused !== undefined ? { facts: reused, quarantine: null }
+      : evaluationFailure === undefined
+        ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256, parentDeploymentKeys)
+        : evaluationQuarantineOutcome(fixedInput, extension, asset, researchPayloadSha256, evaluationFailure);
     // The materializer owns this array; assets themselves remain immutable.
     // Leave indices stable until the loop ends, without copying the remaining cohort.
     if (consumeExtensionAssets) delete extension.assets[index];
@@ -723,4 +747,104 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       quarantines.map((quarantine) => Object.freeze(quarantine)),
     ),
   });
+}
+
+/**
+ * Replay-only compilation reuse for isolated live-reserve-withheld scenarios.
+ * The caller must retain this admitted extension when replacing the target.
+ * Every other input/overlay is checked against the source; the full fact set is
+ * still admitted, hashed and evaluated for every scenario. Production does not
+ * create this context and keeps the ordinary compiler unchanged.
+ */
+export function createSafetyScoreV9LiveWithheldCompilation(
+  sourceInput: Readonly<SafetyScoreV9CompilerInput>,
+  extensionValue: unknown,
+): SafetyScoreV9LiveWithheldCompilation {
+  const extension = materializeSafetyScoreV9FactSetExtension(sourceInput, extensionValue);
+  const commonInput = (input: Readonly<SafetyScoreV9CompilerInput>) => {
+    const {
+      baseInputGenerationId: _generation, liveReserveMap: _reserves,
+      liveReserveProvenanceMap: _provenance, liveToFallbackCoins: _fallback, ...common
+    } = input;
+    return stableJsonStringifyV1(common);
+  };
+  const sourceCommonInput = commonInput(sourceInput);
+  const sourceEnvelope = stableJsonStringifyV1({ ...extension, assets: [] });
+  const sourceAssets = new Map(extension.assets.map(asset => [asset.assetId, asset]));
+  let baseline: Readonly<SafetyScoreV9FactCompilationResult> | undefined;
+  let baselineAssets: ReadonlyMap<string, V9AssetFactsV3> | undefined;
+  const without = <T>(map: Readonly<Record<string, T>>, assetId: string) =>
+    Object.fromEntries(Object.entries(map).filter(([id]) => id !== assetId));
+  const graphIndependentOverlay = (asset: AssetExtension) => {
+    const graph = asset.accessReview?.freeze.claimGraph;
+    return graph === undefined ? asset : {
+      ...asset,
+      accessReview: {
+        ...asset.accessReview,
+        freeze: { ...asset.accessReview!.freeze, claimGraph: { ...graph, generationId: sourceInput.baseInputGenerationId } },
+      },
+    };
+  };
+  return {
+    extension,
+    compile(
+      fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+      scenarioExtension: SafetyScoreV9FactSetExtensionV2,
+      assetId: string,
+      evaluationFailures: ReadonlyMap<string, string> = new Map(),
+      consumeExtensionAssets = false,
+    ): Readonly<SafetyScoreV9FactCompilationResult> {
+      if (!sourceAssets.has(assetId) ||
+          !sourceInput.liveReserveMap[assetId]?.length ||
+          fixedInput.liveReserveMap[assetId] !== undefined ||
+          fixedInput.liveReserveProvenanceMap[assetId] !== undefined ||
+          commonInput(fixedInput) !== sourceCommonInput ||
+          stableJsonStringifyV1(fixedInput.liveReserveMap) !== stableJsonStringifyV1(without(sourceInput.liveReserveMap, assetId)) ||
+          stableJsonStringifyV1(fixedInput.liveReserveProvenanceMap) !== stableJsonStringifyV1(without(sourceInput.liveReserveProvenanceMap, assetId)) ||
+          stableJsonStringifyV1([...fixedInput.liveToFallbackCoins].sort(compareText)) !==
+            stableJsonStringifyV1([...new Set([...sourceInput.liveToFallbackCoins, assetId])].sort(compareText)) ||
+          stableJsonStringifyV1({ ...scenarioExtension, assets: [] }) !== sourceEnvelope) {
+        throw new Error("Live-withheld compilation reuse requires exactly one withheld reserve producer");
+      }
+      assertSafetyScoreV9ExactExtensionAssets(fixedInput, scenarioExtension);
+      for (const asset of scenarioExtension.assets) {
+        if (asset.assetId === assetId) continue;
+        const original = sourceAssets.get(asset.assetId)!;
+        if (asset !== original &&
+            stableJsonStringifyV1(graphIndependentOverlay(asset)) !== stableJsonStringifyV1(original)) {
+          throw new Error(`Live-withheld compilation reuse changed the retained overlay for ${asset.assetId}`);
+        }
+      }
+      baseline ??= compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(sourceInput, extension);
+      baselineAssets ??= new Map(baseline.factSet.assets.map(asset => [asset.assetId, asset]));
+      // Parent deployment identities are the compiler's only cross-asset overlay
+      // read. A rebuilt target changing that context requires ordinary compilation.
+      const target = scenarioExtension.assets.find(asset => asset.assetId === assetId)!;
+      const parentIdentityUnchanged = stableJsonStringifyV1(target.allocationScopeIdentityReview?.registeredDeploymentKeys ?? []) ===
+        stableJsonStringifyV1(sourceAssets.get(assetId)!.allocationScopeIdentityReview?.registeredDeploymentKeys ?? []);
+      const quarantined = new Set(baseline.quarantines.map(row => row.assetId));
+      return compileSafetyScoreV9FactSetWithIsolation(
+        fixedInput, scenarioExtension, evaluationFailures, consumeExtensionAssets,
+        (asset, researchPayloadSha256) => {
+          if (!parentIdentityUnchanged || asset.assetId === assetId || quarantined.has(asset.assetId)) return undefined;
+          const facts = baselineAssets!.get(asset.assetId)!;
+          const graph = facts.accessReview.freeze.claimGraph;
+          // Only these envelope identities change for an untouched asset. Do not
+          // carry its old cohort research hash or admitted graph generation.
+          return {
+            ...facts,
+            evidence: facts.evidence.map(reference => reference.sourceId === "safety-score-v9-research-overlay"
+              ? { ...reference, contentSha256: researchPayloadSha256 }
+              : reference),
+            ...(graph === undefined ? {} : {
+              accessReview: {
+                ...facts.accessReview,
+                freeze: { ...facts.accessReview.freeze, claimGraph: { ...graph, generationId: fixedInput.baseInputGenerationId } },
+              },
+            }),
+          };
+        },
+      );
+    },
+  };
 }

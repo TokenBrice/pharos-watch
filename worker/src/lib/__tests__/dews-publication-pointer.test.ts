@@ -82,7 +82,7 @@ describe("DEWS publication pointer reader", () => {
   it("returns ok for a valid published generation pointer", async () => {
     const db = mockD1([
       pointerMatch(pointerPayload(nowSec - 60), nowSec - 60),
-    ], { requireMatch: true });
+    ]);
 
     await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toEqual({
       status: "ok",
@@ -101,7 +101,7 @@ describe("DEWS publication pointer reader", () => {
         expectedRowCount: stablecoinIds.length,
         stablecoinIdsDigest: buildDewsStablecoinIdsDigest(stablecoinIds),
       }), computedAt),
-    ], { requireMatch: true });
+    ]);
 
     await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toEqual({
       status: "ok",
@@ -119,7 +119,7 @@ describe("DEWS publication pointer reader", () => {
         expectedRowCount: 2,
         stablecoinIdsDigest: "not-a-digest",
       }), computedAt),
-    ], { requireMatch: true });
+    ]);
 
     await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toMatchObject({
       status: "invalid-pointer",
@@ -136,7 +136,7 @@ describe("DEWS publication pointer reader", () => {
     ["a non-positive expected row count", pointerPayload(nowSec - 60, { coverageVersion: 2, expectedRowCount: 0 }), nowSec - 60, "payload expectedRowCount is not a positive integer"],
     ["unparseable JSON", "{nope", nowSec - 60, "payload is not valid JSON"],
   ] as const)("rejects %s", async (_label, value, cacheUpdatedAt, reason) => {
-    const db = mockD1([pointerMatch(value, cacheUpdatedAt)], { requireMatch: true });
+    const db = mockD1([pointerMatch(value, cacheUpdatedAt)]);
 
     const result = await readDewsPublishedGenerationResult(db, nowSec);
 
@@ -152,7 +152,7 @@ describe("DEWS publication pointer reader", () => {
         rows: [],
         first: null,
       },
-    ], { requireMatch: true });
+    ]);
 
     await expect(reconcileDewsPublishedGenerationLedger(db, nowSec)).resolves.toEqual({
       status: "no-pointer",
@@ -163,7 +163,7 @@ describe("DEWS publication pointer reader", () => {
   it("rejects future pointers", async () => {
     const db = mockD1([
       pointerMatch(pointerPayload(nowSec + 60), nowSec + 60),
-    ], { requireMatch: true });
+    ]);
 
     await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toMatchObject({
       status: "invalid-pointer",
@@ -174,7 +174,7 @@ describe("DEWS publication pointer reader", () => {
   it("rejects pointers whose payload timestamp differs from cache updated_at", async () => {
     const db = mockD1([
       pointerMatch(pointerPayload(nowSec - 60), nowSec - 30),
-    ], { requireMatch: true });
+    ]);
 
     await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toMatchObject({
       status: "invalid-pointer",
@@ -185,7 +185,7 @@ describe("DEWS publication pointer reader", () => {
   it("classifies D1 read failures separately from invalid payloads", async () => {
     const db = mockD1([
       pointerMatch(pointerPayload(nowSec - 60), nowSec - 60, new Error("D1 unavailable")),
-    ], { requireMatch: true });
+    ]);
 
     await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toMatchObject({
       status: "read-failed",

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { useDependencyGraph } from "@/hooks/use-dependency-graph";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -41,7 +41,6 @@ function makeQueryResult(data: unknown) {
   };
 }
 
-afterEach(cleanup);
 describe("DependencyMapClient", () => {
   beforeEach(() => {
     mockUseDependencyGraph.mockReset();

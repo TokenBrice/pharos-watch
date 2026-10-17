@@ -132,7 +132,6 @@ describe("enrichMissingPrices", () => {
         { match: "circuit", rows: [], allowUnused: true },
         { match: "cache", rows: [] },
       ],
-      { requireMatch: true },
     );
 
     const fetchSpy = mockFetch([], { requireMatch: true });

@@ -12,7 +12,7 @@ import {
 } from "../lib/command-runner.mts";
 
 // With a compare ref and no ratchet-all, the checker enforces only touched
-// critical sources, so measure only those, as the CI coverage shards do.
+// critical sources, so measure only those.
 // buildCriticalCoverageArgs widens to every enrolled source whenever the
 // touched set cannot be isolated (test-file or plumbing changes).
 const compareRef = (process.env.CRITICAL_COVERAGE_COMPARE_REF ?? "").trim();

@@ -1,26 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeAltPegCoin } from "@shared/test-utils/stablecoin";
 import { NonUsdShareResponseSchema } from "@shared/types/market";
 import { buildAltPegSnapshot, buildAltPegTrendStats } from "@/lib/alt-peg-market";
 
-function makeCoin(id: string, marketCap: number) {
-  return makeStablecoin({
-    id,
-    name: id,
-    symbol: id.toUpperCase(),
-    pegMechanism: "",
-    supplySource: "test",
-    circulating: { usd: marketCap },
-  });
-}
 
 describe("alt-peg-market", () => {
   it("joins live rows to tracked metadata and filters out USD assets", () => {
     const snapshot = buildAltPegSnapshot([
-      makeCoin("usdc-circle", 120_000_000),
-      makeCoin("eurc-circle", 55_000_000),
-      makeCoin("brz-transfero", 12_000_000),
-      makeCoin("paxg-paxos", 18_000_000),
+      makeAltPegCoin("usdc-circle", 120_000_000),
+      makeAltPegCoin("eurc-circle", 55_000_000),
+      makeAltPegCoin("brz-transfero", 12_000_000),
+      makeAltPegCoin("paxg-paxos", 18_000_000),
     ]);
 
     expect(snapshot.altCoinCount).toBe(3);
@@ -34,9 +24,9 @@ describe("alt-peg-market", () => {
 
   it("ranks peg distribution rows by market cap and exposes leader links", () => {
     const snapshot = buildAltPegSnapshot([
-      makeCoin("eurc-circle", 60_000_000),
-      makeCoin("brz-transfero", 15_000_000),
-      makeCoin("paxg-paxos", 25_000_000),
+      makeAltPegCoin("eurc-circle", 60_000_000),
+      makeAltPegCoin("brz-transfero", 15_000_000),
+      makeAltPegCoin("paxg-paxos", 25_000_000),
     ]);
 
     expect(snapshot.distributionRows.map((row) => row.peg)).toEqual(["EUR", "GOLD", "BRL"]);
@@ -46,8 +36,8 @@ describe("alt-peg-market", () => {
   });
 
   it("keeps an unavailable EUR cohort visible without publishing a zero cap or share", () => {
-    const missing = { ...makeCoin("eurs-stasis", 0), circulating: {} };
-    const snapshot = buildAltPegSnapshot([makeCoin("usdc-circle", 100), missing]);
+    const missing = { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} };
+    const snapshot = buildAltPegSnapshot([makeAltPegCoin("usdc-circle", 100), missing]);
     expect(snapshot.altCoinCount).toBe(1);
     expect(snapshot.altMarketCap).toBeNull();
     expect(snapshot.altSharePct).toBeNull();
@@ -60,8 +50,8 @@ describe("alt-peg-market", () => {
 
   it("publishes mixed coverage as a known subtotal and withholds complete shares", () => {
     const snapshot = buildAltPegSnapshot([
-      makeCoin("eurc-circle", 100), { ...makeCoin("eurs-stasis", 0), circulating: {} },
-      makeCoin("usdc-circle", 100),
+      makeAltPegCoin("eurc-circle", 100), { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} },
+      makeAltPegCoin("usdc-circle", 100),
     ]);
     expect(snapshot.altMarketCap).toBe(100);
     expect(snapshot.altSharePct).toBeNull();
@@ -72,14 +62,14 @@ describe("alt-peg-market", () => {
   });
 
   it("distinguishes explicit zero from empty and invalid supply buckets", () => {
-    const zero = buildAltPegSnapshot([makeCoin("usdc-circle", 100), makeCoin("eurs-stasis", 0)]);
+    const zero = buildAltPegSnapshot([makeAltPegCoin("usdc-circle", 100), makeAltPegCoin("eurs-stasis", 0)]);
     expect(zero.altMarketCap).toBe(0);
     expect(zero.altSharePct).toBe(0);
     expect(zero.distributionRows[0].marketCap).toBe(0);
     expect(zero.supplyUnavailableCount).toBe(0);
     const unavailableBuckets: Record<string, number>[] = [{}, { usd: Number.NaN }, { usd: -1 }];
     for (const circulating of unavailableBuckets) {
-      const missing = buildAltPegSnapshot([{ ...makeCoin("eurs-stasis", 0), circulating }]);
+      const missing = buildAltPegSnapshot([{ ...makeAltPegCoin("eurs-stasis", 0), circulating }]);
       expect(missing.totalMarketCap).toBeNull();
       expect(missing.altMarketCap).toBeNull();
     }

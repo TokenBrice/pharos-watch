@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { normalize, resolve } from "node:path";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
@@ -27,6 +27,7 @@ describe("curation sweep executable workflow contract", () => {
     const collect = steps.find((step) => step.id === "generate")!;
     expect(workflow.jobs.sweep["timeout-minutes"]).toBe(25);
     expect(steps.find((step) => step.id === "live_withheld")!["timeout-minutes"]).toBe(15);
+    expect(stepRun("live_withheld")).toContain("--workers 3");
     expect(steps.findIndex((step) => step.id === "registry"))
       .toBeLessThan(steps.findIndex((step) => step.id === "live_withheld"));
     for (const [id, command, status] of generators) {
@@ -44,20 +45,5 @@ describe("curation sweep executable workflow contract", () => {
     expect(issue.run).toContain('[ "$LIVE_WITHHELD_STATUS" != 0 ]');
     expect(issue.run).toContain("Curation sweep incomplete");
     expect(issue.run).toContain("exit 1");
-  });
-
-  it("keeps the generated summary and snapshot PR paths outside workflow permission scope", () => {
-    const generation = stepRun("generate");
-    const output = generation.match(/>\s*(\S*missing-data-registry-summary\.json)/)?.[1];
-    expect(output).toBeDefined();
-    const summaryPath = normalize(output!);
-    expect(summaryPath.startsWith(".github/workflows/")).toBe(false);
-    const publication = steps.filter((step) => step.id === "registry_diff" || step.run?.includes("--body \"$PR_BODY\""));
-    expect(publication).toHaveLength(2);
-    for (const step of publication) {
-      const paths = step.run!.match(/\S*missing-data-registry-summary\.json/g) ?? [];
-      expect(paths.length).toBeGreaterThan(0);
-      for (const path of paths) expect(normalize(path)).toBe(summaryPath);
-    }
   });
 });

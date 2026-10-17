@@ -1,6 +1,5 @@
 import {
   Failure,
-  expectEqual,
   findLineValue,
   read,
 } from "./shared";
@@ -12,9 +11,10 @@ import {
 } from "@shared/lib/isolate-local-state-registry";
 import { METHODOLOGY_PROVENANCE_FILES } from "./methodology-manifest";
 import { findDocContractDrift } from "./contract-blocks";
+import { assignmentKey, buildAssignmentMap, parseAssignments } from "../wrangler-toml.mjs";
 
-function checkGeneratedDocContractBlocks(failures: Failure[]): void {
-  for (const drift of findDocContractDrift(read)) {
+function checkGeneratedDocContractBlocks(failures: Failure[], readDocument: typeof read): void {
+  for (const drift of findDocContractDrift(readDocument)) {
     failures.push({
       file: drift.file,
       label: `generated doc contract ${drift.id}`,
@@ -24,9 +24,9 @@ function checkGeneratedDocContractBlocks(failures: Failure[]): void {
   }
 }
 
-function checkMethodologyCommitProvenance(failures: Failure[]): void {
+function checkMethodologyCommitProvenance(failures: Failure[], readDocument: typeof read): void {
   for (const file of METHODOLOGY_PROVENANCE_FILES) {
-    const doc = read(file);
+    const doc = readDocument(file);
     const found = doc.match(/\*\*Commit(?:s)?:\*\* `unreleased`|commits:\s*\["unreleased"\]/)?.[0] ?? null;
     if (found !== null) {
       failures.push({
@@ -39,27 +39,68 @@ function checkMethodologyCommitProvenance(failures: Failure[]): void {
   }
 }
 
-function checkWorkerInfrastructureIsolateStateDoc(failures: Failure[]): void {
-  const file = "docs/process/worker-infrastructure-appendix.md";
-  const doc = read(file);
-  const start = doc.indexOf(ISOLATE_LOCAL_STATE_DOC_START);
-  const end = doc.indexOf(ISOLATE_LOCAL_STATE_DOC_END);
-  const found = start >= 0 && end >= start
-    ? doc.slice(start, end + ISOLATE_LOCAL_STATE_DOC_END.length)
-    : null;
-
-  expectEqual(
-    failures,
-    file,
-    "isolate-local state registry",
-    found,
-    renderIsolateLocalStateDocumentation(),
-  );
+function checkWorkerInfrastructureIsolateStateDoc(failures: Failure[], readDocument: typeof read): void {
+  for (const drift of findDocContractDrift(readDocument, [{
+    file: "docs/process/worker-infrastructure-appendix.md",
+    id: "isolate-local state registry",
+    startMarker: ISOLATE_LOCAL_STATE_DOC_START,
+    endMarker: ISOLATE_LOCAL_STATE_DOC_END,
+    expected: renderIsolateLocalStateDocumentation(),
+  }])) {
+    failures.push({ file: drift.file, label: drift.id, expected: drift.expected, found: drift.found });
+  }
 }
 
-function checkRedemptionBackstopsDoc(failures: Failure[]): void {
+function extractRuntimeLimitsTomlSnippet(markdown: string): string | null {
+  const heading = "## Runtime Limits and Observability";
+  const start = markdown.indexOf(heading);
+  if (start < 0) return null;
+  const nextHeading = markdown.indexOf("\n## ", start + heading.length);
+  const section = markdown.slice(start, nextHeading < 0 ? markdown.length : nextHeading);
+  const match = section.match(/```toml\s*\n([\s\S]*?)\n```/);
+  return match?.[1] ?? null;
+}
+
+function checkWorkerInfrastructureRuntimeDoc(failures: Failure[], readDocument: typeof read): void {
+  const file = "docs/worker-infrastructure.md";
+  const snippet = extractRuntimeLimitsTomlSnippet(readDocument(file));
+  if (snippet === null) {
+    failures.push({ file, label: "runtime limits snippet", expected: "toml runtime limits snippet", found: null });
+    return;
+  }
+
+  const configByKey = buildAssignmentMap(parseAssignments(readDocument("worker/wrangler.toml")));
+  const docsByKey = buildAssignmentMap(parseAssignments(snippet));
+  for (const field of [
+    { section: "root", key: "compatibility_date" },
+    { section: "root", key: "compatibility_flags" },
+    { section: "root", key: "preview_urls" },
+    { section: "root", key: "minify" },
+    { section: "root", key: "keep_names" },
+    { section: "alias", key: "#pharos-full-catalog" },
+    { section: "limits", key: "cpu_ms" },
+    { section: "observability", key: "enabled" },
+    { section: "observability", key: "head_sampling_rate" },
+    { section: "observability.logs", key: "enabled" },
+    { section: "observability.logs", key: "invocation_logs" },
+  ]) {
+    const key = assignmentKey(field.section, field.key);
+    const expected = configByKey.get(key)?.replace(/\s+/g, " ").trim();
+    const found = docsByKey.get(key)?.replace(/\s+/g, " ").trim();
+    if (expected === undefined || found !== expected) {
+      failures.push({
+        file: expected === undefined ? "worker/wrangler.toml" : file,
+        label: `runtime configuration ${field.section}.${field.key}`,
+        expected: expected ?? "declared",
+        found: expected === undefined ? null : found ?? null,
+      });
+    }
+  }
+}
+
+function checkRedemptionBackstopsDoc(failures: Failure[], readDocument: typeof read): void {
   const file = "docs/redemption-backstops.md";
-  const doc = read(file);
+  const doc = readDocument(file);
 
   const sourceOwnedLine = findLineValue(doc, /- \*\*Configured coins and family counts:\*\* ([^\n]+)/) ?? "";
   if (!sourceOwnedLine.includes("`REDEMPTION_BACKSTOP_CONFIGS`")) {
@@ -93,13 +134,14 @@ function checkRedemptionBackstopsDoc(failures: Failure[]): void {
   }
 }
 
-export function runDocSyncChecks(): Failure[] {
+export function runDocSyncChecks(readDocument: typeof read = read): Failure[] {
   const failures: Failure[] = [];
 
-  checkGeneratedDocContractBlocks(failures);
-  checkMethodologyCommitProvenance(failures);
-  checkWorkerInfrastructureIsolateStateDoc(failures);
-  checkRedemptionBackstopsDoc(failures);
+  checkGeneratedDocContractBlocks(failures, readDocument);
+  checkMethodologyCommitProvenance(failures, readDocument);
+  checkWorkerInfrastructureIsolateStateDoc(failures, readDocument);
+  checkWorkerInfrastructureRuntimeDoc(failures, readDocument);
+  checkRedemptionBackstopsDoc(failures, readDocument);
 
   return failures;
 }

@@ -2,14 +2,6 @@
   "version": 2,
   "status": "canonical",
   "purpose": "Canonical source-to-document routing for agents and change checks. Code, schemas, registries, and checked runtime data remain authoritative for behavior.",
-  "baseDocs": ["docs/process/agent-start-here.md"],
-  "coreRules": [
-    "Prefer the smallest root-cause fix; avoid unrelated refactors.",
-    "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.",
-    "Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides; supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe. Reviewed chain-dropout repair/quarantine is a permitted supplemental path under docs/architecture.md#adr-8 clause (c).",
-    "Keep Tailwind classes as static strings.",
-    "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."
-  ],
   "mappings": [
     {
       "id": "daily-social-posts",
@@ -29,9 +21,7 @@
         { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" }
       ],
       "checks": [
-        "npx vitest run shared/lib/__tests__/daily-social.test.ts shared/lib/__tests__/daily-social-schedule.test.ts scripts/__tests__/daily-social-capture.test.ts scripts/__tests__/publish-daily-social.test.ts scripts/maintenance/__tests__/build-daily-social.test.ts functions/__tests__/social-posts.test.ts",
-        "npm run check:cron-sync",
-        "npm run check:cron-connections"
+        "npx vitest run shared/lib/__tests__/daily-social.test.ts shared/lib/__tests__/daily-social-schedule.test.ts scripts/__tests__/daily-social-capture.test.ts scripts/__tests__/publish-daily-social.test.ts scripts/maintenance/__tests__/build-daily-social.test.ts functions/__tests__/social-posts.test.ts"
       ],
       "rules": [
         "Use the Europe/Belgrade calendar for edition identity and the 14:00 target, including DST.",
@@ -54,8 +44,7 @@
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }
       ],
       "checks": [
-        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts",
-        "npm run check:generated-artifacts -- --only=cemetery-logo-atlas,og-cemetery"
+        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts"
       ],
       "rules": [
         "The Cemetery must stay byte-identical during kit refactors.",
@@ -105,11 +94,6 @@
       "background": ["docs/listing-policy.md", "docs/about-page.md", "docs/shadow-stablecoins.md", "docs/freezing-stablecoins.md"],
       "alsoRead": ["shared/data/stablecoins/AGENTS.md"],
       "checks": [
-        "npm run lint:changed",
-        "npm run check:stablecoin-data",
-        "npm run check:generated-artifacts -- --only=stablecoin-client-projections",
-        "npm run typecheck",
-        "npm run typecheck:worker",
         "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts",
         "npm run check:failure-scenarios",
         "npx vitest run shared/lib/__tests__/failure-scenarios.test.ts scripts/maintenance/__tests__/verify-failure-scenarios.test.ts"
@@ -120,8 +104,7 @@
         "Do not add ad hoc supply overrides outside documented fail-closed admission paths.",
         "Failure scenarios: only the maintainer approves exact content, and any edit invalidates its content hash; drafts never publish in production.",
         "Failure-scenario verification is pinned and read-only; changed and unavailable rows require maintainer review, and unregistered falsifiers stay explicitly unchecked."
-      ],
-      "hints": ["Update methodology docs only when scoring or classification semantics change."]
+      ]
     },
     {
       "id": "pricing-pipeline",
@@ -158,12 +141,11 @@
         {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health"},
         { "path": "docs/runbooks/stablecoins-cache.md", "runbook": { "label": "Stablecoin cache or publication failure", "kind": "symptom" } }
       ],
-      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
+      "checks": ["npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
       "rules": [
         "Consume or cancel failed fetch bodies before opening more Worker fetches.",
         "Do not multiply DefiLlama list-endpoint supply by price."
-      ],
-      "hints": ["Structured methodology history lives under shared/data/methodology-changelogs/pricing-pipeline/."]
+      ]
     },
     {
       "id": "live-reserves",
@@ -425,7 +407,7 @@
         {"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"},
         { "path": "docs/incident-response/safe-browsing-flag.md", "runbook": { "label": "Safe Browsing flag response", "kind": "procedure" } }
       ],
-      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
+      "checks": ["npm run test:critical-contracts", "npm run check:frozen-invariants"],
       "rules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."]
     },
     {
@@ -486,7 +468,7 @@
         { "path": "docs/runbooks/blocked-digest-edition.md", "runbook": { "label": "Blocked digest edition", "kind": "symptom" } }
       ],
       "alsoRead": ["worker/AGENTS.md"],
-      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled", "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts"],
+      "checks": ["npx vitest run worker/src/cron worker/src/handlers/scheduled", "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts"],
       "rules": [
         "Pick the trigger slot before adding fetch-heavy work.",
         "Cron jobs use Pharos's conservative six-connection trigger budget; consume response bodies before opening more fetches.",
@@ -540,7 +522,7 @@
         { "path": "docs/runbooks/telegram-webhook-ingress.md", "runbook": { "label": "Telegram webhook flood-control contract", "kind": "reference" } },
         { "path": "docs/runbooks/telegram-webhook-retry-dedupe.md", "runbook": { "label": "Telegram webhook retry and dedupe", "kind": "symptom" } }
       ],
-      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:telegram-load", "npm run check:cron-sync", "npx vitest run worker/src/api worker/src/cron"],
+      "checks": ["npx vitest run worker/src/api worker/src/cron"],
       "rules": [
         "Preserve webhook authentication, signed initData validation, and idempotent update handling.",
         "Preserve the durable delivery evidence trail."
@@ -574,7 +556,7 @@
         { "path": "docs/runbooks/db-connectivity.md", "runbook": { "label": "D1 connectivity failure", "kind": "symptom" } },
         { "path": "docs/runbooks/d1-telemetry-kill-switch.md", "runbook": { "label": "D1 telemetry kill switch", "kind": "procedure" } }
       ],
-      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:migrations", "npx vitest run worker/src"],
+      "checks": ["npx vitest run worker/src"],
       "rules": [
         "Migrations must be backward-compatible because CI applies D1 migrations before the new Worker is live.",
         "Destructive cleanup requires a separate coordinated rollout."
@@ -634,9 +616,8 @@
         { "path": "docs/runbooks/depeg-lifecycle-review.md", "runbook": { "label": "Depeg lifecycle review", "kind": "procedure" } },
         { "path": "docs/runbooks/mint-burn-integrity.md", "runbook": { "label": "Mint/burn integrity diagnosis", "kind": "symptom" } }
       ],
-      "checks": ["npm run check:doc-sync", "npx vitest run shared/lib worker/src/lib"],
-      "rules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
-      "hints": ["Structured methodology changelogs live under shared/data/methodology-changelogs/; update the matching entry for semantic changes."]
+      "checks": ["npx vitest run shared/lib worker/src/lib"],
+      "rules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."]
     },
     {
       "id": "safety-score-v9",
@@ -702,7 +683,7 @@
         "docs/process/safety-score-v9-readiness.md",
         "docs/process/shock-coverage-refresh.md"
       ],
-      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts -- --only=safety-score-v9-evaluation-build", "npm run check:doc-sync", "npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
+      "checks": ["npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
       "testOwnership": [
         {
           "sources": ["shared/**", "worker/src/lib/**", "worker/wrangler*.toml", "package.json", "scripts/lib/safety-score-v9-evaluation-inputs.mts", "scripts/lib/package-imports.mts", "scripts/lib/automation-registry.mjs", "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts"],
@@ -825,9 +806,6 @@
         "scripts/lib/pr-*.mts",
         "scripts/lib/critical-*.m*",
         "scripts/lib/vitest-ci-args.mts",
-        "scripts/lib/shard-timing*.mts",
-        "scripts/data/pr-test-timings.json",
-        "scripts/maintenance/refresh-pr-test-timings.ts",
         "scripts/maintenance/run-pr-*.ts",
         "scripts/maintenance/*pages-release*.ts",
         "scripts/maintenance/run-critical-*.ts",
@@ -838,11 +816,9 @@
         "worker/scripts/lib/v9-resource-policy.ts",
         "worker/src/lib/__tests__/safety-score-v9-resource-*.test-support.ts",
         "scripts/maintenance/run-generated-artifacts.ts",
-        "scripts/maintenance/run-bootstrap-rehearsal.ts",
         "scripts/maintenance/prepare-workspace.ts",
         "scripts/maintenance/generate-pr-workflow-matrix.ts",
         ".github/**",
-        ".githooks/**",
         "package.json",
         "package-lock.json",
         "worker/package.json",
@@ -869,7 +845,7 @@
         { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
       ],
       "background": [{"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure triage", "kind": "symptom" } }],
-      "checks": ["npx vitest run scripts/__tests__", "npm run check:generated-artifacts"],
+      "checks": ["npx vitest run scripts/__tests__"],
       "rules": [
         "Keep deploy-surface classification aligned with GitHub deploy behavior.",
         "Commit relevant sources before generating git-history-derived artifacts."
@@ -888,8 +864,7 @@
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" },
         { "path": "docs/scripts.md", "anchor": "operational-notes" }
       ],
-      "checks": ["npx vitest run scripts/__tests__", "npm run check:generated-artifacts"],
-      "hints": ["Read generated-artifact or operational guidance only when the script touches those contracts.", "Use check:focused -- --file <path> to select affected generated artifacts; script tests retain source-reading and CLI contracts."]
+      "checks": ["npx vitest run scripts/__tests__"]
     },
     {
       "id": "agent-hooks-process",
@@ -906,15 +881,14 @@
         "docs/process/agent-artifacts.md",
         "scripts/ci/pharos-change-contract.ts",
         "scripts/lib/doc-ownership-registry.mts",
-        "scripts/maintenance/generate-agents-doc.ts",
         "scripts/maintenance/setup-agent-hooks.ts",
         "scripts/maintenance/sync-agent-skills.mjs",
         "docs/doc-ownership.json"
       ],
       "docs": ["docs/process/agent-start-here.md", { "path": "docs/process/agent-artifacts.md", "anchor": "harness-configuration" }, { "path": "docs/process/agent-artifacts.md", "anchor": "agent-skills" }],
-      "checks": ["npm run check:generated-artifacts -- --only=agents-doc", "npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
+      "checks": ["npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
       "rules": [
-        "Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync; an already-loaded AGENTS.md supplies the root rules, and CLAUDE.md is the edit target only for root guidance changes.",
+        "Root AGENTS.md is the single authored instruction file; CLAUDE.md imports it.",
         "Temporary agent output belongs in ignored scratch locations, not committed docs."
       ]
     },
@@ -943,7 +917,7 @@
         "Label every figure's universe: tracked peg-status set, DEWS-covered assets, and open resolver rows are three different denominators.",
         "Keep the event archive server-rendered; it is the crawlable link hub for permanent event pages."
       ],
-      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/app/depeg"]
+      "checks": ["npx vitest run src/app/depeg"]
     },
     {
       "id": "table-exports",
@@ -1023,8 +997,7 @@
       ],
       "alsoRead": ["src/AGENTS.md"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
-      "hints": ["Use check:focused -- --file <path> for related tests on frontend modules; non-module changes retain directory coverage."],
-      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src"]
+      "checks": ["npx vitest run src"]
     },
     {
       "id": "worker-runtime",
@@ -1049,7 +1022,6 @@
         "docs/blacklist-tracker.md"
       ],
       "alsoRead": ["worker/AGENTS.md"],
-      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts"],
       "testOwnership": [
         {
           "sources": ["worker/src/**/*.{ts,tsx}", "shared/lib/**/*.{ts,tsx}", "functions/**/*.{ts,tsx}", "scripts/lib/isolate-local-state-registry-check.ts"],
@@ -1071,7 +1043,6 @@
         { "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }
       ],
       "alsoRead": ["shared/AGENTS.md"],
-      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:generated-artifacts"],
       "rules": ["Use @shared/lib/... and @shared/types... for imports across runtime boundaries into root shared/; within production shared/lib/, use relative imports instead of @shared/* aliases."]
     },
     {

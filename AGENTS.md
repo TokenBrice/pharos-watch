@@ -2,13 +2,11 @@
 
 Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. Live: https://pharos.watch — local dev: http://localhost:3000/
 
-`CLAUDE.md` is the authored source; `AGENTS.md` is its generated, byte-identical mirror (never hand-edit `AGENTS.md`).
-
 ## Do this first
 
 1. Locate a likely file, then route it: `npm run agent:route -- --file <path>` (repeatable).
-2. Read required entry docs/anchors and every returned scoped `AGENTS.md`; use the [read-order contract](docs/process/agent-start-here.md#2-route-a-task) for conditional background, then inspect entrypoints and local imports.
-3. Onboarding, scratch, handoff, and commit conventions: `docs/process/agent-start-here.md`.
+2. Read required entry docs/anchors and every returned scoped `AGENTS.md`, then inspect entrypoints and local imports. All returned rules, checks, and warnings still apply; conditional background reading does not make them optional.
+3. For onboarding, scratch, handoff, or commit conventions, consult `docs/process/agent-start-here.md` when relevant.
 
 ## Tool routing
 
@@ -17,7 +15,8 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 ## Working rules
 
-- State assumptions; ask only when ambiguity blocks a safe choice. Smallest root-cause fix; no unrelated refactors; preserve existing product/design patterns and unrelated dirty work.
+- State assumptions; ask only when ambiguity blocks a safe choice. Smallest root-cause fix; no unrelated refactors; preserve existing product/design patterns. Never revert, reformat, stage, or fold unrelated dirty work into the task.
+- Code, schemas, registries, and checked runtime data are authoritative when prose disagrees.
 - Use your harness's native delegation for independent, disjoint work; never assume it exists.
 - No canonical formatter: match nearby style, no formatting-only churn, `git diff --check` clean (`docs/testing.md#source-formatting-policy`).
 - Credentials: check the ignored root `.env.local` and the documented source before reporting one missing; names only, never values. Worker secrets stay Wrangler-managed.
@@ -41,13 +40,9 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 - Focused checks are authoring feedback, never readiness proof (`docs/testing.md#smallest-adequate-check-per-area`); an unmapped production path's zero-plan is a routing failure.
 - Run `npm run check:pr` for focused authoring feedback before pushing; hosted CI is the readiness authority ([Pre-push readiness](docs/testing.md#pre-push-readiness)). Local receipts are optional diagnostics, not a push prerequisite.
 - CI failures: collect every failed leaf, fix all causal defects in one revision, rerun focused checks, then push once ([workflow incidents](docs/runbooks/workflow-incidents.md)). `check:release` is only an explicit production rehearsal; GitHub Actions owns the release gate.
-- Commit thematically with a descriptive subject and a why-focused body. The pre-commit hook is partial artifact sync, never a test gate or full convergence: eligible `autoStage` outputs only; it skips merge/rebase/cherry-pick/revert, an empty index, or `PHAROS_SKIP_ARTIFACT_HOOK=1` (`docs/scripts.md#operational-notes`). No pre-push test hook.
+- Commit thematically with a descriptive subject and a why-focused body. There are no Git hooks: regenerate affected artifacts explicitly (`npm run check:generated-artifacts` names stale ones) and commit them with their source; hosted CI enforces freshness (`docs/scripts.md#operational-notes`).
 - Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly. Merge release PRs with `gh pr merge --merge`; never squash or rebase them.
 - A green deploy is not runtime health: for cron, scheduler, memory, migration, or ingestion changes, observe the first production execution before claiming success.
-
-## Generated context
-
-Regenerate `AGENTS.md` from this file with `node --import tsx scripts/maintenance/generate-agents-doc.ts`; check freshness with `npm run check:generated-artifacts -- --only=agents-doc`. `next dev` may rewrite the managed block below in `AGENTS.md`; copy it back here and regenerate before committing.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

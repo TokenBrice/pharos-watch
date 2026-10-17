@@ -12,7 +12,7 @@ import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const PAGES_PREVIOUS_SITEMAP_URL = "https://stablecoin-dashboard.pages.dev/sitemap.xml";
 const PUBLIC_FLAGS = ["HERO_VERDICT", "QUIET_DEVIATIONS", "MOBILE_STICKY_SUMMARY", "DEPEG_RESOLVER", "DEPEG_RESOLVER_REVIEWER"];
-// Post-refresh outputs (tracked public/llms.txt among them) are regenerated
+// Post-refresh outputs (including ignored public/llms.txt) are regenerated
 // from the overlaid release data, so they are restored with the inputs: the
 // lane must leave no edits behind in the candidate checkout.
 const RESTORED_PATHS = [...new Set<string>([

@@ -20,6 +20,20 @@ afterEach(() => {
 });
 
 describe("agent hook setup", () => {
+  it("requires opt-in, then detects the installed config without rewriting it", () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "pharos-agent-hooks-"));
+    temporaryDirectories.push(directory);
+    const hooksPath = resolve(directory, "hooks.json");
+    const options = { hooksPath, configPath: resolve(directory, "absent-config.toml"),
+      worktreePaths: { checkoutRoot: directory, commonDir: resolve(directory, ".git") } };
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    expect(runAgentHookSetup({ ...options, install: false })).toBe(1);
+    expect(runAgentHookSetup({ ...options, install: true })).toBe(0);
+    expect(readFileSync(hooksPath, "utf8")).toBe(renderCodexHookConfig());
+    expect(runAgentHookSetup({ ...options, install: false })).toBe(0);
+  });
+
   it("uses the observed shell/write tool matcher and keeps SessionStart unchanged", () => {
     const config = buildCodexHookConfig();
 

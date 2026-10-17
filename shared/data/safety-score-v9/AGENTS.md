@@ -4,10 +4,14 @@ Applies to curated and generated Safety Score V9 evidence under `shared/data/saf
 
 ## Read First
 
-- [Report cards](../../../docs/report-cards.md)
-- [Equivalence harness](../../../docs/process/safety-score-equivalence-harness.md)
-- [Curation-expiry sweep](../../../docs/process/safety-score-curation-expiry-sweep.md)
-- [Mechanism evidence standard](../../../docs/process/mechanism-overlay-evidence-standard.md)
+Read the applicable owner anchors, not every background document; use [task routing](../../../docs/process/agent-start-here.md#2-route-a-task) when the affected contract is unclear.
+
+| Work | Required context |
+| --- | --- |
+| Policy, scoring or publication semantics | [V10 model](../../../docs/report-cards.md#v10-model) |
+| Evidence/compiler changes requiring comparison | [When to use the equivalence harness](../../../docs/process/safety-score-equivalence-harness.md#when-to-use-it), then the selected procedure |
+| Expiry, freshness or missing-data queue work | [Capture current input](../../../docs/process/safety-score-curation-expiry-sweep.md#1-capture-the-current-production-input), then the affected queue step |
+| Mechanism overlays or measured claims | [Evidence scope](../../../docs/process/mechanism-overlay-evidence-standard.md#scope), [evidence classes](../../../docs/process/mechanism-overlay-evidence-standard.md#evidence-classes) and [process requirements](../../../docs/process/mechanism-overlay-evidence-standard.md#process-requirements) |
 
 ## Invariants
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 import failureScenarios from "@data/failure-scenarios.json";
 import type { FailureScenario, FailureScenarioEvidence, FailureScenariosById } from "@shared/types/failure-scenarios";
 import { selectFailureScenario } from "@shared/lib/failure-scenarios";
@@ -10,7 +10,6 @@ import { EVIDENCE_LABEL } from "../scenario-model";
 const scenarios = failureScenarios as FailureScenariosById;
 
 describe("FailureScenarioModule claim-scoped evidence", () => {
-  afterEach(cleanup);
 
   it("does not present approved USDC reserve access or redemption gates as verified on-chain", () => {
     const selection = selectFailureScenario(scenarios, "usdc-circle", {

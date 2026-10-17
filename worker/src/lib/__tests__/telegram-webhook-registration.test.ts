@@ -140,7 +140,6 @@ describe("reconcileTelegramWebhookRegistration", () => {
       [
         cacheSelectEntry("telegram:webhook-reconciled", { value: await expectedWebhookCacheValue(), updated_at: nowSec }),
       ],
-      { requireMatch: true },
     );
 
     const result = await reconcileTelegramWebhookRegistration(db, {
@@ -209,7 +208,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
         }),
         cacheSelectEntry("telegram:reconcile:429:setWebhook"),
         cacheWriteEntry(),
-      ], { requireMatch: true });
+      ]);
       fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
       const result = await reconcileTelegramWebhookRegistration(db, {
@@ -236,7 +235,6 @@ describe("reconcileTelegramWebhookRegistration", () => {
         cacheSelectEntry("telegram:webhook-reconciled"),
         cacheSelectEntry("telegram:reconcile:429:setWebhook"),
       ],
-      { requireMatch: true },
     );
     fetchSpy.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: false, description: "Bad webhook: failed to resolve host" }), { status: 200 }),
@@ -330,7 +328,6 @@ describe("reconcileTelegramCommandRegistration", () => {
       [
         cacheSelectEntry("telegram:commands-reconciled", { value: expectedCommandsCacheValue(), updated_at: nowSec }),
       ],
-      { requireMatch: true },
     );
 
     const result = await reconcileTelegramCommandRegistration(db, {
@@ -351,7 +348,6 @@ describe("reconcileTelegramCommandRegistration", () => {
         cacheSelectEntry("telegram:commands-reconciled"),
         cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
       ],
-      { requireMatch: true },
     );
     const controller = new AbortController();
     controller.abort(new Error("registration aborted"));
@@ -385,7 +381,6 @@ describe("reconcileTelegramCommandRegistration", () => {
         cacheSelectEntry("telegram:commands-reconciled"),
         cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
       ],
-      { requireMatch: true },
     );
     fetchSpy.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: false, description: "Bad Request: command is invalid" }), { status: 200 }),
@@ -406,7 +401,6 @@ describe("reconcileTelegramCommandRegistration", () => {
         cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
         cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_group_chats"),
       ],
-      { requireMatch: true },
     );
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     fetchSpy.mockResolvedValueOnce(
@@ -434,7 +428,6 @@ describe("reconcileTelegramProfileRegistration", () => {
         ...profileBackoffSelectEntries(),
         cacheWriteEntry(),
       ],
-      { requireMatch: true },
     );
     fetchSpy.mockImplementation(
       async () =>
@@ -459,7 +452,6 @@ describe("reconcileTelegramProfileRegistration", () => {
         cacheSelectEntry("telegram:profile-reconciled"),
         ...profileBackoffSelectEntries(),
       ],
-      { requireMatch: true },
     );
     fetchSpy.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: false, description: "Bad Request: NAME_TOO_LONG" }), { status: 400 }),
@@ -475,7 +467,6 @@ describe("reconcileTelegramProfileRegistration", () => {
   it("records a 429 backoff and returns rate-limited without throwing when setMyName is throttled", async () => {
     const db = mockD1(
       [cacheSelectEntry("telegram:profile-reconciled"), ...profileBackoffSelectEntries(), cacheWriteEntry()],
-      { requireMatch: true },
     );
     fetchSpy
       .mockResolvedValueOnce(
@@ -515,7 +506,6 @@ describe("reconcileTelegramProfileRegistration", () => {
         }),
         cacheWriteEntry(),
       ],
-      { requireMatch: true },
     );
     fetchSpy
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
@@ -540,7 +530,6 @@ describe("reconcileTelegramProfileRegistration", () => {
         }),
         cacheWriteEntry(),
       ],
-      { requireMatch: true },
     );
     fetchSpy.mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
@@ -554,7 +543,6 @@ describe("reconcileTelegramProfileRegistration", () => {
   it("defaults retry_after to 60s when Telegram omits the parameters field", async () => {
     const db = mockD1(
       [cacheSelectEntry("telegram:profile-reconciled"), ...profileBackoffSelectEntries(), cacheWriteEntry()],
-      { requireMatch: true },
     );
     fetchSpy
       .mockResolvedValueOnce(

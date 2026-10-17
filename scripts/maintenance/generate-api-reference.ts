@@ -22,7 +22,6 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 import { RedemptionCapacityConfidenceSchema } from "@shared/types/redemption";
 import { isRecord } from "@shared/lib/type-guards";
-import { PEG_COVERAGE_COMPOSITE_MIN } from "@shared/lib/chains/health";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../../..");
 const OPENAPI_PATH = resolve(ROOT, "public/openapi.json");
@@ -32,7 +31,7 @@ export const END_MARKER = "<!-- GENERATED-END: public-endpoints -->";
 
 interface OpenApiSpec { paths: Record<string, unknown>; info?: Record<string, unknown> }
 interface OpenApiRoute {
-  method: string; path: string; operationId: string; summary: string; tags: string;
+  method: string; path: string; operationId: string; summary: string; description: string; tags: string;
   parameters: string; responseCodes: string; responseSchemaRefs: readonly string[]; definition: EndpointDefinition;
 }
 
@@ -49,51 +48,6 @@ const SUPPLEMENTAL_ENDPOINT_ORDER = [
   "donor-key-claim", "feedback", "telegram-mini-app-session", "telegram-mini-app-mutation", "telegram-webhook",
 ] as const;
 
-/** Hand-authored context, deliberately keyed by the stable OpenAPI operationId. */
-export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
-  events: "Searches the normalized event tape; cursor pagination is preferred for long result sets. `droppedRows` is the number of queried database rows rejected because they did not match the response schema; a non-zero value means the returned event set is incomplete, while `total` still counts those queried rows.",
-  stablecoins: "Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and FX context. Since 2026-09-28, `StablecoinListResponse.peggedAssets[].chainCirculating` preserves unobserved `current`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth` values as `null` instead of the legacy projected `0`; omitted historical keys also mean unavailable. Explicit observed zero remains `0`. Consumers must not interpret unavailable chain observations as redemptions, mints, or a complete distribution denominator. Also since 2026-09-28 (pricing v6.38), nominal par routes carry par in `nominalPriceReference` (`{ price, source: \"protocol-par\", mode: \"nominal_reference\" }`) instead of a high-confidence `protocol-redeem` price stamped with the sync clock; non-USD par adds optional `fxReferenceType` (`fresh` or `static`) and `fxObservedAt` (the FX reference's own source time, `null` when unknown). A fresh market quote that depeg detection rates authoritative stays the published `price`; otherwise `price` is par with `priceSource` `protocol-par`, `priceObservedAtMode` `nominal_reference`, and `priceConfidence`, `priceObservedAt` and `priceUpdatedAt` `null`. Such a price is a nominal reference, not an observation.",
-  stablecoinStablecoinId: "Full current/historical detail for a canonical Pharos ID; nominal references follow the pricing v6.38 (2026-09-28) contract above.",
-  stablecoinSummaryStablecoinId: "Compact stablecoin projection for lightweight consumers; nominal references follow the pricing v6.38 (2026-09-28) contract above.",
-  nonUsdShare: "Returns the current and historical market share of tracked non-USD peg groups.",
-  chains: "Returns stablecoin distribution and health aggregates grouped by chain. Since 2026-09-27 chain accounting is raw: `chainAttributedTotalUsd` is the unclamped sum of the published chain rows (previously capped at `globalTotalUsd`), each `dominanceShare` is `totalUsd / globalTotalUsd` without rescaling (shares can sum above 1 when chain rows over-attribute supply), `attributionDiscrepancyUsd` is the signed `chainAttributedTotalUsd - globalTotalUsd`, `unattributedTotalUsd` is its positive residual, and `dominanceGeometryTotalUsd` (`max(global, attributed)`) is a bar-geometry denominator, never a share label. `supplyCoverage` and per-chain `unavailableSupplyObservationCount` count unobserved aggregate and chain supply excluded from those totals. Since Chain Health v1.6, zero peg coverage publishes `healthFactors.pegStability: null`; partial coverage publishes the observed-only factor with `pegStabilityCoverage`. Since v1.7, `healthScore`/`healthBand` also publish for partial coverage with `pegStabilityCoverage.coverage >= " + PEG_COVERAGE_COMPOSITE_MIN + "`; below that they are null. `neutralImputedSupplyUsd` is zero for new payloads; old cached payloads retain their original methodology. Since 2026-09-28 the unused V8 fields `_meta.dependencies.reportCards.inputsStale` and `_meta.dependencies.reportCards.staleInputs` are removed from the public contract; dependency status, age, and reason are unchanged.",
-  stablecoinReservesStablecoinId: "Returns reviewed reserve composition and provenance for one stablecoin. Since 2026-09-27 the freshness verdict carries its policy values: `sync.freshness` publishes the assessment clock (`assessedAt`), judged generation (`fetchedAt`, `attemptId`), fetch age against the route's fetch budget, and, for verified source timestamps, source age against the effective source budget with the cap that set it; `provenance.scoringRejectionReasons` lists the admission gates behind `scoringEligible`. Both are additive optional fields, and unjudged or legacy values are `null`. Also since 2026-09-27, supply-comparing reserve snapshots publish `metadata.liabilityScope` (reviewed included/excluded chains with reasons), `supplyCoverageComplete`, `reserveObservedAt`, `supplyObservedAt`, and `ratioSkewSec`, and `metadata.collateralizationRatio` is omitted with `metadata.ratioUnavailableReason` when liability coverage or reserve/supply time identity is not established. USD1 now publishes `collateralizationRatio` over its reviewed issuer-native perimeter; the former USD1 `fundBackingTotalRatio` and `details.fundScope` fields are removed.",
-  stablecoinCharts: "Returns the shared chart series consumed by stablecoin overview surfaces.",
-  blacklist: "Returns normalized issuer freeze, unfreeze, blacklist, and destruction events.",
-  blacklistSummary: "Returns aggregate blacklist counts and exposure totals.",
-  depegEvents: "Asset/state/review-filtered incidents. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across pages for threshold-crossing totals. Audit verdicts (2026-09-28): confirmed/repaired/false_positive/disputed/no_data/null; unknowns rejected. v6.31 optional `priceCoverage`: off-peg `intervals` and `atParIntervals` ([startSec,endSec][]), nullable-second `lastTrustedObservationAt`/`gapStartedAt`, three-state `lastObservationKind`. Unrecorded spans are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.",
-  depegResolver: "Resolved depeg-duration evidence. Since 2026-09-28, unknown audit verdicts fail closed; DDR excludes false_positive/disputed/no_data, PegScore only false_positive/disputed. Null keeps legacy eligibility.",
-  depegResolverReview: "Returns the reviewer-oriented projection of depeg-duration decisions.",
-  pegSummary: "Peg summary v6.31: `unknownCoverageSeconds` excludes merged blind spans from occupancy/penalties; wholly blind `pegPct`/`recent90d.pegPct` stay null. Recent `observedDays` excludes blind spans (`coverageLimited`). `currentDeviationBps`/`pegReference` ignore the $1M floor. `coinsAtPeg` uses raw canonical thresholds; row deviations stay rounded. Optional nullable `observationStartedAt`: earliest observed history, without PegScore age/audit/four-year clamps.",
-  usdsStatus: "Returns the current USDS freeze and operational-risk status.",
-  bluechipRatings: "Returns imported Bluechip ratings joined to Pharos stablecoin identities.",
-  dexLiquidity: "Returns current DEX liquidity scores and pool-level evidence. Volume, activity and NR follow the liquidity v6.9 volume contract above. Empty datasets retain the confirmed producer output clock; absent authority publishes unavailable freshness, never request time.",
-  dexLiquidityHistory: "Returns bounded historical DEX liquidity observations for one stablecoin. `volume24h` and `score` follow the same v6.9 contract.",
-  supplyHistory: "Returns bounded circulating-supply history for one stablecoin.",
-  dailyDigest: "Returns the latest generated market digest. With no eligible edition, all eleven response fields are explicitly null.",
-  digestArchive: "Returns the index of available dated digest snapshots.",
-  digestSnapshot: "Returns one digest snapshot selected by date.",
-  snapshotsIndex: "Returns the dates available in the public daily snapshot archive.",
-  snapshotsDateJson: "Returns a dated snapshot unchanged, including identity and ETag. Archive validation also applies to coin projections; live producers remain strict. Pre-9.15 cards may retain nullable `stressStateDigest`. Report7 uses recorded pre-10.11 routes and methodology-specific witness/obligation counts; see [historical contracts](./report-cards.md#report-schema-v8).",
-  snapshotDateStablecoinStablecoinId: "Returns one stablecoin projection from a dated public snapshot.",
-  health: "Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts carry nullable `generationId` / `publishedAt` from the served-generation sentinel; `cache-quality-degraded: yield-data:safety-snapshot-coverage` fires only below 0.75 coverage, held safety is `yield-safety-publish-time-fallback:safety-snapshot-held` inside both 24h clocks and `yield-safety-unrated-serving:safety-snapshot-held` beyond them, and unreadable or mismatched publication health fails closed as `yield-safety-availability-unknown`. Adds `headline`/`components`.",
-  publicStatusHistory: "Returns a bounded, public-safe status timeline.",
-  telegramPulse: "Returns public Telegram adoption and delivery health aggregates.",
-  stabilityIndex: "Returns the current Pharos Stability Index and optional component detail. Since 2026-09-28 (PSI v3.64), daily snapshots persist all-null components as null rather than zero. Observed zero remains numeric zero; partial components average only observations and disclose `dailyProvenance.componentSampleCounts`. All-day score averaging and mixed-version breakdown are retained; `componentsUnavailable` identifies unavailable components. Legacy rows without counts remain unknown, not assumed complete. Since PSI v3.66, partial samples expose optional `current.inputDegradation.supplyUnavailableIds` / `trendUnavailableIds`; unavailable supply is omitted from denominators, and an unusable aggregate or paired trend denominator preserves the prior sample rather than inventing zero.",
-  reportCardsV9: "[Status](#safety-score-availability).",
-  safetyGrades: "[Status](#safety-score-availability).",
-  dependencyGraphV1: "[Status](#safety-score-availability).",
-  dependencyScenariosV1: "[Status](#safety-score-availability).",
-  redemptionBackstops: "Returns reviewed redemption paths and backstop evidence.",
-  safetyScoreHistory: "Returns legacy bounded Safety Score history for one stablecoin.",
-  safetyScoreHistoryV2: "Returns identity-aware bounded Safety Score history for one stablecoin.",
-  yieldRankings: "Returns current Yield Intelligence rankings and risk-adjusted fields.",
-  yieldAdapterManifest: "Returns the public adapter-coverage and source-status manifest.",
-  yieldHistory: "Returns bounded yield history for one stablecoin and optional source projection.",
-  mintBurnFlows: "Returns mint/burn pressure for closed UTC hours, not a rolling partial-hour window. `window` publishes `[start,end)` boundaries and `semantics: closed-utc-hours`; `end` is the current UTC hour boundary, excluding the open hour. Requested `hours` controls the aggregate series or per-coin totals; aggregate coin interpretation stays 24h, and 7d/30d/90d nets share that end. Signed nets are `null` when matching `valuation` is `partial`; gross volumes remain known-valuation lower bounds. Direction is withheld unless missing valuation cannot change it; pressure requires a complete 24h window and non-partial baseline. `gauge.score` re-weights over published pressures; `partialValuationInputs`, `partialValuationMcapUsd` and `scoredMcapUsd` disclose withheld weighted inputs and bound the full-cohort score by `(scoredMcapUsd·score ± 100·partialValuationMcapUsd) / (scoredMcapUsd + partialValuationMcapUsd)`. Flight-to-quality is withheld unless exact or provably inactive. Legacy `unknown` valuation keeps labelled nets until those buckets age out.",
-  mintBurnEvents: "Returns the normalized issuance event stream with cursor or offset pagination. Since 2026-09-28 (mint-burn-flow v6.23) `amountUsd` is set only from a price whose actual observation time is within 24 hours either side of the event, and `priceTimestamp` is that observation time: `priceSource` `supply-history-daily` / `supply-history-heal` for a daily snapshot price with a recorded observation clock (never its day label; nominal par is never stored), `price-cache-event-window` / `price_cache_heal` for a replay-safe observed cache price (never a legacy `protocol-redeem` par row of a nominal-par route); the candidate observed closest to the event wins. Events without such evidence keep `amountUsd: null`; this includes NAV tokens whose latest observation is more than 24 hours from the event (for example over weekends). Older rows may still carry `price-cache-current` with a run-time `priceTimestamp`, or `supply-history-daily` with the snapshot day as `priceTimestamp`.",
-  stressSignals: "Returns the bounded stress-signal history used by early-warning surfaces.",
-};
 const SUPPLEMENTAL_NOTES: Readonly<Record<(typeof SUPPLEMENTAL_ENDPOINT_ORDER)[number], string>> = {
   "donor-key-claim": "Issues one non-expiring supporter API key to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
   feedback: "Accepts the bounded feedback form payload used by the website.",
@@ -157,12 +111,16 @@ export function collectOpenApiRoutes(spec: OpenApiSpec): OpenApiRoute[] {
       const operation = pathValue[methodName];
       if (!isRecord(operation)) continue;
       const operationId = typeof operation.operationId === "string" ? operation.operationId : "";
-      if (!operationId || !CURATED_OPERATION_NOTES[operationId]) throw new Error(`Missing curated note for ${methodName.toUpperCase()} ${path}`);
+      if (!operationId) throw new Error(`Missing operationId for ${methodName.toUpperCase()} ${path}`);
+      if (typeof operation.description !== "string" || !operation.description.trim()) {
+        throw new Error(`Missing description for ${methodName.toUpperCase()} ${path}`);
+      }
       const method = methodName.toUpperCase();
       const parameters = [...(Array.isArray(pathValue.parameters) ? pathValue.parameters : []), ...(Array.isArray(operation.parameters) ? operation.parameters : [])];
       routes.push({
         method, path, operationId,
         summary: typeof operation.summary === "string" ? operation.summary : operationId,
+        description: operation.description,
         tags: Array.isArray(operation.tags) ? operation.tags.filter((tag): tag is string => typeof tag === "string").join(", ") : "",
         parameters: formatParams(parameters),
         responseCodes: isRecord(operation.responses) ? Object.keys(operation.responses).sort().join(", ") : "",
@@ -300,8 +258,11 @@ function renderSourceBackedRouteDetails(operationId: string): string | null {
 }
 function renderOpenApiRoute(route: OpenApiRoute): string {
   const sourceBackedDetails = renderSourceBackedRouteDetails(route.operationId);
+  const preview = route.description.split(/(?<=[.!?])\s/, 1)[0];
+  const operationPath = route.path.replaceAll("~", "~0").replaceAll("/", "~1");
   return [
-    `### \`${route.method} ${displayPath(route.path)}\``, "", CURATED_OPERATION_NOTES[route.operationId], "",
+    `### \`${route.method} ${displayPath(route.path)}\``, "",
+    `${preview} [Full endpoint contract](https://pharos.watch/openapi.json#/paths/${operationPath}/${route.method.toLowerCase()}).`, "",
     `- **Operation ID:** \`${route.operationId}\``, `- **Path:** \`${route.path}\``,
     `- **Parameters:** ${route.parameters}`, `- **Success response schema:** ${schemaLink(route.responseSchemaRefs)}`,
     `- **Policy:** authentication ${authLabel(route.definition)}; ${cacheLabel(route.definition)} (\`cacheBypass: ${route.definition.cacheBypass}\`).`,
@@ -343,7 +304,7 @@ export function renderGeneratedBlock(spec: OpenApiSpec): string {
   return [
     START_MARKER,
     "<!-- Generated by scripts/maintenance/generate-api-reference.ts from public/openapi.json and shared/lib/api-endpoints/definitions.ts. -->",
-    "<!-- Curated route notes are authored in the generator and keyed by operationId. Do not edit this block by hand. -->", "",
+    "<!-- Endpoint narratives are authored in scripts/lib/public-api-artifact-catalog.ts and emitted through OpenAPI. Supplemental notes and source-backed examples live in the generator. Do not edit this block by hand. -->", "",
     "### Public Endpoints Quick Reference", "",
     `Generated from \`public/openapi.json\` (\`${typeof spec.info?.title === "string" ? spec.info.title : "Pharos API"}\` v${typeof spec.info?.version === "string" ? spec.info.version : ""}). Total OpenAPI operations: **${routes.length}**.`, "",
     renderQuickReference(routes), "", ...routeSections,
@@ -351,13 +312,9 @@ export function renderGeneratedBlock(spec: OpenApiSpec): string {
   ].join("\n");
 }
 export function replaceGeneratedBlock(doc: string, generatedBlock: string): string {
-  const oldStart = "<!-- GENERATED-START: public-endpoints-quick-reference -->";
-  const oldEnd = "<!-- GENERATED-END: public-endpoints-quick-reference -->";
-  const startMarker = doc.includes(START_MARKER) ? START_MARKER : oldStart;
-  const endMarker = doc.includes(END_MARKER) ? END_MARKER : oldEnd;
-  const start = doc.indexOf(startMarker); const end = doc.indexOf(endMarker);
+  const start = doc.indexOf(START_MARKER); const end = doc.indexOf(END_MARKER);
   if (start === -1 || end === -1 || end < start) throw new Error(`Could not find a valid generated block in ${DOC_PATH}`);
-  return `${doc.slice(0, start)}${generatedBlock}${doc.slice(end + endMarker.length)}`;
+  return `${doc.slice(0, start)}${generatedBlock}${doc.slice(end + END_MARKER.length)}`;
 }
 export function main(checkMode = process.argv.includes("--check")): void {
   const existing = readFileSync(DOC_PATH, "utf8");

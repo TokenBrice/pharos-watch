@@ -283,6 +283,42 @@ function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
 }
 
 describe("Safety Score v9 evidence-gap queue", () => {
+  it("collects lender collateral, accepted-source and latest-attempt gaps from their fact statuses", () => {
+    const core = factSetCore();
+    const asset = core.assets[0]!;
+    const rule = "v10.19.backing.lender-collateral-book";
+    // The first component is the armusdcs-wintermute market/account that made
+    // both sweep generators fail: the compiler status was valid but unvisited.
+    const components = [
+      "lender-collateral:ethereum:0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb:0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837:0x3b9e060a2b05588126fda01b95e9485687fc91d7",
+      "lender-collateral-accepted-source",
+      "lender-book-latest-attempt",
+    ];
+    const statuses = components.map(componentKey => {
+      const gapId = `${asset.assetId}:gap:${componentKey}`;
+      asset.gaps.push(createV9FactGapV3({
+        gapId, reasonCode: "partial-reserve-review", ownerDomain: "backing",
+        policyRuleId: rule, observationState: "missing", responsibility: "unresearched",
+        causeScope: { pillar: "backing", componentKey, factorKey: null, routeKey: null,
+          exposureId: null, requiredDatum: componentKey },
+        path: { kind: "local-component", componentKey },
+        message: "Frozen lender-book evidence is unavailable.", evidenceRefIds: [],
+      }));
+      return { ...knownStatus(rule), observationState: "missing" as const, evidenceRefIds: [], gapIds: [gapId] };
+    });
+    asset.lenderBook = {
+      status: statuses[0]!, acceptedSourceStatus: statuses[1]!, latestAttemptStatus: statuses[2]!,
+      observation: null, collaterals: [],
+    };
+    const factSet = compileV9FactSetV3(core);
+    const queue = buildV9EvidenceGapQueue({ factSet, policy: loadV9MethodologyPolicy(policyAsset) });
+    for (const status of statuses) {
+      expect(queue.entries).toContainEqual(expect.objectContaining({
+        gapId: status.gapIds[0], applicability: "required", action: "collect-evidence",
+      }));
+    }
+  });
+
   it("derives policy, applicability, materiality, owner, and action from typed facts", () => {
     const factSet = compileV9FactSetV3(
       factSetCore("This message deliberately says unsupported but is not classified."),

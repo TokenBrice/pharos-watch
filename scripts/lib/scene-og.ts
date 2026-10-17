@@ -12,8 +12,8 @@
  *
  * Freshness: Firefox and libvips output differs across platforms, so a check hashes the DOCUMENT (no browser) and
  * compares it with the committed signature, then verifies the committed PNG still hashes to the value recorded when
- * it was written (`checkSignedPng`). `buildSignedPng` is a no-op when that check passes, so a pre-commit hook never
- * churns the PNG on another OS.
+ * it was written (`checkSignedPng`). `buildSignedPng` is a no-op when that check passes, avoiding PNG churn on
+ * another OS.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { registerHooks } from "node:module";

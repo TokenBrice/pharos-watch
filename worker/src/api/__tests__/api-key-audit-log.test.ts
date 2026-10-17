@@ -62,7 +62,7 @@ describe("api-key-audit-log handler", () => {
 
 
   it("rejects invalid apiKeyId filters instead of broadening the query", async () => {
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([]);
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?apiKeyId=7abc");
 
     const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });

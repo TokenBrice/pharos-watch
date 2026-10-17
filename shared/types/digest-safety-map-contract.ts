@@ -1,6 +1,6 @@
 import { isValidIsoDateOnly } from "./date-primitives";
 
-// shared/types must stay dependency-free of shared/lib (check:shared-types-imports), so the
+// shared/types must stay dependency-free of shared/lib (ESLint pharos/shared-types-imports), so the
 // record guard is local here rather than imported from @shared/lib/type-guards.
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

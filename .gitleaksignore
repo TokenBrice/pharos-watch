@@ -362,3 +362,7 @@ a9e221850546690c59755a13d75de4a09925f218:shared/data/safety-score-v9/evidence-ga
 # Reviewed 2026-10-12: historical public Solana input mints from the retired
 # Meteora fixture; its exact allowlist was removed by 9d50021db.
 9a4bba0e92c0ef66970439f6cae2d9519ca2076e:worker/src/cron/dex-liquidity/__tests__/fixtures/meteora-dlmm-pinned.json:generic-api-key:1
+
+# Reviewed 2026-10-17: historical public USDC mint in the retired Raydium
+# measured-execution fixture; its dedicated value/path allowlist was removed.
+d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27.json:generic-api-key:13

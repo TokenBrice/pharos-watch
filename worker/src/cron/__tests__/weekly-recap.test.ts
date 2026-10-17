@@ -268,7 +268,7 @@ describe("generateWeeklyRecap", () => {
   });
 
   it("stores a weekly digest and posts to Telegram when generation succeeds", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
     const result = await generateWeeklyRecap(
@@ -374,7 +374,7 @@ describe("generateWeeklyRecap", () => {
     const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
     const db = mockD1(makeTables({
       styleGateModes: { daily: "shadow", weekly: "enforce" },
-    }), { requireMatch: true });
+    }));
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({ extended: violatedExtended }));
 
     const result = await generateWeeklyRecap(
@@ -426,7 +426,7 @@ describe("generateWeeklyRecap", () => {
   });
 
   it("posts the weekly recap to X with a carried-forward dated map", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
     vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
       kind: "available",
@@ -516,7 +516,7 @@ describe("generateWeeklyRecap", () => {
   it("uses the Monday scheduled slot when execution starts after midnight Tuesday", async () => {
     vi.setSystemTime(new Date("2026-03-31T00:01:00.000Z"));
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     const mondaySlotSec = Math.floor(Date.parse("2026-03-30T08:10:00Z") / 1000);
 
     const result = await generateWeeklyRecap(
@@ -555,7 +555,7 @@ describe("generateWeeklyRecap", () => {
         rows: [existing],
         first: existing,
       },
-    ], { requireMatch: true });
+    ]);
 
     const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
@@ -592,7 +592,7 @@ describe("generateWeeklyRecap", () => {
         rows: [existing],
         first: existing,
       },
-    ], { requireMatch: true });
+    ]);
 
     const result = await generateWeeklyRecap(
       db,
@@ -608,7 +608,7 @@ describe("generateWeeklyRecap", () => {
   });
 
   it("preserves blocked quality-gate metadata when Telegram delivery is skipped", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
       text: "PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass, but this hook deliberately runs long enough to trip the hard tweet length validator so the weekly recap remains stored only for operator inspection and must not be published publicly from archive reads.",
     }));
@@ -646,7 +646,7 @@ describe("generateWeeklyRecap", () => {
       publishedAt: null,
       reason: "v9-snapshot-unavailable",
     });
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
     const result = await generateWeeklyRecap(
@@ -686,7 +686,7 @@ describe("generateWeeklyRecap", () => {
       generated_at: Math.floor(Date.UTC(2026, 2, 24 + index) / 1000),
       input_data: JSON.stringify({ ...JSON.parse(template.input_data), gradeTransitions: [] }),
     }));
-    const db = mockD1(makeTables({ dailyRows }), { requireMatch: true });
+    const db = mockD1(makeTables({ dailyRows }));
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
       extended: VALID_WEEKLY_EXTENDED.replace("grade transitions", "risk transitions"),
     }));
@@ -719,7 +719,7 @@ describe("generateWeeklyRecap", () => {
       publishedAt: null,
       reason: "v9-snapshot-unavailable",
     });
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry)
       .mockResolvedValueOnce(weeklyClaudeResponse())
       .mockResolvedValueOnce(weeklyClaudeResponse({
@@ -741,7 +741,7 @@ describe("generateWeeklyRecap", () => {
   });
 
   it("stores failed Telegram delivery state so the weekly row can be retried", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
     vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
       editionKey: "weekly:2026-03-30",
@@ -802,7 +802,7 @@ describe("generateWeeklyRecap", () => {
         match: "SET digest_meta = ?",
         rows: [],
       },
-    ], { requireMatch: true });
+    ]);
 
     const result = await generateWeeklyRecap(
       db,
@@ -830,7 +830,7 @@ describe("generateWeeklyRecap", () => {
   });
 
   it("repairs non-JSON weekly output with a corrective retry", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
       mockAnthropicStreamResponse(
         "USDT stayed at 1.00 all week, blacklist pressure faded, and weekly flows stayed calm.",
@@ -930,7 +930,7 @@ describe("generateWeeklyRecap", () => {
       "PSI opened",
       "PMUSD spent Thursday 5284 bps below peg on $65M while PSI opened",
     );
-    const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
+    const db = mockD1(makeTables({ dailyRows: rows }));
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
       title: "Weekly Depeg Lead",
       text: "PMUSD's 5284 bps depeg took the weekly lead while PSI only framed the regime.",
@@ -958,7 +958,7 @@ describe("generateWeeklyRecap", () => {
   });
 
   it("skips generation cleanly when the Anthropic circuit is open", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
+    const db = mockD1(makeTables());
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
     const result = await generateWeeklyRecap(db, "anthropic-key", null, null);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
@@ -33,9 +33,6 @@ describe("YieldSourceBoard", () => {
     vi.unstubAllGlobals();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("discloses bounded composition and unavailable anomalies on the summary path", () => {
     const rankings = [makeBoardRanking({

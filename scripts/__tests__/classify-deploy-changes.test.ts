@@ -7,13 +7,12 @@ import {
   hasDeployImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
-  hasPagesUiImpact,
   hasWorkerDeployImpact,
   hasWorkerReleaseImpact,
   hasV9ResourceImpact,
-  normalizeChangedFiles,
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mts";
 
 describe("Pages artifact selection", () => {
   it.each([
@@ -117,9 +116,35 @@ describe("V9 resource selection", () => {
   });
 });
 
-describe("normalizeChangedFiles", () => {
+describe("emitGithubOutputs", () => {
+  it("emits only the six consumed workflow outputs while retaining classification fields", () => {
+    const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      const classification = classifyChangedFiles(["package-lock.json"]);
+      emitGithubOutputs(classification);
+      expect(write.mock.calls.map(([line]) => line)).toEqual([
+        "docs_only=false\n",
+        "pages_artifact_required=true\n",
+        "pages_deploy_required=true\n",
+        "playwright_firefox_required=false\n",
+        "v9_resource_required=true\n",
+        "worker_deploy_required=true\n",
+      ]);
+      expect(classification).toMatchObject({
+        deployRequired: true,
+        docsChanged: false,
+        pagesChanged: true,
+        workerChanged: true,
+      });
+    } finally {
+      write.mockRestore();
+    }
+  });
+});
+
+describe("splitNullDelimited", () => {
   it("keeps a path containing a newline intact", () => {
-    expect(normalizeChangedFiles("src/app/we\nird.tsx\0src/app/page.tsx\0")).toEqual([
+    expect(splitNullDelimited("src/app/we\nird.tsx\0src/app/page.tsx\0")).toEqual([
       "src/app/we\nird.tsx",
       "src/app/page.tsx",
     ]);
@@ -185,7 +210,6 @@ describe("hasPagesDeployImpact", () => {
 
     expect(hasPagesDeployImpact(files)).toBe(true);
     expect(hasPagesPublishImpact(files)).toBe(false);
-    expect(hasPagesUiImpact(files)).toBe(false);
   });
 
 });

@@ -6,12 +6,11 @@ import {
   hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
-  hasPagesUiImpact,
   hasWorkerDeployImpact,
   hasWorkerReleaseImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
-import { collectGitPaths, splitNullDelimited } from "../lib/changed-files.mts";
+import { collectGitPaths } from "../lib/changed-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
@@ -48,18 +47,9 @@ export {
   hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
-  hasPagesUiImpact,
   hasWorkerDeployImpact,
   hasWorkerReleaseImpact,
 };
-
-// Parses NUL-delimited `git diff -z` output; see splitNullDelimited for why the
-// separator matters.
-export function normalizeChangedFiles(rawOutput: string): string[] {
-  return splitNullDelimited(rawOutput)
-    .map((path) => normalizeRepoPath(path))
-    .filter(Boolean);
-}
 
 // The artifact registry owns evaluator/catalog generation dependencies. The
 // resource probe also reaches capture, publication, DB and setup-only helpers
@@ -214,18 +204,14 @@ function writeGithubOutputLine(key: string, value: string): void {
 }
 
 export function emitGithubOutputs(classification: DeployClassification): void {
-  writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
-  writeGithubOutputLine("docs_changed", classification.docsChanged ? "true" : "false");
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
   writeGithubOutputLine("pages_artifact_required", classification.pagesArtifactRequired ? "true" : "false");
-  writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
   writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
   writeGithubOutputLine(
     "playwright_firefox_required",
     classification.playwrightFirefoxRequired ? "true" : "false",
   );
   writeGithubOutputLine("v9_resource_required", classification.v9ResourceRequired ? "true" : "false");
-  writeGithubOutputLine("worker_changed", classification.workerChanged ? "true" : "false");
   writeGithubOutputLine("worker_deploy_required", classification.workerDeployRequired ? "true" : "false");
 }
 

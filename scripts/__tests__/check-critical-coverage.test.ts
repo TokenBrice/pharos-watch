@@ -9,6 +9,7 @@ import {
 
 import {
   CRITICAL_COVERAGE_BRANCH_FLOORS,
+  CRITICAL_COVERAGE_LINE_FLOORS,
   getChangedFilesFromGit,
   runCriticalCoverageCheck,
   runCriticalCoverageCompletenessCheck,
@@ -398,6 +399,45 @@ describe("critical coverage changed-file detection", () => {
 
     expect(exits).toEqual(brh < 4 ? [1] : []);
     expect(errors).toEqual(brh < 4 ? ["[coverage] BRANCH FAIL worker/src/lib/evm-rpc.ts: 30.0% (3/10) < 40.0%"] : []);
+  });
+
+  it("keeps the fixed reliability line floors", () => {
+    expect(CRITICAL_COVERAGE_LINE_FLOORS).toEqual({
+      "worker/src/lib/stablecoins-cache.ts": 50,
+      "worker/src/lib/auth.ts": 70,
+      "worker/src/lib/evm-rpc.ts": 70,
+      "worker/src/lib/safety-scores.ts": 40,
+      "worker/src/handlers/scheduled.ts": 40,
+      "worker/src/cron/daily-digest.ts": 40,
+      "worker/src/api/stablecoin-detail.ts": 30,
+      "worker/src/api/health.ts": 60,
+      "worker/src/api/status.ts": 40,
+      "worker/src/cron/dex-liquidity/orchestrator.ts": 55,
+      "worker/src/lib/api-pagination.ts": 70,
+    });
+  });
+
+  it("enforces fixed line and branch floors despite retired per-file environment settings", () => {
+    const file = "worker/src/lib/evm-rpc.ts";
+    const { errors, exits } = runCoverageFixture({
+      env: {
+        CRITICAL_COVERAGE_CHANGED_FILES: file,
+        PR_BASE_SHA: "base",
+        CRITICAL_COVERAGE_THRESHOLD: "0",
+        CRITICAL_COVERAGE_THRESHOLD_EVM_RPC: "0",
+        CRITICAL_COVERAGE_BRANCH_THRESHOLD_EVM_RPC: "0",
+      },
+      lcov: buildCriticalLcov({
+        lineCoverage: { [file]: { lf: 10, lh: 6 } },
+        branchCoverage: { [file]: { brf: 10, brh: 3 } },
+      }),
+      baseline: { files: { [file]: 70 } },
+      execFile: mockExecFileSync(() => JSON.stringify({ files: { [file]: 70 } })),
+    });
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] FAIL worker/src/lib/evm-rpc.ts: 60.0% (6/10) < 70.0%");
+    expect(errors).toContain("[coverage] BRANCH FAIL worker/src/lib/evm-rpc.ts: 30.0% (3/10) < 40.0%");
   });
   it("keeps branch/error-path floors at provider, auth, scoring, and publication boundaries", () => {
     expect(CRITICAL_COVERAGE_BRANCH_FLOORS).toEqual({

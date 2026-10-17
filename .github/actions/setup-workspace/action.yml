@@ -14,14 +14,6 @@ inputs:
     description: Whether to restore ESLint and TypeScript incremental state.
     required: false
     default: "false"
-  next-cache:
-    description: Whether to restore the Next.js compiler cache.
-    required: false
-    default: "false"
-  next-cache-save:
-    description: Whether this job should upload a fresh Next.js compiler cache.
-    required: false
-    default: "false"
   browser-cache:
     description: Whether to restore the Playwright browser download cache.
     required: false
@@ -81,7 +73,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' }}
+    - if: ${{ inputs.static-cache == 'true' || inputs.browser-cache == 'true' }}
       id: cache-key
       shell: bash
       env:
@@ -110,16 +102,6 @@ runs:
           static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-
           static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-
           static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-
-
-    - if: ${{ inputs.next-cache == 'true' }}
-      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-      with:
-        path: .next/cache
-        key: next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts') }}-${{ github.job }}${{ inputs.next-cache-save == 'true' && format('-{0}-{1}', github.run_id, github.run_attempt) || '' }}
-        restore-keys: |
-          next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts') }}-${{ github.job }}-
-          next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts') }}-
-          next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-
 
     - if: ${{ inputs.browser-cache == 'true' }}
       uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
@@ -179,6 +161,8 @@ runs:
           node_modules
           src/generated
           src/lib/case-study-client-index.ts
+          src/data/changelogs/index.ts
+          public/llms.txt
           public/openapi.json
           public/postman
           public/maps/world-countries.svg

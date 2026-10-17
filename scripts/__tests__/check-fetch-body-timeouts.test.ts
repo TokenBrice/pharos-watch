@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   findFetchBodyTimeoutViolations,
-  makeViolationKey,
+  main,
   scanFetchBodyTimeouts,
 } from "../ci/check-fetch-body-timeouts.ts";
 import { withTempRepo } from "./helpers/test-state";
@@ -84,7 +84,7 @@ describe("fetch body timeout guardrail", () => {
     ]);
   });
 
-  it("allows explicitly baselined debt and reports stale baseline entries", () => {
+  it("reports every raw body read without a debt allowlist", () => {
     withTempRepo("pharos-fetch-body-timeouts", {
       "worker/src/cron/provider.ts": `
         import { fetchWithRetry } from "../lib/fetch-retry";
@@ -95,17 +95,41 @@ describe("fetch body timeout guardrail", () => {
         }
       `,
     }, (cwd) => {
-      const initial = scanFetchBodyTimeouts({ cwd, knownDebt: new Set() });
-      expect(initial.unexpected).toHaveLength(1);
+      expect(scanFetchBodyTimeouts({ cwd })).toEqual([
+        expect.objectContaining({
+          file: "worker/src/cron/provider.ts",
+          variable: "res",
+          method: "text",
+        }),
+      ]);
+      const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(cwd);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        expect(main()).toBe(1);
+        expect(errorSpy).toHaveBeenCalledWith(
+          expect.stringContaining("worker/src/cron/provider.ts:6 res.text() after fetchWithRetry at line 4"),
+        );
+      } finally {
+        cwdSpy.mockRestore();
+        errorSpy.mockRestore();
+      }
+    });
+  });
 
-      const knownDebt = new Set([makeViolationKey(initial.unexpected[0]!)]);
-      const accepted = scanFetchBodyTimeouts({ cwd, knownDebt });
-      expect(accepted.unexpected).toEqual([]);
-      expect(accepted.staleDebt).toEqual([]);
-
-      const stale = scanFetchBodyTimeouts({ cwd, knownDebt: new Set(["missing::baseline::entry"]) });
-      expect(stale.unexpected).toHaveLength(1);
-      expect(stale.staleDebt).toEqual(["missing::baseline::entry"]);
+  it("passes when response bodies use the timeout-safe helpers", () => {
+    withTempRepo("pharos-fetch-body-timeouts", {
+      "worker/src/cron/provider.ts": "export async function run() { return fetchJsonWithRetry(url); }",
+    }, (cwd) => {
+      const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(cwd);
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      try {
+        expect(scanFetchBodyTimeouts({ cwd })).toEqual([]);
+        expect(main()).toBe(0);
+        expect(logSpy).toHaveBeenCalledWith("Fetch body timeout check passed (no raw body reads after fetchWithRetry).");
+      } finally {
+        cwdSpy.mockRestore();
+        logSpy.mockRestore();
+      }
     });
   });
 });

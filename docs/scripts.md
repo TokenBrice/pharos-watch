@@ -178,7 +178,7 @@ The stablecoin client projection generator counts the public cemetery as curated
 
 The Git-history-derived projections publish different clocks on purpose. A coin profile's sitemap `lastmod` uses the newest source commit across its base coin file, owned research sidecars and shared detail-page sources. Docs metadata uses committer time for `dateModified` and author time for `dateCreated`. Artifact selection is declared in `scripts/lib/automation-registry.mjs`: sitemap source families come from `scripts/lib/sitemap-source-paths.mts`, while public-doc paths are derived from `shared/lib/public-doc-manifest.json`. Update the owning inventory when adding an uncovered family or public doc; do not maintain a second roster in the registry.
 
-Use `package.json` for artifact commands and `scripts/lib/automation-registry.mjs` for dependencies, lifecycle, outputs, checkability, and staging. Lifecycles are `compile-input`, `post-refresh`, and `maintenance-only`; standalone `prebuild` runs the first two, while Pages splits preparation/release for one live snapshot acquisition. Offline bootstrap writes empty detail envelopes before credentials/fetch; snapshots declare catalog prerequisites and an output directory. Setup rejects changed tracked checkable outputs and nonignored registered outputs absent from Git, including after restore; regenerate and commit repairs with their sources. Ignored compile outputs remain allowed. See [release ordering](./deployment-process.md#ci-deploy-sequence).
+Use `package.json` for artifact commands and `scripts/lib/automation-registry.mjs` for dependencies, lifecycle, outputs, and checkability. Lifecycles are `compile-input`, `post-refresh`, and `maintenance-only`; standalone `prebuild` runs the first two, while Pages splits preparation/release for one live snapshot acquisition. Offline bootstrap writes empty detail envelopes before credentials/fetch and materializes ignored compile/serve inputs, including the changelog barrel, case-study client index, and `/llms.txt`. Setup transports those outputs with the workspace and rejects changed tracked checkable outputs and nonignored registered outputs absent from Git, including after restore; regenerate and commit tracked repairs with their sources. See [release ordering](./deployment-process.md#ci-deploy-sequence).
 
 Scene artifacts share the scene kit's build libraries: `scripts/lib/scene-atlas.ts` (logo atlas WebP, manifest and input signature) and `scripts/lib/scene-og.ts` (CSS-module document, token closure, Firefox render and document-hash signature). `build-cemetery-logo-atlas.ts` and `build-og-cemetery.ts` are configurations over them, and both registry units list the kit paths as sources: [Scene Kit](./data-visualization.md#scene-kit).
 
@@ -190,6 +190,8 @@ The incident runtime projection generator and Worker share runtime-neutral revie
 
 OpenAPI generation preserves normalized stablecoin items and discriminated reserve bounded facts through explicit output schemas, without changing runtime normalization. Empty nested array-item schemas fail generation rather than silently accepting arbitrary values.
 
+Public endpoint narratives are authored once as endpoint descriptions in the public API artifact catalog (`scripts/lib/public-api-artifact-catalog.ts`). OpenAPI and Postman carry the full narrative; the generated API-reference block shows a first-sentence preview and links to the OpenAPI contract. Use absolute `https://pharos.watch/...` documentation links so exported descriptions work outside the site. Supplemental routes and source-backed methodology examples remain in `generate-api-reference.ts`.
+
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
 `PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin` (the Pages release sets `bulk`); `verify:detail-snapshot-sources` reports byte/field diffs and pass timings; `--keep-dir` retains evidence: [bulk source](./stablecoin-detail-page.md#build-snapshot-hydration).
@@ -200,7 +202,7 @@ Build and release ordering is documented in [Deployment Process](./deployment-pr
 
 Use [Pre-push readiness](./testing.md#pre-push-readiness) for local feedback and optional receipt diagnostics, and [release policy](./deployment-process.md#release-snapshot-state-machine) for deployment gates. Hosted CI is the readiness authority. [Boundary waivers](./process/boundary-waivers.md) retain their reviewed scope. Focused, filtered and plan-only checks are authoring feedback; unmapped production paths are routing failures.
 
-[`scripts/lib/pr-test-selection.mts`](../scripts/lib/pr-test-selection.mts) owns changed-file test selection, with always-run sets in [`scripts/lib/critical-test-files.mts`](../scripts/lib/critical-test-files.mts); [`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) only partitions the selected list into weighted shards and serializes the plan. [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption and timing refresh/provenance/review. Timing lanes must remain explicit and consistent across headings and overflow links; scheduling telemetry never establishes test or coverage correctness.
+[`scripts/lib/pr-test-selection.mts`](../scripts/lib/pr-test-selection.mts) owns changed-file test selection, with always-run sets in [`scripts/lib/critical-test-files.mts`](../scripts/lib/critical-test-files.mts); [`scripts/lib/pr-test-plan.mts`](../scripts/lib/pr-test-plan.mts) partitions sorted unique paths round-robin into deterministic unweighted shards and serializes the plan. Adaptive selection retains four shards for up to 800 selected files and eight above that threshold. [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption; PR tests do not collect timing telemetry or use measured scheduling weights.
 
 `npm run test:v9-resource` invokes [`run-v9-resource-lane.ts`](../scripts/maintenance/run-v9-resource-lane.ts): the unsharded V9-impact PR lane shared with unconditional nightly/manual validation and selected serial local feedback. It runs the faithful compute `--guard` (natural 128 MiB, complete live phases, correctness/bytes, auto-enforcing any qualified policy) and independent 256 MiB contagion matrix. Until qualification, phase limits are not enforced and `policy: "unqualified"` is explicit. Invocation-bound `.tmp/safety-score-v9-resource/report.json` must be complete without violations and the named contagion case must pass in fresh `.tmp/v9-resource-lane/vitest.json`; optional historical capture checks may skip. Ordinary tests/coverage suppress ambient probe opt-in. See [V9 resource lane](./testing.md#v9-resource-lane) for proposal-only calibration, 30-day artifacts and failure classification.
 
@@ -229,6 +231,8 @@ API smoke validates the complete redemption response with `RedemptionBackstopsRe
 ### Curation Audits
 
 Use `package.json`'s `audit:*`, `candidates:*`, and `calibrate:*` commands; reports are advisory unless owner docs or CI enforce them. [Stablecoin Data](./stablecoin-data.md) owns curation; feature docs own interpretation. Keep research/queues in `agents/`, durable changes in owner docs. Refresh contracts: [protocol APIs](./process/protocol-api-mechanism-refresh.md) and [CDP shocks](./process/shock-coverage-refresh.md).
+
+`npm run audit:mint-authority-review` prints Markdown by default; add `-- --json --report agents/mint-authority-review/audit.json` for a saved JSON report or `-- --report agents/mint-authority-review/audit.md` for Markdown. The CLI uses the shared coverage-audit parser/runner (`--json` / `--markdown`, `--report <path>`); the former `--format` / `--out` flags are removed. `--generated-at <iso>` pins the capture timestamp. `--live --live-limit <n>` adds an advisory source-URL probe appendix to Markdown only (default limit 50); JSON never probes sources.
 
 These are permanent human review tools, not latent scoring engines. Dispositions do not admit a provider, route, dependency edge, or yield source. DIA price-provider probing and the mint-authority scanner POC are retired; use primary-source native-control review with `audit:mint-authority-review` and `audit:mint-bridge-ownership` instead of generated unknown scanner output.
 
@@ -293,23 +297,23 @@ For live mutation, use the script-specific execute and confirmation guards and f
 
 Scratch reports, evidence captures, calibration output, and operator handoffs belong under the ignored `agents/` tree. Promote only durable policy or reviewed source changes into `docs/` or the owning data source.
 
-Generated-artifact destinations and version-control policy are owned by `scripts/lib/automation-registry.mjs`. Do not redirect or manually normalize registered outputs. See [Pre-Commit Hook Mechanics](#pre-commit-hook-mechanics) for staged-artifact synchronization.
+Generated-artifact destinations and version-control policy are owned by `scripts/lib/automation-registry.mjs`. Do not redirect or manually normalize registered outputs. Regenerate affected tracked artifacts explicitly and commit them with their sources; `npm run check:generated-artifacts` checks convergence.
 
 D1 Insights captures are the specific exception documented above: they write `agents/d1-insights-<timestamp>.json`. Other commands' `--help`, registry entry, or runbook owns the exact destination.
 
-### Pre-Commit Hook Mechanics
+### Local Workspace Preparation
 
-In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.ts` via the `prepare` script. Local installs materialize bootstrap-safe generated projections, materialize the history-derived projections with `npm run bootstrap:generated:history`, and run `git config core.hooksPath .githooks`, so the repo pre-commit hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`, opting into the history-derived projections per job with its `bootstrap-history` input. If hooks were disabled or overridden locally, re-enable them with:
+The npm `prepare` script runs `scripts/maintenance/prepare-workspace.ts`. Local installs materialize bootstrap-safe generated inputs, then the history-derived projections with `npm run bootstrap:generated:history`. GitHub Actions skips implicit preparation and uses `.github/actions/setup-workspace/action.yml`, opting into full-history projections per job with `bootstrap-history`. `PHAROS_PREPARE_BOOTSTRAP=1` forces ordinary bootstrap in CI without enabling history bootstrap.
+
+There is no repository pre-commit or pre-push hook. Existing clones that previously installed the retired artifact hook should remove only that local setting:
 
 ```bash
-git config core.hooksPath .githooks
+if [ "$(git config --local --get core.hooksPath)" = ".githooks" ]; then
+  git config --local --unset core.hooksPath
+fi
 ```
 
-The pre-commit hook runs `npm run sync:staged-artifacts`, regenerating/staging committed artifacts affected by staged sources, including deletions. Auto-stage is offline: `autoStage` cannot be `network-derived`; regenerate `public-datasets` manually with `npm run generate:public-datasets`. All selected generators and source state are preflighted; outputs stage atomically only after every generator succeeds. The shared prebuild phase planner orders offline prerequisites before dependents (canonical catalog → packed Worker bytes → evaluation manifest). Only `autoStage` outputs enter the index; network-derived prerequisites are refused. The source guard covers unstaged/untracked inputs throughout the dependency closure and rejects dirty outputs before generation. Failure restores clean tracked outputs from the index, removes newly created registered-glob files, and restores existing ignored prerequisites' bytes; pre-existing glob members survive, though empty directories may remain. Manifest and registry share authored fixed hash inputs; recursive capture summaries/their parser trigger regeneration without adding unrelated operational code to score identity. `PHAROS_SKIP_ARTIFACT_HOOK=1` bypasses the hook, not artifact freshness proof.
-
-Exact wrapper bypasses in `.githooks/pre-commit`: `PHAROS_SKIP_ARTIFACT_HOOK=1`, an in-progress merge, cherry-pick or revert (their Git state files under `.git/`), `rebase-merge` or `rebase-apply`, and an empty staged diff. Hook installation itself is skipped when `CI` or `GITHUB_ACTIONS` is `1`/`true`, or `PHAROS_PREPARE_SKIP_GIT_HOOKS` is `1`/`true`; `PHAROS_PREPARE_BOOTSTRAP` forces ordinary bootstrap in CI but does not install hooks or enable history bootstrap there (`scripts/maintenance/prepare-workspace.ts`).
-
-The hook is neither full artifact convergence nor a local test/build gate. After source/integration changes, including bypassed merge/rebase/cherry-pick/revert operations, use `npm run check:generated-artifacts` to inspect convergence and keep generated artifacts with their owning sources. [Pre-push readiness](./testing.md#pre-push-readiness) defines local feedback and hosted readiness authority.
+Other custom hook paths remain user-owned. Generated freshness is enforced by hosted checks, not automatic staging; use explicit generation and `npm run check:generated-artifacts` for local convergence. [Pre-push readiness](./testing.md#pre-push-readiness) defines local feedback and hosted readiness authority.
 
 ### Release Ownership
 

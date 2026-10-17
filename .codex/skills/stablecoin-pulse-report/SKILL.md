@@ -42,9 +42,7 @@ Dispatch one independent read-only reviewer when available (prompt in research-b
 
 ### 5. Build and inspect
 
-```bash
-node .codex/skills/stablecoin-pulse-report/scripts/build-pulse-pdf.mjs --dir agents/<YYYY-MM-DD>-pulse-report
-```
+Run the [layout build command](references/layout.md#build) from the repository root.
 
 The build fails on overflow or a page count other than two. Open `out/page-1.png` and `out/page-2.png` and inspect them visually: no clipping, collisions, split `−$` amounts, or orphaned heading words. Fix fit by trimming copy, never by shrinking type below the documented minimum.
 

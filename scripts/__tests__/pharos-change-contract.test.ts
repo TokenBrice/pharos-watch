@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { linkSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -9,9 +10,13 @@ import {
   buildPreToolUseHookOutput,
   classifyChangedFiles,
   findShellCommandViolation,
+  formatContract,
 } from "../ci/pharos-change-contract.ts";
-import { PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
+import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
+import { buildFocusedCheckPlan } from "../maintenance/run-focused-checks.ts";
+// Match the router's lazy module boundary when extending the routing fixture.
+const { PATH_FAMILIES } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -64,7 +69,7 @@ describe("representative --file routing", () => {
   it("caps single-path guidance while preserving ranked overflow in background", () => {
     const originalLength = PATH_FAMILIES.length;
     const family = {
-      background: [], checks: [], hardRules: [], hints: [], scopedContext: [],
+      background: [], checks: [], hardRules: [], scopedContext: [],
       sourceGlobs: ["audit-overflow.fixture"], tier: "specific" as const,
     };
     PATH_FAMILIES.push(
@@ -80,6 +85,46 @@ describe("representative --file routing", () => {
     } finally {
       PATH_FAMILIES.splice(originalLength);
     }
+  });
+
+  it("prints the same synthesized plan as focused checks", () => {
+    const file = "worker/src/cron/sync-yield-data.ts";
+    const result = spawnSync(process.execPath,
+      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--file", file, "--json"],
+      { encoding: "utf8" });
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout).checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
+    expect(JSON.parse(result.stdout).checks).not.toContain("npm run check:structural");
+  });
+
+  it("returns only routed docs and rules without unconditional onboarding or hints", () => {
+    const contract = route("functions/social-posts/example.ts");
+    expect(docKeys(contract)).not.toContain("docs/process/agent-start-here.md");
+    expect(contract.hardRules).toContain("Keep the dated manifest immutable.");
+    expect(contract.hardRules).not.toContain("Keep Tailwind classes as static strings.");
+    expect(contract).not.toHaveProperty("hints");
+    expect(formatContract(contract)).not.toContain("Hints:");
+  });
+
+  it("loads one authored root through the Claude import without mirror warnings", () => {
+    expect(readFileSync("CLAUDE.md", "utf8")).toBe("@AGENTS.md\n");
+    const root = readFileSync("AGENTS.md", "utf8");
+    expect(root).toContain("<!-- BEGIN:nextjs-agent-rules -->");
+    expect(root).toContain("<!-- END:nextjs-agent-rules -->");
+    const contract = route("AGENTS.md");
+    expect(contract.hardRules).toContain("Root AGENTS.md is the single authored instruction file; CLAUDE.md imports it.");
+    expect(contract.warnings).toEqual([]);
+  });
+
+  it.each([
+    ["--base", "--head"], ["--base", "--head-ref"],
+    ["--base-ref", "--head"], ["--base-ref", "--head-ref"],
+  ])("accepts range aliases %s and %s", (baseFlag, headFlag) => {
+    const result = spawnSync(process.execPath,
+      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", baseFlag, "HEAD", headFlag, "HEAD", "--json"],
+      { encoding: "utf8" });
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ changedFiles: [], source: "base/head range" });
   });
 });
 
@@ -702,6 +747,23 @@ describe("W2.7 Python and Node one-line writes", () => {
 });
 
 describe("W2.7 malformed hook payloads", () => {
+  it.each(["pre-tool-use", "permission-request"])("keeps %s denials independent of malformed ownership JSON", (hook) => {
+    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", `
+      import fs from "node:fs";
+      import { syncBuiltinESMExports } from "node:module";
+      const originalRead = fs.readFileSync;
+      fs.readFileSync = (path, ...args) => String(path).endsWith("/docs/doc-ownership.json") ? "{" : originalRead(path, ...args);
+      syncBuiltinESMExports();
+      // Exercise lazy loading after the malformed-registry read boundary is installed.
+      const { runCli } = await import("./scripts/ci/pharos-change-contract.ts");
+      runCli(["--hook=${hook}"]);
+    `], { encoding: "utf8", input: JSON.stringify({ tool_name: "Bash", tool_input: { command: "git reset --hard HEAD" } }) });
+    expect(result.status).toBe(0);
+    const output = JSON.parse(result.stdout);
+    if (hook === "pre-tool-use") expect(output.hookSpecificOutput.permissionDecision).toBe("deny");
+    else expect(output.hookSpecificOutput.decision.behavior).toBe("deny");
+  });
+
   it.each([
     ["empty", ""],
     ["truncated", '{"tool_name": "Bash", "tool_inp'],
@@ -928,7 +990,8 @@ describe("repo Claude hook config", () => {
     expect(config.hooks.SessionStart[0].hooks[0].command).toContain("--hook=session-start");
     expect(config.hooks.PreToolUse[0].hooks[0].command).toContain("--hook=pre-tool-use");
     expect(config.hooks.PreToolUse[0].hooks).toHaveLength(1);
-    expect(config.hooks.PreToolUse[1].hooks[0].command).toContain("--hook=pre-tool-use");
+    expect(config.hooks.PreToolUse).toHaveLength(1);
+    expect(config.hooks.PreToolUse[0].matcher).toBe("Bash|Edit|MultiEdit|Write");
 
     expect(config.hooks.UserPromptSubmit).toBeUndefined();
     expect(config.hooks.PostToolUse).toBeUndefined();

@@ -395,23 +395,7 @@ function redirectSourceKey(source) {
   return pathname.replace(/\/+$/, "");
 }
 
-function collectRedirectSources(outDir) {
-  const redirectsPath = path.join(outDir, "_redirects");
-  if (!fs.existsSync(redirectsPath)) return [];
-
-  const sources = [];
-  for (const line of fs.readFileSync(redirectsPath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-
-    const source = trimmed.split(/\s+/)[0];
-    const key = redirectSourceKey(source);
-    if (key) sources.push({ key, source });
-  }
-  return sources;
-}
-
-function collectRedirectRules(outDir) {
+function collectRedirectEntries(outDir) {
   const redirectsPath = path.join(outDir, "_redirects");
   if (!fs.existsSync(redirectsPath)) return [];
 
@@ -420,7 +404,7 @@ function collectRedirectRules(outDir) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
     const [source, destination, status] = trimmed.split(/\s+/);
-    if (source && destination) rules.push({ source, destination, status: status ?? "" });
+    if (source) rules.push({ source, destination, status: status ?? "" });
   }
   return rules;
 }
@@ -519,8 +503,7 @@ function validateRedirectOrdering(rules, errors) {
   }
 }
 
-function validateStaticRedirects(outDir, errors) {
-  const rules = collectRedirectRules(outDir);
+function validateStaticRedirects(rules, errors) {
   validateRedirectOrdering(rules, errors);
   for (const rule of rules) {
     const destinationPath = redirectPathTemplate(rule.destination);
@@ -940,14 +923,17 @@ export function collectSeoStaticCheckResult({
       errors: [`Missing build output directory: ${outDir}`],
       warnings,
       pageRecords: [],
+      redirectRules: [],
     };
   }
 
   const pageRecords = suppliedPageRecords ?? [...walkOutFiles(outDir, (name) => name === "index.html")]
     .map((filePath) => buildSeoPageRecord(filePath, outDir, structuredDataRouteMatrix));
 
+  const redirectEntries = collectRedirectEntries(outDir);
+  const redirectRules = redirectEntries.filter((entry) => entry.destination);
   validateStaticHeaders(outDir, errors);
-  validateStaticRedirects(outDir, errors);
+  validateStaticRedirects(redirectRules, errors);
 
   for (const record of pageRecords) {
     if (record.hasFatalCsrBailout) {
@@ -1173,7 +1159,12 @@ export function collectSeoStaticCheckResult({
       }
     }
 
-    const redirectSourceByKey = new Map(collectRedirectSources(outDir).map((source) => [source.key, source.source]));
+    const redirectSourceByKey = new Map(
+      redirectEntries.flatMap(({ source }) => {
+        const key = redirectSourceKey(source);
+        return key ? [[key, source]] : [];
+      }),
+    );
     if (redirectSourceByKey.size > 0) {
       for (const loc of locs) {
         const sitemapRoute = sitemapRouteFromPharosUrl(loc);
@@ -1225,7 +1216,7 @@ export function collectSeoStaticCheckResult({
   // Informational warning only: avoids failing CI for transient route count changes.
   warnings.push(`Checked ${pageRecords.length} HTML pages in out/`);
 
-  return { errors, warnings, pageRecords };
+  return { errors, warnings, pageRecords, redirectRules };
 }
 
 function parsePageRecordChunk(files, outDir, structuredDataRouteMatrix) {
@@ -1296,7 +1287,7 @@ function fail(errors, warning = []) {
 }
 
 async function main() {
-  const { errors, warnings, pageRecords } = await collectSeoStaticCheckResultParallel();
+  const { errors, warnings, pageRecords, redirectRules } = await collectSeoStaticCheckResultParallel();
 
   const previousSitemapUrl = process.env.SEO_PREVIOUS_SITEMAP_URL?.trim();
   if (previousSitemapUrl) {
@@ -1314,7 +1305,7 @@ async function main() {
         ...findPublishedArchiveContinuityErrors(
           previousSitemapXml,
           currentSitemapXml,
-          collectRedirectRules(DEFAULT_OUT_DIR),
+          redirectRules,
           new Set(pageRecords.map((record) => record.route)),
         ),
       );

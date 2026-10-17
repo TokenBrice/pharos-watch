@@ -40,86 +40,31 @@ const DEFAULT_BUDGETS = {
   // Pages limit can be higher, but Free and legacy Wrangler paths use 20,000.
   // App Router emits multiple RSC helper files per route, so check before deploy.
   totalOutFiles: 20_000,
-  // Bumped from 12 MB after Council-13 W2-C split. The client registry now
-  // includes reserve and portfolio exposure fields, while several static
-  // pages still legitimately consume the full registry at build time.
+  // The client registry includes reserve and portfolio exposure fields;
+  // static pages also consume the full registry at build time.
   totalJsBytes: 14_500_000,
-  // Mint-authority coverage metadata expanded the generated client registry.
-  // Keep this tight so future registry growth still has to justify itself.
+  // Keep generated client-registry growth reviewable.
   largestJsBytes: 1_560_000,
   totalCssBytes: 650_000,
-  // Lighthouse mobile reports the global CSS transfer as render-blocking, so
-  // track compressed CSS too instead of relying only on raw chunk size.
-  // Homepage render path now includes an expanded above-the-fold critical style block.
-  // Keep this around 65 KiB to avoid false positives from production-only data
-  // and feature-flag inlining while still enforcing a practical compressed CSS
-  // ceiling on critical assets. Ratcheted after the June 2026 Telegram/Reserve
-  // alert surface measured 67,186 bytes in local static-export validation;
-  // production Pages live-data builds measured 67,222 bytes. The Figma chrome
-  // and overview-table pass measured 68,415 bytes in local discovery; keep a
-  // narrow post-ratchet ceiling with about 1 KiB of headroom for gzip variance.
+  // Global CSS is render-blocking; bound compressed transfer with narrow
+  // headroom for production data, feature flags, and gzip variance.
   largestCssGzipBytes: 69_632,
   totalStaticMediaBytes: 2_000_000,
-  // API-reference schema and route-contract growth measured 2,754,850 bytes
-  // after adding listing-governance and identity-bound V9 contracts. Retain
-  // about 15 KB of headroom while keeping future docs-heavy App Router payload
-  // growth reviewable.
+  // The API reference is the largest HTML payload; keep about 15 KB of headroom
+  // while requiring deliberate review of docs-heavy App Router growth.
   largestHtmlBytes: 2_770_000,
-  // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
-  // Safety Score v8.12 exposed bridge-route and oracle-risk report-card fields;
-  // Yield source-role / alternate-summary contracts then pushed the generated
-  // API reference helper to ~1.33 MB. Night Watch publication and recovery
-  // contracts measured 1,350,636 bytes; the July 2026 API-reference expansion
-  // dependency provenance contracts measured 1,380,021 bytes. The FORGE III
-  // dark V9 consumer contracts (the versioned report-cards/v9 endpoint plus its
-  // ReportCardsV9 schema and dependency-graph shape) then measured 1,391,012
-  // bytes. Retain about 10 KB of headroom so the next public schema expansion
-  // still has to re-ratchet deliberately.
+  // Docs/API reference RSC helpers are the largest legitimate TXT payloads;
+  // keep about 10 KB of headroom for public schema growth.
   largestTxtBytes: 1_401_000,
-  // Production Pages builds hydrate mirrors from live API data. These two
-  // references were written when they were non-blocking (P2-16 part 4 made
-  // every named ceiling block) and had drifted far below reality: the live
-  // production route measured 652,874 bytes and the 2026-09-22 release build
-  // 635-646 KiB HTML / 103-115 KiB page TXT across the five representative
-  // coins (Mint Authority and Explore-and-reference sections now render
-  // server-side). Ratcheted to the measured payload with ~3% headroom so the
-  // next growth still has to be re-ratcheted deliberately. Re-ratcheted
-  // 2026-10-05 for v10.05: DAI's mint section now bounds its 149-control Sky
-  // census to 12 rendered rows plus counts (905 KiB -> 667 KiB in a release
-  // build); the remaining DAI growth is the census disclosure and its larger
-  // process summary. 700,000 keeps ~2.5% headroom over the measured route.
-  // Re-ratcheted 2026-10-07 for the always-open dossier redesign: source rows
-  // moved to one shared CSS class (-30 to -45 KiB HTML per route) and bridge
-  // route rows shrank to client-derivable fields (-4.5 to -6.3 KB page TXT).
-  // The release build measured 584,585-668,092 B HTML and 94,868-123,549 B
-  // page TXT (USDT carries 40 drawn bridge routes for the deployment strip),
-  // so HTML tightens and page TXT rises, each with ~2.5% headroom.
-  // Re-ratcheted 2026-10-08 for the "How does X break?" section (#1350): an
-  // approved failure scenario server-renders its folded path, defenders,
-  // falsifiers and sources, adding 102-191 KB raw (11-17 KB gzip) per
-  // scenario coin. Three representative coins carry one; the release build
-  // measured 757-788 KiB HTML (USDe) and 128-137 KiB page TXT (USDT), so
-  // each ceiling keeps ~3% headroom over the top of that range.
+  // Live mirrors, server-rendered dossiers, and failure scenarios dominate
+  // representative detail payloads. Keep about 3% headroom over release data.
   representativeDetailHtmlBytes: 830_000,
   representativeDetailPageTxtBytes: 145_000,
-  // Sum of gzip sizes of every script chunk referenced by a representative
-  // detail page's HTML — the eager first-load JS budget per route (Mythos
-  // #50). Ratcheted from 810 KB after the chart-section deferral (P1-6/P1-5)
-  // and the registry field-drop (P1-4 partial) landed: measured ~681 KB gz
-  // per detail page. The code-health table/chart refactor stack shifted the
-  // representative detail route to ~802 KiB gz. Keep this narrow so future
-  // shared chunk growth still has to be ratcheted deliberately. The June 2026
-  // client-registry/methodology-version expansion measured ~866 KiB per detail
-  // route; keep a narrow post-ratchet ceiling.
+  // Sum gzip sizes of all script chunks referenced by a detail page's HTML.
+  // Keep narrow headroom so shared first-load chunk growth stays reviewable.
   representativeDetailEagerJsGzipBytes: 905_000,
-  // /cemetery/ server-renders the drawn plot-map hero (~430 KB raw, ~71 KB
-  // gzip) and the Autopsy Register (first 25 rows in full, the rest as compact
-  // `:target` rows), and its RSC flight carries the shared register rows with
-  // every obituary and contract (~115 KB), so it carries its own ceilings.
-  // Rebased at the redesign cutover to the measured route (1.30 MB raw,
-  // ~226 KB gzip, 334 KB flight) plus ~5% headroom. The spike's lower targets
-  // (900 KB / 175 KB / 165 KB) assumed slim hero-only rows; the site-wide
-  // streamed-body reveal, not these bytes, is what gates LCP today.
+  // Cemetery server-renders the plot-map hero and Autopsy Register, with shared
+  // register rows in its RSC flight. Keep about 5% headroom for these payloads.
   // The flight is `index.txt`, byte-identical to the decoded inline `__next_f`.
   cemeteryHtmlBytes: 1_370_000,
   cemeteryHtmlGzipBytes: 240_000,

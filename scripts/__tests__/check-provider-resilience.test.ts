@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   scanProviderResilience,
 } from "../ci/check-provider-resilience.ts";
+import { PROVIDER_RESILIENCE_REGISTRY } from "../lib/provider-resilience-registry.mjs";
 import { withTempRepo } from "./helpers/test-state";
 
 const validDirectFetchRegistry = [
@@ -20,11 +21,36 @@ const validDirectFetchRegistry = [
       body: "Cancels unused response bodies.",
       circuitSources: ["CIRCUIT_SOURCE.DEMO"],
     },
-    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly", "CIRCUIT_SOURCE.DEMO"],
+    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly"],
   },
 ];
 
 describe("provider resilience checker", () => {
+  it("keeps circuit-source enforcement without duplicated required markers", () => {
+    for (const entry of PROVIDER_RESILIENCE_REGISTRY) {
+      for (const circuitSource of entry.resilience.circuitSources) {
+        if (circuitSource.startsWith("CIRCUIT_SOURCE.")) {
+          expect(entry.requiredMarkers, entry.id).not.toContain(circuitSource);
+        }
+      }
+    }
+    const parityTrial = PROVIDER_RESILIENCE_REGISTRY.find((entry) => entry.id === "rpc-provider-parity-trial")!;
+    expect(parityTrial.requiredMarkers).toContain("CIRCUIT_SOURCE.DWELLIR_EVM");
+
+    withTempRepo("pharos-provider-resilience", {
+      "worker/src/provider.ts": "AbortSignal.timeout; cancelResponseBodyQuietly;",
+      "worker/src/provider.test.ts": "export {};",
+    }, (cwd) => {
+      const report = scanProviderResilience({
+        cwd,
+        registry: validDirectFetchRegistry,
+        requiredFamilies: ["demo"],
+        directFetchRoots: ["worker/src"],
+      });
+      expect(report.violations.map((violation) => violation.kind)).toEqual(["missing-circuit-source-marker"]);
+    });
+  });
+
   it("passes a registered direct provider with timeout, body, circuit, and test coverage", () => {
     withTempRepo("pharos-provider-resilience", {
       "worker/src/provider.ts": `

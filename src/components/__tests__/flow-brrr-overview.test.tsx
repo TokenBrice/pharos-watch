@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import type { MintBurnCoinFlow, MintBurnGauge } from "@shared/types";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
 import { MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@shared/lib/mint-burn-valuation-display";
@@ -10,7 +10,6 @@ import { formatSignedCurrency } from "@shared/lib/format";
 vi.mock("@/components/flow-machine-scene", () => ({
   FlowMachineScene: ({ statusText }: { statusText: string }) => <div role="status">{statusText}</div>,
 }));
-afterEach(cleanup);
 
 function legacyCoin(netFlow24hUsd: number): MintBurnCoinFlow {
   return {
