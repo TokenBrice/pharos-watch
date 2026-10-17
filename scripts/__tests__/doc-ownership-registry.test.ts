@@ -61,6 +61,16 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
 }
 
 describe("doc-ownership registry integrity", () => {
+  it("authors only exceptional checks, leaving baseline selectors authoritative", () => {
+    for (const mapping of mappings) {
+      for (const command of mapping.checks ?? []) {
+        expect(command, mapping.id).not.toMatch(/^npm run (?:lint:changed|typecheck(?::worker)?|check:(?:stablecoin-data|site-csp-sync|cron-sync|cron-connections|migrations|telegram-load|doc-sync|generated-artifacts))(?: |$)/);
+      }
+    }
+    expect(mappings.find((mapping) => mapping.id === "stablecoin-registry")?.checks)
+      .toContain("npm run check:failure-scenarios");
+  });
+
   const references: Array<{ path: string; anchor?: string }> = [
     ...(ownership.baseDocs ?? []).map((path) => ({ path })),
     ...mappings.flatMap((mapping) => [

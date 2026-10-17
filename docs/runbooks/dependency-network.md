@@ -16,11 +16,16 @@ Capture the full production JSON and a readable report, then reconcile that JSON
 
 ```bash
 npm run audit:coverage -- --domain=dependency-coverage --prod --json --report .tmp/dependency-coverage/audit.json
-npm run audit:coverage -- --domain=dependency-coverage --prod --report .tmp/dependency-coverage/audit.md
+node --import tsx --input-type=module <<'JS'
+import { readFileSync, writeFileSync } from "node:fs";
+import { renderDependencyCoverageAuditMarkdown } from "./scripts/maintenance/generate-dependency-coverage-audit.ts";
+const audit = JSON.parse(readFileSync(".tmp/dependency-coverage/audit.json", "utf8"));
+writeFileSync(".tmp/dependency-coverage/audit.md", renderDependencyCoverageAuditMarkdown(audit));
+JS
 npm run audit:dependency-reconcile -- --audit .tmp/dependency-coverage/audit.json --report .tmp/dependency-coverage/reconciliation.md
 ```
 
-The reconcile entrypoint is `scripts/maintenance/reconcile-dependency-graph.ts`. It requires a non-static dependency-coverage JSON report with `reportCardGraph` present. `--format=json` selects machine-readable reconciliation output; `--help` describes its strict CLI. The two audit commands fetch independently, so retain their timestamps and use the JSON capture as the reconciliation's exact input. Do not assume the Markdown capture has the same publication generation.
+The reconcile entrypoint is `scripts/maintenance/reconcile-dependency-graph.ts`. It requires a non-static dependency-coverage JSON report with `reportCardGraph` present. `--format=json` selects machine-readable reconciliation output; `--help` describes its strict CLI. Markdown is rendered locally from the single JSON capture, so both reports describe the same captured publication generation and timestamp. Use that JSON as the reconciliation's exact input.
 
 The reconciliation lists static-only edges, published-only edges and weight differences. Differences are advisory and exit successfully; malformed input or CLI usage fails the command. A difference alone does not prove a missing dependency: compare authored reserve/variant/manual claims, admitted live reserve mappings and the accepted graph before deciding.
 

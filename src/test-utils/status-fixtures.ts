@@ -5,7 +5,6 @@ import type {
   EndpointProbeResult,
   HealthResponse,
   StatusResponse,
-  StatusSectionKey,
 } from "@shared/types";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
@@ -528,21 +527,6 @@ export function makeRecoveryHoldStatusResponse(base = makeHealthyStatusResponse(
   });
 }
 
-export function makeSectionLoaderFailureStatusResponse(
-  base = makeHealthyStatusResponse(),
-  section: StatusSectionKey = "dependencyHealth",
-): StatusResponse {
-  return degraded(base, {
-    sectionErrors: {
-      ...base.sectionErrors,
-      [section]: {
-        code: `fixture_${section}_query_failed`,
-        message: "Fixture section loader failed without exposing production data.",
-      },
-    },
-  });
-}
-
 export function makeOperationalDependencyFailureStatusResponse(base: StatusResponse = makeHealthyStatusResponse()): StatusResponse {
   const cause = {
     code: "fixture_operational_dependency_failure",
@@ -705,149 +689,6 @@ export function makeActionRecommendedStatusResponse(base = makeHealthyStatusResp
   });
 }
 
-export function makeActionBlockedStatusResponse(base = makeActionRecommendedStatusResponse()): StatusResponse {
-  const dbCause = {
-    code: "db_unhealthy",
-    layer: "system" as const,
-    severity: "critical" as const,
-    message: "Fixture D1 write path is unavailable; mutation actions must remain blocked.",
-  };
-
-  return degraded(base, {
-    dbHealthy: false,
-    availabilityStatus: "stale",
-    causes: {
-      availability: [...base.causes.availability, dbCause],
-      dataQuality: [...base.causes.dataQuality],
-      overall: [...base.causes.overall, dbCause],
-    },
-    reserveComposition: base.reserveComposition.status === "unavailable" ? base.reserveComposition : {
-      ...base.reserveComposition,
-      writeTimeoutUncertain: 1,
-      status: "degraded",
-    },
-    crons: {
-      ...base.crons,
-      "sync-live-reserves": {
-        lastRun: {
-          startedAt: base.timestamp - 43_200,
-          durationMs: 120_000,
-          status: "error",
-          itemCount: 0,
-        },
-        recentRuns: [{ startedAt: base.timestamp - 43_200, durationMs: 120_000, status: "error" }],
-        expectedIntervalSec: 14_400,
-        healthy: false,
-        inFlight: {
-          startedAt: base.timestamp - 21_600,
-          updatedAt: base.timestamp - 21_000,
-          stage: "sync",
-          leaseOwner: "fixture-worker",
-          stale: true,
-        },
-      },
-    },
-  });
-}
-
-export function makeLongCommsStatusResponse(base: StatusResponse = makeHealthyStatusResponse()): StatusResponse {
-  const perAlertType = {
-    dews: { sent: 125, enqueued: 3, failed: 1, blocked: 0, firstSendLatencyMs: 12_345 },
-    depeg: { sent: 84, enqueued: 5, failed: 2, blocked: 1, firstSendLatencyMs: 23_456 },
-    safety: { sent: 43, enqueued: 8, failed: 3, blocked: 0, firstSendLatencyMs: 34_567 },
-    launch: { sent: 21, enqueued: 13, failed: 0, blocked: 2, firstSendLatencyMs: 45_678 },
-    reserve: { sent: 17, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: 56_789 },
-    freeze: { sent: 9, enqueued: 1, failed: 0, blocked: 0, firstSendLatencyMs: 67_890 },
-  };
-
-  return degraded(base, {
-    telegramBot: {
-      ...base.telegramBot!,
-      totalChats: 240,
-      alertEnabledChats: 210,
-      deliverableChats: 198,
-      totalSubscriptions: 1_250,
-      explicitCoinSubscriptions: 1_075,
-      presetImpliedCoinSubscriptions: 175,
-      activePresetFollowers: 48,
-      pendingDeliveries: 29,
-      pendingDisambiguations: 7,
-      lastSubscriberActivityAt: base.timestamp - 98_765,
-      oldestPendingDeliveryAgeSec: 54_321,
-      pendingDeliveryBacklog: { due: 17, deferred: 9, expired: 3, nearTtl: 4 },
-      retryErrorClassCounts: {
-        gateway_timeout_after_fixture_retry_budget: 11,
-        fixture_rate_limit: 7,
-      },
-      lifecycleSnapshot: {
-        date: "2023-10-31",
-        snapshotAt: base.timestamp - 12_345_678,
-        activeWatchers: 198,
-        newWatchers: 18,
-        churnedWatchers: 9,
-        reactivatedWatchers: 4,
-        explicitCoinFollows: 1_075,
-        presetImpliedCoinFollows: 175,
-        activePresetFollowers: 48,
-        alertTypeOptIns: {
-          dews: 180,
-          depeg: 175,
-          safety: 160,
-          launch: 145,
-          reserve: 120,
-          freeze: 110,
-          allTypes: 95,
-        },
-        quietHoursEnabledChats: 88,
-        pendingDeliveries: 29,
-      },
-      topStablecoins: [
-        {
-          stablecoinId: "fixture-dollar-alpha",
-          symbol: "FXA",
-          subscribers: 144,
-          explicitSubscribers: 120,
-          presetImpliedSubscribers: 24,
-        },
-      ],
-    },
-    crons: {
-      ...base.crons,
-      "dispatch-telegram-alerts": {
-        ...base.crons["dispatch-telegram-alerts"],
-        lastRun: {
-          startedAt: base.timestamp - 7_654,
-          durationMs: 98_765,
-          status: "degraded",
-          itemCount: 290,
-          metadata: {
-            subscribersNotified: 198,
-            messagesSent: 290,
-            pendingAttempted: 41,
-            pendingDrained: 12,
-            pendingRetryQueued: 9,
-            pendingDeferred: 17,
-            pendingDropped: 3,
-            pendingEnqueued: 29,
-            pendingRetryAfterSec: 3_600,
-            perAlertType,
-          },
-        },
-        recentRuns: [
-          {
-            startedAt: base.timestamp - 7_654,
-            durationMs: 98_765,
-            status: "degraded",
-            itemCount: 290,
-            metadata: { perAlertType },
-          },
-        ],
-        healthy: false,
-      },
-    },
-  });
-}
-
 export interface StatusDashboardModelFixtureInputs {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
@@ -904,37 +745,4 @@ export function makeCurrentStatusDashboardInputs(
     ...overrides,
     querySyncs: { ...base.querySyncs, ...overrides.querySyncs },
   };
-}
-
-export function makeMissingNeverLoadedEvidenceInputs(): StatusDashboardModelFixtureInputs {
-  return makeCurrentStatusDashboardInputs({
-    healthData: null,
-    probes: undefined,
-    historyTransitions: undefined,
-    querySyncs: {
-      healthUpdatedAt: 0,
-      probesUpdatedAt: 0,
-      historyUpdatedAt: 0,
-      requestSourceUpdatedAt: 0,
-    },
-  });
-}
-
-export function makeStaleEvidenceInputs(): StatusDashboardModelFixtureInputs {
-  const staleAt = STATUS_FIXTURE_NOW_MS - 10 * 60_000;
-  return makeCurrentStatusDashboardInputs({
-    querySyncs: {
-      statusUpdatedAt: staleAt,
-      healthUpdatedAt: staleAt,
-      probesUpdatedAt: staleAt,
-    },
-  });
-}
-
-export function makeBackgroundRefreshFailureInputs(): StatusDashboardModelFixtureInputs {
-  return makeCurrentStatusDashboardInputs({
-    statusError: new Error("Fixture status refresh failed; retained last-good data."),
-    healthError: new Error("Fixture health refresh failed; retained last-good data."),
-    probesError: new Error("Fixture probe refresh failed; retained last-good data."),
-  });
 }

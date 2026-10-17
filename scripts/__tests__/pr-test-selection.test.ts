@@ -27,7 +27,7 @@ describe("declared non-import-graph PR test ownership", () => {
   ] as const)("selects declared invariant owners for %s without import-graph edges", (source, expected) => {
     const selected = selectPrTestFiles([], [], [source], new Map());
     expect(selected).toEqual(expect.arrayContaining([...expected]));
-    const plan = createPrTestPlan("frozen-base", selected, {});
+    const plan = createPrTestPlan("frozen-base", selected);
     expect(plan.shards.flat().sort()).toEqual(selected);
     expect(new Set(plan.shards.flat()).size).toBe(selected.length);
   });

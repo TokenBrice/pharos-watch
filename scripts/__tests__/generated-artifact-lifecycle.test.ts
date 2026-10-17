@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildGeneratedArtifactPhases, GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { buildGeneratedArtifactPhases, GENERATED_ARTIFACT_REGISTRY, selectCheckableArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
 
 // `automation-registry.mjs` is untyped JS, so give its shapes local names here.
 interface RegistryArtifact {
   id: string;
   bootstrap?: boolean;
   checkable?: boolean;
+  ciDriftCheck?: boolean;
   outputPaths: string[];
 }
 
@@ -36,6 +37,23 @@ describe("generated artifact lifecycle", () => {
 });
 
 describe("check-mode artifact selection", () => {
+  it("excludes bootstrap projections only from automatic drift plans, not explicit checks", () => {
+    const projections = [
+      "stablecoin-catalog", "postman", "openapi", "world-map", "report-card-registry-fingerprint",
+      "legacy-stablecoin-redirects", "stablecoin-client-registry", "stablecoin-worker-full-catalog",
+      "stablecoin-client-projections", "depeg-event-search-data",
+    ];
+    expect(registry.filter((artifact) => artifact.ciDriftCheck === false).map((artifact) => artifact.id).sort())
+      .toEqual([...projections].sort());
+    expect(selectCheckableArtifactIds([...projections, "agents-doc", "safety-score-v9-evaluation-build"]))
+      .toEqual(["agents-doc", "safety-score-v9-evaluation-build"]);
+    for (const id of projections) {
+      expect(registry.find((artifact) => artifact.id === id)).toMatchObject({ bootstrap: true, checkable: true });
+      expect(selectGeneratedArtifacts({ check: true, only: [id] }).map((artifact) => artifact.id)).toContain(id);
+      expect(selectedIds({ bootstrap: true })).toContain(id);
+    }
+  });
+
   it("does not pull an unverifiable artifact in as a check-mode dependency", () => {
     const unverifiable = new Set(
       registry.filter((artifact) => artifact.checkable === false).map((artifact) => artifact.id),

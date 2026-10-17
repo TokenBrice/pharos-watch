@@ -15,6 +15,8 @@ Execution note: the `snapshot-supply` retry path runs on the logical quarter-hou
 
 Worker runtime safety and telemetry controls are declared in both Wrangler configs and managed in git. CI proves both strict bundles before one D1 migration application, then deploys heavy followed by public. Routes, triggers and bindings synchronize through `wrangler deploy --strict`; dashboard-only edits can be overwritten.
 
+`npm run check:worker-config` owns runtime safety and paired Public/Heavy configuration; `npm run check:doc-sync` verifies that this TOML snippet matches `worker/wrangler.toml`.
+
 ```toml
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]

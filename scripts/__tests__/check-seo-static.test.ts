@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   collectSeoStaticCheckResult,
+  findPublishedArchiveContinuityErrors,
 } from "../ci/check-seo-static.mjs";
 
 const roots: string[] = [];
@@ -158,6 +159,34 @@ async function writeBaselinePages(
 }
 
 describe("check-seo-static", () => {
+  it("reuses complete redirect rules for archive continuity while retaining source-only sitemap conflicts", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/digest/new/"], {}, ["/", "/stability-index/", "/digest/new/"]);
+    await writePage(root, "/digest/new/", { h1: "New digest" });
+    await writeFile(path.join(root, "_redirects"), [
+      "# Authored redirects",
+      "/digest/old/ /digest/new/ 301",
+      "/stability-index",
+      "/external https://example.test",
+      "",
+    ].join("\n"));
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.redirectRules).toEqual([
+      { source: "/digest/old/", destination: "/digest/new/", status: "301" },
+      { source: "/external", destination: "https://example.test", status: "" },
+    ]);
+    expect(result.errors).toContain(
+      "sitemap.xml URL https://pharos.watch/stability-index/ conflicts with _redirects source /stability-index; drop one of the two signals",
+    );
+    expect(findPublishedArchiveContinuityErrors(
+      `<urlset><url><loc>${pageUrl("/digest/old/")}</loc></url></urlset>`,
+      `<urlset><url><loc>${pageUrl("/digest/new/")}</loc></url></urlset>`,
+      result.redirectRules,
+      new Set(result.pageRecords.map((record: { route: string }) => record.route)),
+    )).toEqual([]);
+  });
+
   it.each([
     { robots: ["noindex, follow"] },
     { robots: ["none"] },

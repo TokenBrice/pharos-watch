@@ -6,6 +6,7 @@ import { collectSourceFiles } from "../lib/source-files.mts";
 import { splitLines } from "../lib/doc-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
+import { findDocContractDrift } from "../lib/doc-sync/contract-blocks";
 import {
   getAllEnvBindingKeys,
   renderEnvExample,
@@ -145,10 +146,6 @@ export function extractExportedEnvInterfaceBody(source: string): string | null {
   }
 
   return null;
-}
-
-export function parseWorkerEnvInterfaceKeys(filePath: string): Set<string> {
-  return new Set(parseWorkerEnvInterfaceBindings(filePath).keys());
 }
 
 export function parseWorkerEnvInterfaceBindings(filePath: string): Map<string, EnvInterfaceBinding> {
@@ -421,29 +418,23 @@ function assertGeneratedBlockMatches(
   expectedContent: string,
   errors: string[],
 ): void {
-  const source = normalizeText(readFileSync(filePath, "utf8"));
-  const startMarker = `<!-- ${marker}:BEGIN -->`;
-  const endMarker = `<!-- ${marker}:END -->`;
-  const startIndex = source.indexOf(startMarker);
-  const endIndex = source.indexOf(endMarker);
-
-  if (startIndex < 0 || endIndex < 0 || endIndex < startIndex) {
-    errors.push(`${relative(repoRoot, filePath)} is missing the generated block markers for ${marker}.`);
+  const drift = findDocContractDrift(
+    (file) => normalizeText(readFileSync(file, "utf8")),
+    [{
+      file: filePath,
+      id: marker,
+      startMarker: `<!-- ${marker}:BEGIN -->`,
+      endMarker: `<!-- ${marker}:END -->`,
+      expected: buildGeneratedBlock(marker, expectedContent),
+    }],
+  )[0];
+  if (!drift) return;
+  if (drift.found === null) {
+    errors.push(`${relative(repoRoot, filePath)} is missing or has duplicate generated block markers for ${marker}.`);
     return;
   }
 
-  const actualBlock = source.slice(startIndex, endIndex + endMarker.length);
-  const expectedBlock = buildGeneratedBlock(marker, expectedContent);
-  if (actualBlock === expectedBlock) {
-    return;
-  }
-
-  const diff = findFirstDifferenceLine(expectedBlock, actualBlock);
-  if (!diff) {
-    errors.push(`${relative(repoRoot, filePath)} has a stale generated block for ${marker}.`);
-    return;
-  }
-
+  const diff = findFirstDifferenceLine(drift.expected, drift.found)!;
   errors.push(
     `${relative(repoRoot, filePath)} has a stale generated block for ${marker} at line ${diff.line}: expected ${JSON.stringify(diff.expected)} but found ${JSON.stringify(diff.actual)}`,
   );

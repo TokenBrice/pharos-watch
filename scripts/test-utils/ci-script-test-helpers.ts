@@ -2,15 +2,6 @@ import type { execFileSync } from "node:child_process";
 
 export type TestEnv = Record<string, string | undefined>;
 
-export type CommandPlanItem = {
-  cmd: string;
-  reasons: string[];
-};
-
-export type ExecutionUnit = {
-  commands: CommandPlanItem[];
-};
-
 export type TestExecFileSync = (
   cmd: string,
   args: readonly string[],
@@ -44,12 +35,4 @@ export function captureProcessExit(onExit: (status: number | undefined) => void)
     onExit(typeof status === "number" ? status : undefined);
     return undefined as never;
   }) as typeof process.exit;
-}
-
-export function commandTexts(plan: readonly CommandPlanItem[]): string[] {
-  return plan.map((item) => item.cmd);
-}
-
-export function executionUnitCommandTexts(units: readonly ExecutionUnit[]): string[][] {
-  return units.map((unit) => commandTexts(unit.commands));
 }

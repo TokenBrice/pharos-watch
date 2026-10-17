@@ -5,6 +5,7 @@ import * as changeContract from "../ci/pharos-change-contract.ts";
 import {
   buildFocusedCheckPlan,
   runFocusedChecks,
+  parseFocusedCheckArgs,
 } from "../maintenance/run-focused-checks.ts";
 
 function writer() {
@@ -15,13 +16,40 @@ function writer() {
   };
 }
 
-const frontendCommands = [
-  "npm run lint:changed -- --file src/components/query-error-notice.tsx",
-  "npm run typecheck",
-  "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx",
-];
-
 describe("focused checks", () => {
+  it.each(["--base", "--base-ref"])("accepts %s and both head spellings", (baseFlag) => {
+    for (const headFlag of ["--head", "--head-ref"]) {
+      expect(parseFocusedCheckArgs([baseFlag, "base", headFlag, "head"])).toMatchObject({ base: "base", head: "head" });
+    }
+  });
+
+  it("rejects conflicting range spellings and selection modes", () => {
+    for (const argv of [
+      ["--base", "one", "--base-ref", "two"],
+      ["--head", "one", "--head-ref", "two"],
+      ["--file", "README.md", "--base-ref", "one"],
+    ]) expect(() => parseFocusedCheckArgs(argv)).toThrow("cannot be used together");
+  });
+
+  it("synthesizes domain baselines without broad structural or ignored projection checks", () => {
+    for (const path of ["worker/src/cron/sync-yield-data.ts", "shared/data/stablecoins/coins/usdc-circle.json", "scripts/ci/check-env-contract.ts"]) {
+      const commands = buildFocusedCheckPlan([path]).checks.map((check) => check.command);
+      expect(commands).toContain("npm run check:doc-sync");
+      expect(commands).not.toContain("npm run check:structural");
+      expect(commands).not.toContain("npm run check:generated-artifacts");
+      for (const command of commands.filter((command) => command.startsWith("npm run check:generated-artifacts"))) {
+        const ids = command.split(" ").filter((argument) => argument.startsWith("--only="))
+          .flatMap((argument) => argument.slice("--only=".length).split(","));
+        for (const id of ["stablecoin-catalog", "postman", "openapi", "stablecoin-client-projections"]) {
+          expect(ids).not.toContain(id);
+        }
+      }
+    }
+    for (const path of ["worker/wrangler.toml", "worker/wrangler.heavy.toml", "docs/worker-infrastructure.md"]) {
+      expect(buildFocusedCheckPlan([path]).checks.map((check) => check.command)).toContain("npm run check:doc-sync");
+    }
+  });
+
   it("gives generic Worker and shared runtime changes baseline compiler and lint obligations", () => {
     const worker = "worker/src/lib/safe-error-message.ts";
     expect(buildFocusedCheckPlan([worker]).checks.map((check) => check.command)).toEqual(expect.arrayContaining([
@@ -87,17 +115,19 @@ describe("focused checks", () => {
     }
   });
 
-  it.each([false, true])("distinguishes mapped no-check plans from verification (planOnly=%s)", async (planOnly) => {
+  it.each([false, true])("distinguishes empty no-check plans from verification (planOnly=%s)", async (planOnly) => {
     const stdout = writer();
     const runCommandImpl = vi.fn();
+    const readChangedFiles = vi.spyOn(changeContract, "readChangedFiles").mockReturnValue([]);
     expect(await runFocusedChecks({
-      argv: ["--file", "CONTRIBUTING.md", "--json", ...(planOnly ? ["--plan-only"] : [])],
+      argv: ["--json", ...(planOnly ? ["--plan-only"] : [])],
       runCommandImpl, stdout, stderr: writer(),
     })).toBe(0);
     expect(JSON.parse(stdout.output())).toMatchObject({
       status: "intentional-no-check", unmappedPaths: [], checks: [], planOnly,
     });
     expect(runCommandImpl).not.toHaveBeenCalled();
+    readChangedFiles.mockRestore();
   });
 
   it("emits a machine-readable plan with lane fields", async () => {
@@ -116,7 +146,13 @@ describe("focused checks", () => {
       planOnly: true,
       status: "planned",
     });
-    expect(report.checks).toMatchObject(frontendCommands.map((command) => ({ command, source: "frontend-routes" })));
+    const checks = report.checks as Array<{ command: string; source: string }>;
+    expect(checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ command: "npm run lint:changed -- --file src/components/query-error-notice.tsx", source: "baseline" }),
+      expect.objectContaining({ command: "npm run typecheck", source: "baseline" }),
+      expect.objectContaining({ command: "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx", source: "frontend-routes" }),
+    ]));
+    expect(checks.some((check) => check.command === "npm run check:structural")).toBe(false);
     expect(report.lanes).toEqual(expect.arrayContaining([
       expect.objectContaining({
         command: "npm run typecheck",

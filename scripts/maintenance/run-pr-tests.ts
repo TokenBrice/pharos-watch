@@ -4,9 +4,8 @@ import { dirname } from "node:path";
 import { localBin } from "../lib/local-bin.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
-import { createPrTestPlan, partitionTestFiles, readPrTestPlan, readPrTestTimings, takeTestShard } from "../lib/pr-test-plan.mts";
-import { publishShardTimings } from "../lib/shard-timings.mts";
-import { hasVitestOption, withCiVitestArgs } from "../lib/vitest-ci-args.mts";
+import { createPrTestPlan, partitionTestFiles, readPrTestPlan, takeTestShard } from "../lib/pr-test-plan.mts";
+import { withCiVitestArgs } from "../lib/vitest-ci-args.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 
 interface RunPrTestsOptions {
@@ -70,25 +69,16 @@ export function runPrTests({
       writeFileSync(planOut, `${JSON.stringify(plan, null, 2)}\n`);
       return 0;
     }
-    if (shard) files = partitionTestFiles(files, shard.shardCount, readPrTestTimings().tests)[shard.shard - 1];
+    if (shard) files = partitionTestFiles(files, shard.shardCount)[shard.shard - 1];
   }
   // An empty explicit shard must not turn into Vitest's unrestricted full run.
   if (files.length === 0) return 0;
   const vitestArgs = withCiVitestArgs(["run", ...files, ...args], env);
-  const timingsFile = env.PR_SHARD_TIMINGS_FILE;
-  const reportArgs: string[] = [];
-  if (timingsFile) {
-    if (!hasVitestOption(vitestArgs, "--reporter")) reportArgs.push("--reporter=default");
-    reportArgs.push("--reporter=./scripts/lib/shard-timing-reporter.mts");
-  }
-  const startedAt = Date.now();
-  const result = spawn(vitest, [...vitestArgs, ...reportArgs], {
+  const result = spawn(vitest, vitestArgs, {
     env: { ...env, PHAROS_V9_RESOURCE_LANE: "0" },
     stdio: "inherit",
   });
-  const wallMs = Date.now() - startedAt;
   if (result.error) throw result.error;
-  if (timingsFile) publishShardTimings(timingsFile, shard ?? { shard: 1, shardCount: 1 }, wallMs, env, "plain-test");
   return result.status ?? 1;
 }
 

@@ -7,16 +7,9 @@ import { MINT_AUTHORITY_METHODOLOGY_PATH, MINT_AUTHORITY_METHODOLOGY_VERSION } f
 import { PUBLIC_ROUTE_PATHS } from "../../src/lib/public-route-inventory";
 import { CaseStudyContentSchema, DependencyExposureContentSchema, DependencyMapContentSchema, MethodologyContentSchema, WeeklyContentSchema, editorialReferenceIssues } from "../lib/editorial-content";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { collectSourceFiles } from "../lib/source-files.mts";
 
 const USAGE = "Usage: npm run check:editorial-content\nValidate authored JSON content, registry membership, metadata, ADR-3, and internal references.";
-
-function contentFiles(root: string): string[] {
-  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    if (entry.name.startsWith(".") || entry.name === "__tests__") return [];
-    const path = join(root, entry.name);
-    return entry.isDirectory() ? contentFiles(path) : entry.name.endsWith(".json") || entry.name.endsWith(".ts") ? [path] : [];
-  });
-}
 
 function registeredJsonFiles(repoRoot: string, owners: readonly string[]): Set<string> {
   const registered = new Set<string>();
@@ -48,7 +41,11 @@ export function checkEditorialContent(repoRoot = process.cwd()): string[] {
   const validData = new Map<string, unknown>();
   for (const surface of surfaces) {
     const registered = registeredJsonFiles(repoRoot, surface.owners);
-    const sources = contentFiles(join(repoRoot, surface.dir));
+    const sources = collectSourceFiles(join(repoRoot, surface.dir), {
+      extensions: [".json", ".ts"],
+      excludedDirs: ["__tests__"],
+      skipDotEntries: true,
+    });
     const jsonFiles = new Set(sources.filter((path) => path.endsWith(".json")));
     for (const path of registered) if (!jsonFiles.has(path)) issues.push(`${relative(repoRoot, path)}: Registered content source is missing`);
     for (const path of sources) {

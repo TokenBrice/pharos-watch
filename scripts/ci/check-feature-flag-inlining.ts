@@ -27,19 +27,20 @@
  */
 
 import { readFileSync, statSync } from "node:fs";
+import ts from "typescript";
 import { collectSourceFiles } from "../lib/source-files.mts";
+import { parseSourceFile } from "../lib/ts-ast.mts";
 
 const FLAGS_SOURCE = "src/lib/feature-flags.ts";
 const CHUNKS_DIR = ".next/static/chunks";
 const FLAG_NAME_RE = /NEXT_PUBLIC_PHAROS_[A-Z_]+/g;
-const DYNAMIC_ENV_RE = /process\.env\[/;
 
 let errored = false;
 
 // ---------- Tier 1: source-level scan ------------------------------------
-let source;
+let sourceFile: ts.SourceFile;
 try {
-  source = readFileSync(FLAGS_SOURCE, "utf8");
+  ({ sourceFile } = parseSourceFile(FLAGS_SOURCE));
 } catch (err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(
@@ -48,97 +49,17 @@ try {
   process.exit(1);
 }
 
-// Strip block + line comments AND template/string literals so the dynamic-env
-// regex doesn't match prose mentions like `process.env[name]` in JSDoc.
-// A stack of contexts tracks nesting so that `${...}` interpolations inside a
-// template literal are parsed as code (and may themselves contain nested
-// strings/templates), preserving any real `process.env[...]` access there while
-// still discarding the surrounding literal text.
-interface ParserContext {
-  kind: "code" | "template";
-  brace: number;
+function hasDynamicEnvAccess(node: ts.Node): boolean {
+  return (
+    ts.isElementAccessExpression(node)
+    && ts.isPropertyAccessExpression(node.expression)
+    && ts.isIdentifier(node.expression.expression)
+    && node.expression.expression.text === "process"
+    && node.expression.name.text === "env"
+  ) || ts.forEachChild(node, hasDynamicEnvAccess) === true;
 }
 
-function stripCommentsAndStrings(input: string): string {
-  let out = "";
-  let i = 0;
-  // Each frame is { kind: "code" | "template", brace: <depth> }. "code" frames
-  // entered via `${` pop back to the template when their brace depth returns to 0.
-  const stack: ParserContext[] = [{ kind: "code", brace: 0 }];
-  while (i < input.length) {
-    const top = stack[stack.length - 1];
-    const ch = input[i];
-    if (top.kind === "template") {
-      if (ch === "\\") {
-        i += 2;
-        continue;
-      }
-      if (ch === "`") {
-        stack.pop();
-        i += 1;
-        continue;
-      }
-      if (ch === "$" && input[i + 1] === "{") {
-        out += "${";
-        stack.push({ kind: "code", brace: 0 });
-        i += 2;
-        continue;
-      }
-      i += 1;
-      continue;
-    }
-    // code context
-    const two = input.slice(i, i + 2);
-    if (two === "//") {
-      const nl = input.indexOf("\n", i);
-      i = nl === -1 ? input.length : nl;
-      continue;
-    }
-    if (two === "/*") {
-      const end = input.indexOf("*/", i + 2);
-      i = end === -1 ? input.length : end + 2;
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      i += 1;
-      while (i < input.length && input[i] !== ch) {
-        if (input[i] === "\\") i += 2;
-        else i += 1;
-      }
-      i += 1;
-      continue;
-    }
-    if (ch === "`") {
-      stack.push({ kind: "template", brace: 0 });
-      i += 1;
-      continue;
-    }
-    if (ch === "{") {
-      top.brace += 1;
-      out += ch;
-      i += 1;
-      continue;
-    }
-    if (ch === "}") {
-      if (top.brace === 0 && stack.length > 1) {
-        // Closes a `${...}` interpolation; resume the enclosing template.
-        out += "}";
-        stack.pop();
-        i += 1;
-        continue;
-      }
-      top.brace -= 1;
-      out += ch;
-      i += 1;
-      continue;
-    }
-    out += ch;
-    i += 1;
-  }
-  return out;
-}
-
-if (DYNAMIC_ENV_RE.test(stripCommentsAndStrings(source))) {
+if (hasDynamicEnvAccess(sourceFile)) {
   process.stderr.write(
     `check-feature-flag-inlining: ${FLAGS_SOURCE} uses dynamic \`process.env[...]\` access.\n` +
       "Next.js only inlines `process.env.NEXT_PUBLIC_X` (direct dot syntax). Switch to per-flag\n" +

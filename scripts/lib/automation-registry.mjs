@@ -136,7 +136,6 @@ function generatedArtifact(definition) {
     ...definition,
     autoStage: definition.autoStage ?? false,
     checkable: definition.checkable ?? true,
-    inputState: definition.inputState ?? "working-tree",
     requiredBrowsers: definition.requiredBrowsers ?? [],
     sourcePaths: uniqueSorted([definition.script, ...(definition.sourcePaths ?? [])]),
     outputPaths: uniqueSorted(definition.outputPaths ?? []),
@@ -147,6 +146,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "stablecoin-catalog",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts --check",
     command: "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
     bootstrap: true,
@@ -201,7 +201,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
     checkable: false,
-    inputState: "build-time",
     outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
     phase: 0,
     reproducibility: "git-history-derived",
@@ -227,7 +226,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
     checkable: false,
-    inputState: "build-time",
     outputPaths: ["src/generated/docs-metadata.json", "src/generated/docs-metadata.json.d.ts"],
     phase: 0,
     reproducibility: "git-history-derived",
@@ -237,6 +235,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "depeg-event-search-data",
     buildLifecycle: "post-refresh",
+    ciDriftCheck: false,
     // No autoStage: every output below is gitignored by `/src/generated/*`
     // since 0b76714f03 untracked them. Staging them aborts the commit.
     checkCommand: "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
@@ -256,6 +255,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "postman",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "tsx scripts/maintenance/generate-postman-collection.ts --check",
     command: "tsx scripts/maintenance/generate-postman-collection.ts",
     bootstrap: true,
@@ -271,6 +271,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "openapi",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "tsx scripts/maintenance/generate-openapi-spec.ts --check",
     command: "tsx scripts/maintenance/generate-openapi-spec.ts",
     bootstrap: true,
@@ -283,6 +284,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "world-map",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "tsx scripts/maintenance/build-world-map-svg.ts --check",
     command: "tsx scripts/maintenance/build-world-map-svg.ts",
     bootstrap: true,
@@ -344,6 +346,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "report-card-registry-fingerprint",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts --check",
     command: "tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts",
     bootstrap: true,
@@ -367,6 +370,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "legacy-stablecoin-redirects",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts --check",
     command: "node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts",
     bootstrap: true,
@@ -385,6 +389,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "stablecoin-client-registry",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "node scripts/build-data/build-client-registry.mjs --check",
     command: "node scripts/build-data/build-client-registry.mjs",
     bootstrap: true,
@@ -430,6 +435,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "stablecoin-worker-full-catalog",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "node --import tsx scripts/build-data/generate-worker-stablecoin-catalog.ts --check",
     command: "node --import tsx scripts/build-data/generate-worker-stablecoin-catalog.ts",
     bootstrap: true,
@@ -443,6 +449,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "stablecoin-client-projections",
     buildLifecycle: "compile-input",
+    ciDriftCheck: false,
     checkCommand: "node --import tsx scripts/build-data/generate-stablecoin-client-projections.ts --check",
     command: "node --import tsx scripts/build-data/generate-stablecoin-client-projections.ts",
     bootstrap: true,
@@ -847,7 +854,7 @@ export function selectCheckableArtifactIds(ids) {
   assertKnownGeneratedArtifactIds([...ids]);
   const selected = new Set(ids);
   return GENERATED_ARTIFACT_REGISTRY
-    .filter((artifact) => selected.has(artifact.id) && artifact.checkable !== false)
+    .filter((artifact) => selected.has(artifact.id) && artifact.checkable !== false && artifact.ciDriftCheck !== false)
     .map((artifact) => artifact.id);
 }
 

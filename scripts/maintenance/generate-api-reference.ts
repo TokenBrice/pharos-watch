@@ -351,13 +351,9 @@ export function renderGeneratedBlock(spec: OpenApiSpec): string {
   ].join("\n");
 }
 export function replaceGeneratedBlock(doc: string, generatedBlock: string): string {
-  const oldStart = "<!-- GENERATED-START: public-endpoints-quick-reference -->";
-  const oldEnd = "<!-- GENERATED-END: public-endpoints-quick-reference -->";
-  const startMarker = doc.includes(START_MARKER) ? START_MARKER : oldStart;
-  const endMarker = doc.includes(END_MARKER) ? END_MARKER : oldEnd;
-  const start = doc.indexOf(startMarker); const end = doc.indexOf(endMarker);
+  const start = doc.indexOf(START_MARKER); const end = doc.indexOf(END_MARKER);
   if (start === -1 || end === -1 || end < start) throw new Error(`Could not find a valid generated block in ${DOC_PATH}`);
-  return `${doc.slice(0, start)}${generatedBlock}${doc.slice(end + endMarker.length)}`;
+  return `${doc.slice(0, start)}${generatedBlock}${doc.slice(end + END_MARKER.length)}`;
 }
 export function main(checkMode = process.argv.includes("--check")): void {
   const existing = readFileSync(DOC_PATH, "utf8");

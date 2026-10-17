@@ -89,43 +89,41 @@ function normalizeCopy(lines: readonly string[]): { text: string; lines: number[
 }
 
 export function collectSensitiveCopyFindings(
-  roots: readonly string[] = SENSITIVE_COPY_ROOTS,
+  files: readonly string[],
   cwd = process.cwd(),
 ): SensitiveCopyFinding[] {
   const findings: SensitiveCopyFinding[] = [];
 
-  for (const root of roots) {
-    for (const file of collectSourceFilesUnderRoot(root, cwd, { extensions: SOURCE_EXTENSIONS })) {
-      const rel = relative(cwd, file).replaceAll("\\", "/");
-      const lines = readFileSync(file, "utf8").split(/\r?\n/g);
-      const findingKeys = new Set<string>();
-      lines.forEach((raw, index) => {
-        const text = raw.trim();
-        if (text.startsWith("//") || text.startsWith("*") || text.startsWith("/*")) return;
-        const haystack = text.toLowerCase();
-        for (const rule of FORBIDDEN_COPY) {
-          const term = rule.terms.find((candidate) => haystack.includes(candidate));
-          if (!term) continue;
-          findingKeys.add(`${rule.id}\0${term}\0${index + 1}`);
-          findings.push({ file: rel, line: index + 1, id: rule.id, term, text });
-        }
-      });
-
-      const normalized = normalizeCopy(lines);
+  for (const file of files) {
+    const rel = relative(cwd, file).replaceAll("\\", "/");
+    const lines = readFileSync(file, "utf8").split(/\r?\n/g);
+    const findingKeys = new Set<string>();
+    lines.forEach((raw, index) => {
+      const text = raw.trim();
+      if (text.startsWith("//") || text.startsWith("*") || text.startsWith("/*")) return;
+      const haystack = text.toLowerCase();
       for (const rule of FORBIDDEN_COPY) {
-        for (const term of rule.terms) {
-          let searchStart = 0;
-          while (searchStart < normalized.text.length) {
-            const matchIndex = normalized.text.indexOf(term, searchStart);
-            if (matchIndex === -1) break;
-            const line = normalized.lines[matchIndex] ?? 1;
-            const key = `${rule.id}\0${term}\0${line}`;
-            if (!findingKeys.has(key)) {
-              findingKeys.add(key);
-              findings.push({ file: rel, line, id: rule.id, term, text: lines[line - 1]!.trim() });
-            }
-            searchStart = matchIndex + term.length;
+        const term = rule.terms.find((candidate) => haystack.includes(candidate));
+        if (!term) continue;
+        findingKeys.add(`${rule.id}\0${term}\0${index + 1}`);
+        findings.push({ file: rel, line: index + 1, id: rule.id, term, text });
+      }
+    });
+
+    const normalized = normalizeCopy(lines);
+    for (const rule of FORBIDDEN_COPY) {
+      for (const term of rule.terms) {
+        let searchStart = 0;
+        while (searchStart < normalized.text.length) {
+          const matchIndex = normalized.text.indexOf(term, searchStart);
+          if (matchIndex === -1) break;
+          const line = normalized.lines[matchIndex] ?? 1;
+          const key = `${rule.id}\0${term}\0${line}`;
+          if (!findingKeys.has(key)) {
+            findingKeys.add(key);
+            findings.push({ file: rel, line, id: rule.id, term, text: lines[line - 1]!.trim() });
           }
+          searchStart = matchIndex + term.length;
         }
       }
     }
@@ -140,13 +138,10 @@ export function checkSensitivePageCopy({
   stdout = process.stdout,
   stderr = process.stderr,
 }: SensitiveCopyOptions = {}): number {
-  const scanned = roots.reduce(
-    (total, root) => total + collectSourceFilesUnderRoot(root, cwd, { extensions: SOURCE_EXTENSIONS }).length,
-    0,
-  );
-  const findings = collectSensitiveCopyFindings(roots, cwd);
+  const files = roots.flatMap((root) => collectSourceFilesUnderRoot(root, cwd, { extensions: SOURCE_EXTENSIONS }));
+  const findings = collectSensitiveCopyFindings(files, cwd);
   if (findings.length === 0) {
-    stdout.write(formatScannedOk("[sensitive-page-copy] Classifier-sensitive pages avoid drainer copy", scanned));
+    stdout.write(formatScannedOk("[sensitive-page-copy] Classifier-sensitive pages avoid drainer copy", files.length));
     return 0;
   }
 

@@ -13,16 +13,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node --import tsx \"$CLAUDE_PROJECT_DIR\"/scripts/ci/pharos-change-contract.ts --hook=pre-tool-use"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|MultiEdit|Write",
+        "matcher": "Bash|Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { createHash } from "node:crypto";
 import {
   existsSync,
   lstatSync,
@@ -9,6 +8,7 @@ import {
   readdirSync,
   readlinkSync,
   realpathSync,
+  rmdirSync,
   symlinkSync,
   unlinkSync,
 } from "node:fs";
@@ -27,7 +27,7 @@ const USAGE = `Usage: node scripts/maintenance/sync-agent-skills.mjs [--check|--
 
 Options:
   --check       Validate the canonical skill tree and Claude facade (default)
-  --write       Create or repair Claude facade directories and symlinks
+  --write       Create or repair Claude facade symlinks and prune removed skills
   -h, --help    Show this help`;
 
 /** @param {string} path */
@@ -212,43 +212,6 @@ function collectPhysicalFiles(skillPath) {
   return files;
 }
 
-/** @param {string} path */
-function contentHash(path) {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
-}
-
-/** @param {string} rootDir @param {string[]} canonicalSkillPaths @param {string[]} facadeSkillPaths @param {string[]} violations */
-function checkDuplicatePhysicalBodies(rootDir, canonicalSkillPaths, facadeSkillPaths, violations) {
-  const canonicalByHash = new Map();
-  for (const skillPath of canonicalSkillPaths) {
-    for (const filePath of collectPhysicalFiles(skillPath)) {
-      try {
-        const hash = contentHash(filePath);
-        const paths = canonicalByHash.get(hash) ?? [];
-        paths.push(filePath);
-        canonicalByHash.set(hash, paths);
-      } catch {
-        violations.push(`${displayPath(rootDir, filePath)} cannot be hashed`);
-      }
-    }
-  }
-
-  for (const skillPath of facadeSkillPaths) {
-    for (const filePath of collectPhysicalFiles(skillPath)) {
-      try {
-        const matches = canonicalByHash.get(contentHash(filePath));
-        if (matches?.length) {
-          violations.push(
-            `duplicate physical body ${displayPath(rootDir, filePath)} matches ${displayPath(rootDir, matches[0])}`,
-          );
-        }
-      } catch {
-        violations.push(`${displayPath(rootDir, filePath)} cannot be hashed`);
-      }
-    }
-  }
-}
-
 /** @param {string} skillName @param {string} skillPath @param {string} entryPath */
 function isAllowlistedCompanion(skillName, skillPath, entryPath) {
   if (skillName.length === 0) return false;
@@ -421,11 +384,8 @@ export function inspectAgentSkills(rootDir = process.cwd()) {
     }
   }
 
-  const canonicalSkillPaths = [];
-  const facadeSkillPaths = [...facadeSkillEntries.values()].map((entry) => entry.path);
   for (const skillName of [...canonicalSkillEntries.keys()].sort()) {
     const canonicalSkillPath = canonicalSkillEntries.get(skillName).path;
-    canonicalSkillPaths.push(canonicalSkillPath);
     checkCanonicalSymlinks(resolvedRoot, canonicalSkillPath, violations);
     checkFrontmatter(join(canonicalSkillPath, "SKILL.md"), skillName, violations);
 
@@ -446,8 +406,6 @@ export function inspectAgentSkills(rootDir = process.cwd()) {
       allowlisted,
     );
   }
-
-  checkDuplicatePhysicalBodies(resolvedRoot, canonicalSkillPaths, facadeSkillPaths, violations);
 
   return {
     violations: [...new Set(violations)],
@@ -473,6 +431,24 @@ function repairFacade(rootDir) {
     changes.push(`created directory ${displayPath(resolvedRoot, facadeRoot)}`);
   } else if (!facadeRootStats.isDirectory()) {
     return changes;
+  }
+
+  const canonicalNames = new Set(canonicalRootEntries.map((entry) => entry.name));
+  for (const facadeSkillEntry of readDirectoryEntries(facadeRoot) ?? []) {
+    if (!facadeSkillEntry.isDirectory || canonicalNames.has(facadeSkillEntry.name)) continue;
+    const facadeEntries = readDirectoryEntries(facadeSkillEntry.path) ?? [];
+    const canonicalSkillPath = join(canonicalRoot, facadeSkillEntry.name);
+    if (facadeEntries.length === 0 || !facadeEntries.every((entry) => (
+      entry.isSymlink
+      && readlinkSync(entry.path) === expectedSymlinkTarget(entry.path, join(canonicalSkillPath, entry.name))
+    ))) continue;
+
+    for (const entry of facadeEntries) {
+      unlinkSync(entry.path);
+      changes.push(`removed symlink ${displayPath(resolvedRoot, entry.path)}`);
+    }
+    rmdirSync(facadeSkillEntry.path);
+    changes.push(`removed directory ${displayPath(resolvedRoot, facadeSkillEntry.path)}`);
   }
 
   for (const skillEntry of canonicalSkillEntries) {

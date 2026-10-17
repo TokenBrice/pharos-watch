@@ -9,6 +9,7 @@ import {
   runPrStaticChecks,
   STRUCTURAL_CHECKS,
 } from "../maintenance/run-pr-static-checks.ts";
+import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 describe("adaptive PR checks", () => {
   it("unions changed Vitest files with the critical contract set", () => {
     const listed = parseVitestFileList("[node] src/a.test.ts\n[worker] worker/a.spec.ts\n");
@@ -69,6 +70,17 @@ describe("adaptive PR checks", () => {
     ])).toEqual(["catalog", "index"]);
   });
 
+  it("keeps ignored bootstrap projections out of automatic PR drift checks", () => {
+    const files = ["scripts/maintenance/generate-postman-collection.ts", "shared/data/stablecoins/coins/usdc-circle.json"];
+    const changed = selectChangedGeneratedArtifactIds(files);
+    expect(changed).toEqual(expect.arrayContaining(["postman", "stablecoin-catalog"]));
+    const automatic = selectCheckableArtifactIds(changed);
+    expect(automatic).not.toContain("postman");
+    expect(automatic).not.toContain("stablecoin-catalog");
+    expect(buildPrStaticCheckPlan(files).commands.find((command) => command.name === "check:generated-artifacts")?.args)
+      .toEqual(automatic.length ? [`--only=${automatic.join(",")}`] : undefined);
+  });
+
   // Ordinary internal docs do not select a checkable artifact; generated output
   // paths such as the API reference still require their owning freshness check.
   it.each([
@@ -125,7 +137,7 @@ describe("adaptive PR checks", () => {
       "check:worker-config", "check:worker-package",
     ]));
     expect(partitionPrStaticCheckPlan(guards.commands).parallel.map((command) => command.name)).toEqual([
-      "check:structural", "check:generated-artifacts",
+      "check:generated-artifacts", "check:structural",
     ]);
   });
 

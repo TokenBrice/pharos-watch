@@ -3,8 +3,7 @@
 import { existsSync } from "node:fs";
 
 import { classifyChangedFiles, normalizeExplicitFiles, readChangedFiles } from "../ci/pharos-change-contract.ts";
-import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
-import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
+import { createPrStaticLeafCommand, selectPrBaselineChecks } from "./run-pr-static-checks.ts";
 import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import {
   parseStrictCliArgs,
@@ -36,7 +35,8 @@ const USAGE = [
   "Options:",
   "  --file <path>       Route an explicit file; repeatable",
   "  --staged            Route staged files",
-  "  --base <ref>        Route files changed from the ref to HEAD",
+  "  --base, --base-ref <ref> Route files changed from the ref",
+  "  --head, --head-ref <ref> Compare to this head (default HEAD)",
   "  --plan-only         Print the routed check plan without running it",
   "  --json              Emit the result as JSON on stdout",
   "  -h, --help          Show this help",
@@ -45,6 +45,7 @@ const USAGE = [
 export interface FocusedCheckArgs {
   base?: string;
   files: string[];
+  head?: string;
   help: boolean;
   json: boolean;
   planOnly: boolean;
@@ -93,9 +94,12 @@ function stringValues(value: unknown): string[] {
 
 export function parseFocusedCheckArgs(argv: readonly string[] = []): FocusedCheckArgs {
   const { values } = parseStrictCliArgs(argv, {
-    conflicts: [["file", "staged", "base"]],
+    conflicts: [["file", "staged", "base", "base-ref"], ["base", "base-ref"], ["head", "head-ref"]],
     options: {
       base: { type: "string" },
+      "base-ref": { type: "string" },
+      head: { type: "string" },
+      "head-ref": { type: "string" },
       file: { multiple: true, type: "string" },
       json: { type: "boolean" },
       "plan-only": { type: "boolean" },
@@ -104,7 +108,8 @@ export function parseFocusedCheckArgs(argv: readonly string[] = []): FocusedChec
   });
 
   return {
-    base: typeof values.base === "string" ? values.base : undefined,
+    base: (values.base ?? values["base-ref"]) as string | undefined,
+    head: (values.head ?? values["head-ref"]) as string | undefined,
     files: stringValues(values.file),
     help: values.help === true,
     json: values.json === true,
@@ -118,7 +123,7 @@ function selectFocusedFiles(args: FocusedCheckArgs): string[] {
     return normalizeExplicitFiles(args.files);
   }
 
-  return readChangedFiles({ baseRef: args.base, staged: args.staged });
+  return readChangedFiles({ baseRef: args.base, headRef: args.head, staged: args.staged });
 }
 
 export function buildFocusedCheckPlan(
@@ -143,6 +148,20 @@ export function buildFocusedCheckPlan(
 
   const checks: FocusedCheck[] = [];
   const seenChecks = new Set<string>();
+  const { classification: deploy, commands: baselineChecks } = selectPrBaselineChecks(classification.changedFiles);
+  const lintFiles = selectLintableFiles(classification.changedFiles);
+  if (lintFiles.length > 0) {
+    const argv = ["npm", "run", "lint:changed", "--", ...lintFiles.flatMap((file) => ["--file", file])];
+    checks.push({ command: createSpawnCommand(argv[0], argv.slice(1)).cmd, argv, source: "baseline" });
+  }
+  if (deploy.pagesChanged || classification.changedFiles.some((file) => file.startsWith("scripts/") && /\.[cm]?[jt]sx?$/.test(file))) {
+    checks.push({ command: "npm run typecheck", source: "baseline" });
+  }
+  for (const command of baselineChecks) {
+    const spawn = createPrStaticLeafCommand(command, command.args ?? []);
+    checks.push({ command: spawn.cmd, argv: [spawn.executable, ...spawn.args], source: "baseline" });
+  }
+  for (const check of checks) seenChecks.add(check.command);
   const genericFamilyIds: Record<string, true> = {
     "frontend-routes": true, "scripts-tooling": true, "worker-runtime": true, "shared-runtime": true,
   };
@@ -153,12 +172,6 @@ export function buildFocusedCheckPlan(
       for (const command of family.checks) {
         let argv: string[] | undefined;
         let plannedCommand = command;
-        if (command === "npm run lint:changed") {
-          const files = selectLintableFiles(classification.changedFiles);
-          if (files.length === 0) continue;
-          argv = ["npm", "run", "lint:changed", "--", ...files.flatMap((file) => ["--file", file])];
-          plannedCommand = createSpawnCommand(argv[0], argv.slice(1)).cmd;
-        }
         if (genericFamilyIds[family.id]) {
           if (retainedCommands.has(command)) continue;
           const files = classification.changedFiles.filter((file) => family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)));
@@ -166,10 +179,6 @@ export function buildFocusedCheckPlan(
             && files.every((file) => /\.[cm]?[jt]sx?$/.test(file) && existsSync(file))) {
             argv = ["npx", "vitest", "related", "--run", "--passWithNoTests=false", ...files];
             plannedCommand = createSpawnCommand(argv[0], argv.slice(1)).cmd;
-          } else if (command === "npm run check:generated-artifacts") {
-            const ids = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(classification.changedFiles));
-            if (ids.length === 0) continue;
-            plannedCommand = `${command} -- --only=${ids.join(",")}`;
           }
         }
         if (seenChecks.has(plannedCommand)) continue;

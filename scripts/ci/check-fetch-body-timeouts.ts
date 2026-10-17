@@ -10,35 +10,17 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const DEFAULT_ROOTS = ["worker/src/api", "worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
-const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set<string>();
-
 interface FetchBodyTimeoutViolation {
   file: string;
   fetchLine: number;
   bodyLine: number;
   variable: string;
   method: string;
-  assignmentText: string;
-  bodyReadText: string;
 }
 
 interface TrackedFetchAssignment {
   name: string;
   line: number;
-  assignmentText: string;
-}
-
-
-interface FetchBodyTimeoutReport {
-  violations: FetchBodyTimeoutViolation[];
-  unexpected: FetchBodyTimeoutViolation[];
-  staleDebt: string[];
-}
-
-
-
-export function makeViolationKey(violation: FetchBodyTimeoutViolation): string {
-  return `${violation.file}::${violation.assignmentText}::${violation.bodyReadText}`;
 }
 
 export function findFetchBodyTimeoutViolations(
@@ -52,7 +34,6 @@ export function findFetchBodyTimeoutViolations(
   const checker = ts.createProgram(["scan.ts"], options, host).getTypeChecker();
   const tracked = new Map<ts.Symbol, TrackedFetchAssignment>();
   const aliases = new Set<ts.Symbol>();
-  const lines = source.split(/\r?\n/g);
   const violations: FetchBodyTimeoutViolation[] = [];
 
   function isFetchCallee(node: ts.Expression): boolean {
@@ -72,7 +53,7 @@ export function findFetchBodyTimeoutViolations(
     const expression = ts.isAwaitExpression(value) ? value.expression : value;
     if (!ts.isCallExpression(expression) || !isFetchCallee(expression.expression)) return;
     const line = sourceFile.getLineAndCharacterOfPosition(declaration.getStart(sourceFile)).line + 1;
-    tracked.set(symbol, { name: name.text, line, assignmentText: lines[line - 1].trim() });
+    tracked.set(symbol, { name: name.text, line });
   }
 
   function visit(node: ts.Node): void {
@@ -123,8 +104,6 @@ export function findFetchBodyTimeoutViolations(
           bodyLine,
           variable: candidate.name,
           method: node.expression.name.text,
-          assignmentText: candidate.assignmentText,
-          bodyReadText: lines[bodyLine - 1].trim(),
         });
       }
     }
@@ -138,12 +117,10 @@ export function findFetchBodyTimeoutViolations(
 export function scanFetchBodyTimeouts({
   cwd = process.cwd(),
   roots = DEFAULT_ROOTS,
-  knownDebt = KNOWN_FETCH_BODY_TIMEOUT_DEBT,
 }: {
   cwd?: string;
   roots?: readonly string[];
-  knownDebt?: ReadonlySet<string>;
-} = {}): FetchBodyTimeoutReport {
+} = {}): FetchBodyTimeoutViolation[] {
   const violations: FetchBodyTimeoutViolation[] = [];
   for (const file of collectSourceFilesUnderRoots(roots, cwd, {
     extensions: SOURCE_EXTENSIONS,
@@ -153,39 +130,21 @@ export function scanFetchBodyTimeouts({
     violations.push(...findFetchBodyTimeoutViolations(source, file));
   }
 
-  const seenKeys = new Set(violations.map(makeViolationKey));
-  const unexpected = violations.filter((violation) => !knownDebt.has(makeViolationKey(violation)));
-  const staleDebt = [...knownDebt].filter((key) => !seenKeys.has(key));
-  return { violations, unexpected, staleDebt };
+  return violations;
 }
 
 export function main(): number {
-  const report = scanFetchBodyTimeouts();
-  if (process.argv.includes("--print-baseline")) {
-    for (const violation of report.violations) {
-      console.log(JSON.stringify(makeViolationKey(violation)) + ",");
-    }
+  const violations = scanFetchBodyTimeouts();
+  if (violations.length === 0) {
+    console.log("Fetch body timeout check passed (no raw body reads after fetchWithRetry).");
     return 0;
   }
 
-  if (report.unexpected.length === 0 && report.staleDebt.length === 0) {
-    console.log(`Fetch body timeout check passed (${report.violations.length} known raw body-read debt item${report.violations.length === 1 ? "" : "s"} tracked).`);
-    return 0;
-  }
-
-  if (report.unexpected.length > 0) {
-    console.error("New fetchWithRetry raw body reads found. Use fetchJsonWithRetry/fetchTextWithRetry or add an intentional baseline entry:");
-    for (const violation of report.unexpected) {
-      console.error(
-        `  - ${violation.file}:${violation.bodyLine} ${violation.variable}.${violation.method}() after fetchWithRetry at line ${violation.fetchLine}`,
-      );
-    }
-  }
-  if (report.staleDebt.length > 0) {
-    console.error("Stale fetch body timeout debt baseline entries should be removed:");
-    for (const key of report.staleDebt) {
-      console.error(`  - ${key}`);
-    }
+  console.error("fetchWithRetry raw body reads found. Use fetchJsonWithRetry/fetchTextWithRetry:");
+  for (const violation of violations) {
+    console.error(
+      `  - ${violation.file}:${violation.bodyLine} ${violation.variable}.${violation.method}() after fetchWithRetry at line ${violation.fetchLine}`,
+    );
   }
   return 1;
 }

@@ -400,7 +400,7 @@ export async function runPrChecks(
       for (const leaf of leaves.filter((candidate) => candidate.status === "deferred-to-ci")) {
         log(`[check:pr] ${leaf.id}: deferred to the GitHub PR gate (run locally with --with-pages).`);
       }
-      log("[check:pr] PLAN ONLY: no checks executed; not readiness proof. Test discovery may import modules. No fetch, clean install/bootstrap assertion, merge checkout, CI artifact transport or production acceptance. Timing history is scheduling telemetry, not a runtime SLA.");
+      log("[check:pr] PLAN ONLY: no checks executed; not readiness proof. Test discovery may import modules. No fetch, clean install/bootstrap assertion, merge checkout, CI artifact transport or production acceptance.");
       leaves.push(...commands.map((command): PrCheckReceiptLeaf => ({
         id: command.lane, command: command.cmd, status: "skipped", durationMs: 0,
       })));

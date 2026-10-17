@@ -691,6 +691,8 @@ npm run audit:mint-authority-review
 npm run audit:mint-bridge-ownership
 ```
 
+For a saved Mint Authority review queue, use `npm run audit:mint-authority-review -- --json --report agents/mint-authority-review/audit.json`. To probe cited source URLs, add `-- --live --live-limit 50` to the bare audit command; live probes are advisory and Markdown-only.
+
 These audits check authored review breadth and ownership; they do not discover authority facts or replace pinned source, proxy, role, and Safe evidence. Historical unknown scanner candidates are archival non-evidence.
 
 ### 5g. Bluechip ratings

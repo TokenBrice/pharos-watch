@@ -19,7 +19,7 @@ import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { MINT_BURN_CONFIG_SPECS } from "../../worker/src/lib/mint-burn-contracts-data";
 import { CONTRACT_CONFIGS } from "../../worker/src/lib/blacklist-contracts";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
-import { STATIC_COMPARE_PAIRS } from "../../src/lib/compare-pages";
+import { assertStaticComparePairs } from "../../src/lib/compare-pages";
 
 const failures: string[] = [];
 
@@ -58,18 +58,7 @@ for (const id of Object.keys(BLUECHIP_SLUG_MAP)) {
     failures.push(`${id}: still in BLUECHIP_SLUG_MAP (shared/lib/bluechip-slugs.ts) — remove per freeze runbook`);
   }
 }
-for (const [leftId, rightId] of STATIC_COMPARE_PAIRS) {
-  if (FROZEN_IDS.has(leftId)) {
-    failures.push(
-      `STATIC_COMPARE_PAIRS contains frozen left id ${leftId} (src/lib/compare-pages.ts) — remove pair per freeze runbook`,
-    );
-  }
-  if (FROZEN_IDS.has(rightId)) {
-    failures.push(
-      `STATIC_COMPARE_PAIRS contains frozen right id ${rightId} (src/lib/compare-pages.ts) — remove pair per freeze runbook`,
-    );
-  }
-}
+assertStaticComparePairs();
 
 if (failures.length > 0) {
   console.error("Frozen-invariant failures:");

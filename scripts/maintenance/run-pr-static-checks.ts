@@ -148,7 +148,7 @@ export function buildPrStaticCheckPlan(
   changedFiles: readonly string[],
   { group }: { group?: PrStaticCheckGroup } = {},
 ) {
-  const classification = classifyChangedFiles(changedFiles);
+  const { classification, commands: baselineChecks } = selectPrBaselineChecks(changedFiles);
   const commands: PrStaticCheckCommand[] = [
     { name: "lint:changed" },
     { name: "typecheck" },
@@ -171,7 +171,27 @@ export function buildPrStaticCheckPlan(
   )) {
     commands.push({ name: "check:html-fixture-metadata" });
   }
+  commands.push(...baselineChecks);
 
+
+  if (hasProductionStructuralImpact(changedFiles)) {
+    commands.push({ name: "check:structural" });
+  }
+
+
+  // Select the complete plan first: grouping changes scheduling, not ownership.
+  return {
+    classification,
+    commands: group
+      ? commands.filter((command) => Boolean(COMPILE_STATIC_CHECKS[command.name]) === (group === "compile"))
+      : commands,
+  };
+}
+
+/** Shared selector inventory for PR and focused authoring checks; never includes structural guards. */
+export function selectPrBaselineChecks(changedFiles: readonly string[]) {
+  const classification = classifyChangedFiles(changedFiles);
+  const commands: PrStaticCheckCommand[] = [];
   if (classification.docsChanged) {
     commands.push(...PR_DOC_COMMANDS.map((command) => ({
       name: command.args[0] === "run" && command.id !== "agents-doc-artifact" ? command.args[1] : command.id,
@@ -181,28 +201,14 @@ export function buildPrStaticCheckPlan(
     commands.push({ name: "check:doc-sync" });
   }
 
-  if (hasProductionStructuralImpact(changedFiles)) {
-    commands.push({ name: "check:structural" });
-  }
-
   if (classification.pagesChanged) {
     commands.push({ name: "check:site-csp-sync" }, { name: "check:stablecoin-data" });
   }
-
-  // A generated artifact must be regenerated in the same commit as the source
-  // it is derived from, whatever lane that source lives in. This selection used
-  // to sit inside the `pagesChanged` branch, so a commit that only touched
-  // `shared/lib/safety-score-v9/**` or `worker/src/lib/safety-score-v9*.ts`
-  // could leave the V9 evaluation-build manifest stale and still pass the PR
-  // gate — the Wave-1 fix wave did exactly that, and only the release discovery
-  // gate caught it.
   const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles))
-    // The shared docs command already checks this artifact in this workspace.
     .filter((id) => !classification.docsChanged || id !== "agents-doc");
   if (artifactIds.length > 0) {
     commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
   }
-
   if (classification.workerChanged) {
     commands.push(
       { name: "typecheck:worker" },
@@ -214,18 +220,10 @@ export function buildPrStaticCheckPlan(
       { name: "check:worker-package" },
     );
   }
-
   if (hasTelegramLoadGuardImpact(changedFiles)) {
     commands.push({ name: "check:telegram-load" });
   }
-
-  // Select the complete plan first: grouping changes scheduling, not ownership.
-  return {
-    classification,
-    commands: group
-      ? commands.filter((command) => Boolean(COMPILE_STATIC_CHECKS[command.name]) === (group === "compile"))
-      : commands,
-  };
+  return { classification, commands };
 }
 
 export function resolvePrDependencyAuditBase(

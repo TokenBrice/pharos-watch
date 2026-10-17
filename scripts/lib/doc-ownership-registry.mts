@@ -16,9 +16,8 @@
  * JSON formatters can render `path#anchor` while still exposing `{path, anchor}`.
  * Optional `runbook` metadata on existing references curates navigation labels
  * and applicability; it is not part of runtime routing or rendered guidance.
- * Hints are deliberately separate from document slots. Exclusions are matched by
- * the same glob implementation and exist only for tracked implementation areas
- * that intentionally inherit a parent contract rather than owning documentation.
+ * Exclusions document implementation areas that intentionally inherit a parent
+ * contract rather than owning documentation; runtime routing uses mappings only.
  */
 import { readFileSync } from "node:fs";
 import { dirname, matchesGlob, resolve } from "node:path";
@@ -58,15 +57,9 @@ interface RawMapping {
   testOwnership?: DeclaredTestOwnership[];
 }
 
-interface RawExclusion {
-  reason: string;
-  sources: string[];
-}
-
 export interface DocOwnershipRegistry {
   baseDocs?: string[];
   coreRules?: string[];
-  exclusions?: RawExclusion[];
   mappings?: RawMapping[];
 }
 
@@ -82,11 +75,6 @@ export interface PathFamily {
   scopedContext: string[];
   sourceGlobs: string[];
   tier: "specific" | "fallback";
-}
-
-export interface PathExclusion {
-  reason: string;
-  sourceGlobs: string[];
 }
 
 type OwnershipGlobMatcher = (file: string) => boolean;
@@ -159,25 +147,14 @@ function normalizeMapping(mapping: RawMapping): PathFamily {
   };
 }
 
-// Skill facades are symlinks; only the canonical skill files are Git-tracked.
-// Keep runtime routing globs unchanged and normalize only for source liveness.
-export function canonicalizeOwnershipSourcePattern(pattern: string): string {
-  return pattern.replace(/^\.(?:agents|claude)\/skills\//, ".codex/skills/");
-}
-
 export function matchesOwnershipGlob(file: string, pattern: string): boolean {
   return createOwnershipGlobMatcher(pattern)(file);
 }
 
 const registry = readDocOwnership();
 
-export const DOC_OWNERSHIP_REGISTRY: DocOwnershipRegistry = registry;
 export const DEFAULT_BASE_DOCS: string[] = registry.baseDocs ?? [];
 export const CORE_RULES: string[] = registry.coreRules ?? [];
 export const PATH_FAMILIES: PathFamily[] = (registry.mappings ?? []).map(normalizeMapping);
 export const DECLARED_TEST_OWNERSHIP: DeclaredTestOwnership[] = (registry.mappings ?? [])
   .flatMap((mapping) => mapping.testOwnership ?? []);
-export const PATH_EXCLUSIONS: PathExclusion[] = (registry.exclusions ?? []).map((exclusion) => ({
-  reason: exclusion.reason,
-  sourceGlobs: exclusion.sources,
-}));

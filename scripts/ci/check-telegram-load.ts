@@ -1049,7 +1049,9 @@ export function buildTelegramLoadCheckReport(
   const fixtures = targets.map((target) => buildSyntheticTelegramFixture(target));
   const scenarios = fixtures.flatMap((fixture) => simulateLoadScenarios(fixture));
   const recapScenarios = fixtures.flatMap((fixture) => {
-    const riskBurst = simulateLoadScenarios(fixture).find((scenario) => scenario.scenarioId === "market-wide-burst");
+    const riskBurst = scenarios.find((scenario) =>
+      scenario.targetActiveWatchers === fixture.activeWatchers && scenario.scenarioId === "market-wide-burst",
+    );
     return simulateTelegramRecapLoadScenarios(fixture.activeWatchers, {
       riskBurstChunks: riskBurst?.messageChunks ?? fixture.activeWatchers,
     });

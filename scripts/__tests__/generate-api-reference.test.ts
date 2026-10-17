@@ -2,6 +2,24 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
+import { END_MARKER, replaceGeneratedBlock, START_MARKER } from "../maintenance/generate-api-reference.ts";
+
+describe("API reference generated markers", () => {
+  it("replaces current markers without changing authored prose", () => {
+    expect(replaceGeneratedBlock(`before\n${START_MARKER}\nstale\n${END_MARKER}\nafter`, "fresh"))
+      .toBe("before\nfresh\nafter");
+  });
+
+  it.each([
+    "no generated markers",
+    `${START_MARKER}\nmissing end`,
+    `missing start\n${END_MARKER}`,
+    `${END_MARKER}\nreversed\n${START_MARKER}`,
+    "<!-- GENERATED-START: public-endpoints-quick-reference -->\nlegacy\n<!-- GENERATED-END: public-endpoints-quick-reference -->",
+  ])("rejects missing, reversed, or retired markers: %s", (doc) => {
+    expect(() => replaceGeneratedBlock(doc, "fresh")).toThrow("Could not find a valid generated block");
+  });
+});
 
 describe("generate-api-reference check mode", () => {
   it.each([

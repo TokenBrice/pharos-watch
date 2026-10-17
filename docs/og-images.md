@@ -81,7 +81,6 @@ Write mode renders each PNG into ignored staging first and replaces the checked-
 | `og-editorial-digest.png` | Daily/weekly digest pages |
 | `og-editorial-learn.png` | `/learn/mechanisms/`, `/learn/case-studies/` |
 | `og-editorial-methodology.png` | Methodology pages |
-| `og-editorial-profile.png` | Generated profile-category card, currently reserved for future stablecoin-profile editorial surfaces |
 
 The Cemetery card (`og-editorial-cemetery.png`) was retired on 2026-09-30: `/cemetery/` selects the generated plot-map card (§5).
 

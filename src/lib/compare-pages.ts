@@ -134,7 +134,7 @@ function getStablecoinOrThrow(id: string): StablecoinMeta {
   return coin;
 }
 
-function assertStaticComparePairs() {
+export function assertStaticComparePairs() {
   const slugs = new Set<string>();
   const unorderedKeys = new Set<string>();
 
