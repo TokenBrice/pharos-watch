@@ -914,10 +914,10 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_integrity_stale: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_monitor_unavailable: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
-  d1_capacity_watch: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
-  d1_capacity_warning: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
-  d1_capacity_critical: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
-  d1_capacity_query_failed: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
+  d1_capacity_watch: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
+  d1_capacity_warning: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
+  d1_capacity_critical: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
+  d1_capacity_query_failed: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
 };
 
 /**

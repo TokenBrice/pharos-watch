@@ -1,107 +1,45 @@
 # Privacy Page
 
-Route contract for `/privacy/`, the public privacy-policy surface linked from the footer.
-
-## Route Shape
-
-- Route: `src/app/privacy/page.tsx`
-- Shared shell: `src/components/feature-page-shell.tsx`
-- Footer link: `src/components/footer.tsx`
-- Sitemap owner: `src/app/sitemap.ts`
-
-The route is statically rendered and does not fetch private data. Its copy describes storage and processing performed elsewhere in the product.
-
-## Metadata
-
-`src/app/privacy/page.tsx` owns the title, description, canonical `/privacy/`, and visible `Last updated` date; the social image falls back to the shared `buildPageMetadata` default. Keep the date in step with substantive policy changes.
-
-The page uses the longform shell with a constrained reading measure. It remains public, indexable, and linked from the footer.
+Public static `/privacy/` describes processing elsewhere in the product; it fetches no private data. `src/app/privacy/page.tsx` owns canonical metadata and visible Last updated date; advance it for substantive policy changes. Keep footer/sitemap discovery and indexability. User-understandable categories, not an exhaustive table inventory, are the policy structure.
 
 ## Data Categories
 
-Keep the visible policy organized around user-understandable categories rather than copying a table-by-table database inventory.
-
 ### Website analytics
 
-Analytics loads only when `NEXT_PUBLIC_GA_ID` is configured and the browser uses the public production hostname `pharos.watch`. Operator routes (`/admin/`, `/admin-api/` and descendants), operator hosts, Pages preview hosts, and the embedded Telegram Mini App are excluded from GA4 bootstrap, page views, custom events, and Web Vitals. The shared gate in `src/lib/analytics.ts` checks the browser location again when custom events fire, including delayed callbacks after a route change.
+`src/lib/analytics.ts` owns the host/path/event gate. GA4 requires configured `NEXT_PUBLIC_GA_ID` and production `pharos.watch`. Operator hosts/routes (`/admin/`, `/admin-api/` and descendants), Pages previews and Telegram Mini App receive no bootstrap, page views, custom events or Web Vitals. Recheck browser location for delayed custom callbacks after navigation.
 
-The shared liquidity/compliance search hook (`src/hooks/use-url-search-sync.ts`) schedules `search_performed` only from manual input, not initial URL queries or browser history changes. Analytics receives the page label and query length, never the raw query in that custom event; clearing input cancels the pending search event. URL synchronization retains its own debounce, while search analytics uses the shared one-second debounce and route-navigation cleanup. This custom-event restriction does not strip query strings from page-view URLs.
+Explicitly configured localhost/127.0.0.1/[::1] is a test-only exception; use a test measurement ID. No other suffix/preview is allowed. Visible policy describes cookies, retention, hosting and actual typed event catalog, never hypothetical telemetry.
 
-Navigation and command-palette telemetry follow the same rule: `nav_click` sends a bounded chrome surface (`rail`, `menu`, `drawer`, or `bottom_bar`), a group identifier, and the internal href clicked — never a query string; `palette_selected` sends the query length plus the selected result's kind, section, and rank; `palette_zero_results` sends the query length when a palette search returns nothing. Raw palette query text is never sent in any event.
+Search events originate from manual input, not initial URL/history. They send page label/query length, never raw search text; clearing/navigation cancels pending events. Navigation sends bounded chrome/group/internal href without query string; palette selection sends query length and result kind/section/rank, zero-result events length only. Raw palette text is never sent. This does not strip query strings from ordinary page-view URLs.
 
-`WebVitalsReporter` keeps its reporting callback identity stable across route rerenders, preventing Next.js from registering additional metric observers for the same mounted reporter. It reads the latest pathname for the public-route guard and existing `page_path` attribution; this does not turn document-lifetime Web Vitals into per-client-navigation measurements.
-
-Deliberate local test exception: `localhost`, `127.0.0.1`, and `[::1]` retain analytics support when a measurement ID is explicitly configured, so the existing local `SMOKE_UI_EXPECT_GA_ID` smoke check remains usable. Use a test measurement ID for these runs; they are not public-production traffic. No other host suffix or preview domain is allowed. The page explains cookies, retention, hosting providers, and the typed event catalog without promising telemetry that the runtime does not collect.
-
-Authoritative sources:
-
-- `src/app/layout.tsx`
-- `src/components/google-analytics.tsx`
-- `src/components/web-vitals-reporter.tsx`
-- `src/lib/analytics.ts`
-- `shared/lib/site-csp.ts`
+Web Vitals retain document-lifetime meaning and current allowed path attribution; client navigation is not a new document measurement. Callback/debounce implementation belongs to the source, not this policy.
 
 ### Browser-local preferences
 
-Pharos has no website account. The only wallet interaction is the optional supporter API key claim on `/api/`, described below; nothing else on the site connects a wallet. Browser-local functional state includes:
-
-- homepage shortcut hrefs in `localStorage` under `pharos-shortcuts`
-- portfolio holdings in `localStorage` under `pharos:portfolio`
-- the user-authored watchlist in `localStorage` under `pharos-watchlist-v1`
-- Picker callout dismissal in `localStorage` under `pharos.selector.callout.v1`
-- optional live Picker result recovery in `sessionStorage` under `pharos.selector.sessionResult.v1`
-- presentation preferences such as table columns, show-your-work mode, command history, motion, and timeline display settings
-
-Portfolio and shortcut state is not sent to the API. Picker snapshot sharing is a separate server-side feature described below.
+There is no website account. Optional supporter-claim wallet interaction is the only wallet connection. Browser state includes shortcuts, portfolio, shared watchlist, Picker dismissal/session recovery, table/show-work/motion/history/Timeline preferences. Feature owners define exact keys: [Homepage](./homepage.md), [Portfolio](./portfolio-page.md#persistence-and-sharing), [Picker](./screener-page.md#browser-storage). Portfolio/shortcut state is not sent to API; shared snapshots are separate server-side storage.
 
 ### Feedback and API access
 
-Feedback contact handles may be included in the public GitHub issue created from a submission. API-access requests (partner keys, lost supporter keys, and key-record removal) arrive as Telegram or X direct messages on the private channel defined by `API_ACCESS_TELEGRAM_*` / `API_ACCESS_X_*` in `shared/lib/public-api-contract.ts`; request messages are deleted once the key is issued or rotated. The self-serve request form and its verification emails were retired on 2026-09-29 and Resend is no longer used: no new requests are accepted, issued self-serve keys expire on their 60-day schedule, and the stored legacy request rows (email address and optional request metadata) remain in private operator storage until a separate follow-up cleanup deletes them. Those stored rows retain only the hashed identifiers the lane collected, never raw IP addresses.
+Feedback contact handles may be published in GitHub issues; disclose that before submission. Partner/lost-key/removal requests use private Telegram/X constants from `shared/lib/public-api-contract.ts`, with request messages deleted after issuance/rotation. No new self-serve email requests or Resend verification are accepted. Existing self-serve credentials expire on their established schedule; legacy email/request metadata remains private until coordinated cleanup. Rate identifiers are hashed, never raw IP.
 
-Supporter API key: claiming a key on `/api/` stores the wallet address that signed the claim, the issued key's prefix, and the claim time in `api_key_donor_claims`, plus the `api_keys` row itself, whose `name` is `donor <address>` and which carries the `last_used_at` / `last_used_route` fields every key records. The `api_key_audit_log` row for the issuance holds only the tier, never the address. A wallet address linked to a credential is personal data, and it is processed to deliver the perk the donor asked for. The claim signature and the plaintext token are never persistently stored and never written to logs. The one-time reveal temporarily keeps an unsaved token in browser memory across internal navigation, clearing it on copy/acknowledgement or document unload; it never writes the token to localStorage or sessionStorage. Wallet addresses are excluded from request telemetry and structured Worker logs, which record outcome codes only. These records have no automatic expiry. Deactivation stops access but leaves the wallet-bearing key name and usage metadata in place. A donor can request removal through the private API-access channel on Telegram or X: the operator follows `docs/api-reference-admin.md` to deactivate the key and delete its key, usage, and audit rows. The wallet address, prefix, and claim time remain in `api_key_donor_claims` to prevent a second claim; removing that fence requires a separate explicit decision allowing reissuance. This is partial erasure, not a promise to remove every wallet-linked record. The public donation ledger on `/funding/` is a separate published record and is unaffected.
+Supporter claims store signing wallet, token prefix and claim time in `api_key_donor_claims` plus key row/name and usage metadata. Issuance audit records tier, not address. Wallet-linked credentials are personal data processed for the requested perk. Signature/plaintext token never persist or enter logs. Unsaved token is temporary browser memory across internal navigation, cleared on copy/acknowledgment/unload, never local/session storage. Wallets stay outside request telemetry/structured logs; log outcome codes only.
 
-Authoritative sources:
-
-- `worker/src/api/feedback.ts`
-- `worker/src/api/donor-key-claims.ts`
-- relevant migrations in `worker/migrations/`
+These records have no automatic expiry. Deactivation alone leaves wallet-bearing key name/usage. Private removal requests follow [admin reference](./api-reference-admin.md) to deactivate and delete key/usage/audit rows. Wallet/prefix/time remain in the claim fence against second issuance; removing that fence requires explicit reissuance decision. This is partial erasure, not all-wallet-record deletion; public donation ledger is independent and unaffected. [API route contract](./api-page.md#supporter-key-claim-contract) owns claim/recovery behavior.
 
 ### Stablecoin Picker snapshots
 
-Picker share links point to Pages KV snapshots recomputed from submitted answers and canonical site data. The artifact contains the normalized input, stablecoin output fields, methodology/version binding, dataset hash, and provenance; it does not contain an account, wallet address, raw IP address, or browser fingerprint. Anyone with the URL can view it.
+Share artifacts are server-recomputed from allowlisted answers/canonical data. They include normalized input/output, methodology/version binding, dataset hash/provenance, no account/wallet/raw IP/fingerprint. Anyone with URL can read them.
 
-Unread snapshots expire after 90 days. The first successful read extends retention to five years; a snapshot that is never opened does not receive that long retention.
-
-Snapshot write quotas use a keyed IP-derived value in the short-lived limiter and D1 quota table. The Pages Function, shared snapshot schema, and migration are authoritative for payload, expiry, and quota behavior:
-
-- `functions/selector-snapshot/[[path]].ts`
-- `functions/lib/selector-canonical-snapshot.ts`
-- `shared/lib/selector/snapshot.ts`
-- `worker/migrations/`
-- [screener-picker-page.md](./screener-picker-page.md)
+Unread artifacts expire after 90 days. Successful read attempts five-year retention extension; failure does not fail read and later reads can retry. Stored extension metadata prevents sliding expiry. Keyed IP-derived quotas exist in short-lived limiter/D1, not artifact body. [Snapshot sharing](./screener-page.md#snapshot-sharing), shared schema and Pages Function own payload/verification/quota details; do not copy a second matrix here.
 
 ### Telegram alerts and Mini App
 
-Telegram processing includes subscriber identity and settings, followed coins and presets, quiet hours and snooze state, short-lived command state, queued delivery work, delivery/audit outcomes, personalized recap preferences and targets, authenticated diagnostics, and identifier-free aggregate adoption/usage counters.
+Telegram processing includes subscriber identity/settings, follows/presets, quiet/snooze state, short-lived command state, delivery queues/outcomes/audit, personalized recap preferences/targets, authenticated diagnostics and identifier-free aggregate adoption/usage counters.
 
-Do not maintain an allegedly exhaustive Telegram table roster here. The schema and retention model evolves through migrations and owning runtime modules. Use these authoritative sources:
+[Telegram architecture schema-purpose map](./telegram-architecture.md#d1-schema) owns storage categories; active Worker migrations are DDL authority. Durable follows/enabled recap preferences remain while configured; empty inactive profiles may prune under runtime policy. Short-lived/operational/audit categories have distinct retention; pending recap deliveries expire under shared six-hour `TELEGRAM_RECAP_TTL_SEC`, target outcomes separately. Runtime retention/inactive cleanup and `shared/lib/telegram-recap-policy.ts` own exact windows.
 
-- `worker/migrations/0000_baseline.sql` plus later `worker/migrations/*.sql`
-- [telegram-alerts.md](./telegram-alerts.md) for the maintained schema and user-facing behavior
-- [telegram-architecture.md](./telegram-architecture.md) for storage and dispatch ownership
-- `worker/src/cron/telegram-retention-cleanup.ts`
-- `worker/src/cron/telegram-inactive-cleanup.ts`
-- `worker/src/lib/telegram/subscriber-lifecycle.ts`
-- `shared/lib/telegram-recap-policy.ts`
-
-Durable follows and enabled recap preferences remain while configured; empty inactive profiles can be pruned under the runtime policy. Short-lived state and operational/audit records use category-specific retention. Personalized recap pending deliveries expire after the shared six-hour `TELEGRAM_RECAP_TTL_SEC`; recap target outcomes have their own retention windows.
-
-Telegram Mini App endpoints validate signed `initData` but do not persist the raw value or a hash. Mutation freshness, read/session portability, cooldown, and aggregate telemetry rules live in the endpoint/auth modules and [telegram-mini-app.md](./telegram-mini-app.md). The visible policy must remain aligned with those sources.
-
-Custom Telegram Worker logs use the allowlisted low-cardinality boundary in `worker/src/lib/telegram/log.ts`. Chat-specific investigation belongs in authenticated D1/admin diagnostics rather than raw identifiers in general logs.
+Mini App validates signed initData but stores neither raw value nor hash. [Mini App](./telegram-mini-app.md) owns mutation freshness, read/session portability, cooldown and aggregate telemetry. General Telegram logs use allowlisted low-cardinality fields; chat-specific investigation stays in authenticated D1/admin diagnostics, not raw general-log identifiers.
 
 ## Update Rules
 
-Update `src/app/privacy/page.tsx` and this contract together when data handling changes. Also update the closest feature doc when the change belongs to Telegram, Picker snapshots, portfolio, feedback, or API access.
-
-For database details, cite the owning migration and runtime cleanup/store module instead of copying an exhaustive roster into this page. Run the verified-doc link and source-path checks after changing references.
+Change visible policy and this owner together for processing/storage/retention changes, plus the closest feature owner. Preserve host/path gates, raw-query/token exclusions and erasure limitations. Migrations/store/cleanup modules own implementation, not a second database inventory in policy prose.

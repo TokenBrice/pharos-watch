@@ -130,7 +130,7 @@ interface NeutralizeInput {
   sourceRiskPenalty: number;
 }
 
-// WHY: per-factor attribution via neutralize-and-rescore (see Presentation Contracts
+// WHY: per-factor attribution via neutralize-and-rescore (see Presentation Boundaries
 // in docs/yield-intelligence.md). Deltas are not strictly additive.
 function neutralizeFactorAndRescore(
   actualScore: number,

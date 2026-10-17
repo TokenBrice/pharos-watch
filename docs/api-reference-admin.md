@@ -58,9 +58,9 @@ Historical rebuilds and staged captures run through `worker/scripts/one-shot-bac
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
 
-Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. The `priceSourceHealth.sourceDistribution` vocabulary now includes all six previously omitted registry buckets: `kava-pricefeed`, `aerodrome-onchain`, `velodrome-onchain`, `mento-fpmm`, `mento-broker`, and `protocol-redeem-cached-rate`. A bucket's availability in the contract does not imply that a current asset uses that source.
+Dedicated asset-scoped circuit outages do not count as source-wide degradation; the shared `protocol-redeem` circuit does. `shared/types/pricing-source-health.ts` owns distribution buckets; a supported bucket does not imply any current asset uses it.
 
-**Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The text block below is an illustrative excerpt, not a schema-valid fixture or exhaustive payload; required fields are omitted. Use `shared/types/status/response.ts` for the complete contract and `shared/types/pricing-source-health.ts` for distribution buckets. Retained diagnostics include yield/publication/provider/dependency health, canaries, reserve drift and reserve composition.
+**Response shape:** `StatusResponseSchema` / `StatusResponse` in `shared/types/status/response.ts` (exported through `shared/types/index.ts`). This illustrative excerpt omits required fields and is not a schema-valid fixture. The schema owns the complete envelope; the [status backend contract](./status-dashboard.md#backend-contract-get-apistatus) owns health evaluation.
 
 The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and the duplicate `alertBroker` block are intentionally omitted from `/api/status`. The retired alert-broker summary is also absent from `/api/health`; producer/provider diagnostics remain in the `sync-stablecoins` cron's latest-run metadata for operator inspection. Retained status sections are validated for their required fields and malformed sections fail closed at the admin client boundary.
 
@@ -75,427 +75,31 @@ Cron terminal execution and observed quality are independent: `degradedCrons` co
   "rawOverallStatus": "healthy",
   "overallStatus": "healthy",
   "confidence": 0.94,
-  "causes": {
-    "availability": [{ "code": "watch_unhealthy_crons_present", "severity": "info" }],
-    "dataQuality": [],
-    "overall": [{ "code": "watch_unhealthy_crons_present", "severity": "info" }]
-  },
-  "state": {
-    "currentStatus": "healthy",
-    "rawStatus": "healthy",
-    "lastEvaluatedAt": 1771856453,
-    "lastChangedAt": 1771856200,
-    "consecutiveRaw": { "healthy": 3, "degraded": 0, "stale": 0 }
-  },
-  "staleness": { "ageSeconds": 0, "maxAgeSec": 1800, "isStale": false },
-  "probe": {
-    "timestamp": 1771856440,
-    "status": "healthy",
-    "sampleCount": 22,
-    "passCount": 22,
-    "failCount": 0,
-    "p95LatencyMs": 301,
-    "internal": {
-      "status": "healthy",
-      "sampleCount": 19,
-      "passCount": 19,
-      "failCount": 0,
-      "p95LatencyMs": 92,
-      "origins": ["https://api.pharos.watch"]
-    },
-    "external": {
-      "status": "healthy",
-      "sampleCount": 3,
-      "passCount": 3,
-      "failCount": 0,
-      "p95LatencyMs": 301,
-      "origins": [
-        "https://api.pharos.watch",
-        "https://site-api.pharos.watch",
-        "https://ops-api.pharos.watch"
-      ]
-    },
-    "internalExternalDiscrepancy": {
-      "hasDivergence": false,
-      "severityDelta": 0,
-      "internalStatus": "healthy",
-      "externalStatus": "healthy",
-      "reason": "in-sync",
-      "details": null
-    }
-  },
-  "discrepancy": {
-    "hasDivergence": false,
-    "severityDelta": 0,
-    "consecutiveDivergent": 0
-  },
-  "timeline": [
-    {
-      "id": 411,
-      "from": "degraded",
-      "to": "healthy",
-      "rawStatus": "healthy",
-      "transitionType": "recover",
-      "reason": "raw-healthy-recovery-threshold",
-      "confidence": 0.94,
-      "at": 1771856200
-    }
-  ],
-  "caches": { ... },
   "crons": {
     "sync-stablecoins": {
-      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 156 },
+      "lastRun": { "startedAt": 1771856400, "status": "ok", ... },
       "inFlight": null,
-      "recentRuns": [...],
-      "expectedIntervalSec": 900,
-      "healthy": true
+      "healthy": true,
+      ...
     }
-  },
-  "dataQuality": {
-    "totalStablecoins": 156,
-    "missingPrices": 3,
-    "blacklistMissingAmounts": 0,
-    "blacklistRecentMissingAmounts": 0,
-    "blacklistRecentWindowSec": 86400,
-    "blacklistMissingRatio": 0,
-    "blacklistTotal": 13422,
-    "blacklistOldestRecoverableAgeSec": 0,
-    "blacklistNeverAttemptedCount": 0,
-    "blacklistRepeatedFailureCount": 0,
-    "onchainSupplyDivergences": 0,
-    "onchainDivergenceRatio": 0,
-    "onchainSupplyMonitoring": "active",
-    "onchainSupplyLatestAt": 1771856300,
-    "onchainSupplyTrackedCoins": 96,
-    "activeDepegs": 12,
-    "staleOnchainSupply": 0,
-    "onchainStaleRatio": 0
   },
   "sectionErrors": {},
-  "canaries": {
-    "checkedAt": 1771856453,
-    "status": "degraded",
-    "latestRunAt": 1771856400,
-    "maxAgeSec": 7200,
-    "totalChecks": 6,
-    "okCount": 6,
-    "degradedCount": 0,
-    "errorCount": 0,
-    "skippedCount": 0,
-    "staleCount": 0,
-    "checks": {
-      "dex-liquidity-current-publication": {
-        "checkId": "dex-liquidity-current-publication",
-        "label": "DEX liquidity current publication",
-        "description": "Current DEX rows are published and match the latest published generation row count.",
-        "status": "ok",
-        "severity": "info",
-        "observedAt": 1771856400,
-        "durationMs": 12
-      }
-    }
-  },
-  "telegramBot": {
-    "totalChats": 128,
-    "alertEnabledChats": 123,
-    "deliverableChats": 121,
-    "subscribedChats": 124,
-    "emptyAlertChats": 2,
-    "mutedChatsWithSubscriptions": 3,
-    "totalSubscriptions": 611,
-    "explicitCoinSubscriptions": 560,
-    "presetImpliedCoinSubscriptions": 51,
-    "activePresetFollowers": 8,
-    "avgSubscriptionsPerSubscribedChat": 4.9,
-    "pendingDisambiguations": 1,
-    "pendingDeliveries": 5,
-    "oldestPendingDeliveryAgeSec": 240,
-    "pendingDeliveryBacklog": {
-      "claimable": 4,
-      "due": 4,
-      "deferred": 1,
-      "sending": 0,
-      "executionUnknown": 0,
-      "sentCleanup": 0,
-      "expired": 1
-    },
-    "retryErrorClassCounts": { "rate_limit": 2, "server_error": 1 },
-    "lastSubscriberActivityAt": 1771856420,
-    "customPreferenceChats": 47,
-    "quietHoursEnabledChats": 18,
-    "alertTypeChats": {
-      "dews": 121,
-      "depeg": 118,
-      "launch": 97,
-      "safety": 102,
-      "allTypes": 95
-    },
-    "topStablecoins": [
-      { "stablecoinId": "usdc-circle", "symbol": "USDC", "subscribers": 82, "explicitSubscribers": 72, "presetImpliedSubscribers": 10 },
-      { "stablecoinId": "usdt-tether", "symbol": "USDT", "subscribers": 77, "explicitSubscribers": 70, "presetImpliedSubscribers": 7 }
-    ],
-    "lifecycleSnapshot": {
-      "date": "2026-05-13",
-      "snapshotAt": 1778674145,
-      "activeWatchers": 121,
-      "newWatchers": 2,
-      "churnedWatchers": 1,
-      "reactivatedWatchers": 0,
-      "explicitCoinFollows": 560,
-      "presetImpliedCoinFollows": 51,
-      "activePresetFollowers": 8,
-      "alertTypeOptIns": {
-        "dews": 121,
-        "depeg": 118,
-        "launch": 97,
-        "safety": 102,
-        "allTypes": 95
-      },
-      "quietHoursEnabledChats": 18,
-      "pendingDeliveries": 6
-    }
-  },
-  "datasetFreshness": {
-    "stablecoins": 1771856400,
-    "blacklist": 1771856200,
-    "mintBurn": 1771856340,
-    "supply": 1771804800,
-    "safetyGrades": 1771804800,
-    "yield": 1771856320,
-    "depegs": 1771856010,
-    "dews": 1771856400,
-    "digest": 1771804800
-  },
-  "summary": {
-    "unhealthyCrons": 1,
-    "availabilityImpactingUnhealthyCrons": 0,
-    "watchUnhealthyCrons": 1,
-    "degradedCrons": 1,
-    "cronErrors": 0,
-    "availabilityImpactingCronErrors": 0,
-    "availabilityImpactingConsecutiveCronErrors": 0,
-    "diagnosticIssueCount": 0,
-    "worstCacheRatio": 1.03
-  },
-  "reserveComposition": {
-    "configuredCoins": 18,
-    "freshCoins": 16,
-    "staleCoins": 1,
-    "missingCoins": 0,
-    "degradedCoins": 1,
-    "errorCoins": 0,
-    "corruptCoins": 0,
-    "independentFreshEligible": 9,
-    "independentFreshUnverified": 2,
-    "staticValidatedFresh": 4,
-    "weakProbeFresh": 1,
-    "writeTimeoutUncertain": 0,
-    "deferredCoins": 0,
-    "runBudgetTruncated": false,
-    "deferredAt": null,
-    "nextCursorStablecoinId": null,
-    "persistentlyStaleIndependentCoins": [],
-    "lastSuccessAt": 1771855800,
-    "oldestFreshAgeSec": 3100,
-    "adapterReliability": [
-      {
-        "adapterKey": "circle",
-        "attempts": 72,
-        "ok": 70,
-        "degraded": 1,
-        "error": 1,
-        "skipped": 0,
-        "successRate": 0.972
-      }
-    ],
-    "status": "healthy",
-    "freshCoverageRatio": 0.89,
-    "authoritativeFreshCoverageRatio": 0.83
-  },
-  "priceSourceHealth": {
-    "sourceDistribution": { ... },
-    "sourceDepthDistribution": {
-      "0": 3,
-      "1": 15,
-      "2": 52,
-      "3": 64,
-      "4": 18,
-      "5+": 4
-    },
-    "confidenceDistribution": {
-      "high": 127,
-      "single-source": 15,
-      "low": 8,
-      "fallback": 6
-    },
-    "totalAssets": 156,
-    "lastSync": 1771856400
-  },
-  "coingeckoPriceDiff": {
-    "checkedAt": 1771856453,
-    "trackedWithGeckoId": 152,
-    "comparedCoins": 149,
-    "mismatchedCount": 2,
-    "thresholdPct": 5,
-    "rows": [
-      {
-        "stablecoinId": "pyusd-paypal",
-        "symbol": "PYUSD",
-        "name": "PayPal USD",
-        "geckoId": "paypal-usd",
-        "ourPrice": 0.944,
-        "coinGeckoPrice": 1.002,
-        "diffPct": 5.79,
-        "priceSource": "defillama",
-        "priceConfidence": "single-source"
-      }
-    ]
-  },
-  "d1Usage": {
-    "checkedAt": 1771856453,
-    "windowStart": 1771770053,
-    "windowEnd": 1771856453,
-    "databaseId": "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a",
-    "databaseName": "stablecoin-db",
-    "databaseSizeBytes": 1589248000,
-    "numTables": 56,
-    "region": "EEUR",
-    "readReplicationMode": "disabled",
-    "readQueries24h": 942012,
-    "writeQueries24h": 709241,
-    "rowsRead24h": 1633139670,
-    "rowsWritten24h": 1555568,
-    "capacity": {
-      "observedAt": 1771856400,
-      "databaseSizeBytes": 1589248000,
-      "maximumSizeBytes": 10000000000,
-      "utilizationRatio": 0.158925,
-      "utilizationPercent": 15.89,
-      "thresholdState": "normal",
-      "crossedThresholdPercent": null,
-      "nextThresholdPercent": 60,
-      "forecastBasis": "linear-window"
-    }
-  },
-  "liquidityHealth": {
-    "lastRunStatus": "degraded",
-    "currentCoverage": 120,
-    "previousCoverage": 125,
-    "currentGlobalTvl": 123000000,
-    "previousGlobalTvl": 125000000,
-    "currentTop10CoveredTvl": 100000000,
-    "previousTop10CoveredTvl": 102000000,
-    "failedSources": ["defillama-yields"],
-    "nearCoverageGuard": false,
-    "nearValueGuard": false,
-    "nearMajorCoverageGuard": false,
-    "currentCoverageClasses": { "primary": 80, "mixed": 20, "fallback": 20, "legacy": 0, "unobserved": 36 },
-    "previousCoverageClasses": { "primary": 82, "mixed": 18, "fallback": 25, "legacy": 0, "unobserved": 31 }
-  },
-  "yieldHealth": {
-    "status": "healthy",
-    "statusImpact": "admin-watch",
-    "runbookUrl": "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md",
-    "rankingCount": 129,
-    "rankingUpdatedAt": 1771856320,
-    "rankingAgeSec": 133,
-    "rankingMaxAgeSec": 3600,
-    "rankingStatus": "healthy",
-    "safetyCoverage": {
-      "coveredCount": 109,
-      "trackedCount": 129,
-      "coverageRatio": 0.845,
-      "threshold": 0.75,
-      "status": "healthy",
-      "reason": null
-    },
-    "supplemental": {
-      "updatedAt": 1771849200,
-      "ageSec": 7253,
-      "maxAgeSec": 21600,
-      "status": "healthy"
-    },
-    "coverageAudit": {
-      "updatedAt": 1769810400,
-      "ageSec": 2046053,
-      "maxAgeSec": 3888000,
-      "status": "healthy"
-    },
-    "sourceRiskCoverage": {
-      "totalRows": 180,
-      "bestRows": 129,
-      "altRows": 51,
-      "rowsWithSourceRisk": 180,
-      "fields": {
-        "sourceRiskPenalty": {
-          "eligibleCount": 180,
-          "populatedCount": 180,
-          "nullCount": 0,
-          "coverageRatio": 1,
-          "nullRate": 0
-        },
-        "sourceRiskScore": {
-          "eligibleCount": 180,
-          "populatedCount": 0,
-          "nullCount": 180,
-          "coverageRatio": 0,
-          "nullRate": 1
-        }
-      }
-    },
-    "latestCronStatus": "ok",
-    "latestCronStartedAt": 1771856300
-  },
-  "mintBurnReconciliation": {
-    "conservationVersion": 1,
-    "checkedAt": 1771856453,
-    "criticalCount": 0,
-    "rows": [
-      {
-        "stablecoinId": "usds-sky",
-        "symbol": "USDS",
-        "status": "insufficient-source",
-        "conservationIssue": "Conservation evidence is not available.",
-        "conservation": [],
-        "coverageStatus": "full"
-      }
-    ]
-  }
+  "telegramBot": { "deliverySli": { ... }, ... },
+  "priceSourceHealth": { "sourceDepthDistribution": { "0": 3, "1": 15, ... }, ... },
+  ...
 }
 ```
 
-`dataQuality.onchainSupplyTrackedCoins` counts only coins with at least one `onchain_supply` row inside the current 3-day active monitoring window. Older historical rows are excluded from `staleOnchainSupply` and `onchainStaleRatio`. An active coin's latest row becomes stale after two `sync-kinesis-supply` producer cycles (currently eight hours).
+The status backend owns [cron health](./status-dashboard.md#cron-health-model), [availability](./status-dashboard.md#availability-status), [data quality](./status-dashboard.md#data-quality-status) and [live-reserve sync health](./status-dashboard.md#live-reserve-sync-health), including monitoring windows, cohort floors, threshold precedence, critical/watch distinctions, degraded-run inheritance and shared public-health floors. `itemCount` is the recorded attempt's count, not a current catalog census; `dataQuality.totalStablecoins` uses known exact active-price expected coverage, falling back to cached active canonical assets.
 
-Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSupplyTrackedCoins >= 10`; below that floor, the counts remain visible but do not by themselves escalate `dataQualityStatus`.
-
-`itemCount` reflects the recorded cron attempt. `dataQuality.totalStablecoins` uses known exact active-price coverage's expected count, falling back to cached active canonical assets.
-
-`summary.availabilityImpactingUnhealthyCrons` and `summary.availabilityImpactingCronErrors` count only cron jobs tagged `statusImpact="critical"` in `shared/lib/cron-jobs.ts`. `summary.watchUnhealthyCrons` counts the watch-tier jobs that remain visible but do not degrade `availabilityStatus` on their own.
-
-`summary.availabilityImpactingConsecutiveCronErrors` counts critical jobs whose two latest required attempts are `error`. Generic neutral skips do not reset that streak; a newer proven-satisfied skip supersedes the error. A fresh isolated critical error degrades availability; a two-attempt streak makes it stale. Independently, two availability-impacting unhealthy jobs also make availability stale.
-
-`summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own unless all freshness evidence for the affected lane is gone.
-
-`reserveComposition.status` evaluates the unacknowledged health cohort. Capacity pressure takes precedence and returns `degraded`: `writeTimeoutUncertain > 0`, or `runBudgetTruncated` with raw `deferredCoins / configuredCoins >= 0.25`. Otherwise bootstrap or an empty health cohort is `healthy`; zero health-fresh coins is `stale`; coverage ratios below `0.75` / `0.5` or an unacknowledged persistently stale independent feed are `degraded`; the remainder is `healthy`.
-
-Coverage ratios use `healthFreshCoins` / `healthConfiguredCoins` and `healthAuthoritativeFreshCoins` / `healthConfiguredCoins`, falling back to raw cohort counts when health fields are absent. Matched feed reviews exclude their assets from these health counts, not raw diagnostics. A fully acknowledged nonempty cohort has ratios `1`; a genuinely empty cohort has `0`. See `evaluateReserveCompositionStatus` in `worker/src/lib/status/evaluation-rules.ts`.
-
-`reserveComposition.runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose the latest live-reserve deferred-tail cursor when the internal sync budget stopped the run before the queue tail. `persistentlyStaleIndependentCoins` lists independent feeds whose latest source has been failing beyond the persistent-stale window. `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path and could not be proven authoritative by readback.
-
-`crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own. Every counted job is derivable from the served records — a fresh degraded `lastRun`, or a neutral `lastRun` whose inherited degraded required run is served in `recentRuns` (appended after the ten-run display window when that window is all neutral, behind a newer proven-satisfied readback when one exists).
-
-`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
+Reserve deferred-tail fields (`runBudgetTruncated`, `deferredCoins`, `deferredAt`, `nextCursorStablecoinId`) expose the last budget stop; `persistentlyStaleIndependentCoins` identifies independent-source failures and `writeTimeoutUncertain` identifies attempts whose authority readback was inconclusive. Raw diagnostics remain visible even when feed reviews remove coins from the health cohort.
 
 
 `producerHeads` contains every canonical schedule/job/path/kind identity, including shared producer paths and budget-only surfaces. `observed=false` explicitly represents an identity that has not run since the history schema deployed. Observed rows separate `lastInvokedAt`/`lastCompletedAt` from `lastProductiveAt` and `lastPublicationAt`, and include invocation ID, Worker version, outcome/error, and invocation/productive counters.
 
 `crons[*].inFlight` is present when a leased cron is actively reporting `cron_run_progress` and the matching `cron_leases` row is still active for the same owner. It includes `startedAt`, `updatedAt`, `stage`, optional `itemsDone/itemsTotal`, optional `message/metadata`, and a `stale` flag when the heartbeat stops updating. High-SLO jobs such as DEX liquidity, yield publication/supplemental sync, digest generation, and Telegram dispatch include stage metadata with `providerFamily`, `phase`, `countTotals`, and, where relevant, `cursor` / `deferredTail` summaries; `/api/status` reads those summaries from `cron_run_progress` and does not add producer-table scans for them.
 
-`overallStatus` is the effective (hysteresis-smoothed) status. `rawOverallStatus` is the immediate worst-of availability/data-quality signal.
-
-`dbHealthy=false` means the DB sentinel failed (`SELECT 1`), so status is forced to at least degraded and data-quality/database freshness queries are skipped.
-
-`telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
+For hysteresis and DB-sentinel behavior, see [overall status](./status-dashboard.md#overall-status); for unavailable Telegram tables and subscriber metrics, see [Telegram bot metrics](./status-dashboard.md#telegram-bot-metrics).
 
 `telegramBot.deliverySli` is the bounded operational delivery read model from Telegram source-event and authoritative target ledgers. Its envelope is always fail-visible:
 
@@ -520,21 +124,15 @@ The same cron metadata also exposes the live safety-alert source contract:
 
 When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue, but safety-grade alerts remain paused until `compute-safety-score-v9` accepts a fresh canonical publication and the Telegram lane reseeds its prior snapshot.
 
-`crons["status-self-check"].lastRun.metadata` now also includes `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence during the self-check run, plus `d1CapacityMonitoring` when the dedicated Cloudflare D1 status bindings are configured.
-
-`probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` are optional because legacy `status_probe_runs` rows did not persist split-plane details. New rows compare rotating router diagnostics against three production-domain HTTP health/gate targets; these are unequal populations, not paired-route outage proof. Without an execution context, the internal-labelled cohort uses HTTPS and reports `probeMode: external-http`. Site health requires the trimmed configured shared secret; otherwise the site target measures only an expected `401`/`403` gate. Ops accepts `302`/`403` blocking responses without attesting redirect Location/Access identity or authenticated availability. There is no condition-specific probe/discrepancy push notification; escalation is operator-driven. Failed discrepancy reads expose `consecutiveDivergent: null`, not zero, and do not reset persisted streaks.
-
-`datasetFreshness` covers pipeline datasets defined by `DatasetFreshnessSchema` in `shared/types/status/core.ts` and `DATASET_FRESHNESS_TARGETS` in `worker/src/lib/status/derived-data.ts`; it does not include discovery-backlog timestamps.
+For self-check freshness fallbacks, optional split-plane probe evidence and D1 monitoring, see [synthetic self-check](./status-dashboard.md#synthetic-self-check). Dataset coverage is defined by `DatasetFreshnessSchema` in `shared/types/status/core.ts` and `DATASET_FRESHNESS_TARGETS` in `worker/src/lib/status/derived-data.ts`; discovery-backlog timestamps are not dataset freshness.
 
 `dataQuality.repairDebt` summarizes low-priority repair/backfill backlog separately from foreground publication health. It reports `status`, `openCount`, `oldestAgeSec`, `byKind`, `availabilityEscalated`, `nextRunnerDueAt`, and `source` from active `worker_repair_tasks` rows. The legacy DDR-specific `ddrRepairDebt*` fields remain populated for compatibility from active DDR task `subject_id`/`payload_json` details and continue to drive the `ddr_repair_debt_present` data-quality warning.
 
 `priceSourceHealth` is derived from the final `sync-stablecoins` asset payload and summarizes resolved price-source distribution, active canonical source-depth buckets (`sourceDepthDistribution`, keyed by `consensusSources.length` buckets `0`, `1`, `2`, `3`, `4`, `5+`), confidence buckets, total assets, and the timestamp of the latest successful price-health snapshot. CoinGecko-vs-Pharos divergence details live in the separate `coingeckoPriceDiff` block.
 
-`coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices and their upstream timestamps through one or more batched `simple/price` calls, and compares only quotes accepted by the shared CoinGecko freshness validator. Missing, invalid, stale, or materially future timestamps are excluded before reporting rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
+The [CoinGecko price-drift card](./status-dashboard.md#coingecko-price-drift-card) owns quote admission, failure/null interpretation and comparison limitations. The [D1 usage card](./status-dashboard.md#d1-usage-card) owns telemetry clocks, reuse/fallback, capacity thresholds and advisory forecasts. Neither browser polling nor a diagnostic query refreshes an upstream producer observation.
 
-Malformed CoinGecko batches fail the whole diagnostic visibly rather than publishing a clean partial result. Zero comparable quotes means unmeasured, not zero drift. This cached-Pharos/live-CoinGecko comparison is triage evidence, not matched-clock consensus or a pricing veto.
-
-`d1Usage` is permanent admin-only D1 diagnosis, normally reused from the 15-minute self-check raw snapshot (30-minute TTL), with live fallback when missing/stale. Dedicated Cloudflare bindings enable concurrent REST database info and trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL reads; missing config yields null and failures yield `sectionErrors.d1Usage`. Preserve each `checkedAt` and 24-hour window rather than equating browser polls with upstream reads. Hourly capacity observations coalesce in UTC-hour rows; live fallback may refresh that history. `capacity` contains authoritative current 60/75/90% utilization thresholds and advisory 24h/72h/7d/30d regressions with sample spans; `conservativeWindow` means shortest valid window, not maximum slope or guaranteed runway. Missing/malformed/expired/future-clock capacity degrades public health with sanitized warnings, never exact private size/forecast fields. API-only `tableGrowth` contains daily reviewed-name/family row counts/deltas, nullable timestamp attribution, top growers and `failedTables` for unreadable/invalid counts; same-day cache reuse is not a separate claim, its serving age is at most 50 hours, and rows are not table byte sizes. The D1 card does not render per-table census details.
+API-only D1 `tableGrowth` carries daily reviewed-name/family row counts/deltas, nullable timestamp attribution, top growers and `failedTables` for unreadable/invalid counts. Its serving age is at most 50 hours; rows are not byte sizes and same-day cache reuse is not an independent observation. The D1 card does not render the per-table census.
 
 `liquidityHealth` uses the newest `sync-dex-liquidity` run carrying `metadata.sourceCoverage` within twice the expected interval; newer cadence-reuse runs without coverage are skipped. Missing or older evidence yields `null`. `sourceRunStartedAt` preserves the selected measurement clock. The projection summarizes row/value/major-asset coverage, failed sources, and current/previous coverage classes.
 
@@ -746,6 +344,8 @@ Correcting the ledger is a two-step operator action. When removing or correcting
 
 ### `GET /api/backfill-dews`
 
+`backfill-dews?mode=backtest-metrics` is the primary calibration path over stored daily history/curated anchors (precision/recall, false-positive days, false negatives, P50/P90 lead time, churn, transition stability and cohort metrics). Default reconstruction is diagnostic, not a complete live-signal/trust-gate replay; unevaluable events retain `predicted=null`, excluded/partial coverage and missing supply anchors rather than false negatives. `repair=refresh-current` republishes current rows under the live $1M DEX trust floor; `repair=prune-history` deletes bounded daily windows whose retained snapshots lack DEX trust metadata. GET allows backtests/read-only `dry-run=true` repair previews; mutations require POST and operator Access service-token authentication.
+
 Default `GET` reconstructs stored-event diagnostics. `events[].evaluation` reports availability (`available`, `partial`, `unavailable`), reasons and evaluated/expected pre-event days. Missing anchors stay unavailable. With no scored pre-event day, `predicted=null`; observed misses stay `false`. Summary `evaluableEvents` excludes these cases, `excludedEvents`/`partialEvents` disclose coverage, and `tpRate` uses only evaluable events (`null` if none); lead times cover detected events.
 
 Use `GET /api/backfill-dews?mode=backtest-metrics` for the curated anchor fixture metrics described below. Use `GET /api/backfill-dews?repair=...&dry-run=true` for repair previews; mutating repair runs are `POST`-only.
@@ -949,135 +549,25 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
 
 **Query parameters:** none.
 
-**Response shape:** `RpcProviderTrialReport` (defined in `worker/src/lib/rpc-provider-parity/types.ts`).
+**Response shape:** `RpcProviderTrialReport`, with per-chain `RpcParityChainSummary`, in `worker/src/lib/rpc-provider-parity/types.ts`. This illustrative excerpt is not a complete fixture; use those types for all per-method, comparator, window and failure fields.
 
-```json
+```text
 {
   "provider": "dwellir",
   "generatedAtSec": 1780000000,
-  "budget": {
-    "configured": true,
-    "usable": true,
-    "reason": "ok",
-    "window": "2026-09",
-    "usedCredits": 12345,
-    "capCredits": 100000000,
-    "observedAtSec": 1780000000
-  },
-  "circuit": { "state": "closed", "consecutiveFailures": 0, "updatedAtSec": 1779999000 },
+  "budget": { "configured": true, "usable": true, "reason": "ok", ... },
+  "circuit": { "state": "closed", "consecutiveFailures": 0, ... },
   "observation": {
-    "windowStartSec": 1779916200,
-    "windowDurationSec": 82800,
-    "lastRunAtSec": 1779999000,
     "runsRetained": 24,
-    "chains": [
-      {
-        "chainId": "base",
-        "dwellirHost": "api-base-mainnet-archive.n.dwellir.com",
-        "comparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
-        "logsComparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
-        "routing": { "statePlacement": "primary", "logScan": true },
-        "lastFailures": [],
-        "comparatorsByStep": {
-          "head": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
-          "state": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
-          "logs": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
-          "latest": [], "reference": [], "header": [], "legacy-latest": []
-        },
-        "runs": 24,
-        "windowStartSec": 1779916200,
-        "windowEndSec": 1779999000,
-        "windowDurationSec": 82800,
-        "gateWindow": { "windowStartSec": 1779916200, "windowEndSec": 1779999000, "windowDurationSec": 82800, "runs": 24 },
-        "skips": { "no-comparator": 0, "no-dwellir-entry": 0, "deadline": 0, "aborted": 0, "unknown": 0 },
-        "lastSkip": null,
-        "dwellirSuccessRate": 1,
-        "headLagBlocks": { "p50": 0, "p95": 1, "samples": 24 },
-        "stateParity": { "checked": 24, "matched": 24, "mismatched": 0, "lastMismatch": null },
-        "logParity": { "checked": 24, "matched": 24, "mismatched": 0, "skippedReason": null },
-        "prunedLogProbe": null,
-        "latency": {
-          "dwellir": {
-            "firstTouch": {
-              "head": { "p50Ms": 180, "p95Ms": 420, "samples": 24 },
-              "state": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "logs": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "reference": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "header": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
-            },
-            "warm": {
-              "head": { "p50Ms": 70, "p95Ms": 140, "samples": 48 },
-              "state": { "p50Ms": 80, "p95Ms": 160, "samples": 24 },
-              "logs": { "p50Ms": 90, "p95Ms": 180, "samples": 24 },
-              "latest": { "p50Ms": 80, "p95Ms": 160, "samples": 48 },
-              "reference": { "p50Ms": 80, "p95Ms": 160, "samples": 96 },
-              "header": { "p50Ms": 80, "p95Ms": 160, "samples": 72 },
-              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
-            },
-            "warmRunMedian": { "p50Ms": 80, "p95Ms": 160, "samples": 24 }
-          },
-          "comparator": {
-            "firstTouch": {
-              "head": { "p50Ms": 140, "p95Ms": 300, "samples": 24 },
-              "state": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "logs": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "reference": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "header": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
-            },
-            "warm": {
-              "head": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "state": { "p50Ms": 60, "p95Ms": 120, "samples": 24 },
-              "logs": { "p50Ms": 70, "p95Ms": 140, "samples": 24 },
-              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "reference": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "header": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
-            },
-            "warmRunMedian": { "p50Ms": 60, "p95Ms": 120, "samples": 24 }
-          }
-        },
-        "availability": {
-          "dwellir": {
-            "head": { "attempts": 72, "successes": 72, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "latest": { "attempts": 48, "successes": 48, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "reference": { "attempts": 96, "successes": 96, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "header": { "attempts": 72, "successes": 72, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "legacy-latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null }
-          },
-          "comparator": {
-            "head": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
-            "latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null },
-            "reference": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null },
-            "header": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null },
-            "legacy-latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null }
-          }
-        },
-        "latestFreshness": {
-          "fresh": 24, "stale": 0, "indeterminate": 0, "unknown": 0,
-          "discriminatingFresh": 24, "nonDiscriminatingFresh": 0,
-          "reasons": { "served-block-in-range": 24 }, "maxNumericCalls": 10, "blockTolerance": 3, "lastStale": null,
-          "sentinel": { "fresh": 24, "stale": 0, "indeterminate": 0, "unknown": 0, "discriminatingFresh": 24 },
-          "tokenState": { "fresh": 24, "stale": 0, "indeterminate": 0, "unknown": 0, "discriminatingFresh": 24 }
-        },
-        "errorClasses": {},
-        "comparatorErrorClasses": {},
-        "failedSteps": {
-          "dwellir": { "head": 0, "state": 0, "logs": 0, "latest": 0, "reference": 0, "header": 0, "legacy-latest": 0 },
-          "comparator": { "head": 0, "state": 0, "logs": 0, "latest": 0, "reference": 0, "header": 0, "legacy-latest": 0 }
-        },
-        "lastComparatorFailure": null,
-        "gate": { "passed": true, "failing": [] },
-        "last": { "atSec": 1779999000, "dwellirHead": 21000000, "comparatorHead": 21000000, "commonBlock": 21000000 }
-      }
-    ]
+    "chains": [{
+      "chainId": "base",
+      "routing": { "statePlacement": "primary", "logScan": true },
+      "headLagBlocks": { "p50": 0, "p95": 1, "samples": 24 },
+      "stateParity": { "checked": 24, "matched": 24, "mismatched": 0, ... },
+      "gate": { "passed": true, "failing": [] },
+      ...
+    }],
+    ...
   },
   "observationError": null
 }

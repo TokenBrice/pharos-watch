@@ -1,8 +1,6 @@
 # PharosWatchBot Mini App
 
-Runtime reference for the Telegram Mini App control panel that ships alongside PharosWatchBot. This doc covers launch surfaces, the `?startapp=` payload registry, seam rules, auth model, BotFather operator state, debugging, and test fixtures.
-
-For bot commands, dispatch, and delivery persistence, see [`telegram-alerts.md`](./telegram-alerts.md). For ingress, storage, bindings, and the worker-side seam ownership rules, see [`telegram-architecture.md`](./telegram-architecture.md).
+Runtime contract for PharosWatchBot Mini App launch, payloads, signed auth and confirmed client controls. [Telegram alerts](./telegram-alerts.md) owns bot commands/dispatch/delivery; [architecture](./telegram-architecture.md#9-mini-app-surface) owns the sole implementation roster and seam prohibitions; [BotFather runbook](./runbooks/telegram-mini-app-botfather.md) owns external configuration.
 
 > **Agent navigation** — Start with the [Telegram architecture seam map](./telegram-architecture.md). Client/auth/state sections: [overview](#overview) · [launch surfaces](#launch-surfaces) · [payload scheme](#payload-scheme) · [client state](#client-state-and-control-semantics) · [auth](#auth-model) · [Mini App launch entrypoints](#mini-app-launch-entrypoints) · [frontend main page](#frontend-main-page) · [public pulse](#public-pulse-privacy-and-freshness).
 
@@ -14,13 +12,6 @@ Launch is private-chat scoped for the current phase: bot commands and alert deli
 
 Unsigned browser **preview** is a permanent launch-guidance state. With no supported Telegram launch hint, it explains how to open the Mini App and makes zero session API calls; it exposes no subscription controls or mutation authority. It is not awaiting promotion to a browser control panel. A Telegram-indicated launch with missing or failed signed data remains the distinct missing/error state, and signed `initData` validation is always the backend authorization boundary. `noindex` and robots exclusion govern discoverability, not access control.
 
-Choose the bounded contract for the affected seam before editing:
-
-- Launch behavior: [Launch Surfaces](#launch-surfaces), [Payload Scheme](#payload-scheme), and [Mini App Launch Entrypoints](#mini-app-launch-entrypoints).
-- Signed requests and state: [Seam Rules](#seam-rules), [Contract And Catalog Versioning](#contract-and-catalog-versioning), [Auth Model](#auth-model), and [Client State And Control Semantics](#client-state-and-control-semantics).
-- Subscription controls: [Daily Recap Control](#daily-recap-control), [Configuration Portability](#configuration-portability), [Bulk Watchlist Management](#bulk-watchlist-management), and [Effective Alert Source](#effective-alert-source).
-- Public surfaces: [Frontend Main Page](#frontend-main-page) and [Public Pulse Privacy And Freshness](#public-pulse-privacy-and-freshness).
-- Operations and verification: [BotFather Operator Checklist](#botfather-operator-checklist), [Debugging Workflow](#debugging-workflow), and [Test Fixtures](#test-fixtures).
 
 ## Daily Recap Control
 
@@ -30,72 +21,40 @@ The Mini App sends `{ kind: "set-recap", enabled, deliveryHourLocal }` through t
 
 Global recap availability is independent of private opt-in: the Worker supports `off|public`, with unset/malformed/retired modes failing closed to off. Off omits the Settings control and rejects forged `set-recap` mutations as `recap-unavailable` before preference writes; public preserves the confirmed-timezone and private-chat requirements. No per-chat rollout allowlist remains.
 
-Owned files:
-
-- `src/app/pharoswatchbot/app/page.tsx`
-- `src/app/pharoswatchbot/app/client.tsx`
-- `src/app/pharoswatchbot/app/components/*`
-- `src/app/pharoswatchbot/app/constants.ts`
-- `src/app/pharoswatchbot/app/error-messages.ts`
-- `src/app/pharoswatchbot/app/format.ts`
-- `src/app/pharoswatchbot/app/mini-app-api.ts`
-- `src/app/pharoswatchbot/app/telegram-sdk.ts`
-- `src/app/pharoswatchbot/app/telegram-theme.ts`
-- `src/app/pharoswatchbot/app/types.ts`
-- `src/app/pharoswatchbot/app/use-mini-app-mutations.ts`
-- `src/app/pharoswatchbot/app/use-mini-app-view.ts`
-- `src/app/pharoswatchbot/app/use-telegram-bridge.ts`
-- `src/app/pharoswatchbot/app/use-telegram-main-button.ts`
-- `worker/src/api/telegram-mini-app.ts`
-- `worker/src/api/telegram-mini-app-rate-limit.ts`
-- `worker/src/api/telegram-mini-app-state.ts`
-- `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/lib/telegram/recap-store.ts`
-- `worker/src/lib/telegram/mini-app-auth.ts`
-- `shared/lib/telegram-mini-app-contract.ts`
-- `shared/lib/telegram-recap-policy.ts`
-- `shared/lib/iana-local-time.ts`
-- `shared/lib/telegram-mini-app-catalog.ts`
-- `shared/lib/telegram-presets.ts`
-- `shared/data/stablecoins/coins.telegram-mini-app.generated.json`
+Implementation ownership lives in [architecture §9](./telegram-architecture.md#9-mini-app-surface), not a second file inventory here.
 
 ## Launch Surfaces
 
-The full inventory of launch entrypoints and their reconciliation paths is documented in [Mini App Launch Entrypoints](#mini-app-launch-entrypoints). Summary:
+The static control panel is `https://pharos.watch/pharoswatchbot/app/`. Web App buttons attach only in private chats; addressed commands/callbacks remain the group mutation surface with fresh admin checks. Private direct-link `chat_type="sender"` is the user's private settings context, not group authority.
 
-- **Persistent menu button.** The five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/` via `setChatMenuButton`. The cache TTL is 15 minutes; Bot API failures or rate-limit backoff can delay drift repair.
-- **Bot profile Main Mini App.** Configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code. See [`runbooks/telegram-mini-app-botfather.md`](./runbooks/telegram-mini-app-botfather.md) for the operator-owned state.
-- **Private command replies.** The canonical command roster lives in the linked launch-entrypoint section of `telegram-alerts.md`; matching private replies and quick-subscribe confirmations attach Web App buttons, while group and supergroup replies keep command/callback keyboards. `/recap` uses callback controls and is not a launch-button entrypoint.
-- **Direct deep links.** `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context. The stale-auth recovery banner relaunches the app through this surface with a payload matching the user's current panel.
+| Surface | Owner / reconciliation |
+| --- | --- |
+| Persistent `Manage Alerts` menu | Five-minute Worker lane, 15-minute fresh-cache marker; Bot API failure/backoff can delay drift repair |
+| Profile `Launch app`, preview/loading assets, Inline Mode | BotFather; use [configured state and smoke tests](./runbooks/telegram-mini-app-botfather.md#configured-state), not a duplicated feature checklist |
+| Private command replies / quick-subscribe | `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status`, `/why`, `/coverage`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, `/forget` attach context-aware buttons; quicksub uses `coin_<id>`. `/recap` itself uses callbacks, not a launch button |
+| Direct `https://t.me/PharosWatchBot?startapp=<payload>` | Shared payload parser chooses view; signed `initData` still authorizes every API operation. Stale-auth relaunch preserves current panel/context |
+
+Groups keep command/callback keyboards; no group Mini App mutation until fresh admin verification and group-scoped launch ownership exist.
 
 ## Payload Scheme
 
-Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. The frontend `?startapp=` surface uses the shared parser from `shared/lib/telegram-mini-app-payloads.ts`. The worker `/start <payload>` parser in `worker/src/api/telegram-webhook-parsing.ts` shares the same charset constant but intentionally supports only bot-command payload schemes: `sub_*`, `status_*`, `why_*`, `coverage_*`, `setup`, `sample`, `app`/`home`, and adoption deep-link tokens (`pw1_*`) whose destination is `setup`, which carry their token into the wizard intro.
+The shared parser in `shared/lib/telegram-mini-app-payloads.ts` owns `?startapp=` routing. This view parameter is not the bot's `/start` command parameter: the Worker parser intentionally accepts only command schemes. Both share `[A-Za-z0-9_-]`, normalize ASCII case to lowercase and emit lowercase/no-space tokens, but Mini App accepts up to 512 characters and bot `?start=` only 64.
 
-Recognized payloads:
+| Payload | Initial view |
+| --- | --- |
+| absent / unknown / `home`, `snooze`, `health` | Home |
+| `settings`, `quiet-hours`, `forget`, `recap_settings` | Settings (matching control context) |
+| `watchlist`, `setup_recommended`, `recap_watchlist` | Watchlist (`setup_recommended` is a legacy launch alias) |
+| `presets` | Presets |
+| `coin_<id>` | Watchlist coin/followable launch target |
+| `why_<id>`, `coverage_<id>` | Watchlist in-app insight with bot-DM full explainer fallback |
+| allowlisted `pw1_*` adoption token | Home/Watchlist according to its destination |
 
-| Payload | Routes to | Notes |
-|---|---|---|
-| `home` | Home panel | Default if no payload, or used by the `/start` skip branch. |
-| `settings` | Settings panel | Global alert toggles, depeg step, quiet hours, clear snooze; used by `/help` and `/settings`. |
-| `watchlist` | Watchlist panel | Per-coin subscriptions and tune controls; used by `/list` and all-stablecoin `/set` confirmations. |
-| `recap_settings` | Settings panel | Used by the `Recap settings` button on delivered daily recaps. |
-| `recap_watchlist` | Watchlist panel | Used by the `View watchlist` button on delivered daily recaps. |
-| `coin_<stablecoinId>` | Watchlist panel scrolled to coin row or launch-target card | Used by per-coin Web App buttons, `/status`, quick-subscribe confirmations, alert keyboards, and per-coin `/set` confirmations. If the coin is in the Mini App catalog but not already followed, the Watchlist tab renders a followable Launch target card. |
-| `why_<stablecoinId>` | Watchlist panel with an in-app why view | Used by `/why` launch contexts and Mini App coin cards. Shows available Mini App watch context and keeps the existing bot-DM `/why` deep link as the full explainer fallback. |
-| `coverage_<stablecoinId>` | Watchlist panel with an in-app coverage view | Used by `/coverage` launch contexts and Mini App coin cards. Shows available Mini App catalog/watch context and keeps the existing bot-DM `/coverage` deep link as the full coverage-card fallback. |
-| `presets` | Presets panel | Followed presets plus available ones; used by `/presets`. |
-| `quiet-hours` | Settings panel | Used by `/mute`, `/unmutehours`, and `/timezone` private replies. |
-| `snooze` | Home panel | Used by per-coin or chat snooze acknowledgements, including `/unsnooze`. |
-| `health` | Home panel | Used by `/health` private reply. |
-| `forget` | Settings panel | Used by the `/forget` command danger-zone entrypoint. |
-| `setup_recommended` | Watchlist panel | Legacy alias retained for older launch buttons. |
+Unfollowed catalog coins render Follow/Why/Coverage/View actions; IDs absent from catalog render read-only no-change fallback. Signed `initData.start_param` outside the payload envelope is ignored as null, not a session rejection. Every payload is untrusted; only signed `initData` grants API authority.
 
-`sample` is intentionally **not** a Mini App view token. It is a bot-command `/start sample` payload only (private-chat-only; runs the `/sample` synthetic preview), like `sub_*`/`status_*`. The Home panel surfaces it via a "Send me a sample alert" button that calls `webApp.openTelegramLink("https://t.me/PharosWatchBot?start=sample")` rather than routing inside the app, because the Mini App cannot call the Bot API directly.
+`sample` is deliberately **not** a Mini App view: Home opens `https://t.me/PharosWatchBot?start=sample` through `openTelegramLink` for the private synthetic preview. `sub_*`/`status_*` likewise remain bot-command paths; Mini App never calls the Bot API.
 
-Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. Emitted payloads are lowercase and contain no spaces; inbound parsing accepts either ASCII letter case and normalizes to lowercase. Unknown payloads fall through to the home panel. Telegram adoption tokens (`pw1_*`) are also accepted on the `?startapp=` surface; those resolving to `miniapp_home` or `miniapp_watchlist` open the Home or Watchlist panel. Parametric coin payloads whose id is in the Mini App catalog but not already followed render a launch-target card with Follow / Why / Coverage / View actions; ids no longer in the catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`. Signed `initData.start_param` values outside the Mini App payload envelope are ignored as `null` rather than rejecting the whole session.
-
-The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. Its operation schema and type live once in `shared/lib/telegram-mini-app-contract.ts`; broader preset follows use the separate `follow-preset` mutation.
+`recommended-setup` is the fail-closed DEWS+depeg `usd-top25` mutation defined by `shared/lib/telegram-mini-app-contract.ts`; broader preset follows use `follow-preset`.
 
 ## Configuration Portability
 
@@ -107,39 +66,23 @@ Export and preview are read-only operations. They accept the 24-hour signed-sess
 
 ## Bulk Watchlist Management
 
-The Watchlist panel can preview and atomically apply up to 20 direct-row additions/removals at once. Selection rejects duplicates, overlaps, empty patches, and more than 20 total requested rows. Adds use the normal direct default (DEWS and depeg on); removals delete only the selected direct rows. Preset follows, global settings, and their inherited coverage are never materialized or modified.
+Bulk edits preview/apply at most 20 direct additions/removals, rejecting empty, duplicate, overlapping or oversized selections. Adds default to DEWS+depeg; removals affect selected direct rows only, never materialize preset/global inheritance.
 
-Preview is a 24-hour signed-session read and reports exact adds, removals, already-matching selections, and whether preset/global sources would still cover each affected coin. Confirmation re-reads current direct state, requires the same preference generation and preview fingerprint, and applies every row plus one generation transition in a single bounded D1 batch. A concurrent setting change returns `stale-bulk-preview`; the client never retries it automatically.
+Preview is a 24h signed read describing exact adds/removes/already-matching and remaining inherited coverage. Confirmation re-reads direct state, requires unchanged generation plus fingerprint, and commits every row with one generation transition in a bounded batch. Drift returns `stale-bulk-preview`; never retry automatically.
 
-After a confirmed edit, the UI offers a five-second one-tap undo. The server accepts undo only against the exact post-edit preference generation and direct-state fingerprint. Removed rows are restored with all six family flags, explicit override markers, tuning, and their prior per-coin snooze; rows added by the edit are removed. Any intervening preference change makes the undo stale instead of overwriting newer intent.
+The five-second undo requires exact post-edit generation/fingerprint. Restore full removed rows (six flags, override markers, tuning, snooze) and remove newly added rows; intervening intent makes undo stale. Single removal uses the same contract: keep only server-derived `undo` for the toast, submit `undo-bulk-watchlist`, never reconstruct a `set-coin` patch from rendered state. Invalid/stale undo changes nothing; no auto-retry.
 
-Single-coin removal uses the same bounded direct-row patch and undo contract. Its confirmed snapshot carries a server-derived `undo` payload with the complete removed row (including snooze-only and explicit-off rows), the post-edit preference generation, and the direct-state fingerprint. The client keeps that payload only for its five-second undo toast and submits `undo-bulk-watchlist` with one restored row; it never reconstructs a `set-coin` patch from the displayed coin. Invalid or stale undo is rejected without changing preferences, and neither removal nor undo is automatically retried.
+Preset edits keep at least one DEWS/depeg/safety family enabled; disable the final toggle and direct users to Unfollow. A non-null `depegStepBps` enables depeg unless that same patch explicitly disables it; Worker guarantees the semantics, not only frontend.
 
-For an already-followed preset, the Presets panel allows DEWS, depeg, and safety-family edits but keeps at least one family enabled. When only one remains, its toggle is disabled and the panel directs the user to **Unfollow** to stop the preset entirely. This keeps the client from offering an all-disabled preset state that the mutation schema rejects.
-
-Per-coin `set-coin` patches treat a non-null `depegStepBps` as an enabling operation unless the same patch explicitly disables `alertTypes.depeg`. The Mini App frontend normally sends `alertTypes.depeg=true` with a step when the visible toggle is off, but the worker owns the semantic guarantee so direct mutation callers cannot store an inactive depeg step.
-
-The `subscriptions[]` state projection includes rows with at least one of the six enabled alert families or explicit override markers, plus snooze-only rows. All-disabled rows with no override or per-coin snooze are hidden so old clear/disable writes do not appear as active watchlist coins.
-
-Reserve drift (C123), launch, and freeze are untunable per-coin/global on/off families. `set-coin` patches carry optional `launch`, `reserve`, and `freeze` booleans, and global toggles use `set-global`. A coin whose only enabled families are untunable renders the C115 "on/off only. No tuning." line in `CoinCard`; neither reserve nor freeze has a per-coin threshold surface.
+`subscriptions[]` includes enabled flags, marked overrides and snooze-only rows, hiding all-disabled/unmarked/unsnoozed residue. Launch/reserve/freeze are per-coin/global on/off only; an untunable-only coin says “on/off only. No tuning.” No reserve/freeze threshold is exposed.
 
 ## Seam Rules
 
-The Mini App is its own seam in the Telegram architecture; full definition and `Must NOT` rules are at [`telegram-architecture.md` § 9. Mini App surface](./telegram-architecture.md#9-mini-app-surface).
-
-The load-bearing rules:
-
-- Do not duplicate per-coin or preset write SQL outside the existing State / persistence helpers. If a callback-shaped helper is too narrow, extract the shared D1 mutation into `worker/src/api/telegram-webhook-store.ts` (or the matching settings-mutation layer) and have both callbacks and Mini App call it.
-- Do not mutate group, supergroup, or channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist. Direct-link `chat_type="sender"` launches are the user's *private* alert context, not a group surface.
-- Do not write analytics, aggregate counters, or rate-limit rows before signed `initData` validation succeeds. Body-too-large, malformed JSON, and schema-denied requests must fail without D1 writes because the Mini App endpoints are public API-key-exempt surfaces.
-- Do not accept mutation auth older than the 5-minute mutation window.
-- Do not use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
-
-The Mini App seam does not receive Telegram webhook updates and does not call the Telegram Bot API. Its only inbound surfaces are `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate`.
+[Architecture §9](./telegram-architecture.md#9-mini-app-surface) owns dependency prohibitions and the implementation roster. Mini App routes do not receive webhook updates or call the Bot API. Subscription SQL stays in existing State helpers, group writes stay denied, and no analytics/counter/cooldown write precedes valid signed auth. Capability/schema/body rejection is pre-write; frontend preview or version negotiation grants no mutation authority.
 
 ## Contract And Catalog Versioning
 
-`shared/lib/telegram-mini-app-contract.ts` is the single runtime-neutral contract for operation schemas, request and response DTO schemas, error codes, the contract version, the catalog version, and the opaque state revision. Contract version `5` adds the optional server-derived `undo` snapshot field for exact single-coin removal, reusing the bulk undo payload. Worker handlers and the static client both import it directly; there is no Worker/frontend literal mirror to keep synchronized.
+`shared/lib/telegram-mini-app-contract.ts` owns operation/DTO schemas, error codes, contract version and opaque revision. Both Worker and client import it; never mirror a literal version or schema. The optional server-derived removal `undo` snapshot reuses the bounded bulk undo contract.
 
 The searchable coin catalog is projected by `scripts/build-data/build-client-registry.mjs` into `shared/data/stablecoins/coins.telegram-mini-app.generated.json`. `shared/lib/telegram-mini-app-catalog.ts` combines that slim asset with the shared preset definitions and derives a content version. The slim catalog is bundled into the fingerprinted static Mini App JavaScript, so it is cached with the Pages asset instead of being returned by every signed API call. The repository does not currently define a fixed byte budget for this registry-sized artifact.
 
@@ -173,33 +116,20 @@ Each direct/local coin row's `CoinCard` renders a compact source chip derived pu
 
 ## Auth Model
 
-HMAC validation is implemented in `worker/src/lib/telegram/mini-app-auth.ts`:
-
-- Parse `URLSearchParams` from raw `initData`.
-- Require `hash`, `auth_date`, and `user` for both Mini App endpoints.
-- Build the bot-token HMAC data-check string from all fields except `hash`, sorted alphabetically, joined by `\n`.
-- Derive the secret key with `HMAC-SHA-256(key="WebAppData", message=TELEGRAM_BOT_TOKEN)`.
-- Compare the computed hex HMAC with `hash` using timing-safe comparison.
-- Try `TELEGRAM_BOT_TOKEN` first and fall back to `TELEGRAM_BOT_TOKEN_PREVIOUS` when configured, so `initData` signed by either token validates during a bot-token rotation overlap. See [`runbooks/telegram-secret-rotation.md`](./runbooks/telegram-secret-rotation.md) for the rotation contract.
+`validateTelegramMiniAppInitData` in `worker/src/lib/telegram/mini-app-auth.ts` owns Telegram HMAC validation and timing-safe comparison. Require signed hash, auth date and user; untrusted browser fields or launch hints are not identity. Try current bot token then configured previous token for overlap ([secret rotation](./runbooks/telegram-secret-rotation.md)); outbound sends use current token only.
 
 Freshness windows:
 
-- **Session reads (`POST /api/telegram-mini-app/session`):** `auth_date` must be within 24 hours. A 24-hour read window keeps long-lived open Mini Apps usable across the day.
-- **Mutations (`POST /api/telegram-mini-app/mutate`):** `auth_date` must be within 5 minutes. Telegram exposes one signed `initData` value for the launch, so a fresh launch may perform multiple mutations with the same `initData` until the freshness window expires. Signed stale-auth rejections pass a per-user cooldown before telemetry: session reads record `mini_app_session_invalid`; writes record `mini_app_mutation_denied` with failure class `stale-auth` and the normalized `mutationActionDetail()` label, not the raw operation kind, in `action_detail`. Portability and bulk previews are reads and record `mini_app_portability` instead. On a stale-auth write rejection the client reloads the session for read-only state, then shows a stale-auth prompt above every tab (all tabs remain readable, edits blocked). With `openTelegramLink`, the prompt offers a relaunch through `https://t.me/PharosWatchBot?startapp=<payload>` preserving the current panel and coin/insight context (`relaunchPayloadForView` in `use-mini-app-view.ts`, inverse of `initialViewFromStartParam`); otherwise it gives close-and-reopen copy. Raw `initData` is never persisted; the write window is not extended.
+- **Reads:** signed `auth_date` within 24h for session, export and previews.
+- **Writes:** signed `auth_date` within five minutes. One launch may make multiple edits with the same `initData`; no rolling refresh or one-shot replay claim is allowed. Stale-auth write rejection reloads read-only state and shows a prompt on every tab. Relaunch via `openTelegramLink` preserves current panel/coin/insight; otherwise instruct close/reopen. Never persist raw `initData`.
+- **Telemetry:** signed stale rejections pass per-user cooldown before aggregate writes: reads use `mini_app_session_invalid`; writes use `mini_app_mutation_denied`, failure `stale-auth` and normalized `mutationActionDetail`, not raw operation kind. Portability/bulk previews record `mini_app_portability`.
+- **Burst admission:** 12 schema/signature-valid attempts per user in an anchored 30-second window beginning with first admission, not wall-clock buckets. Excess returns 429 with identical integer `retryAfterSec`/`Retry-After`. Disable writes with visible non-live countdown and one polite announcement at start/end; keep reads available and require explicit action afterward, never replay.
+- **Budget retention:** burst is independent of domain idempotency/webhook dedupe. `/forget` preserves its active key; bounded seven-day cache retention prunes stale keys.
+- **Body/auth order:** both endpoints cap bodies at 16 KiB using declared length and bounded streams before JSON/schema/HMAC. Rejected body/JSON/schema never touches D1. [Ingress runbook](./runbooks/telegram-webhook-retry-dedupe.md#preauth-ingress-abuse-controls) owns early limiter interpretation.
+- **Privacy:** exact embedded route/descendants omit Google Analytics, page views/events/Web Vitals and GA/Tag Manager CSP origins while permitting Telegram bridge; public landing retains normal configured analytics. First-party usage/adoption aggregates are signed-auth-only and identifier-free. A validated mutable session writes one 30-minute chat-keyed start/allowlisted-placement correlation; first successful mutation atomically consumes it into one latency bucket. Retention and `/forget` clear it; preauth rejection writes nothing.
+- **Groups:** group/supergroup/channel stay read-only, visibly directing users to `/settings@PharosWatchBot` in the group.
 
-Mutation auth is bounded by the short freshness window plus a per-user burst budget of 12 schema-valid, signature-valid mutation attempts in an anchored 30-second window. The window begins at the first admitted write, so adjacent wall-clock buckets cannot admit a double burst. This budget allows a normal settings pass (all six global toggles plus one quiet-hours save) without delay while bounding scripted state writes. Attempts beyond the budget return HTTP 429 with the same integer `retryAfterSec` in the JSON body and `Retry-After` header. The client disables mutation controls for that interval, renders a visible non-live countdown, announces the start and end once through its polite status channel, keeps session refresh and portability reads available, and does not automatically replay writes.
-
-The burst counter is independent of operation semantics and webhook replay protection: it does not make `initData` a one-shot credential, and it does not replace `telegram_processed_updates` deduplication for webhook updates. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits. Mini App operations remain set-shaped/idempotent where their domain permits, but the client still requires an explicit user action after a 429 rather than automatically retrying destructive mutations. `/forget` preserves the active burst key so destructive cleanup cannot reset the authenticated write budget; the retention cron prunes stale burst keys under the bounded seven-day short-lived-cache policy.
-
-Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, analytics, or rate-limit writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies. Body-cap, JSON-parse, and schema failures intentionally perform no D1 writes before auth so unauthenticated clients cannot amplify writes or pollute usage counters.
-
-The embedded `/pharoswatchbot/app` route does not bootstrap Google Analytics and does not send Google page views, custom events, or Web Vitals. Its route-specific CSP allows the Telegram bridge but omits Google Analytics and Tag Manager script, image, and connection origins. This exclusion is exact to the Mini App route and descendants; the public `/pharoswatchbot` product page keeps normal site analytics when GA4 is configured. Required adoption and error visibility comes from first-party `telegram_usage_daily` and `telegram_adoption_daily` counters after signed `initData` authentication. Those rows contain only allowlisted low-cardinality dimensions, never a chat ID. A validated mutable session writes one chat-scoped `telegram:adoption-mini-app-session:<chat_id>` cache entry containing its start time and allowlisted placement; the first successful mutation atomically consumes it and increments one latency bucket. The entry expires after 30 minutes, is removed by daily retention cleanup, and `/forget` deletes it immediately. Rejected pre-auth requests write no counters or correlation state.
-
-Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
-
-The Mini App stylesheet seeds `--telegram-bg`, `--telegram-text`, and `--telegram-color-scheme` from `prefers-color-scheme: dark` when the document contains `.pharos-mini-app`. Once the Telegram bridge is available, `applyTelegramTheme()` is authoritative. `telegram-theme.ts` validates Telegram's hex colors, preserves already-compliant host colors, and minimally mixes hostile values toward black or white before exporting semantic surface, text, muted-text, button, border, and focus variables. Normal text and button labels target WCAG AA `4.5:1`; control fills, borders, and focus rings target `3:1`. Secondary, section, and control surfaces are kept in the host palette but pulled toward the base background when necessary so one readable text hierarchy remains valid across the shell.
-
-`.pharos-mini-app` scopes the Pharos bridge tokens (`--background`, `--card`, `--foreground`, `--muted`, `--border`, `--ring`) to the normalized Telegram palette so internal cards, tabs, selects, and buttons do not mix a dark Telegram shell with light Pharos controls. Invalid or absent theme anchors clear stale inline palette values and leave the existing CSS fallback theme authoritative. Viewport height, safe-area insets, color-scheme handling, and focus offsets are independent of color normalization.
+Theme normalization belongs to `telegram-theme.ts` / `applyTelegramTheme()`: preserve compliant host colors and minimally mix hostile colors to AA text/button `4.5:1` and controls/borders/focus `3:1`. `.pharos-mini-app` scopes semantic tokens to that palette. CSS seeds host color scheme before bridge; invalid/absent anchors clear stale inline values and retain fallback. Viewport, safe-area and focus offsets remain independent.
 
 ## BotFather Operator Checklist
 
@@ -219,23 +149,12 @@ For incident triage, use the [complete Telegram runbook hub](./telegram-alerts.m
 
 - [`runbooks/telegram-mini-app-auth-failures.md`](./runbooks/telegram-mini-app-auth-failures.md) — `mini_app_session_invalid` spikes.
 - [`runbooks/telegram-preset-resolution-failure.md`](./runbooks/telegram-preset-resolution-failure.md) — `presetQueryFailures` / `presetResolutionFailures` rising.
-- [`runbooks/telegram-setup-wizard-stuck.md`](./runbooks/telegram-setup-wizard-stuck.md) — users report the setup wizard not progressing.
+- [Ingress/setup incidents](./runbooks/telegram-webhook-retry-dedupe.md#setup-state) — setup wizard does not progress.
 - [`runbooks/telegram-group-admin-gating-rollback.md`](./runbooks/telegram-group-admin-gating-rollback.md) — flipping the group admin gate from hard to soft.
 
 ## Test Fixtures
 
 `shared/test-utils/telegram-mini-app-state.ts` owns session-state builders for frontend and shared contract tests; mutable-state fixtures omit its catalog.
-
-The page's cumulative native MainButton listener-count test fixes `Date.now()` so a snapshot's clock refresh cannot introduce an extra cleanup/reattach across a wall-clock second boundary. It records the live listener count at every registration and waits for the confirmed cleared-snooze state and complete listener removal, rather than stopping when the mutation request starts.
-
-- `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, group/supergroup read-only behavior, bot-token rotation overlap.
-- `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, burst-limit responses, partial-failure rollback.
-- `worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts` — real-SQLite atomic burst admission, exact retry windows, rollover, D1 failure behavior, `/forget`, and retention cleanup.
-- `shared/lib/__tests__/telegram-mini-app-contract.test.ts` — operation parse parity, compact/legacy response schemas, catalog version, and capability compatibility.
-- `src/app/pharoswatchbot/app/mini-app-api.test.ts` — compact-state hydration, new-client/old-Worker compatibility, capability parameters, and one-shot version refresh.
-- `src/app/pharoswatchbot/app/page.test.tsx` / `use-telegram-main-button.test.ts` — client preview/post-launch rendering, confirmed mutation timing, stale-refresh recovery, stale-auth relaunch, suggestion navigation, timezone selection, and native listener transitions/SDK replacement.
-- `src/app/pharoswatchbot/app/use-mini-app-view.test.ts` — `?startapp=` payload/view round-trip for the stale-auth relaunch payload encoder.
-- `src/app/pharoswatchbot/app/telegram-theme.test.ts` / `telegram-sdk.test.ts` — WCAG contrast normalization, hostile light/dark Telegram palettes, CSS variable publication, fallback clearing, viewport, and safe-area behavior.
 
 Before a release that changes Mini App layout, theme, auth, or mutations, an operator verifies a real Telegram session:
 
@@ -249,44 +168,15 @@ Record the Telegram/client version, OS/device, appearance, assistive setting, an
 
 ## Mini App Launch Entrypoints
 
-PharosWatchBot exposes the Mini App control panel at `https://pharos.watch/pharoswatchbot/app/`. The first launch phase is private-chat scoped: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies because Telegram `InlineKeyboardButton.web_app` is private-chat-only and the MVP does not support group mutation. The private settings panel can toggle global alert families, choose the global depeg worsening step, and manage quiet hours through signed Mini App mutations.
-
-Launch paths:
-
-- Persistent bot menu button: the five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/`.
-- Bot profile Main Mini App: configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code.
-- Private command replies: `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, `/why <ticker>`, `/coverage <ticker>`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, and `/forget` include Web App buttons in private chats. These buttons attach `startapp` context (`home`, `settings`, `watchlist`, `presets`, `quiet-hours`, `snooze`, `health`, `forget`, `coin_<stablecoinId>`, `why_<stablecoinId>`, or `coverage_<stablecoinId>`) so the Mini App opens on the matching panel. Private `quicksub:<stablecoinId>` confirmations also include a `coin_<stablecoinId>` tuning button. Group and supergroup replies keep the existing command and callback keyboards. `/recap` uses callback controls rather than a Web App launch button.
-- Direct Mini App deep links: `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter; backend authorization for every Mini App read and mutation validates Telegram `initData`. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context.
-
-Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group, supergroup, or channel rows until a fresh admin verification path and group-scoped launch ownership model exist.
-
-BotFather-owned release checklist:
-
-- Configure the bot profile Main Mini App as `Launch app` with URL `https://pharos.watch/pharoswatchbot/app/`.
-- Enable the profile launch surface in BotFather separately from the reconciled persistent menu button.
-- Upload current preview screenshots/video and confirm they match the private-chat control-panel flow.
-- Configure the Mini App loading-screen icon and color in BotFather.
-- Enable Inline Mode with BotFather `/setinline` and use a status-oriented placeholder. Worker reconciliation registers `inline_query` and `chosen_inline_result`, but it cannot toggle BotFather-owned Inline Mode.
-- If chosen-card measurement is required, configure a conservative BotFather `/setinlinefeedback` sample. Feedback is aggregate-only and is not a functional delivery signal.
-- Test direct links for `https://t.me/PharosWatchBot?startapp=settings`, `watchlist`, `coin_usdc-circle`, `why_usdc-circle`, and `coverage_usdc-circle` on Telegram mobile, desktop, and web.
-- Verify the page loads inside Telegram with the Telegram bridge script, signed `initData`, and no frame denial headers.
+[Launch surfaces](#launch-surfaces) is the single inventory for Worker-reconciled and BotFather-owned entrypoints. [Payload scheme](#payload-scheme) owns view routing; the [BotFather runbook](./runbooks/telegram-mini-app-botfather.md#smoke-tests) owns operator configuration and real-client launch tests.
 
 ## Frontend Main Page
 
-`src/app/pharoswatchbot/page.tsx` is the product-facing main page for PharosWatchBot and the wider Telegram feature set. It is linked from the top-nav `Tools` menu ("Alert Bot") and the homepage status strip.
+`src/app/pharoswatchbot/page.tsx` serves public `/pharoswatchbot/` using the shared feature shell, linked from Tools and the homepage status strip. `/telegram` and descendants redirect to canonical matching paths. It explains the bot, public digest/community channels, six verbatim family samples, low-noise setup/tuning, private recap, reliability/privacy, and filterable command reference derived from shared manifests. Visible FAQ/setup/application metadata must agree with page copy, not become an independent behavior inventory.
 
-- Route: `/pharoswatchbot/`
-- Legacy alias: `/telegram` redirects to `/pharoswatchbot/`, and `/telegram/*` redirects to the matching `/pharoswatchbot/*` path
-- Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
-- Layout: the page uses the shared `FeaturePageShell` and card language like other feature routes, with no page-scoped theme or scene. Order: `PharosWatchBot` h1, lead and header CTAs (`#bot`: Open in Telegram plus Open the Mini App) → live adoption hero on `FeatureHeroSplit` (`#panel`) → alert families with a selectable verbatim preview (`#signals`; all six previews stay in the DOM, inactive ones `hidden`) → three-step setup (`#getting-started`) → tuning controls (`#controls`: presets, per-coin thresholds, quiet hours and snooze, daily recap, group desks, on-demand reads) → Mini App showcase (`#control`) → digest and community channels (`#channel`, `#community`) → command reference (`#manual`) → reliability and privacy contract (`#reliability`) → FAQ → closing CTA. Frost appears only on the active-watchers beam figure and the lifecycle chart stroke.
-- Reads `/_site-data/telegram-pulse` for snapshot-first watcher/subscription telemetry in the hero: active watchers as the One Beam figure, alert follows (explicit + preset-implied split), daily lifecycle deltas, the top-followed coins, and the Telegram chat lifecycle chart. All of it renders on the surface, none behind disclosure. When the pulse is unavailable the beam shows `—`, never a retained count. Public adoption metrics only: no operational Mini App or queued-delivery counts.
-- Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
-- Adoption-metric loading and unavailable states are named `status` live regions, retaining polite announcements and explicit busy state.
-- Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, reasoned safety-grade alerts, the private personalized Daily Recap (`/recap`, `/recap on|off`, and `/recap time <hour>`), quiet hours, inline snooze, and the overflow delivery queue
-- Documents Daily Recap in the tuning controls, command reference, Mini App capability list, and FAQ, including its private-chat scope, confirmed-timezone requirement, material-change suppression, and separation from the market-wide Daily Digest
-- The recommended `pw1_landing_setup` link preloads the `dews,depeg usd-top25` confirmation and preserves landing/setup attribution through first follow; no extra branch choice or silent subscribe.
-- Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
-- The command reference is filterable client-side and fully visible (no collapsed defaults); alert examples remain the verbatim `shared/lib/telegram-alert-samples.ts` text with plain-language family framing.
+The page reads `/_site-data/telegram-pulse` for public adoption counts/top follows/history only; it never calls mutating bot APIs and exposes no operational Mini App/queued-delivery counters. Unavailable pulse renders `—`, never retained counts; loading/unavailable states are named polite status regions with busy state. Samples derive verbatim from `shared/lib/telegram-alert-samples.ts`.
+
+The recommended `pw1_landing_setup` link preloads DEWS+depeg `usd-top25` confirmation and preserves attribution through first follow: no extra branch choice or silent subscription. Recap copy retains private scope, confirmed timezone, material-change suppression and separation from market-wide Digest. Component order/layout is owned by the route, not mirrored here.
 
 ## Public Pulse Privacy And Freshness
 
@@ -308,3 +198,5 @@ Freshness is split deliberately:
 - Heavy public pulse sections (`topCoins`, lifecycle history, and Mini App daily usage counters) are reused for up to 15 minutes when the cached pulse is valid. The current aggregate counts still refresh on the 5-minute pulse cadence, and pending-delivery count can reuse the dispatch lane's pending-capacity snapshot.
 
 The public chart contains at most 90 completed UTC days of persisted lifecycle snapshots. Daily subscribe, unsubscribe, and reactivation counts come from transition events captured when subscription state changes; the current partial UTC day is never presented as finalized history.
+
+Pulse snapshot publication is generation-fenced: an older build cannot replace a newer generation. `miniAppOpenToFirstMutationP50Sec` uses the selected daily latency-bucket midpoint, stays null/privacy-suppressed below five known-latency sessions, and excludes unknown session correlations. Lifecycle-event/preset read failure publishes affected fields as null in `quality.unavailableFields`, never synthetic zero.

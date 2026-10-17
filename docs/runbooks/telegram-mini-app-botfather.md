@@ -14,10 +14,12 @@ Verify quarterly or after a BotFather UI change.
 | Default menu button | `Manage Alerts` → `https://pharos.watch/pharoswatchbot/app/` | Reconciled by the Worker (`setChatMenuButton`); listed here for completeness. |
 | Mini App preview screenshots | _operator-captured outside repo_ | Record current filenames and SHAs during quarterly BotFather review; update when the Mini App UI ships a material change. |
 | Mini App preview video | _operator-captured outside repo_ | Optional; omit if no current video. |
-| Loading-screen icon | _operator-captured outside repo_ | Record current filename and SHA during quarterly BotFather review. Square; should match the Pharos avatar (`public/pharos-mark.png`). Brand mark refreshed 2026-07-31 — re-upload. |
+| Loading-screen icon | _operator-captured outside repo_ | Record filename/SHA during quarterly review. Square and match current `public/pharos-mark.png`; confirm the current mark has been re-uploaded. |
 | Loading background color | _operator-captured outside repo_ | Record the configured hex during quarterly BotFather review. |
 
 Rows marked `operator-captured outside repo` are not source-controlled assets today. Capture their live BotFather values in the quarterly review note or update this runbook when the assets become repo-owned.
+
+Enable Inline Mode through BotFather `/setinline` with a status-oriented placeholder. Worker registration includes `inline_query` / `chosen_inline_result` but cannot enable this BotFather toggle. For chosen-card measurement, configure a conservative `/setinlinefeedback` sample; feedback is aggregate-only, not functional delivery evidence.
 
 ## Smoke Tests
 
@@ -34,6 +36,6 @@ If any smoke test fails on a deploy, treat the failing payload as a Mini App rel
 ## Cross-References
 
 - [`docs/telegram-mini-app.md`](../telegram-mini-app.md) — payload registry, auth model, launch surfaces.
-- [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Mini App Launch Entrypoints" — Worker-reconciled vs BotFather-owned surfaces.
+- [Mini App launch surfaces](../telegram-mini-app.md#launch-surfaces) — Worker-reconciled vs BotFather-owned entrypoints.
 - [`telegram-mini-app-auth-failures.md`](./telegram-mini-app-auth-failures.md) — when the Mini App loads but auth fails.
 - [`telegram-secret-rotation.md`](./telegram-secret-rotation.md) — bot-token and webhook-secret rotation.

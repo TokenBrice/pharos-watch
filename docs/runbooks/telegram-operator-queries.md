@@ -67,7 +67,7 @@ WHERE chat_id = '<chat_id>'
 GROUP BY delivery_state;
 ```
 
-The retired filtered-clear endpoint's read-only pending count:
+Count pending rows for the inspected chat:
 
 ```sql
 SELECT COUNT(*) AS matched
@@ -75,7 +75,7 @@ FROM telegram_pending_alerts
 WHERE chat_id = '<chat_id>' AND delivery_state = 'pending';
 ```
 
-This is sizing only, not permission to clear rows. A direct `DELETE` would bypass dead-letter, target, recap, and audit bookkeeping.
+Sizing is read-only; [delivery remediation](./telegram-no-delivery.md#remediation) owns stop conditions and mutation prohibitions.
 
 ## Subscriber Delivery Controls
 
@@ -111,7 +111,7 @@ FROM telegram_delivery_pauses
 ORDER BY mode;
 ```
 
-An absent `fresh`, `pending`, or `admin` row is inactive with generation `0`; an expired row is inert but retains its generation. [Bot-wide outage](./telegram-bot-wide-outage.md#pause) owns pause/resume authority, audit, and readback. Do not write pause SQL or clear the circuit to simulate a pause.
+[Delivery pauses](./telegram-no-delivery.md#pause) owns absent/expired-row interpretation, generation/audit requirements and readback; this query grants no write authority.
 
 ## Alert Jobs
 
@@ -218,7 +218,7 @@ WHERE state = 'running'
 ORDER BY updated_at, source_event_id;
 ```
 
-Do not manually advance a baseline while expiry debt remains or reset a plan generation. The `telegram_legacy_overflow_state` table was dropped from production on 2026-08-10. Any surviving `telegram-source:legacy-overflow:v1:*` source rows — synthetic `source_event_id` values in `telegram_alert_source_events` and the plan, target, and pending rows that reference them — are terminal evidence from the removed one-time importer; nothing writes them any more.
+Never advance a baseline with expiry debt or reset a plan generation. Historical legacy-overflow sources remain evidence, not replayable input; [delivery remediation](./telegram-no-delivery.md#remediation) owns recovery.
 
 Targets that missed one alert:
 
@@ -268,9 +268,7 @@ WHERE effect_state IN ('sending', 'execution_unknown')
 ORDER BY COALESCE(effect_started_at, created_at) ASC;
 ```
 
-Treat both states as execution-unknown once the claim expiry has passed. Inspect Telegram/user reports and the exact job payload context before any manual resend. Never reset these rows to `planned` merely to make the dispatcher retry them.
-
-There is no operator acknowledgement action left. `POST /api/admin-telegram-delivery-control` (action `acknowledge_execution_unknown`), which archived a reviewed ID set fail-closed while preserving the authoritative `execution_unknown` outcome, was retired on 2026-08-09. Reviewed rows now wait for the automatic 90-day archive, which performs the same projection and dead-letter copy with `reason = 'execution_unknown_archived'`. Do not hand-edit `execution_unknown` rows to shortcut it; restoring early acknowledgement requires reverting the endpoint's removal commit.
+After claim expiry, sending and execution-unknown require exact Telegram-visible reconciliation, not reset to planned. Reviewed unknown work waits for automatic 90-day audit archival; no operator early-acknowledgement path exists. [Delivery remediation](./telegram-no-delivery.md#remediation) owns the no-replay contract.
 
 ## Dead Letters
 
@@ -330,7 +328,7 @@ FROM telegram_pending_disambiguation
 WHERE chat_id = '<chat_id>';
 ```
 
-Use [Webhook retry and dedupe](./telegram-webhook-retry-dedupe.md#quick-diagnostic-checklist) to determine whether takeover is safe; the [setup-wizard runbook](./telegram-setup-wizard-stuck.md#remediation) owns its scoped expired-row cleanup.
+Use [retry diagnosis](./telegram-webhook-retry-dedupe.md#quick-diagnostic-checklist) for takeover safety and [setup state](./telegram-webhook-retry-dedupe.md#setup-state) for exact chat/type/expiry-scoped cleanup.
 
 ### Webhook Status And Effects
 

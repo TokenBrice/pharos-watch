@@ -1,8 +1,8 @@
-# Safety Score V9 Readiness
+# Mechanism Capture Storage and Replay
 
-This page records the readiness contract for mechanism captures. Compact summaries
-feed the shock-registry and evaluation-build generators; the scorer consumes generated
-registry-backed facts. Raw capture bodies are retained outside Git for replay.
+This page owns raw mechanism-capture retention and exact-byte replay. Compact
+summaries feed the shock-registry and evaluation-build generators; the scorer
+consumes generated registry-backed facts. The stable filename is not a rollout status.
 
 ## Mechanism capture storage
 
@@ -51,81 +51,42 @@ Protocol-API collection and reviewed weekly automation are permanent non-publish
 
 ## Test-owned replay fixtures
 
-Offline replay coverage needs original capture bodies, which no longer live in
-`shared/data/`. The recorded journals under
-`scripts/__tests__/fixtures/<assetId>-mechanism-measurement-block-<number>.json`
-are those bodies, recovered byte-identically from the commit that moved captures
-to R2 (`ade03b84b`):
+Original capture bodies used by offline replay live in
+`scripts/__tests__/fixtures/<assetId>-mechanism-measurement-block-<number>.json`.
+Their immutable recovery source is `ade03b84b^:shared/data/safety-score-v9/mechanism-measurements/<assetId>/<date>.json`.
+`scripts/__tests__/measure-cdp-mechanism-metrics.test.ts` checks SHA-256 and byte
+count against committed summaries before family replay; edited or regenerated
+fixtures are not replacement evidence.
 
-```bash
-git show ade03b84b^:shared/data/safety-score-v9/mechanism-measurements/<assetId>/<date>.json
-```
-
-`scripts/__tests__/measure-cdp-mechanism-metrics.test.ts` asserts each fixture's
-SHA-256 and byte count against the committed `<date>.summary.json` before
-replaying it through the configured family pipeline, so a hand-edited or
-regenerated fixture fails rather than becoming new evidence.
-The internal scalar journal helpers in `core.ts` preserve raw addresses, decoder
-labels and call→decode→record order; family producers retain compound decodes and
-protocol checks. Ordinary and mutated fixtures use the same ordered `ReplayEthCaller`;
-returndata overrides are applied after call validation and recorded in the journal.
-This is an implementation-only consolidation, not a methodology or evidence change.
-`scripts/__tests__/fixtures/usde-ethena-frozen-legacy-protocol-api-v1.json` is
-the frozen legacy V1 protocol-API body recovered the same way; the protocol-API
-refresh pins its SHA-256, so the test replays it at the designated path and
-rejects the identical bytes under any other capture name.
+The frozen `scripts/__tests__/fixtures/usde-ethena-frozen-legacy-protocol-api-v1.json`
+is accepted only at its designated capture path and pinned SHA-256 by the protocol-API
+replay tests. Identical bytes under another capture name do not qualify.
 
 ## Recovered capture-time registries
 
-The September 2026 replay repair recovered these registry identities by exporting
-the Git tree, rebuilding its merged per-coin catalog, and recomputing the
-generator's canonical active/frozen/dead registry SHA-256. These are verified
-registry-equivalent commits, not a claim that the capture records a deployment
-commit (it does not).
+These registry-equivalent Git commits recover the canonical active/frozen/dead
+registry fingerprint for each capture. A registry match does not identify the
+deployed evaluator revision.
 
 | Capture | Registry commit | Recomputed fingerprint |
 | --- | --- | --- |
 | `capture-20260904-1100.json` | `83ee5baede53181d2fc07fd43a7acd103f0f562f` | `4ab43dac582c76e86fd35c1d05f13ce9f9e3e81c3d02203b842ea12b96b68d38` |
 | `capture-20260905-0620.envelope.json` | `a711d32b0e2ea21f562bc29e4f37d6d1a36ac35d` | `3b1fb40199248596da6fae4f4f292dd6f4eba5e7497a6fd3c79d430d2af5ef39` |
 
-There is no committed pinned-captures manifest for these fixed-input exports;
-the evaluation-build manifest's capture pins cover mechanism shock evidence,
-not these operator captures.
-
-Use those SHAs with replay's `--registry-ref`, at clocks `1788509806` and
-`1788589087` respectively. Both completed with 337 cards, without either
-mismatch/future-review override. Repeating each replay produced identical full
-artifact bytes and `safety-score-v9:diff --assert-empty` printed
-`EMPTY DIFF — bit-identical` for each. The September 5 embedded-snapshot export
-also replayed without a ref and diffed empty against the ref-based replay.
-
-The regression `replays a capture-time NAV asset that is non-NAV live only with
-its verified registry snapshot` fails with the former live-only NAV validator
-and passes with snapshot validation. The complete replay test file passed
-12 tests. No vcred classification was changed and both captures retain its NAV
-row with price `1.0022877855081067`.
+Use `--registry-ref` with the listed commit and clocks `1788509806` and
+`1788589087`, respectively. The September 5 envelope also carries its registry
+snapshot. These fixed-input exports have no committed pinned-captures manifest:
+evaluation-build capture pins cover mechanism shock evidence, not operator captures.
 
 ### Identity limits
 
-Both capture registry fingerprints and original base-input generation IDs
-were preserved:
-
-- September 4: `report-cards-input:v1:389d904739cfc13219c02e77b300dba1d6e87bef3e22e769062c1fbc47a38065`.
-- September 5: `report-cards-input:v1:0b0838b3396f373da240128c58f51062cd94c9c6da41b35e539ad18e735fd7ac`.
-
-Neither approved capture contains a production publication/result digest.
-The September 5 envelope contains an **input** identity and payload checksum;
-its `evaluationBuildDigest` is
-`2ba546674fe51a6c484c9777ceec39ce9902291d877a128a5a3586cbe5af73cd`,
-whereas the tested checkout's replay build digest was
-`a0c0b82c4266cfda0412d18e50ddac65bdfe251fb8d0bbaaa1bc11d024931317`.
-These do not match, nor should registry recovery pretend to restore evaluator
-code, policy, and all other V9 overlays. The production envelope checksum is
-verified during parsing; it is not a score-result checksum. Therefore these
-runs prove capture-time registry/NAV interpretation and deterministic replay,
-**not** historical production-output equivalence or a release authorization.
-See the [equivalence harness](./safety-score-equivalence-harness.md#capture-time-registry-replay)
-for snapshot scope and current-curation mode.
+Registry recovery supports capture-time registry/NAV interpretation and deterministic
+replay, not historical production-output equivalence or release authorization.
+Neither listed capture contains a production result digest. An envelope's input
+identity/checksum verifies its input, not scored output; registry recovery restores
+neither evaluator code nor policy/other overlays. Use the
+[capture-time registry replay contract](./safety-score-equivalence-harness.md#capture-time-registry-replay)
+for trusted-ref/snapshot scope and current-curation mode.
 
 ## Composite ceiling policy
 

@@ -107,18 +107,16 @@ Before tracking a coin, confirm it belongs on Pharos:
 
 Active additions and pre-launch promotions must have both a fetchable current price path and a fetchable circulating/market-cap path before they are considered addable. Pre-launch entries are exempt until promotion.
 
-Record one accepted path in the research packet:
+Record one accepted path in the research packet, proving **both** current price and positive supply/market cap:
 
-| Path                        | Price requirement                                                                                                                                    | Market-cap / supply requirement                                                                                                            |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| DefiLlama stablecoins       | `llamaId` resolves to the intended asset and the list/detail data exposes a price                                                                    | Positive observed list `circulating`, validated with `getCirculatingRawOrNull()`; values are already USD, so do not multiply by price |
-| CoinGecko supplemental fiat | `detailProvider: "coingecko"` with observed positive price via verified `geckoId`, or the supported single-contract price resolver when `geckoId` is absent | Positive fresh CoinGecko `usd_market_cap`, or a path accepted by `hasRuntimeOnchainSupplyPath()` in `shared/lib/onchain-supply-probe.ts`; the static check validates admission metadata, not live fetchability |
-| Commodity supplemental      | verified `geckoId` returns the token price; every active GOLD/SILVER asset requires positive `commodityOunces`, including 1oz tokens | Positive fresh CoinGecko market cap, fresh CoinGecko circulating supply × resolved token price for silver assets, a reviewed curated aggregate supply path, or a dedicated gold protocol slug admitted by `shared/lib/commodity-protocols.ts` with usable `mcap` |
-| Explicit runtime exception  | demonstrated maintained source-specific price integration, such as Zephyr Scanner | independently demonstrated circulating supply or market-cap integration; a price allowlist alone is insufficient |
+- **DefiLlama:** `llamaId` identifies this asset and list/detail exposes price; positive list `circulating` passes `getCirculatingRawOrNull()`. It is already USD—do not multiply by price.
+- **Supplemental fiat:** `detailProvider: "coingecko"` with positive observed price from verified `geckoId`, or the supported single-contract resolver without one; positive fresh `usd_market_cap` or a path admitted by `hasRuntimeOnchainSupplyPath()` in `shared/lib/onchain-supply-probe.ts`. Static admission metadata does not prove live fetchability.
+- **Commodity:** verified `geckoId` price and positive `commodityOunces` for every active GOLD/SILVER token, including 1oz tokens. Supply is positive fresh CoinGecko market cap, fresh circulating supply × resolved price for silver, a reviewed curated aggregate, or a dedicated gold slug in `shared/lib/commodity-protocols.ts` with usable `mcap`.
+- **Explicit runtime exception:** demonstrate maintained source-specific price integration (such as Zephyr Scanner) and independently supported supply/market-cap integration; a price allowlist alone is insufficient.
 
-Do not treat a filled JSON profile, a static route, or `canonical-order.json` inclusion as sufficient. If the active asset cannot satisfy both columns, do not add it as active; track it as pre-launch/watchlist material or document the missing upstream path before continuing.
+Do not treat a filled JSON profile, static route or canonical-order inclusion as sufficient. If either requirement fails, do not add the asset as active; retain pre-launch/watchlist material or document the missing upstream path before continuing.
 
-Runtime price-coverage monitoring is separate from this pre-edit gate. A missing price does not suppress an otherwise admitted market cap or make the served surface stale. Unacknowledged gaps warn after two missing `sync-stablecoins` generations and material gaps degrade `/api/health` after 96 (one day); unknown continuity triggers both immediately. Materiality uses current market cap, eligible last-known cap ×2 (up to 30 days old), or unknown cap, against the $1B threshold. At 672 generations (one week), alert-eligible gaps receive `active-price-coverage-critical-duration`; smaller gaps alone do not degrade health. Persistent unpriceability needs reviewed re-sourcing or a catalog decision, not indefinite waiting. `STATUS_MISSING_PRICE_THRESHOLDS` owns the bands; see [Status Dashboard: Active-price gap duration bands](../status-dashboard.md#active-price-gap-duration-bands-2026-09-21) for continuity, materiality, and acknowledgement rules.
+Runtime price-coverage monitoring is separate from this pre-edit gate. Missing price neither suppresses an otherwise admitted market cap nor makes the served surface stale. [Active-price gap duration bands](../status-dashboard.md#active-price-gap-duration-bands-2026-09-21) owns continuity, materiality, alert thresholds and acknowledgement; `STATUS_MISSING_PRICE_THRESHOLDS` owns their values. Persistent unpriceability needs reviewed re-sourcing or a catalog decision, not indefinite waiting.
 
 Exclusions:
 
@@ -169,47 +167,11 @@ In coordinated additions, specialists return their portion of this packet and la
 
 ### Always collect
 
-- `id`, `name`, `symbol`
-- target per-coin registry file
-- lifecycle status: active or pre-launch
-- `flags.backing`
-- `flags.pegCurrency` (schema default `"USD"` — may omit when USD)
-- `flags.governance`
-- `flags.yieldBearing` (schema default `false` — may omit when false)
-- `flags.rwa` (schema default `false` — may omit when false)
-- `flags.navToken` (schema default `false` — may omit when false)
-- `collateral`
-- `pegMechanism`
-- `links`
-- `contracts`
-- `reserves`
+Always research `id`, `name`, `symbol`, target file, lifecycle, backing/peg/governance/yield/RWA/NAV flags, collateral, peg mechanism, links, contracts and reserves. `StablecoinMetaAssetSchemaShape` in `shared/lib/stablecoins/schema.ts` owns their field shapes; the [registry editing rules](../stablecoin-data.md#editing-rules) own authoring semantics. Record the evidence in the [handoff packet](#additionevidence-handoff-packet). Schema defaults do not replace Phase 3 research or the Phase 3.5 editorial gate.
 
 ### Collect when applicable
 
-- `oneLiner`
-- `mechanismArchetype`
-- `llamaId`
-- `detailProvider`
-- `geckoId`
-- `cmcSlug`
-- `protocolSlug`
-- `pegReferenceId`
-- `commodityOunces`
-- `proofOfReserves` (with optional `attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`, and a structured `latestReport`)
-- `jurisdiction`
-- `tradedContracts`
-- `dependencies`
-- `blacklistabilityReview`
-- `collateralQuality`
-- `custodyModel`
-- `governanceQuality`
-- `infrastructures`
-- `yieldConfig`
-- `liveReservesConfig`
-- `mintAuthority`
-- `notices`
-- `tags`
-- all pre-launch metadata from Phase 0a
+Evaluate optional metadata against the asset's actual mechanism and supported pipelines: discovery/provider routing, parent/variant identity, report/attestor evidence, jurisdiction, dependencies, reviewed controls, resilience overrides, feature configs and pre-launch milestones. The schemas own field names and allowed values; each applicable editorial or downstream branch still needs a sourced decision or explicit gap.
 
 ### Research questions you should answer up front
 
@@ -383,83 +345,11 @@ Add scalar metadata to the asset's per-coin JSON file using current field names 
 
 ### Minimal active-asset skeleton (field shapes only — a real entry also needs the mandatory `blacklistabilityReview` from Phase 3 and a `listing-decisions.json` class)
 
-```json
-{
-  "id": "ausd-acme",
-  "name": "Acme USD",
-  "symbol": "AUSD",
-  "oneLiner": "AUSD is Acme's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasury bills held in a bankruptcy-remote vehicle.",
-  "flags": {
-    "backing": "rwa-backed",
-    "governance": "centralized",
-    "rwa": true
-  },
-  "llamaId": "999",
-  "detailProvider": "defillama",
-  "geckoId": "acme-usd",
-  "collateral": "Short-term U.S. Treasury bills held in a bankruptcy-remote vehicle",
-  "pegMechanism": "1:1 mint and redemption against issuer-approved cash subscriptions",
-  "mechanismArchetype": "fiat-cash",
-  "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://acme.example/transparency",
-    "provider": "Deloitte",
-    "attestorTier": "big4",
-    "cadence": "monthly",
-    "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
-  },
-  "links": [
-    { "label": "Website", "url": "https://acme.example" },
-    { "label": "X", "url": "https://x.com/acme" },
-    { "label": "Docs", "url": "https://docs.acme.example" }
-  ],
-  "contracts": [{ "chain": "ethereum", "address": "0xabc123...", "decimals": 6 }]
-}
-```
-
-`oneLiner`, `mechanismArchetype`, and the `proofOfReserves` attestor fields drive the detail-page verdict, schematic, and badge. Follow Phase 3.5 for required fields and sourced waivers; UI fallbacks do not waive the addition gate.
+Use `StablecoinMetaAssetSchemaShape` in `shared/lib/stablecoins/schema.ts` for the active-asset shape and the [registry editing rules](../stablecoin-data.md#editing-rules) for authoring semantics. A valid base row alone is insufficient: add the required risk-review sidecar, listing decision, Phase 3.5 editorial decisions and observed Phase 1a runtime PASS. UI fallbacks do not waive these gates.
 
 ### Mint Authority profile shape
 
-When the Phase 3.5 / Phase 5f gate calls for a reviewed Mint Authority profile, author it in `shared/data/stablecoins/domains/mint-authority/<id>.json`. It is optional overall, but when present the schema expects a reviewable profile:
-
-```json
-{
-  "id": "ausd-acme",
-  "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "Reviewer narrative explaining who can create durable supply and through which route; shown under Review notes.",
-    "headline": "Concentrated — the issuer mints AUSD directly through a 3/5 multisig; admin power is concentrated.",
-    "controls": [
-      {
-        "chain": "ethereum",
-        "address": "0xabc123...",
-        "label": "Acme token owner",
-        "role": "direct-minter",
-        "authorityType": "multisig",
-        "directMintAbility": "direct",
-        "threshold": 3,
-        "signerCount": 5,
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [{ "label": "Ethereum token contract", "url": "https://etherscan.io/address/0xabc123..." }],
-        "evidence": "Contract reads and verified source show this owner can call the token mint function."
-      }
-    ],
-    "review": {
-      "sources": [{ "label": "Acme docs", "url": "https://docs.acme.example" }],
-      "evidence": "Official docs and verified contract reads identify the mint route and controlling authority.",
-      "reviewer": "Codex stablecoin addition",
-      "reviewedAt": "2026-05-25",
-      "unresolvedQuestions": ["Verify whether the multisig has off-chain operational policy constraints."]
-    }
-  }
-}
-```
-
-Use `sourceFreeRationale` instead of `review.sources` only when the review is intentionally source-free, for example a documented absence after exhaustive source review. Privileged mint paths require at least one `controls[]` entry unless confidence is `unknown`. Verified Safe/multisig controls require `threshold`, `signerCount`, and `modulesOrGuardsStatus`; verified or probable controls cannot use `modulesOrGuardsStatus: "unknown"` because unknown modules or guards cap confidence at `manual-review`. A verified Safe control with an on-chain or Safe API `safe.source` also needs `safe.observedBlock`. Wrapped or variant inherited profiles must use `mintPath: "wrapped-or-variant-inherited"` and must set `inheritedFrom`, which must match `variantOf` when the coin declares one.
+Author the profile in `shared/data/stablecoins/domains/mint-authority/<id>.json` using the [Mint Authority authoring contract](../stablecoin-data.md#mint-authority-and-bridge-risk-ownership) and the schema in `shared/types/stablecoin-meta-control-schemas.ts`. Follow Phase 5f for evidence and coverage; a copied example is not a reviewed profile.
 
 ### Current registry editing checklist
 
@@ -547,91 +437,23 @@ See Phase 6 for exact rules.
 
 ### 5b. Live reserves
 
-If the issuer publishes a usable transparency API, attestation feed, or on-chain reserve proof:
+When a usable transparency API, attestation feed or on-chain reserve proof exists, follow [adding a live-reserve adapter](../live-reserves.md#adding-a-new-adapter) and the [metadata contract](../live-reserves.md#metadata-contract). Reuse a matching adapter; add/register one only when no existing adapter applies. Mapped dependencies also require the owner's reviewed dependency-target disposition in the same change.
 
-- add `liveReservesConfig` to the coin metadata
-- reuse an existing adapter if it actually matches the source
-- otherwise add a new adapter under `worker/src/cron/reserve-adapters/` and register it
-- if the adapter produces mapped dependencies, add an `adapterReview(...)` entry in `shared/data/coverage-dispositions/dependency-target-dispositions.ts` in the same change, with dated primary evidence for claim identity and mapping semantics; registering an adapter alone does not satisfy dependency review
-
-Current `liveReservesConfig` rules:
-
-- `adapter`, `version`, and `semantics` are required
-- `display.url` / `display.label` should point to the public source page
-- `inputs.primary` is required
-- `inputs.fallbacks` is optional
-- use a coin-specific `breakerScope` when the same adapter is reused against different upstream sources or params
-- shared breaker scopes are only appropriate when the source is truly shared and source-invariant, such as the M0 family
-- `curated-validated` must align with a tracked on-chain contract for that coin
-
-If no live source exists:
-
-- keep `reserves[]` populated
-- do not invent a live config
+If no live source exists, keep curated `reserves[]`, record the gap and reason, and do not invent a config or adapter. A config never waives supply policy or permits manual supply overrides.
 
 ### 5c. Yield intelligence
 
-If `flags.yieldBearing` is `true`, add `yieldConfig`.
+If `flags.yieldBearing` is true, add reviewed `yieldConfig` and evaluate the runtime source under [Source Configuration](../yield-intelligence-operations.md#source-configuration). That owner defines source registries and intentional-gap authoring; do not invent a source or write a derived export.
 
-Then evaluate whether runtime config is also needed. `worker/src/lib/yield-config/yield-config.ts` is the aggregator; the actual tables live in per-concern files beside it:
-
-- `YIELD_POOL_MAP` (`yield-config-pools.ts`): explicit DeFiLlama pool mapping.
-- `YIELD_VARIANT_MAP` (`yield-config-variants.ts`): separate wrapper/savings token that Pharos does not track directly.
-- `EXPLICIT_YIELD_SOURCE_POOL_MAP` (`yield-config-explicit-pools.ts`): curated exact-pool override for special assets.
-- `ON_CHAIN_RATE_CONFIGS` (`yield-config-rate-sources.ts`): deterministic on-chain exchange-rate APY.
-- `RATE_DERIVED_CONFIGS` (`yield-config-rate-sources.ts`): benchmark-minus-spread products.
-- `DIRECT_PROTOCOL_API_STRATEGIES` (`yield-config-rate-sources.ts`): issuer-API yield sources outside DefiLlama.
-- `PRICE_DERIVED_FALLBACK_IDS` (`yield-config-rate-sources.ts`): allow price-derived APY as the fallback path.
-- `YIELD_ADAPTER_LIFECYCLE` (`yield-config-rate-sources.ts`): typed lifecycle dispositions; accepted gaps are authored in `INTENTIONAL_GAP_REASONS_TYPED`, from which `INTENTIONAL_GAP_REASONS` and lifecycle rows are derived.
-- `AUTO_LENDING_POOL_MAP` / `AUTO_LENDING_SAFETY_BYPASS_IDS` (`yield-config-lending-protocols.ts`): auto-discovered lending-opportunity pools and their safety-check exceptions.
-
-Notes:
-
-- Use a real mechanism type such as `nav-appreciation`, `rebase`, or `lending-vault`.
-- `lending-opportunity` is primarily a runtime-discovered publication type, not the usual static metadata choice.
-- If the yield wrapper is tracked as its own coin, do not also force the base asset through `YIELD_VARIANT_MAP`.
-- When a tracked savings wrapper becomes the canonical yield surface, remove the wrapper-owned `yieldBearing` / `yieldConfig` metadata and historical ownership from the parent instead of leaving the base asset as the wrapper host.
-- If no yield source exists and none is expected, add a sourced typed reason to `INTENTIONAL_GAP_REASONS_TYPED`, not to its derived `INTENTIONAL_GAP_REASONS` export.
+If a wrapper is tracked separately, do not also force it through the base asset's wrapper map. When a tracked savings wrapper becomes the canonical yield surface, remove its yield metadata and historical ownership from the parent. Record unsupported sources as sourced typed intentional gaps.
 
 ### 5d. Redemption backstops
 
-If the coin has a meaningful direct redemption or swap route, add a config to `shared/lib/redemption-backstops.ts` / `shared/lib/redemption-backstop-configs/*`.
-
-Evaluate:
-
-- route family
-- access model
-- settlement model
-- execution model
-- output asset type
-- capacity model
-- cost model
-
-If the route is weak, unknown, or impossible to review cleanly, skip it rather than overstating exit quality. In that case, make the metadata explicit: soften `pegMechanism`/summary language so it does not imply a modeled holder backstop, and add a short notice or audit note explaining that redemption scoring is intentionally absent pending source review.
+For a meaningful direct redemption or swap route, follow [Redemption Backstops](../redemption-backstops.md) for reviewed route/config admission, including access, settlement, execution, output, capacity and cost. If weak or unknown evidence prevents a model, record the intentional gap; soften `pegMechanism`/summary claims and add a notice or audit note so the profile does not imply a modeled holder backstop.
 
 ### 5e. Mint/burn flows
 
-If there is a meaningful issuance contract on a tracked chain, usually Ethereum, evaluate adding a config to `worker/src/lib/mint-burn-contracts-data.ts` (the resolved consumer aggregate lives in `worker/src/lib/mint-burn-contracts.ts`). The spec shape is declared in `worker/src/lib/mint-burn-contracts-types.ts` as `MintBurnContractConfigSpec`.
-
-Two authoring paths:
-
-- **Shortcut** - for plain Transfer-to-zero-address mint/burn on Ethereum, add an entry to `EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS` with `stablecoinId`, `dustThreshold`, and (optionally) `bridgeDetection`. The array expands into full specs automatically.
-- **Full spec** - for custom events (USDT `Issue`/`Redeem`, reUSD deposits, etc.) or non-Ethereum chains, add a `MintBurnContractConfigSpec` to `MINT_BURN_CONFIG_SPECS`.
-
-For a coin configured only outside Ethereum, also add its canonical chain to
-`worker/src/lib/mint-burn-canonical-chain.ts`. The registry-coverage test requires each such coin to have a mapping or
-a documented exception; coins with any Ethereum config continue to use Ethereum by default.
-
-Current practice:
-
-- token identity should come from shared metadata where possible; use `contractSource: "primary" | "traded"` (default `"primary"`) to pick from the coin's `contracts[]` vs `tradedContracts[]`.
-- use `contractAddressOverride` / `decimalsOverride` only when no existing registry deployment matches.
-- prefer a reviewed `startBlock` over the blanket default coverage floor; set `isDefaultStartBlock: true` explicitly when you fall back to the floor.
-- record provenance with `startBlockSource` (free-text) and `startBlockConfidence` (`"high" | "medium" | "low"`).
-- set `adapterKind` when the event set is not plain Transfers: `"custom-events"` or `"mixed"`; omit it (or use `"transfer-zero-address"`) for Transfer-based coins.
-- use `tier: "extended"` by default; reserve `tier: "critical"` for truly major coverage.
-- set a realistic `dustThreshold` in human-readable token units after decimal decoding, not raw base units; see existing entries for scale.
-- add bridge-detection hints (`ccipBridgeDetection`, `cctpBridgeDetection`, `layerZeroOftBridgeDetection`) only when there is a verified reason.
+For meaningful issuance on a supported chain, follow [Mint/Burn Flow Tracker](../mint-burn-flows.md) for config/spec ownership, event adapters, canonical chain, reviewed start block/provenance, decimal-aware dust and bridge detection. Choose the owner's shortcut only for matching plain Transfer events; otherwise use its full-spec path. Record non-applicability or a coverage gap with a reason instead of inventing an adapter.
 
 ### 5f. Mint Authority review
 
@@ -641,48 +463,13 @@ For new high-value active additions and pre-launch promotions, record either a r
 
 Every new addition or promotion that authors a `mintAuthority` profile must also author `mintAuthority.headline`: the detail card's one-sentence verdict, at most 25 words, with no raw identifiers (contract addresses, block heights, second counts, gate codes such as `D29`, evaluator keys, or version pins). `npm run check:stablecoin-data` rejects a headline that breaks that budget (`findSummaryBudgetViolations` in `shared/lib/summary-budget.ts`). Keep the long reviewer narrative in `summary`, which the card folds under `Review notes`. Without a headline the card falls back to a verdict generated from structured fields, which is acceptable for legacy profiles but not for new work.
 
-When authoring `mintAuthority`, verify:
+Use the [registry authoring contract](../stablecoin-data.md#mint-authority-and-bridge-risk-ownership) for field/refinement and deployment-ownership requirements. Research the exact native mint path, current controls, proxy/admin/cap powers, Safe thresholds/modules/guards, key custody, incidents and unresolved paths from primary sources and pinned reads. Preserve unknown/null versus reviewed absence or inapplicability; a failed read proves neither.
 
-- `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review` are present.
-- `review` includes `evidence`, `reviewer`, `reviewedAt`, and either `sources[]` or `sourceFreeRationale`.
-- privileged native paths — `user-collateralized-governed`, `issuer-direct-mint`, `permissioned-minter`, `offchain-attested-minter`, `facilitator-bucket-mint`, `amo-or-custodian-hybrid`, and `m0-permissioned-minter` — include at least one `controls[]` entry unless confidence is `unknown`.
-- each control identifies `label`, `role`, `authorityType`, and `directMintAbility`; addressed or mint-capable controls need control-level sources/evidence or profile-level sources.
-- Safe/multisig controls with `verified` confidence include `threshold`, `signerCount`, and `modulesOrGuardsStatus`; `modulesOrGuardsStatus: "unknown"` caps verified or probable confidence at `manual-review`.
-- EOA mint-capable controls should include `keyCustodyAttestation` when MPC/HSM custody is publicly evidenced; otherwise non-issuer-context EOA direct/can-authorize paths are capped by the score methodology.
-- Cap-limited controls should state `canRaiseCap` when known, and compromised or historically exploited mint paths should include `mintIncidents` entries with source links.
-- direct chain reads, proxy/admin reads, cap/facilitator registries, and Safe state include observed block or source notes when they are part of the evidence.
-- wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and must set `inheritedFrom`; when the coin also declares `variantOf`, the two must match.
-- `authorityPosture: "none-resolved"` is only for non-privileged user/protocol minting, or inherited wrappers whose reviewed parent is also `none-resolved`.
-- `authorityPosture: "none-resolved-mint"` applies when no control can mint or authorize minting on this asset but other domains exist (upgrade, parameters, or inherited parent mint authority). It requires a non-privileged `mintPath` unless a reviewed `noLocalIssuance` exception applies, unlike whole-chain `none-resolved`; it places no condition on the parent. Prefer it over an adverse posture for share wrappers with no local minter.
-- D29 `authorityPosture: "unbounded-governed"` requires `governedIssuance.decisionRule: "affirmative-vote"`; D30 `authorityPosture: "unbounded-veto-guarded"` requires `decisionRule: "minority-veto"`; H `authorityPosture: "unbounded-operationally-governed"` requires affirmative voting plus `operationalIssuance`, `executionCertificates` and `authorityGraph`. There is no legacy rule default. All require unbounded non-wrapper economics, an exact EVM-only governor reference resolving to an authored dao-governor with individual or class-bound execution evidence, uniform `votingControl`, graph/certificate container, exact pinned source evidence, enumerable authorization/capacity and actual review clocks under the [authoring contract](../stablecoin-data.md#governed-issuance-and-cap-semantics-review). With holding-period-weighted/lock-escrowed/past-block-checkpoint voting, the governor carries neither weighted quorum nor signer threshold/count. Labels do not grant qualification.
-- Minority-veto records carry strict `veto` evidence iff their rule is minority-veto (R-j): integer `quorumBps` 1..10000 (bps of total votes at the pin), non-empty exact lowercase four-byte `entrypoints`, `override: "none" | "symmetric-vote-destruction" | "insolvency-gated-restructure" | "unknown"`, and evidence of at least 80 characters. [Gates V1–V7](../mint-authority-scoring.md#minority-veto-issuance-1003) require fresh closed complete certificates and no scoped question/incident (V1), a minimum never-summed 1209600-second public window (V2), quorum at most 200 bps of holding-period-weighted/escrowed/checkpointed votes with only an admissible override (V3), sole veto-governor rooting with no governor unbounded bypass (V4), certified **active** `parameter-change` veto paths containing every declared selector and targeting **every** guarded issuance controller (V5), enumerable authorization/capacity (V6), and certified formula-bound monetary-policy paths (V7). Unknowns fail closed; a failed minority-veto profile cannot fall back to affirmative-governed. Holding-period-weighted means balance × duration; newly received or flash-borrowed shares carry zero votes.
-- D30-S formula-bound interest (deposits × rate × time) reuses `raiseable` with null bound and bounded impairment only with a hard-coded annual-ppm rate cap and minority-replaceable changes delayed at least 172800 seconds. List every such reachable `mint`/`bridge-mint` path in strict `monetaryPolicyPaths`, naming `controlRef`, `pathId`, positive integer `rateCapPpm`, nonnegative integer `rateChangeDelaySec`, `rateChangeRule` and evidence (R-l requires exact control/path resolution). Minority-replaceable means any qualified holder at or below the policy veto quorum can replace/reset the pending change before it applies. Without all conditions, interest or loss-coverage stays unbounded. veto and monetaryPolicyPaths are forbidden on affirmative voting.
-- D30-R `insolvency-gated-restructure` requires strict `veto.restructure` selectors, whole-asset-token equity threshold/observation, dependent control/path refs and evidence naming functions/constants, values and pin. Equity must meet threshold × policy multiple 2; include its function in capacity reads. Bind every selector to a reachable governor-certificate path. Exclude only unreachable disabled-reactivatable dependent paths, proving only restructure enables them and ordinary redemption retains a share. Typed path/reactivation edges must close every alternative; narrative selector labels alone are insufficient.
-- Admission delay belongs only on `suggestMinter` → activation. Already-admitted minters carry their own code-bounded/collateral-gated, certified D30-S, or unbounded exercise semantics and real delay, typically zero for an unbounded path. Never inherit the admission window onto an admitted issuer's exercise path.
-- Do not author D29, D30 or H without complete fresh individual or class-expanded execution-scope evidence on **every** control, including delegated, restriction-only, parameter-only and stopped/zero-current/latent actors. Exact full authorization/member census, runtime/proxy/implementation and instance conditions must match; unmatched members keep specific diagnostics and known adverse paths. Root every relevant expansion path through a closed typed authority graph tracing all permission, upgrade, delegatecall, execution, reactivation and vote-operator alternatives, not signer-prose address/word parsing. D29 needs ≥172800 seconds of unavoidable public notice across every unbounded exercise path and an admissible token governor execution path; D30 uses V2/V3/V5; H separates immediate certified operation from discretionary/envelope clocks. Private cooldown and proposal age are not payload notice. An independent key/council expansion root fails even behind a timelock.
-- Uniform D32 applies to D29/D30/H without grandfathering. Reconcile exact arbitrary-precision controller powers plus proved residual to the successful source-defined pinned voting-supply observation, using actual unilateral thresholds and every delegation/operator/replacement scenario. Above-threshold **own** locked/escrowed votes are admissible unless positively issuer/team/council-affiliated; unknown beneficial affiliation and concentration are diagnostics. A key casting **others'** votes, or able to replace their caster without on-chain holder approval, is council control. A threshold-capable key with actual other-holder casting/replacement authority denies even if its own stake alone suffices; needing those votes to pass alone also denies. Nongovernance privileged/forced creation/delegation denies. Controllers unable to pass alone need no identification; missing decisive ownership stays unknown and denies.
-- H requires [H0–H4](../mint-authority-scoring.md#operationally-governed-issuance-1005), not a veto-only monetary-policy block: affirmative flash-resistant public ≥172800-second governance for all discretionary expansion/envelope raises, genuine conserved principal/time/beneficiary/accounting, source-bound activity compensation, unique liability/supply bookkeeping and complete fresh closure. Final screens: effective annual growth ≤500000 ppm, keeper coefficient ≤1000 ppm, fixed reward ≤10 ppm of unique native supply, funded repeat ≥3600 seconds. Over 48 hours, ceil(certified annual growth ppm ×172800/31536000) + ceil(repeat reward supply ppm/day ×172800/86400) must meet the existing 5% moderate-exposure threshold (50000 ppm). Initial compensation uses activity-relative anti-farming/historical paid-fragment stock proof; repeats need a full in-flight bound. Unknowns remain null with exact gate/control/path/class/member/field diagnostics, not favorable zeros.
-- Combined-exposure evidence is certified only for **0 < W ≤ T**, with W reusing the existing public-governance `minUnavoidableDelaySec` (172800 seconds) and T the operational annual window (31536000 seconds). Policy loading rejects W > T; H admission independently denies out-of-domain anchors with H3 / `aggregate-flow-unproved`. Do not add a duplicate anchor threshold/key or extend the certificate beyond its domain.
-- H bounded delegated stock needs a proved finite cap, every raise/reset/replacement requiring the public ≥172800-second governor route, and no fresh chosen-recipient issuance outside that stock. Downstream strategy/custody losses belong in Backing; external strategy-target closure is not an extra H Mint gate. Refillable flow buckets are not finite stock. H stays economically unbounded at mint 55 / Governed / moderate cap 74 / seasoning and final positive credit ceiling 59, below D29/D30, and remains DDR-fragile/unbounded. Immediate reviewed formula interest or activity awards are not relabeled as delayed. No lifetime budget, surplus floor or permanent partial rung exists.
-- Respect [O0 path corrections](../mint-authority-scoring.md#truthful-path-corrections-and-gho-improvement-trigger-1005): GHO configured-pool first hops and real 345603-second ordinary payload clock, exact current/legacy LockstakeClipper Mom authority, and D3M positive suck/grab fee/donation paired accounting rather than atomic heal. GHO stays mint 25; removing Council chosen-recipient mint, genuinely reserve-backed restriction or a finite aggregate token-governed budget triggers ordinary D29 review. ZCHF D30-S's minority-replaceable seven-day rate process/uint24 nominal annual cap stays distinct from H's effective-growth screen; sibling lineage never grants qualification.
-- A non-governor actor is admissible without governor rooting only when none of its complete-scope paths is an unbounded issuance path. Delegated stock with bounded/raiseable/collateral-gated caps and non-unbounded impairment adds no delay requirement. Restriction-only controls may retain certified monetary-policy/fee parameter paths with bounded/none impairment; these do not themselves disqualify, but any unbounded issuance path does regardless of capability. Signer custody, such as an EIP-7702 owner, is identity evidence, not a path. A favorable label or reverted sample call does not certify closure.
-- D14 semantics describe durable arbitrary-recipient unbacked supply, not the current numeric ceiling. For `raiseable`, `bounded`, or `collateral-gated` semantics, any `direct`/`can-authorize` control, or any control with `canRaiseCap: true` regardless of `directMintAbility`, requires a sourced `capSemanticsReview` (R-c): `raiseable-collateral-only` for `raiseable`, otherwise `bounded-by-construction`. Its rationale must prove collateral- or deposit-backed construction, name governance parameter powers, and include actual review date/reviewer and sources. Collateral/basket admission or price-provider/oracle changes alone belong in Backing/oracle and do not establish arbitrary minting. Proven direct minting, minter/facilitator/ward authorization, or ceiling expansion without posted collateral/deposit requires `unbounded` and its derived-consistent posture. If construction cannot be verified from verified source or bytecode-matched artifacts, set semantics to `unknown`, omit the review block (R-d), correct stale control fields from evidence, record the unverifiable gap, and use the compiler-encoding-consistent posture (direct/can-authorize enters the unbounded branch; otherwise `unknown` when no mint-capable encoding applies). Existing pinned proof of an arbitrary minter-registration entrypoint suffices for `unbounded`. Upgrade authority alone does not trigger R-c.
-- `authorityPosture: "compromised"` applies if and only if a `mintIncidents` entry is `active` (R-e). For positively known unbounded issuance or claim impairment without a qualifying D30/D29/H, recurring reconciliation, or prudential process, use the derived-consistent `unbounded-adverse` annotation; it describes known authority, not proven non-reconciliation. Under R-f, `mintPath: "unknown"` permits `unknown`, or `unbounded-adverse` only with positively known adverse economics, plus `none-resolved-mint` when the reviewed `noLocalIssuance` exception applies. Current authoring strictly rejects retired posture values across active, frozen, delisted and quarantined assets; no annotation or compatibility alias grants process credit. Re-derive all migrated annotations against the landed v10.05 qualifications plus D33 rather than blindly renaming an asset that now qualifies for H or reconciliation.
-- For wrappers with `inheritedFrom`, distinguish copied parent issuer controls from wrapper-local minting. D08 carries the parent's D14 issuance risk through the serial-claim dependency, not a second local charge. Keep the wrapper's current cap semantics and author the matching `capSemanticsReview` if verified source proves deposit/collateral-only share minting and no wrapper-local arbitrary-recipient mint or minter-authorization power; state the parent-control/dependency distinction and cite that construction in the rationale. Only a proven wrapper-local privileged mint path justifies flipping the wrapper to `unbounded`.
-- Positive `reconciliation: "continuous" | "periodic" | "internal-ledger"` and `supervision: "prudential" | "attestation-only"` each require at least one actual `mintAuthority.review.sources` entry and a substantive review evidence sentence of at least 40 characters. For recurring reconciliation, state what complete liability/supply population is matched to what backing, accounting identity, cadence, document date and covered issuer/token/deployments; reserve balances, partial native supplies, bridged omissions or internal settlement alone do not establish whole-supply reconciliation. For prudential supervision, name the regulator/regime, exact supervised issuing entity, current status and issuance scope; custodian regulation, unrelated affiliates or registration alone are insufficient. For attestation-only, name the independent examiner, dated document and actual liability/backing assurance scope; an AUP is not automatically assurance. For internal-ledger, quote the issuer's actual issuance/accounting workflow and scope: it grants disclosure, not a standalone numerical lift. Record access date and scope limitations, distinguish observed facts from derivations, and never author a scored value from a homepage URL or character count alone.
-- Keep `unknown` as an unanswered factor with unavailable numerical observations null; use `none` only for positively reviewed absence and `not-applicable` only for reviewed inapplicability. A failed document/RPC/source-binding read proves none of those positive conclusions. At fixed evidenced unbounded authority and process, these availability values and internal-ledger do not alter the base rung. Independently sourced recurring reconciliation retains 55/70/80, while prudential-alone retains base 55; attestation-only alone grants no mint rung. Internal-ledger may clear only the issuer-backend mint-control question, not whole-financial assurance or signer risk, and its non-prudential whole-supply Control question remains.
-- Research can record sourced governance headlines as `processCandidate: true`, but only the complete process-certification owners can admit D29/D30/H under every landed v10.05 gate. For the v10.06 research wave, author only the independently confirmed claims in its verified-authoring ledger and cite the primary document, not the verifier note; partial or unverifiable scope stays unchanged/unknown. Do not target a grade, refresh evidence clocks cosmetically, manufacture a process certificate, or invent favorable relief for downstream dependencies. Migration spans every registry status and changes vocabulary only where no independently admitted new evidence exists; final annotations must match actual derivation.
+Apply the live mint owner's [scope](../mint-authority-scoring.md#current-v9-scope), [posture derivation](../mint-authority-scoring.md#mint-posture-derivation-and-quality-ladder-932), [D29](../mint-authority-scoring.md#governed-unbounded-issuance-1002), [D30](../mint-authority-scoring.md#minority-veto-issuance-1003), [H](../mint-authority-scoring.md#operationally-governed-issuance-1005), [D32](../mint-authority-scoring.md#uniform-voting-control-1005) and [D33 positive-process/fallback rules](../mint-authority-scoring.md#availability-invariant-mint-fallback-1006), rather than copying their gates here. Only complete, fresh source-bound certification can admit a process rung. A posture label, partial certificate, reverted sample call or sourced `processCandidate` headline cannot; known adverse reach remains even when proof is incomplete.
 
-For every active asset with more than one authored deployment, also complete these required steps:
+For every active multi-deployment asset, complete the registry owner's [native-versus-Bridge Risk review](../stablecoin-data.md#mint-authority-and-bridge-risk-ownership): exact route coverage, native-only mint/upgrade references or a reviewed no-local-issuance exception, and separately scoped bridge controls. Do not invent native issuance, duplicate a bridge capability in Mint Authority, or retain historical bridge vocabulary in active mint data. Catalog validation and compilation fail closed on invalid ownership.
 
-1. Add one `bridgeRouteRisk.routes[]` row per authored chain/contract deployment. Use its normalized `chain:contractAddress` ID and classify the issuance model from evidence; deployment on multiple chains does not by itself prove multi-canonical issuance.
-2. Unless a reviewed `noLocalIssuance` exception applies, add `deploymentRefs` to every Mint Authority control, naming only reviewed `native-issuance` routes, and to `mintAuthority.upgradeability` when `canChangeMintLogic: true`, naming only the native deployments that upgrade path can replace.
-3. Author bridge mint/burn, adapters, lockboxes or escrow, messaging/peers, rate limits, validators, bridge upgrades, pause, and administrators in `bridgeRouteRisk.controls[]`. Give each control a stable kebab-case `id`, one or more exact `routeRefs`, and its evidenced bridge capabilities.
-4. Split a shared controller across the two modules when it genuinely has distinct native-mint and bridge powers. Preserve controller identity and adverse evidence, but never duplicate one bridge capability into Mint Authority.
-5. Remove active Mint Authority use of `role: "bridge-admin"`, `authorityType: "bridge"`, `routeChecks`, and `mintPath: "bridge-or-oft-synthetic"`; the three bridge-specific enum values remain only for historical readback, while `routeChecks` moves with the bridge control.
-6. If no reviewed native deployment exists, do not invent one. Author the reviewed `mintAuthority.review.noLocalIssuance` exception for `inherited-parent-issuance` or `external-only-representation`, satisfying the conditions in [Stablecoin Data Registry](../stablecoin-data.md#mint-authority-and-bridge-risk-ownership).
-
-`npm run check:stablecoin-data` blocks invalid ownership, missing active multi-deployment references, and active bridge vocabulary in Mint Authority. The V9 compiler also fails closed on invalid ownership rather than filtering the control into a safer-looking score.
+Keep the exact control/path/class/member/field gaps and real exercise clocks. Do not copy admission delay onto exercise, parent issuance onto a wrapper-local charge, or a sibling's qualification onto this asset. Do not target a grade, invent relief, cosmetically refresh evidence dates, or turn a URL/character count into whole-liability reconciliation or supervisory proof. New evidence and final annotations must agree with the actual compiler derivation across every lifecycle status.
 
 Use the reviewed-source and ownership audits after collecting primary-source native-control evidence:
 

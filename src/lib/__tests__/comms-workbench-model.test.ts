@@ -161,7 +161,7 @@ describe("buildCommsWorkbenchModel", () => {
     });
     expect(model.delivery.recoveryLinks.map((link) => link.href)).toContain("/admin/crons/");
     expect(model.delivery.recoveryLinks.map((link) => link.href)).toContain("/admin/actions/");
-    expect(model.delivery.recoveryLinks.some((link) => link.href.includes("telegram-rate-limit-storm.md"))).toBe(true);
+    expect(model.delivery.recoveryLinks.some((link) => link.href.includes("telegram-no-delivery.md#rate-limit-storm"))).toBe(true);
     expect(model.delivery.recoveryLinks.some((link) => link.href.includes("telegram-no-delivery.md"))).toBe(true);
   });
 

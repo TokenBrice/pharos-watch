@@ -20,6 +20,8 @@ The response reports the V9 dependency as degraded, stale, or unavailable as app
 
 The frontend chain profile reads `GET /api/chains?chain=<chainId>` through `useChainDetail()`. Its summary, composition, backing breakdown, and stablecoin table use that single Worker-owned generation; it does not fetch or reconcile a separate `/api/stablecoins` snapshot.
 
+`chain_supply_history` is an actively collected forward-only internal baseline, not a live `/api/chains` input. Public history/chart activation requires scope, provenance and bounded capacity approval with an explicit UTC baseline strictly after 2026-04-08. A post-fix date or latest completion marker cannot certify the archive; older rows remain internal and missing days stay gaps.
+
 ## Formula
 
 Current `v1.7` composite:
@@ -32,25 +34,21 @@ Current `v1.7` composite:
 + 0.10 * backingDiversity
 ```
 
-The composite requires non-null `quality` and `pegStability` factors and peg-observation coverage that is `complete`, or `partial` with `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN` in `shared/lib/chains/health.ts`); only then is the weighted total rounded to the nearest integer. Partial coverage below 0.95, or `unavailable` coverage, keeps the composite `null`. Peg weight is 0.20, so an unobserved share of at most 5% can move the observed-only peg factor by at most 5 points and the composite by at most 1 point; the unobserved share stays published in `pegStabilityCoverage` and is never imputed. Nominal par references are not observed prices: their supply remains in the peg coverage denominator without entering its observed numerator.
+The weighted total is rounded to the nearest integer only after the [quality](#not-rated-policy) and [peg-coverage](#peg-coverage) gates pass; otherwise `healthScore` and `healthBand` are `null`.
 
 ## Factors
 
 | Factor             | Weight | Source                                                                   | Semantics                                                                                                                                                                                                                                                                |
 | ------------------ | -----: | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `quality`          |    30% | report-card cache                                                        | Supply-weighted Safety Score average over rated supply only. Not-rated supply is excluded from both the numerator and the denominator; the factor returns `null` when rated supply is below 50% of chain supply.                                                        |
+| `quality` | 30% | fresh accepted Safety Score publication | Supply-weighted average over rated supply only; [Not-Rated Policy](#not-rated-policy) owns admission. |
 | `chainEnvironment` |    20% | L2BEAT snapshot first, then `shared/lib/chains/index.ts` resilience tier | Matched L2BEAT scaling projects use `40%` stage score plus `60%` average risk sentiment across Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure. Unmatched chains fall back to tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
 | `concentration`    |    20% | chain supply shares                                                      | `100 * (1 - HHI)`. A single dominant coin scores `0`; an even N-way split approaches `100 * (1 - 1/N)`.                                                                                                                                                                  |
-| `pegStability`     |    20% | cached prices + peg rates | Observed-supply-weighted peg proximity from shared `deriveDepegSignal(...)`. Missing prices/references receive no imputed score. Zero observed supply is `null`; partial observation publishes the observed-only factor and full-positive-supply coverage; the composite is withheld below 95% coverage (see [Peg Coverage](#peg-coverage)). |
+| `pegStability` | 20% | cached prices + peg rates | Observed-supply-weighted proximity from `deriveDepegSignal(...)`; [Peg Coverage](#peg-coverage) owns denominator and composite admission. |
 | `backingDiversity` |    10% | active stablecoin backing flags                                          | Normalized Shannon entropy across the two active backing cohorts: `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded.                                                                                                                         |
 
 ## Not-Rated Policy
 
-Chain Health has two not-rated (NR) gates: the 50% rated-supply coverage gate on `quality`, and the 95% peg-observation coverage gate for the composite (see [Peg Coverage](#peg-coverage)).
-
-Supply whose stablecoin has no published Safety Score is excluded from the `quality` average — it contributes to neither the numerator nor the denominator. Pharos does not impute a score for unrated supply, because any imputed number is a risk judgement that has not been made. Below 50% rated supply the factor is `null`, which nulls the whole composite (`healthScore` and `healthBand` are `null`) rather than publishing a number derived from a minority of the chain's supply.
-
-Consequence: on a chain with partial coverage, `quality` describes the rated portion of that chain's supply, and the coverage gate — not a synthetic score — is what withholds publication when coverage is too thin.
+Supply without a published Safety Score contributes to neither numerator nor denominator of `quality`; no rating is imputed. Below 50% rated supply, `quality` is `null` and the composite is NR rather than a judgement based on a minority of supply. At sufficient coverage the factor still describes only the rated portion. The independent [peg-coverage gate](#peg-coverage) must also pass.
 
 ## Peg Coverage
 
@@ -67,9 +65,9 @@ Every chain row carries `pegStabilityCoverage`, computed by `assessPegStability(
 | `neutralImputedSupplyUsd` | Always `0` for v1.6+ producers; retained to interpret pre-v1.6 cached payloads that used neutral `50` |
 | `observedScore`           | Supply-weighted peg proximity over observed supply only; `null` when nothing was observed                |
 
-**Active policy since v1.7 (DEC-04; owner threshold 2026-09-28):** zero observed peg coverage makes `healthFactors.pegStability` `null` (NR) and therefore the composite NR. Partial coverage publishes `observedScore` as the factor together with full-positive-supply coverage; the composite (`healthScore`/`healthBand`) is published when `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN`) and stays null below it. The bound: with peg weight 0.20, an unobserved share of at most 5% moves the observed-only peg factor by at most 5 points and the composite by at most 1 point. Quality's 50% gate is not reused. Complete coverage retains the existing formula and quality gate. At adoption, chains such as Ethereum (coverage 0.999961; $5.9M unpriced of $148.7B), Tron, Base, Polygon, and Scroll (0.98749) regain a composite, while Hemi (0.159) stays NR. v1.6 required complete coverage for any composite. No producer imputes neutral 50. Activation requires observed Release A Worker/Pages readiness; supported rollback is the nullable-compatible A pair. Pre-v1.6 cached payloads remain labelled with their original methodology, not restamped as observed-only results.
+Zero observed peg supply makes the factor and composite NR. Partial observation publishes `observedScore`, but the composite requires `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN`). With peg weight 0.20, the at-most-5% unobserved share bounds the peg-factor difference to 5 points and the composite difference to 1 point; missing supply is never imputed. Nominal par supply stays in the denominator, not the observed numerator. Legacy payloads retain their methodology labels and `neutralImputedSupplyUsd` compatibility field; they are not restamped as observed-only results.
 
-Cutover observation: `/api/chains` uses `producerBacked` caching (maximum edge 300 seconds; browser 60 seconds plus 300 seconds stale-while-revalidate), bounded by remaining source freshness. Refetch/revalidate after those windows before claiming cutover; confirm `healthMethodologyVersion: "1.7"`, coverage, factor, and composite together. Error/degraded responses remain `no-store`; deployment must not renew source observation clocks.
+Activation requires observed nullable-compatible Worker/Pages readiness; rollback is limited to that pair. Verify methodology, coverage, factor and composite together after standard cache revalidation. Error/degraded responses remain `no-store`, and deployment never renews source clocks.
 
 ## Bands
 
@@ -83,11 +81,11 @@ Cutover observation: `/api/chains` uses `producerBacked` caching (maximum edge 3
 
 ## L2BEAT Snapshot
 
-`v1.5` treats L2BEAT as a static methodology input, not as a live API dependency. Matched Pharos chain IDs are explicit aliases to L2BEAT project IDs; examples include `optimism -> optimism` (public slug `op-mainnet`), `zksync -> zksync2`, `polygon-zkevm -> polygonzkevm`, `morph-l2 -> morph`, `manta -> mantapacific`, and `swellchain -> swell`.
+L2BEAT is a static methodology input, not a live dependency. `resolveL2BeatProjectId()` in `shared/lib/chains/l2beat-risk.ts` owns explicit Pharos-to-project aliases; public slugs are not inferred project IDs.
 
 Stage scores are `Stage 2 -> 100`, `Stage 1 -> 80`, `Stage 0 -> 55`, and `Not applicable` / `Under review -> 50`. Risk sentiments score as `good -> 100`, `warning -> 60`, `bad -> 20`, and neutral/under-review values as `50`.
 
-L2BEAT audit helpers also expose Interop-backed bridge-route review candidates for Safety Score research. Live Safety Score scoring does not consume the Chain Health snapshot directly in `v1.5`; bridge-route scoring consumes only curated `bridgeRouteRisk` metadata once a reviewer writes a sourced profile.
+Interop audit candidates are research leads only. Safety Score consumes separately reviewed `bridgeRouteRisk` metadata, not the Chain Health snapshot.
 
 `GET /api/chains` keeps the numeric `healthFactors.chainEnvironment` field and adds `chainEnvironmentEvidence` beside it. Matched projects return the consumed L2BEAT project ID, slug, stage score, risk score, five risk fields, and snapshot source date; unmatched chains return the fallback Pharos resilience tier. This is evidence/provenance only and does not introduce live L2BEAT fetching.
 

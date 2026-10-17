@@ -41,10 +41,12 @@ The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose desc
 
 ## Auth And Lanes
 
-- External integrations call `https://api.pharos.watch` and need `X-API-Key` unless the endpoint is explicitly exempt.
-- Website browser reads should go through same-origin `/_site-data/*`, backed by `site-api.pharos.watch` and `X-Pharos-Site-Proxy-Secret`.
+Use the [surface split](./api-reference.md#surface-split) and [public API auth](./api-reference.md#public-api-auth) contracts for external versus website reads; do not expose an internal transport by copying a public default.
+
 - Internal site-only GET transports set `publicApiAccess: "site-only"` and retain `siteDataAccess: "allowed"`; the public host returns `404` even with an API key. Use the existing credentialed site/preview gates, omit public/admin/manual probe metadata, and do not enroll these routes in public OpenAPI/Postman artifacts. See [Internal Detail Snapshot Inputs](process/worker-infrastructure-appendix.md#internal-detail-snapshot-inputs).
-- Admin routes live on `ops-api.pharos.watch` or the same-origin `ops.pharos.watch/api/admin/*` Pages proxy after Cloudflare Access authentication.
+
+Admin route authentication follows [Admin Auth And Idempotency](./api-reference-admin.md#admin-auth-and-idempotency).
+
 - Mutating admin handlers must require `X-Pharos-Admin: 1`; idempotent mutations should use the existing idempotency wrappers.
 
 ## Validation Commands

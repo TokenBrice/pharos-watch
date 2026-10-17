@@ -6,31 +6,7 @@
 
 The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph as a layered **Watershed** diagram (the default desktop view), an alternate force-directed **Network** view, and ranked upstream hubs with direct dependent exposure. Exposure mode adds structural look-through results and separate offline modeled scenarios; the shared failure domains board displays publication groups and existing priced effects. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
 
-Primary files:
-
-- `src/app/dependency-map/page.tsx`
-- `src/app/dependency-map/content.json` — authored metadata, FAQ, lens and Exposure-control copy; consumers use the JSON default export, consistent with the test bundler's disabled named JSON exports
-- `src/lib/dependency-exposure-content.json` — shared visible/Markdown methodology prose; `check:editorial-content` validates both JSON sources and internal links
-- `src/app/dependency-map/client.tsx`
-- `src/app/dependency-map/dependency-hero.tsx` — summary strip plus the full-width graph
-- `shared/lib/dependency-hubs-model.ts`
-- `src/app/dependency-map/dependency-hubs-board.tsx`
-- `src/components/dependency-map-basin-list.tsx` — mobile per-hub basin list with hop-grouped drill-down
-- `src/lib/dependency-watershed/` — pure Watershed view model (`model.ts`), ranks/cycle check (`ranks.ts`), tributary ordering (`order.ts`), ribbon geometry (`geometry.ts`) and `view` URL helper (`view-url.ts`)
-- `src/components/dependency-watershed/` — Watershed stage, legend, other-basins strip, table view and CSS module
-- `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout
-- `src/components/contagion-graph-root.tsx` — graph shell and shared interaction state
-- `src/components/contagion-graph-model.ts` — relationship presentation tokens and grade colors
-- `src/components/contagion-graph-graph.ts` — pure visibility, ripple, and navigation algorithms
-- `src/components/contagion-graph-tooltips.tsx` — node/edge tooltips and the live-region announcement
-- `src/components/contagion-graph/use-contagion-graph-model.ts` — graph view-model hook
-- `src/components/contagion-graph/contagion-graph-shell.tsx` — card chrome, header, and mobile fullscreen dialog
-- `src/components/contagion-graph/contagion-graph-body.tsx` — stage plus inspection rail composition
-- `src/components/contagion-graph/contagion-graph-stage.tsx` — grid canvas, legend, and overlay slots
-- `src/components/contagion-graph/contagion-graph-svg.tsx` — low-level SVG node and edge rendering
-- `src/components/contagion-graph/contagion-graph-insights.tsx` — Selection overlay
-- `src/hooks/use-contagion-graph-drag.ts` — pointer drag and per-node pinning
-- `src/components/stablecoin-detail/contagion-snapshot.tsx` — focused per-stablecoin graph
+Source entrypoints: `src/app/dependency-map/` owns route composition and authored copy; `src/lib/dependency-watershed/` owns the Watershed model; `src/lib/contagion-layout.ts` owns Network construction/layout. Both views consume the accepted graph and shared exposure semantics, not independent scoring models.
 
 ## Data Inputs
 
@@ -178,14 +154,7 @@ The mobile basin list (`dependency-map-basin-list.tsx`) ranks every hub by direc
 
 ## Graph Construction
 
-Graph construction lives in `src/lib/contagion-layout.ts` and is called through `useContagionGraphModel`:
-
-- Filters out cards marked `isDefunct`, then keeps only edges whose source and target are both live cards.
-- Removes coins with no incoming and no outgoing live dependency edge.
-- Sorts remaining coins by market cap descending.
-- Admits each ranked coin when it connects to an admitted coin, or seeds a new component with that coin and its highest-ranked neighbor when two slots remain. This preserves connected pairs in disconnected ranking windows instead of pruning and permanently skipping their endpoints. `buildGraphData` defaults to `DEFAULT_NODE_LIMIT = 200`; the runtime Limit toggle selects 50 / 100 / 200 / All, and All admits every live graph participant.
-- Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
-- Node ring color comes from the canonical grade band via `gradeRange()` in `shared/lib/report-card-core.ts` and `GRADE_RADAR_COLORS` in `shared/lib/classification`.
+`buildGraphData` in `src/lib/contagion-layout.ts`, consumed through `useContagionGraphModel`, retains live published endpoints and graph participants. Market-cap-ranked admission preserves connected pairs rather than stranding endpoints in disconnected ranking windows. Limit selects 50 / 100 / 200 (default) / All; All admits every live participant. Supply controls bounded square-root sizing and canonical grade descriptors control rings; absent supply remains unknown, not zero.
 
 ## Dependency Hubs Model And Board
 
@@ -201,18 +170,7 @@ Two clocks are explicit: methodology version and V9 publication time, then marke
 
 ## Adaptive Supernodes
 
-Supernodes are computed over the full supplied published graph before node-limit, focus, type, and small-link display filtering, with no hardcoded coin IDs:
-
-- Metrics per node: `inWeight = log10(1 + known direct dependent exposure USD)` from the shared direct-exposure model, incoming edge count (`inDegree`), total edge count (`totalDegree = in + out`), and `log10(1 + market cap)`.
-- Normalization: min-max per metric over the full graph.
-- Score: `0.50*inWeight + 0.25*inDegree + 0.15*totalDegree + 0.10*mcap`.
-
-Tiers are a pure function of that graph, with coin ID breaking score ties and no render-history hysteresis:
-
-- Tier 1 (core hubs): P90 + `inDegree >= 2`.
-- Tier 2 (secondary hubs): P75 + (`inDegree >= 1` or `inWeight >= 0.10`).
-- Clamps: Tier 1 min 2 / max 3; Tier 2 min 3 / max 5.
-- Sparse fallback: if edge count < 12, use the top 2 by score as Tier 1.
+Supernodes are computed over the full supplied published graph before node-limit, focus, type or small-link filtering, with no hardcoded coin IDs. `SUPERNODE_CONFIG` in `src/lib/contagion-layout.ts` owns coefficients, percentile thresholds, clamps and sparse fallback. Ranking combines known direct dependent USD exposure, connectivity and market cap; coin ID breaks ties. Tiers are a pure function of the graph, without render-history hysteresis.
 
 Layout anchors Tier 1 near center, Tier 2 on an inner ring, and remaining nodes on outer rings. Edges touching hubs are emphasized and non-hub-to-non-hub edges are dimmed. Hub symbols are always labeled.
 
@@ -239,22 +197,11 @@ The `dependency_map_action` analytics event records changed `focus`, `type`, `li
 
 ## Layout Algorithm
 
-The layout uses `d3-force` with deterministic post-processing:
+`src/lib/contagion-layout.ts` owns the deterministic `d3-force` solver and geometry constants. Seeded ID-based jitter, never `Math.random()`, makes equal input graphs lay out equally. Explicit overlap/boundary passes are bounded to the top `MAX_COLLISION_PASS_NODES`; the All-view tail keeps collision-force positions rather than incurring unbounded quadratic work.
 
-- Canvas: `WIDTH = 800`, `HEIGHT = 600`, `PAD = 44`.
-- Link force: `distance = 100`, `strength = weight * 0.4`.
-- Charge: `-200 - r * 4` (larger nodes repel more).
-- Collision: `radius = r + 8`, `iterations = 4`.
-- Anchoring: `forceX`/`forceY` toward tier-specific layout targets with tier-dependent strengths.
-- Simulation ticks: a fixed 300 ticks, then explicit overlap and boundary passes (up to 100).
+The same solver runs after render in cancellable idle chunks. A tick is indivisible, so the work budget is not a hard slice deadline. Existing positions remain until replacement lands. Identity uses membership, endpoint/type/rounded-weight topology and detail focus, not market-cap rank, radii or hub tiers: market refreshes preserve layout/pins when topology is unchanged; Focus and Type affect presentation only.
 
-The post-simulation overlap pass is O(n²), so it is bounded to the top `MAX_COLLISION_PASS_NODES = 200` ranked nodes. The 50/100/200 limit selections are therefore unaffected, and only the `All` view is capped; its long tail keeps the `forceCollide` positions. Node placement is seeded from `deterministicJitter()` rather than `Math.random()`, so the same input graph always lays out the same way.
-
-The runtime invokes this same solver after render in cancellable idle chunks with an 8 ms work budget, using `requestIdleCallback` with a `setTimeout` fallback. A solver tick is indivisible, so the budget is not a hard upper bound on individual slices. Previous positions remain until the new layout lands; new nodes use layout targets meanwhile. The layout identity combines sorted membership, sorted endpoint/type/rounded-weight signatures, and the detail focus id, not market-cap rank, radii, or hub tiers. Unchanged membership/topology preserves layout and pins across market-cap refreshes; Focus and Type only affect presentation.
-
-SVG nodes and edges are memoized by per-item presentation. Dragging updates node transforms, logo clips, and incident arrow geometry directly; pinned coordinates commit on pointer release rather than on every pointer move. During an active node drag, the position snapshot is held until pointerup/cancel so settled layout coordinates cannot move the drag frame.
-
-Auto-fit and **Fit** never magnify above base scale. The fitted viewBox is at least `WIDTH × HEIGHT` and keeps the 4:3 stage aspect by expanding the shorter bound. The stage measures the bottom area covered by an overlaid legend or stage clipping, including SVG letterboxing, with a `ResizeObserver`. Sparse footprints centre in the unobstructed area above it; large footprints zoom out enough to keep both their top bound and legend clearance. Mobile inline legends reserve no overlay area. **Zoom in** is the only way to exceed base scale, capped at 4×. The SVG element's rendered size comes from a fixed 4:3 CSS aspect (on the detail page, from the desktop stage height), never from the viewBox. As a result, a sparse two-coin neighborhood cannot inflate one node to fill the card, stretch the stage, or hide labels under the legend.
+Dragging holds the position snapshot until pointerup/cancel, when pinned coordinates commit, so a settling layout cannot move the drag frame. Auto-fit and **Fit** never magnify above base scale; only **Zoom in** exceeds it, bounded at 4×. The fixed 4:3 stage preserves its aspect independently of viewBox bounds. Fit accounts for legend/clipping obstruction, centering sparse footprints in available space and zooming large ones out; sparse neighborhoods cannot inflate a node to fill the card or hide labels under the legend.
 
 ## Detail-Page Snapshot
 

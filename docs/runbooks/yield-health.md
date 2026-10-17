@@ -21,20 +21,17 @@ This is the shared **read-only** entry check for yield incidents. Use the Access
 
 1. **Rankings cache:** inspect `yieldHealth.rankingUpdatedAt`, `rankingAgeSec`, `rankingStatus`, `previousRankingCount`, and `rankingCountDelta` in `/api/status`.
 2. **Publisher cron:** inspect `crons["sync-yield-data"]` for latest status, error, metadata, and in-flight lease state.
+   For all-fail/skip metadata, select [Deterministic All-Fail Cooldown](#deterministic-all-fail-cooldown) below.
 3. **Safety coverage:** inspect `yieldHealth.safetyCoverage`; below `0.75` means the cached publisher safety snapshot was sparse, not a read-time hydration measurement. `liveSafetyHydration` separately checks live compatibility and fallback availability.
-4. **Supplemental cache:** inspect `yieldHealth.supplemental`; `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and `families` identify which optional source families are stale or absent. A fresh family row with `sourceCount: 0` is valid evidence that the family ran and found no candidates and is flagged `fresh but empty` on the card; `degradedFamilies` (from the `yield:supplemental-source-run:v1` outcome row) names families that kept their previous snapshot after a degraded producer run. A missing family row means the family did not publish its health marker. Age above 6h means optional source families may be sparse. For throughput misses, inspect the latest `sync-yield-supplemental` metadata `sourceCoverage.sourceFamilySummaries`; missing-target examples are intentionally bounded.
-5. **Benchmarks:** inspect `yieldHealth.benchmarkRegistry` against the [threshold table](#threshold-table). Each used key is assessed from its own feed evidence; a missing or unparseable observation date is never healthy. Documented proxy selection is reported as `proxySelectionRowCount` and never gates the entry or aggregate; fetched-but-unused keys are listed under `unusedBenchmarkKeys`, also without gating status.
-6. **Source-risk coverage:** inspect `yieldHealth.sourceRiskCoverage`; core fields below 75% coverage are admin-watch gaps. Ratios are measured over per-field eligible rows only (depth and tier exclude rows whose venue is the asset itself — the `price-derived`/`rate-derived` derivation methods and the `native-wrapper`/`issuer-savings` issuer rails; `rewardShare` counts only split-capable lanes), with best-row and alt-row ratios reported separately; an empty denominator reports `null`, never 100%. `venueRiskTier="unknown"` counts as missing evidence, not high risk.
+4. **Supplemental cache:** inspect `yieldHealth.supplemental.families` and family counts; use [supplemental validation](./yield-supplemental-snapshot.md#validation) for empty, retained and unknown outcomes, and `sourceCoverage.sourceFamilySummaries` for bounded misses.
+5. **Benchmarks:** inspect `yieldHealth.benchmarkRegistry` using the [threshold table](#threshold-table) and [benchmark incident procedure](./yield-benchmark-fallback-stale.md). Proxy selection and unused keys do not gate registry health.
+6. **Source-risk coverage:** inspect `yieldHealth.sourceRiskCoverage` against the table's eligible-row denominators, separately for best and alternate rows. The card shows all eleven fields; null means N/A, and an unknown venue tier means missing evidence, not high risk.
 7. **Comparison anchors:** inspect stale count and bounded examples with their original `maxAgeSeconds` budgets and `sourceRunStartedAt`. The oldest fields describe the oldest overall anchor, not necessarily a stale one.
-8. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. Gap/candidate counts and bounded lists are read-only triage evidence. `venue-risk-config-missing` requires reviewed venue-risk evidence; `stale-venue-risk-score` requires a fresh review; `stale-auto-lending-override` requires pin removal, repointing, or a written bypass review. New audits no longer emit `quarantine-ready-to-restore`; retained historical items do not authorize source restoration. `reviewDueAdapters` / `lifecycleReviewDueCount` remain real lifecycle review signals. Curated missing native/variant/weighted pools carry `missing-pool` plus `coverage-outage` or `dead-config` and emit `curated-pin-missing`.
+8. **Coverage audit:** inspect `yieldHealth.coverageAudit` and use [Coverage Audit Queue](../yield-intelligence-operations.md#coverage-audit-queue) for counts, reviewed source/config actions, stale pins and historical-reader floors. Bounded displayed rows are not backlog totals.
 
 Read completion separately from input quality using the [publisher contract](../yield-intelligence.md#persistence-and-publication): inspect `metadata.reason`, `metadata.quality.reasons`, and `advisoryReasons`, including advisory Pendle findings. Retired optional families are not current status telemetry.
 
-Coverage budgets measure unresolved post-review work before display truncation: `queueBudgetBasis: "post-disposition"` uses `operatorReviewSummary.visibleHeadlineGapCount` and `visibleRecommendationCandidateCount`, including dead-pin and restoration items once through their queue entries. Older reports fall back to raw detector totals and explicitly report `queueBudgetBasis: "raw-detectors"` until refreshed. Status shows at most six items per side; the report's `operatorQueue` shows twenty per side; applicable raw headline arrays cap at fifty. These are samples, not queue totals. `staleVenueRiskScores` is complete and uncapped because it comes from the finite venue registry.
-
-The queue is permanently DISPLAY-ONLY: no disposition UI/API is authorized. `totalItemCount = publishedItemCount + truncatedItemCount` measures the full visible post-review cohort before caps (for example 146 = 40 + 106); candidate count adds suppression. `byKindScope="full-visible"` is pre-cap, while older report `published-sample` counts cannot be interpreted as full totals. Human review remains a reviewed source/config change, not an API action.
-
-`liveSafetyHydration` reads the canonical compact index and publication health, not identity alone. Held/unavailable branches may use stamped safety only inside BOTH original yield/safety 24-hour clocks; `safety-score-index-*` integrity failures never fall back. Both publication clocks, their ages and budget are reported; failed read is unknown. `pysInputs` requires both finite nonnegative integer publisher counters and a nonzero denominator; incomplete/malformed/zero cohorts are unknown with reason and source run, not proof of table completeness. The card shows all eleven source-risk fields, with eligible best/alternate denominators and null=N/A.
+Coverage-budget basis, truncation and display-only handling are owned by [Coverage Audit Queue](../yield-intelligence-operations.md#coverage-audit-queue). `liveSafetyHydration` reports both original publication clocks, ages and budgets; use [Safety Identity Mismatch](./yield-rankings-stale-or-missing.md#safety-identity-mismatch) and [failure semantics](../yield-intelligence.md#failure-semantics) for compatibility/fallback diagnosis. Failed health reads remain unknown. `pysInputs` requires finite nonnegative integer publisher counters and a nonzero denominator; incomplete, malformed or zero cohorts are unknown with reason/source run, not a table-readback audit.
 
 ## Threshold Table
 
@@ -120,14 +117,42 @@ LIMIT 10;
 
 - **Missing/stale rankings:** check `sync-yield-data` cron errors first. Clear a stuck `sync-yield-data` lease only when the admin cron card shows repeated `skipped_locked` or stale in-flight progress, then let the next post-V9 publisher rebuild `yield-rankings`.
 - **Sparse safety coverage:** inspect `safety-score-v9` publication health and `/api/report-cards/v9`; yield rankings can still publish with the explicit unrated safety fallback, but PYS quality is lower.
-- **Stale supplemental cache:** inspect `sync-yield-supplemental`. Because supplemental sources are optional, do not block the public yield page solely on this signal.
-- **Benchmark fallback/staleness:** inspect `yieldHealth.benchmarkRegistry`, then `risk_free_rates` and the latest `sync-yield-data` metadata for the named key. A retained fallback within 48h fetch age and inside the key's observation bound can remain score-bearing but degraded; past either bound the affected row is NR, and a degraded or stale USD reference additionally re-bases affected non-USD rows to estimated (`reference-benchmark-degraded`) or NR (`benchmark-stale`). Do not let a healthy USD lane close an incident for a stale non-USD key that still has published rows.
+- **Stale supplemental cache:** follow [Supplemental Snapshot](./yield-supplemental-snapshot.md); optional breadth alone does not block the public yield page.
+- **Benchmark fallback/staleness:** follow [Benchmark remediation](./yield-benchmark-fallback-stale.md#remediation) for the named used key. Healthy USD evidence cannot close an incident for a stale non-USD key still used by rows.
 - **Low source-risk coverage:** inspect whether missing fields are absent from current rankings, retained alternates, or both. Missing or `unknown` venue tiers are evidence gaps; do not backfill guessed tiers.
 - **Stale comparison anchors:** inspect `yieldHealth.comparisonAnchorFreshness.staleAnchorExamples` and the latest `sync-yield-data` metadata. This identifies rows whose derived APY is comparing against an old anchor; do not change arbitration or manually rewrite history rows solely to clear this watch signal.
-- **Coverage-audit queue:** record `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note; no disposition UI/API is authorized. New audits no longer emit `quarantine-ready-to-restore`. Preserve historical decoder/fingerprints/disposition text until a named refreshed report and full pre-cap zero-current-kind evidence close its reader floor. After BIMA variant retirement, only a new normal monthly report or separately authorized leased refresh proves stale-item clearance. An hourly publication cannot clear the monthly cached report.
-- **Dead curated pins and review-due adapters:** treat `missing-pool` headline items with a `coverage-outage` reason code as coverage incidents and `dead-config` items as config cleanup; classify `lifecycle-review-due` adapters in the same audit cycle instead of leaving past-due review dates in the registry.
+- **Coverage-audit queue, dead pins and review-due adapters:** follow [Coverage Audit Queue](../yield-intelligence-operations.md#coverage-audit-queue); use the leased replay below only after reviewed changes deploy.
 - **Old coverage audit:** inspect `yield-coverage-audit` cron history. It is monthly and watch-tier, so a late audit is a review backlog, not a public outage.
 - **Unavailable supply input:** missing or malformed `stablecoins` supply cache defers audit publication with `stablecoins-cache-missing` or `stablecoins-cache-malformed` and preserves the prior report. Restore the readable supply cache before replaying; absolute floors are not a substitute for unavailable supply-relative gates.
+
+### Deterministic All-Fail Cooldown
+
+Select this branch when `sync-yield-data.sourceCoverage` reports `onChainAllDeterministicFailed`, `onChainCooldownTriggered` or `onChainSkippedDueToCooldown`, quality reasons name `onchain-rates:all-deterministic-failed` / `onchain-rates:cooldown-coverage-gap`, or the health cache has `cooldownUntil`.
+
+Two consecutive all-fail runs fully masked by non-onchain alternatives can arm a six-hour cooldown. Native deterministic rows may disappear or use lower-confidence alternatives while other rows publish. Start with the [read-only checks](#first-checks), then inspect the newest eight `sync-yield-data` runs with the [shared cron query](#read-only-d1-snippets) and affected public-row provenance.
+
+```sql
+SELECT key, updated_at, value
+FROM cache
+WHERE key = 'yield:onchain-health:v1';
+```
+
+```sql
+SELECT stablecoin_id, source_key, data_source, yield_source, current_apy, updated_at
+FROM yield_data
+WHERE data_source IN ('onchain', 'rate-derived')
+ORDER BY updated_at DESC
+LIMIT 30;
+```
+
+- Leave an active, fully masked cooldown alone; it protects publication runtime. A coverage gap resets cooldown and retries deterministic reads on the next post-V9 cycle.
+- Persistent RPC/empty-`eth_call` and explorer failures require provider status and `ETHERSCAN_API_KEY` checks through normal secret/config handling. Inspect RPC-versus-explorer buckets and fallback ordering in [Runtime Guardrails](../yield-intelligence-operations.md#runtime-guardrails).
+- Clear a genuinely stale `sync-yield-data` lease only under [lease recovery](./lease-and-breaker-recovery.md), never while fresh in-flight progress exists.
+- Never edit/delete `yield:onchain-health:v1` to force reads, add APY/supply overrides, or change source-risk/scoring as cooldown remediation.
+- Readback requires no active cooldown, a valid decreasing cooldown, or reset after successful reads; `onChainRatesResolved > 0` after recovery or `onChainFailureMaskedByAlternativeCoverage: true` while protected; and non-empty rankings with honest source/provenance.
+
+Cooldown self-expires and resets on successful deterministic reads. If a deploy introduced persistent all-fail behavior, roll back the Worker; never override cached APY rows.
+
 
 ### Recompute after a coverage drain
 

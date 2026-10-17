@@ -1,6 +1,6 @@
 # Worker Runtime Experiments
 
-Permanent, manual release qualification for paired Public/Heavy Workers compatibility dates, plus safe criteria for a future separately approved D1 read-replication evaluation. Neither is an active shadow runtime. Compatibility changes never share a release with schema, methodology, recovery, data repair, or replication changes. For incident-time storage pressure use [`docs/runbooks/d1-capacity-and-runtime-experiments.md`](../runbooks/d1-capacity-and-runtime-experiments.md).
+Permanent, manual release qualification for paired Public/Heavy Workers compatibility dates, plus safe criteria for a future separately approved D1 read-replication evaluation. Neither is an active shadow runtime. Compatibility changes never share a release with schema, methodology, recovery, data repair, or replication changes. For incident-time storage pressure use [D1 capacity signals](../runbooks/db-connectivity.md#capacity-signals).
 
 ## Compatibility-Date Experiment
 

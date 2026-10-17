@@ -60,30 +60,7 @@ These Wrangler examples are operator instructions, not checks to run during impl
 
 ## Classification evidence
 
-`ONE_SHOT_BACKFILL_JOBS` in `worker/scripts/one-shot-backfill.ts` owns the current CLI inventory. Classification below uses route registrations, schedule registries, cron imports, runbooks and UI callers—not inferred production completion receipts.
-
-| Owner / family | Lane and evidence |
-| --- | --- |
-| `backfill-supply-history` | One-shot: historical day-window/continuation rebuild; regular history writer is `snapshot-supply`. |
-| `backfill-stability-index` | One-shot: scratch-table historical PSI rebuild with its own advisory lease; regular writer is `stability-index`. |
-| `backfill-depegs` + planning/execution/persistence/preview/replay/window helpers | One-shot: replaces historical `source=backfill` events; regular incident writers remain live detection/confirmation. |
-| `audit-depeg-history` + CG audit/request/synthetic-split/stability-recompute helpers | One-shot: legacy-event verdict, delete and historical repair workflow; not a scheduled audit runner. |
-| `backfill-cg-prices` | One-shot: fills archival `supply_history` price/cap gaps; not current-price sync. |
-| `backfill-yield-history` | One-shot: curated protocol-history import; recurring writer remains yield sync. |
-| `backfill-mint-burn` | One-shot: explicit historical chain chunks using the ingestion pipeline; both scheduled mint/burn lanes stay. |
-| `backfill-mint-burn-prices` | One-shot: older historical NULL-USD debt/bookmark admission; bounded recent auto-heal stays in the cron. |
-| `backfill-tape` | One-shot: operator projector replay overrides; `project-tape` continues normally. |
-| `reclassify-atomic-roundtrips` | One-shot: historical forward/reverse tags and hourly rebuild; new ingestion still uses the shared classifier. |
-| `backfill-blacklist-current-balances` | One-shot: source comment explicitly describes pre-cache historical ingestion bootstrap; periodic current-balance maintenance stays. |
-| `bootstrap-jltxx-reserves` | One-shot: quarantined fixed-ID evidence capture, not active reserve sync or admission; retains the ordinary reserve lease/budget. |
-| `remediate-blacklist-amount-gaps` | Retained recurring repair: bounded recoverable EVM amount debt, documented incident control. |
-| `backfill-dews` | Retained recurring repair and read-only diagnostics: refresh current state/prune unreplayable history under existing policies. |
-| `repair-tasks` | Retained scheduled leased repair queue; not a one-shot HTTP rebuild. |
-| `reset-blacklist-sync` | Retained incident cursor repair used by the blacklist sync runbook. |
-| `trigger-digest` | Retained recurring communication repair: deferred force-run intents under the normal digest lease. |
-| `trigger-yield-coverage-audit` | Retained recurring manual counterpart of the monthly leased audit. |
-| historical market-price and depeg extraction helpers | Shared runtime libraries (`worker/src/lib/historical-market-prices.ts`, `worker/src/lib/historical-depeg-extraction.ts`): recurring authoritative pricing imports them; they cannot move into the operator graph. |
-| optional day-window parser | Shared runtime library (`worker/src/lib/backfill-day-window.ts`): recurring DEWS repair and historical CLI replay share one parser. |
+`ONE_SHOT_BACKFILL_JOBS` and `ATOMIC_IMPORT_BACKFILL_JOBS` in `worker/scripts/one-shot-backfill.ts` own the job/transport inventory. Recurring repairs stay deployed; shared historical-price, extraction and day-window libraries remain shared runtime code. This runbook is an operating contract, not proof that historical repairs completed.
 
 ## backfill-blacklist-current-balances
 
@@ -104,61 +81,7 @@ Admin-only one-shot backfill job for `blacklist_current_balances`, intended for 
 
 `400` is returned when the filters match no configured blacklist contracts.
 
-**Dry-run response**
-
-```json
-{
-  "ok": true,
-  "dryRun": true,
-  "configs": [
-    {
-      "configKey": "ethereum-pyusd",
-      "stablecoin": "PYUSD",
-      "chainId": "ethereum",
-      "candidateCount": 12,
-      "updated": 0,
-      "deleted": 0,
-      "failed": 0
-    }
-  ],
-  "totals": {
-    "candidates": 12,
-    "updated": 0,
-    "deleted": 0,
-    "failed": 0
-  },
-  "budgetUsed": 0,
-  "budgetLimit": 900
-}
-```
-
-**Write-enabled response**
-
-```json
-{
-  "ok": true,
-  "dryRun": false,
-  "configs": [
-    {
-      "configKey": "ethereum-pyusd",
-      "stablecoin": "PYUSD",
-      "chainId": "ethereum",
-      "candidateCount": 500,
-      "updated": 12,
-      "deleted": 0,
-      "failed": 1
-    }
-  ],
-  "totals": {
-    "candidates": 500,
-    "updated": 12,
-    "deleted": 0,
-    "failed": 1
-  },
-  "budgetUsed": 37,
-  "budgetLimit": 900
-}
-```
+**Response:** both modes return `ok`, `dryRun`, per-config identity (`configKey`, `stablecoin`, `chainId`) and `candidateCount`/`updated`/`deleted`/`failed`, matching `totals` and `budgetUsed`/`budgetLimit`. Preview has no writes (zero updated/deleted and request budget); write mode reports actual committed/failed work. A successful process exit does not erase per-config failures.
 
 ## bootstrap-jltxx-reserves
 
@@ -384,15 +307,7 @@ Each forward and reverse pass processes up to 1000 `(tx_hash, stablecoin_id, cha
 
 ## audit-depeg-history
 
-Dry-run preview for the depeg audit job. This is the only supported `GET` mode for `audit-depeg-history`; all mutating executions require `POST`.
-
-The same job also supports dry-run historical repair previews:
-
-- `repair=synthetic-splits` surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg
-- `repair=contradictory-recovery-price` surfaces ended events whose stored `recovery_price` is still outside the allowed depeg threshold and should be nulled
-
-The CoinGecko-backed audit (the default mode) reads CoinGecko through the configured `COINGECKO_API_KEY` binding: requests go to the pro-api host (`https://pro-api.coingecko.com/api/v3/...`) with the `x-cg-pro-api-key` header, at 200 ms start spacing and concurrency 4. When the binding is unset, no upstream request is attempted and the job still returns `200` with `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, every inspected event carrying `verdict: "error"`, and no provenance persisted. The delete and repair modes never contact CoinGecko and do not need the key.
-
+`--method GET` supports only `dry-run=true`; mutations use default POST. Shared audit/repair parameters are below. The default CoinGecko audit uses `COINGECKO_API_KEY`, the Pro host and `x-cg-pro-api-key`, 200 ms start spacing and concurrency 4. Missing key attempts no upstream request: HTTP 200 retains `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, per-event `verdict: "error"` and no persisted provenance. Delete and both repair modes skip CoinGecko and need no key.
 ```json
 {
   "totalMatching": 5,
@@ -420,14 +335,15 @@ The audit can only rule on episodes whose stored move CoinGecko's own history do
 | ------------ | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `limit`      | `integer`                                              | `25`     | Max events or repair candidates to inspect per request (`max 25`)                                                           |
 | `offset`     | `integer`                                              | `0`      | Pagination offset                                                                                                           |
-| `dry-run`    | `"true"`                                               | required | Must be exactly `"true"` for `GET`                                                                                          |
-| `min-supply` | `integer`                                              | `0`      | Minimum supply (USD) to include in audit                                                                                    |
-| `symbol`     | `string`                                               | —        | Filter by symbol (case-insensitive)                                                                                         |
-| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —        | Preview synthetic split consolidation or contradictory terminal-price repairs instead of the CoinGecko false-positive audit |
+| `dry-run`    | `"true"`                                               | GET required; POST optional | Preview only; POST without it may mutate |
+| `min-supply` | `integer`                                              | `0`      | Minimum audit supply (USD) |
+| `symbol`     | `string`                                               | —        | Case-insensitive filter |
+| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —        | Preview or execute the selected repair instead of CG audit |
+| `delete`     | `string`                                               | —        | POST-only comma-separated exact IDs; skips CG audit; `dry-run=true` previews deletion |
 
 ### Live audit and repair
 
-Audits existing depeg events against CoinGecko historical price data to detect false positives. The CoinGecko pass uses the same keyed path as the dry-run (`COINGECKO_API_KEY` binding, `pro-api` host, `x-cg-pro-api-key` header); without that binding the run returns `200` with `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, and per-event `verdict: "error"`, and persists no provenance. `?delete=<ids>` and both `repair=` modes skip the CoinGecko audit and do not need the key.
+POST executes the audit or selected delete/repair using the shared parameters and provider/unavailable-evidence rules above.
 
 `--query 'repair=synthetic-splits'` instead runs a historical repair pass that consolidates adjacent same-direction events when either:
 
@@ -441,15 +357,3 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 Mutating delete/synthetic-repair runs and audit eligibility changes stage available PSI stability-index repairs into the same D1 batch commit. The canonical historical replay receives the post-audit event universe: invalidated events leave it and restored eligible events re-enter it. Supply prices, native quote-domain evidence and same-day DEWS archive rows match bounded backfill. Missing replay inputs retain the existing PSI day and log the named unavailable reason without inflating `daysRecomputed`. If the atomic provenance/mutation-plus-PSI commit fails, the job returns `500` with a specific error and leaves both provenance/events and PSI unchanged.
 
 `GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
-
-**Query parameters**
-
-| Param        | Type                                                   | Default | Description                                                                                                            |
-| ------------ | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `limit`      | `integer`                                              | `25`    | Max events or repair candidates to process per request (`max 25`)                                                      |
-| `offset`     | `integer`                                              | `0`     | Pagination offset                                                                                                      |
-| `delete`     | `string`                                               | —       | Comma-separated event IDs to delete directly (skips CG audit)                                                          |
-| `dry-run`    | `"true"`                                               | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives                         |
-| `min-supply` | `integer`                                              | `0`     | Minimum supply (USD) to include in audit                                                                               |
-| `symbol`     | `string`                                               | —       | Filter by symbol (case-insensitive)                                                                                    |
-| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | —       | Run synthetic split consolidation or contradictory terminal-price repair instead of the CoinGecko false-positive audit |

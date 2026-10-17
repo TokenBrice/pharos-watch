@@ -1,135 +1,29 @@
 # Upcoming Page
 
-Route contract for the public `/upcoming/` surface.
-
----
-
-## Purpose
-
-`/upcoming/` is the public pre-launch stablecoin tracker. It exists to give users a filtered, crawlable view of tracked stablecoins whose metadata status is still `pre-launch`, without mixing them into the active-asset monitoring surfaces.
-
-Primary audience:
-
-- product and docs contributors who need the route contract
-- engineers updating pre-launch metadata, launch phases, or filtering behavior
-
----
-
-## Route Shape
-
-- **Route:** `/upcoming/`
-- **Server shell:** `src/app/upcoming/page.tsx`
-- **Client implementation:** `src/components/upcoming-client.tsx`
-- **Hero wrapper:** `src/components/upcoming-horizon-hero.tsx`
-- **Shared constellation:** `src/components/horizon-constellation.tsx`, also composed by `src/components/home-alt-upcoming-horizon-constellation.tsx`
-- **Shared helpers:** `src/lib/pre-launch.ts`
-- **Primary dataset:** `page.tsx` projects `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`) into the client card/filter payload; the full server registry remains available to the server shell for JSON-LD and the crawlable `sr-only` nav. Both derive from the catalog backed by `shared/data/stablecoins/coins/*.json`
-
-The route renders through `FeaturePageShell` with:
-
-- `breadcrumbName="Upcoming Stablecoins"`
-- `path="/upcoming/"`
-- title `Upcoming Stablecoins`
-- a single lead paragraph describing the page as the pre-launch tracker
-- a launch-alert callout above the client grid that promotes `@PharosWatchBot`
-- a copyable global command: `/subscribe launch all`
-- copy that points users to individual upcoming coin pages for asset-specific exact commands
-
-Metadata is authored directly in `src/app/upcoming/page.tsx` through the shared `buildPageMetadata` helper (`src/lib/page-metadata.ts`), with canonical `/upcoming/`, route-specific title/description, and the route-specific OG image `/og-upcoming.png` in place of the helper's default card.
-
----
+Public `/upcoming/` is the pre-launch tracker, separate from active monitoring. `src/app/upcoming/page.tsx` owns metadata/static shell and projects the server registry into `src/components/upcoming-client.tsx`; `src/lib/pre-launch.ts` owns phase, fuzzy-date, drift and sorting semantics.
 
 ## Data Contract
 
-`UpcomingClient` builds entirely from checked-in metadata and static assets:
+Membership is checked-in `status: "pre-launch"` metadata via `PRE_LAUNCH_STABLECOINS`, not live API inference. Regenerate full/client projections with `npm run bootstrap:generated` after catalog changes. The route uses static logos and optional authored/generated teaser copy; no Worker request or new endpoint belongs here.
 
-| Source                                                                                                                                | Used for                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`)                                                                         | server-side source for the client card/filter projection, JSON-LD, and the crawlable `sr-only` nav             |
-| `shared/data/stablecoins/coins/*.json`                                                                                                | editable stablecoin catalog source of truth; pre-launch membership comes from `status: "pre-launch"`         |
-| Generated stablecoin projections                                                                                                     | full and client registries refreshed together with `npm run bootstrap:generated`                               |
-| `data/logos.json`                                                                                                                     | per-coin logo display                                                                                        |
-| `data/ai-summaries.json`                                                                                                              | teaser copy shown on cards when available                                                                    |
-| `src/lib/pre-launch.ts`                                                                                                               | launch-phase labels, drift heuristics, fuzzy-date formatting, and sort scoring                               |
-
-The route does not call the Worker API directly. It is a metadata-driven surface over pre-launch stablecoin entries already checked into the repo.
-
----
+Keep full server metadata available for JSON-LD and crawlable profile links, but send clients only the card/filter projection. The shared Horizon constellation is also used on homepage; that teaser is not a second full tracker.
 
 ## Filter And Sort Model
 
-`src/components/upcoming-client.tsx` exposes:
+Filtering starts from the full pre-launch projection before sorting. Shared URL codec owns phase/peg/backing comma-delimited multiselects and sort; default expected-launch order is omitted. Invalid state is normalized under the schema, not guessed from labels. Conditional controls depend on actual cohort diversity, not a hardcoded roster. Empty results retain a Clear filters action; exact empty copy lives in source.
 
-- the full-width `UpcomingHorizonHero`, which configures the shared `HorizonConstellation` for this route while the homepage composes the same primitive in its own section shell
-- multi-select `Phase` filters over `announced`, `testnet`, `auditing`, `beta`, and `launching-soon`
-- multi-select `Backing` filters, shown only when the current pre-launch set contains more than one backing class
-- multi-select `Peg` filters, shown only when the current pre-launch set contains more than one peg currency
-- single-select `Sort` options rendered as `pharos-control-pill` toggles:
-  - `Expected Launch`
-  - `Announced Date`
-  - `Name`
-- `Clear filters`, shown only while any filter set is active
-- the filter surface now uses the shared Pharos card/pill treatment instead of standalone flat chip rows, so dark mode stays visually consistent with the rest of the product
+## Deadline Contract
 
-Filtering always starts from the full pre-launch projection passed by `page.tsx`. Sorting is then applied to the filtered result.
-
-The `phase`, `peg`, `backing`, and `sort` filters are URL-backed through the shared URL-state codec. Phase, peg, and backing are comma-delimited multi-selects; the default sort is `expected`, and defaults are omitted from the URL.
-
----
-
-## Card Contract
-
-Each card:
-
-- links to the canonical stablecoin detail route via `buildStablecoinUrl(coin.id)`
-- uses the shared `pharos-card-shell` / `pharos-interactive-card` surface treatment so the route matches the rest of the product in dark mode
-- shows logo, name, symbol, peg/backing/governance badges, and launch-phase badge when present
-- shows teaser copy only when `data/ai-summaries.json` has text for that coin
-- shows `Expected <date>` when `expectedLaunchDate` exists
-- shows a drift badge only when computed status is not `on-track`, on both cards and detail; expiry depends on the current deadline, not revision history
-- shows milestone count only when `coin.milestones.length > 0`
-- treats year/month/quarter/half-year/day targets as inclusive UTC periods, expiring at the following midnight rather than their sorting date. `ExpectedLaunchDriftBadge` is the clock-aware client island: it hydrates and updates at expiry without fetching. Static phase/milestone badges remain server-renderable.
-
-The empty-state copy is:
-
-`No pre-launch coins match. Drop a filter or two.`
-
-It appears with a `Clear filters` action.
+Year/month/quarter/half-year/day targets describe inclusive UTC periods and expire at the following midnight, not their sorting date. Drift depends on the current target, not revision history. `ExpectedLaunchDriftBadge` is a clock-aware client island that hydrates/updates at expiry without fetch; phase/milestone metadata remains server-renderable. Never interpret fuzzy dates as precise launch promises.
 
 ## Launch Alert Promotion
 
-The route now promotes the Telegram launch-alert workflow in two layers:
-
-- a page-level callout, rendered by `src/app/upcoming/page.tsx`, that exposes the copyable global follow command `/subscribe launch all`
-- asset-specific exact commands on the destination pre-launch detail pages, documented in [stablecoin-detail-page.md](./stablecoin-detail-page.md)
-
----
+Preserve the copyable global `/subscribe launch all` command for `@PharosWatchBot`. Asset-specific exact commands belong on destination pre-launch detail pages and use canonical identity, not ticker guessing. [Stablecoin detail](./stablecoin-detail-page.md) owns those commands/landing contracts.
 
 ## SEO And Crawlability
 
-- The route is indexable.
-- `src/app/sitemap.ts` includes `/upcoming/` in the static sitemap output.
-- `src/app/upcoming/page.tsx` renders an `sr-only` nav containing links for every `PRE_LAUNCH_STABLECOIN`, so the page remains crawlable even though the visible card grid is client-rendered.
-- The page emits `CollectionPage` and `ItemList` JSON-LD for the current pre-launch detail routes.
-
-The visible route entrypoint is `/upcoming/`. The homepage renders only a compact `On The Horizon` logo constellation that links back to this route; `/upcoming/` remains the full filterable tracker and crawlable pre-launch surface.
-
----
+Keep public indexability, canonical `/upcoming/`, route OG and sitemap membership. The static shell emits CollectionPage/ItemList JSON-LD and a crawlable nav to every pre-launch `/stablecoin/[id]/` profile, even when visible cards need hydration. Each card links through `buildStablecoinUrl`, never a separate invented upcoming profile URL.
 
 ## Update Rules
 
-Update this doc when any of these contracts change:
-
-- pre-launch filter dimensions or sort options
-- card fields or badge semantics
-- launch-alert promo placement or command copy on `/upcoming/`
-- the route's canonical metadata or crawlability pattern
-- the source of truth for pre-launch stablecoin membership
-
-If launch-phase labels, drift heuristics, or fuzzy-date handling change, update:
-
-1. `src/lib/pre-launch.ts`
-2. this document
-3. any homepage copy that describes the upcoming-stablecoin surface
-
-If pre-launch stablecoins stop linking into the normal `/stablecoin/[id]/` detail route, also update [stablecoin-detail-page.md](./stablecoin-detail-page.md).
+Membership/phase/deadline/filter changes update the registry/projection or `pre-launch.ts`, focused client tests and this owner; shared Horizon/homepage descriptions change together. Metadata/route/link changes include sitemap/crawlable nav and detail owner. Use the pre-launch review workflow for evidence refresh; no runtime activation is implied by editing expected dates.

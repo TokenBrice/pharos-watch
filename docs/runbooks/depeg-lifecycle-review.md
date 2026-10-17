@@ -7,13 +7,10 @@ freezing or delisting a coin remains a manual decision with its own runbook
 
 ## Why this exists
 
-Depeg events have no terminal state for a permanently collapsed coin: the
-detector closes events only on a sustained recovery inside the close threshold
-(50 bps for USD pegs, 75 bps for non-USD), supply under $1M, direction
-supersede, or untracking. A coin that dies at $0.38 with $20M of nominal
-supply satisfies none of those — usx-dforce sat in an open
-"active depeg" for 27 days (and led 17 consecutive digest headlines) before
-its manual freeze; usda-avalon's event has been open since 2025-12-30.
+An open lifecycle is not proof of a recoverable coin. Closure requires sustained
+recovery inside 50 bps (USD) / 75 bps (non-USD), observed supply under $1M,
+direction supersede, or untracking. A permanent collapse can satisfy none of
+these, so the flags below prompt manual lifecycle review rather than auto-close.
 
 ## Flags
 
@@ -21,7 +18,7 @@ Computed daily by `worker/src/lib/depeg-lifecycle.ts` inside the digest cron's
 active-depeg collector, before the prompt slice. The collector excludes
 untracked/frozen coins and unavailable market caps. Flags require a fresh live
 price and a positive stored peg reference; a stale stored peak never triggers
-a freeze review. Thresholds owner-ratified 2026-07-18.
+a freeze review.
 The 21- and 30-day thresholds use a rounded-hourly age that is then floored
 into days, so they can trip up to ~30 minutes early.
 

@@ -29,17 +29,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 
 ## Sync Flow
 
-`syncBluechip()` in `worker/src/cron/sync-bluechip.ts`:
-
-1. Skips work when the `bluechip-ratings` cache is newer than 6 hours and returns `status: "skipped_neutral"` with metadata reason `cache-fresh`.
-2. If `shouldAttemptFetch()` returns false because the shared Bluechip circuit breaker is open, returns `status: "degraded"` with metadata reason `bluechip-circuit-open` and performs no fetch.
-3. Iterates the configured slug mappings in batches of 3, with a 500ms inter-batch delay.
-4. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT` through `fetchTextWithRetry()`. Each attempt's existing 15-second deadline covers headers **and bounded body completion**, cancelling stalled bodies before continuing sibling/remaining batches.
-5. Records 404s, empty payloads and missing grades as unresolved failures, preserving any original observation clock.
-6. Normalizes each successful row into `BluechipRating`, accepting Bluechip category blocks that are omitted or explicitly `null`.
-7. Strips HTML from SMIDGE category summaries before persistence.
-8. Treats malformed/non-JSON `200` responses as slug-scoped `json-parse-failed` misses so one bad payload does not abort the full daily refresh.
-9. Writes the merged map back with `setCacheIfNewer()`.
+`syncBluechip()` in `worker/src/cron/sync-bluechip.ts` owns bounded batched fetching, schema normalization and merged writes through `setCacheIfNewer()`. A cache younger than six hours skips neutrally (`cache-fresh`); an open Bluechip circuit returns degraded (`bluechip-circuit-open`) without fetching. Fetch deadlines cover headers and bounded body completion. HTML is stripped from SMIDGE summaries; omitted/null categories are accepted. Invalid JSON, 404, empty/no-grade and transport failures are slug-local unresolved observations, not deletion or unrating.
 
 Failure behavior:
 - If zero ratings are fetched, the cron returns `status: "degraded"`. Any retained-row reason/state changes are persisted at the **existing** map timestamp, without advancing successful publication.
@@ -58,20 +48,9 @@ Selector scoring, grade exclusions and recommendations admit only within-budget 
 
 ## Data Shape
 
-Each cached map value is a `BluechipRating` (`shared/types/bluechip.ts`, re-exported via `shared/types/market.ts`); the grade union is defined in `shared/types/core.ts`.
+`BluechipRatingSchema` in `shared/types/bluechip.ts` owns the cached row shape; `shared/types/core.ts` owns grades. Nullable source fields and plain-text SMIDGE summaries are reference data, not locally inferred assessments.
 
-| Field | Meaning |
-|-------|---------|
-| `grade` | Bluechip letter grade |
-| `slug` | Bluechip report slug |
-| `lastObservedAt` | Unix seconds of this rating's last successful fetch; `null` for legacy/unknown provenance |
-| `observationState` | `current`, `retained`, `stale`, or `unknown`; derived from constituent age, not map publication |
-| `observationReason` | `null` for successful current observations; machine-readable failed-attempt/expiry/unknown reason otherwise |
-| `collateralization` | Numeric collateralization percentage, or `null` when Bluechip does not report it |
-| `smartContractAudit` | Audit-presence boolean from Bluechip, or `null` when it is not reported |
-| `dateOfRating` | Rating date string, or `null` when Bluechip does not report it |
-| `dateLastChange` | Last grade-change date string or `null` |
-| `smidge` | Plain-text summaries for `stability`, `management`, `implementation`, `decentralization`, `governance`, `externals` |
+`lastObservedAt` is the constituent's last successful fetch, independent of map publication and Bluechip's external `dateOfRating`/`dateLastChange`. `observationState` and `observationReason` retain current/retained/stale/unknown provenance and failed-attempt or age-expiry reasons; legacy unknown clocks remain null.
 
 ---
 
@@ -91,12 +70,6 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 ## Frontend Usage
 
-- `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` via the registered `bluechipRatings` query descriptor, whose producer interval is `CRON_BLUECHIP` (derived from `CRON_INTERVALS["sync-bluechip"]`).
-- `src/components/bluechip-header-badge.tsx` renders only the external `Bluechip: <grade>` badge/report link in both responsive stablecoin detail identity layouts. While the Pharos roster is suspended, no Pharos qualification or tenure appears in visible text, link titles, or accessible labels. An external `dateOfRating` is never evidence of Pharos designation tenure.
-- `src/hooks/use-selector.ts` reads the ratings map as one of the Selector's inputs.
-- The `#bluechip` section of `/about/` (`src/components/about/about-page-content.tsx`, copy in `src/components/about/bluechip-content.ts`) states the roster rule statically; the roster itself is suspended pending the V10 grade-floor review, so it requests neither the ratings map nor the report cards.
-- `src/hooks/use-compare-data-model.ts` folds Bluechip ratings into the compare-page query slices, error propagation, `bluechipMap` projection, and refetch orchestration behind `src/components/compare/compare-client.tsx` (lazily loaded by `src/app/compare/page.tsx`).
+The registered `bluechipRatings` query (`src/hooks/api-hooks.ts`) uses the producer interval; Selector admits only eligible constituents under `isBluechipRatingCurrent`, while detail/compare may display labeled retained/stale/unknown external grades.
 
-`src/lib/bluechip.ts` contains:
-- `BLUECHIP_REPORT_BASE` (`https://bluechip.org/en/coins`)
-- `GRADE_ORDER` for frontend sorting/color bucketing
+The detail badge links only to the external Bluechip report. Pharos qualification/tenure is suspended pending the V10 grade-floor review; `/about/#bluechip` states that rule without fetching a roster. Neither visible copy nor accessible labels infer Pharos tenure from Bluechip's external rating date. `src/lib/bluechip.ts` owns the external report base and grade ordering.

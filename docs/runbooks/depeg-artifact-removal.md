@@ -35,7 +35,7 @@ Run the commands below from the repository root with Wrangler authentication. Hi
 1. **Preview (read-only).**
 
    ```bash
-   npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true&symbol=USN' | jq
+   npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'dry-run=true&symbol=<symbol>' | jq
    ```
 
    Check `totalMatching` and each `auditedEvents[*].verdict`. Read stored
@@ -46,6 +46,10 @@ Run the commands below from the repository root with Wrangler authentication. Hi
    environment variable is unset. Fix it before trusting CoinGecko verdicts
    (delete and repair modes do not need the key).
 
+   The reviewed USN case used `usn-noon` and ids
+   `49235,49236,49237,24424,83782`; its evidence windows remain in the registry.
+   Select the current case's complete reviewed id set, not that example set.
+
 2. **Record the verdict.** Add the reviewed window to
    `shared/data/depegs/backfill-replay-suppressions.ts` (see
    [Recording the verdict](#recording-the-verdict)) and run the integrity suite
@@ -55,12 +59,12 @@ Run the commands below from the repository root with Wrangler authentication. Hi
    stability-index recompute with the deletes in one D1 batch commit:
 
    Delete ids are global, not constrained by the preview's `symbol` filter.
-   First preview `delete=49235,49236,49237,24424,83782&dry-run=true` with the
+   First preview `delete=<reviewed-ids>&dry-run=true` with the
    same CLI, then compare the complete requested id set with `deletedEvents`;
    a partial match can succeed. Verify coin identity from D1 before execution.
 
    ```bash
-   npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=49235,49236,49237,24424,83782' --execute --allow-atomic-import | jq
+   npx tsx worker/scripts/one-shot-backfill.ts audit-depeg-history --query 'delete=<reviewed-ids>' --execute --allow-atomic-import | jq
    ```
 
    Schedule a maintenance window: the atomic import can briefly make D1 unavailable
@@ -86,7 +90,7 @@ Run the commands below from the repository root with Wrangler authentication. Hi
    when that variable is set. Existing USN redirects live in `public/_redirects`.
 
 5. **Verify.** Re-read the coin's history
-   (`GET https://api.pharos.watch/api/depeg-events?stablecoin=usn-noon` with a
+   (`GET https://api.pharos.watch/api/depeg-events?stablecoin=<coin-id>` with a
    public API key) and confirm the rows are gone. Then confirm the next window
    replay does not recreate them: the replay logs
    `backfill-depegs-episode-skipped` with `skipReason: reviewed-suppression` or
@@ -129,5 +133,6 @@ instead of adding a second one.
   coin and direction overlaps it.
 - [`docs/runbooks/depeg-lifecycle-review.md`](./depeg-lifecycle-review.md) —
   open-event lifecycle flags and wind-down curation.
-- [`docs/depeg-detection.md`](../depeg-detection.md) — backfill replay
-  semantics, the registry contract, and the archive/redirect continuity rule.
+- [`docs/depeg-detection.md`](../depeg-detection.md) — replay and suppression semantics.
+- [Event history and crawlability](../depeg-page.md#event-history-and-crawlability) —
+  permanent archive and redirect continuity.

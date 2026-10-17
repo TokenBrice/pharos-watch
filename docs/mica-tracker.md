@@ -10,100 +10,25 @@ The data foundation already exists in the tracked registry: many coins carry a `
 
 ## Architectural keystone
 
-MiCA status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and bundled with references in `shared/data/stablecoins/coins.compliance.generated.json` for the compliance table. Per-coin client detail projections also carry MiCA; the global client list does not.
-
-**No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** This is the decision that keeps complexity at Medium. Every Worker/connection-pool/cache gotcha in `CLAUDE.md` is out of scope for this feature.
+MiCA is static editorial metadata in the compliance sidecar, not a Worker pipeline. [Compliance data projection](./compliance-page.md#data-projection) owns catalog loading and consumer boundaries. Missing metadata means unassessed, never an inferred legal posture.
 
 ---
 
 ## Schema
 
-A dedicated `mica` object on `StablecoinMeta`, not an overload of `jurisdiction` (which stays as the generic `{ country, regulator?, license? }` summary). A dedicated object is the smallest change that captures MiCA's required fields without speculative regime configurability.
-
-GENIUS is now tracked as a dedicated sibling `genius?: GeniusProfile`, not by migrating MiCA into a generic regulatory array. Keep `mica` dedicated because MiCA has regime-specific fields and an existing curated backfill.
+Author a dedicated `mica?: MicaProfile`, separate from generic `jurisdiction` and sibling `genius`. The regime-specific research criteria below decide what may be asserted; schema validity alone does not establish authorization.
 
 ### Types — `shared/types/core.ts`
 
-MiCA metadata is implemented as `mica?: MicaProfile` on `StablecoinMeta`. Status/type/auth enums live in `shared/types/core.ts`, following its `as const` value-list + derived-type pattern. The `MicaProfile` shape is Zod-derived (`z.output<typeof MicaProfileSchema>`) in `shared/types/stablecoin-meta-compliance-schemas.ts` and re-exported as a type alias from `core.ts`; the block below illustrates that shape.
-
-```ts
-export const MICA_STATUS_VALUES = [
-  "authorized",     // EMI / credit-institution authorization in effect for the EMT/ART
-  "pending",        // application filed with a competent authority, awaiting decision
-  "transitional",   // relying on a national CASP grandfathering window (sunsets ~mid-2026)
-  "non-compliant",  // in EU scope, no authorization path; delisted or restricted on EU venues
-  "out-of-scope",   // not offered to the public or admitted to trading in the EU
-] as const;
-export type MicaStatus = (typeof MICA_STATUS_VALUES)[number];
-
-export const MICA_TOKEN_TYPE_VALUES = ["EMT", "ART"] as const; // e-money token vs asset-referenced token
-export type MicaTokenType = (typeof MICA_TOKEN_TYPE_VALUES)[number];
-
-export const MICA_AUTHORIZATION_TYPE_VALUES = ["emi", "credit-institution"] as const;
-export type MicaAuthorizationType = (typeof MICA_AUTHORIZATION_TYPE_VALUES)[number];
-
-export interface MicaProfile {
-  status: MicaStatus;
-  tokenType?: MicaTokenType;
-  authorizationType?: MicaAuthorizationType;
-  competentAuthority?: string;   // e.g. "ACPR" — the supervising national authority
-  authorizedEntity?: string;     // legal issuer entity named on the authorization
-  significant?: boolean;         // EBA-supervised "significant" EMT/ART
-  references?: StablecoinLink[]; // ESMA/EBA/NCA register links (required for any non-out-of-scope status)
-}
-```
-
-`StablecoinMeta` includes the profile alongside `jurisdiction?`:
-
-```ts
-  mica?: MicaProfile;
-```
+`shared/types/core.ts` owns MiCA enum values and exports the Zod-derived `MicaProfile` type from `shared/types/stablecoin-meta-compliance-schemas.ts`. Read those sources for the current field shape rather than copying a type declaration.
 
 ### Zod — `shared/types/stablecoin-meta-compliance-schemas.ts`
 
-Zod validation lives in `shared/types/stablecoin-meta-compliance-schemas.ts` and mirrors the `JurisdictionSchema` pattern, `.strict()`. A cross-field rule enforces sourcing for any non-out-of-scope status:
-
-```ts
-export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
-  status: z.enum(MICA_STATUS_VALUES),
-  tokenType: z.enum(MICA_TOKEN_TYPE_VALUES).optional(),
-  authorizationType: z.enum(MICA_AUTHORIZATION_TYPE_VALUES).optional(),
-  competentAuthority: z.string().min(1).optional(),
-  authorizedEntity: z.string().min(1).optional(),
-  significant: z.boolean().optional(),
-  references: z.array(StablecoinLinkSchema).optional(),
-}).strict().superRefine((mica, ctx) => {
-  if (mica.status === "out-of-scope") {
-    for (const field of ["tokenType", "authorizationType", "competentAuthority", "authorizedEntity"] as const) {
-      if (mica[field] != null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "mica.out-of-scope rows cannot carry in-scope classification fields",
-          path: [field],
-        });
-      }
-    }
-  }
-
-  if (mica.status !== "out-of-scope" && (mica.references?.length ?? 0) === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "mica.status requires at least one source reference unless it is 'out-of-scope'",
-      path: ["references"],
-    });
-  }
-});
-```
+`MicaProfileSchema` in `shared/types/stablecoin-meta-compliance-schemas.ts` owns strict shape and cross-field validation, including evidence references and the out-of-scope field boundary. Apply the [status criteria](#status-criteria) before authoring.
 
 ### Wiring — `shared/lib/stablecoins/schema.ts`
 
-`StablecoinMetaAssetSchema` wires MiCA through next to `jurisdiction: JurisdictionSchema.optional()`:
-
-```ts
-  mica: MicaProfileSchema.optional(),
-```
-
-Verify: `npm run check:stablecoin-data` and the registry tests stay green.
+`shared/lib/stablecoins/schema.ts` assembles the profile into `StablecoinMetaAssetSchema`. Validate metadata edits through the [maintenance checks](#maintenance).
 
 ---
 
@@ -140,23 +65,7 @@ Per-coin `significant` follows EBA designation of significant EMTs/ARTs (thresho
 
 ## Page contract — `/compliance/`
 
-Model on `/screener` (client-only, bundled registry, URL-encoded filters). No API hooks needed for the MiCA columns themselves; reuse existing hooks only if surfacing live supply/peg context alongside.
-
-**Route shape:**
-
-- `src/app/compliance/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ.
-- `src/components/compliance/compliance-client.tsx` — `ComplianceClient`, lazily loaded by the page shell; owns the filters and both regime tables.
-- `src/lib/compliance-model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows. The main table contains active assets only. GENIUS rows stay in Implementation Watch before the explicitly released effective phase; pre-launch GENIUS rows stay in Watch even then, until normal catalog activation. Frozen, quarantined, and delisted rows are excluded.
-- `src/app/compliance/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
-- `public/_redirects` — legacy `/mica` traffic redirects to `/compliance/`.
-
-**Columns (each regime table):** coin · status badge · pathway / type (EMT/ART, authorizationType, `significant` badge) · authority · issuer entity · row-expand toggle. Regime is a filter, not a column — each regime renders its own table. Source links, and for GENIUS rows the review evidence and reserve-disclosure detail, live in the expandable full-width row fold rather than in columns. The `regime=all` Overview directory has its own columns: coin · peg · MiCA status · GENIUS status.
-
-**Filters (URL-encoded, via `useUrlFilters`):** `regime`, `status`, `type`, `peg`, and free-text search as `q`. Example: `/compliance/?regime=mica&status=authorized&peg=EUR`. Only these canonical keys select filters; retired query aliases are ignored.
-
-**Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
-
-**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA and GENIUS status, coin by coin". The mobile header, desktop top nav, and command palette auto-index from `NAV_GROUPS`.
+[Compliance page composition](./compliance-page.md#page-composition) owns the route, tables, navigation and loading; [URL contract](./compliance-page.md#url-contract) owns filters; [data projection](./compliance-page.md#data-projection) owns lifecycle inclusion and evidence loading. MiCA status labels/descriptions/badge classes come from `shared/lib/mica.ts`, not route-local copies.
 
 **Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field. `RegulatoryStandingCard` is a rail card at `xl+` with an in-flow twin in the Control board's tile grid below `xl` (`density="main"`, an evidence-module tile), and that twin owns `#jurisdiction`. The card lists one row per applicable regime (GENIUS / US, MiCA / EU), and each regime row holds status only: a sentence-case status pill (out-of-scope is muted) with the issuer pathway or token-type caption beside it. What the issuer publishes sits in a separate "Issuer disclosures" row (attestation, redemption policy, reserves), shown only with a GENIUS review and never as cells of a regime, because a published attestation says nothing about authorization. Redemption policy and reserves come from the GENIUS review; the attestation cell reads the coin's `proofOfReserves` record first, the same fact as the passport's Attestor entry, and falls back to the GENIUS review's monthly-attestation finding only without a record or with an undisclosed attestor. A recorded cadence is the value: a check for daily to monthly, a watch-tone gap for "Quarterly", "Semi-annual", "Annual" or "Ad hoc" (GENIUS requires monthly); "Self-attested" is a gap, and an attestor without a cadence reads "Not monthly" when the review found no monthly attestation. Published is a check (the reserve disclosure links to the disclosure), a reviewed absence reads "Not found", and a missing record a muted "Not recorded" with "–", never a cross. The value word always follows the glyph, so the card carries no legend. Regulator facts, report dates, review notes and sources fold under `Details & sources (N)` in the rail and `Review notes & sources (N)` in the twin. A coin without a curated regime profile gets no passport field and an explicit "Regulatory standing · Not reviewed" state in the same slots; nothing is faked on-page. The GENIUS passport chip still links off-page to `/compliance/?regime=genius` rather than `#jurisdiction`.
 
@@ -166,16 +75,6 @@ Verify: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run seo:check
 
 ---
 
-## Optional: timeline integration
-
-Low-cost reuse, not required for MVP:
-
-- A global "key MiCA dates" strip on `/compliance/` using the anchors above.
-- Per-coin regulatory milestones via the **existing** `LaunchMilestone` `type: "regulatory"` (`LAUNCH_MILESTONE_TYPE_VALUES` in `core.ts`), surfaced in the `/timeline/` feed ([tape-page.md](./tape-page.md)). The retained curated annotation corpus is editorial history, not a live chart overlay.
-
-No new infrastructure — these primitives already exist.
-
----
 
 ## Data sourcing & maintenance
 
@@ -188,14 +87,7 @@ This is the dominant cost, not the code.
 
 ### Worked reference examples (verify before entry)
 
-| Coin | Likely status | tokenType | Authority / entity |
-| --- | --- | --- | --- |
-| EURC / USDC (Circle) | `authorized` | EMT | ACPR (France), Circle EMI |
-| EURCV (SG-FORGE) | `authorized` | EMT | ACPR (France) |
-| EURQ / USDQ (Quantoz) | `authorized` | EMT | DNB (Netherlands) |
-| USDT (Tether) | `non-compliant` | EMT (scope) | No EMT authorization pursued; EU venue delistings |
-
-These illustrate the model only — confirm each against the ESMA/EBA/NCA registers at data-entry time.
+Use current source metadata and the compliance surface for examples; confirm each token/entity/authorization against the source order above at data-entry time. A likely-status seed is not evidence.
 
 ---
 
@@ -205,7 +97,6 @@ MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; statu
 
 - Data refresh: update or create the compliance sidecar's `mica` block with sourced register references, then run `npm run bootstrap:generated`, `npm run check:stablecoin-data`, and `npm run check:generated-artifacts`.
 - Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.
-- Timeline layer remains optional and can use existing `LaunchMilestone` `type: "regulatory"` and TAPE primitives.
 - **Not a methodology-version bump:** MiCA status is a tracked attribute, not a score. Assignment criteria live in this doc, not in `/methodology` versioning.
 
 ---

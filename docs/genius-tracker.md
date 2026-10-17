@@ -8,7 +8,7 @@ GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins
 
 ## Architectural keystone
 
-GENIUS status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and projected into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's bundled summary. The global client list carries no compliance profiles. Full GENIUS evidence remains in `shared/data/stablecoins/coins.client.detail/<id>.generated.json`: opening a row fold loads it through `loadClientStablecoinDetail(id)`, caches evidence for the session, and combines and de-duplicates top-level and nested references. The summary omits `references`, `negativeEvidenceReview`, `applicabilityBasis`, and `notes`; field sets are owned by `shared/types/stablecoin-client-meta.ts`.
+GENIUS is static editorial metadata in the compliance sidecar. [Compliance data projection](./compliance-page.md#data-projection) owns generated summary/detail field boundaries, lazy row-fold loading, caching and reference de-duplication.
 
 **No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** One field does leave the presentation surface: `genius.issuerEntity` seeds the Safety Score V9 issuer key (`worker/src/lib/safety-score-v9/extension.ts`, run by the `compute-safety-score-v9` cron), so edit it with that issuer join in mind; `authorizationStatus` and the rest stay presentation-only. Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
 
@@ -22,43 +22,11 @@ A dedicated `genius?: GeniusProfile` object on `StablecoinMeta`, sibling to `mic
 
 ### Fields (`GeniusProfile`)
 
-Required: `applicability`, `authorizationStatus`, `issuerPathway`, `reviewer` (string), `reviewedAt` (`YYYY-MM-DD`). Everything else is optional. `.strict()` rejects unknown keys.
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `applicability` | enum | Is this an in-scope payment stablecoin? See [Applicability](#applicability). |
-| `applicabilityBasis` | `{ summary (≥12 chars), references? }` | Why the applicability call was made. |
-| `authorizationStatus` | enum | The headline status. See [Authorization status](#authorization-status). |
-| `issuerPathway` | enum | Which GENIUS issuer route. See [Issuer pathway](#issuer-pathway). |
-| `issuerEntity` | string | Legal issuer entity. |
-| `issuerDomicile` | string | Issuer's country/state. |
-| `licensingRegulator` | string | Free-text licensing context. |
-| `primaryFederalRegulator` | enum | `OCC` \| `Federal Reserve` \| `FDIC` \| `NCUA` \| `Unknown`. |
-| `stateRegulator` | string | For state-qualified pathways. |
-| `foreignExceptionStatus` | enum | See [Foreign exception](#foreign-exception-posture). |
-| `foreignExceptionEvidence` | `{ summary (≥12), references? }` | Required when `registered-exception`. |
-| `enforcementStatus` | enum | `no-public-action-found` \| `warning-or-notice` \| `prohibited-or-revoked` \| `unknown`. |
-| `daspOfferSaleStatus` | enum | Digital-asset-service-provider offer/sale posture. See [DASP offer/sale](#dasp-offersale-posture). |
-| `reserveDisclosurePresent` | boolean | If `true`, **requires** `reserveDisclosureUrl`. |
-| `reserveDisclosureUrl` | URL | Public reserve disclosure / attestation hub. |
-| `redemptionPolicyPresent` | boolean | Public 1:1 redemption policy exists. |
-| `monthlyAttestationPresent` | boolean | Monthly reserve attestation exists. |
-| `notes` | string | Reviewer notes / caveats. |
-| `references` | `GeniusReference[]` | See [Sourcing](#sourcing--source-kinds). |
-| `negativeEvidenceReview` | `{ sourcesChecked[], summary (≥12), reviewer, reviewedAt, references? }` | **Required** when `no-public-authorization-found`. |
-| `reviewer` | string | Who performed the review (e.g. `"Pharos compliance research"`). |
-| `reviewedAt` | `YYYY-MM-DD` | When. |
-
-`GeniusReference`: `{ label, url, sourceKind, sourceDate?, accessedAt?, quoted? }`; `quoted` marks a verbatim external title.
+`GeniusProfileSchema` in `shared/types/stablecoin-meta-compliance-schemas.ts` owns required/optional fields and reference shape. Use the research sections below for applicability, issuer identity, authorization, foreign exception, enforcement, disclosures and dated negative findings; do not infer a legal finding from a schema default or omitted field.
 
 ### Zod cross-field rules (Zod-enforced — `check:stablecoin-data` fails otherwise)
 
-1. `ppsi-approved` | `state-qualified` | `official-application-pending` → `references` must include at least one of kind `federal-register`, `federal-regulator`, or `state-regulator`.
-2. `issuer-announced-intent` → `references` must include at least one of `issuer-disclosure`, `issuer-filing`, `federal-register`, `federal-regulator`, or `state-regulator`.
-3. `no-public-authorization-found` → a `negativeEvidenceReview` object is **required**.
-4. `reserveDisclosurePresent: true` → `reserveDisclosureUrl` is **required**.
-5. `foreignExceptionStatus: "registered-exception"` → `foreignExceptionEvidence` with at least one `federal-register` / `federal-regulator` reference is **required**.
-6. `enforcementStatus: "warning-or-notice" | "prohibited-or-revoked"` → `references` must include at least one regulator-grade (`federal-register` / `federal-regulator` / `state-regulator`) reference.
+The same schema owns strict validation and evidence dependencies. The policy sections below retain the source bars for official status, issuer intent, foreign exceptions, enforcement and negative evidence. Run the [maintenance checks](#maintenance) after editing; do not maintain a second refinement inventory here.
 
 ---
 
@@ -85,11 +53,11 @@ The headline `authorizationStatus`. **When uncertain between two statuses, pick 
 
 | Status | Assign when | Source bar |
 | --- | --- | --- |
-| `ppsi-approved` | An official source identifies a domestic **permitted payment stablecoin issuer** approval for this token/issuer. | Regulator or Federal Register reference (rule 1). |
-| `state-qualified` | An official source identifies a **state-qualified** payment stablecoin issuer pathway for this token/issuer. | Regulator/state-regulator or Federal Register reference (rule 1). |
-| `official-application-pending` | A public **regulator** source shows an application/registration is filed and pending. | Regulator or Federal Register reference (rule 1). |
-| `issuer-announced-intent` | Issuer/partner materials signal a GENIUS-era issuance path, but **no token-specific official approval** was found. Detail summaries describe that signal, not an announced authorization plan or filed application. | Issuer disclosure/filing or stronger (rule 2). |
-| `no-public-authorization-found` | A **dated negative-evidence review** found no qualifying public approval, application, or registration. | `negativeEvidenceReview` required (rule 3). |
+| `ppsi-approved` | An official source identifies a domestic **permitted payment stablecoin issuer** approval for this token/issuer. | Regulator or Federal Register reference. |
+| `state-qualified` | An official source identifies a **state-qualified** payment stablecoin issuer pathway for this token/issuer. | Regulator/state-regulator or Federal Register reference. |
+| `official-application-pending` | A public **regulator** source shows an application/registration is filed and pending. | Regulator or Federal Register reference. |
+| `issuer-announced-intent` | Issuer/partner materials signal a GENIUS-era issuance path, but **no token-specific official approval** was found. Detail summaries describe that signal, not an announced authorization plan or filed application. | Issuer disclosure/filing or stronger. |
+| `no-public-authorization-found` | A **dated negative-evidence review** found no qualifying public approval, application, or registration. | `negativeEvidenceReview` required. |
 | `not-applicable` | The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture (pairs with an excluded/`non-payment-token` applicability). | — |
 | `unknown` | Public posture not resolved from available sources. | — |
 
@@ -121,11 +89,11 @@ separate future-looking field rather than overloading `issuerPathway`.
 
 ## Foreign exception posture
 
-For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer pathway: `registered-exception`, `comparability-determined`, `registration-pending`, `not-qualified`, `not-applicable`, `unknown`. A `registered-exception` claim requires `foreignExceptionEvidence` with a federal-grade reference (rule 5).
+For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer pathway: `registered-exception`, `comparability-determined`, `registration-pending`, `not-qualified`, `not-applicable`, `unknown`. A `registered-exception` claim requires `foreignExceptionEvidence` with a federal-grade reference.
 
 ## Enforcement posture
 
-`enforcementStatus`: `no-public-action-found`, `warning-or-notice`, `prohibited-or-revoked`, or `unknown`. It is optional with no schema default; author a dated finding explicitly. The two action states require a regulator-grade reference (rule 6).
+`enforcementStatus`: `no-public-action-found`, `warning-or-notice`, `prohibited-or-revoked`, or `unknown`. It is optional with no schema default; author a dated finding explicitly. The two action states require a regulator-grade reference.
 
 ## DASP offer/sale posture
 
@@ -133,7 +101,7 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 ## Reserve & redemption disclosure
 
-`reserveDisclosurePresent` / `reserveDisclosureUrl`, `redemptionPolicyPresent`, and `monthlyAttestationPresent` capture the public disclosure footprint GENIUS will require. Record what is **publicly present today**; presence of `reserveDisclosurePresent: true` requires a URL (rule 4).
+`reserveDisclosurePresent` / `reserveDisclosureUrl`, `redemptionPolicyPresent`, and `monthlyAttestationPresent` capture the public disclosure footprint GENIUS will require. Record what is **publicly present today**; presence of `reserveDisclosurePresent: true` requires a URL.
 
 Reserve-report dates have one authority: `proofOfReserves.latestReport`. Its independently optional `periodEnd` and `publishedAt` retain their respective semantics in detail-page regulatory standing and the compliance table; `publishedAtBasis: "signed-date-standin"` renders as **signed**, not published. Neither date is inferred from the other or from the compliance review date. A missing report or unknown dates fabricate no latest-report note. The compliance projection carries the canonical report alongside GENIUS; GENIUS has no separately authored latest-report date.
 

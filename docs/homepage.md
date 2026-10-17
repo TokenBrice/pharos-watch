@@ -1,224 +1,67 @@
 # Homepage
 
-Route contract for `/`, the main Pharos dashboard.
-
----
-
-## Route Shape
-
-- **Server shell:** `src/app/page.tsx`
-- **Hero masthead:** `src/components/home-alt-hero.tsx`
-- **Core top rail:** `src/components/core-top-rail.tsx` + `src/components/homepage-tape.tsx`
-- **Main dashboard client:** `src/components/home-alt-client.tsx`
-- **Upcoming horizon module:** `src/components/home-alt-upcoming-horizon-constellation.tsx`
-- **Fresh-post banner:** `src/components/home-blog-banner.tsx`, included when the latest post is within its 14-day window at build time; static HTML removes it on the next deploy after expiry, not on the visitor's clock
-
-The route does not use `FeaturePageShell`. Instead, the server page renders:
-
-1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
-2. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
-3. conditional `HomeBlogBanner` based on build-time post freshness, placed below the hero so it never takes the slot above the `h1`
-4. `HomeAltClient`
-5. `HomeMediaStrip`, the static `Seen on` media strip linking to `/about/#media`
-
-Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
-
----
+Contract for `/`. `src/app/page.tsx` owns server metadata/JSON-LD, `src/components/home-alt-hero.tsx` the heading/summary and `home-alt-client.tsx` the deferred workbench. Component order lives in source, not a second inventory here.
 
 ## Top-Fold Contract
 
-`src/app/page.tsx` reads the tracked and core-aggregate stablecoin counts for metadata and JSON-LD, then reads `getHomepageHeroSnapshot()` for the server-rendered hero market-summary fallback. The hero snapshot and market-cap KPI exclude tracked variants and stable-value investments.
+Keep exactly one raw visible `h1` across breakpoints. Metadata is canonical `/` with the shared OG card; CollectionPage/ItemList JSON-LD uses core stablecoins/cash equivalents. The server hero fallback and market-cap KPI exclude variants and stable-value investments.
 
-The visible top fold is split across three independently composed surfaces:
+`getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts` reads checked-in public data as fallback only. Preserve that selection through hydration, then reconcile from the existing cache-sharing `useStablecoins()` query. Fallback must be dated and at most 72 hours old; older/undated data is unavailable without live data. A minute clock reevaluates producer age and fallback expiry.
 
-- `CoreTopRail`, rendered directly under the global header chrome, contains the recent-events tape while the grouped top nav owns wayfinding. On desktop the tape renders on every standard page in normal flow: it sits below the sticky top nav and scrolls away with the page, so only the nav stays pinned. On mobile it renders only on the homepage so interior pages keep their first viewport focused on local content.
-- `HomeAltHero`, which owns the page `h1` and, on the deck line itself (wrapping under it on narrow screens), the `HomeMarketStateLine` answer to "is anything wrong right now?" (displayed PSI band and score linking to `/stability-index/`, and the active-depeg census linking to `/depeg/`); its text/summary shell is server-rendered from a maximum-72-hour static public dataset fallback, then reconciles from the homepage's existing live stablecoins query after hydration, while the live historical chart mounts through a viewport gate
-- `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
+The market-state line reuses regime-bar PSI and Active Depegs peg-summary queries, including the same confirmed incident count as `/depeg/` (excluding NAV tokens). It adds no source and no DEWS claim. Missing sources say unavailable, not zero; non-fresh evidence carries shared health notices.
 
-`HomeAltHero` owns the visible `h1` and keeps one raw heading across breakpoints because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
-
----
+The global recent-events rail is in normal flow below sticky navigation on desktop; only navigation remains pinned. On mobile it mounts only on the homepage, not invisibly on interior routes. The fresh-blog banner uses build-time eligibility; expiry disappears on the next deploy, not the visitor's clock, and never precedes the page heading.
 
 ## Query And State Model
 
-The homepage is intentionally decomposed into several cache-sharing clients instead of one route-wide view model.
+Cache-sharing clients isolate heavy rankings/signal queries from the eager summary. Shared loading/ready/empty/unavailable/stale-with-data semantics apply: failed reads without retained data show unavailable plus retry, never healthy/empty. Retained values keep age/notices; only successful zero-row responses claim empty. Rankings name failed source families.
 
-### `HomeAltClient`
+### Supply And Cohorts
 
-The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset as a fallback only. After hydration, `HomeAltHero` derives the same totals and cohorts from the cache-sharing `useStablecoins()` path. A static fallback at most 72 hours old remains visible with its as-of date; an older or undated fallback becomes unavailable when no live data exists. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The desktop `DailyDigestCard` promo inside `HomeAltMiniCardGrid` reads `useDailyDigest()` for the current issue title and short text; without data it shows an explicit unavailable title and Telegram CTA, not fabricated archive copy. It also reads `useDigestArchive()` for the two previous daily editions behind it, rendered as decorative `aria-hidden` fold previews that stay blank without that data. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
+Current supply records observed/expected core IDs, present-but-unavailable rows and omitted rows independently. No observations means a nullable headline, then eligible dated fallback or unavailable; explicit observed zeros stay zero. Partial coverage is a Known market cap subtotal with observed/expected census. Named cohorts require every member; unobserved subgroups are unavailable. Others sums observed assets outside named cohorts. Cohort/non-USD shares use positive observed subtotal, labeled Shares of known market cap subtotal when incomplete; missing supply enters neither numerator nor denominator.
 
-`HomeAltRankingsSection` query inputs:
+Only successful data with a fresh producer `updatedAt` is Live. Without producer time say Freshness unavailable / generation unavailable; query `dataUpdatedAt` is receipt time, never displayed source time or freshness authority. Stale/degraded/failed refreshes preserve producer dates and notices.
 
-- `useStablecoins()`
-- static `logosById` from `src/lib/logos.ts` (no logo query)
-- `usePegSummary()`
-- `usePinnedStablecoins()` for local pinned-watchlist state
-- `useDexLiquidity()`
-- `useReportCardsV9()`
+### Instrument Cards
 
-Before the client-only rankings workbench hydrates, its server-rendered fallback exposes a visible directory of the
-first eight `HOMEPAGE_TOP_CORE_STABLECOINS` profiles plus the full screener. This keeps the Stablecoin Overview useful
-and crawlable when JavaScript is unavailable while the live table remains the hydrated interaction surface.
+Each card uses its destination hero's selector, basis, format and universe, not an independent approximation: displayed PSI (not raw instant when rolling is published), freezable share, confirmed active incidents and best-paid risk in the Yield landing band. Yield overview and top-PYS rows use that same landing view; retained values preserve API quality warnings and retry. Transition names and reduced motion follow the shared view-transition owner.
 
-Derived helpers:
+Active-depeg rows come from peg-summary incident flags within active IDs, independent of event pagination/current-deviation availability. Display bounds name Top N of M; missing observations/ages stay unavailable. Zero incidents does not mean every asset is at peg.
 
-- `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegScores` and `filteredRowCount`; the optional builder derives `reportCardMap`)
- (buckets by the shared peg-deviation levels: healthy under 50 bps, mild 50–200, moderate 200–500, severe 500 and above, from `PEG_DEVIATION_LEVEL_MIN_BPS`; the Peg Health card legend uses `PEG_DEVIATION_LEVEL_LABELS`)
-- `useHomeAltFilters()` for URL-backed peg cohort filtering
+Supply movers partition observed positive/negative changes before ranking; never fill one side with opposite-sign rows. Both endpoints must be observed and the previous value positive; explicit current zero can be a contraction. `supply-moves-card.tsx` owns admission and reviewed-protocol-internal-flow exclusion windows. The measured change is not netted/rewritten elsewhere; digest absolute-dollar ranking is a different population. Mint/burn activity uses the canonical signal: offsetting flows are balanced activity, unvalued active nets unavailable.
 
-Live homepage modules resolve query state through the shared `loading`, `ready`, `empty`, `unavailable`, and `stale-with-data` contract. A failed source without retained data renders an explicit unavailable state and retry action rather than a healthy or empty message. Retained data stays visible with its age and a stale notice, while a successful zero-row response can use the module's normal empty copy. The rankings workbench identifies failed source families instead of replacing them with the generic empty table.
+DDR overview separates resolver/reviewer generations/reasons, freshness and retry. `computedAt` anchors the dated envelope; absent transport status defaults fresh only absent stale/degraded evidence. Retained rows are not live; empty means no published active forecasts in that snapshot. Only valid frozen predictions count as verdicts; pending/no-call/invalidated rows remain visible without calls. Durations stay locked; elapsed-deadline overlays never rewrite frozen evidence.
 
-The DDR overview separates resolver/reviewer generations and reasons, with freshness/error notices and retries. When `computedAt` exists it anchors a dated envelope; unavailable/absent transport status becomes fresh unless stale/degraded evidence applies. Retained rows are not “live”; empty copy claims only no published active forecasts in that snapshot. Only valid frozen predictions count as verdicts; pending/no-call/invalidated rows stay visible without calls. Durations are locked as-of estimates; the live overlay marks elapsed deadlines overdue without rewriting frozen evidence.
+Digest promo without data shows unavailable and Telegram CTA, not fabricated archive copy; decorative prior-edition folds remain blank without archive data.
 
-Starred stablecoin state is local to the browser:
+### Browser State
 
-- localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` and `pharos:yield-watchlist:v1` keys are read once, merged into the canonical key, then deleted)
-- value: normalized stablecoin ID array
-- the homepage pin projection ignores invalid/inactive IDs and reads the first 12 unique active IDs without truncating canonical storage; starring a saved ID below that cap promotes it to the front, while unstarring a visible pin removes it from the shared watchlist
+Shared watchlist `pharos-watchlist-v1` holds normalized IDs. Legacy homepage/yield keys migrate once and are deleted. Homepage projects the first 12 unique active IDs without truncating canonical storage; starring a saved ID below that cap promotes it, unstarring a visible pin removes it. Pins do not bypass filters/search.
 
-Saved shortcuts are also browser-local:
+`pharos-shortcuts` holds ordered local nav hrefs. Legacy six-item defaults expand; the non-editing panel backfills visible defaults while edit mode shows only saved hrefs. Neither store is server identity or a shared watchlist.
 
-- localStorage key: `pharos-shortcuts`
-- value: ordered nav href array
-- legacy six-item default sets hydrate to the expanded twelve-item default
-- the non-editing desktop panel backfills from the default set to keep twelve visible route shortcuts; edit mode still shows only the user's saved hrefs
+### HomepageTape
 
-### `HomeAltHero`
-
-`HomeAltHero` receives the server fallback from `getHomepageHeroSnapshot()` in `src/app/page.tsx`, preserves that exact selection through hydration, and then reconciles the headline and cohort rows from `useStablecoins()`. It renders the `Market Pulse` page heading, the market-state line, the total market-cap summary (neutral ink, not frost-blue), cohort rows, and the viewport-gated live chart.
-
-`HomeMarketStateLine` (`src/components/home-market-state-line.tsx`) adds no data source: it reads the `useStabilityIndex()` query the global regime bar already holds and the `usePegSummary()` response the Active depegs card reads, and states the same confirmed-depeg count as the `/depeg/` hero (`summary.activeDepegCount`, which excludes NAV-priced tokens). Each item says `unavailable` when its source has no data and appends the shared data-health state when it is not fresh; it never renders a missing census as zero. DEWS counts are deliberately absent because the homepage does not load stress signals.
-
-The current supply snapshot records observed versus expected core-aggregate IDs, plus separate present-but-unavailable and omitted-row counts. No observed supply means a nullable headline, not a live $0; the selector then uses a dated, eligible fallback or renders unavailable. Explicit observed zeros remain zero. Mixed coverage stays visible as a **Known market cap subtotal** with an observed/expected census; the present-row `supplyUnavailableCount` keeps its original meaning. A subgroup with no observations is unavailable and named cohorts require all their members. Others sums observed assets outside the named cohorts. Cohort and non-USD percentages use the positive observed subtotal even with incomplete coverage, explicitly labeled **Shares of known market cap subtotal**; missing supply is excluded from both numerator and denominator.
-
-Only successful data with a producer `updatedAt` classified fresh by `deriveDataHealth` is **Live**. Without producer time, retained figures say **Freshness unavailable · generation unavailable** and carry the shared unavailable-freshness notice; query `dataUpdatedAt` is receipt time and supplies neither freshness authority nor a displayed as-of date. Stale, degraded, or failed-refresh figures keep their available producer dates and shared notices. A minute clock rechecks producer age and the fallback's 72-hour expiry.
-
-### Market Pulse cards
-
-`PulseCard` receives each contributing query's producer metadata, canonical freshness preset, and error/availability state. Successful stale/degraded responses (including empty results and non-fresh dependencies) carry shared data-health warnings; useful retained values remain visible.
-
-**Instrument cluster.** Every homepage card that links to a rail instrument leads with exactly that page's hero figure, basis, format and universe chip, read through the rail page's own selector (no second derivation):
-
-| Card | Lead figure (same as the rail hero) | Selector | Universe chip |
-| --- | --- | --- | --- |
-| Stability Index | Displayed PSI (rolling 24h avg when published, else raw instant), `formatScore`, displayed band; the raw instant is context | `getDisplayedPsi()` / `getDisplayedPsiBasis()` | `psi` |
-| FreezeWatch | Freezable share of tracked (or observed, when partial) supply | `buildBlacklistStatusBuckets()` → `computeFreezableSummary()` / `formatShare()` | `active`, `N coins classified` (`registryCount`) |
-| Active depegs | Confirmed active depegs right now | peg summary `summary.activeDepegCount` | `pegCatalog`, `coins.length` |
-| Yield Intelligence | Best-paid risk in view: APY of the top Pharos Yield Score row in the `/yield/` landing risk band | `prepareYieldUniverse()` → `selectVisibleYieldRows(universe, {})` → `selectTopPysRows()` | `yieldRows`, `N in view of M · <landing band>` |
-
-The home has no Safety Scores card, so the Safety hero has no card counterpart. Each lead figure is wrapped in `RailHeroFigureTransition` (`src/components/view-transitions.tsx`, name `rail-hero-<psi|freezewatch|depeg|yield>`, `share="auto"`, `default="none"`) and the rail hero wraps its figure with the same name, so the App Router navigation morphs card figure into rail hero figure; reduced motion follows the shared `::view-transition-*` rules in `globals.css`. Secondary context stays below the lead: the FreezeWatch card's 24h/7d toggle switches the frozen-value line and its latest valued freezes (newest first; a sub-dollar freeze reads `<$1`, never `$0`).
-
-The Active depegs rows come from peg-summary incident flags in `ACTIVE_STABLECOIN_ID_SET`, independently of event pagination or current-deviation availability. Only the top three rows are displayed, with a visible `Top 3 of N by deviation` bound; missing observations and unloaded incident ages are explicitly unavailable, and zero incidents does not claim every price is on peg.
-
-Supply movers partition positive/negative observed changes before ranking, promote the peak once, and never fill an empty side with opposite-sign rows. Mint/burn inactivity uses the canonical activity signal: offsetting mints and burns show balanced activity, while unvalued active nets remain unavailable.
-
-### `HomepageTape`
-
-The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it under the global header chrome and above each page's local content. On desktop the tape renders on every standard page below the sticky `TopNav` and scrolls away with the page; on mobile it renders only on the homepage and scrolls away beneath the site header. Interior mobile routes do not mount the tape component, so its event query does not run behind CSS-hidden chrome; logos come from the static `logosById` map. The server snapshot reserves the desktop rail height until the media query hydrates to avoid shifting desktop content. The in-flow tape shell sets no z-index, so `TopNav` menus (inside the nav's `z-chrome` stacking context) open over it. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
-
-Each item carries the class styling from the homepage tape component: 12px secondary ink so the strip does not compete with the nav, an edge fade (mask) on the scrolling viewport instead of hard clipping, pause on hover and focus, and no animation under `prefers-reduced-motion` (the viewport becomes horizontally scrollable instead). Titles render through `formatTapeEventTitle()` in `src/lib/tape-derive.ts`, which rebuilds yield-warning titles from `payload.newSignals` with the shared warning labels and replaces bare mint/burn chain ids with `CHAIN_META` names, so stored machine vocabulary never reaches the strip. The desktop strip leads with the Core / Variants / Pegs / Chains registry counts, each with a hover definition; phones show the ticker line only. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
-
----
+`src/components/homepage-tape.tsx` reads the canonical latest-events query through same-origin site data, excludes score events and applies `collapseForHomepageStrip`. Query errors/valid empty collapsed data render no ticker; smoke checks the underlying endpoint, not visible copy. `formatTapeEventTitle()` maps stored warning keys/chain IDs to shared public labels. Hover/focus pauses motion; reduced motion provides horizontal scrolling. One nonduplicated View all events link opens `/timeline/`; [Timeline](./tape-page.md) owns archival/publication semantics.
 
 ## URL Filter Contract
 
-The homepage table uses browser URL search params as its public state contract.
+`use-home-alt-filters.ts` and the shared codec own `peg` (one cohort) and `variant` (core default, variants or catalog). Invalid peg state normalizes to all; all/empty/default values clear the key. Updates replace history without scroll jumps. Peg browse links/counts derive from the canonical taxonomy, not route-local copies.
 
-Managed by `src/hooks/use-home-alt-filters.ts` and `src/hooks/use-url-filters.ts`:
+## Stablecoin Overview
 
-- `peg` -> one active peg cohort filter (`usd-peg`, `fiat-non-usd-peg`, `commodity-peg`)
-- `variant` -> listing universe (`variants` or `catalog`); an absent value selects the core universe
+Before hydration, a real leading-core profile directory plus Screener link remains visible/crawlable alongside the shape-matched table placeholder. Background metric refresh preserves page/scroll; filter/search/sort/pinning resets them and shrinking results clamp the page.
 
-Rules:
-
-- only one peg cohort filter is active at a time
-- the rankings table defaults to core stablecoins and cash equivalents; `variant=variants` exposes tracked variants and `variant=catalog` exposes all active listing classes
-- invalid peg params normalize to the unfiltered `all` state
-- the homepage peg browse strip groups landing pages into `Fiat`, `Commodity`, and `Other` categories, displaying all active pegs through `PEG_LABELS_SHORT`
-- `"all"` and empty-string values clear the param instead of persisting it
-- updates use `window.history.replaceState(...)`, so filter changes do not create extra history entries or scroll jumps
-
----
-
-## Section Order
-
-Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
-
-1. `TopNav`
-2. `CoreTopRail` directly below the global header chrome
-3. `HomeAltHero`
-4. `HomeBlogBanner` while the latest post is fresh
-
-Under the fold (`HomeAltClient`):
-
-1. `HomeAltMiniCardGrid`
-2. `ShortcutsSection` (a quiet "Explore" band: small heading, neutral glyphs, no per-destination hues)
-3. `HomeAltRankingsSection` (`StablecoinTable` + `PegBrowseStrip`)
-4. `HomeAltUpcomingHorizonConstellation`
-5. `HomeAltDdrOverview`
-6. `HomeAltYieldOverview`
-7. `HomeAltStatusTelegram`
-
-`src/app/page.tsx` then closes the page with `HomeMediaStrip`, the static `Seen on` media credibility strip that links to `/about/#media`.
-
-The directory table is the product's workbench, so it sits directly after shortcuts and the signal-card band; Horizon and the overview modules follow it.
-
-The Biggest Supply Moves signal card (`src/components/home-alt-mini-cards/supply-moves-card.tsx`) ranks active coins with at least $10M in either current or previous-week supply against `circulatingPrevWeek`. Both sides are read through the absence-aware `getCirculatingRawOrNull` / `getPrevWeekRawOrNull` helpers: a coin whose current or previous-week supply is unavailable (for example `circulating: {}` on a supply-chain-dropout quarantine past its carry ceiling) is skipped rather than ranked against a zero. An observed current zero can rank as a contraction, but a non-positive previous-week value is skipped because percentage change has no positive baseline. A coin with a reviewed protocol-internal mint or burn (`shared/lib/reviewed-protocol-internal-flows.ts`) stays out of the ranking while the event is inside the comparison. The window reaches back eight days because the previous-week value is a daily point. The measured supply change itself is not netted or rewritten, so tables and detail pages still show it. The daily digest's biggest supply mover ranks by absolute USD change and does not apply this exclusion.
-
-`HomeAltYieldOverview` leads with the `/yield/` hero answer for the page's landing risk band (see the instrument-cluster table above), then Coverage, Median APY and the page's `Highest APY` in the same view; the `Top by PYS in view` leaderboard ranks the same landing view. Retained figures keep shared producer-generation freshness notices, failed-refresh retry, and the workbench's API quality warnings.
-
-### Stablecoin Overview
-
-This section contains:
-
-- `StablecoinTable`
-- `PegBrowseStrip`
-
-The homepage table seeds `HOME_ALT_DEFAULT_COLUMNS` (omitting Mint Authority and Flags), pages by `OVERVIEW_PAGE_SIZE` (20) in a capped scroll viewport, and persists Table settings. Background metric refreshes preserve page and scroll; filter/search/sort/pinning changes reset both. A shrinking result count clamps the page.
-
-Peg-deviation text and severity in the shared table both use the published `peg-summary.currentDeviationBps`; the independently refreshed raw price remains the price display and is not recomputed into a second deviation label.
-Liquidity cells retain measured zero with its canonical score colour in both layouts; only unavailable scores render `—`.
-
-When pinning is enabled from the homepage, each table row shows a locked star column to the left of the rank column. Starred rows are shown at the top of the table, ahead of unstarred rows; filters and search still decide which rows are eligible to appear in the table.
-
-The `Mint Score` column reads the published mint component off the report-card payload (`cards[].breakdowns.control.components`, `kind: "mint"`) and shows its score (`0-100`, or `NR`) in its posture-band colour, with the band named in the badge title; the homepage suppresses the header methodology hint (`showHeaderMethodologyHints={false}`), which `/screener/` keeps. Sorting uses the `mintAuthority` sort key and places unrated rows after scored rows. The row title still includes the curated review bucket used by `/coverage/` and `/screener/`, spelled out (`No privileged mint`, `Governed mint`, `Multisig mint`, `Issuer or backend mint`, `Bridge mint`, `Inherited authority`, or `Unknown mint authority`), which describes the curation route rather than the score. Since safety `9.1` this is the same number the Economic Control pillar uses, so the column and the grade can no longer disagree; a publication without breakdowns renders `NR`. The same release renamed the CSV export headers to `Mint Control Score` and `Mint Control Band` (from `Mint Authority Score` / `Mint Authority Band`), which is breaking for header-keyed consumers; the curated route column stays `Mint Authority Status`, and band keys are unchanged.
-
-`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally. The collapsed homepage preview shows USD, EUR, GBP, and BRL first; remaining active fiat pegs sit behind the "View More" disclosure.
-
----
+Deviation text/severity uses published `peg-summary.currentDeviationBps`, not a second calculation from independently refreshed price. Liquidity zero remains measured/coloured; only missing data is `—`. Mint is the published Economic Control component, never a second score lane; missing breakdowns show NR. Curated route describes review coverage, not score. Shared table/export owners define headers and band keys; homepage suppresses header methodology hints while Screener retains them.
 
 ## Loading Strategy
 
-`HomeAltHero` keeps the headline and cohort rows in the eager homepage experience. The market-cap chart uses a lightweight SVG renderer in `src/components/home-alt-hero-chart.tsx`, avoiding the shared Recharts runtime, and `HomeAltHeroChartGate` defers the live chart client until the chart surface reaches the viewport and the browser reaches an idle slice. The chart draws the gray total-market envelope and green USDT area as filled layers, then overlays USDC, USDS + DAI, Others, and Non-USD as legend-matched strokes.
+The eager summary preserves first-paint content. Idle/viewport gates defer the live SVG history chart; heavier sections use shape-matched progressive fallbacks. Each lazy section retains measured responsive height until offscreen; update reserves when layout height changes so mounting does not shift the footer.
 
-The historical aggregate is independent of the four cohort queries: loading, failed, or empty cohort histories do not hide the total envelope. Each historical point keeps its provider peg-bucket census; later-era buckets are not retroactively required. Explicit unavailable bucket values still produce gaps. Structural supplements add only observed, bounded as-of snapshots and never erase an observed provider bucket when their own archives are missing. Every publication rebuilds the chart from provider history and supplemental archives, so corrected publication replaces previously poisoned cached history. A cohort is unavailable (`null`) before its first observation or while its query is loading/failed, including failed refreshes with cached history. For successful nonempty histories only, authored launch dates establish zero before the coin existed; an archive start alone never establishes zero. USDS + DAI requires both histories after launch; Others requires every cohort operand and a nonnegative residual. Over-attribution remains unavailable. The SVG retains every published point and gap boundary, omits degenerate single-point filled segments, and uses unavailable hover markers. The missing-history notice appears for real gaps after initial cohort loading completes. Query recovery restores affected cohorts without replacing the aggregate.
+Historical total is independent of cohort query availability. Keep provider-era peg-bucket census; never retroactively require later buckets. Unavailable buckets remain gaps. Supplements add only observed bounded as-of data and never erase provider buckets when archives are absent. Rebuild publication from provider history/supplemental archives so corrected data replaces poisoned cache.
 
-The heavier homepage sections are client-only dynamic imports in `src/components/home-alt-client.tsx`:
-
-- `HomeAltMiniCardGrid`, which owns the below-hero signal cards
-- `HomeAltRankingsSection`, which owns `PegBrowseStrip`, `StablecoinTable`, pinned stablecoin state, and the table view model
-- `HomeAltDdrOverview`
-- `HomeAltYieldOverview`
-- `HomeAltStatusTelegram`
-
-The `HomeAltRankingsSection` fallback is progressive content rather than a skeleton-only shell: it renders the real
-section heading, summary, and leading stablecoin profile links alongside the shape-matched table placeholder.
-
-`DailyDigestCard` is imported statically inside the dynamically loaded `HomeAltMiniCardGrid`; it is not a separate dynamic import.
-
-Each dynamic module uses a shape-matched skeleton rather than blocking the full page render.
-
-Each below-fold `LazySection` reserves the section's measured rendered height as a static responsive class (`min-h-[<390px height>] lg:min-h-[<1440px height>]` in `home-alt-client.tsx`) and keeps it until the section scrolls off screen, so mounting never shifts the footer. When a section's layout changes height, re-measure and update its reserve: under-reserving causes layout shift, over-reserving only leaves whitespace while in view.
-
----
+A cohort is null before its first observation and on loading/failure, including failed refresh with cached history. Only successful nonempty history plus authored launch date establishes pre-existence zero; archive start alone does not. USDS+DAI requires both histories after launch. Others requires all operands and a nonnegative residual; over-attribution remains unavailable. Retain all points/gap boundaries, omit degenerate filled singletons, mark unavailable hovers and disclose real gaps after initial loading. Cohort recovery must not replace the aggregate.
 
 ## Update Rules
 
-When changing homepage behavior, update this doc if any of these contracts move:
-
-- visible section order
-- filter query-param names or clearing semantics
-- top-fold SEO structure (`h1`, JSON-LD, canonical metadata)
-- major data-source composition for the homepage-wide signal cards or table
-
-For visual/layout-specific changes, also update [Design Language](./design-language.md). For end-to-end source-to-hook mapping, see [Data Flow Map](./data-flow-map.md).
+Update this owner for cohort, unavailable/freshness, URL/persistence, server/live handoff and SEO contracts. Source owns layout/component order. [Architecture](./architecture.md) owns integrity rules, [Design Language](./design-language.md) visual grammar and [Data Flow Map](./data-flow-map.md) source-to-hook routing.

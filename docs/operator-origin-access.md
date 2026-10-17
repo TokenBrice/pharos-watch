@@ -126,21 +126,9 @@ The current proxy now fails closed on its own trust boundary:
 
 ### Pages project bindings needed now
 
-Required active bindings:
+Provision the required Pages ops and site-data bindings from the [runtime binding authority](#runtime-origin-bindings), including the Access service-token pair and UI JWT verification settings before deploying the ops frontend.
 
-- `OPS_API_SERVICE_TOKEN_ID`
-- `OPS_API_SERVICE_TOKEN_SECRET`
-- `CF_ACCESS_TEAM_DOMAIN`
-- `CF_ACCESS_OPS_UI_AUD`
-
-For the site-data proxy:
-
-- `SITE_API_SHARED_SECRET`
-- `SITE_API_ORIGIN=https://site-api.pharos.watch` on production Pages hosts
-- `SELECTOR_SNAPSHOTS` KV namespace binding for Picker snapshots
-- `SELECTOR_SNAPSHOT_IP_HASH_SECRET`
-- `TELEGRAM_ADOPTION_IP_HASH_SECRET`
-- `DB` for Pages-side storage: optional for durable `/_site-data/*` attribution telemetry, but required by `POST /selector-snapshot` for the atomic hashed-IP daily quota store. Plain site-data reads continue without DB telemetry; selector snapshot writes fail closed when the binding is absent.
+`SELECTOR_SNAPSHOTS` is additionally the Picker snapshot KV namespace. `DB` remains optional for site-data attribution telemetry but mandatory for atomic selector-snapshot hashed-IP daily quotas; ordinary site-data reads continue without telemetry, while selector writes fail closed without DB.
 
 Optional active overrides (invalid, opaque or non-HTTP(S) origins fall back to production defaults):
 
@@ -294,19 +282,7 @@ Pages proxy code and smoke tooling continue emitting only the current secret thr
 
 The deployed account posture is owned by `scripts/ci/cloudflare-account-state-manifest.json`, not by the older policy proposals in feature runbooks. The zone's free plan has one rate-limiting slot. It is occupied by `api-rate-limit-ip`, deliberately **disabled**, with no rule-order constraints. It therefore provides no active edge throttling; keyed API limits, Telegram pre-auth bindings, webhook deduplication, and Mini App quotas are enforced in the Worker/application layer.
 
-The disabled rule is retained with this exact configuration so account drift remains visible:
-
-- Match:
-
-  ```
-  (http.host eq "api.pharos.watch"
-    and starts_with(http.request.uri.path, "/api/")
-    and not cf.bot_management.verified_bot)
-  ```
-
-- Characteristics: Cloudflare data-center ID plus source IP
-- Threshold: `120` requests / `10` seconds
-- Action: `Block` for `10` seconds
+Read the exact disabled-rule expression, characteristics, threshold and action in [`cloudflare-account-state-manifest.json`](../scripts/ci/cloudflare-account-state-manifest.json). This manifest is the drift authority; do not maintain a second literal WAF configuration here.
 Any enablement, exception, exact-path replacement, or plan upgrade is an account-state change: verify current plan capabilities, update the manifest and drift fixtures in the same review, then verify the rule ID and matches under Cloudflare Security Events. Do not describe a proposed rule in a feature policy file as deployed state.
 
 ---

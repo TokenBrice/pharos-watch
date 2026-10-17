@@ -1,6 +1,6 @@
 # Live Reserve Sync
 
-> **Agent navigation** — Current invariants and interfaces are below. Detailed implementation and historical decisions are retained in the [appendix](./process/live-reserves-appendix.md). Read routed sections rather than either file wholesale.
+> **Agent navigation** — Current invariants and interfaces are below. Bounded family evidence, accounting and recovery references are in the [appendix](./process/live-reserves-appendix.md). Read routed sections rather than either file wholesale.
 
 Dedicated documentation for the live reserve-composition subsystem that powers `GET /api/stablecoin-reserves/:id`, the stablecoin-detail reserve card, and `/status` reserve-sync health.
 
@@ -14,6 +14,10 @@ Every provenance field below is an evidence claim about the current run, not a f
 Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, authored under `shared/data/stablecoins/coins/*.json` and validated by `shared/lib/stablecoins/schema.ts`). Producer, recovery, adapter lookups, and snapshot-store reads/writes use `shared/lib/stablecoins/worker-runtime-registry.ts`: configured feeds retain lossless `liveReservesConfig`, `flags`, `reserves`, and `reserveReview` inputs, while unconfigured entries keep only bounded classification/structural slices. `ReserveAdapterCoin` in `shared/types/core.ts` defines the adapter's metadata contract.
 
 The `worker/src/lib/live-reserves/store.ts` barrel contains only producer-safe storage and overview functions. Public `resolveReserveResult` callers import `store-views.ts` directly; that presentation layer owns curated-reserve fallback templates and uses the Worker runtime registry. Only an unconfigured/retired coin's fallback lazily imports the full registry. Producer storage imports do not initialize the evidence-heavy catalog.
+
+Snapshot-scoped provenance belongs to the accepted composition, never mutable latest-attempt metadata. A later failed attempt cannot replace its observation clocks, source generation or evidence envelope. `ReserveSliceSchema` validates the complete output before replacement, including namespace-qualified `sourceKey`, linked target identity and explicit `depType`; self-held assets cannot become self-dependencies. V9 compilation owns cycle handling and falls back or fails closed independently of detail/status presentation.
+
+Stable source keys identify upstream categories, contracts or fixed bucket IDs, never percentages or display labels. Producer and reviewed sidecar keys change together. A reviewed join requires a unique matching key on each side; explicit mismatch/collision fails closed. Classification-only reviews may enrich eligible keyed facts within the review-age window, but certify neither whole-book weights nor liability attribution. Unkeyed compatibility captures require a unique normalized-name join under a full-composition review. Live weights remain measured weights; an aggregate fund-share key cannot be assigned to constituent holdings. Adapter mapping reviews live in `shared/data/coverage-dispositions/dependency-target-dispositions.ts`; that registry reviews mapping rules, not substitute asset identities.
 
 ### Registry-Defined Adapter Classes
 
@@ -37,7 +41,7 @@ Equivalent complete descriptors may select explicit named profiles; shared telem
 - `sourceOriginClass` is orthogonal to `evidenceClass`. It records `issuer-attested`, `onchain-observation`, `independent-assurance`, `reviewed-curation`, or `unknown` for diagnostic provenance. Unreviewed adapters resolve explicitly to `unknown`; the registry never guesses origin from an adapter name or input kind. Origin does not change reserve admission, standalone reserve facts, V9 facts, scores, or public API fields. The private V9 evidence-journal schema can carry the resolved value when journal writers are enabled.
 - `source-invariant`: opt-in within-run result sharing for coin-invariant payloads. The result key canonicalizes adapter/version/semantics/inputs/params and omits coin ID; coin-dependent results must declare `none`. Reservoir runs per coin: srUSD reads the SavingModule leg/fee, while wsrUSD uses the deployed direct-rUSD branch. HTTP request sharing and block/resource-keyed PSM inventory deduplicate physical reads without summing shared cash across routes.
 
-For instrument identity, measurement limits, report validation, and retained weak-evidence tiers, read [adapter-specific evidence boundaries](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries). The class definitions above remain the shared admission vocabulary.
+Instrument identity, complete measurement perimeter and matching units constrain every class. A fund-share NAV is not portfolio composition; a token-supply probe is not bank reserves; issuer signatures, PDF hashes, render clocks and reachable endpoints do not establish assurance, custody or executable liquidity. Permanent static/AUP/weak tiers require new independently supported source evidence, not a class flip. Ratios require a reproducible gross or reviewed-net backing/liability denominator; share prices, leverage headlines and incomplete-chain totals remain diagnostics. Unknown holdings stay measured/unlinked where quantifiable; unreadable material scope cannot become a normalized known-only whole book. Family-specific applications and source owners are in [adapter-specific evidence boundaries](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries).
 
 Forest Road USDfr uses physical token supply plus accrued unissued senior/fee claims as the reserve-liability denominator. Its physical, unissued and effective amounts remain separate diagnostics; this reserve accounting does not replace provider circulating-supply ingestion. See the Forest Road boundary in the linked appendix.
 
@@ -60,41 +64,23 @@ The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], 
 
 `shared/lib/live-reserve-freshness.ts` owns `resolveLiveReserveSourceAgeBudget` and the 600-second `MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC`: scoring wins equal caps and the caller supplies the fallback. Producer validation, serving and nested redemption admission share this authority; `validate.ts` does not export a compatibility skew constant. Source skew and Worker fetch-clock integrity are independent.
 
-This fixes the HBD 164-versus-165 discrepancy: its later node-disagreement error remains an operational error, while its clean retained snapshot contributes to eligible coverage in all three consumers. Redemption capacity consumes the same structural, configuration-identity, and freshness rejections but retains its separate evidence-class and degraded-telemetry policy; independent reserve composition is not a prerequisite for valid same-run redemption telemetry.
+A later node-disagreement or other attempt error does not revoke a clean retained snapshot. Redemption capacity consumes the same structural, configuration-identity and freshness rejections, but retains its separate evidence-class and degraded-telemetry policy; independent reserve composition is not a prerequisite for valid same-run redemption telemetry.
 
 The accepted metadata projection reuses `evaluateLiveReserveAdmission` with `sliceCount` instead of decoded slices. Producer writes validate composition; the seal is not a second composition validator. Direct scoring and sealing share strict warning integrity: malformed JSON, types, members or count discrepancies cannot become clean warnings. NULL/empty arrays and valid legacy members with absent severity/effect retain supported defaults. Every consumer reassesses configuration, warnings and original clocks; sealing or fresh redemption never refreshes reserve evidence.
 
-Feed acknowledgement is status policy only, never admission: raw counts, modes, source clocks, scoring and listing status remain unchanged. Valid matched reviews remove the matching feed/contribution from the health cohort only. Uncertain writes, corrupt evidence, deferrals, future clocks and BNUSD adapter-timeout cannot be acknowledged. Only the unchanged October 7 GUSD/mTBILL reviews remain, expiring October 21 under the shared fourteen-day cap. The seven fabricated attestation-redemption failure reviews were removed; any real corrected failure needs a new dated evidence review, not automatic acknowledgement retargeting. yzUSD remains inactive pending issuer-versus-mapping cause review. mTBILL matches only `midas-mtbill:stale-portfolio-timestamp`, never future or ambiguous clocks.
-STBT's live binding and adapter are retired, not merely inactive for acknowledgements. The coin remains tracked; the public reserve endpoint returns 404, while curated detail and retained historical evidence remain. The durable byte-preserving captures and complete review receipt live under `shared/data/coverage-dispositions/retired-reserve-adapters/matrixdock-stbt/`.
+`inputs.fallbacks` are ordered retries of the same adapter after throws, not after normally returned fatal warnings. A successful but score-ineligible fallback cannot overwrite a still-admissible score-grade snapshot on the same assessment clock: record a degraded `fallback-withheld-score-grade-retained` attempt with primary failure and fallback rejection evidence, preserving success linkage. Once the retained snapshot fails admission, normal fallback persistence resumes. Credential-bearing URLs are redacted before errors or I/O labels.
 
-`computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
+Warning `severity` is display; `effect` controls execution: `info` may remain clean, `degraded` stores evidence but blocks independent scoring unless the current warning policy permits it, and `fatal` rejects replacement. Shared unallowlistable warnings cannot be excused per coin. Observed shortfalls, genuine non-positive liabilities and paused routes publish readable adverse evidence with degradation; malformed/unverifiable inputs fail closed and undefined ratios are omitted. `validateAdapterOutput()` enforces the complete slice/raw-sum, clock, unknown-exposure and declared-capability policies; source age uses the oldest material clock with complete coverage.
 
-- `configuredCoins`
-- `freshCoins`
-- `staleCoins`
-- `missingCoins`
-- `degradedCoins`
-- `errorCoins`
-- `corruptCoins`
-- `independentFreshEligible`
-- `independentFreshUnverified`
-- `staticValidatedFresh`
-- `weakProbeFresh`
-- `persistentlyStaleIndependentCoins` (independent feeds older than the persistent-staleness window that can escalate status beyond normal short-lived lag; includes old active failures and circuit-open skips, but not run-budget deferred rows)
-- `writeTimeoutUncertain`
-- `deferredCoins`
-- `runBudgetTruncated`
-- `deferredAt`
-- `nextCursorStablecoinId`
-- `cursorRecordedAt`
-- `lastSuccessAt`
-- `oldestFreshAgeSec`
+Nested redemption claims distinguish absent from invalid-present. Invalid claims are quarantined whole, never partially salvaged or rescued by legacy flat fields; accepted-generation sealing retains the member as `snapshot: null`. Historical null amounts stay unavailable, measured zero survives. Same-run `onchain`/`protocol-api` route attribution requires an executable route predicate and the builder's explicit `routeObserved: true`, not balances, capacity or config. Failed predicates yield unknown without live attribution; observed closures retain adverse status.
 
-`errorCoins` includes active adapter failures even before a coin has ever produced a successful live snapshot; those rows no longer remain hidden inside `missingCoins`.
-`corruptCoins` counts rows where a matching latest-success snapshot exists in D1 but fails strict integrity validation, so the system fails closed to fallback presentation instead of serving truncated or malformed live data.
-When a coin has both an old latest-success snapshot and a newer failing attempt state, the overview now prioritizes the active `error` / `degraded` attempt classification over generic `stale` labeling so status surfaces better reflect live incidents.
-`writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path and whose authoritative success state could not be proven by readback.
-`runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` mirror the newest checkpoint attempt when that attempt still has an active next-item resume pointer, so terminal newer attempts cannot resurrect older orphaned pointers on status surfaces. The pointer survives a run-budget truncation and is replayed by the five-minute `reserve-recovery` lane; it is cleared only when the checkpoint reaches the queue end. Atomic authority/history persistence removes the history-gap reconciliation and repair subsystem.
+Producer writes use attempt/deadline/ownership fences and atomically commit composition, success linkage and both histories. Ambiguous acknowledgements require authoritative readback; failed writes never manufacture success clocks. Only an exhausted, checkpoint-owned full cohort may seal the digest-validated accepted generation before lease release; invalid/unavailable members remain in its complete census. Consumers preserve original evidence clocks. Migration `0239_live_reserve_config_fingerprint.sql` precedes activation; rollback retains additive columns. [Producer and recovery reference](process/live-reserves-appendix.md#cron-behavior) owns bounded operational details, including the sequential two-operation adapter limiter within the trigger's six-connection budget.
+
+Feed acknowledgement is status policy only, never admission: raw counts, modes, source clocks, scoring and listing status remain unchanged. Valid matched reviews remove only matching contributions from the health cohort. `worker/src/lib/reserve-feed-reviews.ts` owns exact identity/cause matching, dated evidence, owner and expiry (at most fourteen days; `now >= expiresAt` re-arms). Unknown/new failures never inherit reviews; circuit-open needs readable latest non-skipped history. Uncertain writes, corrupt evidence, deferrals, future clocks and BNUSD adapter-timeout cannot be acknowledged. mTBILL matches only `midas-mtbill:stale-portfolio-timestamp`, never future or ambiguous clocks. Review renewal requires fresh evidence rather than cause retargeting; [status health](./status-dashboard.md#live-reserve-sync-health) owns cohorts and expiry reminders.
+
+Retired bindings return 404 while the coin, curated research and retained evidence remain; STBT's complete retirement receipt is in `shared/data/coverage-dispositions/retired-reserve-adapters/matrixdock-stbt/`.
+
+`computeReserveCompositionOverview()` and the [status reserve-health contract](./status-dashboard.md#live-reserve-sync-health) own the overview fields, strict-corruption fail-closed count, attempt-over-stale priority, acknowledgement cohorts and recovery-cursor presentation.
 
 ---
 

@@ -1,189 +1,73 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems and dependency exposure lookup. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/sections/methodology-sections.tsx` composes the authored long-form section bodies under `src/app/methodology/sections/`.
-
-> **Agent navigation** — Start at [Methodology editing entry](#methodology-editing-entry), then follow the affected section's runtime source and owning explainer.
+`/methodology/` is the public long-form explanation of scoring and dependency exposure. `src/app/methodology/page.tsx` owns metadata, breadcrumb/Article/visible FAQ JSON-LD and reader guide; section bodies live under `src/app/methodology/sections/`.
 
 ## Methodology editing entry
 
-Read [Update Rules](#update-rules) for methodology changes alongside the canonical [ADR-3 obligations](./architecture.md#adr-3). [Route & Structure](#route--structure) owns page composition, and [Section → Source Mapping](#section--source-mapping) locates the affected runtime contract.
-
-For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-context-anchors). For visible evidence and score breakdowns, use [Show Your Work](#show-your-work); [Verification Shortcuts](#verification-shortcuts) locates the relevant implementation without substituting for its owning methodology doc.
-
----
+[ADR-3](./architecture.md#adr-3) is the single methodology-change checklist and version authority. Use the [source map](#section--source-mapping) to find the domain owner, [Definitions](#definitions) for shared terms and [context anchors](#methodology-context-anchors) for app links. This guide owns editing/navigation, not copied formulas or release history.
 
 ## Route & Structure
 
-- **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, Article JSON-LD, hero/reader-guide shell, and the visible `FaqSection` that emits the FAQ JSON-LD)
-- **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
-- **Section composition module:** `src/app/methodology/sections/methodology-sections.tsx` (single ordered `MethodologySections` list)
-- **Composite section body:** `src/app/methodology/sections/core-sections-pricing.tsx`
-- **Shared section summary/markdown registry:** `src/lib/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
-- **Per-section body modules:** `src/app/methodology/sections/core/*.tsx`, `src/app/methodology/sections/monitoring/*.tsx`, and `src/app/methodology/sections/dependency-exposure-section.tsx`
-- **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav` (with `edgeFade`, so the rail that cannot fit on desktop fades at its right edge instead of showing a clipped label)
-- **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail. Its buttons use `pharos-toggle-pill`; `page.tsx` supplies the inline `ShowYourWorkToggle`'s pill classes through a replacement `className`, leaving other consumers' defaults unchanged.
-- **Design carve-out:** `/methodology/` stays a longform reference page — no signature hero and no frost "One Beam". This is an explicit exception to [Feature-page heroes](./design-language.md#feature-page-heroes); the 76rem measure and `MethodologySectionShell` layout are unchanged. Only the control + numeric *grammar* is aligned to canon: the toggles use the pill language and figures/version badges use `.pharos-numeric` (semantic badge colors preserved).
-- **Reader-mode budget:** release-level evidence rules, version notes and replay results sit inside a `MethodologyDetails` block (Safety Scores: `SafetyScoresVersionNotes`), so Reader mode shows the summary, facts and preconditions only.
-- **Mode persistence contract:** both `MethodologyModeToggle` controls subscribe to `pharos.methodology.mode` in `localStorage`, with Reader as the hydration-safe server snapshot and same-tab notifications. Shared mode opens/closes authored `details` via `data-methodology-details` / `data-methodology-worked-example`.
-- **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
-- **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`; `ContentTable` owns section and scoring-changelog tables, including compact spacing, IDs, classes, and row-header scopes.
-- **Version metadata:** `shared/lib/methodology-versions/constants.ts` owns runtime versions/paths; registries statically import authored `shared/data/methodology-changelogs/**/*.json`. Existing entry/detail types, renderers and ADR-3 factory checks are unchanged. `npm run check:editorial-content` validates metadata, body shapes, registration and internal references before build.
-- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, redemption backstop, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health are all served by the dynamic route `src/app/methodology/[slug]/page.tsx`, whose slugs derive from every `METHODOLOGY_CHANGELOG_REGISTRY` entry's `publicPath`. Retired Mint Authority is the one structured lane without a standalone route; its history remains at `/methodology/#mint-authority-score`.
-- **Changelog wrappers:** `src/app/methodology/[slug]/page.tsx` holds each lane's display config; the shared shell is `src/components/methodology-changelog-page.tsx`, which renders an overview block linking back to the current methodology and public docs archive before the version cards
-- **Changelog sitemap policy:** `METHODOLOGY_CHANGELOG_SITEMAP_PATHS` (`shared/lib/methodology-versions/registry.ts`) is derived from every `METHODOLOGY_CHANGELOG_REGISTRY` entry's `publicPath`, and `src/app/sitemap.ts` re-exports and spreads it, so registering a changelog lane automatically promotes its route. Register a lane only when its route has enough standalone context for external readers, normally through the shared overview block plus a useful latest-version summary.
-- **Scoring changelog special case:** the `scoring-changelog` slug renders every version card from its structured changelog record — `src/app/methodology/changelog-content/scoring/content.tsx` walks the machine-readable changelog and hands each entry to `StructuredChangelogDetail` in `content-shared.tsx`, which renders the entry's optional ordered `detail` body (headings, paragraphs, lists, formulas, weight rows, and tables) or its `summary` plus `impact`. `content-summary.tsx` adds the standalone quick-reference tables after the cards.
-- **Cross-app methodology links:** `src/lib/definitions.ts` (the single term source, see [Definitions](#definitions)) hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/lib/methodology-context.ts` projects it into `METHODOLOGY_CONTEXT`, and `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
+`MethodologySections` in `sections/methodology-sections.tsx` owns ordered composition. `src/lib/methodology-content.ts` owns non-React IDs/titles/markdown summaries; `METHODOLOGY_SECTIONS` in `methodology-shared.tsx` owns navigation. Keep them coherent with public fragments and export.
 
----
+This route intentionally has no signature hero/frost One Beam: it is a long-form reference exception to [feature-page heroes](./design-language.md#feature-page-heroes). Reader mode shows summary, facts and preconditions; detailed evidence/version/worked-example content belongs inside `MethodologyDetails`. Both mode controls share `pharos.methodology.mode` localStorage and same-tab notification, with Reader as hydration-safe server snapshot. Shared detail attributes coordinate authored disclosures.
+
+Changelog routes use `src/app/methodology/[slug]/page.tsx` and the shared changelog shell; params/sitemap derive from registered `publicPath`, not per-lane pages. Register only lanes with standalone context. Retired Mint Authority has history at `/methodology/#mint-authority-score`, not a live standalone route. Version bodies belong in structured changelog data; extend `StructuredChangelogDetail` only for new schema block kinds, not prose releases. Missing commit provenance is `commits: []`, never fabricated hashes or unreleased placeholders.
 
 ## Section → Source Mapping
 
-| Methodology Section   | Primary Runtime Source(s)                                                                                                                                                                                                            |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/methodology-versions/registry.ts`                              |
-| Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                                                                         |
-| Safety Scores         | `shared/lib/safety-score-v9/`, `shared/lib/safety-score-v9/policy.ts`, `worker/src/cron/compute-safety-score-v9.ts`, `shared/lib/methodology-versions/registry.ts`                                                   |
-| Dependency Exposure Lookup | `shared/lib/dependency-exposure.ts`, `shared/lib/safety-score-v9/policy.ts`, `shared/types/report-cards-v9.ts`, `src/app/methodology/sections/dependency-exposure-section.tsx` |
-| Mint Authority / V9 mint component | `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/methodology-versions/mint-authority.ts`, `shared/data/stablecoins/domains/mint-authority/*.json` |
-| Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/methodology-versions/registry.ts` |
-| Redemption Backstop Route Score | `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-configs/`, `worker/src/lib/redemption-backstop/sources.ts`, `shared/lib/methodology-versions/registry.ts` |
-| Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
-| Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                                     |
-| Yield Intelligence    | `worker/src/cron/sync-yield-data.ts`, helper modules under `worker/src/cron/yield-sync/`, `shared/lib/yield-scoring.ts` (PYS formula), `shared/lib/methodology-versions/registry.ts` |
-| PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                                                              |
-| Depeg Duration Resolver | `shared/lib/depeg-resolver/` (DDR/DDRR resolver), `shared/lib/methodology-versions/depeg-resolver.ts`                                                                                                                                          |
-| Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                              |
-| Chain Health Score    | `shared/lib/chains/health.ts`, `shared/lib/chains/index.ts`, `shared/lib/chains/l2beat-risk.ts`, `shared/lib/methodology-versions/registry.ts` — formula, factors, not-rated gate, and bands are owned by [chain-health.md](./chain-health.md) |
-
-The public Safety Score dependency explanation in `src/app/methodology/sections/core/safety-scores-overview.tsx` covers v9.95 identity/kind parity, withheld conflicting links, zero-balance row exclusion, intermediary annotations, and serial mechanism parents (including Spark's weaker-parent limit). It also explains that unresolved reviewed-static reserve dispositions withhold the whole curated envelope, with possible backing and downstream parent-limit consequences. The owning methodology contract remains [report-cards.md](./report-cards.md).
-
-The public Safety Score exit explanation in `src/app/methodology/sections/core/safety-scores-overview.tsx` covers v9.96 explicit issuer stablecoin payouts, captured output-price admission, conservative basket quality, and exact Uniswap V4 PoolId admission independent of indexed TVL; thUSD's executed rail is curation context, and producer-driven effects are distinguished from the frozen replay.
-
-The public Safety Score dependency explanation also covers v9.97 measured nested-leaf reconciliation, corrected immediate claim identities, positive reserve dust preservation, and withholding token-specific links from pooled holdings without attributable backing and tranche loss allocation. Producer recovery does not bypass evidence admission. Optional report-v6 multi-asset common-mode groups reference existing priced effects and add no penalty; weights and materiality thresholds remain unchanged.
-
-The public Safety Score dependency explanation also covers v9.98 explicit authored linked-row kinds and unique reviewed-kind inheritance for the same live coin identity. Unresolved or conflicting legacy kinds withhold only that row's link, never silently become collateral, and can transiently affect backing and downstream scores until typed producer rows arrive. Adding a kind does not refresh historical reserve evidence. Mento's native and bridged holdings retain canonical parents; PYUSDx and ysyBOLD remain intermediary annotations, not additional holdings or independent bridge solvency assurance. Avant discloses measured gross-positive-long holdings with debt and NAV separate, but withholds tracked links until exact token, receipt, and bridge claims are joined. Labels do not establish identities, gross shares are not leveraged net-NAV loss coefficients, and diagnostic fixture replacements are not production freshness evidence or score forecasts.
+| Domain | Owning contract | Runtime entry |
+| --- | --- | --- |
+| Pricing | [Pricing](./pricing-pipeline.md) | `worker/src/lib/price-consensus.ts`, sync-stablecoins enrichment |
+| PSI | [Stability Index](./stability-index.md) | `worker/src/lib/stability-index.ts`, `shared/lib/psi-policy.ts` |
+| Safety / exposure | [Report cards](./report-cards.md), [Dependency map](./dependency-map.md) | `shared/lib/safety-score-v9/`, `shared/lib/dependency-exposure.ts` |
+| Published mint component | [Mint authority](./mint-authority-scoring.md) | `shared/lib/safety-score-v9/control.ts`, `mint-posture.ts` |
+| Liquidity / redemption | [DEX](./dex-liquidity.md), [Redemption](./redemption-backstops.md) | DEX cron, `shared/lib/exit-route-scoring.ts` |
+| Classification | [Taxonomy](./stablecoin-taxonomy-pages.md) | `shared/lib/classification.ts`, `filter-tags.ts` |
+| Flows / yield | [Flows](./mint-burn-flows.md), [Yield](./yield-intelligence.md) | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/yield-scoring.ts` |
+| Peg / DEWS / DDR | [Depeg](./depeg-detection.md), [DEWS](./dews.md), [Resolver](./depeg-resolver.md) | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-resolver/` |
+| Freeze / chain health | [Blacklist](./blacklist-tracker.md), [Chain Health](./chain-health.md) | blacklist cron/contracts, `shared/lib/chains/health.ts` |
 
 ### Exposure mode lookup
 
-The public subsection at `/methodology/#dependency-exposure-methodology` follows Safety Scores in the section composition and navigation rail. Its id, title, and markdown summary live in `DEPENDENCY_EXPOSURE_SECTION_CONTENT` in `src/lib/methodology-content.ts`; `scripts/lib/methodology-to-markdown.ts` automatically exports it through `METHODOLOGY_INDEX_SECTION_CONTENT`.
+Public `/methodology/#dependency-exposure-methodology` explains structural look-through over the full published collateral/wrapper graph, independent of Explore filters. Roots are excluded from dependent counts; direct is one hop, indirect longer. Basket shares sum weighted upstream shares; serial shares use the maximum; combined uses the larger, not their sum. Dependents count once across roots and shared backing books once in USD, while layers can overlap; direct/indirect gross totals are not additive independent holdings.
 
-Exposure mode is a structural lookup over the full published collateral and wrapper edge set. Explore Focus, Type, Limit, and small-link visibility do not restrict results. Selected upstream roots are listed separately and excluded from dependent counts and USD totals. Direct dependents are one hop away; indirect dependents follow longer chains.
+USD uses accepted-publication `circulatingUsdAtEvaluation`, never current-cap fallback. Show generation, methodology, `asOfSec`, supply clock and held state. Missing publication-bound supply keeps rows with unknown USD/reason and excludes them from known totals. Missing coverage metadata is not an empty gap list. Explain weights/cycles, measured/reviewed versus current composition, role dependencies not drawn and known relationships excluded from the scored graph. Empty mapped results prove no absence of external dependencies; peg/liquidity/confidence transmission is out of scope.
 
-Roots begin with share 1. Basket contributions sum each mapped weight multiplied by its upstream look-through share. Serial contributions use the maximum upstream share. When both apply, the lookup uses the larger of the serial maximum and basket sum, not their addition. A dependent appears once across roots. Published shared backing books count once in USD totals, while underlying value can still appear in several dependent layers. The headline states this layer overlap; direct and indirect gross totals must not be presented as independent additive holdings.
-
-USD uses the accepted publication's `circulatingUsdAtEvaluation`, never a silent current-market-cap fallback. Results name generation id, methodology version, `asOfSec`, supply clock, and held status. Missing publication-bound supply leaves the row visible with unknown USD and the reason `Supply at evaluation not published for this generation`. Unknown supply is not zero, and known-USD totals exclude unavailable amounts.
-
-The subsection explains unresolved weights and cycles, measured/reviewed composition that may differ from current ratios, role dependencies listed but not drawn, and known relationships excluded from the scored graph and lookup totals. Missing coverage metadata means not published, not an empty gap list. Peg, liquidity, confidence, and other transmission channels are outside the lookup. An empty mapped result does not establish absence of other dependencies.
-
-History examples remain case-study links only, with no runnable presets or historical replay. Exposure mode also ships separate offline modeled scenarios: a daily Node workflow reuses the production Safety Score evaluator, including role dependencies, for up to 15 A1 direct-exposure hubs ranked using publication-bound supply and published dependencies with shared books counted once. Its three D1b shocks are a downstream-consumed final score limit of 40, a 1,000 bps one-day depeg with captured peg history and exit facts held fixed, and mint-control compromise. Each selection shocks one root, not a combined set. Results name source publication, artifact age, and the two-day freshness budget; earlier-generation results are labelled and stale/unavailable numbers withheld. NR remains NR. These are modeled evaluator outputs, not forecasts, and do not alter canonical cards, journals, publication identity, or scoring policy. Structural lookup remains separate and adds no scoring override.
-
-
----
+Offline modeled scenarios remain distinct from lookup/history: one root per selection, production evaluator including role dependencies, publication-bound ranking/supply and shared books counted once. The [Dependency Map](./dependency-map.md) owns modeled shock admission. Public copy states artifact generation/age and freshness budget, labels earlier-generation results, withholds stale/unavailable numbers and preserves NR. Models are not forecasts and never change canonical cards, journals, identity or policy. Historical examples are study links, not runnable historical presets.
 
 ## Update Rules
 
-When changing any methodology surface, update the runtime implementation, the detailed `/docs` explainer, and the authored `/methodology` section copy in the same change:
+Follow all four [ADR-3](./architecture.md#adr-3) targets for behavior/version changes: runtime version, owning methodology explanation, structured changelog and public methodology copy/examples. Versions increase numerically with at most two decimal places. Unchanged-behavior prose cleanup needs no methodology bump.
 
-1. Runtime implementation (source file above).
-2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/lib/methodology-content.ts`. Use `src/app/methodology/sections/methodology-sections.tsx` only when changing section composition or order.
-
-If a versioned methodology changes, add the JSON entry under `shared/data/methodology-changelogs/` and register its import in `shared/lib/methodology-versions/registry.ts`. Runtime versions live in `constants.ts`, with Safety Score read from `current-version.json`; resolver history is managed by `depeg-resolver.ts`.
-
-Commit provenance in structured changelog entries uses real commit hashes only. Use `commits: []` when provenance was not recorded; public changelog routes should omit `Commit(s)` output for those entries rather than using `unreleased` as a placeholder.
-
-Also update `src/app/methodology/page.tsx` whenever its FAQ structured-data answers, metadata copy, or reader-guide copy changes. Those claims are runtime-facing even when the shell layout itself is unchanged.
-
-If section IDs or changelog paths change, also update `src/lib/methodology-context.ts` so in-app "View methodology" and "Version history" links keep resolving to the correct anchor/route.
-
-If you add a new methodology changelog route, follow the existing pattern:
-
-1. Add the structured entries under `shared/data/methodology-changelogs/` and register them through `shared/lib/methodology-versions/registry.ts`.
-2. Add or update the domain version source and `shared/lib/methodology-versions/constants.ts`.
-3. Update the display configuration in the dynamic route `src/app/methodology/[slug]/page.tsx`; its slug map and `generateStaticParams()` derive from `METHODOLOGY_CHANGELOG_REGISTRY`, so no per-lane `*-changelog/page.tsx` route or changelog factory is needed.
-4. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
-
-If the Chain Health methodology changes, follow the single update contract in [chain-health.md](./chain-health.md#update-contract).
-
-If the current V9 mint component or the retired Mint Authority Score history changes, also update:
-
-1. `docs/mint-authority-scoring.md`
-2. `docs/stablecoin-data.md`
-3. `docs/stablecoin-detail-page.md`
-4. `docs/homepage.md`, `docs/coverage-page.md`, and screener-facing docs when cross-coin display/filter/export semantics change
-
-If the pricing pipeline's source roster or live-price selection semantics change, also update:
-
-1. `docs/pricing-pipeline.md`
-2. `shared/data/methodology-changelogs/pricing-pipeline/`
-3. `docs/pricing-pipeline.md#data-integrity-guardrails` and `docs/supply-snapshot.md#supply-pipeline`
-4. `docs/about-page.md` plus `src/app/about/page.tsx`
-
-For the safety-score changelog specifically, update both:
-
-1. `shared/data/methodology-changelogs/safety-score/`, `shared/lib/methodology-versions/current-version.json`, and `shared/lib/methodology-versions/registry.ts` for the machine-readable changelog and current version.
-2. `src/app/methodology/changelog-content/scoring/content-shared.tsx` only when a version needs a body block kind the `detail` schema in `shared/lib/methodology-versions/base.ts` does not yet have; `content-summary.tsx` for the global quick-reference tables. Version prose itself is data — never a JSX module.
-
----
+Update section body and markdown summary when explanation changes; composition only when order/sections change. Shell FAQ/metadata/guide claims are runtime-facing too. Retarget definitions/context, static params and sitemap together when IDs/public paths move. Pricing source changes also update [About disclosure](./about-page.md), its runtime roster, [pricing update rules](https://pharos.watch/docs/pricing-pipeline/#update-rules) and [supply pipeline](./supply-snapshot.md#supply-pipeline); the integrity ledger is [pricing appendix](./process/pricing-pipeline-appendix.md#data-integrity-guardrails). Native mint display/filter/export changes propagate to detail, homepage, coverage and Screener; do not recreate a separate mint scoring lane.
 
 ## Definitions
 
-`src/lib/definitions.ts` is the single term source for the site. Each entry has a tooltip `label`/`short` (plus optional `detail`), and entries marked `listed` carry a citation-ready `long` text for the A–Z **Definitions** section rendered last on the page (`src/app/methodology/sections/definitions-section.tsx`, anchor `#definitions`, per-term anchors `#def-<key>` such as `#def-peg-score`). The same section emits the `DefinedTermSet` JSON-LD, and `scripts/lib/methodology-to-markdown.ts` appends the list to the methodology markdown export.
-
-Consumers are projections, not copies: `METHODOLOGY_CONTEXT` (`src/lib/methodology-context.ts`) takes entries with a `methodologyPath` (Pharos metrics), `GLOSSARY` (`src/lib/glossary.ts`) takes the DeFi-jargon entries without one (the `<Term>` popover and `[[term]]` markup), and `scripts/maintenance/generate-llms-txt.ts` cites the listed set. Numbers in definition text (Safety Score weights and grade thresholds, DEWS and PSI bands, Liquidity Score weights, depeg thresholds) are interpolated from their owning constants; edit the constant, not the copy. Product names (Digest, Cemetery, FreezeWatch) are not definitions. The retired `/learn/glossary/` route 301s to `/methodology/#definitions`.
+`src/lib/definitions.ts` is the single term source. Listed entries supply citation-ready A–Z long text, `#definitions` and `#def-<key>` anchors, DefinedTermSet JSON-LD and markdown export. Tooltip/context/glossary consumers project the same entries; do not copy them. Numeric text interpolates owning constants, not manual weights/bands. Product names are not definitions. Preserve the `/learn/glossary/` redirect to `/methodology/#definitions`.
 
 ## Methodology-Context Anchors
 
-`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. `METHODOLOGY_SECTIONS` in `src/app/methodology/methodology-shared.tsx` owns the top-level ids, including `#dependency-exposure-methodology`. The `blacklistTracker` context key maps to `#blacklist-tracker-methodology`, while `bluechip` and `proofOfReserves` both map to `#safety-scores-methodology`; there are no separate single-topic anchors for those contexts:
+`src/lib/methodology-context.ts` projects definitions into `METHODOLOGY_CONTEXT`; shared `MethodologyHint`/`ScoreBadgeWrapper` owns tooltip routing. Retain every public fragment referenced by app/help links or migrate all callers. Blacklist context maps to `#blacklist-tracker-methodology`; Bluechip and PoR map to `#safety-scores-methodology`, not invented standalone sections.
 
-Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, and the V9 mint component) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which routes the badge through the unified `MethodologyHint` tooltip and appends the inline `vX.Y` methodology version as a small superscript only when that badge's `METHODOLOGY_CONTEXT` entry carries a `versionLabel`. The `safetyScore` entry deliberately carries none — the active Safety Score methodology is identity-based — so Safety Score badges get the tooltip but no inline version superscript. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip. The mint component keeps a terminal `v1.3` version badge and closing note for context — its section passes no `changelogPath`, so there is no "Version history" link, and in-app mint tooltips carry the Safety Score version and scoring-changelog path instead; it is not a live standalone scoring lane.
+Safety Score identity intentionally has no inline version superscript; table rows use tooltip-only badges with header context. Retired mint terminal history does not expose a standalone Version history link; current mint hints use Safety Score identity/changelog.
 
 ### Blacklist tracker {#blacklist-tracker}
 
-Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. `BLACKLIST_STABLECOINS` in `shared/types/market.ts` owns the response/UI/archive identity union. Live on-chain scan admission is a separate reviewed contract roster, `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts`; do not infer that every UI identity is actively scanned or that an omitted identity lacks an administrative freeze surface. The source registries and their coverage tests own the volatile roster rather than this page.
-
-The detail page retains its per-coin blacklist module. The unmounted recent-activity banner, its hook and its no-op configuration flag have been removed (see [process/feature-flags.md](process/feature-flags.md)). The summary API still exposes its trailing seven-day per-coin event counts.
-
-Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/registry.ts` for the versioned methodology snapshot.
+[Blacklist tracker](./blacklist-tracker.md) owns freeze/release/destroy interpretation. UI/archive identity is distinct from reviewed live scanner admission: never infer scanning from UI membership, or absence of freeze controls from scanner omission.
 
 ### Bluechip rating {#bluechip}
 
-Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos Bluechip editorial roster (the `#bluechip` section of `/about/`). The roster rule admits mapped assets whose synced external Bluechip grade and Pharos report-card overall grade are both A-tier. It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in `src/components/about/bluechip-content.ts` and rendered by the Bluechip section of `src/components/about/about-page-content.tsx`; the roster is suspended pending the V10 grade-floor review and fetches neither feed while that hold stands.
+[Bluechip](./bluechip-ratings.md) owns external ratings. About's roster is an intersection of current external and Pharos A-tier grades, not a hidden safety/liquidity model; respect its explicit publication hold rather than infer membership from one feed.
 
 ### Proof of Reserves
 
-`StablecoinMeta.proofOfReserves` uses optional `attestorTier` and `cadence` fields; `ATTESTOR_TIER_VALUES` and `PROOF_OF_RESERVES_CADENCE_VALUES` in `shared/types/core.ts` own their vocabulary. `POR_TIER_STYLES` in `shared/lib/classification/badges.ts` defines tier labels/colors independently of cadence:
-
-- `big4` — emerald. Independent attestation from a Big-4 firm (Deloitte, EY, KPMG, PwC).
-- `regional` — blue. Licensed regional CPA or auditor with a recognized practice.
-- `niche` — muted/neutral. Small or single-jurisdiction attestor without a wide reputation.
-- `self` — amber. Issuer-published self-attestation, no third-party signoff.
-- `none` — red. A reviewer established that no reserve attestation exists: the issuer's materials were enumerated and hold none, or a claimed attestor was checked and refuted.
-- `undisclosed` — muted, dashed border. The issuer names no attestor, or a named artefact could not be retrieved. This is absence of evidence, not evidence of absence, and it never renders as an assertion.
-
-`none` and `undisclosed` are not interchangeable, and the distinction is the reviewer's: refuting an attestor is a finding, failing to reach one is a gap. Where an asset has no attestor concept at all — reserves verifiable directly on-chain through a bridge or factory contract — the field is omitted rather than forced onto either value, and the badge falls back to the `proofOfReserves.type` label.
-
-The hero passport uses the tier's text style (`src/lib/stablecoin-detail-passport.ts`). Cadence appears in the Regulatory Standing attestation disclosure (`src/lib/regulatory-standing.ts`), not as a combined tier/cadence badge.
-
-## StablecoinMeta surfacing fields (May 2026)
-
-`StablecoinMeta` carries optional fields used by the detail-page hero and mechanism diagram. `oneLiner` is editorial; `mechanismArchetype` also selects the Safety Score mechanism review and policy rubric:
-
-- `oneLiner?: string` — short editorial verdict rendered as the hero TL;DR whenever present; it is not feature-flagged. `NEXT_PUBLIC_PHAROS_HERO_VERDICT` gates only the separate archetype verdict pill (see [process/feature-flags.md](process/feature-flags.md)).
-- `mechanismArchetype?: MechanismArchetype` — classification resolved by `shared/lib/classification/resolve-mechanism-archetype.ts` for both presentation and scoring. Native families additionally require an admitted `mechanismArchetypeReview`. `MECHANISM_ARCHETYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts` owns the vocabulary.
-- `proofOfReserves.attestorTier?` and `proofOfReserves.cadence?` — see the [Proof of Reserves](#proof-of-reserves) sub-section above.
+[Stablecoin addition](./process/adding-a-stablecoin.md) owns PoR metadata authoring; [detail page](./stablecoin-detail-page.md) owns surfacing. Tier and cadence are independent. Reviewed absence (`none`) differs from unavailable evidence (`undisclosed`); where attestation is inapplicable omit the field rather than force either. Never copy tier vocabularies/colours here.
 
 ## Show Your Work
 
-Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading visible payload inputs. Current Safety Score cards use native pillar breakdowns, not V8 `rawInputs`; `shared/types/report-cards-v9.ts` owns the response schema version. Backing shows effective weights/contributions; Exit shows six selected-route components, modifiers/caps and alternatives; Economic Control shows binding or diagnostic component scores without invented weights. Technical keys and pillar adjustments remain visible. Toggle via `?show-work=1` or "Show inputs"; an explicit `pharos.show-work` localStorage preference wins over the URL flag. PegScore decomposition is not on the worker payload.
+`ShowYourWorkPanel` reads visible payload inputs, not another model. Safety uses native pillar breakdowns (Backing contributions, Exit routes/modifiers/caps, Economic Control binding/diagnostic components), with no invented weights or V8 raw-input fallback. Preserve technical keys/adjustments. Explicit `pharos.show-work` preference wins over `?show-work=1`; PegScore decomposition is not a Worker payload promise.
 
 ## Verification Shortcuts
 
-- **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
-- **Safety Score V9 pillar weights / peg multiplier / score-bearing gates:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, loaded and digested by `shared/lib/safety-score-v9/policy.ts` and evaluated under `shared/lib/safety-score-v9/`
-- **Mint component weights / caps / posture bands:** `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`
-- **PSI caps and bands:** `shared/lib/psi-policy.ts`; **formula:** `worker/src/lib/stability-index.ts`
-- **Liquidity component weights:** `shared/lib/liquidity-score-weights.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`
-- **Pressure Shift / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`
-- **DEWS weights / signal thresholds / bands:** `shared/lib/dews-config.ts`, `worker/src/lib/dews.ts`
-- **Peg score blend / penalties / min history:** `shared/lib/peg-score.ts`
+Domain owners above route focused checks. `check:editorial-content` validates structured changelog registration/body/references; public section/export sync and context-fragment tests protect navigation. Source policy/registry constants, not this editing map, are the audit authority.

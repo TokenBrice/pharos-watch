@@ -1,93 +1,43 @@
 # Stablecoin Taxonomy Pages
 
-Route contract for the static `/stablecoins/**` taxonomy family.
-
----
-
-## Purpose
-
-`/stablecoins/**` is the crawlable cohort family: one directory hub plus four browse axes — peg currency, backing type, governance model, and shared infrastructure. Each cohort page is a static, indexable landing surface that introduces the cohort in authored prose, lists its members, and then hands off to the live filtered table.
-
-It is not a second screener. Cohort membership, ordering, and counts are build-time facts derived from checked-in `StablecoinMeta`; current market data always comes from the embedded live table.
-
----
+Static `/stablecoins/**` is the crawlable cohort family: directory plus peg, backing, governance and infrastructure axes. Membership/count/order are checked-in metadata facts; current measurements come from embedded live tables. This is not another Screener.
 
 ## Route Shape
 
-| Route | Template | Page model |
-| --- | --- | --- |
-| `/stablecoins/` | `src/app/stablecoins/page.tsx` | `AXES` (all four axes) plus an A–Z profile directory |
-| `/stablecoins/[peg]/` | `src/app/stablecoins/[peg]/page.tsx` | `PEG_TAXONOMY_PAGES` in `src/lib/peg-taxonomy.ts` |
-| `/stablecoins/backing/` | `src/app/stablecoins/backing/page.tsx` | `STABLECOIN_TAXONOMY_HUB_ROUTES.backing` |
-| `/stablecoins/backing/[backing]/` | `src/app/stablecoins/backing/[backing]/page.tsx` | `BACKING_TAXONOMY_PAGES` |
-| `/stablecoins/governance/` | `src/app/stablecoins/governance/page.tsx` | `STABLECOIN_TAXONOMY_HUB_ROUTES.governance` |
-| `/stablecoins/governance/[governance]/` | `src/app/stablecoins/governance/[governance]/page.tsx` | `GOVERNANCE_TAXONOMY_PAGES` |
-| `/stablecoins/infrastructure/` | `src/app/stablecoins/infrastructure/page.tsx` | `STABLECOIN_TAXONOMY_HUB_ROUTES.infrastructure` |
-| `/stablecoins/infrastructure/[infrastructure]/` | `src/app/stablecoins/infrastructure/[infrastructure]/page.tsx` | `INFRASTRUCTURE_TAXONOMY_PAGES` |
+`src/lib/stablecoin-taxonomy.ts` owns models, axis hub config and `ALL_STABLECOIN_TAXONOMY_PAGES`; `src/lib/peg-taxonomy.ts` owns peg pages. Routes under `src/app/stablecoins/` use shared taxonomy hub/static-slug factories. Generate exact params from models and `notFound()` unknown slugs, never empty fallback cohorts.
 
-The page models and hub route configs live in `src/lib/stablecoin-taxonomy.ts`. The three axis hubs share `createStablecoinTaxonomyHubRoute(route)` in `src/app/stablecoins/taxonomy-page.tsx`, which returns metadata and the page component; each hub route file selects its `STABLECOIN_TAXONOMY_HUB_ROUTES` entry.
-
-Every cohort page is a `createStaticSlugRoute(...)` route (`src/lib/static-slug-page.ts`): `generateStaticParams` enumerates the page model, and a slug outside it renders `notFound()` rather than an empty cohort.
-
-Peg has no `/stablecoins/peg/` hub. Peg slugs sit directly under `/stablecoins/`, sharing that path segment with `backing`, `governance`, and `infrastructure`, so a peg slug may never collide with an axis segment.
-
----
+Peg has no `/stablecoins/peg/` hub. Peg slugs directly share `/stablecoins/` with backing/governance/infrastructure axis segments, so collisions are forbidden. Slug/href helpers in `stablecoin-taxonomy-urls.ts` and `peg-landing.ts` are authority; callers must not hand-build URLs or copy a generated route matrix.
 
 ## Cohort Membership
 
-- Cohorts are filtered from `ACTIVE_STABLECOINS` (`shared/lib/stablecoins/registry.ts`); the peg axis uses the client mirror `CLIENT_ACTIVE_STABLECOINS` (`shared/lib/stablecoins/client-registry.ts`). A lifecycle change alone — pre-launch, quarantined, delisted, frozen — rewrites cohort membership, counts, and titles across this family with no edit to any route file.
-- The hub's A–Z profile directory is the deliberate exception: it iterates `CLIENT_TRACKED_STABLECOINS` (`shared/lib/stablecoins/client-registry.ts`), so non-active profiles stay linked from `/stablecoins/`.
-- Empty-cohort handling is asymmetric. `BACKING_TAXONOMY_PAGES` ends with `.filter((page) => page.coins.length > 0)`, so a backing cohort that empties silently drops its route from `generateStaticParams`, the hub, and the sitemap. `GOVERNANCE_TAXONOMY_PAGES` and `INFRASTRUCTURE_TAXONOMY_PAGES` are not filtered: an emptied governance or infrastructure cohort still publishes an indexed page with a zero-coin title. Removing the last coin from those axes is a content decision, not a no-op.
-- Backing, governance, and infrastructure axes sort cohorts by descending member count, so hub card order is data-driven rather than authored.
-- Slugs are owned by `GOVERNANCE_SLUGS` / `BACKING_SLUGS` / `INFRASTRUCTURE_SLUGS` in `src/lib/stablecoin-taxonomy-urls.ts` and by `PEG_SLUGS` in `src/lib/peg-landing.ts`, which is restricted to pegs with at least one active coin. Build these hrefs elsewhere through `buildGovernanceTaxonomyUrl(...)`, `buildBackingTaxonomyUrl(...)`, `buildInfrastructureTaxonomyUrl(...)`, and `buildPegLandingUrl(...)` instead of string templates.
-- The live table on a cohort page is driven by `page.filterTag`, which must be the same tag `shared/lib/filter-tags.ts` assigns to member coins. A cohort whose `filterTag` drifts from the tag builder renders an empty table under a non-zero cohort count.
+Cohorts derive from active registry (peg uses its client mirror). Any pre-launch/quarantine/delist/freeze transition can rewrite membership/count/title without a route edit. The A–Z directory deliberately uses tracked client registry so non-active profiles remain discoverable.
 
----
+Empty handling is asymmetric: backing filters empty cohorts out of static params/hub/sitemap; governance and infrastructure retain empty indexed pages. Removing their last member is therefore a content decision. Peg routes require active members; pre-launch-only currency records do not activate one. Axis hubs sort by descending membership, not authored release order.
+
+The embedded table's `page.filterTag` must match `shared/lib/filter-tags.ts` for exactly those members. A nonzero static cohort with an empty live table is not acceptable drift.
 
 ## Titles And Authored Copy
 
-- `buildCohortTitle(...)` in `src/lib/stablecoin-taxonomy.ts` renders `<Base>: N Coins Ranked by Risk` (or `: 1 Coin Tracked`) against a 61-character SEO title budget. Its only compaction fallback drops `Infrastructure` from an infrastructure base title; an overflowing backing or governance title is emitted long. Choose base titles that fit rather than widening the fallback. Peg titles use the parallel `buildPegTaxonomyTitle(...)` in `src/lib/peg-taxonomy.ts`, which has no compaction step at all.
-- `intro`, `description`, and hub `leadParagraphs` are content contracts, not incidental markup: `description` is both the page meta description and the hub card blurb, and `intro` is the visible cohort explanation rendered as the lead paragraph.
-- Peg copy is part authored and part derived: `buildPegIntro(...)` composes `PEG_INTRO` and `PEG_MARKET_CONTEXT` (`src/lib/peg-landing.ts`) with a generated top-coin list, and `buildPegRiskSummary(...)` derives the cohort's dominant backing, dominant governance, and freezable-coin count from the registry. Editing peg prose means editing the authored halves, not the generated sentence.
-- Cohort sizes are interpolated into titles, descriptions, and directory copy. Never restate one as a literal in docs or fixtures; read the registry.
+`buildCohortTitle()` owns count interpolation and 61-character budget; its only compaction fallback drops Infrastructure. Backing/governance and peg overflow do not have a broad automatic fallback: choose fitting base titles. Counts must not become literals in docs/fixtures.
 
----
+Description serves metadata/hub blurb; intro is visible explanation. Peg intro/context is authored in `peg-landing.ts`, while top coins/risk composition derive from registry. Edit authored halves rather than generated sentences. Shared classification owns labels, tags and symbols.
 
 ## Crawlability
 
-- The four hubs are `reference` entries and every cohort page is a `taxonomy` entry in `src/lib/public-route-inventory.ts`, sourced from `ALL_STABLECOIN_TAXONOMY_PAGES` and `PEG_SLUGS`. `src/app/__tests__/sitemap-frozen.test.ts` asserts the sitemap is exactly the projection of that inventory, so any added or dropped cohort route surfaces there first.
-- Hubs emit `ItemList` JSON-LD over their cohort links; cohort pages render through `StablecoinTaxonomyShell` (`src/components/stablecoin-taxonomy-shell.tsx`), which emits an `ItemList` of member coins plus a `DefinedTerm` whose `termCode` is the cohort's filter tag (peg pages use the peg currency) and whose defined-term set is the parent axis hub.
-- Legacy `/stablecoins/protocol/*` lineage paths redirect to `/stablecoins/infrastructure/*` in `public/_redirects` and are not sitemap entries.
-- The directory hub `/stablecoins/` has no primary-nav entry (it left the `Markets` menu on 2026-10-12); it is linked from the footer hub row (`Stablecoins`), and cohort and peg pages have no primary-nav entry of their own. Discovery runs through the hub, the command palette (`src/components/command-palette-model.ts` lists `/stablecoins/` and the three axis hubs; the empty state keeps a `Stablecoin Directory` chip), and in-page links such as the homepage peg strip and `/alt-pegs/`.
+`src/lib/public-route-inventory.ts` projects hubs/cohorts into sitemap; exact-inventory tests are the gate. Shared shell emits member ItemList and DefinedTerm (cohort tag, or peg currency, with parent axis defined-term set); hubs emit cohort-link ItemLists.
 
----
+Keep legacy protocol-lineage redirects to infrastructure and out of sitemap. Directory/cohort discovery flows through footer hub, command palette and in-page links including homepage/Alt-Pegs, not individual primary-nav entries. Route lists belong to model projection, not a second doc index.
 
 ## Adding A Cohort Or Peg Slug
 
-Both paths add indexed routes, so treat them as SEO changes rather than data edits.
+This adds indexed content, not just enum data:
 
-1. Add the enum value at its owning source: `INFRASTRUCTURE_VALUES` or `BACKING_TYPE_VALUES` in `shared/types/core.ts`, `GOVERNANCE_TYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts`, or `PEG_CURRENCY_VALUES` in `shared/types/core.ts`. The `stablecoin-client-projections` compile input derives `ACTIVE_PEG_CURRENCIES` from active registry entries during bootstrap.
-2. Add the slug to the matching record in `src/lib/stablecoin-taxonomy-urls.ts` or `ALL_SLUGS` in `src/lib/peg-landing.ts`. Confirm a new peg slug does not collide with `backing`, `governance`, or `infrastructure`.
-3. Author the cohort content entry — `INFRASTRUCTURE_CONTENT`, `BACKING_CONTENT`, or `GOVERNANCE_CONTENT` in `src/lib/stablecoin-taxonomy.ts`, or `PEG_INTRO` / `PEG_MARKET_CONTEXT` in `src/lib/peg-landing.ts` — and check the rendered title against the 61-character budget.
-4. Confirm `shared/lib/filter-tags.ts` emits the cohort's filter tag for member coins.
-5. Run the taxonomy hub and sitemap suites (`src/app/stablecoins/__tests__/taxonomy-hub-pages.test.tsx`, `src/app/__tests__/sitemap-frozen.test.ts`) and regenerate sitemap dates so the new route carries a last-modified value.
-
-CZK, PLN, and AED have authored slug/copy entries (`czk`, `pln`, `aed`) and presentation metadata labelled Czech Koruna, Polish Zloty, and UAE Dirham. Their filter tags are `czk-peg`, `pln-peg`, and `aed-peg`. The client projection's peg route/count order includes all three. A currency becomes a generated cohort route only when the active registry contains an asset in that bucket; pre-launch PLNQ, CZKC, and AED-RAKBANK alone do not create empty active routes. The curated high-volume peg dropdown remains unchanged; individual currency tags and cohort pages retain the existing discovery contract.
-
----
+1. Extend the owning enum; generated active peg currencies still derive from active registry during bootstrap.
+2. Add the canonical slug map and confirm no peg/axis collision.
+3. Author the matching taxonomy content or peg intro/context and check rendered title budget.
+4. Verify shared filter-tag assignment matches members, including lifecycle/empty-cohort effects.
+5. Run taxonomy hub and exact sitemap suites and regenerate sitemap dates for new routes. `src/app/stablecoins/__tests__/taxonomy-hub-pages.test.tsx` and `src/app/__tests__/sitemap-frozen.test.ts` own those checks.
 
 ## Update Rules
 
-Update this doc when any of these change:
-
-- the route table, shared hub template, or slug-route behavior
-- cohort membership scoping or the empty-cohort filtering asymmetry
-- the title budget or its compaction fallback
-- the split between authored and derived cohort copy
-- inventory, sitemap, JSON-LD, or redirect contracts for the family
-
-Related docs to update in the same change:
-
-- [alt-pegs-page.md](./alt-pegs-page.md)
-- [classification.md](./classification.md)
-- [architecture.md](./architecture.md)
+Update this contract for membership asymmetry, slug/title/authoring boundaries or indexing/schema changes. Generated route/coin rosters and currency-addition diaries stay out. Related owners: [Alt-Pegs](./alt-pegs-page.md), [Classification](./classification.md), [Architecture](./architecture.md).

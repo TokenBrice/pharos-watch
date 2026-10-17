@@ -1,101 +1,37 @@
 # About Page
 
-## Overview
-
-The `/about/` route is the product overview for Pharos. It explains:
-
-- why the project exists
-- what the dashboard tracks directly
-- what signals and scores it computes
-- how the data pipeline is assembled
-- where to find methodology, source code, and support channels
-
-Primary implementation file:
-
-- `src/app/about/page.tsx` for the route entry and `metadata`
-- `src/components/about/about-page-content.tsx` for the shell, hero, and section rendering
-- `src/lib/about-content.ts` for the visible source roster and reusable section copy
+Public `/about/` is Pharos's product, trust and source-disclosure hub. `src/app/about/page.tsx` owns metadata; `src/components/about/about-page-content.tsx` renders the page; `src/lib/about-content.ts` owns visible source groups and reusable copy. No source-by-source release diary or parallel provider inventory belongs here.
 
 ## Route Shell Contract
 
-The route shell is owned by `src/components/about/about-page-content.tsx`; `src/app/about/page.tsx` exports only the route `metadata` and renders `<AboutPageContent />`.
-
-- `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
-- the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and two lead paragraphs
-- the page opens on a modest signature hero: a frost-blue tracked-stablecoin figure, the editorial lede and byline, and a neutral stat strip for core, variant, pre-launch, and source counts (`Sources` is a static `50+` label, not a computed count)
-- the shell's `preface` injects `AboutPage` JSON-LD (its `mentions` cover the API/data catalog, coverage matrix, data pipeline, methodology, principles, editorial policy, and funding); the FAQ (`FAQPage`) JSON-LD is emitted separately by `FaqSection` (`includeJsonLd`)
-- the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
-- the public trust material lives inline on `/about/`: `#principles` states the editorial/product principles, `#editorial-ai-policy` states the AI-content policy, and `#corrections-policy` states the corrections path.
+Keep canonical `/about/`, public indexability, AboutPage schema and FAQPage schema matching visible FAQ. Source summaries and full evidence caveats remain in static HTML even behind details. Preserve trust anchors `#principles`, `#editorial-ai-policy`, `#corrections-policy`, `#media` and `#bluechip`; attribution/redirect/inbound links rely on them. Recorded walkthroughs stay with media; legacy Bluechip URLs redirect to its inline section.
 
 ## Section Contract
 
-The page is organized into these sections, in order:
+Explain what is directly tracked, what is computed and where evidence/methodology can be inspected. The dependency principle distinguishes serial final-score limits from proportional backing inheritance; map means direct links/structural look-through, not a failure simulator. Do not move curated narratives into a computed-feature roster.
 
-1. `Why Pharos?`
-2. `Principles, AI Policy, and Corrections`
-3. `Who Is Building Pharos?`
-4. `Pharos in the Media` (`#media`; also the home of the recorded walkthroughs formerly on `/start/` — rows in `WALKTHROUGH_APPEARANCES` are flagged "Full walkthrough" with their duration)
-5. `What Pharos Tracks`
-6. `What Pharos Computes`
-7. `Companion Experiences`
-8. `Classification`
-9. `Pharos Bluechip` (`#bluechip`; the former `/about/bluechip/` page, which now 301s here — copy lives in `src/components/about/bluechip-content.ts`)
-10. `Data Pipeline`
-11. `Methodology`
-12. `About Pharos FAQ`
-13. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
-14. `Get in Touch`
-
-## Design And Interaction Rules
-
-- The dedicated `Who Is Building Pharos?` section uses `lg:grid-cols-[auto_minmax(0,1fr)]` to place the contributor/logo strip beside the copy on `lg+`, stacking vertically below `lg` so the text column does not get crushed.
-- `What Pharos Tracks` and `What Pharos Computes` use full-row links instead of small linked headings. This preserves larger touch targets on mobile and reduces the repeated tile-grid feel.
-- CTA buttons keep `min-h-11` on mobile so the tap target does not collapse below the 44px floor.
-- Section cards stay flat with no per-section accent color; `frost-blue` is reserved for the brand hero numeral and inline link-hover states.
-- The data pipeline section should stay flat. Use a source-group list plus a 3-step flow summary rather than nested card grids. Each source group in `DATA_SOURCE_GROUPS` (`src/lib/about-content.ts`) leads with a one-line `summary`; the exhaustive `sources` list and its evidence caveats sit behind a "Full source list" `<details>` disclosure (still in the static HTML). Grid items carry `min-w-0` and the long lists wrap anywhere, so unbreakable tokens cannot widen the card on phones.
+Failure scenarios describe a maintainer-approved hypothetical path per coin in How it breaks: no computation, score change or universal availability. Dependency Exposure uses publication-bound supply and is not a loss estimate. The About computed roster does not promise a failure-scenario scoreboard/stress panel. Bluechip copy obeys its explicit publication hold and external/Pharos grade intersection, not an invented hidden floor model.
 
 ## Navigation Contract
 
-- `/about/` remains a top-level route in the `Resources` menu's `About Pharos` column (the `NAV_GROUPS` entry keyed `"more"`).
-- `/about/` is the reference hub for low-frequency reference surfaces. `Funding` and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, and `Changelog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and `Blog`, `Mechanisms`, and `Case Studies` fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
-- `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
-- `Dependency Map` must link to `/dependency-map/` and describe mapped collateral and wrapper links. Exposure mode traces linked coins using publication-bound supply and does not estimate losses or changes in Safety Scores. The computed-feature roster has no failure-scenario scoreboard or stress panel.
-- The tracked-feature roster's `Failure scenarios` entry describes the dossier's "How it breaks" section as a curated, maintainer-approved narrative of one hypothetical failure path per coin, not a simulator: nothing is computed or scored, and it never changes a Safety Score. It sits with the curated tracked features, not the computed roster, and has no link, because the section appears only on coins with an approved scenario.
-- `Methodology`, broadcast, Telegram, GitHub, and profile links are explicit CTAs; `Funding` and the public `/docs/listing-policy/` reference are inline prose links.
-- Trust-policy links use `/about/#principles`, `/about/#editorial-ai-policy`, and `/about/#corrections-policy`.
+Use shared `src/lib/nav-config.ts`, not a copied menu roster. Peg Tracker links `/depeg/`; Dependency Map links `/dependency-map/`. Trust-policy links use the canonical About fragments above. Methodology and source/code/support links remain explicit; Funding and public listing policy are discoverable inline. The project is MIT-licensed open source, not a proprietary data endorsement.
 
 ## Content Notes
 
-- The page is public-facing product copy, so internal workflow references should stay clear and non-novelty-first.
-- The dependency principle in `src/lib/about-principles-content.ts` is titled `Dependency propagates risk.` It distinguishes serial parent final-score limits from proportional upstream backing inheritance and describes the map as direct links, not a failure simulator.
-- Cemetery counts in the `Why Pharos?` copy, tracked-feature copy, and FAQ use the generated lightweight `DEAD_STABLECOIN_COUNT`: curated obituaries plus frozen tracked profiles, matching the public cemetery and export cohort rather than the curated-only source file. The root layout's cemetery description shares that projection.
-- The `Get in Touch` copy describes Pharos as MIT-licensed open source and links to the GitHub repository.
-- When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together. The visible source roster lives in `DATA_SOURCE_GROUPS` in `src/lib/about-content.ts`; keep that module as the current roster source instead of duplicating long provider lists here.
-- The `On-chain Reads & Events` roster names Dwellir as primary for scheduled state reads on Ethereum, Mantle, Sonic, Gnosis, Tempo, Plasma, Base, Arbitrum, Optimism, Avalanche and Polygon; supplemental-first ahead of Alchemy census-state endpoints on Linea, Scroll, Unichain, World Chain, MegaETH and Stable; and supplemental-last elsewhere. Supplemental-first does not add registry endpoints or expand inventories. The key, usable budget and valid circuit gate admission; request-path maps never enable it. `DWELLIR_ROUTING_DISABLED_CHAINS` reverts listed chains to supplemental-last and disables their log scans. Log eligibility is limited to full-history endpoints in `DWELLIR_LOG_SCAN_CHAINS`.
-- Dwellir serves Gnosis, Base, Arbitrum, Optimism and Avalanche span-guarded, map-aware `eth_getLogs` batches first independently of state placement, including blacklist scans and other map-aware log readers; Ethereum remains incumbent-only on this global log path. Ink, Berachain and Plasma additionally have a reviewed CCIP observer route. BSC is not promoted. Mint/burn is Alchemy-first with scheduled, admitted Dwellir fallback on Ethereum/Arbitrum/Base only; request/admin paths remain excluded.
-- The pricing source roster includes the reviewed dEURO EURC StablecoinBridge redemption path; its capacity, identity and freshness guards are documented in `docs/pricing-pipeline.md`.
-- The pricing roster includes guarded CHFm/JPYm FPMM and AUDm/CADm/COPm Broker sell quotes from Mento; USDm parent pricing and executable pool-state checks are required, without assumed FX parity. BD can use its reviewed Aerodrome BD/USDC sell route with fresh trusted USDC pricing, pinned runtime code, exact pool identity, current inventory and quote-depth checks. Legacy USDv can use exact-mint Jupiter direct quotes only with independent confirmed Meteora pool-state, inventory, depth and slot-freshness checks and a fresh trusted USDC parent.
-- The pricing roster includes guarded Ethereum Uniswap V3 USDU/USDT QuoterV2 sell quotes normalized through fresh trusted USDT pricing. This asset route uses the existing Uniswap V3 source family; it does not change the static source-count label or source logos.
-- Supply & Price discloses JPMorgan exact-class JLTXX NAV telemetry, not active admission: JLTXX remains quarantined with its October 10 review deadline. Reserve Transparency describes Token Class NAV/class assets as issuer valuation, not independent portfolio assurance or token supply. Hash-bound finalized native shares/observed decimals/block clocks, original dated NAV and reviewed temporal/legal perimeter are mandatory even with positive CoinGecko market cap; authenticated bootstrap captures staged evidence only and cannot activate the roster or publish scores.
-- Pricing copy should continue to disclose market-data sources, oracle sources, DEX-derived pricing, and protocol redemption quotes when they are externally visible in the UI.
-- The pipeline summary should disclose that DEX pool challenges preserve independent protocol evidence before applying their bounded TVL coverage selection.
-- Supply & Price copy should disclose scoped FX-par redemption quotes and curated fail-closed on-chain supply repairs when they affect public `priceSource` or `supplySource` fields.
-- The reserve source roster includes Paxos/KPMG gold reserve examinations and Money on Chain DOC accounting reads on Rootstock; their runtime verification and admission limits are documented in `docs/live-reserves.md`.
-- Reserve Transparency names retained LedgerLens / Wyoming FRNT, Coinbase ONED proof-of-reserves GraphQL, BlackRock BRSRV holdings CSV, Universal USDU, Supercoin ZARSC, Secured Finance USDFC and Somnia BrandedCustodian. Matrixdock STBT's reserve adapter/binding is retired, superseding the rejected October 14 retention branch; `/api/stablecoin-reserves/stbt-matrixdock` returns 404 after generated source cutover. This does not inactivate the coin or remove contracts, price/supply/yield, curated sidecars, independent routes or historical D1 evidence. Dynamic weak census/corpus capability is lost; no independent backing uplift or measured savings is claimed.
-- Reserve Transparency names MYRC's hash-pinned independent examination reports rather than an index-only ledger, Spark V1 local receipt inventory and Forest Road manager accounting reconciliation. These measurement scopes do not imply executable cash liquidity or whole-protocol assurance.
-- On-chain Reads & Events discloses direct USDfr/apyUSD/earnUSD/Monetrix/Saturn route-controller/queue readers. Diagnostic-only observations, measured capacity and reserve composition remain distinct; [Redemption Backstops](./redemption-backstops.md#october-2026-route-evidence-closure) owns their admission and deferred evidence.
-- Reserve copy describes issuer/protocol APIs, proof portals, dashboards and direct on-chain/accounting reads as source families without treating all feeds as independently complete books; detailed coverage belongs in `docs/live-reserves.md`, and counts/detail follow the current registry rather than a hand-counted copy total. Single-asset v2 uses reviewed native CAD/QCAD and GBP/tGBP nominal bases, never USD; Ethereum supply clocks are diagnostic, not whole-reserve freshness, and neither snapshot branch emits invented redemption. The six raw `chainlink-por` bindings are v3: BC3M, BIB01, GLDY, KAG, KAU and TUSD; separate `chainlink-nav` configurations are not part of that six-binding inventory. Exact deployment inventories, original feed/supply clocks and typed unavailable reasons remain. BC3M uses its reviewed inclusive 86,400-second reserve/supply skew allowance only after complete exact circulation reconciliation; BIB01 ratios stay withheld with `reserve-supply-temporal-policy-unreviewed`. Neither borrows TUSD's allowance or falls back to gross supply after a failed probe.
-- Permanent weak disclosures remain explicit: Solstice totals/proof strings are not a verifier/assurance stream; River's protocol-TVL quotient is not satUSD backing; replacement Chancery reads selected issuer accounts, not live RPC or a whole book. DGLD adverse arithmetic remains published/degraded; XAGm keeps original issuer-round age/60-day cap; ONRE's three guards alone do not establish independent book evidence. Avant gross observations/nulls retain 100% unknown composition; Flying Tulip uses one first-party index request with three payloads, not independent chain inventory. SODAX's local census omits ICON/Archway/Havah/Injective and provides no global ratio; FRNT gross supplemental metrics are not a retrieved assurance report/net-payable allocation.
-- ZARP, Ripio wFIAT, USDU and ZARSC report indexes validate identity/date while allocations remain reviewed static composition, not redemption terms/capacity. AUDD's agreed-upon-procedures report gives no assurance opinion; BRLV/AUDM are issuer-attested. Zephyr, AFI, ONED and BRSRV remain limited issuer/protocol/disclosed-securities telemetry rather than independent complete legal books. Static/weak detail/status evidence stays outside independent scoring admission. MYRC's independent examination preserves the native MYR basis, separate cash/fund rows, net-liability reconciliation and original balance date under the 33-day cap; later signing/upload/access does not renew those balances.
-- Retired Solomon legacy, USDH, Abracadabra MIM, StoneYield, OpenEden USDO and USDY runtime newest-report discovery must not appear as configured/parked capabilities. Preserve coin/frozen/curated/research evidence and replacement Chancery/ONRE. OpenEden cUSDO remains active; TBILL's separate Chainlink NAV configuration is retained but quarantined, not an active reserve feed. USDY retains the September 3 reviewed manifest and separately October 1-reviewed September 25 allocation with manual refresh. Origin's retired manual observer is distinct from retained active OUSD vault/redemption; genuine River exit telemetry also remains.
-- Regulatory register copy should disclose both EU MiCA register/NCA sources and U.S. GENIUS implementation-watch sources when `/compliance/` surfaces them.
-- EUR stablecoin reference copy should disclose eurostablecoins.xyz when its coverage API is used for EUR-specific market-availability labels, chain-gap audits, or MiCA issuer cross-checks.
-- DEX/yield source copy describes current source families and dead/deprecated-venue blocking; detailed protocol inventories belong in `docs/dex-liquidity.md` and `docs/yield-intelligence.md`. vaults.fyi is fully retired, not an optional gated live ranking source; BIMA Earn/Etherfuse CETES issuance are no longer current yield sources. Preserve BIMA reserve telemetry, USBD/CETES catalog identity, CETES quarantine and Banxico's independent MXN CETES benchmark. Historical venue/chain/link readers are not current collector enrollment.
-- Ordinary exchange spot sources remain disclosed. CoinGecko discovery tickers now supply price/observed-flow evidence only (Pricing v6.44), never synthetic orderbook liquidity (Liquidity v6.93); zero TVL attribution does not satisfy unchanged DEX trust floors or execution gates. Direct Binance/Coinbase/Kraken depth diagnostics, the dormant exact Kraken observer and disabled BTCUSD placeholders are retired; do not remove whole exchange sources or promise public-book settlement/account/fee proof.
-- The DEX roster retains ordinary Meteora/Bluefin liquidity/discovery, Aerodrome/Velodrome and current/legacy Shadow Exchange venue data. Stopping repeated DLMM collection/Bluefin scheduled Sui selection and retiring Sonic legacy/Base-Optimism volatile exact diagnostics do not retire ordinary venues. Orca/Raydium CLMM, Cetus, Base/Optimism stable diagnostics and Raydium Standard/CPMM provider diagnostics remain non-scoring; classic-stable/Slipstream coverage is not broadened.
-- Reviewed Uniswap V3/PancakeSwap V3/Aerodrome Slipstream RPC source presence does not activate a measured cohort. Hybra/XSwap exact V3 retire; Base/BSC/XLayer/HyperSwap/Kodiak remain unadmitted, with Base first only after independent/capacity acceptance. BSC recovery census remains live pending proved source-exclusive replacement, and BSC Graph execution-only input is permanent without a pending fee/price feature.
-- Only Ethereum hook-free V4 scores; BSC/Base/Arbitrum/Polygon/Tempo collect shadow evidence, while Unichain measured support is retired but ordinary provider PoolId discovery remains. Hooks remain unsupported negative identity/collision evidence, not a future activation module. Curve composite/NG repairs activate no cohort and retire none of the six retained observers; future exact approved sell directions must be named (sUSDe to DOLA is not DOLA selling or fiat exit), preserving modeled DOLA/OUSD descriptions.
-- Stellar Horizon covers classic-AMM discovery only; Aquarius supplies nine reviewed supplemental Spiko Soroban identities. Disabled exhaustive Soroban declarations were removed without removing those sources or presenting Horizon as general contract-token coverage.
-- A new benchmark, reference-rate, or NAV-oracle source used by Yield Intelligence must be disclosed in the visible roster and kept aligned with `docs/yield-intelligence.md`. The `Ratings & Reference` group in `src/lib/about-content.ts` is the current inventory; do not enumerate those feeds here.
-- L2BEAT is disclosed as a static Chain Health chain-risk snapshot and Safety Score bridge-route review source, not as a live worker fetch.
-- PSI copy should describe the current 30-minute cadence and the live formula inputs: active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend. It must also state that the monetary aggregate includes core stablecoins and cash equivalents while excluding tracked variants and stable-value investment products.
+`DATA_SOURCE_GROUPS` is the current visible disclosure roster. Adding a major source or externally visible feature updates its runtime copy alongside the owning domain contract. Counts and current memberships derive from shared projections/registries, never a hand-counted doc list. Cemetery uses merged curated-plus-frozen count, matching public export, not curated JSON alone.
+
+Source-family disclosure must remain honest about depth:
+
+- Pricing names market data, oracles, DEX and protocol-redemption/FX-par quotes when publicly surfaced. [Pricing](./pricing-pipeline.md) owns executable guards and current-price admission; [Supply](./supply-snapshot.md) owns curated fail-closed repairs. Positive market cap or configured source never implies active catalog/score admission; [Listing policy](./listing-policy.md) owns quarantine.
+- [Worker infrastructure](./worker-infrastructure.md#module-initialization) owns RPC routing/capability gates. State, archive, log and scheduled/request-path eligibility are distinct; a named provider is not a whole-network capability claim.
+- Reserve disclosures distinguish independent assurance from issuer/protocol reports, proof portals, accounting and weak telemetry. [Live reserves](./live-reserves.md) and its [evidence boundaries](./process/live-reserves-appendix.md#adapter-specific-evidence-boundaries) own source-specific adverse facts, original clocks, retired readers and restoration admission. A report index does not establish allocations/redemption; local balances/NAV do not prove whole legal backing or executable liquidity. Retirement of one reader does not retire coin, curated research, independent routes or historical evidence.
+- [DEX liquidity](./dex-liquidity.md) and its [appendix](./process/dex-liquidity-appendix.md) own source-exclusive evidence preservation, bounded TVL selection, venue/cohort admission and diagnostic exclusions. Discovery presence never activates measured scoring. Collector retirement does not retire ordinary exchange/venue sources; CoinGecko tickers are price/observed-flow evidence, not synthetic orderbooks.
+- [Yield Intelligence](./yield-intelligence.md) explains eligible source families and source-ownership rules; current adapter/pool membership belongs to runtime registries. Retired vaults.fyi/BIMA/CETES collectors do not become parked live capabilities or erase retained histories/catalog/reserve sources; independent benchmarks remain distinct. New benchmark/reference/NAV sources update visible Ratings & Reference disclosure.
+- [Redemption](./redemption-backstops.md) owns diagnostic versus measured capacity, modeled routes and direct queue/controller admission. Reserve composition, scoped exit telemetry and executable holder proceeds are not interchangeable.
+- Regulatory source copy discloses MiCA NCA/register and GENIUS implementation-watch sources; EUR reference coverage names eurostablecoins.xyz where consumed. L2BEAT is static chain/bridge-review evidence, not a live Worker fetch.
+
+PSI copy describes its current cadence and formula inputs (active-depeg severity, cap breadth, DEWS breadth, seven-day cap trend) through [Stability Index](./stability-index.md), using the core stablecoin/cash-equivalent aggregate, excluding tracked variants/investments.
+
+## Update Rules
+
+Keep visible source-family summaries aligned with domain-owned admission/retirement facts. Do not repeat probe receipts, CSS classes, section order or exhaustive provider rosters. Trust/editorial-policy changes update public copy and linked attribution together; source additions do not silently broaden evidence claims.

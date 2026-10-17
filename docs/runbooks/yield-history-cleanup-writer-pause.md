@@ -59,7 +59,16 @@ LIMIT 20;
 
 ## Remediation
 
-- For a planned cleanup, follow the deployment-process sequence: deploy protections, arm writer pause, verify no active `sync-yield-data` lease, export targeted rows, rehearse delete and restore locally, run bounded production cleanup, then validate after the next post-V9 writer cycle.
+Tracked ownership handoffs and source-attribution corrections use `worker/scripts/yield-history-cleanup.ts` as operator-run maintenance. When cleanup is part of a release:
+
+1. Deploy the read-path and hourly-purge protections first.
+2. Arm the writer pause guard.
+3. Verify `sync-yield-data` is not actively leased.
+4. Export the targeted parent/source rows from both hourly and daily tiers in a version-3 artifact, including each row's nullable `source_observed_at` observation clock; review the separate tier counts.
+5. Rehearse the delete + restore drill on a local throwaway SQLite dataset, including daily-only rows older than hourly retention, and compare complete rows in both tables.
+6. Run the bounded production cleanup only after the restore drill passes.
+7. Verify the parent/source rows stay absent after the next hourly writer cycle.
+
 - Use `worker/scripts/yield-history-cleanup.ts` controls rather than ad hoc SQL. The script owns the `--arm-writer-pause`, `--clear-writer-pause`, `--execute`, `--confirm yield-history-cleanup`, and guarded restore paths.
 - If the pause key is stale and no cleanup operator owns it, clear it with the script's `--clear-writer-pause` path, then let the next post-V9 `sync-yield-data` cycle publish.
 - If cleanup failed after deleting rows, use the exported version-3 artifact and the script's guarded restore path. It includes `hourlyRows` and `dailyRows` with separate counts, each row's nullable `source_observed_at` observation clock, and each daily row's `snapshot_date` identity and publication fields. Both tiers are validated before restore starts; missing observation-clock fields, missing daily data, count mismatches, and older version-1/version-2 artifacts are rejected. Older artifacts cannot prove complete-row restoration; do not invent observation clocks from `recorded_at` or silently fill them with null. Remote restore requires `--execute --confirm yield-history-cleanup` and an armed writer pause.

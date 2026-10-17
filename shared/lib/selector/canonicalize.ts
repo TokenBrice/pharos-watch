@@ -6,7 +6,7 @@
  * The strip-list removes every freshness-derived field so two readers with
  * the same content-level snapshot produce the same `sid`.
  *
- * Binding: see `docs/screener-picker-page.md` for the maintained snapshot
+ * Binding: see `docs/screener-page.md#snapshot-sharing` for the maintained snapshot
  * canonicalization contract.
  */
 

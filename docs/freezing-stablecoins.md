@@ -33,7 +33,6 @@ The script prints two artifacts:
 - In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings with finalized copy and review the generated `deathDate` (defaults to the freeze month, not the actual death date) and `peakMcap` (maximum observed within 1,825 days, not a guaranteed lifetime peak; omit it without reliable evidence). Follow [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record).
 - The cemetery row's `recordedAt` (the UTC date the record entered Pharos) is `frozenAt` unless `obituary.recordedAt` overrides it. Set `obituary.recordedAt` to the strict UTC `YYYY-MM-DD` on which the coin enters the cemetery only when `frozenAt` preserves an earlier historical freeze date. The row also takes the coin's `mechanismArchetype`, so keep that field.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
-- Run `npm run bootstrap:generated`, then `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts`, `npm run logos:cemetery-atlas` and `npm run build:og-cemetery`, then `npm run check:generated-artifacts`, to refresh and verify the gitignored aggregate, report-card registry fingerprint, legacy redirect map, client registry projections, cemetery dataset exports, cemetery logo atlas and cemetery OG image. Commit affected tracked artifacts with their sources. Do not edit generated projections by hand.
 
 The schema enforces the invariant: both `frozenAt` and `obituary` are required when `status === "frozen"`, and both fields are disallowed when `status` is anything else.
 
@@ -62,23 +61,31 @@ rg '"<coin-id>"' data/logos.json
 test -f "public/logos/<registered-logo-file>"
 ```
 
-If no canonical tracked logo is registered, add one, or place the file where `frozenToDeadShape()`'s fallback resolves: `public/logos/<llamaId>-<symbol>.png` when the coin has a `llamaId`, and `public/logos/cemetery/<symbol>.png` only when it does not (`resolveCemeteryLogoUrl` prefixes `/logos/cemetery/` solely for non-absolute paths). `frozenToDeadShape()` always resolves a non-empty logo path. The plot map's grave medallions draw the logo from the cemetery logo atlas below, never from that path, and show the symbol's first letter only for a row the atlas lists as having no logo. The Autopsy Register's Coin column renders the resolved path as a plain `<img>` with no file-existence check, so a missing PNG shows a broken image there. The `test -f` check above is load-bearing.
-
-The cemetery logo atlas (the `cemetery-logo-atlas` generated artifact) packs every resolved cemetery logo into `public/logos/atlas/cemetery-atlas.webp`. Its generator fails when a resolved logo file does not exist, so regenerate it with `npm run logos:cemetery-atlas` once the file is in place and commit affected outputs with the coin file or `data/logos.json`.
+If the canonical logo is missing, register an existing asset in `data/logos.json`
+or supply the fallback used by `frozenToDeadShape()`: `public/logos/<llamaId>-<symbol>.png`
+for coins with a `llamaId`, otherwise `public/logos/cemetery/<symbol>.png`.
+Verify the file exists: the register renders the path directly, while the plot
+uses the generated atlas. The atlas generator fails on missing files; generate
+and commit affected outputs only after registry and logo edits are complete.
 
 ### 4. Validate
 
+Run generation once, after all source and logo changes. Bootstrap refreshes registry
+projections and fingerprints; the dataset and logo atlas are maintenance-only and
+must be generated explicitly. Commit affected tracked outputs; never edit them by hand.
+
 ```bash
 npm run bootstrap:generated
+npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts
+npm run logos:cemetery-atlas
+npm run build:og-cemetery
+npm run check:generated-artifacts
 npm run check:stablecoin-data
 npm run check:frozen-invariants
 npm run lint
 npm test -- --run
 cd worker && npx tsc --noEmit && cd ..
-npm run prebuild  # regenerates compile-input and post-refresh artifacts, including live detail snapshots
-npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts  # regenerates the maintenance-only cemetery dataset
-npm run logos:cemetery-atlas  # regenerates the maintenance-only cemetery logo atlas
-npm run build:og-cemetery  # regenerates the /cemetery/ OG card (plot map; no-op when current)
+npm run prebuild  # refreshes build artifacts, including live detail snapshots
 ```
 
 ### 5. Update docs
@@ -109,5 +116,3 @@ Commit/push according to [Pre-push readiness](./testing.md#pre-push-readiness) a
 - **Live-comparison URL** `/compare/?coins=<id>,...` keeps the coin (its column header carries a `Frozen` badge tooltipped `Frozen on <date>`), but live metric cells fall back to the shared `—` placeholder tooltipped `No comparable data available`; no cell-level tooltip explains the freeze.
 - **Rolling-window metrics** (24h flows, 7d depeg counts, etc.) gradually decay to zero or null past their window once ingestion stops.
 - **No report card.** A frozen coin leaves `ACTIVE_STABLECOINS`, so the next V9 publication carries no card for it and the detail page renders without a grade. There is no all-F stub and no `isDefunct` flag — neither exists in the V9 card contract. This is an intentional v1 simplification; a future v2 could read the last-real card from D1 if richer history is wanted.
-- **AI editorial summary preserved as-is.** The pre-freeze summary in `data/ai-summaries.json` continues to render on the detail page. We do not regenerate it on freeze — preserving the pre-freeze editorial framing.
-- **Methodology versions unchanged.** Per-domain methodology version constants are NOT bumped on freeze. Frozen status is a lifecycle policy, not a scoring change; bump a methodology only when the freeze ships with a domain-specific scoring, ingestion, or API-contract change.

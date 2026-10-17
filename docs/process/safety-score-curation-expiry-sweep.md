@@ -165,6 +165,17 @@ Do not build another classifier from the evidence queue's coarse `action` field.
 Task rows, claim groups, and dispatch reachability are routing counts, not estimates of
 closable facts. No registry row closes a fact mechanically.
 
+Registry schema 2 stores each distinct path-scoped context once per stablecoin in
+`currentFactContexts`. Resolve a task's context with
+`stablecoin.currentFactContexts[task.currentFactContextRef]`; an explicit `null`
+still means no context was available. Different tasks of one work type may reference
+different contexts. Task IDs, claim groups, routing, evidence and disappearance
+sentinels are unchanged. Regenerate older registry artifacts rather than expecting
+the removed per-task `currentFactContext` field. Do not re-inline whole-asset
+surfaces into every task: that makes serialized size quadratic in task count and
+can exceed V8's single-string limit. The reviewed ledger remains separate input
+to human review, not embedded registry data.
+
 The Markdown worklist is a compatibility renderer over this typed routing contract;
 it owns no reason-code classifier. The pre-expiry view likewise calls production's
 exported `resolveReviewedReserveRows()` branch instead of copying reserve-admission
@@ -185,22 +196,9 @@ work-type definition and recommended skill, then verify all four boundaries:
 4. **Methodology:** the current method must permit the evidence or producer. Never
    weaken evidence standards or invent values to make a sentinel disappear.
 
-Triage by the registry's typed `workType`:
-
-| Work types | Required drain checks |
-| --- | --- |
-| `MECHANISM_REVIEW`, `ARCHETYPE_CLASSIFICATION` | Archetype, exact component proposition, issuer disclosure scope, review date, and strict evidence eligibility. |
-| `RESERVE_COMPOSITION`, `RESERVE_SLICE`, `DEPENDENCY_REVIEW` | Latest primary report, composition date, slice materiality, custody, and dependency identity; never date-bump without re-review. |
-| `EXIT_DEX_COVERAGE`, `EXIT_RUNTIME_ROUTE`, `EXIT_OUTPUT`, `EXIT_SETTLEMENT_BOUND` | Venue/token identity, callable route, notional/output semantics, supported method family, and runtime readback; batch reusable adapters/censuses. |
-| `BRIDGE_ROUTE_REVIEW`, `BRIDGE_MATERIALITY` | Canonical deployment/bridge identity, chain support, materiality, controls, and producer refresh after curation. |
-| `ACCESS_REVIEW`, `DEPLOYMENT_CONTROLS`, `MINT_AUTHORITY` | Exact contract/proxy and role scope, current authority, upgrade path, and dated primary/explorer evidence. |
-| `ORACLE_BRANCH`, `ORACLE_PROFILE`, `PEG_INPUT` | Configured branch, source freshness, runtime availability, and fail-closed behavior. |
-| `PARENT_RATEABILITY` | Canonical parent/dependency identity and proof that the score projection consumes it. |
-| `CHAIN_SUPPLY` | Provider identity, price path, contracts and chain coverage for a current score-eligible circulating-USD observation; use `getCirculatingRawOrNull()`, preserve unavailable observations as null, and never add manual/on-chain/CMC/DEX supply overrides. |
-| `OPERATIONAL_RESILIENCE` | Exact-asset overlay in `operational-resilience-overlays-v1.json`, review window, typed source confidence; live history is eligibility-only and unestablished performance stays null/not-reviewed. |
-| `WRAPPER_ALLOCATION`, `WRAPPER_CONTROL_FACTS`, `WRAPPER_EXIT_FACTS` | Wrapper contract identity, then the factor's upstream surface: whole-allocation proof or custody profile, wrapper mint/upgrade/oracle/control review, or redemption terms and fresh exact unwind capacity. |
-| `ASSET_COMPILATION` | Find the `safety_score_v9_asset_quarantined` replay warning and its `metadata.message`; repair the producer/adapter or curated data identity defect at its source, never curate around the quarantine, and confirm a fresh exact replay compiles the asset. |
-| `IMPLEMENTATION_DATE` | Launch date of the currently scored mechanism boundary; conservative range end for fuzzy dates, cited source, and no predecessor launch when the mechanism was materially replaced. |
+Use the registry's embedded work-type definition for instructions, completion criteria,
+recommended skill, cautions and touchpoints. Its source is `V9_MISSING_DATA_WORK_TYPES` in
+`scripts/lib/safety-score-v9-missing-data-work-types.ts`; there is no second roster here.
 
 For a new work type, read its embedded definition and emitting code before deciding;
 do not infer a resolution from its name. Resolution mode describes the work shape,
@@ -273,12 +271,6 @@ they are never silently dropped. Reserve-dependent graph joins are evaluated aga
 the counterfactual facts, not copied supply weights. Graph-free captured overlays
 retain the existing isolated target-rebuild behavior.
 
-The October 6, 2026 sweep's generation mismatch came from leaving untouched graphs at
-the source generation and stamping the target with a one-asset generation. Commit
-`1f4064f47` corrected admission but rebuilt every asset's baseline extension for every
-withheld producer. Run `38401069568` then spent at least 23 minutes 18 seconds in
-live-withheld before the 25-minute job timeout (12:59:02 to 13:22:20 UTC).
-
 Graph-bearing counterfactuals build only the selected extension asset while retaining
 the **full** active set and dependency-cycle context. The operator-only compiler
 context admits the captured extension and compiles the current-code baseline once.
@@ -291,32 +283,14 @@ The full dependency plan, common-mode membership, evaluation, public projection,
 quarantine/retry behavior still run for every scenario. Production does not enable
 this reuse path. Withholding all producers together would change dependency semantics.
 
-The selected-extension optimization alone did not suffice: run `39038600589` reached
-96 full response-render passes in 15 minutes, then timed out without writing the
-report; it had no per-asset progress labels. A CPU-profiled retained-capture USDT
-scenario spent 14.67 s in full-cohort compilation versus 0.324 s in the selected
-extension. Unprofiled warm scenarios measured 5.44–5.90 s before compilation reuse
-versus 3.47–4.87 s afterward, with byte-identical full pipeline JSON for USDT, USDC,
-DAI, USDe and the Wintermute lender.
-
 The workflow runs three isolated shard subprocesses (`--workers 3`), each with a
-2 GiB V8 heap ceiling, on the public repository's 4-vCPU / 16-GiB runner. A complete
-two-worker local run finished in 434.5 s (7m14.5s): 217 isolated scenarios, 172 assessed,
-44 fallback pipeline gaps and one explicit evaluation failure, producing 56 grade
-drops. The workers peaked at 1,813,588 and 1,810,756 KiB RSS and the coordinator at
-481,464 KiB; even three workers at the measured peak fit a conservative 7-GiB
-envelope. Using the observed hosted/local per-scenario ratio, three workers estimate
-roughly eight minutes on the hosted runner; this remains an estimate until dispatch.
-This keeps captures and full reports local rather than adding artifact transfers.
+2 GiB V8 heap ceiling, while captures and full reports stay local.
 Shards partition the sorted active asset IDs, never the scoring cohort.
 `--shard i/n` emits a JSON shard;
 repeat `--merge <shard.json>` to validate and merge a complete shard set. Missing,
 duplicate or mixed-capture shards fail. Merged Markdown is byte-identical to the
 unsharded report. Each asset logs start/completion/failure and elapsed milliseconds;
 the CLI summary also logs total duration and peak RSS.
-The three-worker smoke retained the full 396-asset scoring cohort and selected six
-eligible counterfactuals: 19.1 s versus 31.5 s unsharded, with byte-identical merged
-Markdown including the partial-failure row. This timing subset is not the full run.
 
 An unrecoverable `V9AssetEvaluationError` is isolated by this report only: it records
 the withheld asset, `counterfactual-evaluation-failed`, error class and message, then
@@ -334,13 +308,6 @@ Acceptance requires one completed post-merge scheduled sweep with all five gener
 statuses successful, plus the issue and registry artifact.
 A local replay or manual dispatch alone does not close scheduled-run acceptance.
 
-The live-withheld tests compare the optimized pipeline and report against the former
-full-cohort rebuild, including captured graphs, and assert selected-asset equality
-with full-cohort dependency-cycle diagnostics. They also cover native/legacy graphs,
-invalid graph rejection and capture-time overlay preservation. The evidence queue
-also traverses the lender book, accepted-source and latest-attempt statuses so their
-gaps are not falsely rejected as unreferenced. Workflow tests check the five isolated
-steps and timeout failure propagation.
 
 Assets already present in `liveToFallbackCoins` are excluded: their producer
 silence is already realized in this capture and is owned by the worklist/expiry
@@ -372,9 +339,8 @@ counterfactual report.
 For manual runs, keep captures, replays, worklists, the full missing-data registry, and
 queue output under `agents/v9-captures/`; automation uses ephemeral `agents/sweep/`.
 Both are gitignored scratch. Never commit these multi-megabyte, point-in-time artifacts
-or move them into `docs/`; re-export production input on every weekly sweep. The only
-committed point-in-time projection is the compact registry summary named above, while
-the append-only reviewed ledger preserves operator decisions. Follow the equivalence harness's
+or move them into `docs/`; re-export production input on every weekly sweep. The
+append-only reviewed ledger preserves operator decisions. Follow the equivalence harness's
 [artifact-hygiene contract](./safety-score-equivalence-harness.md#artifact-hygiene).
 
 ## Related

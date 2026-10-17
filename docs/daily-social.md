@@ -24,7 +24,7 @@ Optional `shareBeforePct` / `shareAfterPct` row fields retain the actual cohort 
 
 ## Preparation and publication
 
-There is no scheduled or dispatchable workflow. The former daily social GitHub workflow (cron candidates at `:07`/`:27`/`:47` UTC during hours 11–12, plus manual dispatch) was removed on 2026-09-10 because its `plan` gate only accepted the 13:00–14:00 Europe/Belgrade window, which made it useless for on-demand generation. Operators run the local commands below whenever an edition is wanted.
+There is no scheduled or dispatchable workflow. Operators run the local commands below whenever an edition is wanted.
 
 `publish` (including `--dry-run`) runs only during 13:00–14:00 Europe/Belgrade and requires today's edition, captured before 14:00 and no more than two hours before that scheduled time. It requires `CLOUDFLARE_ACCOUNT_ID`, `SAFETY_MAP_KV_TOKEN`, and `KV_NAMESPACE_ID` (Pages `SELECTOR_SNAPSHOTS` namespace). No X credentials are involved.
 
@@ -36,7 +36,7 @@ The Pages route `functions/social-posts/[[path]].ts` serves `GET`/`HEAD` at `/so
 
 ## Delivery
 
-Publication is manual. The Worker does not fetch, verify or tweet these editions, and no `daily-social-delivery` budget surface or `daily-social:twitter-sent:*` ledger exists. An operator takes the rendered `poster.png` and `.alt.txt` and posts them by hand when an edition is wanted. The former automatic 14:00 Europe/Belgrade tweet was retired on 2026-09-10 to keep every post an editorial decision.
+Publication is manual. The Worker does not fetch, verify or tweet these editions, and no `daily-social-delivery` budget surface or `daily-social:twitter-sent:*` ledger exists. An operator takes the rendered `poster.png` and `.alt.txt` and posts them by hand when an edition is wanted.
 
 Commit/build validation does not activate anything; releasing the Pages code only enables manifest serving.
 

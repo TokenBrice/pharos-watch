@@ -16,7 +16,7 @@
  * meant to clear the selector editorial policy (design §4.5). Substitute `{dimensionLabel}`
  * with the rendered dimension name and `{scoreOrGrade}` with the score.
  *
- * Binding: see `docs/screener-picker-page.md` for the maintained editorial
+ * Binding: see `docs/screener-page.md#input-and-engine-contract` for the maintained editorial
  * template contract.
  */
 import type {

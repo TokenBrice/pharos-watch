@@ -12,11 +12,9 @@ DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both res
 
 Each API response includes the shared `methodology` envelope with `version`, `versionLabel`, `currentVersion`, `currentVersionLabel`, `changelogPath`, `asOf`, and `isCurrent` fields.
 
-The 2026-10-10 `v6.34` release retains independently trusted DEX-only divergence as market evidence when primary prices are absent or nominal. Stale or invalid foundational stablecoins generations hold publication; PSI amplification requires a valid sample within two producer intervals, and stale retained PSI cannot refresh an accepted DEWS clock. Historical diagnostics exclude unevaluable events and retain partial coverage and unavailable supply anchors; signal history distinguishes missing measurements from explicit inapplicability. Admission changes can move scores and bands without changing formula weights. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release. Owner-approved production-history replay and fixed-clock admission/band comparison remain prerequisites, not completed claims.
+Release history is published in the [shared Depeg/DEWS changelog](https://pharos.watch/methodology/depeg-changelog/), not repeated here.
 
-**Release obligations recorded 2026-10-10:** for shared Depeg/DEWS v6.34, fresh admitted producer observations and production resource evidence remain separate gates from owner-approved production-history replay and fixed-clock admission/band comparison; neither a defined version nor replay proves production health.
-
-The 2026-10-08 `v6.33` release repairs Liquidity Erosion's weekly DEX-history admission: nearest positive TVL, confidence >=0.5 and inclusive 36-hour tolerance, with the selected row's original score/TVL/date retained. Missing eligible evidence leaves both historical anchors unavailable. Live DEX history reaches back 8.5 days; historical reconstruction reaches back 15.5 days from the earliest event UTC day, without changing supply-history bounds. Input availability, scores and bands may change. Release requires owner-approved U-C20-16 production-history replay; no replay result is recorded here.
+**Pending release obligations:** v6.34 requires owner-approved production-history replay and fixed-clock admission/band comparison, plus separate fresh admitted producer observations and production resource evidence. Activation remains provisional and must be re-dated at release; a version or passing replay does not prove production health. The v6.33 U-C20-16 production-history replay remains owner-approved prerequisite work; no completed replay result is asserted.
 
 ---
 
@@ -203,52 +201,13 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 ## Data Pipeline
 
-### Tables
+DEWS publishes complete admitted generations, not whichever rows finished most recently. An interrupted or dependency-held run leaves the prior accepted generation readable at its original age; a healthy run advances publication and freshness together. Per-asset malformed inputs are quarantined before scoring/contagion while healthy peers can publish. Historical evidence and previously accepted buffers are retained, and stale latest rows cannot reintroduce a quarantined asset into a newly accepted generation.
 
-| Table                   | Pruning  | Purpose                                |
-| ----------------------- | -------- | -------------------------------------- |
-| `stress_signals`        | 7 days (frozen IDs exempt) | Sparse rolling history: at least hourly, plus band changes and score moves of 1+ point |
-| `stress_signals_latest` | current  | Latest-row materialization for hot readers and smoothing |
-| `stress_signal_publication_rows` | 2 generations | Exact, complete rows for current and previous publication proofs |
-| `stress_signal_history` | 365 days (frozen IDs exempt) | Daily first-run values while admitted IDs are unchanged; atomically resealed when that ID set changes |
-| `surface_publication_generations` (`surface = "dews"`) | durable | Successfully published generations consumed by Tape and publication health |
+Foundational stablecoin inputs must pass canonical timestamp checks and the producer interval-plus-runtime freshness budget (inclusive). Stale/invalid foundational inputs stop before persistence. Stale DEX-liquidity or mint/burn inputs also withhold publication. Stale yield-ranking evidence is flagged but retained, rather than silently zeroing its stress contribution.
 
-Age-based pruning and orphan deletes both skip stablecoin IDs in `FROZEN_IDS`, so frozen coins keep their DEWS history indefinitely.
+PSI amplification requires a valid sample within two PSI producer intervals (inclusive). Missing, stale, future-dated or invalid retained samples leave that optional backdrop unavailable without holding publication; otherwise DEWS and PSI could deadlock after a missed slot. A failed PSI read is a source failure and does hold publication. Previous-reading smoothing uses only accepted-generation evidence within its maximum age.
 
-`cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after the exact publication buffer and latest rows have been written and both generation row counts match the computed result count. The two-generation buffer keeps the last proven generation readable if a later run is interrupted. The pointer and its `surface_publication_generations` row commit in one D1 batch, so downstream consumers cannot observe a pointer without durable publication proof or ledger a generation whose pointer lost the race to a newer run. Migration `0182` bootstraps the pre-existing pointer, and the Tape projector reconciles the current validated pointer again at runtime to cover the migration-to-deploy window. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
-
-A dependency-held run does not advance that pointer. When a whole source fails or a core input cannot be scoped away from the cohort, admitted results still write sparse history and latest rows, but no publication candidate is written; the previous accepted pointer remains and the withheld generation is ledgered as `rejected` with `degraded-sources:<names>`. Per-asset malformed core inputs instead leave the run-local scoring/contagion set. Only their latest materialization is removed: sparse history, existing daily evidence and retained accepted buffers remain intact. Pointer count and stablecoin-ID digest cover exactly the admitted results, so a quarantined asset cannot reappear from stale latest state in a newly accepted generation.
-
-### Cron Schedule
-
-**Trigger:** `26,56 * * * *` — DB-only DEWS/PSI lane. It runs after the hourly `10 * * * *` DEX source stage and `16,46 * * * *` scoring consumer, but it is a separate scheduled invocation so a DEX invocation overrun cannot prevent DEWS publication.
-
-**Cron name:** `compute-dews`
-
-**Run health semantics:** DEWS records upstream problems in `sourceFailures`, `degradedSources`, `sourceCoverage`, and `validationFailures`. A successful peer publication is `ok` with `metadata.quality` reason `dews-asset-inputs-quarantined`, `quarantinedStablecoinIds`, rejection count and named decode details. `malformedCoreInputRows` counts core rejections, not cohort failure. Dependency holds return `degraded` with `reason: "dews-cohort-dependency-unavailable"`; an empty admitted cohort returns `degraded` with `reason: "dews-no-publishable-assets"`. Both leave the accepted pointer and freshness unchanged. Stale DEX liquidity and mint/burn source freshness still withhold publication; `dependencies.dexLiquidity` retains publication diagnostics for upstream-loss versus catch-up triage.
-A stale `yield-rankings` cache past the `sync-yield-data` producer interval plus its configured runtime budget (currently 60 + 10 minutes) is recorded as the `yield-rankings-freshness` source failure; stale evidence is still consumed, because blanking it would silently zero every structured yield contribution.
-The foundational `stablecoins` snapshot is admitted before scoring against `DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC`: the canonical `sync-stablecoins` interval plus its configured runtime budget (currently 15 + 8 minutes, inclusive). Canonical timestamp admission rejects missing, invalid and excessively future clocks. `dependencies.stablecoins` records the exact cache generation ID/update time, age, freshness budget and rejection reason. A stale or invalid snapshot returns `stablecoins-cache-<reason>` as a source failure before persistence; it neither advances the accepted pointer nor publishes a freshness sentinel, leaving accepted buffered scores intact.
-PSI amplification admits `stability_index_samples.stored_at` through `DEWS_PSI_FRESHNESS_BUDGET_SEC` (two PSI producer intervals, inclusive). `dependencies.psi` retains generation, source clock, age, budget and reason. Stale, future-dated or invalid retained samples omit the amplifier and are reported only in `dependencies.psi`; they do not hold publication, because PSI itself fails closed without a fresh DEWS generation and a hold here would deadlock both producers after one missed slot. A failed sample read registers `stability-index-samples` and holds the run; no sample leaves the optional backdrop unavailable.
-
-**Off-chain confirmation resilience:** The CoinGecko confirmation fetch used by the pending-depeg pipeline (and the Binance CEX price fetch beside it) is wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
-
-**Data flow:**
-
-1. Read stablecoins cache, derive peg rates with cached `fxFallbackRates` for thin non-USD groups
-2. Read `dex_liquidity`, live-depeg-trusted `dex_prices`, and `dex_liquidity_history`
-3. Read `blacklist_events` counts (24h + 7d)
-4. Load prior published-bound stress rows for smoothing; discard readings older than `DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC` (2 hours)
-5. Read `mint_burn_hourly` aggregates, separating 30d baseline coverage from latest-row freshness
-6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
-
-   `worker/src/lib/dews/source-state.ts` assembles the nine fixed hydrators in a typed concurrent tuple. Diagnostics replay in source order, coverage keys retain that order, and maps/sets plus dependency diagnostics pass through by reference; each loader still owns admission and degraded fallbacks.
-7. Quarantine eligible assets with malformed core persisted inputs, then compute DEWS and contagion for admitted peers
-8. Write sparse history to `stress_signals`, exact candidate rows to `stress_signal_publication_rows` (healthy runs only), and full latest state to `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
-9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply. "Explicitly" is enforced: a cache row carrying no circulating peg buckets at all is skipped for the cycle (no write, no retire), because the retire path hard-deletes the coin's current **and** 7-day rolling rows and they are never resurrected
-10. Seal the admitted daily `stress_signal_history` rows to the exact computed stablecoin ID set in one atomic replacement; frozen and quarantined historical rows remain outside that run's ownership boundary
-11. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
-12. Prune old data
-13. For a healthy run: validate exact publication-buffer and latest row counts, atomically advance `dews:published-generation` and its durable ledger row, retain the newest two exact generations, and advance `freshness:dews`. For a degraded run: ledger the withheld generation as `rejected` with its `degradedSources` and leave the published generation unchanged
+Storage, retention, exact publication proofs and machine-readable run diagnostics are owned by the [data-flow reference](https://github.com/TokenBrice/pharos-watch/blob/main/docs/data-flow-map.md#dews-internal-publication-contract). The separate DEWS/PSI invocation prevents a DEX source-stage overrun from blocking its scheduled slot.
 
 ---
 
@@ -256,101 +215,32 @@ PSI amplification admits `stability_index_samples.stored_at` through `DEWS_PSI_F
 
 ### `GET /api/stress-signals`
 
-**All coins (no params):** Returns latest DEWS for active tracked stablecoins. The response-level freshness headers use the latest aggregate publication timestamp (`updatedAt`) so one retained long-tail row does not stale the entire `/depeg` surface; `oldestComputedAt` remains in the body for consumers that need to detect per-coin lag. Non-active tracked entries (pre-launch, quarantined, delisted, frozen) are excluded because the aggregate handler gates rows on `ACTIVE_IDS`, and `eligibleCount` is the active-registry size.
+**All coins (no params):** Returns current accepted-generation DEWS for active tracked stablecoins, with `signals`, newest `updatedAt`, oldest `oldestComputedAt`, malformed-row diagnostics and the shared methodology envelope. `eligibleCount` is the active-registry size; other lifecycle states are excluded. Aggregate freshness headers use `updatedAt`; the oldest row is disclosed separately, not used to stale the entire surface.
 
-A null `computeDEWS()` result skips that coin's writes. If peers publish a new accepted generation without it, it is absent from aggregate results (`missingCount`) and single-coin `current` is null/unavailable. Held or zero-result runs leave the accepted pointer unchanged, so its prior accepted score remains readable and ages normally.
+**Single coin:** `?stablecoin=usdt-tether&days=30` returns `current` plus daily `history` (default 30 days, range 1–365). Unknown IDs return `404 Unknown stablecoin`; pre-launch IDs return `404 Stablecoin not tracked`. Quarantined, delisted and frozen tracked IDs retain single-coin history access.
 
-Current readers first validate the pointer-bounded latest materialization's timestamp, count and ID digest, then use exact `stress_signal_publication_rows` as fallback. Telegram and smoothing share that loader; strictly newer timestamps are excluded. PSI separately requires the exact pointed publication generation and fails closed on incomplete coverage.
+Readers validate the accepted pointer's timestamp, row count and ID digest, using its exact buffered generation if latest materialization is incomplete, never a partially newer write. Telegram and smoothing share that loader. A null scoring result writes no row: if peers publish without that asset, aggregate `missingCount` increases and single-coin `current` is null. Held/zero-result runs preserve the prior accepted generation and its original age. PSI requires complete exact-generation coverage.
 
-```text
-{
-  "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "..." },
-    ...
-  },
-  "updatedAt": 1740000000,
-  "oldestComputedAt": 1740000000,
-  "malformedRows": 0,
-  "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
-}
-```
-
-`updatedAt` is the newest current row in the aggregate response and is used for aggregate `X-Data-Age` / `Warning` freshness headers. `oldestComputedAt` is the oldest returned current row and is body-only for consumers that need per-coin lag detection.
-
-**Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
-
-The detail breakdown charts preserve missing or unavailable per-signal history as gaps (`null`), not zero stress, and omit numeric tooltips for those points. Current missing signals say unavailable with their supplied machine reason; “not applicable” requires an explicit applicability reason. Observed zero remains a measured `0/100`.
-
-Unknown IDs return `404` with `Unknown stablecoin`; non-readable (pre-launch) tracked IDs return `404` with `Stablecoin not tracked`. Quarantined, delisted and frozen IDs stay readable on the single-coin path even though the aggregate response excludes them.
-
-```text
-{
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "..." },
-  "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "..." },
-    ...
-  ],
-  "malformedRows": 0,
-  "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
-}
-```
+Historical missing/unavailable sub-signals are gaps (`null`) without numeric tooltips, not zero stress. Current missing signals retain their machine reason; “not applicable” requires an explicit applicability reason; observed zero remains measured `0/100`. The [public OpenAPI contract](https://pharos.watch/openapi.json#/paths/~1api~1stress-signals/get) owns response shapes and authentication.
 
 **Cache:** standard (s-maxage=300, max-age=60)
 
-### `GET /api/backfill-dews` (admin)
-
-Use `?mode=backtest-metrics` for the primary calibration path: stored `stress_signal_history` plus curated anchors report precision, recall, false-positive days, false-negative incidents, lead-time P50/P90, alert churn, band-transition stability, and cohort metrics. Without that mode, the route uses supply/liquidity reconstruction, a diagnostic that cannot replay every live signal or trust gate.
-The reconstruction preserves missing supply anchors and discloses per-event evaluation availability/reasons. Events without a scored pre-event day have `predicted=null`, not a false negative; detection rates exclude them and report excluded/partial coverage separately.
-
-### `GET /api/backfill-dews?repair=...&dry-run=true` / `POST /api/backfill-dews?repair=...` (admin)
-
-Repair modes:
-
-- `repair=refresh-current`: preview or immediately republish current `stress_signals` rows under the live `$1M` DEX trust floor
-- `repair=prune-history`: preview or delete bounded `stress_signal_history` windows that cannot be deterministically recomputed because the retained daily snapshots do not store the underlying DEX trust metadata
-
-`GET` is accepted for the read-only backtest path and for repair previews with `dry-run=true`. Mutating DEWS repair runs require `POST`.
-
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
+Calibration and repair are operator-only tools, not public scoring inputs. Their command, authorization and historical-reconstruction limits are documented in the [operator API reference](https://github.com/TokenBrice/pharos-watch/blob/main/docs/api-reference-admin.md#get-apibackfill-dews).
 
 ---
 
 ## Frontend Integration
 
-| Component     | File                              | Location                                                                              |
-| ------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
-| `DEWSBadge`   | `src/components/dews-badge.tsx`   | Table rows (hidden when CALM)                                                         |
-| `DEWSDetail`  | `src/components/dews-detail.tsx`  | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
-| `DEWSRadarPanel` | `src/components/dews-summary.tsx` | Embedded in the `/depeg/` hero (`DepegOutlookHero`), which supplies the heading and contextual methodology hint |
-
-**Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/api-hooks.ts`
-
-**Classification constants:** `ThreatBand`, `THREAT_BAND_STYLES`, `THREAT_BAND_HEX`, `THREAT_BAND_LABELS` in `shared/lib/classification.ts`
-
-**Design tokens:** `--dews-calm` through `--dews-danger`, plus radar contrast tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`, `--dews-radar-band-ring-opacity`, `--dews-radar-outer-ring-opacity`, `--dews-radar-calm-dot-bloom`, `--dews-radar-calm-dot-core`) in `src/styles/tokens/semantic.css`
+DEWS is visible in the [depeg outlook](https://pharos.watch/depeg/) and stablecoin detail pages. Missing current data is unavailable, not CALM; missing historical sub-signals remain chart gaps with no numeric tooltip. An explicit zero stays measured zero. Literal threat labels and styles are owned by `shared/lib/classification.ts`.
 
 ### Radar Layout (`DEWSRadarPanel`)
 
-The radar is center-is-danger: higher threat bands occupy inner rings, CALM coins form an ambient starfield at the periphery.
+The radar is center-is-danger: higher threat bands occupy inner rings and CALM coins form the peripheral ambient field. Band determines radial position; size provides supply context, not probability. Unavailable supply is disclosed rather than rendered as measured-small supply. A double halo identifies elevated coins also in a confirmed live depeg; zero confirmed events does not mean zero precursor stress.
 
-| Zone           | Radius range | Description                                                                     |
-| -------------- | ------------ | ------------------------------------------------------------------------------- |
-| Center label   | r 0–38       | `SCANNING` status label + total DEWS-covered count                              |
-| DANGER         | r 45–90      | Innermost elevated ring                                                         |
-| WARNING        | r 95–140     |                                                                                 |
-| ALERT          | r 143–175    |                                                                                 |
-| WATCH          | r 178–208    | Outermost elevated ring                                                         |
-| CALM starfield | r 212–238    | Non-interactive ambient dots (r=2 core + r=5 bloom, theme-aware opacity tokens) |
-| Outer boundary | r 240        | Radar edge                                                                      |
-
-Dashed ring boundaries are drawn at each zone's inner edge (r=45, 95, 143, 178) using the zone's threat color, plus a faint gray ring at r=212 delimiting the calm zone. Ring/spoke/calm-dot visibility is theme-aware via the DEWS radar tokens listed above. CALM dots are scattered deterministically using `deterministicRadiusOffset(id, 26)` from `src/lib/dews-radar-utils.ts`. The legend renders severity-order bands with live counts: `Danger (n)`, `Warning (n)`, `Alert (n)`, `Watch (n)`, `Calm (n)`. The `Calm` legend marker uses the same faint bloom+core star-dot treatment as the calm outer starfield.
+The severity-ordered legend reports live counts, while keyboard inspection and detail breakdowns provide alternatives to the visual plot. Geometry is presentation only, not another score input. The [depeg outlook](https://pharos.watch/depeg/) is the public inspection surface; `src/lib/dews-radar-utils.ts` owns layout constants.
 
 ---
 
 ## Alerting
 
-DEWS has a dedicated outbound Telegram path via `dispatch-telegram-alerts`, scheduled every 5 minutes on the isolated `dispatch-telegram-alerts` cron. Subscriber filtering and dedupe behavior live in the Telegram alert subsystem, but DEWS remains surfaced through the normal read paths too:
-
-- `GET /api/stress-signals`
-- Telegram subscriber alerts (`dispatch-telegram-alerts`)
-- Frontend components (`dews-badge`, `dews-detail`, `dews-summary`)
+DEWS supports outbound Telegram subscriber alerts as well as the API and public outlook/detail surfaces. Subscriber filtering and deduplication belong to the Telegram alert subsystem; alert transport never changes the underlying DEWS methodology.
