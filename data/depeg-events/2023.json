@@ -37158,28 +37158,6 @@
     "slug": "usdd-2023-03-14-down-26814"
   },
   {
-    "id": 31073,
-    "stablecoinId": "dola-inverse-finance",
-    "symbol": "DOLA",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 6453,
-    "startedAt": 1678788127,
-    "endedAt": 1678799036,
-    "startPrice": 1.5339810689697642,
-    "peakPrice": 1.6453420902393685,
-    "recoveryPrice": 1.009473740722497,
-    "pegReference": 1,
-    "source": "backfill",
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "constituentEventCount": 1,
-    "slug": "dola-2023-03-14-up-31073"
-  },
-  {
     "id": 56071,
     "stablecoinId": "alusd-alchemix",
     "symbol": "ALUSD",
@@ -37243,7 +37221,7 @@
     "priceCoverage": null,
     "provenance": null,
     "constituentEventCount": 1,
-    "slug": "dola-2023-03-14-up-31071"
+    "slug": "dola-2023-03-14-up"
   },
   {
     "id": 89177,

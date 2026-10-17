@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "captureId": "sha256:e25c297e403542be8b35325e09fbf8f384571b01bea962a659ed3811fe09dec2",
-  "observationStartedAtISO": "2026-10-17T10:18:41.316Z",
-  "observedAtISO": "2026-10-17T10:18:56.264Z",
-  "sourceUrl": "https://stablecoin-dashboard.pages.dev/_site-data/depeg-events",
+  "captureId": "sha256:92716e6f4db9f54075a32ddd515e0a5de32fa06b02cbbb0283e8df3b4f1541c5",
+  "observationStartedAtISO": "2026-10-17T23:57:51.608Z",
+  "observedAtISO": "2026-10-17T23:58:10.527Z",
+  "sourceUrl": "https://api.pharos.watch/api/depeg-events",
   "methodologyVersionLabel": "v6.34",
-  "eventCount": 34303,
-  "apiTotal": 34303
+  "eventCount": 34301,
+  "apiTotal": 34301
 }
