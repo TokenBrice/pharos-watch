@@ -391,6 +391,25 @@ describe("v10.05 direct compact runtime variant admission", () => {
     };
   }
 
+  it("keeps proof closure reuse pin-local and invocation-local", () => {
+    const profile = structuredClone(compactProfile());
+    const certificates = profile.executionCertificates!;
+    const klass = certificates.classes[0]!;
+    certificates.classes.push({
+      ...klass, id: "different-pin", memberRefs: [], compactMembers: [],
+      review: { ...klass.review, pin: { ...klass.review.pin, hash: `0x${"00".repeat(32)}` } },
+    });
+    const projections = compileReviewedMintControlScopes(profile, "alpha", SCOPE_CLOCK, 90 * 86400);
+    expect(projections[0]!.processDiagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "execution-class-unmatched", classId: "different-pin", field: "compactMembers.sourcePathRefs" }),
+    ]));
+    certificates.classes.pop();
+    expect(compileReviewedMintControlScopes(profile, "alpha", SCOPE_CLOCK, 90 * 86400)[0]!.processDiagnostics).toEqual([]);
+    certificates.evidence.find(row => row.id === "source")!.artificial = true;
+    expect(compileReviewedMintControlScopes(profile, "alpha", SCOPE_CLOCK, 90 * 86400)[0]!.processDiagnostics)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ code: "runtime-unmatched" })]));
+  });
+
   it.each(["unmatched-source", "unknown-proxy", "missing-implementation-hash", "code-only-match-proof"] as const)(
     "denies only the runtime admission gate for %s",
     (failure) => {

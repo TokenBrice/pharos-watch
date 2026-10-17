@@ -103,14 +103,10 @@ function* stringifyCanonicalChunks(value: unknown, shared?: SharedCanonicalValue
         const key = keys[index]!;
         stackValues.push(objectValue[key]);
         stackRaw.push(false);
-        stackValues.push(":");
+        // A property prefix is one raw token. Pushing its comma, quoted key
+        // and colon separately triples stack traffic for every object field.
+        stackValues.push(`${index > 0 ? "," : ""}${JSON.stringify(key)}:`);
         stackRaw.push(true);
-        stackValues.push(JSON.stringify(key));
-        stackRaw.push(true);
-        if (index > 0) {
-          stackValues.push(",");
-          stackRaw.push(true);
-        }
       }
       fragment = "{";
     }

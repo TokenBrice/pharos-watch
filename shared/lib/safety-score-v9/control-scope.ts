@@ -200,9 +200,13 @@ export function v1005ProofIsClosed(certificates: V1005ExecutionCertificates | un
         evidence.pin.position === pin.position && evidence.pin.hash === pin.hash);
     });
 }
-function v1005RuntimeIsMatched(runtime: V1005ExecutionMember["runtime"], certificates: V1005ExecutionCertificates, pin: V1005AuthorityGraph["review"]["pin"]): boolean {
+function v1005RuntimeIsMatched(
+  runtime: V1005ExecutionMember["runtime"], certificates: V1005ExecutionCertificates,
+  pin: V1005AuthorityGraph["review"]["pin"],
+  proofClosed: (ref: string, pin?: V1005AuthorityGraph["review"]["pin"]) => boolean,
+): boolean {
   if (runtime.runtimeHash === null || !["exact", "metadata-normalized", "immutable-normalized"].includes(runtime.sourceRuntimeMatch) ||
-      !v1005ProofIsClosed(certificates, runtime.matchProofRef, pin) || runtime.proxyKind === "unknown") return false;
+      !proofClosed(runtime.matchProofRef, pin) || runtime.proxyKind === "unknown") return false;
   const matchProof = certificates.proofs.find((proof) => proof.id === runtime.matchProofRef);
   if (!matchProof?.evidenceRefIds.some((id) => certificates.evidence.some((row) => row.id === id && row.kind === "verified-source"))) return false;
   const hashes = [[runtime.deployment, runtime.runtimeHash], ...(runtime.proxyKind === "none" ? [] : [[runtime.implementation, runtime.implementationRuntimeHash]])];
@@ -326,7 +330,22 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
   const memberMap = new Map(resolvedMembers.map((row) => [row.memberRef, row]));
   const censusMap = new Map(certificates?.censuses.map((row) => [row.id, row]));
   const nativeMembers = new Set(certificates?.censuses.filter((row) => row.kind !== "owner" && row.kind !== "admin").flatMap((row) => row.authoritativeMembers));
-  const proofClosed = (ref: string, pin?: V1005AuthorityGraph["review"]["pin"]) => v1005ProofIsClosed(certificates, ref, pin);
+  // Certificate rows and pins cannot change during this synchronous profile
+  // compilation. Repeated graph/class references reuse the exact verdict, not
+  // an unchecked proof; every distinct proof/pin pair still executes admission.
+  const proofClosureByPin = new Map<V1005AuthorityGraph["review"]["pin"] | undefined, Map<string, boolean>>();
+  const proofClosed = (ref: string, pin?: V1005AuthorityGraph["review"]["pin"]) => {
+    let verdicts = proofClosureByPin.get(pin);
+    if (verdicts === undefined) {
+      verdicts = new Map();
+      proofClosureByPin.set(pin, verdicts);
+    }
+    const prior = verdicts.get(ref);
+    if (prior !== undefined) return prior;
+    const closed = v1005ProofIsClosed(certificates, ref, pin);
+    verdicts.set(ref, closed);
+    return closed;
+  };
   const proofReferencesExist = (ref: string) => certificates?.proofs.some((proof) => proof.id === ref &&
     proof.evidenceRefIds.every((id) => certificates.evidence.some((evidence) => evidence.id === id))) === true;
   if (process && !certificates) add("process-certificate-unavailable", "executionCertificates");
@@ -358,7 +377,7 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
         add("execution-class-unmatched", "executionClassRef", ref, null, classRef.classId, classRef.memberRef);
       } else if (certificates) {
         for (const review of [klass.review, member.review]) if (!v1005ReviewIsCurrent(review, clockSec, maxAgeSec)) add("review-expired", "executionClassRef.review", ref, null, klass.id, ref);
-        if (!v1005RuntimeIsMatched(member.runtime, certificates, member.review.pin) || !klass.runtimeVariants.some((variant) =>
+        if (!v1005RuntimeIsMatched(member.runtime, certificates, member.review.pin, proofClosed) || !klass.runtimeVariants.some((variant) =>
           variant.proxyKind === member.runtime.proxyKind && (variant.runtimeHash === member.runtime.runtimeHash ||
             variant.normalizedRuntimeHash != null && variant.normalizedRuntimeHash === member.runtime.normalizedRuntimeHash) &&
           (variant.proxyKind === "none" || variant.implementationRuntimeHash === member.runtime.implementationRuntimeHash ||
@@ -438,7 +457,7 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
           !matchProof?.evidenceRefIds.some((id) => certificates.evidence.some((row) => row.id === id && row.kind === "verified-source")) ||
           !implementation || klass.runtimeVariants.some((candidate) => candidate !== implementation &&
             candidate.deployment === runtime.implementationIdentityRef) ||
-          !v1005RuntimeIsMatched(implementation, certificates, klass.review.pin)) matchedCloneVariants.delete(runtime);
+          !v1005RuntimeIsMatched(implementation, certificates, klass.review.pin, proofClosed)) matchedCloneVariants.delete(runtime);
     }
     for (const member of klass.compactMembers) {
       if (compactMembers.has(member.deployment) || memberMap.has(member.deployment)) add("authority-census-incomplete", "compactMembers.duplicate", null, null, klass.id, member.deployment);
@@ -455,7 +474,7 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
         runtime.implementationIdentityRef === member.immutables.original);
       const runtimeProofRef = variant?.matchProofRef ?? cloneVariant?.matchProofRef;
       if (member.codeHash === null || !codeRead || !runtimeProofRef || !proofClosed(runtimeProofRef, klass.review.pin)) add("runtime-unmatched", "compactMembers.codeHash", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
-      else if (variant && !v1005RuntimeIsMatched(variant, certificates, klass.review.pin)) add(variant.proxyKind === "none" ? "runtime-unmatched" : "implementation-unmatched", variant.proxyKind === "none" ? "compactMembers.codeHash" : "compactMembers.implementation", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
+      else if (variant && !v1005RuntimeIsMatched(variant, certificates, klass.review.pin, proofClosed)) add(variant.proxyKind === "none" ? "runtime-unmatched" : "implementation-unmatched", variant.proxyKind === "none" ? "compactMembers.codeHash" : "compactMembers.implementation", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       else if (!variant && cloneVariant && !matchedCloneVariants.has(cloneVariant)) add("implementation-unmatched", "compactMembers.implementation", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       if (bindings.length !== 1 || !bindings[0]?.projection.complete) add("authority-census-incomplete", "compactMembers.sourcePathRefs", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       if (bindings.length === 1) {
@@ -588,13 +607,13 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
         const identity = graph.runtimeIdentities?.find((row) => row.id === node.runtime!.ref);
         const runtime = identity && node.deployment ? { ...identity.identity, deployment: node.deployment, matchProofRef: identity.proofRef,
           evidenceRefIds: identity.evidenceRefIds, normalization: identity.identity.normalization.map((row) => ({ ...row, evidenceRefIds: identity.evidenceRefIds })) } : null;
-        if (!identity || !runtime || identity.id !== `0x${sha256Hex(stableJsonStringifyV1(identity.identity))}` || !v1005RuntimeIsMatched(runtime, certificates, graph.review.pin)) {
+        if (!identity || !runtime || identity.id !== `0x${sha256Hex(stableJsonStringifyV1(identity.identity))}` || !v1005RuntimeIsMatched(runtime, certificates, graph.review.pin, proofClosed)) {
           add("runtime-unmatched", `authorityGraph.nodes.${id}.runtime`, pathRef.controlRef, pathRef.pathId, null, memberRef, identity?.evidenceRefIds);
           return { closed: false, governorRooted: false, publicDelaySec: null };
         }
       } else if (node.kind === "contract" || node.kind === "timelock" || node.kind === "token-governor" || node.kind === "multisig" || node.kind === "fixed-program") {
         const member = node.deployment ? memberMap.get(node.deployment) : undefined;
-        if (!member || !v1005RuntimeIsMatched(member.runtime, certificates, graph.review.pin)) {
+        if (!member || !v1005RuntimeIsMatched(member.runtime, certificates, graph.review.pin, proofClosed)) {
           add("runtime-unmatched", `authorityGraph.nodes.${id}.runtime`, pathRef.controlRef, pathRef.pathId, member?.classId ?? null, memberRef, member?.runtime.evidenceRefIds);
           return { closed: false, governorRooted: false, publicDelaySec: null };
         }
