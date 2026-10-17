@@ -228,7 +228,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 
 1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`, `worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts`, or related provider modules
 2. this document for canonical pricing behavior
-3. [Supply Snapshot](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#supply-pipeline), [Depeg Detection](https://pharos.watch/docs/depeg-detection/#stage-2----confirmation), [Pharos Stability Index](https://pharos.watch/docs/stability-index/#cron--storage), or [Blacklist Tracker](https://pharos.watch/docs/blacklist-tracker/#blacklist-sync-state-semantics) when the corresponding pipeline semantics changed
+3. [Supply Snapshot](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#supply-pipeline), [Depeg Detection](https://pharos.watch/docs/depeg-detection/#stage-2----confirmation), [Pharos Stability Index](https://pharos.watch/docs/stability-index/#cron--storage), or [Blacklist Tracker](https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md#blacklist-sync-state-semantics) when the corresponding pipeline semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
 5. `shared/lib/methodology-versions/registry.ts` and the matching entry under `shared/data/methodology-changelogs/pricing-pipeline/` if methodology semantics changed
 6. [About Pharos](https://pharos.watch/about/) and `src/lib/about-content.ts` when externally visible data sources change
