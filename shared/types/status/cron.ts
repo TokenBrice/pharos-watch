@@ -42,7 +42,7 @@ export const ResourcePressureSchema = z.object({
   catalogAssets: ResourceCountSchema,
   intakeBasis: z.enum(["actual-stream", "unavailable"]),
   cacheBasis: z.enum(["intake-estimate", "declared-estimate", "mixed", "unavailable"]),
-  guard: z.enum(["not-measured", "within-policy", "cache-bypassed", "resource-budget-exceeded"]),
+  guard: z.enum(["not-measured", "within-policy", "approaching-resource-budget", "cache-bypassed", "resource-budget-exceeded"]),
   platformOutcome: z.enum(["platform-abandoned", "platform-interrupted"]).nullable(),
   platformOutcomeSource: z.literal("slot-reconciliation").nullable(),
   heapUsedBytes: z.null(),

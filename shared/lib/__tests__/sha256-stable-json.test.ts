@@ -47,6 +47,13 @@ describe("incremental SHA-256", () => {
 });
 
 describe("streamed stable JSON", () => {
+  it("preserves the exact V1 property byte order and punctuation", () => {
+    expect(stableJsonStringifyV1({
+      z: { missing: undefined, 'quoted"key': [false, null, {}, []] },
+      "2": "two", "10": "ten", a: -0,
+    })).toBe('{"10":"ten","2":"two","a":0,"z":{"quoted\\"key":[false,null,{},[]]}}');
+  });
+
   it("round-trips canonical data and hashes the exact serialized bytes", () => {
     const value = { z: ["é", 3, null], a: { enabled: true } };
     const canonical = stableJsonStringifyV1(value);

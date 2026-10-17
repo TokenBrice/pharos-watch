@@ -38,7 +38,7 @@ describe("Safety Score V9 compile admission", () => {
         intakeBasis: "unavailable", cacheBasis: "unavailable",
         platformOutcome: null, platformOutcomeSource: null,
         heapUsedBytes: null, heapUnavailableReason: "workers-runtime-no-heap-api",
-        guard: admitted ? "within-policy" : "resource-budget-exceeded",
+        guard: admitted ? "approaching-resource-budget" : "resource-budget-exceeded",
       },
     });
   });
@@ -51,6 +51,17 @@ describe("Safety Score V9 compile admission", () => {
     expect(assessSafetyScoreV9ResourceBudget({
       catalogAssets: 488, activeAssets: 397, inputBytes: null,
     })).toMatchObject({ admitted: true, resourcePressure: { inputBytes: null } });
+  });
+
+  it.each([
+    [null, true, "within-policy"],
+    [5_999_999, true, "within-policy"],
+    [6_000_000, true, "approaching-resource-budget"],
+    [8_000_000, true, "approaching-resource-budget"],
+    [8_000_001, false, "resource-budget-exceeded"],
+  ] as const)("reports input headroom at %s bytes without weakening admission", (inputBytes, admitted, guard) => {
+    expect(assessSafetyScoreV9ResourceBudget({ catalogAssets: 488, activeAssets: 397, inputBytes }))
+      .toMatchObject({ admitted, reason: admitted ? null : "resource-budget-exceeded", resourcePressure: { inputBytes, guard } });
   });
 
   it("keeps unmeasured producer fields null and assembles intake evidence", () => {

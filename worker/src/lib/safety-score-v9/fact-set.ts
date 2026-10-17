@@ -7,7 +7,7 @@ import {
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   V9AssetFactsV3Schema,
   V9EffectiveDependenciesV3Schema,
@@ -635,10 +635,10 @@ function compileSafetyScoreV9FactSetWithIsolation(
   }
   assertSafetyScoreV9ExactExtensionAssets(fixedInput, extension);
   // Keep the digest-only projection out of this frame while facts accumulate.
-  const researchPayloadSha256 = (() => domainDigest(
-    "safety-score-v9.research-overlay.v1",
-    projectResearchOverlayPayload(extension.assets),
-  ))();
+  const researchPayloadSha256 = (() => sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1({
+    domain: "safety-score-v9.research-overlay.v1",
+    payload: projectResearchOverlayPayload(extension.assets),
+  })))();
   const redemptionObservedAtSec =
     fixedInput.inputFreshness.redemptionBackstops.updatedAt ?? extension.sources.unavailableRedemptionObservedAtSec;
   const shockCoveragePayload = extension.assets.flatMap((asset) =>

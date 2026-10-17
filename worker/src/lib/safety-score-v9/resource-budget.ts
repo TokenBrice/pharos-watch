@@ -6,6 +6,7 @@ import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards
 // catalog or card inventory to satisfy these admission limits.
 const SAFETY_SCORE_V9_CATALOG_MAX_ASSETS = 488;
 const SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = 397;
+const SAFETY_SCORE_V9_INPUT_WARNING_RATIO = 0.75;
 
 export function assessSafetyScoreV9ResourceBudget(input: {
   catalogAssets: number;
@@ -31,7 +32,9 @@ export function assessSafetyScoreV9ResourceBudget(input: {
       catalogMaxAssets: SAFETY_SCORE_V9_CATALOG_MAX_ASSETS,
       inputBytes: input.inputBytes,
       catalogAssets: input.catalogAssets,
-      guard: admitted ? "within-policy" : "resource-budget-exceeded",
+      guard: !admitted ? "resource-budget-exceeded"
+        : input.inputBytes !== null && input.inputBytes >= REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES * SAFETY_SCORE_V9_INPUT_WARNING_RATIO
+          ? "approaching-resource-budget" : "within-policy",
     }),
   };
 }
