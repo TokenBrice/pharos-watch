@@ -559,6 +559,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/lib/cron-jobs.ts",
       "shared/lib/cron-cadences.ts",
       "shared/lib/scheduled-runner-registry.ts",
+      "shared/lib/public-dataset-snapshot-budget.ts",
+      "shared/lib/telegram-delivery-policy.ts",
       "shared/lib/time-constants.ts",
       "worker/wrangler.toml",
       "worker/wrangler.heavy.toml",

@@ -598,7 +598,7 @@ The baseline schema and migration manifest own column inventories; [retention](#
 
 ### In-flight Cron Progress
 
-`cron_run_progress` is diagnostic live state, not execution authority. Status exposes it only with an active matching lease; expired/orphan rows become stale artifacts. Slot heartbeats use `resolveScheduledSlotPolicy()`; child lease renewal is separate from slot heartbeats. `runCronWithLease` defaults to `heartbeatSec = max(15, floor(ttlSec / 3))` with `maxRenewFailures = 2`; the named long-running jobs in `PER_JOB_LEASE_OPTIONS` (`worker/src/handlers/scheduled/context.ts`) override that to 30 seconds and 3 consecutive failures. Terminal cleanup is invocation-fenced.
+`cron_run_progress` is diagnostic live state, not execution authority. Status exposes it only with an active matching lease; expired/orphan rows become stale artifacts. Slot heartbeats use `resolveScheduledSlotPolicy()`; child lease renewal is separate from slot heartbeats. `runCronWithLease` defaults to `heartbeatSec = max(15, floor(ttlSec / 3))` with `maxRenewFailures = 2`; long-running task descriptors in `shared/lib/scheduled-runner-registry.ts` carry the 30-second heartbeat / 3-consecutive-failure overrides consumed by `worker/src/handlers/scheduled/context.ts`. Terminal cleanup is invocation-fenced.
 
 Heartbeat writes retry D1 overloads; a queued write lasting a heartbeat period cannot suppress later ticks. Replacement CAS attempts require owner/generation/state and apply `MAX(updated_at, attempt timestamp)`, so delayed writes cannot move life evidence backwards. Stale/hard-dead thresholds remain those of the [slot policy](#cron-scheduling).
 
@@ -608,7 +608,7 @@ Stage transitions always persist; same-stage updates within 10 seconds coalesce.
 
 `logCronRun()` supplies the abort signal; exceeded ceilings log error and propagate cancellation through `fetchWithRetry()`. Jobs may stop admission earlier to preserve persistence/cleanup time; the wrapper remains authoritative if a bounded call runs late. An unstarted tail must retain its producer's deferred/degraded semantics, never silently vanish.
 
-[Worker and API Limits](../worker-and-api-limits.md#per-job-cron-timeouts) owns the timeout source index and cancellation semantics. `worker/src/lib/cron-timeouts.ts` derives ceilings from `CRON_JOB_DEFINITIONS` and `CRON_TIMEOUT_OVERRIDES_MS` and falls back to `DEFAULT_CRON_TIMEOUT_MS` for any job without an override; the runner contract test asserts only that every registry job has a finite positive budget, so a new job is auto-defaulted rather than rejected. Read source-owned producer budgets rather than a second timeout roster.
+[Worker and API Limits](../worker-and-api-limits.md#per-job-cron-timeouts) owns the timeout source index and cancellation semantics. `worker/src/lib/cron-timeouts.ts` projects each tracked job's ceiling from its canonical `ScheduledTaskDescriptor` in `shared/lib/scheduled-runner-registry.ts`. Slot task policies supply exceptions; descriptors otherwise carry `DEFAULT_CRON_TIMEOUT_MS`, so a new simple job is auto-defaulted rather than requiring another override-map edit. The runner contract tests cover every descriptor's timeout/lease policy, tracked-job projection and occurrence due gates. Read source-owned producer budgets rather than a second timeout roster.
 
 ### Circuit Breakers
 

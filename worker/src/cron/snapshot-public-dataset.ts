@@ -21,7 +21,7 @@ import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort"
 import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
-} from "../lib/public-dataset-snapshot-budget";
+} from "@shared/lib/public-dataset-snapshot-budget";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";

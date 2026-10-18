@@ -4,7 +4,7 @@
 
 ## Overview
 
-[Live Reserve Sync](../live-reserves.md) owns current interfaces. `worker/src/cron/sync-live-reserves.ts` produces evidence; `worker/src/handlers/scheduled/hourly-live-reserves.ts` orders consumers. `shared/lib/scheduled-runner-registry.ts` owns cadence/co-tenancy. Read a bounded family and its implementation; source reviews belong to reserve sidecars, exact captures to fixtures/manifests/retirement receipts.
+[Live Reserve Sync](../live-reserves.md) owns current interfaces. `worker/src/cron/sync-live-reserves.ts` produces evidence; `worker/src/handlers/scheduled/four-hourly-reserves.ts` orders consumers. `shared/lib/scheduled-runner-registry.ts` owns cadence/co-tenancy. Read a bounded family and its implementation; source reviews belong to reserve sidecars, exact captures to fixtures/manifests/retirement receipts.
 
 ## Metadata Contract
 

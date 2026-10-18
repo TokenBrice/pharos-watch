@@ -416,6 +416,7 @@
       "sources": [
         "shared/lib/cron-jobs.ts",
         "shared/lib/scheduled-runner-registry.ts",
+        "shared/lib/public-dataset-snapshot-budget.ts",
         "worker/wrangler.toml",
         "worker/wrangler.heavy.toml",
         "worker/src/index.heavy.ts",

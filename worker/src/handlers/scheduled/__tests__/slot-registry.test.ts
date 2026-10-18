@@ -30,7 +30,7 @@ const CAPABLE_RESULT_METADATA = JSON.stringify({
 const RUN_TIME_GATED_SLOTS: Partial<Record<CronScheduleKey, string>> = {
   fiveMinuteTelegramAlerts: "dispatch lanes gate on circuit state and stored pending work (five-minute-telegram.test.ts)",
   digestTriggerPoll: "digest jobs run only for trigger requests stored by an earlier slot (digest-trigger-poll.test.ts)",
-  fourHourlyReserveSync: "children resume only once the reserve queue checkpoint is exhausted (hourly-live-reserves.test.ts)",
+  fourHourlyReserveSync: "children resume only once the reserve queue checkpoint is exhausted (four-hourly-reserves.test.ts)",
 };
 
 const fixtures = createLatestSchemaFixtureTracker();

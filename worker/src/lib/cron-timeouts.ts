@@ -1,9 +1,9 @@
-import { TELEGRAM_DISPATCH_TIMEOUT_MS } from "@shared/lib/telegram-delivery-policy";
+import {
+  DEFAULT_CRON_TIMEOUT_MS,
+  getScheduledTaskDescriptor,
+} from "@shared/lib/scheduled-runner-registry";
 import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 
-import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
-
-export const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
 export const SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS = 15 * 60_000;
 export const SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS = 60_000;
 export const SCHEDULED_SLOT_JOB_BUDGET_MS =
@@ -44,38 +44,6 @@ export interface CronTimeoutBudgetMetadata {
   controlledErrorReserveMs?: number;
 }
 
-const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
-  // Keep app-level timeout below the platform wall-clock limit so we can log
-  // a controlled error instead of losing the invocation without a cron_runs row.
-  "sync-stablecoins": 8 * 60_000,
-  "reserve-recovery": 13 * 60_000,
-  "cron-sentinel": 13 * 60_000,
-  "sync-live-reserves": 12 * 60_000,
-  // The producer stops RPC work at eight minutes, leaving one minute to publish
-  // a complete quote generation and record the cron result.
-  "sync-cl-exit-depth": 9 * 60_000,
-  "sync-dex-liquidity-stage": 13 * 60_000,
-  "sync-dex-liquidity": 13 * 60_000,
-  "sync-dex-discovery": 13 * 60_000,
-  "sync-yield-data": 10 * 60_000,
-  "sync-yield-supplemental": 12 * 60_000,
-  "sync-blacklist": 12 * 60_000,
-  "sync-mint-burn": 10 * 60_000,
-  "sync-mint-burn-extended": 10 * 60_000,
-  // Telegram send loops stop admitting batches after four minutes. Leave
-  // 30 seconds for durable finalization, but fail before the next five-minute
-  // dispatch invocation can be suppressed by a still-renewing stalled lease.
-  "dispatch-telegram-alerts": TELEGRAM_DISPATCH_TIMEOUT_MS,
-  "snapshot-public-dataset": PUBLIC_DATASET_CRON_TIMEOUT_MS,
-  // Daily digest: Anthropic budget is 12 min, wrapper caps at 14 min to leave
-  // ~2 min for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
-  // before Cloudflare's 15-min scheduled-event ceiling.
-  "daily-digest": 14 * 60_000,
-  // Weekly uses the same Anthropic budget and two-channel publication tail as
-  // daily, so preserve the same post-LLM headroom.
-  "weekly-recap": 14 * 60_000,
-};
-
 /**
  * These status-tracked jobs are known short-lived control-plane/maintenance
  * work. Their terminal cron_runs row remains useful, but an in-flight
@@ -100,15 +68,10 @@ export function shouldSkipCronProgress(job: string): boolean {
     || job.endsWith("-watchdog");
 }
 
-const cronJobIds = new Set(CRON_JOB_DEFINITIONS.map((definition) => definition.job));
-for (const job of Object.keys(CRON_TIMEOUT_OVERRIDES_MS)) {
-  if (!cronJobIds.has(job)) {
-    throw new Error(`Cron timeout override references unknown job "${job}"`);
-  }
-}
-
 export const CRON_TIMEOUT_MS: Record<string, number> = Object.fromEntries(
-  CRON_JOB_DEFINITIONS.map(({ job }) => [job, CRON_TIMEOUT_OVERRIDES_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS]),
+  CRON_JOB_DEFINITIONS.map(({ job, scheduleKey }) => [
+    job, getScheduledTaskDescriptor(scheduleKey, job).timeoutMs,
+  ]),
 );
 
 function positiveFiniteMs(value: number | undefined, fallback: number): number {
