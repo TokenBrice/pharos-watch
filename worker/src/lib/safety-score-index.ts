@@ -4,9 +4,8 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { throwIfAborted } from "./abort";
-import { SAFETY_SCORE_V9_CACHE_KEYS } from "./safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
 import { publicationIdentityFromStorageEnvelope } from "./safety-score-v9/publication-codec";
-import { resolveSafetyScoreV9EffectivePublicationHealth } from "./report-cards-v9-cache";
 
 export interface SafetyScoreGradeSnapshot {
   lifecycle: "active";

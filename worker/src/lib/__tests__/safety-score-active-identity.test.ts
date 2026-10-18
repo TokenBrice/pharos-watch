@@ -8,7 +8,8 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
-import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-store";
+import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 import { loadActiveSafetyScoreIdentity } from "../safety-score-active-source";
 import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import { computeSafetyScoresSnapshot } from "../safety-scores";

@@ -5,7 +5,8 @@ import {
   GENIUS_FOREIGN_EXCEPTION_STATUS_LABELS,
   GENIUS_ISSUER_PATHWAY_LABELS,
 } from "@shared/lib/genius";
-import type { ComplianceRow, GeniusComplianceEvidence } from "@/lib/compliance-model";
+import type { ComplianceRow } from "@/lib/compliance-model";
+import type { GeniusComplianceEvidence } from "@/lib/compliance-evidence";
 import { ComplianceStatusBadge, EmptyCell } from "./compliance-row-primitives";
 
 type GeniusComplianceRow = Extract<ComplianceRow, { regime: "genius" }>;

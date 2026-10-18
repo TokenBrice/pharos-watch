@@ -9,6 +9,8 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
+import * as publicationHealth from "../safety-score-v9/publication-health";
+import * as publicationAttempts from "../safety-score-v9/publication-attempts";
 import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
@@ -42,14 +44,17 @@ vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => (
 vi.mock("../safety-score-v9/publication-store", async (importOriginal) => {
   const original = await importOriginal<typeof PublicationStore>();
   mocks.loadIdentity.mockImplementation(original.loadSafetyScoreV9PublicationIdentityEnvelope);
-  mocks.loadHealth.mockImplementation(original.loadSafetyScoreV9PublicationHealth);
   return {
     ...original,
     persistSafetyScoreV9Publication: mocks.persist,
     persistSafetyScoreV9PublicationAttempt: mocks.persistAttempt,
     loadSafetyScoreV9PublicationIdentityEnvelope: mocks.loadIdentity,
-    loadSafetyScoreV9PublicationHealth: mocks.loadHealth,
   };
+});
+vi.mock("../safety-score-v9/publication-health", async (importOriginal) => {
+  const original = await importOriginal<typeof publicationHealth>();
+  mocks.loadHealth.mockImplementation(original.loadSafetyScoreV9PublicationHealth);
+  return { ...original, loadSafetyScoreV9PublicationHealth: mocks.loadHealth };
 });
 vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal) => ({
   ...await importOriginal<typeof AcceptedProjectionReaders>(),
@@ -79,7 +84,7 @@ describe("Safety Score V9 publication runner", () => {
       const result = await runSafetyScoreV9Publication({ db, fixedInput, nowSec: fixedInput.clockSec });
       expect(result).toMatchObject({ status: "published", journal: { status: "failed", reason: "journal-write-failed", rows: 0 } });
       expect((await store.loadSafetyScoreV9Publication(db))?.publishedAtSec).toBe(fixedInput.clockSec);
-      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
+      expect((await publicationHealth.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
     } finally { sqlite.close(); }
   });
   it("publishes despite replay serialization failure and retains the previous generation pair", async () => {
@@ -121,7 +126,7 @@ describe("Safety Score V9 publication runner", () => {
         status: "failed", reason: failure === "upload" ? "capture-upload-failed" : "capture-index-write-failed",
       } });
       expect((await store.loadSafetyScoreV9Publication(db))?.publishedAtSec).toBe(fixedInput.clockSec);
-      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
+      expect((await publicationHealth.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
       expect(put).toHaveBeenCalledOnce();
     } finally { sqlite.close(); }
   });
@@ -201,7 +206,7 @@ describe("Safety Score V9 publication runner", () => {
     const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100 });
     try {
       await store.persistSafetyScoreV9Publication(db, currentInput(prior));
-      sqlite.prepare("DELETE FROM cache WHERE key = ?").run(store.SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline);
+      sqlite.prepare("DELETE FROM cache WHERE key = ?").run(publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline);
       const before = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
       const readers = await vi.importActual<typeof AcceptedProjectionReaders>("../safety-score-v9/accepted-projection-readers");
       mocks.loadBaseline.mockImplementation(readers.loadSafetyScoreV9AcceptedBaselineState);
@@ -211,11 +216,11 @@ describe("Safety Score V9 publication runner", () => {
         code: "safety-score-v9-accepted-baseline-projection-missing" });
       expect(mocks.build).not.toHaveBeenCalled();
       expect(mocks.persist).not.toHaveBeenCalled();
-      expect((await store.loadSafetyScoreV9FailedPublicationAttempt(db))?.failure?.code).toBe(
+      expect((await publicationAttempts.loadSafetyScoreV9FailedPublicationAttempt(db))?.failure?.code).toBe(
         "safety-score-v9-accepted-baseline-projection-missing",
       );
       for (const row of before) {
-        if (row.key === store.SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt) continue;
+        if (row.key === publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt) continue;
         expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key = ?").get(row.key)).toEqual(row);
       }
     } finally { sqlite.close(); }
@@ -713,7 +718,7 @@ describe("Safety Score V9 publication runner", () => {
         abortCause: { source: "caller", name: "AbortError", message: "cancelled" },
       });
       expect(mocks.persistAttempt.mock.calls[0]![1].signal.aborted).toBe(false);
-      expect(await store.loadSafetyScoreV9FailedPublicationAttempt(db)).toMatchObject({
+      expect(await publicationAttempts.loadSafetyScoreV9FailedPublicationAttempt(db)).toMatchObject({
         outcome: "failed", failure: {
           stage: "base-input", abortCause: { source: "caller", name: "AbortError" },
           phaseElapsedMs: { compile: null },
@@ -828,7 +833,9 @@ describe("Safety Score V9 publication runner", () => {
     const batch = db.batch.bind(db);
     const batchSpy = vi.spyOn(db, "batch").mockImplementation(async (statements) => {
       const result = await batch(statements);
-      caller.abort(new DOMException("cancelled after commit", "AbortError"));
+      if (sqlite.prepare("SELECT 1 FROM cache WHERE key = ?").get(publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publication)) {
+        caller.abort(new DOMException("cancelled after commit", "AbortError"));
+      }
       return result;
     });
     mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
@@ -839,7 +846,7 @@ describe("Safety Score V9 publication runner", () => {
         warnings: ["publication-committed-before-post-commit-failure"],
         abortCause: { source: "caller" }, phaseElapsedMs: { persist: expect.any(Number) },
       });
-      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
+      expect((await publicationHealth.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
       expect(mocks.persistAttempt).not.toHaveBeenCalled();
     } finally { batchSpy.mockRestore(); sqlite.close(); }
   });
@@ -873,8 +880,11 @@ describe("Safety Score V9 publication runner", () => {
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const batch = db.batch.bind(db);
     const batchSpy = vi.spyOn(db, "batch").mockImplementation(async (statements) => {
-      await batch(statements);
-      throw new Error("D1 response lost after commit");
+      const result = await batch(statements);
+      if (sqlite.prepare("SELECT 1 FROM cache WHERE key = ?").get(publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publication)) {
+        throw new Error("D1 response lost after commit");
+      }
+      return result;
     });
     mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
     try {
@@ -888,7 +898,7 @@ describe("Safety Score V9 publication runner", () => {
       const recoverySignal = mocks.loadIdentity.mock.calls[0]![1];
       expect(recoverySignal).toBeInstanceOf(AbortSignal);
       expect(recoverySignal!.aborted).toBe(false);
-      expect(mocks.loadHealth.mock.calls[0]![1]).toBe(recoverySignal);
+      expect(mocks.loadHealth.mock.lastCall![1]).toBe(recoverySignal);
       expect(mocks.persistAttempt).not.toHaveBeenCalled();
     } finally {
       batchSpy.mockRestore(); sqlite.close();
@@ -929,7 +939,7 @@ describe("Safety Score V9 publication runner", () => {
         abortCause: { source: "caller" },
         journal: { status: "skipped", reason: "post-commit-interrupted" },
       });
-      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("held");
+      expect((await publicationHealth.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("held");
       expect(mocks.persistAttempt).not.toHaveBeenCalled();
     } finally { sqlite.close(); }
   });

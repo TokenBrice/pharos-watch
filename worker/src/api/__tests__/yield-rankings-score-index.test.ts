@@ -8,7 +8,8 @@ import { YieldRankingsResponseSchema, YieldRankingsCoinResponseSchema, type Yiel
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
-import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
+import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import * as scoreIndex from "../../lib/safety-score-index";
 import { handleYieldRankings, handleYieldRankingsCoin } from "../yield-rankings-cache";

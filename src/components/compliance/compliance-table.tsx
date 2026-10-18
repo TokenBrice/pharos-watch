@@ -13,10 +13,9 @@ import {
 import { cn } from "@/lib/utils";
 import {
   groupComplianceRowsIntoBands,
-  loadGeniusComplianceEvidence,
   type ComplianceRow,
-  type GeniusComplianceEvidence,
 } from "@/lib/compliance-model";
+import { loadGeniusComplianceEvidence, type GeniusComplianceEvidence } from "@/lib/compliance-evidence";
 import {
   GeniusAuthorityCell,
   GeniusPathwayCell,

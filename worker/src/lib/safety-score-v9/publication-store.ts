@@ -4,11 +4,9 @@ import {
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import { z } from "zod";
 import { throwIfAborted } from "../abort";
 import { getCache } from "../db-cache";
 import { executeAtomicBatch } from "../db";
-import { parseJson } from "../json-parse";
 import { logWorkerEvent } from "../structured-log";
 import {
   parseSafetyScoreV9Publication,
@@ -22,284 +20,15 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
-import { buildV9PublicMaterialization, v9PublicMaterializationStatements, type V9PublicMaterialization } from "../report-cards-v9-materialization";
-
-export const SAFETY_SCORE_V9_CACHE_KEYS = {
-  publication: "report-cards:v9",
-  scoreIndex: "report-cards:v9:score-index",
-  acceptedBaseline: "report-cards:v9:accepted-baseline:v1",
-  lenderCollateral: "report-cards:v9:lender-collateral:v1",
-  publicationHealth: "report-cards:v9:publication-health",
-  publicationAttempt: "report-cards:v9:last-attempt",
-  failedPublicationAttempt: "report-cards:v9:last-failed-attempt",
-} as const;
-
-const V9QuarantineMessageSchema = z.string().min(1).max(500);
-const V9AssetQuarantineCodeSchema = z.enum([
-  "fact-build-failed",
-  "fact-validation-failed",
-  "evaluation-failed",
-]);
-const V9AssetQuarantineSchema = z
-  .object({
-    assetId: z.string().min(1),
-    code: V9AssetQuarantineCodeSchema,
-    message: V9QuarantineMessageSchema,
-  })
-  .strict();
-// Records persisted before quarantine causes were recorded lack `message`.
-// They stay readable (the failed-attempt key may never be rewritten) and are
-// normalized to V9PublicationAttempt with this placeholder.
-const LEGACY_QUARANTINE_MESSAGE = "cause not recorded (legacy record)";
-const V9StoredAssetQuarantineSchema = z
-  .object({
-    assetId: z.string().min(1),
-    code: V9AssetQuarantineCodeSchema,
-    message: V9QuarantineMessageSchema.optional(),
-  })
-  .strict();
-const V9PublicationPhaseElapsedMsSchema = z.object({
-  enrichment: z.number().nonnegative().nullable(),
-  baselineLoad: z.number().nonnegative().nullable(),
-  compile: z.number().nonnegative().nullable(),
-  assess: z.number().nonnegative().nullable(),
-  serialize: z.number().nonnegative().nullable(),
-  persist: z.number().nonnegative().nullable(),
-  journal: z.number().nonnegative().nullable(),
-  archive: z.number().nonnegative().nullable(),
-}).strict();
-export type V9PublicationPhaseElapsedMs = z.infer<typeof V9PublicationPhaseElapsedMsSchema>;
-const V9PublicationAbortCauseSchema = z.object({
-  source: z.enum(["caller", "publication-deadline"]),
-  name: z.string().min(1).max(80),
-  message: z.string().max(500),
-}).strict();
-export type V9PublicationAbortCause = z.infer<typeof V9PublicationAbortCauseSchema>;
-
-const V9PublicationAttemptFailureSchema = z
-  .object({
-    stage: z.enum([
-      "base-input",
-      "v9-enrichment",
-      "compile",
-      "publication-gate",
-      "publication-write",
-      "assess",
-      "serialize",
-      "journal",
-      "archive",
-      "alert-envelope",
-      "aborted",
-    ]),
-    code: z.string().min(1).max(160),
-    message: z.string().min(1).max(500),
-    phaseElapsedMs: V9PublicationPhaseElapsedMsSchema.optional(),
-    phaseTimingBasis: z.literal("workers-io-boundary-attributed").optional(),
-    abortCause: V9PublicationAbortCauseSchema.nullable().optional(),
-  })
-  .strict();
-
-function buildPublicationAttemptSchema<
-  Q extends z.ZodType<{ assetId: string }>,
->(quarantineSchema: Q) {
-  return z
-    .object({
-      schemaVersion: z.literal(1),
-      attemptedAtSec: z.number().int().nonnegative(),
-      outcome: z.enum([
-        "published-clean",
-        "published-partial",
-        "held",
-        "failed",
-      ]),
-      publicationGenerationId: z.string().min(1).nullable(),
-      quarantines: z.array(quarantineSchema),
-      affectedAssetIds: z.array(z.string().min(1)),
-      failure: V9PublicationAttemptFailureSchema.optional(),
-    })
-    .strict()
-    .superRefine((attempt, ctx) => {
-      for (const [path, ids] of [
-        [
-          "quarantines",
-          attempt.quarantines.map((quarantine) => quarantine.assetId),
-        ],
-        ["affectedAssetIds", attempt.affectedAssetIds],
-      ] as const) {
-        if (
-          new Set(ids).size !== ids.length ||
-          ids.some(
-            (assetId, index) =>
-              index > 0 && ids[index - 1]! >= assetId,
-          )
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: [path],
-            message: `${path} must be unique and sorted`,
-          });
-        }
-      }
-      const affected = new Set(attempt.affectedAssetIds);
-      if (
-        attempt.quarantines.some(
-          (quarantine) => !affected.has(quarantine.assetId),
-        )
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["affectedAssetIds"],
-          message: "Affected assets must include every quarantine",
-        });
-      }
-      const published = attempt.outcome.startsWith("published-");
-      if (published !== (attempt.publicationGenerationId !== null)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["publicationGenerationId"],
-          message:
-            "Only published attempts carry a publication generation",
-        });
-      }
-      if (
-        attempt.outcome === "published-clean" &&
-        (attempt.quarantines.length > 0 ||
-          attempt.affectedAssetIds.length > 0)
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["outcome"],
-          message: "A clean publication cannot carry affected assets",
-        });
-      }
-      if (
-        attempt.outcome === "published-partial" &&
-        attempt.affectedAssetIds.length === 0
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["affectedAssetIds"],
-          message: "A partial publication requires affected assets",
-        });
-      }
-      if ((attempt.outcome === "failed") !== (attempt.failure !== undefined)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["failure"],
-          message: "Only failed attempts must carry failure metadata",
-        });
-      }
-    });
-}
-const V9PublicationAttemptSchema = buildPublicationAttemptSchema(
-  V9AssetQuarantineSchema,
-);
-const V9StoredPublicationAttemptSchema = buildPublicationAttemptSchema(
-  V9StoredAssetQuarantineSchema,
-);
-export type V9PublicationAttempt = z.infer<
-  typeof V9PublicationAttemptSchema
->;
+import { stageV9PublicMaterialization, v9StagedPublicMaterializationStatements, type V9StagedPublicMaterialization } from "../report-cards-v9-materialization";
+import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
+import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
 
 class SafetyScoreV9PublicationConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SafetyScoreV9PublicationConflictError";
   }
-}
-
-function parseCanonicalJson<T>(
-  raw: string,
-  schema: z.ZodType<T>,
-  label: string,
-): T {
-  const parsed = parseJson(raw);
-  if (!parsed.ok) throw new Error(`Malformed ${label} JSON: ${parsed.message}`);
-  const value = schema.parse(parsed.value);
-  if (stableJsonStringifyV1(value) !== raw) {
-    throw new Error(`${label} JSON is not canonical`);
-  }
-  return value;
-}
-
-export async function loadSafetyScoreV9PublicationHealth(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<V9PublicationHealth | null> {
-  const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, signal);
-  if (!row) return null;
-  return parseSafetyScoreV9PublicationHealthCache(row);
-}
-
-/** Strict health decoding kept separate from I/O for provenance-aware readers. */
-export function parseSafetyScoreV9PublicationHealthCache(
-  row: { value: string; updatedAt: number },
-): V9PublicationHealth {
-  const parsed = parseJson(row.value);
-  if (!parsed.ok) throw new Error(`Malformed Safety Score v9 publication health JSON: ${parsed.message}`);
-  if (parsed.value !== null && typeof parsed.value === "object" &&
-      "schemaVersion" in parsed.value && parsed.value.schemaVersion === 1) {
-    throw new SafetyScoreV9SchemaCutoverPendingError("health", row.updatedAt);
-  }
-  const health = V9PublicationHealthSchema.parse(parsed.value);
-  if (stableJsonStringifyV1(health) !== row.value) {
-    throw new Error("Safety Score v9 publication health JSON is not canonical");
-  }
-  if (row.updatedAt !== health.attemptedAtSec) {
-    throw new Error(
-      "Safety Score v9 publication health cache timestamp mismatch",
-    );
-  }
-  return health;
-}
-
-async function loadSafetyScoreV9PublicationAttemptAtKey(
-  db: D1Database,
-  key: string,
-  signal?: AbortSignal,
-): Promise<V9PublicationAttempt | null> {
-  const row = await getCache(db, key, signal);
-  if (!row) return null;
-  const stored = parseCanonicalJson(
-    row.value,
-    V9StoredPublicationAttemptSchema,
-    "Safety Score v9 publication attempt",
-  );
-  if (row.updatedAt !== stored.attemptedAtSec) {
-    throw new Error(
-      "Safety Score v9 publication attempt cache timestamp mismatch",
-    );
-  }
-  const attempt: V9PublicationAttempt = {
-    ...stored,
-    quarantines: stored.quarantines.map((quarantine) => ({
-      ...quarantine,
-      message: quarantine.message ?? LEGACY_QUARANTINE_MESSAGE,
-    })),
-  };
-  return attempt;
-}
-
-export async function loadSafetyScoreV9PublicationAttempt(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<V9PublicationAttempt | null> {
-  return loadSafetyScoreV9PublicationAttemptAtKey(
-    db,
-    SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
-    signal,
-  );
-}
-
-export async function loadSafetyScoreV9FailedPublicationAttempt(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<V9PublicationAttempt | null> {
-  return loadSafetyScoreV9PublicationAttemptAtKey(
-    db,
-    SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt,
-    signal,
-  );
 }
 
 export async function loadSafetyScoreV9Publication(
@@ -494,7 +223,7 @@ export async function persistSafetyScoreV9Publication(
   let publicationValue: string | null = null;
   let scoreIndexValue: string | null = null;
   let acceptedProjections: { baseline: string; lender: string } | null = null;
-  let publicMaterialization: V9PublicMaterialization | null = null;
+  let publicMaterialization: V9StagedPublicMaterialization | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
@@ -517,7 +246,7 @@ export async function persistSafetyScoreV9Publication(
       );
     }
     publicationValue = stored;
-    publicMaterialization = buildV9PublicMaterialization(publication, health, JSON.parse(stored).payloadSha256);
+    publicMaterialization = await stageV9PublicMaterialization(db, publication, health, JSON.parse(stored).payloadSha256, input.signal);
     if (!input.buildAcceptedProjections) {
       throw new Error("Accepted Safety Score v9 publication requires projection builders");
     }
@@ -646,7 +375,7 @@ export async function persistSafetyScoreV9Publication(
       acceptedProjections!.lender,
       input.publicationClockSec,
     ));
-    statements.push(...v9PublicMaterializationStatements(db, publicMaterialization!));
+    statements.push(...v9StagedPublicMaterializationStatements(db, publicMaterialization!));
     if (input.publicationReplayCaptureValue !== undefined) {
       statements.push(cacheStatement.bind(
         SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,

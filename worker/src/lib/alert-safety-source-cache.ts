@@ -20,7 +20,7 @@ import type { ActiveSafetyScoreSource } from "./safety-score-active-source";
 import {
   SAFETY_SCORE_V9_CACHE_KEYS,
   parseSafetyScoreV9PublicationHealthCache,
-} from "./safety-score-v9/publication-store";
+} from "./safety-score-v9/publication-health";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 
 const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v2";

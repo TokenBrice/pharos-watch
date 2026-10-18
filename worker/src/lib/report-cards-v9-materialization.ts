@@ -10,9 +10,9 @@ import {
 import { SafetyScoreV9ResolvedCurrentCardSchema, type SafetyScoreV9CurrentCard, type SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { buildReportCardsV9DependencyGraph, ReportCardsV9DependencyGraphSchema, type V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
-import { projectSafetyScoreV9PublicationForMaterialization, resolveSafetyScoreV9EffectivePublicationHealth } from "./report-cards-v9-cache";
+import { projectSafetyScoreV9PublicationForMaterialization } from "./report-cards-v9-cache";
 import { SafetyScoreV9StorageMetadataSchema, SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES, parseSafetyScoreV9Publication, publicationIdentityFromStorageEnvelope } from "./safety-score-v9/publication-codec";
-import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache } from "./safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "./db";
 import { sha256HexFromUtf8Chunks } from "./hash";
 import { getCache } from "./db-cache";
@@ -20,13 +20,18 @@ import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-pro
 import type { ReportCardsV9ProjectionSource, ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import { acquireCronLease, releaseCronLease } from "./cron-lease-primitives";
 import { loadActiveSafetyScoreIndex } from "./safety-score-index";
+import { throwIfAborted } from "./abort";
 
 type SiteMaterialization = { key: string; artifact: V9PublicMaterialization };
 
 export interface V9PublicMaterialization {
   manifest: V9PublicRepresentationManifest;
   fragments: string[];
-  site?: SiteMaterialization[];
+}
+
+export interface V9StagedPublicMaterialization {
+  manifest: V9PublicRepresentationManifest;
+  siteCount: number;
 }
 
 export class V9PublicMaterializationUnavailableError extends Error {
@@ -37,24 +42,109 @@ export class V9PublicMaterializationUnavailableError extends Error {
 const unavailable = (reason: string): never => { throw new V9PublicMaterializationUnavailableError(reason); };
 const V9_MATERIALIZATION_REPAIR_LEASE_SEC = 60;
 
-/** The only whole-cohort admission is at production/repair, never on a hit. */
-export function buildV9PublicMaterialization(
+/** Admit the cohort once, then expand/serialize only one representation at a time. */
+function* buildV9PublicMaterializations(
   publication: SafetyScoreV9CurrentResponse,
   health: V9PublicationHealth,
   payloadSha256: string,
-): V9PublicMaterialization {
+): Generator<V9PublicMaterialization> {
   const snapshot = projectSafetyScoreV9PublicationForMaterialization(publication, health);
-  const artifact = buildMaterialization(snapshot, publication, payloadSha256);
+  yield buildMaterialization(snapshot, publication, payloadSha256);
   const table = projectV9Table(snapshot);
-  artifact.site = [{ key: "table", artifact: buildMaterialization(table, publication, payloadSha256) }];
-  let siteBytes = artifact.site[0]!.artifact.manifest.bytes;
-  for (const card of snapshot.cards) {
-    const detail = buildMaterialization(projectV9Detail(snapshot, card.id, table.dependencyGraph), publication, payloadSha256);
-    siteBytes += detail.manifest.bytes;
+  let siteBytes = 0;
+  const boundedSite = (artifact: V9PublicMaterialization) => {
+    siteBytes += artifact.manifest.bytes;
     if (siteBytes > 64 * 1024 * 1024) throw new Error("v9-site-materializations-oversized");
-    artifact.site.push({ key: `coin:${card.id}`, artifact: detail });
+    return artifact;
+  };
+  yield boundedSite(buildMaterialization(table, publication, payloadSha256));
+  for (const card of snapshot.cards) {
+    yield boundedSite(buildMaterialization(projectV9Detail(snapshot, card.id, table.dependencyGraph), publication, payloadSha256));
   }
-  return artifact;
+}
+
+/**
+ * Immutable, unselected rows can be staged before acceptance. Only the final
+ * canonical-pointer transaction makes them readable. Keep at most one artifact,
+ * and bind at most four fragments (1 MiB) per write; release bodies after IO.
+ */
+export async function stageV9PublicMaterialization(
+  db: D1Database,
+  publication: SafetyScoreV9CurrentResponse,
+  health: V9PublicationHealth,
+  payloadSha256: string,
+  signal?: AbortSignal,
+): Promise<V9StagedPublicMaterialization> {
+  let manifest: V9PublicRepresentationManifest | undefined;
+  let siteCount = 0;
+  for (const artifact of buildV9PublicMaterializations(publication, health, payloadSha256)) {
+    throwIfAborted(signal);
+    const m = artifact.manifest;
+    const key = m.representationKey;
+    const now = Math.floor(Date.now() / 1000);
+    for (let offset = 0; offset < artifact.fragments.length; offset += 4) {
+      const identity = [m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256];
+      const manifestStatement = key === undefined
+        ? db.prepare(`INSERT OR IGNORE INTO safety_score_public_manifests
+          (generation_id, projection_version, payload_sha256, manifest, created_at, retired_at)
+          VALUES (?, ?, ?, ?, ?, ?)`).bind(...identity, stableJsonStringifyV1(m), now, now)
+        : db.prepare(`INSERT OR IGNORE INTO safety_score_site_manifests
+          (generation_id, projection_version, payload_sha256, representation_key, manifest, created_at, retired_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(...identity, key, stableJsonStringifyV1(m), now, now);
+      const rows = artifact.fragments.slice(offset, offset + 4).map((body, index) =>
+        key === undefined ? [...identity, offset + index, body] : [...identity, key, offset + index, body]);
+      await executeAtomicBatch(db, [
+        manifestStatement,
+        ...prepareMultiRowInsertStatements(db, key === undefined
+          ? `INSERT OR IGNORE INTO safety_score_public_fragments
+            (generation_id, projection_version, payload_sha256, ordinal, body)`
+          : `INSERT OR IGNORE INTO safety_score_site_fragments
+            (generation_id, projection_version, payload_sha256, representation_key, ordinal, body)`, rows),
+      ], { signal });
+      artifact.fragments.fill("", offset, offset + 4);
+    }
+    artifact.fragments.length = 0;
+    if (key === undefined) manifest = m;
+    else siteCount++;
+  }
+  if (!manifest) throw new Error("v9-public-materialization-missing");
+  return { manifest, siteCount };
+}
+
+/** Select only a fully staged generation inside the canonical acceptance fence. */
+export function v9StagedPublicMaterializationStatements(
+  db: D1Database, staged: V9StagedPublicMaterialization,
+): D1PreparedStatement[] {
+  const m = staged.manifest;
+  const identity = [m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256];
+  const now = Math.floor(Date.now() / 1000);
+  const statements = [db.prepare(`UPDATE cache SET value = CASE WHEN
+    (SELECT count(*) FROM safety_score_public_manifests
+      WHERE generation_id = ? AND projection_version = ? AND payload_sha256 = ?) = 1
+    AND (SELECT count(*) FROM safety_score_public_fragments
+      WHERE generation_id = ? AND projection_version = ? AND payload_sha256 = ?) = ?
+    AND (SELECT count(*) FROM safety_score_site_manifests
+      WHERE generation_id = ? AND projection_version = ? AND payload_sha256 = ?) = ?
+    AND NOT EXISTS (SELECT 1 FROM safety_score_site_manifests m
+      WHERE m.generation_id = ? AND m.projection_version = ? AND m.payload_sha256 = ?
+      AND (SELECT count(*) FROM safety_score_site_fragments f
+        WHERE f.generation_id = m.generation_id AND f.projection_version = m.projection_version
+          AND f.payload_sha256 = m.payload_sha256 AND f.representation_key = m.representation_key)
+        != json_array_length(m.manifest, '$.fragments'))
+    THEN value ELSE NULL END WHERE key = ?`)
+    .bind(...identity, ...identity, m.fragments.length, ...identity, staged.siteCount, ...identity, SAFETY_SCORE_V9_CACHE_KEYS.publication)];
+  for (const table of ["safety_score_public_manifests", "safety_score_site_manifests"] as const) {
+    // SAFETY: Table identifiers come only from the fixed literal list above.
+    statements.push(db.prepare(`UPDATE ${table} SET retired_at = CASE
+      WHEN generation_id = ? AND projection_version = ? AND payload_sha256 = ? THEN NULL
+      ELSE coalesce(retired_at, ?) END
+      WHERE retired_at IS NULL OR (generation_id = ? AND projection_version = ? AND payload_sha256 = ?)`)
+      .bind(...identity, now, ...identity));
+    // SAFETY: Table identifiers come only from the fixed literal list above.
+    statements.push(db.prepare(`DELETE FROM ${table} WHERE retired_at < ? AND generation_id != ?`)
+      .bind(now - V9_PUBLIC_READ_GRACE_SEC, m.safetyScoreIdentity.publicationGenerationId));
+  }
+  return statements;
 }
 
 function buildMaterialization(
@@ -64,7 +154,7 @@ function buildMaterialization(
 ): V9PublicMaterialization {
   const encoder = new TextEncoder();
   const fragments: string[] = [];
-  let pending = "";
+  let pending: string[] = [];
   let pendingBytes = 0;
   let totalBytes = 0;
   const append = (text: string) => {
@@ -79,11 +169,11 @@ function buildMaterialization(
       totalBytes += bytes;
       if (totalBytes > V9_PUBLIC_REPRESENTATION_MAX_BYTES) throw new Error("v9-public-representation-oversized");
       if (pendingBytes + bytes > V9_PUBLIC_FRAGMENT_MAX_BYTES) {
-        fragments.push(pending);
-        pending = "";
+        fragments.push(pending.join(""));
+        pending = [];
         pendingBytes = 0;
       }
-      pending += piece;
+      pending.push(piece);
       pendingBytes += bytes;
       start = end;
     }
@@ -115,7 +205,7 @@ function buildMaterialization(
     }
   }
   append("}");
-  if (pending.length) fragments.push(pending);
+  if (pending.length) fragments.push(pending.join(""));
   if (fragments.length > V9_PUBLIC_REPRESENTATION_MAX_FRAGMENTS) throw new Error("v9-public-representation-too-many-fragments");
   const manifest = V9PublicRepresentationManifestSchema.parse({
     version: V9_PUBLIC_REPRESENTATION_VERSION,
@@ -148,14 +238,12 @@ export function v9PublicMaterializationStatements(db: D1Database, artifact: V9Pu
       .bind(now, m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256),
     db.prepare(`DELETE FROM safety_score_public_manifests WHERE retired_at < ?
       AND generation_id != ?`).bind(now - V9_PUBLIC_READ_GRACE_SEC, m.safetyScoreIdentity.publicationGenerationId),
-    ...siteMaterializationStatements(db, artifact.site ?? []),
   ];
 }
 
 function siteMaterializationStatements(db: D1Database, representations: SiteMaterialization[]): D1PreparedStatement[] {
   const now = Math.floor(Date.now() / 1000);
-  // Batch across representations, not once per coin: the acceptance transaction
-  // has the same 100-statement ceiling as every other fenced D1 write.
+  // Repair writes only the requested representation.
   const manifestRows: (string | number)[][] = [];
   const fragmentRows: (string | number)[][] = [];
   for (const { key, artifact } of representations) {

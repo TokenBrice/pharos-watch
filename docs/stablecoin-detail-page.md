@@ -268,6 +268,8 @@ Only `selectFailureScenario` in `shared/lib/failure-scenarios.ts` may admit the 
 
 Keep `#explore` and legacy `#explore-next` distinct as outer zone and inner section. `src/lib/stablecoin-detail-hero-view-model.ts` and the shared primary-comparison helper own comparison selection: USDe hands off to its sUSDe brief, registered pairs retain their canonical brief and unknown pairs fall back to the live tool. A generic `/compare/` link means browse comparisons, not activation of a watchlist preset. Infrastructure/cohort links derive from the supported registry, not handwritten classification.
 
+Compact taxonomy, tracker and action links cross their interactive boundary as URL/label pairs, not repeated server-rendered icon/span trees in each route's RSC payload. They still render complete crawlable HTML during static export and retain intent-only prefetch.
+
 ---
 
 ## Fallback And Staleness Rules

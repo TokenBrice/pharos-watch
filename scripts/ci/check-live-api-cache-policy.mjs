@@ -114,7 +114,8 @@ export async function runLiveApiCachePolicyCheck({
 runDirectCli(import.meta.url, async () => {
   const { values } = parseStrictCliArgs(process.argv.slice(2));
   if (values.help) {
-    console.log("Usage: node scripts/ci/check-live-api-cache-policy.mjs\nRead-only public GET cache-policy checks on direct API and same-origin site-data; no secrets required.");
+    console.log("Usage: node scripts/ci/check-live-api-cache-policy.mjs");
+    console.log("Read-only public GET cache-policy checks on direct API and same-origin site-data; no secrets required.");
     return;
   }
   const report = await runLiveApiCachePolicyCheck();

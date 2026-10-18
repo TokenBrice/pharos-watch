@@ -16,7 +16,8 @@ import { buildSafetyScoreV9PegProvenanceSeedCacheEntry, captureSafetyScoreV9PegP
 import { buildSafetyScoreV9CaptureControl, commitCaptureControl, hasPendingAttribution } from "../safety-score-v9/capture-control";
 import { appendSupplyAttributionJournalV1 } from "../safety-score-v9/supply-attribution-journal-store";
 import { computeSafetyScoreV9 } from "../../cron/compute-safety-score-v9";
-import { loadSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-store";
+import { loadSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY, parsePersistedAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
 import { parseNativeV9InputCacheArtifact } from "../safety-score-v9/native-input";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";

@@ -2,6 +2,7 @@ import { IntentLink } from "@/components/intent-link";
 import { ArrowRight } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import { ExploreNextLink } from "@/components/stablecoin-detail/explore-next-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   BACKING_LABELS,
@@ -49,20 +50,6 @@ interface ExploreNextSectionProps {
   logos: Record<string, string>;
 }
 
-function CompactLink({ href, label }: { href: string; label: string }) {
-  return (
-    <IntentLink
-      href={href}
-      className="pharos-focus-ring group flex min-h-9 items-center justify-between gap-3 rounded-sm py-1.5 text-sm text-foreground/85 transition-colors hover:text-foreground"
-    >
-      <span className="min-w-0 truncate">{label}</span>
-      <ArrowRight
-        aria-hidden="true"
-        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
-      />
-    </IntentLink>
-  );
-}
 
 export function ExploreNextSection({ coin, related, staticComparisonPages, logos }: ExploreNextSectionProps) {
   const firstInfrastructure = coin.infrastructures?.[0];
@@ -241,7 +228,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
           <p className="pharos-label">Taxonomy</p>
           <div className="-my-1 flex flex-col">
             {taxonomyLinks.map((link) => (
-              <CompactLink key={link.href} href={link.href} label={link.label} />
+              <ExploreNextLink key={link.href} href={link.href} label={link.label} />
             ))}
           </div>
         </div>
@@ -250,7 +237,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
           <p className="pharos-label">Trackers</p>
           <div className="-my-1 flex flex-col">
             {trackerLinks.map((link) => (
-              <CompactLink key={link.href} href={link.href} label={link.label} />
+              <ExploreNextLink key={link.href} href={link.href} label={link.label} />
             ))}
           </div>
         </div>
@@ -259,7 +246,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
           <p className="pharos-label">Actions</p>
           <div className="-my-1 flex flex-col">
             {actionLinks.map((link) => (
-              <CompactLink key={link.href} href={link.href} label={link.label} />
+              <ExploreNextLink key={link.href} href={link.href} label={link.label} />
             ))}
           </div>
         </div>

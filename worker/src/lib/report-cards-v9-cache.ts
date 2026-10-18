@@ -11,10 +11,8 @@ import {
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { SafetyScoreV9CurrentCard, SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
-import {
-  loadSafetyScoreV9Publication,
-  loadSafetyScoreV9PublicationHealth,
-} from "./safety-score-v9/publication-store";
+import { loadSafetyScoreV9Publication } from "./safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationHealth, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
 
 export class ReportCardsV9SnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -40,46 +38,6 @@ export function buildSafetyScoreV9PublicationIdentity(
     baseInputGenerationId: publication.baseInputGenerationId,
     publicationGenerationId: publication.publicationGenerationId,
   };
-}
-
-/**
- * Publication health as the public snapshot serves it: health that does not
- * match the stored publication is downgraded to `held` rather than trusted.
- */
-export function resolveSafetyScoreV9EffectivePublicationHealth(
-  publication: Pick<SafetyScoreV9CurrentResponse, "publicationGenerationId" | "publishedAtSec">,
-  publicationHealth: V9PublicationHealth,
-): V9PublicationHealth {
-  const healthMatchesPublication =
-    publicationHealth.acceptedPublicationGenerationId ===
-      publication.publicationGenerationId &&
-    publicationHealth.acceptedAtSec === publication.publishedAtSec;
-  return healthMatchesPublication
-    ? publicationHealth
-    : {
-        ...publicationHealth,
-        status: "held" as const,
-        acceptedPublicationGenerationId: publication.publicationGenerationId,
-        acceptedAtSec: publication.publishedAtSec,
-        attemptedAtSec: Math.max(
-          publicationHealth.attemptedAtSec,
-          publication.publishedAtSec,
-        ),
-        heldSinceSec: publicationHealth.status === "held" &&
-          publicationHealth.heldSinceSec !== null
-          ? Math.max(
-              publicationHealth.heldSinceSec,
-              publication.publishedAtSec,
-            )
-          : Math.max(
-              publicationHealth.attemptedAtSec,
-              publication.publishedAtSec,
-            ),
-        reasons: [{
-          code: "assessment-failed" as const,
-          detail: "Publication health did not match the stored snapshot; serving the last-known-good snapshot as held.",
-        }],
-      };
 }
 
 function buildPublicProjection(

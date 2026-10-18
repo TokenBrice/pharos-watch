@@ -9,7 +9,8 @@ import { ReportCardsV9TableResponseSchema, ReportCardsV9DetailResponseSchema } f
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
-import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
+import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";
 import { getRouteMatch } from "../../routes/registry";
@@ -168,6 +169,70 @@ describe("generation-bound compact Safety Scores", () => {
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
     await expect(persistSafetyScoreV9Publication(db, currentInput(next))).rejects.toThrow();
     expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+  });
+
+  it("stages at most four fragments per batch without exposing an unaccepted generation", async () => {
+    const { db, sqlite, publication } = await seed();
+    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    next.cards[0]!.evidence.reasons = [{ code: "unresolved-control-identity", message: "x".repeat(1_200_000), path: "control:incidentState" }];
+    let stagedBatches = 0;
+    let previousFragments = 0;
+    const fragmentCount = sqlite.prepare(`SELECT
+      (SELECT count(*) FROM safety_score_public_fragments WHERE generation_id = ?) +
+      (SELECT count(*) FROM safety_score_site_fragments WHERE generation_id = ?) AS n`);
+    const observedDb = {
+      ...db,
+      batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
+        const result = await db.batch<T>(statements);
+        const acceptedAt = sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?")
+          .get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.updated_at;
+        if (acceptedAt === publication.publishedAtSec) {
+          expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+          const count = Number(fragmentCount.get(next.publicationGenerationId, next.publicationGenerationId)!.n);
+          expect(count - previousFragments).toBeGreaterThan(0);
+          expect(count - previousFragments).toBeLessThanOrEqual(4);
+          expect(statements.length).toBeLessThanOrEqual(2);
+          previousFragments = count;
+          stagedBatches++;
+          const response = await handleReportCardsV9Table(db);
+          expect(response.status).toBe(200);
+          expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec });
+        } else {
+          expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
+            .get(next.publicationGenerationId)!.n).toBe(next.cards.length + 1);
+        }
+        return result;
+      },
+    } as D1Database;
+    await persistSafetyScoreV9Publication(observedDb, currentInput(next));
+    expect(stagedBatches).toBeGreaterThan(next.cards.length + 2);
+    expect(await (await handleReportCardsV9Table(db)).json()).toMatchObject({ updatedAt: next.publishedAtSec });
+    expect((await handleReportCardsV9Detail(db, detailUrl(next.cards[0]!.id))).status).toBe(200);
+  });
+
+  it("rolls back acceptance if staged fragments disappear before the pointer switch", async () => {
+    const { db, sqlite } = await seed();
+    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    let removed = false;
+    const racedDb = {
+      ...db,
+      batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
+        const sites = Number(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ?")
+          .get(next.publicationGenerationId)!.n);
+        if (!removed && sites === next.cards.length + 1) {
+          sqlite.prepare("DELETE FROM safety_score_site_fragments WHERE generation_id = ?")
+            .run(next.publicationGenerationId);
+          removed = true;
+        }
+        return db.batch<T>(statements);
+      },
+    } as D1Database;
+    await expect(persistSafetyScoreV9Publication(racedDb, currentInput(next))).rejects.toThrow();
+    expect(removed).toBe(true);
+    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+    expect((await handleReportCardsV9Table(db)).status).toBe(200);
   });
 
   it("validates the selected coin parameter before reading storage", async () => {

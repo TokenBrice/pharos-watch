@@ -46,6 +46,18 @@ describe("ExploreNextSection", () => {
     for (const link of links.slice(1)) expect(link.getAttribute("data-prefetch")).toBe("disabled");
   });
 
+  it.each(["mouseEnter", "focus"] as const)("keeps compact research links quiet until %s intent", (intent) => {
+    render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);
+    const tracker = screen.getByRole("link", { name: "See all CDP stablecoins" });
+    const action = screen.getByRole("link", { name: "Browse stablecoin comparisons" });
+    expect(tracker.getAttribute("data-prefetch")).toBe("disabled");
+    expect(action.getAttribute("data-prefetch")).toBe("disabled");
+    expect(tracker.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    fireEvent[intent](tracker);
+    expect(tracker.getAttribute("data-prefetch")).toBe("auto");
+    expect(action.getAttribute("data-prefetch")).toBe("disabled");
+  });
+
 
   it("links mechanism tracker CTAs to the canonical active screener filter", () => {
     render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);

@@ -13,7 +13,7 @@ import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/report-cards-v9-cache";
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, serializeSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
-import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../src/lib/safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../src/lib/safety-score-v9/publication-health";
 import { makeV9FixedInput, makeXautObservation } from "../../src/test-helpers/v9-fixed-input";
 import { normalizeFixedInput } from "../../src/lib/report-cards-fixed-input";
 import { deriveXautRepresentationGroupSupplyAttribution } from "../../src/lib/safety-score-v9/xaut-supply-attribution-contract";

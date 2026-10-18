@@ -1316,6 +1316,7 @@
         "scripts/lib/post-deploy-acceptance.mts",
         "scripts/lib/pr-*.mts",
         "scripts/lib/critical-*.m*",
+        ".ci/critical-coverage-baseline.json",
         "scripts/lib/vitest-ci-args.mts",
         "scripts/maintenance/run-pr-*.ts",
         "scripts/maintenance/*pages-release*.ts",

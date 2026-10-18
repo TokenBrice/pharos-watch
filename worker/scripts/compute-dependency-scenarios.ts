@@ -18,7 +18,7 @@ import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } 
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
 import { parseSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
-import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "../src/lib/safety-score-v9/publication-store";
+import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "../src/lib/safety-score-v9/publication-health";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../src/lib/report-cards-v9-cache";
 import { parseSafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
 import { parseActiveWorkerVersionMarker } from "../src/lib/worker-version-first-seen";
