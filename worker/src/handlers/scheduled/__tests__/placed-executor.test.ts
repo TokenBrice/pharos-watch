@@ -106,14 +106,24 @@ describe("project-tape placed-fetch canary", () => {
     expect(JSON.parse(result.metadata!)).toMatchObject({ executorColo: "FRA" });
   });
 
-  it("defaults on when the canary variable is absent", async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json(realResult));
-    const runtime = driver(fetch);
-    delete runtime.env.PROJECT_TAPE_PLACED_EXECUTOR;
-    expect((await runProjectTapeCanary(runtime, new AbortController().signal, vi.fn())).status).toBe("ok");
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(mocks.projectTape).not.toHaveBeenCalled();
-  });
+  it.each([undefined, "", "ON", "true", "false", "on ", " off", "invalid"])(
+    "uses in-process execution with a named warning for invalid mode %s", async (mode) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const fetch = vi.fn();
+      const runtime = driver(fetch);
+      runtime.env.PROJECT_TAPE_PLACED_EXECUTOR = mode;
+      const signal = new AbortController().signal;
+      const report = vi.fn();
+      expect(await runProjectTapeCanary(runtime, signal, report)).toEqual(realResult);
+      expect(mocks.projectTape).toHaveBeenCalledExactlyOnceWith(runtime.db, signal, report);
+      expect(fetch).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledOnce();
+      expect(JSON.parse(warn.mock.calls[0][0])).toMatchObject({
+        event: "placed-executor-invalid-mode", level: "warn",
+        metadata: { reason: "placed-executor-invalid-mode", executorMode: "in-process" },
+      });
+    },
+  );
 
   it("names transport failure without retrying or executing in-process", async () => {
     const fetch = vi.fn().mockRejectedValue(new Error("lost response after remote commit"));

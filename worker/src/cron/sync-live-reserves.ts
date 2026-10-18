@@ -378,7 +378,7 @@ export async function syncLiveReserves(
       await advanceLiveReserveCheckpoint(db, checkpointIdentity!, {
         nextItemKey: checkpointResumeId,
         itemsDone: completedIndex + 1,
-        ...(checkpoint.attemptNo > 1
+        ...(checkpoint.state === "recovering"
           ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
           : {}),
       });

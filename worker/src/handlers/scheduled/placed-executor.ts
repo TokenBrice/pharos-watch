@@ -14,6 +14,7 @@ import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { HeavyEnv } from "../../lib/env";
 import { parseJsonObject } from "../../lib/json-parse";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../../lib/response-body";
+import { logWorkerEvent } from "../../lib/structured-log";
 import type { ScheduledRuntimeContext } from "./context";
 
 function failure(reason: string): CronResult {
@@ -24,7 +25,15 @@ function failure(reason: string): CronResult {
 export async function runProjectTapeCanary(
   runtime: ScheduledRuntimeContext, signal: AbortSignal, reportProgress: CronProgressReporter,
 ): Promise<CronResult> {
-  if (runtime.env.PROJECT_TAPE_PLACED_EXECUTOR === "off") {
+  const mode = runtime.env.PROJECT_TAPE_PLACED_EXECUTOR;
+  if (mode !== "on") {
+    if (mode !== "off") {
+      logWorkerEvent({
+        scope: "handler", level: "warn", event: "placed-executor-invalid-mode", job: "project-tape",
+        message: "PROJECT_TAPE_PLACED_EXECUTOR must be on or off; using in-process execution.",
+        metadata: { reason: "placed-executor-invalid-mode", executorMode: "in-process" },
+      });
+    }
     return projectTape(runtime.db, signal, reportProgress);
   }
   const binding = runtime.env.HEAVY_EXECUTOR;

@@ -73,7 +73,7 @@ export const ENV_BINDINGS = [
   {
     key: "PROJECT_TAPE_PLACED_EXECUTOR",
     valueType: "string",
-    description: "Project-tape-only placed-fetch canary, default on; literal off restores in-process execution for future slots without a transport retry.",
+    description: "Project-tape-only placed-fetch canary, checked-in on; only literal on or off is accepted. Missing/invalid modes warn and use in-process execution for future slots without a transport retry.",
     runtimes: { worker: { status: "optional" } },
   },
   {

@@ -517,6 +517,7 @@ describe("worker.scheduled", () => {
       TWITTER_ACCESS_TOKEN_SECRET: "tw-token-secret",
       COINGECKO_API_KEY: "coingecko",
       HEAVY_EXECUTOR_SHARED_SECRET: "test-placed-executor-secret",
+      PROJECT_TAPE_PLACED_EXECUTOR: "on",
       HEAVY_EXECUTOR: { fetch: vi.fn(async () => Response.json({
         status: "ok", itemCount: 1,
         metadata: JSON.stringify({ reason: "tape-projection-completed", executorColo: "FRA" }),

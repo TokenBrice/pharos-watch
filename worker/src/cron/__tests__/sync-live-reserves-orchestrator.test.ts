@@ -274,7 +274,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(sealAcceptedReserveGeneration).toHaveBeenCalledTimes(1);
   });
 
-  it("advances an authoritative crash item once, then completes only its remaining suffix", async () => {
+  it.each([1, 2])("renews the claimed recovery lease while advancing an authoritative crash item once (attempt %s)", async (attemptNo) => {
     const visited: string[] = [];
     mockAdapterRegistry(async (coin) => {
       visited.push(coin?.id ?? "unknown");
@@ -282,10 +282,11 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     });
     const crashedCoin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
     const suffixCoin = SYNC_ORDERED_CONFIGURED_COINS[1]!;
-    const identity = checkpointIdentity(2, "recovery-owner");
+    const identity = checkpointIdentity(attemptNo, "recovery-owner");
     const db = mockD1([
       checkpointTable({
-        attemptNo: 2,
+        attemptNo,
+        state: "recovering",
         invocationId: identity.invocationId,
         nextItemKey: crashedCoin.id,
         itemsDone: 0,
@@ -329,6 +330,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(boundaryWrites).toHaveLength(2);
     expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
     expect(authoritativeAdvance).toBeDefined();
+    expect(authoritativeAdvance?.binds[3]).toBe(Math.floor(nowMs / 1000) + 15 * 60);
     expect(terminalAdvance).toBeDefined();
   });
 

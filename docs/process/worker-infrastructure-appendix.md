@@ -16,7 +16,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `SAFETY_CAPTURE_ARCHIVE` | `R2Bucket` | optional | - | - | Heavy-only R2 binding to existing pharos-measurements bucket for exact accepted Safety replay captures; required on heavy, absent on public. |
 | `HEAVY_EXECUTOR` | `Fetcher` | optional | - | - | Public-only HTTP service binding to stablecoin-heavy's private default fetch handler for the project-tape placement canary. |
 | `HEAVY_EXECUTOR_SHARED_SECRET` | `string` | optional | - | - | Matching Wrangler-managed secret on public and heavy authenticating the private placed executor; required when the project-tape canary is on. |
-| `PROJECT_TAPE_PLACED_EXECUTOR` | `string` | optional | - | - | Project-tape-only placed-fetch canary, default on; literal off restores in-process execution for future slots without a transport retry. |
+| `PROJECT_TAPE_PLACED_EXECUTOR` | `string` | optional | - | - | Project-tape-only placed-fetch canary, checked-in on; only literal on or off is accepted. Missing/invalid modes warn and use in-process execution for future slots without a transport retry. |
 | `TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram webhook requests. |
 | `TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram Mini App session requests. |
 | `TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram Mini App mutation requests. |
