@@ -4,7 +4,7 @@ import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/consta
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
+import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { decodeCurrentReserveNavPrice, isReserveNavPriceSource, RESERVE_NAV_PRICE_SOURCES, type ReserveNavSnapshotRow } from "../../lib/reserve-nav-price";
 import { throwIfAborted } from "../../lib/abort";
@@ -226,13 +226,15 @@ async function runPrimaryProviderFetch(
   label: string,
   fetcher: () => Promise<boolean>,
 ): Promise<void> {
+  let success: boolean;
   try {
-    await recordOutcome(db, source, await fetcher());
+    success = await fetcher();
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     logWorkerEventArgs("handler", "warn", `[primary-prices] ${label} failed:`, err);
-    await recordOutcome(db, source, false);
+    success = false;
   }
+  await recordOutcomeSafe(db, source, success);
 }
 
 export async function buildPrimaryPricePlan(

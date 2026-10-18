@@ -1,8 +1,8 @@
 import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
- *   serial: dispatch (when token configured) -> watchdog -> cleanup -> pulse
- *   budget-only, after critical lane: one rotating registration unit
+ *   serial: dispatch (with token) -> recap planner/off-mode cleanup -> watchdog -> cleanup -> pulse
+ *   budget-only, after critical lane: all four cached registration checks
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
@@ -359,8 +359,8 @@ function buildTelegramSlotGroups(
 }
 
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {
-  const reconciliationStartedMs = Date.now();
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
+    const reconciliationStartedMs = Date.now();
     const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
     const recapRequiresBotToken = recapRollout.mode === "public";
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram transport work";
@@ -427,6 +427,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     buildTelegramSlotGroups(runtime, runtime.env.TELEGRAM_BOT_TOKEN),
   );
 
+  const reconciliationStartedMs = Date.now();
   const reconciliationResults = await runRuntimeBudgetOnlyTask(
     runtime,
     "telegram-registration-reconciliation",

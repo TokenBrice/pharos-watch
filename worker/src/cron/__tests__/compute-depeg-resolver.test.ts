@@ -227,6 +227,124 @@ describe("computeDepegResolver", () => {
     return { sealed, stores };
   }
 
+  async function runReviewerScenario(
+    mode: "healthy" | "degraded" | "throw" | "abort",
+    primarySafe = true,
+    failure = new Error("review unavailable"),
+  ) {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent({ started_at: NOW_SEC - 72 * 3600 });
+    const { stores, sealed } = storesFor();
+    const created: DdrSealedPublicPrediction[] = [];
+    const manifestPayloads: unknown[] = [];
+    const controller = new AbortController();
+    stores.sealPublicNoCall = vi.fn(async (_db, input) => {
+      const prediction = sealedFromInput(input, "no_call", 7);
+      created.push(prediction);
+      return prediction;
+    });
+    stores.loadSealedPublicPredictions = vi.fn(async () => created);
+    stores.loadCanonicalIncidents = vi.fn(async () => {
+      if (mode === "abort") controller.abort(failure);
+      if (mode === "throw" || mode === "abort") throw failure;
+      return [canonicalIncident({
+        incidentKey: sealed.incidentKey, startedAt: event.started_at, eligibleAt: NOW_SEC,
+      })];
+    });
+    stores.writePublicationManifest = vi.fn(async (_db, input) => {
+      manifestPayloads.push(input.basePayload);
+      return {
+        snapshotToken: "ddr-public-1", snapshotGeneration: 2, snapshotSequence: 1,
+        publishedAt: NOW_SEC, basePayloadHash: "b".repeat(64), publicPredictionIds: [7],
+      };
+    });
+    const db = resolverDb([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      ...(mode === "degraded" ? [{
+        match: "FROM depeg_resolver_incident_event_links", rows: [],
+        throwError: new Error("D1_ERROR: lineage query unavailable"),
+      }] : []),
+      { match: "INSERT OR IGNORE INTO depeg_resolver_assessments", rows: [] },
+      { match: "INSERT INTO depeg_resolver_assessments", rows: [] },
+      { match: "SELECT id, stablecoin_id, started_at, ended_at, recovery_price, close_reason", rows: [{ ...event, close_reason: null }] },
+      { match: "FROM depeg_resolver_incident_event_links", rows: [] },
+      { match: "FROM depeg_resolver_incident_lineage", rows: [] },
+      { match: "SELECT COUNT(*) as row_count, MAX(ts)", rows: [{ row_count: 0, max_ts: null, max_id: null }] },
+      { match: "FROM tape_events", rows: [] },
+      ...healthyDewsPublicationTables(),
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+    ]);
+    const result = await computeDepegResolver({
+      db, ddrRunId: "ddr:quarter-hour:1779984600:test", runAt: NOW_SEC, slot: "quarter-hour",
+      stablecoinsCacheSafe: primarySafe, depegPipelineHealthy: true,
+      storeContracts: stores, signal: controller.signal,
+    });
+    return {
+      result,
+      metadata: JSON.parse(result.metadata ?? "{}"),
+      snapshot: readDdrSnapshotPayload(db),
+      sealedBytes: JSON.stringify(created.map((prediction) => prediction.sealedPayload)),
+      rowHashes: created.map((prediction) => prediction.rowHash),
+      manifestBytes: JSON.stringify(manifestPayloads),
+    };
+  }
+
+  it("reports ancillary review quality without changing successful canonical publication or sealed bytes", async () => {
+    const healthy = await runReviewerScenario("healthy");
+    const incomplete = await runReviewerScenario("degraded");
+
+    expect(healthy.result.status ?? "ok").toBe("ok");
+    expect(healthy.metadata).toMatchObject({
+      v2PublicationAttempted: true, v2PublicationSucceeded: true,
+      ddrrDegraded: false, ddrrDegradedReason: null,
+    });
+    expect(healthy.metadata.quality).toBeUndefined();
+    expect(incomplete.result.status ?? "ok").toBe("ok");
+    expect(incomplete.metadata).toMatchObject({
+      v2PublicationAttempted: true, v2PublicationSucceeded: true,
+      ddrrDegraded: true, ddrrDegradedReason: "incident-lineage-read-failed",
+      quality: { reason: "ddrr-review-degraded" },
+    });
+    expect(incomplete.metadata.reviewRows).toBeGreaterThan(0);
+    expect(incomplete.snapshot._meta.degraded).toBe(false);
+    expect(incomplete.snapshot).toEqual(healthy.snapshot);
+    expect(incomplete.rowHashes).toHaveLength(1);
+    expect(incomplete.rowHashes).toEqual(healthy.rowHashes);
+    expect(incomplete.sealedBytes).toBe(healthy.sealedBytes);
+    expect(incomplete.manifestBytes).toBe(healthy.manifestBytes);
+  });
+
+  it("reports a thrown ancillary reviewer failure without failing canonical publication", async () => {
+    const observed = await runReviewerScenario("throw");
+    expect(observed.result.status ?? "ok").toBe("ok");
+    expect(observed.metadata).toMatchObject({
+      v2PublicationAttempted: true, v2PublicationSucceeded: true,
+      ddrrDegraded: true, ddrrDegradedReason: "review unavailable",
+      quality: { reason: "ddrr-review-failed" },
+    });
+    expect(observed.snapshot._meta.degraded).toBe(false);
+    expect(observed.rowHashes).toHaveLength(1);
+  });
+
+  it("propagates reviewer cancellation rather than returning an ordinary quality warning", async () => {
+    const failure = new Error("review cancelled");
+    await expect(runReviewerScenario("abort", true, failure)).rejects.toBe(failure);
+  });
+
+  it("retains primary degradation while also reporting returned reviewer degradation", async () => {
+    const observed = await runReviewerScenario("degraded", false);
+    expect(observed.result.status).toBe("degraded");
+    expect(observed.metadata).toMatchObject({
+      degradedReason: "stablecoins-cache-unsafe", v2PublicationAttempted: false,
+      ddrrDegraded: true, ddrrDegradedReason: "incident-lineage-read-failed",
+      quality: { reason: "ddrr-review-degraded" },
+    });
+    expect(observed.rowHashes).toEqual([]);
+    expect(observed.manifestBytes).toBe("[]");
+  });
+
   it("excludes terminal lifecycle events from the live DDR snapshot", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(Date.UTC(2026, 4, 26, 12, 0, 0));
@@ -572,7 +690,7 @@ describe("computeDepegResolver", () => {
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
-    await computeDepegResolver({
+    const result = await computeDepegResolver({
       db,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
@@ -585,6 +703,9 @@ describe("computeDepegResolver", () => {
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toContain("publication-retry-pending:");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      v2PublicationAttempted: true, v2PublicationSucceeded: false,
+    });
   });
 
   it("projects first-published sealed no-calls as invalidated when errata exist", async () => {

@@ -8,6 +8,7 @@ import { emptyDdrLineage } from "../context";
 import { DEFAULT_DDR_V2_STORE_CONTRACTS } from "../storage-adapters";
 import { makeDdrResolverRow } from "../../__tests__/depeg-public-projection.test-support";
 import { NOW_SEC } from "./depeg-resolver.test-support";
+import * as reviewer from "../../compute-depeg-resolver-review";
 
 const fixtures = createLatestSchemaFixtureTracker();
 beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000); });
@@ -28,7 +29,7 @@ describe("persistDepegResolverReviewArtifacts", () => {
       insertOpenEvent(db);
       const incident = await ensureIncident(db, 1, NOW_SEC);
       const result = await persistDepegResolverReviewArtifacts(db, diagnostic(), DEFAULT_DDR_V2_STORE_CONTRACTS);
-      expect(result).toEqual({ assessmentWriteCount: 3, reviewRows: 1, reviewError: null });
+      expect(result).toEqual({ assessmentWriteCount: 3, reviewRows: 1, reviewError: null, reviewDegraded: false, reviewDegradedReason: null });
       const review = await loadDepegResolverReviewSnapshot(db);
       expect(review.kind).toBe("ok");
       if (review.kind !== "ok") throw new Error("Expected populated durable review");
@@ -43,7 +44,7 @@ describe("persistDepegResolverReviewArtifacts", () => {
   it("stores real assessment checkpoints and an independently readable review snapshot", async () => {
     const { db, sqlite } = fixtures.open();
     const result = await persistDepegResolverReviewArtifacts(db, diagnostic(), DEFAULT_DDR_V2_STORE_CONTRACTS);
-    expect(result).toEqual({ assessmentWriteCount: 3, reviewRows: 0, reviewError: null });
+    expect(result).toEqual({ assessmentWriteCount: 3, reviewRows: 0, reviewError: null, reviewDegraded: false, reviewDegradedReason: null });
     expect(sqlite.prepare("SELECT checkpoint, assessed_at FROM depeg_resolver_assessments WHERE event_id = 42 ORDER BY checkpoint").all())
       .toEqual([
         { checkpoint: "age_1h", assessed_at: NOW_SEC },
@@ -64,7 +65,7 @@ describe("persistDepegResolverReviewArtifacts", () => {
       async loadCanonicalIncidents() { throw new Error("review store unavailable"); },
     };
     expect(await persistDepegResolverReviewArtifacts(db, diagnostic(), stores))
-      .toEqual({ assessmentWriteCount: 3, reviewRows: 0, reviewError: "review store unavailable" });
+      .toEqual({ assessmentWriteCount: 3, reviewRows: 0, reviewError: "review store unavailable", reviewDegraded: false, reviewDegradedReason: null });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_resolver_assessments WHERE event_id = 42").get())
       .toEqual({ count: 3 });
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'depeg-resolver-review:snapshot'").get()).toBeUndefined();
@@ -110,8 +111,65 @@ describe("persistDepegResolverReviewArtifacts", () => {
     const snapshot = diagnostic();
     snapshot._meta.degraded = true;
     expect(await persistDepegResolverReviewArtifacts(db, snapshot, DEFAULT_DDR_V2_STORE_CONTRACTS))
-      .toEqual({ assessmentWriteCount: 0, reviewRows: 0, reviewError: null });
+      .toEqual({ assessmentWriteCount: 0, reviewRows: 0, reviewError: null, reviewDegraded: false, reviewDegradedReason: null });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_resolver_assessments").get()).toEqual({ count: 0 });
     expect((await loadDepegResolverReviewSnapshot(db)).kind).toBe("ok");
+  });
+
+  it("preserves the quality reason from a durably stored nonthrowing degraded review", async () => {
+    await withSqliteD1(async (db) => {
+      insertOpenEvent(db);
+      await ensureIncident(db, 1, NOW_SEC);
+      const prepare = db.prepare.bind(db);
+      vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        if (sql.includes("GROUP_CONCAT(DISTINCT authorization.created_by)")) {
+          throw new Error("lineage read unavailable");
+        }
+        return prepare(sql);
+      });
+
+      const result = await persistDepegResolverReviewArtifacts(db, diagnostic(), DEFAULT_DDR_V2_STORE_CONTRACTS);
+
+      expect(result).toEqual({
+        assessmentWriteCount: 3, reviewRows: 1, reviewError: null,
+        reviewDegraded: true, reviewDegradedReason: "incident-lineage-read-failed",
+      });
+      const review = await loadDepegResolverReviewSnapshot(db);
+      expect(review.kind).toBe("ok");
+      if (review.kind !== "ok") throw new Error("Expected stored incomplete review");
+      expect(review.payload._meta).toMatchObject({
+        degraded: true, degradedReason: result.reviewDegradedReason, reviewedEventCount: result.reviewRows,
+      });
+      const assessments = await db.prepare("SELECT COUNT(*) AS count FROM depeg_resolver_assessments WHERE event_id = 42").first<{ count: number }>();
+      expect(assessments?.count).toBe(3);
+    });
+  });
+
+  it.each([undefined, "not-json", '{"degraded":null}'])(
+    "does not claim review health when returned quality metadata is unavailable (%s)",
+    async (metadata) => {
+      const { db, sqlite } = fixtures.open();
+      vi.spyOn(reviewer, "computeAndStoreDepegResolverReview").mockResolvedValueOnce({ itemCount: 7, metadata });
+
+      const result = await persistDepegResolverReviewArtifacts(db, diagnostic(), DEFAULT_DDR_V2_STORE_CONTRACTS);
+
+      expect(result).toMatchObject({
+        assessmentWriteCount: 3, reviewRows: 7, reviewError: "ddrr-review-metadata-unavailable",
+      });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_resolver_assessments").get()).toEqual({ count: 3 });
+    },
+  );
+
+  it("retains degraded state when a returned review has no reason", async () => {
+    const { db } = fixtures.open();
+    vi.spyOn(reviewer, "computeAndStoreDepegResolverReview").mockResolvedValueOnce({
+      itemCount: 7, metadata: JSON.stringify({ degraded: true }),
+    });
+
+    const result = await persistDepegResolverReviewArtifacts(db, diagnostic(), DEFAULT_DDR_V2_STORE_CONTRACTS);
+
+    expect(result).toMatchObject({
+      reviewRows: 7, reviewError: null, reviewDegraded: true, reviewDegradedReason: "ddrr-review-degraded",
+    });
   });
 });

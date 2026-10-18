@@ -71,6 +71,75 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("runFiveMinuteTelegramSlot", () => {
+  it("measures registration duration without the preceding critical lane", async () => {
+    let now = 0;
+    vi.mocked(Date.now).mockImplementation(() => now);
+    vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => {
+      now += 40_000;
+      return { itemCount: 1, metadata: "{}" };
+    });
+    vi.mocked(runTelegramDegradationWatchdog).mockImplementation(async () => {
+      now += 5_000;
+      return { itemCount: 0, metadata: "{}" };
+    });
+    const complete = () => { now += 125; return { attempted: true, skipped: false }; };
+    vi.mocked(reconcileTelegramCommandRegistration).mockImplementation(async () => complete());
+    vi.mocked(reconcileTelegramProfileRegistration).mockImplementation(async () => complete());
+    vi.mocked(reconcileTelegramMenuButton).mockImplementation(async () => ({ ...complete(), miniAppUrl: "https://pharos.watch" }));
+    vi.mocked(reconcileTelegramWebhookRegistration).mockImplementation(async () => ({ ...complete(), expectedUrl: "https://api.pharos.watch" }));
+
+    await runFiveMinuteTelegramSlot(buildRuntime("token"));
+
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      durationMs: 500, dueCount: 4, processedCount: 4, outcome: "ok",
+    }));
+  });
+
+  it("measures cached registration checks independently of critical-lane duration", async () => {
+    let now = 0;
+    vi.mocked(Date.now).mockImplementation(() => now);
+    vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => {
+      now += 40_000;
+      return { itemCount: 1, metadata: "{}" };
+    });
+    const skip = () => { now += 10; return { attempted: false, skipped: true, reason: "fresh-cache" as const }; };
+    vi.mocked(reconcileTelegramCommandRegistration).mockImplementation(async () => skip());
+    vi.mocked(reconcileTelegramProfileRegistration).mockImplementation(async () => skip());
+    vi.mocked(reconcileTelegramMenuButton).mockImplementation(async () => ({ ...skip(), miniAppUrl: "https://pharos.watch" }));
+    vi.mocked(reconcileTelegramWebhookRegistration).mockImplementation(async () => ({ ...skip(), expectedUrl: "https://api.pharos.watch" }));
+
+    await runFiveMinuteTelegramSlot(buildRuntime("token"));
+
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      durationMs: 40, processedCount: 0, outcome: "skipped", skippedReason: "fresh-cache",
+      metadata: expect.objectContaining({ skippedCount: 4, lastSuccessAt: null }),
+    }));
+  });
+
+  it("retains missing-token timing before token-independent sidecars", async () => {
+    let now = 0;
+    vi.mocked(Date.now).mockImplementation(() => now);
+    vi.mocked(logSkippedCronRun)
+      .mockImplementationOnce(async () => { now += 25; })
+      .mockImplementationOnce(async () => { now += 25; });
+    vi.mocked(runTelegramDegradationWatchdog).mockImplementation(async () => {
+      now += 10_000;
+      return { itemCount: 0, metadata: "{}" };
+    });
+
+    await runFiveMinuteTelegramSlot(buildRuntime());
+
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      durationMs: 50, outcome: "error", metadata: expect.objectContaining({ failedCount: 4 }),
+    }));
+    expect(reconcileTelegramCommandRegistration).not.toHaveBeenCalled();
+    expect(reconcileTelegramProfileRegistration).not.toHaveBeenCalled();
+    expect(reconcileTelegramMenuButton).not.toHaveBeenCalled();
+    expect(reconcileTelegramWebhookRegistration).not.toHaveBeenCalled();
+    expect(runTelegramDegradationWatchdog).toHaveBeenCalledOnce();
+    expect(publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledOnce();
+  });
+
   it("runs token-independent D1 sidecars when the bot token is absent", async () => {
     const runtime = buildRuntime();
     const summary = await runFiveMinuteTelegramSlot(runtime);

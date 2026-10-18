@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 
 const pricingStageMocks = vi.hoisted(() => ({
   fetchAuthoritativeLivePriceOverrides: vi.fn(),
@@ -174,6 +175,45 @@ describe("sync-stablecoins stage helpers", () => {
       priceObservedAt: syncStartSec - 15,
       priceObservedAtMode: "upstream",
     });
+  });
+
+  it("keeps inline GeckoTerminal disabled without reporting a synthetic work stage", async () => {
+    const syncStartSec = 1_800_000_000;
+    const assets = [makePricedAsset()];
+    pricingStageMocks.fetchPrimaryPrices.mockResolvedValue({
+      results: new Map([["usdt-tether", makePrimaryPriceResult(syncStartSec)]]),
+      stats: {},
+      providerDiagnostics: [],
+    });
+    const reportProgress = vi.fn(async (_update: CronProgressUpdate) => {});
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected pricing transport"));
+    try {
+      const result = await runStablecoinsPricingStage({
+        db: mockD1([{ match: "price_cache", rows: [] }]),
+        assets,
+        previousAssetsById: new Map(),
+        syncStartSec,
+        fxFallbackRates: undefined,
+        validationReferences: undefined,
+        reportProgress,
+      });
+
+      expect(assets[0].price).toBe(1);
+      expect("gtProbe" in result ? result.gtProbe.stats : null).toMatchObject({
+        inlineDisabled: true,
+        isolationReason: "worker-memory-boundary",
+      });
+      const updates = reportProgress.mock.calls.map(([update]) => update);
+      const outerStages = ["price-enrichment", "price-enrichment-primary-complete", "price-enrichment-overrides", "price-validation"];
+      expect(updates.map((update) => update.stage).filter((stage) => outerStages.includes(stage ?? ""))).toEqual(outerStages);
+      expect(updates.some((update) => update.stage === "price-enrichment-gt-probe-disabled" || update.metadata?.subphase === "gt-probe-disabled")).toBe(false);
+      expect(updates.find((update) => update.stage === "price-enrichment-overrides")?.metadata).toMatchObject({
+        gtProbe: { inlineDisabled: true, isolationReason: "worker-memory-boundary" },
+      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
 
