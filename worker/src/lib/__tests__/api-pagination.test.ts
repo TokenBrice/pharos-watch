@@ -452,6 +452,7 @@ describe("fetchPaginatedEvents", () => {
 
   it("runs count-cache preparation, total projection and page in one atomic batch", async () => {
     const db = mockD1([
+      { match: "SELECT 'prepare-summary'", rows: [] },
       { match: "summary-total", rows: [{ total: 7 }] },
       { match: "FROM depeg_events", rows: [{ id: 1 }] },
     ]);

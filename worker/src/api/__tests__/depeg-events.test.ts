@@ -397,7 +397,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("filters pending incidents by readable stablecoin ID", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 0 }] }, { match: "depeg_events", rows: [] },
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 0 }] }, { match: "depeg_events", rows: [] },
     {
       match: "FROM depeg_pending",
       matchBinds: ["usdc-circle"],

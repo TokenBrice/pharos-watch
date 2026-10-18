@@ -2,8 +2,7 @@ import type { PublicationSurfaceId } from "@shared/types/status";
 import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { producerHistoryRetentionPolicy } from "@shared/lib/retention-policy";
-import { runRetentionPolicies, type CappedDeleteResult } from "../cron/shared/capped-delete";
+import { type CappedDeleteResult, deleteCapped } from "../cron/shared/capped-delete";
 import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "./bounded-prune";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 
@@ -96,6 +95,9 @@ interface ProducerHeadRow {
 
 const MAX_HISTORY_METADATA_CHARS = 16_000;
 const MAX_HISTORY_ERROR_CHARS = 1_000;
+const REGULAR_HISTORY_RETENTION_SEC = 30 * 24 * 60 * 60;
+const BUDGET_HISTORY_RETENTION_SEC = 90 * 24 * 60 * 60;
+const CALENDAR_HISTORY_RETENTION_SEC = 550 * 24 * 60 * 60;
 
 function normalizeHistoryMetadata(metadata: string | null | undefined): string | null {
   const parsed = parseObjectMetadata(metadata);

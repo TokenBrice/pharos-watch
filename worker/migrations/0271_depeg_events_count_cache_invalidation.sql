@@ -1,4 +1,5 @@
 -- rollout-safety: backward-compatible
+-- data-migration: reviewed
 -- No backfill or business-row changes. Old Workers remain compatible.
 -- D1 uses SQLite CREATE TRIGGER IF NOT EXISTS, as do the existing DDR guards.
 -- The cache key must match DEPEG_EVENTS_COUNT_CACHE_KEY in depeg-events-count-cache.ts.
