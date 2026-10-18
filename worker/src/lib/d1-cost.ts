@@ -20,6 +20,7 @@ export interface D1Cost {
 
 export interface D1CostTracker {
   db: D1Database;
+  wrapDatabase: <T extends D1Database | D1DatabaseSession>(database: T) => T;
   snapshot: () => D1Cost;
 }
 
@@ -178,6 +179,7 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
 
   return {
     db: wrapDatabase(database),
+    wrapDatabase,
     snapshot: () => ({
       queries, rowsRead, rowsWritten, bindingCalls, batchCalls, awaitElapsedMs,
       sqlDurationMs, sqlDurationResults, servedByRegion, servedByRegionMixed,

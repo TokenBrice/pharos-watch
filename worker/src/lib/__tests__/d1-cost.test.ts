@@ -29,6 +29,24 @@ afterEach(() => vi.restoreAllMocks());
 
 
 describe("createD1CostTracker", () => {
+  it("shares one accumulator across additional bindings without changing results or errors", async () => {
+    const primary = mockD1();
+    const adapter = mockD1();
+    const statement = adapter.prepare("SELECT 1");
+    const rows = result(7, 0);
+    const failure = new Error("adapter binding failed");
+    statement.all = vi.fn().mockResolvedValueOnce(rows).mockRejectedValueOnce(failure);
+    adapter.prepare = vi.fn(() => statement);
+    const tracker = createD1CostTracker(primary);
+    const trackedAdapter = tracker.wrapDatabase(adapter);
+    expect(await trackedAdapter.prepare("SELECT 1").all()).toBe(rows);
+    await expect(trackedAdapter.prepare("SELECT 1").all()).rejects.toBe(failure);
+    expect(tracker.snapshot()).toMatchObject({
+      queries: 2, bindingCalls: 2, batchCalls: 0, rowsRead: 7,
+      reasons: ["failed-attempt-rows-unavailable"],
+    });
+  });
+
   it("accumulates bound statements and batched results without changing receivers or counting twice", async () => {
     const database = mockD1();
     vi.mocked(performance.now)

@@ -48,6 +48,7 @@ import {
 import {
   didReserveSyncAttemptBecomeAuthoritative,
 } from "../lib/live-reserves/store";
+import { createD1CostTracker } from "../lib/d1-cost";
 
 interface ReserveCoinQueueResult {
   counts: LiveReserveQueueCounts;
@@ -326,6 +327,8 @@ export async function syncLiveReserves(
   budgetOverrides?: Partial<LiveReserveSyncBudgetConfig>,
   checkpointIdentity?: ScheduledCheckpointIdentity,
 ): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded"]);
+  db = d1Cost.db;
   const runStartedAt = Math.floor(Date.now() / 1000);
   const runStartedMs = Date.now();
   const budgetConfig = resolveLiveReserveSyncBudgetConfig(budgetOverrides);
@@ -398,6 +401,9 @@ export async function syncLiveReserves(
       previousRequestCacheObserver?.(event);
     },
   };
+  if (effectiveAdapterCtx.db && effectiveAdapterCtx.db !== db) {
+    effectiveAdapterCtx.db = d1Cost.wrapDatabase(effectiveAdapterCtx.db);
+  }
   const resourceAwareReporter: CronProgressReporter | undefined = reportProgress
     ? (update) => reportProgress({
       ...update,
@@ -471,6 +477,7 @@ export async function syncLiveReserves(
     ...result,
     metadata: JSON.stringify({
       ...JSON.parse(result.metadata ?? "{}"),
+      d1Cost: d1Cost.snapshot(),
       resourcePressure: getRequestResourceSnapshot(effectiveAdapterCtx, "terminal"),
     }),
   };

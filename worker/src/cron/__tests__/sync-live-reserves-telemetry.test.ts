@@ -5,6 +5,7 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import { ResourcePressureSchema, type ResourcePressure } from "@shared/types/status/cron";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { AdapterContext } from "../reserve-adapters/index";
+import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
 import {
   createRequestBodyObserver,
   getCachedRequest,
@@ -24,6 +25,7 @@ import {
   recordOutcomeSafeMock,
   shouldAttemptFetchMock,
 } from "./live-reserves.test-support";
+import { syncLiveReserves } from "../sync-live-reserves";
 
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
   const registry = await importOriginal<typeof StablecoinRegistry>();
@@ -42,11 +44,40 @@ function metadataOf(result: { metadata?: string }): {
 }
 
 describe("syncLiveReserves adapter latency telemetry", () => {
+  it("preserves setup D1 exceptions without synthesizing a successful result", async () => {
+    const failure = new Error("original reserve setup failure");
+    const db = mockLiveReserveD1([{ match: "FROM reserve_sync_state", rows: [], throwError: failure }]);
+    await expect(syncLiveReserves(db, new AbortController().signal)).rejects.toBe(failure);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
+  });
+
+  it("includes adapter-context D1 calls without changing their SQL rows", async () => {
+    const rows = [{ id: "adapter-evidence" }];
+    const db = mockLiveReserveD1([{ match: "SELECT adapter_evidence", rows }]);
+    const assertCost = observeMockD1Cost(db);
+    let adapterReads = 0;
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+      ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey],
+      key: adapterKey,
+      fetch: async (_coin: unknown, _config: unknown, _signal: AbortSignal, ctx?: AdapterContext) => {
+        expect((await ctx!.db!.prepare("SELECT adapter_evidence").all()).results).toBe(rows);
+        adapterReads++;
+        return {
+          slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+          metadata: { freshnessMode: "not-applicable" as const },
+        };
+      },
+    }));
+    const result = await syncLiveReserves(db, new AbortController().signal, { db });
+    expect(adapterReads).toBeGreaterThan(0);
+    expect(assertCost(result).bindingCalls).toBeGreaterThanOrEqual(adapterReads);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ failed: 0 });
   });
 
   it("does not strongly retain evicted or oversized payload promises and keeps LRU hit accounting", async () => {
@@ -188,14 +219,17 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       };
     });
 
+    const db = mockLiveReserveD1();
+    const assertCost = observeMockD1Cost(db);
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const result = await syncLiveReserves(
-      mockLiveReserveD1(),
+      db,
       new AbortController().signal,
       { onRequestCache },
       reportProgress,
     );
     const { adapterLatency, resourcePressure } = metadataOf(result);
+    expect(assertCost(result).bindingCalls).toBeGreaterThan(0);
     const configuredCoins = WORKER_ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
     const cacheHitAttempts = adapterLatency.groups
       .filter((group) => group.cacheHit)

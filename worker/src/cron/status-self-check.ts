@@ -30,6 +30,7 @@ import type { WorkerCanaryMode } from "../lib/canary-checks";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
 import { refreshD1TableGrowthSnapshot } from "../lib/status/d1-usage";
 import { getCache, setCache } from "../lib/db-cache";
+import { createD1CostTracker } from "../lib/d1-cost";
 
 interface ProbeResult {
   path: string;
@@ -683,6 +684,8 @@ async function collectStatusSelfCheckProbes(
 }
 
 export async function runStatusSelfCheck(db: D1Database, options: StatusSelfCheckOptions = {}): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded", "external-http-d1-excluded"]);
+  db = d1Cost.db;
   const now = Math.floor(Date.now() / 1000);
   await options.reportProgress?.({ stage: "d1-capacity" });
   const d1CapacityMonitoring = options.d1StatusConfig
@@ -831,6 +834,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     status: reason ? "degraded" : "ok",
     itemCount: sampleCount,
     metadata: JSON.stringify({
+      d1Cost: d1Cost.snapshot(),
       outputPublishedAt: failedOutputs.size === 0 ? now : null,
       failedOutputs: [...failedOutputs],
       evidenceReadFailures,

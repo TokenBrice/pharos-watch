@@ -187,13 +187,14 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     );
 
     expect(result.status).toBe("ok");
-    expect(sealAcceptedReserveGeneration).toHaveBeenCalledWith(db, identity, expect.any(String),
+    expect(sealAcceptedReserveGeneration).toHaveBeenCalledWith(expect.anything(), identity, expect.any(String),
       CONFIGURED_COINS.map((coin) => coin.id), expect.objectContaining({
         status: "ok", itemCount: CONFIGURED_COIN_COUNT, productivity: result.productivity,
       }));
     const sealedResult = vi.mocked(sealAcceptedReserveGeneration).mock.calls[0]![4];
     expect(JSON.parse(result.metadata!)).toEqual({
       ...JSON.parse(sealedResult.metadata!),
+      d1Cost: expect.objectContaining({ bindingCalls: expect.any(Number), batchCalls: expect.any(Number) }),
       resourcePressure: expect.objectContaining({ phase: "terminal" }),
     });
     const history = db.getHistory();
