@@ -6,13 +6,14 @@ import {
   isValidStagedPoolId,
   readDiscoveryCensusSummaries,
   readDiscoveryMeta,
+  readDiscoveryRunCheckpoint,
   readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
-  writeDiscoveryTargetCursors,
+  writeDiscoveryRunCheckpoint,
 } from "../persistence";
-import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD } from "../types";
+import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD, type DiscoveryRunCheckpoint } from "../types";
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stagedPool } from "./discovery.test-support";
@@ -370,34 +371,42 @@ describe("discovery persistence D1 retry coverage", () => {
     ]));
   });
 
-  it("round-trips the per-coin target cursor as one durable map", async () => {
-    let storedValue: string | undefined;
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        if (sql.startsWith("SELECT")) {
-          return {
-            bind: () => ({ first: async () => ({ value: storedValue }) }),
-          };
-        }
-        return {
-          bind: (...values: unknown[]) => ({
-            run: async () => {
-              storedValue = values[1] as string;
-              return { success: true, meta: { changes: 1 } };
-            },
-          }),
-        };
-      },
-    });
+  it("atomically round-trips the cohort checkpoint and deployment-window cursor map", async () => {
+    const { db } = fixtures.open();
+    const batch = vi.spyOn(db, "batch");
     const cursors = new Map([
       ["coin-a", "ethereum:0xaaa"],
       ["coin-b", "osmosis:ibc/BBB"],
     ]);
+    const checkpoint: DiscoveryRunCheckpoint = {
+      runSeq: 17,
+      refreshPending: false,
+      pendingCandidates: [{ stablecoinId: "coin-b", tier: "t2" }],
+    };
 
-    await writeDiscoveryTargetCursors(db, cursors);
-
-    expect(storedValue).toBe(JSON.stringify(Object.fromEntries(cursors)));
+    expect(await readDiscoveryRunCheckpoint(db)).toBeNull();
+    await writeDiscoveryRunCheckpoint(db, checkpoint, cursors);
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(batch.mock.calls[0]?.[0]).toHaveLength(2);
     expect(await readDiscoveryTargetCursors(db)).toEqual(cursors);
+    expect(await readDiscoveryRunCheckpoint(db)).toEqual(checkpoint);
+
+    await writeDiscoveryRunCheckpoint(db, null, null);
+    expect(await readDiscoveryRunCheckpoint(db)).toBeNull();
+    expect(await readDiscoveryTargetCursors(db)).toEqual(cursors);
+  });
+
+  it.each([
+    "{broken",
+    JSON.stringify({ runSeq: 0, refreshPending: false, pendingCandidates: [] }),
+    JSON.stringify({ runSeq: 1, refreshPending: false, pendingCandidates: [{ stablecoinId: "coin-a", tier: "skip" }] }),
+    JSON.stringify({ runSeq: 1, refreshPending: false, pendingCandidates: [
+      { stablecoinId: "coin-a", tier: "t1" }, { stablecoinId: "coin-a", tier: "t2" },
+    ] }),
+  ])("rejects a malformed checkpoint instead of treating it as a completed cohort: %s", async (value) => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO kv_config (key, value) VALUES ('discovery_run_checkpoint', ?)").run(value);
+    await expect(readDiscoveryRunCheckpoint(db)).rejects.toThrow();
   });
 
   it("records an attempt fence without changing existing backoff counters", async () => {

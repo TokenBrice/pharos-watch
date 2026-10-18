@@ -226,6 +226,56 @@ interface CronHistoryRow {
   degraded_reason: string | null;
 }
 
+/** Admission readbacks live in the existing parent slot, never in child/lease
+ * rows. Project them as zero-work neutral observations so the established
+ * error/proof ordering remains attributable without renewing output freshness. */
+async function fetchSnapshotAdmissionRows(db: D1Database, now: number): Promise<CronHistoryRow[]> {
+  const lookbackSec = Math.max(
+    CRON_INTERVALS["snapshot-psi"], CRON_INTERVALS["snapshot-public-dataset"],
+  ) * 2;
+  const result = await db.prepare(`
+    WITH finished_slots AS (
+      SELECT slot_started_at, finished_at, metadata
+      FROM cron_slot_executions
+      WHERE slot_key = 'quarterHourly' AND state = 'finished'
+        AND slot_started_at >= ? AND slot_started_at <= ?
+    )
+    SELECT json_extract(admission.value, '$.job') AS job,
+           MAX(json_extract(admission.value, '$.observedAt')) AS observed_at
+    FROM finished_slots,
+         json_each(CASE WHEN json_valid(finished_slots.metadata)
+           THEN json_extract(finished_slots.metadata, '$.jobs') ELSE '[]' END) AS admission
+    WHERE CASE WHEN admission.type = 'object' THEN
+      json_extract(admission.value, '$.job') IN ('snapshot-psi', 'snapshot-public-dataset')
+      AND json_extract(admission.value, '$.outcome') = 'skipped'
+      AND json_extract(admission.value, '$.status') = 'skipped_neutral'
+      AND json_extract(admission.value, '$.neutral') = 1
+      AND json_extract(admission.value, '$.reason') = 'same_day_snapshot_exists'
+      AND json_type(admission.value, '$.observedAt') = 'integer'
+      AND json_extract(admission.value, '$.observedAt') >= finished_slots.slot_started_at
+      AND json_extract(admission.value, '$.observedAt') <= finished_slots.finished_at
+      AND json_extract(admission.value, '$.observedAt') <= ?
+    ELSE 0 END
+    GROUP BY json_extract(admission.value, '$.job')
+  `).bind(now - lookbackSec, now, now).all<{ job: string; observed_at: number }>();
+  return (result.results ?? []).filter(({ job, observed_at }) =>
+    (job === "snapshot-psi" || job === "snapshot-public-dataset") &&
+    Number.isSafeInteger(observed_at) && observed_at > 0 && observed_at <= now && now - observed_at <= lookbackSec,
+  ).map(({ job, observed_at }) => ({
+    job,
+    started_at: observed_at,
+    duration_ms: 0,
+    status: NEUTRAL_CRON_RUN_STATUS,
+    error: null,
+    item_count: 0,
+    metadata: JSON.stringify({
+      reason: "same_day_snapshot_exists", source: "scheduled-slot-admission", outputPublishedAt: null,
+    }),
+    schedule_key: "quarterHourly",
+    degraded_reason: "same_day_snapshot_exists",
+  }));
+}
+
 interface CronLeaseRow {
   job: string;
   lease_owner: string;
@@ -335,6 +385,9 @@ async function fetchCronHistoryRows(
         seenRuns.add(key);
         rows.push(row);
       }
+    }
+    if (cronJobs.includes("snapshot-psi") || cronJobs.includes("snapshot-public-dataset")) {
+      rows.push(...(await fetchSnapshotAdmissionRows(db, now)).filter(({ job }) => cronJobs.includes(job)));
     }
     const freshOutputJobs = new Set<string>();
     const freshOkOutputJobs = new Set<string>();

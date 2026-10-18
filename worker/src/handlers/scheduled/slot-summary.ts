@@ -13,6 +13,8 @@ export type ScheduledSlotJobSummary = {
   reason?: string;
   error?: string;
   neutral?: boolean;
+  /** Admission decision/read clock, not a child execution/publication clock. */
+  observedAt?: number;
   terminalAccountingError?: {
     stage: CronTerminalAccountingStage;
     outputPublishedAt: number | null;

@@ -57,11 +57,15 @@ vi.mock("../persistence", () => ({
   incrementRunSeq: vi.fn(async () => 1),
   readDiscoveryCensusSummaries: vi.fn(async () => new Map()),
   readDiscoveryMeta: vi.fn(async () => new Map()),
+  readDiscoveryRunCheckpoint: vi.fn(async () => null),
   readDiscoveryTargetCursors: vi.fn(async () => new Map(cursorStore)),
   recordDiscoveryAttemptFence: vi.fn(async () => {}),
   updateDiscoveryMeta: vi.fn(async () => {}),
   upsertStagedPools: vi.fn(async () => {}),
-  writeDiscoveryTargetCursors: vi.fn(async (_db: D1Database, cursors: ReadonlyMap<string, string>) => {
+  writeDiscoveryRunCheckpoint: vi.fn(async (
+    _db: D1Database, _checkpoint: unknown, cursors: ReadonlyMap<string, string> | null,
+  ) => {
+    if (cursors == null) return;
     cursorStore.clear();
     for (const [key, value] of cursors) cursorStore.set(key, value);
   }),
