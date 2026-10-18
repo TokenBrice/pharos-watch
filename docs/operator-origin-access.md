@@ -332,8 +332,8 @@ The independent Production Canaries transport job also runs
 `node scripts/ci/check-live-api-cache-policy.mjs`, requiring no secrets. Its
 bounded public GETs cover exempt direct API responses and same-origin
 `/_site-data` with `Origin`/`Referer`. It compares live `Cache-Control` with
-`shared/lib/api-cache-profiles.ts`: browser `max-age` equals the greater of the
-profile value and manifest floor; edge `s-maxage`, stale-while-revalidate and
+`shared/lib/api-cache-profiles.ts`: browser `max-age` equals the profile value
+(origin miss) or the greater of the profile value and manifest floor (edge hit); edge `s-maxage`, stale-while-revalidate and
 `no-store` remain unchanged. Missing headers, failed/redirected/non-JSON
 responses and directive drift fail with endpoint/profile evidence. This is
 representative response evidence, not proof about every route or Cache Rule.

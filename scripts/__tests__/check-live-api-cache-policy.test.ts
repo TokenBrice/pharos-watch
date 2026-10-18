@@ -21,12 +21,13 @@ function responseFor(url: string, override?: string, status = 200) {
 }
 
 describe("live API Cache-Control drift", () => {
-  it("accepts only the documented browser floor, retaining edge TTL and SWR", () => {
+  it("accepts the source browser TTL (origin miss) or the documented floor (cache hit), retaining edge TTL and SWR", () => {
     expect(compareLiveCacheControl(effectiveProfiles.realtime, "realtime", 60).issues).toEqual([]);
     expect(compareLiveCacheControl(effectiveProfiles.producerBacked, "producerBacked", 60).issues).toEqual([]);
     expect(compareLiveCacheControl(effectiveProfiles.slow, "slow", 60).issues).toEqual([]);
     expect(compareLiveCacheControl('MAX-AGE="60", PUBLIC, S-MAXAGE=60', "realtime", 60).issues).toEqual([]);
-    expect(compareLiveCacheControl(API_CACHE_PROFILES.perCoin, "perCoin", 60).issues).toContain('max-age: expected "60", found "10"');
+    expect(compareLiveCacheControl(API_CACHE_PROFILES.perCoin, "perCoin", 60).issues).toEqual([]);
+    expect(compareLiveCacheControl("public, max-age=30, s-maxage=60", "realtime", 60).issues).toContain('max-age: expected "60", found "30"');
     expect(compareLiveCacheControl("public, max-age=1200, s-maxage=300", "perCoin", 60).issues).toContain('max-age: expected "60", found "1200"');
     expect(compareLiveCacheControl("public, max-age=60, s-maxage=1200", "realtime", 60).issues).toContain('s-maxage: expected "60", found "1200"');
     expect(compareLiveCacheControl("public, s-maxage=300, max-age=60", "producerBacked", 60).issues).toContain('stale-while-revalidate: expected "300", found "absent"');
@@ -71,7 +72,7 @@ describe("live API Cache-Control drift", () => {
     const log = vi.fn();
     const fetchImpl = vi.fn(async (url: string) => {
       if (url.includes("api.pharos.watch/api/health")) throw new Error("network unavailable");
-      if (url.includes("/_site-data/health")) return responseFor(url, API_CACHE_PROFILES.realtime);
+      if (url.includes("/_site-data/health")) return responseFor(url, "public, max-age=1200, s-maxage=60");
       if (url.includes("/_site-data/stablecoins")) return responseFor(url, effectiveProfiles.producerBacked, 503);
       if (url.includes("/_site-data/bluechip-ratings")) return new Response("challenge", { headers: { "Content-Type": "text/html" } });
       return responseFor(url);
@@ -81,7 +82,7 @@ describe("live API Cache-Control drift", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(6);
     expect(report.summary).toContain("FAIL [direct/realtime] https://api.pharos.watch/api/health");
     expect(report.summary).toContain("public GET failed: network unavailable");
-    expect(report.summary).toContain('max-age: expected "60", found "10"');
+    expect(report.summary).toContain('max-age: expected "60", found "1200"');
     expect(report.summary).toContain("expected direct HTTP 200, found 503");
     expect(report.summary).toContain("expected application/json response");
     expect(log).toHaveBeenCalledWith(report.summary);
