@@ -149,6 +149,38 @@ describe("ScreenerClient freshness notices", () => {
     setDefaultMocks();
   });
 
+  it("keeps freshness in the shared fixed-height slot across loading and ready states", () => {
+    const view = render(<ScreenerClient />);
+    expect(mocks.QueryFreshnessNotices.mock.calls.at(-1)?.[0]).toMatchObject({ persistent: true });
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ triggerClassName: "min-w-24" });
+    const unavailableCount = view.getByText("Screener counts unavailable.");
+    expect(unavailableCount.classList.contains("min-h-12")).toBe(true);
+    expect(unavailableCount.classList.contains("lg:min-h-8")).toBe(true);
+    expect(unavailableCount.parentElement?.parentElement?.classList.contains("grid")).toBe(true);
+
+    mocks.useStablecoins.mockReturnValue({
+      data: undefined, isLoading: true, error: null, dataUpdatedAt: 0, meta: null, refetch,
+    });
+    view.rerender(<ScreenerClient />);
+    expect(view.getByText("Loading screener inputs…").classList.contains("min-h-12")).toBe(true);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
+      triggerLabel: "Loading", triggerClassName: "min-w-24", disabled: true,
+    });
+
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null,
+      dataUpdatedAt: 1_700_000_000, meta: null, refetch,
+    });
+    view.rerender(<ScreenerClient />);
+    const readyCount = view.getByText(/tracked/).closest("p");
+    expect(readyCount?.classList.contains("min-h-12")).toBe(true);
+    expect(readyCount?.classList.contains("lg:min-h-8")).toBe(true);
+    expect(mocks.QueryFreshnessNotices.mock.calls.at(-1)?.[0]).toMatchObject({ persistent: true });
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
+      triggerLabel: "Export", triggerClassName: "min-w-24", disabled: false,
+    });
+  });
+
   it("exports every filtered sorted row, independently of the table's displayed page", () => {
     mocks.useStablecoins.mockReturnValue({
       data: { peggedAssets: [makeStablecoin()] },

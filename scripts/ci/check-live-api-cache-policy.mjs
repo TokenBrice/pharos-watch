@@ -55,10 +55,14 @@ export function compareLiveCacheControl(header, profile, browserFloorSeconds) {
   if (!expected.has("no-store") && expected.has("max-age")) {
     expected.set("max-age", String(Math.max(Number(expected.get("max-age")), browserFloorSeconds)));
   }
+  const sourceMaxAge = directives(source).get("max-age");
   const issues = [];
   try {
     const actual = directives(header ?? "");
     for (const name of new Set([...expected.keys(), ...actual.keys()])) {
+      // Cloudflare applies the zone browser floor only to responses it serves
+      // from cache; an origin miss keeps the source browser TTL, which is also valid.
+      if (name === "max-age" && sourceMaxAge !== undefined && actual.get(name) === sourceMaxAge) continue;
       if (actual.get(name) !== expected.get(name)) {
         issues.push(`${name}: expected ${JSON.stringify(expected.get(name) ?? "absent")}, found ${JSON.stringify(actual.get(name) ?? "absent")}`);
       }
@@ -105,7 +109,7 @@ export async function runLiveApiCachePolicyCheck({
     rows.push(row);
   }
   const summary = ["## Live API Cache-Control policy (G-6)",
-    `Response evidence only; account settings are assessed separately. Accepted zone browser floor: ${floor}s. Browser max-age = max(source max-age, floor); edge/SWR and no-store are unchanged.`,
+    `Response evidence only; account settings are assessed separately. Accepted zone browser floor: ${floor}s. Browser max-age = source max-age (origin miss) or max(source max-age, floor) (edge hit); edge/SWR and no-store are unchanged.`,
     ...rows.map((row) => `${row.issues.length ? "FAIL" : "PASS"} [${row.lane}/${row.profile}] ${row.url}: expected ${JSON.stringify(row.expected)}, received ${JSON.stringify(row.actual)}${row.issues.length ? ` — ${row.issues.join("; ")}` : ""}`), ""].join("\n");
   consoleImpl.log(summary);
   return { ok: rows.every((row) => row.issues.length === 0), rows, summary };

@@ -12,6 +12,7 @@ import { handleRedemptionBackstops, handleRedemptionBackstopCoin } from "../rede
 import { handleYieldRankings, handleYieldRankingsCoin } from "../yield-rankings-cache";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { conditionalGetResponse, scopeResponseEtag } from "../../lib/api-response";
 
 vi.mock("../../lib/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: vi.fn(async () => ({ kind: "error", reason: "safety-score-index-unavailable", snapshot: null })),
@@ -84,17 +85,52 @@ describe("site-only coin projections", () => {
     } finally { sqlite.close(); }
   });
 
-  it("bounds the DEX table by its oldest transported row, not its newest sibling", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+  it.each([false, true])("uses the DEX publication clock without hiding ancient row evidence (table=%s)", async (table) => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const ancientUpdatedAt = now - 174 * 86_400;
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
-      insert(sqlite, "dex_liquidity", { symbol: "USDT", ...makeDexLiquidityRow({ updated_at: now - staleAge }) });
+      insert(sqlite, "dex_liquidity", { symbol: "USDT", ...makeDexLiquidityRow({ updated_at: ancientUpdatedAt }) });
       insert(sqlite, "dex_liquidity", { symbol: "USDC", ...makeDexLiquidityRow({ stablecoin_id: "usdc-circle", updated_at: now }) });
-      const response = await handleDexLiquidityTable(db);
-      const body = DexLiquidityTableMapSchema.parse(await response.json());
-      expect(body["usdt-tether"].updatedAt).toBe(now - staleAge);
-      expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - staleAge));
-      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      const path = table ? "dex-liquidity-table" : "dex-liquidity";
+      const response = await (table ? handleDexLiquidityTable(db) : handleDexLiquidity(db));
+      const body = (table ? DexLiquidityTableMapSchema : DexLiquidityMapSchema).parse(await response.clone().json());
+      expect(body["usdt-tether"].updatedAt).toBe(ancientUpdatedAt);
+      expect(body["usdt-tether"].warning).toContain("110");
+      expect(body["usdc-circle"].updatedAt).toBe(now);
+      expect(body["usdc-circle"].warning).toBeNull();
+      expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
+      expect(response.headers.get("X-Data-Age")).toBe("0");
+      expect(response.headers.get("Warning")).toBeNull();
+      expect(response.headers.get("Cache-Control")).not.toBe("no-store");
+
+      const cached = scopeResponseEtag(response, path, true);
+      const etag = cached.headers.get("ETag");
+      expect(etag).toBeTruthy();
+      const request = new Request(`https://site-api.pharos.watch/api/${path}`, {
+        headers: { "If-None-Match": etag! },
+      });
+      const notModified = conditionalGetResponse(request, cached.clone());
+      expect(notModified.status).toBe(304);
+      for (const name of ["ETag", "Date", "Cache-Control", "X-Data-Updated-At", "X-Data-Freshness-Budget"]) {
+        expect(notModified.headers.get(name)).toBe(cached.headers.get(name));
+      }
+      clock.mockReturnValue((now + 86_400) * 1000);
+      expect(conditionalGetResponse(request, cached).status).toBe(200);
+
+      clock.mockReturnValue(now * 1000);
+      const coinResponse = scopeResponseEtag(
+        await handleDexLiquidityCoin(db, coinUrl("dex-liquidity-coin", "usdt-tether")),
+        "dex-liquidity-coin?stablecoin=usdt-tether", true,
+      );
+      const coin = DexLiquidityCoinResponseSchema.parse(await coinResponse.clone().json());
+      expect(coin.coins["usdt-tether"].updatedAt).toBe(ancientUpdatedAt);
+      expect(coin.projection.updatedAt).toBe(ancientUpdatedAt);
+      expect(coinResponse.headers.get("X-Data-Updated-At")).toBe(String(ancientUpdatedAt));
+      expect(coinResponse.headers.get("Warning")).toContain("110");
+      expect(coinResponse.headers.get("Cache-Control")).toBe("no-store");
+      expect(coinResponse.headers.get("ETag")).toBeNull();
+      expect(conditionalGetResponse(request, coinResponse).status).toBe(200);
     } finally { sqlite.close(); }
   });
 
@@ -106,6 +142,13 @@ describe("site-only coin projections", () => {
       insert(sqlite, "redemption_backstop_runs", { ...run, started_at: run.min_updated_at, status: "completed" });
       insert(sqlite, "redemption_backstop_run_rows", makeRedemptionRow({ snapshot_run_id: run.run_id, updated_at: now - staleAge }));
       insert(sqlite, "redemption_backstop_run_rows", makeRedemptionRow({ stablecoin_id: "usdc-circle", snapshot_run_id: run.run_id, updated_at: now }));
+      const full = await handleRedemptionBackstops(db);
+      const fullBody = RedemptionBackstopsResponseSchema.parse(await full.json());
+      expect(fullBody.updatedAt).toBe(now);
+      expect(fullBody.coins["cusd-cap"].updatedAt).toBe(now - staleAge);
+      expect(full.headers.get("X-Data-Updated-At")).toBe(String(now));
+      expect(full.headers.get("Warning")).toBeNull();
+      expect(full.headers.get("Cache-Control")).not.toBe("no-store");
       const response = await handleRedemptionBackstopCoin(db, coinUrl("redemption-backstop-coin", "cusd-cap"));
       const body = RedemptionBackstopCoinResponseSchema.parse(await response.json());
       expect(body.projection).toMatchObject({ generationId: run.run_id, totalCount: 2, updatedAt: now - staleAge });

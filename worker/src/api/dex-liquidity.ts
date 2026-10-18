@@ -138,9 +138,9 @@ export const handleDexLiquidity = async (
   const selectedRows = result.results ?? [];
   const rows = selectedRows.filter((row) => row.stablecoin_id != null);
   const cacheControl = advisoryUnavailableReason ? CACHE_PROFILES.noStore : CACHE_PROFILES.custom;
-  // A compact cohort cannot borrow a newer sibling's clock. Every transported
-  // observation must remain within its own producer budget.
-  const datasetUpdatedAt = rows.length > 0 ? Math.min(...rows.map((row) => row.updated_at)) : null;
+  // Cohort freshness follows the newest published producer row, as before the
+  // compact projections. Individual rows retain their own clocks and warnings.
+  const datasetUpdatedAt = rows.length > 0 ? Math.max(...rows.map((row) => row.updated_at)) : null;
   const headers: Record<string, string> = datasetUpdatedAt != null
     ? addFreshnessHeaders(
         { "Cache-Control": cacheControl },
@@ -159,7 +159,7 @@ export const handleDexLiquidity = async (
       try { normalizeDexLiquidityEvidence(row); } catch { unavailableReason = "invalid-coverage-evidence"; }
       table[row.stablecoin_id] = {
         liquidityScore: unavailableReason ? null : row.liquidity_score,
-        warning: [headers.Warning, advisoryUnavailableWarning, buildDexLiquidityWarning(latestCron,
+        warning: [addFreshnessHeaders({}, row.updated_at, API_FRESHNESS_MAX_AGE_SEC.dexLiquidity).Warning, advisoryUnavailableWarning, buildDexLiquidityWarning(latestCron,
           row.stablecoin_id === "__global__" ? { scope: "global" } : { scope: "coin", stablecoinId: row.stablecoin_id },
         )].filter(Boolean).join(", ") || null,
         unavailableReason,
@@ -232,7 +232,7 @@ export const handleDexLiquidity = async (
     map[id] = {
       unavailableReason: evidence == null ? "invalid-coverage-evidence" : null,
       advisoryUnavailableReason,
-      warning: [headers.Warning, advisoryUnavailableWarning, buildDexLiquidityWarning(
+      warning: [addFreshnessHeaders({}, row.updated_at, API_FRESHNESS_MAX_AGE_SEC.dexLiquidity).Warning, advisoryUnavailableWarning, buildDexLiquidityWarning(
         latestCron,
         id === "__global__" ? { scope: "global" } : { scope: "coin", stablecoinId: id },
       )]
