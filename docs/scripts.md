@@ -159,6 +159,28 @@ API smoke validates the complete redemption response with `RedemptionBackstopsRe
 
 `ops:cron-delivery` reads Cloudflare scheduled-invocation ground truth; see [cron delivery stall](./runbooks/cron-delivery-stall.md).
 
+### Worker Incident Evidence And Status Profile
+
+`ops:watch-worker-cron` and `ops:night-watch-worker` preserve literal `ok`, `degraded`, `error`, `skipped_neutral` and `skipped_locked` counts; `synthetic` counts only the orthogonal `stale-slot-reconciled` subset. Unknown stored statuses retain their own bucket. Productive and publication counts use explicit columns, with unknown counts separate; terminal success is never substituted for publication. Synthetic children group by invocation and slot as “1 started + N not-started”, with execution-unknown children separate; grouping never changes their stored error status. Generation-ledger states are a separate table/count, not extra publications inferred from a terminal.
+
+Read-only status D1 profiling (run from the root):
+
+```sh
+node --import tsx scripts/maintenance/watch-worker-cron.mjs --profile-status
+```
+
+Export `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` with D1 read permission. This executes the **actual source `/api/status` handler** with explicit trusted operator authorization over a SELECT-only D1 REST transport and the Worker's `d1-cost` seam. It reports statement count, nullable rows read/server SQL duration, local end-to-end duration, HTTP/section completeness and latest persisted `status-self-check` `d1Cost` with its observation clock. It does not execute the mutating self-check. The adapter retains metadata for `first()` reads, while the seam preserves its own partial-coverage reasons. This is not a production HTTP/colo latency measurement: source revision, local REST RTT and omitted optional provider credentials are explicit limitations. Exit `1` means incomplete route cost evidence, not zero cost. No status payload, SQL, credentials or provider error bodies are emitted.
+
+```sh
+node --import tsx scripts/maintenance/watch-worker-cron.mjs --incident-bundle \
+  --out-dir agents/worker-incidents --archive-dir agents/previous-worker-incidents
+```
+
+The bundle captures the previous complete UTC day and rolls forward at most **21 days**, reading only bounded D1 `SELECT`s, Cloudflare deployment inventories and scheduled invocation Analytics. Use `CLOUDFLARE_API_TOKEN` (D1/Workers read), `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN` (Analytics read). Credentials go only to Cloudflare; allowlisted artifact fields exclude arbitrary cron metadata/error text, query text and tokens. `bundle.json` and `report.md` include source coverage/reasons, missing days, literal statuses, productivity, publication ledgers and deployment → delivered invocation → child → publication correlations. Joins require a singleton physical cron/slot, one invocation and one exact deployment-version match; unresolved chains remain unattributed. Timestamp-correlated publications explicitly do not establish causality. Deployment history is only a bounded recent inventory, not proof of exact activation time or complete 21-day history.
+
+There was no existing daily production-evidence artifact lane, so the **Worker Memory Monitor** pattern owns a daily `01:17 UTC` incident job (also manual), separate from hourly memory collection. It restores the most recent main-branch incident artifact, drops days outside the rolling window and uploads `worker-incidents-<run>-<attempt>` with **21-day artifact retention** before reporting collection failures. Initial/missing days, row limits (50,000 per D1 source/day), unavailable reads and limited deployment history remain partial; archive bootstrap never fabricates the missing hot-D1 history. No migrations or hot retention changes are made. The [48-job freshness/tolerance matrix](./process/lane-freshness-matrix.md) is draft for owner sign-off, not executable policy.
+
+
 ### Curation Audits
 
 Use `package.json`'s `audit:*`, `candidates:*`, and `calibrate:*` commands; reports are advisory unless owner docs or CI enforce them. [Stablecoin Data](./stablecoin-data.md) owns curation; feature docs own interpretation. Keep research/queues in `agents/`, durable changes in owner docs. Refresh contracts: [protocol APIs](./process/protocol-api-mechanism-refresh.md) and [CDP shocks](./process/shock-coverage-refresh.md).
