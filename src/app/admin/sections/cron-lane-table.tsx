@@ -358,14 +358,21 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, causes, nowSeconds }
                     key={row.key}
                     row={row}
                     nowSeconds={nowSeconds}
-                    isSelected={selectedRow?.key === row.key}
+                    isSelected={selectedJob === row.job}
                     onSelect={() => selectJob(row.job)}
                   />
                 ))}
               </TableBody>
             ))}
           </TableFrame>
-          {selectedRow ? <CronDetailPanel row={selectedRow} causes={causes} nowSeconds={nowSeconds} /> : null}
+          {selectedRow ? (
+            <CronDetailPanel
+              row={selectedRow}
+              causes={causes}
+              nowSeconds={nowSeconds}
+              detailEnabled={selectedJob === selectedRow.job}
+            />
+          ) : null}
         </div>
       )}
 

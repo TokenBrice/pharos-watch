@@ -98,16 +98,18 @@ export function CronDetailPanel({
   row,
   causes = [],
   nowSeconds,
+  detailEnabled,
 }: {
   row: CronWorkbenchRow;
   causes?: readonly StatusCause[];
   nowSeconds: number;
+  detailEnabled: boolean;
 }) {
   const lastRun = row.cron.runs[0];
   const lastRunTiming = lastRun ? formatCronRunTiming(lastRun) : null;
   // Full run/progress metadata is fetched for the opened job only.
-  const detailQuery = useStatusCronDetail(row.job);
-  const detail = detailQuery.data?.job === row.job ? detailQuery.data : undefined;
+  const detailQuery = useStatusCronDetail(row.job, { enabled: detailEnabled });
+  const detail = detailEnabled && detailQuery.data?.job === row.job ? detailQuery.data : undefined;
   const detailLatestRun = detail?.cron.runs[0];
   const detailInFlight = detail?.cron.inFlight ?? null;
   const detailErrors = detail ? Object.values(detail.sectionErrors) : [];
@@ -275,7 +277,11 @@ export function CronDetailPanel({
         </div>
       ) : null}
 
-      {detailQuery.isError && !detail ? (
+      {!detailEnabled ? (
+        <p className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
+          Select this job to load run history and metadata.
+        </p>
+      ) : detailQuery.isError && !detail ? (
         <p role="alert" className="mt-4 border-t border-border/55 pt-3 text-xs text-state-danger-strong">
           Job detail unavailable: {detailQuery.error.message}. Run history and metadata are not shown.
         </p>

@@ -56,6 +56,8 @@ function renderCrons({
   details?: Record<string, CronStatusDetail>;
   detailState?: "success" | "loading" | "error";
 }) {
+  const selectedJob = groups.flatMap((group) => group.entries)[0]?.[0];
+  window.history.replaceState(null, "", selectedJob ? `?job=${encodeURIComponent(selectedJob)}` : "/");
   const summaries = new Map(groups.flatMap((group) => group.entries));
   vi.mocked(useStatusCronDetail).mockImplementation((job) => ({
     data: detailState === "success" ? {
@@ -253,7 +255,7 @@ describe("CronsSection", () => {
         },
       },
     });
-    expect(useStatusCronDetail).toHaveBeenCalledWith("sync-stablecoins");
+    expect(useStatusCronDetail).toHaveBeenCalledWith("sync-stablecoins", { enabled: true });
 
     expect(screen.getAllByText("Stale heartbeat").length).toBeGreaterThan(0);
     expect(screen.getByText("lease-owner-a")).toBeTruthy();

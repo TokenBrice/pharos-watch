@@ -48,9 +48,12 @@ export function useStatusHistory(
   return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.statusHistory(window), options);
 }
 
-/** Per-job cron detail (full run and progress metadata) for the opened workbench job. */
-export function useStatusCronDetail(job: string): UseQueryResult<StatusCronDetailResponse, Error> {
-  return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.statusCronDetail(job));
+/** Full cron detail; callers must explicitly open the job before enabling its query. */
+export function useStatusCronDetail(
+  job: string,
+  options: { enabled: boolean },
+): UseQueryResult<StatusCronDetailResponse, Error> {
+  return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.statusCronDetail(job), options);
 }
 
 /**
