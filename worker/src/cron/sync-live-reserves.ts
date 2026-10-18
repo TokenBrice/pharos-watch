@@ -37,6 +37,7 @@ import {
 } from "./sync-live-reserves-run-state";
 import {
   resolveLiveReserveSyncBudgetConfig,
+  LIVE_RESERVE_SLICE_COST,
   type LiveReserveSyncBudgetConfig,
 } from "./sync-live-reserves-config";
 import {
@@ -110,6 +111,7 @@ async function runReserveCoinQueue(args: {
   reportProgress?: CronProgressReporter;
   checkpoint?: ScheduledCheckpointIdentity;
   startIndex: number;
+  recovering: boolean;
   fullQueue: readonly ConfiguredCoin[];
   telemetry: AdapterLatencyCollector;
 }): Promise<ReserveCoinQueueResult> {
@@ -146,11 +148,17 @@ async function runReserveCoinQueue(args: {
   let lastProgressItemsDone = -1;
   let checkpointBoundaryAdvanced = false;
 
+  const queueStartedMs = Date.now();
   for (const [index, coin] of args.orderedCoins.entries()) {
     throwIfAborted(args.signal);
     const globalIndex = args.startIndex + index;
     const budgetRemaining = args.budgetConfig.runBudgetMs - (Date.now() - args.runStartedMs);
-    if (budgetRemaining < args.budgetConfig.minimumAttemptBudgetMs) {
+    const observedMsPerCoin = counts.attemptedCoins > 0
+      ? (Date.now() - queueStartedMs) / counts.attemptedCoins
+      : LIVE_RESERVE_SLICE_COST.wallMsPerCoin;
+    const admissionMarginMs = Math.max(args.budgetConfig.minimumAttemptBudgetMs, observedMsPerCoin * 2
+      + args.budgetConfig.d1FinalizeTimeoutMs + args.budgetConfig.finalizationMarginMs);
+    if (budgetRemaining < admissionMarginMs || counts.attemptedCoins >= args.budgetConfig.maxCoinsPerSlice) {
       logWorkerEventArgs("handler", "warn",
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
@@ -159,7 +167,7 @@ async function runReserveCoinQueue(args: {
         await advanceLiveReserveCheckpoint(args.db, args.checkpoint, {
           nextItemKey: coin.id,
           itemsDone: globalIndex,
-          ...(args.checkpoint.attemptNo > 1
+          ...(args.recovering
             ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
             : {}),
         });
@@ -168,6 +176,18 @@ async function runReserveCoinQueue(args: {
       }
       const remainingCoins = args.orderedCoins.slice(index);
       const attemptedAt = Math.floor(Date.now() / 1000);
+      if (args.checkpoint) {
+        // The frontier is the only continuation ledger. Untouched coins are
+        // not failed/skipped attempts and must retain their prior source health.
+        counts.deferredCoins = remainingCoins.length;
+        deferredTail = {
+          ...deferredTail,
+          nextCursorStablecoinId: coin.id,
+          cursorRecordedAt: attemptedAt,
+          runBudgetTruncationCount: 1,
+        };
+        break;
+      }
       try {
         const deferred = await recordDeferredTail(
           args.db,
@@ -250,7 +270,7 @@ async function runReserveCoinQueue(args: {
                 itemsDone: globalIndex,
                 deadlineMs: args.runStartedMs + args.budgetConfig.runBudgetMs - args.budgetConfig.finalizationMarginMs,
                 itemsTotal: args.fullQueue.length,
-                ...(args.checkpoint!.attemptNo > 1
+                ...(args.recovering
                   ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
                   : {}),
               }),
@@ -300,7 +320,7 @@ async function runReserveCoinQueue(args: {
     await advanceLiveReserveCheckpoint(args.db, args.checkpoint, {
       nextItemKey: null,
       itemsDone: args.startIndex + args.orderedCoins.length,
-      ...(args.checkpoint.attemptNo > 1
+      ...(args.recovering
         ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
         : {}),
     });
@@ -444,6 +464,7 @@ export async function syncLiveReserves(
     reportProgress: resourceAwareReporter,
     checkpoint: checkpointIdentity,
     startIndex: Math.max(0, startIndex),
+    recovering: checkpoint?.state === "recovering",
     fullQueue: SYNC_ORDERED_CONFIGURED_COINS,
     telemetry,
   });

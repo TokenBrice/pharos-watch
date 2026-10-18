@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS, STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
 import { getCircuitImpactStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM } from "@shared/lib/public-health";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
@@ -205,7 +205,7 @@ describe("status evaluation policy", () => {
     expect(assessment.authoritativeFreshCoverageRatio).toBe(0.8);
   });
 
-  it("keeps one-off low-share reserve truncation healthy while surfacing it as a cause", () => {
+  it("keeps a bounded continuation healthy without using deferred share as a capacity verdict", () => {
     const assessment = deriveReserveCompositionStatus(
       makeReserveComposition({
         runBudgetTruncated: true,
@@ -219,7 +219,7 @@ describe("status evaluation policy", () => {
 
   it.each([
     [0, false, 0, "healthy"],
-    [3, true, 0, "degraded"],
+    [3, true, 0, "healthy"],
     [0, false, 1, "degraded"],
   ] as const)("keeps live remainder separate from real capacity pressure (%s/%s/%s)", (deferredCoins, runBudgetTruncated, writeTimeoutUncertain, status) => {
     const assessment = deriveReserveCompositionStatus(makeReserveComposition({
@@ -228,7 +228,7 @@ describe("status evaluation policy", () => {
     expect(assessment.status).toBe(status);
   });
 
-  it("degrades reserve status for high-share truncation pressure", () => {
+  it("does not degrade reserve coverage for high-share continuation alone", () => {
     const highShare = deriveReserveCompositionStatus(
       makeReserveComposition({
         runBudgetTruncated: true,
@@ -236,7 +236,7 @@ describe("status evaluation policy", () => {
       }),
     );
 
-    expect(highShare.status).toBe("degraded");
+    expect(highShare.status).toBe("healthy");
   });
 
   it("degrades reserve status for uncertain writes", () => {
@@ -581,30 +581,44 @@ describe("status cause text", () => {
     );
   });
 
-  it("emits a warning cause for one-off low-share reserve truncation", () => {
-    const reserveComposition = makeReserveComposition({
-      status: "healthy",
-      runBudgetTruncated: true,
-      deferredCoins: 1,
-      nextCursorStablecoinId: "coin-a",
-    });
-
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition, })).causes;
-
-    expect(causes).toContainEqual(
-      expect.objectContaining({
-        code: "reserve_sync_budget_truncated",
-        severity: "warning",
-        message: expect.stringContaining("deferred 1 coin(s)"),
+  it.each([1799, 1800, 1801])("alerts only beyond the cohort SLO boundary (%ss)", (ageSec) => {
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveComposition: makeReserveComposition({
+        runBudgetTruncated: false, deferredCoins: 9,
+        cohort: {
+          slotStartedAt: 1_700_000_000 - ageSec, completedAt: null, ageSec,
+          continuationPending: true, completedCohorts: 0, completionP95Sec: null,
+        },
       }),
-    );
+    }));
+    expect(result.status).toBe("healthy"); // Ops cause, not a public coverage floor.
+    const cause = result.causes.find((entry) => entry.code === "reserve_cohort_slo_exceeded");
+    if (ageSec > STATUS_RESERVE_COHORT_SLO.maxAgeSec) {
+      expect(cause).toMatchObject({
+        severity: "warning", metric: "reserveCohortAgeSec", value: ageSec,
+        threshold: STATUS_RESERVE_COHORT_SLO.maxAgeSec,
+      });
+    } else expect(cause).toBeUndefined();
+    expect(result.causes.some((entry) => entry.code === "reserve_sync_budget_truncated")).toBe(false);
+  });
+
+  it.each([1800, 1801])("uses completed full-cohort p95 independently of the latest cohort age (%ss)", (completionP95Sec) => {
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveComposition: makeReserveComposition({
+        cohort: { slotStartedAt: 1000, completedAt: 1100, ageSec: 100,
+          continuationPending: false, completedCohorts: 42, completionP95Sec },
+      }),
+    }));
+    expect(result.causes.some((entry) => entry.code === "reserve_cohort_slo_exceeded"))
+      .toBe(completionP95Sec > STATUS_RESERVE_COHORT_SLO.maxAgeSec);
+  });
+
+  it("does not invent successful cohort evidence when the overview is unavailable", () => {
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveCompositionQueryFailed: true,
+    }));
+    expect(result.causes.some((entry) => entry.code === "reserve_sync_query_failed")).toBe(true);
+    expect(result.causes.some((entry) => entry.code === "reserve_cohort_slo_exceeded")).toBe(false);
   });
 
   it("emits a distinct warning cause for DDR repair debt", () => {
@@ -934,7 +948,7 @@ describe("status cause text", () => {
     );
   });
 
-  it("emits reserve causes for truncation and uncertain writes", () => {
+  it("retains uncertain-write causes without treating a deferred frontier as degradation", () => {
     const reserveComposition = {
       ...makeReserveComposition({
         status: "degraded",
@@ -960,12 +974,7 @@ describe("status cause text", () => {
         severity: "warning",
       }),
     );
-    expect(causes).toContainEqual(
-      expect.objectContaining({
-        code: "reserve_sync_budget_truncated",
-        message: expect.stringContaining("next cursor coin-tail"),
-      }),
-    );
+    expect(causes.some((entry) => entry.code === "reserve_sync_budget_truncated")).toBe(false);
   });
 });
 

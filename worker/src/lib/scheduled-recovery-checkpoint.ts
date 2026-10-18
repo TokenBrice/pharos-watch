@@ -1,4 +1,5 @@
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
+import { ScheduledChildDispositionSchema, type ScheduledChildDisposition } from "@shared/types/live-reserves";
 import {
   flattenScheduledSlotPlanJobs,
   getScheduledSlotPlanChainPrerequisites,
@@ -25,12 +26,6 @@ export type ScheduledCheckpointState =
   | "failed"
   | "platform_abandoned";
 
-export type ScheduledChildDisposition =
-  | "not_started"
-  | "running"
-  | "completed"
-  | "failed"
-  | "platform_abandoned";
 
 export interface ScheduledCheckpointIdentity {
   scheduleKey: string;
@@ -197,7 +192,7 @@ function parseChildDispositions(value: string): Record<string, ScheduledChildDis
   return Object.fromEntries(
     Object.entries(parsed).filter((entry): entry is [string, ScheduledChildDisposition] =>
       typeof entry[0] === "string"
-      && ["not_started", "running", "completed", "failed", "platform_abandoned"].includes(String(entry[1]))
+      && ScheduledChildDispositionSchema.safeParse(entry[1]).success
     ),
   );
 }
@@ -439,6 +434,24 @@ export async function setLiveReserveCheckpointChildDisposition(
   );
 }
 
+/** Hand off a settled slice, preserving the one frontier and its domain fence.
+ * The next claim replaces invocation_id; old writers cannot win the takeover.
+ * Unlike crash reconciliation, an intentional handoff is not abandonment.
+ */
+export async function continueLiveReserveCheckpoint(
+  db: D1Database,
+  identity: ScheduledCheckpointIdentity,
+): Promise<void> {
+  await requireChanged(runWithOverloadRetry(() => db.prepare(
+    `UPDATE worker_scheduled_checkpoints
+        SET state = 'ready', recovery_owner = NULL, recovery_lease_until = NULL, updated_at = ?
+      WHERE ${identityWhereSql()}
+        AND state IN ('running', 'recovering')
+        AND current_item_key IS NULL AND current_domain_attempt_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM json_each(child_dispositions_json) WHERE value = 'running')`,
+  ).bind(nowSec(), ...identityBinds(identity)).run()), identity);
+}
+
 export async function finishLiveReserveCheckpoint(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
@@ -504,7 +517,7 @@ async function loadCompletedCronJobsForSlot(
   for (const row of rows.results ?? []) {
     if (row.status !== "ok" && row.status !== "degraded") continue;
     const metadata = parseJsonObject(row.metadata);
-    if (metadata?.childDisposition === "not_started") continue;
+    if (metadata?.childDisposition === "not_started" || metadata?.childDisposition === "continuation_pending") continue;
     if (metadata?.runBudgetTruncated === true) continue;
     if (typeof metadata?.skippedReason === "string") continue;
     if (metadata?.reason === "stale-slot-reconciled") continue;
@@ -590,7 +603,9 @@ async function prepareCheckpointAttemptForRecovery(
       preservedCompletedJobs.add(childJob);
     } else {
       abandonedChildDispositions[childJob] = "platform_abandoned";
-      recoveryChildDispositions[childJob] = "not_started";
+      recoveryChildDispositions[childJob] = childJob === checkpoint.job
+        && (checkpoint.itemsDone > 0 || checkpoint.currentItemKey != null)
+        ? "continuation_pending" : "not_started";
     }
   }
 
@@ -1060,7 +1075,7 @@ export async function releaseUnstartedLiveReserveRecoveryClaim(
   if (
     claimedCheckpoint.currentItemKey !== null
     || Object.values(claimedCheckpoint.childDispositions).some(
-      (disposition) => disposition !== "not_started" && disposition !== "completed",
+      (disposition) => disposition !== "not_started" && disposition !== "completed" && disposition !== "continuation_pending",
     )
   ) return { disposition: "already-started" };
 

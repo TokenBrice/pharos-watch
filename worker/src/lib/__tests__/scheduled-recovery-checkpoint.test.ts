@@ -6,6 +6,8 @@ import {
   advanceLiveReserveCheckpoint,
   beginLiveReserveCheckpoint,
   claimNextLiveReserveCheckpointRecovery,
+  continueLiveReserveCheckpoint,
+  finishLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
   markLiveReserveCheckpointItemStarted,
   prepareEligibleLiveReserveCheckpointRecoveries,
@@ -85,6 +87,63 @@ describe("scheduled recovery checkpoint", () => {
     openDatabases.push(value.sqlite);
     return value;
   }
+
+  it("hands a producer and two continuations through one frontier and persists the cohort completion clock", async () => {
+    const { sqlite, db } = harness();
+    let owner = await seedCheckpointFrontier(db, {
+      slotStartedAt: 1_700, invocationId: "producer", nextItemKey: "coin-0", itemsTotal: 3, nowSec: 1_700,
+    });
+    for (let index = 0; index < 3; index++) {
+      const oldOwner = owner;
+      await setLiveReserveCheckpointChildDisposition(db, owner, "sync-live-reserves", "running", 1_701 + index);
+      await markLiveReserveCheckpointItemStarted(db, owner, {
+        itemKey: `coin-${index}`, domainAttemptId: `domain-${index}`,
+        itemsDone: index, itemsTotal: 3, nowSec: 1_701 + index,
+      });
+      await advanceLiveReserveCheckpoint(db, owner, {
+        nextItemKey: index === 2 ? null : `coin-${index + 1}`, itemsDone: index + 1, nowSec: 1_702 + index,
+      });
+      await setLiveReserveCheckpointChildDisposition(db, owner, "sync-live-reserves",
+        index === 2 ? "completed" : "continuation_pending", 1_702 + index);
+      if (index === 2) break;
+      await continueLiveReserveCheckpoint(db, owner);
+      const claim = await claimNextLiveReserveCheckpointRecovery(db, {
+        owner: `continuation-${index + 1}`, leaseSec: 900, nowSec: 1_710 + index,
+      });
+      if (claim.disposition !== "claimed") throw new Error("expected normal continuation claim");
+      owner = claim.checkpoint;
+      expect(owner).toMatchObject({
+        attemptNo: 1, nextItemKey: `coin-${index + 1}`, itemsDone: index + 1,
+        childDispositions: { "sync-live-reserves": "continuation_pending" },
+      });
+      await expect(advanceLiveReserveCheckpoint(db, oldOwner, {
+        nextItemKey: "wrong-head", itemsDone: 0,
+      })).rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
+      await expect(continueLiveReserveCheckpoint(db, oldOwner)).rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
+    }
+    for (const job of CHILD_JOBS) {
+      await setLiveReserveCheckpointChildDisposition(db, owner, job, "completed", 1_749);
+    }
+    await finishLiveReserveCheckpoint(db, owner, { state: "completed", nowSec: 1_750 });
+    expect(await loadLiveReserveCheckpoint(db, owner)).toMatchObject({
+      state: "completed", completedAt: 1_750, slotStartedAt: 1_700, nextItemKey: null, itemsDone: 3,
+    });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_scheduled_checkpoints").get()).toEqual({ count: 1 });
+  });
+
+  it("refuses normal handoff while an item or a child is still running", async () => {
+    const { db } = harness();
+    const owner = await seedCheckpointFrontier(db, {
+      slotStartedAt: 1_700, invocationId: "producer", nextItemKey: "coin", itemsTotal: 1,
+    });
+    await markLiveReserveCheckpointItemStarted(db, owner, {
+      itemKey: "coin", domainAttemptId: "pending", itemsDone: 0, itemsTotal: 1,
+    });
+    await expect(continueLiveReserveCheckpoint(db, owner)).rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
+    await advanceLiveReserveCheckpoint(db, owner, { nextItemKey: null, itemsDone: 1 });
+    await setLiveReserveCheckpointChildDisposition(db, owner, "sync-live-reserves", "running");
+    await expect(continueLiveReserveCheckpoint(db, owner)).rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
+  });
 
   async function claimUnstartedRecovery(db: D1Database) {
     const checkpoint = await seedCheckpointFrontier(db, {
@@ -740,7 +799,7 @@ describe("scheduled recovery checkpoint", () => {
       nextItemKey: "coin-z",
       itemsDone: 99,
       childDispositions: expect.objectContaining({
-        "sync-live-reserves": "not_started",
+        "sync-live-reserves": "continuation_pending",
       }),
     } });
   });

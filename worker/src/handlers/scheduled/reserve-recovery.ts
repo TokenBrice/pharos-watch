@@ -67,31 +67,6 @@ async function runReserveRecovery(
     metadata: { mode, reason: priorityPollReason(priority), producerPriority: { ...priority }, attemptedCount: 0, checkpointsClaimed: 0 },
   });
 
-  // Config-only polls must not initialize the checkpoint replay's redemption
-  // and sentinel graphs alongside reserve adapters on the 128 MB isolate.
-  await reportProgress({ stage: "recovering-reserve-config" });
-  const { recoverLiveReserveConfigChanges } = await import("../../cron/reserve-recovery-config");
-  const configRecovery = await recoverLiveReserveConfigChanges(runtime.db, signal, {
-    etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
-    alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
-    trongridApiKey: runtime.env.TRONGRID_API_KEY,
-    m0ApiKey: runtime.env.M0_API_KEY,
-    chainRpcs: runtime.chainRpcs,
-    dwellirNative: runtime.dwellirNative,
-  }, { invocationId: runtime.invocationId, scheduleKey: runtime.scheduleKey, slotStartedAt: runtime.slotStartedAt });
-  const configReasons = [
-    ...(configRecovery.failed.length > 0 ? ["reserve-config-recovery-failed"] : []),
-    ...("missingFetcherCount" in configRecovery && configRecovery.missingFetcherCount > 0 ? ["reserve-config-recovery-missing-fetcher"] : []),
-    ...("deferredCount" in configRecovery && configRecovery.deferredCount > 0 ? ["reserve-config-recovery-deferred"] : []),
-  ];
-  const beforeReplayPriority = "producerPriority" in configRecovery && configRecovery.producerPriority
-    ? configRecovery.producerPriority : await getReserveProducerPriority(runtime.db);
-  if (beforeReplayPriority) return createReserveRecoveryResult({
-    status: configReasons.length > 0 ? "degraded" : priorityPollStatus(beforeReplayPriority), itemCount: configRecovery.healed.length,
-    metadata: { mode, configRecovery, checkpointsClaimed: 0, producerPriority: beforeReplayPriority,
-      reasons: [...configReasons, priorityPollReason(beforeReplayPriority)],
-      reason: configReasons[0] ?? priorityPollReason(beforeReplayPriority) } as CronMetadataRecord,
-  });
 
   await reportProgress({ stage: "preparing-reserve-checkpoint" });
   const sweep = await sweepStaleScheduledSlotExecutions(runtime.db, {
@@ -110,6 +85,31 @@ async function runReserveRecovery(
     leaseSec: RESERVE_RECOVERY_CLAIM_SEC,
   });
   if (claim.disposition !== "claimed") {
+    // Keep changed-config work off the normal cohort's wall/CPU budget.
+    // Lazy import also keeps config-only polls free of the consumer graph.
+    await reportProgress({ stage: "recovering-reserve-config" });
+    const { recoverLiveReserveConfigChanges } = await import("../../cron/reserve-recovery-config");
+    const configRecovery = await recoverLiveReserveConfigChanges(runtime.db, signal, {
+      etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
+      alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
+      trongridApiKey: runtime.env.TRONGRID_API_KEY,
+      m0ApiKey: runtime.env.M0_API_KEY,
+      chainRpcs: runtime.chainRpcs,
+      dwellirNative: runtime.dwellirNative,
+    }, { invocationId: runtime.invocationId, scheduleKey: runtime.scheduleKey, slotStartedAt: runtime.slotStartedAt });
+    const configReasons = [
+      ...(configRecovery.failed.length > 0 ? ["reserve-config-recovery-failed"] : []),
+      ...("missingFetcherCount" in configRecovery && configRecovery.missingFetcherCount > 0 ? ["reserve-config-recovery-missing-fetcher"] : []),
+      ...("deferredCount" in configRecovery && configRecovery.deferredCount > 0 ? ["reserve-config-recovery-deferred"] : []),
+    ];
+    const beforeReplayPriority = "producerPriority" in configRecovery && configRecovery.producerPriority
+      ? configRecovery.producerPriority : await getReserveProducerPriority(runtime.db);
+    if (beforeReplayPriority) return createReserveRecoveryResult({
+      status: configReasons.length > 0 ? "degraded" : priorityPollStatus(beforeReplayPriority), itemCount: configRecovery.healed.length,
+      metadata: { mode, configRecovery, checkpointsClaimed: 0, producerPriority: beforeReplayPriority,
+        reasons: [...configReasons, priorityPollReason(beforeReplayPriority)],
+        reason: configReasons[0] ?? priorityPollReason(beforeReplayPriority) } as CronMetadataRecord,
+    });
     const recoveryBlocked = preparation.inspection.incompatibleCheckpointCount > 0
       && preparation.inspection.eligibleCheckpointCount === 0
       && preparation.inspection.readyCheckpointCount === 0;
@@ -137,9 +137,9 @@ async function runReserveRecovery(
   if (replayPriority) {
     const recoveryClaimRelease = await releaseUnstartedLiveReserveRecoveryClaim(runtime.db, checkpoint);
     return createReserveRecoveryResult({
-      status: configReasons.length > 0 ? "degraded" : priorityPollStatus(replayPriority), itemCount: configRecovery.healed.length,
-      metadata: { mode, configRecovery, checkpointsClaimed: 1, reason: configReasons[0] ?? priorityPollReason(replayPriority),
-        reasons: [...configReasons, priorityPollReason(replayPriority)], producerPriority: replayPriority,
+      status: priorityPollStatus(replayPriority), itemCount: 0,
+      metadata: { mode, checkpointsClaimed: 1, reason: priorityPollReason(replayPriority),
+        reasons: [priorityPollReason(replayPriority)], producerPriority: replayPriority,
         recoveryClaimRelease } as CronMetadataRecord,
     });
   }
@@ -163,29 +163,30 @@ async function runReserveRecovery(
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
   const admissionReason = summary.jobs?.find((job) =>
     job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy")?.reason;
-  const admissionPriority = admissionReason && summary.jobsErrored === 0 && summary.jobsDegraded === 0 && configReasons.length === 0
+  const admissionPriority = admissionReason && summary.jobsErrored === 0 && summary.jobsDegraded === 0
     ? await getReserveProducerPriority(runtime.db) : null;
   const admissionPollReason = admissionReason
     ? admissionPriority ? priorityPollReason(admissionPriority) : admissionReason
     : null;
-  const recoveryDeferred = summary.jobsSkipped > 0;
+  const continuationPending = summary.jobs.some((job) => job.reason === "reserve-cohort-continuation");
+  const recoveryDeferred = summary.jobsSkipped > summary.jobs.filter((job) => job.reason === "reserve-cohort-continuation").length;
   const reasons = [
     ...(summary.jobsErrored > 0 ? ["reserve-replay-child-error"] : []),
     ...(summary.jobsDegraded > 0 ? ["reserve-replay-child-degraded"] : []),
     ...(recoveryDeferred && !admissionReason ? ["reserve-replay-deferred"] : []),
-    ...configReasons,
     ...(admissionPollReason ? [admissionPollReason] : []),
   ];
   return createReserveRecoveryResult({
     status: summary.jobsErrored > 0 ? "error"
-      : summary.jobsDegraded > 0 || configReasons.length > 0 || (recoveryDeferred && !admissionReason)
+      : summary.jobsDegraded > 0 || (recoveryDeferred && !admissionReason)
         ? "degraded" : admissionReason ? priorityPollStatus(admissionPriority) : "ok",
-    itemCount: (recoveryDeferred ? 0 : 1) + configRecovery.healed.length,
+    itemCount: recoveryDeferred ? 0 : 1,
     error: summary.jobsErrored > 0 ? "reserve recovery child failed" : undefined,
     metadata: {
-      disposition: recoveryDeferred ? "recovery-deferred" : "recovery-executed",
+      disposition: continuationPending ? "cohort-continuation" : recoveryDeferred ? "recovery-deferred" : "recovery-executed",
+      continuationPending,
       mode,
-      configRecovery,
+      configRecovery: { disposition: "deferred-for-cohort" },
       checkpointsClaimed: 1,
       originalScheduleKey: checkpoint.scheduleKey,
       originalSlotStartedAt: checkpoint.slotStartedAt,

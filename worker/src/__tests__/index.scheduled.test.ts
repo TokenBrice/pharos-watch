@@ -8,6 +8,7 @@ import type * as V9SlotWindow from "../lib/v9-slot-window";
 import type { ScheduledExecutionFence } from "../lib/scheduled-slot-fence";
 import type { SlotDeadline } from "../lib/cron-timeouts";
 import type { CronRunLoggerOptions } from "../lib/cron-logger";
+import type { ScheduledChildDisposition } from "@shared/types/live-reserves";
 
 // 44 of this suite's cron entrypoints are mocked only so the slot stays
 // dispatchable; they share one result shape. Entrypoints whose payload a test
@@ -247,11 +248,12 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
         ...latestCheckpoint,
         childDispositions: {
           ...latestCheckpoint.childDispositions,
-          [job]: disposition as import("../lib/scheduled-recovery-checkpoint").ScheduledChildDisposition,
+          [job]: disposition as ScheduledChildDisposition,
         },
       };
     }),
     finishLiveReserveCheckpoint: vi.fn(async () => undefined),
+    continueLiveReserveCheckpoint: vi.fn(async () => undefined),
     claimNextLiveReserveCheckpointRecovery: vi.fn(async () => ({ disposition: "none" })),
   };
 });
