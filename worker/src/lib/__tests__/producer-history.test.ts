@@ -39,7 +39,8 @@ describe("producer history", () => {
       completedAt: 110,
       outcome: "ok",
       itemCount: 364,
-      metadata: JSON.stringify({ reconciledAt: 109, largeDiagnostic: { preview: "x".repeat(8_000) } }),
+      metadata: JSON.stringify({ reconciledAt: 109, mxLedgerV: 1, mxLedger0: "ledger-chunk",
+        largeDiagnostic: { preview: "x".repeat(8_000) } }),
       productivity: {
         productive: true,
         publications: [
@@ -109,7 +110,7 @@ describe("producer history", () => {
             WHERE idempotency_key = 'run-1'`,
         )
         .get(),
-    ).toEqual({ metadata_json: JSON.stringify({ reconciledAt: 109 }), publications_json: null });
+    ).toEqual({ metadata_json: JSON.stringify({ mxLedgerV: 1, mxLedger0: "ledger-chunk" }), publications_json: null });
     expect(
       sqlite
         .prepare(

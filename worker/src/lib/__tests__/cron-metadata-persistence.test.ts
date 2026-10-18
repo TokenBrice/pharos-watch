@@ -2,10 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   compactCronMetadataForPersistence,
   MAX_PERSISTED_CRON_METADATA_BYTES,
+  DEFAULT_CRON_METADATA_BUDGET_BYTES,
+  getCronMetadataBudgetBytes,
 } from "../cron-metadata-persistence";
 import { buildResourcePressure } from "../cron-resource-pressure";
 
 describe("compactCronMetadataForPersistence", () => {
+  it("uses explicit per-job exceptions without raising the default budget", () => {
+    expect(getCronMetadataBudgetBytes("unregistered-job")).toBe(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(getCronMetadataBudgetBytes("sync-dex-liquidity")).toBe(16 * 1_024);
+    for (const job of ["sync-mint-burn", "sync-mint-burn-extended", "sync-live-reserves"]) {
+      expect(getCronMetadataBudgetBytes(job)).toBe(32 * 1_024);
+    }
+    for (const job of ["sync-stablecoins", "cron-sentinel"]) {
+      expect(getCronMetadataBudgetBytes(job)).toBe(MAX_PERSISTED_CRON_METADATA_BYTES);
+    }
+  });
+
   it("preserves the complete resource block outside diagnostics through oversized compaction", () => {
     const resourcePressure = buildResourcePressure({
       phase: "decode", observedAt: 123, intakeBytes: 42, cacheBytes: 336,
@@ -18,7 +31,7 @@ describe("compactCronMetadataForPersistence", () => {
     expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
   });
 
-  it("compacts oversized rich results below 64 KiB while retaining bounded diagnostics", () => {
+  it("compacts rich results to the default 8 KiB budget while retaining named diagnostics as counts", () => {
     const metadata = JSON.stringify({
       reason: "stablecoin-publication",
       rowsRead: 410,
@@ -42,7 +55,8 @@ describe("compactCronMetadataForPersistence", () => {
     const parsed = JSON.parse(result.metadata!) as {
       reason: string;
       persistenceCompaction: { originalBytes: number };
-      diagnostics: Record<string, unknown>;
+      providerDiagnostics: unknown;
+      fullAssets: unknown;
     };
 
     expect(result.compacted).toBe(true);
@@ -50,17 +64,11 @@ describe("compactCronMetadataForPersistence", () => {
     expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
     expect(parsed.reason).toBe("stablecoin-publication");
     expect(parsed.persistenceCompaction.originalBytes).toBe(result.originalBytes);
-    expect(parsed.diagnostics).toMatchObject({
-      rowsRead: 410,
-      rowsWritten: 364,
-      providerDiagnostics: { count: 5_000 },
-      fullAssets: { count: 410 },
-      coverage: {
-        expectedCount: 364,
-        publishedCount: 364,
-        omittedIdsCount: 100,
-      },
+    expect(parsed).toMatchObject({
+      rowsRead: 410, rowsWritten: 364,
+      providerDiagnostics: { count: 5_000 }, fullAssets: { count: 410 },
     });
+    expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
   });
 
   it("preserves mxLedger scalars as top-level keys through oversized compaction", () => {
@@ -101,5 +109,57 @@ describe("compactCronMetadataForPersistence", () => {
     const result = compactCronMetadataForPersistence(JSON.stringify({ ...source, ...evidence }));
     expect(result.compacted).toBe(true);
     expect(JSON.parse(result.metadata!)).toMatchObject(evidence);
+  });
+
+  it("leaves metadata at the inclusive byte boundary unchanged and admits multibyte diagnostics below it", () => {
+    const metadata = JSON.stringify({ payload: "x".repeat(DEFAULT_CRON_METADATA_BUDGET_BYTES - 14) });
+    expect(new TextEncoder().encode(metadata).length).toBe(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(compactCronMetadataForPersistence(metadata)).toMatchObject({ metadata, compacted: false });
+    const result = compactCronMetadataForPersistence(JSON.stringify({ payload: "\u{1F4B0}".repeat(3_000) }));
+    expect(result.compacted).toBe(true);
+    expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+  });
+
+  it("preserves every consumer contract at its original path while reducing adapter diagnostics", () => {
+    const evidence = {
+      reason: "source-incomplete", reasons: ["source-incomplete"], mode: "daily",
+      outputPublishedAt: null, stale: [{ producerJob: "sync-test", publishedAt: 123, thresholdSec: 600 }],
+      resourcePressure: buildResourcePressure(), retentionTruncated: true, truncated: true,
+      d1Cost: { rowsRead: 123, rowsWritten: 4 }, breakerKeys: ["live-reserves:coin-a"],
+      quality: { sources: { feed: { reasons: ["partial"] } } },
+      sourceCoverage: { comparisonAnchorFreshness: { staleAnchorExamples: [{ stablecoinId: "coin-a" }] } },
+      persistence: { skipped: false, generationId: "generation-a" }, coverageOutcomeCounts: { quiet: 2 },
+      activePriceCoverage: { missingActiveIds: ["coin-a"], missingActiveState: [["coin-a", 5, 123]] },
+      activePublicationCoverage: { missingActiveIds: ["coin-a"], complete: false },
+      publicationStats: { pysInputsPersistedCount: 3, pysInputsNullCount: 1 },
+      apiErrorConfigs: [{ configKey: "ethereum-test" }],
+    };
+    const result = compactCronMetadataForPersistence(JSON.stringify({ ...evidence,
+      adapterLatency: { groups: Array.from({ length: 1_000 }, () => ({ adapterKey: "test", elapsedMs: 10 })) },
+    }));
+    expect(result.compacted).toBe(true);
+    expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(JSON.parse(result.metadata!)).toMatchObject(evidence);
+    expect(JSON.parse(result.metadata!).d1Cost).toEqual(evidence.d1Cost);
+    expect(JSON.parse(result.metadata!).adapterLatency).toEqual({ groupsCount: 1_000 });
+  });
+
+  it("retains complete watchdog generation evidence under the documented per-job exception", () => {
+    const stale = Array.from({ length: 80 }, (_, index) => ({
+      laneKey: "dexLiquidity", cacheKey: "dex-liquidity", producerJob: `producer-${index}`,
+      ageSeconds: 7201, publishedAt: 1000, generationId: `generation-${index}`, assessedAt: 8201,
+      thresholdSec: 7200, producerThresholdSec: 7200, endpointThresholdSec: 14400,
+      availabilityThresholdSec: 14400, availabilityImpacting: false,
+    }));
+    const sources = { freshness: { observedAt: 8201, status: "degraded", metadata: { stale } } };
+    const result = compactCronMetadataForPersistence(JSON.stringify({ sources, oversized: "x".repeat(70_000) }),
+      undefined, "cron-sentinel");
+    expect(result.persistedBytes).toBeLessThanOrEqual(getCronMetadataBudgetBytes("cron-sentinel"));
+    expect(JSON.parse(result.metadata!).sources).toEqual(sources);
+  });
+
+  it("never silently drops contractual evidence that exceeds its job budget", () => {
+    const metadata = JSON.stringify({ stale: Array.from({ length: 1_000 }, () => ({ generationId: "generation-a" })) });
+    expect(() => compactCronMetadataForPersistence(metadata)).toThrow("cron-metadata-consumer-evidence-over-budget:default:8192");
   });
 });

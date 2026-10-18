@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { CronResult } from "../cron-logger";
 import { normalizeCronMetadataWithLease } from "../cron-metadata";
-import { compactCronMetadataForPersistence, MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../cron-metadata-persistence";
+import { compactCronMetadataForPersistence, DEFAULT_CRON_METADATA_BUDGET_BYTES } from "../cron-metadata-persistence";
 
 describe("normalizeCronMetadataWithLease", () => {
   it("applies row defaults and merges lease meta when job metadata is absent", () => {
@@ -35,7 +35,7 @@ describe("normalizeCronMetadataWithLease", () => {
     expect(parsed.owner).toBe("test");
   });
 
-  it("preserves adapter latency while compacting oversized sibling diagnostics before lease enrichment", () => {
+  it("leaves producer and lease evidence intact until audited write-time compaction", () => {
     const adapterLatency = {
       schemaVersion: 1,
       groups: [{ adapterKey: "example", attemptCount: 1 }],
@@ -60,19 +60,18 @@ describe("normalizeCronMetadataWithLease", () => {
     );
     const parsed = JSON.parse(normalized) as {
       adapterLatency?: unknown;
-      adapterLatencyMetadataCompaction?: { compactedFields?: number };
       leaseOwner?: string;
       reason?: string;
       reasons?: string[];
     };
 
-    expect(new TextEncoder().encode(normalized).length)
-      .toBeLessThanOrEqual(MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES);
+    expect(new TextEncoder().encode(normalized).length).toBeGreaterThan(DEFAULT_CRON_METADATA_BUDGET_BYTES);
     expect(parsed.adapterLatency).toEqual(adapterLatency);
-    expect(parsed.adapterLatencyMetadataCompaction?.compactedFields).toBeGreaterThan(0);
     expect(parsed.leaseOwner).toBe("job:scheduled:test");
     expect(parsed.reason).toBe(reason);
     expect(parsed.reasons).toEqual(reasons);
-    expect(JSON.parse(compactCronMetadataForPersistence(normalized).metadata!)).toMatchObject({ reason, reasons });
+    const persisted = compactCronMetadataForPersistence(normalized);
+    expect(persisted.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(JSON.parse(persisted.metadata!)).toMatchObject({ reason, reasons, leaseOwner: "job:scheduled:test" });
   });
 });

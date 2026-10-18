@@ -270,12 +270,12 @@ describe("computeSafetyScoreV9", () => {
       ...metadata, padding: "x".repeat(70_000),
     }));
     expect(compacted.compacted).toBe(true);
-    expect(JSON.parse(compacted.metadata!)).toMatchObject({ diagnostics: {
+    expect(JSON.parse(compacted.metadata!)).toMatchObject({
       publication: { stage: "compile" },
       publicationAbortCause: { source: "caller", name: "TimeoutError" },
       publicationPhaseElapsedMs: { compile: 165_000, persist: null },
       publicationPhaseTimingBasis: "workers-io-boundary-attributed",
-    } });
+    });
   });
 
   it("v10.01 second preparation keeps captured proof identity and rejects subsequent proof substitution", async () => {
@@ -557,9 +557,9 @@ describe("computeSafetyScoreV9", () => {
     const compacted = compactCronMetadataForPersistence(padded);
     expect(compacted.compacted).toBe(true);
     const envelope = JSON.parse(compacted.metadata ?? "{}") as {
-      diagnostics?: { publication?: Record<string, unknown> };
+      publication?: Record<string, unknown>;
     };
-    expect(envelope.diagnostics?.publication).toMatchObject({
+    expect(envelope.publication).toMatchObject({
       coverageFloorVerdicts:
         "active-result-count:pass:observed=332,required== 332;minimum-rateable-assets:fail:observed=264,required=>= 271",
       holdReasonCodes: "coverage-floor-failed:minimum-rateable-assets,producer-failed-pipeline-gap:usdc-circle:missing-pillar-evidence:pipeline-gap",

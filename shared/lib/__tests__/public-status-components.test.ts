@@ -83,7 +83,19 @@ describe("public status components", () => {
     health.blacklist = { ...health.blacklist, missingRatio: null, unavailableReason: "blacklist-read-failed" };
     health.circuits = null;
     expect(component(health, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-read-failed"] });
-    expect(component(health, "data-refresh").reasons).toContain("circuits-unavailable");
+    expect(component(health, "data-refresh").reasons).toContain("circuits-unavailable:unknown");
+  });
+
+  it("bounds and sorts circuit source identity and retains unavailable subreasons", () => {
+    const health = makeHealthyHealthResponse();
+    const open = { state: "open" as const, consecutiveFailures: 3, lastFailureAt: NOW,
+      lastSuccessAt: null, openedAt: NOW };
+    health.circuits = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`source-${String(i).padStart(2, "0")}`, open]));
+    const reason = component(health, "data-refresh").reasons[0];
+    expect(reason).toBe(`upstream-circuits-open:20:${Array.from({ length: 12 }, (_, i) => `source-${String(i).padStart(2, "0")}`).join(",")}`);
+    health.schedulerLiveness = { ...health.schedulerLiveness!, status: "unavailable",
+      ageSeconds: null, unavailableReason: "slot-start-query-failed" };
+    expect(component(health, "data-refresh").reasons).toContain("scheduler:unavailable:slot-start-query-failed");
   });
 
   it("surfaces a non-healthy raw verdict even when no component explains it", () => {

@@ -8,6 +8,7 @@ import {
   getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
+import { PUBLIC_CIRCUIT_IMPACT_QUORUM } from "@shared/lib/public-health";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
@@ -276,14 +277,14 @@ function evaluateCircuitStatus(input: AvailabilityEvaluationInput): Partial<Stat
   const causes: StatusCause[] = [];
   if (input.publicHealth.circuitQueryError) {
     causes.push(makeCause("availability", "circuit_query_failed", "warning", "Circuit breaker diagnostics unavailable (circuits-read-failed); availability cannot be confirmed."));
-  } else if (input.publicHealth.openCircuitCount != null && input.publicHealth.openCircuitCount >= 3) {
+  } else if (input.publicHealth.openCircuitCount != null && input.publicHealth.openCircuitCount >= PUBLIC_CIRCUIT_IMPACT_QUORUM) {
     causes.push(
       makeCause(
         "availability",
         "open_circuit_groups",
         "warning",
         `${input.publicHealth.openCircuitCount} circuit breaker groups are currently open.`,
-        { metric: "openCircuits", value: input.publicHealth.openCircuitCount, threshold: 3 },
+        { metric: "openCircuits", value: input.publicHealth.openCircuitCount, threshold: PUBLIC_CIRCUIT_IMPACT_QUORUM },
       ),
     );
   }

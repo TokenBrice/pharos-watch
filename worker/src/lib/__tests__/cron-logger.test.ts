@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { logCronRun } from "../cron-logger";
+import { DEFAULT_CRON_METADATA_BUDGET_BYTES } from "../cron-metadata-persistence";
 
 describe("cron progress cleanup", () => {
   const fixtures = createLatestSchemaFixtureTracker();
@@ -27,6 +28,23 @@ describe("cron progress cleanup", () => {
     });
 
     expect(sqlite.prepare("SELECT * FROM cron_run_progress").all()).toEqual([]);
+  });
+
+  it("enforces the job byte budget on persisted terminals without copying diagnostics into history", async () => {
+    const { sqlite, db } = fixtures.open();
+    await logCronRun(db, "test-budget", async () => ({
+      status: "degraded", itemCount: 0,
+      metadata: JSON.stringify({ reason: "source-incomplete", outputPublishedAt: null,
+        quality: { reasons: ["source-incomplete"] }, mxLedgerV: 1, mxLedger0: "ledger",
+        providerDiagnostics: Array.from({ length: 5_000 }, () => ({ payload: "x".repeat(50) })) }),
+    }), { producer: { scheduleKey: "quarterHourly", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "budget-test" } });
+    const run = sqlite.prepare("SELECT metadata FROM cron_runs WHERE job = 'test-budget'").get() as { metadata: string };
+    expect(new TextEncoder().encode(run.metadata).length).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(JSON.parse(run.metadata)).toMatchObject({ reason: "source-incomplete", outputPublishedAt: null,
+      quality: { reasons: ["source-incomplete"] }, providerDiagnostics: { count: 5_000 } });
+    const history = sqlite.prepare("SELECT metadata_json FROM worker_producer_history WHERE job = 'test-budget'").get() as { metadata_json: string };
+    expect(JSON.parse(history.metadata_json)).toEqual({ mxLedgerV: 1, mxLedger0: "ledger" });
   });
 
   it("redacts signed URLs from thrown and resolved cron errors before persistence", async () => {

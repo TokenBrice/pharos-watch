@@ -124,7 +124,7 @@ export async function writeScheduledChildTerminal(
   const metadata = compactCronMetadataForPersistence(JSON.stringify({
     ...(parseJsonObject(input.metadata) ?? {}), schedulerAttemptKey: key,
     schedulerTerminalSource: input.source, schedulerTerminalToken: token, childDisposition: input.disposition,
-  })).metadata;
+  }), undefined, input.identity.job).metadata;
   const statements = [
     ...(input.source === "real" ? [] : [prepareAttempt(db, input.identity, key,
       input.disposition === "abandoned" || input.disposition === "interrupted-by-deploy" ? input.startedAt : null,
