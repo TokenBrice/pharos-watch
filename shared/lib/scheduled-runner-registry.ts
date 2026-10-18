@@ -117,7 +117,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     // slot fence abandons delays the watchdog instead of losing it: the
     // five-minute reserve-recovery lane replays the abandoned checkpoint in
     // chain order (chain prerequisites are derived from this plan).
-    // Declared peak 2 + 1 = 3/6.
+    // Declared peak max(reserve 2, redemption 3, sentinel 1) + Kinesis 1 = 4/6.
     jobChains: [
       // Redemption can consume prior sealed acceptance after an incomplete head;
       // only the sentinel requires the current cohort's successful exhaustion.

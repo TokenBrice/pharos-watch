@@ -7,6 +7,7 @@ import {
   CRON_SCHEDULE_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
+  REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY,
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
@@ -21,8 +22,14 @@ describe("cron job schedule metadata", () => {
     expect(CRON_JOB_DEFINITIONS.some((definition) => definition.job === "compute-safety-score-v9-workflow")).toBe(false);
     expect(CRON_INTERVALS).not.toHaveProperty("compute-safety-score-v9-workflow");
   });
-  it("accounts for redemption's serial RPC observers", () => {
-    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-redemption-backstops")).toMatchObject({ maxConnections: 1 });
+  it("reserves the same bounded redemption pool in natural and recovery slots", () => {
+    expect(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY).toBe(3);
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "sync-redemption-backstops")).toMatchObject({
+      scheduleKey: "fourHourlyReserveSync", maxConnections: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY,
+    });
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "reserve-recovery")).toMatchObject({
+      scheduleKey: "fiveMinuteReserveRecovery", maxConnections: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY,
+    });
   });
 
   it("accounts for optional concurrent D1 telemetry without changing status aliases or the later peak", () => {
