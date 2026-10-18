@@ -13,8 +13,8 @@ vi.mock("../../lib/telegram/digest-outbox", async () => {
   return mockDailyDigestOutboxModule();
 });
 
-vi.mock("../telegram-digest-transport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../telegram-digest-transport")>();
+vi.mock("../digest/telegram-transport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../digest/telegram-transport")>();
   const { mockTelegramDigestTransportModule } = await import("./daily-digest.test-support");
   return mockTelegramDigestTransportModule(actual);
 });
@@ -58,7 +58,7 @@ import {
   deliverTelegramDigestEdition,
   enqueueTelegramDigestEdition,
 } from "../../lib/telegram/digest-outbox";
-import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
+import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transport";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../../lib/constants";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";

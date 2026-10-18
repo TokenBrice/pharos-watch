@@ -9,7 +9,7 @@ import { getCache, setCache } from "../lib/db-cache";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../lib/live-reserves/store";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "./sync-live-reserves-shared";
-import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";
+import { SNAPSHOT_KEYS } from "./telegram/sources/telegram-alert-snapshots";
 import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";
 
 const PERSISTENTLY_STALE_WARNING_COUNT_THRESHOLD = 3;

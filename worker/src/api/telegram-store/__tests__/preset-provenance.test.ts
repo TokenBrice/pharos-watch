@@ -1,9 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { mergeSubscriberMaps } from "../../../cron/dispatch-telegram-subscribers";
-import { loadTelegramSourcePresetSubscribersForChats } from "../../../cron/telegram-alert-source-memberships";
-import type { SubscriberRow } from "../../../cron/dispatch-telegram-routing";
+import { mergeSubscriberMaps } from "../../../cron/telegram/dispatch/dispatch-telegram-subscribers";
+import { loadTelegramSourcePresetSubscribersForChats } from "../../../cron/telegram/sources/telegram-alert-source-memberships";
+import type { SubscriberRow } from "../../../cron/telegram/dispatch/dispatch-telegram-routing";
 import { applySubscribeIntent, applyUnsubscribeIntent } from "../presets";
 
 const NOW = 1_783_680_000;

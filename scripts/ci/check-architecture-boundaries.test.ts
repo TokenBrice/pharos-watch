@@ -17,7 +17,7 @@ function fixture() {
 }
 
 const ADAPTER = "worker/src/cron/reserve-adapters/example.ts";
-const RECAP = "worker/src/cron/telegram-recap-planner.ts";
+const RECAP = "worker/src/cron/telegram/recap/telegram-recap-planner.ts";
 const SCRUBBER = "src/lib/api-key-verification-url.ts";
 const ANALYTICS = "src/components/google-analytics.tsx";
 const LIGHT = "src/lib/api-query-domains/stability-light.ts";
@@ -68,9 +68,9 @@ describe("resolved architecture boundaries", () => {
   it("permits comments, type-only edges, and locally shadowed network names", () => {
     const root = fixture();
     writeText(root, RECAP, `
-      import type { Secret } from "./daily-digest";
-      export type { Secret } from "./daily-digest";
-      // fetch("not executable"); import("./daily-digest")
+      import type { Secret } from "../../daily-digest";
+      export type { Secret } from "../../daily-digest";
+      // fetch("not executable"); import("../../daily-digest")
       export function run(window: string, fetch: () => number) { return window[0] + fetch(); }
       export const label = "api.openai.com fetch()";
     `);
@@ -100,7 +100,7 @@ describe("resolved architecture boundaries", () => {
     ]);
   });
 
-  it.each(['import("./weekly-recap")', 'require("./weekly-recap")'])("rejects executable recap loading via %s", (load) => {
+  it.each(['import("../../weekly-recap")', 'require("../../weekly-recap")'])("rejects executable recap loading via %s", (load) => {
     const root = fixture();
     writeText(root, RECAP, `export const run = () => ${load};`);
     writeText(root, "worker/src/cron/weekly-recap.ts", "export const run = () => 1;");
@@ -153,12 +153,12 @@ describe("resolved architecture boundaries", () => {
 
   it("resolves import-equals and refuses escaped require loaders", () => {
     const root = fixture();
-    writeText(root, RECAP, 'import recap = require("./weekly-recap"); export { recap };');
+    writeText(root, RECAP, 'import recap = require("../../weekly-recap"); export { recap };');
     writeText(root, "worker/src/cron/weekly-recap.ts", "export const run = () => 1;");
     expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
       `recap-cost: ${RECAP} -> worker/src/cron/weekly-recap.ts: forbidden dependency`,
     ]);
-    writeText(root, RECAP, 'const load = require; export const run = () => load("./weekly-recap");');
+    writeText(root, RECAP, 'const load = require; export const run = () => load("../../weekly-recap");');
     expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
       `recap-cost: ${RECAP}: non-literal executable dependency (escaped require)`,
     ]);
@@ -174,7 +174,7 @@ describe("resolved architecture boundaries", () => {
 
   it("expands template imports rather than hiding executable dependencies", () => {
     const root = fixture();
-    writeText(root, RECAP, 'export const load = (id: string) => import(`./data/${id}.ts`);');
+    writeText(root, RECAP, 'export const load = (id: string) => import(`../../data/${id}.ts`);');
     writeText(root, "worker/src/cron/data/safe.ts", "export const value = 1;");
     expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([]);
     writeText(root, "worker/src/cron/data/weekly-recap.ts", "export const value = 1;");
