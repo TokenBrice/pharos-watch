@@ -71,7 +71,7 @@ vi.mock("../../lib/stablecoins-cache", () => ({
 
 vi.mock("../../lib/dews/source-state", async () => {
   // Vitest hoists this factory before static imports; load its fixture inside the factory.
-  const { emptyDewsDependencyDiagnostics } = await import("../../cron/dews/__tests__/source-state.test-support");
+  const { emptyDewsDependencyDiagnostics } = await import("../../lib/dews/__tests__/source-state.test-support");
   return {
     loadDewsSourceState: vi.fn(async () => ({
       dexLiqRows: { results: [] },

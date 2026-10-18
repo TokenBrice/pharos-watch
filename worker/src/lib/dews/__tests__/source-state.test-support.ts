@@ -1,4 +1,4 @@
-import type { DewsSourceState } from "../../../lib/dews/contracts";
+import type { DewsSourceState } from "../contracts";
 
 export function emptyDewsDependencyDiagnostics(): DewsSourceState["dependencyDiagnostics"] {
   return {

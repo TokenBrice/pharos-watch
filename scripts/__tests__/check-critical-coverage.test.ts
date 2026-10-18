@@ -74,7 +74,7 @@ describe("critical coverage changed-file detection", () => {
     expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
   });
 
-  it("derives high-stakes pricing, depeg, reserve, score, publication, and proxy candidates from source paths", () => {
+  it("derives high-stakes pricing, depeg, reserve, score, publication, dews, and proxy candidates from source paths", () => {
     const candidates = collectCriticalCoverageCandidates({
       sourceFiles: [
         "functions/lib/upstream-proxy.ts",
@@ -89,6 +89,11 @@ describe("critical coverage changed-file detection", () => {
         "worker/src/lib/mint-burn-scoring.ts",
         "worker/src/lib/live-reserves/store-extra.ts",
         "worker/src/lib/depeg-resolver-store-validators.ts",
+        "worker/src/lib/dews/scoring.ts",
+        "worker/src/lib/dews/service.ts",
+        "worker/src/lib/dews/source-state/hydration.ts",
+        "worker/src/lib/dews/types.ts",
+        "worker/src/lib/dews/__tests__/scoring-blacklist.test.ts",
         "worker/src/lib/price-consensus.ts",
         "worker/src/lib/publication-contract.ts",
         "worker/src/lib/pricing-types.ts",
@@ -106,6 +111,9 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/cron/sync-live-reserves-new-helper.ts",
       "worker/src/cron/sync-stablecoins/new-price-path.ts",
       "worker/src/lib/depeg-resolver-store-validators.ts",
+      "worker/src/lib/dews/scoring.ts",
+      "worker/src/lib/dews/service.ts",
+      "worker/src/lib/dews/source-state/hydration.ts",
       "worker/src/lib/live-reserves/store-extra.ts",
       "worker/src/lib/mint-burn-scoring.ts",
       "worker/src/lib/price-consensus.ts",
