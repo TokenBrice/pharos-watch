@@ -17,7 +17,11 @@ export type {
   D1CapacityAssessment,
   D1CapacityGrowthWindow,
   D1CapacityGrowthWindowKey,
+  D1CapacityHourlyMinMax,
   D1CapacityThresholdState,
+  D1QuotaAssessment,
+  D1QuotaMetric,
+  D1QuotaThresholdState,
 } from "./status/d1-capacity";
 export * from "./status/cron";
 export * from "./status/telegram";

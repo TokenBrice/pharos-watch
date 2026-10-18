@@ -3,6 +3,9 @@ import type {
   D1CapacityGrowthWindow,
   D1CapacityGrowthWindowKey,
   D1CapacityThresholdState,
+  D1QuotaAssessment,
+  D1QuotaMetric,
+  D1QuotaThresholdState,
 } from "../types/status/d1-capacity";
 
 export const D1_PAID_MAX_DATABASE_SIZE_BYTES = 10_000_000_000;
@@ -10,6 +13,33 @@ export const D1_CAPACITY_FORECAST_WINDOW_SEC = 30 * 24 * 60 * 60;
 const D1_CAPACITY_MIN_FORECAST_SPAN_SEC = 24 * 60 * 60;
 const D1_CAPACITY_WINDOW_MIN_SPAN_RATIO = 0.9;
 const D1_CAPACITY_MIN_REGRESSION_SPAN_SEC = 6 * 60 * 60;
+const D1_CAPACITY_HOURLY_MIN_MAX_WINDOW_SEC = 24 * 60 * 60;
+
+/**
+ * Cloudflare D1 paid-plan included monthly allowances. These are billing
+ * thresholds, not hard caps: crossing them bills overage ($0.001/M rows read
+ * and $1.00/M rows written at the 2026-10-18 rate card) rather than failing
+ * queries.
+ * Source: https://developers.cloudflare.com/d1/platform/pricing/ — "first 25
+ * billion rows read per month" and "first 50 million rows written per month"
+ * are included.
+ */
+export const D1_PAID_MONTHLY_INCLUDED_ALLOWANCE = {
+  rowsRead: 25_000_000_000,
+  rowsWritten: 50_000_000,
+} as const;
+
+/** Projection window: the trailing-24h analytics volume is assumed to repeat for a 30-day month. */
+export const D1_QUOTA_PROJECTION_DAYS = 30;
+
+/**
+ * Ops-only cost-signal floors. 80% opens a watch; 95% escalates to a warning.
+ * Neither threshold is a public-health input (owner decision D10).
+ */
+export const D1_QUOTA_THRESHOLDS = {
+  watchPercent: 80,
+  warningPercent: 95,
+} as const;
 
 export interface D1CapacityObservation {
   observedAt: number;
@@ -22,6 +52,62 @@ export function getD1CapacityImpactStatus(
   if (state === "critical") return "stale";
   if (state === "warning") return "degraded";
   return "healthy";
+}
+
+function quotaThresholdState(utilizationPercent: number | null): D1QuotaThresholdState {
+  if (utilizationPercent == null) return "unavailable";
+  if (utilizationPercent >= D1_QUOTA_THRESHOLDS.warningPercent) return "warning";
+  if (utilizationPercent >= D1_QUOTA_THRESHOLDS.watchPercent) return "watch";
+  return "normal";
+}
+
+function crossedQuotaThreshold(utilizationPercent: number | null): 80 | 95 | null {
+  if (utilizationPercent == null) return null;
+  if (utilizationPercent >= D1_QUOTA_THRESHOLDS.warningPercent) return 95;
+  if (utilizationPercent >= D1_QUOTA_THRESHOLDS.watchPercent) return 80;
+  return null;
+}
+
+function nextQuotaThreshold(utilizationPercent: number | null): 80 | 95 | null {
+  if (utilizationPercent == null) return null;
+  if (utilizationPercent < D1_QUOTA_THRESHOLDS.watchPercent) return 80;
+  if (utilizationPercent < D1_QUOTA_THRESHOLDS.warningPercent) return 95;
+  return null;
+}
+
+function assessQuotaMetric(observed24h: number | null, includedMonthlyAllowance: number): D1QuotaMetric {
+  // A missing or malformed observation stays unavailable; it never becomes a
+  // healthy zero.
+  const observed = observed24h != null && finiteNonNegative(observed24h) ? observed24h : null;
+  const projectedMonthly = observed == null ? null : Math.round(observed * D1_QUOTA_PROJECTION_DAYS);
+  const utilizationPercent = projectedMonthly == null
+    ? null
+    : round((projectedMonthly / includedMonthlyAllowance) * 100, 2);
+  return {
+    observed24h: observed,
+    projectedMonthly,
+    includedMonthlyAllowance,
+    utilizationPercent,
+    thresholdState: quotaThresholdState(utilizationPercent),
+    crossedThresholdPercent: crossedQuotaThreshold(utilizationPercent),
+    nextThresholdPercent: nextQuotaThreshold(utilizationPercent),
+  };
+}
+
+export interface D1QuotaUsageObservation {
+  rowsRead24h: number | null;
+  rowsWritten24h: number | null;
+}
+
+/**
+ * Projects the trailing-24h analytics volume onto a 30-day month and compares
+ * it with the paid included allowances. Ops-only cost signal (D10).
+ */
+export function assessD1QuotaUsage(usage: D1QuotaUsageObservation): D1QuotaAssessment {
+  return {
+    rowsRead: assessQuotaMetric(usage.rowsRead24h, D1_PAID_MONTHLY_INCLUDED_ALLOWANCE.rowsRead),
+    rowsWritten: assessQuotaMetric(usage.rowsWritten24h, D1_PAID_MONTHLY_INCLUDED_ALLOWANCE.rowsWritten),
+  };
 }
 
 const THRESHOLDS = [60, 75, 90, 100] as const;
@@ -198,6 +284,14 @@ export function assessD1Capacity(
       ? round((normalized[normalized.length - 1]!.observedAt - normalized[0]!.observedAt) / 3600, 1)
       : 0
   );
+  // Keep the recent hourly extremes so a transient allocation swing (seen as
+  // 560-770 MB intra-day in production) stays visible instead of collapsing
+  // into a single retained-size point.
+  const intradayObservations = normalized.filter(
+    (observation) => observation.observedAt >= current.observedAt - D1_CAPACITY_HOURLY_MIN_MAX_WINDOW_SEC,
+  );
+  const intradayMin = intradayObservations[0]!.databaseSizeBytes;
+  const intradayMax = intradayObservations[intradayObservations.length - 1]!.databaseSizeBytes;
 
   return {
     observedAt: current.observedAt,
@@ -219,5 +313,12 @@ export function assessD1Capacity(
       : round((exhaustionAt - current.observedAt) / SECONDS_PER_DAY, 1),
     growthWindows,
     conservativeWindow: conservativeWindow?.window ?? null,
+    hourlyMinMax24h: {
+      windowSeconds: D1_CAPACITY_HOURLY_MIN_MAX_WINDOW_SEC,
+      sampleCount: intradayObservations.length,
+      minDatabaseSizeBytes: intradayMin,
+      maxDatabaseSizeBytes: intradayMax,
+      swingBytes: intradayMax - intradayMin,
+    },
   };
 }

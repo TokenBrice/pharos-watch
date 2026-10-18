@@ -1,4 +1,4 @@
-import { assessD1Capacity } from "@shared/lib/d1-capacity";
+import { assessD1Capacity, assessD1QuotaUsage } from "@shared/lib/d1-capacity";
 import type { D1CapacityAssessment, D1UsageSummary } from "@shared/types/status";
 import type { CloudflareD1StatusConfig } from "../env";
 import { fetchTextWithRetry } from "../fetch-retry";
@@ -259,11 +259,19 @@ function parseDatabaseInfoEnvelope(payload: unknown): D1DatabaseInfoResult {
   };
 }
 
-function parseAnalyticsMetric(value: unknown, fieldName: string): number {
-  if (value == null) return 0;
+function parseAnalyticsMetric(value: unknown, fieldName: string): number | null {
+  if (value == null) return null;
   const parsed = toNumber(value);
   if (parsed != null) return parsed;
   throw new D1UsagePayloadError(`${fieldName} must be a finite number when present`);
+}
+
+function sumAnalyticsMetric(values: readonly (number | null)[]): number | null {
+  // No groups is an observed zero-volume window; a present group with a null
+  // metric is unavailable evidence and must not become a zero-volume claim.
+  if (values.length === 0) return 0;
+  if (values.some((value) => value == null)) return null;
+  return values.reduce<number>((sum, value) => sum + (value as number), 0);
 }
 
 function parseAnalyticsEnvelope(
@@ -299,10 +307,10 @@ function parseAnalyticsEnvelope(
     throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing d1AnalyticsAdaptiveGroups");
   }
 
-  let readQueries = 0;
-  let writeQueries = 0;
-  let rowsRead = 0;
-  let rowsWritten = 0;
+  const readQueries: Array<number | null> = [];
+  const writeQueries: Array<number | null> = [];
+  const rowsRead: Array<number | null> = [];
+  const rowsWritten: Array<number | null> = [];
 
   for (const group of account.d1AnalyticsAdaptiveGroups) {
     if (!isRecord(group)) {
@@ -311,17 +319,17 @@ function parseAnalyticsEnvelope(
     if (!isRecord(group.sum)) {
       throw new D1UsagePayloadError("Cloudflare D1 analytics group was missing sum");
     }
-    readQueries += parseAnalyticsMetric(group.sum.readQueries, "Cloudflare D1 analytics sum.readQueries");
-    writeQueries += parseAnalyticsMetric(group.sum.writeQueries, "Cloudflare D1 analytics sum.writeQueries");
-    rowsRead += parseAnalyticsMetric(group.sum.rowsRead, "Cloudflare D1 analytics sum.rowsRead");
-    rowsWritten += parseAnalyticsMetric(group.sum.rowsWritten, "Cloudflare D1 analytics sum.rowsWritten");
+    readQueries.push(parseAnalyticsMetric(group.sum.readQueries, "Cloudflare D1 analytics sum.readQueries"));
+    writeQueries.push(parseAnalyticsMetric(group.sum.writeQueries, "Cloudflare D1 analytics sum.writeQueries"));
+    rowsRead.push(parseAnalyticsMetric(group.sum.rowsRead, "Cloudflare D1 analytics sum.rowsRead"));
+    rowsWritten.push(parseAnalyticsMetric(group.sum.rowsWritten, "Cloudflare D1 analytics sum.rowsWritten"));
   }
 
   return {
-    readQueries24h: readQueries,
-    writeQueries24h: writeQueries,
-    rowsRead24h: rowsRead,
-    rowsWritten24h: rowsWritten,
+    readQueries24h: sumAnalyticsMetric(readQueries),
+    writeQueries24h: sumAnalyticsMetric(writeQueries),
+    rowsRead24h: sumAnalyticsMetric(rowsRead),
+    rowsWritten24h: sumAnalyticsMetric(rowsWritten),
   };
 }
 
@@ -632,6 +640,10 @@ export async function getD1UsageSummary(
       ? databaseInfo.read_replication.mode
       : null,
     capacity,
+    quota: assessD1QuotaUsage({
+      rowsRead24h: analytics.rowsRead24h,
+      rowsWritten24h: analytics.rowsWritten24h,
+    }),
     tableGrowth,
     ...analytics,
   };
