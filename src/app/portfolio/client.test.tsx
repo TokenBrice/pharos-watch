@@ -37,12 +37,13 @@ const reportCardsState: {
   error: null,
   meta: {},
 };
+const reportQueryOptions = vi.hoisted(() => vi.fn());
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCardsV9: () => ({
-    ...reportCardsState,
-    refetch: vi.fn(),
-  }),
+  useReportCardsV9Table: (options: { enabled: boolean }) => {
+    reportQueryOptions(options);
+    return { ...reportCardsState, refetch: vi.fn() };
+  },
 }));
 
 vi.mock("@/lib/logos", () => ({
@@ -125,7 +126,27 @@ describe("PortfolioClient URL sync", () => {
   beforeEach(() => {
     portfolioState = basePortfolioState();
     reportCardsState.data = undefined;
+    reportCardsState.isLoading = false;
+    reportQueryOptions.mockClear();
     window.history.replaceState(null, "", "/portfolio/");
+  });
+
+  it("renders the empty editor without requesting report cards", () => {
+    reportCardsState.isLoading = true;
+    render(<PortfolioClient />);
+    expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
+    expect(screen.getByText("coin-selector")).toBeTruthy();
+    expect(screen.getByText("portfolio-empty-state")).toBeTruthy();
+  });
+
+  it("keeps holdings editable while risk enrichment is pending", () => {
+    portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }] };
+    reportCardsState.isLoading = true;
+    render(<PortfolioClient />);
+    expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: true });
+    expect(screen.getByText("coin-selector")).toBeTruthy();
+    expect(screen.getByText("Loading holdings safety evidence…")).toBeTruthy();
+    expect(screen.queryByText(/Weighted V10 safety aggregate/)).toBeNull();
   });
 
   it("removes stale legacy portfolio params when nothing valid survives", async () => {

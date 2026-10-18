@@ -3,58 +3,72 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type DetailSectionsBundle = typeof import("@/components/stablecoin-detail/sections-bundle");
-type DetailSectionName = {
-  [Name in keyof DetailSectionsBundle]: DetailSectionsBundle[Name] extends React.ComponentType<infer _Props>
-    ? Name
-    : never;
-}[keyof DetailSectionsBundle];
-type DetailSectionProps<Name extends DetailSectionName> =
-  DetailSectionsBundle[Name] extends React.ComponentType<infer Props> ? Props : never;
-
-function DetailSectionSkeleton({ className }: { className: string }) {
-  return <Skeleton className={className} />;
-}
-
-function lazyDetailSection<Name extends DetailSectionName>(name: Name, className: string) {
-  type Props = DetailSectionProps<Name>;
-
-  return dynamic<Props>(
-    () =>
-      import("@/components/stablecoin-detail/sections-bundle").then(
-        (mod) => mod[name] as unknown as React.ComponentType<Props>,
-      ),
-    { loading: () => <DetailSectionSkeleton className={className} /> },
-  );
-}
-
+// Each literal client import is a section boundary: requesting one section must
+// not fetch unrelated sections. next.config.ts keeps Recharts in one vendor
+// group, so splitting the section entries does not duplicate the chart stack.
 export const FeedbackModal = dynamic(
   () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
-  // The null fallback is load-bearing: without a `loading` option, `dynamic()`
-  // adds no local Suspense boundary, the chunk-load suspension bubbles to the
-  // page-level boundary, and the whole detail island collapses mid-scroll.
+  // Keep suspension local instead of collapsing the whole detail island.
   { ssr: false, loading: () => null },
 );
 
-export const McapChart = lazyDetailSection("McapChart", "h-[420px] w-full rounded-xl");
-export const MarketDataSection = lazyDetailSection("MarketDataSection", "h-[420px] w-full rounded-xl");
-export const DEWSDetail = lazyDetailSection("DEWSDetail", "h-[320px] w-full rounded-xl");
-export const StablecoinSafetyScoreV9Card = lazyDetailSection(
-  "StablecoinSafetyScoreV9Card",
-  "h-[420px] w-full rounded-xl",
+export const McapChart = dynamic(
+  () => import("@/components/mcap-chart").then((mod) => mod.McapChart),
+  { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
 );
-export const ReservesSection = lazyDetailSection("ReservesSection", "h-[320px] w-full rounded-xl");
-export const HistoryTabs = lazyDetailSection("HistoryTabs", "h-[360px] w-full rounded-xl");
-
-export const FlowsSection = lazyDetailSection("FlowsSection", "h-[320px] w-full rounded-xl");
-export const FlowHistorySection = lazyDetailSection("FlowHistorySection", "h-[320px] w-full rounded-xl");
-export const BlacklistSection = lazyDetailSection("BlacklistSection", "h-[320px] w-full rounded-xl");
-export const BlacklistHistorySection = lazyDetailSection("BlacklistHistorySection", "h-[320px] w-full rounded-xl");
-export const PegStabilityCard = lazyDetailSection("PegStabilityCard", "h-[320px] w-full rounded-xl");
-export const YieldDetailSection = lazyDetailSection("YieldDetailSection", "h-[420px] w-full rounded-xl");
-export const DexLiquidityCard = lazyDetailSection("DexLiquidityCard", "h-[360px] w-full rounded-xl");
-export const DistributionSection = lazyDetailSection("DistributionSection", "h-[320px] w-full rounded-xl");
-export const StablecoinDepegResolverCard = lazyDetailSection(
-  "StablecoinDepegResolverCard",
-  "h-[420px] w-full rounded-xl",
+export const MarketDataSection = dynamic(
+  () => import("@/components/stablecoin-detail/market-data-section").then((mod) => mod.MarketDataSection),
+  { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
+);
+export const DEWSDetail = dynamic(
+  () => import("@/components/dews-detail").then((mod) => mod.DEWSDetail),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const StablecoinSafetyScoreV9Card = dynamic(
+  () => import("@/components/stablecoin-detail/stablecoin-safety-score-v9-card").then((mod) => mod.StablecoinSafetyScoreV9Card),
+  { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
+);
+export const ReservesSection = dynamic(
+  () => import("@/components/stablecoin-detail/reserves-section").then((mod) => mod.ReservesSection),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const HistoryTabs = dynamic(
+  () => import("@/components/stablecoin-detail/history-tabs").then((mod) => mod.HistoryTabs),
+  { loading: () => <Skeleton className="h-[360px] w-full rounded-xl" /> },
+);
+export const FlowsSection = dynamic(
+  () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const FlowHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowHistorySection),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const BlacklistSection = dynamic(
+  () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistSection),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const BlacklistHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistHistorySection),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const PegStabilityCard = dynamic(
+  () => import("@/components/stablecoin-detail/peg-stability-card").then((mod) => mod.PegStabilityCard),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const YieldDetailSection = dynamic(
+  () => import("@/components/yield-detail-section"),
+  { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
+);
+export const DexLiquidityCard = dynamic(
+  () => import("@/components/dex-liquidity-card").then((mod) => mod.DexLiquidityCard),
+  { loading: () => <Skeleton className="h-[360px] w-full rounded-xl" /> },
+);
+export const DistributionSection = dynamic(
+  () => import("@/components/stablecoin-detail/distribution-section").then((mod) => mod.DistributionSection),
+  { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
+);
+export const StablecoinDepegResolverCard = dynamic(
+  () => import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => mod.StablecoinDepegResolverCard),
+  { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
 );

@@ -12,6 +12,24 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { getPollingWindow } from "../api-query-polling";
 
 describe("frontend API query descriptors", () => {
+  it("keeps the chart-only history transport separate from full history cache identity", () => {
+    const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityHistory("usdt-tether", 90);
+    expect(descriptor.path).toBe("/api/dex-liquidity-chart-history?stablecoin=usdt-tether&days=90");
+    expect(descriptor.queryKey).toEqual(["dex-liquidity-chart-history", "usdt-tether", 90]);
+    expect(descriptor.producerIntervalMs).toBe(CRON_INTERVALS["sync-dex-liquidity"] * 1000);
+  });
+
+  it("separates bounded PSI startup from full-history expansion without changing producer polling", () => {
+    const initial = FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail;
+    const full = FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexFullHistory;
+    expect(initial.path).toBe("/api/stability-index?detail=true&days=365");
+    expect(full.path).toBe("/api/stability-index?detail=true");
+    expect(initial.queryKey).not.toEqual(full.queryKey);
+    for (const descriptor of [initial, full]) {
+      expect(descriptor.producerIntervalMs).toBe(CRON_INTERVALS["stability-index"] * 1000);
+    }
+  });
+
   it.each([
     ["depegResolver", "compute-depeg-resolver"],
     ["depegResolverReview", "compute-depeg-resolver"],
@@ -79,15 +97,18 @@ describe("frontend API query descriptors", () => {
     const schema = await resolveSchemaLike(descriptor.schema);
     expect(schema).toBeDefined();
     if (!schema) throw new Error("Expected the registered live summary response schema");
-    const parsed = schema.safeParse({
+    const parsed = schema.safeParse(projectStablecoinLiveSummary({
       currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyObservedAt: 1_790_793_000,
       currentSupplyRestored: true,
-    });
+    }));
     if (!parsed.success) throw new Error("Expected a restored live summary");
     const summary = parsed.data;
     expect(summary.supplyRestored).toBe(true);
     expect(summary.supplyObservedAt).toBe(1_790_793_000);
     expect(summary.circulating).toEqual({ peggedUSD: 100 });
+    expect(descriptor.path).toBe("/api/stablecoin-live-summary/usdt-tether");
+    expect(descriptor.queryKey).toEqual(["stablecoin-live-summary", "usdt-tether"]);
+    expect(schema.safeParse({ tokens: [] }).success).toBe(false);
   });
 
   it.each([false, undefined])("does not mark fresh or legacy current supply restored (%s)", (restored) => {
@@ -276,7 +297,7 @@ describe("frontend API query descriptors", () => {
     expect(schema.safeParse({ ...reportV5, schemaVersion: 4 }).success).toBe(false);
   });
 
-  it("resolves card-local witness text before any frontend reader receives the card", async () => {
+  it("admits resolved witness text and rejects canonical card-local tables at the wire boundary", async () => {
     const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);
     if (schema === undefined) throw new Error("Expected a V9 report-card response schema");
     const semantic = makeReportCardsV9Response();
@@ -290,11 +311,13 @@ describe("frontend API query descriptors", () => {
     card.pillars.control.reasons = [reason];
     const wire = { ...semantic, cards: [internV9PublicWitnessTexts(card)] };
     expect(wire.cards[0]!.witnessTexts?.length).toBeGreaterThan(0);
-    const parsed = schema.safeParse(wire);
+    expect(schema.safeParse(wire).success).toBe(false);
+    const parsed = schema.safeParse(semantic);
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data).toEqual(semantic);
-    wire.cards[0]!.evidence.reasons[0]!.message = "~zzzzzz";
-    expect(schema.safeParse(wire).success).toBe(false);
+    semantic.cards[0]!.evidence.reasons[0]!.message = "~literal evidence";
+    semantic.cards[0]!.pillars.control.reasons[0]!.message = "~literal evidence";
+    expect(schema.safeParse(semantic).success).toBe(true);
   });
 
   it("validates only global PSI display fields and preserves the full payload", () => {

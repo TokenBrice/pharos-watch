@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { LazySection } from "@/components/lazy-section";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
@@ -248,6 +249,14 @@ function ActiveDepegsCard({
 /* ---------- main component ---------- */
 
 export function DigestSnapshot({ date }: { date: string }) {
+  return (
+    <LazySection minHeight={480} rootMargin="0px" placeholder={<Skeleton className="mt-8 h-[480px] w-full rounded-xl" />}>
+      <DigestSnapshotContent date={date} />
+    </LazySection>
+  );
+}
+
+function DigestSnapshotContent({ date }: { date: string }) {
   const { data, isLoading, isError } = useDigestSnapshot(date);
 
   if (isError) {

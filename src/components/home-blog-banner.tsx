@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { LATEST_BLOG_POST } from "@/data/blog";
 
 // Days a new post stays advertised on the homepage. The check runs at build
@@ -25,11 +24,18 @@ export function HomeBlogBanner() {
           From the blog
         </span>
         <span className="min-w-0 flex-1 truncate font-medium text-foreground">{post.title}</span>
-        <ArrowRight
+        <svg
           aria-hidden="true"
-          className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
           strokeWidth={2}
-        />
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+        >
+          <path d="M5 12h14m-7-7 7 7-7 7" />
+        </svg>
       </Link>
     </aside>
   );

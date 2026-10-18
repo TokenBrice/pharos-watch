@@ -31,7 +31,7 @@ const { useDexLiquidityMock, useDexLiquidityHistoryMock, chartReadyMock, areaCha
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidity: useDexLiquidityMock,
+  useDexLiquidityCoin: useDexLiquidityMock,
   useDexLiquidityHistory: useDexLiquidityHistoryMock,
 }));
 

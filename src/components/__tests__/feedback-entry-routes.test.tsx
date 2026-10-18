@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 describe("floating feedback entry routes", () => {
-  it.each(["/api/", "/api"])("offers no feedback control on %s but keeps the dock's scroll control", (pathname) => {
+  it.each(["/api/", "/api", "/api/reference/", "/api/reference"])("offers no feedback control on %s but keeps the dock's scroll control", (pathname) => {
     pathnameMock.mockReturnValue(pathname);
     render(
       <>

@@ -22,6 +22,7 @@ import type {
   HealthBand,
 } from "@shared/types/chains";
 import type { ApiMeta } from "@/lib/api";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
@@ -204,7 +205,7 @@ function IdentityRow({ meta, chainName }: { meta: ChainMeta; chainName: string }
       <div className="flex items-center gap-4">
         <div className="shrink-0 rounded-xl border border-border/60 bg-background/80 p-2.5">
           <Image
-            src={meta.logoPath}
+            src={resolveCompactLogoSrc(meta.logoPath, 48)!}
             alt=""
             width={48}
             height={48}

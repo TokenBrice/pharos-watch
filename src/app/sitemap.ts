@@ -12,6 +12,8 @@ import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import {
   METHODOLOGY_CHANGELOG_SITEMAP_PATHS as SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
 } from "@shared/lib/methodology-versions/registry";
+import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
+import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
 import { DIGEST_ENTRIES, INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
@@ -27,7 +29,7 @@ import {
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
-import { PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
+import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
 
 export const dynamic = "force-static";
 
@@ -177,7 +179,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog/": ["weekly", 0.6],
     "/about/": ["monthly", 0.5],
     "/depeg/archive/": ["monthly", 0.5, (path) => lastEdited(path, "/depeg/")],
-    "/api/": ["monthly", 0.5],
+    [API_ACCESS_PAGE_PATH]: ["monthly", 0.5],
+    "/api/reference/": ["monthly", 0.5, (path) => lastEdited(path, API_ACCESS_PAGE_PATH)],
     "/stablecoins/": ["weekly", 0.7],
     "/stablecoins/backing/": ["weekly", 0.6],
     "/stablecoins/governance/": ["weekly", 0.6],
@@ -199,6 +202,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: lastEdited(path),
       changeFrequency: "monthly" as const,
       priority: 0.4,
+    })),
+    ...METHODOLOGY_HISTORY_ARCHIVES.map((archive) => ({
+      url: `${SITE_URL}${archive.path}`,
+      lastModified: lastEdited(archive.path, archive.changelog.publicPath),
+      changeFrequency: "monthly" as const,
+      priority: 0.3,
+    })),
+    ...CHANGELOG_MONTH_ARCHIVES.map((archive) => ({
+      url: `${SITE_URL}${archive.path}`,
+      lastModified: lastEdited(archive.path, "/changelog/"),
+      changeFrequency: "monthly" as const,
+      priority: 0.3,
     })),
     ...buildStaticSitemapEntries(referencePageSpecs, lastEdited),
   ];

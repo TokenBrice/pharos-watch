@@ -1,15 +1,20 @@
 // @vitest-environment jsdom
 
-import { renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook as renderHookWithProvider } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import { seedStablecoinDetailQueryCache } from "@/lib/api";
+import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
-import { projectFrozenSnapshotLiveSummary } from "@/lib/api-query-descriptors";
+import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
 import { DISABLED_DETAIL_QUERY_CONTROLS, queryResult } from "./use-stablecoin-detail-view-model.test-support";
 import type * as DetailViewModelModule from "@/lib/stablecoin-detail-view-model";
 
 const mocks = vi.hoisted(() => ({
   buildStablecoinDetailViewModel: vi.fn(),
+  trackFreshDataReady: vi.fn(),
   useSupplyHistory: vi.fn(),
   usePegSummary: vi.fn(),
   useDexLiquidity: vi.fn(),
@@ -33,6 +38,14 @@ const mocks = vi.hoisted(() => ({
   refetchReserves: vi.fn(),
 }));
 
+vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: mocks.trackFreshDataReady }));
+
+let queryClient: QueryClient;
+function renderHook<T>(callback: () => T) {
+  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return renderHookWithProvider(callback, { wrapper });
+}
+
 vi.mock("@/lib/stablecoin-detail-view-model", () => ({
   buildStablecoinDetailViewModel: mocks.buildStablecoinDetailViewModel,
 }));
@@ -42,12 +55,13 @@ vi.mock("../use-stablecoins", () => ({
 }));
 
 vi.mock("../api-hooks", () => ({
-  useDexLiquidity: mocks.useDexLiquidity,
+  useDexLiquidityCoin: mocks.useDexLiquidity,
   usePegSummary: mocks.usePegSummary,
   useRegisteredApiQuery: mocks.useRegisteredApiQuery,
-  useReportCardsV9: mocks.useReportCardsV9,
+  useReportCardsV9Detail: mocks.useReportCardsV9,
   useStressSignals: mocks.useStressSignals,
-  useYieldRankings: mocks.useYieldRankings,
+  useYieldRankingsCoin: mocks.useYieldRankings,
+  useRedemptionBackstopCoin: () => queryResult({ refetch: mocks.refetchRedemptionBackstops }),
 }));
 
 vi.mock("../use-mint-burn-flows", () => ({
@@ -118,9 +132,55 @@ function installQueryMocks() {
 describe("useStablecoinDetailViewModel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient();
     resetRefetchMocks();
     installQueryMocks();
   });
+  afterEach(() => queryClient.clear());
+
+  it("retains the ready projection across parent renders until query data changes", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    mocks.buildStablecoinDetailViewModel.mockImplementation(() => ({ status: "ready" }));
+    const { result, rerender } = renderHook(() => useStablecoinDetailViewModel({
+      id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+    }));
+    const initial = result.current;
+    const builds = mocks.buildStablecoinDetailViewModel.mock.calls.length;
+    rerender();
+    expect(mocks.buildStablecoinDetailViewModel).toHaveBeenCalledTimes(builds);
+    expect(result.current).toBe(initial);
+    mocks.usePegSummary.mockReturnValue(queryResult({ data: {}, refetch: mocks.refetchPeg }));
+    rerender();
+    expect(result.current).not.toBe(initial);
+  });
+
+  it.each(["live", "prefetched", "seed", "stale", "failed", "missing-clock", "fetching"])(
+    "reports fresh readiness only for admitted fresh live summary (%s)",
+    (state) => {
+      const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+      const updatedAt = Date.now() / 1000;
+      const data = {
+        price: 1, circulating: { peggedUSD: 100 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+        nativeSupply: { current: 100, prevWeek: 100, prevMonth: 100 },
+      } as StablecoinLiveSummary;
+      if (state === "seed") seedStablecoinDetailQueryCache(queryClient, {
+        version: 1, stablecoinId: coin.id, generatedAt: Date.now(),
+        updatedAt: { liveSummary: updatedAt * 1000 }, lanes: { liveSummary: data },
+      });
+      mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) =>
+        descriptor.queryKey[0] === "stablecoin-live-summary"
+          ? { ...queryResult({ data, error: state === "failed" ? new Error("refresh failed") : null,
+            isFetching: state === "fetching",
+            meta: { updatedAt: state === "missing-clock" ? null : updatedAt,
+              ageSeconds: 0, status: state === "stale" ? "stale" : "fresh" } }),
+            isFetchedAfterMount: state !== "prefetched" }
+          : queryResult());
+      renderHook(() => useStablecoinDetailViewModel({
+        id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+      }));
+      expect(mocks.trackFreshDataReady).toHaveBeenCalledTimes(["live", "prefetched"].includes(state) ? 1 : 0);
+    },
+  );
   it("resolves the hero annual USD metric from an independent annual observation without expanding the chart", async () => {
     const { buildStablecoinDetailViewModel } = await vi.importActual<typeof DetailViewModelModule>(
       "@/lib/stablecoin-detail-view-model",

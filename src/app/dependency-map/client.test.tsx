@@ -76,19 +76,19 @@ describe("DependencyMapClient", () => {
     );
   });
 
-  it("keeps the graph visible when the market-cap endpoint fails", () => {
+  it("keeps the graph visible when the market-cap endpoint fails", async () => {
     mockUseStablecoins.mockReturnValue({
       ...makeQueryResult(undefined),
       error: new Error("Stablecoins unavailable"),
     } as unknown as ReturnType<typeof useStablecoins>);
     render(<DependencyMapClient />);
-    expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
+    expect(await screen.findByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
     expect(screen.getByText(/Market-cap data is unavailable/)).toBeTruthy();
     expect(screen.getByText("Supply data unavailable")).toBeTruthy();
     expect(screen.getByText(/Excludes 1 coins without supply data/)).toBeTruthy();
   });
 
-  it("retains the held notice and unpublished v5 coverage and supply facts", () => {
+  it("retains the held notice and unpublished v5 coverage and supply facts", async () => {
     const full = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", supply: undefined, dependencyCoverage: undefined }), makeV9Card({ id: "dai-makerdao", supply: undefined, dependencyCoverage: undefined })],
       dependencyGraph: { edges: [{ from: "usdc-circle", to: "dai-makerdao", kind: "basket", materiality: "basket-weighted", weight: 0.4, upstreamScore: 80 }] } });
     full.publicationHealth.status = "held";
@@ -97,6 +97,7 @@ describe("DependencyMapClient", () => {
     expect(slim.nodes.every(node => node.circulatingUsdAtEvaluation === null && node.supplyAsOfSec === null && node.dependencyCoverageCount === null)).toBe(true);
     mockUseDependencyGraph.mockReturnValue(makeQueryResult(slim) as unknown as ReturnType<typeof useDependencyGraph>);
     render(<DependencyMapClient />);
+    await screen.findByRole("figure", { name: /Dependency graph showing/ });
     expect(screen.getByRole("status").textContent).toContain("Ratings are held at the last verified snapshot");
     expect(screen.getByText(/Not published for this generation/)).toBeTruthy();
     expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();

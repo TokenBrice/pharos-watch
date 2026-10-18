@@ -17,7 +17,7 @@ const GROUP_TITLES: Record<(typeof DOC_GROUPS)[number], string> = {
 
 // The API reference lives on /api/ (Reference tab), rendered from docs/api-reference.md.
 const FEATURED_API_REFERENCE = {
-  href: "/api/#reference",
+  href: "/api/reference/",
   title: "API Reference",
   label: "API integrators",
   description:

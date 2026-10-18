@@ -4,7 +4,7 @@ import { parseStablecoinHistoryQuery } from "../lib/api-history";
 import { jsonResponseWithHeaders, errorResponse } from "../lib/api-response";
 import { addFreshnessHeaders, buildFreshnessMeta, getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { getCache } from "../lib/db-cache";
+import { readYieldRankingsCoinCache } from "../lib/yield-rankings-coin-cache";
 import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -205,7 +205,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
       return errorResponse(400, "Missing ?sourceKey= parameter for source history mode");
     }
 
-    const rankingsCache = await getCache(db, "yield-rankings");
+    const rankingsCache = await readYieldRankingsCoinCache(db, parsed.stablecoinId);
     const parsedRankingsCache = parseYieldRankingsCache(rankingsCache);
     const rankingsPayload = parsedRankingsCache.payload;
     const publication = extractYieldPublicationMetadata(rankingsPayload, rankingsCache);
@@ -258,7 +258,8 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
     const sql = `SELECT /* pharos:yield-history:${mode}-window-tiered */ * FROM (
              SELECT ${historyColumns}
                FROM yield_history_daily
-              WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at < ? AND ${sourceSelection}
+              WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ?
+                AND recorded_at >= ? AND recorded_at < ? AND ${sourceSelection}
                 ${publicationFilter}
              UNION ALL
              SELECT ${historyColumns}
@@ -280,6 +281,8 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
       .prepare(sql)
       .bind(
         parsed.stablecoinId,
+        Math.floor(parsed.cutoff / 86400) * 86400,
+        Math.floor(rawCutoff / 86400) * 86400,
         parsed.cutoff,
         rawCutoff,
         ...sourceBinds,

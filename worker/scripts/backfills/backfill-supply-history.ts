@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../src/lib/structured-log";
-import { SUPPLY_HISTORY_UPSERT_SQL } from "../../src/lib/supply-history-db";
+import { SUPPLY_HISTORY_UPSERT_SQL, writeSupplyHistoryBatch } from "../../src/lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -10,7 +10,6 @@ import { onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../src/lib/constants";
 import { fetchCoinGeckoMarketHistory } from "../../src/lib/coingecko-market-history";
 import type { ChainRpcConfig } from "../../src/lib/chain-registry";
-import { batchExecute } from "../../src/lib/db";
 import { encodeJsonCursor, parseIntParam, parseJsonCursorParam } from "../../src/lib/api-params";
 import { jsonResponse } from "../../src/lib/api-response";
 import { binarySearchNearest } from "../../src/lib/binary-search";
@@ -517,7 +516,7 @@ async function backfillHistoricalOnChainSupply(
     };
   }
 
-  await batchExecute(db, stmts);
+  await writeSupplyHistoryBatch(db, stmts);
   if (blockMisses > 0 || supplyMisses > 0 || priceMisses > 0) {
     logWorkerEventArgs("api", "warn",
       `[backfill-supply] ${meta.symbol}: historical on-chain supply skipped ${blockMisses} block lookup(s), ${supplyMisses} supply read(s), and ${priceMisses} price day(s)`,
@@ -587,7 +586,7 @@ async function backfillHistoricalTotalSupply(
     };
   }
 
-  await batchExecute(db, stmts);
+  await writeSupplyHistoryBatch(db, stmts);
   if (blockMisses > 0 || supplyMisses > 0 || priceMisses > 0) {
     logWorkerEventArgs("api", "warn",
       JSON.stringify({
@@ -663,7 +662,7 @@ async function backfillCommodity(
     }
 
     if (stmts.length > 0) {
-      await batchExecute(db, stmts);
+      await writeSupplyHistoryBatch(db, stmts);
       if (missingMarketCapDays > 0) {
         const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
           chainRpcs: config.chainRpcs,
@@ -772,7 +771,7 @@ async function backfillCommodity(
   }
 
   if (stmts.length > 0) {
-    await batchExecute(db, stmts);
+    await writeSupplyHistoryBatch(db, stmts);
   }
   return { rows: stmts.length };
 }
@@ -1079,7 +1078,7 @@ async function executeBackfillSupplyHistory(
     }
 
     if (stmts.length > 0) {
-      await batchExecute(db, stmts);
+      await writeSupplyHistoryBatch(db, stmts);
       totalRows += stmts.length;
     }
   }

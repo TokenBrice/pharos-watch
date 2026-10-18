@@ -2,7 +2,8 @@
 
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
-import { useYieldAdapterManifest } from "@/hooks/api-hooks";
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { YieldAdapterManifestResponse } from "@shared/types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
@@ -12,10 +13,11 @@ interface YieldDataHealthProps {
   error: unknown;
   hasData: boolean;
   meta: StaleQuery["meta"];
+  adapterManifestQuery: UseQueryResult<YieldAdapterManifestResponse, Error>;
 }
 
-export function YieldDataHealth({ dataUpdatedAt, error, hasData, meta }: YieldDataHealthProps) {
-  const { data: adapterManifest, error: adapterError, refetch } = useYieldAdapterManifest();
+export function YieldDataHealth({ dataUpdatedAt, error, hasData, meta, adapterManifestQuery }: YieldDataHealthProps) {
+  const { data: adapterManifest, error: adapterError, refetch } = adapterManifestQuery;
   return (
     <>
       <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData, meta }]} />

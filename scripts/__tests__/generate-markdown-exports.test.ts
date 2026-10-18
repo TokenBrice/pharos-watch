@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildMethodologyIndexMarkdown } from "../lib/methodology-to-markdown";
+import { buildMethodologyChangelogMarkdown, buildMethodologyIndexMarkdown } from "../lib/methodology-to-markdown";
 import {
   iterateStablecoinRoutes,
   renderChangelogIndex,
@@ -10,6 +10,8 @@ import {
 } from "../lib/markdown-renderers";
 import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
 import { changelogs } from "../../src/data/changelogs";
+import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "../../src/lib/changelog-history";
+import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
@@ -91,10 +93,38 @@ describe("stablecoin markdown", () => {
 
 describe("authored Markdown export fixtures", () => {
   it.each([
-    ["changelog-index.md", () => renderChangelogIndex(changelogs)],
+    ["changelog-index.md", () => renderChangelogIndex()],
     ["methodology-index.md", () => buildMethodologyIndexMarkdown()],
     ["stablecoin-usdt-tether.md", () => renderStablecoinDetail("usdt-tether")],
   ] as const)("preserves exported bytes for %s", (name, render) => {
     expect(render()).toBe(readFileSync(new URL(`./fixtures/markdown/${name}`, import.meta.url), "utf8"));
+  });
+});
+
+describe("partitioned history Markdown", () => {
+  it("links every monthly archive while limiting full release bodies to recent weeks", () => {
+    const markdown = renderChangelogIndex();
+    for (const archive of CHANGELOG_MONTH_ARCHIVES) expect(markdown).toContain(`https://pharos.watch${archive.path}`);
+    for (const entry of RECENT_CHANGELOGS) expect(markdown).toContain(entry.summary[0].description);
+    const oldest = changelogs.at(-1)!;
+    expect(markdown).not.toContain(oldest.summary[0].description);
+    const archive = CHANGELOG_MONTH_ARCHIVES.at(-1)!;
+    const body = renderChangelogIndex(archive.entries, archive.path);
+    expect(body).toContain(`canonical: "https://pharos.watch${archive.path}"`);
+    expect(body).toContain(oldest.summary[0].description);
+  });
+
+  it("exports every methodology archive with its own canonical and complete structured body", () => {
+    for (const archive of METHODOLOGY_HISTORY_ARCHIVES) {
+      const markdown = buildMethodologyChangelogMarkdown(archive.changelog.markdownKey, archive.archive);
+      expect(markdown).toContain(`canonical: "https://pharos.watch${archive.path}"`);
+      for (const entry of archive.entries) {
+        expect(markdown).toContain(entry.summary);
+        expect(markdown).toContain(entry.title);
+        for (const impact of entry.impact) expect(markdown).toContain(impact);
+        for (const sha of entry.commits) expect(markdown).toContain(sha);
+      }
+    }
+    expect(() => buildMethodologyChangelogMarkdown("scoring", "v999")).toThrow("Unknown methodology archive");
   });
 });

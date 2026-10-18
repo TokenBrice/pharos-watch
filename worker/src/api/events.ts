@@ -175,12 +175,12 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
     q: q.length > 0 ? q : null,
   };
 
-  const { rows, hasMore, total } = await queryTapeEvents(db, {
-    filters,
-    limit,
-    cursor,
-    includeTotal,
-  });
+  // Independent bounded reads: do not add a second D1 round trip after mapping
+  // a tiny per-coin teaser. The freshness result keeps its own failure verdict.
+  const [{ rows, hasMore, total }, freshness] = await Promise.all([
+    queryTapeEvents(db, { filters, limit, cursor, includeTotal }),
+    getLatestSuccessfulCronTimestampResult(db, "project-tape"),
+  ]);
 
   const events: TapeEvent[] = [];
   let droppedRows = 0;
@@ -214,7 +214,6 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
     nextCursor = encodeCursor({ ts: last.ts, id: last.id });
   }
 
-  const freshness = await getLatestSuccessfulCronTimestampResult(db, "project-tape");
   const meta = buildCronFreshnessMeta(freshness, FRESHNESS_MAX_AGE_SEC);
 
   return jsonFreshResponse(

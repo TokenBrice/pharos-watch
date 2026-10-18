@@ -8,6 +8,7 @@ import {
 import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
+import { conditionalGetResponse, scopeResponseEtag } from "../../lib/api-response";
 import {
   evaluateTelegramIngressAbuseGate,
   recordTelegramIngressHandlerResponse,
@@ -75,7 +76,7 @@ export async function handleHttpRequestImpl(
         apiKeyTrafficClass: fastGate.apiKey?.trafficClass ?? null,
         requestLane: fastGate.requestLane,
       })();
-      return addCorsHeaders(fastRateLimitResponse ?? cached, origin);
+      return addCorsHeaders(fastRateLimitResponse ?? conditionalGetResponse(routedRequest, cached), origin);
     }
   }
 
@@ -103,7 +104,7 @@ export async function handleHttpRequestImpl(
   }
   if (cached) {
     recordRequestSource();
-    return addCorsHeaders(cached, origin);
+    return addCorsHeaders(conditionalGetResponse(routedRequest, cached), origin);
   }
 
   const resolvedRoute = resolveRoute(url, routedRequest.method);
@@ -126,6 +127,7 @@ export async function handleHttpRequestImpl(
 
   recordTelegramIngressHandlerResponse(routedRequest, url, response);
   recordRequestSource();
-  writeEdgeCache(edgeCache, response, ctx);
-  return addCorsHeaders(response, origin);
+  const cacheResponse = scopeResponseEtag(response, edgeCache.cacheKey.url, !edgeCache.skipCache);
+  writeEdgeCache(edgeCache, cacheResponse, ctx);
+  return addCorsHeaders(conditionalGetResponse(routedRequest, cacheResponse), origin);
 }

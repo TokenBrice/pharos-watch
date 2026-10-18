@@ -142,7 +142,7 @@ function getRankingProducerCadenceMs(dataSource: string, sourceKey?: string | nu
 }
 
 /** `aging` boundary: the midpoint between a class cadence and its stale bound. */
-function getRankingAgingThresholdMs(dataSource: string, sourceKey?: string | null): number {
+export function getRankingAgingThresholdMs(dataSource: string, sourceKey?: string | null): number {
   const cadenceMs = getRankingProducerCadenceMs(dataSource, sourceKey);
   return cadenceMs + (getRankingStaleThresholdMs(dataSource, sourceKey) - cadenceMs) / 2;
 }

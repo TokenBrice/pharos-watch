@@ -53,7 +53,7 @@ import {
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9/consumer-freshness";
-import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-health";
 import { buildStablecoinsCacheFreshnessGateResult } from "../lib/supply-snapshot-completion";
 
 type StableMethodologyVersions = {

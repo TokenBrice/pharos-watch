@@ -11,10 +11,7 @@ import {
   type AlertSafetySourceSnapshot,
 } from "../../../lib/alert-safety-source-cache";
 import { getCache, setCache } from "../../../lib/db-cache";
-import {
-  loadSafetyScoreV9PublicationAttempt,
-  type V9PublicationAttempt,
-} from "../../../lib/safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationAttempt, type V9PublicationAttempt } from "../../../lib/safety-score-v9/publication-attempts";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../lib/safety-score-v9/consumer-freshness";
 import { logTelegramEvent } from "../../../telegram/common/log";
 import { loadTelegramDewsCurrentRows } from "../../../lib/stress-signals-current-rows";

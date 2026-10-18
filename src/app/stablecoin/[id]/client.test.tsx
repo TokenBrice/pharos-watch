@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { useRef } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render as renderWithTestingLibrary, screen } from "@testing-library/react";
+import { useCallback, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createContagionSnapshotMock,
   createDepegEventsMock,
@@ -55,8 +56,6 @@ vi.mock("@/lib/logos", () => createLogosMock());
 
 vi.mock("@/components/stablecoin-logo", () => createStablecoinLogoMock());
 
-vi.mock("@/components/stale-data-banner", () => createNoopComponentMock("StaleDataBanner"));
-
 vi.mock("@/components/query-error-notice", () => createNoopComponentMock("QueryErrorNotice"));
 
 vi.mock("@/components/longform-scrollspy-nav", () => ({
@@ -105,6 +104,23 @@ vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("Exp
 
 vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
 
+const queryClients: QueryClient[] = [];
+
+function render(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // These compositor tests supply a mocked view-model; transport launch is covered by request-budget tests.
+  vi.spyOn(client, "prefetchQuery").mockResolvedValue(undefined);
+  queryClients.push(client);
+  return renderWithTestingLibrary(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+  });
+}
+
+afterEach(() => {
+  for (const client of queryClients) client.clear();
+  queryClients.length = 0;
+});
+
 // Viewport queues belong to every detail scenario, including isolated frozen cases.
 beforeEach(() => {
   lazyViewportValues.length = 0;
@@ -141,6 +157,34 @@ describe("StablecoinDetailClient", () => {
     useStablecoinDetailViewModelMock.mockReset();
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
     longformScrollspyNavMock.mockClear();
+  });
+
+  it("keeps the actual compact freshness strip through saved refresh, stale and failed settlement", () => {
+    const now = Date.now();
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const query = {
+      label: "Detail snapshot", staleTime: 15 * 60_000, hasData: true, dataUpdatedAt: now,
+      error: null, meta: { updatedAt: (now - 10 * 3600_000) / 1000, ageSeconds: 36000, status: "fresh" as const },
+      isSnapshot: true, isFetching: true, isFetchedAfterMount: false,
+    };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ staleQueries: [query] }));
+    const element = <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />;
+    const { container, rerender } = render(element);
+    const slot = container.querySelector("[data-freshness-slot]")!;
+    expect(slot.getAttribute("data-health-state")).toBe("refreshing");
+    expect(slot.querySelector(":scope > p")?.textContent).toContain("Refreshing… saved data from");
+    for (const error of [null, new Error("offline")]) {
+      useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+        staleQueries: [{ ...query, error, isSnapshot: false, isFetchedAfterMount: true, isFetching: false,
+          meta: { ...query.meta, status: "stale" } }],
+      }));
+      rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+      expect(container.querySelector("[data-freshness-slot]")).toBe(slot);
+      expect(slot.getAttribute("data-health-state")).toBe("stale");
+      expect(slot.querySelector(":scope > p")?.textContent).toBe("Showing an older snapshot");
+      expect(slot.className.split(" ")).toContain("h-12");
+      expect(slot.querySelector("details")?.open).toBe(false);
+    }
   });
 
   it.each([
@@ -204,17 +248,45 @@ describe("StablecoinDetailClient", () => {
     }));
   });
 
+  it("reserves distant reference islands and preserves Explore aliases before and after mounting", () => {
+    let near = false;
+    useNearViewportMock.mockImplementation((rootMargin?: string) => ({
+      ref: () => {},
+      near: rootMargin === "600px" || near,
+    }));
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const content = () => (
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)}
+        exploreNextContent={<section id="explore-next"><h2 id="explore-next-heading">Explore cards</h2></section>} />
+    );
+    const { container, rerender } = render(content());
+    for (const id of ["liquidity", "chart", "distribution", "dex-liquidity", "history", "coin-timeline", "explore", "explore-next", "explore-next-heading"]) {
+      expect(container.querySelectorAll(`#${id}`)).toHaveLength(1);
+    }
+    expect(screen.queryByText("Explore cards")).toBeNull();
+    // The hidden mobile reference cards do not repeat the rail's eager observers.
+    expect(screen.getAllByTestId("price-transparency-card")).toHaveLength(1);
+    near = true;
+    rerender(content());
+    expect(screen.getByText("Explore cards")).toBeTruthy();
+    expect(container.querySelectorAll("#explore-next")).toHaveLength(1);
+    expect(container.querySelectorAll("#explore-next-heading")).toHaveLength(1);
+  });
+
   it("keeps flows and blacklist children behind their own lazy gates", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    nearViewportValues.push(true, true, true);
-    lazyViewportValues.push(
-      false, // Overview FlowsSection
-      true, // DexLiquidityCard
-      false, // Activity BlacklistSection
-      true, // HistoryTabs (grade, depeg, DDR)
-      true, // FlowHistorySection
-      true, // BlacklistHistorySection
-    );
+    // SG-2 added independent DEWS/chart/distribution gates before these panels.
+    // Drive visibility from the mounted reserve, not the incidental hook order.
+    useNearViewportMock.mockImplementation((rootMargin?: string) => {
+      const [near, setNear] = useState(rootMargin === "600px");
+      const ref = useCallback((node: HTMLDivElement | null) => {
+        if (!node) return;
+        const isOverviewFlows = node.style.minHeight === "440px";
+        const isActivityBlacklist = node.style.minHeight === "480px" && !node.closest("#dex-liquidity");
+        setNear(!isOverviewFlows && !isActivityBlacklist);
+      }, []);
+      return { ref, near };
+    });
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({
         hasFlows: true,
@@ -234,6 +306,27 @@ describe("StablecoinDetailClient", () => {
 
 
 
+
+  it("keeps the collateralization and access rail footprints through unavailable and populated evidence", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null }));
+    const { container, rerender } = renderDetail(coin);
+    const collateralization = container.querySelector('[data-rail-slot="collateralization"]')!;
+    const access = container.querySelector('[data-rail-slot="access"]')!;
+    expect(collateralization.className).toBe("min-h-64");
+    expect(access.className).toBe("min-h-48");
+    for (const overrides of [
+      { reportCard: makeV9Card({ id: coin.id }), reserves: LIVE_COLLATERALIZED_RESERVES },
+      { reportCard: null, reserves: null },
+    ]) {
+      useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel(overrides));
+      rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+      expect(container.querySelector('[data-rail-slot="collateralization"]')).toBe(collateralization);
+      expect(container.querySelector('[data-rail-slot="access"]')).toBe(access);
+      expect(collateralization.className).toBe("min-h-64");
+      expect(access.className).toBe("min-h-48");
+    }
+  });
 
   it("mounts the reserves module in the score row when report-card data is unavailable", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -275,7 +368,8 @@ describe("StablecoinDetailClient", () => {
 
     const { container } = renderDetail(coin);
 
-    expect(container.querySelector("#chart")).toBeNull();
+    // The permanent anchor survives while the chart module is viewport-gated.
+    expect(container.querySelector("#chart")).toBeTruthy();
     expect(screen.getAllByTestId("dynamic-detail-section").length).toBeGreaterThan(0);
   });
 

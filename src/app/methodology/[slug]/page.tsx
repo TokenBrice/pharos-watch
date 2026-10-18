@@ -5,12 +5,12 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import {
-  SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS,
   METHODOLOGY_CHANGELOG_REGISTRY,
   type MethodologyChangelogRegistryEntry,
   type MethodologyChangelogRegistryKey,
 } from "@shared/lib/methodology-versions/registry";
-import { ScoringChangelogContent, scoringAnchorId } from "../changelog-content/scoring/content";
+import { methodologyArchivePath, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
+import { ScoringChangelogSummaryTables } from "../changelog-content/scoring/content-summary";
 
 interface ChangelogDisplayConfig {
   metadataTitle: string;
@@ -18,8 +18,6 @@ interface ChangelogDisplayConfig {
   breadcrumbName: string;
   title: string;
   lead: (changelog: MethodologyChangelogRegistryEntry) => ReactNode;
-  sections?: (changelog: MethodologyChangelogRegistryEntry) => readonly { id: string; label: string }[];
-  renderContent?: () => ReactNode;
 }
 
 interface MethodologyChangelogPageProps {
@@ -45,11 +43,6 @@ const DISPLAY_CONFIG: Record<MethodologyChangelogRegistryKey, ChangelogDisplayCo
         &mdash; every weight change, new pillar or dimension, and structural decision.
       </>
     ),
-    sections: () => SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS.map((version) => ({
-      id: scoringAnchorId(version),
-      label: version,
-    })),
-    renderContent: () => <ScoringChangelogContent />,
   },
   "depeg-dews": {
     metadataTitle: "Depeg Tracker + DEWS Changelog - Version History",
@@ -178,14 +171,16 @@ export default async function MethodologyChangelogRoute({ params }: MethodologyC
       title={display.title}
       lead={display.lead(changelog)}
       entries={changelog.entries}
-      sections={display.sections?.(changelog)}
+      history={{
+        archivePath: (version) => methodologyArchivePath(changelog, version),
+        anchorId: (version) => methodologyHistoryAnchor(changelog, version),
+      }}
+      footerContent={changelog.key === "safety-score" ? <ScoringChangelogSummaryTables /> : undefined}
       jsonLdIdentifier={buildPharosUrnJsonLdIdentifier(
         "methodology",
         changelog.citationId,
         changelog.currentLabel,
       )}
-    >
-      {display.renderContent?.()}
-    </MethodologyChangelogPage>
+    />
   );
 }

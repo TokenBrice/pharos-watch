@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
-import { useReportCardsV9 } from "@/hooks/api-hooks";
+import { useReportCardsV9Table } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
-import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import { SafetyScoresContentLoadingState } from "./loading";
 import {
   SafetyEmptyState,
@@ -234,7 +234,7 @@ function GradeSectionHeader({ grade, count }: { grade: string; count: number }) 
 }
 
 export function ReportCardsV9Client() {
-  const reportCardsQuery = useReportCardsV9();
+  const reportCardsQuery = useReportCardsV9Table();
   const stablecoinsQuery = useStablecoins();
   const logos = logosById;
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");

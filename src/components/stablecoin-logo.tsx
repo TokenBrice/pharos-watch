@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { resolveCompactLogoSrc } from "@/lib/logo-variants";
+import { resolveCompactLogoSrc, resolveCompactLogoSrcSet } from "@/lib/logo-variants";
 
 interface StablecoinLogoProps {
   src: string | undefined;
@@ -31,16 +31,19 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
       className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-muted shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
       style={{ width: size, height: size }}
     >
-      <Image
-        src={effectiveSrc}
-        alt={`${name} logo`}
-        width={innerSize}
-        height={innerSize}
-        style={{ width: innerSize, height: innerSize }}
-        className="rounded-full object-contain"
-        unoptimized
-        loading="lazy"
-      />
+      <picture>
+        <source srcSet={resolveCompactLogoSrcSet(src, innerSize)} />
+        <Image
+          src={effectiveSrc}
+          alt={`${name} logo`}
+          width={innerSize}
+          height={innerSize}
+          style={{ width: innerSize, height: innerSize }}
+          className="rounded-full object-contain"
+          unoptimized
+          loading="lazy"
+        />
+      </picture>
     </span>
   );
 }

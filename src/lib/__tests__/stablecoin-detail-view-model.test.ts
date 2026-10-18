@@ -118,6 +118,78 @@ describe("stablecoin detail view-model builder", () => {
     params.queries.dexLiquidity.meta!.updatedAt = now / 1000 - 13 * 4 * 3600;
     expect(health().state).toBe("stale");
   });
+
+  it("ages reserves from independent producer/source budgets, never a fresh request receipt", () => {
+    const now = 1_790_000_000_000;
+    const fetchedAt = now / 1000 - 3600;
+    const sourceAt = now / 1000 - 3 * 86400;
+    const live = {
+      mode: "live" as const, reserves: [], estimated: false, liveAt: fetchedAt,
+      sync: {
+        enabled: true, status: "ok" as const, stale: false, bootstrap: false,
+        freshness: {
+          stale: false, staleReasons: [], assessedAt: fetchedAt, fetchedAt, attemptId: "reserve-attempt",
+          fetchAgeSec: 0, fetchBudgetSec: 48 * 3600, freshnessMode: "verified" as const,
+          sourceFreshnessInvalid: false, sourceTimestamp: sourceAt, sourceAgeSec: 0,
+          sourceAgeBudgetSec: 2 * 86400, sourceAgeBudgetCap: "scoring" as const,
+        },
+      },
+    };
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: {
+      reserves: { live, enabled: true, dataUpdatedAt: now },
+    } });
+    const sourceQuery = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+      .find((entry) => entry.label === "Live Reserves")!;
+    expect(sourceQuery.dataUpdatedAt).toBe(sourceAt * 1000);
+    expect(sourceQuery.meta).toMatchObject({ updatedAt: sourceAt, freshBudgetSec: 2 * 86400 });
+    expect(deriveDataHealth({ ...sourceQuery, label: "Live Reserves", staleTime: sourceQuery.staleTime! }, now).state).toBe("stale");
+    for (const mode of ["live-stale", "curated-fallback", "template-fallback", "unavailable"] as const) {
+      params.supplemental.reserves.live = { ...live, mode, sync: { ...live.sync, stale: true } };
+      const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+        .find((entry) => entry.label === "Live Reserves")!;
+      expect(deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now).state).not.toBe("fresh");
+      expect(query.meta?.dependencies?.reserveEvidence.reason).toContain(mode);
+      expect(query.dataUpdatedAt).not.toBe(now);
+    }
+    params.supplemental.reserves.live = { ...live, sync: undefined, liveAt: undefined };
+    const missing = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+      .find((entry) => entry.label === "Live Reserves")!;
+    expect(missing).toMatchObject({ dataUpdatedAt: 0, meta: { updatedAt: null, status: "unknown" } });
+    for (const missingSource of [{ sourceTimestamp: null }, { sourceAgeBudgetSec: null }]) {
+      params.supplemental.reserves.live = {
+        ...live, sync: { ...live.sync, freshness: { ...live.sync.freshness, ...missingSource } },
+      };
+      const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+        .find((entry) => entry.label === "Live Reserves")!;
+      expect(query).toMatchObject({ dataUpdatedAt: 0, meta: { updatedAt: null, status: "unknown" } });
+    }
+  });
+
+  it("preserves reserve sync errors and uncertain writes without re-dating retained evidence", () => {
+    const now = 1_790_000_000_000;
+    const fetchedAt = now / 1000 - 60;
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: { reserves: {
+      enabled: true, dataUpdatedAt: now,
+      live: {
+        mode: "live", reserves: [], estimated: false, liveAt: fetchedAt,
+        sync: {
+          enabled: true, status: "error", stale: false, bootstrap: false,
+          uncertainWrite: true, failureCategory: "write-uncertain",
+          freshness: {
+            stale: false, staleReasons: [], assessedAt: fetchedAt, fetchedAt, attemptId: "saved-attempt",
+            fetchAgeSec: 0, fetchBudgetSec: 172800, freshnessMode: "not-applicable",
+            sourceFreshnessInvalid: false, sourceTimestamp: null, sourceAgeSec: null,
+            sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
+          },
+        },
+      },
+    } } });
+    const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+      .find((entry) => entry.label === "Live Reserves")!;
+    expect(query.meta).toMatchObject({ updatedAt: fetchedAt, status: "degraded" });
+    expect(query.meta?.warning).toContain("uncertain-write");
+    expect(deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now).state).toBe("degraded");
+  });
   it.each([
     ["USD", "usdt-tether", "peggedUSD", 1, -200, false],
     ["non-USD", "eurc-circle", "peggedEUR", 1.2, -1000, false],

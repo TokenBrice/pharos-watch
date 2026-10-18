@@ -54,7 +54,7 @@ describe("Exposure mode", () => {
     expect(within(table).queryByText("NR")).toBeNull();
   });
 
-  it("keeps the map and root picker available before choosing roots, without reporting empty reach", () => {
+  it("keeps the map and root picker available before choosing roots, without reporting empty reach", async () => {
     window.history.replaceState(null, "", "/dependency-map/");
     const data = publication();
     const cards = data.nodes.map(card => ({ id: card.id, name: card.id, symbol: card.id, grade: card.grade, ratingStatus: card.ratingStatus, partialEvidence: card.partialEvidence }));
@@ -65,7 +65,7 @@ describe("Exposure mode", () => {
       return <DependencyHero workspace={workspace} model={model} cards={cards} dependencyEdges={data.edges} mcapMap={mcapMap} methodologyVersion={data.methodologyVersion} publishedAt={data.updatedAt} />;
     }
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /^Exposure$/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Exposure$/ }));
     expect(screen.getByRole("button", { name: /^Explore$/ })).toBeTruthy();
     expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
     expect(screen.getByLabelText("Add upstream coin")).toBeTruthy();

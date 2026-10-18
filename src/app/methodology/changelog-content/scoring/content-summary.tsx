@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContentTable } from "@/components/table";
-import { changelogTableClassNames } from "./content-shared";
+import { changelogTableClassNames } from "@/components/methodology-changelog-detail";
 
 const WEIGHT_EVOLUTION_COLUMNS = [
   { id: "version", header: "Version", rowHeader: true },

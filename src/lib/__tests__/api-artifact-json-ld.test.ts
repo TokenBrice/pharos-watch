@@ -12,6 +12,7 @@ describe("buildApiArtifactCatalogJsonLd", () => {
         expect.objectContaining({
           "@type": "DataCatalog",
           "@id": "https://pharos.watch/api/#data-catalog",
+          url: "https://pharos.watch/api/reference/",
           dataset: expect.arrayContaining([
             { "@id": "https://pharos.watch/api/#openapi-spec" },
             { "@id": "https://pharos.watch/api/#postman-collection" },
@@ -27,7 +28,7 @@ describe("buildApiArtifactCatalogJsonLd", () => {
         expect.objectContaining({
           "@type": "WebAPI",
           endpointUrl: "https://api.pharos.watch",
-          documentation: "https://pharos.watch/api/",
+          documentation: "https://pharos.watch/api/reference/",
         }),
         expect.objectContaining({
           "@type": "CreativeWork",
@@ -41,7 +42,7 @@ describe("buildApiArtifactCatalogJsonLd", () => {
             "@type": "DataCatalog",
             "@id": "https://pharos.watch/api/#data-catalog",
             name: "Pharos Public API Data Catalog",
-            url: "https://pharos.watch/api/",
+            url: "https://pharos.watch/api/reference/",
           },
           distribution: expect.arrayContaining([
             expect.objectContaining({
@@ -66,22 +67,29 @@ describe("buildApiArtifactCatalogJsonLd", () => {
         expect.objectContaining({
           "@type": "Dataset",
           "@id": "https://pharos.watch/coverage/#dataset",
+          isBasedOn: [
+            {
+              "@type": "CreativeWork",
+              name: "Pharos API Documentation",
+              url: "https://pharos.watch/api/reference/",
+            },
+          ],
           includedInDataCatalog: {
             "@type": "DataCatalog",
             "@id": "https://pharos.watch/api/#data-catalog",
             name: "Pharos Public API Data Catalog",
-            url: "https://pharos.watch/api/",
+            url: "https://pharos.watch/api/reference/",
           },
         }),
         expect.objectContaining({
           "@type": "Dataset",
           "@id": "https://pharos.watch/datasets/top-stablecoins/#dataset",
-          url: "https://pharos.watch/api/#dataset-top-stablecoins",
+          url: "https://pharos.watch/api/reference/#dataset-top-stablecoins",
           includedInDataCatalog: {
             "@type": "DataCatalog",
             "@id": "https://pharos.watch/api/#data-catalog",
             name: "Pharos Public API Data Catalog",
-            url: "https://pharos.watch/api/",
+            url: "https://pharos.watch/api/reference/",
           },
           distribution: expect.arrayContaining([
             expect.objectContaining({

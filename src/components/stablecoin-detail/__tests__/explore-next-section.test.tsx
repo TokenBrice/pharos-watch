@@ -1,16 +1,20 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AnchorHTMLAttributes } from "react";
 import type { StablecoinMeta } from "@shared/types";
 import type { StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 
-vi.mock("next/link", async () => {
-  const { createNextLinkMock } = await import("@/test-utils/frontend");
-  return createNextLinkMock();
-});
+vi.mock("next/link", () => ({
+  default: ({ prefetch, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => (
+    <a {...props} data-prefetch={prefetch === false ? "disabled" : "auto"} />
+  ),
+}));
+
+afterEach(cleanup);
 
 const { ExploreNextSection } = await import("../explore-next-section");
 
@@ -31,6 +35,29 @@ const coin = {
 } as unknown as StablecoinMeta;
 
 describe("ExploreNextSection", () => {
+  it.each(["mouseEnter", "focus"] as const)("keeps all peer routes quiet until %s intent on one chip", (intent) => {
+    const related = CLIENT_ACTIVE_STABLECOINS.slice(0, 6);
+    render(<ExploreNextSection coin={coin} related={related} staticComparisonPages={[]} logos={{}} />);
+    const links = related.map((peer) => screen.getByTitle(peer.name));
+    for (const link of links) expect(link.getAttribute("data-prefetch")).toBe("disabled");
+    expect(links[0].getAttribute("href")).toBe(`/stablecoin/${related[0].id}/`);
+    fireEvent[intent](links[0]);
+    expect(links[0].getAttribute("data-prefetch")).toBe("auto");
+    for (const link of links.slice(1)) expect(link.getAttribute("data-prefetch")).toBe("disabled");
+  });
+
+  it.each(["mouseEnter", "focus"] as const)("keeps compact research links quiet until %s intent", (intent) => {
+    render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);
+    const tracker = screen.getByRole("link", { name: "See all CDP stablecoins" });
+    const action = screen.getByRole("link", { name: "Browse stablecoin comparisons" });
+    expect(tracker.getAttribute("data-prefetch")).toBe("disabled");
+    expect(action.getAttribute("data-prefetch")).toBe("disabled");
+    expect(tracker.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    fireEvent[intent](tracker);
+    expect(tracker.getAttribute("data-prefetch")).toBe("auto");
+    expect(action.getAttribute("data-prefetch")).toBe("disabled");
+  });
+
 
   it("links mechanism tracker CTAs to the canonical active screener filter", () => {
     render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);

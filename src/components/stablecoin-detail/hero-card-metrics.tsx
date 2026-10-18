@@ -159,14 +159,14 @@ export function HeroPriceMetric({
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
+    <div className="min-h-36 min-w-0 rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>
         Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
       </p>
-      <p className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)} text-xl`}>
+      <p className={`break-words font-extrabold pharos-numeric tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)} text-xl`}>
         {price}
       </p>
-      <p className={`pharos-numeric mt-1 text-xs ${referenceClass}`}>{referenceLine}</p>
+      <p className={`mt-1 min-h-12 text-xs ${referenceClass}`}>{referenceLine}</p>
       {limitedDepegCoverageNote ? (
         <p className="mt-1 text-2xs text-state-warn">{limitedDepegCoverageNote}</p>
       ) : null}
@@ -211,7 +211,7 @@ function HeroMarketCapMetric({
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
+    <div className="min-h-36 min-w-0 rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>Market Cap</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-2xs text-muted-foreground">USD-normalized</p>}
@@ -256,8 +256,8 @@ function HeroSupplyMetric({
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
-      <div className="flex items-center justify-between">
+    <div className="mt-3 min-h-24 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
+      <div className="flex min-h-20 flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div>
           <p className={HERO_METRIC_LABEL_CLASS}>Supply</p>
           <p className="text-base font-bold pharos-numeric">
@@ -370,7 +370,7 @@ function MetricChip({
     // reserved for interactive controls; accentClass stays a data-driven
     // severity border (allowed carve-out).
     <div
-      className={`rounded-lg border border-border/60 bg-background/45 flex w-full min-w-0 flex-wrap items-center justify-start gap-1.5 px-2.5 py-1.5 ${accentClass ?? ""}`}
+      className={`rounded-lg border border-border/60 bg-background/45 grid min-h-20 w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-1 px-2.5 py-1.5 ${accentClass ?? ""}`}
     >
       {label ? (
         <span className="pharos-label">{label}</span>
@@ -383,7 +383,7 @@ function MetricChip({
       </span>
       {isEmpty && <span className="sr-only">data unavailable</span>}
       {subValue && !mobileHideSub && (
-        <span className="shrink-0 whitespace-nowrap text-2xs text-muted-foreground">{subValue}</span>
+        <span className="col-span-2 text-2xs text-muted-foreground">{subValue}</span>
       )}
     </div>
   );

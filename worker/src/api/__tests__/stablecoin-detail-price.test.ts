@@ -6,6 +6,7 @@ import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summar
 import { StablecoinDetailResponseSchema } from "@shared/types/market";
 import { handleStablecoinDetail, resetStablecoinDetailStateForTests } from "../stablecoin-detail";
 import { routeStablecoinDetail } from "../stablecoin-detail/router";
+import { handleStablecoinLiveSummary } from "../stablecoin-live-summary";
 import { publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
 
 vi.mock("../stablecoin-detail/router", () => ({ routeStablecoinDetail: vi.fn() }));
@@ -276,6 +277,34 @@ describe("missing detail price enrichment", () => {
 });
 
 describe("detail response paths", () => {
+  it.each([false, true])("projects the actual canonical enrichment path with independent clocks and quarantine (%s)", async (quarantined) => {
+    const db = makeDb({
+      priceObservedAt: NOW - 120,
+      supplyObservedAt: NOW - 600,
+      circulating: quarantined ? {} : { peggedUSD: 200 },
+      supplyRestored: !quarantined,
+      ...(quarantined ? { supplyChainGuard: {
+        status: "unavailable", reason: "supply-chain-dropout", quarantinedSince: NOW - 8 * 86_400,
+        chains: [{
+          chainId: "xlayer", chainLabel: "X Layer", listCurrentUsd: 0, baselineUsd: 200,
+          baselineObservedAt: NOW - 8 * 86_400, baselineSource: "state", resolution: "unavailable",
+        }],
+      } } : {}),
+    }, NOW - 60, 60);
+    const ctx = { waitUntil: vi.fn() } as unknown as ExecutionContext;
+    const full = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    const expected = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(await full.json()));
+    const compact = await handleStablecoinLiveSummary(db, "usdt-tether", ctx);
+    const { _meta, ...summary } = await compact.json() as Record<string, unknown>;
+    expect(summary).toEqual(JSON.parse(JSON.stringify(expected)));
+    expect(summary.priceObservedAt).toBe(NOW - 120);
+    expect(summary.supplyObservedAt).toBe(quarantined ? null : NOW - 600);
+    expect(summary.supplyRestored).toBe(true);
+    expect(summary.circulating).toEqual(quarantined ? {} : { peggedUSD: 200 });
+    expect(_meta).toMatchObject({ updatedAt: NOW - 60 });
+    expect(routeStablecoinDetail).not.toHaveBeenCalled();
+  });
+
   it("serves the published USDT price when its observation predates the depeg detection window", async () => {
     // Captured production publication: observed 1788718239, synced 1788722142,
     // served at 1788722903. The homepage still publishes this high-confidence price.

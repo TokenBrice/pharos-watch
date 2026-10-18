@@ -188,6 +188,7 @@ Automatic selection matches source/output changes and propagates dependencies, t
 | V9 evaluation-build identity | `scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts`; exact runtime import/input graph, not capture-only observers |
 | Incident runtime projection/evidence digest | `shared/lib/safety-score-v9/reviewed-registry.ts`, `review-evidence.ts` and `shared/types/safety-score-v9-research-evidence.ts`; shared admission, not a Worker-import waiver |
 | OpenAPI/Postman/reference narrative | `scripts/lib/public-api-artifact-catalog.ts`; full external narrative and generated first-sentence reference preview. Author portable absolute `https://pharos.watch/...` links. Schema generation rejects empty nested array-item contracts. |
+| Compact stablecoin/chain logos | `npm run logos:compact` (`scripts/maintenance/generate-compact-logos.ts`); 32px and 100px stablecoin WebPs plus 56px and 100px chain WebPs, with one size-indexed `logo-variants.generated.json` map. Originals and vector logos remain available. `resolveCompactLogoSrc` selects by rendered size (small, 50px header, or 28px chain slot); SVG graph images use the same resolver. The `compact-logos` artifact checks both output trees, source pixels, collisions, orphan files and the map byte-for-byte. Chain WebPs share the PNG/SVG one-week cache policy. |
 
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
@@ -204,6 +205,23 @@ Use [Pre-push readiness](./testing.md#pre-push-readiness) for local feedback and
 [`check-unused-code.ts`](../scripts/ci/check-unused-code.ts) owns export-consumption analysis. Property/literal member uses are narrow; escaping/computed namespaces and dynamic imports stay conservative and report uncertainty. Review newly exposed exports individually. Scanner fixtures use external temp roots, never this checkout. Keep useful test-only corpora in `*.test-support.ts`, not production DEBT or external-consumer exemptions; empty debt is not deletion proof. [Testing's commit-scoped deletion policy](./testing.md#ci-pipeline) applies.
 
 `check:script-entrypoints` covers `.mts` and excludes declarations; textual reverse references are not an executable graph, and Markdown cannot retain a disconnected tool. `check:editorial-content` is a structural guard; [blog/changelog publishing](./process/blog-publishing.md#changelog) and [ADR-3](./architecture.md#adr-3) own editorial/methodology policy. Structured-log refactors preserve console versus durable-event distinctions and terminal failure accounting.
+
+### Web Vitals Analysis
+
+`npm run analyze:web-vitals -- --days 7 --out agents/web-vitals.json` reads the GA4 Data API and prints/appends a Markdown table of per-route-family p75 LCP, INP, CLS, TTFB and `fresh_data_ready` (home hero/detail summary separately). `--days` defaults to seven complete days ending yesterday in the GA property timezone; `--out` writes only aggregate JSON. Like `analyze:gsc-*`, it is an evidence/reporting tool, not a deployment mutation. `--help` is credential-free; unknown/duplicate options fail strict parsing.
+
+Required environment names:
+
+- `GA4_PROPERTY_ID`: numeric property ID, **not** the public `G-` measurement ID.
+- `GOOGLE_APPLICATION_CREDENTIALS`: path to a service-account JSON file containing `client_email`/`private_key`; grant the service account Viewer access on that property and enable the Google Analytics Data API. The script obtains an OAuth token with `analytics.readonly` scope.
+- Alternatively, `GA4_ACCESS_TOKEN` supplies an already-issued OAuth token with that scope and property access. It takes precedence over the file. No token or credential content is printed.
+- Optional `GITHUB_STEP_SUMMARY` receives the same aggregate report. Local execution loads ignored `.env.local` if present without replacing existing environment values.
+
+Before collection, register event-scoped GA4 custom dimensions for `page_path`, `name`, `value`, `id`, `surface` and `navigation_type`. `value` must be available as a **dimension**, not only an averaged custom metric: a percentile cannot be recovered from an average. The analyzer queries `customEvent:*` dimensions plus `eventName`/`eventCount`, paginates every row, deduplicates metric IDs using the maximum cumulative update, then computes nearest-rank p75. GA's high-cardinality/`(other)` loss, sampling and privacy thresholding fail clearly rather than publishing a falsely complete percentile. For high-volume windows use a shorter window or raw BigQuery event export; the tool does not claim GA Data API eliminates cardinality limits. Historical events before custom-dimension registration are not recoverable through this report.
+
+`nightly-validation.yml` runs the analyzer on Monday (or manual dispatch) when repository variable `GA4_PROPERTY_ID` is configured. Supply secret `GA4_SERVICE_ACCOUNT_JSON` for the workflow's temporary credential file, or `GA4_ACCESS_TOKEN` for short-lived manual use; temporary credentials are removed even on failure. Until the property variable exists, the job is explicitly skipped, not a passing RUM result. Missing credentials, inaccessible properties, unregistered dimensions and empty observations fail clearly. RUM budgets remain advisory; collect a stable weekly baseline before adding regression enforcement. See [Performance guardrails](./testing.md#performance-guardrails) for lab/production canaries and ratcheting.
+
+Manual production capture: `node scripts/maintenance/probe-page-performance.mjs --url https://pharos.watch --out agents/page-performance.json`; add `--dwell-seconds 1800` for polling/heap evidence or `--advisory` to report exceeded budgets without a failing exit. It requires installed Playwright Chromium and makes read-only browser requests; captured resource URLs remain in the local diagnostic JSON.
 
 ### Smoke And Operations
 

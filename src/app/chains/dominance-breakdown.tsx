@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import type { ChainSummary } from "@shared/types/chains";
 
@@ -112,7 +113,7 @@ export function DominanceBreakdown({
               style={{ backgroundColor: dominanceColor(idx) }}
             />
             <Image
-              src={chain.logoPath}
+              src={resolveCompactLogoSrc(chain.logoPath, 14)!}
               alt=""
               width={14}
               height={14}

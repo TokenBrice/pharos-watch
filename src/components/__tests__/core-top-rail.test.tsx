@@ -31,12 +31,12 @@ beforeEach(() => {
 });
 
 describe("CoreTopRail", () => {
-  it("renders on stablecoin detail desktop routes", () => {
+  it("renders on stablecoin detail desktop routes without an editorial idle delay", async () => {
     pathnameMock.mockReturnValue("/stablecoin/usdt-tether");
 
     render(<CoreTopRail />);
 
-    expect(screen.getByTestId("core-top-tape")).toBeTruthy();
+    expect(await screen.findByTestId("core-top-tape")).toBeTruthy();
   });
 
   it("does not mount the data-fetching tape on mobile interior routes", () => {

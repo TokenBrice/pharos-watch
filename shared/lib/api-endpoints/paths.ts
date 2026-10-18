@@ -20,7 +20,12 @@ export function buildQueryPath(path: string, params?: Record<string, QueryParamV
 
 export const API_PATHS = {
   stablecoins: () => "/api/stablecoins",
+  homepageSnapshot: () => "/api/homepage-snapshot",
+  homepageHistory: () => "/api/homepage-history",
+  reportCardsV9Table: () => "/api/report-cards/v9-table",
+  reportCardsV9Detail: (stablecoinId?: string) => buildQueryPath("/api/report-cards/v9-detail", { stablecoin: stablecoinId }),
   stablecoinDetail: (stablecoinId: string) => `/api/stablecoin/${encodeURIComponent(stablecoinId)}`,
+  stablecoinLiveSummary: (stablecoinId: string) => `/api/stablecoin-live-summary/${encodeURIComponent(stablecoinId)}`,
   stablecoinDetailSnapshotInputs: (ids: readonly string[]) =>
     buildQueryPath("/api/stablecoin-detail-snapshot-inputs", { ids: ids.join(",") }),
   stablecoinSummary: (stablecoinId: string) => `/api/stablecoin-summary/${encodeURIComponent(stablecoinId)}`,
@@ -52,9 +57,14 @@ export const API_PATHS = {
   usdsStatus: () => "/api/usds-status",
   bluechipRatings: () => "/api/bluechip-ratings",
   dexLiquidity: () => "/api/dex-liquidity",
+  dexLiquidityCoin: (stablecoinId?: string) => buildQueryPath("/api/dex-liquidity-coin", { stablecoin: stablecoinId }),
+  dexLiquidityTable: () => "/api/dex-liquidity-table",
   dexLiquidityHistoryBase: () => "/api/dex-liquidity-history",
   dexLiquidityHistory: (stablecoinId: string, days: number = DEX_HISTORY_DEFAULT_DAYS) =>
     buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId, days }),
+  dexLiquidityChartHistoryBase: () => "/api/dex-liquidity-chart-history",
+  dexLiquidityChartHistory: (stablecoinId: string, days: number = DEX_HISTORY_DEFAULT_DAYS) =>
+    buildQueryPath("/api/dex-liquidity-chart-history", { stablecoin: stablecoinId, days }),
   dexLiquidityHistoryProbe: (stablecoinId: string) =>
     buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId }),
   supplyHistoryBase: () => "/api/supply-history",
@@ -62,6 +72,7 @@ export const API_PATHS = {
     buildQueryPath("/api/supply-history", { stablecoin: stablecoinId, days }),
   dailyDigest: () => "/api/daily-digest",
   digestArchive: () => "/api/digest-archive",
+  digestPromo: () => "/api/digest-promo",
   digestSnapshotBase: () => "/api/digest-snapshot",
   digestSnapshot: (date: string) => buildQueryPath("/api/digest-snapshot", { date }),
   snapshotsIndex: () => "/api/snapshots/index",
@@ -70,6 +81,7 @@ export const API_PATHS = {
     `/api/snapshot/${date}/stablecoin/${encodeURIComponent(stablecoinId)}`,
   yieldRankings: () => "/api/yield-rankings",
   yieldRankingsSummary: () => buildQueryPath("/api/yield-rankings", { projection: "summary" }),
+  yieldRankingsCoin: (stablecoinId?: string) => buildQueryPath("/api/yield-rankings-coin", { stablecoin: stablecoinId }),
   yieldAdapterManifest: () => "/api/yield-adapter-manifest",
   yieldHistoryBase: () => "/api/yield-history",
   yieldHistory: (stablecoinId: string, days: number = YIELD_HISTORY_DEFAULT_DAYS, mode?: string, sourceKey?: string) =>
@@ -88,7 +100,8 @@ export const API_PATHS = {
   safetyScoreHistoryV2Base: () => "/api/safety-score-history-v2",
   safetyScoreHistoryV2: (stablecoinId: string, days: number = SAFETY_HISTORY_PATH_DAYS) =>
     buildQueryPath("/api/safety-score-history-v2", { stablecoin: stablecoinId, days }),
-  stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
+  stabilityIndex: (detail = false, days?: number) =>
+    buildQueryPath("/api/stability-index", detail ? { detail: true, days } : undefined),
   reportCardsV9: () => "/api/report-cards/v9",
   safetyGrades: () => "/api/safety-grades",
   dependencyGraph: () => "/api/dependency-graph/v1",
@@ -97,6 +110,7 @@ export const API_PATHS = {
   depegResolver: () => "/api/depeg-resolver",
   depegResolverReview: () => "/api/depeg-resolver-review",
   redemptionBackstops: () => "/api/redemption-backstops",
+  redemptionBackstopCoin: (stablecoinId?: string) => buildQueryPath("/api/redemption-backstop-coin", { stablecoin: stablecoinId }),
   mintBurnFlowsBase: () => "/api/mint-burn-flows",
   mintBurnFlows: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-flows", params),
   mintBurnEventsBase: () => "/api/mint-burn-events",

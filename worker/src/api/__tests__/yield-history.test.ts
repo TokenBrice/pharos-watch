@@ -6,6 +6,12 @@ vi.mock("../../lib/json-decode-observability", () => ({
   logMalformedJsonPath: logMalformedJsonPathMock,
 }));
 
+// Keep the handler's evidence/failure matrix independent of the D1 projection
+// SQL, exercised end-to-end in yield-history-projection.test.ts.
+vi.mock("../../lib/yield-rankings-coin-cache", () => ({
+  readYieldRankingsCoinCache: (db: D1Database) => getCache(db, "yield-rankings"),
+}));
+
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
@@ -24,6 +30,7 @@ import {
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { publishedYieldCache } from "./yield-history.test-support";
+import { getCache } from "../../lib/db-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {

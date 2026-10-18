@@ -11,6 +11,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { formatCompactUsd, formatSignedCompactUsd, formatSignedPercent } from "@shared/lib/format";
 import { CONTAINERS_PER_BAY, HARBOR_UNIT_USD, isHarborChainVessel, type HarborVessel } from "@shared/lib/harbor-scene";
 import styles from "./harbor.module.css";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 export interface HarborRecordCardProps {
   vessel: HarborVessel;
@@ -99,7 +100,7 @@ export function HarborRecordCard({ vessel, names, focusChainId, onClose, onShowI
     <div ref={cardRef} className={styles.card} data-docked={docked} role="region" aria-labelledby={titleId} data-harbor-card>
       <div className={styles.cardHead}>
         {chain.logoPath ? (
-          <Image src={chain.logoPath} alt="" width={20} height={20} className={CHAIN_META[chain.id]?.darkInvert ? "rounded-full dark:invert" : "rounded-full"} style={{ width: 20, height: 20 }} />
+          <Image src={resolveCompactLogoSrc(chain.logoPath, 20)!} alt="" width={20} height={20} className={CHAIN_META[chain.id]?.darkInvert ? "rounded-full dark:invert" : "rounded-full"} style={{ width: 20, height: 20 }} />
         ) : null}
         <h3 id={titleId} className={styles.cardTitle}>
           {chain.name}

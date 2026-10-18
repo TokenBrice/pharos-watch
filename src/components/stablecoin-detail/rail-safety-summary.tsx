@@ -2,6 +2,7 @@
 
 import { FigureLeadText } from "./figure-lead-text";
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { ArrowUpRight } from "lucide-react";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ export function RailSafetySummary({
         <h2 className={DETAIL_MODULE_TITLE_CLASS}>Safety</h2>
         <Link
           href="#report-card"
+          prefetch={false}
           aria-label="Jump to the full safety report card"
           className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
         >
@@ -75,6 +77,7 @@ export function RailSafetySummary({
       {graded ? (
         <Link
           href={hero.href}
+          prefetch={false}
           className="pharos-focus-ring mt-2.5 inline-flex items-baseline gap-2 rounded-md"
         >
           <span className={cn("pharos-numeric text-5xl font-extrabold leading-none tracking-tight", gradeClass)}>
@@ -104,7 +107,7 @@ export function RailSafetySummary({
         {rest.map((item) => {
           const display = resolveRowDisplay(item, { navToken, frozen });
           return (
-            <Link
+            <IntentLink
               key={item.key}
               href={item.href}
               className="pharos-focus-ring flex items-baseline justify-between gap-3 rounded-sm py-2 transition-colors hover:text-foreground"
@@ -120,7 +123,7 @@ export function RailSafetySummary({
                   <span className="text-xs text-muted-foreground">· <FigureLeadText text={display.secondary} /></span>
                 ) : null}
               </span>
-            </Link>
+            </IntentLink>
           );
         })}
       </div>

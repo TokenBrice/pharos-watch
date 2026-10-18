@@ -13,7 +13,7 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 
 export type { SupplyHistoryPoint } from "@shared/types";
 
-export function useStablecoins() {
+export function useStablecoins(overrides?: QueryControlOverrides) {
   return useRegisteredApiQuery<StablecoinListResponse>(
     FRONTEND_API_QUERY_DESCRIPTORS.stablecoins,
     {
@@ -21,6 +21,7 @@ export function useStablecoins() {
       // prior payload visible during the 15-min background refetch instead of
       // wiping to a skeleton. The RefreshingBar signals the in-flight refresh.
       keepPreviousData: true,
+      ...overrides,
     },
   );
 }
@@ -54,6 +55,8 @@ export function useSupplyHistory(
   return {
     data: query.data ?? [],
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isFetchedAfterMount: query.isFetchedAfterMount,
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,

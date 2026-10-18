@@ -7,6 +7,8 @@ import type { GeniusComplianceRow } from "@/lib/compliance-model";
 const fixtures = vi.hoisted(() => ({ loadDetail: vi.fn() }));
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
   CLIENT_TRACKED_STABLECOINS: [],
+}));
+vi.mock("@shared/lib/stablecoins/client-detail", () => ({
   loadClientStablecoinDetail: fixtures.loadDetail,
 }));
 

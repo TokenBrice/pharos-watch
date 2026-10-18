@@ -39,7 +39,7 @@ function detailBucketsAt(
   return chosen ?? {};
 }
 
-/** Shared by browser, per-coin snapshot acquisition and cache-only bulk acquisition. */
+/** Shared by the compact live endpoint, per-coin acquisition and cache-only bulk acquisition. */
 export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): StablecoinLiveSummary {
   const datedTokens = (detail.tokens ?? []).filter(
     (token): token is typeof token & { date: number } => token.date != null,

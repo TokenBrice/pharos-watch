@@ -53,6 +53,8 @@ The global client list carries no compliance profiles; per-coin detail projectio
 
 Source links combine top-level and nested references and de-duplicate them before presentation. Schema and projection changes must keep the generated client artifacts aligned.
 
+`src/lib/compliance-model.ts` owns list/overview projections only. The fold's loader and session cache live in `src/lib/compliance-evidence.ts`, so importing overview sorting or row helpers never reaches the per-coin detail import context.
+
 ## Legacy Route
 
 `public/_redirects` sends `/mica` and `/mica/` to `/compliance/`, and `/mica/*` to `/compliance/:splat`. `/mica/` is not a sitemap, navigation, or App Router surface.

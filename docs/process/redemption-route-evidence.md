@@ -74,7 +74,7 @@ This linked evidence boundary preserves the distinction between direct observati
 
 ## Zero-route producer evidence review (PKT-12, 2026-10-14)
 
-The [v4.5 release record](https://pharos.watch/methodology/redemption-backstop-changelog/#changelog-v-4-5) owns the conservative config-correction chronology. A documented mechanism, legal entitlement, mint/burn interface or balance never substitutes for same-notional holder execution; unknown capacity stays unknown, not zero. Review dates do not become publisher dates.
+The [v4.5 release record](https://pharos.watch/methodology/redemption-backstop-changelog/archive/v4/#changelog-v-4-5) owns the conservative config-correction chronology. A documented mechanism, legal entitlement, mint/burn interface or balance never substitutes for same-notional holder execution; unknown capacity stays unknown, not zero. Review dates do not become publisher dates.
 
 Exact asset identities remain separate: Anything Labs/Youves UUSD, Neutrl/Nexus NUSD, RISE/Ring USDR and legacy/replacement Solomon USDv cannot share inferred routes.
 

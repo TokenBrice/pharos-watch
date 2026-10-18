@@ -1,6 +1,7 @@
 "use client";
 
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { useElementWidth } from "@/hooks/use-element-width";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import { DailyDigestCard } from "@/components/home-alt-mini-cards/daily-digest-card";
 import { MintBurnCard } from "@/components/home-alt-mini-cards/mint-burn-card";
@@ -13,6 +14,10 @@ import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-c
 // Mint/Burn pair stacked into a single column, and the Daily Digest promo at
 // the top-right. Row 2 carries the tall event lists.
 export function HomeAltMiniCardGrid(): React.JSX.Element {
+  // Measure the CSS-controlled slot, not a second copy of the @4xl breakpoint.
+  // Its desktop grid track reserves the same geometry before hydration/mount.
+  const [digestSlotRef, digestSlotWidth] = useElementWidth<HTMLDivElement>();
+
   return (
     <SectionErrorBoundary name="mini-card grid">
       <div className="@container space-y-3">
@@ -27,8 +32,8 @@ export function HomeAltMiniCardGrid(): React.JSX.Element {
             </div>
           </div>
           {/* Desktop-only editorial promo completes the first-row Figma trio. */}
-          <div className="hidden @4xl:col-span-1 @4xl:block">
-            <DailyDigestCard />
+          <div ref={digestSlotRef} className="hidden @4xl:col-span-1 @4xl:block">
+            {digestSlotWidth > 0 ? <DailyDigestCard /> : null}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:auto-rows-[260px] @4xl:grid-cols-3">

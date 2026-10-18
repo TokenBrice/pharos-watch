@@ -4,6 +4,7 @@ import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LazySection } from "../lazy-section";
+import { revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
 
 describe("LazySection", () => {
   afterEach(() => {
@@ -110,6 +111,64 @@ describe("LazySection", () => {
     expect(wrapper.getAttribute("style") ?? "").toMatch(/min-height:\s*300px/);
     fire(1, true); // seen
     fire(1, false, 1200); // exits below the viewport: release
+    expect(wrapper.style.minHeight).toBe("");
+  });
+
+  it("keeps no-hash geometry unchanged and reveals only islands through the initial hash zone", () => {
+    vi.stubGlobal("IntersectionObserver", class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    });
+    const { container, queryByText } = render(
+      <main>
+        <h2 id="market">Market</h2>
+        <LazySection minHeight={320}><p>Market payload</p></LazySection>
+        <h2 id="history">History</h2>
+        <LazySection minHeight={390}><p>History payload</p></LazySection>
+        <h2 id="explore">Explore</h2>
+        <LazySection minHeight={600}><p>Explore payload</p></LazySection>
+      </main>,
+    );
+    expect(queryByText("Market payload")).toBeNull();
+    expect(queryByText("History payload")).toBeNull();
+    const reserves = [...container.querySelectorAll<HTMLElement>("[data-lazy-section]")];
+    expect(reserves.map((node) => node.style.minHeight)).toEqual(["320px", "390px", "600px"]);
+    act(() => {
+      revealDeferredSectionsThroughAnchor("history", ["market", "history", "explore"], container);
+    });
+    expect(queryByText("Market payload")).not.toBeNull();
+    expect(queryByText("History payload")).not.toBeNull();
+    expect(queryByText("Explore payload")).toBeNull();
+    expect(reserves.map((node) => node.style.minHeight)).toEqual(["320px", "390px", "600px"]);
+  });
+
+  it("force-mounts an anchor target without dropping the reserve or waiting for intersection", () => {
+    const callbacks: IntersectionObserverCallback[] = [];
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        if (!options) callbacks.push(callback);
+      }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    });
+    const { container, getByTestId } = render(
+      <LazySection minHeight={300} forceMount>
+        <div data-testid="child">target</div>
+      </LazySection>,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(getByTestId("child").textContent).toBe("target");
+    expect(wrapper.style.minHeight).toBe("300px");
+    // The reserve observer uses real visibility, not the proximity rootMargin.
+    const fire = (isIntersecting: boolean) => act(() => callbacks[0]!([
+      { isIntersecting, boundingClientRect: { bottom: 1_200 } } as IntersectionObserverEntry,
+    ], {} as IntersectionObserver));
+    fire(false);
+    expect(wrapper.style.minHeight).toBe("300px");
+    fire(true);
+    fire(false);
     expect(wrapper.style.minHeight).toBe("");
   });
 });

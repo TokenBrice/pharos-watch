@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   useStablecoins: vi.fn(),
 }));
 
-vi.mock("@/hooks/api-hooks", () => ({ useReportCardsV9: mocks.useReportCardsV9 }));
+vi.mock("@/hooks/api-hooks", () => ({ useReportCardsV9Table: mocks.useReportCardsV9 }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: mocks.useStablecoins }));
 vi.mock("next/link", async () => createNextLinkMock());
 vi.mock("@/components/report-card-mini-v9", () => ({
@@ -50,6 +50,28 @@ describe("ReportCardsV9Client", () => {
   });
 
   afterEach(cleanupFrontendTest);
+
+  it("keeps the high-priority PNG preview when the WebP derivative is missing or fails", () => {
+    render(<ReportCardsV9Client />);
+    const preview = screen.getByRole("link", { name: "Open the Safety Score Map" });
+    const image = preview.querySelector("img")!;
+    expect(image.getAttribute("src")).toBe("/safety-scores/map.webp");
+    expect(image.getAttribute("fetchPriority")).toBe("high");
+    expect(preview.querySelectorAll("img")).toHaveLength(1);
+
+    // A 404, transport failure, or decoding failure all dispatch image error.
+    fireEvent.error(image);
+    expect(image.getAttribute("src")).toBe("/safety-scores/map.png");
+    expect(image.getAttribute("fetchPriority")).toBe("high");
+    expect(image.getAttribute("alt")).toBe("");
+    expect(preview.querySelectorAll("img")).toHaveLength(1);
+    expect(preview.textContent).not.toContain("Full market map");
+
+    // The existing unavailable panel is reserved for both formats failing.
+    fireEvent.error(image);
+    expect(preview.querySelector("img")).toBeNull();
+    expect(preview.textContent).toContain("Full market map");
+  });
 
   it("discloses a fresh successful held publication while keeping accepted ratings visible", () => {
     const nowSec = Math.floor(Date.now() / 1000);

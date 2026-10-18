@@ -5,6 +5,11 @@ import { jsonError, summarizeFetchError } from "./proxy-utils";
 export const DEFAULT_PROXY_TIMEOUT_MS = 10_000;
 export const MAX_PROXY_RESPONSE_BODY_BYTES = 16 * 1024 * 1024;
 
+/** Fetch-only capability shared by Pages service bindings and transport tests. */
+export interface ProxyServiceBinding {
+  fetch(request: Request): Promise<Response>;
+}
+
 class ProxyResponseTooLargeError extends Error {
   constructor() {
     super(`Upstream response exceeded ${MAX_PROXY_RESPONSE_BODY_BYTES} bytes`);
@@ -58,6 +63,7 @@ export async function fetchUpstreamProxy(request: Request, {
   method,
   headers,
   body,
+  serviceBinding,
   timeoutMs = DEFAULT_PROXY_TIMEOUT_MS,
   timeoutReason,
   logPrefix,
@@ -68,6 +74,7 @@ export async function fetchUpstreamProxy(request: Request, {
   method: string;
   headers: Headers;
   body?: BodyInit | null;
+  serviceBinding?: ProxyServiceBinding;
   timeoutMs?: number;
   timeoutReason: DOMException;
   logPrefix: string;
@@ -84,13 +91,18 @@ export async function fetchUpstreamProxy(request: Request, {
   });
 
   try {
-    const response = await fetch(upstreamUrl, {
+    const init: RequestInit = {
       method,
       headers,
       body,
       redirect: "manual",
       signal: timeout.signal,
-    });
+    };
+    // Preserve the canonical URL even over a private binding: Worker host/auth
+    // routing must remain identical to the public-fetch transport.
+    const response = serviceBinding
+      ? await serviceBinding.fetch(new Request(upstreamUrl, init))
+      : await fetch(upstreamUrl, init);
     return { ok: true, response: await bufferUpstreamResponse(response, timeout.signal) };
   } catch (error) {
     const summary = summarizeFetchError(error);

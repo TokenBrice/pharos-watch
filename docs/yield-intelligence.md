@@ -534,6 +534,8 @@ This selection behavior is surfaced in row-level `provenance` metadata on `/api/
 
 The methodology above owns public behavior; this section owns runtime contracts.
 
+[Runtime ownership and scoped reads](./yield-intelligence-operations.md#runtime-ownership-and-scoped-reads) details compact taxonomy, independent query startup and coin/history projection boundaries.
+
 Execution stages live under `worker/src/cron/yield-sync/`: the coordinator composes source loading, resolution, evaluation, history and publication; source readers remain separate from supplemental family execution so their existing isolation and test seams stay explicit. `family-registry.ts` is the runner-free authority for supplemental membership/order, required-cache membership, cadence/staleness and source-key routes. Cache readers and benchmark metadata retain lower-level modules; callers import defining modules directly, with no compatibility barrels. This organization changes no cron identity, persisted key, observation clock or publication guard.
 
 ### Persistence And Publication
@@ -572,16 +574,7 @@ Execution stages live under `worker/src/cron/yield-sync/`: the coordinator compo
 
 ### Producers And Consumers
 
-| Surface | Owner |
-| --- | --- |
-| Yield resolution and publication | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/` |
-| Optional slower source families | `worker/src/cron/sync-yield-supplemental.ts` |
-| Benchmark registry | `worker/src/cron/fetch-tbill-rate.ts` |
-| Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts`, `worker/src/lib/yield-ranking-helpers.ts` |
-| Rankings and history APIs | `worker/src/api/cache-handlers.ts`, `worker/src/api/yield-history.ts` |
-| Shared wire types | `shared/types/index.ts` |
-| Frontend queries and formatting | `src/hooks/api-hooks.ts`, `src/lib/yield-constants.ts` |
-| Yield workbench and per-coin analysis | `src/app/yield/`, `src/app/stablecoin/[id]/yield/` |
+See the [runtime owner table](./yield-intelligence-operations.md#runtime-ownership-and-scoped-reads) for producer/API/frontend entrypoints.
 
 This section defines wire formats, freshness, admission and publication failures; public status distinguishes stale or missing rankings from source-quality diagnostics, while [API Reference](./api-reference.md) defines the HTTP schemas.
 

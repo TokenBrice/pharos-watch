@@ -25,5 +25,5 @@ export const handleSafetyGrades = async (db: D1Database): Promise<Response> => {
     publicationStatus: snapshot.publicationHealth.status,
     grades: snapshot.cards,
   };
-  return jsonSafetyScoreSnapshotResponse(snapshot, body);
+  return jsonSafetyScoreSnapshotResponse(snapshot, body, `safety-grades-v${body.schemaVersion}`);
 };

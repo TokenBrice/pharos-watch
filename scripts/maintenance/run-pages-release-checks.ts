@@ -3,6 +3,11 @@
 import { appendFileSync } from "node:fs";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import {
+  checkSnapshots,
+  DETAIL_SNAPSHOT_UI_STALE_AFTER_MS,
+  reportSnapshotProducerAges,
+} from "../build-data/build-stablecoin-detail-snapshots";
+import {
   createExecutionUnit,
   createNpmScriptCommand,
   runExecutionUnit,
@@ -15,9 +20,11 @@ import {
 export async function runPagesReleaseChecks({
   runCommandImpl = runSpawnCommand,
   report = (summary: string) => console.log(summary),
+  readSnapshots = checkSnapshots,
 }: {
   runCommandImpl?: CommandImplementation<NpmScriptCommand>;
   report?: (summary: string) => void;
+  readSnapshots?: typeof checkSnapshots;
 } = {}): Promise<number> {
   const reporter = { start: (cmd: string) => console.log(`[pages-release-checks] ${cmd}`) };
   const parallelResult = await runParallelExecutionUnits([
@@ -43,6 +50,14 @@ export async function runPagesReleaseChecks({
   } else {
     rows.push({ leaf: "SEO / published archive continuity", command: "npm run seo:check",
       outcome: "skipped", detail: "prerequisite artifact gate failed" });
+  }
+  try {
+    rows.push({ leaf: "Snapshot producer age", command: "local generated detail snapshots",
+      outcome: "advisory", detail: reportSnapshotProducerAges(readSnapshots()) });
+  } catch (error) {
+    rows.push({ leaf: "Snapshot producer age", command: "local generated detail snapshots",
+      outcome: "advisory", detail: `unavailable (snapshot-age-read-failed): ${error instanceof Error ? error.message : String(error)}; ` +
+        `UI stale budget=${DETAIL_SNAPSHOT_UI_STALE_AFTER_MS / 60_000} min` });
   }
   report([
     "## Pages artifact gate results", "",

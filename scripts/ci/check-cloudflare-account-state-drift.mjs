@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const API_BASE_URL = "https://api.cloudflare.com/client/v4";
 const API_TOKEN_ENV = "CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN";
+const ZONE_SETTINGS_TOKEN_ENV = "CLOUDFLARE_ZONE_ANALYTICS_READ";
 const MANIFEST_PATH = "scripts/ci/cloudflare-account-state-manifest.json";
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -57,6 +58,8 @@ export function compareCloudflareAccountState(manifest, liveState) {
   const zone = isRecord(liveState?.zone) ? liveState.zone : {};
   addValueDrift(drift, "zone.name", manifest.zone.name, zone.name);
   addValueDrift(drift, "zone.status", manifest.zone.status, zone.status);
+  addValueDrift(drift, "zone.browser_cache_ttl", manifest.zone.browser_cache_ttl, zone.browser_cache_ttl);
+  addValueDrift(drift, "zone.cache_level", manifest.zone.cache_level, zone.cache_level);
 
   const pages = isRecord(liveState?.pages) ? liveState.pages : {};
   const project = isRecord(pages.project) ? pages.project : {};
@@ -319,10 +322,27 @@ function normalizeRateLimitRules(value) {
   }));
 }
 
+async function readZoneCacheSetting(fetchImpl, apiToken, zoneId, setting) {
+  const operation = `Cloudflare zone ${setting} lookup`;
+  const result = await readCloudflareResult(
+    fetchImpl,
+    apiToken,
+    `/zones/${encodeURIComponent(zoneId)}/settings/${setting}`,
+    operation,
+  );
+  const validValue = setting === "browser_cache_ttl"
+    ? Number.isSafeInteger(result?.value) && result.value >= 0
+    : ["aggressive", "basic", "simplified"].includes(result?.value);
+  if (!isRecord(result) || result.id !== setting || !validValue) {
+    throw new Error(`${operation} returned a malformed setting.`);
+  }
+  return result.value;
+}
+
 /**
  * Fetch Cloudflare state using only GET requests, then discard IDs and secret values before comparison.
  */
-export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImpl = fetch }) {
+export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSettingsToken = apiToken, fetchImpl = fetch }) {
   const zones = asArray(
     await readCloudflareResult(
       fetchImpl,
@@ -372,6 +392,10 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
       { allowNotFound: true },
     ),
   ]);
+  const [browserCacheTtl, cacheLevel] = await Promise.all([
+    readZoneCacheSetting(fetchImpl, zoneSettingsToken, zoneId, "browser_cache_ttl"),
+    readZoneCacheSetting(fetchImpl, zoneSettingsToken, zoneId, "cache_level"),
+  ]);
   const production = isRecord(project?.deployment_configs?.production) ? project.deployment_configs.production : {};
   const unified = normalizeUnifiedPagesBindings(production);
   const heavyConfig = manifest.heavyWorker;
@@ -402,6 +426,8 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
     zone: {
       name: normalizeString(zone.name),
       status: normalizeString(zone.status),
+      browser_cache_ttl: browserCacheTtl,
+      cache_level: cacheLevel,
     },
     pages: {
       project: {
@@ -456,7 +482,12 @@ export async function runCloudflareAccountStateDriftCheck({
     throw new Error(`${API_TOKEN_ENV} is required; configure the repository secret of the same name.`);
   }
 
-  const liveState = await fetchCloudflareAccountState({ manifest, apiToken, fetchImpl });
+  const zoneSettingsToken = normalizeString(env[ZONE_SETTINGS_TOKEN_ENV]);
+  if (!zoneSettingsToken) {
+    throw new Error(`${ZONE_SETTINGS_TOKEN_ENV} is required with Zone Settings Read; configure .env.local or the repository secret of the same name.`);
+  }
+
+  const liveState = await fetchCloudflareAccountState({ manifest, apiToken, zoneSettingsToken, fetchImpl });
   const drift = compareCloudflareAccountState(manifest, liveState);
   if (drift.length > 0) {
     consoleImpl.error("Cloudflare account-state drift detected:");
@@ -469,6 +500,10 @@ export async function runCloudflareAccountStateDriftCheck({
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
   try {
+    // Load ignored operator credentials only for direct CLI execution, never on
+    // import. Existing environment values (including CI secrets) take priority.
+    const envFile = resolve(process.cwd(), ".env.local");
+    if (!process.env.CI && existsSync(envFile)) process.loadEnvFile(envFile);
     const report = await runCloudflareAccountStateDriftCheck();
     if (!report.ok) process.exitCode = 1;
   } catch (error) {

@@ -19,6 +19,7 @@ import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { getLogoSrc, logosById } from "@/lib/logos";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { HarborHero } from "@/components/harbor/harbor-hero";
 import { HarborSelectionProvider, useHarborSelection } from "@/components/harbor/harbor-selection-context";
@@ -245,7 +246,7 @@ function ChainsLeaderboardTable({ sorted, sort }: { sorted: readonly ChainSummar
                 <div className="flex items-center gap-2">
                   {chain.logoPath ? (
                     <Image
-                      src={chain.logoPath}
+                      src={resolveCompactLogoSrc(chain.logoPath, 20)!}
                       alt=""
                       width={20}
                       height={20}

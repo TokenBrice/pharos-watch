@@ -3,7 +3,8 @@
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart as RechartsRadarChart } from "recharts";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import type { SafetyScorePublicationIdentity, SafetyScoreV9Card } from "@shared/types";
+import type { SafetyScorePublicationIdentity } from "@shared/types";
+import type { ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { median } from "@shared/lib/stats";
 import {
   hasCompleteV9RadarPillars,
@@ -26,7 +27,7 @@ const COMPACT_RADAR_BREAKPOINT = 280;
 const NARROW_RADAR_BREAKPOINT = 160;
 
 export interface V9RadarSeries {
-  card: SafetyScoreV9Card;
+  card: Pick<ReportCardsV9TableCard, "id" | "ratingStatus" | "partialEvidence" | "pillars">;
   identity: SafetyScorePublicationIdentity;
   color: string;
 }

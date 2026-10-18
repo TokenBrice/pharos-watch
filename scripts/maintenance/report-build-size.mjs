@@ -3,6 +3,8 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
+import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 
 import {
   countDocumentsReferencingChunks,
@@ -63,6 +65,10 @@ const DEFAULT_BUDGETS = {
   // Sum gzip sizes of all script chunks referenced by a detail page's HTML.
   // Keep narrow headroom so shared first-load chunk growth stays reviewable.
   representativeDetailEagerJsGzipBytes: 905_000,
+  // Initial homepage ceilings are deliberately conservative; ratchet after the
+  // first production-profile measurement rather than assuming lab transfer bytes.
+  homeHtmlBytes: 400_000,
+  homeEagerJsGzipBytes: 1_000_000,
   // Cemetery server-renders the plot-map hero and Autopsy Register, with shared
   // register rows in its RSC flight. Keep about 5% headroom for these payloads.
   // The flight is `index.txt`, byte-identical to the decoded inline `__next_f`.
@@ -83,6 +89,8 @@ const BUDGET_ENV = {
   representativeDetailHtmlBytes: "PHAROS_SIZE_BUDGET_DETAIL_HTML_BYTES",
   representativeDetailPageTxtBytes: "PHAROS_SIZE_BUDGET_DETAIL_PAGE_TXT_BYTES",
   representativeDetailEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_DETAIL_EAGER_JS_GZIP_BYTES",
+  homeHtmlBytes: "PHAROS_SIZE_BUDGET_HOME_HTML_BYTES",
+  homeEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_HOME_EAGER_JS_GZIP_BYTES",
   cemeteryHtmlBytes: "PHAROS_SIZE_BUDGET_CEMETERY_HTML_BYTES",
   cemeteryHtmlGzipBytes: "PHAROS_SIZE_BUDGET_CEMETERY_HTML_GZIP_BYTES",
   cemeteryFlightBytes: "PHAROS_SIZE_BUDGET_CEMETERY_FLIGHT_BYTES",
@@ -97,6 +105,15 @@ const REPRESENTATIVE_DETAIL_ROUTES = [
 ];
 
 const CEMETERY_ROUTE = "cemetery";
+// Load in the source checkout: the inventory's TS aliases resolve relative to
+// its tsconfig, not to a separately supplied artifact working directory.
+const PUBLIC_ROUTE_PATHS = JSON.parse(execFileSync(process.execPath, [
+  "--import", "tsx", "--input-type=module", "-e",
+  'import { PUBLIC_ROUTE_PATHS } from "./src/lib/public-route-inventory.ts"; process.stdout.write(JSON.stringify(PUBLIC_ROUTE_PATHS));',
+], { cwd: fileURLToPath(new URL("../../", import.meta.url)), encoding: "utf8", timeout: 30_000 }));
+const PROSE_ROUTES = PUBLIC_ROUTE_PATHS
+  .filter((href) => /^\/(?:privacy|about|methodology|stablecoins)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
+  .map((href) => href.slice(1, -1));
 
 function resolveBudget(key) {
   const raw = process.env[BUDGET_ENV[key]];
@@ -345,21 +362,43 @@ function gzipSizeOf(filePath) {
   return gzipSizeCache.get(filePath);
 }
 
-const representativeDetailEagerJs = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route) => {
+function eagerJsForRoutes(routes) {
+  return routes.flatMap((route) => {
+    const htmlPath = path.join(outDir, route, "index.html");
+    if (!existsSync(htmlPath)) return [];
+    const html = readFileSync(htmlPath, "utf8");
+    const scriptSrcs = new Set([...html.matchAll(/<script[^>]+src="(\/_next\/[^"]+\.js)"/g)].map((match) => match[1]));
+    let eagerGzipBytes = 0;
+    let scriptCount = 0;
+    for (const src of scriptSrcs) {
+      const chunkPath = path.join(outDir, src.replace(/^\//, ""));
+      if (!existsSync(chunkPath)) continue;
+      eagerGzipBytes += gzipSizeOf(chunkPath);
+      scriptCount += 1;
+    }
+    return [{ route, scriptCount, size: eagerGzipBytes, rel: `${route || "/"} (${scriptCount} scripts, gzip)` }];
+  });
+}
+const representativeDetailEagerJs = eagerJsForRoutes(REPRESENTATIVE_DETAIL_ROUTES);
+const homeEagerJs = eagerJsForRoutes([""]);
+const homeHtmlPath = path.join(outDir, "index.html");
+const homePayloads = [
+  ...(existsSync(homeHtmlPath)
+    ? [{ label: "html", size: statSync(homeHtmlPath).size, budgetKey: "homeHtmlBytes", rel: "out/index.html" }]
+    : []),
+  ...homeEagerJs.map((row) => ({ ...row, label: "eager JS gzip", budgetKey: "homeEagerJsGzipBytes" })),
+];
+const proseScriptLeaks = PROSE_ROUTES.flatMap((route) => {
   const htmlPath = path.join(outDir, route, "index.html");
-  if (!existsSync(htmlPath)) return [];
+  if (!existsSync(htmlPath)) return [`/${route}/ expected prose HTML is missing: out/${route}/index.html`];
   const html = readFileSync(htmlPath, "utf8");
-  const scriptSrcs = new Set([...html.matchAll(/<script[^>]+src="(\/_next\/[^"]+\.js)"/g)].map((match) => match[1]));
-  let eagerGzipBytes = 0;
-  let scriptCount = 0;
-  for (const src of scriptSrcs) {
-    const chunkPath = path.join(outDir, src.replace(/^\//, ""));
-    if (!existsSync(chunkPath)) continue;
-    eagerGzipBytes += gzipSizeOf(chunkPath);
-    scriptCount += 1;
-  }
-  return [{ route, scriptCount, size: eagerGzipBytes, rel: `${route} (${scriptCount} scripts, gzip)` }];
+  return [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
+    .map((match) => match[1])
+    .filter((src) => /\/app\/page-[^/]+\.js(?:\?|$)|\/recharts-vendor-[^/]+\.js(?:\?|$)/.test(src))
+    .map((src) => `/${route}/ must not reference homepage/chart script: ${src}`);
 });
+printTop("Homepage payloads", homePayloads, 10);
+for (const leak of proseScriptLeaks) console.log(`FAIL route invariant: ${leak}`);
 
 printTop("Representative detail eager JS (gzip sum of referenced scripts)", representativeDetailEagerJs, 10);
 
@@ -381,6 +420,8 @@ printTop("Cemetery route payloads", cemeteryPayloads, 10);
 
 if (check) {
   const failures = [];
+  failures.push(...proseScriptLeaks);
+  if (!existsSync(homeHtmlPath)) failures.push("homepage HTML is missing: out/index.html");
   console.log("\nDeploy gate (blocking)");
   checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
   const cssBundle = cssFiles.map((file) => readFileSync(file.path, "utf8")).join("\n");
@@ -443,6 +484,9 @@ if (check) {
         budgets.representativeDetailEagerJsGzipBytes,
         { responsible: detail.rel },
       ),
+    ),
+    ...homePayloads.map((payload) =>
+      referenceDelta(`home ${payload.label}`, payload.size, budgets[payload.budgetKey], { responsible: payload.rel }),
     ),
     ...cemeteryPayloads.map((payload) =>
       referenceDelta(`${CEMETERY_ROUTE} ${payload.label}`, payload.size, budgets[payload.budgetKey], {

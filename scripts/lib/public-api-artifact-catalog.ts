@@ -251,7 +251,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "stablecoin-detail",
     responseSchema: "StablecoinDetailResponse",
     summary: "Stablecoin detail",
-    description: "Full current/historical per-coin analytics dossier for a canonical Pharos stablecoin ID. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/#get-api-stablecoins).",
+    description: "Full current/historical per-coin analytics dossier for a canonical Pharos stablecoin ID. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins).",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
   },
@@ -259,7 +259,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "stablecoin-summary",
     responseSchema: "StablecoinSummaryResponse",
     summary: "Stablecoin summary",
-    description: "Lightweight per-coin price and aggregate supply snapshot. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/#get-api-stablecoins).",
+    description: "Lightweight per-coin price and aggregate supply snapshot. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins).",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
   },
@@ -438,7 +438,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "report-cards-v9",
     summary: "Safety Score V9 report cards",
-    description: "Canonical API schema-7 Safety Score report cards from the accepted internal schema-6 publication. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
+    description: "Canonical API schema-8 Safety Score report cards from the accepted internal schema-7 publication. Public cards carry resolved witness text without card-local witness tables. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "ReportCardsV9Response",
   },
@@ -446,7 +446,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "safety-grades",
     summary: "Safety Score grades (no key)",
     description:
-      "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
+      "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "SafetyGradesResponse",
     postman: {
@@ -457,7 +457,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "dependency-graph-v1",
     summary: "Dependency graph (no key)",
     description:
-      "Free schema-2 projection of the accepted V9 publication: publication-bound node supply, nullable grades, ratingStatus, compact partialEvidence, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
+      "Free schema-2 projection of the accepted V9 publication: publication-bound node supply, nullable grades, ratingStatus, compact partialEvidence, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "DependencyGraphResponse",
     postman: { noAuth: true },
@@ -466,7 +466,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "dependency-scenarios",
     summary: "Modeled dependency scenarios (no key)",
     description:
-      "Offline schema-2 production-evaluator scenarios from a V9 publication, refreshed daily. Published and modeled rows preserve ratingStatus, compact partialEvidence, nullable grades and null deltas for unavailable scores. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two days, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores. See [Safety Score availability](https://pharos.watch/api/#safety-score-availability).",
+      "Offline schema-2 production-evaluator scenarios from a V9 publication, refreshed daily. Published and modeled rows preserve ratingStatus, compact partialEvidence, nullable grades and null deltas for unavailable scores. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two days, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "DependencyScenariosResponse",
     postman: { noAuth: true },
@@ -508,7 +508,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stability-index",
     summary: "Pharos Stability Index",
-    description: "Latest Pharos Stability Index with optional detail payload and history. Since 2026-09-28 (PSI v3.64), daily snapshots persist all-null components as null rather than zero. Observed zero remains numeric zero; partial components average only observations and disclose `dailyProvenance.componentSampleCounts`. All-day score averaging and mixed-version breakdown are retained; `componentsUnavailable` identifies unavailable components. Legacy rows without counts remain unknown, not assumed complete. Successful partial samples retain unpriced-event diagnostics and, since PSI v3.66, optional `current.inputDegradation.supplyUnavailableIds` / `trendUnavailableIds` from the stored snapshot. Unavailable current supply is omitted from denominators and contributors; unusable aggregate market-cap or paired trend inputs preserve the previous sample rather than inventing zero.",
+    description: "PSI and history. Daily components preserve null versus observed zero; partial averages disclose `dailyProvenance.componentSampleCounts`. All-day averaging and mixed-version provenance remain intact; `componentsUnavailable` names gaps. Legacy counts remain unknown. Partial samples retain unpriced-event diagnostics and stored `current.inputDegradation.supplyUnavailableIds` / `trendUnavailableIds`. Unavailable supply is excluded from denominators and contributors; unusable aggregate market-cap or paired trend inputs retain the previous sample, never invented zero.",
     tags: ["Risk"],
     responseSchema: "StabilityIndexResponse",
     parameters: [
@@ -516,7 +516,13 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         name: "detail",
         in: "query",
         schema: { type: "boolean" },
-        description: "When true, includes detailed input components.",
+        description: "Includes components and full-history streak/event-score aggregates with source and response clocks.",
+      },
+      {
+        name: "days",
+        in: "query",
+        schema: { type: "integer", minimum: 30, maximum: 365 },
+        description: "Requires detail=true. Bounds rich history only; aggregates use full history. Omit for unbounded history.",
       },
     ],
     postman: {

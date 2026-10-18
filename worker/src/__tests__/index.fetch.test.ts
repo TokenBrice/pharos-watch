@@ -20,11 +20,17 @@ import {
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
 import { handleStatus } from "../api/status";
 import type * as StatusModule from "../api/status";
+import { handleStablecoins } from "../api/cache-handlers";
+import type * as CacheHandlersModule from "../api/cache-handlers";
 
 vi.mock("@shared/lib/cloudflare-access-jwt", () => ({ verifyAccessJwt: vi.fn(async () => false) }));
 vi.mock("../api/status", async (importOriginal) => {
   const original = await importOriginal<typeof StatusModule>();
   return { ...original, handleStatus: vi.fn(original.handleStatus) };
+});
+vi.mock("../api/cache-handlers", async (importOriginal) => {
+  const original = await importOriginal<typeof CacheHandlersModule>();
+  return { ...original, handleStablecoins: vi.fn(original.handleStablecoins) };
 });
 
 const VALID_KEY_PEPPER = "test-pepper";
@@ -32,6 +38,13 @@ const VALID_KEY_PREFIX = "0123456789abcdef";
 const VALID_KEY_SECRET = "abcdefghijklmnopqrstuvwxyzABCDEF";
 const VALID_API_KEY = `ph_live_${VALID_KEY_PREFIX}_${VALID_KEY_SECRET}`;
 
+/** Edge-hit fixtures carry the same bounded lifetime as real cached responses. */
+function cacheableJson(body: unknown): Response {
+  return Response.json(body, { headers: {
+    "Cache-Control": "public, max-age=60",
+    Date: new Date().toUTCString(),
+  } });
+}
 
 async function validKeyDbTables(
   extra: MockTableConfig[] = [],
@@ -140,12 +153,12 @@ describe("worker.fetch", () => {
     {
       name: "fresh cacheable read",
       run: async () => {
-        cacheMatch.mockResolvedValueOnce(Response.json({ z: "last", a: "first" }));
+        cacheMatch.mockResolvedValueOnce(cacheableJson({ z: "last", a: "first" }));
         return fetchStablecoinsWithApiKey();
       },
       expected: {
         status: 200,
-        headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
+        headers: { "access-control-allow-origin": "https://pharos.watch", "cache-control": "public, max-age=60", "content-type": "application/json" },
         bodyKind: "json",
         canonicalBody: { a: "first", z: "last" },
       },
@@ -153,16 +166,24 @@ describe("worker.fetch", () => {
     {
       name: "degraded no-store response",
       run: async () => {
-        cacheMatch.mockResolvedValueOnce(
+        // No-store responses are rejected on cache reads as well as writes.
+        // Exercise the origin-handler lane, not an impossible reusable cache hit.
+        vi.mocked(handleStablecoins).mockResolvedValueOnce(
           new Response(JSON.stringify({ degraded: true }), {
             headers: {
               "Cache-Control": "no-store",
               "Content-Type": "application/json",
               Warning: '110 - "Response is stale"',
+              ETag: 'W/"degraded-generation"',
+              "Last-Modified": "Sun, 18 Oct 2026 00:00:00 GMT",
             },
           }),
         );
-        return fetchStablecoinsWithApiKey();
+        const response = await fetchStablecoinsWithApiKey();
+        expect(response.headers.has("ETag")).toBe(false);
+        expect(response.headers.has("Last-Modified")).toBe(false);
+        expect(cachePut).not.toHaveBeenCalled();
+        return response;
       },
       expected: {
         status: 200,
@@ -344,7 +365,7 @@ describe("worker.fetch", () => {
   });
 
   it("serves authenticated edge-cache hits without rewriting the cache and accounts for the key", async () => {
-    cacheMatch.mockResolvedValueOnce(Response.json({ cached: true }));
+    cacheMatch.mockResolvedValueOnce(cacheableJson({ cached: true }));
     const { response, env } = await performStablecoinsFetch();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ cached: true });
@@ -354,6 +375,19 @@ describe("worker.fetch", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_request_stats") && entry.binds[0] === 7)).toBe(true);
     expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
+  });
+
+  it("treats a legacy cached response without Date as an ordinary origin miss, not a 500 or renewed cache hit", async () => {
+    const legacy = cacheableJson({ source: "legacy-cache" });
+    legacy.headers.delete("Date");
+    cacheMatch.mockResolvedValueOnce(legacy);
+    vi.mocked(handleStablecoins).mockClear();
+    vi.mocked(handleStablecoins).mockResolvedValueOnce(cacheableJson({ source: "origin" }));
+    const { response } = await performStablecoinsFetch();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ source: "origin" });
+    expect(handleStablecoins).toHaveBeenCalledOnce();
+    expect(cachePut).toHaveBeenCalledOnce();
   });
 
   it("skips edge cache for cache-bypass endpoints", async () => {
@@ -382,10 +416,7 @@ describe("worker.fetch", () => {
   });
 
   it("records keyed /api/* traffic under the public-api lane with the key's consumer class", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    cacheMatch.mockResolvedValueOnce(cacheableJson({ cached: true }));
 
     const env = makeEnv({ DB: mockD1(await validKeyDbTables()) });
     const { ctx, waits } = makeExecutionContext();
@@ -478,10 +509,7 @@ describe("worker.fetch", () => {
   });
 
   it("records authenticated site-api requests as site worker-lane load", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    cacheMatch.mockResolvedValueOnce(cacheableJson({ cached: true }));
     const env = makeEnv({
       DB: mockD1([
         ...makeRequestAttributionTables(),
@@ -646,26 +674,16 @@ describe("worker.fetch", () => {
 
   it("allows public-status-history and telegram-pulse on the site-api lane with the shared secret", async () => {
     cacheMatch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ currentStatus: "healthy", transitions: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }))
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            activeWatchers: 10,
-            coinSubscriptions: 20,
-            pendingDeliveries: 0,
-            updatedAt: 1771856400,
-            updatedEverySeconds: 300,
-            topCoins: [],
-            watcherHistory: [],
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
+      .mockResolvedValueOnce(cacheableJson({ currentStatus: "healthy", transitions: [] }))
+      .mockResolvedValueOnce(cacheableJson({
+        activeWatchers: 10,
+        coinSubscriptions: 20,
+        pendingDeliveries: 0,
+        updatedAt: 1771856400,
+        updatedEverySeconds: 300,
+        topCoins: [],
+        watcherHistory: [],
+      }),
       );
 
     const env = makeEnv();
@@ -806,10 +824,7 @@ describe("worker.fetch", () => {
           REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
           API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
         } as const;
-        cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 1 }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }));
+        cacheMatch.mockResolvedValueOnce(cacheableJson({ cached: true, warm: 1 }));
 
         const warmDb = mockD1(await validKeyDbTables());
         const warm = await performStablecoinsFetch("GET", warmDb, attributionDisabled);
@@ -819,10 +834,7 @@ describe("worker.fetch", () => {
       }
 
       if (testCase.reachesEdgeCache) {
-        cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify(testCase.expectedBody), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }));
+        cacheMatch.mockResolvedValueOnce(cacheableJson(testCase.expectedBody));
       }
 
       const cacheMatchCallsBefore = cacheMatch.mock.calls.length;
@@ -859,7 +871,7 @@ describe("worker.fetch", () => {
       REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
       API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
     } as const;
-    cacheMatch.mockResolvedValueOnce(Response.json({ warm: true }));
+    cacheMatch.mockResolvedValueOnce(cacheableJson({ warm: true }));
     const warm = await performStablecoinsFetch("GET", undefined, overrides);
     expect(warm.response.status).toBe(200);
     await expect(warm.response.json()).resolves.toEqual({ warm: true });
@@ -888,14 +900,8 @@ describe("worker.fetch", () => {
 
   it("rate-limits repeated cacheable reads with the isolate-local fallback when limiter storage fails", async () => {
     cacheMatch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, hit: 1 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, hit: 2 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }));
+      .mockResolvedValueOnce(cacheableJson({ cached: true, hit: 1 }))
+      .mockResolvedValueOnce(cacheableJson({ cached: true, hit: 2 }));
 
     const row = await makeAuthenticatedApiKeyRow({
       pepper: VALID_KEY_PEPPER,

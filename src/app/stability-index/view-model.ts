@@ -3,18 +3,16 @@ import { clampScore } from "@shared/lib/math";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 import { getConditionBand, PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
-import type { PsiChartPoint } from "@shared/lib/psi-view-model";
+import type { StabilityIndexEventScore } from "@shared/types/stability";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StabilityContributor } from "@/hooks/api-hooks";
-import { PSI_EVENTS } from "@/lib/psi-history-events";
+import { PSI_EVENTS } from "@shared/lib/psi-events";
 
 const HISTORY_WINDOW_DAYS = 30;
 const SCORE_DECIMAL_PLACES = 1;
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 export type PsiHistoryPoint = { date: number; score: number; band: string };
-export type { PsiChartPoint };
 
 export interface HistoryStatItem {
   label: string;
@@ -173,7 +171,7 @@ export function buildPsiHistoryStats(history: PsiHistoryPoint[], evaluatedAt: nu
   ];
 }
 
-export function buildPsiEventTimelineRows(data: PsiChartPoint[]): PsiEventTimelineRow[] {
+export function buildPsiEventTimelineRows(scores: readonly StabilityIndexEventScore[]): PsiEventTimelineRow[] {
   return [...PSI_EVENTS].reverse().map((event) => {
     const startDate = new Date(event.date);
     // Authored event dates are UTC calendar dates, not viewer-local instants.
@@ -186,13 +184,7 @@ export function buildPsiEventTimelineRows(data: PsiChartPoint[]): PsiEventTimeli
           return `${start} – ${end}`;
         })()
       : formatChartDate(event.date, "short-year");
-    const rangeEnd = event.dateEnd ?? event.date + THREE_DAYS_MS;
-    const nearby = data.filter(
-      (point) => point.ts >= event.date - THREE_DAYS_MS && point.ts <= rangeEnd + THREE_DAYS_MS,
-    );
-    const worst =
-      nearby.length > 0 ? nearby.reduce((lowest, point) => (point.score < lowest.score ? point : lowest)) : null;
-    const psi = worst ? worst.score : null;
+    const psi = scores.find((score) => score.date === event.date)?.score ?? null;
     const psiBand = psi !== null && psi >= PSI_CONDITION_BANDS[PSI_CONDITION_BANDS.length - 1].min ? getConditionBand(psi) : "";
     return {
       label: event.label,

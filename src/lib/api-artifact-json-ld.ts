@@ -1,5 +1,5 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
+import { API_REFERENCE_URL, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
 import {
   buildCoverageDatasetJsonLd,
   buildPharosDataCatalogReference,
@@ -28,7 +28,7 @@ export function buildApiArtifactCatalogJsonLd() {
       name: PHAROS_PUBLIC_DATA_CATALOG_NAME,
       description:
         "Machine-readable Pharos integration artifacts and public stablecoin data surfaces for external API consumers.",
-      url: `${SITE_URL}/api/`,
+      url: API_REFERENCE_URL,
       inLanguage: "en",
       provider: organization,
       publisher: organization,
@@ -51,8 +51,8 @@ export function buildApiArtifactCatalogJsonLd() {
       name: "Pharos API",
       description:
         "Read-only public integration API for stablecoin market, peg, liquidity, risk, blacklist, yield, chain, and flow data.",
-      url: `${SITE_URL}/api/`,
-      documentation: `${SITE_URL}/api/`,
+      url: API_REFERENCE_URL,
+      documentation: API_REFERENCE_URL,
       endpointUrl: PUBLIC_API_HOST,
       provider: organization,
       isPartOf: { "@id": catalogId },

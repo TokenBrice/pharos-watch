@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTotalMcapChartRows } from "../total-mcap-chart";
+import { buildTotalMcapChartRows } from "@shared/lib/total-mcap-chart";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import productionFixtureJson from "./fixtures/hero-cohort-history.json";
 import octoberFixture from "@shared/test-utils/fixtures/hero-chart-oct10.json";

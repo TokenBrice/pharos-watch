@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { useStablecoinDetailViewModel } from "../use-stablecoin-detail-view-model";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
-import { StablecoinDetailSnapshotHydrator } from "@/app/stablecoin/[id]/client";
+import { StablecoinDetailLiveSummaryStart, StablecoinDetailSnapshotHydrator } from "@/app/stablecoin/[id]/client";
 import { seedStablecoinDetailQueryCache, type StablecoinDetailSnapshot } from "@/lib/api";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
@@ -112,7 +112,7 @@ describe("stablecoin detail request budget", () => {
     };
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
-      if (url.includes("/stablecoin/usdt-tether")) {
+      if (url.includes("/stablecoin-live-summary/usdt-tether")) {
         return Response.json(detailSnapshot(sourceUpdatedAtSec * 1000).lanes.liveSummary, { headers });
       }
       if (url.includes("/supply-history")) {
@@ -184,14 +184,16 @@ describe("stablecoin detail request budget", () => {
 
     await waitFor(() => expect(requests).toHaveLength(7));
     expect(requests).toEqual(expect.arrayContaining([
-      expect.stringContaining("/api/stablecoin/usdt-tether"),
+      expect.stringContaining("/api/stablecoin-live-summary/usdt-tether"),
       expect.stringContaining("/api/peg-summary"),
       expect.stringContaining("/api/supply-history?stablecoin=usdt-tether&days=90"),
-      expect.stringContaining("/api/yield-rankings"),
-      expect.stringContaining("/api/dex-liquidity"),
-      expect.stringContaining("/api/report-cards/v9"),
+      expect.stringContaining("/api/yield-rankings-coin?stablecoin=usdt-tether"),
+      expect.stringContaining("/api/dex-liquidity-coin?stablecoin=usdt-tether"),
+      expect.stringContaining("/api/report-cards/v9-detail?stablecoin=usdt-tether"),
       expect.stringContaining("/api/stress-signals"),
     ]));
+    expect(requests.some((path) => /\/api\/(?:dex-liquidity|yield-rankings|redemption-backstops)(?:\?|$)/.test(path))).toBe(false);
+    expect(requests.some((path) => /\/api\/report-cards\/v9(?:\?|$)/.test(path))).toBe(false);
 
     rerender({ flowsNear: true });
 
@@ -211,7 +213,9 @@ describe("stablecoin detail request budget", () => {
       const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       const wrapper = ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={queryClient}>
-          <StablecoinDetailSnapshotHydrator snapshot={snapshot}>{children}</StablecoinDetailSnapshotHydrator>
+          <StablecoinDetailSnapshotHydrator snapshot={snapshot}>
+            <StablecoinDetailLiveSummaryStart id={coin.id}>{children}</StablecoinDetailLiveSummaryStart>
+          </StablecoinDetailSnapshotHydrator>
         </QueryClientProvider>
       );
       const rendered = renderHook(() => useStablecoinDetailViewModel({
@@ -237,11 +241,44 @@ describe("stablecoin detail request budget", () => {
     const expired = renderWithSnapshot(detailSnapshot(Date.now() - 25 * 60 * 60 * 1000));
     await waitFor(() => expect(requests).toHaveLength(3));
     expect(requests).toEqual(expect.arrayContaining([
-      expect.stringContaining("/api/stablecoin/usdt-tether"),
+      expect.stringContaining("/api/stablecoin-live-summary/usdt-tether"),
       expect.stringContaining("/api/peg-summary"),
       expect.stringContaining("/api/supply-history?stablecoin=usdt-tether&days=90"),
     ]));
     expired.unmount();
     expired.queryClient.clear();
+  });
+
+  it("starts the stale summary after the saved child render and deduplicates its read", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      requests.push(String(input));
+      return new Promise<Response>(() => {});
+    }));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const snapshot = detailSnapshot(Date.now() - 10 * 60 * 1000);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <StablecoinDetailSnapshotHydrator snapshot={snapshot}>
+          <StablecoinDetailLiveSummaryStart id={coin.id}>{children}</StablecoinDetailLiveSummaryStart>
+        </StablecoinDetailSnapshotHydrator>
+      </QueryClientProvider>
+    );
+    let firstFetchStatus: string | undefined;
+    const { rerender, unmount } = renderHook(() => {
+      firstFetchStatus ??= queryClient.getQueryState(["stablecoin-live-summary", coin.id])?.fetchStatus;
+      return useStablecoinDetailViewModel({
+        id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+      });
+    }, { wrapper });
+    expect(firstFetchStatus).toBe("idle");
+    await waitFor(() => expect(requests.filter((path) => path.includes("/stablecoin-live-summary/"))).toHaveLength(1));
+    expect(requests[0]).toContain("/stablecoin-live-summary/usdt-tether");
+    expect(requests.some((path) => path.includes("/stablecoin/"))).toBe(false);
+    rerender();
+    expect(requests.filter((path) => path.includes("/stablecoin-live-summary/"))).toHaveLength(1);
+    unmount();
+    queryClient.clear();
   });
 });

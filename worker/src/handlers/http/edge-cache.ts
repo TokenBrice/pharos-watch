@@ -1,12 +1,15 @@
 import { isCacheKeyQueryFreePath } from "@shared/lib/api-endpoints";
 import { isCacheableGetRequest } from "./cache-eligibility";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { isResponseWithinFreshLifetime } from "../../lib/api-response";
 interface EdgeCacheContext {
   cacheKey: Request;
   skipCache: boolean;
 }
 
 function createCacheKeyRequest(request: Request, url: URL): Request {
+  // A bare GET strips Range and all conditionals. Cache API must return the
+  // complete stored 200 so our own lifetime admission precedes any 304 decision.
   if (url.pathname.startsWith("/api/og/") || isCacheKeyQueryFreePath(url.pathname)) {
     const canonicalUrl = new URL(request.url);
     canonicalUrl.search = "";
@@ -27,17 +30,11 @@ export async function readEdgeCache(context: EdgeCacheContext): Promise<Response
   if (context.skipCache) return null;
   const response = await caches.default.match(context.cacheKey);
   if (!response) return null;
+  if (response.status !== 200) return null;
   const cacheControl = response.headers.get("Cache-Control") ?? "";
-  const ttl = cacheControl.match(/\bs-maxage\s*=\s*(\d+)/i)
-    ?? cacheControl.match(/\bmax-age\s*=\s*(\d+)/i);
-  if (ttl) {
-    const date = Date.parse(response.headers.get("Date") ?? "");
-    const age = Number(response.headers.get("Age") ?? 0);
-    const elapsed = Number.isFinite(date) ? Math.max(0, (Date.now() - date) / 1000) : 0;
-    // Do not reset Date/Age or re-assess the body's generation-time verdict.
-    // Both dispatch lanes must miss once the bounded shared lifetime ends.
-    if (Math.max(elapsed, Number.isFinite(age) ? age : 0) >= Number(ttl[1])) return null;
-  }
+  if (/\b(?:no-store|no-cache|private)\b/i.test(cacheControl)) return null;
+  // Retain the original assessment Date/Age, including multi-producer bounds.
+  if (!isResponseWithinFreshLifetime(response)) return null;
   return response;
 }
 
@@ -46,7 +43,7 @@ export function writeEdgeCache(
   response: Response,
   execCtx: ExecutionContext,
 ): void {
-  if (context.skipCache || !response.ok) return;
+  if (context.skipCache || response.status !== 200) return;
   const cacheControl = response.headers.get("Cache-Control")?.toLowerCase() ?? "";
   if (
     cacheControl.includes("no-store") ||

@@ -70,14 +70,14 @@ describe("V9 common-mode publication", () => {
 
   it("preserves exact priced-effect references for interned and resolved cap reasons", () => {
     const { pipeline, report } = replay();
-    expect(report.cards.some((card) => card.caps.some((cap) => cap.reason.startsWith("~")))).toBe(true);
+    expect(pipeline.candidate.cards.some((card) => card.caps.some((cap) => cap.reason.startsWith("~")))).toBe(true);
     const results = pipeline.evaluatedSet.assets.map((asset) => ({ ...asset, policy: V9_CANDIDATE_POLICY_V1 }));
     const expected = projectSafetyScoreV9CommonModeGroups(
       pipeline.evaluatedSet.dependencyPlan.commonModeGroups, results,
-      report.cards.map((card) => resolveV9PublicWitnessTexts(card)),
+      report.cards,
     );
     expect(projectSafetyScoreV9CommonModeGroups(
-      pipeline.evaluatedSet.dependencyPlan.commonModeGroups, results, report.cards,
+      pipeline.evaluatedSet.dependencyPlan.commonModeGroups, results, pipeline.candidate.cards,
     )).toEqual(expected);
     expect(report.commonModeGroups).toEqual(expected);
   });
@@ -120,7 +120,7 @@ describe("V9 common-mode publication", () => {
     const { pipeline, report } = replay();
     const serial = report.dependencyGraph.edges.find((edge) => edge.to === "susdt-spark" && edge.kind === "serial")!;
     expect(serial).toMatchObject({ dependencyType: "wrapper", wrapperForm: "native-staked", provenance: expect.any(Object) });
-    expect(ReportCardsV9CurrentResponseSchema.parse(report).cards).toEqual(pipeline.candidate.cards);
+    expect(ReportCardsV9CurrentResponseSchema.parse(report).cards).toEqual(pipeline.candidate.cards.map((card) => resolveV9PublicWitnessTexts(card)));
     const changed = structuredClone(report);
     changed.dependencyGraph.edges[0].to = "wrong-dependent";
     expect(ReportCardsV9CurrentResponseSchema.safeParse(changed).success).toBe(false);

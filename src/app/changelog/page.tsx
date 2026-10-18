@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ChangelogTimeline } from "@/components/changelog-timeline";
-import { ChangelogWeekNav } from "@/components/changelog-week-nav";
 import { EditorialMasthead } from "@/components/editorial-masthead";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -10,6 +9,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { changelogs } from "@/data/changelogs";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { formatLongDate } from "@shared/lib/format";
+import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "@/lib/changelog-history";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Changelog: What's New on Pharos",
@@ -43,8 +43,8 @@ export default function ChangelogPage() {
         description: entry.summary.map((s) => s.label).slice(0, 3).join("; "),
         author: { "@id": `${SITE_URL}#person-tokenbrice` },
         publisher: { "@id": `${SITE_URL}#organization` },
-        url: `${SITE_URL}/changelog/#week-${entry.dateRange.to}`,
-        mainEntityOfPage: `${SITE_URL}/changelog/#week-${entry.dateRange.to}`,
+        url: `${SITE_URL}/changelog/archive/${entry.dateRange.to.slice(0, 7)}/#week-${entry.dateRange.to}`,
+        mainEntityOfPage: `${SITE_URL}/changelog/archive/${entry.dateRange.to.slice(0, 7)}/#week-${entry.dateRange.to}`,
       },
     })),
   });
@@ -83,10 +83,25 @@ export default function ChangelogPage() {
         </>,
       ]}
     >
-      {changelogs.length >= 4 && (
-        <ChangelogWeekNav entries={changelogs.map(({ dateRange }) => ({ dateRange }))} />
-      )}
-      <ChangelogTimeline entries={changelogs} />
+      <p className="text-sm text-muted-foreground">Showing the latest {RECENT_CHANGELOGS.length} of {changelogs.length} weeks. All earlier releases remain available in the monthly archives.</p>
+      <ChangelogTimeline entries={RECENT_CHANGELOGS} />
+      <section aria-label="Changelog archives" className="mt-12 space-y-6">
+        <h2 className="pharos-section-title">Monthly archives</h2>
+        {CHANGELOG_MONTH_ARCHIVES.map((archive) => (
+          <section key={archive.month} id={`month-${archive.month}`} className="scroll-mt-28 space-y-3">
+            <h3><Link href={archive.path} prefetch={false} className="pharos-prose-link font-medium">{archive.label} · {archive.entries.length} weeks</Link></h3>
+            <ul className="divide-y divide-border/60">
+              {archive.entries.filter((entry) => !RECENT_CHANGELOGS.includes(entry)).map((entry) => (
+                <li key={entry.dateRange.to} id={`week-${entry.dateRange.to}`} className="scroll-mt-28 py-3">
+                  <Link id={entry.dateRange.to} href={`${archive.path}#week-${entry.dateRange.to}`} prefetch={false} className="pharos-prose-link text-sm">
+                    {entry.dateRange.to} · {entry.headline ?? "Weekly release notes"}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </section>
     </FeaturePageShell>
   );
 }

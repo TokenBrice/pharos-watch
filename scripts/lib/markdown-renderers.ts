@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import aiSummaries from "../../data/ai-summaries.json";
 import digestsData from "../../data/digests.json";
-import { changelogs } from "../../src/data/changelogs";
+import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "../../src/lib/changelog-history";
 import type { ChangelogEntry } from "../../src/data/changelogs/types";
 import {
   BACKING_LABELS,
@@ -147,24 +147,26 @@ export function* iterateStablecoinRoutes(): Generator<MarkdownRoute> {
   }
 }
 
-export function renderChangelogIndex(entries: readonly ChangelogEntry[] = changelogs): string {
+export function renderChangelogIndex(entries: readonly ChangelogEntry[] = RECENT_CHANGELOGS, path = "/changelog/"): string {
   const sections = entries
     .map((entry) => {
       const summary = entry.summary
         .map((item) => `- **${item.label}**: ${item.description}`)
         .join("\n");
       const headline = entry.headline ? `\n\n${entry.headline}` : "";
-      return `## ${entry.dateRange.from} to ${entry.dateRange.to}${headline}\n\n${summary}`;
+      return `<a id="week-${entry.dateRange.to}"></a>\n<a id="${entry.dateRange.to}"></a>\n\n## ${entry.dateRange.from} to ${entry.dateRange.to}${headline}\n\n${summary}`;
     })
     .join("\n\n");
 
   return (
     frontMatterBlock({
       title: "Changelog: What's New on Pharos",
-      canonical: "https://pharos.watch/changelog/",
+      canonical: `https://pharos.watch${path}`,
       description: "Weekly release notes for Pharos.",
     }) +
-    `# Changelog\n\n${sections}\n`
+    `# Changelog\n\n${sections}\n` +
+    (path === "/changelog/" ? `\n## Monthly archives\n\n${CHANGELOG_MONTH_ARCHIVES.map((archive) =>
+      `- [${archive.label}](https://pharos.watch${archive.path})\n${archive.entries.map((entry) => `  - [${entry.dateRange.to}: ${entry.headline ?? "Weekly release notes"}](https://pharos.watch${archive.path}#week-${entry.dateRange.to})`).join("\n")}`).join("\n")}\n` : "\n[Latest releases and all archives](https://pharos.watch/changelog/)\n")
   );
 }
 

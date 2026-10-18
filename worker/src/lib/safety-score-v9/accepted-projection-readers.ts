@@ -15,7 +15,7 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
 } from "./publication-codec";
-import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-store";
+import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-health";
 
 export type SafetyScoreV9AcceptedProjectionState<T> =
   | { kind: "accepted"; projection: T; health: V9PublicationHealth }

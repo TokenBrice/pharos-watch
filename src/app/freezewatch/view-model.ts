@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useReportCardsV9 } from "@/hooks/api-hooks";
+import { useReportCardsV9Table } from "@/hooks/api-hooks";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -95,7 +95,7 @@ export function useFreezeWatchPageController() {
     error: supportReportCardsError,
     refetch: refetchReportCards,
     meta: reportCardsMeta,
-  } = useReportCardsV9();
+  } = useReportCardsV9Table();
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseFreezeWatchPageFilters(searchParams.toString()), [searchParams]);
   const reportCardMap = useMemo(

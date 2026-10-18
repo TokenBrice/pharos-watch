@@ -24,7 +24,7 @@ const mockDeleteCache = vi.fn();
 vi.mock("../../lib/safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
 }));
-vi.mock("../../lib/safety-score-v9/publication-store", () => ({
+vi.mock("../../lib/safety-score-v9/publication-attempts", () => ({
   loadSafetyScoreV9PublicationAttempt:
     mockLoadSafetyScoreV9PublicationAttempt,
 }));

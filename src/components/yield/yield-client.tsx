@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { useYieldRankingsSummary } from "@/hooks/api-hooks";
+import { useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -254,6 +254,7 @@ function YieldEmptyStateNotice({
 
 export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankingsSummary();
+  const adapterManifestQuery = useYieldAdapterManifest();
   const logos = logosById;
   const { searchParams, setParam, replaceParams } = useUrlFilters();
   const arrivedFromSelector = searchParams.get("from") === "selector";
@@ -494,7 +495,7 @@ export function YieldClient() {
 
   return (
     <div className="space-y-6">
-      <YieldDataHealth dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} />
+      <YieldDataHealth dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} adapterManifestQuery={adapterManifestQuery} />
       <YieldApiWarnings warnings={data.warnings} />
       <SelectorHandoffNotice visible={arrivedFromSelector} />
       <YieldWorkbenchFallbackNotice stablecoinId={workbenchFallbackId} />

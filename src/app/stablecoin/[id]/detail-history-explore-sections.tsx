@@ -39,7 +39,9 @@ export function DetailHistoryExploreSections({
         <SectionBanner id="history" label="History" icon={Hourglass} active={activeBannerId === "history"} />
         {frozenNote}
         <section id="coin-timeline" aria-label="Coin event timeline" className="xl:hidden">
-          <TapeForCoinTeaser coinId={viewModel.id} />
+          <LazySection minHeight={180}>
+            <TapeForCoinTeaser coinId={viewModel.id} />
+          </LazySection>
         </section>
         <LazySection minHeight={390}>
           <HistoryTabs
@@ -70,7 +72,13 @@ export function DetailHistoryExploreSections({
       {exploreNextContent ? (
         <div className="space-y-6">
           <SectionBanner id="explore" label="Explore" icon={Sparkles} active={activeBannerId === "explore"} />
-          {exploreNextContent}
+          <LazySection minHeight={600} placeholder={(
+            <div id="explore-next" className="scroll-mt-32">
+              <span id="explore-next-heading" />
+            </div>
+          )}>
+            {exploreNextContent}
+          </LazySection>
         </div>
       ) : null}
       {faqContent}

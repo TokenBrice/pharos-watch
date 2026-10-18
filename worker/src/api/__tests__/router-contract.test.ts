@@ -24,6 +24,24 @@ const makeRouteCtx = routeContextFactory({ db, execCtx });
 
 
 describe("router contract: strict frontend paths are routable", () => {
+  it("retains strict site-only routes in router coverage outside the public smoke lane", () => {
+    const endpoints = ENDPOINT_DEFINITIONS.filter(
+      (endpoint) => endpoint.strictContract && endpoint.publicApiAccess === "site-only",
+    );
+    expect(endpoints.length).toBeGreaterThan(0);
+    for (const endpoint of endpoints) {
+      expect(STRICT_CONTRACT_PATHS_LIST).toContain(endpoint.path);
+      // The only dynamic strict site transport uses the canonical asset id.
+      // Fail closed if a future parameter family needs its own routing fixture.
+      const path = endpoint.path.replace(/:id\b/g, "usdt-tether");
+      expect(path, endpoint.key).not.toMatch(/:[a-z]/i);
+      const resolved = resolveRoute(new URL(path, "https://site-api.pharos.watch"), "GET");
+      expect(resolved, endpoint.key).not.toBeNull();
+      expect(resolved?.methodValidation, endpoint.key).toBeNull();
+      expect(resolved?.routeMatch.methods, endpoint.key).toContain("GET");
+    }
+  });
+
   it.each(["PUT", "DELETE", "PATCH"])("returns Allow POST for %s on a POST-only endpoint", async (method) => {
     const url = new URL("https://api.pharos.watch/api/feedback");
     const response = await route(makeRouteCtx({ url, request: new Request(url, { method }) }));

@@ -468,6 +468,21 @@ describe("reading selectors and context modes", () => {
     if (anchor === "publication") expect(docKeys(contract)).toContain("docs/testing.md#ci-pipeline");
   });
 
+  it.each([
+    "scripts/maintenance/probe-page-performance.mjs",
+    "scripts/maintenance/__tests__/probe-page-performance.test.ts",
+    "scripts/maintenance/report-build-size.mjs",
+    "scripts/maintenance/__tests__/report-build-size.test.ts",
+    "scripts/maintenance/lighthouse-static-export.ts",
+    "scripts/maintenance/analyze-web-vitals.mjs",
+    "scripts/ci/check-live-api-cache-policy.mjs",
+  ])("routes performance tooling %s to its guardrail contract and focused suites", (file) => {
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract)).toContain("docs/testing.md#performance-guardrails");
+    expect(contract.checks.join("\n")).toContain("scripts/maintenance/__tests__/probe-page-performance.test.ts");
+    expect(contract.checks.join("\n")).toContain("scripts/maintenance/__tests__/report-build-size.test.ts");
+  });
+
   it.each(["worker/src/cron/daily-digest.ts", "worker/src/cron/digest-publication-watchdog.ts"])(
     "retains generation for digest producer %s", (file) => {
       expect(docKeys(classifyChangedFiles([file]))).toContain("docs/digest-pipeline.md#generation");
@@ -1528,7 +1543,9 @@ describe("hook diagnostics", () => {
           tool_input: { file_path: ".env.local", content: secrets[1] },
           session_id: secrets[2],
         }), env),
-        runHookCliProcess("session-start", JSON.stringify({ hook_event_name: "SessionStart", session_id: secrets[2] }), env),
+        // Exercise diagnostics independently of mutable/unmapped working-tree paths.
+        runHookCliProcess("session-start", JSON.stringify({ hook_event_name: "SessionStart", session_id: secrets[2] }),
+          env, ["--base", "HEAD", "--head", "HEAD"]),
       ];
       const contents = readFileSync(diagnosticsPath, "utf8");
       const records = contents

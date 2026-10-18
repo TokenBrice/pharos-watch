@@ -2,8 +2,8 @@
 
 import { useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useReportCardsV9 } from "@/hooks/api-hooks";
+import { IntentLink } from "@/components/intent-link";
+import { useReportCardsV9Detail } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -47,7 +47,7 @@ export function ContagionSnapshot({
   stablecoinId,
   variantRelationshipCard,
 }: ContagionSnapshotProps) {
-  const reportCardsQuery = useReportCardsV9();
+  const reportCardsQuery = useReportCardsV9Detail(stablecoinId);
   const stablecoinsQuery = useStablecoins();
   const { data: rc } = reportCardsQuery;
   const { data: list } = stablecoinsQuery;
@@ -55,14 +55,14 @@ export function ContagionSnapshot({
   const hasVariantCard = Boolean(variantRelationshipCard);
   const cards = useMemo(
     () =>
-      (rc?.cards ?? []).map((card) => ({
+      (rc?.neighborhood ?? []).map((card) => ({
         id: card.id,
         symbol: CLIENT_TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id,
         grade: card.grade,
         partialEvidence: card.partialEvidence,
         sharedBookId: card.sharedBookId,
       })),
-    [rc?.cards],
+    [rc?.neighborhood],
   );
   const focusCard = rc?.cards.find((card) => card.id === stablecoinId);
   // Both endpoints must be published cards, otherwise the graph would drop the
@@ -82,8 +82,8 @@ export function ContagionSnapshot({
   }, [list?.peggedAssets]);
   const marketCapAsOf = stablecoinsQuery.meta?.updatedAt ?? null;
   const dependencyContext = useMemo(
-    () => buildDetailDependencyContext(stablecoinId, rc?.cards ?? [], rc?.dependencyGraph.edges ?? [], mcapMap, marketCapAsOf),
-    [stablecoinId, rc?.cards, rc?.dependencyGraph.edges, mcapMap, marketCapAsOf],
+    () => buildDetailDependencyContext(stablecoinId, rc?.neighborhood ?? [], rc?.dependencyGraph.edges ?? [], mcapMap, marketCapAsOf),
+    [stablecoinId, rc?.neighborhood, rc?.dependencyGraph.edges, mcapMap, marketCapAsOf],
   );
   // Keep the existing whole-module empty behavior when no context has a published row.
   const detailCard = focusCard && hasDependencyContextRows(focusCard, dependencyContext) ? focusCard : undefined;
@@ -138,12 +138,12 @@ export function ContagionSnapshot({
     <section className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency context</StablecoinModuleTitle>
-        <Link
+        <IntentLink
           href={`/dependency-map/?focus=${encodeURIComponent(stablecoinId)}`}
           className="pharos-focus-ring inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
         >
           Open in Dependency Map
-        </Link>
+        </IntentLink>
       </div>
       <div className={DETAIL_MODULE_BODY_CLASS}>
         {sourceError ? (

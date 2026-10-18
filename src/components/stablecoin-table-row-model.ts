@@ -9,7 +9,7 @@ import { formatNativePrice } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
-import type { DexLiquidityMap, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { TableDensity } from "@/hooks/use-table-density";
 
 export function buildStablecoinTableRowModel({
@@ -22,7 +22,7 @@ export function buildStablecoinTableRowModel({
 }: {
   coin: StablecoinData;
   pegScores?: Map<string, PegSummaryCoin>;
-  dexLiquidity?: DexLiquidityMap;
+  dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
   density: TableDensity;
   variant: StablecoinTableRowVariant;

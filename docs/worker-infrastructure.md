@@ -112,6 +112,10 @@ Admission, execution and final acceptance share the inherited event-entry deadli
 Heavy's `placement.region = "aws:eu-central-1"` is a **hint near the known EEUR primary region**, not a pinned colo, known D1 host or guarantee. Placement applies only to fetch handlers, not its scheduled jobs or RPC. Terminal metadata records `executorColo` from `request.cf.colo` (null when unavailable), its source, optional `cf-placement` and heavy version. Treat these as fetch-request evidence, not standalone proof of the physical execution location: join same-version Cloudflare Adaptive execution-colo evidence and end-to-end wall/CPU/cost before go/no-go. Require zero duplicate claims/publications and remote-colo p95 wall at most 1.5 times its FRA baseline; record the go/no-go before adding any second lane. Support case #02382680 informs but does not block qualification. See [Cloudflare placement limitations](https://developers.cloudflare.com/workers/configuration/placement/#review-limitations) and [HTTP service bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/http/).
 
 
+### V9 public response materialization
+
+The accepted publication commits immutable, generation-bound public fragments atomically with its canonical marker; request health remains live. [Materialization, rollout and qualification](./process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns admission, integrity, retirement and missing-artifact repair.
+
 ## Module Initialization
 
 The unqualified V9 guard and memory-evidence boundary are owned by the [memory appendix](./process/worker-infrastructure-appendix.md#module-initialization-memory-evidence).
@@ -147,6 +151,10 @@ Select the contract affected by the request path rather than reading the entire 
 The [API reference](./api-reference.md) owns endpoint contracts; the [admin reference](./api-reference-admin.md#admin-endpoint-entry) owns operator-only routes.
 
 [API Endpoint Authoring: Source Of Truth](./api-endpoint-authoring.md#source-of-truth) owns the path/method and auth/cache/site-data metadata inventory; the appendix retains request-order and handler semantics.
+
+### Compact website transports
+
+Site-only projections retain independent query identities and original producer evidence; the [compact transport index](./process/worker-infrastructure-appendix.md#compact-website-transports) links their owning contracts.
 
 ### Completed D1 Schema Cleanup
 
@@ -219,11 +227,11 @@ The existing public `digestTriggerPoll` lane starts with a DB-only sweep-only st
 
 ## Shared Database Helpers
 
-**Files:** `worker/src/lib/db.ts` for generic D1 helpers and `worker/src/lib/db-cache.ts` for cache-table helpers (`getCache`, `setCache`, `setCacheIfAbsent`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`).
+**Files:** `worker/src/lib/db.ts` owns generic D1 helpers; `worker/src/lib/db-cache.ts` owns `getCache`, `setCache`, `setCacheIfAbsent`, `setCacheIfNewer`, `getPriceCache` and `savePriceCache`.
 
 ### Remote D1 Inspection
 
-From `worker/`, run `npx --no-install wrangler d1 execute stablecoin-db --remote --json --command "SELECT ..."`; root invocation with global `--config worker/wrangler.toml` is valid, but worker-cwd avoids config/auth ambiguity. Never use `--file`: D1's **import** API reports `changed_db: true` even for SELECT and locks Worker writes for its duration. `scripts/maintenance/watch-worker-cron.mjs` (`d1Select`) is the reference.
+From `worker/`, use `npx --no-install wrangler d1 execute stablecoin-db --remote --json --command "SELECT ..."` (or root with global `--config worker/wrangler.toml`). Never `--file`: D1's import API reports `changed_db: true` even for SELECT and locks writes. Reference: `scripts/maintenance/watch-worker-cron.mjs` (`d1Select`).
 
 A 7403 account-unauthorized failure supplies no rows, not evidence of missing/zero state. Successful SELECT is observation-time database evidence, not an on-chain pin or authority to release quarantined values.
 

@@ -20,8 +20,8 @@ import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import {
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
-  loadClientStablecoinDetail,
 } from "@shared/lib/stablecoins/client-registry";
+import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import {
   buildCompareRadarCohortBaseline,
@@ -96,14 +96,15 @@ export function useCompareDataModel({
     [clientDetailsById],
   );
   const listQuery = useStablecoins();
-  const pegQuery = usePegSummary();
-  const bluechipQuery = useBluechipRatings();
-  const dexQuery = useDexLiquidity();
-  const reportCardsQuery = useReportCardsV9();
-  const redemptionQuery = useRedemptionBackstops();
-  const yieldQuery = useYieldRankings();
-  const stressQuery = useStressSignals();
-  const flowQuery = useMintBurnFlows();
+  const metricsEnabled = selectedIds.length > 0;
+  const pegQuery = usePegSummary({ enabled: metricsEnabled });
+  const bluechipQuery = useBluechipRatings({ enabled: metricsEnabled });
+  const dexQuery = useDexLiquidity({ enabled: metricsEnabled });
+  const reportCardsQuery = useReportCardsV9({ enabled: metricsEnabled });
+  const redemptionQuery = useRedemptionBackstops({ enabled: metricsEnabled });
+  const yieldQuery = useYieldRankings({ enabled: metricsEnabled });
+  const stressQuery = useStressSignals({ enabled: metricsEnabled });
+  const flowQuery = useMintBurnFlows(24, { enabled: metricsEnabled });
 
   const list = useQuerySlice(listQuery);
   const peg = useQuerySlice(pegQuery);
@@ -120,21 +121,25 @@ export function useCompareDataModel({
   const dexData = dex.data;
   const reportCardsData = reportCards.data;
 
-  const globalError = list.error ?? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error
-    ?? redemption.error ?? yieldRankings.error ?? stress.error ?? flow.error;
+  const globalError = list.error ?? (metricsEnabled
+    ? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error
+      ?? redemption.error ?? yieldRankings.error ?? stress.error ?? flow.error
+    : null);
   const hasPrimaryData = !!listData?.peggedAssets?.length;
 
   const freshnessQueries = useMemo<StaleQuery[]>(() => [
     toFreshnessQuery("stablecoins", list, hasPrimaryData),
-    toFreshnessQuery("pegSummary", peg, !!pegSummary?.coins?.length),
-    toFreshnessQuery("dexLiquidity", dex, !!dexData),
-    toFreshnessQuery("reportCards", reportCards, !!reportCardsData?.cards?.length),
-    toFreshnessQuery("bluechip", bluechip, !!bluechip.data),
-    toFreshnessQuery("redemptionBackstops", redemption, !!redemption.data?.coins),
-    toFreshnessQuery("yieldRankings", yieldRankings, !!yieldRankings.data?.rankings?.length),
-    toFreshnessQuery("stressSignals", stress, !!stress.data?.signals),
-    toFreshnessQuery("mintBurnFlows", flow, flowData !== undefined),
-  ], [bluechip, dex, dexData, flow, flowData, hasPrimaryData, list, peg, pegSummary, redemption, reportCards, reportCardsData, stress, yieldRankings]);
+    ...(metricsEnabled ? [
+      toFreshnessQuery("pegSummary", peg, !!pegSummary?.coins?.length),
+      toFreshnessQuery("dexLiquidity", dex, !!dexData),
+      toFreshnessQuery("reportCards", reportCards, !!reportCardsData?.cards?.length),
+      toFreshnessQuery("bluechip", bluechip, !!bluechip.data),
+      toFreshnessQuery("redemptionBackstops", redemption, !!redemption.data?.coins),
+      toFreshnessQuery("yieldRankings", yieldRankings, !!yieldRankings.data?.rankings?.length),
+      toFreshnessQuery("stressSignals", stress, !!stress.data?.signals),
+      toFreshnessQuery("mintBurnFlows", flow, flowData !== undefined),
+    ] : []),
+  ], [bluechip, dex, dexData, flow, flowData, hasPrimaryData, list, metricsEnabled, peg, pegSummary, redemption, reportCards, reportCardsData, stress, yieldRankings]);
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, V9ConsumerCard>();
@@ -282,14 +287,16 @@ export function useCompareDataModel({
   const handleRetry = useCallback(() => {
     return refetchQueryGroup([
       listQuery.refetch,
-      pegQuery.refetch,
-      bluechipQuery.refetch,
-      dexQuery.refetch,
-      reportCardsQuery.refetch,
-      redemptionQuery.refetch,
-      yieldQuery.refetch,
-      stressQuery.refetch,
-      flowQuery.refetch,
+      ...(metricsEnabled ? [
+        pegQuery.refetch,
+        bluechipQuery.refetch,
+        dexQuery.refetch,
+        reportCardsQuery.refetch,
+        redemptionQuery.refetch,
+        yieldQuery.refetch,
+        stressQuery.refetch,
+        flowQuery.refetch,
+      ] : []),
       ...detailQueries.map((query) => query.refetch),
       ...flowCoinQueries.map((query) => query.refetch),
     ], {
@@ -302,6 +309,7 @@ export function useCompareDataModel({
     flowQuery.refetch,
     dexQuery.refetch,
     listQuery.refetch,
+    metricsEnabled,
     pegQuery.refetch,
     reportCardsQuery.refetch,
     redemptionQuery.refetch,

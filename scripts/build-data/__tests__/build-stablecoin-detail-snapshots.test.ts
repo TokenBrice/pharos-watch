@@ -6,12 +6,16 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/market";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
-import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE } from "@shared/types/detail-snapshot-inputs";
+import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE, type DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
 import {
   buildStablecoinDetailSnapshots,
   checkSnapshots,
+  DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT,
+  DETAIL_SNAPSHOT_UI_STALE_AFTER_MS,
   fetchOptionalDetailSnapshotLane,
   generateSnapshots,
+  reportSnapshotProducerAges,
+  selectStaleDetailSnapshotRefreshIds,
   serializedSnapshotBytes,
   validateStablecoinDetailSnapshot,
   writeSnapshots,
@@ -31,6 +35,16 @@ function liveSummary(overrides: Partial<StablecoinLiveSummary> = {}): Stablecoin
     circulatingPrevMonth: { peggedUSD: 97 },
     nativeSupply: { current: 100, prevWeek: 98, prevMonth: 97 },
     ...overrides,
+  };
+}
+
+function bulkEntry(id: string, updatedAt: number): DetailSnapshotInputEntry {
+  return {
+    id, status: "available", liveSummary: liveSummary(), supplyHistory: [],
+    updatedAt: { liveSummary: updatedAt, supplyHistory: updatedAt },
+    freshness: { liveSummary: { status: "stale", maxAgeSec: 300 }, supplyHistory: { status: "fresh", maxAgeSec: 86_400 } },
+    sources: { detailCacheUpdatedAt: updatedAt / 1000, publicationUpdatedAt: updatedAt / 1000,
+      supplySnapshotUpdatedAt: updatedAt / 1000, supplySnapshotDate: updatedAt / 1000 },
   };
 }
 
@@ -313,6 +327,7 @@ describe("stablecoin detail snapshot generator", () => {
   });
 
   it.each([false, true])("produces identical bulk bytes and falls back only for unavailable coins (originClock=%s)", async (originClock) => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "fixture-site-secret");
     vi.stubEnv("PHAROS_DETAIL_SNAPSHOT_SOURCE", "per-coin");
@@ -379,6 +394,14 @@ describe("stablecoin detail snapshot generator", () => {
     const bulk = await generateSnapshots(false, { generatedAt: now });
     expect(bulk.map((snapshot) => `${JSON.stringify(snapshot)}\n`))
       .toEqual(baseline.map((snapshot) => `${JSON.stringify(snapshot)}\n`));
+    const acquisition = JSON.parse(log.mock.calls[1][0] as string).detailSnapshotAcquisition;
+    expect(acquisition.entries.find((entry: { id: string }) => entry.id === unavailableId)).toMatchObject({
+      source: "bulk-unavailable-fallback", reason: "detail-cache-missing",
+      updatedAt: { liveSummary: sourceClock * 1000 }, bulkSources: { detailCacheUpdatedAt: sourceClock },
+    });
+    expect(acquisition.entries.find((entry: { id: string }) => entry.id === "usdc-circle")).toMatchObject({
+      source: "bulk-cache-only", updatedAt: { liveSummary: sourceClock * 1000 },
+    });
     for (const snapshots of [baseline, bulk]) {
       expect(snapshots.find((snapshot) => snapshot.stablecoinId === "usdc-circle")?.lanes.liveSummary).toMatchObject({
         circulatingPrevWeek: { peggedUSD: 140 }, circulatingPrevMonth: { peggedUSD: 80 },
@@ -424,4 +447,138 @@ describe("stablecoin detail snapshot generator", () => {
     expect(fetch).toHaveBeenCalledTimes(6);
   });
 
+});
+
+describe("bounded stale bulk refresh", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("selects only producer ages strictly above the UI stale band, oldest first with a deterministic cap", () => {
+    const now = 1_800_000_000_000;
+    const boundary = now - DETAIL_SNAPSHOT_UI_STALE_AFTER_MS;
+    const entries: DetailSnapshotInputEntry[] = [
+      bulkEntry("fresh", now - 600_001),
+      bulkEntry("at-boundary", boundary),
+      bulkEntry("old-b", boundary - 1),
+      bulkEntry("oldest", boundary - 1000),
+      bulkEntry("old-a", boundary - 1),
+      { id: "unavailable", status: "unavailable", reason: "detail-cache-missing",
+        sources: { detailCacheUpdatedAt: null, publicationUpdatedAt: null, supplySnapshotUpdatedAt: null, supplySnapshotDate: null } },
+    ];
+    expect(DETAIL_SNAPSHOT_UI_STALE_AFTER_MS).toBe(120 * 60_000);
+    expect(selectStaleDetailSnapshotRefreshIds(entries, now, 2)).toEqual(["oldest", "old-a"]);
+    expect(selectStaleDetailSnapshotRefreshIds(entries, now, 0)).toEqual([]);
+    expect(selectStaleDetailSnapshotRefreshIds(Array.from({ length: 30 }, (_, index) =>
+      bulkEntry(`coin-${index}`, boundary - 1)), now)).toHaveLength(DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT);
+    for (const cap of [-1, 1.5, DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT + 1]) {
+      expect(() => selectStaleDetailSnapshotRefreshIds(entries, now, cap)).toThrow(/refresh limit/);
+    }
+  });
+
+  it("refreshes the selected rows after bulk bodies finish and records actual paths and clocks without re-stamping old rows", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "fixture-site-secret");
+    for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const now = 1_800_000_000_000;
+    const liveIds = TRACKED_STABLECOINS
+      .filter((coin) => coin.status == null || coin.status === "active" || coin.status === "frozen").map((coin) => coin.id);
+    const [refreshedId, retainedId, cappedId] = liveIds;
+    const sourceClocks: Record<string, number> = {
+      [refreshedId]: now - DETAIL_SNAPSHOT_UI_STALE_AFTER_MS - 3000,
+      [retainedId]: now - DETAIL_SNAPSHOT_UI_STALE_AFTER_MS - 2000,
+      [cappedId]: now - DETAIL_SNAPSHOT_UI_STALE_AFTER_MS - 1000,
+    };
+    const perCoinIds: string[] = [];
+    let pendingBodies = 0;
+    let peakBodies = 0;
+    let bulkCompleted = 0;
+    let failRefresh = false;
+    const expectedBatches = Math.ceil(liveIds.length / DETAIL_SNAPSHOT_INPUT_BATCH_SIZE);
+    vi.stubGlobal("fetch", vi.fn(async (raw: string, init: RequestInit) => {
+      const url = new URL(raw);
+      expect(url.hostname).toBe("site-api.pharos.watch");
+      expect(new Headers(init.headers).get("X-Pharos-Site-Proxy-Secret")).toBe("fixture-site-secret");
+      const bulk = url.pathname.endsWith("/stablecoin-detail-snapshot-inputs");
+      pendingBodies++;
+      peakBodies = Math.max(peakBodies, pendingBodies);
+      expect(pendingBodies).toBeLessThanOrEqual(6);
+      let response: Response;
+      if (bulk) {
+        response = Response.json({ version: 1, entries: url.searchParams.get("ids")!.split(",")
+          .map((id) => bulkEntry(id, sourceClocks[id] ?? now - 60_000)) });
+      } else {
+        expect(bulkCompleted % expectedBatches).toBe(0);
+        const history = url.pathname.endsWith("/supply-history");
+        const id = history ? url.searchParams.get("stablecoin")! : url.pathname.split("/").at(-1)!;
+        perCoinIds.push(id);
+        const clock = id === refreshedId ? now - 30_000 : sourceClocks[id];
+        response = Response.json(history ? [] : { price: failRefresh ? "invalid" : 2 }, {
+          headers: { "X-Data-Updated-At": String(clock / 1000) },
+        });
+      }
+      const consume = response.json.bind(response);
+      vi.spyOn(response, "json").mockImplementation(async () => {
+        await Promise.resolve();
+        const data = await consume();
+        pendingBodies--;
+        if (bulk) bulkCompleted++;
+        return data;
+      });
+      return response;
+    }));
+    const snapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now, staleRefreshLimit: 2 });
+    const snapshot = (id: string) => snapshots.find((candidate) => candidate.stablecoinId === id)!;
+    expect(snapshot(refreshedId).updatedAt.liveSummary).toBe(now - 30_000);
+    expect(snapshot(refreshedId).lanes.liveSummary?.price).toBe(2);
+    expect(snapshot(retainedId).updatedAt.liveSummary).toBe(sourceClocks[retainedId]);
+    expect(snapshot(cappedId).updatedAt.liveSummary).toBe(sourceClocks[cappedId]);
+    expect(snapshot(cappedId).lanes.liveSummary?.price).toBe(1);
+    expect(perCoinIds.sort()).toEqual([refreshedId, refreshedId, retainedId, retainedId].sort());
+    expect(pendingBodies).toBe(0);
+    expect(peakBodies).toBe(6);
+    const evidence = JSON.parse(log.mock.calls[0][0] as string).detailSnapshotAcquisition;
+    expect(evidence).toMatchObject({
+      assessedAt: now, staleCandidateCount: 3, staleRefreshLimit: 2, staleRefreshBudgetMs: DETAIL_SNAPSHOT_UI_STALE_AFTER_MS,
+    });
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === refreshedId)).toMatchObject({
+      source: "bulk-stale-refresh", bulkUpdatedAt: { liveSummary: sourceClocks[refreshedId] },
+      updatedAt: { liveSummary: now - 30_000 }, bulkSources: { detailCacheUpdatedAt: sourceClocks[refreshedId] / 1000 },
+    });
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === retainedId)).toMatchObject({
+      source: "bulk-stale-refresh", updatedAt: { liveSummary: sourceClocks[retainedId] },
+    });
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === cappedId)).toMatchObject({
+      source: "bulk-cache-only", updatedAt: { liveSummary: sourceClocks[cappedId] },
+    });
+    expect(snapshot(refreshedId)).not.toHaveProperty("acquisition");
+    failRefresh = true;
+    await expect(generateSnapshots(false, { source: "bulk", generatedAt: now, staleRefreshLimit: 2 })).rejects.toThrow();
+  });
+
+  it("reports producer-age percentiles and the UI budget without substituting artifact time or unavailable clocks", () => {
+    const now = 1_800_000_000_000;
+    const snapshots = buildStablecoinDetailSnapshots({
+      generatedAt: now, liveSummariesById: new Map(TRACKED_STABLECOINS.slice(0, 4).map((coin) => [coin.id, liveSummary()])),
+      supplyHistoryById: new Map(),
+      updatedAtById: new Map(TRACKED_STABLECOINS.slice(0, 3).map((coin, index) =>
+        [coin.id, { liveSummary: now - [60_000, DETAIL_SNAPSHOT_UI_STALE_AFTER_MS, DETAIL_SNAPSHOT_UI_STALE_AFTER_MS + 60_000][index] }])),
+    });
+    expect(reportSnapshotProducerAges(snapshots, now)).toContain("max=121.0 min, p50=120.0 min, p95=121.0 min");
+    expect(reportSnapshotProducerAges(snapshots, now)).toContain("above UI stale budget 120 min: 1/3; unavailable clocks=1");
+    expect(reportSnapshotProducerAges(snapshots, now)).toContain(`oldestProducerAt=${new Date(now - DETAIL_SNAPSHOT_UI_STALE_AFTER_MS - 60_000).toISOString()}`);
+    expect(reportSnapshotProducerAges([], now)).toContain("max=unavailable, p50=unavailable, p95=unavailable");
+    for (const clock of [0, -1, Number.NaN, now + 1]) {
+      const unavailableClockSnapshot = {
+        version: 1 as const, stablecoinId: "usdt-tether", generatedAt: now,
+        lanes: { liveSummary: liveSummary() }, updatedAt: { liveSummary: clock },
+      };
+      expect(reportSnapshotProducerAges([unavailableClockSnapshot], now)).toContain("max=unavailable");
+      expect(reportSnapshotProducerAges([unavailableClockSnapshot], now)).toContain("unavailable clocks=1");
+    }
+  });
 });

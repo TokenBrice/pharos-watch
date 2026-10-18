@@ -11,6 +11,8 @@ what shipped, what's next, and why.
 
 Post headers credit Pharos and link to `/about/#editorial-ai-policy`. Article bodies use the Georgia editorial register; page chrome stays sans and obeys the One Beam Rule in [DESIGN.md](../../DESIGN.md).
 
+The hub's native cover images declare 1200×630 intrinsic dimensions, lazy loading and async decoding. This reserves their layout without generating eager image hints when another route discovers or prefetches the hub; article/social cover URLs stay unchanged.
+
 ## Publish a post
 
 1. **Write the body** at `src/data/blog/posts/<slug>.md`.
@@ -57,7 +59,7 @@ no RSS feed.
 - **The filename is data.** It must equal `dateRange.to`, and every dated file
   must be registered in the barrel. Both dates must be valid `YYYY-MM-DD` days:
   `scripts/lib/editorial-content.ts` rejects malformed or impossible dates;
-  the barrel sorts lexicographically and the page's month folds parse those dates.
+  the barrel sorts lexicographically and the archive manifest groups those dates.
 - **One entry per Monday–Sunday week.** `dateRange.from` is a Monday and
   `dateRange.to` the following Sunday (UTC, inclusive). The editorial-content
   check rejects any other span, and the registry test rejects overlapping
@@ -69,25 +71,24 @@ no RSS feed.
 - **Entry copy limits:** `summary[].href` is an internal absolute path only
   (external or unknown routes fail the editorial-content check), and `fieldNotes` —
   the optional editor's note — is capped at 80 words.
-- **Week anchors are public API.** Each entry renders with `id="week-<to>"`,
-  and the page's `ItemList` JSON-LD publishes that same fragment as every
-  week's `url` and `mainEntityOfPage`. Changing the id format breaks the
-  structured data, not just inbound links.
-- **Older weeks fold by month.** `src/components/changelog-timeline.tsx` renders
-  the newest `CHANGELOG_OPEN_WEEKS` (2) weeks open and every older week inside a
-  native `<details id="month-YYYY-MM">`. Folded weeks stay in the static HTML;
-  `DisclosureHashReveal` opens the enclosing month for `#<to>` / `#week-<to>`
-  links (on load and on hash change) so anchors keep deep-linking.
+- **Week anchors are public API.** Each full entry retains `id="week-<to>"`
+  and its date-only card ID. `/changelog/` keeps both IDs as compact links for
+  older releases, while ItemList JSON-LD points to full archive evidence.
+- **History is statically partitioned.** `src/lib/changelog-history.ts` derives
+  the latest two weeks and complete `/changelog/archive/YYYY-MM/` documents
+  from the generated registry. The landing renders only recent full cards,
+  month links and older week titles. Month archives include recent weeks too,
+  so an archive URL never moves when a newer week arrives. Every month is linked
+  from the hub, indexed in the public route inventory/sitemap, and has its own
+  canonical and generated Markdown twin. No closed month body ships on the hub.
 
 ## Publish a changelog week
 
 1. **Add the JSON entry file** and regenerate its barrel with `node --import tsx scripts/maintenance/generate-changelog-registry.ts`; run `npm run check:editorial-content`.
-2. **Refresh the Markdown twin.** `/changelog/` serves a generated `.md`
-   variant, and its *whole index* is snapshot-tested against
-   `scripts/__tests__/fixtures/markdown/changelog-index.md`. Every new week —
-   and any copy or renderer change — fails that snapshot until you run
-   `npm run refresh:markdown-fixtures` and commit the fixture in the same
-   change.
+2. **Refresh the Markdown twins.** The export generator writes the compact
+   `/changelog/` index and each registered monthly archive. Focused Markdown
+   tests assert archive links, canonical paths and body coverage; generated
+   archive assets are written during the static export.
 3. **Validate** the editorial content, Markdown export, and sitemap inventory:
    ```bash
    npm run check:editorial-content
@@ -95,6 +96,6 @@ no RSS feed.
    ```
 4. **Commit and push** as usual. Discovery needs no per-week work:
    `src/app/sitemap.ts` stamps `/changelog/` from the newest `dateRange.to`,
-   floored by the route's Git edit date, and `public/llms.txt` links the hub
-   only. A week is a fragment on one page, so nothing paginates as the registry
-   grows.
+   floored by the route's Git edit date. `public/llms.txt` links the hub, which
+   exposes all monthly archives. Registry growth adds roughly one route per
+   month rather than one route per week.

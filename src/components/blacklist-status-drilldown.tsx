@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { X } from "lucide-react";
-import { useDexLiquidity, usePegSummary } from "@/hooks/api-hooks";
+import { useDexLiquidityTable, usePegSummary } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { QueryStateNotice } from "@/components/query-state-notice";
@@ -44,7 +44,7 @@ export function BlacklistStatusDrilldown({
 }: BlacklistStatusDrilldownProps) {
   const logos = logosById;
   const { data: pegSummaryData, meta: pegSummaryMeta } = usePegSummary();
-  const { data: dexLiquidity, meta: dexLiquidityMeta } = useDexLiquidity();
+  const { data: dexLiquidity, meta: dexLiquidityMeta } = useDexLiquidityTable();
   // The table's own pending state cannot express a failed support read: without
   // this, an errored `useStablecoins` leaves the drilldown on a skeleton forever.
   const dataState = resolveQueryViewState({ hasData: stablecoins !== undefined, isLoading, error });

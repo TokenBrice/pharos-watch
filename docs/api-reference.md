@@ -430,7 +430,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/health` | Health check | Health | exempt | — | 200, 400, 503 |
 | GET | `/api/public-status-history` | Public status history | Status | `X-API-Key` required | `limit` (query, optional, integer); `window` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/telegram-pulse` | Telegram pulse | Status | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
-| GET | `/api/stability-index` | Pharos Stability Index | Risk | `X-API-Key` required | `detail` (query, optional, boolean) | 200, 400, 401, 429, 503 |
+| GET | `/api/stability-index` | Pharos Stability Index | Risk | `X-API-Key` required | `detail` (query, optional, boolean); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-grades` | Safety Score grades (no key) | Risk | exempt | — | 200, 400, 503 |
 | GET | `/api/dependency-graph/v1` | Dependency graph (no key) | Risk | exempt | — | 200, 400, 503 |
@@ -815,11 +815,11 @@ Lightweight public Telegram adoption and delivery-health aggregates. [Full endpo
 
 ### `GET /api/stability-index`
 
-Latest Pharos Stability Index with optional detail payload and history. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1stability-index/get).
+PSI and history. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1stability-index/get).
 
 - **Operation ID:** `stabilityIndex`
 - **Path:** `/api/stability-index`
-- **Parameters:** `detail` (query, optional, boolean)
+- **Parameters:** `detail` (query, optional, boolean); `days` (query, optional, integer)
 - **Success response schema:** [`StabilityIndexResponse`](https://pharos.watch/openapi.json#/components/schemas/StabilityIndexResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
@@ -843,7 +843,7 @@ Dynamic social-card PNGs, omitted from OpenAPI. Unavailable inputs stay unavaila
 
 ### `GET /api/report-cards/v9`
 
-Canonical API schema-7 Safety Score report cards from the accepted internal schema-6 publication. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1report-cards~1v9/get).
+Canonical API schema-8 Safety Score report cards from the accepted internal schema-7 publication. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1report-cards~1v9/get).
 
 - **Operation ID:** `reportCardsV9`
 - **Path:** `/api/report-cards/v9`

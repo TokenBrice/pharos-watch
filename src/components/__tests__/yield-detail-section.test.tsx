@@ -2,7 +2,8 @@
 
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import YieldDetailSection, { YieldChangeAttributionCard } from "@/components/yield-detail-section";
+import YieldDetailSection from "@/components/yield-detail-section";
+import { YieldChangeAttributionCard } from "@/components/yield-change-attribution-card";
 import {
   buildSourceRiskGoldenFixture,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
@@ -16,7 +17,7 @@ const { useYieldRankingsMock, useYieldHistoryMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useYieldRankings: useYieldRankingsMock,
+  useYieldRankingsCoin: useYieldRankingsMock,
   useYieldHistory: useYieldHistoryMock,
 }));
 

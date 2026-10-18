@@ -71,9 +71,9 @@ export function SelectorClient() {
   const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
   const shareRequests = useRef(new RequestSequence());
 
-  const selector = useSelector(input, state.sid);
-  const output = "output" in selector ? selector.output : null;
   const renderResult = state.step === "result" || state.sid != null;
+  const selector = useSelector(input, state.sid, renderResult);
+  const output = "output" in selector ? selector.output : null;
   const profile = state.profile;
   const totalSteps = computeTotalSteps(state.profile, state.horizon, state.depegTolerance);
   const restorableRun = useMemo(

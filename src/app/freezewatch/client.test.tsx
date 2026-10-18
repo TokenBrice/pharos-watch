@@ -11,8 +11,9 @@ const mocks = vi.hoisted(() => ({
   useStablecoins: vi.fn(),
   useReportCardsV9: vi.fn(),
   usePegSummary: vi.fn(),
-  useDexLiquidity: vi.fn(),
+  useDexLiquidityTable: vi.fn(),
   replaceParams: vi.fn(),
+  stablecoinTable: vi.fn(),
 }));
 
 let currentSearch = "";
@@ -32,9 +33,9 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCardsV9: mocks.useReportCardsV9,
+  useReportCardsV9Table: mocks.useReportCardsV9,
   usePegSummary: mocks.usePegSummary,
-  useDexLiquidity: mocks.useDexLiquidity,
+  useDexLiquidityTable: mocks.useDexLiquidityTable,
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
@@ -75,9 +76,10 @@ vi.mock("@/components/blacklist-table", () => ({
 }));
 
 vi.mock("@/components/stablecoin-table", () => ({
-  StablecoinTable: ({ isLoading }: { isLoading: boolean }) => (
-    <div data-testid="stablecoin-table" data-loading={String(isLoading)} />
-  ),
+  StablecoinTable: (props: { isLoading: boolean }) => {
+    mocks.stablecoinTable(props);
+    return <div data-testid="stablecoin-table" data-loading={String(props.isLoading)} />;
+  },
 }));
 
 vi.mock("@/components/chart-primitives/quarterly-stacked-bar-chart", () => ({
@@ -104,7 +106,7 @@ beforeEach(() => {
   mocks.useStablecoins.mockReturnValue(stubQuery({ data: { peggedAssets: [] } }));
   mocks.useReportCardsV9.mockReturnValue(stubQuery({ data: { cards: [] } }));
   mocks.usePegSummary.mockReturnValue(stubQuery({ data: undefined }));
-  mocks.useDexLiquidity.mockReturnValue(stubQuery({ data: undefined }));
+  mocks.useDexLiquidityTable.mockReturnValue(stubQuery({ data: undefined }));
 });
 
 afterEach(() => {
@@ -137,6 +139,18 @@ describe("FreezeWatchClient", () => {
 
     expect(screen.getByTestId("stablecoin-table").getAttribute("data-loading")).toBe("false");
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
+  });
+
+  it("passes compact DEX scores and the original producer generation to the drilldown", () => {
+    currentSearch = "?status=yes";
+    const dexLiquidity = { "usdc-circle": { liquidityScore: 0 }, "usdt-tether": { liquidityScore: null } };
+    mocks.useDexLiquidityTable.mockReturnValue({
+      ...stubQuery({ data: dexLiquidity }), meta: { updatedAt: 1_700_000_000 },
+    });
+    render(<FreezeWatchClient />);
+    expect(mocks.stablecoinTable.mock.calls.at(-1)?.[0]).toMatchObject({
+      dexLiquidity, sourceGenerations: { dexLiquidity: 1_700_000_000 },
+    });
   });
 
   it("shows error notices instead of the empty-ledger copy and zeroed totals when the reads fail", () => {

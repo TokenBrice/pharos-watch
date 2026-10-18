@@ -111,7 +111,7 @@ export function makePickerQueryData() {
   const query = <T,>(data: T) => ({ data, dataUpdatedAt: 1, error: null });
   return {
     usePegSummary: () => query({ coins: [] }),
-    useReportCardsV9: () => query(makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", grade: "A", score: 90 })] })),
+    useReportCardsV9Table: () => query(makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", grade: "A", score: 90 })] })),
     useStressSignals: () => query({ signals: {} }),
     useDexLiquidity: () => query({}),
     useYieldRankings: () => query({ rankings: [] }),

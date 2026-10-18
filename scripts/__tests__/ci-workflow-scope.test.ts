@@ -180,6 +180,19 @@ describe("CI workflow scope", () => {
     expect(summaries).toHaveLength(1);
     expect(summaries[0].if).toBe("${{ always() && steps.plan.outcome == 'success' }}");
     expect(steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@"))).toHaveLength(1);
+    expect(steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"))?.with?.path)
+      .toContain("${{ env.MAP_OUT_DIR }}/latest.webp");
+  });
+
+  it("checks public live cache policy independently of secret-bearing account evidence", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/production-canaries.yml"));
+    const step = workflow.jobs.transport.steps.find((entry: { run?: string }) =>
+      entry.run === "node scripts/ci/check-live-api-cache-policy.mjs");
+    expect(step).toBeDefined();
+    expect(step.if).toBe("${{ !cancelled() }}");
+    expect(step.env).toBeUndefined();
+    expect(workflow.jobs.transport.env).toBeUndefined();
+    expect(workflow.on.schedule.length).toBeGreaterThan(0);
   });
 
   it("builds Pages without the Next compiler cache and consolidates artifact checks", () => {

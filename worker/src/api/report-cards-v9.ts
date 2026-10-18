@@ -1,20 +1,18 @@
-import {
-  jsonResponse,
-  jsonSafetyScoreSnapshotResponse,
-} from "../lib/api-response";
-import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { jsonResponse, safetyScoreSnapshotHeaders, withRepresentationEtag } from "../lib/api-response";
+import { loadV9PublicMaterializedResponse, V9PublicMaterializationUnavailableError } from "../lib/report-cards-v9-materialization";
 
-/**
- * Canonical V9 public contract. This route reads only the accepted V9
- * publication and never falls back to V8 or recomputes a score.
- */
+/** Every invocation admits live accepted identity/health; only immutable bytes are reused. */
 export const handleReportCardsV9 = async (db: D1Database): Promise<Response> => {
-  const active = await loadActiveSafetyScoreSource(db);
-  if (active.kind === "error") {
+  try {
+    const snapshot = await loadV9PublicMaterializedResponse(db);
+    return withRepresentationEtag(new Response(snapshot.body, { headers: safetyScoreSnapshotHeaders(snapshot) }),
+      ["report-cards-v9", snapshot.representationIdentity, snapshot.publicationHealth]);
+  } catch (error) {
+    const reason = error instanceof V9PublicMaterializationUnavailableError
+      ? error.reason : "v9-public-materialization-read-failed";
     return jsonResponse(
-      { error: active.detail, reason: active.reason },
+      { error: error instanceof Error ? error.message : "Canonical V9 representation is unavailable", reason },
       { status: 503, noStore: true },
     );
   }
-  return jsonSafetyScoreSnapshotResponse(active.snapshot);
 };

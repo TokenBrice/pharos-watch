@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DepegAuditVerdictSchema } from "./depeg-audit";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
 import { FreshnessAssessmentSchema } from "@pharos/contracts/api-meta";
+import { CoinProjectionMetadataSchema } from "./coin-projection";
 import {
   MethodologyEnvelopeSchema,
   NominalPriceReferenceSchema,
@@ -828,6 +829,21 @@ export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);
+export const DexLiquidityCoinResponseSchema = z.object({
+  coins: DexLiquidityMapSchema,
+  projection: CoinProjectionMetadataSchema,
+});
+export type DexLiquidityCoinResponse = z.infer<typeof DexLiquidityCoinResponseSchema>;
+export const DexLiquidityTableRowSchema = DexLiquidityDataSchema.pick({
+  liquidityScore: true,
+  warning: true,
+  unavailableReason: true,
+  advisoryUnavailableReason: true,
+  updatedAt: true,
+  methodologyVersion: true,
+});
+export const DexLiquidityTableMapSchema = z.record(z.string(), DexLiquidityTableRowSchema);
+export type DexLiquidityTableMap = z.infer<typeof DexLiquidityTableMapSchema>;
 
 export const DEX_GLOBAL_KEY = "__global__";
 

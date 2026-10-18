@@ -9,6 +9,7 @@ import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { API_REFERENCE_URL } from "@shared/lib/public-api-contract";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -66,13 +67,13 @@ const ABOUT_PAGE_JSON_LD = {
       "@type": "WebAPI",
       "@id": `${SITE_ORIGIN}/api/#webapi`,
       name: "Pharos API",
-      url: `${SITE_ORIGIN}/api/`,
+      url: API_REFERENCE_URL,
     },
     {
       "@type": "DataCatalog",
       "@id": `${SITE_ORIGIN}/api/#data-catalog`,
       name: "Pharos public data artifacts",
-      url: `${SITE_ORIGIN}/api/`,
+      url: API_REFERENCE_URL,
     },
     {
       "@type": "WebPage",

@@ -1,17 +1,18 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { z } from "zod";
 import {
   buildReportCardsV9DependencyGraph,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+  ReportCardsV9CanonicalProjectionSchema,
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import {
-  loadSafetyScoreV9Publication,
-  loadSafetyScoreV9PublicationHealth,
-} from "./safety-score-v9/publication-store";
+import type { SafetyScoreV9CurrentCard, SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
+import { loadSafetyScoreV9Publication } from "./safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationHealth, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
 
 export class ReportCardsV9SnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -39,57 +40,13 @@ export function buildSafetyScoreV9PublicationIdentity(
   };
 }
 
-/**
- * Publication health as the public snapshot serves it: health that does not
- * match the stored publication is downgraded to `held` rather than trusted.
- */
-export function resolveSafetyScoreV9EffectivePublicationHealth(
-  publication: Pick<SafetyScoreV9CurrentResponse, "publicationGenerationId" | "publishedAtSec">,
-  publicationHealth: V9PublicationHealth,
-): V9PublicationHealth {
-  const healthMatchesPublication =
-    publicationHealth.acceptedPublicationGenerationId ===
-      publication.publicationGenerationId &&
-    publicationHealth.acceptedAtSec === publication.publishedAtSec;
-  return healthMatchesPublication
-    ? publicationHealth
-    : {
-        ...publicationHealth,
-        status: "held" as const,
-        acceptedPublicationGenerationId: publication.publicationGenerationId,
-        acceptedAtSec: publication.publishedAtSec,
-        attemptedAtSec: Math.max(
-          publicationHealth.attemptedAtSec,
-          publication.publishedAtSec,
-        ),
-        heldSinceSec: publicationHealth.status === "held" &&
-          publicationHealth.heldSinceSec !== null
-          ? Math.max(
-              publicationHealth.heldSinceSec,
-              publication.publishedAtSec,
-            )
-          : Math.max(
-              publicationHealth.attemptedAtSec,
-              publication.publishedAtSec,
-            ),
-        reasons: [{
-          code: "assessment-failed" as const,
-          detail: "Publication health did not match the stored snapshot; serving the last-known-good snapshot as held.",
-        }],
-      };
-}
-
-export function projectSafetyScoreV9PublicationToPublicSnapshot(
+function buildPublicProjection(
   publication: SafetyScoreV9CurrentResponse,
   publicationHealth: V9PublicationHealth,
-): ReportCardsV9CurrentResponse {
-  // The storage decoder already validated this publication. Parsing it again
-  // deep-copies every card; validate only the public projection below.
-  const effectiveHealth = resolveSafetyScoreV9EffectivePublicationHealth(
-    publication,
-    publicationHealth,
-  );
-  return ReportCardsV9CurrentResponseSchema.parse({
+  cards: SafetyScoreV9CurrentCard[],
+) {
+  const effectiveHealth = resolveSafetyScoreV9EffectivePublicationHealth(publication, publicationHealth);
+  return {
     model: "v9",
     schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
     lifecycle: "active",
@@ -108,13 +65,37 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
       resultDigest: publication.resultDigest,
       sourceGenerations: publication.sourceGenerations,
     },
-    cards: publication.cards,
+    cards,
     foreignCauseGaps: publication.foreignCauseGaps,
     ...(publication.commonModeGroups === undefined ? {} : { commonModeGroups: publication.commonModeGroups }),
     dependencyGraph: buildReportCardsV9DependencyGraph(
-      publication.cards,
+      cards,
     ),
-  });
+  };
+}
+
+export function projectSafetyScoreV9PublicationToPublicSnapshot(
+  publication: SafetyScoreV9CurrentResponse,
+  publicationHealth: V9PublicationHealth,
+): ReportCardsV9CurrentResponse {
+  const cards = publication.cards.map((card) => resolveV9PublicWitnessTexts(card));
+  return ReportCardsV9CurrentResponseSchema.parse(buildPublicProjection(publication, publicationHealth, cards));
+}
+
+/**
+ * Only for an already admitted canonical publication. Run all public envelope,
+ * graph, gap and parent refinements without cloning the canonical cards again.
+ * The materializer admits/resolves/serializes each wire card independently.
+ */
+export function projectSafetyScoreV9PublicationForMaterialization(
+  publication: SafetyScoreV9CurrentResponse,
+  publicationHealth: V9PublicationHealth,
+) {
+  const admitted = new WeakSet<object>(publication.cards);
+  return ReportCardsV9CanonicalProjectionSchema.safeExtend({
+    cards: z.array(z.custom<SafetyScoreV9CurrentCard>((card) =>
+      card !== null && typeof card === "object" && admitted.has(card))),
+  }).parse(buildPublicProjection(publication, publicationHealth, publication.cards));
 }
 
 export async function loadPublishedReportCardsV9Snapshot(

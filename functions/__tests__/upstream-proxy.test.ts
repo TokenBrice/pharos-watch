@@ -133,6 +133,76 @@ describe("fetchUpstreamProxy", () => {
     });
   });
 
+  it.each(["declared", "streamed"])("enforces the same response cap over a binding with %s length", async (lengthKind) => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const networkFetch = vi.spyOn(globalThis, "fetch");
+    const cancel = vi.fn();
+    const upstream = new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        if (lengthKind === "streamed") {
+          controller.enqueue(new Uint8Array(MAX_PROXY_RESPONSE_BODY_BYTES));
+          controller.enqueue(new Uint8Array([1]));
+        }
+      },
+      cancel,
+    }), {
+      headers: lengthKind === "declared" ? { "Content-Length": String(MAX_PROXY_RESPONSE_BODY_BYTES + 1) } : {},
+    });
+    const binding = { fetch: vi.fn(async (_request: Request) => upstream) };
+    const result = await fetchUpstreamProxy(new Request("https://pharos.watch/proxy"), {
+      ...PROXY_OPTIONS,
+      serviceBinding: binding,
+    });
+    expect(result).toMatchObject({ ok: false, errorKind: "fetch-error" });
+    expect(result.response.status).toBe(502);
+    expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ name: "ProxyResponseTooLargeError" }));
+    expect(binding.fetch).toHaveBeenCalledOnce();
+    expect(networkFetch).not.toHaveBeenCalled();
+  });
+
+  it("retains a bodyless conditional response over a binding", async () => {
+    const binding = { fetch: vi.fn(async (_request: Request) => new Response(null, {
+      status: 304,
+      headers: { ETag: '"generation-1"', Age: "59" },
+    })) };
+    const result = await fetchUpstreamProxy(new Request("https://pharos.watch/proxy"), {
+      ...PROXY_OPTIONS,
+      serviceBinding: binding,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.response.status).toBe(304);
+    expect(result.response.body).toBeNull();
+    expect(result.response.headers.get("Age")).toBe("59");
+    expect(result.response.headers.get("ETag")).toBe('"generation-1"');
+  });
+
+  it("propagates the deadline to a pending binding fetch without a network retry", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const networkFetch = vi.spyOn(globalThis, "fetch");
+    const binding = {
+      fetch: vi.fn((request: Request) => new Promise<Response>((_resolve, reject) => {
+        request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true });
+      })),
+    };
+    let settled = false;
+    const pending = fetchUpstreamProxy(new Request("https://pharos.watch/proxy"), {
+      ...PROXY_OPTIONS,
+      serviceBinding: binding,
+      timeoutMs: 100,
+    }).then((result) => { settled = true; return result; });
+    await vi.advanceTimersByTimeAsync(99);
+    expect(settled).toBe(false);
+    expect(binding.fetch.mock.calls[0][0].signal.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await pending;
+    expect(result).toMatchObject({ ok: false, errorKind: "timeout" });
+    expect(result.response.status).toBe(504);
+    expect(binding.fetch.mock.calls[0][0].signal.aborted).toBe(true);
+    expect(networkFetch).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it.each(["fetch", "body"] as const)("classifies the deadline during %s without firing early", async (phase) => {
     vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => undefined);

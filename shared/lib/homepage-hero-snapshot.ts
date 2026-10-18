@@ -3,38 +3,14 @@ import { getCirculatingRawOrNull } from "./supply";
 import type { StablecoinListResponse } from "../types";
 import { HOMEPAGE_COHORT_BUCKET_IDS, type HomepageCohortBucketKey } from "./homepage-cohort-config";
 
-/** One homepage cohort-bar row; structurally a total-market-cap chart row whose total may be unavailable. */
-export interface HomepageHeroCohort {
-  ts: number;
-  usdt: number | null;
-  usdc: number | null;
-  sky: number | null;
-  others: number | null;
-  nonUsd: number | null;
-  total: number | null;
-}
+export type { HomepageHeroSnapshot } from "../types/homepage";
+import type { HomepageHeroSnapshot } from "../types/homepage";
 
 const COHORT_BUCKET_BY_ID = new Map<string, HomepageCohortBucketKey>(
   (Object.entries(HOMEPAGE_COHORT_BUCKET_IDS) as Array<[HomepageCohortBucketKey, readonly string[]]>).flatMap(
     ([bucket, ids]) => ids.map((id) => [id, bucket] as const),
   ),
 );
-
-export interface HomepageHeroSnapshot {
-  asOfISO: string | null;
-  totalUsd: number | null;
-  nonUsdUsd: number | null;
-  nonUsdShare: number | null;
-  /**
-   * Core-aggregate rows present in the source whose current supply is unavailable. They are
-   * excluded from every sum (never counted as $0), so a nonzero count marks the totals partial.
-   */
-  supplyUnavailableCount: number;
-  supplyObservedCount: number;
-  supplyExpectedCount: number;
-  supplyMissingCount: number;
-  cohort: HomepageHeroCohort;
-}
 
 interface HomepageHeroMarketRow {
   id: string;

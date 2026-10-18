@@ -26,6 +26,7 @@ import {
 } from "@/lib/contagion-layout";
 import { formatCurrency } from "@shared/lib/format";
 import type { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 type PositionMap = ReadonlyMap<string, { x: number; y: number }>;
 type ContagionGraphModel = ReturnType<typeof useContagionGraphModel>;
@@ -377,7 +378,7 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
 
       {logoUrl ? (
         <image
-          href={logoUrl}
+          href={resolveCompactLogoSrc(logoUrl, logoR * 2)}
           x={position.x - logoR}
           y={position.y - logoR}
           width={logoR * 2}

@@ -28,7 +28,7 @@ interface FixtureRateLimitRule {
 }
 
 interface FixtureLiveState {
-  zone: { name: string; status: string };
+  zone: { name: string; status: string; browser_cache_ttl: number; cache_level: string };
   pages: {
     project: {
       name: string;
@@ -95,6 +95,12 @@ function createFixtureFetch(
         name: "safety-score-v9-publication", script_name: "stablecoin-heavy", class_name: "SafetyScoreV9PublicationWorkflow",
       },
       ["/client/v4/zones/zone-id-not-in-manifest/workers/routes"]: heavy.routes.map((pattern) => ({ script: "stablecoin-heavy", pattern })),
+      ["/client/v4/zones/zone-id-not-in-manifest/settings/browser_cache_ttl"]: {
+        id: "browser_cache_ttl", value: liveState.zone.browser_cache_ttl,
+      },
+      ["/client/v4/zones/zone-id-not-in-manifest/settings/cache_level"]: {
+        id: "cache_level", value: liveState.zone.cache_level,
+      },
     };
     if (Object.hasOwn(extra, url.pathname)) {
       if (!heavy.exists && url.pathname.endsWith("/stablecoin-heavy/settings")) return new Response("missing", { status: 404 });
@@ -177,6 +183,8 @@ describe("Cloudflare account-state drift comparison", () => {
   it("reports fixture drift by resource and field without reporting values for secrets", () => {
     expect(compareCloudflareAccountState(manifest, readFixture("drifted-live-state.json"))).toEqual(
       expect.arrayContaining([
+        'zone.browser_cache_ttl: expected 60, found 1200',
+        'zone.cache_level: expected "aggressive", found "basic"',
         'pages.customDomains: missing "ops.pharos.watch"',
         'pages.production.environmentVariables.SITE_API_ORIGIN.value: expected "https://site-api.pharos.watch", found "https://wrong.example"',
         'pages.production.environmentVariables.TELEGRAM_ADOPTION_IP_HASH_SECRET.type: expected "secret_text", found "plain_text"',
@@ -187,6 +195,40 @@ describe("Cloudflare account-state drift comparison", () => {
         'rateLimitRules.api-rate-limit-ip.action: expected "block", found "managed_challenge"',
       ]),
     );
+  });
+
+  it.each([
+    ["browser_cache_ttl", 1200],
+    ["cache_level", "basic"],
+  ])("detects zone cache setting %s drift from its GET response", async (setting, value) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path, result) =>
+      path.endsWith(`/settings/${setting}`) ? Response.json({
+        success: true, result: { ...(result as object), value },
+      }) : undefined);
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    expect(compareCloudflareAccountState(manifest, state).some((entry: string) => entry.startsWith(`zone.${setting}:`))).toBe(true);
+  });
+
+  it.each([
+    ["browser_cache_ttl", null],
+    ["browser_cache_ttl", { id: "browser_cache_ttl" }],
+    ["browser_cache_ttl", { id: "browser_cache_ttl", value: "60" }],
+    ["browser_cache_ttl", { id: "browser_cache_ttl", value: -1 }],
+    ["browser_cache_ttl", { id: "cache_level", value: 60 }],
+    ["cache_level", { id: "cache_level", value: "unknown" }],
+    ["cache_level", { id: "cache_level", value: null }],
+  ])("does not interpret malformed %s as an observed setting: %j", async (setting, result) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith(`/settings/${setting}`) ? Response.json({ success: true, result }) : undefined);
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow(`Cloudflare zone ${setting} lookup returned a malformed setting.`);
+  });
+
+  it.each([403, 404, 500])("does not interpret an unreadable zone setting (HTTP %s) as healthy", async (status) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith("/settings/browser_cache_ttl") ? Response.json({ success: false }, { status }) : undefined);
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow(`Cloudflare zone browser_cache_ttl lookup failed (HTTP ${status})`);
   });
 
   it.each([
@@ -227,7 +269,10 @@ describe("Cloudflare account-state drift comparison", () => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"));
     const report = await runCloudflareAccountStateDriftCheck({
       manifest: expectedManifest,
-      env: testEnv({ CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token" }),
+      env: testEnv({
+        CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token",
+        CLOUDFLARE_ZONE_ANALYTICS_READ: "zone-settings-token-sentinel",
+      }),
       fetchImpl: fetchMock,
       consoleImpl: mockConsole({ log: vi.fn(), error: vi.fn() }),
     });
@@ -273,21 +318,27 @@ describe("Cloudflare account-state drift comparison", () => {
     const liveState = await fetchCloudflareAccountState({
       manifest,
       apiToken: "test-token-that-must-not-be-reported",
+      zoneSettingsToken: "zone-settings-token-sentinel",
       fetchImpl: fetchMock as typeof fetch,
     });
 
     expect(compareCloudflareAccountState(manifest, liveState)).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
     expect(fetchMock.mock.calls.some(([request]) =>
       new URL(String(request)).pathname.endsWith("/workflows/safety-score-v9-publication"))).toBe(true);
     for (const [request, init] of fetchMock.mock.calls) {
       expect(new URL(String(request)).pathname).toContain("/client/v4/");
       expect(init?.method).toBe("GET");
-      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer test-token-that-must-not-be-reported");
+      const token = new URL(String(request)).pathname.includes("/settings/browser_cache_ttl")
+        || new URL(String(request)).pathname.includes("/settings/cache_level")
+        ? "zone-settings-token-sentinel"
+        : "test-token-that-must-not-be-reported";
+      expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${token}`);
     }
     expect(JSON.stringify(liveState)).not.toContain("account-id-not-in-manifest");
     expect(JSON.stringify(liveState)).not.toContain("secret-value-that-must-not-be-reported");
     expect(JSON.stringify(liveState)).not.toContain("heavy-secret-sentinel");
+    expect(JSON.stringify(liveState)).not.toContain("zone-settings-token-sentinel");
   });
 
   it("prefers unified bindings, deduplicates resource names, and discards secret text", async () => {
@@ -351,7 +402,11 @@ describe("Cloudflare account-state drift comparison", () => {
     const errors: string[] = [];
     const report = await runCloudflareAccountStateDriftCheck({
       manifest,
-      env: { CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token-secret-sentinel", NODE_ENV: "test" },
+      env: {
+        CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token-secret-sentinel",
+        CLOUDFLARE_ZONE_ANALYTICS_READ: "zone-settings-token-sentinel",
+        NODE_ENV: "test",
+      },
       fetchImpl: createFixtureFetch(readFixture(`${kind}-live-state.json`)),
       consoleImpl: mockConsole({ log: (message: string) => logs.push(message), error: (message: string) => errors.push(message) }),
     });
@@ -367,6 +422,7 @@ describe("Cloudflare account-state drift comparison", () => {
     }
     const output = JSON.stringify({ report, logs, errors });
     expect(output).not.toContain("token-secret-sentinel");
+    expect(output).not.toContain("zone-settings-token-sentinel");
     expect(output).not.toContain("secret-value-that-must-not-be-reported");
   });
 
@@ -379,6 +435,16 @@ describe("Cloudflare account-state drift comparison", () => {
         manifest,
       }),
     ).rejects.toThrow("CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN is required; configure the repository secret of the same name.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("requires the zone settings read token before making any network request", async () => {
+    const fetchMock = vi.fn();
+    await expect(runCloudflareAccountStateDriftCheck({
+      env: { CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token", NODE_ENV: "test" },
+      fetchImpl: fetchMock as typeof fetch,
+      manifest,
+    })).rejects.toThrow("CLOUDFLARE_ZONE_ANALYTICS_READ is required with Zone Settings Read");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

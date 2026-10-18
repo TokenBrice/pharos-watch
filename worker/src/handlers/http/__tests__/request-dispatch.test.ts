@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeExecutionContext } from "../../../test-helpers/__shared/auth";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { buildFreshnessMeta } from "../../../lib/api-freshness";
+import { handleHomepageHistory } from "../../../api/homepage";
+
+const homepageOwners = vi.hoisted(() => ({ charts: vi.fn(), supply: vi.fn() }));
+vi.mock("../../../api/cache-handlers", () => ({ handleStablecoinCharts: homepageOwners.charts, handleStablecoins: vi.fn() }));
+vi.mock("../../../api/supply-history", () => ({ handleSupplyHistory: homepageOwners.supply }));
 
 const mocks = vi.hoisted(() => ({
   resolveRoute: vi.fn(),
@@ -124,6 +131,72 @@ describe("handleHttpRequestImpl", () => {
         }),
     );
     mocks.addCorsHeaders.mockImplementation((response: Response) => response);
+  });
+
+  it.each([false, true])("returns conditional 304 after auth on both cached lanes (fast=%s)", async (fast) => {
+    const etag = 'W/"cached-generation"';
+    const cached = new Response('{"ok":true}', { headers: {
+      ETag: etag, "Cache-Control": "public, max-age=60",
+      Date: new Date().toUTCString(), Age: "2", "X-Data-Updated-At": "1792300000",
+    } });
+    mocks.readEdgeCache.mockResolvedValue(cached);
+    if (fast) mocks.evaluateCachedPublicApiReadFastGate.mockResolvedValue({
+      isAdmin: false, isSiteProxy: true, apiKey: null, requestLane: "site-api",
+    });
+    mocks.addCorsHeaders.mockImplementation((response: Response) => {
+      response.headers.set("Access-Control-Allow-Origin", "https://pharos.watch");
+      return response;
+    });
+    const response = await handleHttpRequestImpl(new Request("https://site-api.pharos.watch/api/stablecoins", {
+      headers: { "If-None-Match": etag },
+    }), makeEnv(), makeCtx());
+    expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
+    expect(response.headers.get("ETag")).toBe(etag);
+    expect(response.headers.get("Age")).toBe("2");
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+    expect(mocks.route).not.toHaveBeenCalled();
+  });
+
+  it("evaluates a handler validator only after queuing the full 200 for cache admission", async () => {
+    const makeResponse = () => new Response('{"ok":true}', { headers: {
+      ETag: 'W/"producer-generation"', "Cache-Control": "public, max-age=60",
+    } });
+    mocks.route.mockImplementation(async () => makeResponse());
+    const url = "https://api.pharos.watch/api/stablecoins";
+    const initial = await handleHttpRequestImpl(new Request(url), makeEnv(), makeCtx());
+    const etag = initial.headers.get("ETag")!;
+    const result = await handleHttpRequestImpl(new Request(url, {
+      headers: { "If-None-Match": etag },
+    }), makeEnv(), makeCtx());
+    expect(result.status).toBe(304);
+    expect(result.body).toBeNull();
+    expect(mocks.writeEdgeCache.mock.calls[1][1].status).toBe(200);
+    expect(mocks.writeEdgeCache.mock.calls[1][1].headers.get("ETag")).toBe(etag);
+  });
+
+  it("does not return 304 when delayed homepage composition crosses a producer deadline", async () => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const source = (key: string, maxAge: number) => new Response("[]", { headers: {
+        "X-Data-Updated-At": String(now - buildFreshnessMeta(now, maxAge, key).freshBudgetSec + 1),
+      } });
+      homepageOwners.supply.mockImplementation(async () => source("supply-history", API_FRESHNESS_MAX_AGE_SEC.supplyHistory));
+      homepageOwners.charts.mockImplementation(async () => {
+        const response = source("stablecoin-charts", API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts);
+        clock.mockReturnValue((now + 2) * 1000);
+        return response;
+      });
+      mocks.route.mockImplementation(async () => handleHomepageHistory(makeEnv().DB));
+      const response = await handleHttpRequestImpl(new Request("https://site-api.pharos.watch/api/homepage-history", {
+        headers: { "If-None-Match": "*" },
+      }), makeEnv(), makeCtx());
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.has("ETag")).toBe(false);
+    } finally { clock.mockRestore(); }
   });
 
   it("short-circuits CORS preflights before the access gate", async () => {

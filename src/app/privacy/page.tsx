@@ -33,7 +33,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: September 2026"]}
+      leadParagraphs={["Last updated: October 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -66,6 +66,14 @@ export default function PrivacyPage() {
             browser-local storage and are not sent to the API. The Stablecoin Picker stores local browser state for
             callout dismissal and tab-scoped result recovery, and share links can store a content-addressed snapshot of
             the generated selector output in Cloudflare KV.
+          </p>
+          <p>
+            The homepage saves a compact copy of public market, stability-index and incident evidence in
+            IndexedDB on your device. Stablecoin detail pages also keep compact public price and supply summaries
+            for up to 20 recently used coin IDs. These copies contain no personal data, credentials, portfolio
+            holdings, page URLs or visit timestamps and are not sent to the API. Saved values are labelled retained
+            with their original dates and are ignored after 72 hours or an incompatible data-version change.
+            Older detail entries are removed as newer coins are used. Clearing browser site data removes these copies.
           </p>
         </section>
 

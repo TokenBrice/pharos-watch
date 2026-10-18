@@ -10,6 +10,8 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { getHomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
+import { getHomepageDataBootstrapScript } from "@/lib/data-bootstrap-script";
+import { HomepageEvidenceProvider } from "@/lib/homepage-evidence";
 import {
   CORE_AGGREGATE_STABLECOIN_COUNT,
   HOMEPAGE_TOP_CORE_STABLECOINS,
@@ -30,9 +32,9 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: buildLiveRouteOgImageUrl("home"),
 });
 
-export default function HomePage() {
+export default async function HomePage() {
   const total = CORE_AGGREGATE_STABLECOIN_COUNT;
-  const heroSnapshot = getHomepageHeroSnapshot();
+  const heroSnapshot = await getHomepageHeroSnapshot();
 
   // Top 20 stablecoins for ItemList schema
   const itemListEntries = buildStablecoinItemListEntries(HOMEPAGE_TOP_CORE_STABLECOINS, {
@@ -45,6 +47,10 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
+      <script
+        id="pharos-home-data-bootstrap"
+        dangerouslySetInnerHTML={{ __html: getHomepageDataBootstrapScript() }}
+      />
       <JsonLdScript
         json={safeJsonLd(
             buildCollectionItemListJsonLd({
@@ -59,7 +65,9 @@ export default function HomePage() {
             }),
           )}
       />
-      <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={HERO_FALLBACK_SELECTED_AT_MS} />
+      <HomepageEvidenceProvider>
+        <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={HERO_FALLBACK_SELECTED_AT_MS} />
+      </HomepageEvidenceProvider>
       <HomeBlogBanner />
       <HomeAltClient />
       <HomeMediaStrip />

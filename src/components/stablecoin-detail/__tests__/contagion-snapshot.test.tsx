@@ -11,7 +11,10 @@ const useNearViewportMock = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/use-near-viewport", () => ({ useNearViewport: useNearViewportMock }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCardsV9: useReportCardsV9Mock,
+  useReportCardsV9Detail: () => {
+    const query = useReportCardsV9Mock();
+    return { ...query, data: query.data ? { ...query.data, neighborhood: query.data.cards } : undefined };
+  },
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({

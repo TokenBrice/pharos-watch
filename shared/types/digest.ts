@@ -698,6 +698,20 @@ export const DigestArchiveResponseSchema = z.object({
 });
 export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
 
+export const DigestPromoEditionSchema = z.object({
+  digestTitle: z.string().nullable(),
+  editionNumber: z.number().int().positive(),
+  generatedAt: z.number().int().nonnegative(),
+  slug: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+export type DigestPromoEdition = z.infer<typeof DigestPromoEditionSchema>;
+
+export const DigestPromoResponseSchema = z.object({
+  latest: DigestPromoEditionSchema.extend({ excerpt: z.string().nullable() }).nullable(),
+  previousEditions: z.array(DigestPromoEditionSchema).max(2),
+});
+export type DigestPromoResponse = z.infer<typeof DigestPromoResponseSchema>;
+
 /**
  * Build-time digest archive written to data/digests.json. Older snapshots may
  * omit edition metadata, so parsing deliberately normalizes those fields to

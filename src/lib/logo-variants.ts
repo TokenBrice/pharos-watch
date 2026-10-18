@@ -1,8 +1,24 @@
 import MAP from "./logo-variants.generated.json";
 
-const COMPACT_LOGO_SRC_BY_CANONICAL_SRC: Record<string, string> = MAP;
+const LOGO_VARIANTS: Record<string, Partial<Record<32 | 56 | 100, string>>> = MAP;
 
 export function resolveCompactLogoSrc(src: string | undefined, size: number): string | undefined {
-  if (!src || size > 24) return src;
-  return COMPACT_LOGO_SRC_BY_CANONICAL_SRC[src] ?? src;
+  if (!src) return src;
+  const variants = LOGO_VARIANTS[src];
+  if (!variants) return src;
+  if (size <= 24 && variants[32]) return variants[32];
+  if (size <= 28 && variants[56]) return variants[56];
+  if (size <= 50 && variants[100]) return variants[100];
+  return src;
+}
+
+/** Browser-selected density candidates; never upscale a derivative beyond its pixels. */
+export function resolveCompactLogoSrcSet(src: string | undefined, size: number): string | undefined {
+  if (!src || !LOGO_VARIANTS[src]) return undefined;
+  const variants = LOGO_VARIANTS[src];
+  return [1, 2, 3].map((density) => {
+    const pixels = size * density;
+    const width = ([32, 56, 100] as const).find((candidate) => candidate >= pixels && variants[candidate]);
+    return `${width ? variants[width] : src} ${density}x`;
+  }).join(", ");
 }

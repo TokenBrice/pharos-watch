@@ -11,10 +11,19 @@ import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import type { ApiMeta } from "@/lib/api";
 
 const { useStablecoinsMock } = vi.hoisted(() => ({ useStablecoinsMock: vi.fn() }));
-vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
+vi.mock("@/hooks/api-hooks", () => ({
+  useHomepageSnapshot: () => {
+    const query = useStablecoinsMock();
+    return { ...query, data: query.data ? { market: {
+      data: buildLiveHomepageHeroSnapshot(query.data, query.meta?.updatedAt ?? undefined),
+      meta: query.meta,
+    } } : undefined };
+  },
+}));
 vi.mock("@/components/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
 vi.mock("@/components/home-market-state-line", () => ({ HomeMarketStateLine: () => null }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
+vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: vi.fn() }));
 
 const NOW = Date.parse("2026-10-10T12:00:00Z");
 const data = { peggedAssets: [makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 100 } })] };

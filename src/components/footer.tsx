@@ -54,7 +54,7 @@ export function Footer() {
             className="flex flex-wrap items-center gap-1 text-muted-foreground lg:shrink-0 lg:justify-end lg:gap-1.5"
           >
             {FOOTER_NAV.map((link) => (
-              <Link key={link.href} href={link.href} className={PILL_CLASS}>
+              <Link key={link.href} href={link.href} prefetch={false} className={PILL_CLASS}>
                 {link.label}
               </Link>
             ))}
@@ -73,7 +73,7 @@ export function Footer() {
                   <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3" strokeWidth={2} />
                 </a>
               ) : (
-                <Link key={link.href} href={link.href} className={PILL_CLASS}>
+                <Link key={link.href} href={link.href} prefetch={false} className={PILL_CLASS}>
                   {link.label}
                 </Link>
               ),

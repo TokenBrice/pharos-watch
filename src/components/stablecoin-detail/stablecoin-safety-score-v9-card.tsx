@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { History, Table2 } from "lucide-react";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
@@ -51,13 +51,13 @@ function HeaderActions({ updatedAtMs }: { updatedAtMs: number | null }) {
       {updatedAtMs !== null ? <span className="text-muted-foreground/50" aria-hidden="true">·</span> : null}
       <MethodologyHint topic="safetyScore" buttonClassName={HEADER_ICON_BUTTON_CLASS} />
       {methodology.changelogPath ? (
-        <Link
+        <IntentLink
           href={methodology.changelogPath}
           aria-label="Safety Score version history"
           className={HEADER_ICON_BUTTON_CLASS}
         >
           <History className="h-3 w-3" aria-hidden="true" />
-        </Link>
+        </IntentLink>
       ) : null}
       <ShowYourWorkToggle className={HEADER_ICON_BUTTON_CLASS}>
         <Table2 className="h-3 w-3" aria-hidden="true" />

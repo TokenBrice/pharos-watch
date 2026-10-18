@@ -108,6 +108,30 @@ describe("Pages artifact input profile", () => {
     }
   });
 
+  it.each(["0", "1"])("audits both routes and makes Lighthouse failure advisory unless enforcement is enabled (%s)", async (enforce) => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-lighthouse-"));
+    try {
+      dataFixture(root);
+      vi.stubEnv("PHAROS_LIGHTHOUSE_ENFORCE", enforce);
+      vi.stubEnv("PHAROS_LIGHTHOUSE_THRESHOLD", "75");
+      spawn.mockReset();
+      spawn.mockImplementation((_program: string, args: string[]) => ({
+        status: args.includes("lighthouse:static") ? 1 : 0, signal: null,
+      }));
+      const result = runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+      if (enforce === "1") await expect(result).rejects.toThrow("lighthouse");
+      else await expect(result).resolves.toMatchObject({ dataStatus: "degraded-data" });
+      const probes = spawn.mock.calls.filter((call) => call[1].includes("lighthouse:static"));
+      expect(probes).toHaveLength(2);
+      expect(probes[0][1]).toContain("/");
+      expect(probes[1][1]).toContain("/stablecoin/usdc-circle/");
+      expect(probes[0][1]).toContain("75");
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("restores post-refresh outputs it regenerated from release data, even when a gate fails", async () => {
     const root = mkdtempSync(join(tmpdir(), "pharos-pages-restore-"));
     try {

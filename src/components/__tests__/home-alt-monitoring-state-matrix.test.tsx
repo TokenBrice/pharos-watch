@@ -61,9 +61,9 @@ vi.mock("next/image", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidity: useDexLiquidityMock,
+  useDexLiquidityTable: useDexLiquidityMock,
   usePegSummary: usePegSummaryMock,
-  useReportCardsV9: useReportCardsV9Mock,
+  useReportCardsV9Table: useReportCardsV9Mock,
   useStabilityIndex: useStabilityIndexMock,
   useStressSignals: useStressSignalsMock,
 }));

@@ -14,14 +14,16 @@ const {
   useStablecoinsMock,
   useNonUsdShareMock,
   usePegSummaryMock,
-  useDexLiquidityMock,
+  useDexLiquidityTableMock,
   useReportCardsV9Mock,
+  useStablecoinChartsMock,
 } = vi.hoisted(() => ({
   useStablecoinsMock: vi.fn(),
   useNonUsdShareMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
-  useDexLiquidityMock: vi.fn(),
+  useDexLiquidityTableMock: vi.fn(),
   useReportCardsV9Mock: vi.fn(),
+  useStablecoinChartsMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -31,14 +33,16 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 vi.mock("@/hooks/api-hooks", () => ({
   useNonUsdShare: useNonUsdShareMock,
   usePegSummary: usePegSummaryMock,
-  useDexLiquidity: useDexLiquidityMock,
-  useReportCardsV9: useReportCardsV9Mock,
+  useDexLiquidityTable: useDexLiquidityTableMock,
+  useReportCardsV9Table: useReportCardsV9Mock,
+  useStablecoinCharts: useStablecoinChartsMock,
 }));
 
 vi.mock("@/app/alt-pegs/alt-peg-stablecoin-table", () => ({
-  AltPegStablecoinTable: () => (
+  AltPegStablecoinTable: ({ dexLiquidity }: { dexLiquidity?: Record<string, { liquidityScore: number | null }> }) => (
     <div data-testid="alt-peg-stablecoin-table">
       <h2>Drill into each alt-peg cohort</h2>
+      <span data-testid="alt-peg-liquidity-score">{dexLiquidity?.["eurc-circle"]?.liquidityScore ?? "unavailable"}</span>
     </div>
   ),
 }));
@@ -82,6 +86,14 @@ function expectFocusSearch(expected: { view?: string | null; chart?: string | nu
 }
 
 describe("AltPegsClient", () => {
+  it("starts cohort history even while the independent current-market request is loading", () => {
+    useStablecoinsMock.mockReturnValue({ data: undefined, isLoading: true });
+    useStablecoinChartsMock.mockClear();
+    render(<AltPegsClient />);
+    expect(useStablecoinChartsMock).toHaveBeenCalled();
+    expect(screen.queryByTestId("alt-peg-cohort-chart")).toBeNull();
+  });
+
 
   beforeEach(() => {
     window.history.replaceState(null, "", "/alt-pegs/");
@@ -108,7 +120,7 @@ describe("AltPegsClient", () => {
       error: null,
       dataUpdatedAt: 0,
     });
-    useDexLiquidityMock.mockReturnValue({
+    useDexLiquidityTableMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
@@ -148,6 +160,14 @@ describe("AltPegsClient", () => {
     });
   });
 
+  it("preserves compact table liquidity scores, including observed zero and unavailable", () => {
+    useDexLiquidityTableMock.mockReturnValue({ data: { "eurc-circle": { liquidityScore: 0 } } });
+    const view = render(<AltPegsClient />);
+    expect(screen.getByTestId("alt-peg-liquidity-score").textContent).toBe("0");
+    useDexLiquidityTableMock.mockReturnValue({ data: { "eurc-circle": { liquidityScore: null } } });
+    view.rerender(<AltPegsClient />);
+    expect(screen.getByTestId("alt-peg-liquidity-score").textContent).toBe("unavailable");
+  });
   it.each([
     { ageBudgets: 0, error: null, hasData: true, notice: null },
     { ageBudgets: 20, error: null, hasData: true, notice: "Showing an older snapshot" },

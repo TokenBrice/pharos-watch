@@ -5,7 +5,8 @@ import {
 } from "@shared/types/report-cards-v9";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
-import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
 type V9PillarKey = keyof SafetyScoreV9CurrentCard["pillars"];
 type V9Breakdowns = Exclude<SafetyScoreV9CurrentCard["breakdowns"], null>;
@@ -16,6 +17,11 @@ export interface ReportCardsV9ResponseFixturePreset {
   asOfSec: number;
   source: ReportCardsV9Response["source"];
 }
+
+/** Test inputs may be canonical; public fixture outputs always resolve them. */
+export type ReportCardsV9ResponseFixtureOverrides = Omit<Partial<ReportCardsV9Response>, "cards"> & {
+  cards?: SafetyScoreV9CurrentCard[];
+};
 
 /**
  * One default card shape for every V9 consumer. The worker and frontend suites
@@ -166,7 +172,7 @@ export function makeReportCardsV9Pillars(scores: {
   };
 }
 
-export function makeReportCardsV9Card(
+function makeCanonicalReportCardsV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {
   const score = overrides.score === undefined ? DEFAULT_SCORE : overrides.score;
@@ -310,12 +316,19 @@ export function makeReportCardsV9Card(
   };
 }
 
+export function makeReportCardsV9Card(
+  overrides: Partial<SafetyScoreV9CurrentCard> = {},
+): SafetyScoreV9ResolvedCurrentCard {
+  const { witnessTexts: _texts, ...card } = resolveV9PublicWitnessTexts(makeCanonicalReportCardsV9Card(overrides));
+  return card;
+}
+
 /** Cause-proven excluded pillars retain their measured siblings without inventing a grade. */
 export function makeReportCardsV9PartialCard(
   excludedPillar: V9PillarKey = "exit",
   cause: "A" | "B" = "A",
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
-): SafetyScoreV9CurrentCard {
+): SafetyScoreV9ResolvedCurrentCard {
   const pillars = makeReportCardsV9Pillars({ backing: 80, exit: 80, control: 80 });
   pillars[excludedPillar] = { ...pillars[excludedPillar], score: null, aggregationDisposition: "excluded-a-b",
     supportedComponentKeys: [], causeGapRefs: [0], limitedEvidenceCauses: [] };
@@ -333,7 +346,7 @@ export function makeReportCardsV9PipelineGapCard(
   survivingPillar: V9PillarKey | null = "control",
   cause: "A" | "B" = "A",
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
-): SafetyScoreV9CurrentCard {
+): SafetyScoreV9ResolvedCurrentCard {
   const pillars = makeReportCardsV9Pillars({ backing: 80, exit: 80, control: 80 });
   const excludedPillars = (Object.keys(pillars) as V9PillarKey[]).filter((key) => key !== survivingPillar).sort();
   for (let ref = 0; ref < excludedPillars.length; ref++) {
@@ -355,9 +368,12 @@ export function makeReportCardsV9PipelineGapCard(
 export function makeReportCardsV9Response(
   preset: ReportCardsV9ResponseFixturePreset,
   makeCard: () => SafetyScoreV9CurrentCard,
-  overrides: Partial<ReportCardsV9Response> = {},
+  overrides: ReportCardsV9ResponseFixtureOverrides = {},
 ): ReportCardsV9Response {
-  const cards = overrides.cards ?? [makeCard()];
+  const cards = (overrides.cards ?? [makeCard()]).map((card) => {
+    const { witnessTexts: _texts, ...resolved } = resolveV9PublicWitnessTexts(card);
+    return resolved;
+  });
   const safetyScoreIdentity = overrides.safetyScoreIdentity ?? {
     ...preset.safetyScoreIdentity,
   };
@@ -395,10 +411,10 @@ export function makeReportCardsV9Response(
       ...preset.source,
       sourceGenerations: { ...preset.source.sourceGenerations },
     },
-    cards,
     foreignCauseGaps: [],
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
     commonModeGroups: [],
     ...overrides,
+    cards,
   };
 }

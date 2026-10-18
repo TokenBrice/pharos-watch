@@ -167,6 +167,7 @@
     "seo:check": "node scripts/ci/check-seo-static.mjs",
     "analyze:gsc-coverage": "node scripts/maintenance/analyze-gsc-coverage.mjs",
     "analyze:gsc-performance": "node scripts/maintenance/analyze-gsc-performance.mjs",
+    "analyze:web-vitals": "node scripts/maintenance/analyze-web-vitals.mjs",
     "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
     "build:safety-score-map": "tsx scripts/maintenance/build-safety-score-map.ts --edition=daily",
     "build:daily-social": "tsx scripts/maintenance/build-daily-social.ts",

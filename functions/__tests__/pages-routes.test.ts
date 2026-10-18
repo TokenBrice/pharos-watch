@@ -6,6 +6,27 @@ import routes from "../../public/_routes.json";
 const headersFile = readFileSync(resolve(process.cwd(), "public/_headers"), "utf8");
 const redirectsFile = readFileSync(resolve(process.cwd(), "public/_redirects"), "utf8");
 
+// Pages wildcards span slashes, including when followed by a literal suffix.
+// https://developers.cloudflare.com/pages/functions/routing/#functions-invocation-routes
+function invokesFunctions(path: string): boolean {
+  const matches = (rule: string) => {
+    const parts = rule.split("*");
+    if (parts.length === 1) return path === rule;
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    if (!path.startsWith(first) || !path.endsWith(last) || path.length < first.length + last.length) return false;
+    let cursor = first.length;
+    const end = path.length - last.length;
+    for (const middle of parts.slice(1, -1)) {
+      const found = path.indexOf(middle, cursor);
+      if (found < 0 || found + middle.length > end) return false;
+      cursor = found + middle.length;
+    }
+    return true;
+  };
+  return routes.include.some(matches) && !routes.exclude.some(matches);
+}
+
 function activeRedirectLines(): string[] {
   return redirectsFile
     .split(/\r?\n/)
@@ -33,6 +54,56 @@ describe("Pages function routes", () => {
     for (const path of ["/chains/*", "/stablecoin/*", "/stablecoins/*", "/compare/*", "/docs/*", "/methodology/*"]) {
       expect(routes.exclude).not.toContain(path);
     }
+  });
+
+  it("stays within the Pages invocation-rule limits", () => {
+    const rules = [...routes.include, ...routes.exclude];
+    expect(rules.length).toBeLessThanOrEqual(100);
+    expect(rules.every((rule) => rule.startsWith("/") && rule.length <= 100)).toBe(true);
+  });
+
+  it.each([
+    "/index.txt",
+    "/__next._tree.txt",
+    "/__next._head.txt",
+    "/stablecoin/usyc-hashnote/index.txt",
+    "/stablecoin/usyc-hashnote/__next._tree.txt",
+    "/stablecoin/usyc-hashnote/yield/index.txt",
+    "/api/index.txt",
+    "/api/__next._tree.txt",
+    "/api/__next._head.txt",
+    "/critical-css-loader.js",
+    "/media/defi-dad.jpg",
+    "/openapi.json",
+  ])("serves public static asset %s without Functions", (path) => {
+    expect(invokesFunctions(path)).toBe(false);
+  });
+
+  it.each([
+    "/",
+    "/stablecoin/usyc-hashnote/",
+    "/stablecoin/237/",
+    "/stablecoin/usyc-hashnote/yield/",
+    "/api/",
+    "/api/admin/status",
+    "/api/admin/index.txt",
+    "/api/other.txt",
+    "/__nextX_tree.txt",
+    "/admin",
+    "/admin/",
+    "/admin/index.txt",
+    "/admin/__next._tree.txt",
+    "/admin-api/",
+    "/admin-api/index.txt",
+    "/admin-api/__next._tree.txt",
+    "/safety-scores/map.png",
+    "/safety-scores/map.webp",
+    "/safety-scores/map.json",
+    "/social-posts/2026-10-18.png",
+    "/social-posts/2026-10-18.json",
+    "/selector-snapshot/example",
+  ])("retains middleware, redirects or Function-backed handling for %s", (path) => {
+    expect(invokesFunctions(path)).toBe(true);
   });
 
 });

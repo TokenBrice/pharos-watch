@@ -7,6 +7,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { DexLiquidityData } from "@shared/types";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import {
   aggregateThroatSelection,
   buildLiquidityExitRouteModel,
@@ -248,7 +249,7 @@ function ExitRouteInstrumentScene({
                 <line x1={EXIT_ROUTE_SCENE.doorApertureX} y1={geometry.y - 13} x2={EXIT_ROUTE_SCENE.doorApertureX + geometry.apertureWidth} y2={geometry.y - 13} stroke={route.colorHex} strokeWidth="0.8" opacity="0.72" />
                 <circle cx={EXIT_ROUTE_SCENE.doorX} cy={geometry.y} r="13" fill="var(--route-chip-bg)" stroke={route.colorHex} strokeWidth="1.2" />
                 {route.logoPath ? (
-                  <image aria-hidden="true" href={route.logoPath} x={EXIT_ROUTE_SCENE.doorX - 9} y={geometry.y - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
+                  <image aria-hidden="true" href={resolveCompactLogoSrc(route.logoPath, 18)} x={EXIT_ROUTE_SCENE.doorX - 9} y={geometry.y - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
                 ) : (
                   <text x={EXIT_ROUTE_SCENE.doorX} y={geometry.y + 4} textAnchor="middle" fill="var(--route-hero)" fontSize="13" fontWeight="800" aria-hidden="true">+</text>
                 )}
@@ -294,7 +295,7 @@ function ExitRouteInstrumentScene({
                 <line x1={EXIT_ROUTE_SCENE.laneX} y1={geometry.laneBarY + 3} x2={EXIT_ROUTE_SCENE.laneX + geometry.laneWidth} y2={geometry.laneBarY + 3} stroke="var(--route-lane-highlight)" strokeWidth="0.7" opacity="0.5" />
                 <circle cx={EXIT_ROUTE_SCENE.laneLogoX} cy={geometry.logoY} r="12" fill="var(--route-chip-bg)" stroke={route.colorHex} strokeWidth="1.2" />
                 {route.logoPath ? (
-                  <image aria-hidden="true" href={route.logoPath} x={EXIT_ROUTE_SCENE.laneLogoX - 8} y={geometry.logoY - 8} width="16" height="16" preserveAspectRatio="xMidYMid meet" />
+                  <image aria-hidden="true" href={resolveCompactLogoSrc(route.logoPath, 16)} x={EXIT_ROUTE_SCENE.laneLogoX - 8} y={geometry.logoY - 8} width="16" height="16" preserveAspectRatio="xMidYMid meet" />
                 ) : (
                   <text x={EXIT_ROUTE_SCENE.laneLogoX} y={geometry.logoY + 4} textAnchor="middle" fill="var(--route-hero)" fontSize="12" fontWeight="800" aria-hidden="true">+</text>
                 )}

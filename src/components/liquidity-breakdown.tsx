@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { formatCurrency } from "@shared/lib/format";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 export interface BreakdownEntry {
   key: string;
@@ -134,7 +135,7 @@ export function BreakdownLegend({
         const marker = <span className={`inline-block shrink-0 rounded-sm ${markerClassName} ${entry.colorClass}`} />;
         const logo = entry.logoPath ? (
           <Image
-            src={entry.logoPath}
+            src={resolveCompactLogoSrc(entry.logoPath, logoSize)!}
             alt=""
             width={logoSize}
             height={logoSize}

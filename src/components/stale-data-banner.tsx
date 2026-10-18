@@ -1,7 +1,7 @@
 "use client";
 
 import { DataHealthBanner } from "@/components/data-health-banner";
-import { deriveDataHealth, type DataHealthCatchUp } from "@/lib/data-health";
+import { deriveDataHealth, type DataHealthCatchUp, type DataHealthInfo } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import type { ApiMeta } from "@/lib/api";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -26,6 +26,11 @@ export interface StaleQuery {
    * treated as in flight.
    */
   isLoading?: boolean;
+  /** A saved query's first live read, distinct from subsequent polling. */
+  isFetching?: boolean;
+  isFetchedAfterMount?: boolean;
+  /** True only while this cache generation is an unsettled build snapshot. */
+  isSnapshot?: boolean;
   /** Producer catch-up detail, so an aged coverage clock with current totals is not read as a stall. */
   catchUp?: DataHealthCatchUp | null;
   /** Drop this entry when its only finding is a producer catch-up (compact surfaces defer that notice to the owning page). */
@@ -45,8 +50,17 @@ function isFirstFetchInFlight(query: StaleQuery): boolean {
   return query.isLoading ?? query.dataUpdatedAt === 0;
 }
 
-export function StaleDataBanner({ queries }: { queries: readonly StaleQuery[] }) {
+export function StaleDataBanner({
+  queries,
+  persistent = false,
+  onRetry,
+}: {
+  queries: readonly StaleQuery[];
+  persistent?: boolean;
+  onRetry?: () => void;
+}) {
   const hydrated = useHydrated();
+  const refreshingEntries: DataHealthInfo[] = [];
   const health = queries.filter((q) => !isFirstFetchInFlight(q)).flatMap((q) => {
     const preset = q.preset ? DATA_HEALTH_PRESETS[q.preset] : null;
     const label = q.label ?? preset?.label ?? "Data";
@@ -61,8 +75,16 @@ export function StaleDataBanner({ queries }: { queries: readonly StaleQuery[] })
       meta: q.meta ?? null,
       catchUp: q.catchUp,
     }, hydrated ? undefined : q.dataUpdatedAt);
+    if (persistent && q.isSnapshot && q.isFetching && q.isFetchedAfterMount === false
+      && !q.error && info.dataUpdatedAt > 0 && (q.hasData ?? q.dataUpdatedAt > 0)
+      && info.degradationReason !== "source" && !info.catchUp
+      && (!q.meta?.warning || q.meta.warning.startsWith("110 "))
+      && Object.values(q.meta?.dependencies ?? {}).every((dependency) => dependency.status === "fresh")) {
+      refreshingEntries.push(info);
+      return [];
+    }
     return q.hideCatchUp && info.degradationReason === "catch-up" ? [] : [info];
   });
 
-  return <DataHealthBanner entries={health} />;
+  return <DataHealthBanner entries={health} persistent={persistent} refreshingEntries={refreshingEntries} onRetry={queries.some((query) => query.error) ? onRetry : undefined} />;
 }

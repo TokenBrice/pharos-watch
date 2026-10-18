@@ -125,6 +125,21 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     command("webpack-export", "npx", ["--no-install", "next", "build", "--webpack"]);
     command("postbuild", "npm", ["run", "postbuild"]);
     command("pages-release-artifact-gates", "npm", ["run", "check:pages-release"]);
+    const lighthouseFailures: string[] = [];
+    for (const route of ["/", "/stablecoin/usdc-circle/"]) {
+      try {
+        command(`lighthouse ${route}`, "npm", ["run", "lighthouse:static", "--", "--route", route,
+          "--threshold", process.env.PHAROS_LIGHTHOUSE_THRESHOLD ?? "70", "--output-dir", ".tmp/lighthouse"]);
+      } catch (error) {
+        lighthouseFailures.push(String(error));
+      }
+    }
+    report(`- Lighthouse (${process.env.PHAROS_LIGHTHOUSE_ENFORCE === "1" ? "blocking" : "advisory"}): ${
+      lighthouseFailures.length ? lighthouseFailures.join("; ") : "both routes met the score threshold"
+    }. Static-export scores do not measure production CSP/proxy or live-data readiness.`);
+    if (process.env.PHAROS_LIGHTHOUSE_ENFORCE === "1" && lighthouseFailures.length) {
+      throw new Error(lighthouseFailures.join("; "));
+    }
     return result;
   } finally {
     // A standalone local rehearsal must not leave release snapshots or their

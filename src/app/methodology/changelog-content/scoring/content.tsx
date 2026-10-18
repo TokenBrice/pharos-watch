@@ -1,5 +1,6 @@
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
-import { scoringAnchorId, StructuredChangelogDetail, VersionCard } from "./content-shared";
+import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
+import { scoringAnchorId, StructuredChangelogDetail, VersionCard } from "@/components/methodology-changelog-detail";
 import { ScoringChangelogSummaryTables } from "./content-summary";
 
 export { scoringAnchorId };
@@ -9,15 +10,17 @@ export { scoringAnchorId };
  * version only requires the entry in
  * `shared/data/methodology-changelogs/safety-score/` — no JSX block here.
  */
-export function ScoringChangelogContent() {
+export function ScoringChangelogContent({
+  entries = SAFETY_SCORE_METHODOLOGY_CHANGELOG,
+}: { entries?: readonly MethodologyChangelogEntry[] }) {
   return (
     <>
-      {SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => (
+      {entries.map((entry) => (
         <VersionCard key={entry.version} entry={entry}>
           <StructuredChangelogDetail entry={entry} />
         </VersionCard>
       ))}
-      <ScoringChangelogSummaryTables />
+      {entries.some((entry) => entry.version.startsWith("8.")) && <ScoringChangelogSummaryTables />}
     </>
   );
 }

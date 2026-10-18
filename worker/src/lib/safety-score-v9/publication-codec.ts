@@ -66,6 +66,11 @@ const StorageEnvelopeSchema = z
   })
   .strict();
 
+export const SafetyScoreV9StorageMetadataSchema = StorageEnvelopeSchema.omit({ payload: true }).extend({
+  uncompressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES),
+  compressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES),
+});
+
 type CacheIdentity = z.infer<typeof CacheIdentitySchema>;
 
 function publicationIdentity(

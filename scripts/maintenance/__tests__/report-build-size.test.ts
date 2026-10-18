@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { PUBLIC_ROUTE_PATHS } from "../../../src/lib/public-route-inventory";
 
 const SCRIPT = resolve(process.cwd(), "scripts/maintenance/report-build-size.mjs");
 const ZOD_CHUNK = "out/_next/static/chunks/framework-zod.js";
@@ -13,6 +14,11 @@ const DETAIL_ROUTE = "out/stablecoin/usdc-circle";
 const SEARCH_WIDTH_UTILITY = ".xl\\:w-\\[15rem\\]{width:15rem}";
 const SHELL_HTML = '<!doctype html><html><body><script src="/_next/static/chunks/framework-zod.js"></script></body></html>';
 const DETAIL_HTML = '<!doctype html><html><body><script src="/_next/static/chunks/page-abc.js"></script></body></html>';
+const PROSE_ROUTES = PUBLIC_ROUTE_PATHS
+  .filter((href) => /^\/(?:privacy|about|methodology|stablecoins)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
+  .map((href) => href.slice(1, -1));
+const HTML_FILES = 2 + PROSE_ROUTES.length;
+const OUT_FILES = 8 + PROSE_ROUTES.length;
 
 // Fixed payload sizes so the reported byte totals are derived, not guessed.
 const ZOD_CHUNK_BYTES = 500;
@@ -31,8 +37,8 @@ const CEMETERY_FLIGHT_BYTES = 400;
 const tempDirs: string[] = [];
 
 /**
- * Minimal static export: two HTML documents (only one loads the classic Zod
- * chunk), a CSS bundle, a media asset, RSC helpers, and one representative
+ * Minimal static export: shell/detail HTML plus required prose documents (only
+ * the shell loads classic Zod), a CSS bundle, a media asset, RSC helpers, and one
  * stablecoin detail route with its `__PAGE__` payload.
  */
 function syntheticBuild({
@@ -53,6 +59,7 @@ function syntheticBuild({
     [ZOD_CHUNK]: "globalThis._zod={};/* _zod.traits */".padEnd(ZOD_CHUNK_BYTES, "x"),
     [`${DETAIL_ROUTE}/index.html`]: DETAIL_HTML,
     [`${DETAIL_ROUTE}/usdc-circle.__PAGE__.txt`]: "detail-payload".padEnd(DETAIL_TXT_BYTES, "0"),
+    ...Object.fromEntries(PROSE_ROUTES.map((route) => [`out/${route}/index.html`, ""])),
     ...extraFiles,
   };
 
@@ -87,13 +94,13 @@ describe("report-build-size", () => {
     const result = runReport(syntheticBuild());
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("out total files: 8");
-    // 1343 raw bytes across the eight emitted files, reported in scaled units.
+    expect(result.stdout).toContain(`out total files: ${OUT_FILES}`);
+    // Required empty prose documents add file count without changing raw bytes.
     expect(result.stdout).toContain("out total raw size: 1.31 KiB");
     expect(result.stdout).toContain(`JS chunks: ${JS_BYTES} B across 2 files`);
     expect(result.stdout).toContain(`CSS chunks: ${CSS_BYTES} B across 1 files`);
     expect(result.stdout).toContain(`static media: ${MEDIA_BYTES} B across 1 files`);
-    expect(result.stdout).toContain(`HTML: ${HTML_BYTES} B across 2 files`);
+    expect(result.stdout).toContain(`HTML: ${HTML_BYTES} B across ${HTML_FILES} files`);
     expect(result.stdout).toContain(`TXT/RSC helpers: ${TXT_BYTES} B across 2 files`);
     expect(result.stdout).toContain("Font manifest sample\n  /layout: static/media/inter.woff2");
   });
@@ -103,8 +110,8 @@ describe("report-build-size", () => {
     const result = runReport(syntheticBuild(), { budgets: { PHAROS_SIZE_BUDGET_TOTAL_OUT_FILES: "3" } });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain("FAIL total out files: 8 / 3");
-    expect(result.stderr).toContain("- total out files is 8, budget is 3");
+    expect(result.stdout).toContain(`FAIL total out files: ${OUT_FILES} / 3`);
+    expect(result.stderr).toContain(`- total out files is ${OUT_FILES}, budget is 3`);
   });
 
   it("fails the deploy gate when the compiled CSS lost the desktop search width utility", () => {
@@ -132,7 +139,7 @@ describe("report-build-size", () => {
       "File headroom and classic-Zod reach are advisory diagnostics.",
     );
     expect(result.stepSummary).toContain(
-      "| classic Zod HTML references | 50.0% | 75.0% | -25.0% (-33.3%) | advisory |  |",
+      `| classic Zod HTML references | ${(100 / HTML_FILES).toFixed(1)}% | 75.0% |`,
     );
   });
 
@@ -160,6 +167,62 @@ describe("report-build-size", () => {
       `- cemetery RSC flight exceeds its byte ceiling (${CEMETERY_FLIGHT_BYTES} B / 100 B); `
       + "responsible: out/cemetery/index.txt (RSC flight)",
     );
+  });
+
+  it.each(PROSE_ROUTES)(
+    "blocks homepage and chart scripts leaking into /%s/",
+    (route) => {
+      for (const src of ["/_next/static/chunks/app/page-abcd.js", "/_next/static/chunks/recharts-vendor-abcd.js"]) {
+        const build = syntheticBuild({ extraFiles: { [`out/${route}/index.html`]: `<script src="${src}"></script>` } });
+        const result = runReport(build);
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(`/${route}/ must not reference homepage/chart script: ${src}`);
+      }
+    },
+  );
+
+  it("does not confuse an ordinary prose page chunk with the root homepage chunk", () => {
+    const build = syntheticBuild({ extraFiles: {
+      "out/privacy/index.html": '<script src="/_next/static/chunks/app/privacy/page-abcd.js"></script>',
+    } });
+    expect(runReport(build).status).toBe(0);
+  });
+  it.each(["api", "api/reference", ...PROSE_ROUTES.filter((route) => route.startsWith("docs/"))])(
+    "fails closed when required /%s/ HTML is missing",
+    (route) => {
+      const build = syntheticBuild();
+      rmSync(join(build, "out", route, "index.html"));
+      const result = runReport(build);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(`/${route}/ expected prose HTML is missing: out/${route}/index.html`);
+    },
+  );
+
+  it("does not apply prose chart exclusions to deliberate chart-bearing routes", () => {
+    const build = syntheticBuild({ extraFiles: {
+      "out/stability-index/index.html": '<script src="/_next/static/chunks/recharts-vendor-abcd.js"></script>',
+    } });
+    expect(runReport(build).status).toBe(0);
+  });
+
+  it("enforces independent homepage HTML and referenced-script gzip ceilings with env overrides", () => {
+    const build = syntheticBuild();
+    const html = runReport(build, { budgets: { PHAROS_SIZE_BUDGET_HOME_HTML_BYTES: "10" } });
+    expect(html.status).toBe(1);
+    expect(html.stderr).toContain("home html exceeds its byte ceiling");
+    expect(html.stepSummary).toContain("| home html |");
+    const js = runReport(build, { budgets: { PHAROS_SIZE_BUDGET_HOME_EAGER_JS_GZIP_BYTES: "1" } });
+    expect(js.status).toBe(1);
+    expect(js.stderr).toContain("home eager JS gzip exceeds its byte ceiling");
+    expect(js.stepSummary).toContain("| home eager JS gzip |");
+    expect(runReport(build).status).toBe(0);
+  });
+
+  it("counts a duplicate homepage script reference once", () => {
+    const build = syntheticBuild({ extraFiles: { "out/index.html": SHELL_HTML + SHELL_HTML } });
+    const result = runReport(build);
+    expect(result.stdout).toContain("(1 scripts, gzip)");
+    expect(result.status).toBe(0);
   });
 
   it("blocks a --check run with no build and stays advisory without it", () => {

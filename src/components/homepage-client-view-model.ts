@@ -1,9 +1,9 @@
 import type {
   FilterTag,
   PegSummaryResponse,
-  ReportCardsV9CurrentResponse,
   StablecoinListResponse,
 } from "@shared/types";
+import type { ReportCardsV9TableResponse } from "@shared/types/report-cards-v9-projections";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
@@ -39,7 +39,7 @@ export function buildHomepageCriticalViewModel(args: {
 }
 
 export function buildHomepageOptionalViewModel(args: {
-  reportCardsData?: ReportCardsV9CurrentResponse;
+  reportCardsData?: ReportCardsV9TableResponse;
 }) {
   const projected = args.reportCardsData
     ? buildV9SafetyTableMap(args.reportCardsData, args.reportCardsData.safetyScoreIdentity)

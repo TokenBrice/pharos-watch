@@ -166,6 +166,8 @@ Initial load normalizes the `coins` URL param to the accepted canonical ID list.
 
 Compare composes stablecoins, peg summary, Bluechip, DEX, report cards, redemption, yield, stress and aggregate mint/burn queries plus per-coin supply/flow histories. `useCompareDataModel` owns query/window construction; successful aggregate evidence is required to claim tracking coverage.
 
+An empty comparison admits only the stablecoin list used by its selector. Metric feeds enable as soon as at least one accepted comparison ID exists, including URL-initialized selections. Empty-state retries do not bypass those gates; pending evidence remains unavailable, not an empty or safe verdict.
+
 It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
 
 The safety radar baseline counts only rated cards with all three plotted pillars. Peg/mechanism cohorts below three usable members fall back to all usable rated cards; the displayed count and median use this same population. NR, pipeline-gap, and incomplete-pillar cards contribute neither counts nor scores. Fewer than three usable cards suppresses the median.

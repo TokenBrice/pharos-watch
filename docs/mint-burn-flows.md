@@ -429,6 +429,8 @@ Parsed rows are not inserted rows. NULL backlog counts with `nullPriceBacklogAva
 The public [Flows page](https://pharos.watch/flows/) separates raw net direction from baseline-relative pressure and literal mint/burn balance. The receipt uses observed configured-chain 24h totals and 7d hourly buckets, not whole-market issuance. Leaders rank only displayable USD-valued nets/events. Missing chart buckets remain gaps in plots and accessible tables and do not enter rolling averages. Headline direction plus gauge pressure does not imply cross-asset breadth.
 The page then links to the Timeline for all mint/burn events.
 
+The aggregate chart initially selects 7d, sharing the authoritative 168h query with the overview receipt; 24h totals remain an independent query. The 720h variant is admitted only when 30d is selected. No shorter-window totals or valuation-completeness claims are synthesized from a longer response; selecting another window retains the existing canonical keys and cadence.
+
 ### Hooks
 
 `src/hooks/use-mint-burn-flows.ts` shares aggregate/per-coin query options and event-feed hooks. Both response modes are schema-validated; stale-time configuration follows the lane cadence rather than duplicating freshness rules in components.

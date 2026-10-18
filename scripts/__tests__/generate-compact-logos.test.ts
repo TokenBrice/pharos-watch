@@ -70,11 +70,11 @@ describe("generateCompactLogos", () => {
     await writeNoiseLogo(paths.logosDir, "edge.png", 64);
     await writeNoiseLogo(paths.logosDir, "wide.png", 65, 64);
     await writeNoiseLogo(paths.logosDir, "tall.png", 64, 65);
-    expect((await generateCompactLogos(paths)).generated).toBe(2);
-    expect(readdirSync(paths.compactDir).sort()).toEqual(["tall.webp", "wide.webp"]);
+    expect((await generateCompactLogos(paths)).generated).toBe(4);
+    expect(readdirSync(paths.compactDir).sort()).toEqual(["tall-100.webp", "tall.webp", "wide-100.webp", "wide.webp"]);
   });
 
-  it("generates 32x32 variants only for logos past both gates and writes the sorted map", async () => {
+  it("generates 32px and 100px variants only for logos past both gates and writes the sorted map", async () => {
     const { paths } = makePaths();
     await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
     await writeNoiseLogo(paths.logosDir, "beta.jpg", 80);
@@ -85,9 +85,9 @@ describe("generateCompactLogos", () => {
 
     expect(result.ok).toBe(true);
     expect(result.problems).toEqual([]);
-    expect(result.generated).toBe(2);
+    expect(result.generated).toBe(4);
     expect(result.pruned).toEqual([]);
-    expect(readdirSync(paths.compactDir).sort()).toEqual(["alpha.webp", "beta.webp"]);
+    expect(readdirSync(paths.compactDir).sort()).toEqual(["alpha-100.webp", "alpha.webp", "beta-100.webp", "beta.webp"]);
 
     const compactMeta = await sharp(join(paths.compactDir, "alpha.webp")).metadata();
     expect(compactMeta.format).toBe("webp");
@@ -95,9 +95,33 @@ describe("generateCompactLogos", () => {
     expect(compactMeta.height).toBe(32);
 
     expect(JSON.parse(readFileSync(paths.mapPath, "utf8"))).toEqual({
-      "/logos/alpha.png": "/logos/compact/alpha.webp",
-      "/logos/beta.jpg": "/logos/compact/beta.webp",
+      "/logos/alpha.png": { "32": "/logos/compact/alpha.webp", "100": "/logos/compact/alpha-100.webp" },
+      "/logos/beta.jpg": { "32": "/logos/compact/beta.webp", "100": "/logos/compact/beta-100.webp" },
     });
+    expect((await sharp(join(paths.compactDir, "alpha-100.webp")).metadata()).width).toBe(100);
+  });
+
+  it("converts chain rasters below the stablecoin gates, preserving vector originals", async () => {
+    const { paths } = makePaths();
+    paths.chainsDir = join(paths.logosDir, "../chains");
+    paths.compactChainsDir = join(paths.chainsDir, "compact");
+    mkdirSync(paths.chainsDir);
+    await writeFlatLogo(paths.chainsDir, "small.png", 28);
+    await writeNoiseLogo(paths.chainsDir, "large.png", 200);
+    writeFileSync(join(paths.chainsDir, "vector.svg"), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    const result = await generateCompactLogos(paths);
+    expect(result.ok).toBe(true);
+    expect(result.generated).toBe(4);
+    expect(JSON.parse(readFileSync(paths.mapPath, "utf8"))).toEqual({
+      "/chains/large.png": { "56": "/chains/compact/large.webp", "100": "/chains/compact/large-100.webp" },
+      "/chains/small.png": { "56": "/chains/compact/small.webp", "100": "/chains/compact/small-100.webp" },
+    });
+    const meta = await sharp(join(paths.compactChainsDir, "large.webp")).metadata();
+    expect([meta.width, meta.height]).toEqual([56, 56]);
+    expect((await checkCompactLogos(paths)).ok).toBe(true);
+    writeFileSync(join(paths.compactChainsDir, "orphan.webp"), "orphan");
+    expect((await checkCompactLogos(paths)).problems.map((problem) => problem.kind)).toEqual(["orphan-output"]);
+    expect((await generateCompactLogos(paths)).pruned).toContain(join(paths.compactChainsDir, "orphan.webp"));
   });
 
   it("rejects basename collisions before writing any output", async () => {
@@ -108,10 +132,10 @@ describe("generateCompactLogos", () => {
     const result = await generateCompactLogos(paths);
 
     expect(result.ok).toBe(false);
-    expect(result.problems.map((problem) => problem.kind)).toEqual(["collision"]);
+    expect(result.problems.map((problem) => problem.kind)).toEqual(["collision", "collision"]);
     expect(result.problems[0].message).toContain("alpha.png");
     expect(result.problems[0].message).toContain("alpha.jpg");
-    expect(result.problems[0].message).toContain("alpha.webp");
+    expect(result.problems.map((problem) => problem.message).join("\n")).toContain("alpha.webp");
     expect(existsSync(paths.compactDir)).toBe(false);
     expect(existsSync(paths.mapPath)).toBe(false);
   });
@@ -123,9 +147,9 @@ describe("checkCompactLogos", () => {
     await writeNoiseLogo(paths.logosDir, "alpha.png", 100, 100, 123);
     const files = [join(paths.logosDir, "alpha.png"), join(paths.compactDir, "alpha.webp"), paths.mapPath];
     const before = files.map((file) => readFileSync(file));
-    expect((await checkCompactLogos(paths)).problems.map((problem) => problem.kind)).toEqual(["stale-output"]);
+    expect((await checkCompactLogos(paths)).problems.map((problem) => problem.kind)).toEqual(["stale-output", "stale-output"]);
     expect(files.map((file) => readFileSync(file))).toEqual(before);
-    expect(readdirSync(paths.compactDir)).toEqual(["alpha.webp"]);
+    expect(readdirSync(paths.compactDir).sort()).toEqual(["alpha-100.webp", "alpha.webp"]);
   });
 
   it("fails on a stale or missing variant map", async () => {
@@ -185,6 +209,6 @@ describe("checkCompactLogos", () => {
 
     const result = await checkCompactLogos(paths);
     expect(result.ok).toBe(false);
-    expect(result.problems.map((problem) => problem.kind)).toEqual(["collision"]);
+    expect(result.problems.map((problem) => problem.kind)).toEqual(["collision", "collision"]);
   });
 });

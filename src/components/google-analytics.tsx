@@ -56,7 +56,7 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
       document.head.appendChild(script);
-    }, 2_000);
+    }, { timeoutMs: 2_000, fallbackDelayMs: 2_000 });
   }, [analyticsAllowed, measurementId]);
 
   useEffect(() => {

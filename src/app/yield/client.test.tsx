@@ -157,6 +157,7 @@ describe("YieldClient", () => {
     const ready = useYieldRankingsSummaryMock();
     useYieldRankingsSummaryMock.mockReturnValue({ ...ready, data: undefined, isLoading: true });
     const { rerender } = render(<YieldClient />);
+    expect(useYieldAdapterManifestMock).toHaveBeenCalledTimes(1);
     expect(replaceParamsMock).not.toHaveBeenCalled();
 
     useYieldRankingsSummaryMock.mockReturnValue(ready);

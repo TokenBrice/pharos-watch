@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
+import sharp from "sharp";
 import {
   planSafetyMapPublication,
   publishSafetyMapPublication,
@@ -63,6 +64,7 @@ function writeRenderedState(directory: string, overrides: Partial<SafetyMapPubli
   const altPath = join(directory, "latest.alt.json");
   const manifestPath = join(directory, "kv-manifest.json");
   writeFileSync(pngPath, "png bytes");
+  writeFileSync(join(directory, "latest.webp"), "webp bytes");
   writeFileSync(altPath, "alt bytes");
   writeFileSync(manifestPath, "manifest bytes");
   const state: SafetyMapPublishState = {
@@ -83,7 +85,7 @@ function writeRenderedState(directory: string, overrides: Partial<SafetyMapPubli
       updatedAt: "2026-07-27T07:59:00.000Z",
       publicationHealth: { status: "held" },
       counts: { graded: 42, notRated: 3 },
-      bytes: { png: 9, alt: 9 },
+      bytes: { png: 9, alt: 9, webp: 10 },
     },
     ...overrides,
   };
@@ -105,6 +107,7 @@ describe("Safety Map publication CLI", () => {
       "safety-map:alt:latest",
       "safety-map:2026-07-27.png",
       "safety-map:latest.png",
+      "safety-map:latest.webp",
       "safety-map:latest.json",
     ]);
   });
@@ -155,9 +158,11 @@ describe("Safety Map publication CLI", () => {
 
     let renderCommand = "";
     const rendered = await renderSafetyMapPublication({
-      commandRunner: (command) => {
+      commandRunner: async (command) => {
         renderCommand = command;
-        writeFileSync(join(directory, "latest.png"), "png bytes");
+        await sharp({ create: { width: 3200, height: 1800, channels: 3, background: "#05070d" } })
+          .png()
+          .toFile(join(directory, "latest.png"));
         writeFileSync(join(directory, "latest.alt.json"), "alt bytes");
         writeFileSync(join(directory, "latest.manifest.json"), JSON.stringify({
           date: "2026-07-27",
@@ -177,6 +182,9 @@ describe("Safety Map publication CLI", () => {
     });
 
     expect(rendered.manifest?.publicationStatus).toBe("held");
+    const teaser = await sharp(join(directory, "latest.webp")).metadata();
+    expect([teaser.width, teaser.height, teaser.format]).toEqual([800, 450, "webp"]);
+    expect(rendered.manifest?.bytes.webp).toBeLessThan(300_000);
     expect(renderCommand).toBe(`npm run build:safety-score-map -- --out '${join(directory, "latest.png")}'`);
   });
 

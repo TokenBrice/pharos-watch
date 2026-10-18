@@ -14,6 +14,10 @@ This route intentionally has no signature hero/frost One Beam: it is a long-form
 
 Changelog routes use `src/app/methodology/[slug]/page.tsx` and the shared changelog shell; params/sitemap derive from registered `publicPath`, not per-lane pages. Register only lanes with standalone context. Retired Mint Authority has history at `/methodology/#mint-authority-score`, not a live standalone route. Version bodies belong in structured changelog data; extend `StructuredChangelogDetail` only for new schema block kinds, not prose releases. Missing commit provenance is `commits: []`, never fabricated hashes or unreleased placeholders.
 
+History landing pages render the latest two complete releases and compact summaries for older versions. Every historical version fragment, plus table fragments in structured bodies, remains a static link to its full evidence at `/methodology/<slug>/archive/v<major>/`. `shared/lib/methodology-versions/archives.ts` derives these major-version shards from the same registry, bounding route growth rather than creating a page per release. Archive pages have their own canonical URL and generated Markdown twin; public inventory, sitemap and metadata alternates enroll the same archive set. Safety's historical summary tables remain on the overview and V8 archive.
+
+Known version-specific `/methodology/pdf/*.pdf` aliases redirect directly to the matching archive and generated version fragment; unknown PDF paths retain the generic `/methodology/` fallback. Redirect tests bind every published alias to a registered release and its rendered archive anchor.
+
 ## Section → Source Mapping
 
 | Domain | Owning contract | Runtime entry |

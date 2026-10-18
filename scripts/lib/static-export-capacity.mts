@@ -1,5 +1,17 @@
 const ROUTE_FAMILY_MATCHERS = [
   {
+    family: "methodology-archive",
+    match: (path: string) => /^methodology\/([^/]+\/archive\/[^/]+)\//.exec(path),
+  },
+  {
+    family: "changelog-archive",
+    match: (path: string) => /^changelog\/archive\/([^/]+)\//.exec(path),
+  },
+  {
+    family: "api-reference",
+    match: (path: string) => /^api\/(reference)\//.exec(path),
+  },
+  {
     family: "stablecoin-yield",
     match: (path: string) => /^stablecoin\/([^/]+)\/yield\//.exec(path),
   },

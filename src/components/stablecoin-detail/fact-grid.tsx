@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -140,9 +140,9 @@ export function FactGrid({
               <FactValue item={item} />
             </a>
           ) : (
-            <Link key={item.key} href={item.href} title={item.title} className={linkClass}>
+            <IntentLink key={item.key} href={item.href} title={item.title} className={linkClass}>
               <FactValue item={item} />
-            </Link>
+            </IntentLink>
           );
         })}
       </div>

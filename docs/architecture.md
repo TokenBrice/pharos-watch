@@ -53,22 +53,26 @@ Reserve freshness and reviewed suspension admission remain runtime-neutral (`sha
 
 ## Frontend Runtime And SEO Surface
 
-The frontend is a static export. `src/components/route-chrome.tsx` owns chrome and skip-link/workspace boundaries; `src/lib/nav-config.ts` owns navigation, including `QUICK_NAV_ITEMS`. Route docs and source components own interaction details, not a second UI inventory here.
+Static export: `src/components/route-chrome.tsx` owns chrome, skip-link/workspace boundaries; `src/lib/nav-config.ts` owns navigation (`QUICK_NAV_ITEMS`). Route docs own interactions.
 
-- `src/lib/public-route-inventory.ts` owns indexable membership; `src/app/sitemap.ts` must emit the same path set. Derived families flow from their registries into both. `npm run seo:check` checks coverage, orphan routes and link depth.
-- `public/_redirects` owns aliases, which are not sitemap entries. Keep all static rules before splat/placeholder rules: Cloudflare counts every rule after the first dynamic rule toward its 100-rule cap and silently drops excess rules. `functions/stablecoin/[[path]].ts` handles legacy numeric stablecoin IDs.
-- `functions/_middleware.ts` negotiates generated Markdown on the supported document routes. `scripts/maintenance/generate-markdown-exports.ts` writes exported `index.md` assets. Responses require `Vary: Accept` **and CDN no-store** because Cloudflare's default cache does not key on arbitrary `Vary: Accept`. `/llms.txt` is an inference aid, not a robots/sitemap replacement.
+Stable providers outlive navigation; optional chrome never gates route content. [Shell loading and prefetch](./homepage.md#shared-shell-loading) owns lazy-island, PSI and footer boundaries.
+
+- `src/lib/public-route-inventory.ts` and `src/app/sitemap.ts` share indexable paths, including registry-derived families. `npm run seo:check` checks coverage, orphans and depth.
+- History and API documents retain citations/fragments through [methodology archives](./methodology-page.md), [changelog archives](./process/blog-publishing.md#changelog) and [separate API documents](./api-page.md).
+- `public/_redirects` owns non-sitemap aliases. Static rules precede dynamic rules: Cloudflare silently drops rules beyond its 100 post-dynamic-rule cap. `functions/stablecoin/[[path]].ts` redirects legacy numeric IDs.
+- `functions/_middleware.ts` negotiates Markdown; `scripts/maintenance/generate-markdown-exports.ts` emits `index.md`. Require `Vary: Accept` **and CDN no-store**: Cloudflare does not cache-key arbitrary `Vary`. `/llms.txt` replaces neither robots nor sitemap.
 - `public/_routes.json` uses one broad `/*` include and static-asset excludes; overlapping include splats are invalid. `public/_headers` owns static cache policy; route exceptions detach the broad cache rule with `! Cache-Control` to avoid comma-joining. Nonce injection and CSP ownership: [CSP posture](./security-governance.md#csp-posture).
+- [Static invocation exclusions](./process/worker-infrastructure-appendix.md#static-asset-invocation) keep public assets direct and privileged/function-backed routes gated.
 - Client navigation state does not infer a preceding route from `document.referrer`. Display projections may bound examples but retain authoritative totals and disclose omissions; [ADR-34](#adr-34) applies to search, detail and summary surfaces.
 
 ### Runtime host and env rules
 
-- `src/lib/api-url.ts` owns runtime API-origin selection; `src/lib/api.ts` layers transport/freshness on those helpers. Explicit `NEXT_PUBLIC_API_BASE` wins and disables the browser site-data lane.
-- Otherwise `buildRequestUrl()` sends allowed public reads to same-origin `/_site-data/*` on admitted UI hosts. Build-time `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` extends that choice to any hostname; `.github/workflows/pages-release.yml` sets it for production. It does not alter intentional `buildApiUrl()` public-API calls or same-origin `/api/admin/*`. `buildApiUrl()` uses the public origin on canonical/Pages hosts and relative paths locally/without a browser host.
-- Browser proxies do not expose build-only detail inputs. `site-api.pharos.watch` is an internal authenticated Worker host, not a browser surface; [Site-Data Auth](process/worker-infrastructure-appendix.md#site-data-auth) owns admission. The loopback-only `scripts/maintenance/dev-api-proxy.ts` applies shared path/method admission before credentials.
+- `src/lib/api-url.ts` owns origin selection; `src/lib/api.ts` adds transport/freshness. Explicit `NEXT_PUBLIC_API_BASE` wins and disables site-data.
+- `buildRequestUrl()` maps admitted UI-host public reads to `/_site-data/*`; release-set `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` extends this to any host. Intentional `buildApiUrl()` calls and `/api/admin/*` are unchanged. `buildApiUrl()` uses public origin on canonical/Pages hosts, relative paths locally/server-side.
+- Build-only detail inputs are never browser-proxied. Internal `site-api.pharos.watch` and credential admission follow [Site-Data Auth](process/worker-infrastructure-appendix.md#site-data-auth); the loopback dev proxy applies shared path/method admission before credentials.
 - `src/hooks/use-url-filters.ts` supplies query-free static/first-hydration state. Consumers wait for `isReady` before normalization/initialization; history writes preserve the hash and notify subscribers.
 - `src/lib/request.ts` owns callback-scoped timeout/cancellation through success **and error body consumption**. Explicit signal options beat `RequestInit.signal`; the first abort fixes timeout/cancellation identity. `RequestSequence` rejects superseded completions. `src/lib/data-health.ts` ages served generations under effective API budgets; warnings/server verdicts impose floors, never replace the clock. See [frontend freshness](./data-flow-map.md#freshness-contract-frontend).
-- `NEXT_PUBLIC_GA_ID` gates GA bootstrap. `isAnalyticsAllowed()` in `src/lib/analytics.ts` allows Pharos-authored telemetry only on public apex routes, excluding operator paths, Mini App, ops and Pages aliases/previews, with the explicit loopback smoke exception using a test ID. Unset ID leaves the site functional. Event payloads contain bounded descriptors/query length, never raw search text or URL query strings; account-level automatic measurement is separate. Owner: [Privacy Page](./privacy-page.md).
+- `NEXT_PUBLIC_GA_ID` gates bootstrap; unset leaves the site functional. `isAnalyticsAllowed()` (`src/lib/analytics.ts`) admits Pharos telemetry only on public apex routes, excluding operator/Mini App/ops/Pages aliases/previews, except test-ID loopback smoke. Payloads contain bounded descriptors/query length, never search text/query strings; account automatic measurement is separate. [Privacy](./privacy-page.md) owns policy.
 
 ### Metadata and crawl ownership
 
@@ -88,11 +92,11 @@ These same-origin Pages surfaces are **not** Worker API routes. Bindings/admissi
 
 | Endpoint | Pages owner / contract |
 | --- | --- |
-| `GET /_site-data/*` | `functions/_site-data/[[path]].ts`; admitted website reads, signed internal hop and site-data attribution. |
+| `GET /_site-data/*` | `functions/_site-data/[[path]].ts`; admitted website reads, signed internal hop via optional `SITE_API` service binding (URL fetch when absent), and site-data attribution. |
 | `POST /selector-snapshot`, `GET /selector-snapshot/:sid` | `functions/selector-snapshot/[[path]].ts`; verified KV snapshots, [sharing contract](./screener-page.md#snapshot-sharing). |
 | `GET /stablecoin/:legacy-id` | `functions/stablecoin/[[path]].ts`; canonical-ID redirects. |
 | `GET /admin/*`, `GET /admin-api/*`, `/api/admin/*` | Asset host gates in `functions/admin/[[path]].ts` / `functions/admin-api/[[path]].ts`; proxy in `functions/api/admin/[[path]].ts`. [Operator Origin Access](./operator-origin-access.md) owns Access/service-token requirements. |
-| `GET /safety-scores/map.json`, `GET /safety-scores/map.png` | `functions/safety-scores/map.json.ts` / `map.png.ts`; [Safety Score Map serving](./safety-score-map.md#serving). |
+| `GET /safety-scores/map.json`, `GET /safety-scores/map.png`, `GET /safety-scores/map.webp` | `functions/safety-scores/map.json.ts` / `map.png.ts` / `map.webp.ts`; [Safety Score Map serving](./safety-score-map.md#serving). |
 | `GET /social-posts/:date.png`, `GET /social-posts/:date.json` | `functions/social-posts/[[path]].ts`; immutable graphic/manifest, [Daily Social Posts](./daily-social.md). |
 | `POST /pharoswatchbot-adoption` | `functions/pharoswatchbot-adoption.ts`; same-origin telemetry forwarded to internal Worker `/api/telegram-adoption`. |
 | Document middleware | `functions/_middleware.ts`; Markdown negotiation and CSP before route functions; host gates remain in per-route functions and `functions/lib/ops-asset-host-gate.ts`. |

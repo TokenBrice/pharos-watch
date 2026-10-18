@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { HomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import type { ApiMeta } from "@/lib/api";
 import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE_STRONG, USDT_GREEN, USDC_BLUE } from "@/lib/chart-colors";
 import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
 import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
-import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useHomepageSnapshot } from "@/hooks/api-hooks";
 import {
-  buildLiveHomepageHeroSnapshot,
   describeHomepageSupplyCoverage,
   isHomepageSupplyComplete,
 } from "@shared/lib/homepage-hero-snapshot";
@@ -18,6 +17,8 @@ import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { HomeMarketStateLine } from "@/components/home-market-state-line";
+import { trackFreshDataReady } from "@/lib/analytics";
+import { describeRetainedHomepageLane, useHomepageEvidence } from "@/lib/homepage-evidence";
 
 // OTHERS cohort dot — violet pulled from the shared chart palette.
 const OTHERS_PURPLE = CHART_PALETTE[1];
@@ -29,18 +30,7 @@ export function HomeAltHero({
   snapshot: HomepageHeroSnapshot;
   fallbackSelectedAtMs: number;
 }): React.JSX.Element {
-  const stablecoinsQuery = useStablecoins();
-  // Receipt time is not a producer observation; keep unknown generations
-  // available with the shared unavailable-freshness notices.
-  const meta: ApiMeta = stablecoinsQuery.meta?.updatedAt === undefined
-    ? { updatedAt: null, ageSeconds: null, status: "unknown", reason: "missing-generation" }
-    : stablecoinsQuery.meta;
-  const liveSnapshot = useMemo(
-    () => stablecoinsQuery.data
-      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, meta.updatedAt ?? undefined)
-      : null,
-    [stablecoinsQuery.data, meta.updatedAt],
-  );
+  const stablecoinsQuery = useHomepageSnapshot();
   // Hydration-stable first render: the build-time clock keeps server and
   // client output identical, then a deferred tick re-evaluates fallback
   // expiry with the viewer's clock (setState inside a timer callback, never
@@ -54,16 +44,31 @@ export function HomeAltHero({
       clearInterval(interval);
     };
   }, []);
+  const evidence = useHomepageEvidence(stablecoinsQuery.data, nowMs);
+  const browserRetained = evidence.retainedLanes.includes("market");
+  // Producer clocks remain lane-specific, including restored browser evidence.
+  const marketMeta = evidence.data?.market.meta;
+  const meta: ApiMeta = marketMeta?.updatedAt === undefined
+    ? { updatedAt: null, ageSeconds: null, status: "unknown", reason: "missing-generation" }
+    : marketMeta;
+  const fallbackGenerationMs = snapshot.asOfISO ? Date.parse(snapshot.asOfISO) : 0;
+  const liveSnapshot: HomepageHeroSnapshot | null = browserRetained && marketMeta?.updatedAt != null
+    && fallbackGenerationMs > marketMeta.updatedAt * 1000
+    ? null
+    : evidence.data?.market.data ?? null;
   const liveHealth = deriveDataHealth({
     ...DATA_HEALTH_PRESETS.stablecoins,
     dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
-    hasData: stablecoinsQuery.data !== undefined,
+    hasData: liveSnapshot !== null,
     error: stablecoinsQuery.error,
     meta,
   }, nowMs);
   const selection = selectHomepageHeroSnapshot({
     liveSnapshot, liveHealth, fallbackSnapshot: snapshot, nowMs,
   });
+  useEffect(() => {
+    if (selection.source === "live") trackFreshDataReady("home-hero");
+  }, [selection.source]);
 
   const visibleSnapshot = selection.snapshot;
   const latest = visibleSnapshot?.cohort ?? null;
@@ -87,7 +92,7 @@ export function HomeAltHero({
             Backing, freeze risk, liquidity, and peg stress — all in one place.
           </p>
           <span aria-hidden="true" className="hidden text-sm text-muted-foreground sm:inline">·</span>
-          <HomeMarketStateLine />
+          <HomeMarketStateLine nowMs={nowMs} />
         </div>
       </div>
 
@@ -116,7 +121,9 @@ export function HomeAltHero({
                 : selection.source === "live"
                   ? `Live · as of ${selectedDate}`
                   : selection.source === "retained"
-                    ? `${stablecoinsQuery.error ? "Refresh failed" : liveHealth.state === "stale" ? "Stale" : liveHealth.state === "degraded" ? "Degraded" : "Freshness unavailable"} · ${selectedDate ? `as of ${selectedDate}` : "generation unavailable"}`
+                    ? browserRetained && marketMeta
+                      ? `${stablecoinsQuery.error ? "Refresh failed · " : ""}${describeRetainedHomepageLane(marketMeta)}`
+                      : `${stablecoinsQuery.error ? "Refresh failed" : liveHealth.state === "stale" ? "Stale" : liveHealth.state === "degraded" ? "Degraded" : "Freshness unavailable"} · ${selectedDate ? `as of ${selectedDate}` : "generation unavailable"}`
                     : "Live market data unavailable"}
             </p>
             {visibleSnapshot && !supplyComplete ? (
@@ -124,16 +131,16 @@ export function HomeAltHero({
                 {describeHomepageSupplyCoverage(visibleSnapshot)}
               </p>
             ) : null}
-            {selection.source === "live" || selection.source === "retained" ? (
+            {selection.source === "live" || selection.source === "retained" || stablecoinsQuery.error || (stablecoinsQuery.data && !liveSnapshot) ? (
               <QueryFreshnessNotices
                 error={stablecoinsQuery.error}
-                hasData
+                hasData={liveSnapshot !== null}
                 onRetry={() => void stablecoinsQuery.refetch()}
                 queries={[{
                   preset: "stablecoins",
                   label: "Market snapshot",
                   dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
-                  hasData: true,
+                  hasData: liveSnapshot !== null,
                   meta,
                   error: stablecoinsQuery.error,
                 }]}
@@ -145,7 +152,7 @@ export function HomeAltHero({
         {/* The chart fills the whole right column at lg: the cell sizes from the
             headline + cohort column and the chart is pinned inside it. */}
         <div className="border-b border-border/50 lg:relative lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-[305px] lg:border-b-0">
-          <HomeAltHeroChartGate />
+          <HomeAltHeroChartGate history={snapshot.history} nowMs={nowMs} />
         </div>
 
         {/* Cohort breakdown — sits directly under the headline so the column

@@ -1,10 +1,12 @@
 # API Access And Reference Pages
 
-Public `/api/` combines Access and Reference in one static page. `src/app/api/page.tsx` owns metadata/shell; route-local modules render offers, tabs, wallet check and reference. `docs/api-reference.md` is the HTTP authority, rendered at build time, not a separately published `/docs/` page. Preserve redirects from `/about/api/` and `/docs/api-reference/` to `/api/#reference`.
+Public `/api/` is the static Access document; `/api/reference/` is the separate static Reference document. Their route entrypoints own metadata/shell; route-local modules render offers, navigation, wallet check and reference. `docs/api-reference.md` is the HTTP authority, rendered at build time, not a separately published `/docs/` page. Retired `/about/api/` and `/docs/api-reference/` aliases redirect directly to `/api/reference/`.
 
 ## Route Shape
 
-Both panels exist in exported HTML; the inactive panel is hidden. `ApiTabs` selects after hydration, not via CSP-breaking inline script. `#reference` or a child Reference fragment activates that panel and scrolls; Access fragments select Access, the default. Tab clicks replace hash without scrolling. Cross-panel links must be plain anchors so hashchange fires; Next Link hash navigation does not provide that contract.
+Each exported document contains only its own panel, never a hidden copy of the other panel. `ApiTabs` renders crawlable document links with `aria-current`, not a client tablist with absent panels. Legacy `/api/#reference` and child Reference fragments navigate after hydration to `/api/reference/` with the fragment preserved; Access fragments retain their existing `/api/` URLs. The Reference document accepts those same section/subsection/endpoint IDs and also resolves Access fragments back to `/api/`. No CSP-breaking inline bootstrap is required. New first-party navigation points directly at the canonical document; plain anchor links retain browser hashchange behavior.
+
+Structured-data documentation and catalog URLs use `API_REFERENCE_URL` from `shared/lib/public-api-contract.ts`. Existing `/api/#webapi` and `/api/#data-catalog` entity IDs stay stable; they identify entities, not the current document location.
 
 ## `/api/` Shell Contract
 
@@ -64,7 +66,7 @@ Before announcing, acceptance identifies both deployed versions and the accepted
 
 Render canonical reference minus admin sections, preserving section/subsection/endpoint-directory anchors and quickstart. Lane guidance separates external `https://api.pharos.watch` plus `X-API-Key`, website `/_site-data/*`, and Access-protected ops hosts. No-key classifications derive from canonical endpoint registry, including anonymous publication reads and separately authenticated Telegram exceptions; examples run from servers/scripts, not browser-key exposure.
 
-OpenAPI/Postman and static-download links derive from shared artifact/descriptors. Artifact/DataCatalog/Dataset schema uses public URLs and complete nested catalog identity, never private site-data paths. Visible dataset descriptions distinguish snapshots from live API; sameAs/url point to their visible `/api/#dataset-<topic>` descriptions without changing stable IDs/downloads. FAQ must not advertise closed issuance, paid tier or public-feedback key requests.
+OpenAPI/Postman and static-download links derive from shared artifact/descriptors. Artifact/DataCatalog/Dataset schema uses public URLs and complete nested catalog identity, never private site-data paths. Visible dataset descriptions distinguish snapshots from live API; sameAs/url point to their visible `/api/reference/#dataset-<topic>` descriptions without changing stable IDs/downloads. FAQ must not advertise closed issuance, paid tier or public-feedback key requests.
 
 ## Parsing And Rendering Contract
 
@@ -72,4 +74,4 @@ OpenAPI/Postman and static-download links derive from shared artifact/descriptor
 
 ## Update Rules
 
-Change anchor/channel/template constants once, then dependent Pages, Worker messages and generators. HTTP changes update API reference first; route copy remains presentation/navigation. Access/terms changes include both tabs, Funding pointers and claim/rollback acceptance. Route moves include redirects, sitemap and architecture.
+Change anchor/channel/template constants once, then dependent Pages, Worker messages and generators. HTTP changes update API reference first; route copy remains presentation/navigation. Access/terms changes include both documents, Funding pointers and claim/rollback acceptance. Route moves include redirects, sitemap and architecture.

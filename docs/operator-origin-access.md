@@ -79,6 +79,7 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 | `OPS_API_SERVICE_TOKEN_SECRET` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
+| `SITE_API` | - | - | optional | Optional Pages service binding to stablecoin-api for /_site-data; retains the canonical site-api URL, secret and public-fetch fallback when absent. |
 | `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
 | `TELEGRAM_ADOPTION_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for PharosWatchBot CTA telemetry per-client minute quotas; raw IP addresses are never stored. |
 <!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:END -->
@@ -130,6 +131,8 @@ Provision the required Pages ops and site-data bindings from the [runtime bindin
 
 `SELECTOR_SNAPSHOTS` is additionally the Picker snapshot KV namespace. `DB` remains optional for site-data attribution telemetry but mandatory for atomic selector-snapshot hashed-IP daily quotas; ordinary site-data reads continue without telemetry, while selector writes fail closed without DB.
 
+Optional `SITE_API` binding setup, transport guarantees and rollback: [Pages Site API Service Binding](#pages-site-api-service-binding).
+
 Optional active overrides (invalid, opaque or non-HTTP(S) origins fall back to production defaults):
 
 - `OPS_UI_ORIGIN`
@@ -140,6 +143,14 @@ Optional active overrides (invalid, opaque or non-HTTP(S) origins fall back to p
 Set the required Pages bindings before deploying the ops-host frontend, otherwise `/api/admin/*` will fail closed with a configuration error.
 
 ---
+
+## Pages Site API Service Binding
+
+Pages runtime bindings are dashboard-managed; the repository has no Pages Wrangler config. To enable the optional private website-data hop, open **Workers & Pages → stablecoin-dashboard → Settings → Bindings → Add → Service binding**, set **Variable name** to `SITE_API`, select **Service** `stablecoin-api` (default fetch entrypoint), save, and redeploy the Pages project. Configure production and preview separately when both should use it, retaining the matching `SITE_API_SHARED_SECRET` and canonical `SITE_API_ORIGIN` in each environment. [Cloudflare's service-binding setup](https://developers.cloudflare.com/pages/functions/bindings/#service-bindings) requires redeployment for a changed binding to take effect.
+
+Without `SITE_API`, `/_site-data/*` retains its existing URL-fetch transport. A configured binding does not relax host/origin/method/path/secret checks, and a binding failure is an upstream error, not permission to retry through public HTTP. Removing the binding and redeploying restores the URL transport. The ops proxy, selector recomputation, and telemetry mutation transports are unchanged.
+
+Both transports address the canonical `https://site-api.pharos.watch/api/...` URL, carry the same secret, and retain the shared 10-second deadline through body consumption, 16 MiB response cap, manual redirects and `pages-upstream-*` attribution. Forwarded `Age`, `Date` and CORS-exposed freshness/Safety Score fields retain the original assessment, budget and generation. No second cache, timestamp re-stamping, freshness reassessment or schema-admission change is introduced; unavailable and settled-stale evidence remains visible.
 
 ## Cloudflare Account Setup And Recovery
 
@@ -292,24 +303,44 @@ Any enablement, exception, exact-path replacement, or plan upgrade is an account
 `scripts/ci/cloudflare-account-state-manifest.json` is the committed, secret-free
 expectation for the account-bound configuration that this repository does not
 deploy: the active zone, Pages project and production binding names/types,
-custom domains, Access applications, WAF rules and heavy-Worker retirement state.
+custom domains, Access applications, WAF rules, zone browser-cache settings and heavy-Worker retirement state.
 It includes the expected shared D1 database ID, but no account/zone IDs or secret values.
 
 The weekly **Weekly Validation** workflow's `compare-account-state` job runs
-`npm run check:cloudflare-account-state` with the repository secret exposed only
-as `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. The script derives the account
-and zone IDs from the `pharos.watch` zone lookup at runtime, performs only
-Cloudflare API `GET` requests, and reports only resource names, public binding
-types, and differing policy fields. It never prints the token, account/zone IDs,
-or Pages secret values.
+`npm run check:cloudflare-account-state` with two read-only repository secrets:
+`CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN` for account resources and zone discovery,
+and `CLOUDFLARE_ZONE_ANALYTICS_READ` for the two zone-setting GETs. The latter
+must include **Zone → Zone Settings → Read** for `pharos.watch`; Analytics Read
+alone is insufficient. The CLI loads the ignored root `.env.local` only at direct
+runtime outside CI, without overriding exported variables. Imports never load it.
+The script derives account/zone IDs from the zone lookup, performs only
+Cloudflare API `GET` requests, and reports resource names, public binding types
+and differing policy fields—never token values, account/zone IDs or Pages secrets.
 
 Create a dedicated read-only API token for this check. It needs the minimum
 read access for zone lookup, Pages project/domains, Access applications,
 Worker domains/settings/subdomains/routes, Workflows and zone WAF/rulesets. Do not reuse a deployment or
-cache-purge token. If the GitHub secret is absent, the workflow fails before
-making a network request and names the required secret. Intentional account
+cache-purge token. If either GitHub secret is absent, the workflow fails before
+making a network request and names the required secret. Unreadable, missing or
+malformed cache-setting evidence fails rather than implying a healthy policy. Intentional account
 changes must update the manifest and its fixture tests in the same review;
 Terraform/OpenTofu import remains owner-gated and out of scope.
+
+The manifest pins the operator-selected `browser_cache_ttl` (60 seconds) and
+`cache_level` (`aggressive`), checked through the named zone-settings endpoints.
+The independent Production Canaries transport job also runs
+`node scripts/ci/check-live-api-cache-policy.mjs`, requiring no secrets. Its
+bounded public GETs cover exempt direct API responses and same-origin
+`/_site-data` with `Origin`/`Referer`. It compares live `Cache-Control` with
+`shared/lib/api-cache-profiles.ts`: browser `max-age` equals the greater of the
+profile value and manifest floor; edge `s-maxage`, stale-while-revalidate and
+`no-store` remain unchanged. Missing headers, failed/redirected/non-JSON
+responses and directive drift fail with endpoint/profile evidence. This is
+representative response evidence, not proof about every route or Cache Rule.
+The accepted 60-second floor still lifts 10-second realtime/per-coin browser
+profiles; do not lengthen producer budgets or relabel retained generations.
+A future **Respect Existing Headers** choice needs an explicit manifest/fixture
+update (floor zero) and successful direct/proxied response checks.
 
 ---
 

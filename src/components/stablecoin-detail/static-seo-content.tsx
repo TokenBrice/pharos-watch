@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { Fragment, type ReactNode } from "react";
 import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
 import {
@@ -419,12 +420,12 @@ export function StablecoinDetailSeoContent({
             <h2 className="text-lg font-semibold tracking-tight text-foreground">USDC depeg history</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{USDC_DEPEG_HISTORY_FAQ.answer}</p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-              <Link href="/depeg/usdc-2023-03-11/" className={INLINE_LINK_CLASS}>
+              <IntentLink href="/depeg/usdc-2023-03-11/" className={INLINE_LINK_CLASS}>
                 March 2023 USDC depeg timeline
-              </Link>
-              <Link href="/learn/case-studies/usdc-svb-2023/" className={INLINE_LINK_CLASS}>
+              </IntentLink>
+              <IntentLink href="/learn/case-studies/usdc-svb-2023/" className={INLINE_LINK_CLASS}>
                 Why USDC depegged during the SVB crisis
-              </Link>
+              </IntentLink>
             </div>
           </div>
         ) : null}
@@ -446,36 +447,36 @@ export function StablecoinDetailSeoContent({
             <p className="text-sm leading-relaxed text-muted-foreground">{buildProfileSentence(coin)}</p>
 
             <div className="flex flex-wrap gap-2" aria-label="Stablecoin taxonomy">
-              <Link
+              <IntentLink
                 href={buildGovernanceTaxonomyUrl(coin.flags.governance)}
                 className={LINK_PILL_CLASS}
                 aria-label={`Browse ${governanceLabel} stablecoins`}
               >
                 {governanceLabel}
-              </Link>
-              <Link
+              </IntentLink>
+              <IntentLink
                 href={buildBackingTaxonomyUrl(coin.flags.backing)}
                 className={LINK_PILL_CLASS}
                 aria-label={`Browse ${backingLabel} stablecoins`}
               >
                 {backingLabel}
-              </Link>
+              </IntentLink>
               {pegHref ? (
-                <Link href={pegHref} className={LINK_PILL_CLASS} aria-label={`Browse ${pegLabel} stablecoins`}>
+                <IntentLink href={pegHref} className={LINK_PILL_CLASS} aria-label={`Browse ${pegLabel} stablecoins`}>
                   {pegLabel}
-                </Link>
+                </IntentLink>
               ) : (
                 <span className={STATIC_PILL_CLASS}>{pegLabel}</span>
               )}
               {(coin.infrastructures ?? []).map((infrastructure) => (
-                <Link
+                <IntentLink
                   key={infrastructure}
                   href={buildInfrastructureTaxonomyUrl(infrastructure)}
                   className={LINK_PILL_CLASS}
                   aria-label={`Browse ${getInfrastructureLabel(infrastructure)} infrastructure stablecoins`}
                 >
                   {getInfrastructureLabel(infrastructure)}
-                </Link>
+                </IntentLink>
               ))}
             </div>
 
@@ -539,25 +540,25 @@ export function StablecoinDetailSeoContent({
             <p className="pharos-label">Next actions</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {isActiveStablecoinMeta(coin) ? (
-                <Link href={compareHref} className={ACTION_LINK_CLASS}>
+                <IntentLink href={compareHref} className={ACTION_LINK_CLASS}>
                   <ArrowRight aria-hidden="true" className={ACTION_ICON_CLASS} />
                   Compare {coin.symbol}
-                </Link>
+                </IntentLink>
               ) : null}
               {isActiveStablecoinMeta(coin) ? (
-                <Link href="/pharoswatchbot/#getting-started" className={ACTION_LINK_CLASS}>
+                <IntentLink href="/pharoswatchbot/#getting-started" className={ACTION_LINK_CLASS}>
                   <Bell aria-hidden="true" className={ACTION_ICON_CLASS} />
                   Telegram alerts
-                </Link>
+                </IntentLink>
               ) : null}
-              <Link href="/feed/digest.xml" className={ACTION_LINK_CLASS}>
+              <Link href="/feed/digest.xml" prefetch={false} className={ACTION_LINK_CLASS}>
                 <Rss aria-hidden="true" className={ACTION_ICON_CLASS} />
                 Digest RSS
               </Link>
-              <Link href="/api/" className={ACTION_LINK_CLASS}>
+              <IntentLink href="/api/" className={ACTION_LINK_CLASS}>
                 <Code2 aria-hidden="true" className={ACTION_ICON_CLASS} />
                 API access
-              </Link>
+              </IntentLink>
             </div>
             {isActiveStablecoinMeta(coin) ? (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">

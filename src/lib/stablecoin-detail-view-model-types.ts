@@ -28,6 +28,7 @@ import type {
   YieldRankingsResponse,
 } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 
 export interface DetailQueryResource<TData> {
   data?: TData;
@@ -36,6 +37,9 @@ export interface DetailQueryResource<TData> {
   error: unknown | null;
   meta: ApiMeta | null;
   enabled?: boolean;
+  isFetching?: boolean;
+  isFetchedAfterMount?: boolean;
+  isSnapshot?: boolean;
 }
 
 export interface DetailSupplyHistoryInput extends DetailQueryResource<SupplyHistoryPoint[]> {
@@ -62,7 +66,7 @@ export interface StablecoinDetailViewModelQueryInputs {
   stablecoinList: DetailStablecoinListInput;
   pegSummary: DetailQueryResource<PegSummaryResponse>;
   dexLiquidity: DetailQueryResource<DexLiquidityMap>;
-  reportCards: DetailQueryResource<ReportCardsV9CurrentResponse>;
+  reportCards: DetailQueryResource<ReportCardsV9CurrentResponse | ReportCardsV9DetailResponse>;
   redemptionBackstops: DetailQueryResource<RedemptionBackstopsResponse>;
 }
 
@@ -121,6 +125,9 @@ export interface StablecoinDetailStaleQuery {
   enabled?: boolean;
   /** First fetch in flight: the freshness banner waits instead of reporting "not populated". */
   isLoading?: boolean;
+  isFetching?: boolean;
+  isFetchedAfterMount?: boolean;
+  isSnapshot?: boolean;
 }
 
 export type StablecoinDetailFeatureStatus = GatedQueryViewState;
@@ -154,7 +161,7 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
   reportCard: V9ConsumerCard | undefined;
-  reportCardsResponse: ReportCardsV9CurrentResponse | undefined;
+  reportCardsResponse: ReportCardsV9CurrentResponse | ReportCardsV9DetailResponse | undefined;
   reportCardUpdatedAt: number | null;
   variantParent: StablecoinClientMeta | null;
   variantSiblings: StablecoinClientMeta[];

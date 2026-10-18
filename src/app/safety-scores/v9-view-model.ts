@@ -2,7 +2,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SafetyGradeSupplyMix } from "@/components/safety-grade-distribution-bar";
-import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
 export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR" | "pipeline-gap";
@@ -112,7 +112,9 @@ export function groupV9CardsByGrade(
   const groups = new Map<string, V9ConsumerCard[]>();
   for (const card of cards) {
     const grade = cardGroup(card);
-    groups.set(grade, [...(groups.get(grade) ?? []), card]);
+    const group = groups.get(grade);
+    if (group) group.push(card);
+    else groups.set(grade, [card]);
   }
   return GRADE_ORDER.flatMap((grade) => {
     const groupedCards = groups.get(grade);

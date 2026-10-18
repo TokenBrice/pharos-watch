@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MintBurnFlowsResponse } from "@shared/types";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
@@ -26,7 +26,11 @@ vi.mock("@/components/flow-chart", () => ({ FlowChart: () => null }));
 vi.mock("@/components/flow-table", () => ({ FlowTable: () => null }));
 vi.mock("@/components/flow-brrr-overview", () => ({ FlowBrrrOverview: () => null }));
 vi.mock("@/components/faq-section", () => ({ FaqSection: () => null }));
-vi.mock("@/components/control-pill-toggle", () => ({ ControlPillToggle: () => null }));
+vi.mock("@/components/control-pill-toggle", () => ({
+  ControlPillToggle: ({ onChange }: { onChange: (hours: number) => void }) => (
+    <button type="button" onClick={() => onChange(720)}>30d</button>
+  ),
+}));
 
 import FlowsClient from "@/app/flows/client";
 
@@ -73,6 +77,17 @@ afterEach(() => {
 });
 
 describe("FlowsClient", () => {
+  it("defers the 30-day variant until selected and reuses the weekly chart for the overview", () => {
+    render(<FlowsClient faqItems={[]} />);
+    expect(useMintBurnFlowsMock).toHaveBeenCalledWith(24);
+    expect(useMintBurnFlowsMock).toHaveBeenCalledWith(168, { enabled: true });
+    expect(useMintBurnFlowsMock).toHaveBeenCalledWith(168, { enabled: false });
+    expect(useMintBurnFlowsMock).not.toHaveBeenCalledWith(720, expect.anything());
+    fireEvent.click(screen.getByRole("button", { name: "30d" }));
+    expect(useMintBurnFlowsMock).toHaveBeenLastCalledWith(168, { enabled: true });
+    expect(useMintBurnFlowsMock).toHaveBeenCalledWith(720, { enabled: true });
+  });
+
   beforeEach(() => {
     useMintBurnFlowsMock.mockImplementation((hours: number) => {
       if (hours === 168) {

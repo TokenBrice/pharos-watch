@@ -9,6 +9,10 @@ import { COMPLETE_DIGEST_SAFETY_MAP as completeSafetyMap } from "@shared/test-ut
 const { useDigestSnapshotMock } = vi.hoisted(() => ({
   useDigestSnapshotMock: vi.fn(),
 }));
+const viewport = vi.hoisted(() => ({ near: true }));
+vi.mock("@/hooks/use-near-viewport", () => ({
+  useNearViewport: () => ({ ref: vi.fn(), near: viewport.near }),
+}));
 
 vi.mock("@/hooks/api-hooks", () => ({
   useDigestSnapshot: useDigestSnapshotMock,
@@ -16,6 +20,7 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 afterEach(() => {
   vi.clearAllMocks();
+  viewport.near = true;
 });
 
 function mockSnapshot(inputData: Record<string, unknown>, depegEvents: unknown[] = []) {
@@ -27,6 +32,16 @@ function mockSnapshot(inputData: Record<string, unknown>, depegEvents: unknown[]
 }
 
 describe("DigestSnapshot", () => {
+  it("does not admit the dated snapshot query until its article section reaches the viewport", () => {
+    viewport.near = false;
+    mockSnapshot({ totalMcapUsd: 1e9 });
+    const { rerender } = render(<DigestSnapshot date="2026-09-01" />);
+    expect(useDigestSnapshotMock).not.toHaveBeenCalled();
+    viewport.near = true;
+    rerender(<DigestSnapshot date="2026-09-01" />);
+    expect(useDigestSnapshotMock).toHaveBeenCalledWith("2026-09-01");
+  });
+
   it.each([
     ["9.98", "V9"],
     ["10.0", "V10"],

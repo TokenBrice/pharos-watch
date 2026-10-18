@@ -10,6 +10,8 @@ interface LazySectionProps {
   className?: string;
   /** Optional IntersectionObserver rootMargin override. */
   rootMargin?: string;
+  /** Mount a known anchor target without discarding its reserved geometry. */
+  forceMount?: boolean;
   /** Optional content shown in the reserved space while gated, so the reserve
    * reads as a loading surface instead of a blank void. */
   placeholder?: ReactNode;
@@ -29,8 +31,10 @@ interface LazySectionProps {
  * reserve is released only once the wrapper is off screen, where the browser's
  * scroll anchoring absorbs any height change.
  */
-export function LazySection({ minHeight, className, rootMargin, placeholder, children }: LazySectionProps) {
+export function LazySection({ minHeight, className, rootMargin, forceMount = false, placeholder, children }: LazySectionProps) {
   const { ref, near } = useNearViewport<HTMLDivElement>(rootMargin);
+  const [revealed, setRevealed] = useState(false);
+  const mounted = near || forceMount || revealed;
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [holdReserve, setHoldReserve] = useState(true);
   const setRefs = useCallback((el: HTMLDivElement | null) => {
@@ -40,7 +44,14 @@ export function LazySection({ minHeight, className, rootMargin, placeholder, chi
 
   useEffect(() => {
     const el = wrapperRef.current;
-    if (!near || !holdReserve || !el || typeof IntersectionObserver === "undefined") return;
+    const reveal = () => setRevealed(true);
+    el?.addEventListener("pharos:lazy-section-reveal", reveal);
+    return () => el?.removeEventListener("pharos:lazy-section-reveal", reveal);
+  }, []);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!mounted || !holdReserve || !el || typeof IntersectionObserver === "undefined") return;
     let wasVisible = false;
     const io = new IntersectionObserver((entries) => {
       const entry = entries[entries.length - 1];
@@ -67,16 +78,17 @@ export function LazySection({ minHeight, className, rootMargin, placeholder, chi
     });
     io.observe(el);
     return () => io.disconnect();
-  }, [holdReserve, near]);
+  }, [holdReserve, mounted]);
 
-  const reserve = !near || holdReserve;
+  const reserve = !mounted || holdReserve;
   return (
     <div
       ref={setRefs}
+      data-lazy-section=""
       className={reserve ? className : undefined}
       style={reserve && minHeight != null ? { minHeight } : undefined}
     >
-      {near ? children : placeholder ?? null}
+      {mounted ? children : placeholder ?? null}
     </div>
   );
 }

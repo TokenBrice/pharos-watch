@@ -1,6 +1,6 @@
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { TableDensity } from "@/hooks/use-table-density";
-import type { DexLiquidityMap, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 export type StablecoinTableRowVariant = "default" | "figmaOverview";
@@ -19,7 +19,7 @@ export interface StablecoinVirtualRowProps {
   isVisible: (id: ColumnId) => boolean;
   logos?: Record<string, string>;
   pegScores?: Map<string, PegSummaryCoin>;
-  dexLiquidity?: DexLiquidityMap;
+  dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
   showPinnedControl?: boolean;
   isPinned?: boolean;

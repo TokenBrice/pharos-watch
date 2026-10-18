@@ -10,7 +10,7 @@ import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/client-registry";
-import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 
@@ -168,7 +168,7 @@ interface SortStablecoinsParams {
   sort: SortState;
   effectiveSortKey: StablecoinTableSortKey;
   pegScores?: Map<string, PegSummaryCoin>;
-  dexLiquidity?: DexLiquidityMap;
+  dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
 }
 
@@ -224,7 +224,7 @@ export function sortStablecoins({
 export function exportStablecoinsCsv(
   sorted: StablecoinData[],
   pegScores?: Map<string, PegSummaryCoin>,
-  dexLiquidity?: DexLiquidityMap,
+  dexLiquidity?: DexLiquidityTableMap,
   reportCards?: Record<string, V9SafetyTableRow>,
   sourceGenerations?: StablecoinTableSourceGenerations,
 ): void {

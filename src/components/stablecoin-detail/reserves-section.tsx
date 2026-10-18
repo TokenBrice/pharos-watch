@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
-import { formatReserveRiskTier, ReserveRiskSwatch, ReserveTreemap } from "@/components/reserve-treemap";
+import { formatReserveRiskTier, ReserveRiskSwatch } from "@/components/reserve-risk-swatch";
+import { ReserveTreemap } from "@/components/reserve-treemap";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,6 +39,7 @@ import {
 import type { ReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 import { cn } from "@/lib/utils";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
+
 import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ReserveLiquidityHorizon, StablecoinMeta } from "@shared/types";

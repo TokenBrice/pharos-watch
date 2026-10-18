@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -11,6 +11,8 @@ import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loa
 import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNearViewport } from "@/hooks/use-near-viewport";
+import { asMetaQueryOptions, createRegisteredApiPollingQueryOptions } from "@/hooks/api-hooks";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import {
   useStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -28,6 +30,8 @@ import {
   type StablecoinDetailSnapshot,
 } from "@/lib/api";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
+import { hasDataBootstrap } from "@/lib/data-bootstrap";
+import { DetailEvidenceProvider } from "@/lib/detail-evidence";
 import { DetailContent } from "./detail-content";
 
 function DetailLoadingShell({
@@ -109,6 +113,22 @@ export function StablecoinDetailSnapshotHydrator({
 
   return children;
 }
+/** Adopt the parser-started read only after the saved dossier has hydrated. */
+export function StablecoinDetailLiveSummaryStart({ id, children }: { id: string; children: ReactNode }) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    // The raw request already starts in the route's parser bootstrap. Publishing
+    // its result during render can replace seed provenance before a suspended
+    // child hydrates, making its first freshness verdict differ from the server.
+    // Mount-time adoption keeps that first render on the same saved generation.
+    // SPA entries without bootstrap retain the canonical fresh-cache policy.
+    const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id);
+    const options = asMetaQueryOptions(createRegisteredApiPollingQueryOptions(descriptor));
+    void queryClient.prefetchQuery(hasDataBootstrap(descriptor.queryKey) ? { ...options, staleTime: 0 } : options);
+  }, [id, queryClient]);
+  return children;
+}
+
 
 function StablecoinDetailClientContent({
   id,
@@ -144,7 +164,7 @@ function StablecoinDetailClientContent({
     logoSrc,
     archivedLiveSummary,
     supplementalQueryControls: {
-      // These lanes also supply the visible hero, not only their deeper sections.
+      // Hero liquidity/yield observers now read only this coin's scoped projections.
       liquidity: true,
       reportCards: true,
       // The redemption route lives in the Risk zone's exit evidence.
@@ -208,10 +228,13 @@ function StablecoinDetailClientContent({
 }
 
 export default function StablecoinDetailClient(props: StablecoinDetailClientProps) {
-  if (!props.snapshot) return <StablecoinDetailClientContent {...props} />;
   return (
-    <StablecoinDetailSnapshotHydrator snapshot={props.snapshot}>
-      <StablecoinDetailClientContent {...props} />
+    <StablecoinDetailSnapshotHydrator snapshot={props.snapshot ?? null}>
+      <StablecoinDetailLiveSummaryStart key={props.id} id={props.id}>
+        <DetailEvidenceProvider coinId={props.id}>
+          <StablecoinDetailClientContent {...props} />
+        </DetailEvidenceProvider>
+      </StablecoinDetailLiveSummaryStart>
     </StablecoinDetailSnapshotHydrator>
   );
 }

@@ -67,6 +67,13 @@ type EventMap = {
   // Tier 3 — Engagement Signals
   theme_toggled: { theme: string };
   // Tier 4 — Web Vitals
+  fresh_data_ready: {
+    surface: "home-hero" | "detail-summary";
+    value: number;
+    id: string;
+    navigation_type: "navigate" | "route-change";
+    page_path: string;
+  };
   web_vital: {
     name:
       | "CLS"
@@ -103,6 +110,38 @@ export function trackEvent<K extends keyof EventMap>(name: K, params: EventMap[K
   if (typeof window !== "undefined" && isAnalyticsAllowed(window.location.pathname) && window.gtag) {
     window.gtag("event", name, params);
   }
+}
+
+type ReadinessNavigation = { path: string; start: number; sequence: number; sent: Set<string> };
+let readinessNavigation: ReadinessNavigation | undefined;
+
+/** Router-observed SPA start; the initial document uses performance.timeOrigin. */
+export function beginAnalyticsNavigation(pathname: string): void {
+  if (typeof window === "undefined" || readinessNavigation?.path === pathname) return;
+  readinessNavigation = {
+    path: pathname,
+    start: readinessNavigation ? performance.now() : 0,
+    sequence: (readinessNavigation?.sequence ?? -1) + 1,
+    sent: new Set(),
+  };
+}
+
+/** Call only after live, schema-admitted data qualifies as fresh at its owner. */
+export function trackFreshDataReady(surface: "home-hero" | "detail-summary"): void {
+  if (typeof window === "undefined" || !isAnalyticsAllowed(window.location.pathname) || !window.gtag) return;
+  const path = window.location.pathname;
+  if ((surface === "home-hero" && path !== "/")
+    || (surface === "detail-summary" && !/^\/stablecoin\/[^/]+\/?$/.test(path))) return;
+  beginAnalyticsNavigation(path);
+  const navigation = readinessNavigation!;
+  if (navigation.sent.has(surface)) return;
+  const value = performance.now() - navigation.start;
+  if (!Number.isFinite(value) || value < 0) return;
+  navigation.sent.add(surface);
+  trackEvent("fresh_data_ready", {
+    surface, value: Math.round(value), id: `${performance.timeOrigin}:${navigation.sequence}:${surface}`,
+    navigation_type: navigation.sequence === 0 ? "navigate" : "route-change", page_path: path,
+  });
 }
 
 // ---------------------------------------------------------------------------

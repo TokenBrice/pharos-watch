@@ -1,18 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ScoreChart } from "@/components/psi-history-chart";
+import { LazySection } from "@/components/lazy-section";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { useStabilityIndexDetail } from "@/hooks/api-hooks";
+import { useStabilityIndexDetail, useStabilityIndexFullHistory } from "@/hooks/api-hooks";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { logosById } from "@/lib/logos";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
+import type { StabilityIndexResponse } from "@shared/types/stability";
 import {
   buildPsiChartData,
   getDisplayedPsi,
   getDisplayedPsiBasis,
-  getPsiBandStreak,
   getPsiCompletedDayPoint,
 } from "@shared/lib/psi-view-model";
 import {
@@ -31,6 +32,33 @@ import {
   StabilityIndexPanel,
 } from "./presentational";
 
+function PsiHistoryChart({ initialData }: { initialData: StabilityIndexResponse }) {
+  const [needsFullHistory, setNeedsFullHistory] = useState(false);
+  const fullHistory = useStabilityIndexFullHistory({ enabled: needsFullHistory });
+  const { history, current } = fullHistory.data ?? initialData;
+  const chartData = useMemo(() => buildPsiChartData(history, current), [history, current]);
+  return (
+    <div className="space-y-3">
+      <QueryErrorNotice
+        error={fullHistory.error}
+        hasData={!!fullHistory.data}
+        onRetry={() => { void fullHistory.refetch(); }}
+      />
+      {needsFullHistory && !fullHistory.data ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          {fullHistory.error ? "Full history unavailable; showing the recent year." : "Loading full history…"}
+        </p>
+      ) : null}
+      <ScoreChart
+        data={chartData}
+        initialRange="1y"
+        onRangeChange={(range) => setNeedsFullHistory(range === "all")}
+      />
+    </div>
+  );
+}
+
+
 export function StabilityIndexClient() {
   const { data, isLoading, isError, error, dataUpdatedAt, refetch, meta } = useStabilityIndexDetail();
   const logos = logosById;
@@ -39,12 +67,12 @@ export function StabilityIndexClient() {
   const methodology = data?.methodology ?? null;
   const beacon = usePsiBeaconState({ current, meta, dataUpdatedAt, error, isLoading });
 
-  const daysInBand = useMemo(() => {
-    if (!current || !history?.length) return 0;
-    return getPsiBandStreak(history, current.computedAt, getDisplayedPsi(current).band);
-  }, [current, history]);
+  const headlineAggregates = data?.headlineAggregates;
+  const eventTimelineRows = useMemo(
+    () => buildPsiEventTimelineRows(headlineAggregates?.eventScores ?? []),
+    [headlineAggregates],
+  );
 
-  const chartData = useMemo(() => buildPsiChartData(history ?? [], current), [current, history]);
 
   const componentData = useMemo(() => buildPsiComponentData(history ?? [], current), [current, history]);
 
@@ -55,7 +83,6 @@ export function StabilityIndexClient() {
     [history, current?.computedAt],
   );
 
-  const eventTimelineRows = useMemo(() => buildPsiEventTimelineRows(chartData), [chartData]);
 
   const contributorRows = useMemo(
     () => buildPsiContributorRows(current?.contributors ?? [], current?.totalMcapUsd ?? 0),
@@ -75,7 +102,9 @@ export function StabilityIndexClient() {
     return <StabilityIndexLoadingState />;
   }
 
-  if (isError || (!isLoading && !current)) {
+  if (isError || (!isLoading && !current) || (current && (
+    !headlineAggregates || headlineAggregates.computedAt !== current.computedAt
+  ))) {
     const uiError = error ?? new Error("Stability Index data is temporarily unavailable.");
     return (
       <QueryErrorNotice
@@ -88,7 +117,7 @@ export function StabilityIndexClient() {
     );
   }
 
-  if (!current || !displayPsi || !methodology) {
+  if (!current || !displayPsi || !methodology || !headlineAggregates) {
     return <StabilityIndexEmptyState />;
   }
 
@@ -103,7 +132,7 @@ export function StabilityIndexClient() {
         score={displayPsi.score}
         scoreBasis={displayBasis}
         delta={delta}
-        daysInBand={daysInBand}
+        daysInBand={headlineAggregates.daysInBand}
         historyStats={historyStats}
         lanes={beamDimmerLanes}
         componentData={componentData}
@@ -118,7 +147,11 @@ export function StabilityIndexClient() {
 
       <div className="border-t border-border/40 pt-2" />
 
-      <ScoreChart data={chartData} />
+      <section aria-label="PSI history">
+        <LazySection minHeight={450}>
+          <PsiHistoryChart initialData={data!} />
+        </LazySection>
+      </section>
 
       <PsiEventTimelineCard rows={eventTimelineRows} />
 

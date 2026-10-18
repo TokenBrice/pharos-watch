@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { resolveSchemaLike } from "@shared/lib/schema-like";
 
 const { apiFetchMock, apiFetchWithMetaMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(async () => []),
@@ -35,10 +37,13 @@ describe("query option builders", () => {
     await options.queryFn(queryContext(options.queryKey));
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
-      expect.objectContaining({ safeParse: expect.any(Function) }),
+      FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory("usdc-circle").schema,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
       undefined,
+      { bootstrapQueryKey: options.queryKey },
     );
+    expect(await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory("usdc-circle").schema))
+      .toEqual(expect.objectContaining({ safeParse: expect.any(Function) }));
   });
 
   it("builds canonical mint/burn per-coin options", async () => {
@@ -53,10 +58,13 @@ describe("query option builders", () => {
     await options.queryFn(queryContext(options.queryKey));
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/mint-burn-flows?stablecoin=usdc-circle&hours=168",
-      expect.objectContaining({ safeParse: expect.any(Function) }),
+      FRONTEND_API_QUERY_DESCRIPTORS.mintBurnFlowsCoin("usdc-circle", 168).schema,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
       undefined,
+      { bootstrapQueryKey: options.queryKey },
     );
+    expect(await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.mintBurnFlowsCoin("usdc-circle", 168).schema))
+      .toEqual(expect.objectContaining({ safeParse: expect.any(Function) }));
   });
 
 });

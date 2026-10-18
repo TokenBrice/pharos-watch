@@ -1,6 +1,7 @@
 import { API_ORIGIN, SITE_ORIGIN } from "./runtime-origins";
 
 export const PUBLIC_API_HOST = API_ORIGIN;
+export const API_REFERENCE_URL = `${SITE_ORIGIN}/api/reference/`;
 export const PUBLIC_API_KEY_HEADER = "X-API-Key";
 
 /**

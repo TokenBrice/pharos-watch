@@ -16,6 +16,7 @@ import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary"
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
@@ -341,7 +342,7 @@ function ContractChainIdentity({
     <>
       {chain?.logoPath ? (
         <Image
-          src={chain.logoPath}
+          src={resolveCompactLogoSrc(chain.logoPath, isCompact ? 20 : 18)!}
           alt=""
           width={isCompact ? 20 : 18}
           height={isCompact ? 20 : 18}
@@ -540,7 +541,7 @@ function ContractChainButton({
     >
       {chain?.logoPath ? (
         <Image
-          src={chain.logoPath}
+          src={resolveCompactLogoSrc(chain.logoPath, 28)!}
           alt={chain.name}
           width={28}
           height={28}

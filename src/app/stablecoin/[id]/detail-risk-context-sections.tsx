@@ -559,7 +559,9 @@ export function DetailRiskContextSections({
             headingLevel="h2"
           />
         ) : (
-          <DEWSDetail stablecoinId={viewModel.id} />
+          <LazySection minHeight={320}>
+            <DEWSDetail stablecoinId={viewModel.id} />
+          </LazySection>
         )}
 
         <BackingBoard shared={sharedModules} visibility={evidenceAnchors.backing} />

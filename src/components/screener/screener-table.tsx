@@ -10,6 +10,8 @@ import {
 } from "@/components/data-table-shell";
 import { MobileMetricPill, MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
 import { TableCell, TableRow } from "@/components/table";
+import { TablePagination, type TablePaginationProps } from "@/components/table-pagination";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useSortColumnEvent } from "@/hooks/use-sort-column-event";
@@ -45,7 +47,7 @@ const SCREENER_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
   ["peg-summary"],
   ["report-cards"],
   ["stress-signals"],
-  ["dex-liquidity"],
+  ["dex-liquidity-table"],
 ];
 
 function getRowPegDeviationSeries(row: ScreenerRow): ReadonlyArray<number | null> {
@@ -120,7 +122,7 @@ const MOBILE_SORT_OPTIONS: Array<{ key: ScreenerSortKey; label: string }> = [
 interface ScreenerTableProps {
   rows: readonly ScreenerRow[];
   logos?: Record<string, string>;
-  isLoading: boolean;
+  dataState: NonNullable<TablePaginationProps["dataState"]>;
   onClearFilters?: () => void;
   hasActiveFilters: boolean;
   sort: DataTableSortControls<ScreenerSortKey>;
@@ -129,11 +131,12 @@ interface ScreenerTableProps {
 export function ScreenerTable({
   rows,
   logos,
-  isLoading,
+  dataState,
   onClearFilters,
   hasActiveFilters,
   sort,
 }: ScreenerTableProps) {
+  const isLoading = dataState === "loading";
   const watchlist = useWatchlist();
   const tableRef = useRef<HTMLDivElement>(null);
   const compareLinkRef = useRef<HTMLAnchorElement>(null);
@@ -141,10 +144,22 @@ export function ScreenerTable({
   const isBelowXl = useIsMobile(1280);
   const layoutResolved = useHydrated();
   const showDesktopSparklines = layoutResolved && !isBelowXl;
+  const pagination = useTablePagination(rows, { pageSize: 50, resetPageOnTotalChange: true });
+  const pageRows = pagination.paginatedRows;
+  const paginationProps = {
+    page: pagination.effectivePage,
+    totalPages: pagination.totalPages,
+    rangeStart: pagination.rangeStart,
+    rangeEnd: pagination.rangeEnd,
+    total: pagination.totalRows,
+    dataState,
+    onPrevious: pagination.onPreviousPage,
+    onNext: pagination.onNextPage,
+  };
 
   // P6 — j/k row cursor over the desktop table rows. o/Enter opens the dossier,
-  // s toggles the watchlist, c adds to /compare. The hook bails while an input
-  // is focused, so typing in the filter toolbar is unaffected.
+  // s toggles the watchlist, c adds to /compare. Interactive controls retain
+  // their native keyboard behavior.
   //
   // Navigation is performed by clicking real Next <Link> anchors instead of
   // `useRouter().push`, so the table renders without an App Router context
@@ -152,7 +167,7 @@ export function ScreenerTable({
   // cursor row's own detail link; `onAddToCompare` clicks a hidden per-cursor
   // compare link rendered below.
   const { getRowProps, cursorId } = useRowCursor<ScreenerRow>({
-    rows,
+    rows: pageRows,
     getRowId: (row) => row.id,
     onOpen: (row) => {
       tableRef.current
@@ -162,7 +177,7 @@ export function ScreenerTable({
     onToggleStar: (row) => watchlist.toggle(row.id),
     onAddToCompare: () => compareLinkRef.current?.click(),
     scopeRef: tableRef,
-    enabled: !isMobileLayout,
+    enabled: !isMobileLayout && dataState === "ready",
   });
   const compareHref = cursorId ? buildLiveCompareUrl([cursorId]) : null;
 
@@ -193,13 +208,16 @@ export function ScreenerTable({
               <div key={index} className="pharos-card-shell h-28 animate-pulse rounded-xl bg-muted/20" />
             ))}
           </div>
+        ) : dataState === "unavailable" ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Screener inputs unavailable. Retry using the data notice above.</p>
         ) : rows.length === 0 ? (
           <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
         ) : (
           <div className="space-y-3">
-            {rows.map((row) => <ScreenerMobileCard key={row.id} row={row} logo={logos?.[row.id]} />)}
+            {pageRows.map((row) => <ScreenerMobileCard key={row.id} row={row} logo={logos?.[row.id]} />)}
           </div>
         )}
+        <TablePagination {...paginationProps} />
       </div>
     );
   }
@@ -227,15 +245,20 @@ export function ScreenerTable({
         striped
         refreshingQueryKeys={SCREENER_REFRESH_QUERY_KEYS}
         isPending={isLoading}
+        pagination={paginationProps}
       >
         {isLoading ? (
           <DataTableLoadingRows columns={COLUMNS} rowCount={8} />
+        ) : dataState === "unavailable" ? (
+          <DataTableEmptyRow colSpan={COLUMNS.length}>
+            Screener inputs unavailable. Retry using the data notice above.
+          </DataTableEmptyRow>
         ) : rows.length === 0 ? (
           <DataTableEmptyRow colSpan={COLUMNS.length}>
             <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} compact />
           </DataTableEmptyRow>
         ) : (
-          rows.map((row, index) => (
+          pageRows.map((row, index) => (
             <ScreenerTableRow
               key={row.id}
               row={row}
@@ -286,12 +309,10 @@ function ScreenerEmptyState({
   onClearFilters?: () => void;
   compact?: boolean;
 }) {
-  // Cold start is a loading state, not an empty state — the canonical
-  // archetypes only cover the zero-rows case.
   if (!hasActiveFilters) {
     return (
       <div className={compact ? "space-y-2" : "rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground"}>
-        <p>Loading screener inputs…</p>
+        <p>No stablecoins available in this dataset.</p>
       </div>
     );
   }

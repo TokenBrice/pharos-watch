@@ -6,6 +6,7 @@ import Image from "next/image";
 import { FileText, Coins, Clock, Trash2, Search, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { logosById } from "@/lib/logos";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -42,7 +43,7 @@ function PaletteLogo({ src, label }: { src: string; label: string }) {
   }
   return (
     <Image
-      src={src}
+      src={resolveCompactLogoSrc(src, 20)!}
       alt=""
       width={20}
       height={20}
@@ -405,7 +406,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       <PaletteLogo src={item.logoUrl} label={item.label} />
                     ) : item.imagePath ? (
                       <Image
-                        src={item.imagePath}
+                        src={resolveCompactLogoSrc(item.imagePath, 20)!}
                         alt=""
                         width={20}
                         height={20}

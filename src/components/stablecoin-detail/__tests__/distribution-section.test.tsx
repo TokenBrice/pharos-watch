@@ -9,7 +9,7 @@ const { useDexLiquidityMock, useStablecoinsMock } = vi.hoisted(() => ({
   useStablecoinsMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/api-hooks", () => ({ useDexLiquidity: useDexLiquidityMock }));
+vi.mock("@/hooks/api-hooks", () => ({ useDexLiquidityCoin: useDexLiquidityMock }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
 
 afterEach(() => {

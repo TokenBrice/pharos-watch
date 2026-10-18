@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-query";
 import { mergeAbortSignals } from "@shared/lib/abort-signals";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
-import { resolveSchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
+import { type SchemaLikeSource } from "@shared/lib/schema-like";
 import { getPollingWindow } from "@/lib/api-query-polling";
 
 export { getPollingWindow } from "@/lib/api-query-polling";
@@ -65,11 +65,12 @@ export function createApiQueryFn<T>(
   schema?: SchemaLikeSource<T>,
   fetchInit?: RequestInit,
   contractMode?: ApiContractMode,
+  queryKey?: readonly unknown[],
 ): ApiQueryFunction<T> {
   return async (context) => {
     const { requestInit, dispose } = mergeFetchInitSignal(fetchInit, context?.signal);
     try {
-      return await apiFetch<T>(path, await resolveSchemaLike(schema), requestInit, contractMode);
+      return await apiFetch<T>(path, schema, requestInit, contractMode, { bootstrapQueryKey: queryKey });
     } finally {
       dispose();
     }
@@ -81,11 +82,12 @@ function createApiQueryFnWithMeta<T>(
   schema?: SchemaLikeSource<T>,
   fetchInit?: RequestInit,
   contractMode?: ApiContractMode,
+  queryKey?: readonly unknown[],
 ): ApiQueryFunction<{ data: T; meta: ApiMeta | null }> {
   return async (context) => {
     const { requestInit, dispose } = mergeFetchInitSignal(fetchInit, context?.signal);
     try {
-      return await apiFetchWithMeta<T>(path, await resolveSchemaLike(schema), requestInit, contractMode);
+      return await apiFetchWithMeta<T>(path, schema, requestInit, contractMode, { bootstrapQueryKey: queryKey });
     } finally {
       dispose();
     }
@@ -119,7 +121,7 @@ export function createApiPollingQueryOptions<T>(
 ): UseQueryOptions<T, Error, T, readonly unknown[]> {
   return createPollingQueryOptions(
     key,
-    createApiQueryFn(path, opts?.schema, opts?.fetchInit, opts?.contractMode),
+    createApiQueryFn(path, opts?.schema, opts?.fetchInit, opts?.contractMode, key),
     cronInterval,
     opts,
   );
@@ -133,7 +135,7 @@ export function createApiPollingQueryOptionsWithMeta<T>(
 ): UseQueryOptions<{ data: T; meta: ApiMeta | null }, Error, { data: T; meta: ApiMeta | null }, readonly unknown[]> {
   return createPollingQueryOptions(
     key,
-    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, opts?.contractMode),
+    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, opts?.contractMode, key),
     cronInterval,
     opts,
   );
@@ -156,7 +158,7 @@ export function createApiInfinitePollingQueryOptions<TPage>(
     queryFn: async ({ pageParam, signal }) =>
       apiFetchWithMeta<TPage>(
         buildPath(pageParam),
-        await resolveSchemaLike(schema),
+        schema,
         { signal },
       ),
     getNextPageParam: (lastPage) => getNextCursor(lastPage.data) ?? undefined,

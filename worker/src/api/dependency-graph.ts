@@ -1,4 +1,4 @@
-import { projectDependencyGraph } from "@shared/types/dependency-graph";
+import { DEPENDENCY_GRAPH_RESPONSE_SCHEMA_VERSION, projectDependencyGraph } from "@shared/types/dependency-graph";
 import { errorResponse, jsonSafetyScoreSnapshotResponse } from "../lib/api-response";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 
@@ -6,5 +6,6 @@ import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 export const handleDependencyGraph = async (db: D1Database): Promise<Response> => {
   const active = await loadActiveSafetyScoreSource(db);
   if (active.kind === "error") return errorResponse(503, active.detail);
-  return jsonSafetyScoreSnapshotResponse(active.snapshot, projectDependencyGraph(active.snapshot));
+  return jsonSafetyScoreSnapshotResponse(active.snapshot, projectDependencyGraph(active.snapshot),
+    `dependency-graph-v${DEPENDENCY_GRAPH_RESPONSE_SCHEMA_VERSION}`);
 };

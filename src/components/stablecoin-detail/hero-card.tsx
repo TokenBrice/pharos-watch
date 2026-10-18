@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { ArrowLeftRight, ArrowRight, BookOpen, ExternalLink, FileText, Flag, Globe, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -171,14 +171,14 @@ export function HeroIdentityHeader({
           );
         })}
         {links.length > 0 ? <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/60 sm:block" /> : null}
-        <Link
+        <IntentLink
           href={header.compareHref}
           className={actionClass}
           aria-label={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
           title={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
         >
           <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
+        </IntentLink>
         <button
           type="button"
           onClick={onOpenFeedback}
@@ -202,7 +202,7 @@ export function HeroIdentityHeader({
 
 function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewModel["caseStudyCallout"]> }) {
   return (
-    <Link
+    <IntentLink
       href={callout.href}
       aria-label={`Read the case study: ${callout.title} (outcome: ${callout.outcomeLabel})`}
       className="pharos-focus-ring group flex flex-col gap-2 rounded-b-xl border-t border-border/60 bg-muted/25 px-4 py-3 transition-colors hover:bg-muted/45 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5"
@@ -225,7 +225,7 @@ function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewMo
           className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
         />
       </span>
-    </Link>
+    </IntentLink>
   );
 }
 

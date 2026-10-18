@@ -744,10 +744,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     buildLifecycle: "maintenance-only",
     checkCommand: "node --import tsx scripts/maintenance/generate-compact-logos.ts --check",
     command: "node --import tsx scripts/maintenance/generate-compact-logos.ts",
-    outputPaths: ["public/logos/compact/**", "src/lib/logo-variants.generated.json"],
+    outputPaths: ["public/logos/compact/**", "public/chains/compact/**", "src/lib/logo-variants.generated.json"],
     phase: 3,
     script: "scripts/maintenance/generate-compact-logos.ts",
-    sourcePaths: ["public/logos/*.{png,jpg,jpeg,webp}"],
+    sourcePaths: ["public/logos/*.{png,jpg,jpeg,webp}", "public/chains/*.{png,jpg,jpeg,webp}"],
   }),
 ];
 

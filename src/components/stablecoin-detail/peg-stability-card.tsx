@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { ArrowUpRight, CircleHelp } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
@@ -101,7 +101,7 @@ function MechanismHint({ noun, primer, href }: { noun: string; primer: string; h
         <div className="space-y-2">
           <p className="text-xs font-semibold text-foreground">How {noun} stablecoins work</p>
           <p className="text-xs leading-relaxed text-muted-foreground">{primer}</p>
-          <Link
+          <IntentLink
             href={href}
             className={cn(
               "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs font-medium underline-offset-4 hover:underline",
@@ -110,7 +110,7 @@ function MechanismHint({ noun, primer, href }: { noun: string; primer: string; h
           >
             Read the explainer
             <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-          </Link>
+          </IntentLink>
         </div>
       </PopoverContent>
     </Popover>
@@ -245,7 +245,7 @@ export function PegStabilityCard({
       wrapper={wrapper}
       action={
         explainerPath && archetypeNoun ? (
-          <Link
+          <IntentLink
             href={explainerPath}
             className={cn(
               "pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs font-medium underline-offset-4 hover:underline sm:min-h-0 sm:py-0",
@@ -254,7 +254,7 @@ export function PegStabilityCard({
           >
             Learn how {archetypeNoun} stablecoins work
             <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-          </Link>
+          </IntentLink>
         ) : null
       }
     />
@@ -263,12 +263,12 @@ export function PegStabilityCard({
       <p className="text-sm font-semibold">Custom design — no archetype assigned</p>
       <p className="text-sm leading-relaxed text-muted-foreground">
         This coin doesn&apos;t fit the tracked archetypes. See the description below and the{" "}
-        <Link
+        <IntentLink
           href="/methodology/"
           className={cn("pharos-focus-ring rounded-sm underline-offset-4 hover:underline", LINK_TONE_CLASS)}
         >
           methodology page
-        </Link>{" "}
+        </IntentLink>{" "}
         for how Pharos scores it.
       </p>
     </div>

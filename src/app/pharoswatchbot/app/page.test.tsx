@@ -160,6 +160,7 @@ describe("PharosWatchBotMiniAppPage", () => {
         showConfirm: vi.fn((_message, callback) => { confirmations.push(callback); }),
       },
     });
+    await waitFor(() => expect(main.onClick).toHaveBeenCalled());
     const retainedResume = main.callbacks.at(-1)!;
     fireEvent.click(screen.getByRole("tab", { name: "settings" }));
     const retainedBack = back.callbacks.at(-1)!;

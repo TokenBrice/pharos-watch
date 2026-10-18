@@ -53,7 +53,9 @@ function FlowsHeaderSupplement({ syncWarning }: { syncWarning: string | null }) 
 }
 
 export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[] }) {
-  const [hours, setHours] = useState(720);
+  // The overview already needs the authoritative weekly window. Start the chart
+  // there too; the 30-day variant is fetched only when the reader selects it.
+  const [hours, setHours] = useState(168);
   const {
     data: summaryData,
     meta: summaryMeta,
@@ -161,7 +163,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
             gauge={gauge ?? null}
             coins={coins}
             weeklyHourly={weeklyHourly}
-            isLoading={isSummaryLoading || (hours !== 168 && isWeeklyLoading)}
+            isLoading={isSummaryLoading || isWeeklyLoading}
             scopeLabel={scopeLabel}
             syncWarning={syncWarning}
           />

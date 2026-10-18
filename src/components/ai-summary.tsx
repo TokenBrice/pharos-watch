@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { buildAiDisclosureLine, formatAiSummaryIsoDate } from "@/components/ai-disclosure";
 import { AiSummaryProse } from "@/components/ai-summary-prose";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -73,12 +74,12 @@ export function AiSummary({
             <time dateTime={updatedDate}>Updated {updatedDate}</time>
             {disclosure ? <> · {disclosure}</> : null}
           </p>
-          <Link
+          <IntentLink
             href="/about/#editorial-ai-policy"
             className="pharos-focus-ring -my-2 inline-flex min-h-8 shrink-0 items-center rounded-sm underline decoration-dashed underline-offset-2 hover:text-foreground"
           >
             AI policy
-          </Link>
+          </IntentLink>
         </div>
       </CardContent>
     </Card>

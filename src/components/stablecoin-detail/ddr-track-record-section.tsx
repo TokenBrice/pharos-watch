@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { QueryStateNotice } from "@/components/query-state-notice";
@@ -148,12 +148,12 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
         ) : null}
         <p className="text-xs leading-relaxed text-muted-foreground">{record.publicWarning}</p>
         <EvidenceFooter reviewed={record.reviewedAt ?? undefined}>
-          <Link
+          <IntentLink
             href="/depeg"
             className="pharos-focus-ring rounded-sm underline decoration-dashed underline-offset-2 hover:text-foreground"
           >
             Full DDRR review
-          </Link>
+          </IntentLink>
         </EvidenceFooter>
       </CardContent>
     </Card>

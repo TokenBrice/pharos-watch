@@ -3,6 +3,7 @@
 import { useCallback, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { useJustEntered } from "@/hooks/use-just-entered";
+import type { TablePaginationProps } from "@/components/table-pagination";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import {
   BLACKLISTABLE_VALUES,
@@ -91,6 +92,7 @@ interface ScreenerToolbarProps {
   filters: ScreenerFilters;
   matchingRows: number;
   totalRows: number;
+  dataState: NonNullable<TablePaginationProps["dataState"]>;
   activeFilterCount: number;
   onChange: (next: ScreenerFilters) => void;
   onReset: () => void;
@@ -101,6 +103,7 @@ export function ScreenerToolbar({
   filters,
   matchingRows,
   totalRows,
+  dataState,
   activeFilterCount,
   onChange,
   onReset,
@@ -134,16 +137,22 @@ export function ScreenerToolbar({
     <div className="pharos-card-shell space-y-3 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0" aria-live="polite">
-          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            {/* One Beam: the live matched-coin count is the page's single frost figure. */}
-            <span className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
-              {matchingRows.toLocaleString("en-US")}
-            </span>
-            <span className="text-sm font-medium text-muted-foreground">
-              of <span className="pharos-numeric text-foreground">{totalRows.toLocaleString("en-US")}</span> tracked{" "}
-              {active ? "matching" : "— pre-launch and frozen included"}
-            </span>
-          </p>
+          {dataState === "ready" ? (
+            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              {/* One Beam: the live matched-coin count is the page's single frost figure. */}
+              <span className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
+                {matchingRows.toLocaleString("en-US")}
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                of <span className="pharos-numeric text-foreground">{totalRows.toLocaleString("en-US")}</span> tracked{" "}
+                {active ? "matching" : "— pre-launch and frozen included"}
+              </span>
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {dataState === "loading" ? "Loading screener inputs…" : "Screener counts unavailable."}
+            </p>
+          )}
           <p className="pharos-meta mt-0.5">{filterCountLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

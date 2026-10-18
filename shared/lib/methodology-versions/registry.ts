@@ -259,8 +259,6 @@ function getManagedMethodologyVersion(key: ManagedMethodologyKey): MethodologyVe
 }
 
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG = getManagedMethodologyVersion("safety-score").changelog;
-export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS =
-  getManagedMethodologyVersion("safety-score").versionLabels;
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG = getManagedMethodologyVersion("depeg-dews").changelog;
 export const LIQUIDITY_METHODOLOGY_CHANGELOG = getManagedMethodologyVersion("liquidity-score").changelog;
 export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG =

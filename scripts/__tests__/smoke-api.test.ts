@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { spawnSync } from "node:child_process";
+import { ENDPOINT_DEFINITIONS, STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints/definitions";
 import {
   assertPathCoverage,
   CANARY_CONTRACT_SMOKE_PATHS,
@@ -281,6 +282,22 @@ describe("smoke-api depeg resolver review assertion", () => {
 });
 
 describe("smoke-api path scopes", () => {
+  it("derives full public coverage from strict metadata without requesting site-only transports", () => {
+    const publicPaths = resolveContractSmokePaths("full");
+    expect(publicPaths).toEqual(ENDPOINT_DEFINITIONS
+      .filter((endpoint) => endpoint.strictContract && endpoint.publicApiAccess !== "site-only")
+      .map((endpoint) => endpoint.path));
+    const siteOnlyPaths = ENDPOINT_DEFINITIONS
+      .filter((endpoint) => endpoint.strictContract && endpoint.publicApiAccess === "site-only")
+      .map((endpoint) => endpoint.path);
+    expect(siteOnlyPaths.length).toBeGreaterThan(0);
+    for (const path of siteOnlyPaths) {
+      expect(STRICT_CONTRACT_PATHS_LIST).toContain(path);
+      expect(publicPaths).not.toContain(path);
+      expect(ENDPOINT_ASSERTIONS).not.toHaveProperty(path);
+    }
+  });
+
   it("resolves both full and canary scopes with assertion coverage", () => {
     const full = resolveContractSmokePaths("full");
     const canary = resolveContractSmokePaths("canary");

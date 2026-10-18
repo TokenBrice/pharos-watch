@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ContagionGraph } from "@/components/contagion-graph-root";
+import dynamic from "next/dynamic";
 import { DependencyWatershed } from "@/components/dependency-watershed/dependency-watershed";
 import { useMediaQuery } from "@/hooks/use-is-mobile";
 import { trackEvent } from "@/lib/analytics";
@@ -14,6 +14,11 @@ import type { DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import { DependencyExposureWorkspace, type DependencyExposureWorkspaceState } from "./dependency-exposure-workspace";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
+
+const ContagionGraph = dynamic(
+  () => import("@/components/contagion-graph-root").then((module) => module.ContagionGraph),
+  { ssr: false, loading: () => <div className="min-h-[600px]" role="status">Loading network layout…</div> },
+);
 
 interface DependencyHeroProps {
   model: DependencyHubsModel;
@@ -33,7 +38,7 @@ const VIEW_OPTIONS: { value: DependencyMapView; label: string }[] = [{ value: "w
 
 export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace, commonModeGroups, mobileSummary }: DependencyHeroProps) {
   const [view, setView] = useState<DependencyMapView>("watershed");
-  const desktop = useMediaQuery("(min-width: 768px)");
+  const desktop = useMediaQuery("(min-width: 768px)", true);
   useEffect(() => {
     const readUrl = () => setView(readDependencyMapView(window.location.search));
     readUrl();

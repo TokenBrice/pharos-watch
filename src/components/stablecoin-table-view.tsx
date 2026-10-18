@@ -23,7 +23,7 @@ import {
 } from "@/components/stablecoin-table-columns";
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { TableDensity } from "@/hooks/use-table-density";
-import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 const SKELETON_ROW_COUNT = 10;
@@ -57,7 +57,7 @@ interface StablecoinTableViewProps {
   densityConfig: { rowHeight: number; iconSize: number };
   logos?: Record<string, string>;
   pegScores?: Map<string, PegSummaryCoin>;
-  dexLiquidity?: DexLiquidityMap;
+  dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
   pinnedStablecoinSet: ReadonlySet<string>;
   onTogglePinnedStablecoin?: (stablecoinId: string) => void;

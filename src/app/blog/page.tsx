@@ -55,6 +55,10 @@ export default function BlogHubPage() {
                 <img
                   src={post.coverImage}
                   alt={post.coverAlt ?? ""}
+                  width={1200}
+                  height={630}
+                  loading="lazy"
+                  decoding="async"
                   className="aspect-[1200/630] w-full rounded-xl border border-border/50 object-cover transition-opacity hover:opacity-90"
                 />
               </Link>

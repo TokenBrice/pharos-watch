@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useCallback, useState, useRef } from "react";
 import Link from "next/link";
-import { useReportCardsV9 } from "@/hooks/api-hooks";
+import { useReportCardsV9Table } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { trackEvent } from "@/lib/analytics";
@@ -31,14 +31,6 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 // ---------------------------------------------------------------------------
 
 export function PortfolioClient() {
-  const {
-    data: reportData,
-    isLoading: isLoadingCards,
-    dataUpdatedAt: rcUpdatedAt,
-    error: reportCardsError,
-    refetch: refetchReportCards,
-    meta: reportCardsMeta,
-  } = useReportCardsV9();
   const logos = logosById;
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -47,6 +39,14 @@ export function PortfolioClient() {
   // the portfolio bootstrap preserves incoming shares during hydration.
   const { getParam, isReady, setParam } = useUrlFilters();
   const portfolio = usePortfolio(mergeCoinsParam(getParam("p"), getParam("coins")), isReady);
+  const {
+    data: reportData,
+    isLoading: isLoadingCards,
+    dataUpdatedAt: rcUpdatedAt,
+    error: reportCardsError,
+    refetch: refetchReportCards,
+    meta: reportCardsMeta,
+  } = useReportCardsV9Table({ enabled: portfolio.initialized && portfolio.holdings.length > 0 });
 
   // Clean up toast timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
@@ -101,12 +101,11 @@ export function PortfolioClient() {
     [portfolio],
   );
 
-  if (isLoadingCards) {
-    return <PortfolioLoadingState />;
-  }
+  if (!portfolio.initialized) return <PortfolioLoadingState />;
 
   return (
     <div className="space-y-6">
+      {portfolio.holdings.length > 0 && <>
       <QueryFreshnessNotices
         error={reportCardsError}
         hasData={!!reportData?.cards?.length}
@@ -124,6 +123,7 @@ export function PortfolioClient() {
         ]}
       />
       <SafetyScoreV9StatusNotice response={reportData} />
+      </>}
       <PortfolioHeroStrip holdingCount={portfolio.holdings.length} totalUsd={portfolio.totalUsd} />
       <PortfolioHoldingsEditor
         holdings={portfolio.holdings}
@@ -188,6 +188,11 @@ export function PortfolioClient() {
       {portfolio.holdings.length > 0 && (
         <>
           <h2 className="pharos-label">Holdings safety grades</h2>
+          {!reportData && (
+            <p className="text-sm text-muted-foreground" role="status">
+              {isLoadingCards ? "Loading holdings safety evidence…" : "Holdings safety evidence is unavailable."}
+            </p>
+          )}
           {v9Projection?.status === "unavailable" && v9Projection.reason === "portfolio-empty" && (
             <p className="text-sm text-muted-foreground">Enter an amount for at least one holding to compute the weighted safety aggregate.</p>
           )}

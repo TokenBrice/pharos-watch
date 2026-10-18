@@ -3,12 +3,14 @@ import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-cont
 import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
 import { SITE_API_ORIGIN as CANONICAL_SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { resolveTrustedHttpsOrigin } from "./trusted-upstream-origin";
+import type { ProxyServiceBinding } from "./upstream-proxy";
 
 export interface SiteDataProxyEnv {
   DB?: D1Database;
   SITE_ORIGIN?: string;
   OPS_UI_ORIGIN?: string;
   SITE_API_ORIGIN?: string;
+  SITE_API?: ProxyServiceBinding;
   SITE_API_SHARED_SECRET?: string;
 }
 

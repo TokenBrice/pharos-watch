@@ -48,10 +48,14 @@ export function SafetyGradeHero({
 }) {
   const letterClass = mobile ? "text-3xl" : "text-5xl";
   const scoreClass = mobile ? "text-xs" : "text-base";
+  // One track for every read state: late scores cannot squeeze the coin name.
+  const trackClass = mobile
+    ? "flex min-h-10 w-32 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1"
+    : "flex min-h-14 w-48 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1";
 
   if (!reportCard && read === "pending") {
     return (
-      <div className="flex h-full shrink-0 items-center justify-end" role="status" aria-label="Loading Safety Score">
+      <div className={trackClass} role="status" aria-label="Loading Safety Score" data-safety-grade-track>
         <span aria-hidden="true" className={`block animate-pulse rounded-md bg-muted motion-reduce:animate-none ${mobile ? "h-8 w-16" : "h-12 w-24"}`} />
       </div>
     );
@@ -59,7 +63,7 @@ export function SafetyGradeHero({
 
   if (!reportCard && read === "failed") {
     return (
-      <div className="flex h-full shrink-0 items-center justify-end" data-safety-state="unavailable">
+      <div className={trackClass} data-safety-state="unavailable" data-safety-grade-track>
         <span className="text-right text-xs font-semibold leading-tight text-muted-foreground">Grade unavailable</span>
       </div>
     );
@@ -67,7 +71,7 @@ export function SafetyGradeHero({
 
   if (!reportCard) {
     return (
-      <div className="flex h-full shrink-0 items-baseline justify-end gap-1.5">
+      <div className={trackClass} data-safety-grade-track>
         <span className={`pharos-numeric font-extrabold leading-none text-muted-foreground ${letterClass}`}>—</span>
       </div>
     );
@@ -78,12 +82,12 @@ export function SafetyGradeHero({
   // width below (SafetyPartialEvidenceNote). Inline, the note's width squeezed
   // the mobile coin name until it broke one letter per line.
   return (
-    <div className="flex h-full shrink-0 items-baseline justify-end gap-1.5">
+    <div className={trackClass} data-safety-grade-track>
       <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
         <span
-          className={`pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${
-            getSafetyGradeMetadata(reportCard.grade).pulse.accentClassName
-          }`}
+          className={reportCard.grade === null
+            ? "text-right text-xs font-semibold leading-tight text-muted-foreground"
+            : `pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${getSafetyGradeMetadata(reportCard.grade).pulse.accentClassName}`}
         >
           {reportCard.grade === null ? "Pipeline gap" : reportCard.grade}
         </span>
@@ -99,10 +103,9 @@ export function SafetyGradeHero({
 
 /** Partial-evidence qualifier for the hero grade: an amber chip, detail on tap. */
 export function SafetyPartialEvidenceNote({ reportCard }: { reportCard: V9ConsumerCard | null }) {
-  if (!reportCard?.partialEvidence) return null;
   return (
-    <div className="mt-1">
-      <PartialEvidenceChip partialEvidence={reportCard.partialEvidence} />
+    <div className="mt-1 min-h-7">
+      {reportCard?.partialEvidence ? <PartialEvidenceChip partialEvidence={reportCard.partialEvidence} /> : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type * as PsiHistoryEvents from "@/lib/psi-history-events";
+import type * as PsiHistoryEvents from "@shared/lib/psi-events";
+import { getPsiEventScores } from "@shared/lib/psi-events";
 import { getConditionBand, PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import {
   buildPsiComponentData,
@@ -9,7 +10,7 @@ import {
   buildPsiHistoryStats,
 } from "./view-model";
 
-vi.mock("@/lib/psi-history-events", async (importOriginal) => {
+vi.mock("@shared/lib/psi-events", async (importOriginal) => {
   const actual = await importOriginal<typeof PsiHistoryEvents>();
   return {
     ...actual,
@@ -28,11 +29,11 @@ describe("stability index view-model", () => {
       for (const score of [min, min - 0.1].filter((value) => value >= 0)) {
         const band = getConditionBand(score);
         expect(buildPsiHistoryStats([{ date: date / 1000, score, band }], date / 1000)[2].band).toBe(band);
-        expect(buildPsiEventTimelineRows([{ ts: date, score }]).find((row) => row.label === "SVB Weekend")?.psiBand).toBe(band);
+        expect(buildPsiEventTimelineRows(getPsiEventScores([{ ts: date, score }])).find((row) => row.label === "SVB Weekend")?.psiBand).toBe(band);
       }
     }
     expect(buildPsiHistoryStats([{ date: date / 1000, score: -1, band: "" }], date / 1000)[2].band).toBe("");
-    expect(buildPsiEventTimelineRows([{ ts: date, score: -1 }]).find((row) => row.label === "SVB Weekend")?.psiBand).toBe("");
+    expect(buildPsiEventTimelineRows(getPsiEventScores([{ ts: date, score: -1 }])).find((row) => row.label === "SVB Weekend")?.psiBand).toBe("");
     const lanes = buildPsiBeamDimmers([{ ...PSI_COMPONENT_LIMITS, trend: -PSI_COMPONENT_LIMITS.trend }]);
     for (const lane of lanes) {
       expect(lane.max).toBe(PSI_COMPONENT_LIMITS[lane.key]);
@@ -118,11 +119,11 @@ describe("stability index view-model", () => {
   });
 
   it("assigns event timeline PSI bands from the worst nearby score", () => {
-    const rows = buildPsiEventTimelineRows([
+    const rows = buildPsiEventTimelineRows(getPsiEventScores([
       { ts: Date.parse("2023-03-12T00:00:00Z"), score: 58 },
       { ts: Date.parse("2023-03-13T00:00:00Z"), score: 35 },
       { ts: Date.parse("2023-03-14T00:00:00Z"), score: 62 },
-    ]);
+    ]));
 
     const svb = rows.find((row) => row.label.includes("SVB Weekend"));
     expect(svb).toMatchObject({
