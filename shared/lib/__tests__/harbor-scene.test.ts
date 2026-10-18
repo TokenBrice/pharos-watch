@@ -128,7 +128,22 @@ describe("buildHarborScene edge cases", () => {
     input._meta = { status: "degraded", dependencies: { reportCards: { status: "stale", reason: "report cards lagging" } } };
     const scene = buildHarborScene(input);
     expect(scene.ships[0].flag).toEqual({ kind: "unrated", reason: "Inputs unavailable: report cards lagging" });
-    expect(scene.retained).toBe(true);
+    // the degraded envelope is explained by the report-card dependency alone: the supply drawn is not retained
+    expect(scene.retained).toBe(false);
+  });
+
+  it("retains the scene only when the supply generation itself is past its fresh budget", () => {
+    const input = world([chain("a", 2e9)]);
+    const reportCards = { status: "stale", reason: "stale-cache" };
+    input._meta = { status: "degraded", ageSeconds: 600, freshBudgetSec: 1_800, dependencies: { reportCards } };
+    expect(buildHarborScene(input).retained).toBe(false);
+    input._meta = { status: "degraded", ageSeconds: 2_400, freshBudgetSec: 1_800, dependencies: { reportCards } };
+    expect(buildHarborScene(input).retained).toBe(true);
+    // no age/budget: a non-fresh status the dependency does not explain is the supply's own
+    input._meta = { status: "stale", dependencies: { reportCards: { status: "fresh" } } };
+    expect(buildHarborScene(input).retained).toBe(true);
+    input._meta = { status: "fresh" };
+    expect(buildHarborScene(input).retained).toBe(false);
   });
 
   it("encodes wake linearly to ±10% with a break, and new supply as 'new'", () => {

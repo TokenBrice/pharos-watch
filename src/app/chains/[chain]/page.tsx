@@ -10,7 +10,12 @@ import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
+import {
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  CHAIN_HEALTH_METHODOLOGY_VERSION,
+} from "@shared/lib/methodology-versions/constants";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { ShareButton } from "@/components/share-button";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { ChainProfileClient } from "./client";
 import {
@@ -305,7 +310,18 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
         { name: meta.name, url: `/chains/${chain}/` },
       ]}
       title={chainPageTitle(meta.name, deployments)}
-      leadParagraphs={buildChainEditorialIntro({ chainName: meta.name, meta, deployments })}
+      header="instrument"
+      methodology={{
+        label: "Chain Health methodology",
+        version: CHAIN_HEALTH_METHODOLOGY_VERSION,
+        changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+      }}
+      headerActions={<ShareButton ogPath={API_PATHS.ogChain(chain)} />}
+      leadParagraphs={[
+        `Stablecoin supply, Chain Health and tracked deployments on ${meta.name}.`,
+        ...buildChainEditorialIntro({ chainName: meta.name, meta, deployments }),
+      ]}
+      leadDisclosureLabel={`About the ${meta.name} registry cohort`}
       preface={
         <JsonLdScript json={safeJsonLd(buildChainProfileJsonLd({ chainId: chain, meta, deployments }))} />
       }

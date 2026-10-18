@@ -106,9 +106,9 @@ describe("ChainProfileClient", () => {
       },
     }));
     render(<ChainProfileClient chainId="ethereum" />);
-    expect(screen.getByText("Partial Supply")).toBeTruthy();
+    expect(screen.getByText("Partial supply")).toBeTruthy();
     expect(screen.getByText(/2 unavailable supply observations excluded/)).toBeTruthy();
-    expect(screen.getByText("Partial Global Share")).toBeTruthy();
+    expect(screen.getByText("Partial global share")).toBeTruthy();
     expect(screen.getByText(/3 assets excluded from global supply/)).toBeTruthy();
   });
 
@@ -125,6 +125,24 @@ describe("ChainProfileClient", () => {
     expect(screen.queryByText("Pharos doesn't have a chain read for this one yet.")).toBeNull();
   });
 
+  it("carries degraded freshness as a hero chip naming the held report-card input, not a body banner", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chainsQuery: {
+        data: { chains: [makeChain()] },
+        error: null,
+        dataUpdatedAt: 1_710_500_000_000,
+        meta: {
+          updatedAt: 1_710_500_000, ageSeconds: 600, status: "degraded",
+          dependencies: { reportCards: { status: "stale", reason: "stale-cache", ageSeconds: 7_200 } },
+        },
+      },
+    }));
+    render(<ChainProfileClient chainId="ethereum" />);
+    const chip = screen.getByRole("button", { name: /Chain Health inputs stale/ });
+    expect(chip.getAttribute("data-reason-codes")).toBe("api-degraded report-cards-stale stale-cache");
+    expect(screen.queryByText(/Data quality warning/)).toBeNull();
+  });
+
   it("shows a stale-data notice while still rendering the chain when cached data exists", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
       routeError: new Error("cached response"),
@@ -133,7 +151,9 @@ describe("ChainProfileClient", () => {
     render(<ChainProfileClient chainId="ethereum" />);
 
     expect(screen.getByText(/refresh delayed/i)).toBeTruthy();
-    expect(screen.getByText("Ethereum")).toBeTruthy();
+    // the chain name is the page H1; the hero renders the chain's figures, never a duplicate name card or chain ID
+    expect(screen.getByText("Total supply")).toBeTruthy();
+    expect(screen.queryByText(/Chain ID/)).toBeNull();
   });
 
 

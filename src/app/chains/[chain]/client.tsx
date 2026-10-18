@@ -6,7 +6,6 @@ import { Info } from "lucide-react";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useChainProfileData } from "@/hooks/use-chain-profile-data";
 import {
   BackingBreakdown,
@@ -98,17 +97,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
     <SectionErrorBoundary name="Chain Detail">
       <div className="space-y-6">
         <QueryErrorNotice error={routeError} hasData={hasAnyData} onRetry={() => { void refetchAll(); }} />
-        <StaleDataBanner
-          queries={[
-            {
-              preset: "chains",
-              dataUpdatedAt: chainsQuery.dataUpdatedAt,
-              error: chainsQuery.error,
-              hasData: !!chainsQuery.data?.chains?.length,
-              meta: chainsQuery.meta,
-            },
-          ]}
-        />
+        {/* degraded or stale data is the hero's status chip; the body only reports a hard error */}
         {hero}
         {chain && (
           <ShowYourWorkPanel

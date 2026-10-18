@@ -159,15 +159,3 @@ export function getRelatedChainTaxonomyLinks(deployments: readonly ChainTrackedD
     .sort((left, right) => right.count - left.count || left.title.localeCompare(right.title))
     .slice(0, RELATED_TAXONOMY_LIMIT);
 }
-
-export function getChainRuntimeContext(entry: Pick<ChainDirectoryEntry, "type" | "evmChainId">): string {
-  if (entry.type === "evm" && entry.evmChainId != null) {
-    return `EVM chain ID ${entry.evmChainId}`;
-  }
-
-  if (entry.type === "tron") {
-    return "Tron account model";
-  }
-
-  return "Non-EVM or app-specific runtime";
-}

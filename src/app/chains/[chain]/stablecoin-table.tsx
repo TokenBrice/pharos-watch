@@ -17,7 +17,7 @@ import {
 } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChainDetailCoin } from "@shared/types/chains";
-import { trendColor } from "@/lib/chain-ui";
+import { deltaColor } from "@/lib/chain-ui";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
@@ -118,10 +118,10 @@ export function StablecoinTable({
                 </span>
               </div>
             </TableCell>
-            <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change7dPct))}>
+            <TableCell className={cn("text-right font-mono tabular-nums", deltaColor(coin.change7dPct))}>
               {coin.change7dPct == null ? "—" : formatSignedPercent(coin.change7dPct * 100, 2)}
             </TableCell>
-            <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change30dPct))}>
+            <TableCell className={cn("text-right font-mono tabular-nums", deltaColor(coin.change30dPct))}>
               {coin.change30dPct == null ? "—" : formatSignedPercent(coin.change30dPct * 100, 2)}
             </TableCell>
           </InteractiveTableRow>

@@ -14,24 +14,78 @@ vi.mock("./dominance-breakdown", () => ({ DominanceBreakdown: () => null }));
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
+function mockChains(data: Record<string, unknown>, extra: Record<string, unknown> = {}) {
+  useChainsMock.mockReturnValue({
+    data: { globalChange7dPct: null, updatedAt: 1_760_000_000, ...data },
+    isLoading: false, isError: false, error: null, refetch: vi.fn(), dataUpdatedAt: 0, meta: null, ...extra,
+  });
+}
+
+const coverage = (assets: number, observations: number, ids: string[] = []) => ({
+  aggregateUnavailableAssetCount: assets, chainUnavailableObservationCount: observations, chainIdsWithUnavailableObservations: ids,
+});
+
 describe("ChainsLeaderboardClient", () => {
-  it("labels excluded-input global and chain totals as partial without recomputing them", () => {
-    useChainsMock.mockReturnValue({
-      data: {
-        chains: [makeChain({ totalUsd: 123_000_000, unavailableSupplyObservationCount: 2 })],
-        globalTotalUsd: 456_000_000,
-        globalChange7dPct: null,
-        supplyCoverage: { aggregateUnavailableAssetCount: 3, chainUnavailableObservationCount: 4,
-          chainIdsWithUnavailableObservations: ["ethereum", "tron"] },
-      },
-      isLoading: false, isError: false, error: null, refetch: vi.fn(), dataUpdatedAt: 0, meta: null,
+  it("beams the largest dominanceShare, not the first row, and labels partial inputs on the beam and chip", () => {
+    mockChains({
+      chains: [
+        makeChain({ id: "tron", name: "Tron", totalUsd: 123_000_000, dominanceShare: 0.27, unavailableSupplyObservationCount: 2 }),
+        makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 200_000_000, dominanceShare: 0.44 }),
+      ],
+      globalTotalUsd: 456_000_000,
+      supplyCoverage: coverage(3, 4, ["tron"]),
     });
     render(<ChainsLeaderboardClient />);
-    expect(screen.getByText("Partial stablecoin supply")).toBeTruthy();
-    expect(screen.getByText(/3 assets excluded from global supply/).textContent).toContain("4 unavailable chain observations");
+    expect(screen.getByText("Largest chain's share · Ethereum · partial")).toBeTruthy();
+    const hero = screen.getByRole("group", { name: "Chain concentration" });
+    expect(hero.textContent).toContain("44.0%");
+    expect(hero.textContent).toContain("71.0%");
+    const chip = screen.getByRole("button", { name: /Partial coverage/ });
+    expect(chip.getAttribute("data-reason-codes")).toBe("aggregate-unavailable-assets chain-unavailable-observations");
+    expect(screen.getByText("Known supply subtotal")).toBeTruthy();
     expect(screen.getByText(/Partial · 2 unavailable/)).toBeTruthy();
     expect(screen.getByText(formatCompactUsd(456_000_000))).toBeTruthy();
     expect(screen.getByText(formatCompactUsd(123_000_000))).toBeTruthy();
+    expect(screen.queryByText(/assets excluded from global supply/)).toBeNull();
   });
 
+  it("names only the excluded class that is present, never a zero count", () => {
+    mockChains({ chains: [makeChain()], globalTotalUsd: 456_000_000, supplyCoverage: coverage(0, 2, ["ethereum"]) });
+    render(<ChainsLeaderboardClient />);
+    const chip = screen.getByRole("button", { name: /Partial coverage/ });
+    expect(chip.getAttribute("data-reason-codes")).toBe("chain-unavailable-observations");
+    expect(screen.getByText("Observed stablecoin supply")).toBeTruthy();
+
+    cleanup();
+    mockChains({ chains: [makeChain()], globalTotalUsd: 456_000_000, supplyCoverage: coverage(0, 0) });
+    render(<ChainsLeaderboardClient />);
+    expect(screen.queryByRole("button", { name: /Partial coverage/ })).toBeNull();
+    expect(screen.getByText("Largest chain's share · Ethereum")).toBeTruthy();
+  });
+
+  it("renders unrated health as NR with Harbor's reason and tiny shares as <0.1%", () => {
+    mockChains({
+      chains: [
+        makeChain(),
+        makeChain({ id: "exsat", name: "exSat", totalUsd: 0.4, dominanceShare: 0.0000001, healthScore: null, healthBand: null }),
+      ],
+      globalTotalUsd: 456_000_000,
+    });
+    render(<ChainsLeaderboardClient />);
+    const nr = screen.getByTitle("Not rated: insufficient Chain Health coverage");
+    expect(nr.textContent).toContain("NR");
+    // the reason is also visible once above the table, since a title tooltip never reaches touch
+    expect(screen.getByLabelText("Chain Health not rated").textContent).toContain("1 chain · Not rated: insufficient Chain Health coverage");
+    expect(screen.getByText("<0.1%")).toBeTruthy();
+    expect(screen.getByText("<$1")).toBeTruthy();
+    expect(screen.queryByText(/Swipe table horizontally/)).toBeNull();
+  });
+
+  it("stamps retained data with its source time", () => {
+    // the hook exposes freshness as `meta`; the fetch layer strips `_meta` from the body
+    mockChains({ chains: [makeChain()], globalTotalUsd: 456_000_000 }, { meta: { status: "stale", updatedAt: 1_760_000_000, ageSeconds: 9_000 } });
+    render(<ChainsLeaderboardClient />);
+    expect(screen.getByText(/^Retained · as of \w+ \d+, \d{4} at \d{2}:\d{2}/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Stale data/ }).getAttribute("data-reason-codes")).toBe("api-stale");
+  });
 });

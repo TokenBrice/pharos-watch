@@ -147,7 +147,13 @@ export type HarborSceneInput = Pick<
   "globalTotalUsd" | "chainAttributedTotalUsd" | "unattributedTotalUsd" | "attributionDiscrepancyUsd" | "updatedAt"
 > & {
   chains: readonly HarborChainInput[];
-  _meta?: { status?: string; dependencies?: { reportCards?: { status: string; reason?: string | null } } };
+  /** The API freshness envelope; the frontend fetch layer delivers it as the query's `meta`, not inside the body. */
+  _meta?: {
+    status?: string;
+    ageSeconds?: number | null;
+    freshBudgetSec?: number | null;
+    dependencies?: { reportCards?: { status: string; reason?: string | null } } | null;
+  };
 };
 
 export type HarborChainInput = Pick<
@@ -232,7 +238,21 @@ function hullUnitsOf(containers: readonly HarborContainer[]): number {
   return hull;
 }
 
-function harborFlag(chain: Pick<HarborChainInput, "healthBand" | "healthScore">, input: Pick<HarborSceneInput, "_meta">): HarborFlag {
+/**
+ * The scene draws supply, so it is retained only when the supply generation is: a non-fresh envelope whose only cause
+ * is a lagging report-card dependency (supply age within its fresh budget) stays fresh here, and Chain Health names
+ * its own generation through the NR flag reason (R3). Without age/budget, a non-fresh status counts as retained
+ * unless the report-card dependency explains it.
+ */
+export function isSupplyRetained(meta: HarborSceneInput["_meta"]): boolean {
+  if (meta?.status == null || meta.status === "fresh") return false;
+  if (meta.ageSeconds != null && meta.freshBudgetSec != null) return meta.ageSeconds > meta.freshBudgetSec;
+  const reportCards = meta.dependencies?.reportCards;
+  return reportCards == null || reportCards.status === "fresh";
+}
+
+/** Chain Health flag or NR reason; the leaderboard reuses it so the table and the scene share one NR vocabulary. */
+export function harborFlag(chain: Pick<HarborChainInput, "healthBand" | "healthScore">, input: Pick<HarborSceneInput, "_meta">): HarborFlag {
   if (chain.healthBand) {
     return {
       kind: "band",
@@ -377,7 +397,7 @@ export function buildHarborScene(input: HarborSceneInput): HarborScene {
     unattributedTotalUsd: unattributedUsd,
     overAttributionRatio: discrepancy > 0 && input.globalTotalUsd > 0 ? discrepancy / input.globalTotalUsd : null,
     tiered: vessels.some((vessel) => vessel.containers.some((c) => c.tier > 0)),
-    retained: input._meta?.status != null && input._meta.status !== "fresh",
+    retained: isSupplyRetained(input._meta),
     updatedAt: input.updatedAt,
     conservation: { ok: Math.abs(drawnUsd - expectedUsd) <= CONSERVATION_TOLERANCE_USD, drawnUsd, expectedUsd },
   };

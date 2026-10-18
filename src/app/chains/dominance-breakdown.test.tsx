@@ -43,6 +43,27 @@ describe("DominanceBreakdown", () => {
     expect(screen.getByText("20.0%")).toBeTruthy();
   });
 
+  it("names the beam's chain without repeating its share, and prints a nonzero sliver as <0.1%", () => {
+    const withTail = [...topBySupply, makeChain({ id: "exsat", name: "exSat", dominanceShare: 0.0001 })];
+    const { container } = render(
+      <DominanceBreakdown
+        topBySupply={withTail}
+        globalTotalUsd={1_000}
+        chainAttributedTotalUsd={700.1}
+        unattributedTotalUsd={299.9}
+        chains={withTail}
+        beamChainId="ethereum"
+      />,
+    );
+
+    expect(screen.getByText("Ethereum")).toBeTruthy();
+    expect(screen.queryByText("50.0%")).toBeNull();
+    expect(screen.getByText("20.0%")).toBeTruthy();
+    expect(screen.getByText("<0.1%")).toBeTruthy();
+    // the bar's accessible label still carries every share
+    expect(dominanceBarLabel(container)).toContain("Ethereum 50.0%");
+  });
+
   it("surfaces the residual attributed share as 'Other chains'", () => {
     // chainAttributedShare = 900/1000 = 0.9; topShare = 0.7 -> Other = 0.2.
     const { container } = render(
