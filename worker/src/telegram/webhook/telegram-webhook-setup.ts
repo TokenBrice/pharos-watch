@@ -9,7 +9,7 @@
  */
 
 import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../delivery/telegram";
-import { buildTelegramMiniAppUrl } from "./webhook-registration";
+import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";

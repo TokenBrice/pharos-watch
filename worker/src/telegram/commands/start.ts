@@ -2,7 +2,7 @@ import {
   classifyTelegramStartSource,
   recordTelegramUsageEvent,
 } from "../store/usage-analytics";
-import { buildTelegramMiniAppUrl } from "../webhook/webhook-registration";
+import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import { parseStartPayload } from "../webhook/telegram-webhook-parsing";
 import { sendWizardIntro } from "../webhook/telegram-webhook-setup";
 import { START_MESSAGE } from "../webhook/telegram-webhook-shared";

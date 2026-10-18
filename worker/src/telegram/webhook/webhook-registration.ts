@@ -1,12 +1,11 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { API_ORIGIN, SITE_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
+import { API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import {
   TELEGRAM_ALLOWED_UPDATES,
   TELEGRAM_BOT_DESCRIPTION,
   TELEGRAM_BOT_GROUP_COMMANDS,
   TELEGRAM_BOT_NAME,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
-  TELEGRAM_BOT_USERNAME,
 } from "@shared/lib/telegram-bot-registration";
 import { getTelegramPrivateBotCommands } from "@shared/lib/telegram-bot-registration";
 import { getCache, setCache } from "../../lib/db-cache";
@@ -14,6 +13,7 @@ import { sha256Hex } from "../../lib/hash";
 import { postTelegramBotApi } from "../delivery/telegram";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../../lib/fetch-retry";
 import { readResponseTextWithinLimitWithSignal } from "../../lib/response-body";
+import { TELEGRAM_MINI_APP_URL } from "../common/mini-app-url";
 
 export {
   TELEGRAM_ALLOWED_UPDATES,
@@ -26,7 +26,6 @@ export {
 
 const DEFAULT_SELF_URL = API_ORIGIN;
 const TELEGRAM_WEBHOOK_PATH = "/api/telegram-webhook";
-const TELEGRAM_MINI_APP_PATH = `/${TELEGRAM_BOT_USERNAME.toLowerCase()}/app/`;
 const TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY = "telegram:webhook-reconciled";
 const TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY = "telegram:commands-reconciled";
 const TELEGRAM_PROFILE_RECONCILED_CACHE_KEY = "telegram:profile-reconciled";
@@ -42,17 +41,7 @@ const TELEGRAM_COMMANDS_CACHE_VERSION = 8;
 const TELEGRAM_PROFILE_CACHE_VERSION = 3;
 const TELEGRAM_MENU_CACHE_VERSION = 1;
 
-export const TELEGRAM_MINI_APP_URL = new URL(TELEGRAM_MINI_APP_PATH, SITE_ORIGIN).toString();
 export const TELEGRAM_MINI_APP_BUTTON_TEXT = "Manage Alerts";
-
-export function buildTelegramMiniAppUrl(startParam?: string | null): string {
-  const url = new URL(TELEGRAM_MINI_APP_URL);
-  const trimmed = startParam?.trim();
-  if (trimmed) {
-    url.searchParams.set("startapp", trimmed);
-  }
-  return url.toString();
-}
 
 const TELEGRAM_PRIVATE_COMMAND_SCOPE = { type: "all_private_chats" } as const;
 const TELEGRAM_GROUP_COMMAND_SCOPE = { type: "all_group_chats" } as const;

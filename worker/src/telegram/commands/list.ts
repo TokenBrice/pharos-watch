@@ -1,5 +1,5 @@
 import { buildListMessage, buildManageEntryKeyboard, buildMiniAppOnlyKeyboard } from "../webhook/telegram-webhook-messages";
-import { buildTelegramMiniAppUrl } from "../webhook/webhook-registration";
+import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import {
   loadPresetSubscriptions,
   loadSubscriberByChat,

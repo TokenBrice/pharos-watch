@@ -1,7 +1,9 @@
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
-import { resolve } from "node:path";
-import { describe, it } from "vitest";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterAll, describe, it } from "vitest";
 import eslintConfig from "../../eslint.config.mjs";
 
 RuleTester.describe = describe;
@@ -12,6 +14,10 @@ if (!rule) throw new Error("ESLint configuration must register pharos/contracts-
 const tester = new RuleTester({ languageOptions: { parser: tsParser } });
 const consumer = resolve("src/consumer.ts");
 const contract = resolve("shared/contracts/value.ts");
+const fixtureRoot = mkdtempSync(join(tmpdir(), "pharos-eslint-contracts-"));
+const contractsLink = join(fixtureRoot, "wire-contracts");
+symlinkSync(resolve("shared/contracts"), contractsLink, "dir");
+afterAll(() => rmSync(fixtureRoot, { recursive: true, force: true }));
 
 tester.run("pharos/contracts-imports", rule, {
   valid: [
@@ -56,7 +62,28 @@ tester.run("pharos/contracts-imports", rule, {
       `import Value = require(${JSON.stringify(specifier)});`,
       `type Value = import(${JSON.stringify(specifier)}).Value;`,
     ]).map((code) => ({ code, filename: consumer, errors: [{ messageId: "public" }] })),
+    ...["src/consumer.ts", "worker/src/consumer.ts", "functions/consumer.ts"].flatMap((filename) =>
+      ["api-meta.ts", "api-meta", "private/missing.ts"].flatMap((subpath) => {
+        const specifier = `${filename.startsWith("worker/") ? "../../" : "../"}node_modules/@pharos/contracts/${subpath}`;
+        return [
+          `import { Value } from ${JSON.stringify(specifier)};`,
+          `export * from ${JSON.stringify(specifier)};`,
+          `const value = import(${JSON.stringify(specifier)});`,
+          `const value = require(${JSON.stringify(specifier)});`,
+          `import Value = require(${JSON.stringify(specifier)});`,
+        ].map((code) => ({ code, filename: resolve(filename), errors: [{ messageId: "public" }] }));
+      })),
+    ...["api-meta.ts", "api-meta", "private/missing.ts"].map((subpath) => ({
+      code: `import { Value } from ${JSON.stringify(join(contractsLink, subpath))};`,
+      filename: consumer,
+      errors: [{ messageId: "public" }],
+    })),
     { code: 'const value = import(`@shared/contracts/api-meta`);', filename: consumer, errors: [{ messageId: "public" }] },
+    {
+      code: 'import { Value } from "../../node_modules/@pharos/contracts/api-meta.ts";',
+      filename: contract,
+      errors: [{ messageId: "dependency" }],
+    },
     { code: 'const value = require(`@pharos/contracts/private`);', filename: consumer, errors: [{ messageId: "public" }] },
     ...[
       "../lib/value", "../types/value", "../data/value", "../../src/value", "../../worker/src/value",

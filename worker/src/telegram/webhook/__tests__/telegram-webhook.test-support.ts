@@ -13,7 +13,7 @@ import {
   telegramApiCallBody,
   telegramCallBody,
   type MockTelegramD1Options,
-} from "../../test-helpers/telegram";
+} from "../../../test-helpers/__shared/telegram";
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 

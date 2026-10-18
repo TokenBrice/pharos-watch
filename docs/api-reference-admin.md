@@ -214,7 +214,7 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 
 Malformed numeric params return `400`; out-of-range numeric params are clamped to the documented bounds.
 
-**Response shape:** `ApiRequestAttributionResponse` (defined in `shared/types/index.ts`)
+**Response shape:** `ApiRequestAttributionResponse` (defined in `shared/contracts/request-source.ts`, exported as `@pharos/contracts/request-source`)
 
 `ApiRequestAttributionResponse` includes:
 

@@ -255,7 +255,8 @@
         "docs/access-lookthrough.md",
         {"path": "docs/redemption-backstops.md", "anchor": "methodology-versioning"},
         "docs/process/protocol-api-mechanism-refresh.md",
-        "docs/process/redemption-route-evidence.md"
+        {"path": "docs/process/redemption-route-evidence.md", "anchor": "configured-route-bound-evidence"},
+        {"path": "docs/process/redemption-route-evidence.md", "anchor": "zero-route-producer-evidence-review-pkt-12-2026-10-14"}
       ],
       "rules": ["Reserve provenance describes evidence actually read, not merely the configured feed; preserve snapshot admission and retained-attempt distinctions.", "Published serial/basket edges own the map; review leads never create edges without current claim identity and measured weight or reviewed serial/mechanism semantics."]
     },

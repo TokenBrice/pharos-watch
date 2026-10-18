@@ -1,5 +1,5 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import nextVitals from "eslint-config-next/core-web-vitals";
@@ -64,20 +64,33 @@ function isWithinPath(parentDir, candidatePath) {
 }
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
-const contractsRoot = resolve(repoRoot, "shared/contracts");
+const contractsRoot = realpathSync(resolve(repoRoot, "shared/contracts"));
 const contractsManifest = JSON.parse(readFileSync(resolve(contractsRoot, "package.json"), "utf8"));
 const contractsPublicImports = new Set(
   Object.keys(contractsManifest.exports).map((subpath) => `${contractsManifest.name}/${subpath.slice(2)}`),
 );
 
+function canonicalImportTarget(target) {
+  try {
+    return realpathSync(target);
+  } catch (error) {
+    if (error.code !== "ENOENT" && error.code !== "ENOTDIR") throw error;
+    // Extensionless and not-yet-created modules still inherit their directory's symlinks.
+    const parent = dirname(target);
+    return parent === target ? target : resolve(canonicalImportTarget(parent), relative(parent, target));
+  }
+}
+
 function physicalImportTarget(filename, specifier) {
-  if (specifier.startsWith(".")) return resolve(dirname(filename), specifier);
-  if (isAbsolute(specifier)) return resolve(specifier);
-  if (specifier.startsWith("@shared/")) return resolve(repoRoot, "shared", specifier.slice("@shared/".length));
-  if (specifier.startsWith("@/")) return resolve(repoRoot, "src", specifier.slice(2));
-  if (specifier.startsWith("shared/")) return resolve(repoRoot, specifier);
-  if (specifier.startsWith("file:")) return fileURLToPath(specifier);
-  return null;
+  let target;
+  if (specifier.startsWith(".")) target = resolve(dirname(filename), specifier);
+  else if (isAbsolute(specifier)) target = resolve(specifier);
+  else if (specifier.startsWith("@shared/")) target = resolve(repoRoot, "shared", specifier.slice("@shared/".length));
+  else if (specifier.startsWith("@/")) target = resolve(repoRoot, "src", specifier.slice(2));
+  else if (specifier.startsWith("shared/")) target = resolve(repoRoot, specifier);
+  else if (specifier.startsWith("file:")) target = fileURLToPath(specifier);
+  else return null;
+  return canonicalImportTarget(target);
 }
 
 function staticImportSpecifier(node) {
@@ -161,7 +174,7 @@ const pharosBoundaryPlugin = {
       create(context) {
         const filename = context.filename;
         // Package tests are consumers of the public exports, not package implementation.
-        const inContracts = isWithinPath(contractsRoot, filename)
+        const inContracts = isWithinPath(contractsRoot, canonicalImportTarget(filename))
           && !filename.replaceAll("\\", "/").includes("/__tests__/")
           && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename);
         function check(node) {
@@ -174,14 +187,17 @@ const pharosBoundaryPlugin = {
             return;
           }
           const target = physicalImportTarget(filename, specifier);
+          const throughWorkspaceLink = /(?:^|[/\\])node_modules[/\\]@pharos[/\\]contracts(?:[/\\]|$)/.test(specifier);
           if (inContracts) {
-            if (specifier !== "zod" && !(specifier.startsWith(".") && target && isWithinPath(contractsRoot, target))) {
+            if (specifier !== "zod" && !(specifier.startsWith(".") && !throughWorkspaceLink
+              && target && isWithinPath(contractsRoot, target))) {
               context.report({ node, messageId: "dependency" });
             }
           } else if (
             ((specifier === contractsManifest.name || specifier.startsWith(`${contractsManifest.name}/`))
               && !contractsPublicImports.has(specifier))
             || specifier === "@shared/contracts" || specifier.startsWith("@shared/contracts/")
+            || throughWorkspaceLink
             || (target && isWithinPath(contractsRoot, target))
           ) {
             context.report({ node, messageId: "public" });

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { buildTelegramMiniAppUrl, TELEGRAM_MINI_APP_URL } from "../../common/mini-app-url";
 import {
-  buildTelegramMiniAppUrl,
   buildTelegramWebhookUrl,
   reconcileTelegramCommandRegistration,
   reconcileTelegramMenuButton,
@@ -11,7 +11,6 @@ import {
   TELEGRAM_BOT_COMMANDS,
   TELEGRAM_BOT_GROUP_COMMANDS,
   TELEGRAM_MINI_APP_BUTTON_TEXT,
-  TELEGRAM_MINI_APP_URL,
 } from "../webhook-registration";
 
 let fetchSpy = mockFetch([], { requireMatch: true });

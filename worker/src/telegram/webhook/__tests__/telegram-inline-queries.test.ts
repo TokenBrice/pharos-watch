@@ -8,7 +8,7 @@ import {
   makeTelegramUpdateRequest,
   mockTelegramD1 as mockD1,
   telegramApiCallBody,
-} from "../../test-helpers/telegram";
+} from "../../../test-helpers/__shared/telegram";
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 

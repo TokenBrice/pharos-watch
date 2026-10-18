@@ -9,7 +9,7 @@ import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/stat
 import { escapeHtml, type InlineKeyboardButton } from "../delivery/telegram";
 import { formatTelegramAge } from "../common/format-age";
 import { MANAGE_PAGE_SIZE } from "../common/constants";
-import { buildTelegramMiniAppUrl } from "./webhook-registration";
+import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import type { ResolvedCoin } from "../common/alerts-parser";
 import type { TelegramPresetDefinition, TelegramPresetId } from "../common/presets";
 import { isQuietHoursActive } from "../common/quiet-hours";

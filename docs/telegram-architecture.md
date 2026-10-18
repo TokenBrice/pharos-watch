@@ -300,6 +300,7 @@ Files any seam may import:
 - `worker/src/telegram/common/constants.ts` — shared delivery-state type and pending-only predicate; central tokens (snooze/step/view/chunk, ingress, queue, TTL).
 - `worker/src/telegram/common/alerts-parser.ts` — ticker resolution, subscribe/set argument parsing, disambiguation parsing, and close-match suggestions.
 - `worker/src/telegram/common/alerts-formatting.ts` — alert message formatting, `splitMessage`, and `SNOOZE_REPLY_MARKUP`.
+- `worker/src/telegram/common/mini-app-url.ts` — pure Mini App URL and `startapp` context builder shared by alert formatting and HTTP-facing controls; does not import HTTP-bearing Telegram modules.
 - `worker/src/telegram/common/format-age.ts` — compact relative-age labels shared by command and status surfaces.
 - `worker/src/telegram/common/coin-dedupe.ts` — shared stablecoin de-duplication helpers for alert and command coin lists.
 - `worker/src/telegram/common/presets.ts` — preset definitions and resolution.

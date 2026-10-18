@@ -6,7 +6,7 @@ import {
   TELEGRAM_MESSAGE_CHUNK_LIMIT,
   TELEGRAM_SPLIT_VERSION,
 } from "./constants";
-import { buildTelegramMiniAppUrl } from "../webhook/webhook-registration";
+import { buildTelegramMiniAppUrl } from "./mini-app-url";
 import type { ResolvedCoin } from "./alerts-parser";
 
 // Expose chunking constants alongside the formatter that consumes them.

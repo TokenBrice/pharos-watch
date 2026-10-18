@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { mockTelegramMembership } from "../../test-helpers/telegram";
+import { mockTelegramMembership } from "../../../test-helpers/__shared/telegram";
 import {
   fetchSpy,
   firstAckBody,

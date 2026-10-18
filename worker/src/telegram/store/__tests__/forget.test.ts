@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockTelegramD1 as mockD1 } from "../../test-helpers/telegram";
+import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../subscriber-lifecycle";
 

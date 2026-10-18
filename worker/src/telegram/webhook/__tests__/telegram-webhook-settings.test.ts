@@ -7,7 +7,7 @@ import {
   mockTelegramD1 as mockD1,
   telegramApiCalls,
   telegramCallBody,
-} from "../../test-helpers/telegram";
+} from "../../../test-helpers/__shared/telegram";
 
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
