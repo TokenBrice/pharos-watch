@@ -1,7 +1,8 @@
 import { getChainResilienceTier } from "./index";
 import { CHAIN_META } from "../../types/chain-identity";
 import { canonicalizeChainCirculating } from "./circulating";
-import { TRACKED_META_BY_ID } from "../stablecoins/registry";
+// Chain health reads backing/commodity units only, never issuer evidence.
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "../stablecoins/client-registry";
 import { getPegReference } from "../peg-rates";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "../supply";
 import { isObservedPrice } from "../pricing-source-policy";

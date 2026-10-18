@@ -57,6 +57,7 @@
     "test:v9-resource": "node --import tsx scripts/maintenance/run-v9-resource-lane.ts",
     "test:profile": "node scripts/maintenance/profile-vitest.mjs",
     "measure:v9-resource": "node --import tsx worker/scripts/measure-v9-resource.ts",
+    "qualify:worker-memory": "node scripts/maintenance/qualify-worker-memory.mjs",
     "calibrate:v9-resource": "node --import tsx worker/scripts/calibrate-v9-resource.ts",
     "test:critical-contracts": "node --import tsx scripts/maintenance/run-critical-contracts.ts",
     "coverage:critical": "node --import tsx scripts/maintenance/run-critical-coverage.ts",

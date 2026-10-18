@@ -77,6 +77,56 @@ function checkLatin1Scripts(directory: string): boolean {
   return true;
 }
 
+// Inspect emitted reachability, not source import spelling: Wrangler resolves aliases
+// and dynamic imports before writing the map. Missing evidence must fail closed.
+export function checkHeavyReachability(directory: string): boolean {
+  let sourceCount = 0;
+  let valid = true;
+  function reject(path: string): void {
+    console.error(`Heavy Worker reaches forbidden HTTP/rendering source or asset: ${path}`);
+    valid = false;
+  }
+  function visit(current: string): void {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) {
+        visit(path);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (/\.(?:wasm|ttf|otf|woff2?)$/i.test(entry.name)) reject(path);
+      if (!entry.name.endsWith(".map")) continue;
+      try {
+        const map: unknown = JSON.parse(readFileSync(path, "utf8"));
+        if (
+          !map || typeof map !== "object" || !("sources" in map) ||
+          !Array.isArray(map.sources) ||
+          !map.sources.every((source: unknown) => typeof source === "string" && source.trim().length > 0)
+        ) throw new Error("missing sources array");
+        for (const source of map.sources as string[]) {
+          sourceCount++;
+          const normalized = source.replaceAll("\\", "/");
+          if (
+            /(?:^|\/)(?:worker\/)?src\/(?:api\/|routes\/|handlers\/http\/|router\.[cm]?[jt]sx?$|handlers\/scheduled\/public-runners\.[cm]?[jt]s$)/.test(normalized) ||
+            /(?:^|\/)(?:api|og|telegram-webhook|fonts?)(?:\/|[.-])/.test(normalized) ||
+            /\.(?:wasm|ttf|otf|woff2?)(?:$|\?)/i.test(normalized) ||
+            /(?:^|\/)(?:@resvg|satori|yoga-wasm-web)(?:\/|$)/.test(normalized)
+          ) reject(source);
+        }
+      } catch (error) {
+        console.error(`Cannot inspect heavy Worker source map ${path}: ${String(error)}`);
+        valid = false;
+      }
+    }
+  }
+  visit(directory);
+  if (sourceCount === 0) {
+    console.error("Heavy Worker reachability evidence is missing: no nonempty source map sources.");
+    return false;
+  }
+  return valid;
+}
+
 export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {}): WorkerPackageRunResult {
   const repoRoot = process.cwd();
   if (!checkPrivateSourceMaps(repoRoot)) return { status: 1 };
@@ -90,6 +140,7 @@ export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {
     );
     if (result.error || result.status !== 0) return { status: result.status ?? 1 };
     if (!checkLatin1Scripts(outputDirectory)) return { status: 1 };
+    if (role === "heavy" && !checkHeavyReachability(outputDirectory)) return { status: 1 };
   }
   return { status: 0 };
 }

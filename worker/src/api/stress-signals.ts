@@ -17,7 +17,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
-import { ACTIVE_IDS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS as ACTIVE_IDS, WORKER_READABLE_IDS as READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
 import type {

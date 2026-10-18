@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { fnv1a32Hex } from "@shared/lib/fnv1a";
 import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import {

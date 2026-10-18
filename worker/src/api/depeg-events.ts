@@ -26,7 +26,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTrustedDexPriceRow } from "../lib/depeg-trust-policy";

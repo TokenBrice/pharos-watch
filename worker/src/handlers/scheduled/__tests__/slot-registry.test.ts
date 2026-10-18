@@ -4,7 +4,8 @@ import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { ScheduledRuntimeContext } from "../context";
 import type { ScheduledSlotSummary } from "../slot-summary";
-import { SLOT_RUNNER_LOADER_BY_KEY } from "../../scheduled";
+import { PUBLIC_SLOT_RUNNER_LOADERS } from "../public-runners";
+import { HEAVY_SLOT_RUNNER_LOADERS } from "../heavy-runners";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 /**
@@ -67,7 +68,8 @@ async function runSlot(scheduleKey: CronScheduleKey): Promise<{
     VALUES (?, ?, 'running', ?, ?, ?, ?, ?, 1)`)
     .run(scheduleKey, runtime.slotStartedAt, runtime.executionFence.owner, runtime.executionFence.generation,
       runtime.executionFence.invocationId, runtime.slotStartedAt, runtime.slotStartedAt);
-  const runner = await SLOT_RUNNER_LOADER_BY_KEY[plan.scheduleKey]();
+  const loaders = { ...PUBLIC_SLOT_RUNNER_LOADERS, ...HEAVY_SLOT_RUNNER_LOADERS };
+  const runner = await loaders[plan.scheduleKey]();
   const summary = (await runner(runtime)) ?? undefined;
   return { leased, summary };
 }

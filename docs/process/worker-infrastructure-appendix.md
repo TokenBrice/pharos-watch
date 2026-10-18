@@ -388,6 +388,38 @@ The [V9 resource guard](../testing.md#v9-resource-lane) uses the packed Worker c
 
 Publication derives its wall budget from the inherited slot deadline, leaving explicit diagnostic/settlement headroom; [Safety Score production budgets](../worker-and-api-limits.md#safety-score-production-budgets) owns the reserve, admission floor and non-scheduled fallback. Distinguish phase-bearing publisher/window aborts from independently observed `exceededMemory`/`exceededCpu`. Byte growth alone is not timeout attribution: a successful larger input disproves that inference, and deleting valid DEX routes is not the performance fix. Local immutable-admission reuse/speedups still require post-deploy accepted publication and correlated platform outcomes before claiming recovery.
 
+### Role reachability and HTTP metadata
+
+The public and heavy entries inject separate compile-time loader maps (`scheduled/public-runners.ts` and `scheduled/heavy-runners.ts`) into the same scheduled dispatcher. These maps declare imports, **not** cadence, ownership, slot identity or fences: `shared/lib/scheduled-runner-registry.ts` remains authoritative. The role-map contract test requires each map to contain exactly its registry-owned keys and their union to cover every plan. Lazy imports remain necessary to measure and preserve the cold entry versus first-runner initialization boundary.
+
+`check:worker-package` inspects the emitted heavy source maps and binary assets after strict packaging. Missing, malformed or empty source-map evidence fails closed. API, router, routes, HTTP dispatch, public runner map, OG/Telegram-webhook, font and rendering/WASM sources or assets fail the heavy package; the public package may retain them. The runtime-reachability check also discovers runners from **both** maps, so splitting imports cannot silently remove scheduled graphs from its existing DOM-boundary coverage. This guard proves reachability only, not initialization peaks or Worker capacity.
+
+HTTP identity, lifecycle, peg metadata and membership readers use the existing Worker runtime projection. Chains and non-USD share derive core membership through the existing aggregate-universe predicates, never a duplicated cohort. Chain aggregation uses the compact client list projection for the backing flag and commodity units (the Worker projection intentionally does not promise backing for every coin). Projection tests retain canonical identity, flags, lifecycle and core-cohort parity. This is not a global replacement for the complete evidence catalog: provider routing and evidence-bearing/admin computations retain their full-field requirements; ADR-37 transport and scoring inputs are unchanged.
+
+### Offline qualification procedure (D4: qualify first)
+
+Run from the repository root with the locked toolchain/dependencies and generated compile inputs already installed:
+
+```bash
+node scripts/maintenance/qualify-worker-memory.mjs --out-dir agents/worker-memory-qualification/run-01 --runs 5
+```
+
+The parent output directory must exist and the named run directory must be new. The harness exclusively creates it, retains partial failures, performs no remote operations, and changes no caps or qualification policy. Unknown/duplicate options, missing output and invalid repeat counts are usage errors. A failed child, incomplete phase set, non-accepted reader result or missing report fails the harness; `complete: true` means only that its **local diagnostic workload** completed.
+
+It retains:
+
+- `compute/` and `heavy-warm/`: the existing faithful packed-catalog, heavy-config resource probe; two warm publication cycles per child, complete prepare/compute/store/journal/archive phase evidence, output identity/correctness, and separate instrumented 256 MiB versus uninstrumented natural 128 MiB old-space results. Archive evidence measures real serialization through a local recording bucket, **not** network/R2 latency or durability. The fixture's documented production-size gap remains a limitation.
+- `probe.metafile.json` and `probe/`: a split ESM diagnostic built with the heavy catalog alias, conditions and minification settings. Node first loads the cold heavy entry, then the charts runner loader. Importing charts measures its graph initialization, not successful execution of DEX/preparation/charts jobs.
+- `cold-{natural,observed}-N.ndjson` and `readers-{natural,observed}-N.ndjson`: fresh processes, before/after memory samples at each named boundary. Readers open the corresponding successfully computed accepted publication read-only and retain both baseline/lender projections alongside the charts graph; missing/bootstrap/unavailable is never a passing accepted read.
+- `report.json`, child stdout/stderr and nested resource reports: Node/V8/build identity, workload exit/signal/failure reasons, unchanged-policy status and explicit uncollected production evidence.
+
+Keep these evidence classes separate. Node `heapUsed` and V8 old/large-object spaces are the old-space proxy; `external`, `arrayBuffers` and V8 external-script/code statistics describe other local allocations (some overlap). Do not add/subtract them into an invented 128 MB Worker headroom number. Forced-GC samples are not natural peaks; fresh process results are not warm-isolate or shared-isolate concurrency proof. Repeat at current and projected admitted workload sizes without changing production byte/cardinality limits. The existing resource-policy calibration still requires five distinct complete reports, all natural 128 MiB successes and phase maxima at or below its 110 MiB prerequisite before proposing the 112 MiB policy.
+
+For deployment qualification, retain strict public/heavy packages and source maps, compare actual bytes/source counts, deploy the role split without another topology experiment, then correlate the exact paired Worker versions/activation clocks with the first cold `:16/:46` loader/preparation and subsequent accepted `:22/:52` publication, accepted readers and overlapping heavy invocations plus public detail/health traffic. Collect independently filtered `exceededMemory`/`exceededCpu` outcomes and Adaptive memory via `ops:worker-memory`; record actual covered UTC windows, sampling, unmatched events and input/cardinality sizes. Adaptive is shared-isolate sampled evidence, not a phase peak or subtractable margin. Require 14 consecutive covered days without matched public memory outcomes for the WS2 production acceptance criterion; an unobserved period is not zero.
+
+D4 remains **unqualified** until those measurements establish the physical envelope. If cold/warm headroom does not meet the existing policy margin, record the owner's bridge-versus-chunking decision (P3 larger-memory compute bridge with fenced Worker commit, or P4 dependency-chunked manifest); local completion does not authorize either path or a cap increase.
+
+
 ## Packed catalog transport mechanics
 
 [ADR-37](../architecture.md#adr-37) owns losslessness, canonical identity and the no-new-runtime-dependency constraint. `scripts/build-data/generate-worker-stablecoin-catalog.ts` emits deterministic per-record gzip/base64 tuples with exact UTF-8 lengths; `worker/src/lib/full-stablecoin-catalog.ts` validates and decodes them sequentially using one reusable maximum-record output buffer. The complete decoded objects remain resident; transport does not eliminate them or temporary per-record allocations. Empty catalogs are unsupported.

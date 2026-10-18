@@ -1,5 +1,6 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { filterCoreAggregateStablecoins } from "@shared/lib/stablecoins/aggregate-universe";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/market";
@@ -12,6 +13,8 @@ import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 const DEFAULT_DAYS = 5000;
 const MIN_DAYS = 30;
 const MAX_DAYS = 5000;
+
+const CORE_AGGREGATE_ACTIVE_STABLECOINS = filterCoreAggregateStablecoins(WORKER_ACTIVE_STABLECOINS);
 
 /** IDs of commodity-pegged stablecoins (gold, silver). */
 const CORE_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.map((c) => c.id);
