@@ -159,7 +159,8 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
     };
   }
 
-  const updatedAt = cron.lastRun?.startedAt ?? cron.inFlight?.updatedAt ?? null;
+  const latestRun = cron.runs[0] ?? null;
+  const updatedAt = latestRun?.startedAt ?? cron.inFlight?.updatedAt ?? null;
   const ageSeconds = updatedAt != null ? Math.max(0, now - updatedAt) : null;
   const maxAgeSec = cron.expectedIntervalSec * 2;
   if (cron.telemetryUnknown) {
@@ -172,20 +173,20 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
     };
   }
   if (!cron.healthy) {
-    const requiredRun = cron.lastRun?.status === "skipped_neutral"
-      ? cron.recentRuns.find((run) => run.status !== "skipped_neutral")
-      : cron.lastRun;
+    const requiredRun = latestRun?.status === "skipped_neutral"
+      ? cron.runs.find((run) => run.status !== "skipped_neutral")
+      : latestRun;
     const lastStatus = requiredRun?.status ?? null;
-    const failureReason = requiredRun?.degradedReason ?? requiredRun?.metadata?.reason;
+    const failureReason = requiredRun?.degradedReason ?? requiredRun?.reason;
     const reason = lastStatus === "error" || lastStatus === "degraded"
       ? `Latest required cron status is ${lastStatus}${typeof failureReason === "string" ? `: ${failureReason}` : ""}.`
       : `No confirmed cron output within the ${maxAgeSec}s availability budget.`;
     return {
-      status: cron.lastRun ? "degraded" : "stale",
+      status: latestRun ? "degraded" : "stale",
       updatedAt: requiredRun?.startedAt ?? updatedAt,
       ageSeconds: requiredRun ? Math.max(0, now - requiredRun.startedAt) : ageSeconds,
       maxAgeSec,
-      reason: cron.lastRun ? reason : "No successful cron run recorded.",
+      reason: latestRun ? reason : "No successful cron run recorded.",
     };
   }
 

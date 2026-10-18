@@ -1,5 +1,5 @@
 import { unavailableReserveComposition } from "@shared/lib/status-reserve-composition";
-import type { StatusCause, StatusResponse } from "@shared/types/status";
+import type { CronStatusDetail, StatusCause, StatusResponse } from "@shared/types/status";
 import { assessPublicHealth, capturePublicHealthRead, getPublicHealthEvidenceReadFailures, type PublicHealthReadResult } from "./public-health-assessment";
 import { emptyDatasetFreshness } from "./status/derived-data";
 import { getDataQuality } from "./status/data-quality";
@@ -36,7 +36,8 @@ export interface RawStatusComputation {
   confidence: number;
   causes: StatusResponse["causes"];
   caches: StatusResponse["caches"];
-  crons: StatusResponse["crons"];
+  /** Full-evidence cron records; the HTTP response serves their summary projection. */
+  crons: Record<string, CronStatusDetail>;
   budgetOnlySurfaces: StatusResponse["budgetOnlySurfaces"];
   dataQuality: StatusResponse["dataQuality"];
   telegramBot: StatusResponse["telegramBot"];

@@ -13,13 +13,14 @@ import {
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
-import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
+import type { CronEvent, CronInFlight, CronRunDetail, CronStaleArtifact, CronStatusDetail } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
 import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
 import { staleSlotEventCacheKey } from "../scheduled-slot-reconciliation";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import { classifyFreshness } from "./freshness-oracle";
+import { projectCronRunOutcome } from "./cron-status-summary";
 
 /** Job ids behind each cron finding count, so causes can name what to look at (R4). */
 export interface CronFindingJobs {
@@ -32,7 +33,8 @@ export interface CronFindingJobs {
 }
 
 export interface CronHealthSnapshot {
-  crons: Record<string, CronStatus>;
+  /** Internal full-evidence records; `/api/status` serves `summarizeCronStatuses()` of these. */
+  crons: Record<string, CronStatusDetail>;
   cronFindingJobs: CronFindingJobs;
   unhealthyCrons: number;
   availabilityImpactingUnhealthyCrons: number;
@@ -154,12 +156,12 @@ function parseCronEvent(value: string | null | undefined): CronEvent | null {
 }
 
 
-function parseCronRunStatus(status: string): CronRun["status"] {
+function parseCronRunStatus(status: string): CronRunDetail["status"] {
   const parsed = CronRunStatusSchema.safeParse(status);
   return parsed.success ? parsed.data : "error";
 }
 
-function isFreshCronRun(run: CronRun | null | undefined, now: number, interval: number): run is CronRun {
+function isFreshCronRun(run: CronRunDetail | null | undefined, now: number, interval: number): run is CronRunDetail {
   if (run == null) return false;
   return classifyFreshness(
     {
@@ -174,7 +176,7 @@ function isFreshCronRun(run: CronRun | null | undefined, now: number, interval: 
   ).state === "fresh";
 }
 
-function hasFreshOutput(job: string, run: CronRun | null, now: number, interval: number): boolean {
+function hasFreshOutput(job: string, run: CronRunDetail | null, now: number, interval: number): boolean {
   if (!run) return false;
   // Control-plane jobs have no consumer output clock; a completed observation
   // remains available independently of its diagnostic finding.
@@ -319,7 +321,14 @@ async function fetchCronHistoryRows(
   db: D1Database,
   cronJobs: string[],
   now: number,
-): Promise<{ value: CronHistoryRow[] | null; error: string | null; freshOutputJobs?: Set<string>; freshOkOutputJobs?: Set<string> }> {
+): Promise<{
+  value: CronHistoryRow[] | null;
+  error: string | null;
+  freshOutputJobs?: Set<string>;
+  freshOkOutputJobs?: Set<string>;
+  /** Newest confirmed output clock per job among the rows/lookbacks read here. */
+  confirmedOutputAtByJob?: Map<string, number>;
+}> {
   try {
     // Each batch is an independent SELECT, so fire all batches concurrently
     // rather than awaiting them in sequence; D1's HTTP/2 connection is
@@ -391,6 +400,10 @@ async function fetchCronHistoryRows(
     }
     const freshOutputJobs = new Set<string>();
     const freshOkOutputJobs = new Set<string>();
+    const confirmedOutputAtByJob = new Map<string, number>();
+    const recordConfirmedOutput = (job: string, outputAt: number) => {
+      confirmedOutputAtByJob.set(job, Math.max(confirmedOutputAtByJob.get(job) ?? 0, outputAt));
+    };
     for (const row of rows) {
       if (row.status !== "ok" && row.status !== "degraded") continue;
       const outputAt = confirmedCronOutputAt(
@@ -398,6 +411,7 @@ async function fetchCronHistoryRows(
         parseMetadataObject(row.metadata) ?? null,
         row.started_at + Math.ceil(row.duration_ms / 1000),
       );
+      if (outputAt != null && outputAt <= now) recordConfirmedOutput(row.job, outputAt);
       if (outputAt != null && outputAt <= now && now - outputAt <= CRON_INTERVALS[row.job] * 2) {
         freshOutputJobs.add(row.job);
         if (row.status === "ok") freshOkOutputJobs.add(row.job);
@@ -420,6 +434,7 @@ async function fetchCronHistoryRows(
           FROM cron_runs WHERE job = ? AND started_at >= ?
         ) WHERE output_at <= ?
       `).bind(job, windowStart, now).first<{ output_at: number | null; ok_output_at: number | null }>();
+      if (result?.output_at != null) recordConfirmedOutput(job, result.output_at);
       if (result?.output_at != null && now - result.output_at <= CRON_INTERVALS[job] * 2) {
         freshOutputJobs.add(job);
       }
@@ -428,7 +443,7 @@ async function fetchCronHistoryRows(
       }
     }));
     rows.sort((a, b) => b.started_at - a.started_at);
-    return { value: rows, error: null, freshOutputJobs, freshOkOutputJobs };
+    return { value: rows, error: null, freshOutputJobs, freshOkOutputJobs, confirmedOutputAtByJob };
   } catch (err) {
     logWorkerEvent({
       scope: "status",
@@ -582,11 +597,17 @@ function summarizeRunningCronSlots(
   };
 }
 
+export interface LoadCronHealthOptions {
+  /** Restrict history/lease/progress reads and records to these canonical jobs (per-job detail). */
+  jobs?: readonly string[];
+}
+
 export async function loadCronHealth(
   db: D1Database,
   now: number,
+  options: LoadCronHealthOptions = {},
 ): Promise<CronHealthSnapshot> {
-  const cronJobs = Object.keys(CRON_INTERVALS);
+  const cronJobs = options.jobs ? [...options.jobs] : Object.keys(CRON_INTERVALS);
   const cronJobInClause = buildInClause(cronJobs);
   const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
   const slotEventKeys = scheduleKeys.map(staleSlotEventCacheKey);
@@ -721,7 +742,7 @@ export async function loadCronHealth(
     }
   }
 
-  const cronByJob = new Map<string, CronRun[]>();
+  const cronByJob = new Map<string, CronRunDetail[]>();
   for (const row of cronRows.results ?? []) {
     const parsedMeta = parseMetadataObject(row.metadata);
     // Compatibility for false failures written before conditional admissions
@@ -753,15 +774,15 @@ export async function loadCronHealth(
         ...(row.error ? { error: row.error } : {}),
         ...(row.degraded_reason?.trim() ? { degradedReason: row.degraded_reason.trim() } : {}),
         ...(row.item_count != null ? { itemCount: row.item_count } : {}),
-        ...(parsedMeta || parsedStatus !== row.status
-          ? { metadata: { ...(parsedMeta ?? {}), ...(parsedStatus !== row.status ? { rawStatus: row.status } : {}) } }
-          : {}),
+        ...(parsedStatus !== row.status ? { rawStatus: row.status } : {}),
+        ...projectCronRunOutcome(parsedMeta),
+        ...(parsedMeta ? { metadata: parsedMeta } : {}),
       });
       cronByJob.set(row.job, runs);
     }
   }
 
-  const crons: Record<string, CronStatus> = {};
+  const crons: Record<string, CronStatusDetail> = {};
   let unhealthyCrons = 0;
   let availabilityImpactingUnhealthyCrons = 0;
   let watchUnhealthyCrons = 0;
@@ -781,7 +802,8 @@ export async function loadCronHealth(
     watchErrors: [],
   };
 
-  for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
+  for (const job of cronJobs) {
+    const interval = CRON_INTERVALS[job];
     const runs = cronByJob.get(job) ?? [];
     const lastRun = runs.length > 0 ? runs[0] : null;
     const inFlight = cronProgressByJob.get(job);
@@ -893,9 +915,9 @@ export async function loadCronHealth(
     // inherited error, while every served run is a generic neutral skip,
     // leaving the verdict unattributable in the admin cron table.
     crons[job] = {
-      lastRun,
-      recentRuns: runs,
+      runs,
       expectedIntervalSec: interval,
+      confirmedOutputAt: telemetryUnknown ? null : historyResult.confirmedOutputAtByJob?.get(job) ?? null,
       healthy,
       telemetryUnknown,
       ...(cronHistoryQueryError ? { telemetryUnknownReason: cronHistoryQueryError } : {}),

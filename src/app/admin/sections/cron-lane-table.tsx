@@ -139,7 +139,7 @@ function CronWorkbenchControls({
 }
 
 function ItemsValue({ row }: { row: CronWorkbenchRow }) {
-  const lastRun = row.cron.lastRun;
+  const lastRun = row.cron.runs[0];
   if (lastRun?.itemCount != null) return <CountValue value={lastRun.itemCount} />;
   const title = lastRun
     ? "N/A: this job does not report an item count."
@@ -172,9 +172,9 @@ function CronRow({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  const lastRun = row.cron.lastRun;
+  const lastRun = row.cron.runs[0];
   const timing = lastRun ? formatCronRunTiming(lastRun) : null;
-  const prerequisite = formatPrerequisiteEvidence(readString(lastRun?.metadata?.skippedReason));
+  const prerequisite = formatPrerequisiteEvidence(readString(lastRun?.skippedReason));
   const next = getCronNextExpected(row.cron, nowSeconds, row.job);
   return (
     <TableRow
@@ -241,7 +241,7 @@ function CronRow({
         <span title={next.budget}>{next.label}</span>
       </TableCell>
       <TableCell className="px-3 py-2 align-top">
-        <CronRunDots runs={row.cron.recentRuns} />
+        <CronRunDots runs={row.cron.runs} />
       </TableCell>
       <TableCell className="px-3 py-2 text-right align-top text-xs">
         <ItemsValue row={row} />

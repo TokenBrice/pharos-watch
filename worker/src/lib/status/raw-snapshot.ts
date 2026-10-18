@@ -1,4 +1,3 @@
-import { isRecord } from "@shared/lib/type-guards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   CanaryStatusSchema,
@@ -14,7 +13,6 @@ import {
   StatusResponseSchema,
   type CanaryStatus,
   type CoinGeckoPriceDiff,
-  type HealthResponse,
   type LiquidityHealth,
   type MintBurnReconciliationSummary,
   type PublicationHealth,
@@ -30,24 +28,23 @@ import {
   type D1UsageSummaryWithTableGrowth,
 } from "./d1-usage";
 import type { RawStatusComputation } from "../status-evaluation";
-import { getCache, setCacheIfNewer } from "../db-cache";
-import { toErrorMessage } from "@shared/lib/error-utils";
 import { STATUS_SYSTEM_FRESHNESS_SEC } from "../status-reliability-shared";
-import { logWorkerEvent } from "../structured-log";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
-import { parseJsonObjectWithSchema } from "../json-parse";
 import { z } from "zod";
-import { assessFreshnessTimestamp } from "../api-freshness-age";
+import { loadStatusSnapshotPayload, writeStatusSnapshotPayload, type UnavailableStatusSnapshot } from "./status-snapshot-cache";
 
+/**
+ * Operator assessment envelope written by the status self-check: raw
+ * availability/data-quality assessment plus supplements. It carries no cron
+ * histories (`/api/status` always re-reads live cron health) and no public
+ * health projection (`status:public-health-snapshot:v1` owns that). Payload
+ * version 2 replaced the v1 shape under the same cache row, so a v1 row reads
+ * as unreadable and is served by the live fallback until the next self-check.
+ */
 export const STATUS_RAW_SNAPSHOT_CACHE_KEY = "status:raw-snapshot:v1";
 export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
+const STATUS_RAW_SNAPSHOT_PAYLOAD_VERSION = 2;
 const EXPECTED_CRON_JOBS = Object.keys(CRON_INTERVALS);
-const SNAPSHOT_RECENT_RUN_LIMIT = 10;
-const SNAPSHOT_STALE_ARTIFACT_LIMIT = 8;
-const SNAPSHOT_METADATA_DEPTH_LIMIT = 5;
-const SNAPSHOT_METADATA_ARRAY_LIMIT = 40;
-const SNAPSHOT_METADATA_OBJECT_KEY_LIMIT = 80;
-const SNAPSHOT_STRING_LIMIT = 2_000;
 
 interface StatusSupplements {
   liquidityHealth: LiquidityHealth | null;
@@ -66,118 +63,19 @@ interface StatusSupplements {
 
 export type { StatusSupplements };
 
-interface StatusRawSnapshotPayload {
-  version: 1;
-  producedAt: number;
-  raw: RawStatusComputation;
-  publicHealth?: HealthResponse;
-  supplements?: StatusSupplements;
-}
+/** The persisted assessment: everything but the live-reloaded cron records. */
+export type SnapshotRawStatus = Omit<RawStatusComputation, "crons">;
 
 interface FreshStatusRawSnapshot {
   kind: "fresh";
-  raw: RawStatusComputation;
-  publicHealth?: HealthResponse;
+  raw: SnapshotRawStatus;
   supplements?: StatusSupplements;
   updatedAt: number;
   ageSec: number;
   maxAgeSec: number;
 }
 
-interface UnavailableStatusRawSnapshot {
-  kind: "missing" | "stale" | "unreadable" | "read-error";
-  updatedAt: number | null;
-  ageSec: number | null;
-  maxAgeSec: number;
-  error?: string;
-}
-
-export type StatusRawSnapshotLoadResult = FreshStatusRawSnapshot | UnavailableStatusRawSnapshot;
-
-
-
-function truncateString(value: string, limit = SNAPSHOT_STRING_LIMIT): string {
-  if (value.length <= limit) return value;
-  return `${value.slice(0, limit)}... [truncated ${value.length - limit} chars]`;
-}
-
-function compactSnapshotValue(value: unknown, depth = 0, path = ""): unknown {
-  // Sentinel nesting must not erase the clocks/budgets inside a stale verdict.
-  const freshnessEvidence = path === "sources.freshness.metadata.stale" || path.startsWith("sources.freshness.metadata.stale.");
-  const depthLimit = path.startsWith("adapterLatency.") || freshnessEvidence ? 7 : SNAPSHOT_METADATA_DEPTH_LIMIT;
-  if (value == null) return value;
-  if (typeof value === "string") return truncateString(value);
-  if (typeof value === "number" || typeof value === "boolean") return value;
-  if (Array.isArray(value)) {
-    const latencyGroups = path === "adapterLatency.groups";
-    if (depth >= depthLimit) return "[truncated-depth]";
-    return value
-      .slice(0, latencyGroups || freshnessEvidence ? 128 : SNAPSHOT_METADATA_ARRAY_LIMIT)
-      .map((entry) => compactSnapshotValue(entry, depth + 1, path));
-  }
-  if (!isRecord(value)) return null;
-  if (depth >= depthLimit) return "[truncated-depth]";
-
-  const compacted: Record<string, unknown> = {};
-  for (const [key, entry] of Object.entries(value).slice(0, SNAPSHOT_METADATA_OBJECT_KEY_LIMIT)) {
-    // Reserve latency is producer-bounded to 128 groups / 36 KiB. Preserve its
-    // histogram subtree; a second silent 40-group cap falsifies omittedGroups.
-    compacted[key] = compactSnapshotValue(entry, depth + 1, path ? `${path}.${key}` : key);
-  }
-  return compacted;
-}
-
-function compactCronRunForSnapshot(run: unknown, options: { includeMetadata: boolean }): unknown {
-  if (!isRecord(run)) return run;
-  const compacted: Record<string, unknown> = {};
-  for (const key of ["startedAt", "durationMs", "status", "itemCount"] as const) {
-    if (key in run) compacted[key] = run[key];
-  }
-  if (typeof run.error === "string") {
-    compacted.error = truncateString(run.error);
-  } else if (run.error != null) {
-    compacted.error = compactSnapshotValue(run.error);
-  }
-  if (options.includeMetadata && run.metadata != null) {
-    compacted.metadata = compactSnapshotValue(run.metadata);
-  }
-  return compacted;
-}
-
-function compactCronStatusForSnapshot(status: unknown): unknown {
-  if (!isRecord(status)) return status;
-  const compacted: Record<string, unknown> = { ...status };
-
-  if (status.lastRun != null) {
-    compacted.lastRun = compactCronRunForSnapshot(status.lastRun, { includeMetadata: true });
-  }
-  if (Array.isArray(status.recentRuns)) {
-    compacted.recentRuns = status.recentRuns
-      .slice(0, SNAPSHOT_RECENT_RUN_LIMIT)
-      .map((run, index) => compactCronRunForSnapshot(run, { includeMetadata: index === 0 }));
-  }
-  if (status.inFlight != null) {
-    compacted.inFlight = compactSnapshotValue(status.inFlight);
-  }
-  if (Array.isArray(status.staleArtifacts)) {
-    compacted.staleArtifacts = status.staleArtifacts
-      .slice(0, SNAPSHOT_STALE_ARTIFACT_LIMIT)
-      .map((artifact) => compactSnapshotValue(artifact));
-  }
-  return compacted;
-}
-
-function compactRawStatusForSnapshot(raw: RawStatusComputation): RawStatusComputation {
-  if (!isRecord(raw.crons)) return raw;
-  return {
-    ...raw,
-    crons: Object.fromEntries(
-      Object.entries(raw.crons).map(([job, status]) => [job, compactCronStatusForSnapshot(status)]),
-    ) as RawStatusComputation["crons"],
-  };
-}
-
-
+export type StatusRawSnapshotLoadResult = FreshStatusRawSnapshot | UnavailableStatusSnapshot;
 
 const StatusSectionErrorsSchema = z.record(
   z.string(),
@@ -208,7 +106,6 @@ const RawStatusSchema = StatusResponseSchema.in.pick({
   confidence: true,
   causes: true,
   caches: true,
-  crons: true,
   budgetOnlySurfaces: true,
   dataQuality: true,
   telegramBot: true,
@@ -238,20 +135,16 @@ const RawStatusSchema = StatusResponseSchema.in.pick({
     && reserve.unacknowledgedPersistentlyStaleIndependentCoins != null),
 );
 const StatusRawSnapshotPayloadSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(STATUS_RAW_SNAPSHOT_PAYLOAD_VERSION),
   producedAt: z.number().finite(),
+  /** Canonical cron cohort the assessment was computed over. */
+  cronJobs: z.array(z.string()),
   raw: RawStatusSchema,
-  publicHealth: HealthResponseSchema.optional(),
   supplements: StatusSupplementsSchema.optional(),
 });
 
 export interface StatusRawSnapshotWriteOptions {
-  publicHealth?: HealthResponse;
   supplements?: StatusSupplements;
-}
-
-function parseStatusRawSnapshotPayload(value: string): StatusRawSnapshotPayload | null {
-  return parseJsonObjectWithSchema(value, StatusRawSnapshotPayloadSchema);
 }
 
 export async function loadStatusRawSnapshot(
@@ -259,77 +152,19 @@ export async function loadStatusRawSnapshot(
   now: number,
   maxAgeSec = STATUS_RAW_SNAPSHOT_MAX_AGE_SEC,
 ): Promise<StatusRawSnapshotLoadResult> {
-  try {
-    const cached = await getCache(db, STATUS_RAW_SNAPSHOT_CACHE_KEY);
-    if (!cached) {
-      return {
-        kind: "missing",
-        updatedAt: null,
-        ageSec: null,
-        maxAgeSec,
-      };
-    }
-
-    const timestamp = assessFreshnessTimestamp(now, cached.updatedAt);
-    if (timestamp.reason != null) {
-      return { kind: "unreadable", updatedAt: cached.updatedAt, ageSec: null, maxAgeSec, error: timestamp.reason };
-    }
-    const ageSec = timestamp.ageSeconds;
-    if (ageSec > maxAgeSec) {
-      return {
-        kind: "stale",
-        updatedAt: cached.updatedAt,
-        ageSec,
-        maxAgeSec,
-      };
-    }
-
-    const payload = parseStatusRawSnapshotPayload(cached.value);
-    if (!payload) {
-      return {
-        kind: "unreadable",
-        updatedAt: cached.updatedAt,
-        ageSec,
-        maxAgeSec,
-        error: "invalid status raw snapshot payload",
-      };
-    }
-    // Membership changes invalidate the entire assessment, including its severity
-    // floor. Filtering stale producers would leave their cached causes/status behind.
-    const cronJobs = Object.keys(payload.raw.crons);
-    if (cronJobs.length !== EXPECTED_CRON_JOBS.length
-      || EXPECTED_CRON_JOBS.some((job) => !Object.prototype.hasOwnProperty.call(payload.raw.crons, job))) {
-      return {
-        kind: "unreadable",
-        updatedAt: cached.updatedAt,
-        ageSec,
-        maxAgeSec,
-        error: "status raw snapshot cron cohort mismatch",
-      };
-    }
-    const generationTimestamp = assessFreshnessTimestamp(now, payload.producedAt);
-    if (generationTimestamp.reason != null) {
-      return { kind: "unreadable", updatedAt: cached.updatedAt, ageSec: null, maxAgeSec, error: generationTimestamp.reason };
-    }
-
-    return {
-      kind: "fresh",
-      raw: payload.raw,
-      publicHealth: payload.publicHealth,
-      supplements: payload.supplements,
-      updatedAt: cached.updatedAt,
-      ageSec,
-      maxAgeSec,
-    };
-  } catch (error) {
-    return {
-      kind: "read-error",
-      updatedAt: null,
-      ageSec: null,
-      maxAgeSec,
-      error: toErrorMessage(error),
-    };
+  const loaded = await loadStatusSnapshotPayload(
+    db, STATUS_RAW_SNAPSHOT_CACHE_KEY, StatusRawSnapshotPayloadSchema, now, maxAgeSec,
+  );
+  if (loaded.kind !== "fresh") return loaded;
+  const { payload, updatedAt, ageSec } = loaded;
+  // Membership changes invalidate the entire assessment, including its severity
+  // floor. Filtering stale producers would leave their cached causes/status behind.
+  const cohort = new Set(payload.cronJobs);
+  if (cohort.size !== payload.cronJobs.length || cohort.size !== EXPECTED_CRON_JOBS.length
+    || EXPECTED_CRON_JOBS.some((job) => !cohort.has(job))) {
+    return { kind: "unreadable", updatedAt, ageSec, maxAgeSec, error: "status raw snapshot cron cohort mismatch" };
   }
+  return { kind: "fresh", raw: payload.raw, supplements: payload.supplements, updatedAt, ageSec, maxAgeSec };
 }
 
 export async function writeStatusRawSnapshot(
@@ -338,32 +173,12 @@ export async function writeStatusRawSnapshot(
   raw: RawStatusComputation,
   options: StatusRawSnapshotWriteOptions = {},
 ): Promise<boolean> {
-  const payload: StatusRawSnapshotPayload = {
-    version: 1,
+  const { crons, ...assessment } = raw;
+  return writeStatusSnapshotPayload(db, STATUS_RAW_SNAPSHOT_CACHE_KEY, now, {
+    version: STATUS_RAW_SNAPSHOT_PAYLOAD_VERSION,
     producedAt: now,
-    raw: compactRawStatusForSnapshot(raw),
-    publicHealth: options.publicHealth,
+    cronJobs: Object.keys(crons),
+    raw: assessment,
     supplements: options.supplements,
-  };
-
-  try {
-    const { written } = await setCacheIfNewer(
-      db,
-      STATUS_RAW_SNAPSHOT_CACHE_KEY,
-      JSON.stringify(payload),
-      now,
-    );
-    return written;
-  } catch (error) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "raw_status_snapshot_persist_failed",
-      route: "status",
-      source: STATUS_RAW_SNAPSHOT_CACHE_KEY,
-      message: "Failed to persist raw status snapshot",
-      error,
-    });
-    return false;
-  }
+  });
 }

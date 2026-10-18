@@ -5,6 +5,9 @@ export const OPS_STATIC_ROUTES = [
   defineLazyStaticRoute("status-history", () =>
     import("../api/status-history").then(({ handleStatusHistoryRoute }) => handleStatusHistoryRoute),
   ),
+  defineLazyStaticRoute("status-cron-detail", () =>
+    import("../api/status-cron-detail").then(({ handleStatusCronDetailRoute }) => handleStatusCronDetailRoute),
+  ),
   defineLazyStaticRoute("reserve-attempt-history", () =>
     import("../api/reserve-attempt-history").then(({ handleReserveAttemptHistoryRoute }) => handleReserveAttemptHistoryRoute),
   ),

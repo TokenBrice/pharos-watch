@@ -10,8 +10,9 @@ import {
   summarizeStatusPersistenceIssues,
   type StatusPersistenceIssue,
 } from "../lib/status-reliability";
-import { computeRawStatus } from "../lib/status-evaluation";
+import { computeRawStatus, type RawStatusComputation } from "../lib/status-evaluation";
 import { loadCronHealth } from "../lib/status/cron-health";
+import { summarizeCronStatuses } from "../lib/status/cron-status-summary";
 import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
 import { evaluateSchedulerLiveness, mergeD1QuotaCauses, rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
@@ -61,7 +62,7 @@ async function loadWorkerVersions(db: D1Database): Promise<{
 type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
 
 interface ResolvedRawStatus {
-  raw: Awaited<ReturnType<typeof computeRawStatus>>;
+  raw: RawStatusComputation;
   supplements?: StatusSupplements;
   snapshotFallbackReason: StatusSnapshotFallbackReason | null;
   snapshotError?: string;
@@ -385,7 +386,9 @@ export function handleStatus({
         discrepancy,
         timeline,
         caches: raw.caches,
-        crons: raw.crons,
+        // Default response: per-job summary only. Full run/progress metadata is
+        // served per job by /api/status-cron-detail.
+        crons: summarizeCronStatuses(raw.crons),
         budgetOnlySurfaces: raw.budgetOnlySurfaces,
         dataQuality: raw.dataQuality,
         telegramBot: raw.telegramBot,

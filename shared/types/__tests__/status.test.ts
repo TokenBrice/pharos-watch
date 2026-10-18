@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
-import { CronRunSchema, CronInFlightSchema, ResourcePressureSchema } from "../status/cron";
+import { CronRunDetailSchema, CronRunSummarySchema, CronInFlightSchema, ResourcePressureSchema } from "../status/cron";
 import { HealthResponseSchema } from "../status";
 import { TelegramPulseOutputSchema, TelegramPulseSchema } from "../status/telegram";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
@@ -122,7 +122,7 @@ describe("StatusResponseSchema reserve composition contract", () => {
       heapUsedBytes: null, heapUnavailableReason: "workers-runtime-no-heap-api",
     };
     const metadata = { resourcePressure, cursor: "coin-a" };
-    expect(CronRunSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata }).metadata).toEqual(metadata);
+    expect(CronRunDetailSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata }).metadata).toEqual(metadata);
     expect(CronInFlightSchema.parse({ startedAt: 1, updatedAt: 2, stale: false, metadata }).metadata).toEqual(metadata);
     for (const invalid of [
       { ...resourcePressure, intakeBytes: -1 }, { ...resourcePressure, cacheBytes: Infinity },
@@ -130,13 +130,19 @@ describe("StatusResponseSchema reserve composition contract", () => {
       { ...resourcePressure, phase: "x".repeat(81) }, { ...resourcePressure, heapUsedBytes: 0 },
       { ...resourcePressure, platformOutcome: "platform-abandoned" },
     ]) expect(ResourcePressureSchema.safeParse(invalid).success).toBe(false);
-    expect(CronRunSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata: { legacy: true } }).metadata).toEqual({ legacy: true });
+    expect(CronRunDetailSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata: { legacy: true } }).metadata).toEqual({ legacy: true });
   });
 
   it("accepts additive cron reasons without requiring them on legacy runs", () => {
     const run = { startedAt: 1, durationMs: 2, status: "degraded" };
-    expect(CronRunSchema.parse(run)).not.toHaveProperty("degradedReason");
-    expect(CronRunSchema.parse({ ...run, degradedReason: "publication-held" }).degradedReason).toBe("publication-held");
+    expect(CronRunSummarySchema.parse(run)).not.toHaveProperty("degradedReason");
+    expect(CronRunSummarySchema.parse({ ...run, degradedReason: "publication-held" }).degradedReason).toBe("publication-held");
+  });
+
+  it("keeps arbitrary metadata out of the summary run contract", () => {
+    const parsed = CronRunSummarySchema.parse({ startedAt: 1, durationMs: 2, status: "ok", reason: "r", metadata: { big: "x" } });
+    expect(parsed).not.toHaveProperty("metadata");
+    expect(parsed.reason).toBe("r");
   });
   it.each(["yield-winner", null])("preserves additive cache publication identity %s", (generationId) => {
     const publishedAt = generationId ? 1_800_000_000 : null;

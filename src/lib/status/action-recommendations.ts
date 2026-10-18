@@ -84,8 +84,8 @@ export function deriveStatusActionRecommendations(
 
     const actions = CRON_ACTION_PATHS[job] ?? [];
     const jobMeta = getCronJobMeta(job);
-    const errorStreak = countConsecutiveStatus(cron.recentRuns, "error");
-    const skippedStreak = countConsecutiveStatus(cron.recentRuns, "skipped_locked");
+    const errorStreak = countConsecutiveStatus(cron.runs, "error");
+    const skippedStreak = countConsecutiveStatus(cron.runs, "skipped_locked");
     const reason = errorStreak > 0
       ? `${jobMeta?.label ?? job} has ${errorStreak} consecutive error run(s).`
       : skippedStreak > 0

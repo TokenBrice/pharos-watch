@@ -127,6 +127,8 @@ export const API_PATHS = {
   status: () => "/api/status",
   statusHistoryBase: () => "/api/status-history",
   statusHistory: (params?: { limit?: number }) => buildQueryPath("/api/status-history", { limit: params?.limit }),
+  statusCronDetailBase: () => "/api/status-cron-detail",
+  statusCronDetail: (job: string) => buildQueryPath("/api/status-cron-detail", { job }),
   reserveAttemptHistoryBase: () => "/api/reserve-attempt-history",
   reserveAttemptHistory: (params?: { coin?: string; limit?: number }) =>
     buildQueryPath("/api/reserve-attempt-history", { coin: params?.coin, limit: params?.limit }),

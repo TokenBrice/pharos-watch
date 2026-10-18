@@ -57,16 +57,43 @@ const CronMetadataSchema = z.object({
   resourcePressure: ResourcePressureSchema.optional(),
 }).catchall(z.unknown());
 
-export const CronRunSchema = z.object({
+/** Bound on a run's `error` text in the default status summary; detail keeps the full text. */
+export const CRON_RUN_SUMMARY_ERROR_MAX_CHARS = 500;
+
+/**
+ * Lightweight attempt outcome served by the default `/api/status` summary.
+ * Typed projection of the attempt's metadata: no arbitrary metadata is carried.
+ * Absent optional fields mean the attempt did not record them.
+ */
+export const CronRunSummarySchema = z.object({
   startedAt: z.number(),
   durationMs: z.number(),
   status: CronRunStatusSchema,
+  /** Bounded to CRON_RUN_SUMMARY_ERROR_MAX_CHARS in the summary; full text in detail. */
   error: z.string().optional(),
   degradedReason: z.string().optional(),
   itemCount: z.number().optional(),
+  /** Persisted status string when it was not a known run status (served as `error`). */
+  rawStatus: z.string().optional(),
+  reason: z.string().optional(),
+  skippedReason: z.string().optional(),
+  childDisposition: z.string().optional(),
+  workerVersion: z.string().optional(),
+  /** Operator findings derived from `metadata.quality` (shared `getCronQualityReasons`). */
+  qualityReasons: z.array(z.string()).optional(),
+  /** Synthetic-abandonment timing: last heartbeat versus reconciliation clocks. */
+  activeDurationMs: z.number().optional(),
+  progressUpdatedAt: z.number().optional(),
+  reconciledAt: z.number().optional(),
+  reconciliationDelayMs: z.number().optional(),
+});
+export type CronRunSummary = z.output<typeof CronRunSummarySchema>;
+
+/** Selected-attempt detail: the summary projection plus the full persisted metadata. */
+export const CronRunDetailSchema = CronRunSummarySchema.extend({
   metadata: CronMetadataSchema.optional(),
 });
-export type CronRun = z.output<typeof CronRunSchema>;
+export type CronRunDetail = z.output<typeof CronRunDetailSchema>;
 
 export const CronInFlightSchema = z.object({
   startedAt: z.number(),
@@ -80,6 +107,10 @@ export const CronInFlightSchema = z.object({
   stale: z.boolean(),
 });
 export type CronInFlight = z.output<typeof CronInFlightSchema>;
+
+/** Current progress in the default summary; progress metadata is detail-only. */
+export const CronInFlightSummarySchema = CronInFlightSchema.omit({ metadata: true });
+export type CronInFlightSummary = z.output<typeof CronInFlightSummarySchema>;
 
 const CronStaleArtifactSchema = z.object({
   kind: z.enum(["expired-lease", "orphaned-progress"]),
@@ -103,9 +134,7 @@ const CronEventSchema = z.object({
 });
 export type CronEvent = z.output<typeof CronEventSchema>;
 
-export const CronStatusSchema = z.object({
-  lastRun: CronRunSchema.nullable(),
-  recentRuns: z.array(CronRunSchema),
+const CronStatusVerdictShape = {
   expectedIntervalSec: z.number(),
   /**
    * `true`/`false` only when cron telemetry was actually read. `null` means the
@@ -115,7 +144,12 @@ export const CronStatusSchema = z.object({
   healthy: z.boolean().nullable(),
   telemetryUnknown: z.boolean().optional(),
   telemetryUnknownReason: z.string().optional(),
-  inFlight: CronInFlightSchema.nullable().optional(),
+  /**
+   * Newest confirmed output clock (`confirmedCronOutputAt`) among the bounded
+   * history read for this response. `null` means none was found in that read
+   * (or the read failed); it is not proof that the job never published.
+   */
+  confirmedOutputAt: z.number().nullable(),
   staleArtifacts: z.array(CronStaleArtifactSchema).optional(),
   latestEvent: CronEventSchema.optional(),
   /**
@@ -126,8 +160,47 @@ export const CronStatusSchema = z.object({
    * this flag — they are unhealthy until they have produced at least one run.
    */
   bootstrap: z.boolean().optional(),
+};
+
+/**
+ * Default `/api/status` per-job summary. `runs` is newest first: `runs[0]` is
+ * the latest attempt (there is no separate `lastRun`). It holds the ten-row
+ * display window plus the inheritance evidence appended behind an all-neutral
+ * window (latest required attempts and a fresh proven-satisfied readback).
+ */
+export const CronStatusSchema = z.object({
+  ...CronStatusVerdictShape,
+  runs: z.array(CronRunSummarySchema),
+  /**
+   * Registry-selected keys of `runs[0].metadata` that default operator views
+   * read (`CRON_STATUS_LATEST_FACT_KEYS`). Absent when the job has no
+   * registered facts or the latest attempt carried no metadata.
+   */
+  latestRunFacts: z.record(z.string(), z.unknown()).optional(),
+  inFlight: CronInFlightSummarySchema.nullable().optional(),
 });
 export type CronStatus = z.output<typeof CronStatusSchema>;
+
+/** Per-job detail (`/api/status-cron-detail`): same verdict with full run and progress metadata. */
+export const CronStatusDetailSchema = z.object({
+  ...CronStatusVerdictShape,
+  runs: z.array(CronRunDetailSchema),
+  inFlight: CronInFlightSchema.nullable().optional(),
+});
+export type CronStatusDetail = z.output<typeof CronStatusDetailSchema>;
+
+export const StatusCronDetailResponseSchema = z.object({
+  timestamp: z.number(),
+  job: z.string(),
+  cron: CronStatusDetailSchema,
+  /**
+   * Companion reads that failed for this request (progress, leases, slot event
+   * markers). A failed read leaves the matching field empty without implying
+   * the job is idle or event-free.
+   */
+  sectionErrors: z.record(z.string(), z.object({ code: z.string(), message: z.string() })),
+});
+export type StatusCronDetailResponse = z.output<typeof StatusCronDetailResponseSchema>;
 
 export const BudgetOnlySurfaceStatusSchema = z.object({
   job: z.string(),
