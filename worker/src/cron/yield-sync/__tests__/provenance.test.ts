@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildYieldSourceProvenance } from "../provenance";
+import { buildYieldSourceProvenance } from "../publication";
 import type { EvaluatedYieldSource } from "../evaluation";
 import { classifyYieldSourceFreshness } from "../../../lib/yield-ranking-helpers";
 

@@ -1,39 +1,58 @@
-import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { mapWithConcurrency } from "../../lib/concurrency";
-import { getCaches, setCache } from "../../lib/db-cache";
-import { logWorkerEvent } from "../../lib/structured-log";
 import {
-  PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
-  PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
-  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-} from "../../lib/yield-ranking-helpers";
-import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
+  isFixedDecimalDeployment,
+} from "@shared/lib/deployment-amounts";
+import {
+  ACTIVE_STABLECOINS,
+  TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/registry";
+import {
+  PYS_APY_SANITY_MAX,
+} from "@shared/lib/yield-scoring";
+import type {
+  ChainRpcConfig,
+} from "../../lib/chain-registry";
+import {
+  mapWithConcurrency,
+} from "../../lib/concurrency";
+import {
+  getCaches,
+  setCache,
+} from "../../lib/db-cache";
+import {
+  logWorkerEvent,
+} from "../../lib/structured-log";
+import {
+  normalizeTokenAddress,
+} from "../dex-liquidity/token-resolution";
 import {
   COMPOUND_V3_COMETS,
+  AAVE_V3_PINNED_RESERVES,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY,
+  getSupplementalFamilyStaleThresholdSec,
+  type SupplementalSourceFamilyKey,
+  resolveYieldSourceKeyRoute,
+} from "./family-registry";
+import {
   createOptionalRpcFamilyTelemetry,
   fetchAaveV3SupplyRates,
-  fetchBeefySources,
   fetchCompoundV3SupplyRates,
+  type AaveV3RateTarget,
+  type OptionalRpcFamilyTelemetry,
+  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
+  runOptionalSourceFamily,
+} from "./sources-rpc";
+import {
+  fetchBeefySources,
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
   fetchYearnKongSources,
-  type AaveV3RateTarget,
-  type OptionalRpcFamilyTelemetry,
-} from "./sources";
-import type { SupplementalFamilyFetchResult } from "./sources-optional-protocols-supplemental";
-import { OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT } from "./sources-rpc";
-import { AAVE_V3_PINNED_RESERVES } from "./sources-optional-protocols-constants";
-import { runOptionalSourceFamily } from "./optional-source-runtime";
-import type { ResolvedYieldCandidate } from "./types";
-import {
-  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-  type SupplementalSourceFamilyKey,
-} from "./supplemental-source-family-keys";
-import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
+  type SupplementalFamilyFetchResult,
+} from "./sources-optional";
+import type {
+  ResolvedYieldCandidate,
+} from "./types";
 import {
   PENDLE_RATE_LIMIT_BACKOFF_REASON,
   buildYieldSupplementalPendleBackoff,
@@ -41,25 +60,13 @@ import {
   getYieldSupplementalPendleBackoffCacheKey,
   parseYieldSupplementalPendleBackoff,
   parseYieldSupplementalSourcesCache,
-} from "./cache/supplemental-cache-keys";
+} from "./cache";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
 const AAVE_TARGETS_PER_RUN = 6;
 const AAVE_TARGET_ROTATION_INTERVAL_SEC = 4 * 60 * 60;
 const AAVE_ORDINARY_MISS_RATIO_LIMIT = 0.5;
 
-/** Pendle alone refreshes daily; the other families still refresh each producer run. */
-const SUPPLEMENTAL_FAMILY_FETCH_CADENCE_SEC = {
-  pendle: PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
-} as const;
-
-const SUPPLEMENTAL_FAMILY_STALE_THRESHOLD_SEC: Partial<Record<SupplementalSourceFamilyKey, number>> = {
-  pendle: PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS / 1000,
-};
-
-export function getSupplementalFamilyStaleThresholdSec(family: SupplementalSourceFamilyKey): number {
-  return SUPPLEMENTAL_FAMILY_STALE_THRESHOLD_SEC[family] ?? SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
-}
 
 
 interface SupplementalSourceFamilyContext {
@@ -167,27 +174,15 @@ export function getSupplementalCandidateFamily(
 }
 
 function buildSourceFamilyCountRecord(): SourceFamilyCountRecord {
-  return {
-    morpho: 0,
-    pendle: 0,
-    yearnKong: 0,
-    beefy: 0,
-    compoundV3: 0,
-    aaveV3: 0,
-    roycoDawn: 0,
-  };
+  const counts = {} as SourceFamilyCountRecord;
+  for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) counts[family] = 0;
+  return counts;
 }
 
 function buildSourceFamilyExampleRecord(): SourceFamilyExampleRecord {
-  return {
-    morpho: [],
-    pendle: [],
-    yearnKong: [],
-    beefy: [],
-    compoundV3: [],
-    aaveV3: [],
-    roycoDawn: [],
-  };
+  const examples = {} as SourceFamilyExampleRecord;
+  for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) examples[family] = [];
+  return examples;
 }
 
 function buildDropBucket(): SupplementalDropBucket {
@@ -475,7 +470,7 @@ async function runPendleFamily(
   const row = rows.get(familyKey);
   const retained = row ? parseYieldSupplementalSourcesCache(row.value, row.updatedAt, startSec) : null;
   let backoff = parseYieldSupplementalPendleBackoff(rows.get(backoffKey)?.value, startSec);
-  const notDue = retained != null && retained.ageSeconds < SUPPLEMENTAL_FAMILY_FETCH_CADENCE_SEC.pendle;
+  const notDue = retained != null && retained.ageSeconds < SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY.pendle.fetchCadenceSec;
 
   if (!backoff && !notDue) {
     const { value, status } = await runOptionalSupplementalFamily<SupplementalFamilyFetchResult>(
@@ -648,27 +643,26 @@ async function runAaveFamily(
   };
 }
 
-const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
-  (context: SupplementalSourceFamilyContext) =>
-    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.morpho),
-  runPendleFamily,
-  (context: SupplementalSourceFamilyContext) =>
-    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.yearnKong),
-  (context: SupplementalSourceFamilyContext) =>
-    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.beefy),
-  runCompoundFamily,
-  runAaveFamily,
-  (context: SupplementalSourceFamilyContext) =>
-    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.roycoDawn),
-] as const;
+const SUPPLEMENTAL_SOURCE_FAMILY_RUNNERS: Record<
+  SupplementalSourceFamilyKey,
+  (context: SupplementalSourceFamilyContext) => Promise<SupplementalSourceFamilyResult>
+> = {
+  morpho: (context) => runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.morpho),
+  pendle: runPendleFamily,
+  yearnKong: (context) => runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.yearnKong),
+  beefy: (context) => runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.beefy),
+  compoundV3: runCompoundFamily,
+  aaveV3: runAaveFamily,
+  roycoDawn: (context) => runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.roycoDawn),
+};
 
 function runSupplementalFamiliesWithConcurrency(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult[]> {
   return mapWithConcurrency(
-    SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY,
+    SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
     SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
-    (runFamily) => runFamily(context),
+    (family) => SUPPLEMENTAL_SOURCE_FAMILY_RUNNERS[family](context),
   );
 }
 

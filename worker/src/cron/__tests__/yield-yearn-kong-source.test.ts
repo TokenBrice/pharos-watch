@@ -3,7 +3,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
-import { fetchYearnKongSources } from "../yield-sync/sources";
+import { fetchYearnKongSources } from "../yield-sync/sources-optional";
 
 describe("fetchYearnKongSources", () => {
   afterEach(cleanupYieldSourceTest);

@@ -34,38 +34,51 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   return mockRegistry({ stablecoins });
 });
 
-vi.mock("../yield-sync/sources", async () => {
-  // The hoisted mock factory runs before static fixture imports initialize, so
-  // the fixture module must be loaded dynamically here (vitest hoisting).
-  const { emptyRpcTelemetry, healthyFamilyFetch } = await import(
-    "./sync-yield-supplemental.test-support"
-  );
+vi.mock("../yield-sync/family-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/family-registry")>();
+  return {
+    ...actual,
+    COMPOUND_V3_COMETS: [],
+  };
+});
+
+vi.mock("../yield-sync/sources-rpc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-rpc")>();
+  const { emptyRpcTelemetry } = await import("./sync-yield-supplemental.test-support");
   const createOptionalRpcFamilyTelemetry = (targetCount: number) => ({
     ...emptyRpcTelemetry(),
     targetCount,
   });
   return {
-  COMPOUND_V3_COMETS: [],
-  createOptionalRpcFamilyTelemetry,
-  fetchMorphoVaultSources: vi.fn(async () => healthyFamilyFetch()),
-  fetchPendleMarketSources: vi.fn(async () => healthyFamilyFetch()),
-  fetchRoycoDawnSources: vi.fn(async () => ({ candidates: [], degraded: false })),
-  fetchYearnKongSources: vi.fn(async () => healthyFamilyFetch()),
-  fetchBeefySources: vi.fn(async () => healthyFamilyFetch()),
-  fetchCompoundV3SupplyRates: vi.fn(async () => ({
-    results: [],
-    telemetry: emptyRpcTelemetry(),
-  })),
-  fetchAaveV3SupplyRates: vi.fn(async () => ({
-    results: [],
-    telemetry: emptyRpcTelemetry(),
-  })),
+    ...actual,
+    createOptionalRpcFamilyTelemetry,
+    fetchCompoundV3SupplyRates: vi.fn(async () => ({
+      results: [],
+      telemetry: emptyRpcTelemetry(),
+    })),
+    fetchAaveV3SupplyRates: vi.fn(async () => ({
+      results: [],
+      telemetry: emptyRpcTelemetry(),
+    })),
+    OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT: 20,
   };
 });
 
-vi.mock("../yield-sync/sources-rpc", () => ({
-  OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT: 20,
-}));
+vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional")>();
+
+  // The hoisted mock factory runs before static fixture imports initialize, so
+  // the fixture module must be loaded dynamically here (vitest hoisting).
+  const { healthyFamilyFetch } = await import("./sync-yield-supplemental.test-support");
+  return {
+    ...actual,
+    fetchMorphoVaultSources: vi.fn(async () => healthyFamilyFetch()),
+    fetchPendleMarketSources: vi.fn(async () => healthyFamilyFetch()),
+    fetchRoycoDawnSources: vi.fn(async () => ({ candidates: [], degraded: false })),
+    fetchYearnKongSources: vi.fn(async () => healthyFamilyFetch()),
+    fetchBeefySources: vi.fn(async () => healthyFamilyFetch()),
+  };
+});
 
 vi.mock("../../lib/db-cache", () => ({
   getCaches: vi.fn(async () => new Map()),
@@ -74,30 +87,13 @@ vi.mock("../../lib/db-cache", () => ({
 }));
 
 import { getCaches, setCache, setCacheIfNewer } from "../../lib/db-cache";
-import {
-  fetchAaveV3SupplyRates,
-  fetchBeefySources,
-  fetchCompoundV3SupplyRates,
-  fetchMorphoVaultSources,
-  fetchPendleMarketSources,
-  fetchRoycoDawnSources,
-  fetchYearnKongSources,
-} from "../yield-sync/sources";
+import { fetchAaveV3SupplyRates, fetchCompoundV3SupplyRates } from "../yield-sync/sources-rpc";
+import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchRoycoDawnSources, fetchYearnKongSources } from "../yield-sync/sources-optional";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
-import {
-  loadSupplementalSourceFamilies,
-  SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
-} from "../yield-sync/supplemental-source-families";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-family-keys";
-import {
-  PENDLE_RATE_LIMIT_BACKOFF_REASON,
-  buildYieldSupplementalFamilyCache,
-  buildYieldSupplementalPendleBackoff,
-  getYieldSupplementalFamilyCacheKey,
-  getYieldSupplementalPendleBackoffCacheKey,
-  getYieldSupplementalRunOutcomeCacheKey,
-} from "../yield-sync/cache/supplemental-cache-keys";
-import { supplementalFamilySnapshotHash } from "../yield-sync/cache/supplemental-cache-keys";
+import { loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
+import { PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";
+import { supplementalFamilySnapshotHash } from "../yield-sync/cache";
 
 async function flushMicrotasks() {
   for (let i = 0; i < 8; i += 1) {

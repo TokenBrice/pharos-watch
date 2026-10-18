@@ -15,18 +15,13 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
 import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
-import {
-  buildYieldRankingsPayloadFromEvaluatedSources,
-  cleanupFalseLinkedVariantSourceSwitches,
-  loadPreviousYieldPublicationSnapshot,
-  materializeYieldHistoryDaily,
-  pruneYieldTables,
-} from "../yield-sync/publication";
+import { buildYieldRankingsPayloadFromEvaluatedSources, loadPreviousYieldPublicationSnapshot } from "../yield-sync/publication";
+import { cleanupFalseLinkedVariantSourceSwitches, materializeYieldHistoryDaily, pruneYieldTables } from "../yield-sync/history";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
-import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/coordinator-persist";
+import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/publication";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
-import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
-import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";
+import { publishYieldCoordinatorResults } from "../yield-sync/publication";
+import { publishYieldRowsAtomically } from "../yield-sync/publication";
 import {
   FIXED_NOW,
   buildPayloadWithObservedAt,

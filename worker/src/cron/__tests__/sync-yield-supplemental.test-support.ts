@@ -1,4 +1,4 @@
-import type { OptionalRpcFamilyTelemetry } from "../yield-sync/sources";
+import type { OptionalRpcFamilyTelemetry } from "../yield-sync/sources-rpc";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
 
 export function emptyRpcTelemetry(): OptionalRpcFamilyTelemetry {

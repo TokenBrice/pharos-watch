@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { runYieldCoordinatorPersistStage, type YieldCoordinatorPersistStageParams } from "../coordinator-persist-stage";
-import { publishYieldCoordinatorResults } from "../coordinator-persist";
+import { runYieldCoordinatorPersistStage, type YieldCoordinatorPersistStageParams } from "../coordinator";
+import { publishYieldCoordinatorResults } from "../publication";
 
-vi.mock("../coordinator-persist", () => ({ publishYieldCoordinatorResults: vi.fn() }));
+vi.mock("../publication", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../publication")>();
+
+  return {
+    ...actual,
+    publishYieldCoordinatorResults: vi.fn(),
+  };
+});
 
 function params(): YieldCoordinatorPersistStageParams {
   return {

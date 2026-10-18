@@ -35,11 +35,8 @@ import {
   parseYieldSupplementalRunOutcome,
   parseYieldSupplementalSourcesCache,
 } from "../../cron/yield-sync/cache";
-import { getSupplementalFamilyStaleThresholdSec } from "../../cron/yield-sync/supplemental-source-families";
-import {
-  REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-} from "../../cron/yield-sync/supplemental-source-family-keys";
+import { getSupplementalFamilyStaleThresholdSec } from "../../cron/yield-sync/family-registry";
+import { REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS, SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../cron/yield-sync/family-registry";
 import { safeJsonParse } from "../api-cache-read";
 import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import {

@@ -18,11 +18,8 @@ import {
   YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../../lib/yield-config/yield-config";
-import { resolveYieldSourceKeyRoute } from "../yield-sync/yield-source-key-routing";
-import {
-  explainDeterministicAutoLendingEligibility,
-  type AutoLendingEligibilityReasonCode,
-} from "../yield-sync/resolve-helpers";
+import { resolveYieldSourceKeyRoute } from "../yield-sync/family-registry";
+import { explainDeterministicAutoLendingEligibility, type AutoLendingEligibilityReasonCode } from "../yield-sync/resolve";
 import type { DlPool } from "../yield-sync/types";
 
 /** Minimum TVL (USD) for a pool to be flagged as an unmatched high-TVL pool. */

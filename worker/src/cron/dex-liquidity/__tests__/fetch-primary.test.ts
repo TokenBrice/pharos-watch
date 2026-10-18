@@ -25,9 +25,14 @@ vi.mock("../../../lib/structured-log", () => ({
 }));
 
 // Mock yield cache builder
-vi.mock("../../yield-sync/cache", () => ({
-  buildDlStablecoinPoolsCache: vi.fn(() => ({})),
-}));
+vi.mock("../../yield-sync/cache", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../yield-sync/cache")>();
+
+  return {
+    ...actual,
+    buildDlStablecoinPoolsCache: vi.fn(() => ({})),
+  };
+});
 
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";

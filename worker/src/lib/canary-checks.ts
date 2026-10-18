@@ -11,10 +11,8 @@ import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 import { getCache } from "./db-cache";
 import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
-import {
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
-  YIELD_BENCHMARK_SCORE_TTL_SEC,
-} from "../cron/yield-sync/benchmarks";
+import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
+import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 import { classifyFreshness } from "./status/freshness-oracle";

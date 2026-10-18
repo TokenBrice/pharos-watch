@@ -21,13 +21,9 @@ import {
 } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
-import {
-  appendOptionalYieldCandidate,
-  appendPoolFamilyYieldSources,
-  type YieldCandidateAppendStatus,
-} from "../yield-sync/resolve-helpers";
-import { loadOndoOracleAnchorRow } from "../yield-sync/tracked-optional-source-registry";
-import { loadTier1PrevRateRows } from "../yield-sync/resolve-tracked-sources";
+import { appendOptionalYieldCandidate, appendPoolFamilyYieldSources, type YieldCandidateAppendStatus } from "../yield-sync/resolve";
+import { loadOndoOracleAnchorRow } from "../yield-sync/sources-optional";
+import { loadTier1PrevRateRows } from "../yield-sync/resolve";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 
 // --- Full-sync publication sentinels ---

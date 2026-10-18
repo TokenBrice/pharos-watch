@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
-import { buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, resolveYieldCandidateStablecoinId } from "../identity";
+import { buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, resolveYieldCandidateStablecoinId } from "../resolve";
 
 /**
  * Audit Q-146: the identity disambiguation resolver decides whether an

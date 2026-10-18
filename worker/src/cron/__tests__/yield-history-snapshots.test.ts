@@ -10,12 +10,7 @@ import {
   loadYieldHistorySnapshots,
   purgeYieldHistoryOwnershipHandoffs,
 } from "../yield-sync/history";
-import {
-  cleanupFalseLinkedVariantSourceSwitches,
-  drainDecisionRowsBeforeCutoff,
-  drainRowsBeforeCutoff,
-  pruneYieldTables,
-} from "../yield-sync/publication";
+import { cleanupFalseLinkedVariantSourceSwitches, drainDecisionRowsBeforeCutoff, drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/history";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();

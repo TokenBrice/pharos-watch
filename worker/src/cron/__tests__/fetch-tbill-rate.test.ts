@@ -42,15 +42,9 @@ import {
   fetchTbillRate,
 } from "../fetch-tbill-rate";
 
-import {
-  buildHardcodedUsdBenchmark,
-  classifyYieldBenchmarkFreshness,
-  getBenchmarkKeyForPegCurrency,
-  resolveBenchmarkForStablecoin,
-  withYieldBenchmarkStaticMeta,
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
-} from "../yield-sync/benchmarks";
-import { loadRiskFreeRateRegistryWithState } from "../yield-sync/sources-riskfree";
+import { buildHardcodedUsdBenchmark, getBenchmarkKeyForPegCurrency, resolveBenchmarkForStablecoin, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
+import { classifyYieldBenchmarkFreshness, YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
+import { loadRiskFreeRateRegistryWithState } from "../yield-sync/state";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { getCache, setCache } from "../../lib/db-cache";
 import { logCronEvent } from "../../lib/cron-logger";

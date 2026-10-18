@@ -64,7 +64,7 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC } from "../../lib/dews/input-assembly";
-import { buildHistoryKey } from "../yield-sync/evaluation";
+import { buildHistoryKey } from "../yield-sync/history";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
 import {
   makeBenchmarkMeta,

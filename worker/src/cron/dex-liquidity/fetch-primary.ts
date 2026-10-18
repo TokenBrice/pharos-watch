@@ -4,7 +4,7 @@ import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
-import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
+import { isYieldRelevantDlPool } from "../yield-sync/cache";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type {
   LlamaPool,

@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY,
+  getSupplementalFamilyStaleThresholdSec,
   resolveYieldSourceKeyRoute,
-} from "../yield-source-key-routing";
-import { buildYieldSourceRisk, resolveYieldVenueProtocol } from "../source-risk";
-import type { EvaluatedYieldSource } from "../evaluation-types";
-import { getSupplementalCandidateFamily } from "../supplemental-source-families";
+} from "../family-registry";
+import { buildYieldSourceRisk, resolveYieldVenueProtocol } from "../evaluation";
+import type { EvaluatedYieldSource } from "../evaluation";
+import { getSupplementalCandidateFamily } from "../sources-supplemental";
 import { DIRECT_PROTOCOL_API_SOURCE_KEYS } from "../../../lib/yield-config/yield-config-rate-sources";
-import { resolveEvidenceClass } from "../evaluation-arbitration";
+import { resolveEvidenceClass } from "../evaluation";
 
 /**
  * Audit R-080: the prefix-routing consumers (the venue resolver,
@@ -15,6 +19,21 @@ import { resolveEvidenceClass } from "../evaluation-arbitration";
  * functions cannot drift apart again.
  */
 describe("yield source-key routing table", () => {
+  it("derives ordered family membership, required caches and routes from one registry", () => {
+    expect(SUPPLEMENTAL_SOURCE_FAMILY_KEYS).toEqual([
+      "morpho", "pendle", "yearnKong", "beefy", "compoundV3", "aaveV3", "roycoDawn",
+    ]);
+    expect(REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS).toEqual(SUPPLEMENTAL_SOURCE_FAMILY_KEYS);
+    for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+      const entry = SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family];
+      expect(getSupplementalFamilyStaleThresholdSec(family)).toBe(family === "pendle" ? 48 * 3600 : 6 * 3600);
+      expect(entry.fetchCadenceSec).toBe(family === "pendle" ? 24 * 3600 : null);
+      for (const route of entry.routes) {
+        expect(resolveYieldSourceKeyRoute(`${route.prefix}registry-fixture`)).toEqual({ ...route, family });
+      }
+    }
+  });
+
   const cases: Array<{
     sourceKey: string;
     venueProtocol: string;

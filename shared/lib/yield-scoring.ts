@@ -59,7 +59,7 @@ export function computeSourceRiskScoreFromPenalty(
  * Yearn-style venue-risk rubric (yield v8.292). Five category sub-scores, each an
  * integer 1..5 where higher = riskier, weighted into a 1..5 venue-risk score that
  * derives the coarse {@link YieldVenueRiskTier} and a continuous PYS penalty.
- * See `worker/src/cron/yield-sync/source-risk.ts` for the scored venue registry.
+ * See `worker/src/cron/yield-sync/evaluation.ts` for the scored venue registry.
  */
 const VENUE_RISK_CATEGORY_WEIGHTS = {
   audits: 0.2,
