@@ -59,6 +59,8 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   it.each([
     { status: "ok", ageSec: 30, condition: "next-slot-lookahead", healthy: true },
     { status: "ok", ageSec: 30, condition: "heavy-slot-running", healthy: true },
+    { status: "ok", ageSec: 30, condition: "producer-slot-live", healthy: true },
+    { status: "ok", ageSec: 601, condition: "producer-slot-live", healthy: false },
     { status: "ok", ageSec: 601, condition: "next-slot-lookahead", healthy: false },
     { status: "skipped_neutral", ageSec: 30, condition: "current-slot-unfinished", healthy: false },
     { status: "error", ageSec: 30, condition: null, healthy: false },
@@ -71,6 +73,22 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
     expect(snapshot.crons[job].healthy).toBe(healthy);
     expect(snapshot.cronFindingJobs.availabilityImpactingUnhealthy.includes(job)).toBe(!healthy);
+  });
+
+  it("does not renew recovery availability for Oct-13 no-claim neutral polls", async () => {
+    const job = "reserve-recovery";
+    const rows = seedWithOverrides(NOW, [
+      { job, status: "skipped_neutral", ageSec: 30 },
+      { job, status: "ok", ageSec: 2 * CRON_INTERVALS[job] + 1 },
+    ]);
+    for (const row of rows.filter((run) => run.job === job)) {
+      row.item_count = 0;
+      row.metadata = JSON.stringify({ outputPublishedAt: null, reason: "producer-slot-priority",
+        producerPriority: { condition: "current-slot-unfinished", slotStartedAt: 1791907860 } });
+    }
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons[job].healthy).toBe(false);
+    expect(snapshot.cronFindingJobs.availabilityImpactingUnhealthy).toContain(job);
   });
 
   it.each([

@@ -206,6 +206,7 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [makeRawStatusSnapshotRow(now, 120)] },
       { match: "AS last_any", rows: [], first: {
+        observed_at: now,
         last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30,
         heavy: age == null ? null : now - age,
       } },

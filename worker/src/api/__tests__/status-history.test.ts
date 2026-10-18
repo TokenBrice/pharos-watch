@@ -18,6 +18,7 @@ function mockD1(
     ...tables,
     { match: "FROM reserve_sync_state", rows: [] },
     { match: "FROM reserve_composition", rows: [] },
+    { match: "FROM worker_scheduled_checkpoints", rows: [], first: null },
     { match: "JOIN reserve_sync_state", rows: [] },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   ], options);
@@ -99,6 +100,7 @@ describe("handleStatusHistoryRoute", () => {
       reserveComposition: {
         deferredCoins: number;
         runBudgetTruncated: boolean;
+        inProgressCoins: number;
       } | null;
     };
 
@@ -111,7 +113,22 @@ describe("handleStatusHistoryRoute", () => {
     expect(body.reserveComposition).toMatchObject({
       deferredCoins: 0,
       runBudgetTruncated: false,
+      inProgressCoins: 0,
     });
+  });
+
+  it("keeps reserve history unavailable when checkpoint evidence cannot be read", async () => {
+    const db = mockD1([
+      { match: "FROM status_state", rows: [], first: null },
+      { match: "FROM status_probe_runs", rows: [], first: null },
+      { match: "FROM status_discrepancy_state", rows: [], first: null },
+      { match: "FROM status_transitions", rows: [] },
+      { match: "FROM worker_scheduled_checkpoints", rows: [], throwError: new Error("checkpoint unavailable") },
+    ]);
+    const request = makeApiRequest("/api/status-history", { adminKey: "secret-key" });
+    const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
+    const body = await readJsonResponse(res, 200) as { reserveComposition: unknown };
+    expect(body.reserveComposition).toBeNull();
   });
 
   it("exposes unknown streak and an issue when discrepancy evidence cannot be read", async () => {

@@ -3,9 +3,11 @@ import type { DataQuality, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../../public-health-assessment";
 import type { CronHealthSnapshot } from "../cron-health";
 import { makeCronHealth } from "./cron-health.test-support";
+import { mockReserveD1 } from "../../__tests__/live-reserves-store.test-support";
 import {
   applyCronHealthSectionErrors,
   countStatusDiagnosticIssues,
+  loadSupplementalStatusSections,
 } from "../evaluation-context";
 
 const PUBLIC_HEALTH = {
@@ -73,5 +75,27 @@ describe("status evaluation scheduled-slot query failures", () => {
 
     expect(countIssues(cronHealth)).toBe(0);
     expect(getSectionErrors(cronHealth)).toEqual({});
+  });
+});
+
+describe("reserve checkpoint read availability", () => {
+  it("reports reserve overview unavailable when its checkpoint read fails", async () => {
+    const db = mockReserveD1([{
+      match: "FROM worker_scheduled_checkpoints", rows: [], throwError: new Error("checkpoint-read-failed"),
+    }]);
+    const sections = await loadSupplementalStatusSections(db, 10_000);
+    expect(sections.reserveCompositionQueryFailed).toBe(true);
+    expect(sections.reserveComposition).toMatchObject({
+      status: "unavailable", reason: "reserve_composition_query_failed",
+      inProgressCoins: null, deferredCoins: null, runBudgetTruncated: null,
+    });
+    expect(sections.sectionErrors.reserveComposition?.code).toBe("reserve_composition_query_failed");
+  });
+
+  it("keeps successfully absent checkpoint distinct from unreadable checkpoint", async () => {
+    const sections = await loadSupplementalStatusSections(mockReserveD1(), 10_000);
+    expect(sections.reserveCompositionQueryFailed).toBe(false);
+    expect(sections.sectionErrors.reserveComposition).toBeUndefined();
+    expect(sections.reserveComposition.inProgressCoins).toBe(0);
   });
 });

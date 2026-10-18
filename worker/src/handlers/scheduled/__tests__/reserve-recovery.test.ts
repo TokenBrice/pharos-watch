@@ -126,10 +126,12 @@ describe("reserve recovery mode", () => {
     it.each([
       ["next-slot-lookahead", "producer-slot-priority", "ok"],
       ["heavy-slot-running", "heavy-slot-co-tenancy", "ok"],
+      ["producer-slot-live", "producer-slot-live", "ok"],
       ["current-slot-unfinished", "producer-slot-priority", "skipped_neutral"],
     ])("reports %s as %s/%s without admitting more work", async (condition, reason, status) => {
       const priority = {
-        reason, condition, scheduleKey: condition === "heavy-slot-running" ? "halfHourlyChartsOffset" : "fourHourlyReserveSync",
+        reason: condition === "producer-slot-live" ? "producer-slot-priority" : reason,
+        condition, scheduleKey: condition === "heavy-slot-running" ? "halfHourlyChartsOffset" : "fourHourlyReserveSync",
         slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440,
       };
       if (phase === "preflight") mocks.priority.mockResolvedValueOnce(priority);
@@ -145,7 +147,7 @@ describe("reserve recovery mode", () => {
           mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(priority);
           mocks.runReserveSlot.mockResolvedValue({
             jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 1,
-            jobs: [{ job: "sync-live-reserves", status: "skipped_neutral", reason }],
+            jobs: [{ job: "sync-live-reserves", status: "skipped_neutral", reason: priority.reason }],
           });
         }
       }
@@ -158,6 +160,49 @@ describe("reserve recovery mode", () => {
       if (phase === "preflight" || phase === "config") expect(mocks.claim).not.toHaveBeenCalled();
       if (phase === "post-claim") expect(mocks.release).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("keeps Oct-13 delivered-but-no-claim polls neutral without claiming work", async () => {
+    mocks.priority.mockResolvedValue({
+      reason: "producer-slot-priority", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1791907860,
+      observedAt: 1791908204, lookaheadSec: 1440, condition: "current-slot-unfinished",
+    });
+    await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(latestLeasedResult).toMatchObject({ status: "skipped_neutral", itemCount: 0 });
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      reason: "producer-slot-priority", attemptedCount: 0, checkpointsClaimed: 0,
+    });
+    expect(mocks.configRecovery).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+  });
+
+  it("does not turn a failed priority read into a successful poll", async () => {
+    mocks.priority.mockRejectedValue(new Error("producer-slot-read-failed"));
+    const summary = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(summary.jobsErrored).toBe(1);
+    expect(latestLeasedResult).toBeUndefined();
+    expect(mocks.configRecovery).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+  });
+
+  it.each([null, "current-slot-unfinished"])("does not renew waiting after live proof disappears: %s", async (condition) => {
+    mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint({
+      state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
+    }) });
+    mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(condition ? {
+        reason: "producer-slot-priority", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1000,
+        observedAt: 1100, lookaheadSec: 1440, condition,
+      } : null);
+    mocks.runReserveSlot.mockResolvedValue({
+      jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 1,
+      jobs: [{ job: "sync-live-reserves", status: "skipped_neutral", reason: "producer-slot-priority" }],
+    });
+    await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(latestLeasedResult).toMatchObject({ status: "skipped_neutral" });
+    const metadata = JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}");
+    expect(metadata.reason).toBe("producer-slot-priority");
+    expect(confirmedCronOutputAt(latestLeasedResult, metadata, 1100)).toBeNull();
   });
 
 
@@ -295,7 +340,7 @@ describe("reserve recovery mode", () => {
     },
   );
 
-  it.each(["current-slot-unfinished", "next-slot-lookahead"])("preserves config degradation when %s defers an owned claim", async (condition) => {
+  it.each(["current-slot-unfinished", "next-slot-lookahead", "producer-slot-live"])("preserves config degradation when %s defers an owned claim", async (condition) => {
     mocks.configRecovery.mockResolvedValue({ attempted: ["coin"], healed: [], failed: ["coin"] });
     mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint({
       state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
@@ -432,7 +477,7 @@ describe("reserve recovery mode", () => {
     });
   });
 
-  it.each(["current-slot-unfinished", "next-slot-lookahead"])("does not erase a config failure when %s appears before replay", async (condition) => {
+  it.each(["current-slot-unfinished", "next-slot-lookahead", "producer-slot-live"])("does not erase a config failure when %s appears before replay", async (condition) => {
     mocks.configRecovery.mockResolvedValue({ attempted: ["coin"], healed: [], failed: ["coin"] });
     mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce({
       reason: "producer-slot-priority", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1000,
@@ -441,7 +486,8 @@ describe("reserve recovery mode", () => {
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status: "degraded" });
     expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
-      reason: "reserve-config-recovery-failed", reasons: ["reserve-config-recovery-failed", "producer-slot-priority"],
+      reason: "reserve-config-recovery-failed",
+      reasons: ["reserve-config-recovery-failed", condition === "producer-slot-live" ? "producer-slot-live" : "producer-slot-priority"],
     });
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();

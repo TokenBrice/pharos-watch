@@ -327,6 +327,11 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   }
 
   finalizationBudget.remainingMs = Math.max(0, finalizationBudget.deadlineMs - Date.now());
+  const reasons = [
+    ...(args.counts.failed > 0 ? ["reserve-adapter-or-persistence-failed"] : []),
+    ...(args.counts.deferredCoins > 0 || args.counts.deferredSkipped > 0 ? ["reserve-run-budget-deferred"] : []),
+    ...(args.counts.circuitSkipped > 0 ? ["reserve-circuit-open"] : []),
+  ];
 
   return {
     itemCount: args.counts.synced,
@@ -343,6 +348,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
                 : "reserve-circuit-open",
           }
         : {}),
+      reasons,
       structureVersion: 2,
       synced: args.counts.synced,
       failed: args.counts.failed,

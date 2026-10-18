@@ -19,6 +19,18 @@ import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 
 import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
+import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { beginLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
+
+function pendingCheckpoint(overrides: Record<string, unknown> = {}) {
+  return {
+    state: "running", slot_started_at: 9_600, next_item_key: "coin-tail",
+    items_done: 3, items_total: 12, updated_at: 9_905,
+    producer_state: "running", producer_finished_at: null,
+    ...overrides,
+  };
+}
 describe("live-reserves-store", () => {
   it.each([
     ["not-json", 1], ["{}", 0], ["null", 0], ['[{"code":"material-unknown-exposure","effect":"degraded"}]', 1],
@@ -835,28 +847,100 @@ describe("live-reserves-store", () => {
     expect(primarySum).toBe(overview.configuredCoins);
   });
 
-  it("surfaces pending checkpoint resume diagnostics in the overview", async () => {
-    const now = 10_000;
+  it("requires the checkpoint's exact running producer slot before labeling its frontier in-progress", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      await beginLiveReserveCheckpoint(db, { slotStartedAt: 9_600, invocationId: "producer", nowSec: 9_905 });
+      sqlite.prepare(`UPDATE worker_scheduled_checkpoints
+        SET next_item_key = 'coin-tail', items_done = 3, items_total = 12`).run();
+      sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+        VALUES ('fourHourlyReserveSync', 9500, 'running', 'older-producer', 1, 9500, 9905)`).run();
+      expect(await computeReserveCompositionOverview(db, 10_000)).toMatchObject({
+        inProgressCoins: 0, deferredCoins: 9, runBudgetTruncated: true,
+      });
+      sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+        VALUES ('fourHourlyReserveSync', 9600, 'running', 'exact-producer', 1, 9600, 9905)`).run();
+      expect(await computeReserveCompositionOverview(db, 10_000)).toMatchObject({
+        inProgressCoins: 9, deferredCoins: 0, runBudgetTruncated: false,
+      });
+      sqlite.prepare(`UPDATE cron_slot_executions SET state = 'finished', finished_at = 9950
+        WHERE slot_key = 'fourHourlyReserveSync' AND slot_started_at = 9600`).run();
+      expect(await computeReserveCompositionOverview(db, 10_000)).toMatchObject({
+        inProgressCoins: 0, deferredCoins: 9, runBudgetTruncated: true,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("reports a fresh exact-slot running checkpoint as in-progress without inventing deferred coins", async () => {
+    const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint() }]);
+    const overview = await computeReserveCompositionOverview(db, 10_000);
+    expect(overview).toMatchObject({
+      inProgressCoins: 9, deferredCoins: 0, runBudgetTruncated: false, deferredAt: null,
+      nextCursorStablecoinId: "coin-tail", cursorRecordedAt: 9_905,
+    });
+  });
+
+  it("retains actual per-coin budget deferrals while a producer is in progress", async () => {
+    const states = getConfiguredLiveReserveCoins().slice(0, 2).map((coin) => reserveSyncRow({
+      stablecoin_id: coin.id, last_status: "skipped",
+      metadata: JSON.stringify({ failureCategory: "run-budget-exhausted" }),
+    }));
     const db = mockD1([
-      {
-        match: "FROM worker_scheduled_checkpoints",
-        rows: [],
-        first: {
-          state: "running",
-          next_item_key: "coin-tail",
-          items_done: 0,
-          items_total: 12,
-          updated_at: 9_905,
-        },
-      },
+      { match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint() },
+      { match: "FROM reserve_sync_state", rows: states },
     ]);
+    expect(await computeReserveCompositionOverview(db, 10_000)).toMatchObject({
+      deferredCoins: 2, inProgressCoins: 9, runBudgetTruncated: true, deferredAt: 9_905,
+    });
+  });
 
-    const overview = await computeReserveCompositionOverview(db, now);
+  const reservePolicy = resolveScheduledSlotPolicy("fourHourlyReserveSync");
+  it.each([
+    ["recovering", { state: "recovering" }],
+    ["ready", { state: "ready" }],
+    ["stale heartbeat", { updated_at: 10_000 - reservePolicy.slotSilenceSec - 1 }],
+    ["missing producer", { producer_state: null }],
+    ["reconciling producer", { producer_state: "reconciling" }],
+    ["finished producer", { producer_state: "finished", producer_finished_at: 9_950 }],
+    ["running producer with terminal clock", { producer_finished_at: 9_950 }],
+    ["future heartbeat", { updated_at: 10_001 }],
+    ["missing heartbeat", { updated_at: undefined }],
+    ["nonfinite heartbeat", { updated_at: Number.NaN }],
+    ["future slot", { slot_started_at: 10_001 }],
+    ["invalid slot", { slot_started_at: 0 }],
+    ["hard-dead boundary", { slot_started_at: 10_000 - reservePolicy.hardDeadSec, updated_at: 10_000 }],
+    ["old slot with fresh heartbeat", { slot_started_at: 9_000 - reservePolicy.hardDeadSec, updated_at: 10_000 }],
+  ] as const)("keeps non-live pending checkpoint tails deferred: %s", async (_label, overrides) => {
+    const checkpoint = pendingCheckpoint(overrides);
+    const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: checkpoint }]);
+    expect(await computeReserveCompositionOverview(db, 10_000)).toMatchObject({
+      inProgressCoins: 0, deferredCoins: 9, runBudgetTruncated: true,
+      nextCursorStablecoinId: "coin-tail", cursorRecordedAt: checkpoint.updated_at,
+    });
+  });
 
-    expect(overview.runBudgetTruncated).toBe(true);
-    expect(overview.deferredCoins).toBeGreaterThanOrEqual(12);
-    expect(overview.nextCursorStablecoinId).toBe("coin-tail");
-    expect(overview.cursorRecordedAt).toBe(9_905);
+  it.each([0, 1])("bounds checkpoint heartbeat silence at the exact policy boundary plus %s", async (extraSec) => {
+    const checkpoint = pendingCheckpoint({ updated_at: 10_000 - reservePolicy.slotSilenceSec - extraSec });
+    const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: checkpoint }]);
+    expect(await computeReserveCompositionOverview(db, 10_000)).toMatchObject({
+      inProgressCoins: extraSec === 0 ? 9 : 0,
+      deferredCoins: extraSec === 0 ? 0 : 9,
+      runBudgetTruncated: extraSec !== 0,
+    });
+  });
+
+  it("distinguishes absent checkpoint from checkpoint read failure", async () => {
+    expect(await computeReserveCompositionOverview(mockD1(), 10_000)).toMatchObject({
+      inProgressCoins: 0, deferredCoins: 0, runBudgetTruncated: false,
+    });
+    const db = mockD1([{
+      match: "FROM worker_scheduled_checkpoints", rows: [], throwError: new Error("checkpoint-read-failed"),
+    }]);
+    await expect(computeReserveCompositionOverview(db, 10_000)).rejects.toThrow("checkpoint-read-failed");
   });
 
   it("ignores stale pending pointers when the latest checkpoint is terminal", async () => {
@@ -872,11 +956,20 @@ describe("live-reserves-store", () => {
           updated_at: 10_000,
         },
       },
+      {
+        match: "FROM reserve_sync_state",
+        rows: [reserveSyncRow({
+          last_status: "skipped", metadata: JSON.stringify({ failureCategory: "run-budget-exhausted" }),
+        })],
+      },
     ]);
 
     const overview = await computeReserveCompositionOverview(db, 10_100);
 
     expect(overview.runBudgetTruncated).toBe(false);
+    expect(overview.inProgressCoins).toBe(0);
+    expect(overview.deferredCoins).toBe(1);
+    expect(overview.deferredAt).toBeNull();
     expect(overview.nextCursorStablecoinId).toBeNull();
     expect(overview.cursorRecordedAt).toBeNull();
   });

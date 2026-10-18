@@ -15,6 +15,7 @@ const HEAVY_LIVENESS_PLAN = Object.values(SCHEDULED_SLOT_PLANS)
   .sort((a, b) => CRON_SCHEDULE_CADENCES[a.scheduleKey].intervalSec - CRON_SCHEDULE_CADENCES[b.scheduleKey].intervalSec)[0];
 
 interface SlotStarts {
+  observed_at: number | null;
   last_any: number | null;
   reserve: number | null;
   telegram: number | null;
@@ -25,6 +26,7 @@ interface SlotStarts {
 /** Delivery evidence is an actual slot start, never a scheduled clock or completed child. */
 export async function loadSchedulerLiveness(db: D1Database, now: number): Promise<SchedulerLiveness> {
   const observation: SchedulerLiveness = {
+    // Caller time is diagnostic only until the query supplies its observation clock.
     status: "unavailable", observedAt: now,
     lastAnyStartedAt: null, lastFiveMinuteStartedAt: null, ageSeconds: null,
     ...STATUS_SCHEDULER_LIVENESS_THRESHOLDS,
@@ -40,6 +42,7 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
   };
   try {
     const row = await db.prepare(`SELECT
+      (SELECT unixepoch()) AS observed_at,
       (SELECT MAX(started_at) FROM cron_slot_executions) AS last_any,
       (SELECT MAX(started_at) FROM cron_slot_executions WHERE slot_key = ?) AS reserve,
       (SELECT MAX(started_at) FROM cron_slot_executions WHERE slot_key = ?) AS telegram,
@@ -51,15 +54,22 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
       if (HEAVY_LIVENESS_PLAN) observation.heavy.unavailableReason = "slot-start-evidence-missing";
       return observation;
     }
+    if (typeof row.observed_at !== "number" || !Number.isFinite(row.observed_at) || row.observed_at <= 0) {
+      observation.unavailableReason = "slot-start-query-failed";
+      if (HEAVY_LIVENESS_PLAN) observation.heavy.unavailableReason = "slot-start-query-failed";
+      return observation;
+    }
+    const observedAt = row.observed_at;
+    observation.observedAt = observedAt;
     if (HEAVY_LIVENESS_PLAN) {
       observation.heavy.lastStartedAt = row.heavy ?? null;
       if (row.heavy == null) {
         observation.heavy.unavailableReason = "heavy-slot-start-evidence-missing";
-      } else if (!Number.isFinite(row.heavy) || row.heavy <= 0 || row.heavy > now) {
+      } else if (!Number.isFinite(row.heavy) || row.heavy <= 0 || row.heavy > observedAt) {
         observation.heavy.unavailableReason = "slot-start-clock-invalid";
         observation.heavy.lastStartedAt = null;
       } else {
-        observation.heavy.ageSeconds = now - row.heavy;
+        observation.heavy.ageSeconds = observedAt - row.heavy;
         observation.heavy.status = observation.heavy.ageSeconds > observation.heavy.staleAfterSec ? "stale"
           : observation.heavy.ageSeconds > observation.heavy.warningAfterSec ? "degraded" : "healthy";
       }
@@ -67,7 +77,7 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
     observation.lastAnyStartedAt = row.last_any;
     const starts = [row.reserve, row.telegram, row.digest];
     observation.lanes.forEach((lane, index) => { lane.lastStartedAt = starts[index]; });
-    if ([row.last_any, ...starts].some((clock) => clock != null && (!Number.isFinite(clock) || clock <= 0 || clock > now))) {
+    if ([row.last_any, ...starts].some((clock) => clock != null && (!Number.isFinite(clock) || clock <= 0 || clock > observedAt))) {
       observation.unavailableReason = "slot-start-clock-invalid";
       return observation;
     }
@@ -77,7 +87,7 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
       return observation;
     }
     observation.lastFiveMinuteStartedAt = Math.max(...delivered);
-    observation.ageSeconds = now - observation.lastFiveMinuteStartedAt;
+    observation.ageSeconds = observedAt - observation.lastFiveMinuteStartedAt;
     observation.status = observation.ageSeconds > observation.staleAfterSec ? "stale"
       : observation.ageSeconds > observation.warningAfterSec ? "degraded" : "healthy";
     return observation;

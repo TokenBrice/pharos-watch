@@ -6,6 +6,9 @@ import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
+import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
+import { createAdapterLatencyCollector } from "../sync-live-reserves-core";
 import {
   checkpointIdentity as makeCheckpointIdentity,
   checkpointTable as makeCheckpointTable,
@@ -1103,6 +1106,8 @@ describe("syncLiveReserves", () => {
       failed: 1,
       deferredCoins: configuredCoinCount - 1,
       runBudgetTruncated: true,
+      reason: "reserve-adapter-or-persistence-failed",
+      reasons: ["reserve-adapter-or-persistence-failed", "reserve-run-budget-deferred"],
     });
     const timeoutAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
@@ -1235,7 +1240,71 @@ describe("syncLiveReserves", () => {
       skipped: configuredCoinCount,
       deferredCoins: configuredCoinCount,
       runBudgetTruncated: true,
+      reason: "reserve-run-budget-deferred",
+      reasons: ["reserve-run-budget-deferred"],
     });
+  });
+
+  it.each([
+    {
+      name: "simultaneous failure, budget deferral and circuit skip",
+      counts: { synced: 60, failed: 10, skipped: 30, deferredCoins: 25, deferredSkipped: 25, circuitSkipped: 5 },
+      status: "degraded", reason: "reserve-adapter-or-persistence-failed",
+      reasons: ["reserve-adapter-or-persistence-failed", "reserve-run-budget-deferred", "reserve-circuit-open"],
+    },
+    {
+      name: "budget deferral only",
+      counts: { synced: 75, failed: 0, skipped: 25, deferredCoins: 25, deferredSkipped: 25, circuitSkipped: 0 },
+      status: "degraded", reason: "reserve-run-budget-deferred", reasons: ["reserve-run-budget-deferred"],
+    },
+    {
+      name: "circuit skip only",
+      counts: { synced: 0, failed: 0, skipped: 100, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 100 },
+      status: "degraded", reason: "reserve-circuit-open", reasons: ["reserve-circuit-open"],
+    },
+    {
+      name: "clean",
+      counts: { synced: 100, failed: 0, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
+      status: "ok", reason: undefined, reasons: [],
+    },
+    {
+      name: "partial failure below the existing threshold",
+      counts: { synced: 99, failed: 1, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
+      status: "ok", reason: undefined, reasons: ["reserve-adapter-or-persistence-failed"],
+    },
+    {
+      name: "deferred skip without a recorded deferred-coin count",
+      counts: { synced: 99, failed: 0, skipped: 1, deferredCoins: 0, deferredSkipped: 1, circuitSkipped: 0 },
+      status: "ok", reason: undefined, reasons: ["reserve-run-budget-deferred"],
+    },
+  ])("retains all applicable reasons without changing terminal priority: $name", async ({ counts, status, reason, reasons }) => {
+    const collector = createAdapterLatencyCollector();
+    const nowMs = Date.now();
+    const result = await finalizeReserveSyncRun({
+      db: mockD1(), total: 100, runStartedAt: Math.floor(nowMs / 1000), runStartedMs: nowMs,
+      counts: { ...counts, attemptedCoins: counts.synced + counts.failed,
+        ...(counts.synced > 0 ? { latestPublishedAt: 1_000 } : {}) },
+      warningMessages: [], coinsWithErrors: [], coinsWithWarnings: [],
+      breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
+      deferredTail: {
+        nextCursorStablecoinId: null, cursorTailState: null, cursorRecordedAt: null,
+        cursorTailCompletedAt: null, cursorTailFailedAt: null, cursorTailError: null, runBudgetTruncationCount: 0,
+      },
+      checkpointOwned: false, attemptFailureSummaries: [],
+      budgetConfig: resolveLiveReserveSyncBudgetConfig(),
+      phaseTimings: { setup: 0, queue: 0, adapter: 0, d1CoinPersistence: 0 },
+      adapterLatency: collector.finalize(), adapterTelemetryProgress: collector.progress(),
+    });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe(status);
+    expect(result.itemCount).toBe(counts.synced);
+    expect(result.productivity).toEqual({ productive: counts.synced > 0 });
+    expect(metadata.reason).toBe(reason);
+    expect(metadata.reasons).toEqual(reasons);
+    expect(metadata.reasons.length).toBeLessThanOrEqual(3);
+    expect(new Set(metadata.reasons).size).toBe(metadata.reasons.length);
+    expect(metadata.outputPublishedAt).toBe(counts.synced > 0 ? 1_000 : undefined);
+    expect(metadata.runBudgetTruncated).toBe(counts.deferredCoins > 0);
   });
 
   it("finalizes breaker outcomes when deferred-tail persistence fails", async () => {

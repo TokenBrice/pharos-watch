@@ -149,7 +149,7 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
   });
   return [
-    { match: "AS last_any", rows: [], first: { last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30, heavy: now - 30 } },
+    { match: "AS last_any", rows: [], first: { observed_at: now, last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30, heavy: now - 30 } },
     { match: "cache WHERE key IN", rows: healthy
       ? [
           ...["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"].map((key) => makeCacheRow(key)),
@@ -332,6 +332,7 @@ function fixtureMockD1(
       ...(!tables.some((table) => table.match.includes("AS last_any")) ? [{
         match: "AS last_any", rows: [], allowUnused: true,
         first: {
+          observed_at: Math.floor(Date.now() / 1000),
           last_any: Math.floor(Date.now() / 1000) - 30,
           reserve: Math.floor(Date.now() / 1000) - 30,
           telegram: Math.floor(Date.now() / 1000) - 30,
@@ -341,6 +342,9 @@ function fixtureMockD1(
       }] : []),
       ...(!includeStatusDefaults || hasPublicationFixture ? [] : [{ ...publicationFixture, allowUnused: true }]),
       ...(!includeStatusDefaults || hasDewsPointerFixture ? [] : [{ ...dewsPointerFixture, allowUnused: true }]),
+      ...(!tables.some((table) => table.match.includes("worker_scheduled_checkpoints")) ? [{
+        match: "FROM worker_scheduled_checkpoints", rows: [], first: null, allowUnused: true,
+      }] : []),
       ...tables,
       ...["FROM reserve_sync_state", "FROM reserve_composition", "FROM reserve_sync_attempt_history"].filter(
         (match) => !tables.some((table) => table.match === match),
