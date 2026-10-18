@@ -67,7 +67,7 @@ vi.mock("../../../lib/blacklist/run-budget", () => ({
 vi.mock("../../../lib/cron-progress", () => ({ reportCronProgress: vi.fn() }));
 vi.mock("../../../lib/structured-log", () => ({ logWorkerEventArgs: vi.fn() }));
 
-import { scanBlacklistConfigs } from "../config-scan";
+import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, scanBlacklistConfigs } from "../config-scan";
 
 const EVM_CONFIG = CONTRACT_CONFIGS.find((config) => config.chain.type === "evm")!;
 const TRON_CONFIG = CONTRACT_CONFIGS.find((config) => config.chain.type === "tron")!;
@@ -158,6 +158,42 @@ beforeEach(() => {
 });
 
 describe("blacklist config scan accounting", () => {
+  it.each([2, 52, BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS])(
+    "tolerates a proven all-topic %i-block residual without renewing full coverage", async (lag) => {
+      const state = makeState(EVM_CONFIG, { lastSucceededAt: 10 });
+      mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+      mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
+        ...evmResult(), safeHead: 120 + lag, incomplete: true, coverageOutcome: "incomplete",
+        failureSamples: ["behind-safe-head"],
+      });
+      const result = await scanBlacklistConfigs(scanArgs());
+      expect(result.coverageVerdicts[state.configKey]).toBe("lagging-within-tolerance");
+      expect(result.configsSucceeded).toBe(0);
+      expect(result.runtimeBudgetHit).toBe(false);
+      expect(state.lastSucceededAt).toBe(10);
+      expect(result.coverageFailureConfigs[0]).toMatchObject({ lag, samples: ["behind-safe-head"] });
+    },
+  );
+
+  it.each([
+    { safeHead: 121 + BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS },
+    { apiError: true },
+    { coveredTopicCount: 0 },
+    { scannedToBlock: null },
+    { safeHead: null },
+    { safeHead: Number.NaN },
+    { failureSamples: ["behind-safe-head", "decode-error"] },
+  ])("keeps missing or failed evidence outside tolerance: %j", async (overrides) => {
+    const state = makeState();
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
+      ...evmResult(), safeHead: 122, incomplete: true, coverageOutcome: "incomplete",
+      failureSamples: ["behind-safe-head"], ...overrides,
+    });
+    const result = await scanBlacklistConfigs(scanArgs());
+    expect(result.coverageVerdicts[state.configKey]).toBe("failed");
+  });
+
   it("retains catch-up progress and lag without refreshing success until safe head is reached", async () => {
     const state = makeState(EVM_CONFIG, { lastSucceededAt: 10 });
     mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
@@ -181,6 +217,7 @@ describe("blacklist config scan accounting", () => {
     expect(state.cursorValue).toBe(900);
     expect(state.lastSucceededAt).toBeGreaterThan(10);
     expect(second.configLag[state.configKey]?.lag).toBe(0);
+    expect(second.coverageVerdicts[state.configKey]).toBe("covered");
     expect(second.coverageFailureConfigs).toEqual([]);
   });
 
@@ -201,6 +238,7 @@ describe("blacklist config scan accounting", () => {
     expect(result).toMatchObject({
       configsAttempted: 9, configsSucceeded: 1,
       coverageOutcomeCounts: { incomplete: 8, quiet: 1 },
+      coverageVerdicts: Object.fromEntries(states.map((state, index) => [state.configKey, index < 8 ? "failed" : "covered"])),
     });
     expect(result.coverageFailureConfigs).toEqual(states.slice(0, 6).map((state) => ({
       configKey: state.configKey, outcome: "incomplete", cursorKind: "evm_block",

@@ -175,6 +175,20 @@ All credentials in `worker/src/lib/env.ts` are optional at the type boundary:
 
 Missing or unhealthy providers reduce the paths available to the affected config; they must surface through coverage outcomes, circuit state, and cron health rather than silently advancing an unproven cursor.
 
+Run-level coverage is three-state per config in `metadata.coverageVerdicts`: `covered`,
+`lagging-within-tolerance`, or `failed`. `BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS` in
+`worker/src/cron/blacklist/config-scan.ts` is the sole tolerance authority (64 EVM blocks).
+The bound accommodates the measured 2–52-block residuals in otherwise successful scans.
+Tolerance requires every topic covered, finite integral frontier/head evidence, no API error,
+and only `behind-safe-head` as the incomplete reason. Unknown frontiers, missing topics,
+provider/decode failures, Tron timestamp lag, and residuals above the bound remain failures.
+Run metadata retains uncapped verdict/count evidence plus the bounded `coverageFailureConfigs`
+diagnostic samples, including tolerated residuals. Only failed coverage degrades an otherwise
+healthy run; budget/circuit/state errors retain their independent degradation.
+Tolerance never certifies full catch-up: durable config success clocks and producer full-coverage
+freshness still advance only at the proven safe head, not at a tolerated frontier.
+
+
 ## Event And Coverage Rules
 
 `worker/src/lib/blacklist-contracts.ts` is the only registry for event signatures, topic hashes, address/amount decoding indices, array encodings, direction booleans, and deployment start blocks. Parsing is implemented in:

@@ -38,11 +38,16 @@ describe("yield publication terminal outcome", () => {
   ])("finishes applied publication with quality reasons %j", async (...reasons: string[]) => {
     vi.mocked(publishYieldCoordinatorResults).mockResolvedValue({
       ok: true, updatedCount: 1, degradationReasons: reasons, validationFailures: 0,
+      generationId: "yield-1800000000-quality",
       cacheWriteSkipped: false, casSkipped: false, skipReason: null, publicationStats: null,
     });
     const result = await runYieldCoordinatorPersistStage(params());
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(1);
+    expect(result.productivity).toMatchObject({
+      productive: true,
+      publications: [{ surface: "yield-rankings", generationId: "yield-1800000000-quality", publishedAt: 1_800_000_000 }],
+    });
     expect(JSON.parse(result.metadata!)).toMatchObject({
       quality: { degraded: reasons.length > 0, reasons },
     });
@@ -52,6 +57,7 @@ describe("yield publication terminal outcome", () => {
   it("completes a Pendle-only outage without degrading publication quality", async () => {
     vi.mocked(publishYieldCoordinatorResults).mockResolvedValue({
       ok: true, updatedCount: 1, degradationReasons: [], validationFailures: 0,
+      generationId: "yield-1800000000-pendle",
       cacheWriteSkipped: false, casSkipped: false, skipReason: null, publicationStats: null,
     });
     const input = params();
@@ -69,11 +75,13 @@ describe("yield publication terminal outcome", () => {
   it("does not mark a CAS-skipped publication as completed", async () => {
     vi.mocked(publishYieldCoordinatorResults).mockResolvedValue({
       ok: true, updatedCount: 0, degradationReasons: [], validationFailures: 0,
+      generationId: "yield-1800000000-loser",
       cacheWriteSkipped: true, casSkipped: true, skipReason: "newer-publication", publicationStats: null,
     });
     const result = await runYieldCoordinatorPersistStage(params());
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata!).reason).toBe("newer-publication");
+    expect(result.productivity).toMatchObject({ productive: false, publications: [] });
   });
 
   it("keeps the blocked publication reason", async () => {
@@ -84,5 +92,6 @@ describe("yield publication terminal outcome", () => {
     const result = await runYieldCoordinatorPersistStage(params());
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata!).reason).toBe("yield-publication-transaction-failed");
+    expect(result.productivity?.publications ?? []).toEqual([]);
   });
 });

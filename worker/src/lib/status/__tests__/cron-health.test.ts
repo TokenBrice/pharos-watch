@@ -234,8 +234,9 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   it.each([
     { job: "snapshot-public-dataset", reason: "same_day_snapshot_exists" },
     { job: "snapshot-psi", reason: "same_day_snapshot_exists" },
+    { job: "sync-yield-supplemental", reason: "supplemental-catch-up-not-due" },
   ])(
-    "recovers $job availability from a proven same-day skip after a transient precheck error",
+    "recovers $job availability from a proven artifact skip after a transient precheck error",
     async ({ job, reason }) => {
       // Production shape 2026-09-23: the 08:00 run wrote the day's artifact,
       // one 09:31 precheck read failed on a transient D1 internal error, and
@@ -305,6 +306,19 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
 
     expect(snapshot.crons["snapshot-public-dataset"]?.healthy).toBe(false);
+    expect(snapshot.cronErrorCount).toBe(1);
+  });
+
+  it("does not let a supplemental marker-only skip prove recovery after a failed run", async () => {
+    const job = "sync-yield-supplemental";
+    const rows = seedWithOverrides(NOW, [
+      { job, status: "skipped_neutral", ageSec: 300 },
+      { job, status: "error", ageSec: 3600 },
+    ]);
+    rows.find((row) => row.job === job && row.status === "skipped_neutral")!.metadata =
+      JSON.stringify({ reason: "supplemental-catch-up-marker-not-due" });
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons[job]?.healthy).toBe(false);
     expect(snapshot.cronErrorCount).toBe(1);
   });
 

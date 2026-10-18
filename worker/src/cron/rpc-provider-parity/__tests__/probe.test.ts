@@ -8,6 +8,9 @@ import {
   classifyRpcParityTransportError,
   normalizeRpcQuantity,
   probeRpcProviderParityRun,
+  rpcParityRotation,
+  RPC_PARITY_MAX_CHAINS_PER_RUN,
+  RPC_PARITY_ROTATION_HOURS,
   rpcParityCommonBlockMargin,
   RPC_PARITY_LOG_WINDOW_BLOCKS,
   RPC_PARITY_PRUNED_LOG_DEPTH_BLOCKS,
@@ -103,6 +106,39 @@ function runProbe(options: {
 }
 
 describe("rpc parity probe", () => {
+  it.each([0, 3600, 7200, 10800])(
+    "covers the complete roster in any three consecutive hours from %i at the fixed cap", (start) => {
+      const observed = new Set<string>();
+      for (let hour = 0; hour < RPC_PARITY_ROTATION_HOURS; hour++) {
+        const rotation = rpcParityRotation(RPC_PARITY_TARGETS, start + hour * 3600);
+        expect(rotation.targets.length).toBeLessThanOrEqual(RPC_PARITY_MAX_CHAINS_PER_RUN);
+        expect(rotation).toEqual(rpcParityRotation(RPC_PARITY_TARGETS, start + hour * 3600));
+        for (const target of rotation.targets) observed.add(target.chainId);
+      }
+      expect([...observed].sort()).toEqual(RPC_PARITY_TARGETS.map((target) => target.chainId).sort());
+    },
+  );
+
+  it("rejects roster growth beyond three-hour capacity rather than silently losing coverage", () => {
+    const oversized = Array.from(
+      { length: RPC_PARITY_MAX_CHAINS_PER_RUN * RPC_PARITY_ROTATION_HOURS + 1 },
+      () => RPC_PARITY_TARGETS[0],
+    );
+    expect(() => rpcParityRotation(oversized, 0)).toThrow("three-hour rotation capacity");
+  });
+
+  it("reports only selected chains as deadline skips at the fixed cap", async () => {
+    const rotation = rpcParityRotation(RPC_PARITY_TARGETS, 3600);
+    const transport = createFakeTransport(() => rpcResult("0x64"));
+    const result = await runProbe({
+      targets: RPC_PARITY_TARGETS, atSec: 3600, fetchText: transport.fetchText,
+      deadlineMs: START_MS, nowMs: () => START_MS,
+    });
+    expect(result.samples).toEqual([]);
+    expect(transport.calls).toEqual([]);
+    expect(result.skipped).toEqual(rotation.targets.map((target) => ({ chainId: target.chainId, reason: "deadline" })));
+  });
+
   it("redacts bare dRPC query credentials and records failed log ranges", async () => {
     const drpcKey = "query-key-sensitive-test";
     const transport = createFakeTransport((call) => {

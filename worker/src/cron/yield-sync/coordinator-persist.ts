@@ -105,6 +105,7 @@ export async function publishYieldCoordinatorResults(params: {
   | { ok: false; result: CronResult }
   | {
       ok: true;
+      generationId: string;
       updatedCount: number;
       degradationReasons: string[];
       validationFailures: number;
@@ -247,6 +248,7 @@ export async function publishYieldCoordinatorResults(params: {
 
     return {
       ok: true,
+      generationId,
       updatedCount,
       degradationReasons: params.degradationReasons,
       validationFailures: publicationWrite.validationFailures,
