@@ -465,7 +465,22 @@
         { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
         { "path": "docs/api-reference.md", "anchor": "public-endpoints" }
       ],
+      "reading": [
+        {
+          "sources": ["worker/src/api/yield-history.ts", "worker/src/api/yield-rankings.ts"],
+          "local": [
+            "docs/api-endpoint-authoring.md",
+            { "path": "docs/api-reference.md", "anchor": "get-apiyield-history" },
+            { "path": "docs/api-reference.md", "anchor": "get-apiyield-rankings" },
+            { "path": "docs/api-reference.md", "anchor": "public-api-auth" },
+            { "path": "docs/api-reference.md", "anchor": "surface-split" }
+          ],
+          "required": [{ "path": "docs/security-governance.md", "anchor": "token-in-url-discipline" }]
+        }
+      ],
       "background": [
+        "docs/security-governance.md",
+        { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
         { "path": "docs/architecture.md", "anchor": "adr-7" },
         { "path": "docs/architecture.md", "anchor": "adr-27" },
         {"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"},
@@ -517,6 +532,17 @@
         "docs/worker-and-api-limits.md"
       ],
       "docs": ["docs/process/cron-trigger-policy.md"],
+      "reading": [
+        {
+          "sources": ["**"],
+          "required": [
+            { "path": "docs/process/cron-trigger-policy.md", "anchor": "source-of-truth" },
+            { "path": "docs/process/cron-trigger-policy.md", "anchor": "target" },
+            { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" },
+            { "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }
+          ]
+        }
+      ],
       "background": [
         { "path": "docs/architecture.md", "anchor": "adr-7" },
         { "path": "docs/architecture.md", "anchor": "adr-10" },
@@ -554,6 +580,7 @@
       "label": "Telegram ingress, commands, dispatch, and Mini App",
       "risk": "high",
       "sources": [
+        "functions/pharoswatchbot-adoption.ts",
         "worker/src/api/telegram*.ts",
         "worker/src/api/telegram-*/**",
         "worker/src/api/webhook-commands/**",
@@ -689,6 +716,26 @@
         "docs/stability-index.md"
       ],
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
+      "reading": [
+        {
+          "sources": ["worker/src/cron/dex-liquidity/**", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
+          "local": [
+            { "path": "docs/dex-liquidity.md", "anchor": "discovery-cron" },
+            { "path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning" }
+          ]
+        },
+        {
+          "sources": ["docs/report-cards.md"],
+          "local": [
+            { "path": "docs/report-cards.md", "anchor": "v10-model" },
+            { "path": "docs/process/report-cards-appendix.md", "anchor": "scoped-evidence-and-exit-evaluation" }
+          ],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        }
+      ],
       "background": [
         { "path": "docs/architecture.md", "anchor": "adr-3" },
         {"path": "docs/depeg-detection.md", "anchor": "thresholds--constants"},
@@ -779,6 +826,109 @@
         {"path": "docs/report-cards.md", "anchor": "accepted-capture-archive-and-historical-replay"},
         {"path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry"},
         {"path": "docs/digest-pipeline.md", "anchor": "distribution"}
+      ],
+      "reading": [
+        {
+          "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/**", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts"],
+          "local": [
+            { "path": "docs/report-cards.md", "anchor": "v10-model" },
+            { "path": "docs/process/report-cards-appendix.md", "anchor": "scoped-evidence-and-exit-evaluation" }
+          ],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        },
+        {
+          "sources": ["worker/src/lib/safety-score-v9/*supply*.ts", "worker/src/lib/safety-score-v9/__tests__/*supply*.test.ts", "worker/src/cron/sync-v9-supply-attribution.ts"],
+          "local": [{ "path": "docs/report-cards.md", "anchor": "v10-model" }],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ],
+          "required": [{ "path": "docs/process/report-cards-appendix.md", "anchor": "supply-attribution-and-in-flight-accounting" }]
+        },
+        {
+          "sources": ["worker/src/lib/safety-score-v9/extension-bridge.ts", "shared/lib/safety-score-v9/control-bridge-join.ts", "worker/src/lib/safety-score-v9/__tests__/extension-bridge.test.ts", "shared/lib/safety-score-v9/__tests__/control-bridge-join.test.ts"],
+          "required": [{ "path": "docs/process/report-cards-appendix.md", "anchor": "bridge-in-flight-accounting" }]
+        },
+        {
+          "sources": ["worker/src/lib/safety-score-v9/publication*.ts", "worker/src/lib/safety-score-v9/compute*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts"],
+          "required": [{ "path": "docs/process/report-cards-appendix.md", "anchor": "canonical-publication" }]
+        },
+        {
+          "sources": ["worker/src/lib/safety-score-v9/publication-journal*.ts"],
+          "required": [{ "path": "docs/report-cards.md", "anchor": "publication-journal-and-movement-attribution" }]
+        },
+        {
+          "sources": ["worker/src/lib/safety-score-v9/capture-archive*.ts", "worker/src/lib/safety-score-v9/capture-control.ts", "worker/src/lib/safety-score-v9/publication-replay-capture.ts"],
+          "required": [{ "path": "docs/report-cards.md", "anchor": "accepted-capture-archive-and-historical-replay" }]
+        },
+        {
+          "sources": ["functions/safety-scores/**", "functions/__tests__/safety-map-png.test.ts"],
+          "local": [{ "path": "docs/safety-score-map.md", "anchor": "serving" }],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        },
+        {
+          "sources": ["src/app/safety-scores/map/**", "scripts/maintenance/build-safety-score-map.ts"],
+          "local": [{ "path": "docs/safety-score-map.md", "anchor": "generator" }],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        },
+        {
+          "sources": ["scripts/maintenance/publish-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml", "worker/src/cron/safety-map-producer-kick.ts"],
+          "local": [{ "path": "docs/safety-score-map.md", "anchor": "publication" }],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        },
+        {
+          "sources": ["scripts/maintenance/publish-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml"],
+          "local": [{ "path": "docs/testing.md", "anchor": "ci-pipeline" }]
+        },
+        {
+          "sources": ["worker/src/lib/digest-safety-map.ts"],
+          "local": [{ "path": "docs/safety-score-map.md", "anchor": "digest-map-pairing-bounded-carry-forward" }]
+        },
+        {
+          "sources": ["shared/types/digest*.ts", "worker/src/cron/daily-digest.ts", "worker/src/cron/daily-digest/**", "worker/src/cron/digest/**", "worker/src/cron/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts", "docs/digest-pipeline.md"],
+          "local": [{ "path": "docs/digest-pipeline.md", "anchor": "generation" }],
+          "contract": [{ "path": "docs/digest-pipeline.md", "anchor": "distribution" }]
+        },
+        {
+          "sources": ["src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/domains/mint-authority/**", "docs/mint-authority-scoring.md"],
+          "local": [{ "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" }]
+        },
+        {
+          "sources": ["docs/safety-score-map.md"],
+          "local": [
+            { "path": "docs/safety-score-map.md", "anchor": "serving" },
+            { "path": "docs/safety-score-map.md", "anchor": "generator" },
+            { "path": "docs/safety-score-map.md", "anchor": "publication" }
+          ],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        },
+        {
+          "sources": ["docs/process/report-cards-appendix.md", "docs/process/report-cards-evidence-log.md", "shared/data/safety-score-v9/**", "docs/process/safety-score-curation-expiry-sweep.md", "docs/process/safety-score-equivalence-harness.md", "docs/process/safety-score-v9-readiness.md", "docs/process/shock-coverage-refresh.md", "docs/tape-page.md"],
+          "local": [
+            { "path": "docs/report-cards.md", "anchor": "v10-model" },
+            { "path": "docs/process/report-cards-appendix.md", "anchor": "scoped-evidence-and-exit-evaluation" },
+            { "path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it" }
+          ],
+          "contract": [
+            { "path": "docs/report-cards.md", "anchor": "api" },
+            { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        }
       ],
       "background": [
         { "path": "docs/architecture.md", "anchor": "adr-19" },
@@ -975,7 +1125,24 @@
         { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" },
         { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
       ],
-      "background": [{"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure triage", "kind": "symptom" } }],
+      "reading": [
+        {
+          "sources": ["functions/**"],
+          "local": [
+            { "path": "docs/architecture.md", "anchor": "pages-function-endpoints-not-worker-api" },
+            { "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling-entry" }
+          ]
+        },
+        {
+          "sources": ["functions/admin/**", "functions/admin-api/**", "functions/api/**", "functions/_site-data/**", "functions/_middleware.ts", "functions/lib/**"],
+          "required": [{ "path": "docs/operator-origin-access.md", "anchor": "pages-functions-proxy" }]
+        },
+        {
+          "sources": ["functions/_site-data/**", "functions/lib/site-api-env.ts"],
+          "required": [{ "path": "docs/process/worker-infrastructure-appendix.md", "anchor": "site-data-auth" }]
+        }
+      ],
+      "background": [{ "path": "docs/testing.md", "anchor": "ci-pipeline" }, { "path": "docs/testing.md", "anchor": "critical-coverage-gate" }, { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" }, { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }, {"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure triage", "kind": "symptom" } }],
       "checks": ["npx vitest run scripts/__tests__"],
       "rules": [
         "Keep deploy-surface classification aligned with GitHub deploy behavior.",
@@ -1171,7 +1338,36 @@
         { "path": "docs/worker-infrastructure.md", "anchor": "module-initialization" },
         { "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" }
       ],
+      "reading": [
+        {
+          "sources": ["**"],
+          "required": [
+            { "path": "docs/worker-infrastructure.md", "anchor": "module-initialization" },
+            { "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }
+          ]
+        },
+        {
+          "sources": ["worker/src/api/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/handlers/http/**"],
+          "required": [{ "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling-entry" }]
+        },
+        {
+          "sources": ["worker/src/lib/safety-score-v9/**", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/sync-v9-supply-attribution.ts", "worker/src/cron/snapshot-safety-grade-history.ts"],
+          "required": [
+            { "path": "docs/report-cards.md", "anchor": "v10-model" },
+            { "path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it" },
+            { "path": "docs/process/safety-score-curation-expiry-sweep.md", "anchor": "1-capture-the-current-production-input" }
+          ]
+        },
+        {
+          "sources": ["worker/src/api/telegram*.ts", "worker/src/api/telegram-*/**", "worker/src/api/webhook-commands/**", "worker/src/cron/telegram/**", "worker/src/lib/telegram/**", "worker/src/telegram/**", "worker/src/lib/digest*.ts", "worker/src/cron/daily-digest.ts", "worker/src/cron/daily-digest/**", "worker/src/cron/digest/**", "worker/src/cron/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts"],
+          "required": [
+            { "path": "docs/telegram-architecture.md", "anchor": "seam-overview" },
+            { "path": "docs/digest-pipeline.md", "anchor": "overview" }
+          ]
+        }
+      ],
       "background": [
+        { "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" },
         {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "binding-inventory"},
         {"path": "docs/blacklist-tracker.md", "anchor": "public-exposure-contract"},

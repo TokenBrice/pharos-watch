@@ -4,7 +4,7 @@ Applies to worker/src/cron and its scheduled dispatch wiring.
 
 ## Read First
 
-- `docs/process/cron-trigger-policy.md`
+- Read the routed `docs/process/cron-trigger-policy.md#source-of-truth` and `#target`; schedule declarations or new scheduled work also require `#process-for-new-scheduled-work`.
 - `docs/worker-and-api-limits.md#connection-budget-operating-assumption`
 - `docs/worker-infrastructure.md#cron-scheduling`
 

@@ -153,6 +153,47 @@ describe("doc-ownership registry integrity", () => {
       .toContain("npm run check:failure-scenarios");
   });
 
+  it("selects every owned scoring source instead of falling back to the broad publication roster", () => {
+    const scoring = mappings.find((mapping) => mapping.id === "safety-score-v9");
+    expect(scoring).toBeDefined();
+    const owned = trackedFiles.filter((file) => matchesAny(file, scoring!.sources));
+    expect(owned.length).toBeGreaterThan(0);
+    for (const file of owned) {
+      expect(scoring!.reading?.some((selector) => matchesAny(file, selector.sources)), file).toBe(true);
+    }
+  });
+
+  it("keeps distinct scoring-document inputs explicitly selected by their existing owners", () => {
+    for (const file of [
+      "docs/safety-score-map.md", "docs/process/report-cards-appendix.md",
+      "docs/report-cards.md", "docs/process/report-cards-evidence-log.md",
+    ]) {
+      const owner = mappings.find((mapping) =>
+        mapping.tier !== "fallback" && matchesAny(file, mapping.sources) &&
+        mapping.reading?.some((selector) => matchesAny(file, selector.sources)),
+      );
+      expect(owner, file).toBeDefined();
+    }
+  });
+
+  it("keeps Functions in CI check ownership while selecting runtime and applicable proxy contracts", () => {
+    const policy = mappings.find((mapping) => mapping.id === "validation-ci-policy");
+    expect(policy?.sources).toContain("functions/**");
+    expect(policy?.checks).toEqual(["npx vitest run scripts/__tests__"]);
+    const generic = policy?.reading?.find((selector) => selector.sources.includes("functions/**"));
+    expect(generic?.local).toEqual([
+      { path: "docs/architecture.md", anchor: "pages-function-endpoints-not-worker-api" },
+      { path: "docs/worker-infrastructure.md", anchor: "http-request-handling-entry" },
+    ]);
+    const refs = enumerateDocReferences(policy!);
+    expect(refs).toEqual(expect.arrayContaining([
+      { path: "docs/operator-origin-access.md", anchor: "pages-functions-proxy" },
+      { path: "docs/process/worker-infrastructure-appendix.md", anchor: "site-data-auth" },
+      { path: "docs/deployment-process.md", anchor: "ci-deploy-sequence" },
+    ]));
+    expect(policy?.background).toContainEqual({ path: "docs/testing.md", anchor: "ci-pipeline" });
+  });
+
   const references: Array<{ path: string; anchor?: string }> = [
     ...mappings.flatMap((mapping) => [
       ...enumerateDocReferences(mapping),

@@ -4,9 +4,10 @@ Applies to `functions/`.
 
 ## Read First
 
-- `docs/architecture.md` § “Pages Function endpoints (not Worker API)”, `docs/worker-infrastructure.md` § “HTTP Request Handling”, `docs/operator-origin-access.md` § “Pages Functions Proxy”, and `docs/deployment-process.md` § “CI Deploy Sequence”.
+- Read the router-selected runtime/serving sections first; it supplies the Pages Function, HTTP and applicable proxy contracts.
+- Deploy, environment binding, or transport-contract changes: also read `docs/deployment-process.md#ci-deploy-sequence`.
 - Safety map handlers `functions/safety-scores/map.json.ts` and `functions/safety-scores/map.png.ts`: see `docs/safety-score-map.md` § “Serving”; test `functions/__tests__/safety-map-png.test.ts`.
-- Security surfaces: `docs/security-governance.md` § “CSP posture” and `docs/incident-response/safe-browsing-flag.md` § “Step 5 — Harden, ship, verify”.
+- CSP or browser-facing security changes: read `docs/security-governance.md#csp-posture` and `docs/incident-response/safe-browsing-flag.md` § “Step 5 — Harden, ship, verify”.
 
 ## Rules
 

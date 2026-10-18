@@ -324,6 +324,158 @@ describe("reading selectors and context modes", () => {
     expect(outputs[0].contextMode.requested).toBe("auto");
     expect(outputs[1].contextMode).toEqual({ requested: "contract", effective: "contract", reasons: ["Explicit contract context"] });
   });
+
+  it.each(["auto", "contract"] as const)("keeps evaluator %s reading at the scoring seam, not consumer implementations", (mode) => {
+    const contract = classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode);
+    expect(contract.contextMode.effective).toBe("contract");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      "docs/report-cards.md#v10-model",
+      "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation",
+      "docs/report-cards.md#api", "docs/report-cards.md#consumers",
+    ]));
+    expect(docKeys({ docs: [...contract.docs, ...contract.background] }))
+      .not.toContain("docs/digest-pipeline.md#generation");
+    expect([...contract.docs, ...contract.background].some((doc) => doc.path === "docs/safety-score-map.md")).toBe(false);
+    expect(buildRouteContext(contract).total.bytes).toBeLessThanOrEqual(80_000);
+  });
+
+  it.each([
+    ["worker/src/lib/safety-score-v9/supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
+    ["worker/src/cron/sync-v9-supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
+    ["worker/src/lib/safety-score-v9/extension-bridge.ts", "bridge-in-flight-accounting"],
+    ["shared/lib/safety-score-v9/control-bridge-join.ts", "bridge-in-flight-accounting"],
+    ["shared/lib/safety-score-v9/__tests__/control-bridge-join.test.ts", "bridge-in-flight-accounting"],
+  ])("retains the accounting contract for %s", (file, anchor) => {
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract)).toContain(`docs/process/report-cards-appendix.md#${anchor}`);
+    expect(contract.requiredDocs).toContainEqual({ path: "docs/process/report-cards-appendix.md", anchor });
+  });
+
+  it.each(["json", "png"])("starts Functions map.%s with runtime serving and retains its feature owner", (extension) => {
+    const file = `functions/safety-scores/map.${extension}.ts`;
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract).slice(0, 3)).toEqual([
+      "docs/architecture.md#pages-function-endpoints-not-worker-api",
+      "docs/worker-infrastructure.md#http-request-handling-entry",
+      "docs/safety-score-map.md#serving",
+    ]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["validation-ci-policy", "safety-score-v9"]);
+    expect(docKeys(contract)).toEqual(expect.arrayContaining(
+      Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`),
+    ));
+    expect(docKeys(contract)).not.toContain("docs/testing.md#ci-pipeline");
+    expect(docKeys({ docs: contract.background })).toContain("docs/deployment-process.md#ci-deploy-sequence");
+    expect(buildRouteContext(contract).total.bytes).toBeLessThanOrEqual(40_000);
+  });
+
+  it.each([
+    ["scripts/maintenance/build-safety-score-map.ts", "generator"],
+    ["scripts/maintenance/publish-safety-score-map.ts", "publication"],
+    [".github/workflows/safety-map-refresh.yml", "publication"],
+  ])("keeps the map implementation owner bounded for %s", (file, anchor) => {
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract)[0]).toBe(`docs/safety-score-map.md#${anchor}`);
+    expect(docKeys(contract)).not.toContain("docs/safety-score-map.md");
+    if (anchor === "publication") expect(docKeys(contract)).toContain("docs/testing.md#ci-pipeline");
+  });
+
+  it.each(["worker/src/cron/daily-digest.ts", "worker/src/cron/digest-publication-watchdog.ts"])(
+    "retains generation for digest producer %s", (file) => {
+      expect(docKeys(classifyChangedFiles([file]))).toContain("docs/digest-pipeline.md#generation");
+    },
+  );
+
+  it.each([
+    ["docs/safety-score-map.md", "docs/safety-score-map.md#serving"],
+    ["docs/process/report-cards-appendix.md", "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation"],
+    ["docs/report-cards.md", "docs/report-cards.md#v10-model"],
+    ["docs/process/report-cards-evidence-log.md", "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation"],
+  ])("selects scoring documentation %s without the broad family fallback", (file, owner) => {
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract)).toContain(owner);
+    expect(docKeys(contract)).not.toContain("docs/digest-pipeline.md#generation");
+    expect(docKeys(contract)).not.toContain("docs/process/report-cards-appendix.md#supply-attribution-and-in-flight-accounting");
+  });
+
+  it.each(["worker/src/cron/dex-liquidity/orchestrator.ts", "worker/src/api/yield-history.ts"])(
+    "accounts for unconditional bounded Worker obligations on %s", (file) => {
+      const contract = classifyChangedFiles([file]);
+      expect(docKeys(contract)).toEqual(expect.arrayContaining([
+        "docs/worker-infrastructure.md#module-initialization",
+        "docs/worker-and-api-limits.md#connection-budget-operating-assumption",
+      ]));
+      if (file.includes("/cron/")) {
+        expect(docKeys(contract)).toEqual(expect.arrayContaining([
+          "docs/process/cron-trigger-policy.md#source-of-truth",
+          "docs/process/cron-trigger-policy.md#target",
+          "docs/worker-infrastructure.md#cron-scheduling",
+          "docs/dex-liquidity.md#discovery-cron",
+        ]));
+        expect(docKeys(contract)).not.toContain("docs/process/cron-trigger-policy.md");
+      } else {
+        expect(docKeys(contract)).toContain("docs/worker-infrastructure.md#http-request-handling-entry");
+        expect(docKeys(contract)).toContain("docs/api-reference.md#get-apiyield-history");
+        expect(docKeys(contract)).not.toContain("docs/api-reference.md#public-endpoints");
+      }
+    },
+  );
+
+  it("preserves check-planner inputs for every distinct matched-family and reading-selector signature", () => {
+    const ids: Record<string, true> = {
+      "safety-score-v9": true, "validation-ci-policy": true, "methodology-scoring": true,
+      "worker-cron": true, "worker-runtime": true, "worker-api-auth": true,
+    };
+    const families = PATH_FAMILIES.filter((family) => ids[family.id]);
+    const { createOwnershipGlobMatcher } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+    const matchers = PATH_FAMILIES.map((family) => ({
+      family,
+      sources: family.sourceGlobs.map(createOwnershipGlobMatcher),
+      selectors: (family.reading ?? []).map((selector) => selector.sources.map(createOwnershipGlobMatcher)),
+    }));
+    const representatives = new Map<string, string>();
+    const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0").filter(Boolean);
+    for (const file of trackedFiles) {
+      const matched = matchers.filter(({ sources }) => sources.some((match) => match(file)));
+      const signature = matched.map(({ family, selectors }) => ({
+        id: family.id,
+        selectors: selectors.flatMap((sources, index) => sources.some((match) => match(file)) ? [index] : []),
+      }));
+      if (!signature.some((entry) => ids[entry.id] && entry.selectors.length > 0)) continue;
+      const key = JSON.stringify(signature);
+      if (!representatives.has(key)) representatives.set(key, file);
+    }
+    const files = [...representatives.values()];
+    expect(files.length).toBeGreaterThan(0);
+    // The focused planner consumes changed paths and ordered mapping IDs, then
+    // reads source globs/checks/tier from the unchanged families. Baseline,
+    // deploy and lint selectors use those same paths, never reading refs.
+    function plannerInputs(file: string) {
+      const { changedFiles, mappings, checks, unmappedPaths, deploy } = classifyChangedFiles([file]);
+      return { changedFiles, mappings, checks, unmappedPaths, deploy };
+    }
+    const selectedInputs = files.map(plannerInputs);
+    const selectors = families.map((family) => family.reading);
+    try {
+      for (const family of families) family.reading = undefined;
+      files.forEach((file, index) => {
+        expect(JSON.stringify(plannerInputs(file)), file).toBe(JSON.stringify(selectedInputs[index]));
+      });
+    } finally {
+      families.forEach((family, index) => { family.reading = selectors[index]; });
+    }
+  });
+
+  it("adds only Telegram's exceptional check to the adoption proxy plan (PR3b ownership)", () => {
+    const file = "functions/pharoswatchbot-adoption.ts";
+    const commands = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
+    expect(commands).toEqual([
+      `npm run lint:changed -- --file ${file}`,
+      "npm run typecheck", "npm run check:doc-sync", "npm run check:site-csp-sync", "npm run check:stablecoin-data",
+      "npx vitest run scripts/__tests__",
+      "npx vitest run worker/src/api worker/src/cron worker/src/telegram",
+    ]);
+    expect(classifyChangedFiles([file]).mappings.map((mapping) => mapping.id)).toEqual(["validation-ci-policy", "telegram"]);
+  });
 });
 
 describe("representative --file routing", () => {

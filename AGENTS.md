@@ -5,8 +5,10 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 ## Do this first
 
 1. Locate a likely file, then route it: `npm run agent:route -- --file <path>` (repeatable).
-2. Read required entry docs/anchors and every returned scoped `AGENTS.md`, then inspect entrypoints and local imports. All returned rules, checks, and warnings still apply; conditional background reading does not make them optional.
+2. In every harness (omp, Claude Code, Codex), read the router's exact `Read first` anchors and every returned scoped `AGENTS.md`; none is assumed to auto-load nested guides. More-specific instructions take precedence. Inspect entrypoints/local imports; all returned rules, checks and warnings apply.
 3. For onboarding, scratch, handoff, or commit conventions, consult `docs/process/agent-start-here.md` when relevant.
+
+`--context=auto` selects local or contract reading from the inputs; `--context=contract` upgrades explicitly, never downgrades obligations. Required refs bypass the ordinary reading cap. The diagnostic `context` total unions root/scoped instructions and selected sections; conditional background, source, skills and framework reads remain additional context.
 
 ## Tool routing
 
