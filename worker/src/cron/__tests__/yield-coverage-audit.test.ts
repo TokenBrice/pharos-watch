@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
-vi.mock("../yield-sync/sources", () => ({
-  loadDlStablecoinPools: vi.fn(),
-}));
+vi.mock("../yield-sync/sources-dl", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-dl")>();
+
+  return {
+    ...actual,
+    loadDlStablecoinPools: vi.fn(),
+  };
+});
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
   setCache: vi.fn(),
@@ -31,7 +36,7 @@ import {
   YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../../lib/yield-config/yield-config";
-import { loadDlStablecoinPools } from "../yield-sync/sources";
+import { loadDlStablecoinPools } from "../yield-sync/sources-dl";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-config-registry";
 import type { DlPool } from "../yield-sync/types";

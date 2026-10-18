@@ -15,8 +15,8 @@ vi.mock("../../lib/digest-safety-map", async (importOriginal) => {
 });
 vi.mock("../../lib/telegram/digest-appendices", async () => (await import("./daily-digest.test-support")).mockDailyDigestAppendicesModule());
 vi.mock("../../lib/telegram/digest-outbox", async () => (await import("./daily-digest.test-support")).mockDailyDigestOutboxModule());
-vi.mock("../telegram-digest-transport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../telegram-digest-transport")>();
+vi.mock("../digest/telegram-transport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../digest/telegram-transport")>();
   return (await import("./daily-digest.test-support")).mockTelegramDigestTransportModule(actual);
 });
 vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.test-support")).mockDailyDigestCircuitBreakerModule());

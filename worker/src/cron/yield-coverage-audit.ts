@@ -13,7 +13,7 @@ import { readCachedJson } from "../lib/api-cache-read";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { reportCronProgress } from "../lib/cron-progress";
-import { loadDlStablecoinPools } from "./yield-sync/sources";
+import { loadDlStablecoinPools } from "./yield-sync/sources-dl";
 import {
   AUTO_LENDING_POOL_MAP,
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
@@ -23,7 +23,7 @@ import {
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../lib/yield-config/yield-config";
 import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
-import { loadStablecoinSupplyMapFromCacheValue, type StablecoinSupplyMapLoadResult } from "./yield-sync/supply-map";
+import { loadStablecoinSupplyMapFromCacheValue, type StablecoinSupplyMapLoadResult } from "./yield-sync/state";
 import type { YieldAdapterLifecycleEntry } from "../lib/yield-config/yield-config-registry";
 import { YIELD_ADAPTER_LIFECYCLE } from "../lib/yield-config/yield-config-rate-sources";
 import {

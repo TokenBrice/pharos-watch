@@ -239,7 +239,7 @@ export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] 
         }
       }
     } else if (rule === "recap-cost") {
-      walk(rule, ["worker/src/cron/telegram-recap-planner.ts"],
+      walk(rule, ["worker/src/cron/telegram/recap/telegram-recap-planner.ts"],
         (file) => /(?:^|\/)(?:daily-digest|weekly-recap|anthropic|openai|ai-request)(?:\.|\/|$)|\/cron\/digest\//i.test(file), true);
     } else if (rule === "verification-url") {
       walk(rule, [SCRUBBER], (file) => /^package:zod(?:\/|$)/.test(file)

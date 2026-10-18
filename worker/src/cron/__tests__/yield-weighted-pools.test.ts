@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildWeightedYieldPoolGroupSource } from "../yield-sync/weighted-pools";
+import { buildWeightedYieldPoolGroupSource } from "../yield-sync/resolve";
 import type { DlPool } from "../yield-sync/types";
 import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
-import { resolveYieldRewardShare } from "../yield-sync/source-risk";
+import { resolveYieldRewardShare } from "../yield-sync/evaluation";
 import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 
 function makePool(overrides: Partial<DlPool> & Pick<DlPool, "pool" | "tvlUsd" | "apy">): DlPool {

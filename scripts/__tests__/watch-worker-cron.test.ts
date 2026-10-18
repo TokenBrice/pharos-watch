@@ -8,6 +8,17 @@ import {
 import { optionalTables, snapshotSelector } from "./watch-worker-cron.test-support";
 
 describe("watch-worker-cron artifact gap classification", () => {
+  it.each([
+    ["--unknown"], ["--database"], ["--limit=2x"], ["--limit=0"],
+    ["--database=one", "--database=two"], ["extra"],
+  ])("rejects invalid watcher usage %j", (...argv) => {
+    expect(() => parseWorkerWatchArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
+  it("keeps strict equals-form watcher options and local defaults", () => {
+    expect(parseWorkerWatchArgs(["--local", "--since-minutes=30", "--limit=10"]))
+      .toMatchObject({ remote: false, sinceMinutes: 30, limit: 10, metadataBytes: 800 });
+  });
 
   it("keeps established publication ledger failures warning-level", () => {
     expect(classifyArtifactFailure(

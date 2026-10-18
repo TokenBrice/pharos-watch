@@ -19,7 +19,7 @@ import {
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { syncYieldData } from "../sync-yield-data";
-import * as publicationModule from "../yield-sync/publication";
+import * as apiSchemaModule from "../../lib/api-schema";
 import { batchExecute } from "../../lib/db";
 import { getCache, getCaches } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
@@ -29,8 +29,8 @@ import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader, supplementalFamilyCacheRow } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
-import { loadYieldSyncState } from "../yield-sync/state-loading";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-family-keys";
+import { loadYieldSyncState } from "../yield-sync/state";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
 import { morphoCandidate, supplementalCandidate } from "./yield-candidate.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
@@ -1140,10 +1140,9 @@ describe("syncYieldData", () => {
       ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    vi.spyOn(publicationModule, "validateYieldRankingsPayloadForPublish").mockResolvedValue({
+    vi.spyOn(apiSchemaModule, "validatePayloadWithSchema").mockReturnValue({
       ok: false,
-      validationFailures: 1,
-      reason: "schema-validation-failed",
+      issues: "fixture schema-validation-failed",
     });
     mockFetch([]);
 

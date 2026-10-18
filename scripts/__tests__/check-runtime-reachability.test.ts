@@ -177,8 +177,8 @@ describe("runtime reachability policies", () => {
   ])("rejects full V9 snapshot reachability through Telegram context: %s", async (module, loader) => {
     const root = makeRoot();
     writeText(root, "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts", "export const ok = true;\n");
-    writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", 'export { buildAlertContextLines } from "../../cron/telegram-alert-context";\n');
-    writeText(root, "worker/src/cron/telegram-alert-context.ts", `import { ${loader} } from "../lib/${module}";\nexport const buildAlertContextLines = ${loader};\n`);
+    writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", 'export { buildAlertContextLines } from "../../cron/telegram/sources/telegram-alert-context";\n');
+    writeText(root, "worker/src/cron/telegram/sources/telegram-alert-context.ts", `import { ${loader} } from "../../../lib/${module}";\nexport const buildAlertContextLines = ${loader};\n`);
     writeText(root, `worker/src/lib/${module}.ts`, `export const ${loader} = () => true;\n`);
     writeText(root, "worker/src/cron/prune-detail-cache.ts", "export const ok = true;\n");
     writeText(root, "worker/src/cron/snapshot-supply.ts", "export const ok = true;\n");

@@ -5,7 +5,7 @@ vi.mock("../../lib/evm-rpc", () => ({
 }));
 
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { fetchOndoUsdyOracleSource } from "../yield-sync/sources";
+import { fetchOndoUsdyOracleSource } from "../yield-sync/sources-optional";
 
 const mockEvmCall = vi.mocked(fetchEvmUint256AtBlock);
 

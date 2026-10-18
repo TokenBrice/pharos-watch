@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig, type RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
-import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-observers";
+import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-read-client";
 import type { CapacityResolverContext } from "../redemption-backstop-capacity/profile";
 import { resolveExecutableObserverCapacity } from "../redemption-backstop-capacity/executable-observer";
 import { EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/redemption-backstop-capacity";

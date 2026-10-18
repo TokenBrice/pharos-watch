@@ -40,6 +40,18 @@ describe("V9 resource diagnostic failure modes", () => {
     expect(runResourceChild(root, script, {}, [], root, "crash")).toMatchObject({ status: 7, reasons: [{ reason: "child-failed", status: 7 }] });
   });
 
+  it("preloads network denial independently of the workload root", () => {
+    const root = temporary();
+    const script = join(root, "network.mjs");
+    writeFileSync(script, "await fetch('https://example.invalid');");
+    expect(runResourceChild(root, script, {}, [], root, "network")).toMatchObject({
+      status: 1, reasons: [{ reason: "child-failed", status: 1 }],
+    });
+    const stderr = readFileSync(join(root, "network.stderr"), "utf8");
+    expect(stderr).toContain("worker-memory-network-denied");
+    expect(stderr).not.toContain("ERR_MODULE_NOT_FOUND");
+  });
+
   it("shares a measurement deadline across children and retains evidence before any build or child", async () => {
     const root = temporary();
     const pending = measureV9Resource(root, "compute", 1, "post-p2", { deadlineMs: 0 });

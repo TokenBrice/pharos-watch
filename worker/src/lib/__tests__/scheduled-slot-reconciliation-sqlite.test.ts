@@ -439,7 +439,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyOffset",
     });
 
@@ -481,7 +480,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     expect(
       await sweepStaleScheduledSlotExecutions(db, {
         nowSec: nowSec + 60,
-        staleAfterSec: 1_200,
         slotKey: "halfHourlyOffset",
       }),
     ).toMatchObject({ candidateSlots: 0, slotsReconciled: 0 });
@@ -536,7 +534,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyOffset",
     });
 
@@ -659,7 +656,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyOffset",
     });
 
@@ -722,7 +718,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const idleSummary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "digestTriggerPoll",
     });
     expect(idleSummary).toMatchObject({ syntheticCronRuns: 0, notStartedCronRuns: 0 });
@@ -756,7 +751,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const startedSummary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "digestTriggerPoll",
     });
     expect(startedSummary).toMatchObject({ syntheticCronRuns: 1, notStartedCronRuns: 0 });
@@ -801,7 +795,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     }
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
-      nowSec, staleAfterSec: 1_200, slotKey: scheduleKey,
+      nowSec, slotKey: scheduleKey,
     });
     expect(summary.slotsReconciled).toBe(1);
     const rows = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = ?").all(job);
@@ -828,7 +822,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "daily0810Utc",
     });
 
@@ -851,7 +844,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
     });
 
@@ -891,7 +883,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
     });
 
@@ -942,7 +933,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
     });
     const run = sqlite.prepare(
@@ -1004,7 +994,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "hourlyYieldSync",
     });
 
@@ -1051,7 +1040,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
     });
 
@@ -1119,7 +1107,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
-      staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
     });
 
@@ -1162,7 +1149,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
           }), activation);
       }
       await sweepStaleScheduledSlotExecutions(db, {
-        nowSec, staleAfterSec: 1_200, slotKey: "halfHourlyMeasuredExecution",
+        nowSec, slotKey: "halfHourlyMeasuredExecution",
       });
       const row = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()!;
       expect(row.status).toBe(evidence === "verified" ? "skipped_neutral" : "error");
@@ -1181,7 +1168,7 @@ describe("bounded abandonment progress evidence", () => {
     seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
     const pressure = buildResourcePressure({ phase: "decode", observedAt: nowSec - 1200, intakeBytes: 100, cacheBytes: 800 });
     sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ resourcePressure: pressure }));
-    await sweepStaleScheduledSlotExecutions(db, { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" });
+    await sweepStaleScheduledSlotExecutions(db, { nowSec, slotKey: "halfHourlyMeasuredExecution" });
     const row = sqlite.prepare("SELECT metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get() as { metadata: string };
     const metadata = JSON.parse(row.metadata);
     expect(metadata.progressSnapshot.resourcePressure).toEqual(pressure);
@@ -1207,7 +1194,7 @@ describe("bounded abandonment progress evidence", () => {
     const nowSec = 1_772_004_000;
     seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
     sqlite.prepare("UPDATE cron_run_progress SET items_done = 261, items_total = 278, metadata = ?").run(metadata);
-    const options = { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" };
+    const options = { nowSec, slotKey: "halfHourlyMeasuredExecution" };
     await sweepStaleScheduledSlotExecutions(db, options);
     const readMetadata = () => JSON.parse((sqlite.prepare("SELECT metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get() as { metadata: string }).metadata);
     const first = readMetadata();
@@ -1237,7 +1224,7 @@ describe("bounded abandonment progress evidence", () => {
     sqlite.prepare("UPDATE cron_leases SET heartbeat_at = ?, lease_until = ?, updated_at = ?").run(nowSec, nowSec + 600, nowSec);
     sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ currentCoinId: "usdnr-nerona" }));
     sqlite.prepare("UPDATE cron_slot_executions SET started_at=?").run(nowSec - 600);
-    await sweepStaleScheduledSlotExecutions(db, { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" });
+    await sweepStaleScheduledSlotExecutions(db, { nowSec, slotKey: "halfHourlyMeasuredExecution" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()).toEqual({ count: 0 });
   });

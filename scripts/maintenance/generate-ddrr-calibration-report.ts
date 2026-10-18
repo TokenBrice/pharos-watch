@@ -22,13 +22,11 @@ import {
   isRecord,
   joinUrl,
   markdownValue,
-  parseCoverageAuditCliArgs,
   readRequiredJsonFile,
   resolveGeneratedAt,
   runCoverageAuditCli,
-  toPositiveInt,
 } from "../lib/coverage-audit-cli";
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { CliUsageError, parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
 import { renderMarkdownRows } from "../lib/markdown-report";
 
 export const DEFAULT_DDRR_CALIBRATION_REPORT_PATH = "agents/ddrr-calibration-report.md";
@@ -934,42 +932,35 @@ function usage(): string {
 }
 
 export function parseArgs(argv: readonly string[] = process.argv.slice(2)): DdrrCalibrationCliOptions {
-  return parseCoverageAuditCliArgs(argv, {
-    createOptions: (): DdrrCalibrationCliOptions => ({
-      inputPath: null,
-      apiBase: null,
-      url: null,
-      prod: false,
-      format: "markdown",
-      reportPath: DEFAULT_DDRR_CALIBRATION_REPORT_PATH,
-      stdout: false,
-      generatedAt: null,
-      sampleLimit: SAMPLE_LIMIT,
-    }),
-    includeGeneratedAt: true,
-    generatedAtMissingMessage: "--generated-at requires an ISO timestamp or 'now'",
-    usage,
-    unknownArgumentMessage: (arg) => `Unknown option: ${arg}`,
-    options: [
-      { flag: "--prod", kind: "boolean", apply: (options) => { options.prod = true; } },
-      { flag: "--api-base", kind: "value", missingMessage: "--api-base requires a URL", apply: (options, value) => { options.apiBase = value!; } },
-      { flag: "--url", kind: "value", missingMessage: "--url requires a URL", apply: (options, value) => { options.url = value!; } },
-      { flag: "--input", kind: "value", missingMessage: "--input requires a path", apply: (options, value) => { options.inputPath = value!; } },
-      { flag: "--stdout", kind: "boolean", apply: (options) => { options.stdout = true; } },
-      {
-        flag: "--limit",
-        kind: "value",
-        allowMissingValue: true,
-        apply: (options, value) => { options.sampleLimit = toPositiveInt(value ?? "", "--limit"); },
-      },
-    ],
-    validate: (options) => {
-      const sourceCount = [options.inputPath != null, options.apiBase != null, options.url != null, options.prod].filter(
-        Boolean,
-      ).length;
-      if (sourceCount > 1) throw new Error("Choose only one of --input, --api-base, --url, or --prod.");
+  const { values, tokens } = parseStrictCliArgs(argv, {
+    options: {
+      prod: { type: "boolean" }, "api-base": { type: "string" }, url: { type: "string" },
+      input: { type: "string" }, stdout: { type: "boolean" }, limit: { type: "string" },
+      json: { type: "boolean" }, markdown: { type: "boolean" },
+      report: { type: "string" }, "generated-at": { type: "string" },
     },
   });
+  if (values.help) {
+    process.stdout.write(`${usage()}\n`);
+    process.exit(0);
+  }
+  const options: DdrrCalibrationCliOptions = {
+    inputPath: typeof values.input === "string" ? values.input : null,
+    apiBase: typeof values["api-base"] === "string" ? values["api-base"] : null,
+    url: typeof values.url === "string" ? values.url : null,
+    prod: values.prod === true,
+    format: "markdown",
+    reportPath: typeof values.report === "string" ? values.report : DEFAULT_DDRR_CALIBRATION_REPORT_PATH,
+    stdout: values.stdout === true,
+    generatedAt: typeof values["generated-at"] === "string" ? values["generated-at"] : null,
+    sampleLimit: values.limit === undefined ? SAMPLE_LIMIT : parseCliInteger(values.limit, { name: "--limit", min: 1 }),
+  };
+  for (const token of tokens) {
+    if (token.kind === "option" && (token.name === "json" || token.name === "markdown")) options.format = token.name;
+  }
+  const sourceCount = [options.inputPath != null, options.apiBase != null, options.url != null, options.prod].filter(Boolean).length;
+  if (sourceCount > 1) throw new CliUsageError("Choose only one of --input, --api-base, --url, or --prod.");
+  return options;
 }
 
 function unwrapResponsePayload(payload: unknown): unknown {

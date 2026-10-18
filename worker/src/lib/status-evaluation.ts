@@ -10,9 +10,9 @@ import {
   loadSupplementalStatusSections,
 } from "./status/evaluation-context";
 import type { StatusLevel } from "./status-reliability";
+import { maxStatus } from "./status-reliability-shared";
 import {
   deriveReserveCompositionStatus,
-  maxStatus,
   scoreStatusConfidence,
 } from "./status/evaluation-state";
 import { synthesizeOverallCauses } from "./status/evaluation-causes";

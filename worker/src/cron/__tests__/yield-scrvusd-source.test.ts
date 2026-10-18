@@ -5,7 +5,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
-import { fetchCurveScrvusdCurrentRateSource } from "../yield-sync/sources";
+import { fetchCurveScrvusdCurrentRateSource } from "../yield-sync/sources-optional";
 
 const TEST_CHAIN_RPCS = new Map<string, ChainRpcConfig>([
   [

@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { pruneTelegramMiniAppMutationBurstCache } from "../../cron/telegram-retention-cleanup";
+import { pruneTelegramMiniAppMutationBurstCache } from "../../cron/telegram/maintenance/telegram-retention-cleanup";
 import { prepareDeleteTelegramChatCacheStatements } from "../telegram-webhook-store";
 import {
   acquireTelegramMiniAppMutationBurst,

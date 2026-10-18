@@ -24,7 +24,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   return mockRegistry({ stablecoins });
 });
 
-import { fetchRoycoDawnSources } from "../yield-sync/royco-dawn";
+import { fetchRoycoDawnSources } from "../yield-sync/sources-optional";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 
 describe("fetchRoycoDawnSources", () => {

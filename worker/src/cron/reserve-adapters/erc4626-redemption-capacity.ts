@@ -25,7 +25,7 @@ import { parseBoundedDecimals, ratioFromRaw } from "./slice-math";
 import { parseDecimalNumber } from "./strict-amount";
 import { observeSfrxusdCrosschainRedemptionRoute } from "./sfrxusd-crosschain-redemption";
 import type { SfrxusdCrosschainV9RouteAttempt } from "../../lib/sfrxusd-crosschain-redemption-route";
-import type { ExecutableRedemptionObservation } from "./executable-redemption-observers";
+import type { ExecutableRedemptionObservation } from "./executable-redemption-read-client";
 
 export type Erc4626RedemptionLiquidityConfig = NonNullable<
   LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionLiquidity"]

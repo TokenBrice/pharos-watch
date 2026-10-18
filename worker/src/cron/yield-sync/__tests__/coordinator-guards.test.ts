@@ -3,12 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
-import {
-  guardPublishedYieldCoverage,
-  summarizeYieldPublicationQualityMix,
-} from "../coordinator-guards";
-import { pruneYieldTables } from "../publication";
-import { repairPublishedYieldGenerationFromCache } from "../publication-lifecycle";
+import { guardPublishedYieldCoverage, summarizeYieldPublicationQualityMix } from "../coordinator";
+import { pruneYieldTables } from "../history";
+import { repairPublishedYieldGenerationFromCache } from "../publication";
 import type { PreviousYieldPublicationSnapshot } from "../publication";
 
 const GENERATION_START_SEC = 1_800_000_000;

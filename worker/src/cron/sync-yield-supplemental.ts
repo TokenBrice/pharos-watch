@@ -4,23 +4,9 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
-import {
-  buildYieldSupplementalFamilyCache,
-  buildYieldSupplementalRunOutcome,
-  getYieldSupplementalFamilyCacheKey,
-  getYieldSupplementalRunOutcomeCacheKey,
-  type SupplementalFamilyCacheResult,
-  parseYieldSupplementalSourcesCache,
-  supplementalFamilySnapshotHash,
-} from "./yield-sync/cache/supplemental-cache-keys";
-import {
-  loadSupplementalSourceFamilies,
-  type SupplementalDedupeDiscardedValue,
-} from "./yield-sync/supplemental-source-families";
-import {
-  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-  type SupplementalSourceFamilyKey,
-} from "./yield-sync/supplemental-source-family-keys";
+import { buildYieldSupplementalFamilyCache, buildYieldSupplementalRunOutcome, getYieldSupplementalFamilyCacheKey, getYieldSupplementalRunOutcomeCacheKey, type SupplementalFamilyCacheResult, parseYieldSupplementalSourcesCache, supplementalFamilySnapshotHash } from "./yield-sync/cache";
+import { loadSupplementalSourceFamilies, type SupplementalDedupeDiscardedValue } from "./yield-sync/sources-supplemental";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS, type SupplementalSourceFamilyKey } from "./yield-sync/family-registry";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
 
 /** B27: bounded audit trail for values collapsed by the intra-family dedupe. */

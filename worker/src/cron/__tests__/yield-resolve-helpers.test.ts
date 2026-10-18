@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  enforceExternalOpportunityTvlEligibility,
-  getLendingOpportunityAbsoluteTvlFloor,
-  getRequiredLendingOpportunityTvlUsd,
-} from "../yield-sync/resolve-helpers";
+import { enforceExternalOpportunityTvlEligibility, getLendingOpportunityAbsoluteTvlFloor, getRequiredLendingOpportunityTvlUsd } from "../yield-sync/resolve";
 import type { ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
 import type { YieldType } from "@shared/types/core";
 

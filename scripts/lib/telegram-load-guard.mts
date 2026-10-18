@@ -40,18 +40,19 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
     id: "dispatch-and-pending",
     reason: "fan-out orchestration, routing, delivery, overflow, and durable pending work",
     paths: [
-      "worker/src/cron/dispatch-telegram-*.ts",
-      "worker/src/cron/telegram-pending/**",
+      "worker/src/cron/telegram/dispatch/dispatch-telegram-*.ts",
+      "worker/src/cron/telegram/sources/dispatch-telegram-events.ts",
+      "worker/src/cron/telegram/delivery/**",
     ],
     examples: [
-      "worker/src/cron/dispatch-telegram-routing.ts",
-      "worker/src/cron/telegram-pending/drain.ts",
+      "worker/src/cron/telegram/dispatch/dispatch-telegram-routing.ts",
+      "worker/src/cron/telegram/delivery/drain.ts",
     ],
   },
   {
     id: "job-target-schema",
     reason: "durable source-event, job, target, effect, and status contracts",
-    paths: ["worker/src/cron/telegram-alert-*.ts", "worker/migrations/**"],
+    paths: ["worker/src/cron/telegram/*/telegram-alert-*.ts", "worker/migrations/**"],
     examples: [
       "worker/migrations/0183_telegram_fresh_target_effect_fencing.sql",
     ],

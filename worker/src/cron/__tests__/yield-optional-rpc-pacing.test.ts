@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
-import { COMPOUND_V3_COMETS } from "../yield-sync/sources-optional-protocols-constants";
+import { COMPOUND_V3_COMETS } from "../yield-sync/family-registry";
 import {
   fetchAaveV3SupplyRates,
   fetchCompoundV3SupplyRates,

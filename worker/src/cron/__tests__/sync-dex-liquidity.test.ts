@@ -272,7 +272,6 @@ import {
 } from "@shared/lib/cron-jobs";
 import {
   consumeDexLiquidityScoringStage,
-  decideDexLiquiditySourceSlot,
   stageDexLiquidityScoring,
 } from "../dex-liquidity/orchestrator";
 import {
@@ -1517,20 +1516,6 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.mocked(markDexLiquidityScoringStageConsumed).mockImplementation(
       actualScoringStage.markDexLiquidityScoringStageConsumed,
     );
-  });
-
-  it.each([
-    ["writing", true, null, false, "wait"],
-    ["failed", true, null, true, "wait"],
-    ["failed", false, null, false, "recover"],
-    ["missing", false, null, true, "recover"],
-    ["ready", false, null, false, "consume"],
-    ["consumed", false, "dex-liquidity-10", false, "reuse"],
-    ["ready", false, "dex-liquidity-10", false, "reuse"],
-  ] as const)("decides source state %s with live=%s and accepted=%s", (manifestState, activeStageRun, accepted, expired, action) => {
-    expect(decideDexLiquiditySourceSlot({
-      manifestState, activeStageRun, syncStartedAt: 10, lastStageRunStatus: null,
-    }, accepted, expired)).toMatchObject({ action });
   });
 
   it("consumes ready output once across both ticks and retries of :16", async () => {

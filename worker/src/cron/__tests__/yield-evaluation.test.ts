@@ -9,9 +9,10 @@ import {
   withYieldBenchmarkStaticMeta,
   type ParsedYieldBenchmarkMeta,
 } from "../yield-sync/benchmarks";
-import { buildHistoryKey, evaluateYieldSources } from "../yield-sync/evaluation";
+import { buildHistoryKey } from "../yield-sync/history";
+import { evaluateYieldSources } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
-import { compareCandidates } from "../yield-sync/evaluation-arbitration";
+import { compareCandidates } from "../yield-sync/evaluation";
 import type { ResolvedYield } from "../yield-sync/types";
 import { baseEvaluationInput, FRESH_BENCHMARK_RECORD_DATE, resolvedYield } from "./yield-evaluation.test-support";
 

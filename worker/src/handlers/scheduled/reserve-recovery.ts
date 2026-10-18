@@ -159,7 +159,7 @@ async function runReserveRecovery(
   });
   recoveryRuntime.slotSignal = signal;
   await reportProgress({ stage: "replaying-reserve-checkpoint" });
-  const { runFourHourlyReserveSyncSlot } = await import("./hourly-live-reserves");
+  const { runFourHourlyReserveSyncSlot } = await import("./four-hourly-reserves");
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
   const admissionReason = summary.jobs?.find((job) =>
     job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy")?.reason;

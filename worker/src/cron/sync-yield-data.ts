@@ -1,9 +1,9 @@
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { runYieldCoordinatorFetchStage } from "./yield-sync/coordinator-fetch-stage";
-import { runYieldCoordinatorHealthTelemetryStage } from "./yield-sync/coordinator-health-telemetry-stage";
-import { runYieldCoordinatorNormalizeStage } from "./yield-sync/coordinator-normalize-stage";
-import { runYieldCoordinatorPersistStage } from "./yield-sync/coordinator-persist-stage";
+import { runYieldCoordinatorFetchStage } from "./yield-sync/coordinator";
+import { runYieldCoordinatorHealthTelemetryStage } from "./yield-sync/coordinator";
+import { runYieldCoordinatorNormalizeStage } from "./yield-sync/coordinator";
+import { runYieldCoordinatorPersistStage } from "./yield-sync/coordinator";
 
 export async function syncYieldData(
   db: D1Database,

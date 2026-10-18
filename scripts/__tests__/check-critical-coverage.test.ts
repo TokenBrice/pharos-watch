@@ -19,6 +19,7 @@ import {
   CRITICAL_FILES,
   collectCriticalCoverageCandidates,
   collectCriticalCoverageWaiverReviewQueue,
+  parseLcov,
   validateCriticalCoverageWaiverMetadata,
   validateCriticalCoverageBaseline,
 } from "../lib/critical-coverage.mjs";
@@ -74,7 +75,7 @@ describe("critical coverage changed-file detection", () => {
     expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
   });
 
-  it("derives high-stakes pricing, depeg, reserve, score, publication, and proxy candidates from source paths", () => {
+  it("derives high-stakes pricing, depeg, reserve, score, publication, dews, and proxy candidates from source paths", () => {
     const candidates = collectCriticalCoverageCandidates({
       sourceFiles: [
         "functions/lib/upstream-proxy.ts",
@@ -89,6 +90,11 @@ describe("critical coverage changed-file detection", () => {
         "worker/src/lib/mint-burn-scoring.ts",
         "worker/src/lib/live-reserves/store-extra.ts",
         "worker/src/lib/depeg-resolver-store-validators.ts",
+        "worker/src/lib/dews/scoring.ts",
+        "worker/src/lib/dews/service.ts",
+        "worker/src/lib/dews/source-state/hydration.ts",
+        "worker/src/lib/dews/types.ts",
+        "worker/src/lib/dews/__tests__/scoring-blacklist.test.ts",
         "worker/src/lib/price-consensus.ts",
         "worker/src/lib/publication-contract.ts",
         "worker/src/lib/pricing-types.ts",
@@ -106,11 +112,44 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/cron/sync-live-reserves-new-helper.ts",
       "worker/src/cron/sync-stablecoins/new-price-path.ts",
       "worker/src/lib/depeg-resolver-store-validators.ts",
+      "worker/src/lib/dews/scoring.ts",
+      "worker/src/lib/dews/service.ts",
+      "worker/src/lib/dews/source-state/hydration.ts",
       "worker/src/lib/live-reserves/store-extra.ts",
       "worker/src/lib/mint-burn-scoring.ts",
       "worker/src/lib/price-consensus.ts",
       "worker/src/lib/publication-contract.ts",
     ]);
+  });
+
+
+  it("treats an explicit zero-line lcov record as fully covered but still drops records without an LF line", () => {
+    const parsed = parseLcov([
+      "TN:",
+      "SF:worker/src/lib/dews/contracts.ts",
+      "FNF:0",
+      "FNH:0",
+      "LF:0",
+      "LH:0",
+      "BRF:0",
+      "BRH:0",
+      "end_of_record",
+      "",
+      "TN:",
+      "SF:worker/src/lib/partial-record.ts",
+      "end_of_record",
+      "",
+    ].join("\n"));
+
+    expect(parsed.get("worker/src/lib/dews/contracts.ts")).toEqual({
+      lf: 0,
+      lh: 0,
+      pct: 100,
+      brf: 0,
+      brh: 0,
+      branchPct: null,
+    });
+    expect(parsed.has("worker/src/lib/partial-record.ts")).toBe(false);
   });
 
 

@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
-import { fetchMidasMmevNavOracleSource } from "../yield-sync/midas-mmev-nav-oracle";
+import { fetchMidasMmevNavOracleSource } from "../yield-sync/sources-optional";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "../yield-sync/tracked-optional-source-registry";
-import { buildPreviewYieldRankingsArtifacts, publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
-import { materializeYieldHistoryDaily } from "../yield-sync/publication";
+import { TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "../yield-sync/sources-optional";
+import { buildPreviewYieldRankingsArtifacts, publishYieldCoordinatorResults } from "../yield-sync/publication";
+import { materializeYieldHistoryDaily } from "../yield-sync/history";
 import { makeBenchmarkMeta, makeBenchmarkRegistry, makeEvaluatedSource, makeSafetySnapshotMeta,
   makeYieldSourceMeta } from "./yield-publication.test-support";
 

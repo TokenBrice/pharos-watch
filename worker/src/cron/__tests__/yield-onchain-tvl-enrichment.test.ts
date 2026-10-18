@@ -85,10 +85,15 @@ vi.mock("../../lib/yield-config/yield-config", () => ({
   isAutoLendingCollisionBlockedForStablecoin: () => false,
 }));
 
-vi.mock("../yield-sync/tracked-optional-source-registry", () => ({
-  TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID: new Map(),
-  STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: [],
-}));
+vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional")>();
+
+  return {
+    ...actual,
+    TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID: new Map(),
+    STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: [],
+  };
+});
 
 vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
@@ -97,7 +102,7 @@ vi.mock("../../lib/evm-rpc", () => ({
 }));
 
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { resolveTrackedYieldSources } from "../yield-sync/resolve-tracked-sources";
+import { resolveTrackedYieldSources } from "../yield-sync/resolve";
 import { fetchOnChainRates } from "../yield-sync/sources-rpc";
 import type { DlPool } from "../yield-sync/types";
 

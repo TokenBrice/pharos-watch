@@ -1,6 +1,6 @@
 # Worker Infrastructure — Runtime Contracts Appendix
 
-> **Agent navigation** — Start with the [infrastructure entry](../worker-infrastructure.md). Read only the affected contract here: [bindings](#binding-inventory), [HTTP](#http-request-handling), [retention](#append-only-d1-retention-policy), [memory qualification](#module-initialization-memory-evidence), [scheduling](#cron-scheduling), [Workflow sunset](#safety-score-v9-workflow-shadow-pilot), [logging/progress](#logcronrun-wrapper), [cache generations](#cache-table), [leases](#lease-integration-status), or [health/status](#health--status-endpoints). Feature guides own producer algorithms; source registries and generated blocks own inventories. Historical measurements are not current acceptance evidence.
+> **Agent navigation** — Start with the [infrastructure entry](../worker-infrastructure.md). Read only the affected contract here: [bindings](#binding-inventory), [HTTP](#http-request-handling), [retention](#append-only-d1-retention-policy), [memory qualification](#module-initialization-memory-evidence), [task topology/new-job checklist](#scheduled-task-topology), [scheduling](#cron-scheduling), [Workflow sunset](#safety-score-v9-workflow-shadow-pilot), [logging/progress](#logcronrun-wrapper), [cache generations](#cache-table), [leases](#lease-integration-status), or [health/status](#health--status-endpoints). Feature guides own producer algorithms; source registries and generated blocks own inventories. Historical measurements are not current acceptance evidence.
 
 ## Binding Inventory
 
@@ -418,6 +418,11 @@ It retains:
 - `cold-{natural,observed}-N.ndjson` and `readers-{natural,observed}-N.ndjson`: fresh processes, before/after memory samples at each named boundary. Readers open the corresponding successfully computed accepted publication read-only and retain both baseline/lender projections alongside the charts graph; missing/bootstrap/unavailable is never a passing accepted read.
 - `report.json`, child stdout/stderr and nested resource reports: Node/V8/build identity, workload exit/signal/failure reasons, unchanged-policy status and explicit uncollected production evidence.
 
+Every fixture/resource/qualification child preloads `worker/scripts/lib/v9-resource-offline.mjs`: unexpected fetch, socket, HTTP(S), TLS, UDP, DNS or WebSocket activity exits immediately with `worker-memory-network-denied`, before application retry handling. The warm observer receives explicit deterministic unavailable dependencies, exercising planning/rejection allocations rather than remote census/provider latency; it does not invent successful chain evidence. This is a reduced offline observer envelope, not qualification of live RPC response allocations. The preload and dependency fixtures are included in the resource protocol fingerprint.
+Local Unix-domain IPC remains available for the tsx loader; TCP/IP and remote provider transports remain denied.
+
+The cold-entry sample precedes the optional private-fetch initialization. Heavy's service-binding placed executor is permitted only after an unauthenticated probe returns its exact `401 / placed-executor-unauthorized` contract; the added `private-fetch-validated` phase records that graph initialization separately. The built input graph still rejects public HTTP/API routes, OG/rendering packages, fonts and WASM. Presence of a fetch method alone is neither rejection nor proof of role isolation.
+
 Keep these evidence classes separate. Node `heapUsed` and V8 old/large-object spaces are the old-space proxy; `external`, `arrayBuffers` and V8 external-script/code statistics describe other local allocations (some overlap). Do not add/subtract them into an invented 128 MB Worker headroom number. Forced-GC samples are not natural peaks; fresh process results are not warm-isolate or shared-isolate concurrency proof. Repeat at current and projected admitted workload sizes without changing production byte/cardinality limits. The existing resource-policy calibration still requires five distinct complete reports, all natural 128 MiB successes and phase maxima at or below its 110 MiB prerequisite before proposing the 112 MiB policy.
 
 For deployment qualification, retain strict public/heavy packages and source maps, compare actual bytes/source counts, deploy the role split without another topology experiment, then correlate the exact paired Worker versions/activation clocks with the first cold `:16/:46` loader/preparation and subsequent accepted `:22/:52` publication, accepted readers and overlapping heavy invocations plus public detail/health traffic. Collect independently filtered `exceededMemory`/`exceededCpu` outcomes and Adaptive memory via `ops:worker-memory`; record actual covered UTC windows, sampling, unmatched events and input/cardinality sizes. Adaptive is shared-isolate sampled evidence, not a phase peak or subtractable margin. Require 14 consecutive covered days without matched public memory outcomes for the WS2 production acceptance criterion; an unobserved period is not zero.
@@ -430,6 +435,97 @@ D4 remains **unqualified** until those measurements establish the physical envel
 [ADR-37](../architecture.md#adr-37) owns losslessness, canonical identity and the no-new-runtime-dependency constraint. `scripts/build-data/generate-worker-stablecoin-catalog.ts` emits deterministic per-record gzip/base64 tuples with exact UTF-8 lengths; `worker/src/lib/full-stablecoin-catalog.ts` validates and decodes them sequentially using one reusable maximum-record output buffer. The complete decoded objects remain resident; transport does not eliminate them or temporary per-record allocations. Empty catalogs are unsupported.
 
 Only Wrangler aliases `#pharos-full-catalog` to that loader; frontend/tooling uses the ordinary JSON wrapper. Equality/hash/registry-view tests require canonical order, complete evidence and raw/normalized registry identity. Packed bytes and the decoder are evaluator-build inputs, so transport can rotate build identity without changing methodology or semantic registry fingerprint. Generator correctness is source-equality guarded. Local bundle/hydration/serialization results are not SQLite durability or first-production memory acceptance.
+
+
+<!-- GENERATED-START: scheduled-task-topology -->
+<!-- Generated by scripts/maintenance/generate-cron-doc-view.ts. Do not edit by hand. -->
+
+## Scheduled Task Topology
+
+For a simple job joining an existing lane, there are at most four authoritative production edits:
+
+1. Implement the job under `worker/src/cron/` using the existing domain family.
+2. Bind it in the existing lane handler under `worker/src/handlers/scheduled/`; keep lazy runner imports lazy.
+3. Add its status/connection metadata in `shared/lib/cron-jobs.ts` (budget-only work uses that same authority).
+4. Add it to the existing slot chain or side stage in `shared/lib/scheduled-runner-registry.ts`; declare exceptional timeout, lease or due metadata in that slot's `taskPolicies`.
+
+Descriptors supply the default 300-second timeout, TTL-derived lease behavior and every-occurrence due policy. Timeout clipping and lease TTL calculation remain runtime concerns; the timeout column is the configured cap, not extra slot time. Side stages retain their own execution/admission policy and are not automatically leased or timed by the scheduled wrapper.
+
+Add focused tests and owning domain documentation, then regenerate this view with `node --import tsx scripts/maintenance/generate-cron-doc-view.ts`. These evidence/generated edits are not additional production authorities. New lanes, expressions or shared identities require their existing cadence, deployment and capacity review; they are not the simple-job path.
+
+The registry-iterating scheduled-runner contract tests check descriptor coverage, timeout/lease metadata and due policies; `check:cron-sync`, `check:cron-connections` and the `cron-doc-view` generated-artifact check enforce deployment, capacity and documentation parity.
+
+Chain/task positions below are one-based. Separate chains run independently; tasks within each chain are ordered. Lease overrides show heartbeat seconds / consecutive renewal failures; defaults remain in `worker/src/lib/cron-lease-primitives.ts`.
+
+| Logical slot key | Job | Execution position | Producer kind | Connections | Timeout (s) | Lease overrides (s / failures) | Due policy |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `quarterHourly` | `sync-fx-rates` | chain 1, task 1 | scheduled-job | 3 | 300 | TTL-derived defaults | every occurrence |
+| `quarterHourly` | `sync-stablecoins` | chain 1, task 2 | scheduled-job | 4 | 480 | 30 / 3 | every occurrence |
+| `quarterHourly` | `snapshot-supply` | chain 1, task 3 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `quarterHourly` | `snapshot-chain-supply` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `quarterHourly` | `snapshot-psi` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | admission evidence required |
+| `quarterHourly` | `snapshot-public-dataset` | chain 1, task 6 | scheduled-job | 0 | 600 | 30 / 3 | admission evidence required |
+| `v9SupplyAttributionOffset` | `sync-v9-supply-attribution` | chain 1, task 1 | scheduled-job | 3 | 300 | 30 / 3 | every occurrence |
+| `depegResolverOffset` | `compute-depeg-resolver` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `v9PublicationOffset` | `compute-safety-score-v9` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `statusSelfCheckOffset` | `status-self-check` | chain 1, task 1 | scheduled-job | 2 | 300 | TTL-derived defaults | every occurrence |
+| `statusSelfCheckOffset` | `data-invariant-canary` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `statusSelfCheckOffset` | `cron-sentinel` | chain 1, task 3 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
+| `statusSelfCheckOffset` | `price-corroboration` | side stage, task 1 | budget-only | 4 | 300 | not leased by the scheduled wrapper | every occurrence |
+| `sixHourlyBlacklist` | `sync-blacklist` | chain 1, task 1 | scheduled-job | 1 | 720 | 30 / 3 | every occurrence |
+| `halfHourlyMintBurnCritical` | `sync-mint-burn` | chain 1, task 1 | scheduled-job | 1 | 600 | 30 / 3 | every occurrence |
+| `twoHourlyDexDiscovery` | `sync-dex-discovery` | chain 1, task 1 | scheduled-job | 2 | 780 | 30 / 3 | every occurrence |
+| `halfHourlyMintBurnExtended` | `sync-mint-burn-extended` | chain 1, task 1 | scheduled-job | 1 | 600 | 30 / 3 | every occurrence |
+| `halfHourlyMeasuredExecution` | `sync-cl-exit-depth` | chain 1, task 1 | scheduled-job | 3 | 540 | 30 / 3 | every occurrence |
+| `halfHourlyMeasuredExecutionSupplemental` | `sync-cl-exit-depth` | chain 1, task 1 | scheduled-job | 3 | 540 | 30 / 3 | every occurrence |
+| `halfHourlyOffset` | `sync-dex-liquidity-stage` | chain 1, task 1 | scheduled-job | 5 | 780 | 30 / 3 | every occurrence |
+| `halfHourlyChartsOffset` | `sync-dex-liquidity` | chain 1, task 1 | scheduled-job | 5 | 780 | 30 / 3 | every occurrence |
+| `halfHourlyChartsOffset` | `cron-sentinel` | chain 1, task 2 | scheduled-job | 1 | 780 | TTL-derived defaults | DEX publication slot |
+| `halfHourlyChartsOffset` | `prepare-safety-score-v9-input` | chain 1, task 3 | scheduled-job | 3 | 300 | TTL-derived defaults | every occurrence |
+| `halfHourlyChartsOffset` | `sync-stablecoin-charts` | chain 1, task 4 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `dewsPsiOffset` | `compute-dews` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `dewsPsiOffset` | `stability-index` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `dewsPsiOffset` | `project-tape` | chain 1, task 3 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `fourHourlyReserveSync` | `sync-live-reserves` | chain 1, task 1 | scheduled-job | 2 | 720 | 30 / 3 | every occurrence |
+| `fourHourlyReserveSync` | `sync-redemption-backstops` | chain 1, task 2 | scheduled-job | 3 | 300 | TTL-derived defaults | every occurrence |
+| `fourHourlyReserveSync` | `cron-sentinel` | chain 1, task 3 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
+| `fourHourlyReserveSync` | `sync-kinesis-supply` | chain 2, task 1 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `hourlyYieldSync` | `sync-yield-supplemental` | chain 1, task 1 | scheduled-job | 3 | 720 | 30 / 3 | admission evidence required |
+| `hourlyYieldSync` | `fetch-tbill-rate` | chain 1, task 2 | scheduled-job | 1 | 300 | TTL-derived defaults | admission evidence required |
+| `hourlyYieldSync` | `sync-yield-data` | chain 1, task 3 | scheduled-job | 2 | 600 | 30 / 3 | every occurrence |
+| `hourlyYieldSync` | `observe-rpc-provider-parity` | chain 2, task 1 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `fourHourlyYieldSupplemental` | `sync-yield-supplemental` | chain 1, task 1 | scheduled-job | 3 | 720 | 30 / 3 | every occurrence |
+| `fiveMinuteTelegramAlerts` | `dispatch-telegram-alerts` | chain 1, task 1 | scheduled-job | 4 | 270 | 30 / 3 | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-personalized-recap-planner` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-degradation-watchdog` | chain 1, task 3 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-disambiguation-cleanup` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-pulse-snapshot` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-registration-reconciliation` | side stage, task 1 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
+| `fiveMinuteReserveRecovery` | `reserve-recovery` | chain 1, task 1 | scheduled-job | 3 | 780 | 30 / 3 | every occurrence |
+| `digestTriggerPoll` | `daily-digest` | chain 1, task 1 | scheduled-job | 1 | 840 | 30 / 3 | admission evidence required |
+| `digestTriggerPoll` | `weekly-recap` | chain 1, task 2 | scheduled-job | 1 | 840 | 30 / 3 | admission evidence required |
+| `digestTriggerPoll` | `telegram-digest-outbox-drain` | side stage, task 1 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
+| `digestTriggerPoll` | `safety-map-producer-kick` | side stage, task 2 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
+| `digestTriggerPoll` | `digest-trigger-poll` | side stage, task 3 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
+| `daily0300Utc` | `cron-sentinel` | chain 1, task 1 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `prune-status-probe-runs` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `prune-cron-history` | chain 1, task 3 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `prune-detail-cache` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `telegram-inactive-cleanup` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `telegram-retention-cleanup` | chain 1, task 6 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0800Utc` | `snapshot-supply` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0800Utc` | `snapshot-safety-grade-history` | chain 2, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0800Utc` | `snapshot-psi` | chain 2, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0800Utc` | `snapshot-public-dataset` | chain 2, task 3 | scheduled-job | 0 | 600 | 30 / 3 | every occurrence |
+| `daily0800Utc` | `fetch-tbill-rate` | chain 3, task 1 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `daily0800Utc` | `sync-usds-status` | chain 3, task 2 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `daily0805Utc` | `sync-bluechip` | chain 1, task 1 | scheduled-job | 3 | 300 | TTL-derived defaults | every occurrence |
+| `daily0805Utc` | `daily-digest` | chain 2, task 1 | scheduled-job | 1 | 840 | 30 / 3 | every occurrence |
+| `daily0810Utc` | `weekly-recap` | chain 1, task 1 | scheduled-job | 1 | 840 | 30 / 3 | Monday UTC |
+| `daily0810Utc` | `sync-cl-exit-depth` | chain 2, task 1 | scheduled-job | 3 | 540 | 30 / 3 | every occurrence |
+| `monthlyYieldAudit` | `yield-coverage-audit` | chain 1, task 1 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+
+<!-- GENERATED-END: scheduled-task-topology -->
 
 ## Cron Scheduling
 
@@ -598,7 +694,7 @@ The baseline schema and migration manifest own column inventories; [retention](#
 
 ### In-flight Cron Progress
 
-`cron_run_progress` is diagnostic live state, not execution authority. Status exposes it only with an active matching lease; expired/orphan rows become stale artifacts. Slot heartbeats use `resolveScheduledSlotPolicy()`; child lease renewal is separate from slot heartbeats. `runCronWithLease` defaults to `heartbeatSec = max(15, floor(ttlSec / 3))` with `maxRenewFailures = 2`; the named long-running jobs in `PER_JOB_LEASE_OPTIONS` (`worker/src/handlers/scheduled/context.ts`) override that to 30 seconds and 3 consecutive failures. Terminal cleanup is invocation-fenced.
+`cron_run_progress` is diagnostic live state, not execution authority. Status exposes it only with an active matching lease; expired/orphan rows become stale artifacts. Slot heartbeats use `resolveScheduledSlotPolicy()`; child lease renewal is separate from slot heartbeats. `runCronWithLease` defaults to `heartbeatSec = max(15, floor(ttlSec / 3))` with `maxRenewFailures = 2`; long-running task descriptors in `shared/lib/scheduled-runner-registry.ts` carry the 30-second heartbeat / 3-consecutive-failure overrides consumed by `worker/src/handlers/scheduled/context.ts`. Terminal cleanup is invocation-fenced.
 
 Heartbeat writes retry D1 overloads; a queued write lasting a heartbeat period cannot suppress later ticks. Replacement CAS attempts require owner/generation/state and apply `MAX(updated_at, attempt timestamp)`, so delayed writes cannot move life evidence backwards. Stale/hard-dead thresholds remain those of the [slot policy](#cron-scheduling).
 
@@ -608,7 +704,7 @@ Stage transitions always persist; same-stage updates within 10 seconds coalesce.
 
 `logCronRun()` supplies the abort signal; exceeded ceilings log error and propagate cancellation through `fetchWithRetry()`. Jobs may stop admission earlier to preserve persistence/cleanup time; the wrapper remains authoritative if a bounded call runs late. An unstarted tail must retain its producer's deferred/degraded semantics, never silently vanish.
 
-[Worker and API Limits](../worker-and-api-limits.md#per-job-cron-timeouts) owns the timeout source index and cancellation semantics. `worker/src/lib/cron-timeouts.ts` derives ceilings from `CRON_JOB_DEFINITIONS` and `CRON_TIMEOUT_OVERRIDES_MS` and falls back to `DEFAULT_CRON_TIMEOUT_MS` for any job without an override; the runner contract test asserts only that every registry job has a finite positive budget, so a new job is auto-defaulted rather than rejected. Read source-owned producer budgets rather than a second timeout roster.
+[Worker and API Limits](../worker-and-api-limits.md#per-job-cron-timeouts) owns the timeout source index and cancellation semantics. `worker/src/lib/cron-timeouts.ts` projects each tracked job's ceiling from its canonical `ScheduledTaskDescriptor` in `shared/lib/scheduled-runner-registry.ts`. Slot task policies supply exceptions; descriptors otherwise carry `DEFAULT_CRON_TIMEOUT_MS`, so a new simple job is auto-defaulted rather than requiring another override-map edit. The runner contract tests cover every descriptor's timeout/lease policy, tracked-job projection and occurrence due gates. Read source-owned producer budgets rather than a second timeout roster.
 
 ### Circuit Breakers
 

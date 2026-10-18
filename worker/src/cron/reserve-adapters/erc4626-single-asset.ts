@@ -46,8 +46,8 @@ import {
 import {
   hasExecutableRedemptionObserver,
   observeExecutableRedemptionRoute,
-  type ExecutableRedemptionObservation,
 } from "./executable-redemption-observers";
+import type { ExecutableRedemptionObservation } from "./executable-redemption-read-client";
 import { observeMorphoLenderBook } from "./morpho-lender-book";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 

@@ -14,20 +14,32 @@ vi.mock("@shared/lib/tracked-stablecoin-utils", async (importOriginal) => {
       .map((id) => registry.TRACKED_META_BY_ID.get(id)!),
   };
 });
-vi.mock("../yield-sync/tracked-optional-source-registry", () => ({
-  TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID: new Map(),
-  STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: [],
-}));
-vi.mock("../yield-sync/sources", () => ({ getPriceDerivedApy: vi.fn(async () => null) }));
+vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional")>();
+
+  return {
+    ...actual,
+    TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID: new Map(),
+    STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: [],
+  };
+});
+vi.mock("../yield-sync/state", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/state")>();
+
+  return {
+    ...actual,
+    getPriceDerivedApy: vi.fn(async () => null),
+  };
+});
 
 import { YIELD_POOL_MAP, YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config";
-import { resolveTrackedYieldSources } from "../yield-sync/resolve-tracked-sources";
+import { resolveTrackedYieldSources } from "../yield-sync/resolve";
 import { baseEvaluationInput } from "./yield-evaluation.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type { DlPool } from "../yield-sync/types";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { evaluateYieldSources } from "../yield-sync/evaluation";
-import { buildPreviewYieldRankingsArtifacts, publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
+import { buildPreviewYieldRankingsArtifacts, publishYieldCoordinatorResults } from "../yield-sync/publication";
 import { FIXED_NOW, makeBenchmarkMeta, makeBenchmarkRegistry, makeSafetySnapshotMeta, makeYieldSourceMeta } from "./yield-publication.test-support";
 
 async function resolvePools(dlPools: DlPool[]) {

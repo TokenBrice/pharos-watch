@@ -3,7 +3,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
-import { fetchReProtocolReusdSource } from "../yield-sync/sources";
+import { fetchReProtocolReusdSource } from "../yield-sync/sources-optional";
 
 describe("fetchReProtocolReusdSource", () => {
   beforeEach(() => {

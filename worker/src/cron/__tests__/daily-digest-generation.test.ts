@@ -14,7 +14,7 @@ vi.mock("../../lib/digest-safety-map", async (importOriginal) => {
 });
 vi.mock("../../lib/telegram/digest-appendices", async () => (await import("./daily-digest.test-support")).mockDailyDigestAppendicesModule());
 vi.mock("../../lib/telegram/digest-outbox", async () => (await import("./daily-digest.test-support")).mockDailyDigestOutboxModule());
-vi.mock("../telegram-digest-transport", async (importOriginal) => (await import("./daily-digest.test-support")).mockTelegramDigestTransportModule(await importOriginal<typeof import("../telegram-digest-transport")>()));
+vi.mock("../digest/telegram-transport", async (importOriginal) => (await import("./daily-digest.test-support")).mockTelegramDigestTransportModule(await importOriginal<typeof import("../digest/telegram-transport")>()));
 vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.test-support")).mockDailyDigestCircuitBreakerModule());
 
 import { generateDailyDigest, resumeDailyDigestDelivery } from "../daily-digest";
@@ -28,7 +28,7 @@ import { postDigestTweet } from "../../lib/twitter";
 import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram/digest-appendices";
 import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../lib/telegram/digest-outbox";
-import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
+import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transport";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { ANTHROPIC_OK_TEXT, getInsertDigestBinds, makeDailyDigestScenario, makeRefusalResponse, makeStreamResponse, styleGateModeTables, VALID_CAPTURE_MAP_SUMMARY, VALID_DAILY_EXTENDED, withClauseDash, type DailyDigestScenario } from "./daily-digest.test-support";
 import { publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";

@@ -1,6 +1,7 @@
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
+import { buildHistoryKey } from "../yield-sync/history";
+import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import { buildYieldPublicationViews, buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
 

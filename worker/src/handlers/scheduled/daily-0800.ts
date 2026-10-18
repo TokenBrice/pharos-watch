@@ -14,7 +14,7 @@ import { snapshotPublicDataset } from "../../cron/snapshot-public-dataset";
 import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
-} from "../../lib/public-dataset-snapshot-budget";
+} from "@shared/lib/public-dataset-snapshot-budget";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";

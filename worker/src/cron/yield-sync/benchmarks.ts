@@ -1,12 +1,18 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
+import {
+  TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/registry";
+import {
+  YIELD_BENCHMARK_SCORE_TTL_SEC,
+} from "@shared/lib/status-thresholds";
 import type {
   YieldBenchmarkKey,
   YieldBenchmarkMeta,
   YieldBenchmarkRegistry,
   YieldBenchmarkSelectionMode,
 } from "@shared/types/yield";
-import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
+import {
+  RISK_FREE_RATE_FALLBACK,
+} from "../../lib/constants";
 
 // Canonical definition lives in shared/lib/status-thresholds.ts.
 export { YIELD_BENCHMARK_SCORE_TTL_SEC };

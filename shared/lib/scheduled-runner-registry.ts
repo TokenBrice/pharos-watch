@@ -8,6 +8,42 @@ import {
   type CronScheduleKey,
 } from "./cron-jobs";
 import { isDexLiquidityPublicationSlot } from "./cron-cadences";
+import { TELEGRAM_DISPATCH_TIMEOUT_MS } from "./telegram-delivery-policy";
+import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
+
+export const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
+export type ScheduledTaskDuePolicy = "always" | "conditional-admission" | "dex-publication" | "monday";
+
+export interface ScheduledTaskLeaseOptions {
+  heartbeatSec?: number;
+  maxRenewFailures?: number;
+}
+
+interface ScheduledTaskPolicy {
+  timeoutMs?: number;
+  leaseOptions?: Readonly<ScheduledTaskLeaseOptions>;
+  due?: ScheduledTaskDuePolicy;
+}
+
+// Tighter renewal detects lease loss within long-running jobs' own timeout.
+// Unspecified options retain runCronWithLease's TTL-derived defaults.
+const LONG_RUNNING_LEASE_OPTIONS = { heartbeatSec: 30, maxRenewFailures: 3 } as const;
+const SENTINEL_TASK_POLICY = { timeoutMs: 13 * 60_000 } as const;
+// Eight minutes of RPC work leaves one minute to publish a complete generation.
+const MEASURED_EXECUTION_TASK_POLICY = {
+  timeoutMs: 9 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS,
+} as const;
+const YIELD_SUPPLEMENTAL_TASK_POLICY = {
+  timeoutMs: 12 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS,
+} as const;
+const PUBLIC_DATASET_TASK_POLICY = {
+  timeoutMs: PUBLIC_DATASET_CRON_TIMEOUT_MS, leaseOptions: LONG_RUNNING_LEASE_OPTIONS,
+} as const;
+// The 12-minute Anthropic cap leaves two minutes for persistence and delivery,
+// still below the platform's 15-minute scheduled-event ceiling.
+const DIGEST_TASK_POLICY = {
+  timeoutMs: 14 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS,
+} as const;
 
 export type ScheduledWorkerRole = "public" | "heavy";
 
@@ -23,9 +59,10 @@ interface ScheduledSlotPlanInput {
   worker: ScheduledWorkerRole;
   jobChains: readonly ScheduledSlotJobChain[];
   budgetOnlyJobs?: readonly string[];
+  taskPolicies?: Readonly<Record<string, ScheduledTaskPolicy>>;
 }
 
-export interface ScheduledSlotPlan extends ScheduledSlotPlanInput {
+export interface ScheduledSlotPlan extends Omit<ScheduledSlotPlanInput, "taskPolicies"> {
   scheduleKey: CronScheduleKey;
   schedule: CronScheduleExpression;
   triggerSchedules: readonly string[];
@@ -42,10 +79,16 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "snapshot-psi",
       "snapshot-public-dataset",
     ]],
+    taskPolicies: {
+      "sync-stablecoins": { timeoutMs: 8 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS },
+      "snapshot-psi": { due: "conditional-admission" },
+      "snapshot-public-dataset": { ...PUBLIC_DATASET_TASK_POLICY, due: "conditional-admission" },
+    },
   },
   v9SupplyAttributionOffset: {
     worker: "heavy",
     jobChains: [["sync-v9-supply-attribution"]],
+    taskPolicies: { "sync-v9-supply-attribution": { leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   depegResolverOffset: {
     worker: "public",
@@ -63,34 +106,42 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "cron-sentinel",
     ]],
     budgetOnlyJobs: ["price-corroboration"],
+    taskPolicies: { "cron-sentinel": SENTINEL_TASK_POLICY },
   },
   sixHourlyBlacklist: {
     worker: "public",
     jobChains: [["sync-blacklist"]],
+    taskPolicies: { "sync-blacklist": { timeoutMs: 12 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   halfHourlyMintBurnCritical: {
     worker: "public",
     jobChains: [["sync-mint-burn"]],
+    taskPolicies: { "sync-mint-burn": { timeoutMs: 10 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   twoHourlyDexDiscovery: {
     worker: "public",
     jobChains: [["sync-dex-discovery"]],
+    taskPolicies: { "sync-dex-discovery": { timeoutMs: 13 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   halfHourlyMintBurnExtended: {
     worker: "public",
     jobChains: [["sync-mint-burn-extended"]],
+    taskPolicies: { "sync-mint-burn-extended": { timeoutMs: 10 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   halfHourlyMeasuredExecution: {
     worker: "public",
     jobChains: [["sync-cl-exit-depth"]],
+    taskPolicies: { "sync-cl-exit-depth": MEASURED_EXECUTION_TASK_POLICY },
   },
   halfHourlyMeasuredExecutionSupplemental: {
     worker: "public",
     jobChains: [["sync-cl-exit-depth"]],
+    taskPolicies: { "sync-cl-exit-depth": MEASURED_EXECUTION_TASK_POLICY },
   },
   halfHourlyOffset: {
     worker: "public",
     jobChains: [["sync-dex-liquidity-stage"]],
+    taskPolicies: { "sync-dex-liquidity-stage": { timeoutMs: 13 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   halfHourlyChartsOffset: {
     worker: "heavy",
@@ -100,6 +151,10 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "prepare-safety-score-v9-input",
       "sync-stablecoin-charts",
     ]],
+    taskPolicies: {
+      "sync-dex-liquidity": { timeoutMs: 13 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS },
+      "cron-sentinel": { ...SENTINEL_TASK_POLICY, due: "dex-publication" },
+    },
   },
   dewsPsiOffset: {
     worker: "public",
@@ -124,6 +179,10 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       ["sync-live-reserves", "sync-redemption-backstops", "cron-sentinel"],
       ["sync-kinesis-supply"],
     ],
+    taskPolicies: {
+      "sync-live-reserves": { timeoutMs: 12 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS },
+      "cron-sentinel": SENTINEL_TASK_POLICY,
+    },
   },
   hourlyYieldSync: {
     worker: "public",
@@ -142,10 +201,16 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       ["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"],
       ["observe-rpc-provider-parity"],
     ],
+    taskPolicies: {
+      "sync-yield-supplemental": { ...YIELD_SUPPLEMENTAL_TASK_POLICY, due: "conditional-admission" },
+      "fetch-tbill-rate": { due: "conditional-admission" },
+      "sync-yield-data": { timeoutMs: 10 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS },
+    },
   },
   fourHourlyYieldSupplemental: {
     worker: "public",
     jobChains: [["sync-yield-supplemental"]],
+    taskPolicies: { "sync-yield-supplemental": YIELD_SUPPLEMENTAL_TASK_POLICY },
   },
   fiveMinuteTelegramAlerts: {
     worker: "public",
@@ -157,15 +222,25 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "telegram-pulse-snapshot",
     ]],
     budgetOnlyJobs: ["telegram-registration-reconciliation"],
+    // Batch admission stops at four minutes; reserve 30 seconds for finalization
+    // and terminate before the next five-minute dispatch can lose its lease.
+    taskPolicies: {
+      "dispatch-telegram-alerts": { timeoutMs: TELEGRAM_DISPATCH_TIMEOUT_MS, leaseOptions: LONG_RUNNING_LEASE_OPTIONS },
+    },
   },
   fiveMinuteReserveRecovery: {
     worker: "public",
     jobChains: [["reserve-recovery"]],
+    taskPolicies: { "reserve-recovery": { timeoutMs: 13 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   digestTriggerPoll: {
     worker: "public",
     jobChains: [["daily-digest", "weekly-recap"]],
     budgetOnlyJobs: ["telegram-digest-outbox-drain", "safety-map-producer-kick", "digest-trigger-poll"],
+    taskPolicies: {
+      "daily-digest": { ...DIGEST_TASK_POLICY, due: "conditional-admission" },
+      "weekly-recap": { ...DIGEST_TASK_POLICY, due: "conditional-admission" },
+    },
   },
   daily0300Utc: {
     worker: "public",
@@ -177,6 +252,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "telegram-inactive-cleanup",
       "telegram-retention-cleanup",
     ]],
+    taskPolicies: { "cron-sentinel": SENTINEL_TASK_POLICY },
   },
   daily0800Utc: {
     worker: "public",
@@ -185,6 +261,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       ["snapshot-safety-grade-history", "snapshot-psi", "snapshot-public-dataset"],
       ["fetch-tbill-rate", "sync-usds-status"],
     ],
+    taskPolicies: { "snapshot-public-dataset": PUBLIC_DATASET_TASK_POLICY },
   },
   daily0805Utc: {
     worker: "public",
@@ -192,10 +269,15 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       ["sync-bluechip"],
       ["daily-digest"],
     ],
+    taskPolicies: { "daily-digest": DIGEST_TASK_POLICY },
   },
   daily0810Utc: {
     worker: "public",
     jobChains: [["weekly-recap"], ["sync-cl-exit-depth"]],
+    taskPolicies: {
+      "weekly-recap": { ...DIGEST_TASK_POLICY, due: "monday" },
+      "sync-cl-exit-depth": MEASURED_EXECUTION_TASK_POLICY,
+    },
   },
   monthlyYieldAudit: {
     worker: "public",
@@ -292,42 +374,14 @@ export interface ScheduledTaskDescriptor {
   chainIndex: number | null;
   taskIndex: number;
   calendarIdentity?: ScheduledCalendarIdentity;
+  timeoutMs: number;
+  leaseOptions: Readonly<ScheduledTaskLeaseOptions>;
+  due: ScheduledTaskDuePolicy;
 }
 
 function descriptorKey(scheduleKey: CronScheduleKey, job: string): string {
   return `${scheduleKey}\u0000${job}`;
 }
-
-/** These retry/poll lanes require admission evidence; a slot occurrence alone never proves work was due. */
-export const CONDITIONALLY_ADMITTED_SCHEDULED_TASKS: readonly { scheduleKey: CronScheduleKey; job: string }[] = [
-  { scheduleKey: "quarterHourly", job: "snapshot-psi" },
-  { scheduleKey: "quarterHourly", job: "snapshot-public-dataset" },
-  { scheduleKey: "hourlyYieldSync", job: "sync-yield-supplemental" },
-  { scheduleKey: "hourlyYieldSync", job: "fetch-tbill-rate" },
-  { scheduleKey: "digestTriggerPoll", job: "daily-digest" },
-  { scheduleKey: "digestTriggerPoll", job: "weekly-recap" },
-];
-
-export function isConditionallyAdmittedScheduledTask(scheduleKey: string | null, job: string): boolean {
-  return CONDITIONALLY_ADMITTED_SCHEDULED_TASKS.some((task) => task.scheduleKey === scheduleKey && task.job === job);
-}
-
-/**
- * Slot members whose occurrence is gated by a cadence inside the slot. A
- * member that was never due on this occurrence was not "abandoned before
- * start", so stale-slot reconciliation must not invent an error row for it
- * (rule R4). Other members, apart from conditional admissions above, are due.
- */
-const SCHEDULED_TASK_DUE_PREDICATES: Readonly<
-  Record<string, (slotStartedAtSec: number) => boolean>
-> = {
-  // Turnover evidence only exists on the hourly DEX publication slot.
-  [descriptorKey("halfHourlyChartsOffset", "cron-sentinel")]: isDexLiquidityPublicationSlot,
-  // Weekly generation is Monday-only; `generateWeeklyRecap` re-checks the same
-  // UTC day from the same slot clock.
-  [descriptorKey("daily0810Utc", "weekly-recap")]: (slotStartedAtSec) =>
-    new Date(slotStartedAtSec * 1_000).getUTCDay() === 1,
-};
 
 /**
  * Whether an unstarted slot member was due by the clock on this occurrence. Unknown
@@ -339,14 +393,23 @@ export function isScheduledTaskDueAt(
   job: string,
   slotStartedAtSec: number,
 ): boolean {
-  if (isConditionallyAdmittedScheduledTask(scheduleKey, job)) return false;
-  const isDue = SCHEDULED_TASK_DUE_PREDICATES[descriptorKey(scheduleKey, job)];
-  return isDue ? isDue(slotStartedAtSec) : true;
+  const due = SCHEDULED_TASK_DESCRIPTOR_BY_KEY.get(descriptorKey(scheduleKey, job))?.due ?? "always";
+  switch (due) {
+    case "conditional-admission": return false;
+    case "dex-publication": return isDexLiquidityPublicationSlot(slotStartedAtSec);
+    case "monday": return new Date(slotStartedAtSec * 1_000).getUTCDay() === 1;
+    case "always": return true;
+  }
 }
 
 function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
   const descriptors: ScheduledTaskDescriptor[] = [];
   for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
+    const policies = (SCHEDULED_SLOT_PLAN_INPUTS[plan.scheduleKey] as ScheduledSlotPlanInput).taskPolicies ?? {};
+    const plannedJobs = new Set(getScheduledSlotPlanBudgetEntries(plan));
+    for (const job of Object.keys(policies)) {
+      if (!plannedJobs.has(job)) throw new Error(`Scheduled task policy references unplanned job ${plan.scheduleKey}/${job}`);
+    }
     for (let chainIndex = 0; chainIndex < plan.jobChains.length; chainIndex += 1) {
       const chain = plan.jobChains[chainIndex] ?? [];
       for (let taskIndex = 0; taskIndex < chain.length; taskIndex += 1) {
@@ -377,6 +440,9 @@ function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
           chainIndex,
           taskIndex,
           ...(plan.scheduleKey === "monthlyYieldAudit" ? { calendarIdentity: "utc-month" } : {}),
+          timeoutMs: policies[job]?.timeoutMs ?? DEFAULT_CRON_TIMEOUT_MS,
+          leaseOptions: policies[job]?.leaseOptions ?? {},
+          due: policies[job]?.due ?? "always",
         });
       }
     }
@@ -402,6 +468,9 @@ function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
         chainIndex: null,
         taskIndex,
         ...(plan.scheduleKey === "monthlyYieldAudit" ? { calendarIdentity: "utc-month" } : {}),
+        timeoutMs: policies[job]?.timeoutMs ?? DEFAULT_CRON_TIMEOUT_MS,
+        leaseOptions: policies[job]?.leaseOptions ?? {},
+        due: policies[job]?.due ?? "always",
       });
     }
   }
@@ -411,6 +480,15 @@ function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
 export const SCHEDULED_TASK_DESCRIPTORS: readonly ScheduledTaskDescriptor[] = Object.freeze(
   buildScheduledTaskDescriptors(),
 );
+
+/** Retry/poll lanes require admission evidence; a slot alone never proves work was due. */
+export const CONDITIONALLY_ADMITTED_SCHEDULED_TASKS: readonly { scheduleKey: CronScheduleKey; job: string }[] = SCHEDULED_TASK_DESCRIPTORS
+  .filter((descriptor) => descriptor.due === "conditional-admission")
+  .map(({ scheduleKey, job }) => ({ scheduleKey, job }));
+
+export function isConditionallyAdmittedScheduledTask(scheduleKey: string | null, job: string): boolean {
+  return CONDITIONALLY_ADMITTED_SCHEDULED_TASKS.some((task) => task.scheduleKey === scheduleKey && task.job === job);
+}
 
 const SCHEDULED_TASK_DESCRIPTOR_BY_KEY = new Map(
   SCHEDULED_TASK_DESCRIPTORS.map((descriptor) => [

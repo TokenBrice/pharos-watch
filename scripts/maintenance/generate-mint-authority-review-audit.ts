@@ -7,8 +7,8 @@ import {
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
 import type { StablecoinMeta } from "@shared/types";
-import { runDirectCli } from "../lib/cli-args.mjs";
-import { parseCoverageAuditCliArgs, runCoverageAuditCli, toPositiveInt } from "../lib/coverage-audit-cli";
+import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
+import { runCoverageAuditCli } from "../lib/coverage-audit-cli";
 
 type AuditFormat = "markdown" | "json";
 
@@ -36,26 +36,32 @@ function usage(): string {
 }
 
 export function parseArgs(argv: string[], now = new Date()): Options {
-  return parseCoverageAuditCliArgs(argv, {
-    createOptions: (): Options => ({
-      generatedAt: now.toISOString(),
-      format: "markdown",
-      reportPath: null,
-      live: false,
-      liveLimit: 50,
-    }),
-    includeGeneratedAt: true,
-    usage,
-    options: [
-      { flag: "--live", kind: "boolean", apply: (options) => { options.live = true; } },
-      {
-        flag: "--live-limit",
-        kind: "value",
-        missingMessage: "--live-limit must be a positive integer",
-        apply: (options, value) => { options.liveLimit = toPositiveInt(value!, "--live-limit"); },
-      },
-    ],
+  const { values, tokens } = parseStrictCliArgs(argv, {
+    options: {
+      json: { type: "boolean" }, markdown: { type: "boolean" },
+      report: { type: "string" }, "generated-at": { type: "string" },
+      live: { type: "boolean" }, "live-limit": { type: "string" },
+    },
   });
+  if (values.help) {
+    process.stdout.write(`${usage()}\n`);
+    process.exit(0);
+  }
+  const liveLimit = values["live-limit"] === undefined ? 50 : Number(values["live-limit"]);
+  if (!Number.isInteger(liveLimit) || liveLimit <= 0) {
+    throw new CliUsageError("--live-limit must be a positive integer");
+  }
+  let format: AuditFormat = "markdown";
+  for (const token of tokens) {
+    if (token.kind === "option" && (token.name === "json" || token.name === "markdown")) format = token.name;
+  }
+  return {
+    generatedAt: typeof values["generated-at"] === "string" ? values["generated-at"] : now.toISOString(),
+    format,
+    reportPath: typeof values.report === "string" ? values.report : null,
+    live: values.live === true,
+    liveLimit,
+  };
 }
 
 export function uniqueMintAuthoritySourceUrls(coins: readonly StablecoinMeta[] = TRACKED_STABLECOINS): string[] {

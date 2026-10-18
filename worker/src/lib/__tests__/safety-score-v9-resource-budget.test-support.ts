@@ -199,7 +199,8 @@ export function validateResourceSamples(samples: ResourceSample[], phases: reado
 export function runResourceChild(root: string, entry: string, protocol: Record<string, string>, flags: string[], directory: string, name: string, deadline = Date.now() + RESOURCE_MEASUREMENT_DEADLINE_MS) {
   const remaining = deadline - Date.now();
   if (remaining <= 0) return { status: null, signal: null, error: "overall-resource-measurement-deadline-exceeded", reasons: [{ reason: "wall-timeout" }] };
-  const result = spawnSync(process.execPath, [...flags, entry], { cwd: root, env: resourceChildEnvironment(protocol), encoding: "utf8", timeout: Math.min(300_000, remaining), killSignal: "SIGKILL", maxBuffer: 16 * 1024 * 1024 });
+  const offlinePreload = new URL("../../../scripts/lib/v9-resource-offline.mjs", import.meta.url).href;
+  const result = spawnSync(process.execPath, ["--import", offlinePreload, ...flags, entry], { cwd: root, env: resourceChildEnvironment(protocol), encoding: "utf8", timeout: Math.min(300_000, remaining), killSignal: "SIGKILL", maxBuffer: 16 * 1024 * 1024 });
   writeFileSync(resolve(directory, `${name}.stderr`), result.stderr ?? "");
   writeFileSync(resolve(directory, `${name}.stdout`), result.stdout ?? "");
   const reasons: ResourceViolation[] = [];
@@ -251,6 +252,8 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
     "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
     "worker/scripts/lib/v9-resource-policy.ts",
+    "worker/scripts/lib/v9-resource-offline.mjs",
+    "shared/test-utils/v9-resource-offline.ts",
   ].map((file) => {
     try { return [file, createHash("sha256").update(readFileSync(resolve(root, file))).digest("hex")]; }
     catch { return [file, null]; }

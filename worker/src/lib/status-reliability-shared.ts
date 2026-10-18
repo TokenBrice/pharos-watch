@@ -78,6 +78,10 @@ export interface StatusTransitionRow {
 
 export const SEVERITY: Record<StatusLevel, number> = { healthy: 0, degraded: 1, stale: 2 };
 
+export function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
+  return SEVERITY[a] >= SEVERITY[b] ? a : b;
+}
+
 export function clampConfidence(confidence: number): number {
   if (!Number.isFinite(confidence)) return 0.1;
   return clamp(confidence, 0.1, 1);

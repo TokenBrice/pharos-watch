@@ -3,7 +3,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
-import { fetchZephyrZysSource } from "../yield-sync/sources";
+import { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 
 describe("fetchZephyrZysSource", () => {
   afterEach(cleanupYieldSourceTest);

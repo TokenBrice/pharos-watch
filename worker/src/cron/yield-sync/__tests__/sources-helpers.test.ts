@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig, RpcEndpoint } from "../../../lib/chain-registry";
 import { registryRpcEndpoint } from "../../../test-helpers/chain-rpc-fixtures.test-support";
-import {
-  createOptionalSourceBudget,
-  resolveRpcUrls,
-} from "../sources-helpers";
+import { createOptionalSourceBudget, resolveRpcUrls } from "../sources-rpc";
 
 function supplementalEndpoint(url: string): RpcEndpoint {
   return {

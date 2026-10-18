@@ -4,7 +4,7 @@ import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.te
 import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
-} from "../../../lib/public-dataset-snapshot-budget";
+} from "@shared/lib/public-dataset-snapshot-budget";
 
 const mocks = vi.hoisted(() => ({
   snapshotSupply: vi.fn(),

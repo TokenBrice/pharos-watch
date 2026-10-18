@@ -11,6 +11,7 @@ import {
 } from "@shared/types/__tests__/status.test-support";
 import { synthesizeOverallCauses } from "../status/evaluation-causes";
 import { deriveReserveCompositionStatus } from "../status/evaluation-state";
+import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
@@ -88,6 +89,16 @@ function makeDataQualityEvaluationInput(
 }
 
 describe("status evaluation policy", () => {
+  it.each([
+    ["healthy", "healthy", "healthy"], ["healthy", "degraded", "degraded"],
+    ["healthy", "stale", "stale"], ["degraded", "healthy", "degraded"],
+    ["degraded", "degraded", "degraded"], ["degraded", "stale", "stale"],
+    ["stale", "healthy", "stale"], ["stale", "degraded", "stale"], ["stale", "stale", "stale"],
+  ] as const)("aggregates %s and %s using the shared severity order", (left, right, expected) => {
+    expect(SEVERITY).toEqual({ healthy: 0, degraded: 1, stale: 2 });
+    expect(maxStatus(left, right)).toBe(expected);
+  });
+
   it.each([2, 3])("uses the public circuit quorum for admin causes at %i open groups", (openCircuitCount) => {
     const circuitImpactStatus = getCircuitImpactStatus(openCircuitCount);
     expect(circuitImpactStatus).toBe(openCircuitCount === 2 ? "healthy" : "degraded");

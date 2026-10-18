@@ -156,6 +156,31 @@ type TestEvidence = Omit<ReturnType<typeof evidence>, "snapshots"> & {
 };
 
 describe("night-watch-worker", () => {
+  it("preserves option defaults and maps strict equals-form evidence options", () => {
+    const now = new Date(generatedAt);
+    expect(parseArgs([], now)).toMatchObject({
+      cycles: 1, start: generatedAt, end: "2026-06-24T14:00:00.000Z",
+      intervalMinutes: 15, resume: true, remote: true, includeStatus: false,
+    });
+    expect(parseArgs([
+      "--cycles=2", "--interval-minutes=30", "--include-status-history",
+      "--no-resume", "--local", "--dry-run", "--sample-limit=10",
+    ], now)).toMatchObject({
+      cycles: 2, end: "2026-06-24T18:00:00.000Z", intervalMinutes: 30,
+      includeStatus: true, includeStatusHistory: true, resume: false, remote: false,
+      dryRun: true, sampleLimit: 10,
+    });
+  });
+
+  it.each([
+    ["--unknown"], ["--output"], ["--cycles=1", "--cycles=2"], ["extra"],
+    ["--cycles=3"], ["--interval-minutes=2x"], ["--start=invalid"],
+    ["--start", generatedAt, "--end", generatedAt],
+  ])("rejects invalid night-watch usage %j", (...argv) => {
+    expect(() => parseArgs(argv, new Date(generatedAt)))
+      .toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
   it.each(CONDITIONALLY_ADMITTED_SCHEDULED_TASKS)(
     "does not grade unadmitted conditional path $scheduleKey:$job as missing",
     ({ scheduleKey, job }) => {

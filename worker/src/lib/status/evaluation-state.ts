@@ -7,15 +7,6 @@ import {
 
 export type { ReserveCompositionAssessment } from "./evaluation-rules";
 
-const STATUS_SEVERITY: Record<StatusLevel, number> = {
-  healthy: 0,
-  degraded: 1,
-  stale: 2,
-};
-
-export function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
-  return STATUS_SEVERITY[a] >= STATUS_SEVERITY[b] ? a : b;
-}
 
 export function deriveReserveCompositionStatus(
   reserveComposition: Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>,

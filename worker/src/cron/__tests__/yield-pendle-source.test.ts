@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-import { fetchPendleMarketSources } from "../yield-sync/sources";
+import { fetchPendleMarketSources } from "../yield-sync/sources-optional";
 
 describe("fetchPendleMarketSources", () => {
   afterEach(cleanupYieldSourceTest);

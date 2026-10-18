@@ -119,7 +119,7 @@ export function mockDailyDigestCircuitBreakerModule() {
 }
 
 export function mockTelegramDigestTransportModule(
-  actual: typeof import("../telegram-digest-transport"),
+  actual: typeof import("../digest/telegram-transport"),
 ) {
   return {
     ...actual,

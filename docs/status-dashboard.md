@@ -98,6 +98,8 @@ The [history endpoint](#history-endpoint-get-apistatus-history) owns timeline re
 
 Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
+`worker/src/lib/status-reliability-shared.ts` owns the shared severity ordering (`SEVERITY`) and `maxStatus` aggregation primitive. Evaluation rules and state helpers import that lower-level authority directly; rules do not depend on evaluation state.
+
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
 
 `PUBLIC_CIRCUIT_IMPACT_QUORUM` in `shared/lib/public-health.ts` is the sole source-wide circuit quorum
@@ -307,7 +309,7 @@ Subject to a successful history read, cron availability is healthy when:
 
 The display starts with ten runs. A full window with fewer than two required attempts triggers an indexed, two-row required-attempt lookup; duplicate evidence is removed. A fresh proven-satisfied readback is recovered separately when absent, preserving error supersession behind generic admissions. Appended attempts/readbacks keep verdicts attributable in `crons[*].runs` (newest first, behind the ten-row display window) and remain visible in the admin history. A full window without fresh confirmed `ok` output also triggers the bounded `CONFIRMED_CRON_OUTPUT_AT_SQL` aggregate, retaining successful and degraded output clocks separately; no-op attempts never renew publication. Duration trends count only executed `ok`/`degraded`/`error` attempts, excluding admission skips from averages and sample floors; cap-hit and graceful-deferral policy is unchanged.
 
-Conditional retry/poll membership is owned by `CONDITIONALLY_ADMITTED_SCHEDULED_TASKS` in `shared/lib/scheduled-runner-registry.ts`. A missed slot does not prove those children were required: their demand/output prechecks must first admit work. Reconciliation therefore does not invent a failure for an unstarted conditional child. Status excludes retained `error` rows only when the exact registered job/schedule pair carries `reason = "stale-slot-reconciled"` and `childDisposition = "not_started"`; raw database records remain intact. Started/unknown attempts, actual read failures, and canonical scheduled obligations remain actionable. This exclusion never creates publication evidence or renews output freshness.
+Conditional retry/poll membership is authored in `ScheduledTaskDescriptor.due` (the slot plan's `taskPolicies`) in `shared/lib/scheduled-runner-registry.ts`; `CONDITIONALLY_ADMITTED_SCHEDULED_TASKS` is a derived view. A missed slot does not prove those children were required: their demand/output prechecks must first admit work. Reconciliation therefore does not invent a failure for an unstarted conditional child. Status excludes retained `error` rows only when the exact registered job/schedule pair carries `reason = "stale-slot-reconciled"` and `childDisposition = "not_started"`; raw database records remain intact. Started/unknown attempts, actual read failures, and canonical scheduled obligations remain actionable. This exclusion never creates publication evidence or renews output freshness.
 Admin last-completed text is `Unknown` with the failed-read reason when telemetry is unavailable. A readable window lacking success says `No successful run in recent history`, never claims absence across all history.
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a generic neutral skip (no

@@ -13,7 +13,7 @@ import type {
   buildFailedRedemptionBackstopEntry as BuildFailedRedemptionBackstopEntry,
   resolveRedemptionBackstopEntry as ResolveRedemptionBackstopEntry,
 } from "../redemption-backstop/sources";
-import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-observers";
+import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-read-client";
 import {
   buildEntryFixture,
   dusdOpenQueueMetadata,

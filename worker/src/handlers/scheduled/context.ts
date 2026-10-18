@@ -40,37 +40,6 @@ import type { CronLeaseRunResult } from "../../lib/cron-lease-primitives";
 import type { ScheduledExecutionFence } from "../../lib/scheduled-slot-fence";
 
 /**
- * Per-job overrides for cron lease behavior. Jobs not listed use the default
- * policy in `runCronWithLease` (heartbeatSec = ttlSec/3, maxRenewFailures = 2).
- * Long-running scheduled jobs use a tighter heartbeat so lease-loss detection
- * happens within the job's own timeout window instead of near the outer TTL.
- */
-const LONG_RUNNING_LEASE_OPTIONS = { heartbeatSec: 30, maxRenewFailures: 3 } satisfies Pick<
-  CronLeaseOptions,
-  "heartbeatSec" | "maxRenewFailures"
->;
-
-const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec" | "maxRenewFailures">> = {
-  "sync-stablecoins": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-live-reserves": LONG_RUNNING_LEASE_OPTIONS,
-  "reserve-recovery": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-cl-exit-depth": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-dex-liquidity-stage": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-dex-liquidity": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-dex-discovery": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-yield-data": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-yield-supplemental": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-blacklist": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-mint-burn": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-mint-burn-extended": LONG_RUNNING_LEASE_OPTIONS,
-  "dispatch-telegram-alerts": LONG_RUNNING_LEASE_OPTIONS,
-  "snapshot-public-dataset": LONG_RUNNING_LEASE_OPTIONS,
-  "sync-v9-supply-attribution": LONG_RUNNING_LEASE_OPTIONS,
-  "daily-digest": LONG_RUNNING_LEASE_OPTIONS,
-  "weekly-recap": LONG_RUNNING_LEASE_OPTIONS,
-};
-
-/**
  * Contract C: each scheduled runtime starts without Dwellir and admits routing
  * at most once. Unreadable ledger, exhausted budget, unavailable circuit, or
  * unexpected errors leave the original endpoint map unchanged.
@@ -300,7 +269,6 @@ export function createScheduledRuntimeContext(
                 scheduled.recoveryCheckpoint ? "reserve-checkpoint-replay" : descriptor.producerPath,
                 { ...slotMeta, producerKind })
               : createLeaseOwner(job);
-            const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
             const buildLeaseMeta = (lease: CronLeaseRunResult<unknown>) => ({
               leaseOwner: lease.leaseOwner,
               renewFailures: lease.renewFailures,
@@ -323,7 +291,7 @@ export function createScheduledRuntimeContext(
               abortSignal: signal,
               timeoutBudget,
               deadline: runtime.deadline,
-              ...perJobLeaseOptions,
+              ...descriptor.leaseOptions,
             };
             if (scheduled.recoveryCheckpoint) leaseOptions.reserveRecoveryAdmission = true;
             if (job === "sync-live-reserves" && scheduled.scheduleKey === "fourHourlyReserveSync"

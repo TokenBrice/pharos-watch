@@ -3,7 +3,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
-import { fetchYearnYboldSource } from "../yield-sync/sources";
+import { fetchYearnYboldSource } from "../yield-sync/sources-optional";
 
 const YBOLD_VAULT = "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8";
 const YSYBOLD_VAULT = "0x23346B04a7f55b8760E5860AA5A77383D63491cD";

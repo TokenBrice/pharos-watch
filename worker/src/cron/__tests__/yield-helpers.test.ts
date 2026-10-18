@@ -23,7 +23,7 @@ import {
   findBestLendingPool,
   isBlockedYieldOpportunitySource,
 } from "../yield-helpers";
-import { computeTvlWeightedMedianApy } from "../yield-sync/rankings";
+import { computeTvlWeightedMedianApy } from "../yield-sync/evaluation";
 import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
 import { LENDING_PROTOCOL_ALLOWLIST, YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config";
 import { makeDlYieldPool } from "./yield-resolve.test-support";

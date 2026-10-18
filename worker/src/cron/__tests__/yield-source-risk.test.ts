@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildYieldSourceRisk } from "../yield-sync/source-risk";
-import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
+import { buildYieldSourceRisk } from "../yield-sync/evaluation";
+import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 
 function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYieldSource {
   return {

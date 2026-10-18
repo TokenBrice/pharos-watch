@@ -1,5 +1,10 @@
-import type { YieldType } from "@shared/types/core";
-import type { YieldBenchmarkKey, YieldSourceRisk } from "@shared/types/yield";
+import type {
+  YieldType,
+} from "@shared/types/core";
+import type {
+  YieldBenchmarkKey,
+  YieldSourceRisk,
+} from "@shared/types/yield";
 
 export interface DlPool {
   pool: string;

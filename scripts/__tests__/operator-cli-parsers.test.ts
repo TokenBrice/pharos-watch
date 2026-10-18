@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseFreezeStablecoinArgs } from "../maintenance/freeze-stablecoin";
+import { parseD1InsightsArgs } from "../maintenance/capture-d1-insights.mjs";
+import { parseSeoRenderBudgetArgs } from "../maintenance/audit-seo-render-budget.mjs";
 
 import {
   run as waitForReleaseMarker,
@@ -17,6 +19,45 @@ afterEach(() => {
 });
 
 describe("priority operator CLI parsers", () => {
+  it("preserves SEO audit defaults and accepts strict route/wait options", () => {
+    expect(parseSeoRenderBudgetArgs([])).toMatchObject({ waitMs: 4000, json: false, help: false });
+    expect(parseSeoRenderBudgetArgs(["--routes=/,/api/", "--wait-ms=0", "--json"]))
+      .toMatchObject({ routes: ["/", "/api/"], waitMs: 0, json: true });
+    expect(parseSeoRenderBudgetArgs(["-h"]).help).toBe(true);
+  });
+
+  it.each([
+    ["--unknown"], ["--url"], ["--wait-ms=invalid"], ["--wait-ms=-1"],
+    ["--url=one", "--url=two"], ["extra"], ["--routes=,"],
+  ])("rejects invalid SEO audit usage %j", (...argv) => {
+    expect(() => parseSeoRenderBudgetArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
+  it("preserves D1 capture defaults and repeatable period/sort selection", () => {
+    expect(parseD1InsightsArgs([])).toMatchObject({
+      database: "stablecoin-db", config: "worker/wrangler.toml", limit: 50,
+      periods: [], sortBy: [], output: null, dryRun: false,
+    });
+    expect(parseD1InsightsArgs([
+      "--period=7d", "--period", "30d", "--sort-by=reads", "--sort-by", "time", "--dry-run",
+    ])).toMatchObject({ periods: ["7d", "30d"], sortBy: ["reads", "time"], dryRun: true });
+  });
+
+  it.each([
+    ["--unknown"], ["--database"], ["--limit=2x"], ["--limit=0"],
+    ["--database=one", "--database=two"], ["extra"],
+  ])("rejects invalid D1 insights usage %j", (...argv) => {
+    expect(() => parseD1InsightsArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
+  it.each(["--database", "--config", "--limit", "--period", "--sort-by", "--output"])(
+    "rejects flag-like values for D1 insights option %s", (flag) => {
+      for (const argv of [[flag, "--dry-run"], [`${flag}=--dry-run`]]) {
+        expect(() => parseD1InsightsArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+      }
+    },
+  );
+
   it("requires exactly one freeze target and rejects option-like typos", () => {
     expect(parseFreezeStablecoinArgs(["--dry-run", "usdc-circle"])).toEqual({
       coinId: "usdc-circle",

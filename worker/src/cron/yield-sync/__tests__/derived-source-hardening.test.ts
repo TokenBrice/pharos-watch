@@ -4,17 +4,22 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_ADAPTER_MANIFEST } from "../../../lib/yield-config/yield-config";
 import { INTENTIONAL_GAP_REASONS } from "../../../lib/yield-config/yield-config-rate-sources";
 import { isPriceDerivedYieldEligible } from "../../../lib/yield-config/yield-config-registry";
-import { resolveTrackedYieldSources } from "../resolve-tracked-sources";
-import { getPriceDerivedApy } from "../sources-riskfree";
+import { resolveTrackedYieldSources } from "../resolve";
+import { getPriceDerivedApy } from "../state";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkMeta } from "../benchmarks";
 import { baseEvaluationInput, freshUsdBenchmark } from "../../__tests__/yield-evaluation.test-support";
 import { evaluateYieldSources } from "../evaluation";
 import { parseRiskFreeRateCache } from "../cache";
 
-vi.mock("../tracked-optional-source-registry", () => ({
-  TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID: new Map(),
-  STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: [],
-}));
+vi.mock("../sources-optional", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../sources-optional")>();
+
+  return {
+    ...actual,
+    TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID: new Map(),
+    STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: [],
+  };
+});
 
 const now = 1790467200;
 const excluded = ["vbill-vaneck", "stkgho-umbrella-aave", "usdb-blast", "bc3m-backed"];
