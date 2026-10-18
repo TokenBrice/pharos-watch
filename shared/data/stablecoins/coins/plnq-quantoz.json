@@ -42,7 +42,7 @@
   },
   "announcedDate": "2026-04-07",
   "launchPhase": "announced",
-  "launchPhaseDetail": "PLNQ is deployed on Ethereum but the issuer states no tokens are in circulation and no reserve exists. Ethereum block 26107706 observed 2026-10-02 confirms symbol PLNQ, six decimals and zero totalSupply; the exact-contract DefiLlama price response is empty. The whitepaper plans Polygon, Algorand, XRP Ledger and Xahau, but those production identities are not verified. No CoinGecko identity or launch date is published. The cover states original AFM notification on 6 April 2026, while ESMA records notification on 7 April and the whitepaper was amended on 30 April.",
+  "launchPhaseDetail": "Quantoz announced PLNQ on April 14 2026 with Zodia Markets supporting initial distribution, and PLNQ is deployed on Ethereum, but the issuer states no tokens are in circulation and no reserve exists. Ethereum block 26107706 observed 2026-10-02 confirms symbol PLNQ, six decimals and zero totalSupply; the exact-contract DefiLlama price response is empty. The whitepaper plans Polygon, Algorand, XRP Ledger and Xahau, but those production identities are not verified. No CoinGecko identity or launch date is published. The cover states original AFM notification on 6 April 2026, while ESMA records notification on 7 April and the whitepaper was amended on 30 April.",
   "milestones": [
     {
       "date": "2026-04-06",
@@ -57,6 +57,13 @@
       "title": "ESMA records PLNQ whitepaper notification",
       "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
       "description": "Not a confirmed circulation date or approval of the whitepaper."
+    },
+    {
+      "date": "2026-04-14",
+      "type": "announcement",
+      "title": "Quantoz Payments announces PLNQ and GBPQ",
+      "description": "Quantoz announced PLNQ and GBPQ as MiCA electronic money tokens to be issued initially on Ethereum, with Polygon, Stellar, XRPL, Algorand and Xahau planned later and Zodia Markets supporting initial institutional distribution. The release gives no circulation figure.",
+      "sourceUrl": "https://www.quantoz.com/blog/quantoz-payments-becomes-europes-leading-stablecoin-issuer-with-five-licensed-tokens-adding-polish-zloty-and-british-pound"
     },
     {
       "date": "2026-04-30",

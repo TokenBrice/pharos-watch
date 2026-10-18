@@ -1657,8 +1657,8 @@
   },
   "usdvb-versabank": {
     "title": "VersaBank’s conditional dollar deposit-token pilot",
-    "text": "VersaBank USA announced an internal USDVB pilot on August 26, 2025, with limited designated external partner and client testing planned. Each USDVB represents one U.S. dollar deposited with the bank, with issuance and redemption through VersaVault. This exposes holders to a bank deposit rather than a separately segregated stablecoin reserve trust. The September 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. Commercial launch, ordinary external-holder rights and official deployments must be established before active admission.",
-    "updatedAt": "2026-10-02"
+    "text": "VersaBank USA announced an internal USDVB pilot on August 26, 2025, and on October 15, 2026 announced a commercial phase under the VUSD brand, naming no chain or date. Each token represents one U.S. dollar deposited with the bank, with issuance and redemption through VersaVault. This exposes holders to a bank deposit rather than a separately segregated stablecoin reserve trust. The September 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. Commercial launch, ordinary external-holder rights and official deployments must be established before active admission.",
+    "updatedAt": "2026-10-18"
   },
   "usdx-axis": {
     "title": "Venue-held hedges with restricted primary access",
@@ -4936,11 +4936,11 @@
   },
   "eur-qivalis": {
     "title": "Thirty-Seven Banks, One Euro",
-    "text": "QEUR is a pre-launch MiCA-oriented euro stablecoin from a banking consortium that ballooned to 37 institutions across 15 countries by May 2026, up from 12 a few months earlier, targeting H2 2026 issuance under a Dutch EMI license. Qivalis is the European banking establishment's answer to USDC and Tether: a MiCA-compliant euro stablecoin now backed by names like BNP Paribas, ING, UniCredit, BBVA, ABN Amro, Intesa Sanpaolo, Rabobank, and Nordea. The reserve design puts at least 40% in bank deposits and the remainder in short-term euro-area government bonds spread across EU countries. It reads like a {{term:money-market-fund}}money market fund{{/term}} with a blockchain address. The chain question is settled: Ethereum mainnet first (ERC-20F with a permissioned KYC layer), then Polygon and Base. Only pre-verified participants can hold or transfer the token. This is the consortium's compromise between public-chain liquidity and institutional control. CEO Jan-Oliver Sell (ex-Coinbase Germany) is lining up exchange partnerships, and the EMI license application sits with De Nederlandsche Bank, filed but not granted; Qivalis says it will launch the moment approval lands. The central tension is unchanged and arguably sharper at 37 members: whether dozens of banks that compete fiercely everywhere else can cooperate long enough to ship before Circle's EURC and SocGen's EURCV finish eating the MiCA-compliant euro market. The ticker itself isn't even public yet. {{term:custody}}Custody{{/term}} sits across consortium banks and 1:1 {{term:redemption}}redemption{{/term}} rights remain pre-launch commitments.",
-    "updatedAt": "2026-09-07",
+    "text": "QEUR is a pre-launch euro stablecoin from a consortium of 37 banks across 15 countries, and De Nederlandsche Bank granted its issuer, Qivalis, electronic money institution authorisation in October 2026. Qivalis is the European banking establishment's answer to USDC and Tether: a MiCA electronic money token backed by names like BNP Paribas, ING, UniCredit, BBVA, ABN Amro, Intesa Sanpaolo, Rabobank, and Nordea. The reserve design puts at least 40% in bank deposits and the remainder in short-term euro-area government bonds spread across EU countries. It reads like a {{term:money-market-fund}}money market fund{{/term}} with a blockchain address. The chain question is settled: Ethereum mainnet first (ERC-20F with a permissioned KYC layer), then Polygon and Base. Only pre-verified participants can hold or transfer the token, which is the consortium's compromise between public-chain liquidity and institutional control. The licence clears the regulatory gate, but issuance still waits on the remaining MiCA requirements and a published white paper, and neither a ticker nor a launch date is public. The central tension is unchanged: whether dozens of banks that compete everywhere else can cooperate long enough to ship before Circle's EURC and SocGen's EURCV consolidate the MiCA euro market. {{term:custody}}Custody{{/term}} sits across consortium banks and 1:1 {{term:redemption}}redemption{{/term}} rights remain pre-launch commitments.",
+    "updatedAt": "2026-10-18",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07"
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-18"
   },
   "pusd-polaris": {
     "title": "Immutable CDP, Yield Included",
@@ -9032,11 +9032,11 @@
   },
   "jpy-megabank-consortium": {
     "title": "The Three-Megabank Yen",
-    "text": "Japan's three largest banks said on June 10 2026 that they will jointly issue a yen stablecoin under a trust agreement, with MUFG, Mizuho, and SMBC as joint settlors and an unnamed trust bank or similar institution as trustee, and they aim to begin actual commercial transactions during fiscal year 2026, which ends in March 2027. A memorandum of understanding establishes a voluntary council to work through issuance infrastructure, schemes, and governance, building on a demonstration experiment selected in November 2025 for the Financial Services Agency's FinTech Proof-of-Concept Hub. Nikkei reported the token would start yen-denominated on MUFG's Progmat platform with a dollar version to follow, though the banks' own release names neither denomination nor platform. No ticker, chain, trustee, or reserve composition is public. The durable constraint is concentration: joint issuance rests on three systemically important banks and a trustee not yet chosen.",
-    "updatedAt": "2026-09-27",
+    "text": "Japan's three largest banks said on June 10 2026 that they will jointly issue a yen stablecoin under a trust agreement, with MUFG, Mizuho, and SMBC as joint settlors and a trust bank or similar institution as trustee, and they aim to begin actual commercial transactions during fiscal year 2026, which ends in March 2027. A memorandum of understanding establishes a voluntary council to work through issuance infrastructure, schemes, and governance. On October 16 2026 the banks reported a July trial of that model, selected in November 2025 for the Financial Services Agency's FinTech Proof-of-Concept Hub, with Mitsubishi UFJ Trust and Banking as trustee, an SMBC-provided blockchain built by TISI, and Mitsubishi Corporation cross-border payments as the test case. The trial design holds trust assets in bank deposits, sets no issuance cap, and limits circulation to users verified by the banks; the release calls that design provisional. Nikkei reported the token would start yen-denominated on MUFG's Progmat platform with a dollar version to follow, though the banks name neither a production platform nor a chain. No ticker, production trustee, or reserve composition is public. The durable constraint is concentration: joint issuance rests on three systemically important banks and a trust structure still being settled.",
+    "updatedAt": "2026-10-18",
     "authoredBy": "ai",
-    "model": "glm-5.3",
-    "factsAsOf": "2026-09-27",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-18",
     "sources": [
       {
         "label": "MUFG Bank / Mizuho Bank / SMBC joint release, June 10 2026",
@@ -9045,6 +9045,10 @@
       {
         "label": "CoinDesk: Japan's three largest banks eye joint stablecoin issue by March 2027",
         "url": "https://www.coindesk.com/business/2026/06/10/japan-s-three-largest-banks-aim-for-joint-stablecoin-issue-by-march"
+      },
+      {
+        "label": "MUFG Bank / Mizuho Bank / SMBC / Mitsubishi UFJ Trust and Banking / TISI joint release, October 16 2026",
+        "url": "https://www.bk.mufg.jp/news/news2026/pdf/news1016_1.pdf"
       }
     ]
   }

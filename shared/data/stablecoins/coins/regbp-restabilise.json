@@ -23,6 +23,13 @@
   "launchPhaseDetail": "FCA selected ReStabilise for its stablecoin issuance sandbox on 25 February 2026. The issuer names reGBP and invites partnerships, pilots and early access, while describing the product as built to become FCA-authorised. Sandbox selection does not establish final issuance authorization. No production chain, contract, token price, public circulation or commercial launch date is verified.",
   "milestones": [
     {
+      "date": "2025-11-18",
+      "type": "milestone",
+      "title": "ReStabilise raises a 2.82 million pound pre-seed round led by Project A",
+      "description": "Goodwin announced it advised ReStabilise, a UK startup issuing pound and other currency stablecoins for institutional clients founded by Mike Ringer and Dave Lemmens, on a pre-seed round led by Project A. The announcement does not name reGBP.",
+      "sourceUrl": "https://www.goodwinlaw.com/en/news-and-events/news/2025/11/announcements-technology-dcb-goodwin-advises-restabilise"
+    },
+    {
       "date": "2026-02-25",
       "type": "regulatory",
       "title": "FCA selects ReStabilise for stablecoin sandbox",

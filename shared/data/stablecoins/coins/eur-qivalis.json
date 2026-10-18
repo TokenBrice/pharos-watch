@@ -31,7 +31,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "announced",
-  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license application with De Nederlandsche Bank pending. Qivalis says it will launch immediately on approval; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. As of September 13 2026 qivalis.eu still states the EMI application is pending before DNB and that it does not issue electronic money; the H2 2026 target stands, and September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release",
+  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); De Nederlandsche Bank granted Qivalis electronic money institution authorisation, announced October 14 2026; Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. No launch date accompanied the authorisation and the H2 2026 target stands; September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release",
   "featuredContent": [
     {
       "type": "article",
@@ -146,6 +146,13 @@
       "title": "Qivalis appoints Olga Elsenga as Chief Risk and Compliance Officer",
       "description": "Qivalis appointed Olga Elsenga, formerly Head of Legal at ClearBank Europe and a management board member at Worldline's Global Collect Services, as Chief Risk and Compliance Officer effective October 1 2026. The company states it is still progressing towards DNB authorisation as an electronic money institution, is not yet authorised, and plans to launch before the end of 2026.",
       "sourceUrl": "https://qivalis.eu/press/news/qivalis-strengthens-leadership-team-ahead-of-launch-with-chief-risk-compliance-officer-olga-elsenga"
+    },
+    {
+      "date": "2026-10-14",
+      "type": "regulatory",
+      "title": "De Nederlandsche Bank authorises Qivalis as an electronic money institution",
+      "description": "Qivalis announced that DNB granted it electronic money institution authorisation, making it eligible to issue euro electronic money tokens. Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published. No launch date or ticker was given.",
+      "sourceUrl": "https://thepaypers.com/fintech/news/qivalis-secures-emi-authorisation-from-de-nederlandsche-bank"
     }
   ]
 }

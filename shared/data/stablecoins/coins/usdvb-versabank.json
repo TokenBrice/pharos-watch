@@ -1,14 +1,14 @@
 {
   "id": "usdvb-versabank",
-  "name": "VersaBank Real Bank Deposit Token USD",
-  "symbol": "USDVB",
-  "oneLiner": "USDVB is VersaBank USA’s pilot dollar deposit token, issued one-for-one against bank deposits ahead of conditional commercialization.",
+  "name": "VersaBank VUSD",
+  "symbol": "VUSD",
+  "oneLiner": "VUSD is VersaBank USA’s planned dollar deposit token, piloted as USDVB and issued one-for-one against bank deposits ahead of conditional commercialization.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Pre-launch bank deposit token: one USDVB represents US$1 on deposit with VersaBank USA National Association. This is exposure to a bank deposit and its balance sheet, not a separately segregated 100%-cash reserve trust. Federal deposit-insurance eligibility remains subject to regulatory confirmation.",
-  "pegMechanism": "The pilot issues one USDVB per US$1 deposited with VersaBank USA, with issuance and redemption through VersaVault and access/control through VersaView on planned Algorand, Ethereum and Stellar deployments. Ordinary external-holder transfer and redemption rights, minimums, fees, timing and capacity are unpublished.",
+  "collateral": "Pre-launch bank deposit token: one VUSD represents US$1 on deposit with VersaBank USA National Association. This is exposure to a bank deposit and its balance sheet, not a separately segregated 100%-cash reserve trust. Federal deposit-insurance eligibility remains subject to regulatory confirmation.",
+  "pegMechanism": "The USDVB pilot issues one token per US$1 deposited with VersaBank USA, with issuance and redemption through VersaVault and access/control through VersaView on planned Algorand, Ethereum and Stellar deployments. Ordinary external-holder transfer and redemption rights, minimums, fees, timing and capacity are unpublished.",
   "mechanismArchetype": "fiat-cash",
   "links": [
     {
@@ -25,7 +25,7 @@
   },
   "status": "pre-launch",
   "announcedDate": "2025-08-26",
-  "launchPhaseDetail": "Internal USDVB pilot announced August 26, 2025, with limited designated external deposit-partner/client deployment planned. Pilot is not a supported catalog launch-phase enum, so no launchPhase is assigned. Commercial launch requires the bank’s stated OCC non-objection process; the September 1, 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. No current launch window or official chain-qualified asset addresses are established.",
+  "launchPhaseDetail": "Internal USDVB pilot announced August 26, 2025, with limited designated external deposit-partner/client deployment planned. Pilot is not a supported catalog launch-phase enum, so no launchPhase is assigned. Commercial launch requires the bank’s stated OCC non-objection process; the September 1, 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. On October 15 2026 VersaBank announced the US commercial phase, under which VersaBank USA is to issue a tokenized deposit branded VUSD; the release names no chain or date. Pharos tracks the commercial token as VUSD from October 15 2026; USDVB remains the pilot name. No current launch window or official chain-qualified asset addresses are established.",
   "milestones": [
     {
       "date": "2025-08-26",
@@ -40,6 +40,13 @@
       "title": "Quarterly filing retains conditional tokenized-deposit strategy",
       "sourceUrl": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf",
       "description": "The bank seeks regulatory confirmation of insurance eligibility and the ability to pay interest; the filing does not establish a public USDVB commercial launch."
+    },
+    {
+      "date": "2026-10-15",
+      "type": "announcement",
+      "title": "VersaBank announces the US commercial phase of its tokenized deposits with VUSD",
+      "description": "VersaBank said VersaBank USA will issue VUSD, a US dollar tokenized deposit it describes as interest-paying and FDIC insurance-eligible, and plans exchange listings as soon as feasible. The release names no blockchain or launch date and describes the bank as moving toward launch.",
+      "sourceUrl": "https://www.newsfilecorp.com/release/319128"
     }
   ]
 }

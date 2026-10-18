@@ -168,6 +168,13 @@
       "title": "HKDAP circulating supply roughly doubles to about 1.01 million HKDAP; still no price field",
       "description": "DefiLlama stablecoin id 437 and the Ethereum contract both show 1,006,890 HKDAP outstanding on September 27 2026, up from about 527,200 on August 27, across ten holder addresses, including a one-day 3.16 million mint-and-burn snapshot on September 25 that reverted within a day. DefiLlama's price field remains null and CoinGecko carries a preview listing with zero supply, so no runtime price path exists.",
       "sourceUrl": "https://stablecoins.llama.fi/stablecoin/437"
+    },
+    {
+      "date": "2026-10-16",
+      "type": "partnership",
+      "title": "Finloop and QFPay HK complete an HKDAP payment transaction with Anchorpoint",
+      "description": "Finloop Finance, an HKDAP distributor, and payment provider QFPay HK announced a collaboration with Anchorpoint and a completed payment transaction using HKDAP. No amount was disclosed.",
+      "sourceUrl": "https://www.manilatimes.net/2026/10/16/tmt-newswire/pr-newswire/finloop-collaborates-with-anchorpoint-and-qfpay-hk-on-hong-kong-payment-applications-for-the-regulated-hkd-stablecoin-hkdap/2447426"
     }
   ],
   "dateHistory": [

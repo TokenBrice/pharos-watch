@@ -1,0 +1,139 @@
+{
+  "dateRange": {
+    "from": "2026-10-12",
+    "to": "2026-10-18"
+  },
+  "headline": "Safety Score reaches 10.22 with Morpho lender books as Backing, and the site adopts one product grammar.",
+  "fieldNotes": "The week split between what readers see and what the Worker can carry. The redesign gave every page one type scale, one chart theme and named state colours, and turned /chains/ and the dependency map into countable scenes. Underneath, Safety Score publication kept hitting the Worker heap, so admission now runs once, memory kills are observed, and publication budgets derive from the slot deadline.",
+  "summary": [
+    {
+      "label": "Safety Score 10.22",
+      "tag": "feature",
+      "description": "Releases 10.18 to 10.22 ship. 10.18 activates Redemption 4.5 and Liquidity 6.95, 10.19 adds Morpho lender collateral books to Backing, and 10.22 admits mechanism evidence at exact UTC pins.",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "One product grammar",
+      "tag": "design",
+      "description": "Type, headers and chrome unify; semantic state colours and one chart theme replace hand-coded scales. The home becomes an instrument cluster, coin pages lead with answer, action and evidence, and /learn/ retires."
+    },
+    {
+      "label": "Scene-based maps",
+      "tag": "design",
+      "description": "/chains/ becomes Harbor, a countable isometric scene, and the dependency hairball gives way to a layered Watershed view, both built on a scene kit extracted from the Cemetery.",
+      "href": "/chains/"
+    },
+    {
+      "label": "Public status page",
+      "tag": "feature",
+      "description": "Status is rebuilt around components and incidents, cron causes name the jobs behind them, and healthy work no longer reports as failure. The ops admin now answers whether anyone needs to act.",
+      "href": "/status/"
+    },
+    {
+      "label": "Share cards and Safety Map",
+      "tag": "design",
+      "description": "Share cards render from live data instead of stale screenshots, the Safety Map poster is redrawn for feed-scale legibility, and the Safety Scores page shows supply-weighted grades.",
+      "href": "/safety-scores/"
+    },
+    {
+      "label": "Evidence corrections",
+      "tag": "coverage",
+      "description": "64 batch listings are refined to primary sources, VGBP is re-admitted, DOLA's reserve, backstop and freeze evidence is corrected after the Inverse review, and a cUSD-cap failure scenario is approved."
+    },
+    {
+      "label": "RPC and feed repairs",
+      "tag": "infra",
+      "description": "Dwellir becomes primary for Ethereum state, Arbitrum logs, Polygon, Tempo and Plasma, Uniswap v4 discovery is restored, and USDai, Frankencoin, SBC and BRLV feeds are repaired."
+    },
+    {
+      "label": "Worker memory and tests",
+      "tag": "infra",
+      "description": "The V9 publication Workflow retires, publication admits once under the Worker heap, and memory kills are observed. About 4,500 low-value test cases and the pre-push receipt mandate are removed."
+    }
+  ],
+  "stats": {
+    "totalCommits": 189
+  },
+  "commits": [
+    {
+      "hash": "82d3e799",
+      "message": "Resolve DOLA's transfer posture and scope freeze copy to material deployments"
+    },
+    {
+      "hash": "80ed2d6c",
+      "message": "Check authored overlay admission by review form, not by banning exact pins"
+    },
+    {
+      "hash": "c820db3a",
+      "message": "Bump the Safety policy release identity to 10.22"
+    },
+    {
+      "hash": "48b4dc34",
+      "message": "Correct DOLA jrDOLA backstop evidence to the v2 vault and permissionless slashing"
+    },
+    {
+      "hash": "bd437094",
+      "message": "Admit mechanism evidence at exact UTC review pins"
+    },
+    {
+      "hash": "9d4964f7",
+      "message": "Rewrite the DOLA summary around its circular collateral"
+    },
+    {
+      "hash": "b01cbd22",
+      "message": "Resolve redemption backstops three at a time so the job fits its budget"
+    },
+    {
+      "hash": "2c129503",
+      "message": "Make abandonment diagnosis evidence-first and record cron colo in memory reports"
+    },
+    {
+      "hash": "5a7faeba",
+      "message": "Separate provider failures from bookkeeping and keep producer diagnostics honest"
+    },
+    {
+      "hash": "2d5bd837",
+      "message": "Report designed parity truncation as complete work and keep blacklist failure detail"
+    },
+    {
+      "hash": "b96a2c9a",
+      "message": "Treat a still-running DEX stage as a neutral wait, not a scorer error"
+    },
+    {
+      "hash": "18a7e261",
+      "message": "Stop status from reporting healthy work as failure"
+    },
+    {
+      "hash": "b06410e2",
+      "message": "Bound the four largest retention deletes and report truncation"
+    },
+    {
+      "hash": "53cf3d91",
+      "message": "Retire the two reviewed DOLA depeg artifacts from the archive"
+    },
+    {
+      "hash": "cc47fe1f",
+      "message": "Stop static detail pages asserting values they do not have"
+    },
+    {
+      "hash": "669bef84",
+      "message": "Suppress two DOLA depeg backfill artifacts"
+    },
+    {
+      "hash": "4cf07ab7",
+      "message": "Correct DOLA control, oracle and copy evidence from the Inverse review"
+    },
+    {
+      "hash": "fa05624a",
+      "message": "Net idle FiRM DOLA inventory out of DOLA's reserve book"
+    },
+    {
+      "hash": "628c1bd3",
+      "message": "Pin the clock in the aged-detail refresh test"
+    },
+    {
+      "hash": "4530ff45",
+      "message": "Cut repeated work from the Safety Score compile and warn before the input cap"
+    }
+  ]
+}
