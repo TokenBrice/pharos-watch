@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { batchExecute } from "../../lib/db";
+import { batchExecute, D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runCappedPruneFamily } from "../shared/capped-delete";
@@ -25,11 +25,13 @@ import {
 //   24 h price pin treat a dead observation as fresh). A null observation must fall out via
 //   hasInvalidTvl in the merge until the pool is genuinely observed again;
 // - minRefreshGapSec: the hourly write-back passes a gap so rows refreshed within it are skipped.
-const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_registry
+const STAGING_INSERT_SQL = `INSERT INTO dex_pool_registry
   (pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol, tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio,
-   is_stable, base_token, quote_token, quote_symbol, price_usd, locked_liq_pct, raw_json, discovered_at, refreshed_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(stablecoin_id, pool_id, source) DO UPDATE SET
+   is_stable, base_token, quote_token, quote_symbol, price_usd, locked_liq_pct, raw_json, discovered_at, refreshed_at)`;
+const STAGING_ROW_COLUMN_COUNT = 22;
+const STAGING_ROW_VALUES_SQL = `(${new Array(STAGING_ROW_COLUMN_COUNT).fill("?").join(", ")})`;
+const STAGING_ROWS_PER_STATEMENT = Math.floor((D1_MAX_BOUND_PARAMETERS - 2) / STAGING_ROW_COLUMN_COUNT);
+const STAGING_CONFLICT_SQL = `ON CONFLICT(stablecoin_id, pool_id, source) DO UPDATE SET
   chain = excluded.chain,
   protocol = excluded.protocol,
   dex_id = excluded.dex_id,
@@ -120,7 +122,8 @@ function legacyOrderbookPoolId(pool: Pick<StagedPool, "poolId" | "stablecoinId" 
  * is not older than the stored one, a null tvl/volume overwrites the stored value instead of
  * preserving stale metrics, and `options.minRefreshGapSec` skips rows another writer
  * refreshed within that gap.
- * Batches in groups of 50 to stay within D1 statement limits.
+ * Packs four rows per statement (90 binds including the shared gap predicate),
+ * then batches 50 statements. Legacy cleanup remains ordered before its insert.
  */
 export interface StagedPoolUpsertOptions {
   /** When set, an existing row refreshed within this many seconds is left untouched (the DO UPDATE becomes a no-op, which D1 counts as zero rows written). */
@@ -150,46 +153,46 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
 
   const minRefreshGapSec = options?.minRefreshGapSec ?? 0;
 
-  const stmts = validPools.flatMap((pool) => {
+  const statements: D1PreparedStatement[] = [];
+  const rows: unknown[][] = [];
+  let changedRows = 0;
+  const flushRows = (): void => {
+    if (rows.length === 0) return;
+    statements.push(db.prepare(
+      `${STAGING_INSERT_SQL} VALUES ${new Array(rows.length).fill(STAGING_ROW_VALUES_SQL).join(", ")} ${STAGING_CONFLICT_SQL}`,
+    ).bind(...rows.flat(), minRefreshGapSec, minRefreshGapSec));
+    rows.length = 0;
+  };
+  const flushStatements = async (): Promise<void> => {
+    if (statements.length === 0) return;
+    changedRows += await batchExecute(db, statements, { chunkSize: STAGING_BATCH_SIZE, signal });
+    statements.length = 0;
+  };
+  for (const pool of validPools) {
+    throwIfAborted(signal);
     const cleanupPoolId = legacyOrderbookPoolId(pool);
-    const cleanupStmt = cleanupPoolId
-      ? db
-          .prepare("DELETE FROM dex_pool_registry WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?")
-          .bind(pool.stablecoinId, cleanupPoolId)
-      : null;
-    const insertStmt = db
-      .prepare(STAGING_UPSERT_SQL)
-      .bind(
-        pool.poolId,
-        pool.stablecoinId,
-        pool.source,
-        pool.chain,
-        pool.protocol,
-        pool.dexId,
-        pool.symbol,
-        pool.tvlUsd,
-        pool.volume24h,
-        pool.qualityMultiplier,
-        pool.poolType,
-        pool.feeTier,
-        pool.balanceRatio,
-        pool.isStable === null ? null : pool.isStable ? 1 : 0,
-        pool.baseToken,
-        pool.quoteToken,
-        pool.quoteSymbol,
-        pool.priceUsd,
-        pool.lockedLiqPct,
-        pool.rawJson,
-        pool.discoveredAt,
-        pool.refreshedAt,
-        minRefreshGapSec,
-        minRefreshGapSec,
-      );
-    return cleanupStmt ? [cleanupStmt, insertStmt] : [insertStmt];
-  });
-
-  throwIfAborted(signal);
-  return batchExecute(db, stmts, { chunkSize: STAGING_BATCH_SIZE, signal });
+    if (cleanupPoolId) {
+      // Never move a legacy delete past an earlier insert (including duplicates).
+      flushRows();
+      if (statements.length === STAGING_BATCH_SIZE) await flushStatements();
+      statements.push(db.prepare(
+        "DELETE FROM dex_pool_registry WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?",
+      ).bind(pool.stablecoinId, cleanupPoolId));
+    }
+    rows.push([
+      pool.poolId, pool.stablecoinId, pool.source, pool.chain, pool.protocol,
+      pool.dexId, pool.symbol, pool.tvlUsd, pool.volume24h, pool.qualityMultiplier,
+      pool.poolType, pool.feeTier, pool.balanceRatio,
+      pool.isStable === null ? null : pool.isStable ? 1 : 0,
+      pool.baseToken, pool.quoteToken, pool.quoteSymbol, pool.priceUsd,
+      pool.lockedLiqPct, pool.rawJson, pool.discoveredAt, pool.refreshedAt,
+    ]);
+    if (rows.length === STAGING_ROWS_PER_STATEMENT) flushRows();
+    if (statements.length === STAGING_BATCH_SIZE) await flushStatements();
+  }
+  flushRows();
+  await flushStatements();
+  return changedRows;
 }
 
 /**

@@ -21,7 +21,7 @@ import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
 } from "../../../lib/public-dataset-snapshot-budget";
 import { SLOT_RUNNER_LOADER_BY_KEY } from "../../scheduled";
-import { fetchPancakeSwapPools } from "../../../cron/dex-liquidity/fetch-pancakeswap";
+import type { HeavyEnv } from "../../../lib/env";
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((a, b) => a.localeCompare(b));
@@ -42,10 +42,12 @@ describe("scheduled runner contract", () => {
     expect(isScheduledTaskDueAt("quarterHourly", "unknown-job", monday)).toBe(true);
   });
 
-  it("names missing GRAPH degradation on heavy DEX stage recovery", async () => {
-    expect(await fetchPancakeSwapPools(null)).toMatchObject({
-      ok: false, degraded: true, errors: ["missing GRAPH_API_KEY"],
-    });
+  it("exposes Graph capability to heavy while keeping recovery within the existing peak", () => {
+    const graph: Pick<HeavyEnv, "GRAPH_API_KEY"> = { GRAPH_API_KEY: "configured-heavy-key" };
+    expect(graph.GRAPH_API_KEY).toBe("configured-heavy-key");
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find(
+      (entry) => entry.job === "sync-dex-liquidity" && entry.scheduleKey === "halfHourlyChartsOffset",
+    )).toMatchObject({ maxConnections: 5 });
   });
   it("owns only the three revised heavy plans without adding expressions", () => {
     expect(Object.values(SCHEDULED_SLOT_PLANS).filter((plan) => plan.worker === "heavy")

@@ -3,25 +3,21 @@
  *   sync-dex-liquidity (0 normally, 5 during source recovery) → cron-sentinel turnover source (0)
  *   → prepare-safety-score-v9-input (3)
  *   sync-stablecoin-charts (1), failure-independent and serial
- * :16 consumes and publishes the hourly source generation; :46 normally reuses
- * the exact current generation for V9 preparation, or publishes the hour's
- * still-unconsumed ready stage when :16 never completed. Inline reconstruction
- * requires Graph capability and the source-job lease; heavy intentionally lacks
- * Graph credentials and refuses recapture rather than constructing a partial
- * graph. The serial chain peaks at 3 normally; 5 is the reserved peak for a
- * credential-capable recovery caller, not evidence heavy performs recapture.
+ * Both ticks use one exact source-slot consume/reuse decision. A new accepted
+ * publication, not the calendar minute, drives turnover. Heavy has Graph
+ * credentials for terminal/missing-stage reconstruction under the source lease
+ * and inherited deadline. A live producer still yields a neutral wait.
+ * The serial chain peaks at 3 normally and 5 during bounded recovery.
  * The registry/checker therefore treats this slot as headroom-full.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
 import {
   consumeDexLiquidityScoringStage,
   DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
-  reuseCurrentDexLiquidityScoringGeneration,
 } from "../../cron/dex-liquidity/orchestrator";
 import {
   DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
   isDailyDexShadowTargetPublicationSlot,
-  isHourlyDexPriceSlot,
 } from "@shared/lib/cron-cadences";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
 import { runCronSentinel } from "../../cron/cron-sentinel";
@@ -155,39 +151,24 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
       "sync-dex-liquidity": async (signal, reportProgress) => {
         let result: CronResult;
         try {
-          result = !isHourlyDexPriceSlot(runtime.slotStartedAt)
-            ? await reuseCurrentDexLiquidityScoringGeneration(
-                runtime.db,
-                signal,
-                reportProgress,
-                runtime.slotStartedAt,
-                {
-                  deadline: runtime.deadline,
-                  stageRecovery: {
-                    graphApiKey: runtime.env.GRAPH_API_KEY ?? null,
-                    coingeckoApiKey: runtime.coingeckoApiKey,
-                    chainRpcs: runtime.chainRpcs,
-                  },
-                },
-              )
-            : await consumeDexLiquidityScoringStage(
-                runtime.db,
-                signal,
-                reportProgress,
-                runtime.slotStartedAt,
-                {
-                  deadline: runtime.deadline,
-                  publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
-                  stageReadyDeadlineMs:
-                    (runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000)
-                    + DEX_SCORING_STAGE_READY_WAIT_MS,
-                  stageRecovery: {
-                    graphApiKey: runtime.env.GRAPH_API_KEY ?? null,
-                    coingeckoApiKey: runtime.coingeckoApiKey,
-                    chainRpcs: runtime.chainRpcs,
-                  },
-                },
-              );
+          result = await consumeDexLiquidityScoringStage(
+            runtime.db,
+            signal,
+            reportProgress,
+            runtime.slotStartedAt,
+            {
+              deadline: runtime.deadline,
+              publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
+              stageReadyDeadlineMs:
+                (runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000)
+                + DEX_SCORING_STAGE_READY_WAIT_MS,
+              stageRecovery: {
+                graphApiKey: runtime.env.GRAPH_API_KEY ?? null,
+                coingeckoApiKey: runtime.coingeckoApiKey,
+                chainRpcs: runtime.chainRpcs,
+              },
+            },
+          );
         } catch (error) {
           dexPublication = {
             status: "error",

@@ -9,6 +9,7 @@ import { initMetrics } from "../pool-helpers";
 import {
   MissingDexLiquidityScoringStageError,
   DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
+  DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE,
   decodeDexLiquidityScoringStageChunks,
   encodeDexLiquidityScoringStageChunks,
   loadDexLiquidityScoringStage,
@@ -33,6 +34,7 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
 } {
   const underlyingByStatement = new WeakMap<object, D1PreparedStatement>();
   const bindingsByStatement = new WeakMap<object, unknown[]>();
+  const sqlByStatement = new WeakMap<object, string>();
   const chunkRunBindings: unknown[][] = [];
   let ambiguousChunkCommitCount = 0;
   let ambiguousFinalizationCommitCount = 0;
@@ -68,6 +70,7 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
     } as unknown as D1PreparedStatement;
     underlyingByStatement.set(wrapped as object, statement);
     bindingsByStatement.set(wrapped as object, bindings);
+    sqlByStatement.set(wrapped as object, sql);
     return wrapped;
   };
 
@@ -77,6 +80,16 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
       const result = await db.batch<T>(
         statements.map((statement) => underlyingByStatement.get(statement as object) ?? statement),
       );
+      const chunks = statements.filter((statement) =>
+        sqlByStatement.get(statement as object)?.includes("INSERT INTO dex_liquidity_scoring_stage_chunks"),
+      );
+      for (const statement of chunks) {
+        chunkRunBindings.push([...(bindingsByStatement.get(statement as object) ?? [])]);
+      }
+      if (chunks.length > 0 && ambiguousChunkCommitCount === 0) {
+        ambiguousChunkCommitCount++;
+        throw new Error("D1 DB is overloaded after committed scoring-stage chunk batch");
+      }
       return result;
     },
   });
@@ -525,6 +538,40 @@ describe("DEX liquidity scoring stage", () => {
     expect(previous.generationId).not.toBe(stored.generationId);
   });
 
+  it("batches bounded chunks without changing decoded output or generation totals", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const widths: number[] = [];
+    const db = makeNoopD1({
+      prepare: harness.db.prepare.bind(harness.db),
+      batch: async <T>(statements: D1PreparedStatement[]) => {
+        widths.push(statements.length);
+        return harness.db.batch<T>(statements);
+      },
+    });
+    const expected = decodeDexLiquidityScoringStageChunks([
+      ...encodeDexLiquidityScoringStageChunks(sourceState(), poolState(6_800)),
+    ]);
+    const stored = await persistDexLiquidityScoringStage(db, {
+      sourceSlotStartedAt: 11_000, syncStartSec: 11_010,
+      sourceState: sourceState(), poolState: poolState(6_800),
+    });
+    // Count durable chunks using manifest totals; all write batches are bounded,
+    // including the initial two-statement manifest transaction.
+    expect(stored.chunkCount).toBeGreaterThan(DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE);
+    expect(widths.every((width) => width <= DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE)).toBe(true);
+    expect(widths.filter((width) => width === DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE).length).toBe(
+      Math.floor(stored.chunkCount / DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE),
+    );
+    expect(widths.length).toBeLessThan(stored.chunkCount);
+    const loaded = await loadDexLiquidityScoringStage(harness.db, {
+      nowSec: 11_360, expectedSourceSlotStartedAt: 11_000,
+    });
+    expect(loaded.sourceState).toEqual(expected.sourceState);
+    expect(loaded.poolState).toEqual(expected.poolState);
+    expect(stored.recordCount).toBe(expected.recordCount);
+  });
+
   it("waits for the exact source slot to become ready without accepting an older stage", async () => {
     const harness = createLatestSchemaSqlite();
     openDatabases.push(harness.sqlite);
@@ -660,6 +707,7 @@ describe("DEX liquidity scoring stage", () => {
     const empty = await probeDexLiquidityScoringStageSlot(harness.db, sourceSlotStartedAt);
     expect(empty).toEqual({
       manifestState: "missing",
+      syncStartedAt: null,
       activeStageRun: false,
       lastStageRunStatus: null,
     });
@@ -684,6 +732,7 @@ describe("DEX liquidity scoring stage", () => {
     const liveProducer = await probeDexLiquidityScoringStageSlot(harness.db, sourceSlotStartedAt);
     expect(liveProducer).toEqual({
       manifestState: "ready",
+      syncStartedAt: sourceSlotStartedAt + 10,
       activeStageRun: true,
       lastStageRunStatus: "error",
     });
@@ -698,6 +747,7 @@ describe("DEX liquidity scoring stage", () => {
     const terminal = await probeDexLiquidityScoringStageSlot(harness.db, sourceSlotStartedAt);
     expect(terminal).toEqual({
       manifestState: "failed",
+      syncStartedAt: sourceSlotStartedAt + 10,
       activeStageRun: false,
       lastStageRunStatus: "error",
     });
@@ -722,7 +772,9 @@ describe("DEX liquidity scoring stage", () => {
 
     expect(injected.ambiguousChunkCommits()).toBe(1);
     expect(injected.ambiguousFinalizationCommits()).toBe(1);
-    expect(injected.chunkRunBindings()).toHaveLength(stored.chunkCount + 1);
+    expect(injected.chunkRunBindings()).toHaveLength(
+      stored.chunkCount + Math.min(stored.chunkCount, DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE),
+    );
     expect(injected.chunkRunBindings().every((bindings) =>
       bindings.length === 6
       && typeof bindings[2] === "string"
