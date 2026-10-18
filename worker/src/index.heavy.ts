@@ -1,11 +1,11 @@
 import type { HeavyEnv } from "./lib/env";
 
 const worker = {
-  async fetch(request: Request, env: HeavyEnv): Promise<Response> {
+  async fetch(request: Request, env: HeavyEnv, ctx?: ExecutionContext): Promise<Response> {
     // Lazy handler initialization keeps the scheduled-only heavy graphs cold
     // when serving the private service-binding canary (and vice versa).
     const { handlePlacedExecutorFetch } = await import("./handlers/scheduled/placed-executor");
-    return handlePlacedExecutorFetch(request, env);
+    return handlePlacedExecutorFetch(request, env, ctx);
   },
   async scheduled(event: ScheduledEvent, env: HeavyEnv, ctx: ExecutionContext): Promise<void> {
     const eventEntryMs = Date.now();

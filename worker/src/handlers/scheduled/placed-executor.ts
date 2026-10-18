@@ -6,8 +6,10 @@ import type { PlacedProjectTapeRequest } from "@shared/types/placed-executor";
 import { projectTape } from "../../cron/project-tape";
 import { timingSafeCompare } from "../../lib/auth";
 import { parseRequestJsonWithSchema } from "../../lib/api-json-body";
-import { settleAfterAbort } from "../../lib/cron-abort-settlement";
-import { CRON_TIMEOUT_MS, createSlotDeadline, assertSlotDeadline } from "../../lib/cron-timeouts";
+import { retainUntilDeadline, settleAfterAbort } from "../../lib/cron-abort-settlement";
+import {
+  CRON_TIMEOUT_MS, createSlotDeadline, assertSlotDeadline, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
+} from "../../lib/cron-timeouts";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { HeavyEnv } from "../../lib/env";
 import { parseJsonObject } from "../../lib/json-parse";
@@ -33,28 +35,39 @@ export async function runProjectTapeCanary(
     return failure("placed-executor-missing-fence");
   }
   const workDeadlineMs = Math.min(runtime.deadline.platformDeadlineMs, Date.now() + CRON_TIMEOUT_MS["project-tape"]);
+  if (workDeadlineMs <= Date.now() || signal.aborted) return failure("placed-executor-timeout");
   const payload: PlacedProjectTapeRequest = {
     job: "project-tape", scheduleKey: "dewsPsiOffset", slotStartedAt: runtime.slotStartedAt,
     eventEntryMs: runtime.deadline.eventEntryMs, deadlineMs: runtime.deadline.platformDeadlineMs, workDeadlineMs,
     invocationId: fence.invocationId, owner: fence.owner, generation: fence.generation,
   };
   const transportSignal = AbortSignal.any([signal, AbortSignal.timeout(Math.max(0, workDeadlineMs - Date.now()))]);
-  const settled = await settleAfterAbort(async () => {
-    let response: Response | undefined;
-    try {
-      response = await binding.fetch(new Request(PLACED_EXECUTOR_URL, {
-        method: "POST", headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
-        body: JSON.stringify(payload), signal: transportSignal,
-      }));
-      if (!response.ok) return failure("placed-executor-http-error");
-      const raw = await readResponseJsonWithinLimitWithSignal(response, PLACED_EXECUTOR_MAX_BODY_BYTES, transportSignal);
-      const parsed = PlacedProjectTapeResultSchema.safeParse(raw);
-      return parsed.success ? parsed.data : failure("placed-executor-invalid-result");
-    } finally {
-      await cancelResponseBodyQuietly(response);
-    }
+  let work: Promise<CronResult> | undefined;
+  const settled = await settleAfterAbort(() => {
+    work = (async () => {
+      let response: Response | undefined;
+      try {
+        response = await binding.fetch(new Request(PLACED_EXECUTOR_URL, {
+          method: "POST", headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
+          body: JSON.stringify(payload), signal: transportSignal,
+        }));
+        if (!response.ok) return failure("placed-executor-http-error");
+        const raw = await readResponseJsonWithinLimitWithSignal(response, PLACED_EXECUTOR_MAX_BODY_BYTES, transportSignal);
+        const parsed = PlacedProjectTapeResultSchema.safeParse(raw);
+        return parsed.success ? parsed.data : failure("placed-executor-invalid-result");
+      } finally {
+        await cancelResponseBodyQuietly(response);
+      }
+    })();
+    return work;
   }, transportSignal, { platformDeadlineMs: runtime.deadline.platformDeadlineMs });
-  if (settled.status === "aborted") return failure("placed-executor-timeout");
+  if (settled.status === "aborted") {
+    if (!settled.settled && work) {
+      runtime.ctx.waitUntil(retainUntilDeadline(work.then(() => undefined, () => undefined),
+        runtime.deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS));
+    }
+    return failure("placed-executor-timeout");
+  }
   if (settled.status === "rejected") return failure("placed-executor-transport-failed");
   return settled.value;
 }
@@ -115,7 +128,9 @@ function guardedProjectorDatabase(db: D1Database, payload: PlacedProjectTapeRequ
   });
 }
 
-export async function handlePlacedExecutorFetch(request: Request, env: HeavyEnv): Promise<Response> {
+export async function handlePlacedExecutorFetch(
+  request: Request, env: HeavyEnv, ctx?: Pick<ExecutionContext, "waitUntil">,
+): Promise<Response> {
   const secret = env.HEAVY_EXECUTOR_SHARED_SECRET;
   const provided = request.headers.get("authorization")?.replace(/^Bearer /, "");
   if (!secret || !provided || !(await timingSafeCompare(provided, secret))) {
@@ -141,30 +156,40 @@ export async function handlePlacedExecutorFetch(request: Request, env: HeavyEnv)
   const respond = (result: CronResult) => Response.json({ ...result,
     metadata: JSON.stringify({ ...parseJsonObject(result.metadata), ...evidence }),
   });
-  try {
-    assertSlotDeadline(deadline, signal);
-    // Durable one-shot marker lives with the existing slot record, so it survives
-    // isolate changes and is pruned by slot retention. Never clear it on failure.
-    const claim = await env.DB.prepare(`UPDATE cron_slot_executions SET metadata = json_set(
-      COALESCE(metadata, '{}'), '$.placedProjectTape', json_object('generation', ?))
-      WHERE slot_key = ? AND slot_started_at = ?
-        AND COALESCE(json_extract(metadata, '$.placedProjectTape.generation'), 0) <> ?
-        AND ${ACTIVE_EXECUTION_SQL}`).bind(payload.generation, payload.scheduleKey, payload.slotStartedAt,
-      payload.generation, ...executionBindings(payload)).run();
-    assertSlotDeadline(deadline, signal);
-    if ((claim.meta.changes ?? 0) !== 1) return respond(failure("placed-executor-duplicate-or-stale"));
-    const db = guardedProjectorDatabase(env.DB, payload, signal);
-    const settled = await settleAfterAbort(() => projectTape(db, signal), signal, {
-      platformDeadlineMs: deadline.platformDeadlineMs,
-    });
-    if (settled.status === "aborted") return respond(failure("placed-executor-timeout"));
-    if (settled.status === "rejected") return respond(failure("placed-executor-execution-failed"));
-    assertSlotDeadline(deadline, signal);
-    // A projector can degrade after catching a guarded write error. A final
-    // guard must succeed before returning any accepted result to the driver.
-    await db.batch([]);
-    return respond(settled.value);
-  } catch {
-    return respond(failure(signal.aborted ? "placed-executor-timeout" : "placed-executor-execution-failed"));
+  let work: Promise<CronResult> | undefined;
+  const settled = await settleAfterAbort(() => {
+    work = (async () => {
+      assertSlotDeadline(deadline, signal);
+      // Durable one-shot marker lives with the existing slot record, so it survives
+      // isolate changes and is pruned by slot retention. Never clear it on failure.
+      const claim = await env.DB.prepare(`UPDATE cron_slot_executions SET metadata = json_set(
+        COALESCE(metadata, '{}'), '$.placedProjectTape', json_object('generation', ?))
+        WHERE slot_key = ? AND slot_started_at = ?
+          AND COALESCE(json_extract(metadata, '$.placedProjectTape.generation'), 0) <> ?
+          AND ${ACTIVE_EXECUTION_SQL}`).bind(payload.generation, payload.scheduleKey, payload.slotStartedAt,
+        payload.generation, ...executionBindings(payload)).run();
+      assertSlotDeadline(deadline, signal);
+      if ((claim.meta.changes ?? 0) !== 1) return failure("placed-executor-duplicate-or-stale");
+      const db = guardedProjectorDatabase(env.DB, payload, signal);
+      const result = await projectTape(db, signal);
+      assertSlotDeadline(deadline, signal);
+      // Projectors may degrade after catching a write error; acceptance still
+      // requires live driver authority after their last D1 operation.
+      await db.batch([]);
+      return result;
+    })();
+    return work;
+  }, signal, { platformDeadlineMs: deadline.platformDeadlineMs });
+  if (settled.status === "aborted") {
+    if (!settled.settled && work) {
+      ctx?.waitUntil(retainUntilDeadline(work.then(() => undefined, () => undefined),
+        payload.deadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS));
+    }
+    return respond(failure("placed-executor-timeout"));
   }
+  if (settled.status === "rejected") {
+    return respond(failure(signal.aborted || deadline.remainingMs() <= 0
+      ? "placed-executor-timeout" : "placed-executor-execution-failed"));
+  }
+  return respond(settled.value);
 }

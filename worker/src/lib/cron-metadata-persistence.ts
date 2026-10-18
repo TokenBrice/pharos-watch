@@ -40,6 +40,7 @@ const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEnt
   "publicationStats", "apiErrorConfigs",
   "adapterTelemetryProgress",
   "publicationAbortCause", "publicationPhaseElapsedMs", "publicationPhaseTimingBasis",
+  "executorMode", "executorColo", "executorColoSource", "cfPlacement", "executorWorkerVersion", "executionGeneration",
 ].map((key) => [key, true]));
 // These are forensic-only cron copies. Active-price coverage is deliberately excluded:
 // the next producer and public-health reader reconstruct missing-asset streaks from it.

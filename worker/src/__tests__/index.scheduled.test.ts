@@ -520,7 +520,7 @@ describe("worker.scheduled", () => {
       HEAVY_EXECUTOR: { fetch: vi.fn(async () => Response.json({
         status: "ok", itemCount: 1,
         metadata: JSON.stringify({ reason: "tape-projection-completed", executorColo: "FRA" }),
-      })) } as Fetcher,
+      })), connect: () => { throw new Error("Unexpected executor socket connection"); } },
     });
     const schedules = Object.entries(CRON_TRIGGER_SCHEDULES).flatMap(
       ([scheduleKey, triggerSchedules]) =>

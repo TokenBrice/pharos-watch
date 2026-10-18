@@ -9,6 +9,8 @@ import { markScheduledChildStarted } from "../../../lib/scheduled-child-terminal
 import type { ScheduledChildIdentity } from "../../../lib/scheduled-child-terminal";
 import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeExecutionContext } from "../../../test-helpers/__shared/auth";
+import { compactCronMetadataForPersistence } from "../../../lib/cron-metadata-persistence";
 
 const mocks = vi.hoisted(() => ({ projectTape: vi.fn(), dews: vi.fn(), psi: vi.fn() }));
 vi.mock("../../../cron/project-tape", () => ({ projectTape: mocks.projectTape }));
@@ -27,10 +29,11 @@ function driver(fetch: Mock, flag = "on") {
   const now = Date.now();
   return makeScheduledRuntime({
     scheduleKey: "dewsPsiOffset", slotStartedAt: Math.floor(now / 1000), deadline: createSlotDeadline(now),
+    ctx: makeExecutionContext().ctx,
     executionFence: { scheduleKey: "dewsPsiOffset", slotStartedAt: Math.floor(now / 1000),
       invocationId: "driver", owner: "owner", generation: 3, workerRole: "public" },
     env: createWorkerEnv({ PROJECT_TAPE_PLACED_EXECUTOR: flag, HEAVY_EXECUTOR_SHARED_SECRET: SECRET,
-      HEAVY_EXECUTOR: { fetch } as Fetcher }),
+      HEAVY_EXECUTOR: { fetch, connect: () => { throw new Error("Unexpected executor socket connection"); } } }),
   });
 }
 
@@ -130,11 +133,13 @@ describe("project-tape placed-fetch canary", () => {
     });
     const fetch = vi.fn(() => new Promise<Response>(() => {}));
     const runtime = driver(fetch);
+    const waitUntil = vi.spyOn(runtime.ctx, "waitUntil");
     runtime.deadline = createSlotDeadline(Date.now(), Date.now() + 10);
     const pending = runProjectTapeCanary(runtime, new AbortController().signal, vi.fn());
     await vi.advanceTimersByTimeAsync(20);
     expect(JSON.parse((await pending).metadata!).reason).toBe("placed-executor-timeout");
     expect(fetch).toHaveBeenCalledOnce();
+    expect(waitUntil).toHaveBeenCalledOnce();
     expect(mocks.projectTape).not.toHaveBeenCalled();
   });
 
@@ -220,5 +225,50 @@ describe("project-tape placed-fetch canary", () => {
     const result = PlacedProjectTapeResultSchema.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
     expect(result.status).toBe("error");
     expect(sqlite.prepare("SELECT value FROM cache WHERE key='canary-write'").get()).toBeUndefined();
+  });
+
+  it("retains a timed-out executor admission tail without starting late projector work", async () => {
+    const { env, payload } = await executorFixture();
+    vi.useFakeTimers();
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new Error("test-executor-timeout")), ms);
+      return controller.signal;
+    });
+    payload.workDeadlineMs = Date.now() + 10;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let admitted!: () => void;
+    const claimStarted = new Promise<void>((resolve) => { admitted = resolve; });
+    const prepare = env.DB.prepare.bind(env.DB);
+    vi.spyOn(env.DB, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      const bind = statement.bind.bind(statement);
+      statement.bind = (...args) => {
+        const bound = bind(...args);
+        const run = bound.run.bind(bound);
+        vi.spyOn(bound, "run").mockImplementation(async () => { admitted(); await held; return run(); });
+        return bound;
+      };
+      return statement;
+    });
+    const waitUntil = vi.fn<(work: Promise<unknown>) => void>();
+    const pending = handlePlacedExecutorFetch(internalRequest(payload), env, { waitUntil });
+    await claimStarted;
+    await vi.advanceTimersByTimeAsync(20);
+    expect(PlacedProjectTapeResultSchema.parse(await (await pending).json()).error).toBe("placed-executor-timeout");
+    expect(waitUntil).toHaveBeenCalledOnce();
+    release();
+    await Promise.all(waitUntil.mock.calls.map(([work]) => work));
+    expect(mocks.projectTape).not.toHaveBeenCalled();
+  });
+
+  it("retains executor placement evidence through the Wave A metadata byte budget", () => {
+    const evidence = { executorMode: "placed-fetch", executorColo: "FRA", executorColoSource: "request.cf.colo",
+      cfPlacement: "remote-FRA", executorWorkerVersion: "heavy-version", executionGeneration: 3 };
+    const result = compactCronMetadataForPersistence(JSON.stringify({ ...evidence, forensicPayload: "x".repeat(100_000) }),
+      undefined, "project-tape");
+    expect(result.compacted).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject(evidence);
   });
 });
