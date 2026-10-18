@@ -26,7 +26,7 @@ import {
 } from "@shared/types/stablecoin-taxonomy";
 import { PEG_METADATA } from "@shared/lib/classification";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { CUSTODY_MODEL_VALUES } from "@shared/types/core";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import {
@@ -263,8 +263,8 @@ export interface ScreenerRow {
   safetyGrade: ReportCardGrade | null;
   /** Safety overall score (0–100). null = unrated. */
   safetyScore: number | null;
-  ratingStatus: SafetyScoreV9CurrentCard["ratingStatus"] | null;
-  partialEvidence: SafetyScoreV9CurrentCard["partialEvidence"];
+  ratingStatus: ReportCardsV9TableCard["ratingStatus"] | null;
+  partialEvidence: ReportCardsV9TableCard["partialEvidence"];
   safetyBackingScore: number | null;
   safetyExitScore: number | null;
   safetyControlScore: number | null;

@@ -9,7 +9,7 @@ import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { buildAltPegLinkHubGroups } from "@/lib/alt-peg-market";
 import type {
-  DexLiquidityMap,
+  DexLiquidityTableMap,
   PegCurrency,
   PegSummaryCoin,
   StablecoinData,
@@ -41,7 +41,7 @@ interface AltPegStablecoinTableProps {
   isLoading: boolean;
   logos?: Record<string, string>;
   pegScores?: Map<string, PegSummaryCoin>;
-  dexLiquidity?: DexLiquidityMap;
+  dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
   sourceGenerations?: StablecoinTableSourceGenerations;
 }

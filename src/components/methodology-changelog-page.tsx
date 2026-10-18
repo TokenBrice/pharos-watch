@@ -11,6 +11,7 @@ import {
   toMethodologyVersionLabel,
 } from "@shared/lib/methodology-versions/base";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { METHODOLOGY_RECENT_VERSIONS, methodologyDetailAnchors } from "@shared/lib/methodology-versions/archives";
 
 interface MethodologyChangelogPageProps {
   breadcrumbName: string;
@@ -24,6 +25,10 @@ interface MethodologyChangelogPageProps {
   children?: React.ReactNode;
   footerContent?: React.ReactNode;
   jsonLdIdentifier?: PharosUrnJsonLdIdentifier;
+  history?: {
+    archivePath: (version: string) => string;
+    anchorId: (version: string) => string;
+  };
 }
 
 export function MethodologyChangelogPage({
@@ -38,14 +43,15 @@ export function MethodologyChangelogPage({
   children,
   footerContent,
   jsonLdIdentifier,
+  history,
 }: MethodologyChangelogPageProps) {
   const derivedSections = [
     { id: "overview", label: "Overview" },
     { id: "latest-updates", label: "Latest" },
-    ...entries.map((entry) => ({
+    ...(history ? [{ id: "earlier-versions", label: "Earlier versions" }] : entries.map((entry) => ({
       id: methodologyChangelogEntryId(entry.version),
       label: toMethodologyVersionLabel(entry.version),
-    })),
+    }))),
   ];
 
   const navSections = sections ?? derivedSections;
@@ -96,8 +102,8 @@ export function MethodologyChangelogPage({
             <h2 className="text-xl font-semibold text-foreground">{title} version history</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Use this changelog to trace how Pharos changed the related scoring, data-source, threshold, or
-              interpretation rules over time. The latest card below is the current public contract; older entries are
-              retained so historical charts and citations can be read against the rules active at the time.
+              interpretation rules over time. Entries record the contract active at each release; archived rules
+              are retained so historical charts and citations can be read against the rules active at the time.
             </p>
           </div>
           <div className="space-y-2 border-border/50 lg:border-l lg:pl-5">
@@ -171,15 +177,38 @@ export function MethodologyChangelogPage({
           )}
 
           <div className="space-y-4">
-            {entries.map((entry, index) => (
+            {(history ? entries.slice(0, METHODOLOGY_RECENT_VERSIONS) : entries).map((entry, index) => (
               <MethodologyVersionCard
                 key={entry.version}
                 entry={entry}
-                entryId={methodologyChangelogEntryId(entry.version)}
+                entryId={history?.anchorId(entry.version) ?? methodologyChangelogEntryId(entry.version)}
                 defaultOpen={index === 0}
+                archiveHref={history ? `${history.archivePath(entry.version)}#${history.anchorId(entry.version)}` : undefined}
               />
             ))}
           </div>
+          {history && entries.length > METHODOLOGY_RECENT_VERSIONS && (
+            <section id="earlier-versions" className="scroll-mt-28 space-y-4">
+              <h2 className="pharos-section-title">Earlier versions</h2>
+              <p className="text-sm text-muted-foreground">Compact summaries retain historical citation targets. Open a version archive for its full evidence and commit provenance.</p>
+              <ol className="divide-y divide-border/60">
+                {entries.slice(METHODOLOGY_RECENT_VERSIONS).map((entry) => (
+                  <li key={entry.version} id={history.anchorId(entry.version)} className="scroll-mt-28 space-y-1 py-3">
+                    <Link href={`${history.archivePath(entry.version)}#${history.anchorId(entry.version)}`} prefetch={false} className="pharos-focus-ring rounded-sm text-sm font-medium underline underline-offset-4">
+                      {toMethodologyVersionLabel(entry.version)} · {entry.title}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">{formatMethodologyDisplayDate(entry.date)}</p>
+                    <p className="max-w-3xl text-sm text-muted-foreground">{entry.summary}</p>
+                    {methodologyDetailAnchors(entry.detail).map((anchor) => (
+                      <Link key={anchor.id} id={anchor.id} href={`${history.archivePath(entry.version)}#${anchor.id}`} prefetch={false} className="pharos-prose-link block scroll-mt-28 text-xs">
+                        {anchor.label}
+                      </Link>
+                    ))}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
         </>
       )}
       {footerContent}

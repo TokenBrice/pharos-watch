@@ -14,7 +14,6 @@ import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
 import {
   buildGraphData,
   buildSupernodeState,
-  DEFAULT_NODE_LIMIT,
   MIN_RADIUS,
   HEIGHT,
   runSimulationInChunks,
@@ -29,6 +28,7 @@ import {
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { trackEvent } from "@/lib/analytics";
 import { NODE_LIMIT_OPTIONS } from "@/lib/contagion-layout";
+import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
 import { highlightedExposureEdges, type ExposureOverlay } from "./contagion-graph-exposure";

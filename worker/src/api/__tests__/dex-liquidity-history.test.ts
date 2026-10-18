@@ -3,13 +3,27 @@ import { describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
-import { handleDexLiquidityHistory } from "../dex-liquidity-history";
+import { handleDexLiquidityHistory, handleDexLiquidityChartHistory } from "../dex-liquidity-history";
 import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { DexLiquidityHistoryResponseSchema } from "@shared/types/market";
 
 describe("handleDexLiquidityHistory", () => {
   const row = makeDexLiquidityHistoryRow();
 
+
+  it("reads the chart projection without loading or parsing executable-route dossiers", async () => {
+    const db = mockD1([{ match: "dex_liquidity_history", rows: [{ ...row, exit_route_summary_json: null }] }]);
+    const response = await handleDexLiquidityChartHistory(
+      db, new URL("https://x/api/dex-liquidity-chart-history?stablecoin=usdt-tether&days=90"),
+    );
+    const body = DexLiquidityHistoryResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body[0]).toMatchObject({ tvl: row.total_tvl_usd, volume24h: row.total_volume_24h_usd });
+    expect(body[0]).not.toHaveProperty("exitRouteObservations");
+    expect(db.getHistory()[0]!.sql).toContain("NULL AS exit_route_summary_json");
+    expect(db.getHistory()[0]!.sql).toContain("stablecoin_id = ? AND snapshot_date >= ?");
+    expect(db.getHistory()[0]!.binds[0]).toBe("usdt-tether");
+    expect(response.headers.get("Cache-Control")).toBeTruthy();
+  });
   it.each([
     { coverage_class: "primary", coverage_confidence: null },
     { coverage_class: "invalid", coverage_confidence: 1 },
@@ -201,4 +215,10 @@ registerStablecoinParameterContract({
   name: "DEX liquidity history",
   path: "/api/dex-liquidity-history",
   invoke: handleDexLiquidityHistory,
+});
+
+registerStablecoinParameterContract({
+  name: "DEX liquidity chart history",
+  path: "/api/dex-liquidity-chart-history",
+  invoke: handleDexLiquidityChartHistory,
 });

@@ -9,7 +9,7 @@ import {
   useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
-  useReportCardsV9,
+  useReportCardsV9Table,
   useStressSignals,
   useYieldRankings,
 } from "@/hooks/api-hooks";
@@ -78,14 +78,19 @@ async function defaultFetchSnapshot(sid: string, signal: AbortSignal): Promise<S
   }
 }
 
-export function useSelector(input: SelectorInput | null, sid: string | null): UseSelectorResult {
-  const stablecoins = useStablecoins();
-  const pegSummary = usePegSummary();
-  const reportCards = useReportCardsV9();
-  const stressSignals = useStressSignals();
-  const dexLiquidity = useDexLiquidity();
-  const yieldRankings = useYieldRankings();
-  const bluechipRatings = useBluechipRatings();
+export function useSelector(
+  input: SelectorInput | null,
+  sid: string | null,
+  evaluationEnabled = input !== null || sid !== null,
+): UseSelectorResult {
+  const enabled = evaluationEnabled || sid !== null;
+  const stablecoins = useStablecoins({ enabled });
+  const pegSummary = usePegSummary({ enabled });
+  const reportCards = useReportCardsV9Table({ enabled });
+  const stressSignals = useStressSignals({ enabled });
+  const dexLiquidity = useDexLiquidity({ enabled });
+  const yieldRankings = useYieldRankings({ enabled });
+  const bluechipRatings = useBluechipRatings({ enabled });
   const snapshotRequests = useRef(new RequestSequence());
 
   const [snapshotState, setSnapshotState] = useState<
@@ -152,12 +157,14 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     bluechipRatings.dataUpdatedAt ?? 0,
   );
 
-  const engineResult = useMemo<SelectorEngineResult>(() => {
-    if (!liveInput || !datasetReady) return { kind: "pending" };
-
-    const dataset = buildSelectorRows({
+  // Answer changes rerank the same admitted universe; only peg selection or
+  // source generations rebuild rows, normalization and the dataset hash.
+  const pegCurrency = liveInput?.pegCurrency;
+  const dataset = useMemo(() => {
+    if (!enabled || !pegCurrency || !datasetReady) return null;
+    return buildSelectorRows({
       stablecoinsData: stablecoins.data ?? null,
-      pegCurrency: liveInput.pegCurrency,
+      pegCurrency,
       pegData: pegSummary.data ?? null,
       reportData: reportCards.data ?? null,
       stressData: stressSignals.data ?? null,
@@ -166,7 +173,22 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
       bluechipData: bluechipRatings.data ?? null,
       now: selectorTimestamp,
     });
+  }, [
+    bluechipRatings.data,
+    datasetReady,
+    dexLiquidity.data,
+    enabled,
+    pegCurrency,
+    pegSummary.data,
+    reportCards.data,
+    selectorTimestamp,
+    stablecoins.data,
+    stressSignals.data,
+    yieldRankings.data,
+  ]);
 
+  const engineResult = useMemo<SelectorEngineResult>(() => {
+    if (!enabled || !liveInput || !dataset) return { kind: "pending" };
     try {
       return {
         kind: "ready",
@@ -184,18 +206,7 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
       console.error("[selector] Selector engine failed", error);
       return { kind: "error", reason: "engine-failed" };
     }
-  }, [
-    bluechipRatings.data,
-    datasetReady,
-    dexLiquidity.data,
-    liveInput,
-    pegSummary.data,
-    reportCards.data,
-    selectorTimestamp,
-    stablecoins.data,
-    stressSignals.data,
-    yieldRankings.data,
-  ]);
+  }, [dataset, enabled, liveInput]);
 
   if (sid) {
     if (snapshotState.kind === "loading") return { status: "snapshot-loading" };
@@ -227,7 +238,7 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     }
   }
 
-  if (!input) return { status: "loading" };
+  if (!enabled || !input) return { status: "loading" };
   if (criticalQueryFailed) return { status: "error", reason: "selector-data-unavailable" };
   if (!datasetReady) return { status: "loading" };
   if (engineResult.kind === "ready") return { status: "ready", output: engineResult.output };

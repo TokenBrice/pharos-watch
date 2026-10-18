@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -237,7 +237,7 @@ export function buildLighthouseArgs({
   ];
 }
 
-function printScoreSummary(
+export function printScoreSummary(
   report: LighthouseReport,
   reportPath: string,
   threshold: number,
@@ -262,6 +262,17 @@ function printScoreSummary(
     console.log(`[lighthouse-static] ${label}: ${value}`);
   }
   console.log(`[lighthouse-static] Report: ${reportPath}`);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+      `\n### Lighthouse: ${reportPath}`,
+      `Form factor: ${formFactor}; throttling: ${throttlingMethod}; score threshold: ${threshold}.`,
+      "",
+      "| Metric | Measured |",
+      "| --- | --- |",
+      ...summary.map(([label, value]) => `| ${label} | ${value} |`),
+      "",
+    ].join("\n"));
+  }
 
   if (score < threshold) {
     throw new Error(`Lighthouse performance score ${score} is below threshold ${threshold}`);

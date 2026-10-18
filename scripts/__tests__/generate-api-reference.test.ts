@@ -23,6 +23,15 @@ describe("API reference generated markers", () => {
 });
 
 describe("API reference endpoint narratives", () => {
+  it("points catalog integration guidance at the canonical Reference document", () => {
+    const linked = PUBLIC_API_ARTIFACT_ENDPOINTS.filter((endpoint) => endpoint.description.includes("https://pharos.watch/api/"));
+    expect(linked.length).toBeGreaterThan(0);
+    for (const endpoint of linked) {
+      expect(endpoint.description).toContain("https://pharos.watch/api/reference/#");
+      expect(endpoint.description).not.toContain("https://pharos.watch/api/#");
+    }
+  });
+
   it("uses catalog descriptions through OpenAPI without a second operation inventory", () => {
     const spec = loadOpenapi();
     const routes = collectOpenApiRoutes(spec);

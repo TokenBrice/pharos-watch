@@ -16,6 +16,7 @@ import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@sha
 import { API_PAGE_ANCHORS, DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
 import { DONOR_KEY_QUALIFYING_STABLECOINS } from "@shared/lib/funding/donor-eligibility";
 import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
 const PHAROS_FUNDING_ENS = "pharos-watch.eth";
@@ -554,7 +555,7 @@ function WalletTile() {
                 key={c}
                 className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-3xs"
               >
-                {meta?.logoPath ? <Image src={meta.logoPath} alt="" width={12} height={12} /> : null}
+                {meta?.logoPath ? <Image src={resolveCompactLogoSrc(meta.logoPath, 12)!} alt="" width={12} height={12} /> : null}
                 {meta?.name ?? c}
               </span>
             );

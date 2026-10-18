@@ -14,6 +14,32 @@ import { expandEvidenceModuleFor } from "@/components/stablecoin-detail/evidence
 /** Dispatched on a hidden `[data-tab-panel]` that holds a hash target; its tab group selects it synchronously. */
 export const TAB_PANEL_REVEAL_EVENT = "pharos:tab-panel-reveal";
 
+/** Mount only the deferred islands preceding or inside the requested longform zone. */
+export function revealDeferredSectionsThroughAnchor(
+  sectionId: string,
+  zoneIds: readonly string[],
+  root: HTMLElement | null,
+): void {
+  const target = document.getElementById(sectionId);
+  if (!root || !target || !root.contains(target)) return;
+  const zones = zoneIds.map((id) => document.getElementById(id))
+    .filter((zone): zone is HTMLElement => zone !== null && root.contains(zone));
+  const nextZone = zones.find((zone) => zone !== target
+    && Boolean(target.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING)
+    && !zone.contains(target));
+  for (const deferred of root.querySelectorAll<HTMLElement>("[data-lazy-section]")) {
+    if (nextZone && !(deferred.compareDocumentPosition(nextZone) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+    deferred.dispatchEvent(new Event("pharos:lazy-section-reveal"));
+  }
+}
+
+interface AnchorAlignmentOptions {
+  /** Mount the intended islands before each measurement, including newly loaded descendants. */
+  beforeAlign?: () => void;
+  /** Scrollspy supplies its measured sticky offset; nested targets use CSS scroll margins. */
+  align?: () => void;
+}
+
 function revealAnchorTarget(target: HTMLElement | null): void {
   if (!target) return;
 
@@ -58,8 +84,12 @@ export function revealAnchorId(sectionId: string): HTMLElement | null {
   return twin;
 }
 
-/** Re-align a nested anchor while lazy sections settle; click jumps skip the initial frame. */
-export function alignAnchorAfterHydration(sectionId: string, alignOnNextFrame = true): () => void {
+/** Re-align an anchor while lazy sections settle; click jumps skip the initial frame. */
+export function alignAnchorAfterHydration(
+  sectionId: string,
+  alignOnNextFrame = true,
+  { beforeAlign, align: alignTarget }: AnchorAlignmentOptions = {},
+): () => void {
   const initialHash = window.location.hash;
   let cancelled = false;
   const align = () => {
@@ -70,7 +100,9 @@ export function alignAnchorAfterHydration(sectionId: string, alignOnNextFrame = 
     }
     // An initial-position correction must not animate through every lazy
     // section: CSS smooth scrolling delays mounting and retargets mid-flight.
-    revealAnchorId(sectionId)?.scrollIntoView({ block: "start", behavior: "instant" });
+    beforeAlign?.();
+    if (alignTarget) alignTarget();
+    else revealAnchorId(sectionId)?.scrollIntoView({ block: "start", behavior: "instant" });
   };
   // Match the bounded passport-link cadence; instant also respects reduced motion.
   const frame = alignOnNextFrame ? window.requestAnimationFrame(align) : 0;
@@ -85,7 +117,13 @@ export function alignAnchorAfterHydration(sectionId: string, alignOnNextFrame = 
         pending = window.requestAnimationFrame(align);
       });
   observer?.observe(document.body);
-  const deadline = window.setTimeout(() => stop(), 6000);
+  // Chunk completion can mount another deferred child without changing the reserve's height.
+  const mutations = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => {
+    window.cancelAnimationFrame(pending);
+    pending = window.requestAnimationFrame(align);
+  });
+  mutations?.observe(document.body, { childList: true, subtree: true });
+  const deadline = window.setTimeout(() => stop(), 15000);
   const stop = () => {
     cancelled = true;
     window.cancelAnimationFrame(frame);
@@ -93,6 +131,7 @@ export function alignAnchorAfterHydration(sectionId: string, alignOnNextFrame = 
     timers.forEach((timer) => window.clearTimeout(timer));
     window.clearTimeout(deadline);
     observer?.disconnect();
+    mutations?.disconnect();
     window.removeEventListener("hashchange", stop);
     for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
       window.removeEventListener(event, stop);

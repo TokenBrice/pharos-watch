@@ -12,9 +12,13 @@ Current aggregation admits each `CLIENT_CORE_AGGREGATE_ACTIVE_IDS` member once a
 
 Supply uses nullable helpers: absent/empty/invalid is unavailable, finite zero is measured. Snapshot/cohort rows disclose observed/unavailable counts with known subtotals. No observed member means no numeric cap; incomplete denominators withhold shares. Partial cohorts remain visible with coverage. Atlas unknown markers are neutral, distinct from zero-floor size, with explicit accessible unavailable labels; partial plotted supply cannot receive complete-cohort ranks.
 
+The asset table reads scores from the compact DEX table projection (`useDexLiquidityTable`), not the full pool-detail map; missing scores remain unavailable and observed zero stays numeric.
+
 ### Permanent Series Boundary
 
 Current core-universe aggregates and historical provider-wide series are different populations. `useStablecoinCharts()` plus selected Worker-reconciled structural supply overlays supplies cohort history. Never append a current core sum to that history; no shadow core-history tail is implied. Latest history is dated provider-wide sample, not current core cap.
+
+Cohort history starts alongside the current stablecoin query, before the page's current-market loading return. Its mounted chart reuses the same canonical query key and producer-cadence options; there is no second history cache or polling policy.
 
 `useNonUsdShare()` non-commodity history includes currency-linked and other non-commodity pegs, not pure fiat only. Numeric cohort/share observations are required; malformed data is unavailable, not zero. Coverage uses `interior-gap-prior-value`: observed value over observed plus prior-value estimates for missing core assets, including trailing holes. This cannot census assets with no history. Existing endpoint publication floors remain producer-owned. Headline/tooltips/tables/annual changes qualify partial or unknown coverage.
 

@@ -8,7 +8,105 @@ import {
   methodNotAllowedResponse,
   noStoreResponse,
   withResponseHeaders,
+  conditionalGetResponse,
+  scopeResponseEtag,
+  withRepresentationEtag,
 } from "../api-response";
+import { addCorsHeaders } from "../../handlers/http/cors";
+
+describe("conditional GET representations", () => {
+  const now = 1_800_000_000;
+  afterEach(() => vi.restoreAllMocks());
+  function representation(generation = "generation-1", overlay = "current", attemptedAt = now - 5) {
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    return scopeResponseEtag(withRepresentationEtag(new Response('{"cards":[]}', {
+      headers: {
+        "Cache-Control": overlay === "held" ? "no-store" : "public, s-maxage=60, max-age=10",
+        Date: new Date((now - 5) * 1000).toUTCString(),
+        Age: "5",
+        "Content-Length": "12",
+        "X-Safety-Score-Status": overlay,
+        "X-Data-Updated-At": String(now - 30),
+        "X-Data-Freshness-Budget": "120",
+        "X-Data-Assessed-At": String(now - 5),
+      },
+    }), { version: 1, generation, overlay, attemptedAt }), "/api/report-cards/v9", false);
+  }
+
+  it("returns empty 304 for unchanged generations with weak/list matching and preserves CORS and clocks", async () => {
+    const first = representation();
+    const etag = first.headers.get("ETag")!;
+    const response = addCorsHeaders(conditionalGetResponse(new Request("https://site-api.pharos.watch/api/report-cards/v9", {
+      headers: { "If-None-Match": `"another", ${etag.replace(/^W\//, "")}` },
+    }), first), "https://pharos.watch");
+    expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
+    await expect(response.text()).resolves.toBe("");
+    expect(response.headers.get("ETag")).toBe(etag);
+    expect(response.headers.get("Age")).toBe("5");
+    expect(response.headers.get("Date")).toBe(new Date((now - 5) * 1000).toUTCString());
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 30));
+    expect(response.headers.get("X-Data-Assessed-At")).toBe(String(now - 5));
+    expect(response.headers.get("X-Data-Freshness-Budget")).toBe("120");
+    expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=60, max-age=10");
+    expect(response.headers.get("Content-Length")).toBeNull();
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(response.headers.get("Access-Control-Expose-Headers")).toContain("ETag");
+  });
+
+  it("returns 200 with a new validator for changed generation or mutable health", () => {
+    const etag = representation().headers.get("ETag")!;
+    for (const changed of [representation("generation-2"), representation("generation-1", "current", now - 1)]) {
+      const response = conditionalGetResponse(new Request("https://site-api.pharos.watch/api/report-cards/v9", {
+        headers: { "If-None-Match": etag },
+      }), changed);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("ETag")).not.toBe(etag);
+    }
+  });
+
+  it("returns held 200/no-store without inherited reusable validators", () => {
+    const etag = representation().headers.get("ETag")!;
+    const held = representation("generation-1", "held");
+    held.headers.set("ETag", etag);
+    held.headers.set("Last-Modified", new Date(now * 1000).toUTCString());
+    const response = conditionalGetResponse(new Request("https://site-api.pharos.watch/api/report-cards/v9", {
+      headers: { "If-None-Match": etag },
+    }), held);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("ETag")).toBeNull();
+    expect(response.headers.get("Last-Modified")).toBeNull();
+  });
+
+  it.each(["http-date", "http-age", "producer-budget"])("never resurrects expired %s", (kind) => {
+    const response = representation();
+    const etag = response.headers.get("ETag")!;
+    if (kind === "http-date") response.headers.set("Date", new Date((now - 60) * 1000).toUTCString());
+    if (kind === "http-age") response.headers.set("Age", "60");
+    if (kind === "producer-budget") response.headers.set("X-Data-Freshness-Budget", "30");
+    expect(conditionalGetResponse(new Request("https://site-api.pharos.watch/api/report-cards/v9", {
+      headers: { "If-None-Match": etag },
+    }), response).status).toBe(200);
+  });
+
+  it("does not collide full, projected or coin-specific representations", () => {
+    const base = representation();
+    const tags = ["/api/feed", "/api/feed?projection=summary", "/api/feed-coin?stablecoin=usdt", "/api/feed-coin?stablecoin=usdc"]
+      .map((path) => scopeResponseEtag(base.clone(), path, true).headers.get("ETag"));
+    expect(new Set(tags).size).toBe(4);
+  });
+
+  it("uses a unique stored response publication when no complete producer identity exists", () => {
+    const first = scopeResponseEtag(new Response("first", { headers: { "Cache-Control": "public, max-age=60" } }), "/api/feed", true);
+    const second = scopeResponseEtag(new Response("second", { headers: { "Cache-Control": "public, max-age=60" } }), "/api/feed", true);
+    expect(first.headers.get("ETag")).not.toBe(second.headers.get("ETag"));
+    const response = conditionalGetResponse(new Request("https://site-api.pharos.watch/api/feed", {
+      headers: { "If-None-Match": first.headers.get("ETag")! },
+    }), first);
+    expect(response.status).toBe(304);
+  });
+});
 
 describe("errorResponse", () => {
   it("returns JSON error with given status", async () => {

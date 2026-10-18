@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { PSI_CONDITION_BAND_VALUES } from "../stability-constants";
 import {
-  PSI_CONDITION_BAND_VALUES,
   StabilityIndexResponseSchema,
   UsdsStatusResponseOutputSchema,
   UsdsStatusResponseSchema,

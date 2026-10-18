@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { Newspaper, Send } from "lucide-react";
-import { useDailyDigest, useDigestArchive } from "@/hooks/api-hooks";
-import { splitDigestParagraphs } from "@/lib/digest";
+import { useDigestPromo } from "@/hooks/api-hooks";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
-import type { DigestArchiveEntry } from "@shared/types";
+import type { DigestPromoEdition } from "@shared/types/digest";
 
 
 function compactDigestText(value: string | null | undefined): string | null {
@@ -14,45 +13,19 @@ function compactDigestText(value: string | null | undefined): string | null {
   return compact ? compact : null;
 }
 
-function getPreviousDailyEditions({
-  entries,
-  currentEditionNumber,
-  currentGeneratedAt,
-}: {
-  entries: readonly DigestArchiveEntry[] | undefined;
-  currentEditionNumber: number | null | undefined;
-  currentGeneratedAt: number | null | undefined;
-}): DigestArchiveEntry[] {
-  if (!entries?.length) return [];
-  return entries
-    .filter((entry) => (entry.digestType ?? "daily") !== "weekly")
-    .filter((entry) => {
-      if (currentEditionNumber != null && entry.editionNumber === currentEditionNumber) return false;
-      if (currentGeneratedAt != null && entry.generatedAt === currentGeneratedAt) return false;
-      return true;
-    })
-    .slice(0, 2);
-}
 
 // Promo card sitting at the top-right of the Market Pulse band. Unlike its
 // data siblings it carries no live signal, so it leads with the serif digest
 // nameplate and two CTAs instead of the label + expand header pattern.
 export function DailyDigestCard(): React.JSX.Element {
-  const { data } = useDailyDigest();
-  const { data: archiveData } = useDigestArchive();
-  const title = data
-    ? compactDigestText(data.digestTitle) ?? "Daily Digest"
+  const { data } = useDigestPromo();
+  const latest = data?.latest;
+  const title = latest
+    ? compactDigestText(latest.digestTitle) ?? "Daily Digest"
     : "Daily digest is unavailable — read the latest on Telegram";
-  const editionPrefix = data?.editionNumber ? `#${data.editionNumber}` : null;
-  const previousEditions = getPreviousDailyEditions({
-    entries: archiveData?.digests,
-    currentEditionNumber: data?.editionNumber,
-    currentGeneratedAt: data?.generatedAt,
-  });
-  const text = data
-    ? compactDigestText(data.digest) ??
-      compactDigestText(splitDigestParagraphs(data.digestExtended)[0])
-    : null;
+  const editionPrefix = latest?.editionNumber ? `#${latest.editionNumber}` : null;
+  const previousEditions = data?.previousEditions ?? [];
+  const text = latest?.excerpt;
 
   return (
     <div className="pharos-card-shell relative h-full min-h-0 overflow-hidden px-5 pt-7 text-center">
@@ -116,7 +89,7 @@ function DigestFoldPreview({
   entry,
   className,
 }: {
-  entry: DigestArchiveEntry | undefined;
+  entry: DigestPromoEdition | undefined;
   className: string;
 }): React.JSX.Element {
   const title = compactDigestText(entry?.digestTitle);

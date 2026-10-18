@@ -75,7 +75,7 @@ afterEach(() => {
 describe("ScreenerTable mobile cards", () => {
   it("server-renders a cheap pending branch before viewport hydration", () => {
     const html = renderToStaticMarkup(
-      <ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />,
+      <ScreenerTable rows={[rowWithSeries]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />,
     );
 
     expect(html).toContain("stablecoin-screener-layout-pending");
@@ -87,7 +87,7 @@ describe("ScreenerTable mobile cards", () => {
     const toggleSort = vi.fn();
     installViewportMatchMedia(500);
 
-    render(<ScreenerTable rows={[row]} isLoading={false} hasActiveFilters={false} sort={makeSort({ toggleSort })} />);
+    render(<ScreenerTable rows={[row]} dataState="ready" hasActiveFilters={false} sort={makeSort({ toggleSort })} />);
 
     await waitFor(() => {
       expect(screen.getAllByText("USDT").length).toBeGreaterThan(0);
@@ -112,7 +112,7 @@ describe("ScreenerTable desktop table", () => {
   it("labels the safety summary badge with the projected V9 grade and score", async () => {
     installViewportMatchMedia(1400);
 
-    render(<ScreenerTable rows={[row]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
+    render(<ScreenerTable rows={[row]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Safety grade B+, score 82")).toBeTruthy();
@@ -122,7 +122,7 @@ describe("ScreenerTable desktop table", () => {
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {
     installViewportMatchMedia(900);
 
-    render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
+    render(<ScreenerTable rows={[rowWithSeries]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
@@ -134,7 +134,7 @@ describe("ScreenerTable desktop table", () => {
   it("renders xl sparkline SVGs and labels the peg column as a worst/current range", async () => {
     installViewportMatchMedia(1400);
 
-    render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
+    render(<ScreenerTable rows={[rowWithSeries]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
       expect(screen.getByRole("img", { name: /Peg range: worst \/ current for USDT/i })).toBeTruthy();
@@ -146,5 +146,88 @@ describe("ScreenerTable desktop table", () => {
     expect(screen.getByText("Peg range").closest("th")?.getAttribute("title")).toBe(
       "Peg range: worst / current deviation (±bps around the peg)",
     );
+  });
+});
+
+describe("ScreenerTable pagination", () => {
+  const rows = Array.from({ length: 55 }, (_, index) => ({
+    ...row,
+    id: `coin-${index}`,
+    name: `Coin ${index}`,
+    symbol: `COIN${index}`,
+  }));
+
+  it.each([500, 1400])("bounds the active %ipx layout and discloses the full matched count", async (width) => {
+    installViewportMatchMedia(width);
+    const { rerender } = render(
+      <ScreenerTable rows={rows} dataState="ready" hasActiveFilters={false} sort={makeSort()} />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Coin 0")).toBeTruthy());
+    expect(screen.getByText("Coin 49")).toBeTruthy();
+    expect(screen.queryByText("Coin 50")).toBeNull();
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 1–50 of 55 stablecoins");
+    if (width === 1400) expect(screen.getAllByRole("row")).toHaveLength(51);
+    else expect(screen.queryByRole("table")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+    expect(screen.getByText("Coin 50")).toBeTruthy();
+    expect(screen.getByText("Coin 54")).toBeTruthy();
+    expect(screen.queryByText("Coin 0")).toBeNull();
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 51–55 of 55 stablecoins");
+    expect(screen.getByRole("button", { name: "Go to next page" }).hasAttribute("disabled")).toBe(true);
+
+    rerender(<ScreenerTable rows={rows.slice(0, 2)} dataState="ready" hasActiveFilters sort={makeSort()} />);
+    expect(screen.getByText("Coin 0")).toBeTruthy();
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 1–2 of 2 stablecoins");
+  });
+
+  it.each([500, 1400])("separates loading, settled failure and valid empty counts at %ipx", async (width) => {
+    installViewportMatchMedia(width);
+    const view = render(
+      <ScreenerTable rows={[]} dataState="loading" hasActiveFilters={false} sort={makeSort()} />,
+    );
+    await waitFor(() => expect(screen.getByText("Loading results…")).toBeTruthy());
+    expect(screen.queryByText(/Showing/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Go to next page" })).toBeNull();
+
+    view.rerender(<ScreenerTable rows={[]} dataState="unavailable" hasActiveFilters={false} sort={makeSort()} />);
+    expect(screen.getByText("Result counts unavailable.")).toBeTruthy();
+    expect(screen.getByText(/Screener inputs unavailable/)).toBeTruthy();
+    expect(screen.queryByText(/Loading/)).toBeNull();
+    expect(screen.queryByText(/Showing/)).toBeNull();
+
+    view.rerender(<ScreenerTable rows={[]} dataState="ready" hasActiveFilters sort={makeSort()} />);
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 0–0 of 0 stablecoins");
+    expect(screen.getByText("No stablecoins match these filters.")).toBeTruthy();
+  });
+
+  it("leaves Enter activation to pager and sorting buttons instead of opening the cursor coin", async () => {
+    installViewportMatchMedia(1400);
+    const toggleSort = vi.fn();
+    render(<ScreenerTable rows={rows} dataState="ready" hasActiveFilters={false} sort={makeSort({ toggleSort })} />);
+    await waitFor(() => expect(screen.getByText("Coin 0")).toBeTruthy());
+    const opened = vi.fn((event: Event) => event.preventDefault());
+    document.querySelectorAll("[data-screener-open]").forEach((link) => link.addEventListener("click", opened));
+
+    const next = screen.getByRole("button", { name: "Go to next page" });
+    next.focus();
+    expect(fireEvent.keyDown(next, { key: "Enter" })).toBe(true);
+    expect(opened).not.toHaveBeenCalled();
+    // jsdom does not synthesize a native button click from a keyboard event.
+    fireEvent.click(next);
+    expect(screen.getByText("Coin 50")).toBeTruthy();
+    const previous = screen.getByRole("button", { name: "Go to previous page" });
+    previous.focus();
+    expect(fireEvent.keyDown(previous, { key: "Enter" })).toBe(true);
+    fireEvent.click(previous);
+    expect(screen.getByText("Coin 0")).toBeTruthy();
+
+    const supply = screen.getByRole("button", { name: "Sort by Supply" });
+    supply.focus();
+    expect(fireEvent.keyDown(supply, { key: "Enter" })).toBe(true);
+    fireEvent.click(supply);
+    expect(toggleSort).toHaveBeenCalledWith("supply");
+    expect(opened).not.toHaveBeenCalled();
   });
 });

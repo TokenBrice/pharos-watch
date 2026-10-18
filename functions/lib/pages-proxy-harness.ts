@@ -1,4 +1,4 @@
-import { DEFAULT_PROXY_TIMEOUT_MS, fetchUpstreamProxy } from "./upstream-proxy";
+import { DEFAULT_PROXY_TIMEOUT_MS, fetchUpstreamProxy, type ProxyServiceBinding } from "./upstream-proxy";
 import { jsonError } from "./proxy-utils";
 
 export interface PagesProxyContext<Env, Params = { path?: string | string[] }> {
@@ -13,6 +13,7 @@ export interface PagesProxyUpstreamRequest {
   method: string;
   headers: Headers;
   body?: BodyInit | null;
+  serviceBinding?: ProxyServiceBinding;
   timeoutMs: number;
   timeoutReason: DOMException;
   timeoutMessage: string;
@@ -27,6 +28,7 @@ export interface CreateProxyRequestOptions {
   method?: string;
   headers?: Headers;
   body?: BodyInit | null;
+  serviceBinding?: ProxyServiceBinding;
   timeoutMs?: number;
   label: string;
 }
@@ -39,6 +41,7 @@ export function createProxyRequest({
   method = request.method,
   headers = new Headers(),
   body,
+  serviceBinding,
   timeoutMs = DEFAULT_PROXY_TIMEOUT_MS,
   label,
 }: CreateProxyRequestOptions): PagesProxyUpstreamRequest {
@@ -48,6 +51,7 @@ export function createProxyRequest({
     method,
     headers,
     body,
+    serviceBinding,
     timeoutMs,
     timeoutReason: new DOMException(timeoutMessage, "TimeoutError"),
     timeoutMessage,
@@ -161,6 +165,7 @@ export async function runPagesProxy<Env, Params>(
     method: upstreamRequest.method,
     headers: upstreamRequest.headers,
     body: upstreamRequest.body,
+    serviceBinding: upstreamRequest.serviceBinding,
     timeoutMs: upstreamRequest.timeoutMs,
     timeoutReason: upstreamRequest.timeoutReason,
     logPrefix: harness.logPrefix,

@@ -1,22 +1,19 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
-import { normalizeStablecoinLiveSummary, projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
-import { StablecoinDetailResponseSchema } from "@shared/types/market";
-import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
+import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
-import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
+import type { DailyDigestResponse, DigestArchiveResponse, DigestPromoResponse, DigestSnapshotResponse } from "@shared/types/digest";
 import type {
   BlacklistResponse,
   BlacklistSummaryResponse,
   BluechipRatingsMap,
   DexLiquidityHistoryPoint,
   DexLiquidityMap,
+  DexLiquidityTableMap,
   NonUsdSharePoint,
   PegSummaryResponse,
   StablecoinChartPoint,
@@ -27,11 +24,14 @@ import type {
 } from "@shared/types/market";
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
+import type { RedemptionBackstopCoinResponse } from "@shared/types/redemption";
+import type { YieldRankingsCoinResponse } from "@shared/types/yield";
 import type {
   SafetyScoreHistoryResponse,
   SafetyScoreHistoryV2Response,
 } from "@shared/types/safety-score-history";
 import type { ReportCardsV9CurrentResponse, SafetyGradesResponse } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import type {
   HealthResponse,
@@ -49,7 +49,10 @@ import {
   defineParameterizedStaticApiQuery,
 } from "@/lib/api-query-contract";
 import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-light";
-import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-detail";
+import {
+  STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR,
+  STABILITY_INDEX_FULL_HISTORY_QUERY_DESCRIPTOR,
+} from "@/lib/api-query-domains/stability-detail";
 import {
   CRON_15MIN,
   CRON_1MIN,
@@ -73,38 +76,7 @@ export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
 /** Expanded window fetched only when a detail chart selects 1Y or All. */
 export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
 
-/**
- * Project a frozen coin's archived list row (captured at freeze time) into the same compact
- * summary. Supply is observed at `capturedAt`; a row that no longer satisfies the summary
- * schema yields `null` so the page keeps its live-query behavior instead of inventing fields.
- */
-export function projectFrozenSnapshotLiveSummary(snapshot: FrozenSnapshot): StablecoinLiveSummary | null {
-  const row = snapshot.peggedAssetRow;
-  const parsed = StablecoinLiveSummarySchema.safeParse({
-    price: row.price ?? null,
-    priceSource: row.priceSource ?? null,
-    priceConfidence: row.priceConfidence ?? null,
-    priceUpdatedAt: row.priceUpdatedAt ?? null,
-    priceObservedAt: row.priceObservedAt ?? row.priceUpdatedAt ?? null,
-    priceObservedAtMode: row.priceObservedAtMode,
-    priceSyncedAt: row.priceSyncedAt,
-    ...(row.nominalPriceReference ? { nominalPriceReference: row.nominalPriceReference } : {}),
-    consensusSources: row.consensusSources,
-    agreeSources: row.agreeSources,
-    supplyObservedAt: Math.floor(Date.parse(snapshot.capturedAt) / 1000),
-    circulating: row.circulating,
-    circulatingPrevDay: row.circulatingPrevDay,
-    circulatingPrevWeek: row.circulatingPrevWeek,
-    circulatingPrevMonth: row.circulatingPrevMonth,
-    // Archived list rows carry USD peg buckets only, so native token-count checkpoints are unavailable.
-    nativeSupply: { current: null, prevWeek: null, prevMonth: null },
-  });
-  return parsed.success ? normalizeStablecoinLiveSummary(parsed.data) : null;
-}
 
-const StablecoinLiveSummaryResponseSchema = StablecoinDetailResponseSchema.transform(
-  projectStablecoinLiveSummary,
-);
 
 export interface MintBurnEventsDescriptorOptions {
   direction?: string;
@@ -156,10 +128,13 @@ const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
 export const FRONTEND_API_QUERY_DESCRIPTORS = {
   stablecoinLiveSummary: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<StablecoinLiveSummary>(async () => StablecoinLiveSummaryResponseSchema),
+    // Schema loading stays outside the shared shell's eager module graph.
+    createLazySchema<StablecoinLiveSummary>(async () =>
+      (await import("@shared/types/stablecoin-live-summary")).StablecoinLiveSummarySchema,
+    ),
     (stablecoinId: string) => ({
       queryKey: ["stablecoin-live-summary", stablecoinId] as const,
-      path: API_PATHS.stablecoinDetail(stablecoinId),
+      path: API_PATHS.stablecoinLiveSummary(stablecoinId),
       producerIntervalMs: PER_COIN_CACHE_TTL_SECONDS * 1000,
     }),
   ),
@@ -173,6 +148,16 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     createLazySchema<StablecoinListResponse>(
       async () => (await import("@shared/types/market")).StablecoinListResponseSchema,
     ),
+  ),
+  homepageSnapshot: defineApiQuery(
+    { queryKey: ["homepage-snapshot"] as const, path: API_PATHS.homepageSnapshot(), producerIntervalMs: CRON_15MIN },
+    "plain",
+    createLazySchema(async () => (await import("@shared/types/homepage")).HomepageSnapshotSchema),
+  ),
+  homepageHistory: defineApiQuery(
+    { queryKey: ["homepage-history"] as const, path: API_PATHS.homepageHistory(), producerIntervalMs: CRON_CHARTS },
+    "plain",
+    createLazySchema(async () => (await import("@shared/types/homepage")).HomepageHistorySchema),
   ),
   chains: defineApiQuery(
     {
@@ -219,14 +204,53 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     "meta",
     createLazySchema<DexLiquidityMap>(async () => (await import("@shared/types/market")).DexLiquidityMapSchema),
   ),
+  // Lazy schema boundaries keep executable cohort validators out of the eager shell.
+  dexLiquidityCoin: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<DexLiquidityMap>(async () =>
+      (await import("@shared/types/market")).DexLiquidityCoinResponseSchema.transform(({ coins }) => coins),
+    ),
+    (stablecoinId: string) => ({
+      queryKey: ["dex-liquidity-coin", stablecoinId] as const,
+      path: API_PATHS.dexLiquidityCoin(stablecoinId),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
+    }),
+  ),
+  dexLiquidityTable: defineApiQuery(
+    {
+      queryKey: ["dex-liquidity-table"] as const,
+      path: API_PATHS.dexLiquidityTable(),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
+    },
+    "meta",
+    createLazySchema<DexLiquidityTableMap>(async () => (await import("@shared/types/market")).DexLiquidityTableMapSchema),
+  ),
+  redemptionBackstopCoin: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<RedemptionBackstopCoinResponse>(async () => (await import("@shared/types/redemption")).RedemptionBackstopCoinResponseSchema),
+    (stablecoinId: string) => ({
+      queryKey: ["redemption-backstop-coin", stablecoinId] as const,
+      path: API_PATHS.redemptionBackstopCoin(stablecoinId),
+      producerIntervalMs: CRON_INTERVALS["sync-redemption-backstops"] * 1000,
+    }),
+  ),
+  yieldRankingsCoin: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<YieldRankingsCoinResponse>(async () => (await import("@shared/types/yield")).YieldRankingsCoinResponseSchema),
+    (stablecoinId: string) => ({
+      queryKey: ["yield-rankings-coin", stablecoinId] as const,
+      path: API_PATHS.yieldRankingsCoin(stablecoinId),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.yieldRankings,
+    }),
+  ),
   dexLiquidityHistory: defineParameterizedApiQuery(
     "plain",
     createLazySchema<DexLiquidityHistoryPoint[]>(
       async () => (await import("@shared/types/market")).DexLiquidityHistoryResponseSchema,
     ),
     (stablecoinId: string, days: number = 90) => ({
-      queryKey: ["dex-liquidity-history", stablecoinId, days] as const,
-      path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
+      queryKey: ["dex-liquidity-chart-history", stablecoinId, days] as const,
+      path: API_PATHS.dexLiquidityChartHistory(stablecoinId, days),
       // Same producer as the `dexLiquidity` sibling: `sync-dex-liquidity` (2h)
       // delete-and-replaces today's `dex_liquidity_history` row every run, so the
       // chart's newest point changes every two hours even though its granularity is daily.
@@ -242,6 +266,18 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     "meta",
     createLazySchema<DigestArchiveResponse>(
       async () => (await import("@shared/types/digest")).DigestArchiveResponseSchema,
+    ),
+  ),
+  digestPromo: defineApiQuery(
+    {
+      queryKey: ["digest-promo"] as const,
+      path: API_PATHS.digestPromo(),
+      producerIntervalMs: CRON_DAILY_DIGEST,
+    },
+    "plain",
+    // Keep digest validators out of the eager client bundle, like archive reads.
+    createLazySchema<DigestPromoResponse>(
+      async () => (await import("@shared/types/digest")).DigestPromoResponseSchema,
     ),
   ),
   digestSnapshot: defineParameterizedStaticApiQuery(
@@ -366,13 +402,31 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ReportCardsV9CurrentResponse>(
-      async () => {
-        const { ReportCardsV9CurrentResponseSchema } = await import("@shared/types/report-cards-v9");
-        return ReportCardsV9CurrentResponseSchema.transform((response) => ({
-          ...response, cards: response.cards.map((card) => resolveV9PublicWitnessTexts(card)),
-        }));
-      },
+      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9CurrentResponseSchema,
     ),
+  ),
+  // Lazy schemas preserve the report family client chunk boundary.
+  reportCardsV9Table: defineApiQuery(
+    {
+      queryKey: ["report-cards", "v9", "table", 1] as const,
+      path: API_PATHS.reportCardsV9Table(),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
+    },
+    "meta",
+    createLazySchema<ReportCardsV9TableResponse>(
+      async () => (await import("@shared/types/report-cards-v9-projections")).ReportCardsV9TableResponseSchema,
+    ),
+  ),
+  reportCardsV9Detail: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<ReportCardsV9DetailResponse>(
+      async () => (await import("@shared/types/report-cards-v9-projections")).ReportCardsV9DetailResponseSchema,
+    ),
+    (stablecoinId: string) => ({
+      queryKey: ["report-cards", "v9", "detail", 1, stablecoinId] as const,
+      path: API_PATHS.reportCardsV9Detail(stablecoinId),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
+    }),
   ),
   // Free no-key grade projection of the same V9 publication; `/api/` reads it
   // only when a visitor checks a donor wallet.
@@ -476,6 +530,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   stabilityIndex: STABILITY_INDEX_QUERY_DESCRIPTOR,
   stabilityIndexDetail: STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR,
+  stabilityIndexFullHistory: STABILITY_INDEX_FULL_HISTORY_QUERY_DESCRIPTOR,
   usdsStatus: defineApiQuery(
     {
       queryKey: ["usds-status"] as const,

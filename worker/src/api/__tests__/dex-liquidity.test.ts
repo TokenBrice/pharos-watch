@@ -354,7 +354,7 @@ describe("handleDexLiquidity", () => {
 
   it("exposes exact deployment outcome truth", async () => {
     const db = mockDexD1([
-      { match: "FROM dex_liquidity\n", rows: [row] },
+      { match: "FROM dex_liquidity WHERE", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
       {

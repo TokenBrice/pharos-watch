@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
@@ -16,10 +17,23 @@ import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import type { GradeFilter, PegFilter, V9PillarAverage } from "./v9-view-model";
 
 const SAFETY_MAP_PATH = "/safety-scores/map/";
-const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.png";
+const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.webp";
+const SAFETY_MAP_FALLBACK_IMAGE_PATH = "/safety-scores/map.png";
 
 function SafetyMapPreview() {
-  const { unavailable, checkAlreadyFailed, onError } = useImageUnavailable();
+  const [imagePath, setImagePath] = useState(SAFETY_MAP_IMAGE_PATH);
+  const { unavailable, onError } = useImageUnavailable();
+  const handleImageError = useCallback(() => {
+    if (imagePath === SAFETY_MAP_IMAGE_PATH) {
+      setImagePath(SAFETY_MAP_FALLBACK_IMAGE_PATH);
+    } else {
+      onError();
+    }
+  }, [imagePath, onError]);
+  const checkAlreadyFailed = useCallback((image: HTMLImageElement | null) => {
+    // A failed request can settle before hydration attaches the error handler.
+    if (image && image.complete && image.naturalWidth === 0) handleImageError();
+  }, [handleImageError]);
 
   return (
     <Link
@@ -36,12 +50,14 @@ function SafetyMapPreview() {
         ) : (
           <img
             ref={checkAlreadyFailed}
-            src={SAFETY_MAP_IMAGE_PATH}
+            src={imagePath}
             alt=""
-            width={3200}
-            height={1800}
+            width={800}
+            height={450}
+            fetchPriority="high"
+            decoding="async"
             className="h-full min-h-32 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
-            onError={onError}
+            onError={handleImageError}
           />
         )}
       </div>

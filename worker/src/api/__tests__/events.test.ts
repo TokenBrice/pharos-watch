@@ -61,6 +61,24 @@ function makeRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("handleEvents", () => {
+  it("starts the independent freshness read before the per-coin page settles", async () => {
+    vi.useFakeTimers();
+    try {
+      const db = mockD1([
+        { match: "FROM tape_events", rows: [makeRow()], delayMs: 1000 },
+        { match: "cron_runs", rows: [], first: { started_at: SEC } },
+      ]);
+      const pending = handleEvents(db, new URL("https://x/api/events?coin=usdt-tether&limit=5"));
+      await Promise.resolve();
+      expect(db.getHistory().map(({ sql }) => sql).some((sql) => sql.includes("cron_runs"))).toBe(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      const response = await pending;
+      expect(response.status).toBe(200);
+      expect(db.getHistory().find(({ sql }) => sql.includes("FROM tape_events"))?.binds).toEqual(["usdt-tether", 6]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("serializes a V9 score event with its complete policy identity", async () => {
     const payload = {
       prevGrade: "B",

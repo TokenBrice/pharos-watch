@@ -142,7 +142,7 @@ export const RUNTIME_REACHABILITY_POLICIES = [
       allowedImporters: [
         {
           prefix: "shared/data/stablecoins/coins.client.detail/",
-          importers: ["shared/lib/stablecoins/client-registry.ts"],
+          importers: ["shared/lib/stablecoins/client-detail.ts"],
         },
       ],
     },

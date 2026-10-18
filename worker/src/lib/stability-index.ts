@@ -20,7 +20,7 @@
  * @see docs/stability-index.md for the verified algorithm specification.
  */
 
-import type { PsiConditionBand } from "@shared/types/stability";
+import type { PsiConditionBand } from "@shared/types/stability-constants";
 export type ConditionBand = PsiConditionBand;
 import { clampScore, round1, roundTo } from "@shared/lib/math";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";

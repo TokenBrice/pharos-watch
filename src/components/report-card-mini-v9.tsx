@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { memo } from "react";
+import { LazySection } from "@/components/lazy-section";
 import { Card, CardContent } from "@/components/ui/card";
 import { CompareRadarV9 } from "@/components/radar-chart-v9";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
@@ -10,9 +12,9 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import type {
   SafetyScorePublicationIdentity,
 } from "@shared/types";
-import { hasCompleteV9RadarPillars, type V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { hasCompleteV9RadarPillars, type V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
-export function ReportCardMiniV9({
+export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
   card,
   identity,
   logo,
@@ -65,11 +67,16 @@ export function ReportCardMiniV9({
 
           {hasCompleteV9RadarPillars(card) ? (
             <div className="w-full max-w-[11rem]">
-              <CompareRadarV9
-                series={[{ card, identity, color: "#10b981" }]}
-                cohortSeries={[]}
-                size={140}
-              />
+              <p className="sr-only">
+                Backing {card.pillars.backing.score}/100; Exit {card.pillars.exit.score}/100; Economic Control {card.pillars.control.score}/100.
+              </p>
+              <LazySection minHeight={140} rootMargin="200px">
+                <CompareRadarV9
+                  series={[{ card, identity, color: "#10b981" }]}
+                  cohortSeries={[]}
+                  size={140}
+                />
+              </LazySection>
             </div>
           ) : (
             <p className="py-1 text-center text-xs text-muted-foreground">Pillar radar unavailable</p>
@@ -78,4 +85,4 @@ export function ReportCardMiniV9({
       </Card>
     </Link>
   );
-}
+});

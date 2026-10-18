@@ -4,7 +4,7 @@ import type { MutableRefObject, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { revealAnchorId } from "@/lib/anchor-reveal";
+import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
 
 interface LongformSection {
   id: string;
@@ -35,6 +35,8 @@ interface LongformScrollspyNavProps {
    * alignment, and active-section detection.
    */
   stickyOffsetPx?: number;
+  /** Reveal deferred content through the destination before measuring its final position. */
+  onBeforeAlign?: (sectionId: string) => void;
   /**
    * `banner` (default) renders a horizontal sticky bar.
    * `rail` renders a thin vertical column intended for a sticky right-rail TOC.
@@ -91,37 +93,32 @@ function scrollToSection(sectionId: string, railNode: HTMLDivElement | null, sti
   if (!sectionNode) return;
 
   const nextTop = window.scrollY + sectionNode.getBoundingClientRect().top - getScrollOffset(railNode, stickyOffsetPx);
-  window.scrollTo({ top: Math.max(0, nextTop), behavior: "auto" });
+  window.scrollTo({ top: Math.max(0, nextTop), behavior: "instant" });
 }
 
-function clearPendingScrollSync(pendingScrollSyncRef: MutableRefObject<number[]>) {
-  for (const timer of pendingScrollSyncRef.current) {
-    window.clearTimeout(timer);
-  }
-  pendingScrollSyncRef.current = [];
+function clearPendingScrollSync(pendingScrollSyncRef: MutableRefObject<(() => void) | null>) {
+  pendingScrollSyncRef.current?.();
+  pendingScrollSyncRef.current = null;
 }
 
 function scheduleSectionAlignment(
   sectionId: string,
   railNode: HTMLDivElement | null,
-  pendingScrollSyncRef: MutableRefObject<number[]>,
+  pendingScrollSyncRef: MutableRefObject<(() => void) | null>,
   updateHash: boolean,
   stickyOffsetPx?: number,
+  onBeforeAlign?: (sectionId: string) => void,
 ) {
   clearPendingScrollSync(pendingScrollSyncRef);
   if (updateHash) {
     window.history.pushState(null, "", `#${sectionId}`);
   }
-  scrollToSection(sectionId, railNode, stickyOffsetPx);
-
-  for (const delay of [160, 480, 960]) {
-    const timer = window.setTimeout(() => {
-      if (getHashSectionId() === sectionId) {
-        scrollToSection(sectionId, railNode, stickyOffsetPx);
-      }
-    }, delay);
-    pendingScrollSyncRef.current.push(timer);
-  }
+  const align = () => {
+    onBeforeAlign?.(sectionId);
+    scrollToSection(sectionId, railNode, stickyOffsetPx);
+  };
+  align();
+  pendingScrollSyncRef.current = alignAnchorAfterHydration(sectionId, false, { align });
 }
 
 function centerActivePill(scroller: HTMLElement | null, anchor: HTMLAnchorElement | null) {
@@ -153,6 +150,7 @@ export function LongformScrollspyNav({
   showDepthHint,
   onActiveChange,
   stickyOffsetPx,
+  onBeforeAlign,
   variant = "banner",
   emphasis,
   edgeFade = false,
@@ -161,7 +159,7 @@ export function LongformScrollspyNav({
   const railRef = useRef<HTMLDivElement | null>(null);
   const bannerScrollerRef = useRef<HTMLElement | null>(null);
   const activeAnchorRef = useRef<HTMLAnchorElement | null>(null);
-  const pendingScrollSyncRef = useRef<number[]>([]);
+  const pendingScrollSyncRef = useRef<(() => void) | null>(null);
   const initialHashHandledRef = useRef(false);
   const activePillSyncedRef = useRef(false);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
@@ -289,13 +287,14 @@ export function LongformScrollspyNav({
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     const activeHash = getHashSectionId();
+    let initialHashFrame = 0;
     if (!initialHashHandledRef.current) {
       initialHashHandledRef.current = true;
       if (activeHash.length > 0 && sectionNodes.some((node) => node.id === activeHash)) {
-        requestAnimationFrame(() => {
+        initialHashFrame = window.requestAnimationFrame(() => {
           applyScrollMargins();
           setActiveId(activeHash);
-          scheduleSectionAlignment(activeHash, railNode, pendingScrollSyncRef, false, stickyOffsetPx);
+          scheduleSectionAlignment(activeHash, railNode, pendingScrollSyncRef, false, stickyOffsetPx, onBeforeAlign);
         });
       }
     }
@@ -303,6 +302,7 @@ export function LongformScrollspyNav({
     return () => {
       window.removeEventListener("scroll", handleScroll);
       if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+      window.cancelAnimationFrame(initialHashFrame);
       resizeObserver.disconnect();
       window.removeEventListener("resize", applyScrollMargins);
       clearPendingScrollSync(pendingScrollSyncRef);
@@ -310,7 +310,7 @@ export function LongformScrollspyNav({
         node.style.scrollMarginTop = "";
       }
     };
-  }, [sectionSignature, emphasis, stickyOffsetPx]);
+  }, [sectionSignature, emphasis, stickyOffsetPx, onBeforeAlign]);
 
   if (sections.length === 0) return null;
 
@@ -334,7 +334,7 @@ export function LongformScrollspyNav({
                     href={`#${section.id}`}
                     onClick={(event) => {
                       event.preventDefault();
-                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx);
+                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx, onBeforeAlign);
                       setActiveId(section.id);
                     }}
                     aria-current={isActive ? "true" : undefined}
@@ -411,7 +411,7 @@ export function LongformScrollspyNav({
                     aria-current={isActive ? "true" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
-                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx);
+                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx, onBeforeAlign);
                       setActiveId(section.id);
                     }}
                     className={cn(

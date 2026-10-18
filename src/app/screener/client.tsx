@@ -10,7 +10,7 @@ import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
 import { ScreenerTable } from "@/components/screener/screener-table";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
-import { usePegSummary, useReportCardsV9, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
+import { usePegSummary, useReportCardsV9Table, useStressSignals, useDexLiquidityTable } from "@/hooks/api-hooks";
 import { useSort } from "@/hooks/use-sort";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { buildQueryFreshnessGroup } from "@/lib/query-refetch-group";
@@ -44,6 +44,17 @@ import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
+import type { TablePaginationProps } from "@/components/table-pagination";
+
+// Curated classification is immutable for the lifetime of the client bundle.
+const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
+  .filter((meta) => meta.status !== "quarantined" && meta.status !== "delisted")
+  .map((meta) => ({
+    meta,
+    mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
+    custodyModel: resolveCustodyModel(meta),
+    blacklistable: projectBlacklistable(meta.blacklistStatus),
+  }));
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -123,7 +134,7 @@ export function ScreenerClient() {
     error: reportError,
     refetch: refetchReport,
     meta: reportMeta,
-  } = useReportCardsV9();
+  } = useReportCardsV9Table();
   const {
     data: stressData,
     isLoading: isStressLoading,
@@ -138,7 +149,7 @@ export function ScreenerClient() {
     error: dexError,
     refetch: refetchDex,
     meta: dexMeta,
-  } = useDexLiquidity();
+  } = useDexLiquidityTable();
 
   const { state: filters, replaceState: setFilters } = useUrlState(SCREENER_URL_SCHEMA, {
     enabled: hasHydrated,
@@ -166,9 +177,16 @@ export function ScreenerClient() {
 
   const resetFilters = useCallback(() => setFilters(SCREENER_FILTER_DEFAULTS), [setFilters]);
 
-  // Build the merged row set. Gated on `useStablecoins().isSuccess` per the
-  // brief's escalation note: filters applied to incomplete data would
-  // momentarily hide coins whose scores haven't streamed in yet.
+  // Source-local projections must not be rebuilt (or readmitted) whenever a
+  // sibling query arrives.
+  const pegById = useMemo(() => buildPegSummaryCoinMap(pegData?.coins), [pegData?.coins]);
+  const safetyById = useMemo(() => {
+    const projected = reportData ? buildV9SafetyTableMap(reportData, reportData.safetyScoreIdentity) : null;
+    return projected?.status === "available" ? projected.value : {};
+  }, [reportData]);
+
+  // Build only after a primary dataset is available, including retained data.
+  // Optional score reads preserve unknown values until their sources arrive.
   const allRows = useMemo<ScreenerRow[]>(() => {
     if (!stablecoinsData?.peggedAssets) return [];
     const supplyById = new Map<string, number | null>();
@@ -180,16 +198,9 @@ export function ScreenerClient() {
       const supplySeries = buildSupplySeries(asset);
       if (supplySeries) supplySeriesById.set(asset.id, supplySeries);
     }
-    const pegById = buildPegSummaryCoinMap(pegData?.coins);
-    const projectedSafety = reportData
-      ? buildV9SafetyTableMap(reportData, reportData.safetyScoreIdentity)
-      : null;
-    const safetyById = projectedSafety?.status === "available" ? projectedSafety.value : {};
 
     const rows: ScreenerRow[] = [];
-    for (const meta of CLIENT_TRACKED_STABLECOINS) {
-      if (meta.status === "quarantined" || meta.status === "delisted") continue;
-      const lifecycle = meta.status ?? "active";
+    for (const { meta, mechanism, custodyModel, blacklistable } of SCREENABLE_COINS) {
       const safety = safetyById[meta.id] ?? null;
       const pegCoin = pegById.get(meta.id);
       const mintAuthorityScore = resolveMintAuthorityScoreDisplay(safety?.mint);
@@ -197,9 +208,9 @@ export function ScreenerClient() {
         id: meta.id,
         name: meta.name,
         symbol: meta.symbol,
-        lifecycle,
+        lifecycle: meta.status ?? "active",
         type: meta.flags.governance,
-        mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
+        mechanism,
         peg: meta.flags.pegCurrency,
         supplyUsd: supplyById.get(meta.id) ?? null,
         pegScore: pegCoin?.pegScore ?? null,
@@ -223,8 +234,8 @@ export function ScreenerClient() {
         safetyWeakestPillar: safety?.weakestPillar?.pillar ?? null,
         safetyWeakestScore: safety?.weakestPillar?.score ?? null,
         safetyBindingCapReason: safety?.bindingCapReason ?? null,
-        custodyModel: resolveCustodyModel(meta),
-        blacklistable: projectBlacklistable(meta.blacklistStatus),
+        custodyModel,
+        blacklistable,
         mintAuthority: meta.mintAuthorityStatus ?? "unknown",
         mintAuthorityScore: mintAuthorityScore.score,
         mintAuthorityScoreBand: mintAuthorityScore.bandKey,
@@ -237,7 +248,7 @@ export function ScreenerClient() {
       });
     }
     return rows;
-  }, [stablecoinsData, pegData, reportData, stressData, dexData]);
+  }, [stablecoinsData, pegById, safetyById, stressData, dexData]);
 
   const filteredRows = useMemo(() => applyFilters(allRows, filters), [allRows, filters]);
   const scoreFilterDataLoading = hasLoadingScoreFilterData(filters, {
@@ -251,9 +262,11 @@ export function ScreenerClient() {
     () => sortScreenerRows(filteredRows, sortKey, sortDirection),
     [filteredRows, sortKey, sortDirection],
   );
-  const exportRows = scoreFilterDataLoading ? [] : sortedRows;
-
-  const hasStablecoinRows = !!stablecoinsData?.peggedAssets?.length;
+  const hasStablecoinRows = stablecoinsData?.peggedAssets !== undefined;
+  const dataState: NonNullable<TablePaginationProps["dataState"]> = !hasStablecoinRows
+    ? (stablecoinsError || !isStablecoinsLoading ? "unavailable" : "loading")
+    : scoreFilterDataLoading ? "loading" : "ready";
+  const exportRows = dataState === "ready" ? sortedRows : [];
 
   const freshnessGroup = buildQueryFreshnessGroup([
     {
@@ -312,11 +325,9 @@ export function ScreenerClient() {
     ),
   ).toISOString();
 
-  const totalTracked = CLIENT_TRACKED_STABLECOINS.filter(
-    (coin) => coin.status !== "quarantined" && coin.status !== "delisted",
-  ).length;
-  const totalRows = allRows.length || totalTracked;
-  const matchingRows = scoreFilterDataLoading ? totalRows : filteredRows.length;
+  const totalTracked = SCREENABLE_COINS.length;
+  const totalRows = hasStablecoinRows ? allRows.length : totalTracked;
+  const matchingRows = filteredRows.length;
   const active = hasActiveFilters(filters);
   const activeFilterCount = countActiveScreenerFilters(filters);
   // One coin-count story: the screener universe is the full tracked registry
@@ -340,6 +351,7 @@ export function ScreenerClient() {
         filters={filters}
         matchingRows={matchingRows}
         totalRows={totalRows}
+        dataState={dataState}
         activeFilterCount={activeFilterCount}
         onChange={setFilters}
         onReset={resetFilters}
@@ -354,8 +366,8 @@ export function ScreenerClient() {
             // they are stamped with the safety-score identity. The retired
             // standalone mint-authority lane no longer produces this value.
             methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included)`}
-            triggerLabel={scoreFilterDataLoading ? "Loading" : "Export"}
-            disabled={scoreFilterDataLoading}
+            triggerLabel={dataState === "loading" ? "Loading" : "Export"}
+            disabled={dataState !== "ready"}
           />
         }
       />
@@ -364,7 +376,7 @@ export function ScreenerClient() {
         <ScreenerTable
           rows={sortedRows}
           logos={logos}
-          isLoading={isStablecoinsLoading || scoreFilterDataLoading}
+          dataState={dataState}
           onClearFilters={active ? resetFilters : undefined}
           hasActiveFilters={active}
           sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}

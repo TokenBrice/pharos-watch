@@ -3,20 +3,22 @@ import type { ZodType } from "zod";
 import { D1_INT32_MAX } from "./d1-constants";
 import { getCache, getCacheUpdatedAt, setCacheIfNewer } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders, type FreshnessMeta } from "./api-freshness";
-import { errorResponse, jsonResponseWithHeaders, withErrorHandler } from "./api-response";
+import { errorResponse, withErrorHandler, withRepresentationEtag } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { decodeCachedJson, decodeJsonString } from "./cache-json";
+import { sha256HexFromUtf8Chunks } from "./hash";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;
 const RESPONSE_READY_CACHE_VERSION = 2;
-const RESPONSE_READY_ENVELOPE_VERSION = 1;
+const RESPONSE_READY_ENVELOPE_VERSION = 2;
 
 interface ResponseReadyCacheEnvelope {
   version: typeof RESPONSE_READY_ENVELOPE_VERSION;
   schemaId: string;
   body: string;
+  bodySha256: string;
 }
 
 const _cacheRead = new IsolateLocalState(() => ({
@@ -120,6 +122,7 @@ export function encodeResponseReadyCacheValue(body: string, schemaId: string): s
     version: RESPONSE_READY_ENVELOPE_VERSION,
     schemaId,
     body,
+    bodySha256: sha256HexFromUtf8Chunks([body]),
   } satisfies ResponseReadyCacheEnvelope);
 }
 
@@ -157,7 +160,7 @@ function decodeResponseReadyCacheBody(
   cacheKey: string,
   cached: { value: string },
   expectedSchemaId: string,
-): string | null {
+): Pick<ResponseReadyCacheEnvelope, "body" | "bodySha256"> | null {
   const parsed = readCachedJson<ResponseReadyCacheEnvelope>(
     "response-ready-cache",
     getResponseReadyCacheKey(cacheKey),
@@ -171,13 +174,14 @@ function decodeResponseReadyCacheBody(
     typeof envelope !== "object" ||
     envelope.version !== RESPONSE_READY_ENVELOPE_VERSION ||
     envelope.schemaId !== expectedSchemaId ||
-    typeof envelope.body !== "string"
+    typeof envelope.body !== "string" ||
+    typeof envelope.bodySha256 !== "string" || !/^[a-f0-9]{64}$/.test(envelope.bodySha256)
   ) {
     logWorkerEventArgs("lib", "warn", `[cache] Ignoring response-ready companion for "${cacheKey}" with missing or mismatched schema marker`);
     return null;
   }
 
-  return envelope.body;
+  return { body: envelope.body, bodySha256: envelope.bodySha256 };
 }
 
 function injectMetaIntoJsonObject(rawBody: string, freshness: FreshnessMeta): string | null {
@@ -205,6 +209,7 @@ export function createCacheHandler(
   maxAgeSec: number,
   options?: {
     schema?: ZodType<unknown>;
+    readCache?: (db: D1Database, cacheKey: string) => Promise<{ value: string; updatedAt: number } | null>;
     transform?: (
       payload: unknown,
       context: {
@@ -232,21 +237,23 @@ export function createCacheHandler(
             : null;
           const responseReadyBody = trustedBody != null
             && options.injectMeta !== "never"
-            ? injectMetaIntoJsonObject(trustedBody, freshness)
-            : trustedBody;
+            ? injectMetaIntoJsonObject(trustedBody.body, freshness)
+            : trustedBody?.body;
           if (responseReadyBody != null) {
-            return new Response(responseReadyBody, {
+            return withRepresentationEtag(new Response(responseReadyBody, {
               headers: addFreshnessHeaders({
                 "Content-Type": "application/json",
                 "Cache-Control": cacheControl,
               }, canonicalUpdatedAt, maxAgeSec, freshness),
-            });
+            }), ["cache-handler-v1", endpoint, cacheKey, canonicalUpdatedAt,
+              options.responseReadySchemaId, trustedBody?.bodySha256,
+              freshness.status, freshness.freshBudgetSec, freshness.degradedBudgetSec]);
           }
         }
       }
     }
 
-    const cached = await getCache(db, cacheKey);
+    const cached = await (options?.readCache ?? getCache)(db, cacheKey);
     if (!cached) {
       return errorResponse(503, "Data not yet available");
     }
@@ -279,15 +286,12 @@ export function createCacheHandler(
     }, cached.updatedAt, maxAgeSec, freshness);
 
     if (options?.injectMeta !== "never" && body && typeof body === "object" && !Array.isArray(body)) {
-      return jsonResponseWithHeaders(
-        {
-          ...(body as Record<string, unknown>),
-          _meta: freshness,
-        },
-        headers,
-      );
+      body = { ...(body as Record<string, unknown>), _meta: freshness };
     }
 
+    // updated_at admits same-clock replacement, so it is not a content identity.
+    // Without a producer digest, dispatch assigns a response-cache publication
+    // validator rather than claim independently mutable bodies are unchanged.
     return new Response(JSON.stringify(body), { headers });
   });
 }

@@ -13,6 +13,10 @@ import {
   type YieldHistoryResponse,
 } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
+import type { DexLiquidityMap } from "@shared/types/market";
+import type { RedemptionBackstopCoinResponse } from "@shared/types/redemption";
+import type { YieldRankingsCoinResponse } from "@shared/types/yield";
+import type { ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
@@ -26,6 +30,7 @@ import {
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import type { FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor } from "@/lib/api-query-contract";
 import type { ApiMeta } from "@/lib/api";
+import { reconcileStablecoinLiveSummary } from "@/lib/stablecoin-live-summary-query";
 
 export type { StabilityContributor };
 
@@ -109,15 +114,23 @@ export function createRegisteredApiPollingQueryOptions<T>(
 ):
   | UseQueryOptions<T, Error, T, readonly unknown[]>
   | UseQueryOptions<QueryWithMetaEnvelope<T>, Error, QueryWithMetaEnvelope<T>, readonly unknown[]> {
-  return descriptor.responseMode === "meta"
-    ? createApiPollingQueryOptionsWithMeta<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
-        ...overrides,
-        schema: descriptor.schema,
-      })
-    : createApiPollingQueryOptions<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
-        ...overrides,
-        schema: descriptor.schema,
-      });
+  if (descriptor.responseMode === "meta") {
+    const options = createApiPollingQueryOptionsWithMeta<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
+      ...overrides,
+      schema: descriptor.schema,
+    });
+    if (descriptor.queryKey[0] === "stablecoin-live-summary") {
+      options.structuralSharing = (previous, incoming) => reconcileStablecoinLiveSummary(
+        previous as QueryWithMetaEnvelope<T> | undefined,
+        incoming as QueryWithMetaEnvelope<T>,
+      );
+    }
+    return options;
+  }
+  return createApiPollingQueryOptions<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
+    ...overrides,
+    schema: descriptor.schema,
+  });
 }
 
 function createRegisteredStaticQueryOptions<T>(
@@ -132,9 +145,31 @@ function createRegisteredStaticQueryOptions<T>(
   return createStaticQueryOptions(descriptor.queryKey, createApiQueryFn<T>(descriptor.path, descriptor.schema), opts);
 }
 
-export const useBluechipRatings = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.bluechipRatings);
+export const useBluechipRatings = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.bluechipRatings, undefined);
 export const useDailyDigest = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dailyDigest);
+export const useHomepageSnapshot = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.homepageSnapshot);
+export const useHomepageHistory = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.homepageHistory);
 export const useDexLiquidity = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidity, undefined);
+export const useDexLiquidityTable = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityTable);
+
+/** Keep map-shaped detail selectors while validating the scoped wire envelope first. */
+export function useDexLiquidityCoin(stablecoinId: string, overrides?: QueryControlOverrides): ApiQueryWithMetaResult<DexLiquidityMap> {
+  return useRegisteredApiQuery<DexLiquidityMap>(
+    FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityCoin(stablecoinId), overrides,
+  );
+}
+
+export function useRedemptionBackstopCoin(stablecoinId: string, overrides?: QueryControlOverrides) {
+  return useRegisteredApiQuery<RedemptionBackstopCoinResponse>(
+    FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstopCoin(stablecoinId), overrides,
+  );
+}
+
+export function useYieldRankingsCoin(stablecoinId: string, overrides?: QueryControlOverrides) {
+  return useRegisteredApiQuery<YieldRankingsCoinResponse>(
+    FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsCoin(stablecoinId), overrides,
+  );
+}
 
 export function useDexLiquidityHistory(stablecoinId: string, days?: number) {
   return useQuery<DexLiquidityHistoryPoint[], Error>(dexLiquidityHistoryQueryOptions(stablecoinId, days));
@@ -149,6 +184,7 @@ function dexLiquidityHistoryQueryOptions(stablecoinId: string, days?: number) {
 }
 
 export const useDigestArchive = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.digestArchive);
+export const useDigestPromo = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.digestPromo);
 
 // Digest snapshots are immutable by date — static cache, no polling needed
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotResponse, Error> {
@@ -162,7 +198,19 @@ export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotRe
 // Public health is a 15-minute cron snapshot; the registered descriptor derives
 // the 15-minute staleTime and 30-minute refetchInterval for this hook.
 export const useHealth = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.health, { retry: 1 });
-export const usePegSummary = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary);
+export const usePegSummary = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary, undefined);
+
+export function useReportCardsV9Table(overrides?: V9QueryControlOverrides) {
+  return useRegisteredApiQuery<ReportCardsV9TableResponse>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table, {
+    ...overrides, keepPreviousData: false,
+  });
+}
+
+export function useReportCardsV9Detail(stablecoinId: string, overrides?: V9QueryControlOverrides) {
+  return useRegisteredApiQuery<ReportCardsV9DetailResponse>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Detail(stablecoinId), {
+    ...overrides, keepPreviousData: false,
+  });
+}
 
 /** Canonical V9 query. Its model-specific key and disabled previous-data
  * retention prevent an earlier-policy payload from surviving a refetch. */
@@ -184,7 +232,7 @@ export const useDepegResolver = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRI
 export const useDepegResolverReview = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.depegResolverReview, {
   keepPreviousData: true,
 });
-export const useRedemptionBackstops = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops);
+export const useRedemptionBackstops = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops, undefined);
 
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
   return useRegisteredApiQuery<SafetyScoreHistoryResponse>(
@@ -204,6 +252,10 @@ export const useStablecoinCharts = bindRegisteredApiQuery(FRONTEND_API_QUERY_DES
 export const useNonUsdShare = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.nonUsdShare);
 export const useStabilityIndex = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex);
 export const useStabilityIndexDetail = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail);
+export const useStabilityIndexFullHistory = bindRegisteredApiQuery(
+  FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexFullHistory,
+  undefined,
+);
 
 // Public /pharoswatchbot telemetry contract. Keep rendered fields and
 // docs/telegram-alerts.md in sync with worker/src/telegram/webhook/telegram-pulse.ts.

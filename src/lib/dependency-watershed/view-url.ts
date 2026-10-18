@@ -1,11 +1,11 @@
-import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-layout";
+import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
 
 export type DependencyMapView = "watershed" | "network";
 
 /**
  * Explore parameters only the Network view reads, such as the coin-page `?focus=<id>` deep link, with the value the
- * Network writes when untouched. The Network renders first during hydration and syncs its defaults into the URL, so
- * default values are not a request for Network (otherwise every reload after a first visit would open Network).
+ * Network writes when untouched. Default values are not a request for Network,
+ * otherwise reloading after a Network visit would override the Watershed default.
  */
 const NETWORK_PARAM_DEFAULTS = { focus: "all", trace: null, type: "all", limit: String(DEFAULT_NODE_LIMIT) } as const;
 

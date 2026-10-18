@@ -27,12 +27,11 @@
 /learn/ /learn/case-studies/ 301
 /learn /learn/case-studies/ 301
 
-# The API access page, API reference page and API reference doc merged into
-# one /api/ page with Access | Reference tabs (site simplification, 2026-10-11).
-/about/api/ /api/#reference 301
-/about/api /api/#reference 301
-/docs/api-reference/ /api/#reference 301
-/docs/api-reference /api/#reference 301
+# Retired API documentation aliases resolve directly to the Reference document.
+/about/api/ /api/reference/ 301
+/about/api /api/reference/ 301
+/docs/api-reference/ /api/reference/ 301
+/docs/api-reference /api/reference/ 301
 
 # Consolidated public documentation routes. The engineering and design docs
 # were withdrawn from the public set (2026-10-11); they remain internal in docs/.
@@ -101,19 +100,19 @@
 /feed/blog/ /feed/blog.xml 301
 /feed/blog /feed/blog.xml 301
 
-# Methodology PDFs were deprecated in favor of canonical HTML methodology pages.
+# Methodology PDFs were deprecated; versioned citations open their full archive evidence.
 /methodology/pdf/index.pdf /methodology/ 301
-/methodology/pdf/scoring-v7.26.pdf /methodology/scoring-changelog/ 301
-/methodology/pdf/depeg-dews-v6.0.pdf /methodology/depeg-changelog/ 301
-/methodology/pdf/blacklist-tracker-v3.993.pdf /methodology/blacklist-tracker-changelog/ 301
-/methodology/pdf/liquidity-score-v5.7.pdf /methodology/liquidity-score-changelog/ 301
-/methodology/pdf/stability-index-v3.3.pdf /methodology/stability-index-changelog/ 301
-/methodology/pdf/mint-burn-flow-v6.11.pdf /methodology/mint-burn-flow-changelog/ 301
-/methodology/pdf/yield-v8.17.pdf /methodology/yield-changelog/ 301
-/methodology/pdf/pricing-pipeline-v6.04.pdf /methodology/pricing-pipeline-changelog/ 301
-/methodology/pdf/pricing-pipeline-v6.06.pdf /methodology/pricing-pipeline-changelog/ 301
-/methodology/pdf/pricing-pipeline-v6.07.pdf /methodology/pricing-pipeline-changelog/ 301
-/methodology/pdf/chain-health-v1.2.pdf /methodology/chain-health-changelog/ 301
+/methodology/pdf/scoring-v7.26.pdf /methodology/scoring-changelog/archive/v7/#scoring-v7-26 301
+/methodology/pdf/depeg-dews-v6.0.pdf /methodology/depeg-changelog/archive/v6/#changelog-v-6-0 301
+/methodology/pdf/blacklist-tracker-v3.993.pdf /methodology/blacklist-tracker-changelog/archive/v3/#changelog-v-3-993 301
+/methodology/pdf/liquidity-score-v5.7.pdf /methodology/liquidity-score-changelog/archive/v5/#changelog-v-5-7 301
+/methodology/pdf/stability-index-v3.3.pdf /methodology/stability-index-changelog/archive/v3/#changelog-v-3-3 301
+/methodology/pdf/mint-burn-flow-v6.11.pdf /methodology/mint-burn-flow-changelog/archive/v6/#changelog-v-6-11 301
+/methodology/pdf/yield-v8.17.pdf /methodology/yield-changelog/archive/v8/#changelog-v-8-17 301
+/methodology/pdf/pricing-pipeline-v6.04.pdf /methodology/pricing-pipeline-changelog/archive/v6/#changelog-v-6-04 301
+/methodology/pdf/pricing-pipeline-v6.06.pdf /methodology/pricing-pipeline-changelog/archive/v6/#changelog-v-6-06 301
+/methodology/pdf/pricing-pipeline-v6.07.pdf /methodology/pricing-pipeline-changelog/archive/v6/#changelog-v-6-07 301
+/methodology/pdf/chain-health-v1.2.pdf /methodology/chain-health-changelog/archive/v1/#changelog-v-1-2 301
 /methodology/pdf/ /methodology/ 301
 /methodology/pdf /methodology/ 301
 
@@ -218,9 +217,9 @@
 # The glossary folded into the A-Z Definitions section of /methodology/ (dynamic rules)
 /learn/glossary/* /methodology/#definitions 301
 
-# The API access page, API reference page and API reference doc merged into (dynamic rules)
-/about/api/* /api/#reference 301
-/docs/api-reference/* /api/#reference 301
+# Retired API documentation aliases (dynamic rules)
+/about/api/* /api/reference/ 301
+/docs/api-reference/* /api/reference/ 301
 
 # Consolidated public documentation routes. The engineering and design docs (dynamic rules)
 /docs/data-pipeline/* /docs/ 301

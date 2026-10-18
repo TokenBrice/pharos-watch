@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
@@ -34,7 +35,8 @@ import { projectOracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-c
 import type { BackingMetricsInput } from "@/components/stablecoin-detail/backing-metrics-card";
 import { deriveLiquidationEngine } from "@/components/stablecoin-detail/mechanism-diagrams/mechanism-template";
 import type { StablecoinDetailSnapshot } from "@/lib/api";
-import { projectFrozenSnapshotLiveSummary } from "@/lib/api-query-descriptors";
+import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
+import { getStablecoinDetailDataBootstrapScript } from "@/lib/data-bootstrap-script";
 import type { StablecoinAiSummariesById } from "@shared/types";
 import type { FailureScenariosById } from "@shared/types/failure-scenarios";
 import { selectFailureScenario } from "@shared/lib/failure-scenarios";
@@ -125,22 +127,22 @@ function StablecoinResearchContext({
       <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-2 text-sm">
         {researchLinks.map((link) => (
           <li key={link.href}>
-            <Link
+            <IntentLink
               href={link.href}
               className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
             >
               {link.label}
-            </Link>
+            </IntentLink>
           </li>
         ))}
         {staticComparisonLinks.map((link) => (
           <li key={link.href}>
-            <Link
+            <IntentLink
               href={link.href}
               className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
             >
               {link.shortTitle}
-            </Link>
+            </IntentLink>
           </li>
         ))}
       </ul>
@@ -268,6 +270,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
+      {coin.status !== "frozen" ? (
+        <script id="pharos-detail-data-bootstrap" dangerouslySetInnerHTML={{ __html: getStablecoinDetailDataBootstrapScript(id) }} />
+      ) : null}
       <h1 className="sr-only">{coin.name} ({coin.symbol}) stablecoin analytics</h1>
       <Suspense
         fallback={

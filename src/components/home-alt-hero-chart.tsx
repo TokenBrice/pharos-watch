@@ -21,7 +21,7 @@ import {
 import { formatCurrencyTick, niceTicks, niceTimeTicks } from "@/lib/chart-ticks";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { ChartTooltipSurface } from "@/components/pharos-chart-tooltip";
-import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
+import type { TotalMcapChartRow } from "@shared/lib/total-mcap-chart";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 
 const HOME_ALT_CHART_MARGIN = { top: 24, right: 32, bottom: 12, left: 0 } as const;
@@ -267,6 +267,11 @@ function HomeAltChartFrame({
   }, [height, rows, width, yDomain]);
 
   const { bounds, visibleRows, scales, yTicks, xTicks } = geometry;
+  const paths = useMemo(() => ({
+    areas: CHART_LAYERS.map((layer) => buildAreaPath({ rows: visibleRows, layer, scales })),
+    tops: CHART_LAYERS.map((layer) => buildTopLinePath({ rows: visibleRows, layer, scales })),
+    cohorts: COHORT_LINES.map((line) => buildCohortLinePath({ rows: visibleRows, line, scales })),
+  }), [visibleRows, scales]);
   const { x0, x1, y0, y1 } = bounds;
 
   const handlePointerMove = useCallback(
@@ -334,17 +339,17 @@ function HomeAltChartFrame({
           ))}
           {visibleRows.length > 0 ? (
             <g>
-              {CHART_LAYERS.map((layer) => (
+              {CHART_LAYERS.map((layer, index) => (
                 <path
                   key={layer.key}
-                  d={buildAreaPath({ rows: visibleRows, layer, scales })}
+                  d={paths.areas[index]}
                   fill={`url(#${layer.gradientId})`}
                 />
               ))}
-              {CHART_LAYERS.map((layer) => (
+              {CHART_LAYERS.map((layer, index) => (
                 <path
                   key={`${layer.key}-line`}
-                  d={buildTopLinePath({ rows: visibleRows, layer, scales })}
+                  d={paths.tops[index]}
                   fill="none"
                   stroke={layer.color}
                   strokeWidth={1.5}
@@ -354,10 +359,10 @@ function HomeAltChartFrame({
                   <title>{layer.label}</title>
                 </path>
               ))}
-              {COHORT_LINES.map((line) => (
+              {COHORT_LINES.map((line, index) => (
                 <path
                   key={`${line.key}-line`}
-                  d={buildCohortLinePath({ rows: visibleRows, line, scales })}
+                  d={paths.cohorts[index]}
                   fill="none"
                   stroke={line.color}
                   strokeDasharray={line.dashArray}

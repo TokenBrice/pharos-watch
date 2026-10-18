@@ -60,6 +60,8 @@
 | 0270     | `0270_cron_slot_executions_slot_started_at_prune_index.sql` | Add the distinct logical-slot-clock index used by bounded retention; retain the actual-start indexes and all existing Worker reads/writes. |
 | 0271     | `0271_depeg_events_count_cache_invalidation.sql`           | Add transactional public depeg count-summary invalidation on event membership/active-filter and DDR incident/link changes; no business-row rewrite. |
 | 0272     | `0272_producer_history_retained_counters.sql`             | Initialize per-identity retained producer counters with one covering-index aggregate; maintain exact counts through history insert/delete/productivity/identity triggers so status reads only heads/counters. |
+| 0273     | `0273_report_cards_v9_materializations.sql`              | Add generation/version/source-digest-bound admitted V9 public JSON manifests and bounded immutable fragments; accepted writes commit atomically, with same-identity lazy rollout backfill. |
+| 0274     | `0274_report_cards_v9_site_representations.sql`          | Add table and coin-scoped Safety Score immutable manifests/fragments, committed under the accepted publication fence with live health composition. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -355,6 +357,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - The deploy workflow reruns `npm run check:migrations`, applies remote D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged deployment owns 100% of production traffic.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Worker rollback is an explicit operator action. It restores Worker code traffic but does not undo D1 schema or data changes.
+
+Migration `0273` adds derived public response storage only; old Workers continue reading and writing the canonical cache unchanged. Apply before either new Worker activates. The heavy accepted writer commits the manifest/fragments in its existing fenced transaction; held writes retain them. The public reader can synchronously backfill a missing artifact for the currently accepted identity under a canonical-row CAS, without restamping producer clocks. Corrupt existing artifacts fail closed. Replaced representations retire at replacement time and drain after the five-minute in-flight grace on later accepted writes; active/held generations are protected. Preserve the pre-window Time Travel bookmark, migration ledger and paired Worker versions; code rollback leaves these derived tables intact.
 
 Migration `0252` is pre-Worker compatible: existing writers emit the five known verdicts or NULL. It preserves archived values and adds no data mutation. Record the pre-window D1 Time Travel bookmark, migration ledger, and Worker version before rollout; a Worker rollback leaves the additive guards in place. Schema restoration requires the separately verified bookmark, not an automatic rollback.
 

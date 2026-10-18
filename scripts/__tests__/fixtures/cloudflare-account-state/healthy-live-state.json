@@ -1,7 +1,9 @@
 {
   "zone": {
     "name": "pharos.watch",
-    "status": "active"
+    "status": "active",
+    "browser_cache_ttl": 60,
+    "cache_level": "aggressive"
   },
   "pages": {
     "project": {

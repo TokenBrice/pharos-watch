@@ -7,7 +7,7 @@ body:
     id: path
     attributes:
       label: Doc path or page
-      placeholder: docs/api-reference.md or https://pharos.watch/api/#reference
+      placeholder: docs/api-reference.md or https://pharos.watch/api/reference/
     validations:
       required: true
   - type: textarea

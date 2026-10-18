@@ -22,6 +22,7 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
+import { buildV9PublicMaterialization, v9PublicMaterializationStatements, type V9PublicMaterialization } from "../report-cards-v9-materialization";
 
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
@@ -493,6 +494,7 @@ export async function persistSafetyScoreV9Publication(
   let publicationValue: string | null = null;
   let scoreIndexValue: string | null = null;
   let acceptedProjections: { baseline: string; lender: string } | null = null;
+  let publicMaterialization: V9PublicMaterialization | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
@@ -515,6 +517,7 @@ export async function persistSafetyScoreV9Publication(
       );
     }
     publicationValue = stored;
+    publicMaterialization = buildV9PublicMaterialization(publication, health, JSON.parse(stored).payloadSha256);
     if (!input.buildAcceptedProjections) {
       throw new Error("Accepted Safety Score v9 publication requires projection builders");
     }
@@ -643,6 +646,7 @@ export async function persistSafetyScoreV9Publication(
       acceptedProjections!.lender,
       input.publicationClockSec,
     ));
+    statements.push(...v9PublicMaterializationStatements(db, publicMaterialization!));
     if (input.publicationReplayCaptureValue !== undefined) {
       statements.push(cacheStatement.bind(
         SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,

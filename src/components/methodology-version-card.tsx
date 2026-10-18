@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { StructuredChangelogDetail } from "@/components/methodology-changelog-detail";
 import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
@@ -18,10 +20,12 @@ export function MethodologyVersionCard({
   entry,
   entryId,
   defaultOpen = false,
+  archiveHref,
 }: {
   entry: MethodologyChangelogEntry;
   entryId?: string;
   defaultOpen?: boolean;
+  archiveHref?: string;
 }) {
   const dateLabel = formatMethodologyDisplayDate(entry.date);
 
@@ -70,6 +74,8 @@ export function MethodologyVersionCard({
             ))}
           </ul>
         </div>
+        {entry.detail && <StructuredChangelogDetail entry={entry} />}
+        {archiveHref && <Link href={archiveHref} prefetch={false} className="pharos-prose-link">Open full version archive</Link>}
         <div className="flex flex-wrap gap-2 text-xs">
           {entry.reconstructed ? (
             <span className="rounded-full border border-border/60 bg-background/50 px-3 py-1">

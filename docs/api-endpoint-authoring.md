@@ -2,7 +2,7 @@
 
 Use this checklist when adding or changing a Worker API endpoint. The route registry is centralized; do not hand-roll endpoint metadata. Read the affected `docs/api-reference.md` section; its `public-endpoints` block is generated, not hand-authored.
 
-For the public `/api/` page (Access and Reference tabs), see [API Access And Reference Pages](./api-page.md).
+For `/api/` and `/api/reference/`, see [API pages](./api-page.md).
 
 ## Source Of Truth
 
@@ -25,7 +25,7 @@ For the public `/api/` page (Access and Reference tabs), see [API Access And Ref
 
 Use the shared definitions and dynamic descriptors for endpoint inventories, path builders for construction, and Worker bindings for dispatch. The [Worker appendix](./process/worker-infrastructure-appendix.md#http-request-handling) retains CORS, auth, maintenance and action-lifecycle semantics, not a second endpoint inventory.
 
-The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose descriptor points to the small stability-domain contract that validates only the PSI fields it renders. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
+`RegimeBar`'s registered `useStabilityIndex()` validates rendered PSI fields with the small stability contract, keeping classic Zod out of the all-route graph while caching the full payload. The detail page retains its full lazy schema.
 
 ## Implementation Checklist
 
@@ -40,6 +40,7 @@ Read the affected endpoint's section in [API Reference](./api-reference.md#publi
 7. For public integration endpoints, author the endpoint narrative once in `PUBLIC_API_ARTIFACT_ENDPOINTS` descriptions in `scripts/lib/public-api-artifact-catalog.ts`, using absolute public documentation URLs. Keep route/order metadata in `scripts/maintenance/generate-api-reference.ts` aligned; it retains supplemental-route notes and source-backed examples, not a second endpoint narrative. Regenerate OpenAPI, Postman and the `public-endpoints` block; never edit generated output by hand. Edit only applicable hand-authored contract sections in `docs/api-reference.md`. Internal site-only transports belong in `docs/worker-infrastructure.md`; admin contracts belong in `docs/api-reference-admin.md`.
 8. For integration-facing public `GET` routes, give the artifact catalogue entry a canonical `responseSchema` from `scripts/lib/public-api-response-schemas.ts`; new entries without one fail closed. Keep the generator's operation order and OpenAPI/Postman outputs aligned with runtime metadata.
 9. Add or update handler tests in `worker/src/api/__tests__/`. Include critical suites in `npm run test:critical-contracts` only when they belong on the critical path. Set `strictContract: true` in `shared/lib/api-endpoints/definitions.ts` for frontend-critical routes: `worker/src/api/__tests__/router-contract.test.ts` checks every strict path with `getRouteMatch()` without executing handlers. Its registry/method sweep uses sentinel public handlers and unauthenticated admin requests; dedicated tests must prove payload shape, authenticated behavior, freshness and handler failures.
+   Public smoke paths/assertions derive from strict metadata excluding `publicApiAccess: "site-only"`; router-contract coverage still includes those routes.
 
 ## Auth And Lanes
 

@@ -16,7 +16,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useDexLiquidity } from "@/hooks/api-hooks";
+import { useDexLiquidityCoin } from "@/hooks/api-hooks";
 import { hasMeaningfulDexData } from "@/components/dex-liquidity-card";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatCurrency } from "@shared/lib/format";
@@ -24,6 +24,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
 import { cn } from "@/lib/utils";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -101,7 +102,7 @@ function DonutSwatch({ datum }: { datum: DonutDatum }) {
   if (datum.logoPath) {
     return (
       <img
-        src={datum.logoPath}
+        src={resolveCompactLogoSrc(datum.logoPath, 14)}
         alt=""
         width={14}
         height={14}
@@ -374,7 +375,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 }
 
 function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
-  const query = useDexLiquidity();
+  const query = useDexLiquidityCoin(stablecoinId);
   const { data: liquidityMap, isLoading } = query;
 
   const liq = liquidityMap?.[stablecoinId];

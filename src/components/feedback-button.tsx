@@ -7,7 +7,7 @@ import { FeedbackModal } from "@/components/feedback-modal-lazy";
 
 /** Routes without the floating feedback entry. `/api/` keeps key requests off the public-GitHub feedback modal. */
 export function isFeedbackHiddenPath(pathname: string | null): boolean {
-  return pathname === "/" || pathname === "/api" || pathname === "/api/";
+  return pathname === "/" || pathname === "/api" || pathname === "/api/" || pathname === "/api/reference" || pathname === "/api/reference/";
 }
 
 export function FeedbackButton() {

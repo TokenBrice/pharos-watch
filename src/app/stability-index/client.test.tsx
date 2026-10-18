@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StabilityIndexClient } from "./client";
 
 let stabilityState: {
@@ -10,6 +10,7 @@ let stabilityState: {
     current: Record<string, unknown> | null;
     history: Array<Record<string, unknown>>;
     methodology: Record<string, unknown>;
+    headlineAggregates?: { computedAt: number; generatedAt: number; daysInBand: number; eventScores: { date: number; score: number | null }[] };
   } | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -26,12 +27,27 @@ let stabilityState: {
 };
 
 const refetch = vi.fn();
+const fullHistoryQuery = vi.fn();
 
 vi.mock("@/hooks/api-hooks", () => ({
   useStabilityIndexDetail: () => ({
     ...stabilityState,
     refetch,
   }),
+  useStabilityIndexFullHistory: (options?: { enabled?: boolean }) => {
+    fullHistoryQuery(options);
+    return {
+      ...stabilityState,
+      data: options?.enabled === false || !stabilityState.data ? undefined : {
+        ...stabilityState.data,
+        history: [
+          ...stabilityState.data.history,
+          { date: 1_600_000_000, score: 30, band: "CRISIS" },
+        ],
+      },
+      refetch,
+    };
+  },
 }));
 
 vi.mock("@/hooks/use-time-range-filter", () => ({
@@ -62,7 +78,18 @@ vi.mock("recharts", () => ({
 }));
 
 vi.mock("@/components/psi-history-chart", () => ({
-  ScoreChart: ({ data }: { data: unknown[] }) => <div>score-chart-{data.length}</div>,
+  ScoreChart: ({ data, initialRange, onRangeChange }: {
+    data: unknown[];
+    initialRange?: string;
+    onRangeChange?: (range: string) => void;
+  }) => (
+    <div>
+      <span>score-chart-{data.length}</span>
+      <span>initial-range-{initialRange}</span>
+      <button onClick={() => onRangeChange?.("all")}>All history</button>
+      <button onClick={() => onRangeChange?.("30d")}>Recent history</button>
+    </div>
+  ),
   BAND_ZONES: [
     { y1: 90, label: "BEDROCK" },
     { y1: 75, label: "STEADY" },
@@ -85,7 +112,7 @@ vi.mock("@/components/stale-data-banner", () => ({
 }));
 
 vi.mock("@/components/query-error-notice", () => ({
-  QueryErrorNotice: ({ error }: { error?: Error | null }) => <div role="alert">{error?.message ?? "error"}</div>,
+  QueryErrorNotice: ({ error }: { error?: Error | null }) => error ? <div role="alert">{error.message}</div> : null,
 }));
 
 vi.mock("@/components/stablecoin-logo", () => ({
@@ -106,8 +133,57 @@ vi.mock("@/lib/analytics", () => ({
 }));
 
 describe("StabilityIndexClient", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("keeps offscreen history behind its reserved viewport gate without delaying headline statistics", () => {
+    vi.stubGlobal("IntersectionObserver", class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    });
+    const { container } = render(<StabilityIndexClient />);
+    expect(screen.queryByText("score-chart-3")).toBeNull();
+    expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("30d high").length).toBeGreaterThan(0);
+    expect(container.querySelector('[aria-label="PSI history"] > div')?.getAttribute("style")).toContain("min-height: 450px");
+    expect(fullHistoryQuery).not.toHaveBeenCalled();
+  });
+
+  it("keeps chart mounting bounded and expands only after selecting All", () => {
+    vi.stubGlobal("IntersectionObserver", class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    });
+    const { container } = render(<StabilityIndexClient />);
+    const gate = container.querySelector('[aria-label="PSI history"] > div')!;
+    act(() => gate.dispatchEvent(new Event("pharos:lazy-section-reveal")));
+    expect(screen.getByText("initial-range-1y")).toBeTruthy();
+    expect(fullHistoryQuery.mock.calls.every(([options]) => options?.enabled === false)).toBe(true);
+    expect(screen.getByText("score-chart-3")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "All history" }));
+    expect(fullHistoryQuery).toHaveBeenLastCalledWith({ enabled: true });
+    expect(screen.getByText("score-chart-4")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Recent history" }));
+    expect(fullHistoryQuery).toHaveBeenLastCalledWith({ enabled: false });
+  });
+
+  it("renders the authoritative streak instead of recounting bounded history", () => {
+    stabilityState.data!.headlineAggregates!.daysInBand = 801;
+    render(<StabilityIndexClient />);
+    expect(screen.getByText("801 days in STEADY")).toBeTruthy();
+  });
+
+  it("refuses a streak from another current generation", () => {
+    stabilityState.data!.headlineAggregates!.computedAt -= 1;
+    render(<StabilityIndexClient />);
+    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+    expect(screen.queryByTestId("psi-beacon")).toBeNull();
+  });
+
   beforeEach(() => {
     refetch.mockReset();
+    fullHistoryQuery.mockReset();
     stabilityState = {
       data: {
         current: {
@@ -127,6 +203,7 @@ describe("StabilityIndexClient", () => {
           { date: 1_709_913_600, score: 80, band: "STEADY", components: { severity: 9, breadth: 4, stressBreadth: 2, trend: 4 }, methodologyVersion: "1.0" },
           { date: 1_709_827_200, score: 76, band: "STEADY", components: { severity: 8, breadth: 4, stressBreadth: 1, trend: 4 }, methodologyVersion: "1.0" },
         ],
+        headlineAggregates: { computedAt: 1_710_000_000, generatedAt: 1_710_000_000, daysInBand: 3, eventScores: [] },
         methodology: {
           versionLabel: "v1.0",
           currentVersionLabel: "v1.0",
@@ -166,6 +243,7 @@ describe("StabilityIndexClient", () => {
   it("draws the beacon lit when the sample is fresh", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     stabilityState.data!.current!.computedAt = nowSec;
+    stabilityState.data!.headlineAggregates!.computedAt = nowSec;
     stabilityState.meta = { updatedAt: nowSec, ageSeconds: 0, status: "fresh" };
     render(<StabilityIndexClient />);
 
@@ -177,6 +255,7 @@ describe("StabilityIndexClient", () => {
   it("draws a retained beacon without band hue when the sample is stale", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     stabilityState.data!.current!.computedAt = nowSec - 8 * 3600;
+    stabilityState.data!.headlineAggregates!.computedAt = nowSec - 8 * 3600;
     stabilityState.meta = { updatedAt: nowSec - 8 * 3600, ageSeconds: 8 * 3600, status: "stale" };
     render(<StabilityIndexClient />);
 

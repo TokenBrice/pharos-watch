@@ -24,12 +24,13 @@ import type {
   YieldType,
   YieldVenueRiskTier,
 } from "../../types";
+import type { ReportCardsV9TableResponse } from "../../types/report-cards-v9-projections";
 
 export interface BuildSelectorRowsArgs {
   stablecoinsData: StablecoinListResponse | null;
   pegCurrency?: SelectorInput["pegCurrency"] | null;
   pegData: PegSummaryResponse | null;
-  reportData: ReportCardsV9CurrentResponse | null;
+  reportData: ReportCardsV9CurrentResponse | ReportCardsV9TableResponse | null;
   stressData: StressSignalsAllResponse | null;
   dexData: DexLiquidityMap | null;
   yieldData: YieldRankingsResponse | null;

@@ -7,7 +7,6 @@ import {
   runSimulation,
   WIDTH,
   HEIGHT,
-  DEFAULT_NODE_LIMIT,
   MAX_COLLISION_PASS_NODES,
   PAD,
   MIN_RADIUS,
@@ -18,6 +17,7 @@ import {
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { V9Grade } from "@shared/types/safety-score-v9";
+import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
 
 // ---------------------------------------------------------------------------
 // Helpers — minimal mock factories

@@ -6,6 +6,7 @@ import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./
 import { isValidIsoDateOnly } from "./date-primitives";
 import { BusinessCalendarIdSchema, BusinessClockTimeSchema, BusinessTimezoneSchema } from "./business-calendars";
 import { ConsumedReserveInputSchema, LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES } from "./reserve-input";
+import { CoinProjectionMetadataSchema } from "./coin-projection";
 
 /** Shared route identity/capability authority; Worker strategies supply only executable reads. */
 export interface ExecutableRedemptionObserverDefinition {
@@ -456,3 +457,7 @@ export const RedemptionBackstopsResponseSchema = z.object({
   snapshotSource: RedemptionSnapshotSourceSchema.optional(),
 });
 export type RedemptionBackstopsResponse = z.infer<typeof RedemptionBackstopsResponseSchema>;
+export const RedemptionBackstopCoinResponseSchema = RedemptionBackstopsResponseSchema.extend({
+  projection: CoinProjectionMetadataSchema,
+});
+export type RedemptionBackstopCoinResponse = z.infer<typeof RedemptionBackstopCoinResponseSchema>;

@@ -1,22 +1,9 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema } from "./core";
 
-/**
- * Closed PSI condition-band vocabulary. Every published band comes from the producer's
- * score thresholds, so the wire contract publishes the closed set rather than a free-form
- * string: consumers that index a band→colour map cannot be handed a value the map lacks.
- */
-export const PSI_CONDITION_BAND_VALUES = [
-  "BEDROCK",
-  "STEADY",
-  "TREMOR",
-  "FRACTURE",
-  "CRISIS",
-  "MELTDOWN",
-] as const;
+import { PSI_CONDITION_BAND_VALUES } from "./stability-constants";
 
 export const PsiConditionBandSchema = z.enum(PSI_CONDITION_BAND_VALUES);
-export type PsiConditionBand = z.infer<typeof PsiConditionBandSchema>;
 
 export const StabilityIndexComponentsSchema = z.object({
   severity: z.number().nullable(),
@@ -89,6 +76,20 @@ export const StabilityIndexHistoryPointSchema = z.object({
   componentsUnavailable: StabilityIndexUnavailableComponentsSchema.optional(),
 });
 
+const StabilityIndexEventScoreSchema = z.object({
+  date: z.number(),
+  score: z.number().nullable(),
+});
+export type StabilityIndexEventScore = z.infer<typeof StabilityIndexEventScoreSchema>;
+
+const StabilityIndexHeadlineAggregatesSchema = z.object({
+  computedAt: z.number(),
+  generatedAt: z.number(),
+  daysInBand: z.number().int().nonnegative(),
+  eventScores: z.array(StabilityIndexEventScoreSchema),
+});
+export type StabilityIndexHeadlineAggregates = z.infer<typeof StabilityIndexHeadlineAggregatesSchema>;
+
 export const StabilityIndexResponseSchema = z.object({
   current: StabilityIndexCurrentSchema.nullable(),
   history: z.array(StabilityIndexHistoryPointSchema),
@@ -99,6 +100,7 @@ export const StabilityIndexResponseSchema = z.object({
    */
   malformedRows: z.number().optional(),
   methodology: MethodologyEnvelopeSchema,
+  headlineAggregates: StabilityIndexHeadlineAggregatesSchema.optional(),
 });
 
 export type StabilityContributor = z.infer<typeof StabilityContributorSchema>;

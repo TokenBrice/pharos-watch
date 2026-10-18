@@ -14,6 +14,8 @@ import { deriveDataHealth, mergeHealthStates } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
 import { apiFetchWithMeta } from "@/lib/api";
+import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { StablecoinDetailResponseSchema } from "@shared/types/market";
 
 interface CapturedResponse {
   body: unknown;
@@ -49,9 +51,14 @@ describe("production stablecoin freshness", () => {
     }
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
-      if (url.includes("/stablecoin/usdt-tether")) {
-        if (lane === "detail") return response(lane);
-        return Response.json(captured[lane].body, { headers: captured[lane].revalidatedHeaders });
+      if (url.includes("/stablecoin-live-summary/usdt-tether")) {
+        // Replay the captured source through the same compact projection as the migrated endpoint.
+        // Headers and any body provenance stay unchanged; receipt does not renew the producer.
+        const detail = StablecoinDetailResponseSchema.parse(captured[lane].body);
+        return Response.json({
+          ...projectStablecoinLiveSummary(detail),
+          ...(detail._meta ? { _meta: detail._meta } : {}),
+        }, { headers: lane === "detail" ? captured[lane].headers : captured[lane].revalidatedHeaders });
       }
       if (url.includes("/supply-history")) return response("supply-history");
       if (url.includes("/peg-summary")) return response("peg-summary");

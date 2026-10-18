@@ -1,6 +1,7 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
-import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
+import { ReportCardsV9TableResponseSchema, type ReportCardsV9TableResponse, type ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
+import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
 import type {
   SafetyScorePublicationIdentity,
   SafetyScoreV9Card,
@@ -14,10 +15,11 @@ import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
 export type V9ConsumerResponse = ReportCardsV9CurrentResponse;
 export type V9ConsumerCard = SafetyScoreV9CurrentCard;
+export type V9TableConsumerCard = ReportCardsV9TableCard;
 export type V9ConsumerIdentity = V9ConsumerResponse["safetyScoreIdentity"];
 
 /** The usable population for every three-pillar radar count and aggregate. */
-export function hasCompleteV9RadarPillars(card: SafetyScoreV9Card): boolean {
+export function hasCompleteV9RadarPillars(card: Pick<ReportCardsV9TableCard, "ratingStatus" | "pillars">): boolean {
   return card.ratingStatus === "rated"
     && Number.isFinite(card.pillars.backing.score)
     && Number.isFinite(card.pillars.exit.score)
@@ -69,8 +71,22 @@ export function resolveV9ConsumerResponse(
   if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
     return { status: "unavailable", reason: "identity-mismatch" };
   }
-  return { status: "available", identity: parsed.data.safetyScoreIdentity,
-    value: { ...parsed.data, cards: parsed.data.cards.map((card) => resolveV9PublicWitnessTexts(card)) } };
+  return { status: "available", identity: parsed.data.safetyScoreIdentity, value: parsed.data };
+}
+
+function resolveV9TableConsumerResponse(
+  input: unknown,
+  expectedIdentity: V9ConsumerIdentity,
+): V9ConsumerResult<ReportCardsV9TableResponse | V9ConsumerResponse> {
+  if (input !== null && typeof input === "object" && "projection" in input && input.projection === "table") {
+    const parsed = ReportCardsV9TableResponseSchema.safeParse(input);
+    if (!parsed.success) return { status: "unavailable", reason: "invalid-v9-response" };
+    if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
+      return { status: "unavailable", reason: "identity-mismatch" };
+    }
+    return { status: "available", identity: parsed.data.safetyScoreIdentity, value: parsed.data };
+  }
+  return resolveV9ConsumerResponse(input, expectedIdentity);
 }
 
 // Re-exported so existing imports of `V9GradeRiskBucket` / `getV9GradeRiskBucket`
@@ -83,14 +99,14 @@ export interface V9SafetyTableRow {
   id: string;
   score: number | null;
   grade: V9Grade | null;
-  ratingStatus: SafetyScoreV9Card["ratingStatus"];
-  partialEvidence: SafetyScoreV9Card["partialEvidence"];
+  ratingStatus: ReportCardsV9TableCard["ratingStatus"];
+  partialEvidence: ReportCardsV9TableCard["partialEvidence"];
   riskBucket: V9GradeRiskBucket | null;
-  pillars: SafetyScoreV9Card["pillars"];
-  evidence: SafetyScoreV9Card["evidence"];
-  weakestPillar: SafetyScoreV9Card["weakestPillar"];
-  bindingCapReason: NonNullable<SafetyScoreV9Card["bindingCap"]>["reason"] | null;
-  accessPosture: SafetyScoreV9Card["accessPosture"];
+  pillars: ReportCardsV9TableCard["pillars"];
+  evidence: ReportCardsV9TableCard["evidence"];
+  weakestPillar: ReportCardsV9TableCard["weakestPillar"];
+  bindingCapReason: NonNullable<ReportCardsV9TableCard["bindingCap"]>["reason"] | null;
+  accessPosture: ReportCardsV9TableCard["accessPosture"];
   freezeStatus: V9FreezeStatus;
   /**
    * Published Economic Control mint component. Safety 9.1 made this the single
@@ -102,7 +118,8 @@ export interface V9SafetyTableRow {
 }
 
 /** Read the mint component off a card's control breakdown, null-safe. */
-export function readV9CardMintComponent(card: SafetyScoreV9Card): PublishedMintComponent | null {
+export function readV9CardMintComponent(card: SafetyScoreV9Card | ReportCardsV9TableCard): PublishedMintComponent | null {
+  if ("mint" in card) return card.mint;
   const breakdowns = "breakdowns" in card ? card.breakdowns : null;
   const component = breakdowns?.control?.components.find((entry) => entry.kind === "mint");
   return component && component.score !== null ? { score: component.score, posture: component.posture } : null;
@@ -118,9 +135,10 @@ export function buildV9SafetyTableRows(
   expectedIdentity: V9ConsumerIdentity,
   riskFilter: V9GradeRiskBucket | "all" = "all",
 ): V9ConsumerResult<V9SafetyTableRow[]> {
-  const response = resolveV9ConsumerResponse(input, expectedIdentity);
+  const response = resolveV9TableConsumerResponse(input, expectedIdentity);
   if (response.status === "unavailable") return response;
   const rows = response.value.cards
+    .map((card) => "mint" in card ? card : projectV9TableCard(card))
     .map((card) => ({
       id: card.id,
       score: card.score,
@@ -161,7 +179,7 @@ export function buildV9SafetyTableMap(
 
 export type V9FreezeStatus = "not-observed" | "possible" | "upstream" | "direct" | "unknown";
 
-function mapV9FreezeStatus(card: SafetyScoreV9Card): V9FreezeStatus {
+function mapV9FreezeStatus(card: Pick<ReportCardsV9TableCard, "accessPosture">): V9FreezeStatus {
   switch (card.accessPosture.freezeExposure) {
     case "none-known":
       return "not-observed";
@@ -195,7 +213,7 @@ export function buildV9PortfolioProjection(
   expectedIdentity: V9ConsumerIdentity,
   holdings: readonly PortfolioHolding[],
 ): V9ConsumerResult<V9PortfolioProjection> {
-  const response = resolveV9ConsumerResponse(input, expectedIdentity);
+  const response = resolveV9TableConsumerResponse(input, expectedIdentity);
   if (response.status === "unavailable") return response;
   if (response.value.publicationHealth.status === "held") {
     return { status: "unavailable", reason: "v9-publication-held" };

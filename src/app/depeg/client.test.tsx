@@ -27,6 +27,8 @@ const mocks = vi.hoisted(() => ({
   QueryFreshnessNotices: vi.fn(),
 }));
 
+vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));

@@ -1,5 +1,4 @@
 import type {
-  StablecoinClientDetailMeta,
   StablecoinClientListMeta,
 } from "../../types/stablecoin-client-meta";
 import clientListAsset from "../../data/stablecoins/coins.client.list.generated.json";
@@ -12,7 +11,7 @@ import { isActiveStablecoinMeta } from "./status";
  *
  * The list contains identity, lifecycle, filter, chain, and compact badge
  * fields only. Reserve, compliance, yield, and review evidence is emitted as
- * one JSON file per coin and loaded through `loadClientStablecoinDetail`.
+ * one JSON file per coin and loaded through `client-detail.ts`.
  */
 
 const CANONICAL_ORDER = canonicalOrderAsset as readonly string[];
@@ -40,28 +39,6 @@ export const CLIENT_ACTIVE_IDS: ReadonlySet<string> = registry.active.ids;
 /** Map of active stablecoin ID -> compact client metadata. */
 export const CLIENT_ACTIVE_META_BY_ID: ReadonlyMap<string, StablecoinClientListMeta> = registry.active.metaById;
 
-/**
- * Load the evidence-bearing projection for one known coin. Dynamic JSON
- * imports become per-file chunks in the static export, so list/filter routes
- * never pull the full detail corpus into their initial client chunk.
- */
-export async function loadClientStablecoinDetail(id: string): Promise<StablecoinClientDetailMeta | null> {
-  if (!CLIENT_TRACKED_IDS.has(id)) return null;
-  const listMeta = CLIENT_TRACKED_META_BY_ID.get(id);
-  if (!listMeta) return null;
-  // The runtime-selected ID is required here: a static import would eagerly
-  // include all 406 detail files in every browser chunk.
-  const detailAsset: unknown = await import(`../../data/stablecoins/coins.client.detail/${id}.generated.json`);
-  if (detailAsset === null || typeof detailAsset !== "object" || !("default" in detailAsset)) {
-    throw new Error(`[client-registry] detail projection ID mismatch for ${id}`);
-  }
-  const detail = detailAsset.default;
-  if (!detail || typeof detail !== "object" || Array.isArray(detail) || !("id" in detail) || detail.id !== id) {
-    throw new Error(`[client-registry] detail projection ID mismatch for ${id}`);
-  }
-  // Projection fields are authored and validated by the client-data generator.
-  return { ...listMeta, ...(detail as Partial<StablecoinClientDetailMeta>) };
-}
 
 export type {
   StablecoinClientDetailMeta,

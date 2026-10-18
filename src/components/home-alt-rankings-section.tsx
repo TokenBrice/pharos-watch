@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
-import { useDexLiquidity, usePegSummary, useReportCardsV9 } from "@/hooks/api-hooks";
+import { useDexLiquidityTable, usePegSummary, useReportCardsV9Table } from "@/hooks/api-hooks";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
 import {
@@ -66,8 +66,8 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const [searchQuery, setSearchQuery] = useState("");
   const stablecoinsQuery = useStablecoins();
   const pegSummaryQuery = usePegSummary();
-  const dexLiquidityQuery = useDexLiquidity();
-  const reportCardsQuery = useReportCardsV9();
+  const dexLiquidityQuery = useDexLiquidityTable();
+  const reportCardsQuery = useReportCardsV9Table();
   const { data: stablecoinsData, isLoading } = stablecoinsQuery;
   const logos = logosById;
   const { data: pegSummaryData } = pegSummaryQuery;

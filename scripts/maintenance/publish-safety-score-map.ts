@@ -13,6 +13,7 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import sharp from "sharp";
 import { parseStrictCliArgs, assertCliUsage, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { runShellCommand, type CommandImplementation } from "../lib/command-runner.mts";
 
@@ -55,7 +56,7 @@ interface SafetyMapManifest {
   publicationHealth: unknown;
   counts: Record<string, unknown>;
   mapSummary?: unknown;
-  bytes: { png: number; alt: number };
+  bytes: { png: number; alt: number; webp: number };
 }
 
 export type SafetyMapPlanMode = "force" | "ensure";
@@ -299,7 +300,7 @@ function buildManifest(outDir: string): { manifest: SafetyMapManifest; manifestP
     publicationHealth: meta.publicationHealth ?? null,
     counts: asObject(meta.counts, "latest.manifest.json counts must be an object"),
     ...(meta.mapSummary === undefined ? {} : { mapSummary: meta.mapSummary }),
-    bytes: { png: statSync(png).size, alt: statSync(alt).size },
+    bytes: { png: statSync(png).size, alt: statSync(alt).size, webp: statSync(join(outDir, "latest.webp")).size },
   };
   const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
   if (Buffer.byteLength(manifestText, "utf8") >= MAX_MANIFEST_BYTES) throw new Error(`KV manifest is ${Buffer.byteLength(manifestText, "utf8")} bytes; it must stay under ${MAX_MANIFEST_BYTES} bytes.`);
@@ -332,6 +333,12 @@ export async function renderSafetyMapPublication({
     writeState(statePath, state);
     throw new Error(`Safety Map render failed with status ${status}`);
   }
+  // The site teaser is a derivative of this exact render, never a separate
+  // data fetch or a checked-in snapshot with a different publication clock.
+  await sharp(join(outDir, "latest.png"))
+    .resize(800, 450)
+    .webp({ quality: 78 })
+    .toFile(join(outDir, "latest.webp"));
   const { manifest, manifestPath } = buildManifest(outDir);
   Object.assign(state, { phase: "rendered", manifest, manifestPath, renderSeconds: Math.floor((Date.now() - started) / 1000) });
   writeState(statePath, state);
@@ -345,6 +352,7 @@ export function safetyMapPublicationEntries(state: SafetyMapPublishState, outDir
     { key: "safety-map:alt:latest", path: join(outDir, "latest.alt.json") },
     { key: `safety-map:${state.manifest.date}.png`, path: join(outDir, "latest.png"), verify: true },
     { key: "safety-map:latest.png", path: join(outDir, "latest.png") },
+    { key: "safety-map:latest.webp", path: join(outDir, "latest.webp") },
     { key: MANIFEST_KEY, path: state.manifestPath },
   ];
 }

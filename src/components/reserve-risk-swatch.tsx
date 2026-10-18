@@ -1,0 +1,24 @@
+import type { ReserveRisk } from "@shared/types";
+import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
+import { RISK_ACCENT_COLORS, RISK_COLORS } from "@/lib/chart-colors";
+import { formatDecimal } from "@shared/lib/format";
+
+/** A risk-tier swatch is the tile itself in miniature: same fill, same accent border. */
+export function ReserveRiskSwatch({ risk }: { risk: ReserveRisk }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="size-2.5 shrink-0 rounded-[2px] border"
+      style={{ backgroundColor: RISK_COLORS[risk], borderColor: RISK_ACCENT_COLORS[risk] }}
+    />
+  );
+}
+
+/** Sentence-case tier phrase for visible text ("Very low risk"); never mono caps, it is a phrase. */
+export function formatReserveRiskTier(risk: ReserveRisk): string {
+  return `${RESERVE_RISK_PRESENTATION[risk].shortLabel} risk`;
+}
+/** Reserve shares are display-rounded to two decimals; positive dust stays visible. */
+export function formatReserveSharePct(pct: number): string {
+  return pct > 0 && pct < 0.01 ? "<0.01%" : `${formatDecimal(pct, 0, 2)}%`;
+}

@@ -83,6 +83,7 @@ export interface RedemptionBackstopLoadResult {
   snapshotSource?: RedemptionSnapshotSource;
   reserveInputAssessment?: ConsumedRedemptionReserveAssessment;
   runMetadata?: RedemptionBackstopRunMetadata;
+  totalCount?: number;
 }
 
 interface RedemptionBackstopRunRow {
@@ -599,10 +600,45 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
   }
 }
 
-export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<RedemptionBackstopsResponse> {
+/** Select only the requested immutable row; the completed manifest retains cohort scope. */
+async function loadRedemptionBackstopCoinSnapshot(
+  db: D1Database,
+  stablecoinId: string,
+): Promise<RedemptionBackstopLoadResult> {
+  const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
+  for (const run of recentRuns) {
+    if (run.written_count !== run.expected_count || (run.expected_count > 0 && run.max_updated_at == null)) continue;
+    const [count, rows] = await Promise.all([
+      db.prepare(`SELECT COUNT(*) AS totalCount, COUNT(DISTINCT stablecoin_id) AS uniqueCount
+        FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?`).bind(run.run_id)
+        .first<{ totalCount: number; uniqueCount: number }>(),
+      db.prepare(`SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
+        FROM redemption_backstop_run_rows WHERE snapshot_run_id = ? AND stablecoin_id = ?`).bind(run.run_id, stablecoinId)
+        .all<RedemptionBackstopRow>(),
+    ]);
+    if (count?.totalCount !== run.written_count || count.uniqueCount !== run.written_count) continue;
+    const selectedRows = rows.results;
+    const rejections: string[] = [];
+    const map = decodeBackstopRows(selectedRows, "Failed to decode immutable redemption backstop coin row", run.run_id, rejections);
+    if (Object.keys(map).length !== selectedRows.length) continue;
+    return {
+      map,
+      latestUpdatedAt: map[stablecoinId]?.updatedAt ?? run.max_updated_at,
+      runId: run.run_id,
+      methodologyVersion: run.methodology_version,
+      snapshotSource: "run-rows",
+      totalCount: run.written_count,
+    };
+  }
+  throw new RedemptionBackstopSnapshotUnavailableError("No valid completed redemption backstop run found for coin");
+}
+
+export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoinId?: string): Promise<RedemptionBackstopsResponse & {
+  projection?: { stablecoinId: string; generationId: string | null; updatedAt: number | null; totalCount: number; unavailableReason: "row-not-published" | null };
+}> {
   let loaded: RedemptionBackstopLoadResult;
   try {
-    loaded = await loadRedemptionBackstopSnapshot(db);
+    loaded = stablecoinId ? await loadRedemptionBackstopCoinSnapshot(db, stablecoinId) : await loadRedemptionBackstopSnapshot(db);
   } catch (error) {
     if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
       throw error;
@@ -637,5 +673,12 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
     },
     updatedAt,
     ...(loaded.snapshotSource ? { snapshotSource: loaded.snapshotSource } : {}),
+    ...(stablecoinId ? { projection: {
+      stablecoinId,
+      generationId: loaded.runId ?? null,
+      updatedAt: coins[stablecoinId]?.updatedAt ?? null,
+      totalCount: loaded.totalCount ?? Object.keys(coins).length,
+      unavailableReason: coins[stablecoinId] ? null : "row-not-published" as const,
+    } } : {}),
   };
 }

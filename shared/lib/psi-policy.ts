@@ -1,4 +1,4 @@
-import type { PsiConditionBand } from "../types/stability";
+import type { PsiConditionBand } from "../types/stability-constants";
 import { bandFromThresholds } from "./math";
 
 /** Inclusive lower bounds, ordered from the most stable band to the least. */

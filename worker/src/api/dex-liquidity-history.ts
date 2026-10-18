@@ -37,7 +37,7 @@ function parseRouteSummary(json: string | null) {
   };
 }
 
-export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promise<Response> => {
+async function handleLiquidityHistory(db: D1Database, url: URL, includeRouteSummary: boolean): Promise<Response> {
     return handleStablecoinHistoryRequest(db, url, {
       query: STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity,
       cacheControl: CACHE_PROFILES.slow,
@@ -46,7 +46,7 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
           .prepare(
             `SELECT total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
                   coverage_class, coverage_confidence, methodology_version
-                  , exit_route_summary_json, volume_availability_json
+                  , ${includeRouteSummary ? "exit_route_summary_json" : "NULL AS exit_route_summary_json"}, volume_availability_json
            FROM dex_liquidity_history
            WHERE stablecoin_id = ? AND snapshot_date >= ?
            ORDER BY snapshot_date ASC`,
@@ -87,4 +87,11 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
         };
       },
     });
-  };
+}
+
+export const handleDexLiquidityHistory = (db: D1Database, url: URL): Promise<Response> =>
+  handleLiquidityHistory(db, url, true);
+
+/** The detail TVL chart does not consume multi-megabyte executable-route evidence. */
+export const handleDexLiquidityChartHistory = (db: D1Database, url: URL): Promise<Response> =>
+  handleLiquidityHistory(db, url, false);

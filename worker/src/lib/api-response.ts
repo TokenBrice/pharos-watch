@@ -1,7 +1,10 @@
+import { createHash, randomUUID } from "node:crypto";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { cloneResponse, createJsonResponse } from "@shared/lib/http-response";
 import { addFreshnessHeaders } from "./api-freshness-headers";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { logWorkerEvent } from "./structured-log";
 
 type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
@@ -11,6 +14,88 @@ export interface JsonResponseOptions {
   headers?: Record<string, string>;
   noStore?: boolean;
   retryAfterSec?: number;
+}
+
+/**
+ * Semantic validators deliberately ignore assessment-clock churn. Callers must
+ * include every mutable payload overlay (health/reason/version) in the identity.
+ * Never pass the cohort/body: only bounded producer identity metadata is hashed.
+ */
+export function withRepresentationEtag(response: Response, identity: unknown): Response {
+  if (!isReusableResponse(response)) return withoutValidators(response);
+  return withResponseHeaders(response, {
+    ETag: `W/"${createHash("sha256").update(JSON.stringify(identity)).digest("hex")}"`,
+  });
+}
+
+function isReusableResponse(response: Response): boolean {
+  const policy = response.headers.get("Cache-Control") ?? "";
+  const freshness = response.headers.get("X-Data-Freshness");
+  return response.status === 200 && !/\b(?:no-store|no-cache|private)\b/i.test(policy)
+    && /\b(?:s-maxage|max-age)\s*=\s*[1-9]\d*/i.test(policy)
+    && (freshness === null || freshness === "fresh")
+    && response.headers.get("X-Safety-Score-Status") !== "held";
+}
+
+function withoutValidators(response: Response): Response {
+  if (!response.headers.has("ETag") && !response.headers.has("Last-Modified")) return response;
+  return cloneResponse(response, { mutateHeaders: (headers) => {
+    headers.delete("ETag");
+    headers.delete("Last-Modified");
+  } });
+}
+
+/** Scope validators to the exact route/query representation before cache admission. */
+export function scopeResponseEtag(response: Response, representation: string, cacheable: boolean): Response {
+  if (!isReusableResponse(response)) return withoutValidators(response);
+  const sourceEtag = response.headers.get("ETag");
+  if (!sourceEtag && !cacheable) return response;
+  // Without a producer validator, identify this exact response-cache publication.
+  // The token is stored with its bytes once, never inferred from a partial clock
+  // that could omit independently mutable overlays.
+  const scoped = withRepresentationEtag(response, [
+    "http-representation-v1", representation,
+    sourceEtag ?? ["response-cache-publication", response.headers.get("X-Data-Updated-At"), randomUUID()],
+    response.headers.get("X-Data-Freshness"), response.headers.get("X-Data-Freshness-Reason"),
+    response.headers.get("X-Safety-Score-Status"),
+  ]);
+  if (scoped.headers.has("Date")) return scoped;
+  return withResponseHeaders(scoped, { Date: new Date(Date.now()).toUTCString() });
+}
+
+/** Shared admission for edge hits and conditionals, including composed Date bounds. */
+export function isResponseWithinFreshLifetime(response: Response): boolean {
+  const policy = response.headers.get("Cache-Control") ?? "";
+  const ttl = policy.match(/\bs-maxage\s*=\s*(\d+)/i) ?? policy.match(/\bmax-age\s*=\s*(\d+)/i);
+  const date = Date.parse(response.headers.get("Date") ?? "");
+  const age = Number(response.headers.get("Age") ?? "0");
+  const now = Date.now() / 1000;
+  if (!ttl || !Number.isFinite(date) || !Number.isFinite(age) || age < 0
+    || Math.max(age, Math.max(0, now - date / 1000)) >= Number(ttl[1])) return false;
+  const updatedAt = response.headers.get("X-Data-Updated-At");
+  const budget = response.headers.get("X-Data-Freshness-Budget");
+  return updatedAt === null || budget === null || (Number.isFinite(Number(updatedAt))
+    && Number.isFinite(Number(budget)) && now < Number(updatedAt) + Number(budget));
+}
+
+/** A 304 keeps the original Date/Age and bounded policy; it never renews a verdict. */
+export function conditionalGetResponse(request: Request, response: Response): Response {
+  if (request.method !== "GET" || !isReusableResponse(response)) return withoutValidators(response);
+  const etag = response.headers.get("ETag");
+  const condition = request.headers.get("If-None-Match");
+  if (!etag || !condition) return response;
+  if (!isResponseWithinFreshLifetime(response)) return response;
+  const opaqueTag = etag.replace(/^W\//, "");
+  // Entity-tag values can contain commas; do not split a quoted opaque tag.
+  const tags = condition.match(/(?:W\/)?"[^"]*"|\*/g) ?? [];
+  if (!tags.some((tag) => tag === "*" || tag.replace(/^W\//, "") === opaqueTag)) return response;
+  const headers = new Headers(response.headers);
+  headers.delete("Content-Length");
+  headers.delete("Content-Encoding");
+  headers.delete("Content-Range");
+  // Do not await cancellation of a tee branch; another cache writer may consume it.
+  void response.body?.cancel().catch(() => undefined);
+  return new Response(null, { status: 304, headers });
 }
 
 
@@ -43,8 +128,9 @@ export function withResponseHeaders(response: Response, headersInit: HeadersInit
 }
 
 export function noStoreResponse(response: Response): Response {
-  if (response.headers.get("Cache-Control") === "no-store") return response;
-  return withResponseHeaders(response, { "Cache-Control": "no-store" });
+  const uncached = response.headers.get("Cache-Control") === "no-store"
+    ? response : withResponseHeaders(response, { "Cache-Control": "no-store" });
+  return withoutValidators(uncached);
 }
 
 export function errorResponse(status: number, message: string, options: JsonResponseOptions = {}): Response {
@@ -116,21 +202,28 @@ export function jsonFreshDegradedResponse(payload: { _meta: { degraded: boolean 
 }
 
 interface SafetyScoreSnapshotResponseMetadata {
-  publicationHealth: { status: "current" | "held" };
+  publicationHealth: Pick<V9PublicationHealth, "status">;
   updatedAt: number;
 }
 
 export function jsonSafetyScoreSnapshotResponse(
-  snapshot: SafetyScoreSnapshotResponseMetadata,
-  body: unknown = snapshot,
+  snapshot: SafetyScoreSnapshotResponseMetadata & {
+    safetyScoreIdentity: SafetyScoreV9PublicationIdentity;
+    publicationHealth: V9PublicationHealth;
+  },
+  body: unknown,
+  representation: string,
 ): Response {
+  return withRepresentationEtag(jsonResponseWithHeaders(body, safetyScoreSnapshotHeaders(snapshot)),
+    [representation, snapshot.safetyScoreIdentity, snapshot.publicationHealth]);
+}
+
+/** Shared policy for object responses and admitted immutable byte streams. */
+export function safetyScoreSnapshotHeaders(snapshot: SafetyScoreSnapshotResponseMetadata): Record<string, string> {
   const held = snapshot.publicationHealth.status === "held";
-  return jsonFreshResponse(body, {
-    cacheControl: held ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard,
-    updatedAt: snapshot.updatedAt,
-    maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
-    headers: {
-      "X-Safety-Score-Status": held ? "held" : "current",
-    },
-  });
+  return addFreshnessHeaders({
+    "Content-Type": "application/json",
+    "Cache-Control": held ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard,
+    "X-Safety-Score-Status": held ? "held" : "current",
+  }, snapshot.updatedAt, API_FRESHNESS_MAX_AGE_SEC.reportCards);
 }

@@ -44,8 +44,8 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 
 vi.mock("@/hooks/api-hooks", () => ({
   usePegSummary: usePegSummaryMock,
-  useDexLiquidity: useDexLiquidityMock,
-  useReportCardsV9: useReportCardsV9Mock,
+  useDexLiquidityTable: useDexLiquidityMock,
+  useReportCardsV9Table: useReportCardsV9Mock,
   useStressSignals: useStressSignalsMock,
 }));
 

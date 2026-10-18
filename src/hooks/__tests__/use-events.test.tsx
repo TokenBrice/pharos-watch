@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveSchemaLike } from "@shared/lib/schema-like";
 
 const { useInfiniteQueryMock, apiFetchWithMetaMock, useRegisteredApiQueryMock } = vi.hoisted(() => ({
   useInfiniteQueryMock: vi.fn(),
@@ -138,14 +139,14 @@ describe("useEvents", () => {
     await options.queryFn({ pageParam: "cursor-2" });
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/events?type=peg.alert&type=depeg.confirmed&coin=usdc-circle&limit=500&cursor=cursor-2",
-      expect.any(Object),
+      expect.any(Function),
       expect.objectContaining({
         signal: undefined,
       }),
     );
 
-    const schema = apiFetchWithMetaMock.mock.calls[0]?.[1];
-    expect(schema.safeParse({ events: [{ id: "incomplete" }], nextCursor: null }).success).toBe(false);
+    const schema = await resolveSchemaLike(apiFetchWithMetaMock.mock.calls[0]?.[1]);
+    expect(schema?.safeParse({ events: [{ id: "incomplete" }], nextCursor: null }).success).toBe(false);
   });
 
   it("uses the canonical Tape events runtime schema for latest-event queries", async () => {

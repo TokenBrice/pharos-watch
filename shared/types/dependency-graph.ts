@@ -85,9 +85,11 @@ export const DependencyGraphResponseSchema = ReportCardsV9DependencyGraphSchema.
 });
 export type DependencyGraphResponse = z.infer<typeof DependencyGraphResponseSchema>;
 
-function resolveCommonModeEffects(snapshot: ReportCardsV9CurrentResponse): z.infer<typeof DependencyGraphCommonModeGroupsSchema> | undefined {
+export function resolveCommonModeEffects(snapshot: Pick<ReportCardsV9CurrentResponse, "commonModeGroups"> & {
+  cards: readonly Pick<ReportCardsV9CurrentResponse["cards"][number], "id" | "caps" | "scoreTrace">[];
+}): z.infer<typeof DependencyGraphCommonModeGroupsSchema> | undefined {
   if (snapshot.commonModeGroups === undefined) return undefined;
-  let cardsById: Map<string, ReportCardsV9CurrentResponse["cards"][number]> | undefined;
+  let cardsById: Map<string, Pick<ReportCardsV9CurrentResponse["cards"][number], "id" | "caps" | "scoreTrace">> | undefined;
   return snapshot.commonModeGroups.map(({ pricedEffects, ...group }) => {
     if (pricedEffects === undefined) return group;
     cardsById ??= new Map(snapshot.cards.map((card) => [card.id, card]));

@@ -9,7 +9,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { NonUsdShareChart } from "@/components/non-usd-share-chart";
-import { useDexLiquidity, useNonUsdShare, usePegSummary, useReportCardsV9 } from "@/hooks/api-hooks";
+import { useDexLiquidityTable, useNonUsdShare, usePegSummary, useReportCardsV9Table, useStablecoinCharts } from "@/hooks/api-hooks";
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -232,9 +232,11 @@ function AltPegDistributionCard({
 export function AltPegsClient() {
   const stablecoinsQuery = useStablecoins();
   const shareQuery = useNonUsdShare();
+  // Start cohort history alongside the independent current-market read.
+  useStablecoinCharts();
   const pegSummaryQuery = usePegSummary();
-  const dexLiquidityQuery = useDexLiquidity();
-  const reportCardsQuery = useReportCardsV9();
+  const dexLiquidityQuery = useDexLiquidityTable();
+  const reportCardsQuery = useReportCardsV9Table();
   const logos = logosById;
   const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
 

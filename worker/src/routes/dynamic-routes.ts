@@ -99,6 +99,13 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
       return handleStablecoinDetail(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey);
     }),
   ),
+  defineDynamicRouteFromDescriptor("stablecoin-live-summary", (routeCtx, match) =>
+    resolveDynamicStablecoinRoute(match, async (canonicalId) => {
+      // Keep provider strategy code out of unrelated routes' initial module graph.
+      const { handleStablecoinLiveSummary } = await import("../api/stablecoin-live-summary");
+      return handleStablecoinLiveSummary(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey);
+    }),
+  ),
   defineDynamicRouteFromDescriptor("og-image", async (routeCtx) => {
     // `handleOg` owns the malformed-URI rejection for /api/og/stablecoin/:id and
     // returns the same 400 text/plain response, so no outer guard is needed here.

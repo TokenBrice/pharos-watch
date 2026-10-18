@@ -108,6 +108,148 @@ describe("site-data proxy", () => {
     expect(observed).toEqual(expected);
   });
 
+  it.each([false, true])("passes conditional 304 status, empty body and allowlisted headers through binding=%s", async (useBinding) => {
+    const headers = {
+      ETag: 'W/"generation-1"',
+      "Cache-Control": "public, s-maxage=300, max-age=60",
+      Age: "42", Date: "Sun, 18 Oct 2026 12:00:00 GMT",
+      "X-Data-Updated-At": "1792324700", "X-Data-Assessed-At": "1792324800",
+      "X-Data-Freshness-Budget": "4800", "X-Data-Freshness": "fresh",
+      "Access-Control-Allow-Origin": "https://pharos.watch",
+      "Access-Control-Expose-Headers": "ETag, Age, Date, X-Data-Updated-At",
+      Vary: "Origin",
+    };
+    const upstreamResponse = new Response(null, { status: 304, headers: { ...headers, "X-Private-Upstream": "secret" } });
+    const binding = { fetch: vi.fn(async (_request: Request) => upstreamResponse) };
+    const networkFetch = useBinding
+      ? mockFetch([], { requireMatch: true })
+      : siteApi.response("/api/stablecoins", upstreamResponse);
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
+      headers: { Origin: "https://pharos.watch", "If-None-Match": headers.ETag,
+        "If-Modified-Since": headers.Date },
+    }), makeEnv(undefined, useBinding ? { SITE_API: binding } : {})));
+    expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
+    await expect(response.text()).resolves.toBe("");
+    for (const [name, value] of Object.entries(headers)) expect(response.headers.get(name)).toBe(value);
+    expect(response.headers.get("X-Private-Upstream")).toBeNull();
+    if (useBinding) {
+      const request = binding.fetch.mock.calls[0][0];
+      expect(request.headers.get("If-None-Match")).toBe(headers.ETag);
+      expect(request.headers.get("If-Modified-Since")).toBe(headers.Date);
+      expect(networkFetch).not.toHaveBeenCalled();
+    } else {
+      expect(networkFetch).toHaveBeenCalledOnce();
+    }
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it.each(["fresh", "stale", "unknown"])("forwards the complete exposed freshness contract for %s evidence", async (freshness) => {
+    const headers = {
+      "Cache-Control": "no-store",
+      "X-Data-Age": freshness === "unknown" ? "unavailable" : "120",
+      "X-Data-Updated-At": "1792300000",
+      "X-Data-Freshness": freshness,
+      "X-Data-Freshness-Reason": freshness === "fresh" ? "within-budget" : "source-unavailable",
+      "X-Data-Assessed-At": "1792300120",
+      "X-Data-Freshness-Budget": "60",
+      "X-Safety-Score-Status": "held",
+      "X-Safety-Score-Updated-At": "1792200000",
+      "X-Safety-Score-Generation": "retained-generation",
+      "X-Safety-Score-Assessed-At": "1792300120",
+      "X-Safety-Score-Freshness-Budget": "86400",
+      Warning: '110 - "Response is stale"',
+      "Retry-After": "60",
+    };
+    const exposed = Object.keys(headers).filter((name) => name !== "Cache-Control");
+    siteApi.json("/api/stablecoins", { ok: true }, 200, {
+      ...headers,
+      "Access-Control-Expose-Headers": exposed.join(", "),
+      "X-Private-Upstream": "not-forwarded",
+    });
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
+      headers: { Origin: "https://pharos.watch" },
+    })));
+    expect(response.headers.get("Access-Control-Expose-Headers")).toBe(exposed.join(", "));
+    for (const [name, value] of Object.entries(headers)) {
+      expect(response.headers.get(name)).toBe(value);
+    }
+    expect(response.headers.get("X-Private-Upstream")).toBeNull();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("uses the service binding with canonical host, secret, query and attribution without resetting clocks", async () => {
+    const networkFetch = mockFetch([], { requireMatch: true });
+    const upstreamHeaders = {
+      Age: "299",
+      Date: "Mon, 15 Jun 2026 09:55:01 GMT",
+      ETag: '"generation-1"',
+      "Cache-Control": "public, max-age=60, s-maxage=300",
+      "X-Data-Freshness": "stale",
+      "X-Data-Assessed-At": "1792300120",
+      "X-Data-Freshness-Budget": "60",
+    };
+    const binding = {
+      fetch: vi.fn(async (_request: Request) => new Response('{"ok":true}', { headers: upstreamHeaders })),
+    };
+    const db = makeTestD1Database();
+    const response = await onRequest(siteDataContext(new Request(
+      "https://pharos.watch/_site-data/stablecoin-summary/usdt-tether?range=7d",
+      { headers: { Origin: "https://pharos.watch", Accept: "application/json", "If-None-Match": '"generation-0"' } },
+    ), makeEnv(db, { SITE_API: binding })));
+
+    expect(binding.fetch).toHaveBeenCalledOnce();
+    const request = binding.fetch.mock.calls[0][0];
+    expect(request.url).toBe("https://site-api.pharos.watch/api/stablecoin-summary/usdt-tether?range=7d");
+    expect(request.method).toBe("GET");
+    expect(request.redirect).toBe("manual");
+    expect(request.headers.get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
+    expect(request.headers.get("If-None-Match")).toBe('"generation-0"');
+    expect(request.headers.get("Accept")).toBe("application/json");
+    expect(request.headers.get("Origin")).toBeNull();
+    expect(request.signal).toBeInstanceOf(AbortSignal);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    for (const [name, value] of Object.entries(upstreamHeaders)) {
+      expect(response.headers.get(name)).toBe(value);
+    }
+    expectAttribution(db, "stablecoin-summary", "/api/stablecoin-summary/:id");
+    expect(networkFetch).not.toHaveBeenCalled();
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["/_site-data/status", {}, 404],
+    ["/_site-data/stablecoins", { SITE_API_ORIGIN: "https://api.pharos.watch" }, 500],
+    ["/_site-data/stablecoins", { SITE_API_SHARED_SECRET: "" }, 500],
+  ])("keeps binding requests behind admission for %s", async (path, overrides, status) => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const networkFetch = mockFetch([], { requireMatch: true });
+    const binding = { fetch: vi.fn(async (_request: Request) => new Response("{}")) };
+    const response = await onRequest(siteDataContext(new Request(`https://pharos.watch${path}`, {
+      headers: { Origin: "https://pharos.watch" },
+    }), makeEnv(undefined, { ...overrides, SITE_API: binding })));
+    expect(response.status).toBe(status);
+    expect(binding.fetch).not.toHaveBeenCalled();
+    expect(networkFetch).not.toHaveBeenCalled();
+  });
+
+  it("does not retry a failed binding through the public network", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const networkFetch = mockFetch([], { requireMatch: true });
+    const binding = { fetch: vi.fn(async (_request: Request): Promise<Response> => { throw new Error("binding unavailable"); }) };
+    const db = makeTestD1Database();
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
+      headers: { Origin: "https://pharos.watch" },
+    }), makeEnv(db, { SITE_API: binding })));
+    expect(response.status).toBe(502);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expectAttribution(db, "stablecoins", "/api/stablecoins", "pages-upstream-error");
+    expect(networkFetch).not.toHaveBeenCalled();
+  });
+
   it("preserves unavailable producer evidence without caching the response", async () => {
     siteApi.json("/api/blacklist", { events: [], total: 0 }, 200, {
       "Cache-Control": "no-store",
@@ -366,17 +508,19 @@ describe("site-data proxy", () => {
     );
   });
 
-  it("attributes a stalled body to timeout only after the deadline and cancels it", async () => {
+  it.each(["fetch", "binding"])("attributes a stalled %s body to timeout only after the deadline and cancels it", async (transport) => {
     vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const cancel = vi.fn();
-    siteApi.response("/api/stablecoins", new Response(new ReadableStream<Uint8Array>({ cancel })));
+    const upstream = new Response(new ReadableStream<Uint8Array>({ cancel }));
+    const binding = { fetch: vi.fn(async (_request: Request) => upstream) };
+    if (transport === "fetch") siteApi.response("/api/stablecoins", upstream);
     const db = makeTestD1Database();
     const ctx = makeWaitUntil();
     let settled = false;
     const pending = onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
       headers: { Origin: "https://pharos.watch" },
-    }), makeEnv(db), ctx.waitUntil)).then((response) => {
+    }), makeEnv(db, transport === "binding" ? { SITE_API: binding } : {}), ctx.waitUntil)).then((response) => {
       settled = true;
       return response;
     });

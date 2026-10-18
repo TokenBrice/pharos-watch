@@ -1,12 +1,22 @@
 import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../../src/test-helpers/__shared/endpoint-contracts";
 import type { ChainRpcConfig } from "../../../src/lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../../src/lib/evm-selectors";
 import { fetchHistoricalFxRates } from "../../../src/lib/backfill-fx";
 import { ethereumSupplyRpc, supplyRpcResponse } from "./backfill-supply-history.test-support";
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "UPDATE cache SET value = json_set", rows: [] },
+  ], options);
+}
 
 type PsiEligibleCoin = (typeof import("@shared/lib/psi-eligible"))["PSI_ELIGIBLE_STABLECOINS"][number];
 

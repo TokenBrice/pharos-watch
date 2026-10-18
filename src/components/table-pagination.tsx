@@ -8,6 +8,7 @@ export interface TablePaginationProps {
   rangeStart: number;
   rangeEnd: number;
   total: number;
+  dataState?: "ready" | "loading" | "unavailable";
   onPrevious?: () => void;
   onNext?: () => void;
   previousDisabled?: boolean;
@@ -25,6 +26,7 @@ export function TablePagination({
   rangeStart,
   rangeEnd,
   total,
+  dataState = "ready",
   onPrevious,
   onNext,
   previousDisabled = page === 0,
@@ -51,16 +53,20 @@ export function TablePagination({
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
         <span className="text-sm text-muted-foreground" aria-live="polite">
-          Showing{" "}
-          <span className="font-mono tabular-nums">{formattedRangeStart}</span>
-          {"–"}
-          <span className="font-mono tabular-nums">{formattedRangeEnd}</span>
-          {" "}of{" "}
-          <span className="font-mono tabular-nums">{formattedTotal}</span> {noun}
+          {dataState === "loading" ? "Loading results…" : dataState === "unavailable" ? "Result counts unavailable." : (
+            <>
+              Showing{" "}
+              <span className="font-mono tabular-nums">{formattedRangeStart}</span>
+              {"–"}
+              <span className="font-mono tabular-nums">{formattedRangeEnd}</span>
+              {" "}of{" "}
+              <span className="font-mono tabular-nums">{formattedTotal}</span> {noun}
+            </>
+          )}
         </span>
         {supplementaryText ? <span className="pharos-meta">{supplementaryText}</span> : null}
       </div>
-      {showControls ? (
+      {showControls && dataState === "ready" ? (
         <div className="flex items-center gap-2">
           <Button
             variant="outline"

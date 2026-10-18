@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { ReactNode, Ref, RefObject } from "react";
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles, Unlink } from "lucide-react";
 import { AiSummary } from "@/components/ai-summary";
 import { BackToSource } from "@/components/back-to-source";
@@ -38,7 +38,7 @@ import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
-import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
+import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
 import { resolveDetailGradeRead } from "@/lib/stablecoin-detail-query-view-model";
 import { cn } from "@/lib/utils";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
@@ -68,6 +68,8 @@ const DETAIL_SECTIONS = [
   { id: "history", label: "History", icon: Hourglass },
   { id: "explore", label: "Explore", icon: Sparkles },
 ] as const;
+
+const DETAIL_SECTION_IDS = DETAIL_SECTIONS.map((section) => section.id);
 
 interface DetailContentProps {
   activeBannerId: string;
@@ -120,6 +122,7 @@ function DetailIdentity({
         hasData={viewModel.supplyHistory.length > 0}
         onRetry={viewModel.handleRetryAll}
         queries={viewModel.staleQueries}
+        persistent
       />
       <HeroIdentityHeader
         model={heroModel}
@@ -148,7 +151,8 @@ function hasContextZoneContent(viewModel: ReadyDetailViewModel, hasVariantCard: 
   if (hasVariantCard) return true;
   const response = viewModel.reportCardsResponse;
   if (!response) return false;
-  const cardIds = new Set(response.cards.map((card) => card.id));
+  const cards = "neighborhood" in response ? response.neighborhood : response.cards;
+  const cardIds = new Set(cards.map((card) => card.id));
   const hasEdge = response.dependencyGraph.edges.some(
     (edge) => (edge.from === viewModel.id || edge.to === viewModel.id) && cardIds.has(edge.from) && cardIds.has(edge.to),
   );
@@ -162,11 +166,13 @@ function DetailNavigation({
   contextHasContent,
   hasFailureScenario,
   onActiveChange,
+  onBeforeAlign,
   viewModel,
 }: {
   contextHasContent: boolean;
   hasFailureScenario: boolean;
   onActiveChange: (id: string) => void;
+  onBeforeAlign: (sectionId: string) => void;
   viewModel: ReadyDetailViewModel;
 }) {
   return (
@@ -181,6 +187,7 @@ function DetailNavigation({
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"
       onActiveChange={onActiveChange}
+      onBeforeAlign={onBeforeAlign}
       // A band of page background behind the pills, so scrolled content never
       // shows through beside them: the spread shadow paints the band and the
       // clip keeps it to the bar's height (a shadow never adds scroll
@@ -190,19 +197,19 @@ function DetailNavigation({
       className="mt-2 bg-background py-2 shadow-[0_0_0_100vmax_var(--background)] [clip-path:inset(0_-100vmax)] lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none xl:[clip-path:inset(0_0_0_-100vmax)]"
       rightSlot={(
         <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
-          <Link
+          <IntentLink
             href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
             className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
-          </Link>
+          </IntentLink>
           <span className="text-border">|</span>
-          <Link
+          <IntentLink
             href={getPrimaryStaticComparisonLinkForCoin(viewModel.coin.id)?.href ?? buildLiveCompareUrl([viewModel.coin.id])}
             className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             Compare
-          </Link>
+          </IntentLink>
         </div>
       )}
     />
@@ -315,8 +322,30 @@ function DetailSummaryRail({
           frozen={viewModel.coin.status === "frozen"}
           gradeRead={resolveGradeRead(viewModel)}
         />
-        {sharedModules.backingMetrics ? <BackingMetricsCard view={sharedModules.backingMetrics} anchorTwin /> : null}
-        <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />
+        {sharedModules.backingMetrics || viewModel.coin.liveReservesConfig ? (
+          <div className="min-h-64" data-rail-slot="collateralization">
+            {sharedModules.backingMetrics ? <BackingMetricsCard view={sharedModules.backingMetrics} anchorTwin /> : (
+              <RailCard title="Collateralization" ariaLabel="Collateralization">
+                <p className="px-4 pb-4 text-xs text-muted-foreground">
+                  {viewModel.featureStates.reserves.status === "loading" || viewModel.featureStates.reserves.status === "deferred"
+                    ? "Waiting for reserve evidence."
+                    : "Collateralization evidence is unavailable."}
+                </p>
+              </RailCard>
+            )}
+          </div>
+        ) : null}
+        <div className="min-h-48" data-rail-slot="access">
+          {sharedModules.accessRows.length > 0 ? (
+            <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />
+          ) : (
+            <RailCard title="Access posture" ariaLabel="Access posture">
+              <p className="px-4 pb-4 text-xs text-muted-foreground">
+                {resolveGradeRead(viewModel) === "pending" ? "Loading published access posture…" : "Published access posture is unavailable."}
+              </p>
+            </RailCard>
+          )}
+        </div>
         {sharedModules.regulatoryStanding ? (
           <RegulatoryStandingCard view={sharedModules.regulatoryStanding} anchorTwin />
         ) : sharedModules.regulatoryNotReviewed ? (
@@ -364,6 +393,10 @@ export function DetailContent({
   overviewGateRef,
   viewModel,
 }: DetailContentProps) {
+  const detailRootRef = useRef<HTMLDivElement | null>(null);
+  const prepareAnchor = useCallback((sectionId: string) => {
+    revealDeferredSectionsThroughAnchor(sectionId, DETAIL_SECTION_IDS, detailRootRef.current);
+  }, []);
   // The scrollspy owns its top-level hashes. Nested direct links need the
   // same bounded alignment after hydration, not only disclosure reveal.
   useEffect(() => {
@@ -374,9 +407,9 @@ export function DetailContent({
       return;
     }
     if (hash && !DETAIL_SECTIONS.some((section) => section.id === hash)) {
-      return alignAnchorAfterHydration(hash);
+      return alignAnchorAfterHydration(hash, true, { beforeAlign: () => prepareAnchor(hash) });
     }
-  }, []);
+  }, [prepareAnchor]);
   const heroModel = viewModel.hero;
   const frozenNote = viewModel.coin.status === "frozen" && viewModel.coin.frozenAt
     ? <FrozenDataNote frozenAt={viewModel.coin.frozenAt} />
@@ -392,14 +425,18 @@ export function DetailContent({
   ) : null;
   // Board headings, control roles, the Backing KPI and the Evidence index:
   // built once, read by the pillar boards and the xl rail alike.
-  const sharedModules = buildDetailSharedModules({
+  const sharedModules = useMemo(() => buildDetailSharedModules({
     mechanismBacking,
     backingParent,
     mechanismCollateralization,
     mechanismReview,
     viewModel,
-  });
-  const contextHasContent = hasContextZoneContent(viewModel, variantRelationshipCard !== null);
+  }), [mechanismBacking, backingParent, mechanismCollateralization, mechanismReview, viewModel]);
+  const hasVariantCard = variantRelationshipCard !== null;
+  const contextHasContent = useMemo(
+    () => hasContextZoneContent(viewModel, hasVariantCard),
+    [viewModel, hasVariantCard],
+  );
   // Registered AI-summary claim tokens resolve against the same live values the
   // hero and report card render; pillar grades use the breakdown's scoreToGrade.
   const card = viewModel.reportCard;
@@ -419,7 +456,7 @@ export function DetailContent({
   };
 
   return (
-    <div>
+    <div ref={detailRootRef}>
       <DetailIdentity
         heroModel={heroModel}
         heroRef={heroRef}
@@ -456,6 +493,7 @@ export function DetailContent({
             contextHasContent={contextHasContent}
             hasFailureScenario={failureScenario !== null}
             onActiveChange={onActiveBannerChange}
+            onBeforeAlign={prepareAnchor}
             viewModel={viewModel}
           />
           <div className="mt-4 min-w-0 space-y-6">

@@ -8,11 +8,10 @@ import { isDepegResolverEnabled, isDepegResolverReviewerEnabled } from "@/lib/fe
  * objects directly — the hook deliberately does not re-flatten them into a
  * per-field bag.
  *
- * Both queries are eager: the reviewer's ledger renders behind a disclosure on
- * `/depeg/`, but its headline accuracy is a hero figure, so the payload is
- * needed on first paint regardless.
+ * The reviewer query is admitted separately from its feature flag so a folded
+ * audit ledger need not fetch. Existing eager consumers retain that default.
  */
-export function useDepegResolverSurfaces() {
+export function useDepegResolverSurfaces({ reviewEnabled = true }: { reviewEnabled?: boolean } = {}) {
   const resolverEnabled = isDepegResolverEnabled();
   const resolverReviewerEnabled = resolverEnabled && isDepegResolverReviewerEnabled();
 
@@ -20,6 +19,6 @@ export function useDepegResolverSurfaces() {
     resolverEnabled,
     resolverReviewerEnabled,
     resolver: useDepegResolver({ enabled: resolverEnabled }),
-    resolverReview: useDepegResolverReview({ enabled: resolverReviewerEnabled }),
+    resolverReview: useDepegResolverReview({ enabled: resolverReviewerEnabled && reviewEnabled }),
   };
 }

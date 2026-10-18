@@ -3,6 +3,7 @@ import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-card-grade";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 import { FreshnessAssessmentSchema, FreshnessStatusSchema } from "@pharos/contracts/api-meta";
+import { CoinProjectionMetadataSchema } from "./coin-projection";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
   YIELD_BENCHMARK_KEY_VALUES,
@@ -309,6 +310,21 @@ export const YieldRankingsResponseSchema = z.object({
   methodology: MethodologyEnvelopeSchema.optional(),
 });
 export type YieldRankingsResponse = z.infer<typeof YieldRankingsResponseSchema>;
+export const YieldRankingsCoinResponseSchema = YieldRankingsResponseSchema.extend({
+  projection: CoinProjectionMetadataSchema,
+});
+export type YieldRankingsCoinResponse = z.infer<typeof YieldRankingsCoinResponseSchema>;
+
+/** Internal generation-bound comparator census; coin readers admit only their row. */
+export const YieldCoinCohortSchema = YieldRankingsResponseSchema.pick({ provenance: true, warnings: true }).extend({
+  signature: z.string().min(1),
+  assessedAt: z.number().nonnegative(),
+  validUntil: z.number().nonnegative(),
+  totalCount: z.number().int().nonnegative(),
+  degradationReasons: z.array(z.string()),
+  rankings: z.array(YieldRankingSchema.pick({ id: true, liveRank: true, rankChangeAttribution: true })),
+});
+export type YieldCoinCohort = z.infer<typeof YieldCoinCohortSchema>;
 
 export const YieldHistoryResponseSchema = z.object({
   current: YieldHistoryPointSchema.nullable(),

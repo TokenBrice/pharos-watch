@@ -8,6 +8,13 @@ import {
 
 const mockD1 = makeSupplySnapshotDb;
 
+const { publishNonUsdShareHistoryMock } = vi.hoisted(() => ({
+  publishNonUsdShareHistoryMock: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../lib/non-usd-share-history", () => ({
+  publishNonUsdShareHistory: publishNonUsdShareHistoryMock,
+}));
+
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => ({
   WORKER_ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle"]),
   WORKER_ACTIVE_STABLECOINS: [
@@ -31,11 +38,32 @@ const completionMarker = buildSupplySnapshotCompletionMarker;
 describe("snapshotSupply", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    publishNonUsdShareHistoryMock.mockReset().mockResolvedValue(undefined);
     vi.setSystemTime(new Date("2025-06-15T08:30:00Z"));
   });
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("reports a projection failure without claiming the already committed supply write failed", async () => {
+    publishNonUsdShareHistoryMock.mockRejectedValueOnce(new Error("projection read failed"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1({ stablecoins: {
+      assets: { peggedAssets: [
+        makeSnapshotAsset({ id: "usdt-tether" }),
+        makeSnapshotAsset({ id: "usdc-circle", symbol: "USDC" }),
+      ] },
+      updatedAt: nowSec,
+    } });
+    const result = await snapshotSupply(db);
+    expect(publishNonUsdShareHistoryMock).toHaveBeenCalledOnce();
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(2);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "non_usd_share_publication_failed" });
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "snapshot-supply:last-write"
+    )).toBe(true);
   });
 
   it("returns itemCount 0 when cache is missing", async () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+import { projectV9Table } from "@shared/lib/report-cards-v9-projections";
 import {
   buildV9PortfolioProjection,
   buildV9SafetyTableMap,
@@ -18,13 +19,16 @@ import {
 
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 describe("V9 safety consumer projections", () => {
-  it("resolves raw-wire witness texts at the independent consumer parser boundary", () => {
+  it("requires resolved witness text at the independent consumer parser boundary", () => {
     const semantic = makeReportCardsV9Response();
     const reason = { code: "unresolved-control-identity" as const, message: "The independently scoped incident disposition remains unknown.", path: "control:incidentState" };
     semantic.cards[0]!.evidence.reasons = [reason];
     semantic.cards[0]!.pillars.control.reasons = [reason];
     const wire = { ...semantic, cards: semantic.cards.map((card) => internV9PublicWitnessTexts(card)) };
     expect(resolveV9ConsumerResponse(wire, semantic.safetyScoreIdentity)).toEqual({
+      status: "unavailable", reason: "invalid-v9-response",
+    });
+    expect(resolveV9ConsumerResponse(semantic, semantic.safetyScoreIdentity)).toEqual({
       status: "available", identity: semantic.safetyScoreIdentity, value: semantic,
     });
   });
@@ -224,12 +228,19 @@ describe("V9 safety consumer projections", () => {
       id: card.id,
       score: card.score,
       grade: card.grade,
-      pillars: card.pillars,
-      evidence: card.evidence,
+      pillars: {
+        backing: { score: card.pillars.backing.score, aggregationDisposition: card.pillars.backing.aggregationDisposition },
+        exit: { score: card.pillars.exit.score, aggregationDisposition: card.pillars.exit.aggregationDisposition },
+        control: { score: card.pillars.control.score, aggregationDisposition: card.pillars.control.aggregationDisposition },
+      },
+      evidence: { level: card.evidence.level },
       weakestPillar: card.weakestPillar,
       bindingCapReason: bindingCap.reason,
       mint: { score: card.pillars.control.score, posture: "distributed" },
     });
+    expect(buildV9SafetyTableRows(projectV9Table(response), response.safetyScoreIdentity)).toEqual(rows);
+    expect(rows.value[0]?.pillars.backing).not.toHaveProperty("causeGapRefs");
+    expect(rows.value[0]?.evidence).not.toHaveProperty("freshness");
   });
 
   it("keeps NR, insufficient evidence, and absent breakdowns fail-closed", () => {
@@ -259,12 +270,13 @@ describe("V9 safety consumer projections", () => {
     expect(rows.value[0]).toMatchObject({
       score: null,
       grade: "NR",
-      evidence: nrCard.evidence,
+      evidence: { level: nrCard.evidence.level },
       weakestPillar: null,
       bindingCapReason: null,
       mint: null,
     });
     expect(rows.value[0]?.pillars.backing.score).toBeNull();
+    expect(buildV9SafetyTableRows(projectV9Table(response), response.safetyScoreIdentity)).toEqual(rows);
   });
 
   it("projects explicit V9 values into stable-table inputs", () => {
@@ -284,10 +296,11 @@ describe("V9 safety consumer projections", () => {
       score: 61,
       grade: "C+",
       riskBucket: "neutral",
-      evidence: { level: "adequate", freshness: "current", reasons: [] },
+      evidence: { level: "adequate" },
       weakestPillar: { pillar: "backing", score: 60 },
       bindingCapReason: null,
     });
+    expect(buildStablecoinTableInputs({ reportCardsV9: projectV9Table(response) }).reportCards).toEqual(table);
   });
 
   it("builds a three-pillar portfolio aggregate without inventing an asset grade", () => {

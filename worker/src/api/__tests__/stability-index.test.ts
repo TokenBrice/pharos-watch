@@ -4,6 +4,10 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleStabilityIndex } from "../stability-index";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
+import { getDisplayedPsi, getPsiBandStreak } from "@shared/lib/psi-view-model";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { getRouteMatch } from "../../routes/registry";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -423,4 +427,66 @@ describe("daily PSI stored provenance compatibility", () => {
     expect(body.history[2].dailyProvenance).toBeUndefined();
     expect(body.history[2].score).toBe(90);
   });
+
+  it.each(["continuous", "missing-day", "band-change", "malformed-components"] as const)(
+    "bounds initial history while matching full-history headline statistics: %s",
+    async (scenario) => {
+      const { sqlite, db } = fixtures.open();
+      const today = bucketUnixSecondsToUtcDay(1_800_000_000);
+      const now = today + 3600;
+      vi.useFakeTimers();
+      vi.setSystemTime(now * 1000);
+      const components = JSON.stringify({ severity: 10, breadth: 5, stressBreadth: 2, trend: -1 });
+      const snapshot = JSON.stringify({ totalMcapUsd: 1e11, contributors: [] });
+      const insert = sqlite.prepare(`INSERT INTO stability_index
+        (computed_at, score, band, components, input_snapshot, methodology_version)
+        VALUES (?, ?, ?, ?, ?, '3.0')`);
+      insert.run(Date.UTC(2018, 9, 18) / 1000, 20, "CRISIS", components, snapshot);
+      for (let daysAgo = 1; daysAgo <= 800; daysAgo++) {
+        if (scenario === "missing-day" && daysAgo === 500) continue;
+        insert.run(
+          today - daysAgo * DAY_SECONDS,
+          scenario === "band-change" && daysAgo === 500 ? 95 : 80,
+          scenario === "band-change" && daysAgo === 500 ? "BEDROCK" : "STEADY",
+          scenario === "malformed-components" && daysAgo === 500 ? "[]" : components,
+          snapshot,
+        );
+      }
+      const sample = sqlite.prepare(`INSERT INTO stability_index_samples
+        (stored_at, score, band, components, input_snapshot, methodology_version)
+        VALUES (?, ?, ?, ?, ?, '3.0')`);
+      // Headline follows the rolling average (80 / STEADY), not instant 70 / TREMOR.
+      sample.run(now - 600, 90, "BEDROCK", components, snapshot);
+      sample.run(now - 300, 70, "TREMOR", components, snapshot);
+      const fullResponse = await handleStabilityIndex(db, new URL("https://x/api/stability-index?detail=true"));
+      const initialResponse = await handleStabilityIndex(db, new URL("https://x/api/stability-index?detail=true&days=365"));
+      const full = StabilityIndexResponseSchema.parse(await fullResponse.json());
+      const initial = StabilityIndexResponseSchema.parse(await initialResponse.json());
+      expect(initial.history).toHaveLength(365);
+      expect(full.history.length).toBeGreaterThan(799);
+      expect(initial.headlineAggregates).toEqual(full.headlineAggregates);
+      expect(initial.headlineAggregates).toMatchObject({
+        computedAt: now - 300,
+        generatedAt: now,
+        daysInBand: scenario === "continuous" ? 801 : 500,
+      });
+      expect(initial.headlineAggregates!.eventScores.find((event) => event.date === Date.UTC(2018, 9, 14))?.score).toBe(20);
+      expect(initial.headlineAggregates!.daysInBand).toBe(
+        getPsiBandStreak(full.history, full.current!.computedAt, getDisplayedPsi(full.current!).band),
+      );
+      const recentStatsInput = (history: typeof full.history) => history.filter(
+        (point) => point.date >= today - 29 * DAY_SECONDS && point.date < today + DAY_SECONDS,
+      );
+      expect(recentStatsInput(initial.history)).toEqual(recentStatsInput(full.history));
+      expect(getRouteMatch("/api/stability-index")?.endpoint?.cacheKeyIgnoresQuery).not.toBe(true);
+    },
+  );
+
+  it.each(["days=365", "detail=true&days=366", "detail=true&days=bad"])(
+    "rejects invalid bounded history parameters: %s",
+    async (params) => {
+      const response = await handleStabilityIndex(mockD1([]), new URL(`https://x/api/stability-index?${params}`));
+      expect(response.status).toBe(400);
+    },
+  );
 });

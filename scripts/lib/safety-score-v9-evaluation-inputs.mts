@@ -168,6 +168,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/bluechip.ts",
   "shared/types/business-calendars.ts",
   "shared/types/chain-identity.ts",
+  "shared/types/coin-projection.ts",
   "shared/types/core.ts",
   "shared/types/date-primitives.ts",
   "shared/types/depeg-audit.ts",

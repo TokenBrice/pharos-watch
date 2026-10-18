@@ -21,7 +21,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 
 Historical V8 methodology is documented in the scoring changelog. It is not a production API, fallback, selector input, or frontend model.
 
-Release changes, activation status, replay evidence and outstanding acceptance obligations live in the [structured scoring history](https://pharos.watch/methodology/scoring-changelog/), including [v10.15](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-15), [v10.18](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-18) and [v10.21](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-21). A version definition or fixed-input replay does not establish fresh producer closure or production health.
+Release changes, activation status, replay evidence and outstanding acceptance obligations live in the [structured scoring history](https://pharos.watch/methodology/scoring-changelog/), including [v10.15](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-15), [v10.18](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-18) and [v10.21](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-21). A version definition or fixed-input replay does not establish fresh producer closure or production health.
 
 V10.01 introduces cause-aware scoring after the V10 major release. Internal `safety-score-v9` implementation names and API route paths remain unchanged; public body schemas distinguish technical availability from NR. Digest snapshots label their grade distribution from the captured methodology major version, preserving V9 editions rather than relabelling history.
 
@@ -69,7 +69,7 @@ Wrapper-local reviews in `wrapper-allocation-reviews-v1.json.localReviews` are a
 
 Morpho books weight frozen accepted Backing or class quality by allocation and LLTV². Idle keeps parent quality; the blend cannot exceed it. Same-parent multi-slice books keep lower generic constraints; unavailable books keep prior scoring. Sub-1%-NAV oracle branches stay disclosed, weighted; unmatched claims keep the prior aggregate.
 
-For collateral quality `q` and LLTV fraction `l`, transmitted lender quality is `100 − l² × (100 − q)`. Allocation-weighted book quality scales the deployed share of parent Backing, while idle retains parent quality; the final blend is capped at the parent. The [v10.19 changelog](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-19) retains calibration evidence and production-acceptance boundaries.
+For collateral quality `q` and LLTV fraction `l`, transmitted lender quality is `100 − l² × (100 − q)`. Allocation-weighted book quality scales the deployed share of parent Backing, while idle retains parent quality; the final blend is capped at the parent. The [v10.19 changelog](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-19) retains calibration evidence and production-acceptance boundaries.
 
 ### Report schema v8
 
@@ -112,13 +112,15 @@ Archive tooling (`worker/scripts/export-safety-score-capture-archive.ts`) lists 
 
 `GET /api/report-cards/v9` is the full live Safety Score API. `GET /api/dependency-graph/v1` exposes a free, no-key graph projection of the same accepted publication, not another scoring authority.
 
-The handler reads the canonical publication and health row, validates the complete current response, and never recomputes or falls back to V8. Missing, malformed, or incomplete accepted state returns `503`; an identity mismatch between otherwise valid rows serves the authenticated publication as explicitly held. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
+The handler authenticates the accepted representation and live health, never recomputes scores or falls back to V8. Missing/invalid required evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. Retired unversioned and preview routes return `404`.
 
 A current response emits `X-Safety-Score-Status: current`. A held response serves the last accepted ratings, emits `X-Safety-Score-Status: held`, uses the accepted timestamp for freshness, and forces `Cache-Control: no-store`.
 
-Endpoint freshness for `/api/report-cards/v9` follows the publication cadence: the shared surface descriptor sets the `X-Data-Age` / `Warning` budget at 2x `compute-safety-score-v9` (3600 s), so the endpoint tolerates exactly one missed 30-minute publication — the same basis as the V9 consumer fail-close — instead of the historical sub-cadence 900 s budget.
+[Materialization admission and rollout](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns wire resolution, live-health re-admission, atomic storage, repair, retirement and qualification.
 
-The V9 consumer fail-close itself (`worker/src/lib/safety-score-v9/consumer-freshness.ts`) treats an unusable clock as unavailable, not fresh: a non-finite `updatedAt` (or `now`) and any publication time later than `now` are both rejected on the same path as the age limit. No clock-skew allowance is granted, so the read instant is the newest acceptable publication time. Consumers reading the age constant directly keep their own bounds.
+Site-only [compact list/detail representations](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#compact-website-representations) preserve the full report and free-grades contracts.
+
+Endpoint freshness uses 2x `compute-safety-score-v9` (3600 s), tolerating one missed 30-minute publication, matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
 
 The response includes:
 

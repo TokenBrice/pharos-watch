@@ -19,7 +19,7 @@ export function hasDependencyContextRows(card: SafetyScoreV9CurrentCard, context
 
 export function buildDetailDependencyContext(
   stablecoinId: string,
-  cards: readonly SafetyScoreV9CurrentCard[],
+  cards: readonly Pick<SafetyScoreV9CurrentCard, "id" | "sharedBookId">[],
   publishedEdges: readonly ReportCardsV9DependencyEdge[],
   mcapMap: ReadonlyMap<string, number | null>,
   marketCapAsOf: number | null,

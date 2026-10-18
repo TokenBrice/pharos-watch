@@ -7,6 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 import { isSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { SourceNavigationProvider } from "@/components/back-to-source";
+import { isEditorialPath } from "@/lib/editorial-routes";
+import { discardDataBootstrap } from "@/lib/data-bootstrap";
 
 /**
  * Custom event broadcast when the user presses a numeric key (1-9) to sort
@@ -27,19 +29,6 @@ const PHAROS_QUERY_DEFAULT_OPTIONS = {
   },
 };
 
-const STATIC_CONTENT_ROUTE_ROOTS = [
-  "/about",
-  "/learn",
-  "/docs",
-  "/changelog",
-  "/blog",
-  "/methodology",
-] as const;
-
-function isStaticContentPath(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return STATIC_CONTENT_ROUTE_ROOTS.some((root) => pathname === root || pathname.startsWith(`${root}/`));
-}
 
 const CommandPalette = lazy(() =>
   import("./command-palette-root").then((mod) => ({ default: mod.CommandPalette })),
@@ -108,7 +97,7 @@ const InteractiveProviders = lazy(async () => {
     import("@/components/route-progress-bar"),
   ]);
 
-  function LoadedInteractiveProviders({ children }: { children: React.ReactNode }) {
+  function LoadedInteractiveProviders() {
     const { toasts, addToast, removeToast } = toastHook.useToast();
     const { toggleTheme } = themeHook.useThemeToggle({ toast: addToast });
     const [keyboardShortcutsLoaded, setKeyboardShortcutsLoaded] = useState(false);
@@ -163,7 +152,6 @@ const InteractiveProviders = lazy(async () => {
     return (
       <>
         <routeProgress.RouteProgressBar />
-        {children}
         {keyboardShortcutsLoaded && (
           <Suspense fallback={null}>
             <KeyboardShortcuts open={keyboardShortcutsOpen} onOpenChange={setKeyboardShortcutsOpen} />
@@ -181,10 +169,13 @@ const InteractiveProviders = lazy(async () => {
   return { default: LoadedInteractiveProviders };
 });
 
-function RouteProviders({ children }: { children: React.ReactNode }) {
+function RouteProviders() {
   const pathname = usePathname();
-  if (isStaticContentPath(pathname)) return children;
-  return <InteractiveProviders>{children}</InteractiveProviders>;
+  useEffect(() => {
+    if (pathname && window.__pharosDataBootstrap?.route !== pathname) discardDataBootstrap();
+  }, [pathname]);
+  if (isEditorialPath(pathname)) return null;
+  return <InteractiveProviders />;
 }
 
 /**
@@ -200,8 +191,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SourceNavigationProvider>
           <GlobalSearchProvider>
+            {children}
             <Suspense fallback={null}>
-              <RouteProviders>{children}</RouteProviders>
+              <RouteProviders />
             </Suspense>
           </GlobalSearchProvider>
         </SourceNavigationProvider>

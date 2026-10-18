@@ -11,6 +11,16 @@ const FULL_STABILITY_SCHEMA = createLazySchema<StabilityIndexResponse>(async () 
 export const STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR = defineApiQuery(
   {
     queryKey: ["stability-index-detail"] as const,
+    path: API_PATHS.stabilityIndex(true, 365),
+    producerIntervalMs: CRON_STABILITY_INDEX,
+  },
+  "meta",
+  FULL_STABILITY_SCHEMA,
+);
+
+export const STABILITY_INDEX_FULL_HISTORY_QUERY_DESCRIPTOR = defineApiQuery(
+  {
+    queryKey: ["stability-index-full-history"] as const,
     path: API_PATHS.stabilityIndex(true),
     producerIntervalMs: CRON_STABILITY_INDEX,
   },

@@ -4,16 +4,17 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
-import type { YieldRankingsResponse } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, YieldRankingsCoinResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import * as scoreIndex from "../../lib/safety-score-index";
-import { handleYieldRankings } from "../yield-rankings-cache";
+import { handleYieldRankings, handleYieldRankingsCoin } from "../yield-rankings-cache";
 import { handleSafetyGrades } from "../safety-grades";
 import { projectSafetyGrades } from "@shared/types/report-cards-v9";
+import * as opportunitySafety from "@shared/lib/yield-opportunity-risk";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
 const databases: DatabaseSync[] = [];
@@ -128,5 +129,116 @@ describe("rankings score-index hydration", () => {
     const grades = await handleSafetyGrades(db);
     expect(grades.status).toBe(503);
     expect(await grades.json()).toMatchObject({ reason });
+  });
+
+  it.each([false, true])("shares exact global ranks and safety coverage across coin URLs (held=%s)", async (held) => {
+    const { db } = await fixture(held);
+    const fullResponse = await handleYieldRankings(db);
+    const full = YieldRankingsResponseSchema.parse(await fullResponse.json());
+    const url = (id: string) => new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${id}`);
+    const first = await handleYieldRankingsCoin(db, url("usdc-circle"));
+    expect(first.status).toBe(200);
+    const firstBody = YieldRankingsCoinResponseSchema.parse(await first.json());
+    expect(firstBody.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
+    expect(firstBody.provenance).toEqual(full.provenance);
+    expect(firstBody.warnings).toEqual(full.warnings);
+    const safety = vi.spyOn(opportunitySafety, "resolveYieldRowSafety");
+    const prepare = vi.spyOn(db, "prepare");
+    const second = await handleYieldRankingsCoin(db, url("usdt-tether"));
+    expect(second.status).toBe(200);
+    const secondBody = YieldRankingsCoinResponseSchema.parse(await second.json());
+    expect(secondBody.rankings).toEqual(full.rankings.filter((row) => row.id === "usdt-tether"));
+    expect(secondBody.projection.totalCount).toBe(2);
+    expect(secondBody.provenance).toEqual(full.provenance);
+    expect(second.headers.get("Warning")).toBe(fullResponse.headers.get("Warning"));
+    // No full ranking read/admission and no unrelated selected/alternate safety
+    // hydration on a different coin's cache miss.
+    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(0);
+    expect(safety.mock.calls.every(([input]) => input.yieldType === "lending-opportunity")).toBe(true);
+    expect(safety.mock.calls.length).toBeLessThanOrEqual(1);
+  });
+
+  it("coalesces cold comparator construction before cohort hydration", async () => {
+    const { db } = await fixture();
+    const prepare = vi.spyOn(db, "prepare");
+    const request = (id: string) => handleYieldRankingsCoin(db, new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${id}`));
+    const responses = await Promise.all([request("usdc-circle"), request("usdt-tether")]);
+    expect(responses.some((response) => response.status === 200)).toBe(true);
+    expect(responses.every((response) => response.status === 200 || response.status === 503)).toBe(true);
+    for (const response of responses.filter((entry) => entry.status === 503)) {
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.get("Retry-After")).toBe("1");
+    }
+    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(1);
+    expect((await request("usdt-tether")).status).toBe(200);
+    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(1);
+  });
+
+  it("rebuilds the shared comparator only at an evidence transition and keeps row ages current", async () => {
+    const { db } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    const prepare = vi.spyOn(db, "prepare");
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    vi.setSystemTime((NOW + 30) * 1000);
+    let full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    let coin = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
+    expect(coin.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
+    expect(coin.rankings[0].provenance?.sourceAgeSeconds).toBe(30);
+    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(2); // cold cohort + explicit full baseline
+    // Protocol-API source aging boundary is five hours; the hourly publisher
+    // clock is not a substitute for the independently aging source.
+    vi.setSystemTime((NOW + 18_001) * 1000);
+    coin = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
+    full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    expect(coin.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
+    expect(coin.rankings[0].warningSignals).toContain("aging");
+    expect(coin.provenance).toEqual(full.provenance);
+    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(4);
+  });
+
+  it("invalidates comparator coverage on mutable Safety health/index failure without renewing the yield clock", async () => {
+    const { db, sqlite } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
+    const coin = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
+    const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    expect(coin.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
+    expect(coin.provenance).toEqual(full.provenance);
+    expect(coin.provenance?.liveSafetyHydration?.coveredCount).toBe(0);
+    expect(coin.projection).toMatchObject({ generationId: `yield-${NOW}`, updatedAt: NOW, totalCount: 2 });
+  });
+
+  it.each(["yield", "safety"] as const)("expires the comparator when a future %s clock first admits publish-time fallback", async (clock) => {
+    const { db, sqlite } = await fixture(true);
+    if (clock === "safety") {
+      sqlite.prepare("UPDATE cache SET value = json_set(value, '$.provenance.safetySnapshot.publishedAt', ?) WHERE key = 'yield-rankings'").run(NOW + 5);
+    } else {
+      sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.updatedAt', ?, '$.publication.updatedAt', ?, '$.publication.cutoffAt', ?),
+        updated_at = ? WHERE key = 'yield-rankings'`).run(NOW + 5, NOW + 5, NOW + 5, NOW + 5);
+    }
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    const before = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
+    expect(before.rankings[0].safetyScore).toBeNull();
+    vi.setSystemTime((NOW + 5) * 1000);
+    const after = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
+    const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    expect(after.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
+    expect(after.provenance).toEqual(full.provenance);
+    expect(after.rankings[0].safetyScore).toBe(80);
+    expect(after.provenance?.liveSafetyHydration?.fallback).toBe("publish-time-snapshot");
+  });
+
+  it("re-admits a schema-invalid same-generation comparator instead of pinning an unrecoverable miss", async () => {
+    const { db, sqlite } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.warnings', 42) WHERE key = 'yield-rankings:coin-cohort:v1'").run();
+    const repaired = await handleYieldRankingsCoin(db, url);
+    expect(repaired.status).toBe(200);
+    const body = YieldRankingsCoinResponseSchema.parse(await repaired.json());
+    const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    expect(body.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
+    expect(body.provenance).toEqual(full.provenance);
   });
 });

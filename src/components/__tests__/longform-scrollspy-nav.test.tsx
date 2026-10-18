@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 
 class ResizeObserverMock {
+  static callbacks: ResizeObserverCallback[] = [];
+  constructor(callback: ResizeObserverCallback) { ResizeObserverMock.callbacks.push(callback); }
   observe() {}
   disconnect() {}
 }
@@ -85,6 +87,7 @@ describe("LongformScrollspyNav", () => {
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    ResizeObserverMock.callbacks = [];
     Object.defineProperty(window, "scrollTo", {
       configurable: true,
       value: windowScrollToMock,
@@ -132,6 +135,7 @@ describe("LongformScrollspyNav", () => {
     windowScrollToMock.mockClear();
     elementScrollToMock.mockClear();
     scrollIntoViewMock.mockClear();
+    SECTION_DOCUMENT_TOPS.pipeline = 500;
   });
 
   afterEach(() => {
@@ -175,8 +179,8 @@ describe("LongformScrollspyNav", () => {
       vi.runAllTimers();
     });
 
-    expect(windowScrollToMock).toHaveBeenCalledTimes(4);
-    expect(windowScrollToMock).toHaveBeenNthCalledWith(1, { top: 330, behavior: "auto" });
+    expect(windowScrollToMock).toHaveBeenCalledTimes(5);
+    expect(windowScrollToMock).toHaveBeenNthCalledWith(1, { top: 330, behavior: "instant" });
     expect(document.getElementById("pipeline")?.style.scrollMarginTop).toBe(
       "calc(170px + var(--pharos-sticky-summary-h, 0px))",
     );
@@ -187,7 +191,35 @@ describe("LongformScrollspyNav", () => {
       vi.runAllTimers();
     });
 
-    expect(windowScrollToMock).toHaveBeenCalledTimes(4);
+    expect(windowScrollToMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("corrects late deferred expansion with sticky clearance, then stops when the reader takes over", () => {
+    window.history.replaceState(null, "", "#pipeline");
+    render(<Harness stickyOffsetPx={106} />);
+    act(() => { vi.advanceTimersByTime(8_000); });
+    SECTION_DOCUMENT_TOPS.pipeline = 2_394;
+    act(() => {
+      for (const callback of ResizeObserverMock.callbacks) callback([], {} as ResizeObserver);
+    });
+    expect(windowScrollToMock).toHaveBeenLastCalledWith({ top: 2_224, behavior: "instant" });
+    const count = windowScrollToMock.mock.calls.length;
+    fireEvent.wheel(window);
+    SECTION_DOCUMENT_TOPS.pipeline = 3_000;
+    act(() => {
+      for (const callback of ResizeObserverMock.callbacks) callback([], {} as ResizeObserver);
+      vi.runAllTimers();
+    });
+    expect(windowScrollToMock).toHaveBeenCalledTimes(count);
+  });
+
+  it("does not realign non-hash visits when deferred content expands", () => {
+    render(<Harness stickyOffsetPx={106} />);
+    act(() => {
+      for (const callback of ResizeObserverMock.callbacks) callback([], {} as ResizeObserver);
+      vi.runAllTimers();
+    });
+    expect(windowScrollToMock).not.toHaveBeenCalled();
   });
 
   it.each(["#bad%"])("ignores malformed initial fragment %s and keeps navigation usable", (hash) => {
@@ -202,7 +234,7 @@ describe("LongformScrollspyNav", () => {
     });
 
     expect(screen.getByRole("link", { name: "Pipeline" }).getAttribute("aria-current")).toBe("true");
-    expect(windowScrollToMock).toHaveBeenCalledWith({ top: 330, behavior: "auto" });
+    expect(windowScrollToMock).toHaveBeenCalledWith({ top: 330, behavior: "instant" });
   });
 
 });

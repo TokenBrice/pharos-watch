@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useCallback, useState } from "react";
+import { memo, useMemo, useRef, useCallback, useState } from "react";
 import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
@@ -12,7 +12,8 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { CHART_BAND_OPACITY } from "@/lib/chart-theme";
-import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
+import { BAND_ZONES, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
+import { PSI_EVENTS } from "@shared/lib/psi-events";
 import { trackEvent } from "@/lib/analytics";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
 import {
@@ -22,6 +23,7 @@ import {
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatRangeTickDate } from "@/lib/chart-time-range";
 import { formatChartDate } from "@shared/lib/format";
+import type { TimeRangeOption } from "@/lib/chart-time-range";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -35,14 +37,18 @@ const PSI_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; score: number }>[] =
 
 /* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 
-export function ScoreChart({
+export const ScoreChart = memo(function ScoreChart({
   data,
   excludeEvents,
   showHeader = true,
+  initialRange,
+  onRangeChange,
 }: {
   data: { ts: number; score: number }[];
   excludeEvents?: string[];
   showHeader?: boolean;
+  initialRange?: TimeRangeOption;
+  onRangeChange?: (range: TimeRangeOption) => void;
 }) {
   const psiScoreGradientId = useSvgId("psi-score");
   const chartRef = useRef<HTMLDivElement>(null);
@@ -51,10 +57,22 @@ export function ScoreChart({
     const exported = await downloadChartPng(chartRef, "pharos-psi-history");
     setExportError(exported ? null : "Chart export failed. Try again from this browser.");
   }, []);
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts", undefined, { initialRange });
   const isMobile = useIsMobile();
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
-  const formatTimestamp = useCallback((ts: number) => formatRangeTickDate(ts, range), [range]);
+  const timestampLabels = useMemo(() => {
+    // Recharts revisits candidate ticks on resize and hover. Compute labels
+    // once per admitted series/range; the formatter only reads this projection.
+    const labels = new Map<number, string>();
+    for (const point of filteredData) {
+      labels.set(point.ts, formatRangeTickDate(point.ts, range));
+    }
+    return labels;
+  }, [filteredData, range]);
+  const formatTimestamp = useCallback(
+    (ts: number) => timestampLabels.get(ts) ?? formatRangeTickDate(ts, range),
+    [timestampLabels, range],
+  );
   const chartMargin = useMemo(
     () => ({ top: showHeader ? 30 : 26, right: 30, bottom: showHeader ? 20 : 8, left: 5 }),
     [showHeader],
@@ -82,6 +100,7 @@ export function ScoreChart({
               onChange={(r) => {
                 trackEvent("time_range_changed", { page: "stability-index-score", range: r });
                 setRange(r);
+                onRangeChange?.(r);
               }}
             />
             <Button
@@ -238,4 +257,4 @@ export function ScoreChart({
       </CardContent>
     </Card>
   );
-}
+});

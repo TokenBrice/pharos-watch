@@ -6,6 +6,7 @@
 #   safety-map:alt:latest
 #   safety-map:YYYY-MM-DD.png (then immediate byte readback verification)
 #   safety-map:latest.png
+#   safety-map:latest.webp (800×450 website teaser)
 #   safety-map:latest.json (manifest commit marker, always last)
 #
 # Provisioned inputs:
@@ -125,6 +126,7 @@ jobs:
           name: safety-map-${{ steps.render.outputs.date }}
           path: |
             ${{ env.MAP_OUT_DIR }}/latest.png
+            ${{ env.MAP_OUT_DIR }}/latest.webp
             ${{ env.MAP_OUT_DIR }}/latest.alt.json
             ${{ env.MAP_OUT_DIR }}/latest.manifest.json
             ${{ env.MAP_OUT_DIR }}/kv-manifest.json

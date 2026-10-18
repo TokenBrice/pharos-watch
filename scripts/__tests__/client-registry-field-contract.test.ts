@@ -26,6 +26,26 @@ import {
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
+  it("keeps compact yield taxonomy identical to every source and generated detail sidecar", () => {
+    const { output, detailOutputs } = buildClientRegistryOutput();
+    const list = JSON.parse(output) as StablecoinClientListMeta[];
+    const details = new Map<string, StablecoinClientDetailMeta>(
+      detailOutputs.map((entry: { id: string; output: string }) => [entry.id, JSON.parse(entry.output)]),
+    );
+    for (const source of TRACKED_SOURCE_COINS) {
+      const compact = list.find((coin) => coin.id === source.id);
+      expect(compact, source.id).toBeDefined();
+      expect(compact?.yieldType, source.id).toBe(source.yieldConfig?.yieldType);
+      expect(compact?.yieldType, source.id).toBe(details.get(source.id)?.yieldConfig?.yieldType);
+    }
+  });
+
+  it("preserves an unclassified yield-bearing coin rather than inventing a yield type", () => {
+    const coin = { id: "unknown-yield", flags: { yieldBearing: true } };
+    expect(projectListCoin(coin, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin")).not.toHaveProperty("yieldType");
+    expect(projectDetailCoin(coin, STABLECOIN_CLIENT_DETAIL_FIELDS)).not.toHaveProperty("yieldConfig");
+  });
+
   it("retains typed native denomination rails in worker deployment projections", () => {
     const native = { kind: "native-denom", chain: "kava", address: "usdx", decimals: 6 };
     const receipt = { chain: "osmosis", address: "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE", decimals: 6 };

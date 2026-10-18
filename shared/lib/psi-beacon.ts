@@ -1,5 +1,5 @@
-import type { PsiConditionBand } from "../types/stability";
-import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "./classification";
+import type { PsiConditionBand } from "../types/stability-constants";
+import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "./classification/psi";
 import { PSI_CONDITION_BANDS } from "./psi-policy";
 
 /**

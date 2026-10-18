@@ -2,27 +2,28 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ChangelogTimeline } from "@/components/changelog-timeline";
-import { openDisclosuresForHash } from "@/components/disclosure-hash-reveal";
 import { changelogs } from "@/data/changelogs";
+import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "@/lib/changelog-history";
 
-afterEach(() => {
-  cleanup();
-  window.history.replaceState(null, "", "/");
-});
+afterEach(cleanup);
 
-describe("ChangelogTimeline", () => {
-  it("renders folded weeks in the markup and opens their month for a deep link", () => {
-    render(<ChangelogTimeline entries={changelogs} />);
-    const folded = changelogs.at(-1)!;
-    const weekItem = document.getElementById(`week-${folded.dateRange.to}`);
-    const month = weekItem?.closest("details");
+describe("ChangelogTimeline partitions", () => {
+  it("renders only the recent partition, not hidden historical bodies", () => {
+    render(<ChangelogTimeline entries={RECENT_CHANGELOGS} />);
+    for (const entry of RECENT_CHANGELOGS) {
+      expect(document.getElementById(`week-${entry.dateRange.to}`)).not.toBeNull();
+      expect(document.getElementById(entry.dateRange.to)).not.toBeNull();
+    }
+    expect(document.getElementById(`week-${changelogs.at(-1)!.dateRange.to}`)).toBeNull();
+  });
 
-    expect(weekItem?.textContent).toContain(String(folded.stats.totalCommits));
-    expect(month?.open).toBe(false);
-
-    expect(openDisclosuresForHash(`#${folded.dateRange.to}`)?.id).toBe(folded.dateRange.to);
-    expect(month?.open).toBe(true);
-    expect(openDisclosuresForHash(`#${folded.dateRange.to}`)).toBeNull();
-    expect(openDisclosuresForHash(`#week-${changelogs[0].dateRange.to}`)).toBeNull();
+  it("retains both public week anchors and authoritative commit totals in complete month archives", () => {
+    const archive = CHANGELOG_MONTH_ARCHIVES.at(-1)!;
+    render(<ChangelogTimeline entries={archive.entries} highlightLatest={false} />);
+    for (const entry of archive.entries) {
+      const week = document.getElementById(`week-${entry.dateRange.to}`);
+      expect(week?.textContent).toContain(String(entry.stats.totalCommits));
+      expect(document.getElementById(entry.dateRange.to)).not.toBeNull();
+    }
   });
 });

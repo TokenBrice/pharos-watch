@@ -1,10 +1,47 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createCacheHandler,
+  encodeResponseReadyCacheValue,
+  getResponseReadyCacheKey,
   getCacheJsonParseFailureCountersForTests,
   readCachedJson,
   resetCacheJsonParseFailureCountersForTests,
   safeJsonParse,
 } from "../api-cache-read";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { conditionalGetResponse } from "../api-response";
+
+describe("response-ready publication validators", () => {
+  afterEach(() => vi.restoreAllMocks());
+  it("keeps a producer digest across assessments and changes it for same-clock replacement", async () => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const handler = createCacheHandler("test", "test", "public, max-age=60", 60, {
+      responseReadyCache: "json-object", responseReadySchemaId: "test:v1",
+    });
+    const makeDb = (value: number) => mockD1([{ match: "cache", rows: [
+      { key: "test", value: "{malformed", updated_at: now },
+      { key: getResponseReadyCacheKey("test"), updated_at: now,
+        value: encodeResponseReadyCacheValue(JSON.stringify({ value }), "test:v1") },
+    ] }]);
+    const db = makeDb(1);
+    const first = await handler(db);
+    const etag = first.headers.get("ETag")!;
+    expect(etag).toMatch(/^W\/"[a-f0-9]{64}"$/);
+    clock.mockReturnValue((now + 2) * 1000);
+    const repeat = await handler(db);
+    expect(repeat.headers.get("ETag")).toBe(etag);
+    expect(conditionalGetResponse(new Request("https://site-api.pharos.watch/api/test", {
+      headers: { "If-None-Match": etag },
+    }), repeat).status).toBe(304);
+    const changed = await handler(makeDb(2));
+    expect(changed.headers.get("ETag")).not.toBe(etag);
+    clock.mockReturnValue((now + 480) * 1000);
+    const expired = await handler(db);
+    expect(expired.headers.get("Cache-Control")).toBe("no-store");
+    expect(expired.headers.get("ETag")).toBeNull();
+  });
+});
 
 describe("readCachedJson", () => {
   beforeEach(() => {

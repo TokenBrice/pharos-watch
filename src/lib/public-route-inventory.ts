@@ -1,6 +1,7 @@
 import { getActiveChainIds } from "@shared/lib/chains";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
+import { METHODOLOGY_ARCHIVE_PATHS } from "@shared/lib/methodology-versions/archives";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
@@ -12,6 +13,7 @@ import { INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
 
 export type PublicRouteKind =
   | "primary"
@@ -41,9 +43,12 @@ export const PUBLIC_PRIMARY_ROUTE_PATHS = [
   "/compliance/", "/pharoswatchbot/", "/methodology/",
 ] as const;
 
+/** The website's Access document, not an HTTP API endpoint. */
+export const API_ACCESS_PAGE_PATH = "/api/";
+
 export const PUBLIC_REFERENCE_ROUTE_PATHS = [
   "/changelog/", "/blog/", "/about/", "/depeg/archive/",
-  "/api/", "/stablecoins/", "/stablecoins/backing/",
+  API_ACCESS_PAGE_PATH, "/api/reference/", "/stablecoins/", "/stablecoins/backing/",
   "/stablecoins/governance/", "/stablecoins/infrastructure/", "/privacy/", "/docs/",
 ] as const;
 
@@ -55,6 +60,8 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ...entries("primary", PUBLIC_PRIMARY_ROUTE_PATHS),
   ...entries("reference", PUBLIC_REFERENCE_ROUTE_PATHS),
   ...entries("methodology", METHODOLOGY_CHANGELOG_SITEMAP_PATHS),
+  ...entries("methodology", METHODOLOGY_ARCHIVE_PATHS),
+  ...entries("reference", CHANGELOG_MONTH_ARCHIVES.map((archive) => archive.path)),
   ...entries("stablecoin", CLIENT_TRACKED_STABLECOINS.map((coin) => buildStablecoinUrl(coin.id))),
   ...entries("chain", getActiveChainIds().map((chainId) => `/chains/${chainId}/`)),
   ...entries("chain", ["/chains/"]),

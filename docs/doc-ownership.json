@@ -474,6 +474,7 @@
         "shared/lib/runtime-origins.ts",
         "shared/lib/site-csp.ts",
         "public/_headers",
+        "public/_redirects",
         "public/_routes.json",
         "docs/api-endpoint-authoring.md",
         "docs/api-reference.md",
@@ -1387,11 +1388,48 @@
         { "path": "docs/scripts.md", "anchor": "operator-cli-contract" },
         { "path": "docs/testing.md", "anchor": "smallest-adequate-check-per-area" }
       ],
+      "reading": [
+        {
+          "sources": [
+            "scripts/maintenance/probe-page-performance.mjs",
+            "scripts/maintenance/report-build-size.mjs",
+            "scripts/maintenance/lighthouse-static-export.ts",
+            "scripts/maintenance/analyze-web-vitals.mjs",
+            "scripts/maintenance/__tests__/probe-page-performance.test.ts",
+            "scripts/maintenance/__tests__/report-build-size.test.ts",
+            "scripts/maintenance/__tests__/analyze-web-vitals.test.ts",
+            "scripts/__tests__/lighthouse-static-export.test.ts",
+            "scripts/ci/check-live-api-cache-policy.mjs",
+            "scripts/__tests__/check-live-api-cache-policy.test.ts"
+          ],
+          "local": [
+            { "path": "docs/testing.md", "anchor": "performance-guardrails" },
+            { "path": "docs/scripts.md", "anchor": "operator-cli-contract" }
+          ]
+        }
+      ],
       "background": [
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" },
         { "path": "docs/scripts.md", "anchor": "operational-notes" }
       ],
-      "checks": ["npx vitest run scripts/__tests__"]
+      "checks": [
+        "npx vitest run scripts/__tests__",
+        "npx vitest run scripts/maintenance/__tests__/probe-page-performance.test.ts scripts/maintenance/__tests__/report-build-size.test.ts scripts/maintenance/__tests__/analyze-web-vitals.test.ts"
+      ],
+      "testOwnership": [
+        {
+          "sources": ["scripts/maintenance/probe-page-performance.mjs"],
+          "tests": ["scripts/maintenance/__tests__/probe-page-performance.test.ts"]
+        },
+        {
+          "sources": ["scripts/maintenance/report-build-size.mjs"],
+          "tests": ["scripts/maintenance/__tests__/report-build-size.test.ts"]
+        },
+        {
+          "sources": [".github/workflows/production-canaries.yml"],
+          "tests": ["scripts/__tests__/check-live-api-cache-policy.test.ts", "scripts/__tests__/ci-workflow-scope.test.ts"]
+        }
+      ]
     },
     {
       "id": "agent-hooks-process",

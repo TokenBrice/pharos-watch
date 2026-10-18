@@ -2,11 +2,10 @@ import {
   isV9WitnessTextField,
   mapV9WitnessTextFields,
   type V9PublicWitnessTextEntry,
-  type V9PublicWitnessTextTable,
 } from "../../types/safety-score-v9-public-witness-texts";
 
 /** Intern only where the canonical JSON is smaller; reserved leading '~' literals are always escaped. */
-export function internV9PublicWitnessTexts<T extends object>(card: T): T & V9PublicWitnessTextTable {
+export function internV9PublicWitnessTexts<T extends object>(card: T): Omit<T, "witnessTexts"> & { witnessTexts?: V9PublicWitnessTextEntry[] } {
   const counts = new Map<string, number>();
   function collect(node: unknown): void {
     if (Array.isArray(node)) { for (const child of node) collect(child); return; }

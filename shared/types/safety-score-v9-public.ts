@@ -392,10 +392,11 @@ type CardRefinementInput = Omit<z.infer<typeof SafetyScoreV9CurrentCardBaseSchem
   breakdowns: z.infer<typeof SafetyScoreV9HistoricalBreakdownsSchema> | null;
 };
 
-function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx): void {
+function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, resolved = false): void {
     try {
-      validateV9PublicWitnessTexts(card);
-      if (card.witnessTexts !== undefined) {
+      if (resolved) validateV9ResolvedWitnessViews(card);
+      else validateV9PublicWitnessTexts(card);
+      if (!resolved && card.witnessTexts !== undefined) {
         card = resolveV9PublicWitnessTexts(card);
         validateV9ResolvedWitnessViews(card);
         const semantic = SafetyScoreV9CurrentCardBaseSchema.safeParse(card);
@@ -441,6 +442,13 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx): voi
 }
 
 export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema.superRefine(refineCurrentCard);
+
+/** Wire cards contain literal evidence, never canonical card-local references. */
+export const SafetyScoreV9ResolvedCurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
+  .omit({ witnessTexts: true })
+  .extend({ witnessTexts: z.undefined().optional() })
+  .superRefine((card, ctx) => refineCurrentCard(card, ctx, true));
+export type SafetyScoreV9ResolvedCurrentCard = z.infer<typeof SafetyScoreV9ResolvedCurrentCardSchema>;
 
 /** Report7/breakdown6 retain strict pre-10.11 route shapes. */
 const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.extend({

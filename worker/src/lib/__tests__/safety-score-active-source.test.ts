@@ -2,7 +2,6 @@ import { buildReportCardsV9DependencyGraph, type ReportCardsV9CurrentResponse } 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
-import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 
 /**
  * The unavailable case stays a real end-to-end read against an empty schema;
@@ -61,19 +60,18 @@ describe("active Safety Score source", () => {
     });
   });
 
-  it.each(["current", "held"] as const)("resolves %s witness text before digest consumers receive it", async (status) => {
+  it.each(["current", "held"] as const)("preserves already resolved %s text without another traversal", async (status) => {
     const semantic = status === "current" ? makeReportCardsV9Response() : heldSnapshot();
     const reason = { code: "unresolved-control-identity" as const, message: "The independently scoped incident disposition remains unknown.", path: "control:incidentState" };
     semantic.cards[0]!.evidence.reasons = [reason];
     semantic.cards[0]!.pillars.control.reasons = [reason];
-    const wire = { ...semantic, cards: semantic.cards.map((card) => internV9PublicWitnessTexts(card)) };
-    mocks.snapshotOverride = async () => wire;
+    mocks.snapshotOverride = async () => semantic;
     const result = await loadActiveSafetyScoreSource({} as D1Database);
     expect(result.kind).toBe(status === "current" ? "v9" : "held");
     expect(result.snapshot).toEqual(semantic);
   });
 
-  it("re-projects the dependency graph from decoded cards", async () => {
+  it("preserves the already resolved dependency graph", async () => {
     const semantic = makeReportCardsV9Response();
     const label = "Staked vault share used as collateral intermediary";
     const provenance = { source: "live-reserve" as const, evidenceAsOf: "2026-10-11", intermediary: { kind: "vault-share" as const, label, verified: true } };
@@ -83,10 +81,8 @@ describe("active Safety Score source", () => {
       serial: [{ ...dependency, upstreamAssetId: "parent", blocked: false, dependencyType: "wrapper", wrapperForm: "strategy-vault" }],
       basket: [{ ...dependency, upstreamAssetId: "other", weight: 0.5, boundedUnknown: false, dependencyType: "collateral", wrapperForm: null }],
     } as typeof semantic.cards[0]["dependencies"];
-    const cards = semantic.cards.map((card) => internV9PublicWitnessTexts(card));
-    const wire = { ...semantic, cards, dependencyGraph: buildReportCardsV9DependencyGraph(cards) };
-    expect(JSON.stringify(wire.dependencyGraph)).not.toContain(label);
-    mocks.snapshotOverride = async () => wire;
+    semantic.dependencyGraph = buildReportCardsV9DependencyGraph(semantic.cards);
+    mocks.snapshotOverride = async () => semantic;
 
     const result = await loadActiveSafetyScoreSource({} as D1Database);
     expect(result.snapshot?.dependencyGraph).toEqual(buildReportCardsV9DependencyGraph(semantic.cards));

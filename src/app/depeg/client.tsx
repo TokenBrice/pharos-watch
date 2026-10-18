@@ -28,6 +28,7 @@ import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { DepegContentLoadingState } from "./loading";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 
 /** DEWS publishes every 30 minutes, so anything past two cycles is worth saying out loud. */
 const STALE_DEWS_AGE_SEC = 60 * 60;
@@ -113,6 +114,8 @@ export function DepegClient() {
     meta: pegMeta,
     refetch: refetchPeg,
   } = usePegSummary();
+  // Radar sizing is independent of the peg-summary response and its loading shell.
+  useStablecoins();
   const {
     data: dewsData,
     error: dewsError,
@@ -127,7 +130,7 @@ export function DepegClient() {
     meta: eventsMeta,
     refetch: refetchEvents,
   } = useInfiniteDepegEvents({ includePending: true });
-  const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
+  const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces({ reviewEnabled: gradingOpen });
   const resolverSlice = useQuerySlice(resolver);
   const resolverReviewSlice = useQuerySlice(resolverReview);
   const resolverData = resolverSlice.data;
@@ -244,14 +247,14 @@ export function DepegClient() {
     dewsError ??
     eventsError ??
     (resolverEnabled ? resolverSlice.error : null) ??
-    (resolverReviewerEnabled ? resolverReviewSlice.error : null);
+    (resolverReviewerEnabled && gradingOpen ? resolverReviewSlice.error : null);
   const handleRetry = useCallback(() => {
     return refetchQueryGroup([
       refetchPeg,
       refetchDews,
       refetchEvents,
       ...(resolverEnabled ? [resolver.refetch] : []),
-      ...(resolverReviewerEnabled ? [resolverReview.refetch] : []),
+      ...(resolverReviewerEnabled && gradingOpen ? [resolverReview.refetch] : []),
     ]);
   }, [
     refetchDews,
@@ -261,6 +264,7 @@ export function DepegClient() {
     resolverReview.refetch,
     resolverEnabled,
     resolverReviewerEnabled,
+    gradingOpen,
   ]);
   const freshnessQueries: StaleQuery[] = [
     { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
@@ -276,7 +280,7 @@ export function DepegClient() {
       meta: resolverSlice.meta,
     });
   }
-  if (resolverReviewerEnabled) {
+  if (resolverReviewerEnabled && (gradingOpen || resolverReviewData != null)) {
     freshnessQueries.push({
       preset: "depegResolverReview",
       dataUpdatedAt: resolverReviewSlice.dataUpdatedAt,

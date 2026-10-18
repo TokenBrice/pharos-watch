@@ -34,7 +34,13 @@ const FORWARDED_RESPONSE_HEADERS = [
   "X-Data-Updated-At",
   "X-Data-Freshness",
   "X-Data-Freshness-Reason",
+  "X-Data-Assessed-At",
+  "X-Data-Freshness-Budget",
   "X-Safety-Score-Status",
+  "X-Safety-Score-Updated-At",
+  "X-Safety-Score-Generation",
+  "X-Safety-Score-Assessed-At",
+  "X-Safety-Score-Freshness-Budget",
   "X-Content-Type-Options",
   "Strict-Transport-Security",
   "Referrer-Policy",
@@ -135,6 +141,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
         method: "GET",
         headers: upstreamHeaders,
         label: "Site API",
+        serviceBinding: env.SITE_API,
       });
     },
     onFetchError: async (proxyContext, upstreamPath, errorKind, response) => {

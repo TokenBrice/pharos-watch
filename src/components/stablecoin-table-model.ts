@@ -39,7 +39,7 @@ import {
   type ColumnId,
 } from "@/hooks/use-preferences";
 import { DENSITY_CONFIGS, useTableDensity, type TableDensity } from "@/hooks/use-table-density";
-import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 export interface StablecoinTableSort {
@@ -183,7 +183,7 @@ export function useStablecoinTableRows({
   sort: StablecoinTableSort;
   renderedSet: ReadonlySet<ColumnId>;
   pegScores?: Map<string, PegSummaryCoin>;
-  dexLiquidity?: DexLiquidityMap;
+  dexLiquidity?: DexLiquidityTableMap;
   sourceGenerations?: StablecoinTableSourceGenerations;
   pinnedStablecoinIds: readonly string[];
   isOverview: boolean;

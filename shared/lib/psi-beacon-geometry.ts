@@ -1,4 +1,4 @@
-import type { PsiConditionBand } from "../types/stability";
+import type { PsiConditionBand } from "../types/stability-constants";
 import type { PsiBeaconModel, PsiBeaconPenaltyKey, PsiBeaconSpan } from "./psi-beacon";
 import { formatPath, formatPoints, hull, project, round1, type ScenePoint, type SceneProjection } from "./scene/projection";
 import { LIGHTHOUSE_LANTERN_Z, LIGHTHOUSE_TOP_Z } from "./scene/objects/lighthouse";

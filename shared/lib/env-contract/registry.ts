@@ -682,6 +682,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "SITE_API",
+    valueType: "Fetcher",
+    description: "Optional Pages service binding to stablecoin-api for /_site-data; retains the canonical site-api URL, secret and public-fetch fallback when absent.",
+    docs: { includeInOperatorOriginAccess: true },
+    runtimes: {
+      pagesSiteData: { status: "optional" },
+    },
+  },
+  {
     key: "SELECTOR_SNAPSHOTS",
     valueType: "KVNamespace",
     description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; new content-addressed `s:{sid}` entries carry server-recomputed trust metadata, while legacy entries remain client-unverified. HMAC-IP write-quota counters live in D1 for atomic reservations.",

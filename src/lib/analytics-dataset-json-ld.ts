@@ -1,4 +1,5 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { API_REFERENCE_URL } from "@shared/lib/public-api-contract";
 import type { PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
@@ -117,7 +118,7 @@ export function buildPharosDataCatalogReference() {
     "@type": "DataCatalog",
     "@id": PHAROS_PUBLIC_DATA_CATALOG_ID,
     name: PHAROS_PUBLIC_DATA_CATALOG_NAME,
-    url: `${SITE_URL}/api/`,
+    url: API_REFERENCE_URL,
   };
 }
 
@@ -171,14 +172,14 @@ export function buildPublicDatasetMirrorJsonLd(topic: PublicDatasetTopic) {
     "@id": `${SITE_URL}/datasets/${descriptor.slug}/#dataset`,
     name: descriptor.name,
     description: descriptor.description,
-    url: `${SITE_URL}/api/#dataset-${descriptor.slug}`,
+    url: `${API_REFERENCE_URL}#dataset-${descriptor.slug}`,
     creator: organization,
     publisher: organization,
     isAccessibleForFree: true,
     license: PHAROS_DATA_LICENSE_URL,
     includedInDataCatalog: buildPharosDataCatalogReference(),
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", descriptor.slug)],
-    sameAs: `${SITE_URL}/api/#dataset-${descriptor.slug}`,
+    sameAs: `${API_REFERENCE_URL}#dataset-${descriptor.slug}`,
     ...(date ? { dateModified: date } : {}),
     keywords: descriptor.keywords,
     variableMeasured: rowFields.map((name) => ({
@@ -233,7 +234,7 @@ export function buildCoverageDatasetJsonLd() {
       {
         "@type": "CreativeWork",
         name: "Pharos API Documentation",
-        url: `${SITE_URL}/api/`,
+        url: API_REFERENCE_URL,
       },
     ],
   };

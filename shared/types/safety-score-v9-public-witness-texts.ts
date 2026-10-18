@@ -75,6 +75,9 @@ export function resolveV9PublicWitnessText(card: V9PublicWitnessTextTable, value
 
 /** Copy-on-write; no mutation, no expansion of unrelated evidence or gap tables. */
 export function resolveV9PublicWitnessTexts<T extends V9PublicWitnessTextTable>(card: T): T {
+  // Resolved wire cards have no table. Leading '~' there is literal text, not
+  // a canonical reference; also avoid traversing an already resolved cohort.
+  if (card.witnessTexts === undefined) return card;
   const table = decodeWitnessTextTable(card);
   const result = mapV9WitnessTextFields(card, (value) =>
     isV9WitnessTextReference(value) ? table[witnessTextRef(table, value)]! : value) as T;

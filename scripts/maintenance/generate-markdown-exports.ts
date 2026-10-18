@@ -1,7 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { changelogs } from "../../src/data/changelogs";
+import { CHANGELOG_MONTH_ARCHIVES } from "../../src/lib/changelog-history";
+import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy";
 import {
   buildMethodologyChangelogMarkdown,
@@ -58,10 +59,16 @@ export async function main(): Promise<void> {
       body: buildMethodologyChangelogMarkdown(key),
     });
   }
+  for (const archive of METHODOLOGY_HISTORY_ARCHIVES) {
+    write({ path: archive.path, body: buildMethodologyChangelogMarkdown(archive.changelog.markdownKey, archive.archive) });
+  }
 
   for (const route of iterateStablecoinRoutes()) write(route);
 
-  write({ path: "/changelog/", body: renderChangelogIndex(changelogs) });
+  write({ path: "/changelog/", body: renderChangelogIndex() });
+  for (const archive of CHANGELOG_MONTH_ARCHIVES) {
+    write({ path: archive.path, body: renderChangelogIndex(archive.entries, archive.path) });
+  }
 
   for (const route of iterateDigestRoutes()) write(route);
   for (const route of iterateDocRoutes()) write(route);

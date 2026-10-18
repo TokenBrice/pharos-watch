@@ -95,7 +95,7 @@ const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
     description: "Privacy policy for Pharos web, API, and alert surfaces",
   },
   {
-    href: "/api/#reference",
+    href: "/api/reference/",
     label: "API Reference",
     icon: KeyRound,
     description: "Endpoint reference, authentication model, and public API access",

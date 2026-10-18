@@ -46,8 +46,7 @@ vi.mock("@/hooks/api-hooks", () => ({
   useYieldHistory: useYieldHistoryMock,
 }));
 
-vi.mock("@shared/lib/stablecoins/client-registry", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@shared/lib/stablecoins/client-registry")>()),
+vi.mock("@shared/lib/stablecoins/client-detail", () => ({
   loadClientStablecoinDetail: loadClientStablecoinDetailMock,
 }));
 

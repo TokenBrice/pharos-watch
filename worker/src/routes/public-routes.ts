@@ -9,6 +9,8 @@ import {
 
 export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbRoute("stablecoins", () => import("../api/cache-handlers").then(({ handleStablecoins }) => handleStablecoins)),
+  defineLazyDbRoute("homepage-snapshot", () => import("../api/homepage").then(({ handleHomepageSnapshot }) => handleHomepageSnapshot)),
+  defineLazyDbRoute("homepage-history", () => import("../api/homepage").then(({ handleHomepageHistory }) => handleHomepageHistory)),
   defineLazyDbUrlRoute("stablecoin-detail-snapshot-inputs", () => import("../api/stablecoin-detail/snapshot-inputs").then(({ handleDetailSnapshotInputs }) => handleDetailSnapshotInputs)),
   defineLazyDbRoute("stablecoin-charts", () => import("../api/cache-handlers").then(({ handleStablecoinCharts }) => handleStablecoinCharts)),
   defineLazyDbUrlRoute("blacklist", () => import("../api/blacklist").then(({ handleBlacklist }) => handleBlacklist)),
@@ -20,14 +22,23 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbRoute("usds-status", () => import("../api/cache-handlers").then(({ handleUsdsStatus }) => handleUsdsStatus)),
   defineLazyDbRoute("bluechip-ratings", () => import("../api/cache-handlers").then(({ handleBluechipRatings }) => handleBluechipRatings)),
   defineLazyDbRoute("dex-liquidity", () => import("../api/dex-liquidity").then(({ handleDexLiquidity }) => handleDexLiquidity)),
+  // Projection handlers stay lazy to preserve the Worker module-initialization boundary.
+  defineLazyDbUrlRoute("dex-liquidity-coin", () => import("../api/dex-liquidity").then(({ handleDexLiquidityCoin }) => handleDexLiquidityCoin)),
+  defineLazyDbRoute("dex-liquidity-table", () => import("../api/dex-liquidity").then(({ handleDexLiquidityTable }) => handleDexLiquidityTable)),
+  defineLazyDbUrlRoute("redemption-backstop-coin", () => import("../api/redemption-backstops").then(({ handleRedemptionBackstopCoin }) => handleRedemptionBackstopCoin)),
+  defineLazyDbUrlRoute("yield-rankings-coin", () => import("../api/yield-rankings-cache").then(({ handleYieldRankingsCoin }) => handleYieldRankingsCoin)),
   defineLazyDbUrlRoute("dex-liquidity-history", () => import("../api/dex-liquidity-history").then(({ handleDexLiquidityHistory }) => handleDexLiquidityHistory)),
+  defineLazyDbUrlRoute("dex-liquidity-chart-history", () => import("../api/dex-liquidity-history").then(({ handleDexLiquidityChartHistory }) => handleDexLiquidityChartHistory)),
   defineLazyDbUrlRoute("supply-history", () => import("../api/supply-history").then(({ handleSupplyHistory }) => handleSupplyHistory)),
   defineLazyDbRoute("daily-digest", () => import("../api/daily-digest").then(({ handleDailyDigest }) => handleDailyDigest)),
   defineLazyDbRoute("digest-archive", () => import("../api/digest-archive").then(({ handleDigestArchive }) => handleDigestArchive)),
+  defineLazyDbRoute("digest-promo", () => import("../api/digest-promo").then(({ handleDigestPromo }) => handleDigestPromo)),
   defineLazyDbUrlRoute("digest-snapshot", () => import("../api/digest-snapshot").then(({ handleDigestSnapshot }) => handleDigestSnapshot)),
   defineLazyDbUrlRoute("snapshots-index", () => import("../api/snapshot").then(({ handleSnapshotsIndex }) => handleSnapshotsIndex)),
   defineLazyDbUrlRoute("stability-index", () => import("../api/stability-index").then(({ handleStabilityIndex }) => handleStabilityIndex)),
   defineLazyDbRoute("report-cards-v9", () => import("../api/report-cards-v9").then(({ handleReportCardsV9 }) => handleReportCardsV9)),
+  defineLazyDbRoute("report-cards-v9-table", () => import("../api/report-cards-v9-projections").then(({ handleReportCardsV9Table }) => handleReportCardsV9Table)),
+  defineLazyDbUrlRoute("report-cards-v9-detail", () => import("../api/report-cards-v9-projections").then(({ handleReportCardsV9Detail }) => handleReportCardsV9Detail)),
   defineLazyDbRoute("safety-grades", () => import("../api/safety-grades").then(({ handleSafetyGrades }) => handleSafetyGrades)),
   // Keep the handler outside the eager Worker graph, as required by the lazy route registry.
   defineLazyDbRoute("dependency-graph-v1", () => import("../api/dependency-graph").then(({ handleDependencyGraph }) => handleDependencyGraph)),

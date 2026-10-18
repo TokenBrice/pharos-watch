@@ -1,5 +1,5 @@
 import { isSiteDataAllowedUiHostname, resolveSiteDataProxyPath } from "@shared/lib/site-data-lane";
-import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
+import { OPS_UI_HOSTNAME, PAGES_APP_ORIGIN, SITE_HOSTNAME, resolvePublicApiBase } from "@shared/lib/runtime-origins";
 
 export function resolveApiBase(
   hostname?: string | null,
@@ -48,4 +48,17 @@ export function buildRequestUrl(path: string, init?: Pick<RequestInit, "method">
     return siteDataPath;
   }
   return buildApiUrl(path);
+}
+
+/** Serializable admission policy for parser-time, same-origin GETs only. */
+export function getSiteDataBootstrapPolicy() {
+  const pagesHostname = new URL(PAGES_APP_ORIGIN).hostname;
+  const envBase = process.env.NEXT_PUBLIC_API_BASE;
+  const forceProxy = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
+  return {
+    disabled: Boolean((envBase ?? "").trim()),
+    anyHostname: (forceProxy ?? "").trim().toLowerCase() === "true",
+    hostnames: [SITE_HOSTNAME, OPS_UI_HOSTNAME, pagesHostname].filter((hostname) => isSiteDataAllowedUiHostname(hostname)),
+    hostnameSuffix: `.${pagesHostname}`,
+  };
 }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { ArrowRight } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -51,7 +51,7 @@ interface ExploreNextSectionProps {
 
 function CompactLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link
+    <IntentLink
       href={href}
       className="pharos-focus-ring group flex min-h-9 items-center justify-between gap-3 rounded-sm py-1.5 text-sm text-foreground/85 transition-colors hover:text-foreground"
     >
@@ -60,7 +60,7 @@ function CompactLink({ href, label }: { href: string; label: string }) {
         aria-hidden="true"
         className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
       />
-    </Link>
+    </IntentLink>
   );
 }
 
@@ -143,7 +143,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
       </div>
 
       {caseStudy ? (
-        <Link
+        <IntentLink
           href={`/learn/case-studies/${caseStudy.slug}/`}
           className="pharos-focus-ring group flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/50 px-4 py-3 transition-colors hover:border-foreground/30 hover:bg-accent"
         >
@@ -155,7 +155,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
             aria-hidden="true"
             className="h-4 w-4 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
           />
-        </Link>
+        </IntentLink>
       ) : null}
 
       {hasPeers ? (
@@ -163,20 +163,20 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <p className="pharos-label">Peers</p>
             {pegSlug ? (
-              <Link
+              <IntentLink
                 href={`/stablecoins/${pegSlug}/`}
                 className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 See all peers
                 <ArrowRight aria-hidden="true" className="h-3 w-3" />
-              </Link>
+              </IntentLink>
             ) : null}
           </div>
 
           {related.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5">
               {related.slice(0, 6).map((peer) => (
-                <Link
+                <IntentLink
                   key={peer.id}
                   href={buildStablecoinUrl(peer.id)}
                   className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-xs text-foreground transition-colors hover:border-foreground/30 hover:bg-accent"
@@ -184,7 +184,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
                 >
                   <StablecoinLogo src={getLogoSrc(logos, peer.id)} name={peer.name} size={16} />
                   <span className="font-mono tabular-nums font-medium">{peer.symbol}</span>
-                </Link>
+                </IntentLink>
               ))}
             </div>
           ) : null}
@@ -200,7 +200,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
               <div className="overflow-hidden rounded-xl border border-border/60">
                 <div className="-mb-px -mr-px grid sm:grid-cols-2 xl:grid-cols-3">
                 {staticComparisonPages.map((page, index) => (
-                  <Link
+                  <IntentLink
                     key={page.href}
                     href={page.href}
                     className={`pharos-focus-ring group ${
@@ -218,18 +218,18 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
                       aria-hidden="true"
                       className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
                     />
-                  </Link>
+                  </IntentLink>
                 ))}
                 </div>
               </div>
               {hiddenComparisonCount > 0 ? (
-                <Link
+                <IntentLink
                   href={peersHref}
                   className="pharos-focus-ring inline-flex min-h-9 items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground lg:hidden"
                 >
                   +{hiddenComparisonCount} more comparison briefs
                   <ArrowRight aria-hidden="true" className="h-3 w-3" />
-                </Link>
+                </IntentLink>
               ) : null}
             </div>
           ) : null}

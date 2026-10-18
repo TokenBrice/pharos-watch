@@ -1,7 +1,7 @@
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
-import { parseBooleanParam } from "../lib/api-params";
+import { parseBooleanParam, parseIntParam } from "../lib/api-params";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -16,12 +16,13 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
-import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
+import { buildPsiChartData, getDisplayedPsi, getPsiBandStreak, upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
+import { getPsiEventScores } from "@shared/lib/psi-events";
 import { round1 } from "@shared/lib/math";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 
 import { isRecord } from "@shared/lib/type-guards";
-import { StabilityIndexDailyProvenanceSchema, type StabilityIndexInputDegradation } from "@shared/types/stability";
+import { StabilityIndexDailyProvenanceSchema, type StabilityIndexHeadlineAggregates, type StabilityIndexInputDegradation } from "@shared/types/stability";
 
 function readDailyProvenance(value: unknown) {
   const parsed = StabilityIndexDailyProvenanceSchema.safeParse(value);
@@ -114,11 +115,16 @@ function decodePsiObjectField(
 export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Response> => {
   const detail = parseBooleanParam(url.searchParams.get("detail"), "detail", false);
   if (detail instanceof Response) return detail;
+  const days = url.searchParams.has("days")
+    ? parseIntParam(url.searchParams.get("days"), 365, 30, 365, "days", { rangePolicy: "reject" })
+    : null;
+  if (days instanceof Response) return days;
+  if (days !== null && !detail) return errorResponse(400, "days requires detail=true");
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = bucketUnixSecondsToUtcDay(now);
 
   // Only parse recent provenance: legacy replay blobs can be large.
-  // Detail history remains unbounded so historical annotations retain their date range.
+  // Bounded detail reads keep rich rows bounded; streaks use a separate thin projection.
   const dailyProvenanceProjection = `CASE WHEN computed_at >= ? THEN
     CASE WHEN json_valid(input_snapshot) THEN
     CASE WHEN json_extract(input_snapshot, '$.source') = 'daily-avg' THEN
@@ -132,11 +138,11 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
     END
   END AS daily_provenance`;
   const historyQuery = `SELECT computed_at, score, band, components, methodology_version,
-    ${dailyProvenanceProjection} FROM stability_index ORDER BY computed_at DESC${detail ? "" : " LIMIT 91"}`;
+    ${dailyProvenanceProjection} FROM stability_index ORDER BY computed_at DESC${detail ? (days === null ? "" : ` LIMIT ${days + 1}`) : " LIMIT 91"}`;
 
   // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
   // the previous sample remains the source of truth.
-  const [latestSample, avg24hRow, todayAvgRow, rows] = await Promise.all([
+  const [latestSample, avg24hRow, todayAvgRow, rows, aggregateRows] = await Promise.all([
     db
       .prepare("SELECT stored_at, score, band, components, input_snapshot, methodology_version FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>(),
@@ -152,6 +158,12 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       .prepare(historyQuery)
       .bind(now - 91 * DAY_SECONDS)
       .all<{ computed_at: number; score: number; band: string; components: string; methodology_version: string | null; daily_provenance: string | null }>(),
+    days !== null
+      ? db.prepare(`SELECT computed_at, score, band FROM stability_index
+          WHERE CASE WHEN json_valid(components) THEN json_type(components) = 'object' ELSE 0 END
+          ORDER BY computed_at DESC`)
+        .all<{ computed_at: number; score: number; band: string }>()
+      : null,
   ]);
   const results = rows.results ?? [];
 
@@ -280,6 +292,22 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       methodologyBreakdown: snapshot.value.methodologyBreakdown,
     })
     : undefined;
+  const aggregateHistory = aggregateRows
+    ? [
+      ...(todayAvgRow?.avg != null ? [{ date: todayMidnight, score: round1(todayAvgRow.avg), band: getConditionBand(round1(todayAvgRow.avg)) }] : []),
+      ...aggregateRows.results.map((row) => ({ date: row.computed_at, score: row.score, band: row.band })),
+    ]
+    : history;
+  const aggregateCurrent = { score: currentSource.score, band: currentSource.band, avg24h, avg24hBand, computedAt };
+  const headlineAggregates: StabilityIndexHeadlineAggregates | undefined = detail ? {
+    computedAt,
+    generatedAt: now,
+    daysInBand: aggregateHistory.length
+      ? getPsiBandStreak(aggregateHistory, computedAt, getDisplayedPsi(aggregateCurrent).band)
+      : 0,
+    eventScores: getPsiEventScores(buildPsiChartData(aggregateHistory, aggregateCurrent)),
+  } : undefined;
+
 
   return jsonResponse({
     current: {
@@ -299,7 +327,8 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       methodologyVersion,
       ...(dailyProvenance ? { dailyProvenance } : {}),
     },
-    history,
+    history: days === null ? history : history.filter((point) => point.date >= computedAt - days * DAY_SECONDS),
+    ...(headlineAggregates ? { headlineAggregates } : {}),
     malformedRows,
     methodology: buildMethodologyEnvelope({
       version: methodologyVersion,

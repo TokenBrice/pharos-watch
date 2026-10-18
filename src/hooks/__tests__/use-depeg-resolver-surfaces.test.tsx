@@ -106,6 +106,29 @@ afterEach(() => {
 });
 
 describe("useDepegResolverSurfaces", () => {
+  it("does not fetch the reviewer until the disclosure opens", async () => {
+    flags.resolverEnabled.mockReturnValue(true);
+    flags.reviewerEnabled.mockReturnValue(true);
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const fetchSpy = mockFetch([
+      { match: (request: Request) => new URL(request.url).pathname === RESOLVER_PATH, respond: () => ({ body: RESOLVER_PAYLOAD }) },
+      { match: (request: Request) => new URL(request.url).pathname === REVIEW_PATH, respond: () => ({ body: REVIEW_PAYLOAD }) },
+    ], { requireMatch: true });
+    const { result, rerender } = renderHook(
+      ({ reviewEnabled }) => useDepegResolverSurfaces({ reviewEnabled }),
+      { wrapper, initialProps: { reviewEnabled: false } },
+    );
+    await waitFor(() => expect(result.current.resolver.data).toEqual(RESOLVER_PAYLOAD));
+    expect(result.current.resolverReview.fetchStatus).toBe("idle");
+    expect(requestsTo(fetchSpy, REVIEW_PATH)).toBe(0);
+    rerender({ reviewEnabled: true });
+    await waitFor(() => expect(result.current.resolverReview.data).toEqual(REVIEW_PAYLOAD));
+    expect(requestsTo(fetchSpy, REVIEW_PATH)).toBe(1);
+  });
+
   it("suppresses both requests while DDR is off, then issues one each after the flag flips", async () => {
     flags.resolverEnabled.mockReturnValue(false);
     // Reviewer flag is on: the DDR gate alone must still keep the ledger silent.

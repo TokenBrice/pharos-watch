@@ -6,6 +6,7 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { isMissingTableError } from "../lib/db";
 import {
   DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,
+  dexLiquidityPublishedRowFilter,
   normalizeDexLiquidityEvidence,
   type DexLiquidityRow,
   type NormalizedDexLiquidityEvidence,
@@ -27,30 +28,46 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
+import { readCoinProjectionId } from "../lib/api-coin-projection";
+import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/market";
 
-export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
+export const handleDexLiquidity = async (
+  db: D1Database,
+  stablecoinId?: string,
+  tableProjection = false,
+): Promise<Response> => {
+  const coinFilter = stablecoinId ? " AND stablecoin_id = ?" : "";
+  const coinBindings = stablecoinId ? [stablecoinId] : [];
   const [result, histResult, priceResult, deploymentResult, cronRead] = await Promise.all([
     db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, total_volume_7d_measured, volume_availability_json, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
-         FROM dex_liquidity
-         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
+        // SAFETY: projections, FROM/join shape, aliases and filters are fixed internal SQL; coin values are bound.
+        `SELECT ${tableProjection
+          ? "stablecoin_id, total_tvl_usd, liquidity_score, updated_at, coverage_class, coverage_confidence, methodology_version"
+          : "stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, total_volume_7d_measured, volume_availability_json, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version"}
+         , publication_generation_id${stablecoinId ? ", dataset.totalCount AS projection_total_count" : ""}
+         FROM ${stablecoinId ? `(SELECT COUNT(*) AS totalCount FROM dex_liquidity
+           WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}) dataset
+           LEFT JOIN dex_liquidity ON ${dexLiquidityPublishedRowFilter("dex_liquidity")}${coinFilter}` :
+           `dex_liquidity WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`}
          ORDER BY liquidity_score DESC`,
       )
-      .all<DexLiquidityRow>(),
-    db
+      .bind(...coinBindings)
+      .all<DexLiquidityRow & { publication_generation_id: string | null; projection_total_count?: number }>(),
+    tableProjection ? Promise.resolve({ results: [] as DexHistoryRow[] }) : db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence
          FROM dex_liquidity_history
-         WHERE snapshot_date >= ?
+         WHERE snapshot_date >= ?${coinFilter}
          ORDER BY stablecoin_id, snapshot_date DESC`,
       )
-      .bind(Math.floor(Date.now() / 1000) - 8 * 86_400) // 8 days back covers 7d comparison
+      .bind(Math.floor(Date.now() / 1000) - 8 * 86_400, ...coinBindings)
       .all<DexHistoryRow>(),
-    db
+    tableProjection ? Promise.resolve({ results: [] as DexPriceRow[] }) : db
       .prepare(
-        "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices",
+        `SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices WHERE 1 = 1${coinFilter}`,
       )
+      .bind(...coinBindings)
       .all<DexPriceRow>()
       .catch((err) => {
         const msg = toErrorMessage(err);
@@ -60,13 +77,15 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
         logWorkerEventArgs("api", "error", "[dex-liquidity] Unexpected error loading dex_prices:", msg);
         throw err;
       }),
-    db
+    tableProjection ? Promise.resolve({ results: [] as DexDeploymentOutcomeRow[] }) : db
       .prepare(
         `SELECT stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
               observed_pool_count, observed_at, waiver_owner, waiver_reason, waiver_expires_at
          FROM dex_deployment_outcomes
+        WHERE 1 = 1${coinFilter}
         ORDER BY stablecoin_id, chain, contract_address`,
       )
+      .bind(...coinBindings)
       .all<DexDeploymentOutcomeRow>()
       .catch((err) => {
         if (isMissingTableError(err)) return { results: [] as DexDeploymentOutcomeRow[] };
@@ -115,22 +134,49 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const oneDayAgo = nowSec - 86_400;
   const sevenDaysAgo = nowSec - 7 * 86_400;
   const { day: trend24hToleranceSec, week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
-  const rows = result.results ?? [];
+  // A missing coin still carries the census selected in the same SQL snapshot.
+  const selectedRows = result.results ?? [];
+  const rows = selectedRows.filter((row) => row.stablecoin_id != null);
   const cacheControl = advisoryUnavailableReason ? CACHE_PROFILES.noStore : CACHE_PROFILES.custom;
-  const headers = rows.length > 0
+  // A compact cohort cannot borrow a newer sibling's clock. Every transported
+  // observation must remain within its own producer budget.
+  const datasetUpdatedAt = rows.length > 0 ? Math.min(...rows.map((row) => row.updated_at)) : null;
+  const headers: Record<string, string> = datasetUpdatedAt != null
     ? addFreshnessHeaders(
         { "Cache-Control": cacheControl },
-        Math.max(...rows.map((row) => row.updated_at)),
+        datasetUpdatedAt,
         API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
       )
-    : buildCronFreshnessHeaders(
+    : stablecoinId ? { "Cache-Control": CACHE_PROFILES.noStore } : buildCronFreshnessHeaders(
         await getLatestSuccessfulCronTimestampResult(db, "sync-dex-liquidity"),
         API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
         cacheControl,
       );
+  if (tableProjection) {
+    const table: DexLiquidityTableMap = {};
+    for (const row of rows) {
+      let unavailableReason: "invalid-coverage-evidence" | null = null;
+      try { normalizeDexLiquidityEvidence(row); } catch { unavailableReason = "invalid-coverage-evidence"; }
+      table[row.stablecoin_id] = {
+        liquidityScore: unavailableReason ? null : row.liquidity_score,
+        warning: [headers.Warning, advisoryUnavailableWarning, buildDexLiquidityWarning(latestCron,
+          row.stablecoin_id === "__global__" ? { scope: "global" } : { scope: "coin", stablecoinId: row.stablecoin_id },
+        )].filter(Boolean).join(", ") || null,
+        unavailableReason,
+        advisoryUnavailableReason,
+        updatedAt: row.updated_at,
+        methodologyVersion: row.methodology_version,
+      };
+    }
+    const warning = advisoryUnavailableWarning ?? buildDexLiquidityWarning(latestCron, { scope: "global" });
+    if (warning) headers.Warning = [headers.Warning, warning].filter(Boolean).join(", ");
+    return jsonResponseWithHeaders(table, headers);
+  }
 
+  // Normalizers intentionally retain raw diagnostic fields until wire-schema admission.
   const map: Record<string, unknown> = {};
-  for (const row of result.results ?? []) {
+  let coinUnavailableReason: "invalid-coverage-evidence" | null = null;
+  for (const row of rows) {
     const id = row.stablecoin_id;
     const currentTvl = row.total_tvl_usd;
 
@@ -159,6 +205,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
     } catch (error) {
       logWorkerEventArgs("api", "error", `[dex-liquidity] Quarantining malformed evidence row for ${id}:`, error);
     }
+    if (id === stablecoinId) coinUnavailableReason = evidence == null ? "invalid-coverage-evidence" : null;
     const scoreDetails = normalizeDexScoreDetails(
       row.score_components_json,
       `dex-liquidity:${id}:score_components_json`,
@@ -220,7 +267,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: safeJsonParse<unknown[] | null>(
+      priceSources: safeJsonParse<DexLiquidityData["priceSources"]>(
         dexPrice?.price_sources_json,
         null,
         `dex-liquidity:${id}:price_sources_json`,
@@ -257,5 +304,23 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;
   }
 
-  return jsonResponseWithHeaders(map, headers);
+  return jsonResponseWithHeaders(stablecoinId ? {
+    coins: map,
+    projection: {
+      stablecoinId,
+      generationId: rows[0]?.publication_generation_id ?? null,
+      updatedAt: rows[0]?.updated_at ?? null,
+      totalCount: selectedRows[0]?.projection_total_count ?? 0,
+      unavailableReason: rows.length === 0 ? "row-not-published" : coinUnavailableReason,
+    },
+  } : map, headers);
 };
+
+export async function handleDexLiquidityCoin(db: D1Database, url: URL): Promise<Response> {
+  const id = readCoinProjectionId(url);
+  return id instanceof Response ? id : handleDexLiquidity(db, id);
+}
+
+export async function handleDexLiquidityTable(db: D1Database): Promise<Response> {
+  return handleDexLiquidity(db, undefined, true);
+}

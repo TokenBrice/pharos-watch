@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { render } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
@@ -14,7 +13,7 @@ import { ScreenerClient } from "./client";
 const mocks = vi.hoisted(() => ({
   QueryFreshnessNotices: vi.fn(),
   ScreenerTable: vi.fn(),
-  useDexLiquidity: vi.fn(),
+  useDexLiquidityTable: vi.fn(),
   useHydrated: vi.fn(),
   usePegSummary: vi.fn(),
   useReportCardsV9: vi.fn(),
@@ -34,12 +33,6 @@ vi.mock("@/components/query-freshness-notices", () => ({
 
 vi.mock("@/components/selector/selector-callout", () => ({
   SelectorCallout: () => <div data-testid="selector-callout" />,
-}));
-
-vi.mock("@/components/screener/screener-toolbar", () => ({
-  ScreenerToolbar: ({ rightSlot }: { rightSlot?: ReactNode }) => (
-    <div data-testid="screener-toolbar">{rightSlot}</div>
-  ),
 }));
 
 vi.mock("@/components/screener/screener-table", () => ({
@@ -65,9 +58,9 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidity: mocks.useDexLiquidity,
+  useDexLiquidityTable: mocks.useDexLiquidityTable,
   usePegSummary: mocks.usePegSummary,
-  useReportCardsV9: mocks.useReportCardsV9,
+  useReportCardsV9Table: mocks.useReportCardsV9,
   useStressSignals: mocks.useStressSignals,
 }));
 
@@ -132,7 +125,7 @@ function setDefaultMocks() {
     meta: null,
     refetch,
   });
-  mocks.useDexLiquidity.mockReturnValue({
+  mocks.useDexLiquidityTable.mockReturnValue({
     data: { "usdc-circle": { liquidityScore: 80 } },
     error: null,
     dataUpdatedAt: 1_700_000_000,
@@ -156,7 +149,48 @@ describe("ScreenerClient freshness notices", () => {
     setDefaultMocks();
   });
 
+  it("exports every filtered sorted row, independently of the table's displayed page", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+    render(<ScreenerClient />);
+    const table = mocks.ScreenerTable.mock.calls.at(-1)?.[0] as { rows: ScreenerRow[] };
+    const exported = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as { data: ScreenerRow[] };
+    expect(exported.data.length).toBeGreaterThan(50);
+    expect(exported.data).toBe(table.rows);
+    expect(exported.data.map((row) => row.id)).toEqual(table.rows.map((row) => row.id));
+    expect(exported.data.at(-1)?.id).toBe(table.rows.at(-1)?.id);
+  });
 
+
+  it.each([true, false])("withholds counts and export without primary data (loading=%s)", (isLoading) => {
+    mocks.useStablecoins.mockReturnValue({
+      data: undefined, isLoading, error: isLoading ? null : new Error("Offline"),
+      dataUpdatedAt: 0, meta: null, refetch,
+    });
+    const view = render(<ScreenerClient />);
+    expect(view.queryByText(/tracked/)).toBeNull();
+    expect(view.getByText(isLoading ? "Loading screener inputs…" : "Screener counts unavailable.")).toBeTruthy();
+    expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0].dataState).toBe(isLoading ? "loading" : "unavailable");
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ data: [], disabled: true });
+  });
+
+  it("keeps retained primary rows and compact liquidity scores available after refresh failure", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: new Error("Offline"),
+      dataUpdatedAt: 1_700_000_000, meta: null, refetch,
+    });
+    render(<ScreenerClient />);
+    const table = mocks.ScreenerTable.mock.calls.at(-1)?.[0];
+    expect(table.dataState).toBe("ready");
+    expect(table.rows.find((row: ScreenerRow) => row.id === "usdc-circle")?.liquidityScore).toBe(80);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].disabled).toBe(false);
+  });
   it("keeps the global data gate tied to the primary stablecoin rows", () => {
     const stablecoinsError = new Error("stablecoin list unavailable");
     mocks.useStablecoins.mockReturnValue({

@@ -15,6 +15,8 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy";
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
+import { METHODOLOGY_ARCHIVE_PATHS } from "@shared/lib/methodology-versions/archives";
+import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
@@ -52,6 +54,7 @@ interface BuildPageMetadataInput {
 const METHODOLOGY_MARKDOWN_PATHS: ReadonlySet<string> = new Set<string>([
   "/methodology/",
   ...METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
+  ...METHODOLOGY_ARCHIVE_PATHS,
 ]);
 
 export function normalizeWhitespace(text: string): string {
@@ -73,6 +76,7 @@ function canonicalPathname(canonical: string): string | null {
 
 function hasGeneratedMarkdownAsset(pathname: string): boolean {
   if (pathname === "/changelog/" || pathname === "/docs/") return true;
+  if (CHANGELOG_MONTH_ARCHIVES.some((archive) => archive.path === pathname)) return true;
   if (METHODOLOGY_MARKDOWN_PATHS.has(pathname)) return true;
 
   const stablecoinMatch = pathname.match(/^\/stablecoin\/([^/]+)\/$/);

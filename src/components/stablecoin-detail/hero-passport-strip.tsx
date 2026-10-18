@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { CSSProperties } from "react";
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
@@ -88,21 +87,16 @@ export function HeroPassportStrip({
     stopScrollSyncRef.current = alignAnchorAfterHydration(sectionId, false);
   }
 
-  // Dense strips distribute like a real document data page — fields spread
-  // edge-to-edge across the available width. Sparse strips (<6 facts) keep the
-  // start-aligned gap so three fields don't float disconnected across the card.
-  const distributionClass = items.length >= 6 ? "lg:justify-between" : "";
-  const desktopItems = compactDesktop ? items.filter((item) => item.category !== "Mechanism") : items;
-  // Content-sized tracks with an even-distribution ceiling: `min-content` floors
-  // each column at its own longest entry so a wide value takes the room from its
-  // short-value neighbours instead of spilling over them, while `1fr` still
-  // shares the leftover evenly so sparse strips keep the document rhythm.
-  const desktopGridStyle = {
-    gridTemplateColumns: `repeat(${Math.max(desktopItems.length, 1)}, minmax(min-content, 1fr))`,
-  } as CSSProperties;
-  // At nine-plus fields the entries alone consume the strip: trade cell padding
-  // for value room so the band still resolves on one row.
-  const desktopCellPaddingClass = desktopItems.length >= 9 ? "px-2.5" : "px-4";
+  // Supplemental facts own tracks before their reads settle. Empty tracks make
+  // no evidence claim and never become links to unavailable sections.
+  const resolvedByKey = new Map(items.map((item) => [item.key, item]));
+  const orderedKeys: HeroPassportItemViewModel["key"][] = [
+    "mechanism", "redeemability", "minting", "freeze", "record", "chains",
+    "jurisdiction", "mica", "genius", "attestor", "issued",
+  ];
+  const slotKeys = orderedKeys.filter((key) => resolvedByKey.has(key) || key === "redeemability" || key === "minting" || key === "record");
+  const slots = compactDesktop ? slotKeys.map((key) => ({ key, item: resolvedByKey.get(key) })) : items.map((item) => ({ key: item.key, item }));
+  const desktopSlots = slots.filter(({ item }) => item?.category !== "Mechanism");
 
   return (
     <TooltipProvider>
@@ -125,13 +119,14 @@ export function HeroPassportStrip({
         <div
           className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto ${
             compactDesktop ? "lg:hidden" : "lg:flex-wrap lg:gap-x-4 lg:overflow-visible"
-          } ${compactDesktop ? "" : distributionClass}`}
+          }`}
         >
-          {items.map((item) => {
+          {slots.map(({ key, item }) => {
+            if (!item) return <span key={key} aria-hidden="true" data-passport-reserve={key} className="min-h-16 w-40 shrink-0" />;
             const isHashJump = item.href.startsWith("#");
             return withPassportTooltip(
               item,
-              <Link
+              <IntentLink
                 key={item.key}
                 href={item.href}
                 aria-label={item.ariaLabel}
@@ -143,26 +138,27 @@ export function HeroPassportStrip({
                       }
                     : undefined
                 }
-                className="pharos-focus-ring group flex min-h-11 shrink-0 snap-start flex-col justify-center rounded-sm lg:min-h-0"
+                className={`pharos-focus-ring group flex shrink-0 snap-start flex-col justify-center rounded-sm ${compactDesktop ? "min-h-16 w-40" : "min-h-11 lg:min-h-0"}`}
               >
                 <span className="pharos-label leading-tight">
                   {item.category}
                 </span>
                 <PassportItemValue
                   item={item}
-                  valueClassName="whitespace-nowrap text-xs font-semibold leading-snug"
+                  valueClassName={`${compactDesktop ? "break-words" : "whitespace-nowrap"} text-xs font-semibold leading-snug`}
                 />
-              </Link>,
+              </IntentLink>,
             );
           })}
         </div>
         {compactDesktop ? (
-          <div className="scrollbar-none hidden overflow-x-auto lg:grid" style={desktopGridStyle}>
-            {desktopItems.map((item) => {
+          <div className="scrollbar-none hidden overflow-x-auto lg:flex">
+            {desktopSlots.map(({ key, item }) => {
+              if (!item) return <span key={key} aria-hidden="true" data-passport-reserve={key} className="min-h-20 w-40 shrink-0 border-r border-border/40" />;
               const isHashJump = item.href.startsWith("#");
               return withPassportTooltip(
                 item,
-                <Link
+                <IntentLink
                   key={item.key}
                   href={item.href}
                   aria-label={item.ariaLabel}
@@ -174,7 +170,7 @@ export function HeroPassportStrip({
                         }
                       : undefined
                   }
-                  className={`pharos-focus-ring group flex min-h-14 min-w-0 flex-col justify-center border-r border-border/40 py-3 last:border-r-0 ${desktopCellPaddingClass}`}
+                  className="pharos-focus-ring group flex min-h-20 w-40 shrink-0 flex-col justify-center border-r border-border/40 px-4 py-3 last:border-r-0"
                 >
                   <span className="pharos-label leading-tight">
                     {item.category}
@@ -182,10 +178,10 @@ export function HeroPassportStrip({
                   <span className="mt-0.5 flex">
                     <PassportItemValue
                       item={item}
-                      valueClassName="whitespace-nowrap text-xs font-semibold leading-snug"
+                      valueClassName="break-words text-xs font-semibold leading-snug"
                     />
                   </span>
-                </Link>,
+                </IntentLink>,
               );
             })}
           </div>

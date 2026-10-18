@@ -27,13 +27,11 @@ export interface UseRowCursorResult {
   };
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target instanceof HTMLInputElement) return true;
-  if (target instanceof HTMLTextAreaElement) return true;
-  if (target instanceof HTMLSelectElement) return true;
-  if (target.isContentEditable) return true;
-  return false;
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return target.closest(
+    'button, a[href], input, textarea, select, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="textbox"], [role="combobox"], [role="slider"], [role="checkbox"], [role="switch"]',
+  ) !== null;
 }
 
 export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResult {
@@ -95,8 +93,8 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
     if (rowsLength === 0) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (isEditableTarget(event.target)) return;
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isInteractiveTarget(event.target)) return;
 
       // If scoped, only act when the scope contains the activeElement.
       const scopeEl = scopeRef?.current;

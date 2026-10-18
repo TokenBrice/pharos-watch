@@ -13,8 +13,7 @@ import { DonationsFileSchema } from "@shared/lib/funding/schema";
 import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
 import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
 import { ApiOfferCards } from "./api-offer-cards";
-import { ApiReferencePanel } from "./api-reference-panel";
-import { API_TAB_IDS, ApiTabs } from "./api-tabs";
+import { ApiTabs } from "./api-tabs";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 
 export const metadata = buildPageMetadata({
@@ -32,7 +31,7 @@ const FREE_GRADES_CURL = `curl ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}`;
 const LEDGER_RECONCILED_DATE = formatIsoDate(donationsData.last_updated_at);
 
 const DEVELOPER_RESOURCES = [
-  { label: "API reference", href: `#${API_TAB_IDS.reference}`, artifact: false },
+  { label: "API reference", href: "/api/reference/", artifact: false },
   { label: "OpenAPI", href: PUBLIC_API_ARTIFACTS.openApi, artifact: true },
   { label: "Postman collection", href: PUBLIC_API_ARTIFACTS.postmanCollection, artifact: true },
   { label: "Postman environment", href: PUBLIC_API_ARTIFACTS.postmanEnvironment, artifact: true },
@@ -72,9 +71,7 @@ export default async function ApiPage() {
         </div>
       }
     >
-      <ApiTabs
-        reference={await ApiReferencePanel()}
-        access={
+      <ApiTabs active="access">
           <div className="space-y-12">
             <div className="space-y-4">
               <ApiOfferCards coins={coins} gradesAsOf={asOfDate} supporterCount={supporterCount} />
@@ -123,8 +120,7 @@ export default async function ApiPage() {
               </ul>
             </nav>
           </div>
-        }
-      />
+      </ApiTabs>
     </FeaturePageShell>
   );
 }

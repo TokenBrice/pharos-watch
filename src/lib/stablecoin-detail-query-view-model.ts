@@ -26,6 +26,7 @@ import type {
   YieldRanking,
 } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -59,7 +60,7 @@ export interface DetailFeatureAvailabilitySnapshot {
 }
 
 export function resolveReportCardSnapshotUpdatedAtMs(
-  reportCards: DetailQueryResource<ReportCardsV9CurrentResponse>,
+  reportCards: DetailQueryResource<ReportCardsV9CurrentResponse | ReportCardsV9DetailResponse>,
 ): number | null {
   const updatedAtSeconds = reportCards.meta?.updatedAt ?? reportCards.data?.updatedAt ?? null;
   return updatedAtSeconds != null && updatedAtSeconds > 0 ? updatedAtSeconds * 1000 : null;
@@ -150,6 +151,72 @@ function staleQueryFrom<T>(
     meta: query.meta,
     enabled: query.enabled,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isFetchedAfterMount: query.isFetchedAfterMount,
+    isSnapshot: query.isSnapshot,
+  };
+}
+
+/** Reserve fetch/source clocks have independent budgets; the first expiry owns aging. */
+function reserveStaleQuery(
+  reserves: StablecoinDetailViewModelSupplementalInputs["reserves"],
+): StablecoinDetailStaleQuery {
+  const live = reserves.live;
+  const sync = live?.sync;
+  const freshness = sync?.freshness;
+  const fetchedAt = freshness?.fetchedAt ?? live?.liveAt;
+  const isLive = live?.mode === "live" || live?.mode === "live-stale";
+  const sourceAuthorityAvailable = freshness?.freshnessMode === "not-applicable"
+    || (freshness?.freshnessMode === "verified" && freshness.sourceTimestamp != null
+      && freshness.sourceTimestamp > 0 && freshness.sourceAgeBudgetSec != null);
+  const clocks: { at: number; budget: number }[] = [];
+  if (isLive && freshness && fetchedAt != null && fetchedAt > 0 && sourceAuthorityAvailable) {
+    clocks.push({ at: fetchedAt, budget: freshness.fetchBudgetSec });
+    if (freshness.freshnessMode === "verified" && freshness.sourceTimestamp != null
+      && freshness.sourceTimestamp > 0 && freshness.sourceAgeBudgetSec != null) {
+      clocks.push({ at: freshness.sourceTimestamp, budget: freshness.sourceAgeBudgetSec });
+    }
+  }
+  const authority = clocks.reduce<{ at: number; budget: number } | null>((first, clock) =>
+    !first || clock.at + clock.budget < first.at + first.budget ? clock : first, null);
+  const stale = live?.mode === "live-stale" || sync?.stale || freshness?.stale || freshness?.sourceFreshnessInvalid;
+  const issues = [
+    live?.mode,
+    sync && `sync:${sync.status}`,
+    ...(freshness?.staleReasons ?? []),
+    freshness?.sourceFreshnessInvalid && "invalid-source-freshness",
+    sync?.uncertainWrite && "uncertain-write",
+    sync?.failureCategory,
+    ...(sync?.warnings ?? []),
+  ].filter(Boolean).join("; ");
+  const fetchClock = fetchedAt != null && fetchedAt > 0 ? new Date(fetchedAt * 1000).toISOString() : "unknown";
+  const sourceClock = freshness?.sourceTimestamp != null && freshness.sourceTimestamp > 0
+    ? new Date(freshness.sourceTimestamp * 1000).toISOString() : "unknown";
+  const details = `${issues}; producer fetch ${fetchClock}; fetch budget ${freshness?.fetchBudgetSec ?? "unknown"} seconds; attempt ${freshness?.attemptId ?? "unknown"}; source ${sourceClock}; source mode ${freshness?.freshnessMode ?? "unknown"}; source budget ${freshness?.sourceAgeBudgetSec ?? "unknown"} seconds (${freshness?.sourceAgeBudgetCap ?? "unknown"})`;
+  return {
+    label: "Live Reserves",
+    staleTime: CRON_RESERVE_SYNC,
+    // A successful request receipt is never a reserve producer generation.
+    dataUpdatedAt: authority ? authority.at * 1000 : 0,
+    error: reserves.error,
+    hasData: live != null && live.mode !== "unavailable",
+    isLoading: reserves.isLoading,
+    meta: authority && freshness ? {
+      updatedAt: authority.at,
+      ageSeconds: freshness.assessedAt - authority.at,
+      assessedAt: freshness.assessedAt,
+      status: stale ? "stale" : sync?.status !== "ok" || sync?.uncertainWrite ? "degraded" : "fresh",
+      freshBudgetSec: authority.budget,
+      degradedBudgetSec: authority.budget,
+      ...(sync?.status !== "ok" || sync?.uncertainWrite ? { warning: issues } : {}),
+      dependencies: { reserveEvidence: { status: stale ? "stale" : "fresh", reason: details } },
+    } : {
+      updatedAt: null,
+      ageSeconds: null,
+      status: stale ? "stale" : "unknown",
+      reason: `${live?.mode ?? "unavailable"}: reserve-generation-or-budget-unavailable`,
+      dependencies: { reserveEvidence: { status: "unavailable", reason: details } },
+    },
   };
 }
 
@@ -186,6 +253,9 @@ export function buildDetailStaleQueries(
       hasData: queries.supplyHistory.dataUpdatedAt > 0 || (queries.supplyHistory.data?.length ?? 0) > 0,
       meta: queries.supplyHistory.meta,
       isLoading: queries.supplyHistory.isLoading,
+      isFetching: queries.supplyHistory.isFetching,
+      isFetchedAfterMount: queries.supplyHistory.isFetchedAfterMount,
+      isSnapshot: queries.supplyHistory.isSnapshot,
     },
   ];
   if (queries.annualPriceHistory?.enabled) {
@@ -220,15 +290,7 @@ export function buildDetailStaleQueries(
     });
   }
   if (supplemental.reserves.enabled) {
-    result.push({
-      label: "Live Reserves",
-      staleTime: CRON_RESERVE_SYNC,
-      dataUpdatedAt: supplemental.reserves.dataUpdatedAt,
-      error: supplemental.reserves.error,
-      hasData: supplemental.reserves.live != null,
-      isLoading: supplemental.reserves.isLoading,
-      meta: null,
-    });
+    result.push(reserveStaleQuery(supplemental.reserves));
   }
   return result.filter((query) => query.enabled !== false);
 }

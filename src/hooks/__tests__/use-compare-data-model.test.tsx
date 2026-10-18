@@ -116,6 +116,31 @@ describe("useCompareDataModel", () => {
     supplyHistoryQueryOptionsMock.mockReturnValue({});
     mintBurnFlowsCoinQueryOptionsMock.mockReturnValue({});
   });
+  it("keeps only the selector list active until comparisons are selected", () => {
+    const { result, rerender } = renderHook(
+      ({ selectedIds }) => useCompareDataModel({ selectedIds, flowHours: 24, radarCohort: "peg" }),
+      { initialProps: { selectedIds: [] as string[] } },
+    );
+    const metricHooks = [
+      usePegSummaryMock, useBluechipRatingsMock, useDexLiquidityMock, useReportCardsV9Mock,
+      useRedemptionBackstopsMock, useYieldRankingsMock, useStressSignalsMock,
+    ];
+    for (const hook of metricHooks) expect(hook).toHaveBeenLastCalledWith({ enabled: false });
+    expect(useMintBurnFlowsMock).toHaveBeenLastCalledWith(24, { enabled: false });
+    expect(result.current.freshnessQueries.map((query) => query.preset)).toEqual(["stablecoins"]);
+    expect(useQueriesMock).toHaveBeenCalledWith({ queries: [] });
+
+    rerender({ selectedIds: ["usdc-circle"] });
+    for (const hook of metricHooks) expect(hook).toHaveBeenLastCalledWith({ enabled: true });
+    expect(useMintBurnFlowsMock).toHaveBeenLastCalledWith(24, { enabled: true });
+  });
+
+  it("enables metrics immediately for an initial URL-provided selection", () => {
+    renderHook(() => useCompareDataModel({ selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg" }));
+    expect(useReportCardsV9Mock).toHaveBeenCalledWith({ enabled: true });
+    expect(usePegSummaryMock).toHaveBeenCalledWith({ enabled: true });
+  });
+
 
   it("returns partial-failure freshness and symbol-bearing radar presentation models", () => {
     const stablecoinsMeta = { source: "stablecoins-fixture" };

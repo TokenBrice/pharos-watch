@@ -1,4 +1,5 @@
-import { PSI_CONDITION_BAND_VALUES, type PsiConditionBand } from "../../types/stability";
+import { PSI_CONDITION_BAND_VALUES } from "../../types/stability-constants";
+import type { PsiConditionBand } from "../../types/stability-constants";
 import { projectDescriptors } from "./descriptors";
 
 export type ConditionBand = PsiConditionBand;

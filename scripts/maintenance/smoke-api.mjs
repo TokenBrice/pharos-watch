@@ -14,25 +14,13 @@ import {
   retrySmokeResult,
 } from "../lib/smoke-runtime.mjs";
 import { assertRedemptionResponse } from "../lib/smoke-redemption-assertions.mjs";
+import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints/definitions";
 
-export const STRICT_CONTRACT_SMOKE_PATHS = [
-  "/api/stablecoins",
-  "/api/peg-summary",
-  "/api/dex-liquidity",
-  "/api/stability-index",
-  "/api/report-cards/v9",
-  "/api/dependency-graph/v1",
-  "/api/dependency-scenarios/v1",
-  "/api/depeg-resolver",
-  "/api/depeg-resolver-review",
-  "/api/redemption-backstops",
-  "/api/blacklist",
-  "/api/blacklist-summary",
-  "/api/depeg-events",
-  "/api/events",
-  "/api/mint-burn-flows",
-  "/api/stress-signals",
-];
+// Strict site-only transports keep router coverage, but the public API host
+// deliberately returns 404 for them, even with the smoke command's API key.
+export const STRICT_CONTRACT_SMOKE_PATHS = ENDPOINT_DEFINITIONS
+  .filter((endpoint) => endpoint.strictContract && endpoint.publicApiAccess !== "site-only")
+  .map((endpoint) => endpoint.path);
 
 export const CANARY_CONTRACT_SMOKE_PATHS = [
   "/api/stablecoins",
@@ -244,7 +232,8 @@ function stripMeta(body) {
 
 export function resolveContractSmokePaths(scope = "full") {
   const selected = scope === "canary" ? CANARY_CONTRACT_SMOKE_PATHS : STRICT_CONTRACT_SMOKE_PATHS;
-  const parsed = [...selected];
+  const publicStrictPaths = new Set(STRICT_CONTRACT_SMOKE_PATHS);
+  const parsed = selected.filter((path) => publicStrictPaths.has(path));
   for (const p of parsed) {
     assert(typeof p === "string" && p.startsWith("/api/"), `Invalid strict API path entry: ${String(p)}`);
   }

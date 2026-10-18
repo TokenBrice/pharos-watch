@@ -8,6 +8,7 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 import { installSvgCoordinateShim } from "./contagion-graph-test-support";
 import { ALL_NODE_LIMIT, runSimulationInChunks } from "@/lib/contagion-layout";
 import { trackEvent } from "@/lib/analytics";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
@@ -92,6 +93,18 @@ beforeAll(installSvgCoordinateShim);
 
 
 describe("ContagionGraph", () => {
+  it("resolves SVG logos by their rendered diameter instead of loading every original", () => {
+    const src = "/logos/cg-onyc.png";
+    const logos = Object.fromEntries(CARDS.map((card) => [card.id, src]));
+    const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} logos={logos} />);
+    const images = Array.from(container.querySelectorAll<SVGImageElement>("image"));
+    expect(images.length).toBeGreaterThan(0);
+    for (const image of images) {
+      expect(image.getAttribute("href")).toBe(resolveCompactLogoSrc(src, Number(image.getAttribute("width"))));
+    }
+    expect(images.some((image) => image.getAttribute("href")?.includes("/compact/"))).toBe(true);
+  });
+
   function getTraceCoinPicker(): HTMLSelectElement {
     const picker = screen.getByLabelText("Trace coin");
     if (!(picker instanceof HTMLSelectElement)) {

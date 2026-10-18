@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { ChevronDown } from "lucide-react";
 import { MODULE_DISCLOSURE_SUMMARY_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { SourceLinkList, type SourceLink } from "@/components/stablecoin-detail/source-link-list";
@@ -150,17 +150,17 @@ export function EvidenceFooter({
     <>
       {item ? (
         <>
-          <Link
+          <IntentLink
             href={item.methodologyPath}
             title={item.versionLabel ? `Methodology ${item.versionLabel}` : undefined}
             className={FOOTER_LINK_CLASS}
           >
             View methodology
-          </Link>
+          </IntentLink>
           {item.changelogPath ? (
-            <Link href={item.changelogPath} className={FOOTER_LINK_CLASS}>
+            <IntentLink href={item.changelogPath} className={FOOTER_LINK_CLASS}>
               Version history &rarr;
-            </Link>
+            </IntentLink>
           ) : null}
         </>
       ) : null}

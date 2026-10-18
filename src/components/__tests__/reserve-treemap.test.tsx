@@ -85,6 +85,9 @@ describe("ReserveTreemap", () => {
   it("keeps a basket just under the 90% line as a treemap", () => {
     const html = render([SLICE("T-bills", 89.9, "very-low"), SLICE("Cash", 10.1, "very-low")]);
     expect(html).toContain("pharos-chart-stage");
+    // The accessible figure exists even before the viewport-gated renderer.
+    expect(html).toContain('role="figure"');
+    expect(html).toContain('aria-label="Reviewed reserve slices: T-bills 89.9%, Cash 10.1%"');
     expect(html).not.toContain("Other reserve slices");
   });
 

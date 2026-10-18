@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -34,26 +35,24 @@ import {
 } from "@/lib/yield-peers";
 import {
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
-  loadClientStablecoinDetail,
 } from "@shared/lib/stablecoins/client-registry";
+import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import type { YieldHistoryPoint } from "@shared/types";
 
-// Keep chart-bearing pieces dynamic: a static import here re-attaches the
-// whole recharts chunk to the eager first load of all 400+ coin yield pages.
-// Loaders route through the detail sections-bundle so this page shares the
-// detail family's lazy chunk instead of emitting its own recharts copy.
+// Keep each chart-bearing piece behind its own client import boundary. The
+// shared Webpack recharts-vendor group deduplicates charts across these loaders.
 const YieldHistoryChart = dynamic(
-  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldHistoryChart),
+  () => import("@/components/yield-history-chart").then((mod) => mod.YieldHistoryChart),
   {
     loading: () => <Skeleton className="h-[360px] w-full rounded-xl" />,
   },
 );
 
 const YieldChangeAttributionCard = dynamic(
-  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldChangeAttributionCard),
+  () => import("@/components/yield-change-attribution-card").then((mod) => mod.YieldChangeAttributionCard),
   {
     loading: () => <Skeleton className="h-[120px] w-full rounded-xl" />,
   },
@@ -565,16 +564,18 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             APY across every retained source over time, plotted against the benchmark hurdle rate
             {readyModel.medianApy != null ? " and global TVL-weighted median." : "."}
           </p>
-          <YieldHistoryChart
-            stablecoinId={id}
-            benchmarkRate={readyModel.benchmarkRate}
-            benchmarkLabel={readyModel.benchmarkLabel}
-            benchmarkIsFallback={readyModel.benchmarkIsFallback}
-            medianApy={readyModel.medianApy}
-            availableSources={readyModel.historySources}
-            hideSourceSelector
-            externalSourceKeys={chartSourceKeys}
-          />
+          <LazySection minHeight={360}>
+            <YieldHistoryChart
+              stablecoinId={id}
+              benchmarkRate={readyModel.benchmarkRate}
+              benchmarkLabel={readyModel.benchmarkLabel}
+              benchmarkIsFallback={readyModel.benchmarkIsFallback}
+              medianApy={readyModel.medianApy}
+              availableSources={readyModel.historySources}
+              hideSourceSelector
+              externalSourceKeys={chartSourceKeys}
+            />
+          </LazySection>
           {showResetSources ? (
             <button
               type="button"

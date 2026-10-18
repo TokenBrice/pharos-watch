@@ -16,6 +16,16 @@ function makeExecutionContext() {
 }
 
 describe("createEdgeCacheContext", () => {
+  it("strips conditional and range headers before asking Cache API for a full representation", () => {
+    const request = new Request("https://api.pharos.watch/api/yield-rankings?projection=summary", {
+      headers: { "If-None-Match": '"generation"', "If-Modified-Since": new Date().toUTCString(),
+        Range: "bytes=0-100", "If-Range": '"generation"' },
+    });
+    const context = createEdgeCacheContext(request, new URL(request.url));
+    expect(context.cacheKey.url).toBe(request.url);
+    expect(Array.from(context.cacheKey.headers.keys())).toEqual([]);
+  });
+
   it("canonicalizes OG image cache keys by stripping arbitrary query strings", () => {
     const request = new Request("https://api.pharos.watch/api/og/chain/ethereum?bust=random");
     const context = createEdgeCacheContext(request, new URL(request.url));
@@ -89,7 +99,9 @@ describe("writeEdgeCache", () => {
     const context = makeContext();
     match.mockResolvedValueOnce(undefined);
     await expect(readEdgeCache(context)).resolves.toBeNull();
-    const cached = new Response("cached");
+    const cached = new Response("cached", { headers: {
+      "Cache-Control": "public, max-age=60", Date: new Date().toUTCString(),
+    } });
     match.mockImplementationOnce(async (key: Request) => key.url === context.cacheKey.url ? cached : undefined);
     await expect(readEdgeCache(context)).resolves.toBe(cached);
   });
@@ -117,6 +129,20 @@ describe("writeEdgeCache", () => {
     match.mockResolvedValue(new Response("cached", {
       headers: { "Cache-Control": "public, s-maxage=10, max-age=60", Date: new Date(now).toUTCString(), Age: "10" },
     }));
+    await expect(readEdgeCache(makeContext())).resolves.toBeNull();
+  });
+
+  it.each([
+    { Date: "invalid", Age: "0" },
+    { Date: new Date().toUTCString(), Age: "-1" },
+    { Date: new Date().toUTCString(), Age: "unknown" },
+  ])("rejects unreadable lifetime bounds %j", async (bounds) => {
+    match.mockResolvedValue(new Response("cached", { headers: { "Cache-Control": "public, max-age=60", ...bounds } }));
+    await expect(readEdgeCache(makeContext())).resolves.toBeNull();
+  });
+
+  it.each([206, 304])("rejects unexpected Cache API status %s before reuse", async (status) => {
+    match.mockResolvedValue(new Response(status === 304 ? null : "partial", { status }));
     await expect(readEdgeCache(makeContext())).resolves.toBeNull();
   });
 

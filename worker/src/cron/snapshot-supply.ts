@@ -29,6 +29,7 @@ import {
   classifyStablecoinPublicationGap,
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
+import { publishNonUsdShareHistory } from "../lib/non-usd-share-history";
 
 // Freshness gates follow the stablecoins producer cadence (`sync-stablecoins`
 // via the shared lane descriptor): the snapshot logs a degraded-freshness
@@ -70,6 +71,22 @@ async function repairSameDayMissingPrices(
     ).bind(price, priceObservedAt, stablecoinId, snapshotDate));
 
   return batchExecute(db, repairs, { signal });
+}
+
+async function publishShareHistory(
+  db: D1Database, nowSec: number, itemCount: number, signal?: AbortSignal,
+): Promise<CronResult | null> {
+  try {
+    await publishNonUsdShareHistory(db, nowSec, signal);
+    return null;
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    recordCronFailure("snapshot-supply", err, { metadata: { stage: "nonUsdSharePublication" } });
+    return createCronResult({
+      status: "degraded", itemCount,
+      metadata: { reason: "non_usd_share_publication_failed", error: String(err).slice(0, 200) },
+    });
+  }
 }
 
 export async function snapshotSupply(
@@ -223,6 +240,8 @@ export async function snapshotSupply(
   if (alreadyWritten) {
     try {
       const repairedPriceRows = await repairSameDayMissingPrices(db, snapshotDate, snapshotRows, signal);
+      const shareFailure = await publishShareHistory(db, nowSec, repairedPriceRows, signal);
+      if (shareFailure) return shareFailure;
       return createCronResult({
         ...(publicationGapBand !== "none" ? {
           status: publicationGapBand === "elevated" ? "degraded" as const : "ok" as const,
@@ -290,6 +309,7 @@ export async function snapshotSupply(
           ownedRowIds: snapshotRows.map(([stablecoinId]) => stablecoinId),
           missingActiveIds: publicationCoverage.missingActiveIds,
         }),
+        generationId: crypto.randomUUID(),
         writtenRows: snapshotRows.length,
       });
       const ownedStablecoinIds = [...new Set([
@@ -325,6 +345,9 @@ export async function snapshotSupply(
       metadata: { reason: "all_coins_zero_supply" },
     });
   }
+
+  const shareFailure = await publishShareHistory(db, nowSec, snapshotRows.length, signal);
+  if (shareFailure) return shareFailure;
 
   logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
   if (restoredOnlyIds.length > 0 || publicationGapBand !== "none") {

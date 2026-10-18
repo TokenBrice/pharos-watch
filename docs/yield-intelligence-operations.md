@@ -145,3 +145,22 @@ The [engineering publication contract](./yield-intelligence.md#persistence-and-p
 ### Retired supplemental source: vaults.fyi
 
 The anonymous probe and exact-vault allowlist machinery have been retired, including runtime env controls and provider credit accounting. Primary and hourly catch-up supplemental jobs now enumerate only the surviving family registry. Historical `protocol-api:vaults-fyi:<chain>:<vault>` rows retain curated-observation classification, venue/chain attribution, and existing source links; removal of the collector does not upgrade them to first-party evidence. Provider secrets and retired cache/circuit/budget rows require separate post-deploy cleanup after compatible code soak and rollback-floor closure.
+
+## Runtime Ownership And Scoped Reads
+
+The `/yield/` coin index groups the complete active yield-bearing compact registry by `coin.yieldType`, retaining missing taxonomy under Other; it never loads per-coin detail sidecars. The client-registry generator's source parity assertion and field-contract tests keep compact taxonomy equal to generated detail configuration. Rankings summary and adapter-manifest queries start independently at route mount, using their existing canonical keys.
+
+- History reads only its requested coin's complete rankings row plus publication envelope through the D1 JSON projection; selected and alternate `sourceRisk` still join by coin, source and publication generation. Malformed cache bytes retain their original row clock for the existing unavailable-cutoff path. Daily-history reads constrain the indexed `snapshot_date` range in addition to exact `recorded_at` boundaries; raw/daily overlap deduplication and staged/failed exclusion are unchanged.
+- Stablecoin dossiers and embedded yield sections use site-only `/api/yield-rankings-coin?stablecoin=<id>` with an independent cache key. It retains the complete selected row and original producer clock, alternatives, benchmark/methodology/publication metadata, global warnings and coverage denominators. D1 selects the coin before validation/aging/hydration; the [generation-bound shared comparator census](./process/worker-infrastructure-appendix.md#coin-scoped-liquidity-redemption-and-yield-transports) preserves exact rank/attribution and cohort coverage without repeating population hydration for every coin. The yield landing page and cohort peer workbench keep their cohort endpoints.
+
+| Surface | Owner |
+| --- | --- |
+| Yield resolution and publication | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/` |
+| Optional slower source families | `worker/src/cron/sync-yield-supplemental.ts` |
+| Benchmark registry | `worker/src/cron/fetch-tbill-rate.ts` |
+| Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts`, `worker/src/lib/yield-ranking-helpers.ts` |
+| Rankings and history APIs | `worker/src/api/cache-handlers.ts`, `worker/src/api/yield-history.ts` |
+| Shared wire types | `shared/types/index.ts` |
+| Frontend queries and formatting | `src/hooks/api-hooks.ts`, `src/lib/yield-constants.ts` |
+| Yield workbench and per-coin analysis | `src/app/yield/`, `src/app/stablecoin/[id]/yield/` |
+

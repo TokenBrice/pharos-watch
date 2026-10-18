@@ -3,6 +3,7 @@ import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publicati
 import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9ResolvedCurrentCardSchema,
   SafetyScoreV9HistoricalCardSchema,
   SafetyScoreV9WitnessHistoricalCardSchema,
   SafetyScoreV9DependencyProvenanceSchema,
@@ -354,17 +355,23 @@ function refineReportCardsV9Response(
 }
 
 /** Report8 carries exact typed exit identity; old envelopes require explicit historical dispatch. */
-export const ReportCardsV9CurrentResponseSchema = z
-  .object({
-    ...ReportCardsV9ResponseShape,
-    lifecycle: z.literal("active"),
-    schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
-    publicationHealth: V9PublicationHealthSchema,
-    cards: z.array(SafetyScoreV9CurrentCardSchema),
-    foreignCauseGaps: canonicalTextArray(),
-  })
-  .strict()
-  .superRefine(refineReportCardsV9Response);
+const ReportCardsV9CurrentEnvelopeShape = {
+  ...ReportCardsV9ResponseShape,
+  lifecycle: z.literal("active"),
+  schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+  publicationHealth: V9PublicationHealthSchema,
+  foreignCauseGaps: canonicalTextArray(),
+};
+export const ReportCardsV9CurrentResponseSchema = z.object({
+  ...ReportCardsV9CurrentEnvelopeShape,
+  cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
+}).strict().superRefine(refineReportCardsV9Response);
+
+/** Trusted materializer input: canonical cards, with the same public refinements. */
+export const ReportCardsV9CanonicalProjectionSchema = z.object({
+  ...ReportCardsV9CurrentEnvelopeShape,
+  cards: z.array(SafetyScoreV9CurrentCardSchema),
+}).strict().superRefine(refineReportCardsV9Response);
 export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
 
 /**

@@ -50,7 +50,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCardsV9: useReportCardsV9Mock,
+  useReportCardsV9Table: useReportCardsV9Mock,
 }));
 
 describe("parseFreezeWatchPageFilters", () => {

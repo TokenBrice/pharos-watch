@@ -53,7 +53,7 @@ jobs:
           SMOKE_API_KEY: ${{ secrets.PHAROS_API_KEY }}
 
   transport:
-    name: API HTTPS redirects
+    name: API HTTPS redirects and live cache policy
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -67,3 +67,35 @@ jobs:
         env:
           SMOKE_TRANSPORT_API_URL: http://api.pharos.watch/api/health?smoke=transport
           SMOKE_TRANSPORT_SITE_API_URL: http://site-api.pharos.watch/api/stablecoins?limit=1&smoke=transport
+      - name: Check live direct and same-origin API Cache-Control
+        if: ${{ !cancelled() }}
+        run: node scripts/ci/check-live-api-cache-policy.mjs
+
+  page-performance:
+    name: Live page performance and polling
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          browser-cache: "true"
+          install-playwright-chromium: "true"
+      - name: Capture home and detail viewport matrix
+        run: |
+          args=()
+          if [[ "$(date -u +%u)" == "1" ]]; then
+            args+=(--dwell-seconds 1800)
+          fi
+          node scripts/maintenance/probe-page-performance.mjs "${args[@]}"
+      - name: Retain production measurements
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: page-performance-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/page-performance.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30

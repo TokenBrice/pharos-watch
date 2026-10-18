@@ -3,11 +3,13 @@ import {
   makeReportCardsV9Pillars,
   makeReportCardsV9Response as makeSharedReportCardsV9Response,
   type ReportCardsV9ResponseFixturePreset,
+  type ReportCardsV9ResponseFixtureOverrides,
 } from "@shared/test-utils/report-cards-v9";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import type {
   SafetyScoreV9CurrentCard,
   SafetyScoreV9CurrentResponse,
+  SafetyScoreV9ResolvedCurrentCard,
 } from "@shared/types/safety-score-v9-public";
 
 const digest = (character: string) => character.repeat(64);
@@ -35,12 +37,12 @@ const V9_RESPONSE_PRESET = {
 
 export function makeWorkerV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
-): SafetyScoreV9CurrentCard {
+): SafetyScoreV9ResolvedCurrentCard {
   return makeReportCardsV9Card(overrides);
 }
 
 export function makeWorkerReportCardsV9Response(
-  overrides: Partial<ReportCardsV9Response> = {},
+  overrides: ReportCardsV9ResponseFixtureOverrides = {},
 ): ReportCardsV9Response {
   return makeSharedReportCardsV9Response(V9_RESPONSE_PRESET, makeWorkerV9Card, overrides);
 }

@@ -69,6 +69,7 @@ The workflow reads the live manifest only in the plan-before-browser phase. The 
 | `safety-map:alt:latest` | Alt text and the per-tier table |
 | `safety-map:YYYY-MM-DD.png` | Dated image — the URL the digest embeds |
 | `safety-map:latest.png` | Same bytes, stable URL for the site |
+| `safety-map:latest.webp` | 800×450 WebP teaser derived from the same PNG render |
 | `safety-map:latest.json` | Manifest — **written last, the commit marker** |
 
 Manifest-last prevents a new manifest from advertising before its image writes and dated-PNG hash readback complete. A failed readback leaves the stable latest image untouched, but KV keys are not atomic: a same-day `force` can overwrite the dated image while the prior manifest still references it. The backwards-time guard compares against the manifest saved during planning, not a fresh live read; workflow concurrency serializes this workflow's runs.
@@ -76,6 +77,10 @@ Manifest-last prevents a new manifest from advertising before its image writes a
 Keys live under the single-purpose `safety-map:` prefix inside the existing `SELECTOR_SNAPSHOTS` namespace — the same namespace `functions/selector-snapshot/[[path]].ts` uses. Reusing it changes account state not at all, so the weekly Cloudflare account-state drift check needs no manifest update. (R2 was rejected for this reason among others: that check normalizes `d1` and `kv_namespace` bindings only, so an R2 bucket would be unmonitored surface.)
 
 Failure surfaces as a red run and a GitHub notification. Independently, the digest watchdog checks `/safety-scores/map.json` from 07:15 UTC and raises advisory `map-producer-lag` when the manifest is not today's. On the 15-minute status lane its first check lands at 07:24, leaving about 40 minutes before the 08:05 digest. This advisory neither consumes the digest publication alert cooldown nor degrades the sentinel run; digest publication stays unblocked.
+
+The retained render artifact includes `latest.png`, its derived `latest.webp`,
+alt JSON and both manifests, so publication failures retain the exact teaser
+bytes alongside the full-size poster.
 
 ### Pre-Digest Producer Kick
 
@@ -95,15 +100,19 @@ The workflow keeps three daily schedules, 01:20, 03:20, and 05:20 UTC, as a no-c
 
 ## Serving
 
-`functions/safety-scores/map.png.ts` serves `/safety-scores/map.png` from KV. `GET` and `HEAD` only; HEAD answers exactly as GET does minus the body, because several social platforms probe an image URL with HEAD before fetching it.
+`functions/safety-scores/map.png.ts` and `map.webp.ts` serve the PNG and latest WebP teaser from KV. Both allow GET/HEAD only; HEAD returns GET headers without a body. [Teaser presentation](#teaser-presentation) owns generation and fallback.
 
 `functions/safety-scores/map.json.ts` serves the manifest commit marker at `/safety-scores/map.json` with `no-store`. The daily digest reads this bounded endpoint to validate publication date and data freshness without adding the Pages KV namespace to the API Worker. A same-day manifest is current; when publication is late, the newest manifest up to two whole UTC days old may be carried forward. Missing, malformed, unreachable, or older state makes the map attachment unavailable, but never withholds the digest itself (see the bounded carry-forward pairing below).
 
 `?date=YYYY-MM-DD` selects the dated archive, validated against a strict pattern; anything else is a 400. The Function never lists the namespace and never accepts a caller-supplied key fragment beyond the date. The archive lives on a query parameter rather than a nested path segment so it cannot shadow the static `/safety-scores/map/` page; Cloudflare includes the query string in the default cache key, so the two remain distinct cache entries.
 
-Cache headers differ by resource: `latest.png` gets a short edge TTL with a long `stale-while-revalidate` grace window; dated URLs are served as `immutable`, although a same-day `force` rerender can overwrite their KV bytes without changing the URL.
+Cache headers differ by resource: `latest.png` and `latest.webp` get the same short edge TTL with a long `stale-while-revalidate` grace window; dated PNG URLs are served as `immutable`, although a same-day `force` rerender can overwrite their KV bytes without changing the URL.
 
-**A missing binding or a missing object is a 404 with `no-store`, not a 500.** This diverges from the `selector-snapshot` precedent, which treats an absent binding as a misconfiguration, and the divergence is deliberate: it is what makes the kill switch work. A KV read that throws is a 503, which is a different condition and must not be confused with the kill switch.
+Missing binding/object returns `404 no-store` (the deliberate kill switch, unlike selector-snapshot misconfiguration); thrown KV reads return `503`.
+
+## Teaser Presentation
+
+`functions/safety-scores/map.webp.ts` serves the latest teaser at `/safety-scores/map.webp`, with the same GET/HEAD, missing-object and KV-failure semantics as the PNG. The publication render phase resizes the exact rendered PNG to 800×450 at WebP quality 78 before building the manifest, which records its byte size; the WebP is written before the manifest commit marker. `/safety-scores/` initially requests only this eager, high-priority teaser. If it fails (missing derivative, transport or decode error), the same image element switches once to `/safety-scores/map.png`, retaining high priority, decorative alt text, aspect ratio and the named map link. Failures settled before hydration take the same fallback path. Only a failed PNG fallback displays the unavailable preview, so an older publication without a WebP remains visible. A normal successful WebP does not request the PNG. The map page and download control retain the full-resolution PNG. A same-day `ensure` remains a no-op; `force` or the next day's publication creates the new key.
 
 The page at `src/app/safety-scores/map/page.tsx` embeds the image with a download link and prose on how to read it. `src/app/safety-scores/map/poster.tsx` swaps in an explanatory panel on image error, so both the local-development state (no Pages Function exists under `next dev`) and the post-kill-switch state read as deliberate rather than broken.
 
@@ -127,11 +136,11 @@ If any condition fails, the digest still generates and delivers without the map 
 Three levers, in increasing order of what has already escaped:
 
 1. **Stop generating.** `gh workflow disable safety-map-refresh.yml`. Previously published keys stay live and served. A disabled workflow also refuses the Worker's pre-digest dispatches; the kick surface then reports `dispatch-failed` until its daily attempt budget is spent.
-2. **Stop serving the image.** Delete `safety-map:latest.png` and today's dated key plus any dated keys still eligible for the two-day carry-forward window, then run `.github/workflows/purge-pages-zone-cache.yml`. The Function then returns 404 with `no-store` and the page renders its unavailable panel. No Pages release is required.
+2. **Stop serving the image.** Delete `safety-map:latest.png`, `safety-map:latest.webp`, and today's dated key plus any dated keys still eligible for the two-day carry-forward window, then run `.github/workflows/purge-pages-zone-cache.yml`. The Functions then return 404 with `no-store` and the pages render their unavailable panels. No Pages release is required.
 
-   The purge is not optional. `latest.png` is served with `s-maxage=300, stale-while-revalidate=86400`, so a deleted key can keep being served from the edge for up to a day. Dated keys are `immutable` and will not re-validate at all until purged.
+   The purge is not optional. Both latest image formats are served with `s-maxage=300, stale-while-revalidate=86400`, so a deleted key can keep being served from the edge for up to a day. Dated keys are `immutable` and will not re-validate at all until purged.
 
-   Deleting `safety-map:latest.json` is a **different** lever with a different scope: the Function never reads the manifest, so the image keeps serving. What the manifest controls is whether the digest carries a map (see above); deleting it removes the map attachment but does **not** hold the digest. Delete the manifest to pull the map from social channels; delete the PNG keys to stop it appearing on the site. To stop both, delete all three.
+   Deleting `safety-map:latest.json` is a **different** lever with a different scope: the image Functions never read the manifest, so the images keep serving. What the manifest controls is whether the digest carries a map (see above); deleting it removes the map attachment but does **not** hold the digest. Delete the manifest to pull the map from social channels; delete the PNG and WebP keys to stop it appearing on the site. To stop both, delete the manifest and all applicable image keys.
 3. **A bad image is already live and scraped.** Re-render, overwrite the keys, and run `.github/workflows/purge-pages-zone-cache.yml`. This purges Pages, not social CDNs. A same-day `force` keeps the dated URL and may remain stale there; only a new date gives the next post a new URL.
 
 ## Related

@@ -179,6 +179,23 @@ describe("HeroPassportStrip", () => {
     ]);
   });
 
+  it("reserves supplemental passport tracks without inventing facts or section links", () => {
+    const initial = ITEMS.filter((item) => item.key !== "redeemability" && item.key !== "minting");
+    const { container, rerender } = render(<HeroPassportStrip items={initial} compactDesktop />);
+    expect(container.querySelectorAll('[data-passport-reserve="redeemability"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-passport-reserve="minting"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-passport-reserve="record"]')).toHaveLength(2);
+    expect(container.querySelector('a[href="#redemption"]')).toBeNull();
+    expect(container.querySelector('a[href="#mint-authority"]')).toBeNull();
+    const chains = container.querySelector('a[href="#contracts"]')!;
+    expect(chains.className).toContain("w-40");
+    rerender(<HeroPassportStrip items={ITEMS} compactDesktop />);
+    expect(container.querySelectorAll('[data-passport-reserve="redeemability"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-passport-reserve="minting"]')).toHaveLength(0);
+    expect(container.querySelector('a[href="#contracts"]')).toBe(chains);
+    expect(chains.className).toContain("w-40");
+  });
+
   it("renders nothing when fewer than three facts resolve", () => {
     const { container } = render(<HeroPassportStrip items={ITEMS.slice(0, 2)} />);
     expect(container.firstChild).toBeNull();

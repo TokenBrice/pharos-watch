@@ -8,7 +8,7 @@
 
 ## Universe And Data Sources
 
-Screener starts from `CLIENT_TRACKED_STABLECOINS`: active, pre-launch and frozen assets, excluding quarantined/delisted records regardless of URL state. Policy-withheld records remain accessible through static detail pages. Canonical IDs join stablecoin supply, peg summary, report cards, stress signals and DEX liquidity; curated client metadata owns classification, custody and identity. There is no Screener-specific API.
+Screener starts from `CLIENT_TRACKED_STABLECOINS`: active, pre-launch and frozen assets, excluding quarantined/delisted records regardless of URL state. Policy-withheld records remain accessible through static detail pages. Canonical IDs join stablecoin supply, peg summary, report cards, stress signals and the compact DEX table projection (`useDexLiquidityTable`, score only); curated client metadata owns classification, custody and identity. There is no Screener-specific API.
 
 Supply uses `getCirculatingRawOrNull()`. Missing assets or absent/empty/invalid peg buckets yield `null`, not zero. Active supply ranges never match `null`; an explicit zero passes a max-only filter. `supplyMax=0` means no maximum, so the palette drops non-positive `supply<=` ceilings. Null cells show `—`, CSV cells are empty, and missing supply-sparkline endpoints remain gaps; explicit zero remains numeric zero.
 
@@ -20,7 +20,7 @@ Supply uses `getCirculatingRawOrNull()`. Missing assets or absent/empty/invalid 
 
 ## Loading, Error, And Freshness
 
-Rows wait for the stablecoin list. `buildQueryFreshnessGroup()` combines all five live sources for shared notices/retry; retained data may remain visible with stale/error metadata. The route invents no local freshness windows.
+Rows wait for the stablecoin list. Toolbar and pagination counts require available primary data, including retained data after refresh failure; pending and unavailable reads show explicit state copy instead of zero counts, and disable export. Successful empty filtered results still disclose zero. `buildQueryFreshnessGroup()` combines all five live sources for shared notices/retry; retained data may remain visible with stale/error metadata. The route invents no local freshness windows.
 
 Active DEWS/report-card filters (including safety/pillar/evidence and mint score/band) hold the loading presentation and disable export during initial loading without retained data. Failed fetches end that gate and missing readings are excluded. PegScore and liquidity floors are not initially gated: they use whatever has arrived and can narrow the first view.
 
@@ -30,7 +30,9 @@ Default sorting is descending Safety Score; shared comparator/`useSort()` owns u
 
 Peg Range is `[worst tracked deviation, current deviation]` from peg summary, not a 30-day history or a per-coin history fetch; labels/tooltips must agree. The separate 30d Supply sparkline compares monthly/current endpoints.
 
-`TableExportMenu` exports the filtered, sorted set, never the whole universe behind a capped view. Preserve identity/classification, supply, score, pillar/evidence/cap, rating/partial-cause, custody/control and mint fields. Mint is the published Safety Score component through V9-named consumers, not a separate authority. CSV headers `mint_authority`, `mint_authority_score`, `mint_authority_score_band` differ intentionally from title-case directory exports; URL band keys remain stable. Stamp Safety Score provenance, including the mint component.
+Only the active responsive layout mounts. Available results render in 50-row pages with an explicit “Showing N–M of total” range; pagination bounds presentation only. Filtering and sorting run over the full matched set before paging, and the toolbar count and export remain independent of the displayed page. Desktop row-cursor shortcuts operate on the current page and yield to interactive controls, including pager and sort buttons.
+
+`TableExportMenu` exports the complete filtered, sorted set, never just the displayed page. Preserve identity/classification, supply, score, pillar/evidence/cap, rating/partial-cause, custody/control and mint fields. Mint is the published Safety Score component through V9-named consumers, not a separate authority. CSV headers `mint_authority`, `mint_authority_score`, `mint_authority_score_band` differ intentionally from title-case directory exports; URL band keys remain stable. Stamp Safety Score provenance, including the mint component.
 
 ## Picker Handoff
 
@@ -41,6 +43,10 @@ Telegram subscribe commands use deduplicated canonical IDs, not tickers; identic
 ## Input And Engine Contract
 
 The wizard's profile, peg, horizon, depeg tolerance, venue/custody and exit inputs are owned by `selector-state.ts`; profile/peg policies live with the engine. Stablecoin-list and report-card reads are critical: failure without retained data produces typed `selector-data-unavailable` with Adjust answers/Start over recovery. Optional gaps become coverage signals.
+
+Question steps are independent of evaluation feeds. The client enables the canonical source queries at the result/evaluation stage; URL-initialized results and `sid` snapshots enable them immediately when URL state is admitted. Cached data does not run the ranking engine while the reader is still answering questions. Pending evaluation stays loading, never an empty shortlist.
+
+The browser memoizes the merged universe and dataset hash separately from ranking: answer-only changes reuse them, while a different peg or participating source generation rebuilds them. This does not change deterministic adapter/engine output or snapshot identity.
 
 Ranking reweights published domain outputs plus one Safety Score composite. Pillars and dependency evidence already inside that composite must not be weighted again; they may drive exclusion floors, explanations and watch context. A profile spends its peg budget on one PegScore slot. Watch text says Safety Score without hardcoding a major; the publication footer owns version identity and historical snapshot prose stays frozen.
 

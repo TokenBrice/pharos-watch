@@ -290,7 +290,7 @@ export function buildOpenApiDocument() {
     },
     externalDocs: {
       description: "Full Pharos API reference",
-      url: "https://pharos.watch/api/#reference",
+      url: "https://pharos.watch/api/reference/",
     },
     servers: [{ url: "https://api.pharos.watch", description: "Public integration API" }],
     security: [{ ApiKeyAuth: [] }],
@@ -307,7 +307,7 @@ export function buildOpenApiDocument() {
       },
       schemas: {
         JsonValue: {
-          description: "Endpoint-specific JSON response. See https://pharos.watch/api/#reference for detailed contracts.",
+          description: "Endpoint-specific JSON response. See https://pharos.watch/api/reference/ for detailed contracts.",
         },
         ...buildOpenApiResponseSchemas(),
       },

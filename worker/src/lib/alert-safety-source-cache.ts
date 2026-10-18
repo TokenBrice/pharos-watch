@@ -3,6 +3,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import { resolveV9PublicWitnessText } from "@shared/types/safety-score-v9-public-witness-texts";
 import type { SafetyAlertSourceState } from "@shared/types";
 import { SafetyGradesResponseSchema, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
   projectV9CompactPartialEvidence,
   refineV9RatingStatusFields,
@@ -271,7 +272,7 @@ export function buildActiveAlertSafetyV9SourceEnvelope(
 }
 
 export function buildAlertSafetyV9SourceEnvelopeFromParts(source: {
-  cards: ReportCardsV9CurrentResponse["cards"];
+  cards: readonly SafetyScoreV9CurrentCard[];
   safetyScoreIdentity: ReportCardsV9CurrentResponse["safetyScoreIdentity"];
   publishedAt: number;
 }): AlertSafetySourceEnvelope {

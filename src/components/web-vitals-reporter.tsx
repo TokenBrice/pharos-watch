@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useReportWebVitals } from "next/web-vitals";
 import { usePathname } from "next/navigation";
-import { isAnalyticsAllowed, trackEvent } from "@/lib/analytics";
+import { beginAnalyticsNavigation, isAnalyticsAllowed, trackEvent } from "@/lib/analytics";
 
 type WebVitalMetric = {
   name: "CLS" | "FCP" | "INP" | "LCP" | "TTFB" | "FID" | "Next.js-hydration" | "Next.js-route-change-to-render" | "Next.js-render";
@@ -19,6 +19,7 @@ export function WebVitalsReporter() {
 
   useEffect(() => {
     pathnameRef.current = pathname;
+    if (pathname) beginAnalyticsNavigation(pathname);
   }, [pathname]);
 
   // Inline arrow would capture `pathname` and re-subscribe `onCLS/onLCP/...`

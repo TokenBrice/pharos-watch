@@ -1,6 +1,7 @@
 import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
-import { CLIENT_TRACKED_STABLECOINS, loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   GENIUS_AUTHORIZATION_STATUS_VALUES,

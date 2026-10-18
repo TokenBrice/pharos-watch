@@ -172,9 +172,10 @@ board, **collapsed by default** and unmounted while collapsed. A `#forecast-grad
 URL (on load or `hashchange`, including the hero's track-record link) opens it and
 re-aligns the anchor once the ledger mounts.
 
-Its query is not gated by disclosure state: the hero needs `summary.headline`
-on first paint. DDR and DDRR feature flags gate the query, section, freshness
-entry, and error notice together.
+The reviewer query is enabled when the disclosure opens, including `#forecast-grading`
+entry. Before its first read, the hero's track record stays unavailable rather than
+claiming an empty or safe ledger. Retained review evidence keeps its original clock
+and freshness notice. DDR/DDRR feature flags still gate the section and query.
 
 ---
 
@@ -223,6 +224,8 @@ history anchor; the API, tracker, detail history and feeds retain the full event
 
 `DEWSRadarPanel` additionally reads `useStablecoins()` for market-cap mark sizing through the shared
 query cache.
+The route starts that stablecoin read independently before the peg-summary loading
+return, avoiding a peg-summary → radar-sizing request waterfall.
 
 ---
 

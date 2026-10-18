@@ -4,12 +4,14 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFile
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { API_ORIGIN, PAGES_APP_ORIGIN, SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
 import {
   detailSnapshotSourceUpdatedAt,
 } from "@shared/lib/detail-snapshot-inputs";
-import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE, DetailSnapshotInputsResponseSchema } from "@shared/types/detail-snapshot-inputs";
+import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE, DetailSnapshotInputsResponseSchema, type DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   StablecoinDetailResponseSchema,
@@ -34,6 +36,47 @@ export const DETAIL_SNAPSHOT_TARGET_BYTES = 8 * 1024;
 const MAX_PARALLEL_COIN_REQUESTS = 6;
 // Match the six-connection budget; bulk bodies finish before fallback reads begin.
 const MAX_PARALLEL_BULK_REQUESTS = 6;
+// This is the UI stale band, not the endpoint's much stricter advisory budget.
+export const DETAIL_SNAPSHOT_UI_STALE_AFTER_MS =
+  API_FRESHNESS_MAX_AGE_SEC.stablecoins * FRESHNESS_RATIOS.DEGRADED * 1000;
+export const DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT = 24;
+
+export function selectStaleDetailSnapshotRefreshIds(
+  entries: readonly DetailSnapshotInputEntry[],
+  assessedAt: number,
+  limit = DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT,
+): string[] {
+  if (!Number.isInteger(limit) || limit < 0 || limit > DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT) {
+    throw new Error(`Detail snapshot stale refresh limit must be an integer from 0 to ${DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT}`);
+  }
+  return entries
+    .filter((entry): entry is Extract<DetailSnapshotInputEntry, { status: "available" }> =>
+      entry.status === "available" && assessedAt - entry.updatedAt.liveSummary > DETAIL_SNAPSHOT_UI_STALE_AFTER_MS)
+    .sort((left, right) => left.updatedAt.liveSummary - right.updatedAt.liveSummary || left.id.localeCompare(right.id))
+    .slice(0, limit)
+    .map((entry) => entry.id);
+}
+
+/** Only emitted detail-summary lanes enter these statistics, never artifact clocks. */
+export function reportSnapshotProducerAges(
+  snapshots: readonly StablecoinDetailSnapshot[],
+  assessedAt = Date.now(),
+): string {
+  const clocks = snapshots.filter((snapshot) => snapshot.lanes.liveSummary != null)
+    .map((snapshot) => snapshot.updatedAt?.liveSummary);
+  const validClocks = clocks.filter((clock): clock is number =>
+    clock != null && Number.isFinite(clock) && clock > 0 && clock <= assessedAt);
+  const ages = validClocks.map((clock) => assessedAt - clock).sort((left, right) => left - right);
+  const percentile = (ratio: number): string => ages.length
+    ? `${(ages[Math.ceil(ages.length * ratio) - 1] / 60_000).toFixed(1)} min`
+    : "unavailable";
+  return `Detail snapshot producer age (liveSummary; assessedAt=${new Date(assessedAt).toISOString()}; ` +
+    `oldestProducerAt=${validClocks.length ? new Date(Math.min(...validClocks)).toISOString() : "unavailable"}): ` +
+    `max=${percentile(1)}, p50=${percentile(0.5)}, p95=${percentile(0.95)}; ` +
+    `above UI stale budget ${DETAIL_SNAPSHOT_UI_STALE_AFTER_MS / 60_000} min: ` +
+    `${ages.filter((age) => age > DETAIL_SNAPSHOT_UI_STALE_AFTER_MS).length}/${ages.length}; ` +
+    `unavailable clocks=${clocks.length - ages.length}; no summary lane=${snapshots.length - clocks.length}`;
+}
 
 export class DetailSnapshotHttpError extends Error {
   readonly status: number;
@@ -203,6 +246,7 @@ async function mapWithConcurrency<T, R>(
 export interface DetailSnapshotGenerationOptions {
   source?: "per-coin" | "bulk";
   generatedAt?: number;
+  staleRefreshLimit?: number;
 }
 
 interface SnapshotCoinLanes {
@@ -264,8 +308,19 @@ export async function generateSnapshots(
     };
   };
   const lanes: SnapshotCoinLanes[] = [];
+  const assessedAt = options.generatedAt ?? Date.now();
+  const acquisition: Array<{
+    id: string;
+    source: "per-coin" | "bulk-cache-only" | "bulk-unavailable-fallback" | "bulk-stale-refresh";
+    updatedAt: SnapshotCoinLanes["updatedAt"];
+    bulkUpdatedAt?: SnapshotCoinLanes["updatedAt"];
+    bulkSources?: DetailSnapshotInputEntry["sources"];
+    reason?: string;
+  }> = [];
+  let staleCandidateCount = 0;
   if (source === "per-coin") {
     lanes.push(...await mapWithConcurrency(liveIds, MAX_PARALLEL_COIN_REQUESTS, fetchCoin));
+    acquisition.push(...lanes.map((lane) => ({ id: lane.id, source: "per-coin" as const, updatedAt: lane.updatedAt })));
   } else {
     // Bulk is an internal site-only transport even when ordinary per-coin reads
     // use the public API key lane. Explicit site/preview bases remain supported.
@@ -288,20 +343,45 @@ export async function generateSnapshots(
       }
       return entries;
     });
-    // Separate phases keep unavailable-coin fallbacks within the same global cap.
-    lanes.push(...await mapWithConcurrency(responses.flat(), MAX_PARALLEL_COIN_REQUESTS, async (entry) => {
-      if (entry.status === "unavailable") {
-        console.warn(`[stablecoin-detail-snapshots] Bulk unavailable for ${entry.id}: ${entry.reason}; fetching per-coin`);
-        return fetchCoin(entry.id);
+    const entries = responses.flat();
+    staleCandidateCount = entries.filter((entry) =>
+      entry.status === "available" && assessedAt - entry.updatedAt.liveSummary > DETAIL_SNAPSHOT_UI_STALE_AFTER_MS).length;
+    const refreshIds = new Set(selectStaleDetailSnapshotRefreshIds(entries, assessedAt, options.staleRefreshLimit));
+    // Separate phases keep stale refreshes and unavailable fallbacks within the
+    // same global cap. Each coin consumes detail then history sequentially.
+    const acquired = await mapWithConcurrency(entries, MAX_PARALLEL_COIN_REQUESTS, async (entry) => {
+      const refresh = refreshIds.has(entry.id);
+      const source: (typeof acquisition)[number]["source"] = entry.status === "unavailable" ? "bulk-unavailable-fallback"
+        : refresh ? "bulk-stale-refresh" : "bulk-cache-only";
+      let lane: SnapshotCoinLanes;
+      if (entry.status === "unavailable" || refresh) {
+        console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching per-coin`);
+        // The route may serve the original generation while revalidating. Do not
+        // mistake a successful GET for a new producer generation or re-stamp it.
+        lane = await fetchCoin(entry.id);
+      } else {
+        lane = {
+          id: entry.id,
+          liveSummary: normalizeStablecoinLiveSummary(entry.liveSummary),
+          supplyHistory: entry.supplyHistory,
+          updatedAt: entry.updatedAt,
+        };
       }
-      return {
-        id: entry.id,
-        liveSummary: normalizeStablecoinLiveSummary(entry.liveSummary),
-        supplyHistory: entry.supplyHistory,
-        updatedAt: entry.updatedAt,
-      };
-    }));
+      return { lane, provenance: {
+        id: entry.id, source, updatedAt: lane.updatedAt, bulkSources: entry.sources,
+        ...(entry.status === "available" ? { bulkUpdatedAt: entry.updatedAt } : { reason: entry.reason }),
+      } };
+    });
+    lanes.push(...acquired.map(({ lane }) => lane));
+    acquisition.push(...acquired.map(({ provenance }) => provenance));
   }
+  // Keep run-scoped provenance in build evidence, not the byte-equivalent seed
+  // envelope. "stale-refresh" names the path read, not a claim of newer data.
+  console.log(JSON.stringify({ detailSnapshotAcquisition: {
+    assessedAt, staleRefreshBudgetMs: DETAIL_SNAPSHOT_UI_STALE_AFTER_MS,
+    staleRefreshLimit: options.staleRefreshLimit ?? DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT,
+    staleCandidateCount, entries: acquisition,
+  } }));
   return buildStablecoinDetailSnapshots({
     generatedAt: options.generatedAt ?? Date.now(),
     liveSummariesById: new Map(lanes.map((lane) => [lane.id, lane.liveSummary])),

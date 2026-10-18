@@ -1,16 +1,29 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AnchorHTMLAttributes } from "react";
 
-vi.mock("next/link", async () => {
-  const { createNextLinkMock } = await import("@/test-utils/frontend");
-  return createNextLinkMock();
-});
+vi.mock("next/link", () => ({
+  default: ({ prefetch, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => (
+    <a {...props} data-prefetch={prefetch === false ? "disabled" : "auto"} />
+  ),
+}));
+
+afterEach(cleanup);
 
 const { AiSummary } = await import("../ai-summary");
 
 describe("AiSummary", () => {
+  it.each(["mouseEnter", "focus"] as const)("prefetches the AI policy only after %s intent", (intent) => {
+    render(<AiSummary title="Summary" text="Evidence." updatedAt="2026-10-18" />);
+    const link = screen.getByRole("link", { name: "AI policy" });
+    expect(link.getAttribute("href")).toBe("/about/#editorial-ai-policy");
+    expect(link.getAttribute("data-prefetch")).toBe("disabled");
+    fireEvent[intent](link);
+    expect(link.getAttribute("data-prefetch")).toBe("auto");
+  });
+
   it("renders optional labeled sources without inventing review provenance", () => {
     render(<AiSummary
       title="Evidence correction"

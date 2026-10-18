@@ -191,11 +191,14 @@ deliberately disabled `api-rate-limit-ip` rule; per-endpoint ingress limiting
 Worker application layer, so the drift manifest requires exactly that one edge
 rule.
 
-The scheduled Cloudflare account-state drift workflow uses the separate
-repository secret `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. It is a dedicated
-read-only credential and is not attached to the production environment; see
-[`docs/operator-origin-access.md`](./operator-origin-access.md) for its scope
-and the secret-free manifest it checks.
+The scheduled Cloudflare account-state drift workflow uses separate read-only
+repository secrets `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN` (account resources)
+and `CLOUDFLARE_ZONE_ANALYTICS_READ` (zone cache settings, requiring Zone Settings
+Read for `pharos.watch`, not Analytics Read alone). Neither is attached to the
+production environment or injected into setup. Local direct CLI runs can load
+the ignored root `.env.local` at runtime; no values enter the manifest or logs.
+See [account-state drift](./operator-origin-access.md#10-monitor-cloudflare-account-state-drift)
+for scope, fail-closed evidence handling and the secret-free expected policy.
 
 ### First heavy deployment prerequisites (ADR-38)
 

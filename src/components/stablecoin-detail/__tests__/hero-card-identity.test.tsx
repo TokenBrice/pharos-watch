@@ -2,6 +2,7 @@
 
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import { SafetyGradeHero } from "../hero-card-identity";
 
 describe("SafetyGradeHero read states", () => {
@@ -24,5 +25,22 @@ describe("SafetyGradeHero read states", () => {
 
     expect(container.textContent).toBe("—");
     expect(container.querySelector('[role="status"]')).toBeNull();
+  });
+  it("uses the identical grade track for pending, failed, unscored, scored and pipeline-gap states", () => {
+    const { container, rerender } = render(<SafetyGradeHero reportCard={null} read="pending" mobile />);
+    const track = container.querySelector("[data-safety-grade-track]")!;
+    const trackClass = track.className;
+    for (const read of ["failed", "settled"] as const) {
+      rerender(<SafetyGradeHero reportCard={null} read={read} mobile />);
+      expect(container.querySelector("[data-safety-grade-track]")).toBe(track);
+      expect(track.className).toBe(trackClass);
+    }
+    for (const grade of ["B+", null] as const) {
+      const card = { grade, score: grade ? 100 : null } as V9ConsumerCard;
+      rerender(<SafetyGradeHero reportCard={card} mobile />);
+      expect(container.querySelector("[data-safety-grade-track]")).toBe(track);
+      expect(track.className).toBe(trackClass);
+      expect(track.textContent).toContain(grade ?? "Pipeline gap");
+    }
   });
 });

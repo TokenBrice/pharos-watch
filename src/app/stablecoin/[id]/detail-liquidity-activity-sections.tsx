@@ -67,13 +67,17 @@ export function DetailLiquidityActivitySections({
             Context zone, where a market chart went unfound. */}
         <SectionBanner id="liquidity" label="Market" icon={Droplet} active={activeBannerId === "liquidity"} />
         {showPegChart ? (
-          <MarketDataSection
-            stablecoinId={viewModel.id}
-            supplyHistory={viewModel.supplyHistory}
-            pegCurrency={viewModel.coin.flags.pegCurrency}
-            updatedAtMs={viewModel.supplyUpdatedAt}
-            frozenNote={frozenNote}
-          />
+          <section id="chart" aria-label="Market data charts">
+            <LazySection className="min-h-[780px] lg:min-h-[520px]">
+              <MarketDataSection
+                stablecoinId={viewModel.id}
+                supplyHistory={viewModel.supplyHistory}
+                pegCurrency={viewModel.coin.flags.pegCurrency}
+                updatedAtMs={viewModel.supplyUpdatedAt}
+                frozenNote={frozenNote}
+              />
+            </LazySection>
+          </section>
         ) : (
           <section id="chart">
             {frozenNote}
@@ -85,7 +89,9 @@ export function DetailLiquidityActivitySections({
         <section id="distribution">
           {frozenNote}
           <SectionErrorBoundary name="distribution">
-            <DistributionSection stablecoinId={viewModel.id} />
+            <LazySection minHeight={320}>
+              <DistributionSection stablecoinId={viewModel.id} />
+            </LazySection>
           </SectionErrorBoundary>
         </section>
         <section id="dex-liquidity">
@@ -101,12 +107,14 @@ export function DetailLiquidityActivitySections({
             reachable below xl. */}
         {hasPriceTransparency ? (
           <section id="price" aria-label="Price transparency" className="xl:hidden">
-            <PriceTransparencyCard
-              coinData={viewModel.coinData}
-              consensusSources={viewModel.consensusSources ?? []}
-              agreeSources={viewModel.agreeSources ?? []}
-              dexPriceCheck={viewModel.dexPriceCheck}
-            />
+            <LazySection minHeight={200}>
+              <PriceTransparencyCard
+                coinData={viewModel.coinData}
+                consensusSources={viewModel.consensusSources ?? []}
+                agreeSources={viewModel.agreeSources ?? []}
+                dexPriceCheck={viewModel.dexPriceCheck}
+              />
+            </LazySection>
           </section>
         ) : null}
       </div>
@@ -115,7 +123,13 @@ export function DetailLiquidityActivitySections({
         {viewModel.hasYieldSection || viewModel.hasBlacklist ? (
           <SectionBanner id="activity" label="Activity" icon={HeartPulse} active={activeBannerId === "activity"} />
         ) : null}
-        {viewModel.hasYieldSection ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
+        {viewModel.hasYieldSection ? (
+          <section id="yield">
+            <LazySection minHeight={420}>
+              <YieldDetailSection stablecoinId={viewModel.id} />
+            </LazySection>
+          </section>
+        ) : null}
         {viewModel.hasBlacklist ? (
           <div>
             {frozenNote}

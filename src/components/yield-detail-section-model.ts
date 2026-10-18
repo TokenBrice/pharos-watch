@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { useYieldRankings } from "@/hooks/api-hooks";
+import { useYieldRankingsCoin } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
   resolveYieldDisplayRebaseReferenceRate,
@@ -181,7 +181,7 @@ export type YieldDetailSectionModel =
 
 export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSectionModel {
   const { getParam, replaceParams } = useUrlFilters();
-  const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
+  const { data, meta: apiMeta, error, isLoading } = useYieldRankingsCoin(stablecoinId);
   const sourcesParam = getParam("sources");
   const requestedSourceKeys = useMemo(() => sourcesParam.split(",").filter(Boolean), [sourcesParam]);
   const [showAllSources, setShowAllSources] = useState(false);

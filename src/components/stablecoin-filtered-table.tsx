@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useDexLiquidity, usePegSummary, useReportCardsV9 } from "@/hooks/api-hooks";
+import { useDexLiquidityTable, usePegSummary, useReportCardsV9Table } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
@@ -20,8 +20,8 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
   const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useStablecoins();
   const logos = logosById;
   const pegSummaryQuery = usePegSummary();
-  const liquidityQuery = useDexLiquidity();
-  const reportCardsQuery = useReportCardsV9();
+  const liquidityQuery = useDexLiquidityTable();
+  const reportCardsQuery = useReportCardsV9Table();
   const pegSummaryData = pegSummaryQuery.data;
   const dexLiquidity = liquidityQuery.data;
   const reportCardsData = reportCardsQuery.data;

@@ -9,6 +9,7 @@ interface QueryFreshnessNoticesProps {
   onRetry?: () => void;
   queries: readonly StaleQuery[];
   showFreshnessBanner?: boolean;
+  persistent?: boolean;
 }
 
 export function QueryFreshnessNotices({
@@ -17,13 +18,14 @@ export function QueryFreshnessNotices({
   onRetry,
   queries,
   showFreshnessBanner = true,
+  persistent = false,
 }: QueryFreshnessNoticesProps) {
   const resolvedHasData = hasData ?? queries.some((query) => query.hasData ?? query.dataUpdatedAt > 0);
 
   return (
     <>
-      <QueryErrorNotice error={error} hasData={resolvedHasData} onRetry={onRetry} />
-      {showFreshnessBanner ? <StaleDataBanner queries={queries} /> : null}
+      {!persistent ? <QueryErrorNotice error={error} hasData={resolvedHasData} onRetry={onRetry} /> : null}
+      {showFreshnessBanner ? <StaleDataBanner queries={queries} persistent={persistent} onRetry={persistent ? onRetry : undefined} /> : null}
     </>
   );
 }

@@ -10,7 +10,7 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDexLiquidity } from "@/hooks/api-hooks";
+import { useDexLiquidityCoin } from "@/hooks/api-hooks";
 import type { DexLiquidityData } from "@shared/types/market";
 import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
@@ -76,7 +76,7 @@ function dexScoreBandKey(score: number): string {
 }
 
 export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
-  const query = useDexLiquidity();
+  const query = useDexLiquidityCoin(stablecoinId);
   const { data: liquidityMap, isLoading } = query;
 
   if (isLoading && !liquidityMap) {

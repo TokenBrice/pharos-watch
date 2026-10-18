@@ -7,6 +7,7 @@ import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { formatCurrency } from "@shared/lib/format";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),
@@ -70,7 +71,8 @@ describe("LiquidityStats", () => {
     expect(screen.getByText("Leading door:")).toBeTruthy();
     expect(screen.getByText("Leading lane:")).toBeTruthy();
     expect(container.querySelector('image[href="/dexes/curve.png"]')).toBeTruthy();
-    expect(container.querySelector('image[href="/chains/ethereum.png"]')).toBeTruthy();
+    expect(screen.getByTestId("chain-lane-ethereum").querySelector("image")?.getAttribute("href"))
+      .toBe(resolveCompactLogoSrc("/chains/ethereum.png", 16));
   });
 
   it("updates the selected route panel from chain and throat interactions", () => {

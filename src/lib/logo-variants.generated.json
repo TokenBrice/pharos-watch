@@ -1,317 +1,1674 @@
 {
-  "/logos/106-eusd.png": "/logos/compact/106-eusd.webp",
-  "/logos/110-crvusd.jpg": "/logos/compact/110-crvusd.webp",
-  "/logos/118-gho.png": "/logos/compact/118-gho.webp",
-  "/logos/120-pyusd.png": "/logos/compact/120-pyusd.webp",
-  "/logos/14-usdd.jpg": "/logos/compact/14-usdd.webp",
-  "/logos/146-usde.png": "/logos/compact/146-usde.webp",
-  "/logos/15-dola.png": "/logos/compact/15-dola.webp",
-  "/logos/168-fxusd.jpg": "/logos/compact/168-fxusd.webp",
-  "/logos/172-usdb.png": "/logos/compact/172-usdb.webp",
-  "/logos/173-buidl.png": "/logos/compact/173-buidl.webp",
-  "/logos/195-usd0.png": "/logos/compact/195-usd0.webp",
-  "/logos/20-alusd.png": "/logos/compact/20-alusd.webp",
-  "/logos/204-bnusd.png": "/logos/compact/204-bnusd.webp",
-  "/logos/205-ausd.png": "/logos/compact/205-ausd.webp",
-  "/logos/209-usds.webp": "/logos/compact/209-usds.webp",
-  "/logos/213-m.png": "/logos/compact/213-m.webp",
-  "/logos/217-rusd.png": "/logos/compact/217-rusd.webp",
-  "/logos/219-usdf.png": "/logos/compact/219-usdf.webp",
-  "/logos/221-usdtb.jpg": "/logos/compact/221-usdtb.webp",
-  "/logos/226-zchf.png": "/logos/compact/226-zchf.webp",
-  "/logos/23-ousd.png": "/logos/compact/23-ousd.webp",
-  "/logos/230-usn.png": "/logos/compact/230-usn.webp",
-  "/logos/231-honey.png": "/logos/compact/231-honey.webp",
-  "/logos/235-frxusd.png": "/logos/compact/235-frxusd.webp",
-  "/logos/237-usyc.png": "/logos/compact/237-usyc.webp",
-  "/logos/24-cusd.png": "/logos/compact/24-cusd.webp",
-  "/logos/241-usdo.png": "/logos/compact/241-usdo.webp",
-  "/logos/246-usdf.png": "/logos/compact/246-usdf.webp",
-  "/logos/250-rlusd.png": "/logos/compact/250-rlusd.webp",
-  "/logos/255-yusd.png": "/logos/compact/255-yusd.webp",
-  "/logos/256-reusd.png": "/logos/compact/256-reusd.webp",
-  "/logos/262-usd1.png": "/logos/compact/262-usd1.webp",
-  "/logos/266-pusd.png": "/logos/compact/266-pusd.webp",
-  "/logos/269-bold.png": "/logos/compact/269-bold.webp",
-  "/logos/271-avusd.png": "/logos/compact/271-avusd.webp",
-  "/logos/286-usdg.png": "/logos/compact/286-usdg.webp",
-  "/logos/287-usnd.png": "/logos/compact/287-usnd.webp",
-  "/logos/295-usdaf.png": "/logos/compact/295-usdaf.webp",
-  "/logos/296-cusd.png": "/logos/compact/296-cusd.webp",
-  "/logos/298-iusd.jpg": "/logos/compact/298-iusd.webp",
-  "/logos/302-hyusd.png": "/logos/compact/302-hyusd.webp",
-  "/logos/309-usdai.png": "/logos/compact/309-usdai.webp",
-  "/logos/335-jupusd.png": "/logos/compact/335-jupusd.webp",
-  "/logos/339-reusd.png": "/logos/compact/339-reusd.webp",
-  "/logos/344-yzusd.png": "/logos/compact/344-yzusd.webp",
-  "/logos/347-usdgo.png": "/logos/compact/347-usdgo.webp",
-  "/logos/353-aid.png": "/logos/compact/353-aid.webp",
-  "/logos/354-apxusd.webp": "/logos/compact/354-apxusd.webp",
-  "/logos/5-dai.png": "/logos/compact/5-dai.webp",
-  "/logos/50-eurc.png": "/logos/compact/50-eurc.webp",
-  "/logos/52-ceur.png": "/logos/compact/52-ceur.webp",
-  "/logos/65-usdh.png": "/logos/compact/65-usdh.webp",
-  "/logos/66-fpi.png": "/logos/compact/66-fpi.webp",
-  "/logos/75-uusd.png": "/logos/compact/75-uusd.webp",
-  "/logos/98-euroe.png": "/logos/compact/98-euroe.webp",
-  "/logos/aa-falconx-mev-capital.png": "/logos/compact/aa-falconx-mev-capital.webp",
-  "/logos/acred-apollo-securitize.png": "/logos/compact/acred-apollo-securitize.webp",
-  "/logos/aed-rakbank.png": "/logos/compact/aed-rakbank.webp",
-  "/logos/arc-anq.png": "/logos/compact/arc-anq.webp",
-  "/logos/audf-forte.webp": "/logos/compact/audf-forte.webp",
-  "/logos/audm-mento.png": "/logos/compact/audm-mento.webp",
-  "/logos/audx-aussie-dollar-token.png": "/logos/compact/audx-aussie-dollar-token.webp",
-  "/logos/ausdt-tether-alloy.png": "/logos/compact/ausdt-tether-alloy.webp",
-  "/logos/bc3m-backed.png": "/logos/compact/bc3m-backed.webp",
-  "/logos/bd-basedollar.jpg": "/logos/compact/bd-basedollar.webp",
-  "/logos/benji-franklin-templeton.png": "/logos/compact/benji-franklin-templeton.webp",
-  "/logos/bib01-backed.png": "/logos/compact/bib01-backed.webp",
-  "/logos/bils-bitsofgold.png": "/logos/compact/bils-bitsofgold.webp",
-  "/logos/brd-volpon.png": "/logos/compact/brd-volpon.webp",
-  "/logos/brl-b3.png": "/logos/compact/brl-b3.webp",
-  "/logos/brl-itau.png": "/logos/compact/brl-itau.webp",
-  "/logos/brl1-brl1.webp": "/logos/compact/brl1-brl1.webp",
-  "/logos/brla-brla-digital.png": "/logos/compact/brla-brla-digital.webp",
-  "/logos/brlm-mento.png": "/logos/compact/brlm-mento.webp",
-  "/logos/brlv-crown.png": "/logos/compact/brlv-crown.webp",
-  "/logos/brsrv-blackrock.png": "/logos/compact/brsrv-blackrock.webp",
-  "/logos/buck-buck-assets.png": "/logos/compact/buck-buck-assets.webp",
-  "/logos/busd0-usual.png": "/logos/compact/busd0-usual.webp",
-  "/logos/cadd-cad-digital.png": "/logos/compact/cadd-cad-digital.webp",
-  "/logos/cadm-mento.png": "/logos/compact/cadm-mento.webp",
-  "/logos/cdp-enosys.png": "/logos/compact/cdp-enosys.webp",
-  "/logos/cdxusd-cod3x.png": "/logos/compact/cdxusd-cod3x.webp",
-  "/logos/cg-acrdx.png": "/logos/compact/cg-acrdx.webp",
-  "/logos/cg-apyusd.png": "/logos/compact/cg-apyusd.webp",
-  "/logos/cg-asusdf.png": "/logos/compact/cg-asusdf.webp",
-  "/logos/cg-ebusd.png": "/logos/compact/cg-ebusd.webp",
-  "/logos/cg-eursafo.png": "/logos/compact/cg-eursafo.webp",
-  "/logos/cg-eurspkcc.png": "/logos/compact/cg-eurspkcc.webp",
-  "/logos/cg-gbpsafo.png": "/logos/compact/cg-gbpsafo.webp",
-  "/logos/cg-hbusdt.jpg": "/logos/compact/cg-hbusdt.webp",
-  "/logos/cg-hlscope.png": "/logos/compact/cg-hlscope.webp",
-  "/logos/cg-jaaa.png": "/logos/compact/cg-jaaa.webp",
-  "/logos/cg-mapollo.png": "/logos/compact/cg-mapollo.webp",
-  "/logos/cg-mf-one.png": "/logos/compact/cg-mf-one.webp",
-  "/logos/cg-mglobal.png": "/logos/compact/cg-mglobal.webp",
-  "/logos/cg-mhyper.png": "/logos/compact/cg-mhyper.webp",
-  "/logos/cg-mmev.png": "/logos/compact/cg-mmev.webp",
-  "/logos/cg-mtbill.png": "/logos/compact/cg-mtbill.webp",
-  "/logos/cg-onyc.png": "/logos/compact/cg-onyc.webp",
-  "/logos/cg-ousg.png": "/logos/compact/cg-ousg.webp",
-  "/logos/cg-parallel-usdp.png": "/logos/compact/cg-parallel-usdp.webp",
-  "/logos/cg-safo.png": "/logos/compact/cg-safo.webp",
-  "/logos/cg-savusd.png": "/logos/compact/cg-savusd.webp",
-  "/logos/cg-solomon-usdv.png": "/logos/compact/cg-solomon-usdv.webp",
-  "/logos/cg-sovryn-dollar.jpg": "/logos/compact/cg-sovryn-dollar.webp",
-  "/logos/cg-spkcc.png": "/logos/compact/cg-spkcc.webp",
-  "/logos/cg-srusd.png": "/logos/compact/cg-srusd.webp",
-  "/logos/cg-srusde.png": "/logos/compact/cg-srusde.webp",
-  "/logos/cg-stac.png": "/logos/compact/cg-stac.webp",
-  "/logos/cg-steakusdc.png": "/logos/compact/cg-steakusdc.webp",
-  "/logos/cg-steakusdt.png": "/logos/compact/cg-steakusdt.webp",
-  "/logos/cg-susd1plus.png": "/logos/compact/cg-susd1plus.webp",
-  "/logos/cg-susdd.jpg": "/logos/compact/cg-susdd.webp",
-  "/logos/cg-susn.png": "/logos/compact/cg-susn.webp",
-  "/logos/cg-syrupusdc.png": "/logos/compact/cg-syrupusdc.webp",
-  "/logos/cg-syrupusdt.png": "/logos/compact/cg-syrupusdt.webp",
-  "/logos/cg-syzusd.png": "/logos/compact/cg-syzusd.webp",
-  "/logos/cg-tradable.jpg": "/logos/compact/cg-tradable.webp",
-  "/logos/cg-uktbl.png": "/logos/compact/cg-uktbl.webp",
-  "/logos/cg-uscc.jpg": "/logos/compact/cg-uscc.webp",
-  "/logos/cg-ustb.jpg": "/logos/compact/cg-ustb.webp",
-  "/logos/cg-wrapped-savings-rusd.png": "/logos/compact/cg-wrapped-savings-rusd.webp",
-  "/logos/cg-xnk.png": "/logos/compact/cg-xnk.webp",
-  "/logos/cg-yousd.png": "/logos/compact/cg-yousd.webp",
-  "/logos/chfau-allunity.png": "/logos/compact/chfau-allunity.webp",
-  "/logos/chfm-mento.png": "/logos/compact/chfm-mento.webp",
-  "/logos/chfsafo-spiko.png": "/logos/compact/chfsafo-spiko.webp",
-  "/logos/cjpy-yamato.webp": "/logos/compact/cjpy-yamato.webp",
-  "/logos/cngn-compliant-naira.png": "/logos/compact/cngn-compliant-naira.webp",
-  "/logos/copm-mento.png": "/logos/compact/copm-mento.webp",
-  "/logos/ctusd-citrea.jpg": "/logos/compact/ctusd-citrea.webp",
-  "/logos/cumiu-chinaamc.png": "/logos/compact/cumiu-chinaamc.webp",
-  "/logos/cusdo-openeden.png": "/logos/compact/cusdo-openeden.webp",
-  "/logos/dusd-alto.png": "/logos/compact/dusd-alto.webp",
-  "/logos/dusd-dialectic.png": "/logos/compact/dusd-dialectic.webp",
-  "/logos/dusd-dtrinity.png": "/logos/compact/dusd-dtrinity.webp",
-  "/logos/dusd-fluid.png": "/logos/compact/dusd-fluid.webp",
-  "/logos/earnusd-lido.png": "/logos/compact/earnusd-lido.webp",
-  "/logos/ejpy-jbfd.png": "/logos/compact/ejpy-jbfd.webp",
-  "/logos/emxn-telcoin.png": "/logos/compact/emxn-telcoin.webp",
-  "/logos/eur-qivalis.png": "/logos/compact/eur-qivalis.webp",
-  "/logos/eur0-usual.png": "/logos/compact/eur0-usual.webp",
-  "/logos/euro3-3a-dao.webp": "/logos/compact/euro3-3a-dao.webp",
-  "/logos/eurot-token-teknoloji.png": "/logos/compact/eurot-token-teknoloji.webp",
-  "/logos/eurw-newrails.jpg": "/logos/compact/eurw-newrails.webp",
-  "/logos/eusd-telcoin.png": "/logos/compact/eusd-telcoin.webp",
-  "/logos/eutbl-spiko.png": "/logos/compact/eutbl-spiko.webp",
-  "/logos/filqa-fidelity-international.png": "/logos/compact/filqa-fidelity-international.webp",
-  "/logos/fiusd-fiserv.png": "/logos/compact/fiusd-fiserv.webp",
-  "/logos/fiusd-sygnum.png": "/logos/compact/fiusd-sygnum.webp",
-  "/logos/frnt-wyoming.png": "/logos/compact/frnt-wyoming.webp",
-  "/logos/ftusd-flying-tulip.png": "/logos/compact/ftusd-flying-tulip.webp",
-  "/logos/fusd-freedom-dollar.png": "/logos/compact/fusd-freedom-dollar.webp",
-  "/logos/fxsave-f-x-protocol.png": "/logos/compact/fxsave-f-x-protocol.webp",
-  "/logos/gbp-vvtx.png": "/logos/compact/gbp-vvtx.webp",
-  "/logos/gbpa-agant.png": "/logos/compact/gbpa-agant.webp",
-  "/logos/gbpm-mento.png": "/logos/compact/gbpm-mento.webp",
-  "/logos/ghsm-mento.png": "/logos/compact/ghsm-mento.webp",
-  "/logos/gldon-ondo.png": "/logos/compact/gldon-ondo.webp",
-  "/logos/gold-paxg.png": "/logos/compact/gold-paxg.webp",
-  "/logos/gtusdc-gauntlet.png": "/logos/compact/gtusdc-gauntlet.webp",
-  "/logos/gtusdcp-gauntlet.png": "/logos/compact/gtusdcp-gauntlet.webp",
-  "/logos/gtusdtp-gauntlet.png": "/logos/compact/gtusdtp-gauntlet.webp",
-  "/logos/gusdcq-galaxy.png": "/logos/compact/gusdcq-galaxy.webp",
-  "/logos/gusdtq-galaxy.png": "/logos/compact/gusdtq-galaxy.webp",
-  "/logos/hbd-hive.jpg": "/logos/compact/hbd-hive.webp",
-  "/logos/hkdr-rd-technologies.png": "/logos/compact/hkdr-rd-technologies.webp",
-  "/logos/hlusd-hela.png": "/logos/compact/hlusd-hela.webp",
-  "/logos/home-homecoin.png": "/logos/compact/home-homecoin.webp",
-  "/logos/iauon-ondo.png": "/logos/compact/iauon-ondo.webp",
-  "/logos/idrx-idrx.png": "/logos/compact/idrx-idrx.webp",
-  "/logos/inalpha-nest.png": "/logos/compact/inalpha-nest.webp",
-  "/logos/iusd-indigo-protocol.png": "/logos/compact/iusd-indigo-protocol.webp",
-  "/logos/iusd-initia.png": "/logos/compact/iusd-initia.webp",
-  "/logos/jltxx-jpmorgan.png": "/logos/compact/jltxx-jpmorgan.webp",
-  "/logos/jpyc-jpyc-v1.png": "/logos/compact/jpyc-jpyc-v1.webp",
-  "/logos/jpydf-deltaforesight.png": "/logos/compact/jpydf-deltaforesight.webp",
-  "/logos/jpym-mento.png": "/logos/compact/jpym-mento.webp",
-  "/logos/jpysc-sbi-startale.png": "/logos/compact/jpysc-sbi-startale.webp",
-  "/logos/jpyt-dephaser.png": "/logos/compact/jpyt-dephaser.webp",
-  "/logos/jtrsy-anemoy.png": "/logos/compact/jtrsy-anemoy.webp",
-  "/logos/jusd-jusd-stable-token.png": "/logos/compact/jusd-jusd-stable-token.webp",
-  "/logos/kesm-mento.png": "/logos/compact/kesm-mento.webp",
-  "/logos/kgst-kyrgyz-som.png": "/logos/compact/kgst-kyrgyz-som.webp",
-  "/logos/klarnausd-klarna.jpg": "/logos/compact/klarnausd-klarna.webp",
-  "/logos/kpkusdcprime-kpk.png": "/logos/compact/kpkusdcprime-kpk.webp",
-  "/logos/kpkusdcyield-kpk.png": "/logos/compact/kpkusdcyield-kpk.webp",
-  "/logos/krw1-bdacs.png": "/logos/compact/krw1-bdacs.webp",
-  "/logos/krwq-iq.png": "/logos/compact/krwq-iq.webp",
-  "/logos/kusd-kerne.png": "/logos/compact/kusd-kerne.webp",
-  "/logos/luausd-lumi-finance.png": "/logos/compact/luausd-lumi-finance.webp",
-  "/logos/lvusd-leverup.png": "/logos/compact/lvusd-leverup.webp",
-  "/logos/mai-qidao.png": "/logos/compact/mai-qidao.webp",
-  "/logos/mantrausd-mantra.png": "/logos/compact/mantrausd-mantra.webp",
-  "/logos/money-defi-money.png": "/logos/compact/money-defi-money.webp",
-  "/logos/moveusd-cfx.png": "/logos/compact/moveusd-cfx.webp",
-  "/logos/msy-main-street.png": "/logos/compact/msy-main-street.webp",
-  "/logos/mxnb-juno.png": "/logos/compact/mxnb-juno.webp",
-  "/logos/mxne-real-mxn.png": "/logos/compact/mxne-real-mxn.webp",
-  "/logos/myrc-blox.png": "/logos/compact/myrc-blox.webp",
-  "/logos/nbasis-nest.png": "/logos/compact/nbasis-nest.webp",
-  "/logos/net-cloudflare.png": "/logos/compact/net-cloudflare.webp",
-  "/logos/nopal-nest.png": "/logos/compact/nopal-nest.webp",
-  "/logos/ntbill-nest.png": "/logos/compact/ntbill-nest.webp",
-  "/logos/nwisdom-nest.png": "/logos/compact/nwisdom-nest.webp",
-  "/logos/nxusd-nereus.png": "/logos/compact/nxusd-nereus.webp",
-  "/logos/okrw-hashed.png": "/logos/compact/okrw-hashed.webp",
-  "/logos/oned-gennius.png": "/logos/compact/oned-gennius.webp",
-  "/logos/ousd-open-standard.png": "/logos/compact/ousd-open-standard.webp",
-  "/logos/phpc-coins-ph.png": "/logos/compact/phpc-coins-ph.webp",
-  "/logos/pusd-polymarket.png": "/logos/compact/pusd-polymarket.webp",
-  "/logos/pyusdx-moonpay.png": "/logos/compact/pyusdx-moonpay.webp",
-  "/logos/qcad-stablecorp.png": "/logos/compact/qcad-stablecorp.webp",
-  "/logos/rd-rai-dollar.png": "/logos/compact/rd-rai-dollar.webp",
-  "/logos/reur-royal-euro.png": "/logos/compact/reur-royal-euro.webp",
-  "/logos/roughrider-bnd.png": "/logos/compact/roughrider-bnd.webp",
-  "/logos/rusd-revolut.png": "/logos/compact/rusd-revolut.webp",
-  "/logos/rusd-royal-dollar.png": "/logos/compact/rusd-royal-dollar.webp",
-  "/logos/said-gaib.png": "/logos/compact/said-gaib.webp",
-  "/logos/sbold-k3-capital.png": "/logos/compact/sbold-k3-capital.webp",
-  "/logos/scrvusd-curve.png": "/logos/compact/scrvusd-curve.webp",
-  "/logos/sdai-gnosis.png": "/logos/compact/sdai-gnosis.webp",
-  "/logos/sdai-sky.png": "/logos/compact/sdai-sky.webp",
-  "/logos/sdola-inverse-finance.png": "/logos/compact/sdola-inverse-finance.webp",
-  "/logos/sfrax-frax.png": "/logos/compact/sfrax-frax.webp",
-  "/logos/sfrxusd-frax.png": "/logos/compact/sfrxusd-frax.webp",
-  "/logos/sgho-aave.png": "/logos/compact/sgho-aave.webp",
-  "/logos/silk-shade-protocol.webp": "/logos/compact/silk-shade-protocol.webp",
-  "/logos/slvon-ondo.png": "/logos/compact/slvon-ondo.webp",
-  "/logos/sofid-sofi.png": "/logos/compact/sofid-sofi.webp",
-  "/logos/spusd-soulpeg.png": "/logos/compact/spusd-soulpeg.webp",
-  "/logos/stbt-matrixdock.png": "/logos/compact/stbt-matrixdock.webp",
-  "/logos/stcusd-cap.png": "/logos/compact/stcusd-cap.webp",
-  "/logos/steakcusdc-steakhouse.png": "/logos/compact/steakcusdc-steakhouse.webp",
-  "/logos/strusd-tori.png": "/logos/compact/strusd-tori.webp",
-  "/logos/stusd-stoneyield.png": "/logos/compact/stusd-stoneyield.webp",
-  "/logos/suiusde-sui.png": "/logos/compact/suiusde-sui.webp",
-  "/logos/susd-solayer.png": "/logos/compact/susd-solayer.webp",
-  "/logos/susdai-usd-ai.png": "/logos/compact/susdai-usd-ai.webp",
-  "/logos/susdc-spark-v1.png": "/logos/compact/susdc-spark-v1.webp",
-  "/logos/susdc-spark.png": "/logos/compact/susdc-spark.webp",
-  "/logos/susde-ethena.png": "/logos/compact/susde-ethena.webp",
-  "/logos/susdf-falcon.png": "/logos/compact/susdf-falcon.webp",
-  "/logos/susds-sky.png": "/logos/compact/susds-sky.webp",
-  "/logos/susdt-spark.png": "/logos/compact/susdt-spark.webp",
-  "/logos/susdx-axis.png": "/logos/compact/susdx-axis.webp",
-  "/logos/syrupusdg-maple.png": "/logos/compact/syrupusdg-maple.webp",
-  "/logos/syusd-aegis.png": "/logos/compact/syusd-aegis.webp",
-  "/logos/tgld-tenbin.png": "/logos/compact/tgld-tenbin.webp",
-  "/logos/thbill-theo.png": "/logos/compact/thbill-theo.webp",
-  "/logos/thgold-theo.jpg": "/logos/compact/thgold-theo.webp",
-  "/logos/thusd-theo.png": "/logos/compact/thusd-theo.webp",
-  "/logos/trusd-tori.jpg": "/logos/compact/trusd-tori.webp",
-  "/logos/umint-ubs.png": "/logos/compact/umint-ubs.webp",
-  "/logos/usbd-bima.png": "/logos/compact/usbd-bima.webp",
-  "/logos/uscc-superstate.png": "/logos/compact/uscc-superstate.webp",
-  "/logos/usd3-3jane.png": "/logos/compact/usd3-3jane.webp",
-  "/logos/usd3-reserve-protocol.png": "/logos/compact/usd3-reserve-protocol.webp",
-  "/logos/usda-alpha-partner.jpg": "/logos/compact/usda-alpha-partner.webp",
-  "/logos/usdat-saturn.png": "/logos/compact/usdat-saturn.webp",
-  "/logos/usdcx-movement.png": "/logos/compact/usdcx-movement.webp",
-  "/logos/usdf-flipcash.png": "/logos/compact/usdf-flipcash.webp",
-  "/logos/usdfc-secured-finance.png": "/logos/compact/usdfc-secured-finance.webp",
-  "/logos/usdfr-forest-road.jpg": "/logos/compact/usdfr-forest-road.webp",
-  "/logos/usdh-hermetica.png": "/logos/compact/usdh-hermetica.webp",
-  "/logos/usdk-kast.png": "/logos/compact/usdk-kast.webp",
-  "/logos/usdk-orki.jpg": "/logos/compact/usdk-orki.webp",
-  "/logos/usdkg-gold-dollar.jpg": "/logos/compact/usdkg-gold-dollar.webp",
-  "/logos/usdm-monetrix.png": "/logos/compact/usdm-monetrix.webp",
-  "/logos/usdon-ondo.png": "/logos/compact/usdon-ondo.webp",
-  "/logos/usdpt-western-union.png": "/logos/compact/usdpt-western-union.webp",
-  "/logos/usdq-quill.png": "/logos/compact/usdq-quill.webp",
-  "/logos/usdr-ring.png": "/logos/compact/usdr-ring.webp",
-  "/logos/usdrif-rif.webp": "/logos/compact/usdrif-rif.webp",
-  "/logos/usdsc-startale.png": "/logos/compact/usdsc-startale.webp",
-  "/logos/usdsm-stable-mint.png": "/logos/compact/usdsm-stable-mint.webp",
-  "/logos/usdso-somnia.png": "/logos/compact/usdso-somnia.webp",
-  "/logos/usdsui-sui.png": "/logos/compact/usdsui-sui.webp",
-  "/logos/usdu-universal.png": "/logos/compact/usdu-universal.webp",
-  "/logos/usdu-usdu-finance.png": "/logos/compact/usdu-usdu-finance.webp",
-  "/logos/usdvb-versabank.png": "/logos/compact/usdvb-versabank.webp",
-  "/logos/usdx-axis.png": "/logos/compact/usdx-axis.webp",
-  "/logos/usdx-kava.png": "/logos/compact/usdx-kava.webp",
-  "/logos/ussd-sonic-labs.jpg": "/logos/compact/ussd-sonic-labs.webp",
-  "/logos/ustbl-spiko.png": "/logos/compact/ustbl-spiko.webp",
-  "/logos/usx-dforce.png": "/logos/compact/usx-dforce.webp",
-  "/logos/uusd-anything-labs.png": "/logos/compact/uusd-anything-labs.webp",
-  "/logos/vbill-vaneck.png": "/logos/compact/vbill-vaneck.webp",
-  "/logos/vcred-vcred.jpg": "/logos/compact/vcred-vcred.webp",
-  "/logos/vndc-jade-labs.png": "/logos/compact/vndc-jade-labs.webp",
-  "/logos/vusd-virtue.png": "/logos/compact/vusd-virtue.webp",
-  "/logos/wars-argentine-peso.png": "/logos/compact/wars-argentine-peso.webp",
-  "/logos/wbrl-ripio.png": "/logos/compact/wbrl-ripio.webp",
-  "/logos/wclp-ripio.png": "/logos/compact/wclp-ripio.webp",
-  "/logos/wcop-ripio.png": "/logos/compact/wcop-ripio.webp",
-  "/logos/wemix-dollar-wemix.png": "/logos/compact/wemix-dollar-wemix.webp",
-  "/logos/wm-m0.jpg": "/logos/compact/wm-m0.webp",
-  "/logos/wmxn-ripio.png": "/logos/compact/wmxn-ripio.webp",
-  "/logos/wpen-ripio.png": "/logos/compact/wpen-ripio.webp",
-  "/logos/wtgxx-wisdomtree.png": "/logos/compact/wtgxx-wisdomtree.webp",
-  "/logos/xaut-tether.png": "/logos/compact/xaut-tether.webp",
-  "/logos/xdai-gnosis.png": "/logos/compact/xdai-gnosis.webp",
-  "/logos/xgld-unitas.png": "/logos/compact/xgld-unitas.webp",
-  "/logos/xgz-goldzip.png": "/logos/compact/xgz-goldzip.webp",
-  "/logos/xmd-metal-dollar.png": "/logos/compact/xmd-metal-dollar.webp",
-  "/logos/xo-exodus.png": "/logos/compact/xo-exodus.webp",
-  "/logos/xtusd-xt.png": "/logos/compact/xtusd-xt.webp",
-  "/logos/ybold-yearn.png": "/logos/compact/ybold-yearn.webp",
-  "/logos/yusd-yieldfi.png": "/logos/compact/yusd-yieldfi.webp",
-  "/logos/yvusdc-yearn.png": "/logos/compact/yvusdc-yearn.webp",
-  "/logos/zarm-mento.png": "/logos/compact/zarm-mento.webp",
-  "/logos/zarsc-supercoin.png": "/logos/compact/zarsc-supercoin.webp",
-  "/logos/zaru-blocktower.png": "/logos/compact/zaru-blocktower.webp",
-  "/logos/zkusd-goal3.png": "/logos/compact/zkusd-goal3.webp",
-  "/logos/zsd-zephyr-protocol.png": "/logos/compact/zsd-zephyr-protocol.webp"
+  "/chains/0g.png": {
+    "56": "/chains/compact/0g.webp",
+    "100": "/chains/compact/0g-100.webp"
+  },
+  "/chains/abcore.png": {
+    "56": "/chains/compact/abcore.webp",
+    "100": "/chains/compact/abcore-100.webp"
+  },
+  "/chains/abstract.png": {
+    "56": "/chains/compact/abstract.webp",
+    "100": "/chains/compact/abstract-100.webp"
+  },
+  "/chains/agoric.webp": {
+    "56": "/chains/compact/agoric.webp",
+    "100": "/chains/compact/agoric-100.webp"
+  },
+  "/chains/algorand.png": {
+    "56": "/chains/compact/algorand.webp",
+    "100": "/chains/compact/algorand-100.webp"
+  },
+  "/chains/apechain.png": {
+    "56": "/chains/compact/apechain.webp",
+    "100": "/chains/compact/apechain-100.webp"
+  },
+  "/chains/aptos.png": {
+    "56": "/chains/compact/aptos.webp",
+    "100": "/chains/compact/aptos-100.webp"
+  },
+  "/chains/arbitrum.png": {
+    "56": "/chains/compact/arbitrum.webp",
+    "100": "/chains/compact/arbitrum-100.webp"
+  },
+  "/chains/arc.png": {
+    "56": "/chains/compact/arc.webp",
+    "100": "/chains/compact/arc-100.webp"
+  },
+  "/chains/astar.png": {
+    "56": "/chains/compact/astar.webp",
+    "100": "/chains/compact/astar-100.webp"
+  },
+  "/chains/aurora.png": {
+    "56": "/chains/compact/aurora.webp",
+    "100": "/chains/compact/aurora-100.webp"
+  },
+  "/chains/avalanche.png": {
+    "56": "/chains/compact/avalanche.webp",
+    "100": "/chains/compact/avalanche-100.webp"
+  },
+  "/chains/base.png": {
+    "56": "/chains/compact/base.webp",
+    "100": "/chains/compact/base-100.webp"
+  },
+  "/chains/berachain.png": {
+    "56": "/chains/compact/berachain.webp",
+    "100": "/chains/compact/berachain-100.webp"
+  },
+  "/chains/bifrost.png": {
+    "56": "/chains/compact/bifrost.webp",
+    "100": "/chains/compact/bifrost-100.webp"
+  },
+  "/chains/bitlayer.png": {
+    "56": "/chains/compact/bitlayer.webp",
+    "100": "/chains/compact/bitlayer-100.webp"
+  },
+  "/chains/bittorrent.png": {
+    "56": "/chains/compact/bittorrent.webp",
+    "100": "/chains/compact/bittorrent-100.webp"
+  },
+  "/chains/blast.png": {
+    "56": "/chains/compact/blast.webp",
+    "100": "/chains/compact/blast-100.webp"
+  },
+  "/chains/bob.png": {
+    "56": "/chains/compact/bob.webp",
+    "100": "/chains/compact/bob-100.webp"
+  },
+  "/chains/boba.png": {
+    "56": "/chains/compact/boba.webp",
+    "100": "/chains/compact/boba-100.webp"
+  },
+  "/chains/bsc.png": {
+    "56": "/chains/compact/bsc.webp",
+    "100": "/chains/compact/bsc-100.webp"
+  },
+  "/chains/bsquared.png": {
+    "56": "/chains/compact/bsquared.webp",
+    "100": "/chains/compact/bsquared-100.webp"
+  },
+  "/chains/cardano.png": {
+    "56": "/chains/compact/cardano.webp",
+    "100": "/chains/compact/cardano-100.webp"
+  },
+  "/chains/celo.png": {
+    "56": "/chains/compact/celo.webp",
+    "100": "/chains/compact/celo-100.webp"
+  },
+  "/chains/codex.png": {
+    "56": "/chains/compact/codex.webp",
+    "100": "/chains/compact/codex-100.webp"
+  },
+  "/chains/corn.png": {
+    "56": "/chains/compact/corn.webp",
+    "100": "/chains/compact/corn-100.webp"
+  },
+  "/chains/cronos.png": {
+    "56": "/chains/compact/cronos.webp",
+    "100": "/chains/compact/cronos-100.webp"
+  },
+  "/chains/edgechain.png": {
+    "56": "/chains/compact/edgechain.webp",
+    "100": "/chains/compact/edgechain-100.webp"
+  },
+  "/chains/ethereum.png": {
+    "56": "/chains/compact/ethereum.webp",
+    "100": "/chains/compact/ethereum-100.webp"
+  },
+  "/chains/etherlink.png": {
+    "56": "/chains/compact/etherlink.webp",
+    "100": "/chains/compact/etherlink-100.webp"
+  },
+  "/chains/fantom.png": {
+    "56": "/chains/compact/fantom.webp",
+    "100": "/chains/compact/fantom-100.webp"
+  },
+  "/chains/flare.png": {
+    "56": "/chains/compact/flare.webp",
+    "100": "/chains/compact/flare-100.webp"
+  },
+  "/chains/flow.png": {
+    "56": "/chains/compact/flow.webp",
+    "100": "/chains/compact/flow-100.webp"
+  },
+  "/chains/fraxtal.png": {
+    "56": "/chains/compact/fraxtal.webp",
+    "100": "/chains/compact/fraxtal-100.webp"
+  },
+  "/chains/gatelayer.png": {
+    "56": "/chains/compact/gatelayer.webp",
+    "100": "/chains/compact/gatelayer-100.webp"
+  },
+  "/chains/gnosis.png": {
+    "56": "/chains/compact/gnosis.webp",
+    "100": "/chains/compact/gnosis-100.webp"
+  },
+  "/chains/hedera.png": {
+    "56": "/chains/compact/hedera.webp",
+    "100": "/chains/compact/hedera-100.webp"
+  },
+  "/chains/hemi.png": {
+    "56": "/chains/compact/hemi.webp",
+    "100": "/chains/compact/hemi-100.webp"
+  },
+  "/chains/hydration.png": {
+    "56": "/chains/compact/hydration.webp",
+    "100": "/chains/compact/hydration-100.webp"
+  },
+  "/chains/hyperevm.png": {
+    "56": "/chains/compact/hyperevm.webp",
+    "100": "/chains/compact/hyperevm-100.webp"
+  },
+  "/chains/hyperliquid-l1.png": {
+    "56": "/chains/compact/hyperliquid-l1.webp",
+    "100": "/chains/compact/hyperliquid-l1-100.webp"
+  },
+  "/chains/icp.png": {
+    "56": "/chains/compact/icp.webp",
+    "100": "/chains/compact/icp-100.webp"
+  },
+  "/chains/immutable-zkevm.png": {
+    "56": "/chains/compact/immutable-zkevm.webp",
+    "100": "/chains/compact/immutable-zkevm-100.webp"
+  },
+  "/chains/injective.png": {
+    "56": "/chains/compact/injective.webp",
+    "100": "/chains/compact/injective-100.webp"
+  },
+  "/chains/ink.png": {
+    "56": "/chains/compact/ink.webp",
+    "100": "/chains/compact/ink-100.webp"
+  },
+  "/chains/katana.png": {
+    "56": "/chains/compact/katana.webp",
+    "100": "/chains/compact/katana-100.webp"
+  },
+  "/chains/kava.png": {
+    "56": "/chains/compact/kava.webp",
+    "100": "/chains/compact/kava-100.webp"
+  },
+  "/chains/klaytn.png": {
+    "56": "/chains/compact/klaytn.webp",
+    "100": "/chains/compact/klaytn-100.webp"
+  },
+  "/chains/linea.png": {
+    "56": "/chains/compact/linea.webp",
+    "100": "/chains/compact/linea-100.webp"
+  },
+  "/chains/manta.png": {
+    "56": "/chains/compact/manta.webp",
+    "100": "/chains/compact/manta-100.webp"
+  },
+  "/chains/mantle.png": {
+    "56": "/chains/compact/mantle.webp",
+    "100": "/chains/compact/mantle-100.webp"
+  },
+  "/chains/mantra.png": {
+    "56": "/chains/compact/mantra.webp",
+    "100": "/chains/compact/mantra-100.webp"
+  },
+  "/chains/megaeth.png": {
+    "56": "/chains/compact/megaeth.webp",
+    "100": "/chains/compact/megaeth-100.webp"
+  },
+  "/chains/metis.png": {
+    "56": "/chains/compact/metis.webp",
+    "100": "/chains/compact/metis-100.webp"
+  },
+  "/chains/mezo.png": {
+    "56": "/chains/compact/mezo.webp",
+    "100": "/chains/compact/mezo-100.webp"
+  },
+  "/chains/mode.png": {
+    "56": "/chains/compact/mode.webp",
+    "100": "/chains/compact/mode-100.webp"
+  },
+  "/chains/monad.png": {
+    "56": "/chains/compact/monad.webp",
+    "100": "/chains/compact/monad-100.webp"
+  },
+  "/chains/moonbeam.png": {
+    "56": "/chains/compact/moonbeam.webp",
+    "100": "/chains/compact/moonbeam-100.webp"
+  },
+  "/chains/moonriver.png": {
+    "56": "/chains/compact/moonriver.webp",
+    "100": "/chains/compact/moonriver-100.webp"
+  },
+  "/chains/morph-l2.png": {
+    "56": "/chains/compact/morph-l2.webp",
+    "100": "/chains/compact/morph-l2-100.webp"
+  },
+  "/chains/movement.png": {
+    "56": "/chains/compact/movement.webp",
+    "100": "/chains/compact/movement-100.webp"
+  },
+  "/chains/near.png": {
+    "56": "/chains/compact/near.webp",
+    "100": "/chains/compact/near-100.webp"
+  },
+  "/chains/nibiru.png": {
+    "56": "/chains/compact/nibiru.webp",
+    "100": "/chains/compact/nibiru-100.webp"
+  },
+  "/chains/noble.png": {
+    "56": "/chains/compact/noble.webp",
+    "100": "/chains/compact/noble-100.webp"
+  },
+  "/chains/optimism.png": {
+    "56": "/chains/compact/optimism.webp",
+    "100": "/chains/compact/optimism-100.webp"
+  },
+  "/chains/osmosis.png": {
+    "56": "/chains/compact/osmosis.webp",
+    "100": "/chains/compact/osmosis-100.webp"
+  },
+  "/chains/pharos.png": {
+    "56": "/chains/compact/pharos.webp",
+    "100": "/chains/compact/pharos-100.webp"
+  },
+  "/chains/plasma.png": {
+    "56": "/chains/compact/plasma.webp",
+    "100": "/chains/compact/plasma-100.webp"
+  },
+  "/chains/plume.png": {
+    "56": "/chains/compact/plume.webp",
+    "100": "/chains/compact/plume-100.webp"
+  },
+  "/chains/polkadot.png": {
+    "56": "/chains/compact/polkadot.webp",
+    "100": "/chains/compact/polkadot-100.webp"
+  },
+  "/chains/polygon-zkevm.png": {
+    "56": "/chains/compact/polygon-zkevm.webp",
+    "100": "/chains/compact/polygon-zkevm-100.webp"
+  },
+  "/chains/polygon.png": {
+    "56": "/chains/compact/polygon.webp",
+    "100": "/chains/compact/polygon-100.webp"
+  },
+  "/chains/provenance.png": {
+    "56": "/chains/compact/provenance.webp",
+    "100": "/chains/compact/provenance-100.webp"
+  },
+  "/chains/pulsechain.png": {
+    "56": "/chains/compact/pulsechain.webp",
+    "100": "/chains/compact/pulsechain-100.webp"
+  },
+  "/chains/rise.png": {
+    "56": "/chains/compact/rise.webp",
+    "100": "/chains/compact/rise-100.webp"
+  },
+  "/chains/scroll.png": {
+    "56": "/chains/compact/scroll.webp",
+    "100": "/chains/compact/scroll-100.webp"
+  },
+  "/chains/secret.png": {
+    "56": "/chains/compact/secret.webp",
+    "100": "/chains/compact/secret-100.webp"
+  },
+  "/chains/sei.png": {
+    "56": "/chains/compact/sei.webp",
+    "100": "/chains/compact/sei-100.webp"
+  },
+  "/chains/somnia.png": {
+    "56": "/chains/compact/somnia.webp",
+    "100": "/chains/compact/somnia-100.webp"
+  },
+  "/chains/soneium.png": {
+    "56": "/chains/compact/soneium.webp",
+    "100": "/chains/compact/soneium-100.webp"
+  },
+  "/chains/songbird.png": {
+    "56": "/chains/compact/songbird.webp",
+    "100": "/chains/compact/songbird-100.webp"
+  },
+  "/chains/sonic.png": {
+    "56": "/chains/compact/sonic.webp",
+    "100": "/chains/compact/sonic-100.webp"
+  },
+  "/chains/sophon.png": {
+    "56": "/chains/compact/sophon.webp",
+    "100": "/chains/compact/sophon-100.webp"
+  },
+  "/chains/stable.png": {
+    "56": "/chains/compact/stable.webp",
+    "100": "/chains/compact/stable-100.webp"
+  },
+  "/chains/stacks.png": {
+    "56": "/chains/compact/stacks.webp",
+    "100": "/chains/compact/stacks-100.webp"
+  },
+  "/chains/starknet.png": {
+    "56": "/chains/compact/starknet.webp",
+    "100": "/chains/compact/starknet-100.webp"
+  },
+  "/chains/stellar.png": {
+    "56": "/chains/compact/stellar.webp",
+    "100": "/chains/compact/stellar-100.webp"
+  },
+  "/chains/sui.png": {
+    "56": "/chains/compact/sui.webp",
+    "100": "/chains/compact/sui-100.webp"
+  },
+  "/chains/swellchain.png": {
+    "56": "/chains/compact/swellchain.webp",
+    "100": "/chains/compact/swellchain-100.webp"
+  },
+  "/chains/tac.png": {
+    "56": "/chains/compact/tac.webp",
+    "100": "/chains/compact/tac-100.webp"
+  },
+  "/chains/taiko.png": {
+    "56": "/chains/compact/taiko.webp",
+    "100": "/chains/compact/taiko-100.webp"
+  },
+  "/chains/tezos.png": {
+    "56": "/chains/compact/tezos.webp",
+    "100": "/chains/compact/tezos-100.webp"
+  },
+  "/chains/ton.png": {
+    "56": "/chains/compact/ton.webp",
+    "100": "/chains/compact/ton-100.webp"
+  },
+  "/chains/tron.png": {
+    "56": "/chains/compact/tron.webp",
+    "100": "/chains/compact/tron-100.webp"
+  },
+  "/chains/unichain.png": {
+    "56": "/chains/compact/unichain.webp",
+    "100": "/chains/compact/unichain-100.webp"
+  },
+  "/chains/viction.png": {
+    "56": "/chains/compact/viction.webp",
+    "100": "/chains/compact/viction-100.webp"
+  },
+  "/chains/worldchain.png": {
+    "56": "/chains/compact/worldchain.webp",
+    "100": "/chains/compact/worldchain-100.webp"
+  },
+  "/chains/xdc.png": {
+    "56": "/chains/compact/xdc.webp",
+    "100": "/chains/compact/xdc-100.webp"
+  },
+  "/chains/xlayer.png": {
+    "56": "/chains/compact/xlayer.webp",
+    "100": "/chains/compact/xlayer-100.webp"
+  },
+  "/chains/xrpl.png": {
+    "56": "/chains/compact/xrpl.webp",
+    "100": "/chains/compact/xrpl-100.webp"
+  },
+  "/chains/zilliqa.png": {
+    "56": "/chains/compact/zilliqa.webp",
+    "100": "/chains/compact/zilliqa-100.webp"
+  },
+  "/chains/zircuit.png": {
+    "56": "/chains/compact/zircuit.webp",
+    "100": "/chains/compact/zircuit-100.webp"
+  },
+  "/chains/zksync.png": {
+    "56": "/chains/compact/zksync.webp",
+    "100": "/chains/compact/zksync-100.webp"
+  },
+  "/logos/106-eusd.png": {
+    "32": "/logos/compact/106-eusd.webp",
+    "100": "/logos/compact/106-eusd-100.webp"
+  },
+  "/logos/110-crvusd.jpg": {
+    "32": "/logos/compact/110-crvusd.webp",
+    "100": "/logos/compact/110-crvusd-100.webp"
+  },
+  "/logos/118-gho.png": {
+    "32": "/logos/compact/118-gho.webp",
+    "100": "/logos/compact/118-gho-100.webp"
+  },
+  "/logos/120-pyusd.png": {
+    "32": "/logos/compact/120-pyusd.webp",
+    "100": "/logos/compact/120-pyusd-100.webp"
+  },
+  "/logos/14-usdd.jpg": {
+    "32": "/logos/compact/14-usdd.webp",
+    "100": "/logos/compact/14-usdd-100.webp"
+  },
+  "/logos/146-usde.png": {
+    "32": "/logos/compact/146-usde.webp",
+    "100": "/logos/compact/146-usde-100.webp"
+  },
+  "/logos/15-dola.png": {
+    "32": "/logos/compact/15-dola.webp",
+    "100": "/logos/compact/15-dola-100.webp"
+  },
+  "/logos/168-fxusd.jpg": {
+    "32": "/logos/compact/168-fxusd.webp",
+    "100": "/logos/compact/168-fxusd-100.webp"
+  },
+  "/logos/172-usdb.png": {
+    "32": "/logos/compact/172-usdb.webp",
+    "100": "/logos/compact/172-usdb-100.webp"
+  },
+  "/logos/173-buidl.png": {
+    "32": "/logos/compact/173-buidl.webp",
+    "100": "/logos/compact/173-buidl-100.webp"
+  },
+  "/logos/195-usd0.png": {
+    "32": "/logos/compact/195-usd0.webp",
+    "100": "/logos/compact/195-usd0-100.webp"
+  },
+  "/logos/20-alusd.png": {
+    "32": "/logos/compact/20-alusd.webp",
+    "100": "/logos/compact/20-alusd-100.webp"
+  },
+  "/logos/204-bnusd.png": {
+    "32": "/logos/compact/204-bnusd.webp",
+    "100": "/logos/compact/204-bnusd-100.webp"
+  },
+  "/logos/205-ausd.png": {
+    "32": "/logos/compact/205-ausd.webp",
+    "100": "/logos/compact/205-ausd-100.webp"
+  },
+  "/logos/209-usds.webp": {
+    "32": "/logos/compact/209-usds.webp",
+    "100": "/logos/compact/209-usds-100.webp"
+  },
+  "/logos/213-m.png": {
+    "32": "/logos/compact/213-m.webp",
+    "100": "/logos/compact/213-m-100.webp"
+  },
+  "/logos/217-rusd.png": {
+    "32": "/logos/compact/217-rusd.webp",
+    "100": "/logos/compact/217-rusd-100.webp"
+  },
+  "/logos/219-usdf.png": {
+    "32": "/logos/compact/219-usdf.webp",
+    "100": "/logos/compact/219-usdf-100.webp"
+  },
+  "/logos/221-usdtb.jpg": {
+    "32": "/logos/compact/221-usdtb.webp",
+    "100": "/logos/compact/221-usdtb-100.webp"
+  },
+  "/logos/226-zchf.png": {
+    "32": "/logos/compact/226-zchf.webp",
+    "100": "/logos/compact/226-zchf-100.webp"
+  },
+  "/logos/23-ousd.png": {
+    "32": "/logos/compact/23-ousd.webp",
+    "100": "/logos/compact/23-ousd-100.webp"
+  },
+  "/logos/230-usn.png": {
+    "32": "/logos/compact/230-usn.webp",
+    "100": "/logos/compact/230-usn-100.webp"
+  },
+  "/logos/231-honey.png": {
+    "32": "/logos/compact/231-honey.webp",
+    "100": "/logos/compact/231-honey-100.webp"
+  },
+  "/logos/235-frxusd.png": {
+    "32": "/logos/compact/235-frxusd.webp",
+    "100": "/logos/compact/235-frxusd-100.webp"
+  },
+  "/logos/237-usyc.png": {
+    "32": "/logos/compact/237-usyc.webp",
+    "100": "/logos/compact/237-usyc-100.webp"
+  },
+  "/logos/24-cusd.png": {
+    "32": "/logos/compact/24-cusd.webp",
+    "100": "/logos/compact/24-cusd-100.webp"
+  },
+  "/logos/241-usdo.png": {
+    "32": "/logos/compact/241-usdo.webp",
+    "100": "/logos/compact/241-usdo-100.webp"
+  },
+  "/logos/246-usdf.png": {
+    "32": "/logos/compact/246-usdf.webp",
+    "100": "/logos/compact/246-usdf-100.webp"
+  },
+  "/logos/250-rlusd.png": {
+    "32": "/logos/compact/250-rlusd.webp",
+    "100": "/logos/compact/250-rlusd-100.webp"
+  },
+  "/logos/255-yusd.png": {
+    "32": "/logos/compact/255-yusd.webp",
+    "100": "/logos/compact/255-yusd-100.webp"
+  },
+  "/logos/256-reusd.png": {
+    "32": "/logos/compact/256-reusd.webp",
+    "100": "/logos/compact/256-reusd-100.webp"
+  },
+  "/logos/262-usd1.png": {
+    "32": "/logos/compact/262-usd1.webp",
+    "100": "/logos/compact/262-usd1-100.webp"
+  },
+  "/logos/266-pusd.png": {
+    "32": "/logos/compact/266-pusd.webp",
+    "100": "/logos/compact/266-pusd-100.webp"
+  },
+  "/logos/269-bold.png": {
+    "32": "/logos/compact/269-bold.webp",
+    "100": "/logos/compact/269-bold-100.webp"
+  },
+  "/logos/271-avusd.png": {
+    "32": "/logos/compact/271-avusd.webp",
+    "100": "/logos/compact/271-avusd-100.webp"
+  },
+  "/logos/286-usdg.png": {
+    "32": "/logos/compact/286-usdg.webp",
+    "100": "/logos/compact/286-usdg-100.webp"
+  },
+  "/logos/287-usnd.png": {
+    "32": "/logos/compact/287-usnd.webp",
+    "100": "/logos/compact/287-usnd-100.webp"
+  },
+  "/logos/295-usdaf.png": {
+    "32": "/logos/compact/295-usdaf.webp",
+    "100": "/logos/compact/295-usdaf-100.webp"
+  },
+  "/logos/296-cusd.png": {
+    "32": "/logos/compact/296-cusd.webp",
+    "100": "/logos/compact/296-cusd-100.webp"
+  },
+  "/logos/298-iusd.jpg": {
+    "32": "/logos/compact/298-iusd.webp",
+    "100": "/logos/compact/298-iusd-100.webp"
+  },
+  "/logos/302-hyusd.png": {
+    "32": "/logos/compact/302-hyusd.webp",
+    "100": "/logos/compact/302-hyusd-100.webp"
+  },
+  "/logos/309-usdai.png": {
+    "32": "/logos/compact/309-usdai.webp",
+    "100": "/logos/compact/309-usdai-100.webp"
+  },
+  "/logos/335-jupusd.png": {
+    "32": "/logos/compact/335-jupusd.webp",
+    "100": "/logos/compact/335-jupusd-100.webp"
+  },
+  "/logos/339-reusd.png": {
+    "32": "/logos/compact/339-reusd.webp",
+    "100": "/logos/compact/339-reusd-100.webp"
+  },
+  "/logos/344-yzusd.png": {
+    "32": "/logos/compact/344-yzusd.webp",
+    "100": "/logos/compact/344-yzusd-100.webp"
+  },
+  "/logos/347-usdgo.png": {
+    "32": "/logos/compact/347-usdgo.webp",
+    "100": "/logos/compact/347-usdgo-100.webp"
+  },
+  "/logos/353-aid.png": {
+    "32": "/logos/compact/353-aid.webp",
+    "100": "/logos/compact/353-aid-100.webp"
+  },
+  "/logos/354-apxusd.webp": {
+    "32": "/logos/compact/354-apxusd.webp",
+    "100": "/logos/compact/354-apxusd-100.webp"
+  },
+  "/logos/5-dai.png": {
+    "32": "/logos/compact/5-dai.webp",
+    "100": "/logos/compact/5-dai-100.webp"
+  },
+  "/logos/50-eurc.png": {
+    "32": "/logos/compact/50-eurc.webp",
+    "100": "/logos/compact/50-eurc-100.webp"
+  },
+  "/logos/52-ceur.png": {
+    "32": "/logos/compact/52-ceur.webp",
+    "100": "/logos/compact/52-ceur-100.webp"
+  },
+  "/logos/65-usdh.png": {
+    "32": "/logos/compact/65-usdh.webp",
+    "100": "/logos/compact/65-usdh-100.webp"
+  },
+  "/logos/66-fpi.png": {
+    "32": "/logos/compact/66-fpi.webp",
+    "100": "/logos/compact/66-fpi-100.webp"
+  },
+  "/logos/75-uusd.png": {
+    "32": "/logos/compact/75-uusd.webp",
+    "100": "/logos/compact/75-uusd-100.webp"
+  },
+  "/logos/98-euroe.png": {
+    "32": "/logos/compact/98-euroe.webp",
+    "100": "/logos/compact/98-euroe-100.webp"
+  },
+  "/logos/aa-falconx-mev-capital.png": {
+    "32": "/logos/compact/aa-falconx-mev-capital.webp",
+    "100": "/logos/compact/aa-falconx-mev-capital-100.webp"
+  },
+  "/logos/acred-apollo-securitize.png": {
+    "32": "/logos/compact/acred-apollo-securitize.webp",
+    "100": "/logos/compact/acred-apollo-securitize-100.webp"
+  },
+  "/logos/aed-rakbank.png": {
+    "32": "/logos/compact/aed-rakbank.webp",
+    "100": "/logos/compact/aed-rakbank-100.webp"
+  },
+  "/logos/arc-anq.png": {
+    "32": "/logos/compact/arc-anq.webp",
+    "100": "/logos/compact/arc-anq-100.webp"
+  },
+  "/logos/audf-forte.webp": {
+    "32": "/logos/compact/audf-forte.webp",
+    "100": "/logos/compact/audf-forte-100.webp"
+  },
+  "/logos/audm-mento.png": {
+    "32": "/logos/compact/audm-mento.webp",
+    "100": "/logos/compact/audm-mento-100.webp"
+  },
+  "/logos/audx-aussie-dollar-token.png": {
+    "32": "/logos/compact/audx-aussie-dollar-token.webp",
+    "100": "/logos/compact/audx-aussie-dollar-token-100.webp"
+  },
+  "/logos/ausdt-tether-alloy.png": {
+    "32": "/logos/compact/ausdt-tether-alloy.webp",
+    "100": "/logos/compact/ausdt-tether-alloy-100.webp"
+  },
+  "/logos/bc3m-backed.png": {
+    "32": "/logos/compact/bc3m-backed.webp",
+    "100": "/logos/compact/bc3m-backed-100.webp"
+  },
+  "/logos/bd-basedollar.jpg": {
+    "32": "/logos/compact/bd-basedollar.webp",
+    "100": "/logos/compact/bd-basedollar-100.webp"
+  },
+  "/logos/benji-franklin-templeton.png": {
+    "32": "/logos/compact/benji-franklin-templeton.webp",
+    "100": "/logos/compact/benji-franklin-templeton-100.webp"
+  },
+  "/logos/bib01-backed.png": {
+    "32": "/logos/compact/bib01-backed.webp",
+    "100": "/logos/compact/bib01-backed-100.webp"
+  },
+  "/logos/bils-bitsofgold.png": {
+    "32": "/logos/compact/bils-bitsofgold.webp",
+    "100": "/logos/compact/bils-bitsofgold-100.webp"
+  },
+  "/logos/brd-volpon.png": {
+    "32": "/logos/compact/brd-volpon.webp",
+    "100": "/logos/compact/brd-volpon-100.webp"
+  },
+  "/logos/brl-b3.png": {
+    "32": "/logos/compact/brl-b3.webp",
+    "100": "/logos/compact/brl-b3-100.webp"
+  },
+  "/logos/brl-itau.png": {
+    "32": "/logos/compact/brl-itau.webp",
+    "100": "/logos/compact/brl-itau-100.webp"
+  },
+  "/logos/brl1-brl1.webp": {
+    "32": "/logos/compact/brl1-brl1.webp",
+    "100": "/logos/compact/brl1-brl1-100.webp"
+  },
+  "/logos/brla-brla-digital.png": {
+    "32": "/logos/compact/brla-brla-digital.webp",
+    "100": "/logos/compact/brla-brla-digital-100.webp"
+  },
+  "/logos/brlm-mento.png": {
+    "32": "/logos/compact/brlm-mento.webp",
+    "100": "/logos/compact/brlm-mento-100.webp"
+  },
+  "/logos/brlv-crown.png": {
+    "32": "/logos/compact/brlv-crown.webp",
+    "100": "/logos/compact/brlv-crown-100.webp"
+  },
+  "/logos/brsrv-blackrock.png": {
+    "32": "/logos/compact/brsrv-blackrock.webp",
+    "100": "/logos/compact/brsrv-blackrock-100.webp"
+  },
+  "/logos/buck-buck-assets.png": {
+    "32": "/logos/compact/buck-buck-assets.webp",
+    "100": "/logos/compact/buck-buck-assets-100.webp"
+  },
+  "/logos/busd0-usual.png": {
+    "32": "/logos/compact/busd0-usual.webp",
+    "100": "/logos/compact/busd0-usual-100.webp"
+  },
+  "/logos/cadd-cad-digital.png": {
+    "32": "/logos/compact/cadd-cad-digital.webp",
+    "100": "/logos/compact/cadd-cad-digital-100.webp"
+  },
+  "/logos/cadm-mento.png": {
+    "32": "/logos/compact/cadm-mento.webp",
+    "100": "/logos/compact/cadm-mento-100.webp"
+  },
+  "/logos/cdp-enosys.png": {
+    "32": "/logos/compact/cdp-enosys.webp",
+    "100": "/logos/compact/cdp-enosys-100.webp"
+  },
+  "/logos/cdxusd-cod3x.png": {
+    "32": "/logos/compact/cdxusd-cod3x.webp",
+    "100": "/logos/compact/cdxusd-cod3x-100.webp"
+  },
+  "/logos/cg-acrdx.png": {
+    "32": "/logos/compact/cg-acrdx.webp",
+    "100": "/logos/compact/cg-acrdx-100.webp"
+  },
+  "/logos/cg-apyusd.png": {
+    "32": "/logos/compact/cg-apyusd.webp",
+    "100": "/logos/compact/cg-apyusd-100.webp"
+  },
+  "/logos/cg-asusdf.png": {
+    "32": "/logos/compact/cg-asusdf.webp",
+    "100": "/logos/compact/cg-asusdf-100.webp"
+  },
+  "/logos/cg-ebusd.png": {
+    "32": "/logos/compact/cg-ebusd.webp",
+    "100": "/logos/compact/cg-ebusd-100.webp"
+  },
+  "/logos/cg-eursafo.png": {
+    "32": "/logos/compact/cg-eursafo.webp",
+    "100": "/logos/compact/cg-eursafo-100.webp"
+  },
+  "/logos/cg-eurspkcc.png": {
+    "32": "/logos/compact/cg-eurspkcc.webp",
+    "100": "/logos/compact/cg-eurspkcc-100.webp"
+  },
+  "/logos/cg-gbpsafo.png": {
+    "32": "/logos/compact/cg-gbpsafo.webp",
+    "100": "/logos/compact/cg-gbpsafo-100.webp"
+  },
+  "/logos/cg-hbusdt.jpg": {
+    "32": "/logos/compact/cg-hbusdt.webp",
+    "100": "/logos/compact/cg-hbusdt-100.webp"
+  },
+  "/logos/cg-hlscope.png": {
+    "32": "/logos/compact/cg-hlscope.webp",
+    "100": "/logos/compact/cg-hlscope-100.webp"
+  },
+  "/logos/cg-jaaa.png": {
+    "32": "/logos/compact/cg-jaaa.webp",
+    "100": "/logos/compact/cg-jaaa-100.webp"
+  },
+  "/logos/cg-mapollo.png": {
+    "32": "/logos/compact/cg-mapollo.webp",
+    "100": "/logos/compact/cg-mapollo-100.webp"
+  },
+  "/logos/cg-mf-one.png": {
+    "32": "/logos/compact/cg-mf-one.webp",
+    "100": "/logos/compact/cg-mf-one-100.webp"
+  },
+  "/logos/cg-mglobal.png": {
+    "32": "/logos/compact/cg-mglobal.webp",
+    "100": "/logos/compact/cg-mglobal-100.webp"
+  },
+  "/logos/cg-mhyper.png": {
+    "32": "/logos/compact/cg-mhyper.webp",
+    "100": "/logos/compact/cg-mhyper-100.webp"
+  },
+  "/logos/cg-mmev.png": {
+    "32": "/logos/compact/cg-mmev.webp",
+    "100": "/logos/compact/cg-mmev-100.webp"
+  },
+  "/logos/cg-mtbill.png": {
+    "32": "/logos/compact/cg-mtbill.webp",
+    "100": "/logos/compact/cg-mtbill-100.webp"
+  },
+  "/logos/cg-onyc.png": {
+    "32": "/logos/compact/cg-onyc.webp",
+    "100": "/logos/compact/cg-onyc-100.webp"
+  },
+  "/logos/cg-ousg.png": {
+    "32": "/logos/compact/cg-ousg.webp",
+    "100": "/logos/compact/cg-ousg-100.webp"
+  },
+  "/logos/cg-parallel-usdp.png": {
+    "32": "/logos/compact/cg-parallel-usdp.webp",
+    "100": "/logos/compact/cg-parallel-usdp-100.webp"
+  },
+  "/logos/cg-safo.png": {
+    "32": "/logos/compact/cg-safo.webp",
+    "100": "/logos/compact/cg-safo-100.webp"
+  },
+  "/logos/cg-savusd.png": {
+    "32": "/logos/compact/cg-savusd.webp",
+    "100": "/logos/compact/cg-savusd-100.webp"
+  },
+  "/logos/cg-solomon-usdv.png": {
+    "32": "/logos/compact/cg-solomon-usdv.webp",
+    "100": "/logos/compact/cg-solomon-usdv-100.webp"
+  },
+  "/logos/cg-sovryn-dollar.jpg": {
+    "32": "/logos/compact/cg-sovryn-dollar.webp",
+    "100": "/logos/compact/cg-sovryn-dollar-100.webp"
+  },
+  "/logos/cg-spkcc.png": {
+    "32": "/logos/compact/cg-spkcc.webp",
+    "100": "/logos/compact/cg-spkcc-100.webp"
+  },
+  "/logos/cg-srusd.png": {
+    "32": "/logos/compact/cg-srusd.webp",
+    "100": "/logos/compact/cg-srusd-100.webp"
+  },
+  "/logos/cg-srusde.png": {
+    "32": "/logos/compact/cg-srusde.webp",
+    "100": "/logos/compact/cg-srusde-100.webp"
+  },
+  "/logos/cg-stac.png": {
+    "32": "/logos/compact/cg-stac.webp",
+    "100": "/logos/compact/cg-stac-100.webp"
+  },
+  "/logos/cg-steakusdc.png": {
+    "32": "/logos/compact/cg-steakusdc.webp",
+    "100": "/logos/compact/cg-steakusdc-100.webp"
+  },
+  "/logos/cg-steakusdt.png": {
+    "32": "/logos/compact/cg-steakusdt.webp",
+    "100": "/logos/compact/cg-steakusdt-100.webp"
+  },
+  "/logos/cg-susd1plus.png": {
+    "32": "/logos/compact/cg-susd1plus.webp",
+    "100": "/logos/compact/cg-susd1plus-100.webp"
+  },
+  "/logos/cg-susdd.jpg": {
+    "32": "/logos/compact/cg-susdd.webp",
+    "100": "/logos/compact/cg-susdd-100.webp"
+  },
+  "/logos/cg-susn.png": {
+    "32": "/logos/compact/cg-susn.webp",
+    "100": "/logos/compact/cg-susn-100.webp"
+  },
+  "/logos/cg-syrupusdc.png": {
+    "32": "/logos/compact/cg-syrupusdc.webp",
+    "100": "/logos/compact/cg-syrupusdc-100.webp"
+  },
+  "/logos/cg-syrupusdt.png": {
+    "32": "/logos/compact/cg-syrupusdt.webp",
+    "100": "/logos/compact/cg-syrupusdt-100.webp"
+  },
+  "/logos/cg-syzusd.png": {
+    "32": "/logos/compact/cg-syzusd.webp",
+    "100": "/logos/compact/cg-syzusd-100.webp"
+  },
+  "/logos/cg-tradable.jpg": {
+    "32": "/logos/compact/cg-tradable.webp",
+    "100": "/logos/compact/cg-tradable-100.webp"
+  },
+  "/logos/cg-uktbl.png": {
+    "32": "/logos/compact/cg-uktbl.webp",
+    "100": "/logos/compact/cg-uktbl-100.webp"
+  },
+  "/logos/cg-uscc.jpg": {
+    "32": "/logos/compact/cg-uscc.webp",
+    "100": "/logos/compact/cg-uscc-100.webp"
+  },
+  "/logos/cg-ustb.jpg": {
+    "32": "/logos/compact/cg-ustb.webp",
+    "100": "/logos/compact/cg-ustb-100.webp"
+  },
+  "/logos/cg-wrapped-savings-rusd.png": {
+    "32": "/logos/compact/cg-wrapped-savings-rusd.webp",
+    "100": "/logos/compact/cg-wrapped-savings-rusd-100.webp"
+  },
+  "/logos/cg-xnk.png": {
+    "32": "/logos/compact/cg-xnk.webp",
+    "100": "/logos/compact/cg-xnk-100.webp"
+  },
+  "/logos/cg-yousd.png": {
+    "32": "/logos/compact/cg-yousd.webp",
+    "100": "/logos/compact/cg-yousd-100.webp"
+  },
+  "/logos/chfau-allunity.png": {
+    "32": "/logos/compact/chfau-allunity.webp",
+    "100": "/logos/compact/chfau-allunity-100.webp"
+  },
+  "/logos/chfm-mento.png": {
+    "32": "/logos/compact/chfm-mento.webp",
+    "100": "/logos/compact/chfm-mento-100.webp"
+  },
+  "/logos/chfsafo-spiko.png": {
+    "32": "/logos/compact/chfsafo-spiko.webp",
+    "100": "/logos/compact/chfsafo-spiko-100.webp"
+  },
+  "/logos/cjpy-yamato.webp": {
+    "32": "/logos/compact/cjpy-yamato.webp",
+    "100": "/logos/compact/cjpy-yamato-100.webp"
+  },
+  "/logos/cngn-compliant-naira.png": {
+    "32": "/logos/compact/cngn-compliant-naira.webp",
+    "100": "/logos/compact/cngn-compliant-naira-100.webp"
+  },
+  "/logos/copm-mento.png": {
+    "32": "/logos/compact/copm-mento.webp",
+    "100": "/logos/compact/copm-mento-100.webp"
+  },
+  "/logos/ctusd-citrea.jpg": {
+    "32": "/logos/compact/ctusd-citrea.webp",
+    "100": "/logos/compact/ctusd-citrea-100.webp"
+  },
+  "/logos/cumiu-chinaamc.png": {
+    "32": "/logos/compact/cumiu-chinaamc.webp",
+    "100": "/logos/compact/cumiu-chinaamc-100.webp"
+  },
+  "/logos/cusdo-openeden.png": {
+    "32": "/logos/compact/cusdo-openeden.webp",
+    "100": "/logos/compact/cusdo-openeden-100.webp"
+  },
+  "/logos/dusd-alto.png": {
+    "32": "/logos/compact/dusd-alto.webp",
+    "100": "/logos/compact/dusd-alto-100.webp"
+  },
+  "/logos/dusd-dialectic.png": {
+    "32": "/logos/compact/dusd-dialectic.webp",
+    "100": "/logos/compact/dusd-dialectic-100.webp"
+  },
+  "/logos/dusd-dtrinity.png": {
+    "32": "/logos/compact/dusd-dtrinity.webp",
+    "100": "/logos/compact/dusd-dtrinity-100.webp"
+  },
+  "/logos/dusd-fluid.png": {
+    "32": "/logos/compact/dusd-fluid.webp",
+    "100": "/logos/compact/dusd-fluid-100.webp"
+  },
+  "/logos/earnusd-lido.png": {
+    "32": "/logos/compact/earnusd-lido.webp",
+    "100": "/logos/compact/earnusd-lido-100.webp"
+  },
+  "/logos/ejpy-jbfd.png": {
+    "32": "/logos/compact/ejpy-jbfd.webp",
+    "100": "/logos/compact/ejpy-jbfd-100.webp"
+  },
+  "/logos/emxn-telcoin.png": {
+    "32": "/logos/compact/emxn-telcoin.webp",
+    "100": "/logos/compact/emxn-telcoin-100.webp"
+  },
+  "/logos/eur-qivalis.png": {
+    "32": "/logos/compact/eur-qivalis.webp",
+    "100": "/logos/compact/eur-qivalis-100.webp"
+  },
+  "/logos/eur0-usual.png": {
+    "32": "/logos/compact/eur0-usual.webp",
+    "100": "/logos/compact/eur0-usual-100.webp"
+  },
+  "/logos/euro3-3a-dao.webp": {
+    "32": "/logos/compact/euro3-3a-dao.webp",
+    "100": "/logos/compact/euro3-3a-dao-100.webp"
+  },
+  "/logos/eurot-token-teknoloji.png": {
+    "32": "/logos/compact/eurot-token-teknoloji.webp",
+    "100": "/logos/compact/eurot-token-teknoloji-100.webp"
+  },
+  "/logos/eurw-newrails.jpg": {
+    "32": "/logos/compact/eurw-newrails.webp",
+    "100": "/logos/compact/eurw-newrails-100.webp"
+  },
+  "/logos/eusd-telcoin.png": {
+    "32": "/logos/compact/eusd-telcoin.webp",
+    "100": "/logos/compact/eusd-telcoin-100.webp"
+  },
+  "/logos/eutbl-spiko.png": {
+    "32": "/logos/compact/eutbl-spiko.webp",
+    "100": "/logos/compact/eutbl-spiko-100.webp"
+  },
+  "/logos/filqa-fidelity-international.png": {
+    "32": "/logos/compact/filqa-fidelity-international.webp",
+    "100": "/logos/compact/filqa-fidelity-international-100.webp"
+  },
+  "/logos/fiusd-fiserv.png": {
+    "32": "/logos/compact/fiusd-fiserv.webp",
+    "100": "/logos/compact/fiusd-fiserv-100.webp"
+  },
+  "/logos/fiusd-sygnum.png": {
+    "32": "/logos/compact/fiusd-sygnum.webp",
+    "100": "/logos/compact/fiusd-sygnum-100.webp"
+  },
+  "/logos/frnt-wyoming.png": {
+    "32": "/logos/compact/frnt-wyoming.webp",
+    "100": "/logos/compact/frnt-wyoming-100.webp"
+  },
+  "/logos/ftusd-flying-tulip.png": {
+    "32": "/logos/compact/ftusd-flying-tulip.webp",
+    "100": "/logos/compact/ftusd-flying-tulip-100.webp"
+  },
+  "/logos/fusd-freedom-dollar.png": {
+    "32": "/logos/compact/fusd-freedom-dollar.webp",
+    "100": "/logos/compact/fusd-freedom-dollar-100.webp"
+  },
+  "/logos/fxsave-f-x-protocol.png": {
+    "32": "/logos/compact/fxsave-f-x-protocol.webp",
+    "100": "/logos/compact/fxsave-f-x-protocol-100.webp"
+  },
+  "/logos/gbp-vvtx.png": {
+    "32": "/logos/compact/gbp-vvtx.webp",
+    "100": "/logos/compact/gbp-vvtx-100.webp"
+  },
+  "/logos/gbpa-agant.png": {
+    "32": "/logos/compact/gbpa-agant.webp",
+    "100": "/logos/compact/gbpa-agant-100.webp"
+  },
+  "/logos/gbpm-mento.png": {
+    "32": "/logos/compact/gbpm-mento.webp",
+    "100": "/logos/compact/gbpm-mento-100.webp"
+  },
+  "/logos/ghsm-mento.png": {
+    "32": "/logos/compact/ghsm-mento.webp",
+    "100": "/logos/compact/ghsm-mento-100.webp"
+  },
+  "/logos/gldon-ondo.png": {
+    "32": "/logos/compact/gldon-ondo.webp",
+    "100": "/logos/compact/gldon-ondo-100.webp"
+  },
+  "/logos/gold-paxg.png": {
+    "32": "/logos/compact/gold-paxg.webp",
+    "100": "/logos/compact/gold-paxg-100.webp"
+  },
+  "/logos/gtusdc-gauntlet.png": {
+    "32": "/logos/compact/gtusdc-gauntlet.webp",
+    "100": "/logos/compact/gtusdc-gauntlet-100.webp"
+  },
+  "/logos/gtusdcp-gauntlet.png": {
+    "32": "/logos/compact/gtusdcp-gauntlet.webp",
+    "100": "/logos/compact/gtusdcp-gauntlet-100.webp"
+  },
+  "/logos/gtusdtp-gauntlet.png": {
+    "32": "/logos/compact/gtusdtp-gauntlet.webp",
+    "100": "/logos/compact/gtusdtp-gauntlet-100.webp"
+  },
+  "/logos/gusdcq-galaxy.png": {
+    "32": "/logos/compact/gusdcq-galaxy.webp",
+    "100": "/logos/compact/gusdcq-galaxy-100.webp"
+  },
+  "/logos/gusdtq-galaxy.png": {
+    "32": "/logos/compact/gusdtq-galaxy.webp",
+    "100": "/logos/compact/gusdtq-galaxy-100.webp"
+  },
+  "/logos/hbd-hive.jpg": {
+    "32": "/logos/compact/hbd-hive.webp",
+    "100": "/logos/compact/hbd-hive-100.webp"
+  },
+  "/logos/hkdr-rd-technologies.png": {
+    "32": "/logos/compact/hkdr-rd-technologies.webp",
+    "100": "/logos/compact/hkdr-rd-technologies-100.webp"
+  },
+  "/logos/hlusd-hela.png": {
+    "32": "/logos/compact/hlusd-hela.webp",
+    "100": "/logos/compact/hlusd-hela-100.webp"
+  },
+  "/logos/home-homecoin.png": {
+    "32": "/logos/compact/home-homecoin.webp",
+    "100": "/logos/compact/home-homecoin-100.webp"
+  },
+  "/logos/iauon-ondo.png": {
+    "32": "/logos/compact/iauon-ondo.webp",
+    "100": "/logos/compact/iauon-ondo-100.webp"
+  },
+  "/logos/idrx-idrx.png": {
+    "32": "/logos/compact/idrx-idrx.webp",
+    "100": "/logos/compact/idrx-idrx-100.webp"
+  },
+  "/logos/inalpha-nest.png": {
+    "32": "/logos/compact/inalpha-nest.webp",
+    "100": "/logos/compact/inalpha-nest-100.webp"
+  },
+  "/logos/iusd-indigo-protocol.png": {
+    "32": "/logos/compact/iusd-indigo-protocol.webp",
+    "100": "/logos/compact/iusd-indigo-protocol-100.webp"
+  },
+  "/logos/iusd-initia.png": {
+    "32": "/logos/compact/iusd-initia.webp",
+    "100": "/logos/compact/iusd-initia-100.webp"
+  },
+  "/logos/jltxx-jpmorgan.png": {
+    "32": "/logos/compact/jltxx-jpmorgan.webp",
+    "100": "/logos/compact/jltxx-jpmorgan-100.webp"
+  },
+  "/logos/jpyc-jpyc-v1.png": {
+    "32": "/logos/compact/jpyc-jpyc-v1.webp",
+    "100": "/logos/compact/jpyc-jpyc-v1-100.webp"
+  },
+  "/logos/jpydf-deltaforesight.png": {
+    "32": "/logos/compact/jpydf-deltaforesight.webp",
+    "100": "/logos/compact/jpydf-deltaforesight-100.webp"
+  },
+  "/logos/jpym-mento.png": {
+    "32": "/logos/compact/jpym-mento.webp",
+    "100": "/logos/compact/jpym-mento-100.webp"
+  },
+  "/logos/jpysc-sbi-startale.png": {
+    "32": "/logos/compact/jpysc-sbi-startale.webp",
+    "100": "/logos/compact/jpysc-sbi-startale-100.webp"
+  },
+  "/logos/jpyt-dephaser.png": {
+    "32": "/logos/compact/jpyt-dephaser.webp",
+    "100": "/logos/compact/jpyt-dephaser-100.webp"
+  },
+  "/logos/jtrsy-anemoy.png": {
+    "32": "/logos/compact/jtrsy-anemoy.webp",
+    "100": "/logos/compact/jtrsy-anemoy-100.webp"
+  },
+  "/logos/jusd-jusd-stable-token.png": {
+    "32": "/logos/compact/jusd-jusd-stable-token.webp",
+    "100": "/logos/compact/jusd-jusd-stable-token-100.webp"
+  },
+  "/logos/kesm-mento.png": {
+    "32": "/logos/compact/kesm-mento.webp",
+    "100": "/logos/compact/kesm-mento-100.webp"
+  },
+  "/logos/kgst-kyrgyz-som.png": {
+    "32": "/logos/compact/kgst-kyrgyz-som.webp",
+    "100": "/logos/compact/kgst-kyrgyz-som-100.webp"
+  },
+  "/logos/klarnausd-klarna.jpg": {
+    "32": "/logos/compact/klarnausd-klarna.webp",
+    "100": "/logos/compact/klarnausd-klarna-100.webp"
+  },
+  "/logos/kpkusdcprime-kpk.png": {
+    "32": "/logos/compact/kpkusdcprime-kpk.webp",
+    "100": "/logos/compact/kpkusdcprime-kpk-100.webp"
+  },
+  "/logos/kpkusdcyield-kpk.png": {
+    "32": "/logos/compact/kpkusdcyield-kpk.webp",
+    "100": "/logos/compact/kpkusdcyield-kpk-100.webp"
+  },
+  "/logos/krw1-bdacs.png": {
+    "32": "/logos/compact/krw1-bdacs.webp",
+    "100": "/logos/compact/krw1-bdacs-100.webp"
+  },
+  "/logos/krwq-iq.png": {
+    "32": "/logos/compact/krwq-iq.webp",
+    "100": "/logos/compact/krwq-iq-100.webp"
+  },
+  "/logos/kusd-kerne.png": {
+    "32": "/logos/compact/kusd-kerne.webp",
+    "100": "/logos/compact/kusd-kerne-100.webp"
+  },
+  "/logos/luausd-lumi-finance.png": {
+    "32": "/logos/compact/luausd-lumi-finance.webp",
+    "100": "/logos/compact/luausd-lumi-finance-100.webp"
+  },
+  "/logos/lvusd-leverup.png": {
+    "32": "/logos/compact/lvusd-leverup.webp",
+    "100": "/logos/compact/lvusd-leverup-100.webp"
+  },
+  "/logos/mai-qidao.png": {
+    "32": "/logos/compact/mai-qidao.webp",
+    "100": "/logos/compact/mai-qidao-100.webp"
+  },
+  "/logos/mantrausd-mantra.png": {
+    "32": "/logos/compact/mantrausd-mantra.webp",
+    "100": "/logos/compact/mantrausd-mantra-100.webp"
+  },
+  "/logos/money-defi-money.png": {
+    "32": "/logos/compact/money-defi-money.webp",
+    "100": "/logos/compact/money-defi-money-100.webp"
+  },
+  "/logos/moveusd-cfx.png": {
+    "32": "/logos/compact/moveusd-cfx.webp",
+    "100": "/logos/compact/moveusd-cfx-100.webp"
+  },
+  "/logos/msy-main-street.png": {
+    "32": "/logos/compact/msy-main-street.webp",
+    "100": "/logos/compact/msy-main-street-100.webp"
+  },
+  "/logos/mxnb-juno.png": {
+    "32": "/logos/compact/mxnb-juno.webp",
+    "100": "/logos/compact/mxnb-juno-100.webp"
+  },
+  "/logos/mxne-real-mxn.png": {
+    "32": "/logos/compact/mxne-real-mxn.webp",
+    "100": "/logos/compact/mxne-real-mxn-100.webp"
+  },
+  "/logos/myrc-blox.png": {
+    "32": "/logos/compact/myrc-blox.webp",
+    "100": "/logos/compact/myrc-blox-100.webp"
+  },
+  "/logos/nbasis-nest.png": {
+    "32": "/logos/compact/nbasis-nest.webp",
+    "100": "/logos/compact/nbasis-nest-100.webp"
+  },
+  "/logos/net-cloudflare.png": {
+    "32": "/logos/compact/net-cloudflare.webp",
+    "100": "/logos/compact/net-cloudflare-100.webp"
+  },
+  "/logos/nopal-nest.png": {
+    "32": "/logos/compact/nopal-nest.webp",
+    "100": "/logos/compact/nopal-nest-100.webp"
+  },
+  "/logos/ntbill-nest.png": {
+    "32": "/logos/compact/ntbill-nest.webp",
+    "100": "/logos/compact/ntbill-nest-100.webp"
+  },
+  "/logos/nwisdom-nest.png": {
+    "32": "/logos/compact/nwisdom-nest.webp",
+    "100": "/logos/compact/nwisdom-nest-100.webp"
+  },
+  "/logos/nxusd-nereus.png": {
+    "32": "/logos/compact/nxusd-nereus.webp",
+    "100": "/logos/compact/nxusd-nereus-100.webp"
+  },
+  "/logos/okrw-hashed.png": {
+    "32": "/logos/compact/okrw-hashed.webp",
+    "100": "/logos/compact/okrw-hashed-100.webp"
+  },
+  "/logos/oned-gennius.png": {
+    "32": "/logos/compact/oned-gennius.webp",
+    "100": "/logos/compact/oned-gennius-100.webp"
+  },
+  "/logos/ousd-open-standard.png": {
+    "32": "/logos/compact/ousd-open-standard.webp",
+    "100": "/logos/compact/ousd-open-standard-100.webp"
+  },
+  "/logos/phpc-coins-ph.png": {
+    "32": "/logos/compact/phpc-coins-ph.webp",
+    "100": "/logos/compact/phpc-coins-ph-100.webp"
+  },
+  "/logos/pusd-polymarket.png": {
+    "32": "/logos/compact/pusd-polymarket.webp",
+    "100": "/logos/compact/pusd-polymarket-100.webp"
+  },
+  "/logos/pyusdx-moonpay.png": {
+    "32": "/logos/compact/pyusdx-moonpay.webp",
+    "100": "/logos/compact/pyusdx-moonpay-100.webp"
+  },
+  "/logos/qcad-stablecorp.png": {
+    "32": "/logos/compact/qcad-stablecorp.webp",
+    "100": "/logos/compact/qcad-stablecorp-100.webp"
+  },
+  "/logos/rd-rai-dollar.png": {
+    "32": "/logos/compact/rd-rai-dollar.webp",
+    "100": "/logos/compact/rd-rai-dollar-100.webp"
+  },
+  "/logos/reur-royal-euro.png": {
+    "32": "/logos/compact/reur-royal-euro.webp",
+    "100": "/logos/compact/reur-royal-euro-100.webp"
+  },
+  "/logos/roughrider-bnd.png": {
+    "32": "/logos/compact/roughrider-bnd.webp",
+    "100": "/logos/compact/roughrider-bnd-100.webp"
+  },
+  "/logos/rusd-revolut.png": {
+    "32": "/logos/compact/rusd-revolut.webp",
+    "100": "/logos/compact/rusd-revolut-100.webp"
+  },
+  "/logos/rusd-royal-dollar.png": {
+    "32": "/logos/compact/rusd-royal-dollar.webp",
+    "100": "/logos/compact/rusd-royal-dollar-100.webp"
+  },
+  "/logos/said-gaib.png": {
+    "32": "/logos/compact/said-gaib.webp",
+    "100": "/logos/compact/said-gaib-100.webp"
+  },
+  "/logos/sbold-k3-capital.png": {
+    "32": "/logos/compact/sbold-k3-capital.webp",
+    "100": "/logos/compact/sbold-k3-capital-100.webp"
+  },
+  "/logos/scrvusd-curve.png": {
+    "32": "/logos/compact/scrvusd-curve.webp",
+    "100": "/logos/compact/scrvusd-curve-100.webp"
+  },
+  "/logos/sdai-gnosis.png": {
+    "32": "/logos/compact/sdai-gnosis.webp",
+    "100": "/logos/compact/sdai-gnosis-100.webp"
+  },
+  "/logos/sdai-sky.png": {
+    "32": "/logos/compact/sdai-sky.webp",
+    "100": "/logos/compact/sdai-sky-100.webp"
+  },
+  "/logos/sdola-inverse-finance.png": {
+    "32": "/logos/compact/sdola-inverse-finance.webp",
+    "100": "/logos/compact/sdola-inverse-finance-100.webp"
+  },
+  "/logos/sfrax-frax.png": {
+    "32": "/logos/compact/sfrax-frax.webp",
+    "100": "/logos/compact/sfrax-frax-100.webp"
+  },
+  "/logos/sfrxusd-frax.png": {
+    "32": "/logos/compact/sfrxusd-frax.webp",
+    "100": "/logos/compact/sfrxusd-frax-100.webp"
+  },
+  "/logos/sgho-aave.png": {
+    "32": "/logos/compact/sgho-aave.webp",
+    "100": "/logos/compact/sgho-aave-100.webp"
+  },
+  "/logos/silk-shade-protocol.webp": {
+    "32": "/logos/compact/silk-shade-protocol.webp",
+    "100": "/logos/compact/silk-shade-protocol-100.webp"
+  },
+  "/logos/slvon-ondo.png": {
+    "32": "/logos/compact/slvon-ondo.webp",
+    "100": "/logos/compact/slvon-ondo-100.webp"
+  },
+  "/logos/sofid-sofi.png": {
+    "32": "/logos/compact/sofid-sofi.webp",
+    "100": "/logos/compact/sofid-sofi-100.webp"
+  },
+  "/logos/spusd-soulpeg.png": {
+    "32": "/logos/compact/spusd-soulpeg.webp",
+    "100": "/logos/compact/spusd-soulpeg-100.webp"
+  },
+  "/logos/stbt-matrixdock.png": {
+    "32": "/logos/compact/stbt-matrixdock.webp",
+    "100": "/logos/compact/stbt-matrixdock-100.webp"
+  },
+  "/logos/stcusd-cap.png": {
+    "32": "/logos/compact/stcusd-cap.webp",
+    "100": "/logos/compact/stcusd-cap-100.webp"
+  },
+  "/logos/steakcusdc-steakhouse.png": {
+    "32": "/logos/compact/steakcusdc-steakhouse.webp",
+    "100": "/logos/compact/steakcusdc-steakhouse-100.webp"
+  },
+  "/logos/strusd-tori.png": {
+    "32": "/logos/compact/strusd-tori.webp",
+    "100": "/logos/compact/strusd-tori-100.webp"
+  },
+  "/logos/stusd-stoneyield.png": {
+    "32": "/logos/compact/stusd-stoneyield.webp",
+    "100": "/logos/compact/stusd-stoneyield-100.webp"
+  },
+  "/logos/suiusde-sui.png": {
+    "32": "/logos/compact/suiusde-sui.webp",
+    "100": "/logos/compact/suiusde-sui-100.webp"
+  },
+  "/logos/susd-solayer.png": {
+    "32": "/logos/compact/susd-solayer.webp",
+    "100": "/logos/compact/susd-solayer-100.webp"
+  },
+  "/logos/susdai-usd-ai.png": {
+    "32": "/logos/compact/susdai-usd-ai.webp",
+    "100": "/logos/compact/susdai-usd-ai-100.webp"
+  },
+  "/logos/susdc-spark-v1.png": {
+    "32": "/logos/compact/susdc-spark-v1.webp",
+    "100": "/logos/compact/susdc-spark-v1-100.webp"
+  },
+  "/logos/susdc-spark.png": {
+    "32": "/logos/compact/susdc-spark.webp",
+    "100": "/logos/compact/susdc-spark-100.webp"
+  },
+  "/logos/susde-ethena.png": {
+    "32": "/logos/compact/susde-ethena.webp",
+    "100": "/logos/compact/susde-ethena-100.webp"
+  },
+  "/logos/susdf-falcon.png": {
+    "32": "/logos/compact/susdf-falcon.webp",
+    "100": "/logos/compact/susdf-falcon-100.webp"
+  },
+  "/logos/susds-sky.png": {
+    "32": "/logos/compact/susds-sky.webp",
+    "100": "/logos/compact/susds-sky-100.webp"
+  },
+  "/logos/susdt-spark.png": {
+    "32": "/logos/compact/susdt-spark.webp",
+    "100": "/logos/compact/susdt-spark-100.webp"
+  },
+  "/logos/susdx-axis.png": {
+    "32": "/logos/compact/susdx-axis.webp",
+    "100": "/logos/compact/susdx-axis-100.webp"
+  },
+  "/logos/syrupusdg-maple.png": {
+    "32": "/logos/compact/syrupusdg-maple.webp",
+    "100": "/logos/compact/syrupusdg-maple-100.webp"
+  },
+  "/logos/syusd-aegis.png": {
+    "32": "/logos/compact/syusd-aegis.webp",
+    "100": "/logos/compact/syusd-aegis-100.webp"
+  },
+  "/logos/tgld-tenbin.png": {
+    "32": "/logos/compact/tgld-tenbin.webp",
+    "100": "/logos/compact/tgld-tenbin-100.webp"
+  },
+  "/logos/thbill-theo.png": {
+    "32": "/logos/compact/thbill-theo.webp",
+    "100": "/logos/compact/thbill-theo-100.webp"
+  },
+  "/logos/thgold-theo.jpg": {
+    "32": "/logos/compact/thgold-theo.webp",
+    "100": "/logos/compact/thgold-theo-100.webp"
+  },
+  "/logos/thusd-theo.png": {
+    "32": "/logos/compact/thusd-theo.webp",
+    "100": "/logos/compact/thusd-theo-100.webp"
+  },
+  "/logos/trusd-tori.jpg": {
+    "32": "/logos/compact/trusd-tori.webp",
+    "100": "/logos/compact/trusd-tori-100.webp"
+  },
+  "/logos/umint-ubs.png": {
+    "32": "/logos/compact/umint-ubs.webp",
+    "100": "/logos/compact/umint-ubs-100.webp"
+  },
+  "/logos/usbd-bima.png": {
+    "32": "/logos/compact/usbd-bima.webp",
+    "100": "/logos/compact/usbd-bima-100.webp"
+  },
+  "/logos/uscc-superstate.png": {
+    "32": "/logos/compact/uscc-superstate.webp",
+    "100": "/logos/compact/uscc-superstate-100.webp"
+  },
+  "/logos/usd3-3jane.png": {
+    "32": "/logos/compact/usd3-3jane.webp",
+    "100": "/logos/compact/usd3-3jane-100.webp"
+  },
+  "/logos/usd3-reserve-protocol.png": {
+    "32": "/logos/compact/usd3-reserve-protocol.webp",
+    "100": "/logos/compact/usd3-reserve-protocol-100.webp"
+  },
+  "/logos/usda-alpha-partner.jpg": {
+    "32": "/logos/compact/usda-alpha-partner.webp",
+    "100": "/logos/compact/usda-alpha-partner-100.webp"
+  },
+  "/logos/usdat-saturn.png": {
+    "32": "/logos/compact/usdat-saturn.webp",
+    "100": "/logos/compact/usdat-saturn-100.webp"
+  },
+  "/logos/usdcx-movement.png": {
+    "32": "/logos/compact/usdcx-movement.webp",
+    "100": "/logos/compact/usdcx-movement-100.webp"
+  },
+  "/logos/usdf-flipcash.png": {
+    "32": "/logos/compact/usdf-flipcash.webp",
+    "100": "/logos/compact/usdf-flipcash-100.webp"
+  },
+  "/logos/usdfc-secured-finance.png": {
+    "32": "/logos/compact/usdfc-secured-finance.webp",
+    "100": "/logos/compact/usdfc-secured-finance-100.webp"
+  },
+  "/logos/usdfr-forest-road.jpg": {
+    "32": "/logos/compact/usdfr-forest-road.webp",
+    "100": "/logos/compact/usdfr-forest-road-100.webp"
+  },
+  "/logos/usdh-hermetica.png": {
+    "32": "/logos/compact/usdh-hermetica.webp",
+    "100": "/logos/compact/usdh-hermetica-100.webp"
+  },
+  "/logos/usdk-kast.png": {
+    "32": "/logos/compact/usdk-kast.webp",
+    "100": "/logos/compact/usdk-kast-100.webp"
+  },
+  "/logos/usdk-orki.jpg": {
+    "32": "/logos/compact/usdk-orki.webp",
+    "100": "/logos/compact/usdk-orki-100.webp"
+  },
+  "/logos/usdkg-gold-dollar.jpg": {
+    "32": "/logos/compact/usdkg-gold-dollar.webp",
+    "100": "/logos/compact/usdkg-gold-dollar-100.webp"
+  },
+  "/logos/usdm-monetrix.png": {
+    "32": "/logos/compact/usdm-monetrix.webp",
+    "100": "/logos/compact/usdm-monetrix-100.webp"
+  },
+  "/logos/usdon-ondo.png": {
+    "32": "/logos/compact/usdon-ondo.webp",
+    "100": "/logos/compact/usdon-ondo-100.webp"
+  },
+  "/logos/usdpt-western-union.png": {
+    "32": "/logos/compact/usdpt-western-union.webp",
+    "100": "/logos/compact/usdpt-western-union-100.webp"
+  },
+  "/logos/usdq-quill.png": {
+    "32": "/logos/compact/usdq-quill.webp",
+    "100": "/logos/compact/usdq-quill-100.webp"
+  },
+  "/logos/usdr-ring.png": {
+    "32": "/logos/compact/usdr-ring.webp",
+    "100": "/logos/compact/usdr-ring-100.webp"
+  },
+  "/logos/usdrif-rif.webp": {
+    "32": "/logos/compact/usdrif-rif.webp",
+    "100": "/logos/compact/usdrif-rif-100.webp"
+  },
+  "/logos/usdsc-startale.png": {
+    "32": "/logos/compact/usdsc-startale.webp",
+    "100": "/logos/compact/usdsc-startale-100.webp"
+  },
+  "/logos/usdsm-stable-mint.png": {
+    "32": "/logos/compact/usdsm-stable-mint.webp",
+    "100": "/logos/compact/usdsm-stable-mint-100.webp"
+  },
+  "/logos/usdso-somnia.png": {
+    "32": "/logos/compact/usdso-somnia.webp",
+    "100": "/logos/compact/usdso-somnia-100.webp"
+  },
+  "/logos/usdsui-sui.png": {
+    "32": "/logos/compact/usdsui-sui.webp",
+    "100": "/logos/compact/usdsui-sui-100.webp"
+  },
+  "/logos/usdu-universal.png": {
+    "32": "/logos/compact/usdu-universal.webp",
+    "100": "/logos/compact/usdu-universal-100.webp"
+  },
+  "/logos/usdu-usdu-finance.png": {
+    "32": "/logos/compact/usdu-usdu-finance.webp",
+    "100": "/logos/compact/usdu-usdu-finance-100.webp"
+  },
+  "/logos/usdvb-versabank.png": {
+    "32": "/logos/compact/usdvb-versabank.webp",
+    "100": "/logos/compact/usdvb-versabank-100.webp"
+  },
+  "/logos/usdx-axis.png": {
+    "32": "/logos/compact/usdx-axis.webp",
+    "100": "/logos/compact/usdx-axis-100.webp"
+  },
+  "/logos/usdx-kava.png": {
+    "32": "/logos/compact/usdx-kava.webp",
+    "100": "/logos/compact/usdx-kava-100.webp"
+  },
+  "/logos/ussd-sonic-labs.jpg": {
+    "32": "/logos/compact/ussd-sonic-labs.webp",
+    "100": "/logos/compact/ussd-sonic-labs-100.webp"
+  },
+  "/logos/ustbl-spiko.png": {
+    "32": "/logos/compact/ustbl-spiko.webp",
+    "100": "/logos/compact/ustbl-spiko-100.webp"
+  },
+  "/logos/usx-dforce.png": {
+    "32": "/logos/compact/usx-dforce.webp",
+    "100": "/logos/compact/usx-dforce-100.webp"
+  },
+  "/logos/uusd-anything-labs.png": {
+    "32": "/logos/compact/uusd-anything-labs.webp",
+    "100": "/logos/compact/uusd-anything-labs-100.webp"
+  },
+  "/logos/vbill-vaneck.png": {
+    "32": "/logos/compact/vbill-vaneck.webp",
+    "100": "/logos/compact/vbill-vaneck-100.webp"
+  },
+  "/logos/vcred-vcred.jpg": {
+    "32": "/logos/compact/vcred-vcred.webp",
+    "100": "/logos/compact/vcred-vcred-100.webp"
+  },
+  "/logos/vndc-jade-labs.png": {
+    "32": "/logos/compact/vndc-jade-labs.webp",
+    "100": "/logos/compact/vndc-jade-labs-100.webp"
+  },
+  "/logos/vusd-virtue.png": {
+    "32": "/logos/compact/vusd-virtue.webp",
+    "100": "/logos/compact/vusd-virtue-100.webp"
+  },
+  "/logos/wars-argentine-peso.png": {
+    "32": "/logos/compact/wars-argentine-peso.webp",
+    "100": "/logos/compact/wars-argentine-peso-100.webp"
+  },
+  "/logos/wbrl-ripio.png": {
+    "32": "/logos/compact/wbrl-ripio.webp",
+    "100": "/logos/compact/wbrl-ripio-100.webp"
+  },
+  "/logos/wclp-ripio.png": {
+    "32": "/logos/compact/wclp-ripio.webp",
+    "100": "/logos/compact/wclp-ripio-100.webp"
+  },
+  "/logos/wcop-ripio.png": {
+    "32": "/logos/compact/wcop-ripio.webp",
+    "100": "/logos/compact/wcop-ripio-100.webp"
+  },
+  "/logos/wemix-dollar-wemix.png": {
+    "32": "/logos/compact/wemix-dollar-wemix.webp",
+    "100": "/logos/compact/wemix-dollar-wemix-100.webp"
+  },
+  "/logos/wm-m0.jpg": {
+    "32": "/logos/compact/wm-m0.webp",
+    "100": "/logos/compact/wm-m0-100.webp"
+  },
+  "/logos/wmxn-ripio.png": {
+    "32": "/logos/compact/wmxn-ripio.webp",
+    "100": "/logos/compact/wmxn-ripio-100.webp"
+  },
+  "/logos/wpen-ripio.png": {
+    "32": "/logos/compact/wpen-ripio.webp",
+    "100": "/logos/compact/wpen-ripio-100.webp"
+  },
+  "/logos/wtgxx-wisdomtree.png": {
+    "32": "/logos/compact/wtgxx-wisdomtree.webp",
+    "100": "/logos/compact/wtgxx-wisdomtree-100.webp"
+  },
+  "/logos/xaut-tether.png": {
+    "32": "/logos/compact/xaut-tether.webp",
+    "100": "/logos/compact/xaut-tether-100.webp"
+  },
+  "/logos/xdai-gnosis.png": {
+    "32": "/logos/compact/xdai-gnosis.webp",
+    "100": "/logos/compact/xdai-gnosis-100.webp"
+  },
+  "/logos/xgld-unitas.png": {
+    "32": "/logos/compact/xgld-unitas.webp",
+    "100": "/logos/compact/xgld-unitas-100.webp"
+  },
+  "/logos/xgz-goldzip.png": {
+    "32": "/logos/compact/xgz-goldzip.webp",
+    "100": "/logos/compact/xgz-goldzip-100.webp"
+  },
+  "/logos/xmd-metal-dollar.png": {
+    "32": "/logos/compact/xmd-metal-dollar.webp",
+    "100": "/logos/compact/xmd-metal-dollar-100.webp"
+  },
+  "/logos/xo-exodus.png": {
+    "32": "/logos/compact/xo-exodus.webp",
+    "100": "/logos/compact/xo-exodus-100.webp"
+  },
+  "/logos/xtusd-xt.png": {
+    "32": "/logos/compact/xtusd-xt.webp",
+    "100": "/logos/compact/xtusd-xt-100.webp"
+  },
+  "/logos/ybold-yearn.png": {
+    "32": "/logos/compact/ybold-yearn.webp",
+    "100": "/logos/compact/ybold-yearn-100.webp"
+  },
+  "/logos/yusd-yieldfi.png": {
+    "32": "/logos/compact/yusd-yieldfi.webp",
+    "100": "/logos/compact/yusd-yieldfi-100.webp"
+  },
+  "/logos/yvusdc-yearn.png": {
+    "32": "/logos/compact/yvusdc-yearn.webp",
+    "100": "/logos/compact/yvusdc-yearn-100.webp"
+  },
+  "/logos/zarm-mento.png": {
+    "32": "/logos/compact/zarm-mento.webp",
+    "100": "/logos/compact/zarm-mento-100.webp"
+  },
+  "/logos/zarsc-supercoin.png": {
+    "32": "/logos/compact/zarsc-supercoin.webp",
+    "100": "/logos/compact/zarsc-supercoin-100.webp"
+  },
+  "/logos/zaru-blocktower.png": {
+    "32": "/logos/compact/zaru-blocktower.webp",
+    "100": "/logos/compact/zaru-blocktower-100.webp"
+  },
+  "/logos/zkusd-goal3.png": {
+    "32": "/logos/compact/zkusd-goal3.webp",
+    "100": "/logos/compact/zkusd-goal3-100.webp"
+  },
+  "/logos/zsd-zephyr-protocol.png": {
+    "32": "/logos/compact/zsd-zephyr-protocol.webp",
+    "100": "/logos/compact/zsd-zephyr-protocol-100.webp"
+  }
 }

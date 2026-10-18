@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { ShortcutsSection } from "@/components/shortcuts-section";
 import { LazySection } from "@/components/lazy-section";
@@ -188,6 +187,23 @@ function StatusStripFallback(): React.JSX.Element {
   );
 }
 
+function HorizonFallback(): React.JSX.Element {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-7 w-44" />
+      <Skeleton className="h-28 w-full lg:h-52" />
+    </div>
+  );
+}
+
+const HomeAltUpcomingHorizonConstellation = dynamic(
+  () => import("@/components/home-alt-upcoming-horizon-constellation").then((mod) => mod.HomeAltUpcomingHorizonConstellation),
+  {
+    ssr: false,
+    loading: HorizonFallback,
+  },
+);
+
 const HomeAltDdrOverview = dynamic(
   () => import("@/components/home-alt-ddr-overview").then((mod) => mod.HomeAltDdrOverview),
   {
@@ -212,24 +228,52 @@ const HomeAltStatusTelegram = dynamic(
   },
 );
 
-/**
- * M14 — force-mount below-fold panels when the URL carries an anchor so the
- * browser can resolve the scroll target. Hash changes during the session
- * don't matter; the lazy gate has long since unmounted by then.
- */
+// Include headings that exist only after their deferred chunk mounts.
+const HASH_TARGET_SECTIONS: Readonly<Record<string, string>> = {
+  "home-alt-rankings": "rankings",
+  "home-alt-rankings-title": "rankings",
+  "upcoming-horizon-constellation-title": "horizon",
+  "ddr-overview-title": "ddr",
+  "yield-overview-title": "yield",
+  "home-alt-status-telegram-title": "status",
+};
+
+/** Resolve an initial anchor after hydration without activating unrelated data. */
 function useHashTargetForceMount() {
-  const [forced, setForced] = useState(false);
+  const [target, setTarget] = useState<{ id: string; section: string } | null>(null);
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.location.hash && window.location.hash !== "#") {
-      // One-shot setState that runs only when the URL arrives with a hash.
-      // The empty dep array guarantees it never re-fires, so the cascade
-      // lint rule is a false positive here.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForced(true);
+    let id: string;
+    try {
+      id = decodeURIComponent(window.location.hash.slice(1));
+    } catch {
+      return;
     }
+    const section = Object.hasOwn(HASH_TARGET_SECTIONS, id) ? HASH_TARGET_SECTIONS[id] : undefined;
+    if (!section) return;
+    // The initial hash is browser-only; preserve server/first-client markup.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTarget({ id, section });
   }, []);
-  return forced;
+
+  useEffect(() => {
+    if (!target) return;
+    const scrollToTarget = () => {
+      const element = document.getElementById(target.id);
+      if (!element) return false;
+      element.scrollIntoView({ block: "start" });
+      return true;
+    };
+    if (scrollToTarget()) return;
+    // A heading inside a dynamic section may arrive after this effect. Wait
+    // for that actual target, not a timer or every other section's payload.
+    const observer = new MutationObserver(() => {
+      if (scrollToTarget()) observer.disconnect();
+    });
+    const root = document.getElementById("data");
+    if (root) observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [target]);
+  return target?.section;
 }
 
 // Reserves are the measured rendered heights (390 base / 1440 `lg:`), as static
@@ -248,21 +292,20 @@ function BelowFold({
   placeholder?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  if (forced) return <>{children}</>;
   return (
-    <LazySection className={reserveClassName} rootMargin={rootMargin} placeholder={placeholder}>
+    <LazySection className={reserveClassName} rootMargin={rootMargin} forceMount={forced} placeholder={placeholder}>
       {children}
     </LazySection>
   );
 }
 
 export function HomeAltClient() {
-  const hashTargetForcesMount = useHashTargetForceMount();
+  const hashTargetSection = useHashTargetForceMount();
 
   return (
     <div id="data" tabIndex={-1}>
       <div className="space-y-3">
-        <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[1396px] lg:min-h-[594px]" rootMargin="0px">
+        <BelowFold forced={false} reserveClassName="min-h-[1396px] lg:min-h-[594px]" rootMargin="0px">
           <HomeAltMiniCardGrid />
         </BelowFold>
       </div>
@@ -281,7 +324,7 @@ export function HomeAltClient() {
         className="mt-5 space-y-4 sm:mt-6"
       >
         <BelowFold
-          forced={hashTargetForcesMount}
+          forced={hashTargetSection === "rankings"}
           reserveClassName="min-h-[1230px] lg:min-h-[1015px]"
           rootMargin="0px"
           placeholder={<RankingsSectionFallback />}
@@ -290,13 +333,13 @@ export function HomeAltClient() {
         </BelowFold>
       </section>
 
-      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[212px] lg:min-h-[335px]">
+      <BelowFold forced={hashTargetSection === "horizon"} reserveClassName="min-h-[212px] lg:min-h-[335px]">
         <div className="mt-8 sm:mt-10">
           <HomeAltUpcomingHorizonConstellation />
         </div>
       </BelowFold>
 
-      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[1340px] lg:min-h-[626px]">
+      <BelowFold forced={hashTargetSection === "ddr"} reserveClassName="min-h-[1340px] lg:min-h-[626px]">
         <div className="mt-8 sm:mt-10">
           <SectionErrorBoundary name="depeg forecasting overview">
             <HomeAltDdrOverview />
@@ -304,7 +347,7 @@ export function HomeAltClient() {
         </div>
       </BelowFold>
 
-      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[564px] lg:min-h-[489px]">
+      <BelowFold forced={hashTargetSection === "yield"} reserveClassName="min-h-[564px] lg:min-h-[489px]">
         <div className="mt-8 sm:mt-10">
           <SectionErrorBoundary name="yield intelligence overview">
             <HomeAltYieldOverview />
@@ -312,7 +355,7 @@ export function HomeAltClient() {
         </div>
       </BelowFold>
 
-      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[83px] lg:min-h-[53px]">
+      <BelowFold forced={hashTargetSection === "status"} reserveClassName="min-h-[83px] lg:min-h-[53px]">
         <div className="mt-8 sm:mt-10">
           <SectionErrorBoundary name="status and telegram overview">
             <HomeAltStatusTelegram />

@@ -119,7 +119,7 @@ function MarketDataSectionBody({
   }, [range, setBrushedRange]);
 
   return (
-    <section id="chart" aria-label="Market data charts" className={DETAIL_MODULE_SHELL_CLASS}>
+    <section aria-label="Market data charts" className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market data</StablecoinModuleTitle>
         <div className="flex flex-wrap items-center gap-2">

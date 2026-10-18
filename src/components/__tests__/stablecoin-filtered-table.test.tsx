@@ -7,7 +7,7 @@ import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 const mocks = vi.hoisted(() => ({ stablecoins: vi.fn(), peg: vi.fn(), liquidity: vi.fn(), ratings: vi.fn() }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: mocks.stablecoins }));
-vi.mock("@/hooks/api-hooks", () => ({ usePegSummary: mocks.peg, useDexLiquidity: mocks.liquidity, useReportCardsV9: mocks.ratings }));
+vi.mock("@/hooks/api-hooks", () => ({ usePegSummary: mocks.peg, useDexLiquidityTable: mocks.liquidity, useReportCardsV9Table: mocks.ratings }));
 vi.mock("@/lib/logos", () => ({ logosById: {} }));
 vi.mock("@/lib/stablecoin-table-inputs", () => ({
   buildStablecoinTableInputs: ({ pegSummaryCoins, reportCardsV9 }: { pegSummaryCoins: unknown; reportCardsV9: { cards: unknown } }) => ({

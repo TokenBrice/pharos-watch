@@ -133,3 +133,75 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+
+  lighthouse:
+    name: Static-export Lighthouse baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-history: "true"
+      - name: Build offline artifact and record both Lighthouse routes
+        run: node --import tsx --input-type=module -e "import { runPagesArtifactLane } from './scripts/ci/run-pages-artifact-lane.ts'; await runPagesArtifactLane({ acquireReleaseData:false });"
+        env:
+          # Advisory for two weeks; ratchet from measured p50 before enabling.
+          PHAROS_LIGHTHOUSE_THRESHOLD: "70"
+          PHAROS_LIGHTHOUSE_ENFORCE: "0"
+      - name: Retain Lighthouse reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lighthouse-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/lighthouse/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+  web-vitals:
+    name: Weekly GA4 Web Vitals
+    if: ${{ vars.GA4_PROPERTY_ID != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+      - name: Select weekly window
+        id: window
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [[ "$(date -u +%u)" == "1" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "selected=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Analyze last seven complete days
+        if: ${{ steps.window.outputs.selected == 'true' }}
+        env:
+          GA4_PROPERTY_ID: ${{ vars.GA4_PROPERTY_ID }}
+          GA4_ACCESS_TOKEN: ${{ secrets.GA4_ACCESS_TOKEN }}
+          GA4_SERVICE_ACCOUNT_JSON: ${{ secrets.GA4_SERVICE_ACCOUNT_JSON }}
+        run: |
+          umask 077
+          if [[ -n "$GA4_SERVICE_ACCOUNT_JSON" ]]; then
+            printf '%s' "$GA4_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/ga4-service-account.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/ga4-service-account.json"
+          fi
+          npm run analyze:web-vitals -- --days 7 --out .tmp/web-vitals.json
+      - name: Remove temporary GA credentials
+        if: ${{ always() }}
+        run: rm -f "$RUNNER_TEMP/ga4-service-account.json"
+      - name: Retain aggregate RUM report
+        if: ${{ always() && steps.window.outputs.selected == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-vitals-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/web-vitals.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30

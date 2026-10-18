@@ -13,6 +13,7 @@ export interface SafetyMapContext {
 export const SAFETY_MAP_KEY_PREFIX = "safety-map:";
 export const SAFETY_MAP_MANIFEST_KEY = `${SAFETY_MAP_KEY_PREFIX}latest.json`;
 export const SAFETY_MAP_LATEST_KEY = `${SAFETY_MAP_KEY_PREFIX}latest.png`;
+export const SAFETY_MAP_TEASER_KEY = `${SAFETY_MAP_KEY_PREFIX}latest.webp`;
 export const SAFETY_MAP_ARCHIVE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const SAFETY_MAP_MANIFEST_MAX_BYTES = 16_384;
 

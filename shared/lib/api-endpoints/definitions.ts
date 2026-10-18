@@ -345,6 +345,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
   }),
   publicGet({
+    key: "stablecoin-live-summary",
+    path: "/api/stablecoin-live-summary/:id",
+    routeDependencies: ["coingeckoApiKey"],
+    publicApiAccess: "site-only",
+    strictContract: true,
+  }),
+  publicGet({
     key: "stablecoin-detail-snapshot-inputs",
     path: "/api/stablecoin-detail-snapshot-inputs",
     siteDataAccess: "denied",
@@ -370,6 +377,18 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.stablecoinCharts(),
     cacheKeyIgnoresQuery: true,
     probeGroup: "public",
+  }),
+  publicGet({
+    key: "homepage-snapshot",
+    path: API_PATHS.homepageSnapshot(),
+    publicApiAccess: "site-only",
+    strictContract: true,
+  }),
+  publicGet({
+    key: "homepage-history",
+    path: API_PATHS.homepageHistory(),
+    publicApiAccess: "site-only",
+    strictContract: true,
   }),
   publicGet({
     key: "peg-summary",
@@ -436,10 +455,29 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   }),
   publicGet({
+    key: "dex-liquidity-coin",
+    path: API_PATHS.dexLiquidityCoin(),
+    publicApiAccess: "site-only",
+    strictContract: true,
+  }),
+  publicGet({
+    key: "dex-liquidity-table",
+    path: API_PATHS.dexLiquidityTable(),
+    publicApiAccess: "site-only",
+    cacheKeyIgnoresQuery: true,
+    strictContract: true,
+  }),
+  publicGet({
     key: "dex-liquidity-history",
     path: API_PATHS.dexLiquidityHistoryBase(),
     probeGroup: "public",
     probePath: API_PATHS.dexLiquidityHistoryProbe("usdt-tether"),
+  }),
+  publicGet({
+    key: "dex-liquidity-chart-history",
+    path: API_PATHS.dexLiquidityChartHistoryBase(),
+    publicApiAccess: "site-only",
+    strictContract: true,
   }),
   publicGet({
     key: "supply-history",
@@ -458,6 +496,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.digestArchive(),
     cacheKeyIgnoresQuery: true,
     probeGroup: "public",
+  }),
+  publicGet({
+    key: "digest-promo",
+    path: API_PATHS.digestPromo(),
+    publicApiAccess: "site-only",
+    cacheKeyIgnoresQuery: true,
+    strictContract: true,
   }),
   publicGet({
     key: "digest-snapshot",
@@ -485,6 +530,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     key: "yield-rankings",
     path: API_PATHS.yieldRankings(),
     probeGroup: "public",
+  }),
+  publicGet({
+    key: "yield-rankings-coin",
+    path: API_PATHS.yieldRankingsCoin(),
+    publicApiAccess: "site-only",
+    strictContract: true,
   }),
   publicGet({
     key: "yield-adapter-manifest",
@@ -523,6 +574,20 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheBypass: true,
     strictContract: true,
     probeGroup: "public",
+  }),
+  publicGet({
+    key: "report-cards-v9-table",
+    path: API_PATHS.reportCardsV9Table(),
+    publicApiAccess: "site-only",
+    cacheBypass: true,
+    strictContract: true,
+  }),
+  publicGet({
+    key: "report-cards-v9-detail",
+    path: API_PATHS.reportCardsV9Detail(),
+    publicApiAccess: "site-only",
+    cacheBypass: true,
+    strictContract: true,
   }),
   // Free lane: grade-only projection of the V9 publication, no X-API-Key.
   publicGet({
@@ -570,6 +635,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
+  }),
+  publicGet({
+    key: "redemption-backstop-coin",
+    path: API_PATHS.redemptionBackstopCoin(),
+    publicApiAccess: "site-only",
+    strictContract: true,
   }),
   publicGet({
     key: "mint-burn-flows",

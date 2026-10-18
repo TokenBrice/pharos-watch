@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
@@ -117,12 +117,12 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
       </div>
       </ModuleDisclosure>
       <div className="mt-3 flex justify-end">
-        <Link
+        <IntentLink
           href={`/freezewatch/?stablecoin=${symbol}`}
           className="text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           See all events →
-        </Link>
+        </IntentLink>
       </div>
     </>
   );

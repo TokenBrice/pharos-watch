@@ -13,6 +13,7 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { buildDirectHubExposures, v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@shared/lib/dependency-exposure";
 import { deterministicHash } from "@/lib/layout-utils";
+import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,10 +96,6 @@ export type GraphNodeLimit = number | typeof ALL_NODE_LIMIT;
 // 200 NODE_LIMIT_OPTIONS value) so the 50/100/200 selections are unaffected and only
 // the ALL view is capped; the long tail keeps its d3-force forceCollide positions.
 export const MAX_COLLISION_PASS_NODES = 200;
-// Opening view for the full map. 200 is the largest fixed option and stays inside
-// MAX_COLLISION_PASS_NODES, so the default costs no more layout work than the
-// deepest bounded selection a user can pick.
-export const DEFAULT_NODE_LIMIT: NodeLimitOption = 200;
 export const MIN_RADIUS = 10;
 const MAX_RADIUS = 34;
 export const RING_WIDTH = 3;

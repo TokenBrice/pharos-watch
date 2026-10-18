@@ -253,7 +253,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
   },
   {
     label: "API page",
-    route: "/api/",
+    route: "/api/reference/",
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
       { type: "DataCatalog", requiredPaths: ["name", "url", "dataset.0.@id"] },

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { BadgeCheck, Rocket } from "lucide-react";
 import type { Infrastructure, StablecoinData, StablecoinMeta } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
@@ -42,9 +42,9 @@ function HeroCompactChip({ href, children }: { href?: string | null; children: R
     "pharos-focus-ring inline-flex h-5 items-center rounded-full bg-muted/70 px-2.5 text-xs font-medium leading-none text-foreground/80 transition-colors hover:bg-muted";
   if (!href) return <span className={className}>{children}</span>;
   return (
-    <Link href={href} className={className}>
+    <IntentLink href={href} className={className}>
       {children}
-    </Link>
+    </IntentLink>
   );
 }
 
@@ -61,31 +61,37 @@ export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
   const governanceLabel = HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance];
 
   return (
-    <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/40 px-4 py-2 sm:px-5">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {showVerdict ? (
-          <span
-            id={`hero-verdict-${coin.id}`}
-            data-archetype={verdict.archetype}
-            className="inline-flex h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-none text-state-info-bright"
-          >
-            <BadgeCheck aria-hidden="true" className="h-3 w-3" />
-            {verdict.label}
+    <div className="flex flex-col gap-2 border-b border-border/40 px-4 py-2 sm:px-5">
+      {isHeroVerdictEnabled() ? (
+        <div className="flex min-h-5 items-center" data-hero-verdict-lane>
+          {showVerdict ? (
+            <span
+              id={`hero-verdict-${coin.id}`}
+              data-archetype={verdict.archetype}
+              className="inline-flex min-h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-snug text-state-info-bright"
+            >
+              <BadgeCheck aria-hidden="true" className="h-3 w-3 shrink-0" />
+              {verdict.label}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>{pegLabel}</HeroCompactChip>
+          <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>{backingLabel}</HeroCompactChip>
+          <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>{governanceLabel}</HeroCompactChip>
+          {(coin.infrastructures ?? []).map((value) => (
+            <InfrastructureBadge key={value} value={value} />
+          ))}
+        </div>
+        {launchDate ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Rocket aria-hidden="true" className="h-3.5 w-3.5" />
+            {launchDate}
           </span>
         ) : null}
-        <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>{pegLabel}</HeroCompactChip>
-        <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>{backingLabel}</HeroCompactChip>
-        <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>{governanceLabel}</HeroCompactChip>
-        {(coin.infrastructures ?? []).map((value) => (
-          <InfrastructureBadge key={value} value={value} />
-        ))}
       </div>
-      {launchDate ? (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground lg:-my-2 lg:-mr-5 lg:h-10 lg:border-l lg:border-border/40 lg:px-4">
-          <Rocket aria-hidden="true" className="h-3.5 w-3.5" />
-          {launchDate}
-        </span>
-      ) : null}
     </div>
   );
 }

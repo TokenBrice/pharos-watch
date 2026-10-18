@@ -48,7 +48,7 @@ Start with:
 
 - [About Pharos](https://pharos.watch/about/)
 - [Methodology](https://pharos.watch/methodology/)
-- [API reference](https://pharos.watch/api/#reference)
+- [API reference](https://pharos.watch/api/reference/)
 - [Documentation index](./docs/README.md)
 
 ## Repository Map

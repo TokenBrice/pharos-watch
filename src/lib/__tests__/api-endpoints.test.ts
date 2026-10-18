@@ -22,7 +22,7 @@ import {
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
-import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/maintenance/smoke-api.mjs";
+import { ENDPOINT_ASSERTIONS, assertPathCoverage, resolveContractSmokePaths } from "../../../scripts/maintenance/smoke-api.mjs";
 
 describe("api endpoint registry", () => {
   it("publishes runnable probes in the correct security groups", () => {
@@ -147,7 +147,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(9);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(10);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",
@@ -158,6 +158,18 @@ describe("api endpoint registry", () => {
       requestAttribution: {
         routeKey: "stablecoin-detail",
         routePath: "/api/stablecoin/:id",
+      },
+    });
+    expect(findDynamicEndpointDescriptor("/api/stablecoin-live-summary/usdt-tether")).toMatchObject({
+      key: "stablecoin-live-summary",
+      methods: ["GET"],
+      publicApiAccess: "site-only",
+      siteDataAccess: "allowed",
+      adminRequired: false,
+      routeDependencies: ["coingeckoApiKey"],
+      requestAttribution: {
+        routeKey: "stablecoin-live-summary",
+        routePath: "/api/stablecoin-live-summary/:id",
       },
     });
     expect(findDynamicEndpointDescriptor("/api/stablecoin-summary/usdc-circle")).toMatchObject({
@@ -190,6 +202,8 @@ describe("api endpoint registry", () => {
     });
     expect(getPublicApiAccess("/api/stablecoin/usdt-tether")).toBe("protected");
     expect(getSiteDataAccess("/api/stablecoin/usdt-tether")).toBe("allowed");
+    expect(getPublicApiAccess("/api/stablecoin-live-summary/usdt-tether")).toBe("site-only");
+    expect(getSiteDataAccess("/api/stablecoin-live-summary/usdt-tether")).toBe("allowed");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
     expect(getSiteDataAccess("/api/og/stablecoin/usdt-tether")).toBe("denied");
     expect(getPublicApiAccess("/api/api-keys/0/update")).toBeNull();
@@ -326,8 +340,25 @@ describe("api endpoint registry", () => {
     expect(new Set(STRICT_CONTRACT_PATHS_LIST).size).toBe(STRICT_CONTRACT_PATHS_LIST.length);
   });
 
-  it("keeps smoke endpoint assertions aligned with strict contract paths", () => {
-    expect(() => assertPathCoverage(STRICT_CONTRACT_PATHS_LIST, ENDPOINT_ASSERTIONS)).not.toThrow();
+  it("keeps public smoke assertions aligned with externally reachable strict paths", () => {
+    const publicStrictPaths = ENDPOINT_DEFINITIONS
+      .filter((endpoint) => endpoint.strictContract && endpoint.publicApiAccess !== "site-only")
+      .map((endpoint) => endpoint.path);
+    expect(resolveContractSmokePaths("full")).toEqual(publicStrictPaths);
+    expect(() => assertPathCoverage(publicStrictPaths, ENDPOINT_ASSERTIONS)).not.toThrow();
+  });
+
+  it("retains strict site-only router contracts without adding public smoke requests", () => {
+    const siteOnlyStrictPaths = ENDPOINT_DEFINITIONS
+      .filter((endpoint) => endpoint.strictContract && endpoint.publicApiAccess === "site-only")
+      .map((endpoint) => endpoint.path);
+    expect(siteOnlyStrictPaths.length).toBeGreaterThan(0);
+    for (const path of siteOnlyStrictPaths) {
+      expect(STRICT_CONTRACT_PATHS_LIST).toContain(path);
+      expect(resolveContractSmokePaths("full")).not.toContain(path);
+      expect(resolveContractSmokePaths("canary")).not.toContain(path);
+      expect(Object.keys(ENDPOINT_ASSERTIONS)).not.toContain(path);
+    }
   });
 
   it("keeps dynamic descriptor access and dependency fields aligned with static definitions", () => {

@@ -1,5 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
+import { withPublicApiAcceptMarker } from "@/lib/api-request-policy";
 import { isRecord } from "@shared/lib/type-guards";
 import {
   ApiDependencyMetaSchema,
@@ -17,8 +17,9 @@ import {
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
 } from "@/lib/api-query-descriptors";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
-import { formatSchemaLikeIssues, type SchemaLike } from "@shared/lib/schema-like";
+import { formatSchemaLikeIssues, resolveSchemaLike, type SchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
 import { requestResponse } from "@/lib/request";
+import { claimDataBootstrap } from "@/lib/data-bootstrap";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
@@ -35,6 +36,17 @@ export interface StablecoinDetailSnapshot {
     supplyHistory?: SupplyHistoryPoint[];
   };
 }
+const detailSnapshotReads = new WeakMap<object, { dataUpdateCount: number; errorUpdateCount: number }>();
+
+/** A real success/error settles a seed permanently, including across route remounts. */
+export function isDetailSnapshotQuery(queryClient: QueryClient, queryKey: readonly unknown[]): boolean {
+  const state = queryClient.getQueryState<object>(queryKey);
+  const seeded = state?.data && detailSnapshotReads.get(state.data);
+  return Boolean(state && seeded
+    && state.dataUpdateCount === seeded.dataUpdateCount
+    && state.errorUpdateCount === seeded.errorUpdateCount);
+}
+
 
 /** Seed only coin-scoped detail queries without resetting their producer clocks. */
 export function seedStablecoinDetailQueryCache(
@@ -48,11 +60,18 @@ export function seedStablecoinDetailQueryCache(
       : 0;
     const existingState = queryClient.getQueryState<{ data: T; meta: ApiMeta | null }>(queryKey);
     const existingUpdatedAt = existingState?.data?.meta?.updatedAt;
-    if (existingUpdatedAt != null && existingUpdatedAt * 1000 > updatedAt) return;
+    if (existingUpdatedAt != null && existingUpdatedAt * 1000 >= updatedAt) return;
     const meta: ApiMeta = updatedAt > 0
       ? { updatedAt: updatedAt / 1000, ageSeconds: Math.max(0, (Date.now() - updatedAt) / 1000), status: "fresh" }
       : { updatedAt: null, ageSeconds: null, status: "unknown", reason: "snapshot-producer-timestamp-unavailable" };
-    queryClient.setQueryData(queryKey, { data, meta }, { updatedAt });
+    const envelope = queryClient.setQueryData(queryKey, { data, meta }, { updatedAt });
+    const state = queryClient.getQueryState(queryKey);
+    if (envelope && state) {
+      detailSnapshotReads.set(envelope, {
+        dataUpdateCount: state.dataUpdateCount,
+        errorUpdateCount: state.errorUpdateCount,
+      });
+    }
   };
 
   if (snapshot.lanes.liveSummary) {
@@ -77,27 +96,10 @@ export function seedStablecoinDetailQueryCache(
 
 export type ApiContractMode = "strict" | "warn";
 
-function withPublicApiAcceptMarker(path: string, init?: RequestInit): RequestInit | undefined {
-  if (typeof window === "undefined") return init;
-  if (!path.startsWith("/api/") || path.startsWith("/api/admin/")) return init;
-
-  const headers = new Headers(init?.headers);
-  const accept = headers.get("Accept");
-  if (!accept) {
-    headers.set("Accept", `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`);
-  } else if (!accept.toLowerCase().includes(PHAROS_WEB_ACCEPT_MARKER)) {
-    headers.set("Accept", `${accept}, ${PHAROS_WEB_ACCEPT_MARKER}`);
-  }
-
-  return {
-    ...init,
-    headers,
-  };
-}
-
 export interface ApiRequestOptions {
   signal?: AbortSignal;
   timeoutMs?: number | null;
+  bootstrapQueryKey?: readonly unknown[];
 }
 
 function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): number {
@@ -241,6 +243,38 @@ function validateApiPayload<T>(path: string, data: unknown, schema?: SchemaLike<
   return data as T;
 }
 
+/** Both parser-started and ordinary reads enter the same JSON/error/meta pipeline. */
+async function readApiJson(
+  path: string,
+  init?: RequestInit,
+  options?: ApiRequestOptions,
+  nullOn404?: boolean,
+): Promise<{ res: Pick<Response, "headers">; json: unknown } | null> {
+  const requestInit = withPublicApiAcceptMarker(path, init);
+  const adopted = options?.timeoutMs === undefined
+    ? claimDataBootstrap(options?.bootstrapQueryKey, buildRequestUrl(path, requestInit), {
+        ...requestInit,
+        signal: options?.signal ?? requestInit?.signal,
+      })
+    : undefined;
+  if (adopted) {
+    const body = await adopted;
+    if (body.status < 200 || body.status >= 300) {
+      if (nullOn404 && body.status === 404) return null;
+      throw new ApiFetchError(path, body.status, body.bodyText);
+    }
+    return { res: { headers: new Headers(body.headers) }, json: JSON.parse(body.bodyText ?? "") as unknown };
+  }
+  return apiRequest(path, async (res) => {
+    if (!res.ok) {
+      if (nullOn404 && res.status === 404) return null;
+      throw await buildFetchError(path, res);
+    }
+    const json: unknown = await res.json();
+    return { res, json };
+  }, init, options);
+}
+
 // --- Standard fetch (no meta) ---
 
 export interface ApiFetchOptions extends ApiRequestOptions {
@@ -253,14 +287,14 @@ export interface ApiFetchOptions extends ApiRequestOptions {
  *  graceful degradation that returns data as-is after logging. */
 export async function apiFetch<T>(
   path: string,
-  schema?: SchemaLike<T>,
+  schema?: SchemaLikeSource<T>,
   init?: RequestInit,
   contractMode?: ApiContractMode,
 ): Promise<T>;
 /** Overload: passing `{ nullOn404: true }` makes the return type `T | null`. */
 export async function apiFetch<T>(
   path: string,
-  schema: SchemaLike<T> | undefined,
+  schema: SchemaLikeSource<T> | undefined,
   init: RequestInit | undefined,
   contractMode: ApiContractMode | undefined,
   options: ApiFetchOptions & { nullOn404: true },
@@ -268,27 +302,25 @@ export async function apiFetch<T>(
 /** Overload: request options without `nullOn404` preserve the non-null return type. */
 export async function apiFetch<T>(
   path: string,
-  schema: SchemaLike<T> | undefined,
+  schema: SchemaLikeSource<T> | undefined,
   init: RequestInit | undefined,
   contractMode: ApiContractMode | undefined,
   options: ApiFetchOptions & { nullOn404?: false },
 ): Promise<T>;
 export async function apiFetch<T>(
   path: string,
-  schema?: SchemaLike<T>,
+  schema?: SchemaLikeSource<T>,
   init?: RequestInit,
   contractMode?: ApiContractMode,
   options?: ApiFetchOptions,
 ): Promise<T | null> {
-  return apiRequest(path, async (res) => {
-    if (!res.ok) {
-      if (options?.nullOn404 && res.status === 404) return null;
-      throw await buildFetchError(path, res);
-    }
-
-    const data: unknown = await res.json();
-    return validateApiPayload(path, data, schema, contractMode);
-  }, init, options);
+  const [payload, resolvedSchema] = await Promise.all([
+    readApiJson(path, init, options, options?.nullOn404),
+    resolveSchemaLike(schema),
+  ]);
+  (options?.signal ?? init?.signal)?.throwIfAborted();
+  if (payload === null) return null;
+  return validateApiPayload(path, payload.json, resolvedSchema, contractMode);
 }
 
 // --- Meta-aware fetch ---
@@ -296,16 +328,17 @@ export async function apiFetch<T>(
 /** Fetch JSON + extract freshness metadata from _meta field or X-Data-Age header. */
 export async function apiFetchWithMeta<T>(
   path: string,
-  schema?: SchemaLike<T>,
+  schema?: SchemaLikeSource<T>,
   init?: RequestInit,
   contractMode?: ApiContractMode,
   requestOptions?: ApiRequestOptions,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
-  const { res, json } = await apiRequest(path, async (res) => {
-    if (!res.ok) throw await buildFetchError(path, res);
-    const json: unknown = await res.json();
-    return { res, json };
-  }, init, requestOptions);
+  const [payload, resolvedSchema] = await Promise.all([
+    readApiJson(path, init, requestOptions),
+    resolveSchemaLike(schema),
+  ]);
+  (requestOptions?.signal ?? init?.signal)?.throwIfAborted();
+  const { res, json } = payload!;
 
   // Extract only the generic freshness envelope. Some endpoints expose domain
   // metadata under `_meta`; that must stay in `data` for consumers.
@@ -385,7 +418,7 @@ export async function apiFetchWithMeta<T>(
   // Validate the stripped body. A failure here is not recoverable by
   // re-validating the un-stripped `json` (which still carries `_meta`); a
   // consumer that needs the raw envelope should use `apiFetch` instead.
-  return { data: validateApiPayload(path, data, schema, contractMode), meta };
+  return { data: validateApiPayload(path, data, resolvedSchema, contractMode), meta };
 }
 
 export async function fetchStablecoinReserves(

@@ -15,6 +15,9 @@ vi.mock("next/navigation", () => ({
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal("requestIdleCallback", undefined);
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
+    window.setTimeout(() => callback(0), 16));
+  vi.stubGlobal("cancelAnimationFrame", (handle: number) => window.clearTimeout(handle));
 });
 
 afterEach(() => {
@@ -85,11 +88,12 @@ describe("GoogleAnalytics", () => {
       "page_view",
       expect.objectContaining({ page_path: "/" }),
     ]);
-    // The gtag.js download is deferred to an idle window (requestIdleCallback,
-    // or a setTimeout fallback in jsdom) so its execution stays off the load
-    // critical path; the injected script still carries the measurement id.
+    // GA retains a two-second delay after the post-paint fallback, rather
+    // than inheriting the visible hero chart's short activation budget.
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
-    act(() => vi.advanceTimersByTime(2_000));
+    act(() => vi.advanceTimersByTime(2_031));
+    expect(document.getElementById("pharos-google-analytics")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
     expect(document.getElementById("pharos-google-analytics")).toHaveProperty(
       "src", "https://www.googletagmanager.com/gtag/js?id=G-TEST",
     );
