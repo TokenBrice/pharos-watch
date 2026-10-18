@@ -5,7 +5,7 @@ import {
   assertQualificationHeavyEntry, assertQualificationHeavyGraph,
   qualificationProbeSource, qualifyWorkerMemory,
 } from "../qualify-worker-memory.mjs";
-import { offlineTransferMaterialityDependencies } from "../../../worker/src/lib/__tests__/safety-score-v9-resource-offline.test-support";
+import { offlineTransferMaterialityDependencies } from "../../../shared/test-utils/v9-resource-offline";
 
 describe("Worker memory qualification harness", () => {
   it("accepts the private placed executor's unauthenticated refusal, not public HTTP", async () => {
