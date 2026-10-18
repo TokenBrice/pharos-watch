@@ -1,7 +1,7 @@
 "use client";
 
 import { Children, Fragment, isValidElement, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, CircleDashed, CircleSlash } from "lucide-react";
+import { ChevronDown, CircleDashed, CircleSlash, Hourglass } from "lucide-react";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { MODULE_FOLD_RHYTHM_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
@@ -395,11 +395,19 @@ export function EvidenceModule({
   );
 }
 
-export type EvidenceState = "not-reviewed" | "not-applicable";
+/** `pending-launch`: a live surface a pre-launch dossier will carry once tracking starts. */
+export type EvidenceState = "not-reviewed" | "not-applicable" | "pending-launch";
 
 const EVIDENCE_STATE_LABEL: Record<EvidenceState, string> = {
   "not-reviewed": "Not reviewed",
   "not-applicable": "Not applicable",
+  "pending-launch": "Activates at launch",
+};
+
+const EVIDENCE_STATE_GLYPH: Record<EvidenceState, typeof CircleDashed> = {
+  "not-reviewed": CircleDashed,
+  "not-applicable": CircleSlash,
+  "pending-launch": Hourglass,
 };
 
 /**
@@ -435,7 +443,7 @@ export function EvidenceStateStrip({
   const generatedId = useId();
   const headingId = id ? `${id}-title` : `${generatedId}-title`;
   const Heading = headingLevel ?? (density === "main" ? "h3" : "h2");
-  const Glyph = state === "not-reviewed" ? CircleDashed : CircleSlash;
+  const Glyph = EVIDENCE_STATE_GLYPH[state];
 
   return (
     <section

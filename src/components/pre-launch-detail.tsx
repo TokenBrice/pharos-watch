@@ -1,48 +1,59 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
-import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play, Bell } from "lucide-react";
-import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, PRE_LAUNCH_ACCENT_CLASSES } from "@shared/lib/classification";
+import { ExternalLink, BookOpen, Play } from "lucide-react";
+import { CLIENT_ACTIVE_STABLECOINS, CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import {
+  BACKING_LABELS,
+  GOVERNANCE_LABELS,
+  HERO_CHIP_BACKING_LABELS,
+  HERO_CHIP_GOVERNANCE_LABELS,
+  HERO_CHIP_PEG_LABELS,
+  PEG_LABELS_SHORT,
+  PRE_LAUNCH_ACCENT_CLASSES,
+  getHeroPegLabel,
+} from "@shared/lib/classification";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { cn } from "@/lib/utils";
+import { AiSummary } from "@/components/ai-summary";
+import { IntentLink } from "@/components/intent-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { CopyButton } from "@/components/copy-button";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
-import { PreLaunchTimelineBar } from "@/components/pre-launch-timeline-bar";
-import { LaunchMilestoneBadge, LaunchPhaseBadge } from "@/components/pre-launch-badge";
-import { ExpectedLaunchDriftBadge } from "@/components/expected-launch-drift-badge";
-import { TermText } from "@/components/term-text";
+import { LaunchMilestoneBadge } from "@/components/pre-launch-badge";
+import { PreLaunchAlertAction } from "@/components/pre-launch-alert-action";
+import { PreLaunchLaunchPath } from "@/components/pre-launch-launch-path";
+import { PreLaunchReadiness } from "@/components/pre-launch-readiness";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { EvidenceModule, EvidenceStateStrip } from "@/components/stablecoin-detail/evidence-module";
+import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
+import { InfrastructureBadge } from "@/components/stablecoin-detail/hero-card-identity";
+import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
+import { linkIconFor } from "@/components/stablecoin-detail/link-icon";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { getLogoSrc, logosById } from "@/lib/logos";
+import { buildPegLandingUrl } from "@/lib/peg-landing";
+import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
+import { formatFuzzyDate } from "@/lib/pre-launch";
+import { buildLaunchVerdict, describeTargetHistory, sortMilestonesNewestFirst } from "@/lib/pre-launch-dossier";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
-import {
-  formatFuzzyDate,
-  dateScore,
-} from "@/lib/pre-launch";
-import type { StablecoinMeta, LaunchMilestone, FeaturedContent } from "@shared/types";
-import { formatLongDate } from "@shared/lib/format";
+import type { FeaturedContent, LaunchMilestone, StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 
-// ---------------------------------------------------------------------------
-// Link icon mapping
-// ---------------------------------------------------------------------------
+/** Live surfaces a pre-launch dossier gains at its first post-launch data sync. */
+const LIVE_SURFACES = "Price & peg · Supply & flows · Liquidity · Safety Score · DEWS";
 
-function getLinkIcon(label: string) {
-  const normalized = label.toLowerCase();
-  if (normalized.includes("twitter") || normalized.includes("x")) {
-    return <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
-  }
-  if (normalized.includes("website") || normalized.includes("homepage")) {
-    return <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
-  }
-  if (normalized.includes("docs") || normalized.includes("documentation")) {
-    return <FileText className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
-  }
-  if (normalized.includes("audit") || normalized.includes("security")) {
-    return <Shield className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
-  }
-  return <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
-}
+/** Newest milestones shown before the "Earlier activity" fold. */
+const VISIBLE_MILESTONES = 5;
+
+const HEADER_ACTION_CLASS =
+  "pharos-focus-ring hidden size-11 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground sm:inline-flex lg:size-8";
+
+const HERO_CHIP_CLASS =
+  "pharos-focus-ring inline-flex h-5 items-center rounded-full bg-muted/70 px-2.5 text-xs font-medium leading-none text-foreground/80 transition-colors hover:bg-muted";
 
 function ContentTypeIcon({ type }: { type: FeaturedContent["type"] }) {
   const cls = "h-3.5 w-3.5";
@@ -63,430 +74,421 @@ function extractTweetId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-function formatSummaryUpdatedAt(updatedAt: string): string {
-  return formatLongDate(new Date(`${updatedAt}T00:00:00Z`), { utc: true });
+function chainName(chain: string): string {
+  return CHAIN_META[chain]?.name ?? chain;
 }
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// Identity header and hero
 // ---------------------------------------------------------------------------
 
-function InfoGridItem({ label, value }: { label: string; value: string }) {
+/** The dossier identity header (`HeroIdentityHeader` grammar); the visible `h1` lives here. */
+function PreLaunchIdentityHeader({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc: string | undefined }) {
+  const links = (coin.links ?? []).slice(0, 3);
   return (
-    <div className="space-y-1">
-      <dt className="pharos-label">{label}</dt>
-      <dd className="text-sm font-medium">{value}</dd>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Milestones timeline
-// ---------------------------------------------------------------------------
-
-function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
-  const sorted = [...milestones].sort((a, b) => dateScore(b.date) - dateScore(a.date));
-
-  return (
-    <div className="space-y-0">
-      {sorted.map((m, i) => {
-        const isLast = i === sorted.length - 1;
-        const dateDisplay = formatFuzzyDate(m.date);
-
-        return (
-          <div key={`${m.date}-${m.title}`} className="relative flex gap-3">
-            {/* Vertical connector */}
-            {!isLast && <div className="absolute bottom-0 left-[7px] top-5 w-px bg-border/40" />}
-
-            {/* Dot */}
-            <div className="relative mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-border bg-background" />
-
-            {/* Content */}
-            <div className="min-w-0 flex-1 pb-4">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <span className="pharos-numeric text-xs text-muted-foreground">{dateDisplay}</span>
-                <LaunchMilestoneBadge type={m.type} />
-              </div>
-              <p className="mt-1 text-sm font-medium text-foreground">{m.title}</p>
-              {m.description && <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">{m.description}</p>}
-              {m.sourceUrl && (
-                <a
-                  href={m.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-2xs text-muted-foreground/70 hover:text-foreground"
-                >
-                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                  Source
-                </a>
-              )}
-            </div>
+    <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-5">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
+          <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-3">
+            <span className="pharos-label shrink-0">{coin.symbol}</span>
+            <h1 className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:leading-none">
+              {coin.name}
+              <span className="sr-only"> ({coin.symbol}) pre-launch stablecoin tracker</span>
+            </h1>
           </div>
-        );
-      })}
+        </div>
+        {coin.oneLiner ? (
+          <p className="mt-2 max-w-none text-pretty text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 lg:shrink-0 lg:flex-nowrap lg:pt-1">
+        {links.map((link) => {
+          const Icon = linkIconFor(link.label);
+          return (
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              // Below sm the in-flow Key Links card carries these.
+              className={HEADER_ACTION_CLASS}
+              aria-label={`${link.label} (opens in new tab)`}
+              title={link.label}
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+          );
+        })}
+        {links.length > 0 ? <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/60 sm:block" /> : null}
+        <PreLaunchAlertAction coinId={coin.id} symbol={coin.symbol} />
+      </div>
+    </header>
+  );
+}
+
+function PreLaunchChipRail({ coin }: { coin: StablecoinMeta }) {
+  const pegLabel =
+    (coin.flags.navToken
+      ? getHeroPegLabel(
+          coin.flags,
+          coin.pegReferenceId ? CLIENT_TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+        )
+      : null) ?? HERO_CHIP_PEG_LABELS[coin.flags.pegCurrency];
+  const pegLandingUrl = buildPegLandingUrl(coin.flags.pegCurrency);
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-border/40 px-4 py-2.5 sm:px-5">
+      <span
+        className={cn(
+          "inline-flex h-5 items-center rounded-full border px-2.5 text-xs font-medium leading-none",
+          PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.border,
+          PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.bg,
+          PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.text,
+        )}
+      >
+        Pre-launch · no market data yet
+      </span>
+      {pegLandingUrl ? (
+        <IntentLink href={pegLandingUrl} className={HERO_CHIP_CLASS}>
+          {pegLabel}
+        </IntentLink>
+      ) : (
+        <span className={HERO_CHIP_CLASS}>{pegLabel}</span>
+      )}
+      <IntentLink href={buildBackingTaxonomyUrl(coin.flags.backing)} className={HERO_CHIP_CLASS}>
+        {HERO_CHIP_BACKING_LABELS[coin.flags.backing]}
+      </IntentLink>
+      <IntentLink href={buildGovernanceTaxonomyUrl(coin.flags.governance)} className={HERO_CHIP_CLASS}>
+        {HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance]}
+      </IntentLink>
+      {(coin.infrastructures ?? []).map((value) => (
+        <InfrastructureBadge key={value} value={value} />
+      ))}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Props
+// Launch path and activity
+// ---------------------------------------------------------------------------
+
+function LaunchPathModule({ coin }: { coin: StablecoinMeta }) {
+  const history = describeTargetHistory(coin.dateHistory);
+
+  return (
+    <EvidenceModule
+      id="launch-path"
+      title="Launch path"
+      variant="module"
+      headingLevel="h2"
+      visual={<PreLaunchLaunchPath coin={coin} />}
+      verdict={buildLaunchVerdict(coin)}
+      folds={
+        <>
+          {history.length > 0 ? (
+            <ModuleDisclosure id="target-history" label="Target history" count={history.length}>
+              <ol className="mt-1 space-y-1.5 pb-1 text-xs text-muted-foreground">
+                {history.map((entry) => (
+                  <li key={entry.key} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="pharos-numeric text-foreground line-through decoration-muted-foreground/60">{entry.target}</span>
+                    <span>retired {entry.retiredOn}</span>
+                  </li>
+                ))}
+                {coin.expectedLaunchDate ? (
+                  <li className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="pharos-numeric font-semibold text-foreground">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
+                    <span>current target</span>
+                  </li>
+                ) : null}
+              </ol>
+            </ModuleDisclosure>
+          ) : null}
+          {coin.launchPhaseDetail ? (
+            <ModuleDisclosure id="launch-status" label="Launch status narrative">
+              <p className="mt-1 break-words pb-1 text-sm leading-relaxed text-muted-foreground">{coin.launchPhaseDetail}</p>
+            </ModuleDisclosure>
+          ) : null}
+        </>
+      }
+      // Keyed: React's dev key check flags this server-built footer inside the
+      // client module's fold run.
+      footer={
+        <EvidenceFooter key="footer">
+          <span>Registry dates (UTC); a quarter, half or year target draws as its whole window.</span>
+        </EvidenceFooter>
+      }
+    />
+  );
+}
+
+function MilestoneList({ milestones }: { milestones: LaunchMilestone[] }) {
+  return (
+    <ol className="space-y-0">
+      {milestones.map((m, i) => (
+        <li key={`${m.date}-${m.title}`} className="relative flex gap-3 pb-4 last:pb-0">
+          {i < milestones.length - 1 ? (
+            <span aria-hidden="true" className="absolute bottom-0 left-[4.5px] top-4 w-px bg-border/60" />
+          ) : null}
+          {/* The same glyphs as the Launch path plot: dot, or diamond for a delay. */}
+          <span aria-hidden="true" className="mt-1.5 flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+            <span className={m.type === "delay" ? "h-2 w-2 rotate-45 bg-state-warn-solid" : "h-2.5 w-2.5 rounded-full bg-foreground/75"} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <time dateTime={m.date} className="pharos-numeric text-xs text-muted-foreground">
+                {formatFuzzyDate(m.date)}
+              </time>
+              <LaunchMilestoneBadge type={m.type} />
+            </div>
+            <p className="mt-1 text-sm font-medium text-foreground">{m.title}</p>
+            {m.description ? (
+              <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">{m.description}</p>
+            ) : null}
+            {m.sourceUrl ? (
+              <a
+                href={m.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pharos-focus-ring mt-1 inline-flex min-h-6 items-center gap-1 rounded-sm text-2xs text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Source
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </a>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ActivityModule({ coin }: { coin: StablecoinMeta }) {
+  const milestones = sortMilestonesNewestFirst(coin.milestones);
+  if (milestones.length === 0) {
+    return <EvidenceStateStrip id="activity" title="Activity" state="not-reviewed" reason="no milestones logged yet" density="main" headingLevel="h2" />;
+  }
+  const visible = milestones.slice(0, VISIBLE_MILESTONES);
+  const earlier = milestones.slice(VISIBLE_MILESTONES);
+  const sourced = milestones.filter((m) => m.sourceUrl).length;
+
+  return (
+    <EvidenceModule
+      id="activity"
+      title="Activity"
+      variant="module"
+      headingLevel="h2"
+      folds={
+        earlier.length > 0 ? (
+          <ModuleDisclosure id="earlier-activity" label="Earlier activity" count={earlier.length}>
+            <div className="mt-2 pb-1">
+              <MilestoneList milestones={earlier} />
+            </div>
+          </ModuleDisclosure>
+        ) : null
+      }
+      footer={
+        <EvidenceFooter key="footer">
+          <span className="pharos-numeric">
+            {milestones.length} {milestones.length === 1 ? "entry" : "entries"} · {sourced} sourced
+          </span>
+        </EvidenceFooter>
+      }
+    >
+      <MilestoneList milestones={visible} />
+    </EvidenceModule>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Featured coverage
+// ---------------------------------------------------------------------------
+
+function FeaturedCoverage({ items }: { items: FeaturedContent[] }) {
+  return (
+    <section aria-labelledby="featured-coverage-title" className="space-y-3">
+      <DetailSectionTitle id="featured-coverage-title">Featured coverage</DetailSectionTitle>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {items.map((item) => {
+          const tweetId = item.type === "tweet" ? extractTweetId(item.url) : null;
+
+          /* ── Tweet embed ─────────────────────────────────── */
+          if (tweetId) {
+            return (
+              <div key={item.url} className="overflow-hidden rounded-xl [&_.react-tweet-theme]:!my-0">
+                <Suspense
+                  fallback={
+                    <div className="flex h-40 items-center justify-center rounded-xl border border-border/60 bg-card/50 text-sm text-muted-foreground">
+                      Loading tweet…
+                    </div>
+                  }
+                >
+                  <PreLaunchTweetEmbed id={tweetId} />
+                </Suspense>
+              </div>
+            );
+          }
+
+          /* ── Rich card (blog / article / video) ─────────── */
+          return (
+            <a
+              key={item.url}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pharos-focus-ring pharos-interactive-card group flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card/50"
+            >
+              {item.image && (
+                <div className="relative aspect-[1200/630] w-full overflow-hidden bg-muted/30">
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    unoptimized
+                  />
+                </div>
+              )}
+              <div className="flex flex-1 flex-col gap-1.5 p-4">
+                <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                {item.description && (
+                  <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
+                )}
+                <div className="mt-auto flex items-center gap-1.5 pt-1 text-2xs text-muted-foreground/70">
+                  <ContentTypeIcon type={item.type} />
+                  <span>{item.source ?? item.type}</span>
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rail
+// ---------------------------------------------------------------------------
+
+function PlannedProfileCard({ coin }: { coin: StablecoinMeta }) {
+  const chains = [...new Set(coin.contracts?.map((c) => c.chain) ?? [])].map(chainName);
+  const jurisdiction = coin.jurisdiction?.regulator
+    ? `${coin.jurisdiction.country} (${coin.jurisdiction.regulator})`
+    : coin.jurisdiction?.country;
+  const facts: FactGridItem[] = [
+    { key: "peg", label: "Peg", value: PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency, valueStyle: "text" },
+    { key: "backing", label: "Backing", value: BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing, valueStyle: "text" },
+    { key: "governance", label: "Governance", value: GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance, valueStyle: "text" },
+    { key: "jurisdiction", label: "Jurisdiction", value: jurisdiction ?? "Not recorded", valueStyle: "text" },
+    ...(coin.flags.yieldBearing ? [{ key: "yield", label: "Yield", value: "Yield-bearing", valueStyle: "text" as const }] : []),
+    ...(chains.length > 0 ? [{ key: "chains", label: "Target chains", value: chains.join(", "), valueStyle: "text" as const }] : []),
+  ];
+
+  return (
+    <RailCard title="Planned profile" ariaLabel="Planned profile">
+      <div className="space-y-4 px-4 pb-4">
+        <FactGrid items={facts} aria-label="Planned profile" />
+        {coin.reserves && coin.reserves.length > 0 ? (
+          <div className="space-y-2 border-t border-border/50 pt-3">
+            <p className="pharos-label">Planned collateral</p>
+            <ul className="space-y-1.5">
+              {coin.reserves.map((slice) => (
+                <li key={slice.name} className="flex items-baseline justify-between gap-3 text-xs">
+                  <span className="min-w-0 break-words text-foreground">{slice.name}</span>
+                  <span className="pharos-numeric shrink-0 text-muted-foreground">{slice.pct}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </RailCard>
+  );
+}
+
+function RelatedCard({ coin }: { coin: StablecoinMeta }) {
+  const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
+  return (
+    <RailCard title="Related stablecoins" ariaLabel="Related stablecoins">
+      <div className="space-y-3 px-4 pb-4">
+        <p className="text-xs text-muted-foreground">
+          {related.length > 0
+            ? "Tracked stablecoins with a similar governance, backing or peg profile."
+            : "No tracked stablecoin shares this profile yet."}
+        </p>
+        {related.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {related.map((rel) => (
+              <Link
+                key={rel.id}
+                href={buildStablecoinUrl(rel.id)}
+                className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-1.5 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent lg:min-h-9"
+              >
+                <StablecoinLogo src={getLogoSrc(logosById, rel.id)} name={rel.name} size={18} />
+                <span className="font-mono text-xs font-medium tabular-nums">{rel.symbol}</span>
+              </Link>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </RailCard>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
 // ---------------------------------------------------------------------------
 
 interface PreLaunchDetailProps {
   coin: StablecoinMeta;
   logoSrc: string | undefined;
-  summary: { title: string; text: string; updatedAt: string } | null;
+  summary: StablecoinAiSummary | null;
 }
 
-// ---------------------------------------------------------------------------
-// Main component (server component — no "use client")
-// ---------------------------------------------------------------------------
-
+/**
+ * The pre-launch variant of the stablecoin dossier (server component): the
+ * live dossier's identity header, hero, summary, evidence modules and rail,
+ * filled with registry launch facts only. Live surfaces are named once in an
+ * explicit "Activates at launch" strip, never drawn as empty cards.
+ */
 export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps) {
-  const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
-  const chains = coin.contracts?.map((c) => c.chain) ?? [];
-  const uniqueChains = [...new Set(chains)];
-  const launchAlertCommand = `/subscribe launch ${coin.id}`;
-  const summaryDateline = summary ? formatSummaryUpdatedAt(summary.updatedAt) : null;
-
-  // Build jurisdiction display with regulator if available
-  const jurisdictionDisplay = coin.jurisdiction?.regulator
-    ? `${coin.jurisdiction.country} (${coin.jurisdiction.regulator})`
-    : coin.jurisdiction?.country;
-
-  const launchAlertCallout = (
-    <section className={cn("rounded-xl border px-4 py-4 sm:px-6", PRE_LAUNCH_ACCENT_CLASSES.launchSection.border, PRE_LAUNCH_ACCENT_CLASSES.launchSection.bg)}>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className={cn("flex items-center gap-2 text-sm font-semibold", PRE_LAUNCH_ACCENT_CLASSES.launchSection.text)}>
-            <Bell className="h-4 w-4" aria-hidden="true" />
-            <span>Launch alert</span>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">
-              Get a Telegram alert when {coin.symbol} becomes tracked on Pharos
-            </p>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Copy this exact command and send it to{" "}
-              <a
-                href={TELEGRAM_BOT_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
-              >
-                @PharosWatchBot
-                <ExternalLink className="h-3 w-3" aria-hidden="true" />
-              </a>
-              . It uses this coin&apos;s exact Pharos ID, so it works even when a ticker is ambiguous.
-            </p>
-          </div>
-        </div>
-
-        <div className="min-w-0 rounded-xl border border-border/60 bg-background/55 p-3">
-          <p className="pharos-label">Copy exact bot command</p>
-          <div className="mt-2 flex items-center gap-2">
-            <code tabIndex={0} className="pharos-focus-ring block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono tabular-nums text-foreground sm:text-sm">
-              {launchAlertCommand}
-            </code>
-            <CopyButton
-              text={launchAlertCommand}
-              className="shrink-0 rounded-md border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-        <a
-          href={TELEGRAM_BOT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
-        >
-          Open @PharosWatchBot
-          <ExternalLink className="h-3 w-3" aria-hidden="true" />
-        </a>
-        <Link
-          href="/pharoswatchbot/#getting-started"
-          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
-        >
-          See all Telegram alert options
-        </Link>
-      </div>
-    </section>
-  );
-
   return (
-    <div className="space-y-8">
-      {/* ── Back Navigation ───────────────────────────────────────── */}
-      <nav aria-label="Back navigation">
-        <Link
-          href="/upcoming/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          <span>Back to Upcoming</span>
-        </Link>
-      </nav>
-
-      {/* ── Header ────────────────────────────────────────────────── */}
-      <header className="flex items-start gap-4">
-        <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
-        <div className="min-w-0 space-y-1">
-          <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {coin.name} ({coin.symbol}) Pre-launch Stablecoin Tracker
-          </h1>
-          <p className="font-mono tabular-nums text-sm text-muted-foreground">{coin.symbol}</p>
-        </div>
-      </header>
-
-      {/* ── Pre-Launch Banner ─────────────────────────────────────── */}
-      <div className={cn("rounded-xl border px-4 py-4 sm:px-6", PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.border, PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.bg)}>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className={cn("text-sm font-semibold", PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.text)}>Pre-launch</span>
-          <span className="text-sm text-muted-foreground">Pharos hasn&apos;t ingested data for this one yet.</span>
-          {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} size="detail" />}
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Pharos can still tell you how this asset is supposed to work, when it expects to launch, and what sources to
-          watch. Live market, peg, liquidity, and safety surfaces activate only after the first post-launch data sync.
-        </p>
-        {coin.launchPhaseDetail && (
-          <details className="mt-3">
-            <summary className="pharos-focus-ring cursor-pointer rounded-sm text-sm font-medium text-foreground">
-              Full launch status and history
-            </summary>
-            <p className="mt-2 break-words text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>
-          </details>
-        )}
-      </div>
-
-      {/* ── At-a-Glance Grid ─────────────────────────────────────── */}
-      <section className="pharos-card-shell p-4 sm:p-5">
-        <h3 className="mb-3 text-lg font-semibold tracking-tight">At a Glance</h3>
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <InfoGridItem label="Backing" value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} />
-          <InfoGridItem label="Governance" value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} />
-          <InfoGridItem
-            label="Peg currency"
-            value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
+    <StablecoinDetailIdentityProvider symbol={coin.symbol} logoSrc={logoSrc}>
+      <Link
+        href="/upcoming/"
+        className="pharos-focus-ring mb-2 inline-flex items-center gap-1.5 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <span aria-hidden="true">←</span> All upcoming stablecoins
+      </Link>
+      <PreLaunchIdentityHeader coin={coin} logoSrc={logoSrc} />
+      <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
+        <div className="min-w-0 space-y-4">
+          <div className="pharos-card-shell gap-0 overflow-hidden py-0">
+            <PreLaunchChipRail coin={coin} />
+            <PreLaunchReadiness coin={coin} />
+          </div>
+          <EvidenceStateStrip
+            id="live-surfaces"
+            title="Live surfaces"
+            state="pending-launch"
+            reason={LIVE_SURFACES}
+            density="main"
+            headingLevel="h2"
           />
-          {jurisdictionDisplay && <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />}
-          {coin.flags.yieldBearing && <InfoGridItem label="Yield-Bearing" value="Yes" />}
-        </dl>
-      </section>
-
-      {/* ── Launch Timeline ───────────────────────────────────────── */}
-      {(() => {
-        const hasDrift = coin.dateHistory && coin.dateHistory.length > 0;
-        const driftBadge = <ExpectedLaunchDriftBadge dateHistory={coin.dateHistory} expectedLaunchDate={coin.expectedLaunchDate} size="detail" />;
-        const dateTrail =
-          hasDrift && coin.expectedLaunchDate ? (
-            <p className="mt-2 text-xs text-muted-foreground/70">
-              {coin.dateHistory!.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}
-              {" → "}
-              {formatFuzzyDate(coin.expectedLaunchDate)} (current)
-            </p>
-          ) : null;
-
-        if (coin.announcedDate && coin.expectedLaunchDate) {
-          return (
-            <section className="pharos-card-shell p-4 sm:p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-semibold tracking-tight">Launch Timeline</h3>
-                {driftBadge}
-              </div>
-              <PreLaunchTimelineBar announcedDate={coin.announcedDate} expectedLaunchDate={coin.expectedLaunchDate} />
-              {dateTrail}
-            </section>
-          );
-        }
-        if (coin.expectedLaunchDate) {
-          return (
-            <section className="pharos-card-shell p-4 sm:p-5">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <span className="text-muted-foreground">Expected Launch:</span>
-                <span className="font-medium">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
-                {driftBadge}
-              </div>
-              {dateTrail}
-            </section>
-          );
-        }
-        return null;
-      })()}
-
-      {/* ── Launch Alert CTA ──────────────────────────────────────── */}
-      {launchAlertCallout}
-
-      {/* ── Activity Timeline (milestones) ─────────────────────────── */}
-      {coin.milestones && coin.milestones.length > 0 && (
-        <section className="pharos-card-shell p-4 sm:p-5">
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">Activity Timeline</h3>
-          <MilestoneTimeline milestones={coin.milestones} />
-        </section>
-      )}
-
-      {/* ── Editorial Summary ─────────────────────────────────────── */}
-      {summary && (
-        <section className="pharos-card-shell space-y-2 p-4 sm:p-5">
-          <h3 className="text-lg font-semibold tracking-tight">{summary.title}</h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            <TermText text={summary.text} />
-          </p>
-          <p className="text-2xs text-muted-foreground/70">
-            Updated <time dateTime={summary.updatedAt}>{summaryDateline}</time>
-          </p>
-        </section>
-      )}
-
-      {/* ── Discover ───────────────────────────────────────────────── */}
-      {coin.featuredContent && coin.featuredContent.length > 0 && (
-        <section className="space-y-3">
-          <h3 className="text-lg font-semibold tracking-tight">Discover</h3>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {coin.featuredContent.map((item) => {
-              const tweetId = item.type === "tweet" ? extractTweetId(item.url) : null;
-
-              /* ── Tweet embed ─────────────────────────────────── */
-              if (tweetId) {
-                return (
-                  <div key={item.url} className="overflow-hidden rounded-xl [&_.react-tweet-theme]:!my-0">
-                    <Suspense
-                      fallback={
-                        <div className="flex h-40 items-center justify-center rounded-xl border border-border/60 bg-card/50 text-sm text-muted-foreground">
-                          Loading tweet…
-                        </div>
-                      }
-                    >
-                      <PreLaunchTweetEmbed id={tweetId} />
-                    </Suspense>
-                  </div>
-                );
-              }
-
-              /* ── Rich card (blog / article / video) ─────────── */
-              return (
-                <a
-                  key={item.url}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pharos-focus-ring pharos-interactive-card group flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card/50"
-                >
-                  {item.image && (
-                    <div className="relative aspect-[1200/630] w-full overflow-hidden bg-muted/30">
-                      <Image
-                        src={item.image}
-                        alt={item.title}
-                        fill
-                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                        unoptimized
-                      />
-                    </div>
-                  )}
-                  <div className="flex flex-1 flex-col gap-1.5 p-4">
-                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                    {item.description && (
-                      <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
-                    )}
-                    <div className="mt-auto flex items-center gap-1.5 pt-1 text-2xs text-muted-foreground/70">
-                      <ContentTypeIcon type={item.type} />
-                      <span>{item.source ?? item.type}</span>
-                    </div>
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* ── Planned Reserves ──────────────────────────────────────── */}
-      {coin.reserves && coin.reserves.length > 0 && (
-        <section className="pharos-card-shell p-4 sm:p-5">
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">Planned Collateral Composition</h3>
-          <div className="space-y-2">
-            {coin.reserves.map((slice) => (
-              <div
-                key={slice.name}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/45 px-3 py-2"
-              >
-                <span className="text-sm">{slice.name}</span>
-                <span className="shrink-0 pharos-numeric text-sm text-muted-foreground">{slice.pct}%</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Target Chains ─────────────────────────────────────────── */}
-      {uniqueChains.length > 0 && (
-        <section className="pharos-card-shell p-4 sm:p-5">
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">Target Chains</h3>
-          <div className="flex flex-wrap gap-2">
-            {uniqueChains.map((chain) => (
-              <span
-                key={chain}
-                className="inline-flex items-center rounded-full border border-border/60 bg-background/50 px-3 py-1 text-xs font-medium capitalize"
-              >
-                {chain}
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Links ─────────────────────────────────────────────────── */}
-      {coin.links && coin.links.length > 0 && (
-        <section className="pharos-card-shell p-4 sm:p-5">
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">Links</h3>
-          <div className="flex flex-wrap gap-2">
-            {coin.links.map((link) => (
-              <a
-                key={link.url}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent sm:min-h-9"
-                aria-label={`${link.label} (opens in new tab)`}
-              >
-                {getLinkIcon(link.label)}
-                <span>{link.label}</span>
-                <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Related Active Stablecoins ────────────────────────────── */}
-      <section className="pharos-card-shell p-4 sm:p-5">
-        <div className="mb-3 space-y-1.5">
-          <h3 className="text-lg font-semibold tracking-tight">Related Stablecoins</h3>
-          <p className="text-sm text-muted-foreground">
-            {related.length > 0
-              ? "Active stablecoins with similar governance, backing, or peg currency."
-              : "No active stablecoin shares this profile yet."}
-          </p>
+          {summary ? <AiSummary {...summary} /> : null}
+          <LaunchPathModule coin={coin} />
+          <ActivityModule coin={coin} />
+          {coin.featuredContent && coin.featuredContent.length > 0 ? (
+            <FeaturedCoverage items={coin.featuredContent} />
+          ) : null}
         </div>
-        {related.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {related.map((rel) => (
-              <Link
-                key={rel.id}
-                href={buildStablecoinUrl(rel.id)}
-                className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
-              >
-                <StablecoinLogo src={getLogoSrc(logosById, rel.id)} name={rel.name} size={20} />
-                <span className="font-mono tabular-nums text-xs font-medium">{rel.symbol}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
+        <aside aria-label={`${coin.symbol} profile`} className="mt-4 grid gap-4 md:grid-cols-2 xl:mt-0 xl:grid-cols-1">
+          <PlannedProfileCard coin={coin} />
+          <KeyLinksCard meta={coin} anchors />
+          <RelatedCard coin={coin} />
+        </aside>
+      </div>
+    </StablecoinDetailIdentityProvider>
   );
 }

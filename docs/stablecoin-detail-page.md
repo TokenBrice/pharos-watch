@@ -49,18 +49,15 @@ The `/stablecoin/[id]/yield/` subroute is statically generated only for active c
 
 ### Pre-launch detail variant
 
-`PreLaunchDetail` is the server-rendered variant for tracked assets whose metadata status is still `pre-launch`; its identity header owns the visible `h1`.
+`PreLaunchDetail` (`src/components/pre-launch-detail.tsx`) is the server-rendered variant for tracked assets whose metadata status is still `pre-launch`. It is a deliberate variant of the live dossier, not a separate page style, and shows registry facts only: no market figure, no invented date.
 
-The identity header precedes the status banner. The banner keeps its lifecycle explanation visible and places the full `launchPhaseDetail` narrative in a collapsed native disclosure labelled "Full launch status and history". The full text remains in the server-rendered HTML; this layout does not change lifecycle status, launch dates, or alert behavior.
-
-The exact launch-alert command is keyboard-focusable so narrow-screen readers can scroll its overflow without a pointer. Launch narratives and milestone descriptions wrap unbroken addresses so the page reflows at 320 CSS pixels, including with the narrative disclosure expanded.
-
-In addition to the pre-launch dossier sections (banner, timeline, milestones, featured content, and metadata), it now includes a launch-alert CTA that:
-
-- promotes `@PharosWatchBot`
-- renders the exact command users can copy and paste for that asset
-- uses `/subscribe launch <coin.id>` so the copied command is deterministic even when a ticker is ambiguous
-- renders immediately below the expected-launch/timeline block, before the milestone/activity section
+- **Identity header** (`HeroIdentityHeader` grammar): logo, ticker and name in the visible `h1` (an `sr-only` suffix keeps the "pre-launch stablecoin tracker" wording), the one-liner, up to three link actions and a `Launch alert` header action. Its popover carries the exact `/subscribe launch <coin.id>` command with a copy control, and the trigger's accessible name carries the same command so it is in the server HTML. The command uses the canonical ID, never the ticker.
+- **Readiness hero:** a chip rail (pre-launch status, peg, backing, governance, infrastructure) over four cells: Phase (`Unphased` when missing), Target launch (`No target date` when missing), Target drift (shared `resolveDriftDisplay` vocabulary: amber for any push, red only when overdue; neutral `No current target` with "<old> target retired <date>" when `dateHistory` exists but no current target does, because a retirement may be Pharos curation rather than an issuer act) and Since announcement. Window countdown, overdue drift and day counts read the visitor clock after mount (`src/lib/pre-launch-dossier.ts`); the static export renders placeholders, never the build date. Fuzzy announcement dates prefix the day count with `~`.
+- **Live surfaces:** one `EvidenceStateStrip` in the `pending-launch` state ("Activates at launch") names the surfaces that turn on at the first post-launch sync, instead of empty live cards.
+- **Editorial summary:** the shared `AiSummary` card, including its sources and AI disclosure.
+- **Launch path** (`EvidenceModule`): one UTC time axis drawn after mount with retired targets (dashed; the most recent labelled in-plot), the current target as a band spanning its whole fuzzy window, milestones (dots, clustered at a 16px gap; delays as amber diamonds), the announcement mark and today with the current phase. The first axis tick always carries its year. A structured verdict follows (no fact grid: the hero owns those figures); `Target history (N)` and `Launch status narrative` are `ModuleDisclosure` folds (the full `launchPhaseDetail` stays in the server HTML).
+- **Activity** (`EvidenceModule`): the newest five milestones with per-entry sources; older entries fold under `Earlier activity (N)`. Narratives and milestone descriptions wrap unbroken addresses so the page reflows at 320 CSS pixels.
+- **Rail** (22rem from `xl`, in flow below): Planned profile facts and planned collateral, Key Links, Related stablecoins. Featured coverage follows the main column.
 
 ---
 
