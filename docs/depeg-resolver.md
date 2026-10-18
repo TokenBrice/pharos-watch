@@ -208,6 +208,14 @@ Stage 2 is an empirical **landmark survival** estimate over the clean corpus of 
 
 No leakage: a closed event's final peak severity is never used to estimate a live event's duration. Explicitly rejected for duration calibration (tested, worsen calibration): backfill-row exclusion and minimum-age gating.
 
+### Training corpus storage
+
+`worker/src/cron/depeg-resolver/training-history.ts` owns the bounded history read; `TRAINING_WINDOW_SEC` and `HISTORICAL_ROW_CAP` in `constants.ts` remain the window/cap authorities. Migration `0269_ddr_training_corpus_rollup.sql` adds `depeg_resolver_training_corpus`, keyed by event id, containing the exact SQLite severity-observation aggregate plus the event identity and start/end boundaries. Empty observations remain `[]`; invalid/missing/nonnumeric deviations keep the live aggregate's bytes and are rejected as numeric evidence by the existing mapper.
+
+SQLite triggers refresh the aggregate in the event/assessment writer's own transaction, including close, reopen, late assessment insert, diagnostic update/delete, and authorized identity repair. Existing assessment persistence and event writers therefore require no second write convention, and old Workers also maintain the rollup. Pending-onset evidence and audit eligibility remain live reads, not cached verdicts.
+
+The loader admits rollup JSON only when every selected historical row has a matching identity and interval in one SQLite snapshot. It never returns a partial training corpus. If any row is missing or mismatched, that invocation uses the complete original live aggregate query and repairs at most `TRAINING_ROLLUP_BACKFILL_EVENT_CAP` event ids already identified by the bounded read. Failed rollup reads/backfills also fall back to the live query; a failed live read still fails the load. Backfill runs inside the existing resolver lane, without a new trigger or migration-time history scan. Once complete, history reads perform event-key lookups instead of scanning assessments per event; no methodology or frozen prediction changes.
+
 ### Output
 
 - `Expected to resolve within ~6–24h` (median plus typical-range band), labeled with the stratum and its support state.
