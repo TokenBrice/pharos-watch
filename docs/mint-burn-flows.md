@@ -163,7 +163,7 @@ The operator view reads cached evidence only, displays each latest audited range
 
 ## Sync Algorithm
 
-`syncMintBurn()` in `worker/src/cron/sync-mint-burn.ts` orchestrates ingestion; `completeMintBurnRun()` in `worker/src/cron/mint-burn/run-completion.ts` owns terminal materialization and post-run work.
+`syncMintBurn()` in `worker/src/cron/sync-mint-burn.ts` composes one invocation-local `MintBurnRun` from `worker/src/cron/mint-burn/run.ts`. The aggregate coordinates run-state/rotation, config scanning, hourly materialization, staged cursor commits and completion, owning the shared `lastBlocksAfterRun`, `pendingCursorUpdates` and `affectedHours` maps. `run-state.ts`, `run-configs.ts` and `run-completion.ts` remain its focused state, scan and terminal-materialization collaborators. Recalc still runs in `finally`; moving ownership does not change failure propagation, cursor fencing, retention or lane-specific cache invalidation.
 
 | Boundary | Invariant |
 | --- | --- |

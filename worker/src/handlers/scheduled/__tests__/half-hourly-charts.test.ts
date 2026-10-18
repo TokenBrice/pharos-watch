@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../../cron/dex-liquidity/orchestrator", () => ({
   consumeDexLiquidityScoringStage: mocks.consumeDexLiquidityScoringStage,
-  DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON: "scoring-stage-producer-running",
 }));
 vi.mock("../../../cron/prepare-safety-score-v9-input", () => ({
   prepareSafetyScoreV9Input: mocks.prepareSafetyScoreV9Input,
