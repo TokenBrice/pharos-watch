@@ -9,6 +9,8 @@ import { projectCemeteryEntries } from "../../lib/tape-projectors/cemetery";
 import { projectLifecycleFrozen } from "../../lib/tape-projectors/lifecycle";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../../lib/tape-projectors/types";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   fixtures.closeAll();
@@ -62,6 +64,46 @@ function dbWithOverride(override: MockTableConfig): MockD1Database {
 }
 
 describe("projectTape", () => {
+  it("emits binding-call costs while preserving SQL rows and projector failures", async () => {
+    const rows = [{ id: "observed" }];
+    const failure = new Error("original SQL failure");
+    const db = mockD1([
+      { match: "SELECT id", rows },
+      { match: "UPDATE tape", rows: [] },
+      { match: "SELECT failed", rows: [], throwError: failure },
+    ]);
+    const assertCost = observeMockD1Cost(db);
+    const jobs = TAPE_PROJECTOR_JOBS as unknown as Array<(typeof TAPE_PROJECTOR_JOBS)[number]>;
+    const originalJobs = [...jobs];
+    jobs.splice(0, jobs.length, {
+      name: "test.sql",
+      run: async (trackedDb) => {
+        expect((await trackedDb.prepare("SELECT id").all()).results).toBe(rows);
+        await trackedDb.batch([trackedDb.prepare("UPDATE tape"), trackedDb.prepare("UPDATE tape")]);
+        return { projected: rows.length, advanced: null };
+      },
+    }, {
+      name: "test.failure",
+      run: async (trackedDb) => {
+        try {
+          await trackedDb.prepare("SELECT failed").all();
+        } catch (error) {
+          expect(error).toBe(failure);
+          throw error;
+        }
+        throw new Error("expected original SQL failure");
+      },
+    });
+    try {
+      const result = await projectTape(db);
+      expect(result).toMatchObject({ status: "degraded", itemCount: 1 });
+      expect(assertCost(result)).toMatchObject({ queries: 4, bindingCalls: 3, batchCalls: 1 });
+      expect(JSON.parse(result.metadata!)).toMatchObject({ perClass: { "test.sql": 1, "test.failure": -1 } });
+    } finally {
+      jobs.splice(0, jobs.length, ...originalJobs);
+    }
+  });
+
   it("returns degraded when a projector fails", async () => {
     const jobs = TAPE_PROJECTOR_JOBS as unknown as Array<(typeof TAPE_PROJECTOR_JOBS)[number]>;
     const originalJobs = [...jobs];

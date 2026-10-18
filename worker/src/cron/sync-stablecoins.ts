@@ -17,6 +17,7 @@ import type { DwellirNativeCapability } from "../lib/dwellir-native";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { createBinanceFetchSession } from "../lib/cex-tickers";
 import { createNativePegQuoteSession } from "../lib/native-peg-quotes";
+import { createD1CostTracker } from "../lib/d1-cost";
 
 export interface SyncStablecoinsOptions {
   cmcApiKey?: string;
@@ -32,6 +33,15 @@ export async function syncStablecoins(
   signal?: AbortSignal,
   options: SyncStablecoinsOptions = {},
 ): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded"]);
+  db = d1Cost.db;
+  const withD1Cost = (result: CronResult): CronResult => ({
+    ...result,
+    metadata: JSON.stringify({
+      ...JSON.parse(result.metadata ?? "{}"),
+      d1Cost: d1Cost.snapshot(),
+    }),
+  });
   const {
     cmcApiKey,
     coingeckoApiKey,
@@ -41,7 +51,7 @@ export async function syncStablecoins(
     jupiterApiKey,
   } = options;
   const startAbort = returnIfAborted(signal, "start");
-  if (startAbort) return startAbort;
+  if (startAbort) return withD1Cost(startAbort);
   const syncStartSec = Math.floor(Date.now() / 1000);
   const binanceSession = createBinanceFetchSession();
   // Per-run memo shared by native-peg hardening, depeg detection, and
@@ -62,10 +72,10 @@ export async function syncStablecoins(
     dwellirNative,
     reportProgress,
   });
-  if (!("kind" in intake)) return intake;
+  if (!("kind" in intake)) return withD1Cost(intake);
   if (intake.kind === "fallback") {
     if (intake.result.itemCount && intake.result.itemCount > 0) {
-      return intake.result;
+      return withD1Cost(intake.result);
     }
     throw new Error(intake.errorMessage);
   }
@@ -103,7 +113,7 @@ export async function syncStablecoins(
     reportProgress,
     nativePegSession,
   });
-  if ("enrichStats" in pricingStage === false) return pricingStage;
+  if ("enrichStats" in pricingStage === false) return withD1Cost(pricingStage);
   const {
     enrichStats,
     priceValidationStats,
@@ -163,5 +173,5 @@ export async function syncStablecoins(
       binanceSession,
       nativePegSession,
     }),
-  });
+  }).then(withD1Cost);
 }

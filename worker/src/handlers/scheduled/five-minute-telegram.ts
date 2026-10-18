@@ -23,6 +23,7 @@ import {
 } from "@shared/lib/telegram-recap-policy";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import { parseJsonObject } from "../../lib/json-parse";
+import { createD1CostTracker } from "../../lib/d1-cost";
 import {
   getRuntimeProducerIdentity,
   runRuntimeBudgetOnlyTask,
@@ -324,8 +325,9 @@ function buildTelegramSlotGroups(
       job: "telegram-pulse-snapshot",
       errorMessage: "[cron] telegram-pulse-snapshot failed:",
       run: async (signal) => {
+        const d1Cost = createD1CostTracker(runtime.db, ["outer-cron-lifecycle-excluded"]);
         const { publishTelegramPulseSnapshotWithOutcome } = await import("../../api/telegram-pulse");
-        const outcome = await publishTelegramPulseSnapshotWithOutcome(runtime.db, undefined, {
+        const outcome = await publishTelegramPulseSnapshotWithOutcome(d1Cost.db, undefined, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           signal,
         });
@@ -334,6 +336,7 @@ function buildTelegramSlotGroups(
           itemCount: outcome.snapshotPublished ? 1 : 0,
           error: outcome.error ?? undefined,
           metadata: JSON.stringify({
+            d1Cost: d1Cost.snapshot(),
             sidecar: "telegram-pulse-snapshot",
             snapshotPublished: outcome.snapshotPublished,
             heavySectionsRecomputed: outcome.heavySectionsRecomputed,

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { observeMockD1Cost } from "../../../lib/__tests__/d1-cost.test-support";
+import type { CronResult } from "../../../lib/cron-logger";
 
 vi.mock("../../../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: vi.fn() }));
 vi.mock("../../../cron/telegram-recap-planner", () => ({ planTelegramPersonalizedRecaps: vi.fn() }));
@@ -71,6 +74,44 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("runFiveMinuteTelegramSlot", () => {
+  it("emits pulse D1 costs while retaining publication results and SQL errors", async () => {
+    const rows = [{ id: "pulse-evidence" }];
+    const failure = new Error("original pulse SQL failure");
+    const db = mockD1([
+      { match: "SELECT pulse_evidence", rows },
+      { match: "UPDATE pulse_cache", rows: [] },
+      { match: "SELECT failed_pulse", rows: [], throwError: failure },
+    ]);
+    const assertCost = observeMockD1Cost(db);
+    const runtime = buildRuntime();
+    runtime.db = db;
+    const published = {
+      pulse: { quality: { status: "complete", unavailableFields: [] } },
+      status: "ok", snapshotPublished: true, heavySectionsRecomputed: false,
+      heavyMarkerAdvanced: true, error: null,
+    };
+    vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockImplementationOnce(async (trackedDb) => {
+      expect((await trackedDb.prepare("SELECT pulse_evidence").all()).results).toBe(rows);
+      await trackedDb.batch([trackedDb.prepare("UPDATE pulse_cache"), trackedDb.prepare("UPDATE pulse_cache")]);
+      await expect(trackedDb.prepare("SELECT failed_pulse").all()).rejects.toBe(failure);
+      return published as never;
+    });
+    let pulseResult: CronResult | undefined;
+    const runLeasedCron = runtime.runLeasedCron;
+    runtime.runLeasedCron = vi.fn(async (job, run) => {
+      const result = await runLeasedCron(job, run);
+      if (job === "telegram-pulse-snapshot" && result) pulseResult = result;
+      return result;
+    });
+    const summary = await runFiveMinuteTelegramSlot(runtime);
+    expect(summary.jobs.find((job) => job.job === "telegram-pulse-snapshot")).toMatchObject({ outcome: "ok", itemCount: 1 });
+    expect(pulseResult).toBeDefined();
+    expect(assertCost(pulseResult!)).toMatchObject({ queries: 4, bindingCalls: 3, batchCalls: 1 });
+    expect(JSON.parse(pulseResult!.metadata!)).toMatchObject({
+      snapshotPublished: true, heavySectionsRecomputed: false, heavyMarkerAdvanced: true, qualityStatus: "complete",
+    });
+  });
+
   it("measures registration duration without the preceding critical lane", async () => {
     let now = 0;
     vi.mocked(Date.now).mockImplementation(() => now);

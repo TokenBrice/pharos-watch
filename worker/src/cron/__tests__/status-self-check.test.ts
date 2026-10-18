@@ -6,6 +6,7 @@ import { makePublicHealth } from "../../lib/__tests__/public-health.test-support
 import type * as PublicHealthModule from "../../lib/public-health-assessment";
 import type { HealthResponse } from "@shared/types/status";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
+import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
@@ -63,7 +64,7 @@ const updateDiscrepancyObservationMock = vi.fn(async () => ({
 function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Array<Record<string, unknown>> = []) {
   return { rawOverallStatus, dbHealthy: true, evidenceReadFailures: [] as string[], sectionErrors: {}, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
 }
-const computeRawStatusMock = vi.fn(async () => buildRawStatus());
+const computeRawStatusMock = vi.fn(async (_db: D1Database) => buildRawStatus());
 const reconcileStatusStateMock = vi.fn(async () => ({
   effectiveStatus: "stale",
   persistenceSucceeded: true,
@@ -127,6 +128,37 @@ const {
 const { STATUS_PROBE_THRESHOLDS } = await import("@shared/lib/status-thresholds");
 
 describe("runStatusSelfCheck", () => {
+  it("emits D1 costs without changing status SQL results", async () => {
+    const rows = [{ id: "status-evidence" }];
+    const db = mockD1([{ match: "SELECT telemetry_evidence", rows }]);
+    const assertCost = observeMockD1Cost(db);
+    computeRawStatusMock.mockImplementationOnce(async (trackedDb) => {
+      expect((await trackedDb.prepare("SELECT telemetry_evidence").all()).results).toBe(rows);
+      return buildRawStatus();
+    });
+    const result = await runStatusSelfCheck(db);
+    expect(result.status).toBe("ok");
+    expect(assertCost(result)).toMatchObject({
+      bindingCalls: expect.any(Number),
+      sqlDurationMs: null,
+      servedByRegion: null,
+      servedByPrimaryResults: 0,
+      servedByReplicaResults: 0,
+      reasons: expect.arrayContaining(["external-http-d1-excluded"]),
+    });
+    expect(JSON.parse(result.metadata!).rawOverallStatus).toBe("healthy");
+  });
+
+  it("preserves an uncaught status SQL exception", async () => {
+    const failure = new Error("original status SQL failure");
+    const db = mockD1([{ match: "SELECT failed_evidence", rows: [], throwError: failure }]);
+    computeRawStatusMock.mockImplementationOnce(async (trackedDb) => {
+      await trackedDb.prepare("SELECT failed_evidence").all();
+      return buildRawStatus();
+    });
+    await expect(runStatusSelfCheck(db)).rejects.toBe(failure);
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();

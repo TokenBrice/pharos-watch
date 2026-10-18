@@ -19,12 +19,15 @@ import { recordCronFailure, type CronProgressReporter, type CronResult } from ".
 import { createCronResult } from "../lib/cron-result";
 import { TAPE_PROJECTOR_JOBS } from "../lib/tape-projectors/registry";
 import { throwIfAborted } from "../lib/abort";
+import { createD1CostTracker } from "../lib/d1-cost";
 
 export async function projectTape(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded"]);
+  db = d1Cost.db;
   const perClass: Record<string, number> = {};
   let total = 0;
   let advancedAny = false;
@@ -75,6 +78,6 @@ export async function projectTape(
     status: hasFailure ? "degraded" : "ok",
     itemCount: total,
     productivity: { productive: total > 0 },
-    metadata: { reason: hasFailure ? "tape-projector-failed" : "tape-projection-completed", perClass, watermarkAdvanced: advancedAny },
+    metadata: { reason: hasFailure ? "tape-projector-failed" : "tape-projection-completed", perClass, watermarkAdvanced: advancedAny, d1Cost: d1Cost.snapshot() },
   });
 }
