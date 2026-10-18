@@ -376,6 +376,33 @@ describe("runFourHourlyReserveSyncSlot", () => {
     );
   });
 
+  it("surfaces a checkpoint-read failure as named watchdog degradation without failing sibling work", async () => {
+    vi.mocked(computeReserveCompositionOverview).mockRejectedValue(new Error("checkpoint-read-failed"));
+
+    const summary = await runFourHourlyReserveSyncSlot(buildRuntime());
+    expect(summary).toMatchObject({ jobsRun: 3, jobsErrored: 0, jobsDegraded: 1, jobsSkipped: 0 });
+    expect(summary.jobs).toContainEqual(expect.objectContaining({
+      job: "cron-sentinel", status: "degraded", reason: "reserve-post-sync:reserve-post-sync:degraded",
+    }));
+    expect(summary.jobs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ job: "sync-live-reserves", status: "ok" }),
+      expect.objectContaining({ job: "sync-redemption-backstops", status: "ok" }),
+    ]));
+    expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
+    const retained = sentinelSourceStates.get("cron-sentinel:source:reserve-post-sync");
+    expect(retained).toBeDefined();
+    const source = JSON.parse(retained!.value);
+    expect(source.status).toBe("degraded");
+    expect(JSON.parse(source.metadata).degradedReasons).toEqual(["persistent-stale-overview-failed"]);
+    const failure = errorSpy.mock.calls.find(([message]: readonly unknown[]) =>
+      typeof message === "string" && message.includes("[cron-failure:reserve-post-sync-watchdog]"));
+    expect(failure).toBeDefined();
+    expect(JSON.parse(String(failure![1]))).toMatchObject({
+      job: "reserve-post-sync-watchdog", errorMessage: "checkpoint-read-failed",
+      metadata: { stage: "persistent-stale-overview" },
+    });
+  });
+
   it("observes the reserve generation only after the producer that writes it settles", async () => {
     let releaseSync: () => void = () => {};
     const syncGate = new Promise<void>((resolve) => {

@@ -15,6 +15,7 @@ import { computeReserveCompositionOverview } from "../lib/live-reserves/store";
 import { emptyReserveComposition } from "../lib/status/derived-data";
 import { deriveReserveCompositionStatus } from "../lib/status/evaluation-state";
 import { logWorkerEvent } from "../lib/structured-log";
+import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";
 
 export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
   "status-history",
@@ -40,7 +41,7 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
       listRecentStatusTransitions(db, limit + 1, { from, to }, () => {
         transitionQueryFailed = true;
       }),
-      computeReserveCompositionOverview(db, now)
+      computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))
         .then((overview) => ({ ok: true as const, overview }))
         .catch((error) => {
           logWorkerEvent({

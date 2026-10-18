@@ -222,11 +222,13 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
  * Records the outcome of a fetch attempt and handles state transitions.
  *
  * NOTE: There is a known TOCTOU window between shouldAttemptFetch() and
- * recordOutcome() — concurrent cron jobs could both read "half-open" and
- * both probe. This is accepted as best-effort behavior; the circuit breaker
- * provides probabilistic protection, not strict mutual exclusion.
- * D1 lacks the CAS primitives needed for strict single-probe semantics
- * without adding a separate coordination mechanism.
+ * recordOutcome() — concurrent cron jobs can both read "half-open" and both
+ * probe. That is accepted best-effort protection: the breaker reduces outage
+ * load probabilistically and does not promise strict mutual exclusion. D1 is
+ * not the limit — this module performs best-effort reads/writes by design.
+ * Strict single-probe semantics would need an explicit SQL-fenced claim in the
+ * same statement (the pattern used by `scheduled-slot-fence.ts` owner/
+ * generation updates), which this breaker deliberately does not add.
  */
 export async function recordOutcome(
   db: D1Database,

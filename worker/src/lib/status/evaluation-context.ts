@@ -4,6 +4,7 @@ import type {
 } from "@shared/types/status";
 import { unavailableReserveComposition } from "@shared/lib/status-reserve-composition";
 import { computeReserveCompositionOverview } from "../live-reserves/store";
+import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { CronHealthSnapshot } from "./cron-health";
 import {
@@ -55,7 +56,7 @@ export async function loadSupplementalStatusSections(
   let reserveComposition: StatusResponse["reserveComposition"] = emptyReserveComposition();
   let reserveCompositionQueryFailed = false;
   try {
-    const reserveOverviewData = await computeReserveCompositionOverview(db, now);
+    const reserveOverviewData = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
     const reserveAssessment = deriveReserveCompositionStatus({
       ...emptyReserveComposition(),
       ...reserveOverviewData,

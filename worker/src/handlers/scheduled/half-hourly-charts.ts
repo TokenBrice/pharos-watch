@@ -3,23 +3,24 @@
  *   sync-dex-liquidity (0 normally, 5 during source recovery) → cron-sentinel turnover source (0)
  *   → prepare-safety-score-v9-input (3)
  *   sync-stablecoin-charts (1), failure-independent and serial
- * :16 consumes and publishes the hourly source generation; :46 reuses the
- * exact current score generation for V9 preparation. A terminally failed or
- * never-started hourly stage is re-run inline by the :16 consumer (bounded by
- * the stage job's lease and the consumer's own wall-clock budget), and :46
- * publishes the hour's still-unconsumed stage when :16 never completed.
- * The serial chain peaks at 3 normally and 5 during bounded source recovery;
- * the registry/checker therefore treats this slot as headroom-full.
+ * :16 consumes and publishes the hourly source generation; :46 normally reuses
+ * the exact current generation for V9 preparation, or publishes the hour's
+ * still-unconsumed ready stage when :16 never completed. Inline reconstruction
+ * requires Graph capability and the source-job lease; heavy intentionally lacks
+ * Graph credentials and refuses recapture rather than constructing a partial
+ * graph. The serial chain peaks at 3 normally; 5 is the reserved peak for a
+ * credential-capable recovery caller, not evidence heavy performs recapture.
+ * The registry/checker therefore treats this slot as headroom-full.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
 import {
   consumeDexLiquidityScoringStage,
+  DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
   reuseCurrentDexLiquidityScoringGeneration,
 } from "../../cron/dex-liquidity/orchestrator";
 import {
   DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
   isDailyDexShadowTargetPublicationSlot,
-  isDexLiquidityPublicationSlot,
   isHourlyDexPriceSlot,
 } from "@shared/lib/cron-cadences";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
@@ -200,13 +201,6 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
         return result;
       },
       "cron-sentinel": (signal) => {
-        if (!isDexLiquidityPublicationSlot(runtime.slotStartedAt)) {
-          return Promise.resolve({
-            status: "skipped_neutral" as const,
-            itemCount: 0,
-            metadata: JSON.stringify({ reason: "not-liquidity-publication-slot" }),
-          });
-        }
         const publication = dexPublication;
         if (
           publication == null
@@ -236,6 +230,11 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
           && publication.generationId !== null
           && publication.skipped === false
           && publication.skippedReason === "liquidity-cadence-reuse";
+        const isLiveProducerWait =
+          publication?.status === "skipped_neutral"
+          && publication.generationId === null
+          && publication.skipped
+          && publication.skippedReason === DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON;
         const dexPublicationUnavailable = (
           recovery?: { outcome: string } & Record<string, unknown>,
         ) => ({
@@ -250,17 +249,18 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
             childDisposition: "not_started",
           }),
         });
+        if (publication == null) return dexPublicationUnavailable();
         if (
-          publication == null
-          || publication.status === "skipped_locked"
-          || (publication.status === "skipped_neutral" && !isExactCadenceReuse)
-          || publication.skipped
+          !isLiveProducerWait
+          && (publication.status === "skipped_locked"
+            || (publication.status === "skipped_neutral" && !isExactCadenceReuse)
+            || publication.skipped)
         ) {
           return dexPublicationUnavailable();
         }
         let generationId = publication.generationId;
         let recovery: DexPublicationRecovery | null = null;
-        if (publication.status === "error") {
+        if (publication.status === "error" || isLiveProducerWait) {
           const recovered = await recoverLastAcceptedDexPublication(
             runtime.db,
             runtime.slotStartedAt,
@@ -292,7 +292,7 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
             ...parseObjectMetadata(result.metadata),
             dexPublicationRecovery: {
               upstreamJob: "sync-dex-liquidity",
-              upstreamStatus: "error",
+              upstreamStatus: publication.status,
               reusedGenerationId: recovery.generationId,
               publicationAgeSec: recovery.publicationAgeSec,
               budgetSec: recovery.budgetSec,

@@ -123,6 +123,7 @@ const StatusReserveCompositionSchema = z.union([
     weakProbeFresh: z.null(),
     writeTimeoutUncertain: z.null(),
     deferredCoins: z.null(),
+    inProgressCoins: z.null().optional(),
     runBudgetTruncated: z.null(),
     deferredAt: z.null(),
     nextCursorStablecoinId: z.null(),

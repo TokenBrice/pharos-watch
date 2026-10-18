@@ -5,6 +5,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { computeReserveCompositionOverview } from "../../lib/live-reserves/store";
 import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
+import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 import {
   recordDeferredTail,
   selectConfiguredCoinRunQueue,
@@ -205,7 +206,7 @@ describe("recordDeferredTail", () => {
           lastSuccessAt: successAt,
         },
       });
-      const overview = await computeReserveCompositionOverview(db, deferredAt + 60);
+      const overview = await computeReserveCompositionOverview(db, deferredAt + 60, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
       expect(overview).toMatchObject({
         freshCoins: 1,
         deferredCoins: 2,

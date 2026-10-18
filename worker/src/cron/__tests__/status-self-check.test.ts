@@ -176,6 +176,7 @@ describe("runStatusSelfCheck", () => {
     const result = await runStatusSelfCheck({} as D1Database, {});
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata!).failCount).toBeGreaterThan(0);
+    expect(JSON.parse(result.metadata!).reason).toBe("probe-execution-failed");
   });
 
   it("publishes the averaged middle pair for four deterministic probe durations", async () => {
@@ -223,8 +224,83 @@ describe("runStatusSelfCheck", () => {
     const result = await run({} as D1Database);
     const metadata = JSON.parse(result.metadata!);
     expect(durations).toHaveLength(0);
-    expect(metadata).toMatchObject({ sampleCount: 20, p95LatencyMs: p95Ms, transportStatus: status });
+    expect(metadata).toMatchObject({ sampleCount: 20, passCount: 20, failCount: 0, p95LatencyMs: p95Ms, transportStatus: status });
     expect(metadata.latencySummary.p95Ms).toBe(p95Ms);
+    expect(result.status).toBe(status === "healthy" ? "ok" : "degraded");
+    expect(metadata.reason).toBe(status === "healthy" ? undefined : "probe-latency-exceeded");
+    expect(metadata.outputPublishedAt).toBe(1_777_000_000);
+  });
+
+  it("keeps execution failure ahead of latency when failed probes are slow", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_777_000_000_000);
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      vi.setSystemTime(Date.now() + STATUS_PROBE_THRESHOLDS.healthyP95MaxMs + 1);
+      return buildProbeResponse(input, "healthy", init, { status: 503 });
+    });
+    const result = await runStatusSelfCheck({} as D1Database);
+    const metadata = JSON.parse(result.metadata!);
+    expect(result.status).toBe("degraded");
+    expect(metadata.failCount).toBeGreaterThan(0);
+    expect(metadata.p95LatencyMs).toBeGreaterThan(STATUS_PROBE_THRESHOLDS.healthyP95MaxMs);
+    expect(metadata.transportStatus).not.toBe("healthy");
+    expect(metadata.reason).toBe("probe-execution-failed");
+  });
+
+  it("keeps an empty probe population execution-failed", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const result = await runStatusSelfCheck({} as D1Database, { signal: controller.signal });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      sampleCount: 0, passCount: 0, failCount: 0,
+      transportStatus: "stale", reason: "probe-execution-failed",
+    });
+  });
+
+  it("does not call absent connectivity evidence a latency breach", async () => {
+    const controller = new AbortController();
+    routeMock.mockImplementation(async ({ url }: { url: URL }) => {
+      controller.abort();
+      return buildProbeResponse(url, "degraded");
+    });
+    const result = await runStatusSelfCheck({} as D1Database, {
+      ctx: makeExecutionContext().ctx, signal: controller.signal,
+    });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      sampleCount: 1, passCount: 0, failCount: 0, p95LatencyMs: 0,
+      transportStatus: "stale", semanticStatus: "degraded",
+      quality: { reason: "probe-plane-degraded" }, reason: "probe-execution-failed",
+    });
+  });
+
+  it.each([
+    { name: "persistence", persistenceFailed: true, evidenceFailed: false, reason: "status-self-check-persistence-failed" },
+    { name: "evidence", persistenceFailed: false, evidenceFailed: true, reason: "status-self-check-evidence-read-failed" },
+    { name: "both", persistenceFailed: true, evidenceFailed: true, reason: "status-self-check-persistence-failed" },
+  ])("keeps persistence and evidence failures ahead of latency ($name)", async ({ persistenceFailed, evidenceFailed, reason }) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_777_000_000_000);
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      vi.setSystemTime(Date.now() + STATUS_PROBE_THRESHOLDS.healthyP95MaxMs + 1);
+      return buildProbeResponse(input, "healthy", init);
+    });
+    if (persistenceFailed) writeStatusProbeRunMock.mockResolvedValueOnce(false);
+    if (evidenceFailed) computeRawStatusMock.mockResolvedValueOnce({
+      ...buildRawStatus(), evidenceReadFailures: ["scheduler:read-failed"],
+    });
+    const result = await runStatusSelfCheck({} as D1Database);
+    const metadata = JSON.parse(result.metadata!);
+    expect(result.status).toBe("degraded");
+    expect(metadata).toMatchObject({
+      failCount: 0, reason,
+      failedOutputs: persistenceFailed ? ["status_probe_runs"] : [],
+      evidenceReadFailures: evidenceFailed ? ["scheduler:read-failed"] : [],
+      outputPublishedAt: persistenceFailed ? null : 1_777_000_000,
+    });
+    expect(metadata.passCount).toBeGreaterThan(0);
+    expect(metadata.p95LatencyMs).toBeGreaterThan(STATUS_PROBE_THRESHOLDS.healthyP95MaxMs);
   });
 
   it("persists each probe boundary before entering the route", async () => {

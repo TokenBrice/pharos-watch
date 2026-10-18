@@ -151,7 +151,8 @@ export async function syncRpcProviderParity(
     message: `parity samples retained: ${write.runs} run(s)`,
   });
 
-  const degraded = probe.deadlineHit || probe.aborted || !write.ok;
+  const hasObservation = probe.attempted > 0 && probe.samples.length > 0;
+  const degraded = (probe.deadlineHit && !hasObservation) || probe.aborted || !write.ok;
   throwIfAborted(signal);
   return {
     status: degraded ? "degraded" : "ok",
@@ -166,6 +167,7 @@ export async function syncRpcProviderParity(
       headOk: probe.headOk,
       skipped: probe.skipped.length,
       deadlineHit: probe.deadlineHit,
+      truncated: probe.deadlineHit,
       aborted: probe.aborted,
       runsRetained: write.runs,
       storeBytes: write.bytes,

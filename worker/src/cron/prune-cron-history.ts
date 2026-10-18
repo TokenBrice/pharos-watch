@@ -11,6 +11,7 @@ import { pruneOldApiKeyRequestRateLimits } from "../lib/api-key-request-rate-lim
 import { pruneProducerHistory } from "../lib/producer-history";
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "@shared/lib/request-attribution";
 import { deleteCapped } from "./shared/capped-delete";
+import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "../lib/bounded-prune";
 import { SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC } from "../lib/safety-score-v9/publication-journal";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
 
@@ -21,8 +22,6 @@ const SLOT_EXECUTION_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 const BLOCK_TIMESTAMP_CACHE_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 const SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
 const REQUEST_TELEMETRY_RETENTION_SEC = REQUEST_ATTRIBUTION_RETENTION_DAYS * SECONDS.ONE_DAY;
-const REQUEST_TELEMETRY_DELETE_BATCH_LIMIT = 10_000;
-const REQUEST_TELEMETRY_DELETE_RUN_LIMIT = 100_000;
 const SELF_SERVE_RATE_LIMIT_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
 
 function toUtcDateString(timestampSec: number): string {
@@ -34,6 +33,12 @@ interface SimpleRetentionPolicy {
   cutoff: number | string;
 }
 
+/**
+ * Every policy routed here carries the canonical bounded shape
+ * `WHERE <clock> < ? AND rowid IN (SELECT rowid FROM <table>
+ *  WHERE <clock> < ? ORDER BY <clock> ASC LIMIT ?)`, so the cutoff binds twice
+ * and the batch limit last. Same cutoff, same rows, oldest-first.
+ */
 async function runCappedRetentionPass(
   db: D1Database,
   policy: SimpleRetentionPolicy,
@@ -42,9 +47,9 @@ async function runCappedRetentionPass(
   return deleteCapped(
     db,
     policy.sql,
-    (limit) => [policy.cutoff, limit],
-    REQUEST_TELEMETRY_DELETE_BATCH_LIMIT,
-    REQUEST_TELEMETRY_DELETE_RUN_LIMIT,
+    (limit) => [policy.cutoff, policy.cutoff, limit],
+    RETENTION_DELETE_BATCH_LIMIT,
+    RETENTION_DELETE_RUN_LIMIT,
     signal,
   );
 }
@@ -70,7 +75,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   const requestTelemetryCutoff = now - REQUEST_TELEMETRY_RETENTION_SEC;
   const simpleRetentionPolicies = {
     cronRuns: {
-      sql: "DELETE FROM cron_runs WHERE started_at < ?",
+      sql: "DELETE FROM cron_runs WHERE started_at < ? AND rowid IN (SELECT rowid FROM cron_runs WHERE started_at < ? ORDER BY started_at ASC LIMIT ?)",
       cutoff: now - SECONDS.ONE_WEEK,
     },
     selectorSnapshotDailyQuota: {
@@ -78,42 +83,42 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       cutoff: selectorSnapshotDailyQuotaCutoffDate,
     },
     blockTimestampCache: {
-      sql: "DELETE FROM block_timestamp_cache WHERE updated_at < ?",
+      sql: "DELETE FROM block_timestamp_cache WHERE updated_at < ? AND rowid IN (SELECT rowid FROM block_timestamp_cache WHERE updated_at < ? ORDER BY updated_at ASC LIMIT ?)",
       cutoff: now - BLOCK_TIMESTAMP_CACHE_RETENTION_SEC,
     },
     slotExecutions: {
-      sql: "DELETE FROM cron_slot_executions WHERE slot_started_at < ?",
+      sql: "DELETE FROM cron_slot_executions WHERE slot_started_at < ? AND rowid IN (SELECT rowid FROM cron_slot_executions WHERE slot_started_at < ? ORDER BY slot_started_at ASC LIMIT ?)",
       cutoff: now - SLOT_EXECUTION_RETENTION_SEC,
     },
     apiRequestConsumerStats: {
-      sql: "DELETE FROM api_request_consumer_stats WHERE rowid IN (SELECT rowid FROM api_request_consumer_stats WHERE bucket_start < ? ORDER BY bucket_start ASC LIMIT ?)",
+      sql: "DELETE FROM api_request_consumer_stats WHERE bucket_start < ? AND rowid IN (SELECT rowid FROM api_request_consumer_stats WHERE bucket_start < ? ORDER BY bucket_start ASC LIMIT ?)",
       cutoff: requestTelemetryCutoff,
     },
     siteDataRequestStats: {
-      sql: "DELETE FROM site_data_request_stats WHERE rowid IN (SELECT rowid FROM site_data_request_stats WHERE bucket_start < ? ORDER BY bucket_start ASC LIMIT ?)",
+      sql: "DELETE FROM site_data_request_stats WHERE bucket_start < ? AND rowid IN (SELECT rowid FROM site_data_request_stats WHERE bucket_start < ? ORDER BY bucket_start ASC LIMIT ?)",
       cutoff: requestTelemetryCutoff,
     },
     apiKeyRequestStats: {
-      sql: "DELETE FROM api_key_request_stats WHERE rowid IN (SELECT rowid FROM api_key_request_stats WHERE bucket_start < ? ORDER BY bucket_start ASC LIMIT ?)",
+      sql: "DELETE FROM api_key_request_stats WHERE bucket_start < ? AND rowid IN (SELECT rowid FROM api_key_request_stats WHERE bucket_start < ? ORDER BY bucket_start ASC LIMIT ?)",
       cutoff: requestTelemetryCutoff,
     },
     safetyScoreJournal: {
-      sql: "DELETE FROM safety_score_publication_journal WHERE rowid IN (SELECT rowid FROM safety_score_publication_journal WHERE published_at < ? ORDER BY published_at ASC LIMIT ?)",
+      sql: "DELETE FROM safety_score_publication_journal WHERE published_at < ? AND rowid IN (SELECT rowid FROM safety_score_publication_journal WHERE published_at < ? ORDER BY published_at ASC LIMIT ?)",
       cutoff: now - SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC,
     },
     safetyScoreAttempts: {
-      sql: "DELETE FROM safety_score_publication_attempts WHERE rowid IN (SELECT rowid FROM safety_score_publication_attempts WHERE attempted_at < ? ORDER BY attempted_at ASC LIMIT ?)",
+      sql: "DELETE FROM safety_score_publication_attempts WHERE attempted_at < ? AND rowid IN (SELECT rowid FROM safety_score_publication_attempts WHERE attempted_at < ? ORDER BY attempted_at ASC LIMIT ?)",
       cutoff: now - SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC,
     },
     safetyScoreCaptureArchive: {
-      sql: "DELETE FROM safety_score_capture_archive WHERE rowid IN (SELECT rowid FROM safety_score_capture_archive WHERE published_at < ? ORDER BY published_at ASC, generation_id ASC LIMIT ?)",
+      sql: "DELETE FROM safety_score_capture_archive WHERE published_at < ? AND rowid IN (SELECT rowid FROM safety_score_capture_archive WHERE published_at < ? ORDER BY published_at ASC, generation_id ASC LIMIT ?)",
       cutoff: now - SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC,
     },
   } as const;
 
-  const cronRunsDeleted = await runSimpleRetentionPass(db, simpleRetentionPolicies.cronRuns, signal);
+  const cronRuns = await runCappedRetentionPass(db, simpleRetentionPolicies.cronRuns, signal);
 
-  const producerHistoryDeleted = await pruneProducerHistory(db, now, signal);
+  const producerHistory = await pruneProducerHistory(db, now, signal);
   throwIfAborted(signal);
   const repairTasks = await pruneRepairTasks(db, now - SECONDS.ONE_WEEK, signal);
   throwIfAborted(signal);
@@ -139,12 +144,12 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     simpleRetentionPolicies.selectorSnapshotDailyQuota,
     signal,
   );
-  const blockTimestampCacheDeleted = await runSimpleRetentionPass(
+  const blockTimestampCache = await runCappedRetentionPass(
     db,
     simpleRetentionPolicies.blockTimestampCache,
     signal,
   );
-  const slotExecutionsDeleted = await runSimpleRetentionPass(
+  const slotExecutions = await runCappedRetentionPass(
     db,
     simpleRetentionPolicies.slotExecutions,
     signal,
@@ -171,15 +176,15 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   return createCronResult({
     status: "ok",
     itemCount:
-      cronRunsDeleted +
-      producerHistoryDeleted +
+      cronRuns.pruned +
+      producerHistory.pruned +
       repairTasks.deleted +
       canaryRuns.deleted +
       recoveryCheckpoints.deleted +
       selfServeRateLimits.deleted +
       selectorSnapshotDailyQuotaDeleted +
-      blockTimestampCacheDeleted +
-      slotExecutionsDeleted +
+      blockTimestampCache.pruned +
+      slotExecutions.pruned +
       apiRequestConsumerStats.pruned +
       siteDataRequestStats.pruned +
       apiKeyRequestStats.pruned +
@@ -187,8 +192,8 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       safetyScoreAttempts.pruned +
       safetyScoreCaptureArchive.pruned,
     metadata: {
-      cronRunsDeleted,
-      producerHistoryDeleted,
+      cronRunsDeleted: cronRuns.pruned,
+      producerHistoryDeleted: producerHistory.pruned,
       safetyScoreJournalDeleted: safetyScoreJournal.pruned,
       safetyScoreAttemptsDeleted: safetyScoreAttempts.pruned,
       safetyScoreJournalCappedAtLimit: safetyScoreJournal.cappedAtLimit,
@@ -202,14 +207,18 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       recoveryCheckpointsDeleted: recoveryCheckpoints.deleted,
       selfServeRateLimitsDeleted: selfServeRateLimits.deleted,
       retentionTruncated: {
+        cronRuns: cronRuns.cappedAtLimit,
+        blockTimestampCache: blockTimestampCache.cappedAtLimit,
+        slotExecutions: slotExecutions.cappedAtLimit,
+        producerHistory: producerHistory.cappedAtLimit,
         repairTasks: repairTasks.truncated,
         canaryRuns: canaryRuns.truncated,
         recoveryCheckpoints: recoveryCheckpoints.truncated,
         selfServeRateLimits: selfServeRateLimits.truncated,
       },
       selectorSnapshotDailyQuotaDeleted,
-      blockTimestampCacheDeleted,
-      slotExecutionsDeleted,
+      blockTimestampCacheDeleted: blockTimestampCache.pruned,
+      slotExecutionsDeleted: slotExecutions.pruned,
       apiRequestConsumerStatsDeleted: apiRequestConsumerStats.pruned,
       siteDataRequestStatsDeleted: siteDataRequestStats.pruned,
       apiKeyRequestStatsDeleted: apiKeyRequestStats.pruned,

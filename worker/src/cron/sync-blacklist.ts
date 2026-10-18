@@ -313,6 +313,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         configsAttempted,
         configsSucceeded,
         coverageFailures,
+        coverageFailureConfigs: scan.coverageFailureConfigs,
         stateConflicts,
         rpcLogConfigs,
         providerCircuitSkips,

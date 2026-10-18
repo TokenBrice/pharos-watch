@@ -9,6 +9,7 @@ import { makeReservesDb, mockReserveD1, reserveCompositionRow, reserveSyncRow } 
 import { resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 import { getReserves } from "@shared/lib/reserve-templates";
+import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 
 function fixture(id = "hbd-hive", metadata: Record<string, unknown> = { freshnessMode: "not-applicable" }, fingerprint?: string, status = "ok") {
   const source = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter ?? "infinifi";
@@ -85,7 +86,7 @@ describe("live reserve admission", () => {
     const db = fixture("hbd-hive", { freshnessMode: "not-applicable" }, undefined, "error");
     expect((await resolveReserveResult(db, "hbd-hive", 1_200))?.provenance?.scoringEligible).toBe(true);
     expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(true);
-    const overview = await computeReserveCompositionOverview(db, 1_200);
+    const overview = await computeReserveCompositionOverview(db, 1_200, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
     expect(overview.independentFreshEligible).toBe(1);
     expect(overview.errorCoins).toBe(1);
   });
@@ -125,7 +126,7 @@ describe("live reserve admission", () => {
     const db = fixture("hbd-hive", metadata);
     expect((await resolveReserveResult(db, "hbd-hive", 1_200))?.provenance?.scoringEligible).toBe(false);
     expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(false);
-    expect((await computeReserveCompositionOverview(db, 1_200)).independentFreshEligible).toBe(0);
+    expect((await computeReserveCompositionOverview(db, 1_200, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).independentFreshEligible).toBe(0);
   });
 
   it("accepts explicit verified timestamps through the future-skew boundary", async () => {

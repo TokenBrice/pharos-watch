@@ -278,11 +278,43 @@ describe("producer history", () => {
     insert.run("budget-old", "budget", "budget-only", "b", now - 40 * 86_400, now - 40 * 86_400, null, now);
     insert.run("monthly-old", "monthly", "scheduled-job", "m", now - 400 * 86_400, now - 400 * 86_400, "2025-01", now);
 
-    expect(await pruneProducerHistory(db, now)).toBe(1);
+    expect(await pruneProducerHistory(db, now)).toEqual({ pruned: 1, cappedAtLimit: false });
     const ids = sqlite
       .prepare("SELECT idempotency_key FROM worker_producer_history ORDER BY idempotency_key")
       .all()
       .map((row) => String((row as { idempotency_key: string }).idempotency_key));
     expect(ids).toEqual(["budget-old", "monthly-old"]);
+  });
+
+  it("caps producer-history deletion at the run budget and keeps non-eligible cutoffs intact", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const now = 2_000_000_000;
+    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 100001)
+      INSERT INTO worker_producer_history (
+        idempotency_key, schedule_key, job, producer_path, producer_kind, invocation_id,
+        invoked_at, completed_at, outcome, productive, publication_count, created_at
+      )
+      SELECT printf('regular-%06d', id), 'daily0300Utc', 'scheduled-job', 'p', 'scheduled-job',
+        printf('invocation-%06d', id), ? - id, ? - id, 'ok', 0, 0, ? FROM n`).run(
+      now - 40 * 86_400, now - 40 * 86_400, now,
+    );
+    // Budget-only rows sit inside their 90-day window; the regular 30-day boundary is retained by the strict cutoff.
+    const insert = sqlite.prepare(
+      `INSERT INTO worker_producer_history (
+         idempotency_key, schedule_key, job, producer_path, producer_kind, invocation_id,
+         invoked_at, completed_at, outcome, productive, publication_count, calendar_period, created_at
+       ) VALUES (?, 'daily0300Utc', ?, 'p', ?, ?, ?, ?, 'ok', 0, 0, ?, ?)`,
+    );
+    insert.run("budget-recent", "budget", "budget-only", "b", now - 40 * 86_400, now - 40 * 86_400, null, now);
+    insert.run("regular-boundary", "regular", "scheduled-job", "r", now - 30 * 86_400, now - 30 * 86_400, null, now);
+
+    expect(await pruneProducerHistory(db, now)).toEqual({ pruned: 100_000, cappedAtLimit: true });
+    expect(
+      sqlite.prepare("SELECT idempotency_key FROM worker_producer_history ORDER BY idempotency_key").all(),
+    ).toEqual([
+      { idempotency_key: "budget-recent" },
+      { idempotency_key: "regular-000001" },
+      { idempotency_key: "regular-boundary" },
+    ]);
   });
 });

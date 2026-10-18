@@ -103,6 +103,35 @@ describe("runPruneCronHistory", () => {
       .toEqual([{ generation_id: "generation-100001" }]);
   });
 
+  it("caps the cron_runs backlog at 100,000 rows, deletes oldest first, and flags truncation", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - ONE_WEEK_SEC;
+    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 100001)
+      INSERT INTO cron_runs (job, started_at, duration_ms, status)
+      SELECT 'sync-stablecoins', ? - id, 1, 'ok' FROM n`).run(cutoff);
+
+    const result = await runPruneCronHistory(db);
+
+    expect(select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs")).toEqual([
+      { started_at: cutoff - 1 },
+    ]);
+    expect(result.itemCount).toBe(100_000);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      cronRunsDeleted: 100_000,
+      retentionTruncated: {
+        cronRuns: true,
+        blockTimestampCache: false,
+        slotExecutions: false,
+        producerHistory: false,
+        repairTasks: false,
+        canaryRuns: false,
+        recoveryCheckpoints: false,
+        selfServeRateLimits: false,
+      },
+    });
+  });
+
   it.each([
     {
       label: "removes cron_runs older than 7 days and keeps newer rows",

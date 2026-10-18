@@ -205,6 +205,17 @@ describe("status evaluation policy", () => {
     expect(assessment.status).toBe("healthy");
   });
 
+  it.each([
+    [0, false, 0, "healthy"],
+    [3, true, 0, "degraded"],
+    [0, false, 1, "degraded"],
+  ] as const)("keeps live remainder separate from real capacity pressure (%s/%s/%s)", (deferredCoins, runBudgetTruncated, writeTimeoutUncertain, status) => {
+    const assessment = deriveReserveCompositionStatus(makeReserveComposition({
+      inProgressCoins: 8, deferredCoins, runBudgetTruncated, writeTimeoutUncertain,
+    }));
+    expect(assessment.status).toBe(status);
+  });
+
   it("degrades reserve status for high-share truncation pressure", () => {
     const highShare = deriveReserveCompositionStatus(
       makeReserveComposition({

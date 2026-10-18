@@ -2,6 +2,8 @@ import type { PublicationSurfaceId } from "@shared/types/status";
 import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { type CappedDeleteResult, deleteCapped } from "../cron/shared/capped-delete";
+import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "./bounded-prune";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 
 export interface ProducerTerminalGuard {
@@ -449,28 +451,34 @@ export async function loadProducerHeads(
     }));
 }
 
-export async function pruneProducerHistory(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<number> {
+export async function pruneProducerHistory(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<CappedDeleteResult> {
   throwIfAborted(signal);
-  const result = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare(
-          `DELETE FROM worker_producer_history
-        WHERE (calendar_period IS NOT NULL AND completed_at < ?)
-           OR (calendar_period IS NULL AND producer_kind = 'budget-only' AND completed_at < ?)
-           OR (calendar_period IS NULL AND producer_kind != 'budget-only' AND completed_at < ?)`,
-        )
-        .bind(
-          nowSec - CALENDAR_HISTORY_RETENTION_SEC,
-          nowSec - BUDGET_HISTORY_RETENTION_SEC,
-          nowSec - REGULAR_HISTORY_RETENTION_SEC,
-        )
-        .run(),
-    3,
+  const calendarCutoff = nowSec - CALENDAR_HISTORY_RETENTION_SEC;
+  const budgetCutoff = nowSec - BUDGET_HISTORY_RETENTION_SEC;
+  const regularCutoff = nowSec - REGULAR_HISTORY_RETENTION_SEC;
+  const result = await deleteCapped(
+    db,
+    `DELETE FROM worker_producer_history
+      WHERE rowid IN (
+        SELECT rowid
+          FROM worker_producer_history
+         WHERE (calendar_period IS NOT NULL AND completed_at < ?)
+            OR (calendar_period IS NULL AND producer_kind = 'budget-only' AND completed_at < ?)
+            OR (calendar_period IS NULL AND producer_kind != 'budget-only' AND completed_at < ?)
+         ORDER BY completed_at ASC
+         LIMIT ?
+      )`,
+    (limit) => [calendarCutoff, budgetCutoff, regularCutoff, limit],
+    RETENTION_DELETE_BATCH_LIMIT,
+    RETENTION_DELETE_RUN_LIMIT,
     signal,
   );
   throwIfAborted(signal);
-  return result.meta.changes ?? 0;
+  return result;
 }
 
 export function utcCalendarMonth(timestampSec: number): string {

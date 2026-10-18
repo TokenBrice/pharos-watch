@@ -10,6 +10,7 @@ import { computeReserveCompositionOverview, getMaxSyncAge } from "../lib/live-re
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "./sync-live-reserves-shared";
 import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";
+import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";
 
 const PERSISTENTLY_STALE_WARNING_COUNT_THRESHOLD = 3;
 const PERSISTENTLY_STALE_WARNING_MAX_AGE_SEC = 21 * DAY_SECONDS;
@@ -69,7 +70,7 @@ export async function runReservePostSyncWatchdog(
 
   try {
     throwIfAborted(signal);
-    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000));
+    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000), resolveScheduledSlotPolicy("fourHourlyReserveSync"));
     throwIfAborted(signal);
     const persistentlyStale = overview.persistentlyStaleIndependentCoins;
     persistentlyStaleIndependentCoinCount = persistentlyStale.length;

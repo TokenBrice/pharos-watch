@@ -142,7 +142,7 @@ The kill switches are for observability degradation only. They do not disable AP
 
 ### Append-only D1 Retention Policy
 
-The daily `prune-cron-history` job owns cleanup for cron/producer/slot observability, quota, block-timestamp cache, canary, recovery-checkpoint, repair-task, self-serve limiter, and request-telemetry rows. High-growth retention deletes select oldest eligible `rowid`s in fixed-size statements and stop at an explicit per-invocation row or batch budget; cron metadata reports deleted counts and `retentionTruncated` when repair-task, canary, recovery-checkpoint, or self-serve limiter work remains. The self-serve limiter sweep (retired lane; kept until its table is dropped in the follow-up rollout) drains oldest-first in bounded batches until the eligible backlog is empty or a 100,000-row per-run budget is reached, and it runs only here, never on a request path. `api_request_consumer_stats`, `site_data_request_stats`, and `api_key_request_stats` share the request-attribution authority's 35-day window. Each request table is deleted oldest-first in 10,000-row statements with a 100,000-row per-run ceiling; cron metadata reports each deleted count and whether a table reached that ceiling. The per-table rulings for the append-only product/audit tables it intentionally leaves alone live in [`worker/migrations/MANIFEST.md`](../../worker/migrations/MANIFEST.md#append-only-retention-policy). Do not duplicate that inventory here.
+The daily `prune-cron-history` job owns cleanup for cron/producer/slot observability, quota, block-timestamp cache, canary, recovery-checkpoint, repair-task, self-serve limiter, and request-telemetry rows. High-growth retention deletes select oldest eligible `rowid`s in 10,000-row statements and stop at a 100,000-row per-invocation ceiling (`RETENTION_DELETE_BATCH_LIMIT` and `RETENTION_DELETE_RUN_LIMIT` in `worker/src/lib/bounded-prune.ts`), so a multi-week lapse of `cron_runs`, `worker_producer_history`, `block_timestamp_cache`, or `cron_slot_executions` drains across successive daily runs instead of issuing one oversized statement. Cron metadata reports each deleted count and `retentionTruncated` (`cronRuns`, `producerHistory`, `blockTimestampCache`, `slotExecutions`, `repairTasks`, `canaryRuns`, `recoveryCheckpoints`, `selfServeRateLimits`) when a family reaches its ceiling. The two-day `selector_snapshot_daily_quota` sweep remains a single cutoff statement, which its two-day window keeps small. `cron_slot_executions` filters and orders on `slot_started_at`, which no index covers (`idx_cron_slot_executions_slot_started_at` indexes `(slot_key, started_at)`), so each batch scans the retained table before its cap applies. The self-serve limiter sweep (retired lane; kept until its table is dropped in the follow-up rollout) drains oldest-first in bounded batches until the eligible backlog is empty or a 100,000-row per-run budget is reached, and it runs only here, never on a request path. `api_request_consumer_stats`, `site_data_request_stats`, and `api_key_request_stats` share the request-attribution authority's 35-day window. Each request table is deleted oldest-first in 10,000-row statements with a 100,000-row per-run ceiling; cron metadata reports each deleted count and whether a table reached that ceiling. The per-table rulings for the append-only product/audit tables it intentionally leaves alone live in [`worker/migrations/MANIFEST.md`](../../worker/migrations/MANIFEST.md#append-only-retention-policy). Do not duplicate that inventory here.
 
 Producer-history retention distinguishes ordinary rows (30 days), budget-only rows (90 days) and UTC-calendar identities (550 days); rich cron drill-down remains separately short-lived. Retention never turns unconfirmed output into a publication.
 
@@ -502,7 +502,7 @@ V9 publication admission is gated solely by quarter-hourly core-slot evidence th
 
 The platform header-wait limit and Pharos's stricter trigger-wide budget are stated once in [Worker and API Limits: Connection-budget operating assumption](../worker-and-api-limits.md#connection-budget-operating-assumption). What follows is how that budget is measured and applied per slot.
 
-`npm run check:cron-connections` reads `shared/lib/cron-jobs.ts` and sums peak `connectionGroup` usage, so sequential chains count by their maximum in-chain fetch width rather than by adding every chained job together.
+`npm run check:cron-connections` derives each trigger's peak from the slot plans in `shared/lib/scheduled-runner-registry.ts`: a serial chain contributes its largest child `maxConnections`, independent chains are summed, and budget-only side work contributes its own peak compared with (not added to) that sum. `connectionGroup` is reporting metadata for serial sharing inside a chain and never reduces the peak across independent parallel chains. The six-connection figure is a static declaration budget, not a live socket measurement: at runtime `ScheduledFetchBudget` in `worker/src/lib/scheduled-fetch-budget.ts` admits declared child weights up to `CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt` (5) so parallel chains cannot all start at once, while provider limiters and response-body consumption own actual fetch concurrency.
 
 Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `telegram-digest-outbox-drain`, `safety-map-producer-kick`, `digest-trigger-poll`, and Telegram registration reconciliation entries even though those surfaces do not create separate `/api/status` job rows.
 Redemption declares one connection for its serial queue/reviewed execution RPC observers; it is not D1-only. The four-hour natural reserve slot remains 3/6 (two producer connections plus independent Kinesis); serialized recovery remains 2/6.
@@ -516,9 +516,10 @@ The `halfHourlyChartsOffset` trigger's serial chain contains DEX consumption, th
 
 **Policy for new jobs:**
 
+- Follow [Cron Trigger Budget Policy](cron-trigger-policy.md#target): added logical work, fetch surface or connection pressure needs that policy's growth-gate review and an explicit consolidation/rebalance decision before any new expression. A new trigger is never the first move.
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
-- Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
 - Never add a fetching job to a slot with headroom <=1.
+- A job that cannot share a slot documents the measured reason (for example a dedicated provider rate-limit budget) and declares its `maxConnections`/`connectionGroup`/exact `scheduleKey` budget row in the same change.
 
 ### Cron Error Handling Policy
 
@@ -558,7 +559,7 @@ The baseline schema and migration manifest own column inventories; [retention](#
 
 ### In-flight Cron Progress
 
-`cron_run_progress` is diagnostic live state, not execution authority. Status exposes it only with an active matching lease; expired/orphan rows become stale artifacts. Slot heartbeats use `resolveScheduledSlotPolicy()`; child lease renewal is separate (30 seconds, at most three consecutive failures). Terminal cleanup is invocation-fenced.
+`cron_run_progress` is diagnostic live state, not execution authority. Status exposes it only with an active matching lease; expired/orphan rows become stale artifacts. Slot heartbeats use `resolveScheduledSlotPolicy()`; child lease renewal is separate from slot heartbeats. `runCronWithLease` defaults to `heartbeatSec = max(15, floor(ttlSec / 3))` with `maxRenewFailures = 2`; the named long-running jobs in `PER_JOB_LEASE_OPTIONS` (`worker/src/handlers/scheduled/context.ts`) override that to 30 seconds and 3 consecutive failures. Terminal cleanup is invocation-fenced.
 
 Heartbeat writes retry D1 overloads; a queued write lasting a heartbeat period cannot suppress later ticks. Replacement CAS attempts require owner/generation/state and apply `MAX(updated_at, attempt timestamp)`, so delayed writes cannot move life evidence backwards. Stale/hard-dead thresholds remain those of the [slot policy](#cron-scheduling).
 
@@ -568,7 +569,7 @@ Stage transitions always persist; same-stage updates within 10 seconds coalesce.
 
 `logCronRun()` supplies the abort signal; exceeded ceilings log error and propagate cancellation through `fetchWithRetry()`. Jobs may stop admission earlier to preserve persistence/cleanup time; the wrapper remains authoritative if a bounded call runs late. An unstarted tail must retain its producer's deferred/degraded semantics, never silently vanish.
 
-[Worker and API Limits](../worker-and-api-limits.md#per-job-cron-timeouts) owns the timeout source index and cancellation semantics. `worker/src/lib/cron-timeouts.ts` derives ceilings from `CRON_JOB_DEFINITIONS` and `CRON_TIMEOUT_OVERRIDES_MS`; the runner test rejects newly implicit default ceilings. Read source-owned producer budgets rather than a second timeout roster.
+[Worker and API Limits](../worker-and-api-limits.md#per-job-cron-timeouts) owns the timeout source index and cancellation semantics. `worker/src/lib/cron-timeouts.ts` derives ceilings from `CRON_JOB_DEFINITIONS` and `CRON_TIMEOUT_OVERRIDES_MS` and falls back to `DEFAULT_CRON_TIMEOUT_MS` for any job without an override; the runner contract test asserts only that every registry job has a finite positive budget, so a new job is auto-defaulted rather than rejected. Read source-owned producer budgets rather than a second timeout roster.
 
 ### Circuit Breakers
 

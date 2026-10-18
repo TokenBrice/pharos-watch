@@ -69,16 +69,33 @@ describe("pruneStatusProbeRuns", () => {
 
     // First pass: batchSize=100 caps the deletion, leaving 50 eligible rows.
     const first = await pruneStatusProbeRuns(db, { cutoffSec, batchSize: 100 });
-    expect(first.deleted).toBe(100);
+    expect(first).toEqual({ deleted: 100, cappedAtLimit: true });
 
     // Second pass finishes the backlog.
     const second = await pruneStatusProbeRuns(db, { cutoffSec, batchSize: 100 });
-    expect(second.deleted).toBe(50);
+    expect(second).toEqual({ deleted: 50, cappedAtLimit: false });
 
     // Recent rows survive.
     const remaining = await db
       .prepare("SELECT COUNT(*) AS cnt FROM status_probe_runs")
       .first<{ cnt: number }>();
     expect(remaining?.cnt).toBe(10);
+  });
+
+  it("reports cappedAtLimit in run metadata when the 90-day backlog fills the batch", async () => {
+    const db = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const expectedCutoffSec = now - 90 * 86_400;
+    await db.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 10000)
+      INSERT INTO status_probe_runs
+        (status, sample_count, pass_count, fail_count, p95_latency_ms, details_json, created_at)
+      SELECT 'healthy', 50, 50, 0, 100, '{}', ? FROM n`).bind(expectedCutoffSec - 1).run();
+
+    const result = await runPruneStatusProbeRuns(db);
+    const metadata = JSON.parse(result.metadata!) as { deleted: number; cappedAtLimit: boolean };
+
+    expect(metadata).toMatchObject({ deleted: 10_000, cappedAtLimit: true });
+    const remaining = await db.prepare("SELECT COUNT(*) AS cnt FROM status_probe_runs").first<{ cnt: number }>();
+    expect(remaining?.cnt).toBe(0);
   });
 });

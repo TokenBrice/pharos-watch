@@ -12,6 +12,8 @@ import {
 import { runCronWithLease } from "../cron-lease-primitives";
 import { beginLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery } from "../scheduled-recovery-checkpoint";
 import { SCHEDULED_SLOT_JOB_BUDGET_MS } from "../cron-timeouts";
+import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const fixtures = createLatestSchemaFixtureTracker();
 beforeEach(() => {
@@ -67,6 +69,72 @@ describe("reserve recovery admission", () => {
     });
     const admission = reserveRecoveryAdmissionSql();
     expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 0 });
+  });
+
+  it.each([
+    ["fresh", 600, 30, true],
+    ["silence boundary", 600, resolveScheduledSlotPolicy("fourHourlyReserveSync").slotSilenceSec, true],
+    ["stale heartbeat", 600, resolveScheduledSlotPolicy("fourHourlyReserveSync").slotSilenceSec + 1, false],
+    ["future heartbeat", 600, -1, false],
+    ["before slot start", 600, 601, false],
+    ["before hard dead", resolveScheduledSlotPolicy("fourHourlyReserveSync").hardDeadSec - 1, 0, true],
+    ["hard-dead boundary", resolveScheduledSlotPolicy("fourHourlyReserveSync").hardDeadSec, 0, false],
+    ["past hard dead", resolveScheduledSlotPolicy("fourHourlyReserveSync").hardDeadSec + 1, 0, false],
+  ] as const)("bounds proven-live producer waiting: %s", async (_label, slotAge, heartbeatAge, live) => {
+    const fixture = admittedFixture();
+    const observedAt = fixture.current + slotAge;
+    vi.setSystemTime(observedAt * 1000);
+    fixture.sqlite.prepare("UPDATE cron_slot_executions SET state = 'running', finished_at = NULL, updated_at = ?")
+      .run(observedAt - heartbeatAge);
+    expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
+      reason: "producer-slot-priority", condition: live ? "producer-slot-live" : "current-slot-unfinished",
+      scheduleKey: "fourHourlyReserveSync", slotStartedAt: fixture.current,
+    });
+    const admission = reserveRecoveryAdmissionSql();
+    expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 0 });
+  });
+
+  it.each(["reconciling", "abandoned", "interrupted", "finished", "running"])(
+    "requires running state without a terminal clock for live proof: %s", async (state) => {
+      const fixture = admittedFixture();
+      const observedAt = fixture.current + 600;
+      vi.setSystemTime(observedAt * 1000);
+      fixture.sqlite.prepare("UPDATE cron_slot_executions SET state = ?, finished_at = ?, updated_at = ?")
+        .run(state, state === "running" ? observedAt : null, observedAt);
+      expect(await getReserveProducerPriority(fixture.db)).toMatchObject({ condition: "current-slot-unfinished" });
+    },
+  );
+
+  it.each([null, 0, Number.NaN, Infinity])("does not prove life from an invalid heartbeat: %s", async (updated_at) => {
+    const observedAt = Math.floor(Date.parse("2026-10-07T00:16:00Z") / 1000);
+    const db = mockD1([{
+      match: "FROM cron_slot_executions", rows: [], first: { state: "running", finished_at: null, updated_at },
+    }]);
+    expect(await getReserveProducerPriority(db, observedAt)).toMatchObject({ condition: "current-slot-unfinished" });
+  });
+
+  it("does not promote an Oct-13 delivered-but-no-claim producer to a healthy wait", async () => {
+    vi.setSystemTime(new Date("2026-10-13T16:16:44Z"));
+    const fixture = admittedFixture();
+    expect(fixture.current).toBe(1791907860);
+    fixture.sqlite.prepare("UPDATE cron_slot_executions SET slot_started_at = ?")
+      .run(fixture.current - CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec);
+    fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+      VALUES ('fiveMinuteReserveRecovery', ?, 'running', 'unrelated', 1, ?, ?)`)
+      .run(fixture.now, fixture.now, fixture.now);
+    fixture.sqlite.prepare(`INSERT INTO cron_run_progress (job, started_at, updated_at, lease_owner, metadata)
+      VALUES ('sync-live-reserves', ?, ?, 'unrelated-child', ?)`)
+      .run(fixture.now, fixture.now, JSON.stringify({ scheduleKey: "fourHourlyReserveSync", slotStartedAt: fixture.current }));
+    for (const observedAt of [fixture.now, fixture.current + resolveScheduledSlotPolicy("fourHourlyReserveSync").hardDeadSec,
+      Date.parse("2026-10-13T19:47:00Z") / 1000]) {
+      vi.setSystemTime(observedAt * 1000);
+      expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
+        reason: "producer-slot-priority", condition: "current-slot-unfinished", slotStartedAt: 1791907860,
+      });
+      const admission = reserveRecoveryAdmissionSql();
+      expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 0 });
+    }
   });
 
   it.each(["degraded", "error"])("releases producer priority after a finished %s slot", async (status) => {
