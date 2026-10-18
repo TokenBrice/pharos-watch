@@ -35,7 +35,7 @@ const metricsSchema = z.object({
   memoryUsageBytesP90: metric, memoryUsageBytesP99: metric, memoryUsageBytesP999: metric,
 });
 const adaptiveSchema = z.object({
-  dimensions: z.object({ datetime: timestamp.optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), scriptName: z.string(), scriptVersion: z.string().optional(), status: z.string() }),
+  dimensions: z.object({ datetime: timestamp.optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), scriptName: z.string(), scriptVersion: z.string().optional(), coloCode: z.string().min(1).optional(), status: z.string() }),
   sum: z.object({ requests: numeric, subrequests: metric }),
   avg: z.object({ sampleInterval: metric }).nullish().transform((value) => value ?? { sampleInterval: null }),
   quantiles: metricsSchema,
@@ -77,6 +77,7 @@ type JoinedRow = {
 type LaneDay = {
   dayUtc: string; windowFrom: string; windowTo: string; scriptName: string; workerRole: Role;
   cron: string | null; scheduleKey: string; status: string; scriptVersion: string | null;
+  coloCode: string | null;
   rollup: "physical" | "logical"; queryComplete: boolean; reason: string | null;
   eligibleRows: number; matchedRows: number; memoryMeasuredRows: number; memoryUnavailableRows: number;
   groupedRows: number; ambiguousRows: number; unmatchedRows: number;
@@ -127,9 +128,12 @@ export function parseWorkerMemoryArgs(argv: string[], now = new Date()) {
   return { help: false as const, from, to, outDir: values["out-dir"] as string | undefined };
 }
 function adaptiveQuery(kind: Exclude<Kind, "scheduled">) {
+  // coloCode is requested only for event-grouped Adaptive reads; it splits a
+  // group by serving location. The role-day read keeps Cloudflare's date-level
+  // quantile rollup so it remains comparable with retained artifacts.
   return `query($a:String!,$f:Time!,$t:Time!,$s:String!){viewer{accounts(filter:{accountTag:$a}){
     workersInvocationsAdaptive(limit:${WORKER_MEMORY_TELEMETRY_POLICY.queryRowLimit},filter:{scriptName:$s,datetime_geq:$f,datetime_lt:$t${kind === "kills" ? ',status:"exceededMemory"' : ""}},orderBy:[${kind === "role-day" ? "date" : "datetime"}_ASC]){
-      dimensions{${kind === "role-day" ? "date" : "datetime scriptVersion"} scriptName status}
+      dimensions{${kind === "role-day" ? "date" : "datetime scriptVersion coloCode"} scriptName status}
       sum{requests subrequests} avg{sampleInterval}
       quantiles{cpuTimeP50 durationP50 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 memoryUsageBytesP999}
     }}}}`;
@@ -188,7 +192,7 @@ export function joinScheduledMemory(adaptiveRows: AdaptiveRow[], scheduledRows: 
     }
     return {
       workerRole: role, scriptName: row.dimensions.scriptName, adaptive: row,
-      groupKey: JSON.stringify([row.dimensions.scriptName, row.dimensions.scriptVersion ?? null, row.dimensions.datetime, row.dimensions.status]),
+      groupKey: JSON.stringify([row.dimensions.scriptName, row.dimensions.scriptVersion ?? null, row.dimensions.datetime, row.dimensions.status, row.dimensions.coloCode ?? null]),
       adaptiveStatus: row.dimensions.status, scheduledStatus: scheduled?.status ?? null, correlation,
       reason: correlation === "unique-singleton" ? null : correlation === "grouped" ? "requests-or-sampling-not-singleton" : correlation === "unmatched" && role === "public" ? "unattributed-public-invocation" : correlation,
       candidates, lane, cpuDeltaUs: scheduled && row.quantiles.cpuTimeP50 !== null ? Math.abs(scheduled.cpuTimeUs - row.quantiles.cpuTimeP50) : null,
@@ -199,15 +203,15 @@ export function joinScheduledMemory(adaptiveRows: AdaptiveRow[], scheduledRows: 
 
 export function buildDailyLaneSamples(samples: JoinedRow[], scheduled: { role: Role; rows: ScheduledRow[] }[], sources: SourceRead[], from: string, to: string): LaneDay[] {
   const groups = new Map<string, { seed: Omit<LaneDay, "eligibleRows" | "matchedRows" | "memoryMeasuredRows" | "memoryUnavailableRows" | "groupedRows" | "ambiguousRows" | "unmatchedRows" | "samplingIntervalUnknownRows" | "samplingIntervalRange" | "sampledRowMemoryP50DistributionBytes">; rows: JoinedRow[] }>();
-  function add(role: Role, day: string, cron: string, scheduleKey: string, status: string, version: string | null, row?: JoinedRow) {
+  function add(role: Role, day: string, cron: string, scheduleKey: string, status: string, version: string | null, colo: string | null, row?: JoinedRow) {
     for (const rollup of ["physical", "logical"] as const) {
-      const key = JSON.stringify([role, day, rollup === "physical" ? cron : null, scheduleKey, status, version]);
+      const key = JSON.stringify([role, day, rollup === "physical" ? cron : null, scheduleKey, status, version, colo]);
       let group = groups.get(key);
       if (!group) {
         const start = new Date(Math.max(Date.parse(from), Date.parse(`${day}T00:00:00Z`))).toISOString();
         const end = new Date(Math.min(Date.parse(to), Date.parse(`${day}T00:00:00Z`) + 86400_000)).toISOString();
         const complete = sources.filter((source) => source.workerRole === role && ["samples", "scheduled"].includes(source.kind)).every((source) => !source.failures.some((failure) => failure.from < end && failure.to > start));
-        group = { seed: { dayUtc: day, windowFrom: start, windowTo: end, scriptName: TARGETS[role], workerRole: role, cron: rollup === "physical" ? cron : null, scheduleKey, status, scriptVersion: version, rollup, queryComplete: complete, reason: null, basis: "empirical-nearest-rank-of-matched-row-memoryUsageBytesP50" }, rows: [] };
+        group = { seed: { dayUtc: day, windowFrom: start, windowTo: end, scriptName: TARGETS[role], workerRole: role, cron: rollup === "physical" ? cron : null, scheduleKey, status, scriptVersion: version, coloCode: colo, rollup, queryComplete: complete, reason: null, basis: "empirical-nearest-rank-of-matched-row-memoryUsageBytesP50" }, rows: [] };
         groups.set(key, group);
       }
       if (row) group.rows.push(row);
@@ -218,13 +222,13 @@ export function buildDailyLaneSamples(samples: JoinedRow[], scheduled: { role: R
       const plan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[candidate.cron];
       return plan?.worker === row.workerRole ? [[candidate.cron, { cron: candidate.cron, scheduleKey: plan.scheduleKey }] as const] : [];
     })).values()];
-    for (const lane of lanes) add(row.workerRole, row.adaptive.dimensions.datetime!.slice(0, 10), lane.cron, lane.scheduleKey, row.adaptiveStatus, row.adaptive.dimensions.scriptVersion ?? null, row);
+    for (const lane of lanes) add(row.workerRole, row.adaptive.dimensions.datetime!.slice(0, 10), lane.cron, lane.scheduleKey, row.adaptiveStatus, row.adaptive.dimensions.scriptVersion ?? null, row.adaptive.dimensions.coloCode ?? null, row);
   }
   for (const source of scheduled) for (const row of source.rows) {
     const plan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[row.cron];
     if (!plan || plan.worker !== source.role) continue;
     const day = row.datetime.slice(0, 10);
-    if (![...groups.values()].some((group) => group.seed.workerRole === source.role && group.seed.dayUtc === day && group.seed.cron === row.cron)) add(source.role, day, row.cron, plan.scheduleKey, "no-usable-memory-observations", null);
+    if (![...groups.values()].some((group) => group.seed.workerRole === source.role && group.seed.dayUtc === day && group.seed.cron === row.cron)) add(source.role, day, row.cron, plan.scheduleKey, "no-usable-memory-observations", null, null);
   }
   return [...groups.values()].map(({ seed, rows }) => {
     const eligible = rows.filter((row) => row.correlation === "unique-singleton" && row.lane !== null);
@@ -399,7 +403,7 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
     }),
     exceededMemory: { groups: kills, complete, returnedGroups: complete ? kills.length : null, reportedRequests: complete ? knownRequests : null, knownReturnedGroups: kills.length, knownReportedRequests: knownRequests, reasons: [...new Set(killSources.flatMap((source) => source.failures.map((failure) => failure.reason)))] },
     queries, verdict: { status: "unavailable", reasons: [], alertFrom: window.from, alertTo: window.to, heavyKillObserved: false, collectionIncomplete: true, freshnessFailed: false, observedHeavyRequests: null, observedPublicRequests: null, knownHeavyRequests: 0, knownPublicRequests: 0, exitCode: 1 },
-    caveats: ["All memory values are sampled V8 isolate memory shared across concurrent invocations, not phase peaks or headroom.", "Query-complete is not unsampled request-population completeness. Unknown values are null, never zero-filled.", "Filtered Adaptive exceededMemory is kill authority; Scheduled status can differ. Correlation is not a request ID.", "Current collector-registry candidate jobs are not historical execution or culprit proof.", "Public kills and incomplete public broad samples are report-only; revisit after one week of baseline.", "Small-N empirical P999 can equal the largest returned P50 sample. No population confidence is claimed."],
+    caveats: ["All memory values are sampled V8 isolate memory shared across concurrent invocations, not phase peaks or headroom.", "Query-complete is not unsampled request-population completeness. Unknown values are null, never zero-filled.", "Filtered Adaptive exceededMemory is kill authority; Scheduled status can differ. Correlation is not a request ID.", "Current collector-registry candidate jobs are not historical execution or culprit proof.", "Public kills and incomplete public broad samples are report-only; revisit after one week of baseline.", "Small-N empirical P999 can equal the largest returned P50 sample. No population confidence is claimed.", "Adaptive coloCode is the serving location of the sampled invocation group; missing colo stays unknown and is never inferred from request.cf or a self-fetch echo."],
     outputFiles: ["report.json", "report.md", "samples.ndjson", "exceeded-memory.ndjson", "queries.json"],
   };
   report.verdict = evaluateMemoryObservation(report, new Date(generatedAt));
@@ -421,12 +425,12 @@ export function renderWorkerMemoryMarkdown(report: WorkerMemoryReport) {
     `Freshness: ${report.freshness.status}; coverage-lag budget 8100s (gates default windows only), ingestion allowance 900s (not an ingestion guarantee). No report-age gate is applied.`,
     `Reasons: ${report.verdict.reasons.join(", ") || "none"}.`, "", ...report.caveats.map((text) => `- ${text}`), "",
     "## Independently filtered exceededMemory inventory", "", `Returned groups: ${report.exceededMemory.returnedGroups ?? "unavailable"}; known subtotal ${report.exceededMemory.knownReturnedGroups}. Reported requests: ${report.exceededMemory.reportedRequests ?? "unavailable"}; known subtotal ${report.exceededMemory.knownReportedRequests}.`,
-    "Full inventory: `exceeded-memory.ndjson` (bounded display below: first 100 groups). Lane descriptors are stored once in `report.json.laneDescriptors`, keyed by each row's `lane.scheduleKey`.", "", "| Invocation | Role | Requests / sample interval | Physical / logical lane | Correlation | Adaptive / Scheduled status |", "|---|---|---|---|---|---|"];
-  for (const row of report.exceededMemory.groups.slice(0, 100)) lines.push(`| ${row.adaptive.dimensions.datetime} | ${row.workerRole} | ${row.adaptive.sum.requests} / ${row.adaptive.avg.sampleInterval ?? "unknown"} | ${safe(row.lane?.cron ?? "unattributed")} / ${safe(row.lane?.scheduleKey ?? "unattributed")} | ${row.correlation} | exceededMemory / ${safe(row.scheduledStatus ?? "unavailable")} |`);
-  lines.push("", "## Lane/day empirical matched-row P50 distribution (MiB)", "", "Basis: empirical-nearest-rank-of-matched-row-memoryUsageBytesP50. Outcome/version strata and physical/logical rollups stay separate. Counts accompany every distribution; null is unavailable.", "", "| Day / role | Lane / rollup | Outcome / version | N measured / matched | p50 | p90 | p99 | p999 | Complete |", "|---|---|---|---|---|---|---|---|---|");
+    "Full inventory: `exceeded-memory.ndjson` (bounded display below: first 100 groups). Lane descriptors are stored once in `report.json.laneDescriptors`, keyed by each row's `lane.scheduleKey`.", "", "| Invocation | Role | Colo | Requests / sample interval | Physical / logical lane | Correlation | Adaptive / Scheduled status |", "|---|---|---|---|---|---|---|"];
+  for (const row of report.exceededMemory.groups.slice(0, 100)) lines.push(`| ${row.adaptive.dimensions.datetime} | ${row.workerRole} | ${safe(row.adaptive.dimensions.coloCode ?? "unknown")} | ${row.adaptive.sum.requests} / ${row.adaptive.avg.sampleInterval ?? "unknown"} | ${safe(row.lane?.cron ?? "unattributed")} / ${safe(row.lane?.scheduleKey ?? "unattributed")} | ${row.correlation} | exceededMemory / ${safe(row.scheduledStatus ?? "unavailable")} |`);
+  lines.push("", "## Lane/day/colo empirical matched-row P50 distribution (MiB)", "", "Basis: empirical-nearest-rank-of-matched-row-memoryUsageBytesP50. Outcome/version/colo strata and physical/logical rollups stay separate. Counts accompany every distribution; null is unavailable.", "", "| Day / role | Lane / rollup | Outcome / version / colo | N measured / matched | p50 | p90 | p99 | p999 | Complete |", "|---|---|---|---|---|---|---|---|---|");
   for (const row of report.laneDays) {
     const q = row.sampledRowMemoryP50DistributionBytes;
-    lines.push(`| ${row.dayUtc} / ${row.workerRole} | ${safe(row.cron ?? row.scheduleKey)} / ${row.rollup} | ${safe(row.status)} / ${safe(row.scriptVersion ?? "unknown")} | ${row.memoryMeasuredRows} / ${row.matchedRows} | ${mib(q?.p50)} | ${mib(q?.p90)} | ${mib(q?.p99)} | ${mib(q?.p999)} | ${row.queryComplete} |`);
+    lines.push(`| ${row.dayUtc} / ${row.workerRole} | ${safe(row.cron ?? row.scheduleKey)} / ${row.rollup} | ${safe(row.status)} / ${safe(row.scriptVersion ?? "unknown")} / ${safe(row.coloCode ?? "unknown")} | ${row.memoryMeasuredRows} / ${row.matchedRows} | ${mib(q?.p50)} | ${mib(q?.p90)} | ${mib(q?.p99)} | ${mib(q?.p999)} | ${row.queryComplete} |`);
   }
   lines.push("", "## Direct Cloudflare sampled role/day quantiles (MiB)", "", "Not pooled lane statistics or percentile-of-percentiles. Each row retains its exact source window in report.json.", "", "| Role / source window | Outcome | Requests / sample interval | p50 | p90 | p99 | p999 | Complete |", "|---|---|---|---|---|---|---|---|");
   for (const day of report.roleDays) {

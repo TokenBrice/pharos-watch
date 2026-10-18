@@ -3,16 +3,14 @@
  * new rows into `tape_events`. Idempotent on `(source_table, source_row_id,
  * transition)` so re-running the job is a no-op for rows already projected.
  *
- * v1 scope (Phase 0):
- *   - depeg_events           → depeg.opened, depeg.resolved, depeg.peak_worsened
- *   - blacklist_events       → freeze.blocked, freeze.unblocked, freeze.destroyed
- *   - safety_grade_history   → score.upgraded, score.downgraded
- *   - shared/lib/*-version   → methodology.bumped:<domain>
- *   - shared/lib/cemetery-merged → cemetery.entry.added
- *   - shared/lib/stablecoins (frozen) → lifecycle.tracked.frozen
- *
- * The three relational sources are explicit transition tables (no snapshot
- * diff). The static sources use a first-observation pattern.
+ * `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts` is the
+ * ordered class authority; do not copy its roster into this header. Classes are
+ * three shapes: explicit transition tables (depeg_events, blacklist_events,
+ * safety_grade_history, mint_burn_events), snapshot tables diffed in JS against
+ * the last sample at or before the watermark (stability_index_samples,
+ * stress_signals, yield_history and yield_source_decisions), and
+ * first-observation static catalogs (methodology `*-version` changelogs,
+ * cemetery entries, frozen stablecoins).
  *
  * Runs on the `26,56 * * * *` DEWS/PSI DB-only lane (purely D1-bound, no
  * outbound fetches), so it adds zero connection budget to the trigger.
