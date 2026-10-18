@@ -1,8 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { executeAtomicBatch } from "../../lib/db";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { canonicalTelegramWebhookIntentBytes } from "../../lib/telegram/processed-updates";
 import {
   TelegramWebhookEffectFence,
@@ -415,5 +416,114 @@ describe("buildMutationOperations", () => {
     expect(
       sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = 31").get(),
     ).toEqual({ mutation_applied_at: NOW + 1 });
+  });
+});
+
+describe("telegram terminal marker failure classes", () => {
+  const fixtures: DatabaseSync[] = [];
+  afterEach(() => {
+    vi.restoreAllMocks();
+    while (fixtures.length > 0) fixtures.pop()?.close();
+  });
+
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  /** Reads the bounded terminal-marker records from the structured log sink. */
+  function readTerminalMarkerRecords(
+    calls: readonly unknown[][],
+  ): Array<Record<string, unknown>> {
+    const records: Array<Record<string, unknown>> = [];
+    for (const [entry] of calls) {
+      if (typeof entry !== "string" || !entry.startsWith("{")) continue;
+      const parsed: unknown = JSON.parse(entry);
+      if (!isRecord(parsed) || parsed.action !== "processed-update-terminal-marker") continue;
+      records.push(parsed);
+    }
+    return records;
+  }
+
+  async function thrownBy(pending: Promise<void>): Promise<unknown> {
+    return pending.then(() => null, (error: unknown) => error);
+  }
+
+  it("classifies a rejected terminal statement as sql_rejected without leaking SQL or identifiers", async () => {
+    const { sqlite } = createFixture();
+    fixtures.push(sqlite);
+    const updateId = 987654;
+    insertClaim(sqlite, updateId, "owner-secret-claim");
+    const db = createSqliteD1(sqlite, {
+      onRun(sql) {
+        if (sql.includes("SET status = 'processed'")) {
+          throw new Error(`D1_ERROR: ${sql} — database is locked`);
+        }
+      },
+    });
+    const fence = new TelegramWebhookEffectFence(
+      db,
+      updateId,
+      { owner: "owner-secret-claim", generation: 1 },
+      createTelegramWebhookIntent("command:/help", { command: "/help" }),
+      null,
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const error = await thrownBy(fence.finish());
+
+    if (!(error instanceof Error)) throw new Error("expected a thrown Error");
+    expect(error.message).toContain("D1_ERROR");
+    const records = readTerminalMarkerRecords(errorSpy.mock.calls);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      scope: "telegram",
+      level: "error",
+      action: "processed-update-terminal-marker",
+      reasonClass: "sql_rejected",
+    });
+    const serialized = JSON.stringify(records[0]);
+    expect(serialized).not.toContain("telegram_processed_updates");
+    expect(serialized).not.toContain(String(updateId));
+    expect(serialized).not.toContain("owner-secret-claim");
+    expect(serialized).not.toContain("SET status");
+  });
+
+  it("classifies a fence that matches no row as zero_change", async () => {
+    const { sqlite, db } = createFixture();
+    fixtures.push(sqlite);
+    insertClaim(sqlite, 11, "owner-1");
+    const fence = new TelegramWebhookEffectFence(db, 11, { owner: "owner-1", generation: 1 }, undefined, null);
+    await fence.plan(createTelegramWebhookIntent("command:/help", { command: "/help" }));
+    // A stale takeover replaced the claim after this request planned its intent.
+    sqlite.prepare(
+      "UPDATE telegram_processed_updates SET claim_owner = 'owner-2', claim_generation = 2 WHERE update_id = 11",
+    ).run();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const error = await thrownBy(fence.finish());
+
+    if (!(error instanceof Error)) throw new Error("expected a thrown Error");
+    expect(error.message).toBe("Telegram update terminal marker lost ownership");
+    expect(readTerminalMarkerRecords(errorSpy.mock.calls)[0]).toMatchObject({ reasonClass: "zero_change" });
+  });
+
+  it("classifies a refused pre-statement fence write as fence_rejected", async () => {
+    const { sqlite } = createFixture();
+    fixtures.push(sqlite);
+    insertClaim(sqlite, 12, "owner-1");
+    const db = createSqliteD1(sqlite, {
+      onRun(sql) {
+        if (sql.includes("SET effect_state = 'planned'")) {
+          throw new Error("D1_ERROR: database is locked");
+        }
+      },
+    });
+    const fence = new TelegramWebhookEffectFence(db, 12, { owner: "owner-1", generation: 1 }, undefined, null);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const error = await thrownBy(fence.finish());
+
+    expect(error).toBeInstanceOf(Error);
+    expect(readTerminalMarkerRecords(errorSpy.mock.calls)[0]).toMatchObject({ reasonClass: "fence_rejected" });
   });
 });

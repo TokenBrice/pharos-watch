@@ -8,6 +8,9 @@ compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
 minify = true
 keep_names = true
+# Cloudflare stores the uploaded map privately and uses it to de-minify stack
+# traces in Workers Logs; it is never served as a Pages asset.
+upload_source_maps = true
 
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true },
