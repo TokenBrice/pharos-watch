@@ -4,15 +4,15 @@ import {
   sendToChat,
   type BatchMessage,
   type PreSendBatchResult,
-} from "../../../lib/telegram";
-import { SNOOZE_REPLY_MARKUP } from "../../../lib/telegram/alerts";
+} from "../../../telegram/delivery/telegram";
+import { SNOOZE_REPLY_MARKUP } from "../../../telegram/common/alerts-formatting";
 import {
   PENDING_BACKOFF_SCHEDULE_SEC,
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
   TELEGRAM_PENDING_PRIORITY,
-} from "../../../lib/telegram/constants";
-import { isQuietHoursActive } from "../../../lib/telegram/quiet-hours";
+} from "../../../telegram/common/constants";
+import { isQuietHoursActive } from "../../../telegram/common/quiet-hours";
 import {
   recordTelegramAlertTargetCancellations,
   type TelegramAlertTargetCancellation,
@@ -46,7 +46,7 @@ import {
   type PendingOutcomeProjection,
   type PendingSendResult,
 } from "./outcomes";
-import { logTelegramEvent } from "../../../lib/telegram/log";
+import { logTelegramEvent } from "../../../telegram/common/log";
 import {
   revalidatePendingAlertPreferences,
   type PendingPreferenceRevalidation,
@@ -60,9 +60,9 @@ import {
   telegramDeliveryPauseSkip,
   telegramTransportPermitSkip,
   type TelegramTransportPermit,
-} from "../../../lib/telegram/transport-control";
-import { migrateTelegramChatId } from "../../../lib/telegram/subscriber-lifecycle";
-import { TelegramSendOriginatedError } from "../../../lib/telegram/transport-errors";
+} from "../../../telegram/delivery/transport-control";
+import { migrateTelegramChatId } from "../../../telegram/store/subscriber-lifecycle";
+import { TelegramSendOriginatedError } from "../../../telegram/delivery/transport-errors";
 
 const PENDING_WAVE_FINALIZATION_RESERVE_MS = 15_000;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];

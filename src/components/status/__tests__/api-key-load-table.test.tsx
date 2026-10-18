@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { ApiRequestAttributionResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import { ApiKeyLoadTable } from "../api-key-load-table";
 
 function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiRequestAttributionResponse {

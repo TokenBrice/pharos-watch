@@ -16,7 +16,7 @@ import {
   type V9PublicationAttempt,
 } from "../../../lib/safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../lib/safety-score-v9/consumer-freshness";
-import { logTelegramEvent } from "../../../lib/telegram/log";
+import { logTelegramEvent } from "../../../telegram/common/log";
 import { loadTelegramDewsCurrentRows } from "../../../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "../delivery/types";
 import {

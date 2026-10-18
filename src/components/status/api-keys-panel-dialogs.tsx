@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ApiKeySummary } from "@shared/types";
+import type { ApiKeySummary } from "@pharos/contracts/api-keys";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import {

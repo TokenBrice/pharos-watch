@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectStagedFiles } from "../lib/changed-files.mts";
@@ -12,6 +13,24 @@ import {
 } from "../maintenance/run-pr-static-checks.ts";
 import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 describe("adaptive PR checks", () => {
+  it("selects doc sync for selector-only and required-only owners without depending on context mode", () => {
+    const originalLength = PATH_FAMILIES.length;
+    const family = {
+      id: "selector-only", label: "Selector-only owner", risk: "low" as const,
+      sourceGlobs: ["reading-owner.fixture"], tier: "specific" as const,
+      docs: [], background: [], checks: [], hardRules: [], scopedContext: [],
+    };
+    PATH_FAMILIES.push({ ...family, reading: [{ sources: ["reading-owner.fixture"],
+      contract: [{ path: "docs/testing.md", anchor: "ci-pipeline" }] }] });
+    try {
+      expect(buildPrStaticCheckPlan(["reading-owner.fixture"]).commands.map((command) => command.name)).toContain("check:doc-sync");
+      PATH_FAMILIES.splice(originalLength, 1, { ...family, required: [{ path: "docs/testing.md", anchor: "ci-pipeline" }] });
+      expect(buildPrStaticCheckPlan(["reading-owner.fixture"]).commands.map((command) => command.name)).toContain("check:doc-sync");
+    } finally {
+      PATH_FAMILIES.splice(originalLength);
+    }
+  });
+
   it("unions changed Vitest files with the critical contract set", () => {
     const listed = parseVitestFileList("[node] src/a.test.ts\n[worker] worker/a.spec.ts\n");
     expect(selectPrTestFiles(listed, ["src/critical.test.ts"], [], new Map(), () => true)).toEqual([

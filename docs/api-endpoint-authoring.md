@@ -21,7 +21,7 @@ For the public `/api/` page (Access and Reference tabs), see [API Access And Ref
 | Frontend API query descriptors | `src/lib/api-query-descriptors.ts` is the single declaration table for public-frontend paths, query keys, polling/freshness policy, response mode, and cached lazy schema loaders; admin surfaces use the twin table `src/lib/admin-api-query-descriptors.ts`, which carries no `responseMode` and polls on the generic one-minute ops budget. `src/hooks/api-hooks.ts` derives plain-versus-meta execution from each descriptor's `responseMode`. |
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
-| Public response wire schemas | `scripts/lib/public-api-response-schemas.ts` composes body contracts with typed freshness from `shared/types/api-meta.ts`; map responses reserve `_meta` separately from asset values. Frontend schemas validate after metadata extraction in `src/lib/api.ts`. |
+| Public response wire schemas | `scripts/lib/public-api-response-schemas.ts` composes body contracts with typed freshness from `shared/contracts/api-meta.ts` (`@pharos/contracts/api-meta`); map responses reserve `_meta` separately from asset values. Frontend schemas validate after metadata extraction in `src/lib/api.ts`. |
 
 Use the shared definitions and dynamic descriptors for endpoint inventories, path builders for construction, and Worker bindings for dispatch. The [Worker appendix](./process/worker-infrastructure-appendix.md#http-request-handling) retains CORS, auth, maintenance and action-lifecycle semantics, not a second endpoint inventory.
 

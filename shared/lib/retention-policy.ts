@@ -232,7 +232,7 @@ const OWNER_MANAGED_TABLES = [
   ["scheduled_child_attempts", "slot_started_at", "worker/migrations/0260_scheduled_child_attempts.sql", "parent cron slot window (14 days)", "ON DELETE CASCADE from executing cron_slot_executions identity"],
   ["telegram_webhook_operation_mutations", "applied_at", "worker/migrations/0000_baseline.sql", "parent processed-update window (7 days)", "ON DELETE CASCADE from telegram_processed_updates"],
   ["telegram_processed_updates", "received_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "7 days", "processed-update eligibility; 5,000 rows and time budget"],
-  ["telegram_recap_targets", "updated_at", "worker/src/lib/telegram/recap-store.ts", "90 days", "terminal recap targets only"],
+  ["telegram_recap_targets", "updated_at", "worker/src/telegram/recap/recap-store.ts", "90 days", "terminal recap targets only"],
   ["telegram_alert_dead_letters", "expired_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "TELEGRAM_RETENTION_WINDOWS.alertAudit", "strict audit cutoff"],
   ["telegram_alert_job_target_items", "created_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "14-day replay / 90-day audit", "terminal legacy/replay eligibility; child-before-parent; own cap per phase"],
   ["telegram_alert_job_targets", "created_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "14-day replay / 90-day audit", "terminal delivery/effect state; no active pending evidence"],

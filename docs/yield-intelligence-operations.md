@@ -1,5 +1,7 @@
 # Yield Intelligence Operations
 
+> **Agent navigation** — Start with [Runtime Guardrails](#runtime-guardrails) and [Failure Semantics](#failure-semantics). Grep the matching heading for Slot Context · Yield Health Thresholds · Coverage Audit Queue · Adapter lifecycle states · Source Configuration · Decision Ledger Retention instead of reading wholesale.
+
 This guide owns diagnosis, coverage-queue handling, and slot recovery for yield producers. Wire, freshness, admission, and publication-failure invariants are owned by the [Yield Engineering Contract](./yield-intelligence.md#engineering-contract); operator thresholds and status interpretation by the [Yield Health runbook](./runbooks/yield-health.md#threshold-table).
 
 ## Slot Context
@@ -105,13 +107,9 @@ When a lifecycle review date comes due and the adapter stays quarantined or inte
 
 ### Historical Ownership Cutover
 
-The live Falcon savings pool and exchange-rate config move from `usdf-falcon` to `susdf-falcon`, and the obsolete parent variant is removed. USDf and xDAI already have no holder-yield flag or `yieldConfig`, so their metadata stays unchanged. The Gnosis pool `13392973-be6e-4b2f-bce9-4f7dd53d1c3a` moves from `sdai-sky` to `sdai-gnosis`; the Ethereum Sky rate remains owned by `sdai-sky`.
+Source-config ownership changes do not rewrite historical rows or authorize a backfill. Any history migration requires a coordinated review of exact pool, contract and source-key identity; never bulk-relabel a parent or cross-chain series by symbol, or move supply/price history as a side effect. Falcon, Gnosis sDAI and Saturn cutover evidence and review selectors are preserved at `git:9dd50f9eb880426aeb17ce1076a07501f0ef04a4:docs/yield-intelligence-operations.md`.
 
-No historical database rows are rewritten by these config changes. Before any operator-led history migration, identify Falcon records by the sUSDf pool UUID or legacy `onchain:usdf-falcon` key, and review whether to move them to `susdf-falcon` / `onchain:susdf-falcon`. For sDAI, review only records tied to Gnosis pool UUID `13392973-be6e-4b2f-bce9-4f7dd53d1c3a` under `sdai-sky`. Never bulk-relabel `sdai-sky` history: its `onchain:sdai-sky` series belongs to the distinct Ethereum vault. Historical decisions and publication evidence need a coordinated, reviewed cutover rather than ad hoc D1 updates.
-
-For Saturn, review any historical yield rows under `usdat-saturn` against the exact Ethereum sUSDat contract `0xd166337499e176bbc38a1fbd113ab144e5bd2df7` before assigning them to `susdat-saturn`. Do not move USDat supply or price history, and do not infer sUSDat ownership from a parent symbol alone. No D1 migration or historical backfill is part of this source cutover.
-
-## Decision Ledger Retention (v8.14)
+## Decision Ledger Retention
 
 - Every stored `yield_source_decisions` row is tagged with a final `retention_reason` of `trend` or `audit`.
 - Source switches are permanent `trend` rows. For anomaly or rejected-higher-confidence evidence, only the first row of a new evidence fingerprint is a permanent `trend`; unchanged hourly repetitions are `audit`. A resolved and later recurring fingerprint creates a new boundary row.
@@ -126,33 +124,7 @@ Yield history keeps full hourly rows for the newest 30 days and one close-of-day
 
 The materializer drains at most 1,000 missing or newer daily closes per run below the 30-day raw cutoff, including cold-start and below-watermark backlogs. Raw observations are never pruned before a daily close at least as new exists for their source/day. Work beyond the cap stays in raw history for later runs; deleted values are never synthesized.
 
-The E2-F1 recovery drain is **pending deployment**, not an executed backfill. Measure outstanding retained source-days with the assessment SELECT below; the 1,000-close-per-run materializer cap applies only below the 30-day raw cutoff. Newer closes wait until eligible. Elapsed hourly runs alone do not prove completion.
-
-```sql
-WITH raw_days AS (
-  SELECT stablecoin_id, source_key,
-    CAST(recorded_at / 86400 AS INTEGER) * 86400 AS day,
-    COUNT(*) AS raw_rows, MAX(recorded_at) AS latest
-  FROM yield_history
-  WHERE publication_state IS NULL OR publication_state = 'published'
-  GROUP BY stablecoin_id, source_key, day
-)
-SELECT COUNT(*) AS source_day_rows,
-  SUM(r.raw_rows) AS raw_rows_covered,
-  COUNT(DISTINCT r.day) AS utc_days,
-  MIN(date(r.day, 'unixepoch')) AS first_day,
-  MAX(date(r.day, 'unixepoch')) AS last_day,
-  SUM(CASE WHEN d.stablecoin_id IS NULL THEN 1 ELSE 0 END) AS missing_daily_rows,
-  SUM(CASE WHEN d.stablecoin_id IS NOT NULL THEN 1 ELSE 0 END) AS daily_rows_needing_newer_close
-FROM raw_days r
-LEFT JOIN yield_history_daily d
-  ON d.stablecoin_id = r.stablecoin_id
-  AND d.source_key = r.source_key AND d.snapshot_date = r.day
-WHERE r.day < CAST(unixepoch('now') / 86400 AS INTEGER) * 86400
-  AND (d.stablecoin_id IS NULL OR d.recorded_at < r.latest);
-```
-
-This is the assessment's `closedBackfillVolume` query; to assess only the currently eligible drain, replace the closed-day bound with `r.day < CAST((unixepoch('now') - 30 * 86400) / 86400 AS INTEGER) * 86400`. Legacy non-published raw rows are never compacted: only null legacy publication state or explicit `published` rows enter materialization.
+Legacy non-published raw rows are never compacted: only null legacy publication state or explicit `published` rows enter materialization. Recovery-drain deployment status and the retained-source-day assessment query are historical evidence at `git:9dd50f9eb880426aeb17ce1076a07501f0ef04a4:docs/yield-intelligence-operations.md`, not proof of completed backfill.
 
 Continuity gaps do not prove lost observations: source inactivity may explain them, and an assessment limited to retained raw/daily evidence is not a global upper bound. Deleted values must never be synthesized.
 
@@ -167,3 +139,9 @@ The [engineering publication contract](./yield-intelligence.md#persistence-and-p
 - For `publication-skipped`, aborts, or abandoned staging, compare cache-advertised identity with [Source Decision Evidence](./runbooks/yield-rankings-stale-or-missing.md#source-decision-evidence). Confirm repair/readback against the winning published generation; never finalize or replay a losing attempt by hand.
 - For `no-yield-bearing-coins`, inspect active tracked-asset/config input and the `yield-sync-no-yield-bearing-coins` event rather than interpreting the run as successful empty coverage.
 - For safety NR/default rows, inspect their published `safetyReason` and use [Safety Identity Mismatch](./runbooks/yield-rankings-stale-or-missing.md#safety-identity-mismatch) before deciding whether the issue is an individual card or common publication evidence.
+
+## Retired Supplemental Sources
+
+### Retired supplemental source: vaults.fyi
+
+The anonymous probe and exact-vault allowlist machinery have been retired, including runtime env controls and provider credit accounting. Primary and hourly catch-up supplemental jobs now enumerate only the surviving family registry. Historical `protocol-api:vaults-fyi:<chain>:<vault>` rows retain curated-observation classification, venue/chain attribution, and existing source links; removal of the collector does not upgrade them to first-party evidence. Provider secrets and retired cache/circuit/budget rows require separate post-deploy cleanup after compatible code soak and rollback-floor closure.

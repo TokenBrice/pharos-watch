@@ -40,7 +40,7 @@ Ordinary processed rows retain seven days; started/unknown evidence retains 90 d
 
 ## Preauth Ingress Abuse Controls
 
-This branch covers exact `POST /api/telegram-webhook`, `/api/telegram-mini-app/session`, and `/api/telegram-mini-app/mutate` paths. Numeric policy/body ceilings are owned by `TELEGRAM_INGRESS_POLICIES` in `worker/src/handlers/http/telegram-ingress-abuse.ts` and matching Rate Limiting bindings in `worker/wrangler.toml`; inspect those together when sizing or changing them. The guard is not an account-wide exact quota: native Cloudflare Workers Rate Limiting bindings are permissive, eventually consistent, and per-colo.
+This branch covers exact `POST /api/telegram-webhook`, `/api/telegram-mini-app/session`, and `/api/telegram-mini-app/mutate` paths. Numeric policy/body ceilings are owned by `TELEGRAM_INGRESS_POLICIES` in `worker/src/telegram/webhook/telegram-ingress-abuse.ts` and matching Rate Limiting bindings in `worker/wrangler.toml`; inspect those together when sizing or changing them. The guard is not an account-wide exact quota: native Cloudflare Workers Rate Limiting bindings are permissive, eventually consistent, and per-colo.
 
 `api.pharos.watch` has the canonical route budget. Other Worker hosts share a separate noncanonical-host key per route, so preview/site-data/ops-origin requests cannot spend the public API budget but still face preauth limits. Each source key combines route/host lane and the existing 128-bit HMAC-SHA256 client-IP hash keyed by `SITE_API_SHARED_SECRET`. Raw IPs never enter keys/logs. Missing IPs share `unknown`; a missing hash secret fails closed. Rotating that secret resets source buckets, not aggregate counters.
 
@@ -73,11 +73,11 @@ The same-origin CTA counter is separate: Pages `POST /pharoswatchbot-adoption` f
 
 Preserve reviewed launch/mutation headroom. Change the policy module, matching `worker/wrangler.toml` bindings, focused tests, and this interpretation together. Roll back to the prior Worker with its matching configuration; never add an isolate-local fallback map for a failed binding. Future edge rules need rollback instructions against the then-current account manifest.
 
-Focused policy checks for the verifier are `worker/src/handlers/http/__tests__/telegram-ingress-abuse.test.ts` and `request-dispatch.test.ts`; they cover exact host/path/method, cost order, bounded streams, fail-closed behavior, launch bursts, isolation, telemetry, and binding budgets. After rollout verify one ordinary launch/mutation and unexpected 429/503 trends. Do not generate production traffic sufficient to trip a limit merely to test it.
+Focused policy checks for the verifier are `worker/src/telegram/webhook/__tests__/telegram-ingress-abuse.test.ts` and `request-dispatch.test.ts`; they cover exact host/path/method, cost order, bounded streams, fail-closed behavior, launch bursts, isolation, telemetry, and binding budgets. After rollout verify one ordinary launch/mutation and unexpected 429/503 trends. Do not generate production traffic sufficient to trip a limit merely to test it.
 
 ## Authenticated Flood Control
 
-Commands, callbacks, and pending-selection replies share fixed-window D1 counters. Private chats have one chat scope. Groups with actor ID evaluate both actor and higher chat-wide ceilings; without actor ID they use a private-sized chat cap. `worker/src/api/telegram-webhook-ingress-policy.ts` owns policy; this is downstream of preauth binding admission.
+Commands, callbacks, and pending-selection replies share fixed-window D1 counters. Private chats have one chat scope. Groups with actor ID evaluate both actor and higher chat-wide ceilings; without actor ID they use a private-sized chat cap. `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` owns policy; this is downstream of preauth binding admission.
 
 Each evaluated scope uses one conditional `cache` upsert with `RETURNING`, incrementing the window or beginning a new one at the exact expiry boundary. Concurrent webhook deliveries must not lose increments. An execution/invalid-count failure logs `command-flood`.
 
@@ -120,7 +120,7 @@ WHERE chat_id = '<chat_id>'
 
 Use authorized D1 binding access and substitute the confirmed chat, never a broad delete. The user's next `/start` issues fresh intro. Check the row and cleanup metadata afterward. If multiple chats are affected and cleanup is error/stale, restore the cron lane and let its next tick sweep; no separate setup admin endpoint exists. [Delivery triage](./telegram-no-delivery.md) covers cron/D1 health.
 
-If a per-chat lockup has **no stale row**, suspect wizard dispatch instead of cleanup. Before clearing anything, preserve chat ID, exact `action_payload` JSON, and a failing-webhook tail snippet in the restricted incident record; general logs must stay identifier-free. Inspect `sendWizardIntro` and branch/target/confirm paths in `worker/src/api/telegram-webhook-setup.ts` and capture reproducible bug evidence rather than reset unrelated data.
+If a per-chat lockup has **no stale row**, suspect wizard dispatch instead of cleanup. Before clearing anything, preserve chat ID, exact `action_payload` JSON, and a failing-webhook tail snippet in the restricted incident record; general logs must stay identifier-free. Inspect `sendWizardIntro` and branch/target/confirm paths in `worker/src/telegram/webhook/telegram-webhook-setup.ts` and capture reproducible bug evidence rather than reset unrelated data.
 
 ## Cross-References
 

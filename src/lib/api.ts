@@ -7,7 +7,7 @@ import {
   ApiMetaWarningOnlySchema,
   type ApiDependencyMeta,
   type ApiMetaEnvelope,
-} from "@shared/types/api-meta";
+} from "@pharos/contracts/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
 import type { SupplyHistoryPoint } from "@shared/types/market";
 import type { QueryClient } from "@tanstack/react-query";

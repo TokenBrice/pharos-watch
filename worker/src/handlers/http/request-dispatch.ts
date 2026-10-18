@@ -11,7 +11,7 @@ import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-ca
 import {
   evaluateTelegramIngressAbuseGate,
   recordTelegramIngressHandlerResponse,
-} from "./telegram-ingress-abuse";
+} from "../../telegram/webhook/telegram-ingress-abuse";
 import {
   checkCachedPublicApiReadFastRateLimit,
   evaluateAccessGate,

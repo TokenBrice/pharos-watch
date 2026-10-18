@@ -1,5 +1,7 @@
 # Depeg Early Warning Score (DEWS)
 
+> **Agent navigation** — Start with [Score Formula](#score-formula) and [Threat Bands](#threat-bands). Grep the matching heading for Sub-Signals & Weights · Sub-Signal Details · Edge Cases · Data Pipeline · API Endpoint · Frontend Integration instead of reading wholesale.
+
 Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a calibrated probability. Computed every 30 minutes from 8 sub-signals.
 
 ## Methodology Versioning

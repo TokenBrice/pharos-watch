@@ -245,7 +245,7 @@ describe("Telegram status-path budgets", () => {
   };
 
   it("budgets exact production status SQL and follows runtime reader edits", () => {
-    const source = readFileSync(resolve("worker/src/lib/telegram/usage-analytics.ts"), "utf8");
+    const source = readFileSync(resolve("worker/src/telegram/store/usage-analytics.ts"), "utf8");
     const queries = extractProductionStatusSql(source);
     const readers: Record<string, string> = {
       "pulse-aggregate": "computeTelegramCurrentLifecycleSnapshot",
@@ -271,7 +271,7 @@ describe("Telegram status-path budgets", () => {
   });
 
   it("selects the load guard when production status readers or their predicates change", () => {
-    expect(hasTelegramLoadGuardImpact(["worker/src/lib/telegram/usage-analytics.ts"])).toBe(true);
+    expect(hasTelegramLoadGuardImpact(["worker/src/telegram/store/usage-analytics.ts"])).toBe(true);
     expect(hasTelegramLoadGuardImpact(["shared/lib/telegram-alert-families.ts"])).toBe(true);
   });
 

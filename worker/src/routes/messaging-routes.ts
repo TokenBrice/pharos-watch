@@ -1,4 +1,4 @@
-import { TELEGRAM_ADOPTION_API_PATH } from "../lib/telegram/adoption-analytics";
+import { TELEGRAM_ADOPTION_API_PATH } from "../telegram/adoption/adoption-analytics";
 import {
   defineLazyStaticRoute,
   type FullRouteContext,
@@ -10,7 +10,7 @@ export const TELEGRAM_ADOPTION_ROUTE = {
   dependencies: [] as const,
   methods: ["POST"] as const,
   handle: async (routeCtx: FullRouteContext) => {
-    const { handleTelegramAdoption } = await import("../api/telegram-adoption");
+    const { handleTelegramAdoption } = await import("../telegram/adoption/telegram-adoption");
     return handleTelegramAdoption(routeCtx);
   },
 } satisfies Omit<RouteMatch, "endpoint">;
@@ -33,21 +33,21 @@ export const MESSAGING_STATIC_ROUTES = [
     ),
   ),
   defineLazyStaticRoute("telegram-mini-app-session", () =>
-    import("../api/telegram-mini-app").then(
+    import("../telegram/mini-app/telegram-mini-app").then(
       ({ handleTelegramMiniAppSession }) =>
         ({ db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout }) =>
           handleTelegramMiniAppSession(db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout),
     ),
   ),
   defineLazyStaticRoute("telegram-mini-app-mutation", () =>
-    import("../api/telegram-mini-app").then(
+    import("../telegram/mini-app/telegram-mini-app").then(
       ({ handleTelegramMiniAppMutation }) =>
         ({ db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout }) =>
           handleTelegramMiniAppMutation(db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout),
     ),
   ),
   defineLazyStaticRoute("telegram-webhook", () =>
-    import("../api/telegram-webhook").then(
+    import("../telegram/webhook/telegram-webhook").then(
       ({ handleTelegramWebhook }) =>
         ({
           db,

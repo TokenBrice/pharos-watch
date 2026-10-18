@@ -4,7 +4,7 @@ import { parseTelegramAdoptionToken } from "./telegram-adoption-analytics";
  * Telegram Mini App deep-link payload registry.
  *
  * Runtime-neutral (no Worker/D1 or browser-only imports). Consumed by:
- *   - `worker/src/api/telegram-webhook-parsing.ts` — to validate `?start=` payloads.
+ *   - `worker/src/telegram/webhook/telegram-webhook-parsing.ts` — to validate `?start=` payloads.
  *   - The Mini App client at `src/app/pharoswatchbot/app/client.tsx` — to map
  *     `?startapp=` payloads to a starting view.
  *
@@ -48,7 +48,7 @@ export const TELEGRAM_MINI_APP_PAYLOAD_PATTERN = /^[A-Za-z0-9_-]+$/;
  * `setup_recommended` is preserved for backward compatibility with any older
  * deployments that may still emit it. New emit sites should prefer one of the
  * other tokens (e.g. `watchlist` after a recommended setup completes — see
- * `worker/src/api/telegram-webhook-setup.ts`).
+ * `worker/src/telegram/webhook/telegram-webhook-setup.ts`).
  */
 export const MINI_APP_PAYLOAD_NAMES = Object.freeze({
   home: "home",

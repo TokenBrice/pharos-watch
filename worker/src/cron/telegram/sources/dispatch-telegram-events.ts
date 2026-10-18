@@ -8,13 +8,13 @@ import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../../../lib/abort";
 import { buildInClause, chunkArray } from "../../../lib/db";
-import { DEPEG_STEP_VALUES } from "../../../lib/telegram/constants";
+import { DEPEG_STEP_VALUES } from "../../../telegram/common/constants";
 import {
   isDewsAlertable,
   type DepegAlertPayload,
   type DepegResolved,
   type DepegWorsening,
-} from "../../../lib/telegram/alerts";
+} from "../../../telegram/common/alerts-formatting";
 import { buildAlertContextLines } from "./telegram-alert-context";
 import {
   buildDewsChanges,

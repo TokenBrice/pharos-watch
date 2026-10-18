@@ -1,4 +1,4 @@
-import type { TelegramCreds } from "../lib/telegram";
+import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { CronResult } from "../lib/cron-logger";
 import { runCronStalenessWatchdog } from "./cron-staleness-watchdog";
 import { runDigestPublicationWatchdog } from "./digest-publication-watchdog";

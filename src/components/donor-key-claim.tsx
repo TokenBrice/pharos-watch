@@ -16,7 +16,7 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { buildDonorClaimSiweMessage, generateDonorClaimNonce } from "@shared/lib/donor-key-claim";
 import { getAddress } from "viem/utils";
 import { formatIsoDate } from "@shared/lib/format";
-import type { DonorKeyClaimResponse } from "@shared/types";
+import type { DonorKeyClaimResponse } from "@pharos/contracts/api-keys";
 import { Button } from "@/components/ui/button";
 import { IssuedTokenPanel } from "@/components/issued-token-panel";
 import { copyText as writeClipboardText } from "@/lib/clipboard";

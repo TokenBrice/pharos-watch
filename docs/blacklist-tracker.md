@@ -1,5 +1,7 @@
 # Blacklist Tracker
 
+> **Agent navigation** — Read the section you need: [Methodology And Ownership](#methodology-and-ownership) · [Public Exposure Contract](#public-exposure-contract) · [Schedule And Runtime](#schedule-and-runtime) · [Event And Coverage Rules](#event-and-coverage-rules) · [Storage Semantics](#storage-semantics) · [Producer Flow](#producer-flow) · [Telegram Freeze Alerts](#telegram-freeze-alerts) · [API And Operator Contract](#api-and-operator-contract) · [Frontend Contract](#frontend-contract) · [Maintenance Checklist](#maintenance-checklist). Grep the heading for narrower subsections.
+
 Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the runtime scans the live contract configurations in `worker/src/lib/blacklist-contracts.ts`; that registry owns the supported chains, symbols, and deferred deployments.
 
 ## Methodology And Ownership
@@ -9,9 +11,9 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
 
-The 2026-10-10 `v4.3` release counts canonical account/log identities once and persists Tron accounts as validated lowercase `0x` bytes rather than provider Base58. Numeric local ordering and proven cross-transaction evidence govern lifecycle and amount state; matching block hashes govern RPC event timestamps. Bounded scan progress is not caught-up coverage and cannot renew success/publication clocks. Durable snapshot debt retries budget-skipped or ambiguous work. Unknown USD valuations remain unavailable, mixed totals disclose partial coverage, and gold totals include every canonical tracked cohort, including XAUM, with explicit provenance for zero substitution. Historical repair cannot use current quotes as event-time USD evidence. Classification thresholds and cadence are unchanged. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release; fixed-clock identity/ordering/valuation/coverage comparison remains required.
+The tracker counts canonical account/log identities once and persists Tron accounts as validated lowercase `0x` bytes rather than provider Base58. Numeric local ordering and proven cross-transaction evidence govern lifecycle and amount state; matching block hashes govern RPC event timestamps. Bounded scan progress is not caught-up coverage and cannot renew success/publication clocks. Durable snapshot debt retries budget-skipped or ambiguous work. Unknown USD valuations remain unavailable, mixed totals disclose partial coverage, and gold totals include every canonical tracked cohort, including XAUM, with explicit provenance for zero substitution. Historical repair cannot use current quotes as event-time USD evidence.
 
-**Release obligations recorded 2026-10-10:** for v4.3, fresh admitted producer observations and production resource evidence remain separate gates from fixed-clock supply/valuation/coverage comparison; these prerequisites do not assert completed production replay or runtime health.
+Fresh admitted producer observations and production resource evidence remain separate gates from fixed-clock supply/valuation/coverage comparison; these prerequisites do not assert completed production replay or runtime health. Release chronology belongs to the structured changelog above. The provisional activation target, release obligations, owner-ruling history, and provider-admission observations are retained in `git:a23e12b91:docs/blacklist-tracker.md`, not as current release or health claims.
 
 Three registries have deliberately different jobs:
 
@@ -32,7 +34,7 @@ The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and th
 - `possible`: a curated direct pause, blacklist, freeze, or mutable holder-facing control exists but is not confirmed as an active direct blacklist control.
 - `no`: no exposure resolves under the current model.
 
-Review scoping rules (owner ruling, 2026-09-29):
+Review scoping rules:
 
 - **Upstream collateral counts only when an issuer or custodian controls it.** Exposed reserve
   assets or rails are issuer-freezable tokens (for example USDC, USDT, cbBTC, cbETH), custodian-pausable
@@ -111,8 +113,8 @@ When the same current `inherited` verdict names **no** tracked upstream, the rev
 `structuralDisposition: "inherited-untracked-upstream"`: no `upstreamAssetId` and no failure domain
 are asserted (the branch verifies neither), the freeze review keeps its `possible` reach, and the gap
 is still the measured `inherited-access-exposure` rather than `missing-access-review`. Dropping that
-review — the behaviour before the 2026-08-10 owner ruling — published assets such as `dai-makerdao`
-and `crvusd-curve` as never reviewed and erased the exposure the reviewer had measured.
+review would publish assets such as `dai-makerdao` and `crvusd-curve` as never reviewed and erase
+the exposure the reviewer had measured.
 
 The transfer half of the branch has its own structural case. `resolveSafetyScoreV9ReviewedTransferFact()`
 in `worker/src/lib/safety-score-v9/extension-transfer.ts` normally requires the curated
@@ -157,7 +159,7 @@ Current-balance cache telemetry preserves the canonical `skippedDueBudget` count
 - Etherscan v2 is an explorer source for supported EVM log scans and a best-effort final historical-call fallback.
 - Base, Optimism, Avalanche, BSC, and Gnosis prefer chain RPC `eth_getLogs`; chain RPC configuration comes from `worker/src/lib/chain-registry.ts`.
 - Historical EVM balance lookup prefers dRPC when configured, then the shared chain RPC path, then best-effort Etherscan.
-- Scheduled `logScanRpcEndpoints` puts Dwellir first on Gnosis (9,000-block pages; dRPC/public failover), Base/Optimism/Avalanche (10,000; Alchemy/public), independent of state placement. BSC is excluded (2026-10-13: one log mismatch, five null near-head headers). `DWELLIR_ROUTING_DISABLED_CHAINS` restores incumbents; mint/burn keeps Alchemy.
+- Scheduled `logScanRpcEndpoints` puts Dwellir first on Gnosis (9,000-block pages; dRPC/public failover), Base/Optimism/Avalanche (10,000; Alchemy/public), independent of state placement. BSC is excluded. `DWELLIR_ROUTING_DISABLED_CHAINS` restores incumbents; mint/burn keeps Alchemy.
 - Ranges use the smaller caller/provider span; incumbent windows stay unchanged. Range errors (including HTTP-200 `-32005`) split serially within depth/call/deadline budgets; incomplete ranges cannot advance cursors. Log/timestamp/receipt reads use registered auth and meter Dwellir members/retries. Retained endpoints reject starts before `head - retainedBlocks`; zkSync stays excluded. Transaction-context singleton retries honor abort/deadline/budget, capped at eight/batch; failures stay unavailable.
 - Dwellir targets 100 serial log calls/config, up to 600 with ≥300 subrequests/≥240 s left in the shared 900-subrequest/10-minute budget (splits included). Reserve stops shorten targets, not coverage. Capacity: Gnosis 0.9–5.4M blocks/run; Base/Optimism/Avalanche 1–6M. Incumbent fallback spans: Base/Optimism Alchemy 500,000, public 50,000; Avalanche Alchemy 250,000, public eight ×2,000.
 - Tron event scans and current-balance reads use TronGrid. Pagination URLs are origin/path validated before credentials are forwarded.

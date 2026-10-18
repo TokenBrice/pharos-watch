@@ -1,7 +1,8 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { ApiKeyAuditLogResponse, StatusCronDetailResponse, StatusHistoryResponse } from "@shared/types";
+import type { ApiKeyAuditLogResponse } from "@pharos/contracts/api-keys";
+import type { StatusCronDetailResponse, StatusHistoryResponse } from "@shared/types";
 import {
   ADMIN_API_QUERY_DESCRIPTORS,
   type AdminApiQueryDescriptor,

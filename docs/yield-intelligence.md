@@ -225,9 +225,7 @@ The Re Protocol adapter reads the official daily price feed's `reUSD` series and
 
 Zephyr publishes its one-day effective APY only for `zys-zephyr-protocol`, not base ZSD. Cron and backfill share the upstream hourly observation bucket as history identity; retries cannot add samples. Publication generation fencing remains independent. Hashnote excludes non-finite/nonpositive timestamps and reports beyond five-minute future skew before choosing either NAV endpoint.
 
-#### Retired supplemental source: vaults.fyi
-
-The anonymous probe and exact-vault allowlist machinery have been retired, including runtime env controls and provider credit accounting. Primary and hourly catch-up supplemental jobs now enumerate only the surviving family registry. Historical `protocol-api:vaults-fyi:<chain>:<vault>` rows retain curated-observation classification, venue/chain attribution, and existing source links; removal of the collector does not upgrade them to first-party evidence. Provider secrets and retired cache/circuit/budget rows require separate post-deploy cleanup after compatible code soak and rollback-floor closure.
+Historical vaults.fyi rows retain curated-observation classification, venue/chain attribution, and existing source links; the retired collector confers no first-party evidence status.
 
 Supplemental discovery isolates ordinary per-target failures while preserving bounded family publication. Morpho splits tracked symbol filters into batches of at most 100 (the public GraphQL limit), paginates each batch independently, and keeps the existing overall request deadline. Aave refreshes the verified Ethereum USDC, Arbitrum USDT, and Base USDC reserves plus three rotating tracked-contract targets, in two batches of at most three inside the 28-second family deadline. Successful generations replace the family snapshot rather than accumulating old windows or refreshing their timestamps. Successful targets publish when a strict majority resolves; budget exhaustion, systemic zero-resolution, or at least 50% misses retains the previous family snapshot. Long-tail probes do not imply a listed reserve or continuous coverage.
 

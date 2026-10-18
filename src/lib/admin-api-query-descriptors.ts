@@ -1,15 +1,13 @@
 import { API_PATHS, buildQueryPath } from "@shared/lib/api-endpoints/paths";
 import type {
-  ApiKeyAuditLogResponse,
-  ApiKeyListResponse,
-  ApiRequestAttributionResponse,
-  CredentialLifecycleSummaryResponse,
   StatusHistoryResponse,
   StatusResponse,
   StatusCronDetailResponse,
 } from "@shared/types";
-import { ApiKeyAuditLogResponseSchema, ApiKeyListResponseSchema, CredentialLifecycleSummaryResponseSchema } from "@shared/types/api-keys";
-import { ApiRequestAttributionResponseSchema } from "@shared/types/request-source";
+import type { ApiKeyAuditLogResponse, ApiKeyListResponse, CredentialLifecycleSummaryResponse } from "@pharos/contracts/api-keys";
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
+import { ApiKeyAuditLogResponseSchema, ApiKeyListResponseSchema, CredentialLifecycleSummaryResponseSchema } from "@pharos/contracts/api-keys";
+import { ApiRequestAttributionResponseSchema } from "@pharos/contracts/request-source";
 import { StatusCronDetailResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "@shared/types/status";
 import { AdminActionAuditLogResponseSchema, type AdminActionAuditLogResponse } from "@/lib/actions-workbench-model";
 import { CRON_1MIN } from "@/lib/cron-intervals";

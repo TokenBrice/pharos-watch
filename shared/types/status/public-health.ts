@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { StatusHealthValue } from "./core";
 import { ActivePriceCoverageHealthSchema, StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
 import { CacheStatusSchema } from "./schema-primitives";
-import { FreshnessStatusSchema } from "../api-meta";
+import { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
 import { V9PublicationHealthSchema } from "../report-cards-v9";
 import {
   RESERVE_ALERT_SOURCE_STATE_VALUES,

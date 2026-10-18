@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@cf-wasm/resvg": "^0.4.0",
+    "@pharos/contracts": "*",
     "react": "^19.2.8",
     "satori": "0.32.0",
     "viem": "2.56.3",

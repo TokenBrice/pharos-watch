@@ -1,5 +1,5 @@
 import { classifyBrowserRequestConsumer, resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
-import type { ApiKeyTrafficClass } from "@shared/types";
+import type { ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
 import {
   isApiKeyRequestAttributionDisabled,
   isRequestSourceAttributionDisabled,

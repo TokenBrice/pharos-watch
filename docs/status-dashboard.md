@@ -429,7 +429,7 @@ Computed from publication/price coverage, blacklist gaps, on-chain integrity and
 - Non-gating info causes `price_gap_reviews_expiring` and `reserve_feed_reviews_expiring` remind operators when a review currently acknowledging a missing price or matched stale/erroring reserve feed has `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, defined in `shared/lib/status-thresholds.ts`); dormant reviews are excluded. Each cause lists IDs by soonest expiry and links to [review renewal](./runbooks/review-renewal.md); reminders do not change public health or status transitions.
 - else `healthy`
 
-### Missing-price ratio bands (2026-04-13)
+### Missing-price ratio bands
 
 `missingPriceRatio` stays ratio-based as the active catalog changes; elevated counts are advisory before the degraded band.
 
@@ -441,7 +441,7 @@ Computed from publication/price coverage, blacklist gaps, on-chain integrity and
 
 The `missing_prices_elevated` info cause exists to preserve operator observability in the 15-18% band without forcing a visible status transition.
 
-### Active-price gap duration bands (2026-09-21)
+### Active-price gap duration bands
 
 `missingPriceRatio` counts assets, not gap duration. Duration escalates independently using per-asset `consecutiveMissingGenerations`, only for unacknowledged alert-eligible gaps. Every gap is named; only a material asset (market cap ≥ `durationMaterialMarketCapUsd` = $1B, or unknown) changes the impact status:
 
@@ -451,7 +451,7 @@ The `missing_prices_elevated` info cause exists to preserve operator observabili
 | critical | ≥ 672 — one week | `degraded` (never `stale`) | additionally `active-price-coverage-critical-duration:<ids>` |
 | unknown continuity | prior coverage read failed or was malformed; streak is null with `streakUnavailableReason` | `degraded` for material unacknowledged gaps | `active-price-coverage-incomplete:<ids>`; no invented critical duration |
 
-All three thresholds live in `STATUS_MISSING_PRICE_THRESHOLDS` (`generationsElevated`, `generationsCritical`, `durationMaterialMarketCapUsd`), and the shared verdict helper `assessActivePriceGapDuration` (`shared/lib/status-thresholds.ts`) derives both the public-health impact status and the evaluator's cause from the same evidence. The ratio bands above are unchanged and still drive the `missing_prices_*` causes. The duration dimension is a data-quality verdict, not an availability one. A material gap degrades `/api/health` and names the asset but never reports the surface stale (a 2026-09-22 release briefly did, turning the status page, browser probes and deploy acceptance stale over seven minor assets). The service materiality threshold is $1B: a long-running gap below that size remains a named warning, so isolated smaller-asset failures do not degrade the whole application. This threshold governs service coverage, not the importance of an individual asset to its holders. When a material gap does degrade public health, the state machine records it under the dedicated public-impacting `active_price_coverage_duration_degraded` cause (`worker/src/lib/status/evaluation-rules.ts`), so the incident and its recovery stay in `/api/public-status-history`; the ordinary `active_price_coverage_incomplete` warning stays admin-only. A gap past the critical band is a catalog decision — re-source the price, add a reviewed price-gap acknowledgement, or retire the asset — rather than a fetch gap to wait out. See [Adding a Stablecoin](./process/adding-a-stablecoin.md).
+All three thresholds live in `STATUS_MISSING_PRICE_THRESHOLDS` (`generationsElevated`, `generationsCritical`, `durationMaterialMarketCapUsd`), and the shared verdict helper `assessActivePriceGapDuration` (`shared/lib/status-thresholds.ts`) derives both the public-health impact status and the evaluator's cause from the same evidence. The ratio bands above are unchanged and still drive the `missing_prices_*` causes. The duration dimension is a data-quality verdict, not an availability one. A material gap degrades `/api/health` and names the asset but never reports the surface stale. Historical incident provenance: `git:c61e500386d30cb837ff7da0838d2ca57c27bb31:docs/status-dashboard.md`. The service materiality threshold is $1B: a long-running gap below that size remains a named warning, so isolated smaller-asset failures do not degrade the whole application. This threshold governs service coverage, not the importance of an individual asset to its holders. When a material gap does degrade public health, the state machine records it under the dedicated public-impacting `active_price_coverage_duration_degraded` cause (`worker/src/lib/status/evaluation-rules.ts`), so the incident and its recovery stay in `/api/public-status-history`; the ordinary `active_price_coverage_incomplete` warning stays admin-only. A gap past the critical band is a catalog decision — re-source the price, add a reviewed price-gap acknowledgement, or retire the asset — rather than a fetch gap to wait out. See [Adding a Stablecoin](./process/adding-a-stablecoin.md).
 
 Missing-price `affectedMarketCapUsd` is null if any affected asset lacks admitted current circulating supply; price counts remain observed independently. Explicit zero supply contributes zero, not unavailable.
 

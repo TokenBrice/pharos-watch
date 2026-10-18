@@ -78,7 +78,7 @@ The `og-cemetery` artifact renders the real resting plot map, depends on the atl
 
 ### Telegram channel notifications
 
-`worker/src/lib/telegram/digest-appendices.ts` compares deployed dataset with D1 snapshot during daily digest delivery. Seed silently on first run; new rows become one consolidated next-digest appendix with available epitaphs. This is not a separate API feed.
+`worker/src/telegram/digest/digest-appendices.ts` compares deployed dataset with D1 snapshot during daily digest delivery. Seed silently on first run; new rows become one consolidated next-digest appendix with available epitaphs. This is not a separate API feed.
 
 ### UI behavior
 

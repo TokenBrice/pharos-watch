@@ -18,7 +18,7 @@ import type { buildDispatchSnapshotState, TelegramDispatchSharedState } from "./
 import { reportCronProgress } from "../../../lib/cron-progress";
 import { drainPendingQueue, reconcilePendingQueueMaintenance } from "../delivery/drain";
 import { emptyDrainResult, type PendingCapacitySnapshot } from "../delivery/types";
-import { TELEGRAM_PENDING_DRAIN_BUDGET } from "../../../lib/telegram/constants";
+import { TELEGRAM_PENDING_DRAIN_BUDGET } from "../../../telegram/common/constants";
 import { runPendingQueueLifecycle } from "./dispatch-telegram-pending-lifecycle";
 import {
   commitTelegramAlertSourceBaseline,
@@ -31,8 +31,8 @@ import { resolveTelegramAlertSourcePresetPages } from "../sources/telegram-alert
 import { loadTelegramTargetPlanProgress } from "../target-plans/read-model";
 import { runTelegramTargetPlanCoordinator } from "../target-plans/coordinator";
 import { TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN } from "@shared/lib/telegram-delivery-policy";
-import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../../../lib/telegram/constants";
-import { readTelegramFreshHandoffAllowance } from "../../../lib/telegram/transport-control";
+import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../../../telegram/common/constants";
+import { readTelegramFreshHandoffAllowance } from "../../../telegram/delivery/transport-control";
 
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
 type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;

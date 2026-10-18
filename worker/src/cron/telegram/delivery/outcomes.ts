@@ -1,7 +1,7 @@
 import { batchExecute } from "../../../lib/db";
-import type { BatchResult } from "../../../lib/telegram";
-import { PENDING_MAX_ATTEMPTS } from "../../../lib/telegram/constants";
-import { recordTelegramDeliveryOutcomes } from "../../../lib/telegram/usage-analytics";
+import type { BatchResult } from "../../../telegram/delivery/telegram";
+import { PENDING_MAX_ATTEMPTS } from "../../../telegram/common/constants";
+import { recordTelegramDeliveryOutcomes } from "../../../telegram/store/usage-analytics";
 import {
   recordTelegramAlertTargetStatuses,
   type TelegramAlertTargetStatusUpdate,
@@ -21,7 +21,7 @@ import type {
   PendingRetryUpdate,
   PendingDeadLetterReason,
 } from "./types";
-import { logTelegramEvent } from "../../../lib/telegram/log";
+import { logTelegramEvent } from "../../../telegram/common/log";
 import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 import { recordTelegramJobTargetFinalDelivery } from "./telegram-alert-job-target-outcomes";
 import {

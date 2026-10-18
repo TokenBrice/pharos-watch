@@ -1,6 +1,6 @@
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { buildDonorClaimSiweMessage } from "@shared/lib/donor-key-claim";
-import { DonorKeyClaimResponseSchema } from "@shared/types/api-keys";
+import { DonorKeyClaimResponseSchema } from "@pharos/contracts/api-keys";
 import type { DatabaseSync } from "node:sqlite";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

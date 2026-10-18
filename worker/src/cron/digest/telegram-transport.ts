@@ -1,13 +1,13 @@
-import type { TelegramCreds } from "../../lib/telegram";
+import type { TelegramCreds } from "../../telegram/delivery/telegram";
 import { throwIfAborted } from "../../lib/abort";
 import {
   claimTelegramTransportPermit,
   recordTelegramTransportOutcomes,
   type TelegramTransportOutcome,
   type TelegramTransportPermit,
-} from "../../lib/telegram/transport-control";
+} from "../../telegram/delivery/transport-control";
 import { recordCronFailure } from "../../lib/cron-logger";
-import { parseTelegramTransportErrorClass } from "../../lib/telegram/transport-errors";
+import { parseTelegramTransportErrorClass } from "../../telegram/delivery/transport-errors";
 
 export interface TelegramDigestPermittedDelivery {
   status: string;

@@ -1,0 +1,431 @@
+import { makeSubscriptionRow } from "./telegram-rows.test-support.ts";
+import { describe, it, expect } from "vitest";
+import { MANAGE_PAGE_SIZE } from "../../common/constants";
+import { formatTelegramCompactUsd, formatTelegramSignedCompactUsd } from "../../common/telegram-format";
+import {
+  buildListMessage,
+  buildManageEntryKeyboard,
+  buildManageWatchlistKeyboard,
+  buildNotFoundMessage,
+  buildStatusMessage,
+  describeGlobalAlertSettings,
+  describeSubscriptionSettings,
+} from "../telegram-webhook-messages";
+import type { SubscriberRow, SubscriptionRow } from "../telegram-webhook-shared";
+import type { StatusForCoin } from "../telegram-webhook-status";
+import { buildCoverageMessage } from "../telegram-webhook-insights";
+
+
+describe("buildNotFoundMessage", () => {
+  it("escapes HTML in ticker", () => {
+    const msg = buildNotFoundMessage("<script>");
+    expect(msg).not.toContain("<script>");
+    expect(msg).toContain("&lt;script&gt;");
+  });
+});
+
+describe("describeSubscriptionSettings", () => {
+  it("shows all types", () => {
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 1, alert_safety: 1, alert_launch: 1, alert_reserve: 1, alert_freeze: 1,
+    dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
+    expect(describeSubscriptionSettings(row)).toBe("DEWS, Depeg, Safety, Launch, Reserve, Freeze");
+  });
+
+  it("shows inherited defaults when no types or overrides are enabled", () => {
+    const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
+    expect(describeSubscriptionSettings(row)).toBe("Inherits preset/global defaults");
+  });
+
+  it("appends a snooze countdown when alert_snooze_until_ts is in the future (P1-U10)", () => {
+    const nowSec = 1_700_000_000;
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    alert_snooze_until_ts: nowSec + 38 * 60, });
+    expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS — snoozed for 38 min");
+  });
+
+  it("ignores an expired alert_snooze_until_ts", () => {
+    const nowSec = 1_700_000_000;
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    alert_snooze_until_ts: nowSec - 60, });
+    expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS");
+  });
+
+  it("distinguishes snooze-only inheritance, one-family off, and fully explicit muting", () => {
+    const nowSec = 1_700_000_000;
+    const row = makeSubscriptionRow("x", {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      alert_reserve: 0, alert_freeze: 0, alert_snooze_until_ts: nowSec + 3600,
+    });
+    expect(describeSubscriptionSettings(row, nowSec, { perCoinTag: true }))
+      .toBe("Inherits preset/global defaults — snoozed for 1 h");
+    expect(describeSubscriptionSettings({ ...row, alert_depeg_override: 1 }, nowSec + 3600, { perCoinTag: true }))
+      .toBe("Inherits preset/global defaults; off: Depeg (overrides defaults)");
+    expect(describeSubscriptionSettings({
+      ...row, alert_dews_override: 1, alert_depeg_override: 1, alert_safety_override: 1,
+      alert_launch_override: 1, alert_reserve_override: 1, alert_freeze_override: 1,
+    }, nowSec + 3600, { perCoinTag: true })).toBe("Muted (overrides defaults)");
+  });
+});
+
+describe("describeGlobalAlertSettings", () => {
+  it("lists enabled global types", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 1, global_alert_launch: 1,
+      global_alert_reserve: 1,
+      global_alert_freeze: 1,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+    };
+    expect(describeGlobalAlertSettings(sub)).toBe("DEWS, Safety (downgrades; 3-point drop when scored), Launch, Reserve, Freeze");
+  });
+});
+
+describe("buildListMessage", () => {
+  // Pin "now" to noon UTC on 2024-01-15 so quiet-hours/snooze rendering is deterministic.
+  const NOON_UTC_SEC = Math.floor(Date.UTC(2024, 0, 15, 12, 0, 0) / 1000);
+  // 02:30 UTC on the same date — inside a 22:00–07:00 quiet window.
+  const NIGHT_UTC_SEC = Math.floor(Date.UTC(2024, 0, 15, 2, 30, 0) / 1000);
+
+  it("includes global settings and coin list", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
+    };
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
+    expect(msg).toContain("DEWS");
+    expect(msg).toContain("22:00–07:00 UTC");
+    expect(msg).toContain("Coins (0)");
+  });
+
+  it("renders an active snooze with relative remaining time", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+      alert_snooze_until_ts: NOON_UTC_SEC + 38 * 60,
+    };
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
+    expect(msg).toContain("Snoozed for 38 min");
+    expect(msg).not.toContain("Snooze: Off");
+    expect(msg).toContain("Quiet hours: Off");
+  });
+
+  it("renders quiet hours as active when inside the window", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
+    };
+    const msg = buildListMessage(sub, [], [], NIGHT_UTC_SEC);
+    expect(msg).toContain("Quiet hours: active until 07:00 UTC");
+    expect(msg).not.toContain("22:00–07:00 UTC");
+    expect(msg).toContain("Snooze: Off");
+  });
+
+  it("evaluates active quiet hours in the subscriber timezone", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 13, quiet_hours_end_utc: 14,
+      timezone: "Europe/Paris",
+    };
+    const msg = buildListMessage(sub, [], [], NOON_UTC_SEC);
+    expect(msg).toContain("Quiet hours: active until 14:00 Europe/Paris");
+    expect(msg).not.toContain("13:00–14:00 UTC");
+  });
+
+  it("renders a fully marked-off coin row as muted and tags flagged rows", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+    };
+    const mutedRow: SubscriptionRow = {
+      stablecoin_id: "usdc-circle",
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      alert_dews_override: 1, alert_depeg_override: 1, alert_safety_override: 1,
+      alert_launch_override: 1, alert_reserve_override: 1, alert_freeze_override: 1,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    };
+    const flaggedRow: SubscriptionRow = {
+      stablecoin_id: "dai-makerdao",
+      alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    };
+    const msg = buildListMessage(sub, [mutedRow, flaggedRow], [], NOON_UTC_SEC);
+    expect(msg).toContain("Muted (overrides defaults)");
+    expect(msg).toContain("DEWS · per-coin");
+  });
+});
+
+describe("buildManageEntryKeyboard", () => {
+  it("emits a single Manage button starting at page 0", () => {
+    const kb = buildManageEntryKeyboard();
+    expect(kb.inline_keyboard).toEqual([[{ text: "Manage", callback_data: "manage:page:0" }]]);
+  });
+});
+
+describe("buildManageWatchlistKeyboard", () => {
+  it("renders one row per coin with a ❌ + symbol label and unsub callback", () => {
+    const subs = [makeSubscriptionRow("usdc-circle"), makeSubscriptionRow("dai-makerdao")];
+    const kb = buildManageWatchlistKeyboard(subs, 0);
+    // Sorted alphabetically by symbol: DAI then USDC.
+    expect(kb.inline_keyboard[0]).toEqual([{ text: "❌ DAI", callback_data: "unsub:dai-makerdao" }]);
+    expect(kb.inline_keyboard[1]).toEqual([{ text: "❌ USDC", callback_data: "unsub:usdc-circle" }]);
+    // No nav row when everything fits on one page.
+    expect(kb.inline_keyboard).toHaveLength(2);
+  });
+
+  it("paginates at MANAGE_PAGE_SIZE per page and adds Prev/Next nav", () => {
+    // Pick 7 known tracked ids so MANAGE_PAGE_SIZE=5 yields two pages.
+    const ids = [
+      "usdc-circle",
+      "usdt-tether",
+      "dai-makerdao",
+      "frax-frax",
+      "tusd-trueusd",
+      "lusd-liquity",
+      "susd-synthetix",
+    ];
+    const subs = ids.map((id) => makeSubscriptionRow(id));
+
+    const page0 = buildManageWatchlistKeyboard(subs, 0);
+    const coinRows0 = page0.inline_keyboard.slice(0, MANAGE_PAGE_SIZE);
+    expect(coinRows0).toHaveLength(MANAGE_PAGE_SIZE);
+    // Page 0 has only a Next button.
+    const navRow0 = page0.inline_keyboard[page0.inline_keyboard.length - 1];
+    expect(navRow0.some((b) => b.callback_data === "manage:page:1" && b.text.includes("Next"))).toBe(true);
+    expect(navRow0.some((b) => b.text.includes("Prev"))).toBe(false);
+
+    const page1 = buildManageWatchlistKeyboard(subs, 1);
+    // Last page: only Prev nav.
+    const navRow1 = page1.inline_keyboard[page1.inline_keyboard.length - 1];
+    expect(navRow1.some((b) => b.callback_data === "manage:page:0" && b.text.includes("Prev"))).toBe(true);
+    expect(navRow1.some((b) => b.text.includes("Next"))).toBe(false);
+  });
+
+  it("clamps an out-of-range page index to the last valid page", () => {
+    const subs = [makeSubscriptionRow("usdc-circle"), makeSubscriptionRow("dai-makerdao")];
+    const kb = buildManageWatchlistKeyboard(subs, 99);
+    // Two coins, one page — no nav row, both rows present.
+    expect(kb.inline_keyboard).toHaveLength(2);
+  });
+});
+
+function baseStatus(overrides: Partial<StatusForCoin> = {}): StatusForCoin {
+  return {
+    stablecoinId: "usdc-circle",
+    priceUsd: 1,
+    priceUpdatedAt: Math.floor(Date.now() / 1000),
+    supplyUsd: null,
+    supplyObservedAt: null,
+    supplyCurrent: false,
+    dews: null,
+    safety: null,
+    safetyUnavailableReason: null,
+    liquidity: null,
+    yield: null,
+    flow: null,
+    depeg: { status: "stable" },
+    ...overrides,
+  };
+}
+
+describe("buildStatusMessage 24h mint/burn flow line (C122)", () => {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  it("renders a signed Flow 24h line when flow is present", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({ flow: { netFlowUsd: 12_300_000, updatedAt: nowSec, stale: false, assessedAt: nowSec, freshBudgetSec: 21_600 } }),
+    );
+    expect(msg).toContain("Flow 24h: +$12");
+  });
+
+  it("renders $0 for zero net flow (tracked coin, no events)", () => {
+    const msg = buildStatusMessage("USDC", baseStatus({ flow: { netFlowUsd: 0, updatedAt: nowSec, stale: false, assessedAt: nowSec, freshBudgetSec: 21_600 } }));
+    expect(msg).toContain("Flow 24h: $0");
+  });
+
+  it("renders a negative net flow with a minus sign", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({ flow: { netFlowUsd: -4_000_000, updatedAt: nowSec, stale: false, assessedAt: nowSec, freshBudgetSec: 21_600 } }),
+    );
+    expect(msg).toContain("Flow 24h: -$4");
+  });
+
+  it("omits the line for untracked coins (flow null), without an n/a placeholder", () => {
+    const msg = buildStatusMessage("USDC", baseStatus({ flow: null }));
+    expect(msg).not.toContain("Flow 24h");
+  });
+
+  it.each([3600, 6 * 3600, 6 * 3600 + 1])("retains the producer flow stale verdict at age %s", (ageSec) => {
+    const assessedAt = Math.floor(Date.now() / 1000);
+    const stale = ageSec > 6 * 3600;
+    const message = buildStatusMessage("USDC", baseStatus({ flow: {
+      netFlowUsd: 123_500, updatedAt: assessedAt - ageSec, assessedAt,
+      freshBudgetSec: 6 * 3600, stale,
+    } }));
+    const flowLine = message.split("\n").find((line) => line.startsWith("Flow 24h:"));
+    expect(flowLine).toContain("+$123.5K");
+    expect(flowLine?.includes(", stale")).toBe(stale);
+  });
+});
+
+describe("buildStatusMessage supply and DEX context", () => {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  it("states invalid DEX evidence as unavailable rather than silently omitting liquidity", () => {
+    const message = buildStatusMessage("USDC", baseStatus({
+      liquidity: null, liquidityUnavailableReason: "invalid-coverage-evidence",
+    }));
+    expect(message).toContain("Liquidity: unavailable (invalid-coverage-evidence)");
+    expect(message).not.toContain("Liquidity: NR");
+  });
+
+  it("states unavailable supply explicitly instead of $0 or dropping it", () => {
+    const msg = buildStatusMessage("USDC", baseStatus({ supplyUsd: null }));
+    expect(msg).toContain("Supply: unavailable");
+    expect(msg).not.toContain("Supply: $0");
+  });
+
+  it("keeps an explicit zero supply and labels only out-of-budget observations stale", () => {
+    expect(
+      buildStatusMessage("USDC", baseStatus({ supplyUsd: 0, supplyObservedAt: nowSec, supplyCurrent: true })),
+    ).toMatch(/Supply: \$0 \([^)]*\)/);
+    const stale = buildStatusMessage(
+      "USDC",
+      baseStatus({ supplyUsd: 5_000_000_000, supplyObservedAt: nowSec - 30 * 86_400, supplyCurrent: false }),
+    );
+    expect(stale).toMatch(/Supply: \$5[^\n]*, stale\)/);
+  });
+
+  it("labels 30-day-old DEX liquidity stale while keeping its age", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({ liquidity: { score: 91, totalTvlUsd: 123_000_000, updatedAt: nowSec - 30 * 86_400, current: false } }),
+    );
+    expect(msg).toMatch(/Liquidity: 91, TVL \$123[^\n]*, stale\)/);
+    const current = buildStatusMessage(
+      "USDC",
+      baseStatus({ liquidity: { score: 91, totalTvlUsd: 123_000_000, updatedAt: nowSec, current: true } }),
+    );
+    expect(current).not.toContain("stale");
+  });
+});
+
+describe("buildStatusMessage canonical safety provenance", () => {
+  it("renders model provenance and explicit canonical unavailability", () => {
+    const source = baseStatus({
+      safety: {
+        grade: "A",
+        ratingStatus: "rated",
+        partialEvidence: null,
+        score: 90,
+        model: "v9",
+        methodologyVersion: "9.0",
+        publicationGenerationId: "report-cards:v9:123",
+        publishedAt: Math.floor(Date.now() / 1000),
+        recordedAt: Math.floor(Date.now() / 1000),
+      },
+    });
+    expect(buildStatusMessage("USDC", source)).toContain("Safety: A (90) [V9 9.0]");
+    expect(buildCoverageMessage("USDC", source)).toContain("Safety: A (90) [V9 9.0]");
+    expect(
+      buildStatusMessage("USDC", baseStatus({ safetyUnavailableReason: "canonical-snapshot-unavailable" })),
+    ).toContain("Safety: temporarily unavailable");
+  });
+
+  it.each(["pipeline-gap", "rated", "not-rated"] as const)("keeps %s availability distinct from its grade", (ratingStatus) => {
+    const status = baseStatus({ safety: {
+      grade: ratingStatus === "pipeline-gap" ? null : ratingStatus === "not-rated" ? "NR" : "A",
+      score: ratingStatus === "rated" ? 80 : null,
+      ratingStatus,
+      partialEvidence: ratingStatus === "not-rated" ? null : {
+        reasonCode: "partial-evidence-pipeline-gap",
+        excludedPillars: ratingStatus === "pipeline-gap" ? ["backing", "exit"] : ["exit"],
+        causes: ["A"],
+      },
+      model: "v9", methodologyVersion: "10.01", publicationGenerationId: "test",
+      publishedAt: 1_700_000_000, recordedAt: 1_700_000_000,
+    } });
+    const message = buildStatusMessage("USDC", status);
+    const coverage = buildCoverageMessage("USDC", status);
+    const sharedRating = message.split("\n").find((line) => line.startsWith("Safety:"))?.split("],")[0];
+    expect(coverage).toContain(`${sharedRating}]`);
+    expect(coverage).not.toContain("Safety: null");
+    if (ratingStatus === "pipeline-gap") {
+      expect(message).toContain("Safety: Pipeline gap — Unavailable");
+      expect(message).not.toContain("Safety: NR");
+      expect(message).not.toContain("Safety: null");
+      expect(message).not.toContain("(0)");
+    } else if (ratingStatus === "rated") {
+      expect(message).toContain("Safety: A (80) — Partial evidence: pipeline gap");
+    } else {
+      expect(message).toContain("Safety: NR");
+      expect(message).not.toContain("Pipeline gap");
+    }
+  });
+});
+
+describe("buildStatusMessage Telegram HTML escaping", () => {
+  it("escapes provider-controlled yield source text", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({
+        yield: {
+          currentApy: 4.8,
+          apy30d: 4.2,
+          source: 'Morpho: Safe Vault <a href="https://attacker.example/phish">CLAIM</a> & <b>verified</b>',
+          pharosYieldScore: 42,
+          updatedAt: Math.floor(Date.now() / 1000),
+        },
+      }),
+    );
+
+    expect(msg).toContain(
+      "Morpho: Safe Vault &lt;a href=&quot;https://attacker.example/phish&quot;&gt;CLAIM&lt;/a&gt; &amp; &lt;b&gt;verified&lt;/b&gt;",
+    );
+    expect(msg).not.toContain('<a href="https://attacker.example/phish">');
+    expect(msg).not.toContain("<b>verified</b>");
+  });
+
+  it("renders PYS unavailable only when the status loader cannot resolve a score", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({
+        yield: {
+          currentApy: 4.8,
+          apy30d: 4.2,
+          source: "Aave V3",
+          pharosYieldScore: null,
+          pysUnavailableReason: "yield-ranking-not-found",
+          updatedAt: Math.floor(Date.now() / 1000),
+        },
+      }),
+    );
+    expect(msg).toContain("PYS unavailable");
+  });
+});
+
+describe("Telegram compact USD formatting", () => {
+  it("preserves user-visible tier and sign bytes", () => {
+    expect(formatTelegramCompactUsd(1_250_000_000_000)).toBe("$1250.0B");
+    expect(formatTelegramCompactUsd(2_500_000_000)).toBe("$2.5B");
+    expect(formatTelegramCompactUsd(3_500_000)).toBe("$3.5M");
+    expect(formatTelegramCompactUsd(4_500)).toBe("$4.5K");
+    expect(formatTelegramCompactUsd(999)).toBe("$999");
+    expect(formatTelegramCompactUsd(-2_500_000)).toBe("$-2.5M");
+    expect(formatTelegramSignedCompactUsd(2_500_000)).toBe("+$2.5M");
+    expect(formatTelegramSignedCompactUsd(-2_500_000)).toBe("-$2.5M");
+  });
+
+  it("returns null for nullish and non-finite values", () => {
+    expect(formatTelegramCompactUsd(null)).toBeNull();
+    expect(formatTelegramCompactUsd(Infinity)).toBeNull();
+    expect(formatTelegramSignedCompactUsd(undefined)).toBeNull();
+    expect(formatTelegramSignedCompactUsd(NaN)).toBeNull();
+  });
+});

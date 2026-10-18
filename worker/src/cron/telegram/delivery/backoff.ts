@@ -2,8 +2,8 @@ import { getCache } from "../../../lib/db-cache";
 import { runWithOverloadRetry } from "../../../lib/d1-overload-retry";
 import {
   PENDING_BACKOFF_SCHEDULE_SEC,
-} from "../../../lib/telegram/constants";
-import { logTelegramEvent } from "../../../lib/telegram/log";
+} from "../../../telegram/common/constants";
+import { logTelegramEvent } from "../../../telegram/common/log";
 
 const PENDING_BACKOFF_CAP_SEC = PENDING_BACKOFF_SCHEDULE_SEC[PENDING_BACKOFF_SCHEDULE_SEC.length - 1];
 export const TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY = "telegram:global-send-backoff-until";

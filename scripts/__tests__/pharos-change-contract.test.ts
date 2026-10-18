@@ -8,10 +8,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildPermissionRequestHookOutput,
   buildPreToolUseHookOutput,
+  buildRouteContext,
   classifyChangedFiles,
+  classifyRouteContext,
   findShellCommandViolation,
   formatContract,
+  ROUTE_CONTEXT_CEILINGS,
 } from "../ci/pharos-change-contract.ts";
+import type { ChangeContract, RouteContextDocumentCache } from "../ci/pharos-change-contract.ts";
 import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
 import { buildFocusedCheckPlan } from "../maintenance/run-focused-checks.ts";
@@ -50,6 +54,63 @@ function docKeys(contract: { docs: Array<{ anchor?: string; path: string }> }): 
   return contract.docs.map((doc) => doc.anchor ? `${doc.path}#${doc.anchor}` : doc.path);
 }
 
+function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, methodology: boolean) {
+  const keys = Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`);
+  if (methodology) keys.push("docs/architecture.md#adr-3");
+  expect(docKeys(contract)).toEqual(expect.arrayContaining(keys));
+}
+
+// Exact measured byte ceilings, not rounded class allowances. Lower these when
+// reading shrinks; never regenerate them automatically or trade away obligations.
+const ROUTE_FIXTURES = [
+  ["src/components/stablecoin-table.tsx", 20_359, 20_359],
+  ["src/app/yield/page.tsx", 49_528, 49_528],
+  ["worker/src/cron/dex-liquidity/orchestrator.ts", 51_270, 51_270],
+  ["worker/src/api/yield-history.ts", 75_600, 75_600],
+  ["shared/lib/safety-score-v9/evaluate-asset.ts", 64_103, 64_103],
+  ["shared/lib/classification.ts", 46_819, 46_819],
+  ["functions/safety-scores/map.json.ts", 26_202, 30_995],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 46_819, 46_819],
+  ["worker/src/telegram/webhook/telegram-webhook.ts", 90_024, 90_024],
+  ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 27_551, 27_551],
+] as const;
+
+interface ReadingSignature {
+  file: string;
+  mode: "auto" | "contract";
+  contract: ChangeContract;
+  signature: Array<{ id: string; selectors: number[] }>;
+}
+
+function enumerateReadingSignatures() {
+  const { createOwnershipGlobMatcher } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+  const matchers = PATH_FAMILIES.map((family) => ({
+    family,
+    sources: family.sourceGlobs.map(createOwnershipGlobMatcher),
+    selectors: (family.reading ?? []).map((selector) => selector.sources.map(createOwnershipGlobMatcher)),
+  }));
+  const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0").filter(Boolean);
+  const representatives = new Map<string, ReadingSignature>();
+  for (const file of trackedFiles) {
+    const matched = matchers.filter(({ sources }) => sources.some((match) => match(file)));
+    if (matched.length === 0) continue;
+    const signature = matched.map(({ family, selectors }) => ({
+      id: family.id,
+      selectors: selectors.flatMap((sources, index) => sources.some((match) => match(file)) ? [index] : []),
+    }));
+    for (const mode of ["auto", "contract"] as const) {
+      const contract = classifyChangedFiles([file], mode);
+      const key = JSON.stringify([mode, signature, contract.scopedContext, contract.contextMode.effective, classifyRouteContext(contract)]);
+      if (!representatives.has(key)) representatives.set(key, { file, mode, contract, signature });
+    }
+  }
+  return [...representatives.values()];
+}
+
+// Classification stays cheap; only one representative of each complete
+// family/selector/scoped-guide/mode/class signature opens Markdown documents.
+let readingSignatures: ReadingSignature[] | undefined;
+
 function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
   const fixtureRoot = mkdtempSync(join(tmpdir(), "pharos-change-contract-sql-"));
   const sqlPath = join(fixtureRoot, "query.sql");
@@ -61,10 +122,612 @@ function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
   }
 }
 
+describe("route context accounting", () => {
+  function withContextFixture(callback: (repoRoot: string) => void) {
+    const repoRoot = mkdtempSync(join(tmpdir(), "pharos-route-context-"));
+    writeFileSync(join(repoRoot, "AGENTS.md"), "# Root\né😀\n");
+    writeFileSync(join(repoRoot, "CLAUDE.md"), "@AGENTS.md\n");
+    writeFileSync(join(repoRoot, "scope.md"), "# Scope\n");
+    writeFileSync(join(repoRoot, "guide.md"), "# Guide\n\n## One\né😀\n### Child\nnested\n## Two\nlast\n");
+    try {
+      callback(repoRoot);
+    } finally {
+      rmSync(repoRoot, { force: true, recursive: true });
+    }
+  }
+
+  it("counts UTF-8 bytes, physical lines and character-based tokens over the range union", () => {
+    withContextFixture((repoRoot) => {
+      const context = buildRouteContext({
+        docs: [
+          { path: "guide.md", anchor: "one" },
+          { path: "guide.md", anchor: "child" },
+          { path: "guide.md", anchor: "two" },
+          { path: "./guide.md", anchor: "one" },
+        ],
+        scopedContext: ["scope.md"],
+        // Conditional references must not be opened or charged.
+        background: [{ path: "not-preloaded.md", anchor: "conditional" }],
+      }, { repoRoot });
+      expect(context.total).toEqual({ bytes: 65, characters: 59, lines: 9, approximateTokens: 15 });
+      expect(context.files.find((file) => file.path === "guide.md")).toEqual({
+        path: "guide.md", bytes: 43, characters: 40, lines: 6, approximateTokens: 10,
+        ranges: [{ startLine: 3, endLine: 8, bytes: 43, characters: 40, lines: 6, approximateTokens: 10 }],
+      });
+      expect(context.references.find((ref) => ref.anchor === "one")).toEqual({
+        path: "guide.md", anchor: "one", kind: "primary", requiredReason: "Selected primary ownership reference",
+        startLine: 3, endLine: 6, bytes: 31, characters: 28, lines: 4, approximateTokens: 7,
+      });
+      expect(context.references.filter((ref) => ref.anchor === "one")).toHaveLength(1);
+      expect(context.background).toEqual([{ path: "not-preloaded.md", anchor: "conditional" }]);
+    });
+  });
+
+  it("counts the authored root once through scoped, primary, canonical-path and Claude aliases", () => {
+    withContextFixture((repoRoot) => {
+      symlinkSync(join(repoRoot, "AGENTS.md"), join(repoRoot, "root-link.md"));
+      const context = buildRouteContext({
+        docs: [{ path: "AGENTS.md" }, { path: "./AGENTS.md" }, { path: "CLAUDE.md" }, { path: "root-link.md" }],
+        scopedContext: ["AGENTS.md"],
+        background: [],
+      }, { repoRoot });
+      expect(context.total).toEqual({ bytes: 14, characters: 11, lines: 2, approximateTokens: 3 });
+      expect(context.references).toEqual([{
+        path: "AGENTS.md", kind: "root", requiredReason: "Root repository instructions",
+        startLine: 1, endLine: 2, bytes: 14, characters: 11, lines: 2, approximateTokens: 3,
+      }]);
+      expect(context.files).toHaveLength(1);
+    });
+  });
+
+  it("lets whole-file reads subsume sections and merges adjacent selected ranges", () => {
+    withContextFixture((repoRoot) => {
+      const contract = {
+        docs: [{ path: "guide.md", anchor: "child" }, { path: "guide.md", anchor: "two" }],
+        scopedContext: [], background: [],
+      };
+      const adjacent = buildRouteContext(contract, { repoRoot });
+      expect(adjacent.files.find((file) => file.path === "guide.md")?.ranges).toHaveLength(1);
+      // Child and Two are adjacent. One omitted preceding section is not charged.
+      expect(adjacent.total).toEqual({ bytes: 43, characters: 40, lines: 6, approximateTokens: 10 });
+      const whole = buildRouteContext({ ...contract, docs: [...contract.docs, { path: "guide.md" }] }, { repoRoot });
+      expect(whole.total).toEqual({ bytes: 66, characters: 60, lines: 10, approximateTokens: 15 });
+      expect(whole.files.find((file) => file.path === "guide.md")?.ranges).toEqual([
+        { startLine: 1, endLine: 8, bytes: 52, characters: 49, lines: 8, approximateTokens: 13 },
+      ]);
+    });
+  });
+
+  it("does not charge gaps and counts the final physical line without a trailing newline", () => {
+    withContextFixture((repoRoot) => {
+      writeFileSync(join(repoRoot, "guide.md"), "# Guide\n## One\none\n## Gap\nskip\n## Two\ntwo");
+      const context = buildRouteContext({
+        docs: [{ path: "guide.md", anchor: "one" }, { path: "guide.md", anchor: "two" }],
+        scopedContext: [], background: [],
+      }, { repoRoot });
+      expect(context.total).toEqual({ bytes: 35, characters: 32, lines: 6, approximateTokens: 8 });
+      expect(context.files.find((file) => file.path === "guide.md")?.ranges).toEqual([
+        { startLine: 2, endLine: 3, bytes: 11, characters: 11, lines: 2, approximateTokens: 3 },
+        { startLine: 6, endLine: 7, bytes: 10, characters: 10, lines: 2, approximateTokens: 3 },
+      ]);
+    });
+  });
+
+  it("shares parsed document snapshots without sharing selected ranges between routes", () => {
+    withContextFixture((repoRoot) => {
+      const documents: RouteContextDocumentCache = new Map();
+      const first = { docs: [{ path: "guide.md", anchor: "one" }], scopedContext: [], background: [] };
+      const second = { docs: [{ path: "guide.md", anchor: "two" }], scopedContext: [], background: [] };
+      const firstContext = buildRouteContext(first, { repoRoot, documents });
+      const parsed = documents.get(join(repoRoot, "guide.md"))?.document;
+      expect(parsed).toBeDefined();
+      const secondContext = buildRouteContext(second, { repoRoot, documents });
+      expect(documents.get(join(repoRoot, "guide.md"))?.document).toBe(parsed);
+      expect(documents.size).toBe(2);
+      expect(firstContext).toEqual(buildRouteContext(first, { repoRoot }));
+      expect(secondContext).toEqual(buildRouteContext(second, { repoRoot }));
+      expect(secondContext.references.some((reference) => reference.anchor === "one")).toBe(false);
+    });
+  });
+
+  it("fails on missing required files and anchors without changing classification", () => {
+    withContextFixture((repoRoot) => {
+      expect(() => buildRouteContext({
+        docs: [{ path: "missing.md" }], scopedContext: [], background: [],
+      }, { repoRoot })).toThrow("Cannot account for missing.md");
+      expect(() => buildRouteContext({
+        docs: [{ path: "guide.md", anchor: "missing" }], scopedContext: [], background: [],
+      }, { repoRoot })).toThrow("Cannot account for guide.md#missing: Missing Markdown anchor: #missing");
+      expect(() => buildRouteContext({
+        docs: [], scopedContext: ["missing/AGENTS.md"], background: [],
+      }, { repoRoot })).toThrow("Cannot account for missing/AGENTS.md");
+    });
+  });
+
+  it("prints the same measured payload in text and keeps accounting outside check selection", () => {
+    const contract = classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"]);
+    const original = JSON.stringify(contract);
+    const context = buildRouteContext(contract);
+    expect(JSON.stringify(contract)).toBe(original);
+    const text = formatContract(contract, { context });
+    expect(text).toContain(`Total initial routed context: ${context.total.bytes} B, ${context.total.lines} lines, ~${context.total.approximateTokens} tokens (merged per file).`);
+    for (const reference of context.references) {
+      expect(text).toContain(`${reference.bytes} B, ${reference.lines} lines, ~${reference.approximateTokens} tokens`);
+    }
+    expect(text).toContain("Background references are not counted.");
+    expect(text).toContain("Required ownership reference (not subject to the reading cap)");
+  });
+});
+
+describe("reading selectors and context modes", () => {
+  it.each([
+    ["shared/lib/classification.ts", false],
+    ["shared/data/stablecoins/coins/usdt-tether.json", false],
+    ["shared/lib/safety-score-v9/evaluate-asset.ts", true],
+    ["worker/src/cron/dex-liquidity/orchestrator.ts", true],
+    ["worker/src/api/yield-history.ts", true],
+    ["worker/src/telegram/webhook/telegram-webhook.ts", false],
+    ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", false],
+    ["functions/safety-scores/map.json.ts", true],
+    ["functions/pharoswatchbot-adoption.ts", false],
+  ] as const)("keeps integrity ADRs primary and undemoted for %s", (file, methodology) => {
+    const contract = classifyChangedFiles([file]);
+    expectIntegrityObligations(contract, methodology);
+    const keys = Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`);
+    if (methodology) keys.push("docs/architecture.md#adr-3");
+    expect(docKeys({ docs: contract.background }).filter((key) => keys.includes(key))).toEqual([]);
+  });
+
+  function withReadingFamily(callback: () => void) {
+    const originalLength = PATH_FAMILIES.length;
+    PATH_FAMILIES.push({
+      id: "reading-fixture", label: "Reading fixture", risk: "high", tier: "specific",
+      sourceGlobs: ["reading-fixture/**"], checks: ["fixture-check"], hardRules: [], scopedContext: [], background: [],
+      docs: [{ path: "default.md" }],
+      required: [{ path: "required.md" }],
+      reading: [{ sources: ["reading-fixture/selected.ts"],
+        local: [{ path: "local.md" }], contract: [{ path: "contract.md" }],
+        required: [{ path: "selector-required.md" }] }],
+    });
+    try {
+      callback();
+    } finally {
+      PATH_FAMILIES.splice(originalLength);
+    }
+  }
+
+  it("falls back per input file in a mixed batch and contract augments local", () => {
+    withReadingFamily(() => {
+      const files = ["reading-fixture/selected.ts", "reading-fixture/unselected.ts"];
+      const local = classifyChangedFiles(files);
+      expect(docKeys(local)).toEqual(["local.md", "default.md", "required.md", "selector-required.md"]);
+      expect(docKeys(classifyChangedFiles(files, "contract")))
+        .toEqual(["local.md", "contract.md", "default.md", "required.md", "selector-required.md"]);
+      expect(docKeys(classifyChangedFiles(["reading-fixture/selected.ts"])))
+        .toEqual(["local.md", "required.md", "selector-required.md"]);
+      expect(docKeys(classifyChangedFiles(["reading-fixture/unselected.ts"]))).toEqual(["default.md", "required.md"]);
+    });
+  });
+
+  it("never demotes required refs, even when authored after six ordinary refs or repeated as background", () => {
+    withReadingFamily(() => {
+      const family = PATH_FAMILIES[PATH_FAMILIES.length - 1];
+      family.docs = Array.from({ length: 7 }, (_, index) => ({ path: `ordinary-${index + 1}.md` }));
+      family.background = [{ path: "required.md" }];
+      const contract = classifyChangedFiles(["reading-fixture/unselected.ts"]);
+      expect(docKeys(contract)).toEqual([
+        "ordinary-1.md", "ordinary-2.md", "ordinary-3.md", "ordinary-4.md", "ordinary-5.md", "ordinary-6.md", "required.md",
+      ]);
+      expect(contract.background).toEqual([{ path: "ordinary-7.md" }]);
+    });
+  });
+
+  it("orders selector-owned reading separately without changing mappings or check order", () => {
+    withReadingFamily(() => {
+      PATH_FAMILIES.push({
+        id: "generic-reading-fixture", label: "A generic fixture", risk: "high", tier: "specific",
+        sourceGlobs: ["reading-fixture/**"], checks: ["generic-check"], docs: [{ path: "generic.md" }],
+        hardRules: [], scopedContext: [], background: [],
+      });
+      const local = classifyChangedFiles(["reading-fixture/selected.ts"]);
+      const contract = classifyChangedFiles(["reading-fixture/selected.ts"], "contract");
+      expect(local.mappings.map((mapping) => mapping.id)).toEqual(["generic-reading-fixture", "reading-fixture"]);
+      expect(docKeys(local).slice(0, 2)).toEqual(["local.md", "generic.md"]);
+      expect(contract.checks).toEqual(local.checks);
+      expect(contract.checks).toEqual(["generic-check", "fixture-check"]);
+    });
+  });
+
+  it("uses contract reading for implementation inputs on two surfaces but not tests or doc companions", () => {
+    const implementation = "src/components/stablecoin-table.tsx";
+    expect(classifyChangedFiles([implementation]).contextMode.effective).toBe("local");
+    const contract = classifyChangedFiles([implementation, "worker/src/lib/db.ts"]);
+    expect(contract.contextMode.effective).toBe("contract");
+    expect(contract.contextMode.reasons).toContain("Implementation inputs span surfaces: src, worker");
+    expect(classifyChangedFiles([implementation, "worker/src/lib/__tests__/db.test.ts"]).contextMode.effective).toBe("local");
+    expect(classifyChangedFiles([implementation, "shared/AGENTS.md"]).contextMode.effective).toBe("local");
+  });
+
+  it.each([
+    "shared/types/api.ts", "shared/lib/api-endpoints/catalog.ts", "shared/lib/example-contract.ts",
+    "shared/lib/classification.ts", "shared/lib/methodology-versions/constants.ts",
+    "shared/data/methodology-changelogs/example.json", "shared/data/stablecoins/coins/usdt-tether.json",
+    "shared/lib/safety-score-v9/evaluate-asset.ts", "shared/data/safety-score-v9/inputs.json",
+    "worker/migrations/0268_telegram_planning_lookup_indexes.sql", "shared/contracts/api-meta.ts",
+  ])("upgrades contract-sensitive input %s using ownership glob semantics", (file) => {
+    const contract = classifyChangedFiles([file]);
+    expect(contract.contextMode.effective).toBe("contract");
+    expect(contract.contextMode.reasons.some((reason) => reason.startsWith("Contract-sensitive input:"))).toBe(true);
+  });
+
+  it.each(["local", "invalid", "AUTO", ""])("rejects invalid --context=%s", (context) => {
+    const result = spawnSync(process.execPath,
+      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", `--context=${context}`, "--file", "src/components/stablecoin-table.tsx", "--json"],
+      { encoding: "utf8" });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain(context === "" ? "--context requires a non-empty value" : "Invalid --context");
+    expect(result.stdout).toBe("");
+  });
+
+  it.each(["auto", "contract"] as const)("fails unmapped CLI routing without a runnable plan in %s mode", (context) => {
+    const result = spawnSync(process.execPath,
+      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", `--context=${context}`, "--new-file",
+        "--file", "unmapped.fixture", "--file", "src/components/stablecoin-table.tsx", "--json"], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    const output = JSON.parse(result.stdout);
+    expect(output.unmappedPaths).toEqual(["unmapped.fixture"]);
+    expect(output.checks).toEqual([]);
+    expect(output.warnings).toEqual(expect.arrayContaining([expect.stringContaining("Missing documentation owner")]));
+  });
+
+  it.each([
+    "src/components/stablecoin-table.tsx", "src/app/yield/page.tsx",
+    "worker/src/cron/dex-liquidity/orchestrator.ts", "worker/src/api/yield-history.ts",
+    "shared/lib/safety-score-v9/evaluate-asset.ts", "shared/lib/classification.ts",
+    "functions/safety-scores/map.json.ts", "shared/data/stablecoins/coins/usdt-tether.json",
+    "worker/src/telegram/webhook/telegram-webhook.ts", "worker/migrations/0268_telegram_planning_lookup_indexes.sql",
+    "scripts/maintenance/worker-evidence-report.mjs", "functions/pharoswatchbot-adoption.ts",
+  ])("keeps the emitted check plan byte-identical across modes for %s", (file) => {
+    const outputs = (["auto", "contract"] as const).map((context) => {
+      const result = spawnSync(process.execPath,
+        ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", `--context=${context}`, "--file", file, "--json"],
+        { encoding: "utf8" });
+      expect(result.status).toBe(0);
+      return JSON.parse(result.stdout);
+    });
+    expect(JSON.stringify(outputs[0].checks)).toBe(JSON.stringify(outputs[1].checks));
+    expect(outputs[0].checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
+    expect(outputs[0].mappings).toEqual(outputs[1].mappings);
+    expect(outputs[0].contextMode.requested).toBe("auto");
+    expect(outputs[1].contextMode).toEqual({ requested: "contract", effective: "contract", reasons: ["Explicit contract context"] });
+  });
+
+  it.each(["auto", "contract"] as const)("keeps evaluator %s reading at the scoring seam, not consumer implementations", (mode) => {
+    const contract = classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode);
+    expect(contract.contextMode.effective).toBe("contract");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      "docs/report-cards.md#v10-model",
+      "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation",
+      "docs/report-cards.md#api", "docs/report-cards.md#consumers",
+    ]));
+    expect(docKeys({ docs: [...contract.docs, ...contract.background] }))
+      .not.toContain("docs/digest-pipeline.md#generation");
+    expect([...contract.docs, ...contract.background].some((doc) => doc.path === "docs/safety-score-map.md")).toBe(false);
+    expect(buildRouteContext(contract).total.bytes).toBeLessThanOrEqual(80_000);
+  });
+
+  it.each([
+    "worker/src/cron/compute-safety-score-v9.ts",
+    "worker/src/cron/prepare-safety-score-v9-input.ts",
+    "worker/src/lib/safety-score-v9/publication-journal.ts",
+    "worker/src/lib/safety-score-v9/publication-replay-capture.ts",
+    "worker/src/lib/safety-score-v9/publication-runner.ts",
+  ])("routes a lone scoring publication path %s through the contract seam", (file) => {
+    const contract = classifyChangedFiles([file]);
+    expect(contract.contextMode.effective).toBe("contract");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining(["docs/report-cards.md#api", "docs/report-cards.md#consumers"]));
+  });
+
+  it.each([
+    ["worker/src/lib/safety-score-v9/supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
+    ["worker/src/cron/sync-v9-supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
+    ["worker/src/lib/safety-score-v9/extension-bridge.ts", "bridge-in-flight-accounting"],
+    ["shared/lib/safety-score-v9/control-bridge-join.ts", "bridge-in-flight-accounting"],
+    ["shared/lib/safety-score-v9/__tests__/control-bridge-join.test.ts", "bridge-in-flight-accounting"],
+  ])("retains the accounting contract for %s", (file, anchor) => {
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract)).toContain(`docs/process/report-cards-appendix.md#${anchor}`);
+    expect(contract.requiredDocs).toContainEqual({ path: "docs/process/report-cards-appendix.md", anchor });
+  });
+
+  it.each(["json", "png"])("starts Functions map.%s with runtime serving and retains its feature owner", (extension) => {
+    const file = `functions/safety-scores/map.${extension}.ts`;
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract).slice(0, 3)).toEqual([
+      "docs/architecture.md#pages-function-endpoints-not-worker-api",
+      "docs/worker-infrastructure.md#http-request-handling-entry",
+      "docs/safety-score-map.md#serving",
+    ]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["validation-ci-policy", "safety-score-v9"]);
+    expect(docKeys(contract)).toEqual(expect.arrayContaining(
+      Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`),
+    ));
+    expect(docKeys(contract)).not.toContain("docs/testing.md#ci-pipeline");
+    expect(docKeys({ docs: contract.background })).toContain("docs/deployment-process.md#ci-deploy-sequence");
+    expect(buildRouteContext(contract).total.bytes).toBeLessThanOrEqual(40_000);
+  });
+
+  it.each([
+    ["scripts/maintenance/build-safety-score-map.ts", "generator"],
+    ["scripts/maintenance/publish-safety-score-map.ts", "publication"],
+    [".github/workflows/safety-map-refresh.yml", "publication"],
+  ])("keeps the map implementation owner bounded for %s", (file, anchor) => {
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract)[0]).toBe(`docs/safety-score-map.md#${anchor}`);
+    expect(docKeys(contract)).not.toContain("docs/safety-score-map.md");
+    if (anchor === "publication") expect(docKeys(contract)).toContain("docs/testing.md#ci-pipeline");
+  });
+
+  it.each(["worker/src/cron/daily-digest.ts", "worker/src/cron/digest-publication-watchdog.ts"])(
+    "retains generation for digest producer %s", (file) => {
+      expect(docKeys(classifyChangedFiles([file]))).toContain("docs/digest-pipeline.md#generation");
+    },
+  );
+
+  it.each([
+    ["docs/safety-score-map.md", "docs/safety-score-map.md#serving"],
+    ["docs/process/report-cards-appendix.md", "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation"],
+    ["docs/report-cards.md", "docs/report-cards.md#v10-model"],
+    ["docs/process/report-cards-evidence-log.md", "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation"],
+  ])("selects scoring documentation %s without the broad family fallback", (file, owner) => {
+    const contract = classifyChangedFiles([file]);
+    expect(docKeys(contract)).toContain(owner);
+    expect(docKeys(contract)).not.toContain("docs/digest-pipeline.md#generation");
+    expect(docKeys(contract)).not.toContain("docs/process/report-cards-appendix.md#supply-attribution-and-in-flight-accounting");
+  });
+
+  it.each(["worker/src/cron/dex-liquidity/orchestrator.ts", "worker/src/api/yield-history.ts"])(
+    "accounts for unconditional bounded Worker obligations on %s", (file) => {
+      const contract = classifyChangedFiles([file]);
+      expect(docKeys(contract)).toEqual(expect.arrayContaining([
+        "docs/worker-infrastructure.md#module-initialization",
+        "docs/worker-and-api-limits.md#connection-budget-operating-assumption",
+      ]));
+      if (file.includes("/cron/")) {
+        expect(docKeys(contract)).toEqual(expect.arrayContaining([
+          "docs/process/cron-trigger-policy.md#source-of-truth",
+          "docs/process/cron-trigger-policy.md#target",
+          "docs/worker-infrastructure.md#cron-scheduling",
+          "docs/dex-liquidity.md#discovery-cron",
+        ]));
+        expect(docKeys(contract)).not.toContain("docs/process/cron-trigger-policy.md");
+      } else {
+        expect(docKeys(contract)).toContain("docs/worker-infrastructure.md#http-request-handling-entry");
+        expect(docKeys(contract)).toContain("docs/api-reference.md#get-apiyield-history");
+        expect(docKeys(contract)).not.toContain("docs/api-reference.md#public-endpoints");
+      }
+    },
+  );
+
+  it("preserves check-planner inputs for every distinct matched-family and reading-selector signature", () => {
+    const ids: Record<string, true> = {
+      "safety-score-v9": true, "validation-ci-policy": true, "methodology-scoring": true,
+      "worker-cron": true, "worker-runtime": true, "worker-api-auth": true,
+    };
+    const families = PATH_FAMILIES.filter((family) => ids[family.id]);
+    readingSignatures ??= enumerateReadingSignatures();
+    const files = readingSignatures.filter((entry) => entry.mode === "auto" &&
+      entry.signature.some((family) => ids[family.id] && family.selectors.length > 0)).map((entry) => entry.file);
+    expect(files.length).toBeGreaterThan(0);
+    // The focused planner consumes changed paths and ordered mapping IDs, then
+    // reads source globs/checks/tier from the unchanged families. Baseline,
+    // deploy and lint selectors use those same paths, never reading refs.
+    function plannerInputs(file: string) {
+      const { changedFiles, mappings, checks, unmappedPaths, deploy } = classifyChangedFiles([file]);
+      return { changedFiles, mappings, checks, unmappedPaths, deploy };
+    }
+    const selectedInputs = files.map(plannerInputs);
+    const selectors = families.map((family) => family.reading);
+    try {
+      for (const family of families) family.reading = undefined;
+      files.forEach((file, index) => {
+        expect(JSON.stringify(plannerInputs(file)), file).toBe(JSON.stringify(selectedInputs[index]));
+      });
+    } finally {
+      families.forEach((family, index) => { family.reading = selectors[index]; });
+    }
+  });
+
+  it("adds only Telegram's exceptional check to the adoption proxy plan (PR3b ownership)", () => {
+    const file = "functions/pharoswatchbot-adoption.ts";
+    const commands = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
+    expect(commands).toEqual([
+      `npm run lint:changed -- --file ${file}`,
+      "npm run typecheck", "npm run check:doc-sync", "npm run check:site-csp-sync", "npm run check:stablecoin-data",
+      "npx vitest run scripts/__tests__",
+      "npx vitest run worker/src/api worker/src/cron worker/src/telegram",
+    ]);
+    expect(classifyChangedFiles([file]).mappings.map((mapping) => mapping.id)).toEqual(["validation-ci-policy", "telegram"]);
+  });
+});
+
+describe("route context enforcement and fixture ratchets", () => {
+  it.each(ROUTE_FIXTURES)("keeps %s within its exact auto/contract fixture ceilings", (file, autoCeiling, contractCeiling) => {
+    for (const [mode, ceiling] of [["auto", autoCeiling], ["contract", contractCeiling]] as const) {
+      const context = buildRouteContext(classifyChangedFiles([file], mode));
+      expect(context.total.bytes, `${file} (${mode})`).toBeLessThanOrEqual(ceiling);
+      expect(ceiling).toBeLessThanOrEqual(context.ceiling);
+      expect(context.status).toBe("within-budget");
+      expect(context.ceiling).toBe(ROUTE_CONTEXT_CEILINGS[context.class]);
+    }
+  });
+
+  it("bounds every tracked mapped reading signature in both modes", () => {
+    readingSignatures ??= enumerateReadingSignatures();
+    const documents: RouteContextDocumentCache = new Map();
+    const measuredBytes = new Map<string, number>();
+    expect(new Set(readingSignatures.map((entry) => entry.mode))).toEqual(new Set(["auto", "contract"]));
+    for (const { file, mode, contract } of readingSignatures) {
+      // Selector signatures can select identical reading sets. Measure their
+      // union once, but compare every signature against its own class ceiling.
+      const key = JSON.stringify([
+        [...contract.scopedContext].sort(),
+        contract.docs.map((doc) => `${doc.path}#${doc.anchor ?? ""}`).sort(),
+      ]);
+      let bytes = measuredBytes.get(key);
+      if (bytes === undefined) {
+        bytes = buildRouteContext(contract, { documents }).total.bytes;
+        measuredBytes.set(key, bytes);
+      }
+      const routeClass = classifyRouteContext(contract);
+      const ceiling = ROUTE_CONTEXT_CEILINGS[routeClass];
+      expect(bytes, `${file} (${mode}): ${bytes} > ${ceiling} (${routeClass})`).toBeLessThanOrEqual(ceiling);
+    }
+  });
+
+  it("retains the evaluator and Functions map acceptance limits in both modes", () => {
+    for (const mode of ["auto", "contract"] as const) {
+      expect(buildRouteContext(classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode)).total.bytes).toBeLessThanOrEqual(80_000);
+      expect(buildRouteContext(classifyChangedFiles(["functions/safety-scores/map.json.ts"], mode)).total.bytes).toBeLessThanOrEqual(40_000);
+    }
+  });
+
+  it("charges every multi-file route to the 160 KB union without double-counting common guides", () => {
+    const files = ["shared/lib/safety-score-v9/evaluate-asset.ts", "functions/safety-scores/map.json.ts"];
+    const contract = classifyChangedFiles(files);
+    const context = buildRouteContext(contract);
+    expect(context.class).toBe("multi-domain-batch");
+    expect(context.ceiling).toBe(160_000);
+    expect(context.status).toBe("within-budget");
+    expect(context.files.filter((file) => file.path === "AGENTS.md")).toHaveLength(1);
+    expect(context.total.bytes).toBeLessThan(files.reduce((sum, file) =>
+      sum + buildRouteContext(classifyChangedFiles([file], "contract")).total.bytes, 0));
+    // Even two paths in the same family use the batch guard, not a sum of caps.
+    expect(buildRouteContext(classifyChangedFiles([
+      "src/components/stablecoin-table.tsx", "src/app/yield/page.tsx",
+    ])).class).toBe("multi-domain-batch");
+  });
+
+  it.each(["text", "json"] as const)("fails oversized batch CLI %s with the complete plan and contributions", (format) => {
+    const files = ROUTE_FIXTURES.map(([file]) => file);
+    const result = spawnSync(process.execPath, [
+      "--import", "tsx", "scripts/ci/pharos-change-contract.ts",
+      ...files.flatMap((file) => ["--file", file]), ...(format === "json" ? ["--json"] : []),
+    ], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    const contract = classifyChangedFiles(files);
+    const context = buildRouteContext(contract);
+    expect(context.status).toBe("over-budget");
+    if (format === "json") {
+      const output = JSON.parse(result.stdout);
+      expect(output.context).toEqual(context);
+      expect(output.requiredDocs).toEqual(contract.requiredDocs);
+      expect(output.hardRules).toEqual(contract.hardRules);
+      expect(output.checks).toEqual(buildFocusedCheckPlan(files).checks.map((check) => check.command));
+      expect(output.context.remediation).toContain("smaller explicit path groups");
+    } else {
+      expect(result.stdout).toContain("multi-domain-batch — over-budget (ceiling 160000 B)");
+      expect(result.stdout).toContain("smaller explicit path groups");
+      for (const reference of context.references) {
+        expect(result.stdout).toContain(reference.anchor ? `${reference.path}#${reference.anchor}` : reference.path);
+      }
+      for (const file of context.files) expect(result.stdout).toContain(`${file.path}: ${file.bytes} B`);
+      for (const rule of contract.hardRules) expect(result.stdout).toContain(rule);
+      for (const check of buildFocusedCheckPlan(files).checks) expect(result.stdout).toContain(check.command);
+    }
+  });
+
+  it("fails an enlarged required section without removing its reference or coupling hooks/checks to size", () => {
+    // Patch reads only in the child: no repository files or authored obligations
+    // change, and the real CLI exit path still sees the enlarged ADR-28 section.
+    const script = `
+      import fs from "node:fs";
+      import { syncBuiltinESMExports } from "node:module";
+      import * as router from "./scripts/ci/pharos-change-contract.ts";
+      import { buildFocusedCheckPlan } from "./scripts/maintenance/run-focused-checks.ts";
+      const original = fs.readFileSync;
+      let reads = 0;
+      fs.readFileSync = function(path, ...args) {
+        const value = original.call(this, path, ...args);
+        if (String(path).endsWith("/docs/architecture.md") && typeof value === "string") {
+          reads++;
+          return value.replace("#### ADR-28\\n", "#### ADR-28\\n" + "x".repeat(200_000) + "\\n");
+        }
+        return value;
+      };
+      syncBuiltinESMExports();
+      const files = ["shared/lib/safety-score-v9/evaluate-asset.ts"];
+      const contract = router.classifyChangedFiles(files);
+      buildFocusedCheckPlan(files);
+      router.buildSessionStartHookOutput(contract);
+      router.buildPreToolUseHookOutput({ tool_name: "Read", tool_input: { file_path: "AGENTS.md" } });
+      router.buildPermissionRequestHookOutput({ tool_name: "Read", tool_input: { file_path: "AGENTS.md" } });
+      if (reads !== 0) throw new Error("Hooks/check planner opened routed Markdown");
+      router.runCli(["--file", files[0], "--json"]);
+      if (reads === 0) throw new Error("CLI did not account for the mutated required section");
+    `;
+    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(1);
+    const output = JSON.parse(result.stdout);
+    expect(output.context.status).toBe("over-budget");
+    expect(output.context.total.bytes).toBeGreaterThan(output.context.ceiling);
+    expectIntegrityObligations(output, true);
+    expect(output.context.references).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "docs/architecture.md", anchor: "adr-28", requiredReason: expect.stringContaining("Required") }),
+    ]));
+    expect(output.checks).toEqual(buildFocusedCheckPlan(output.changedFiles).checks.map((check) => check.command));
+  });
+
+  it("catches a removed required obligation independently of its smaller byte total", () => {
+    const file = "shared/lib/classification.ts";
+    const baseline = classifyChangedFiles([file]);
+    const before = buildRouteContext(baseline);
+    const families = PATH_FAMILIES.filter((family) => baseline.mappings.some((mapping) => mapping.id === family.id));
+    const originals = families.map((family) => family.required);
+    try {
+      for (const family of families) {
+        family.required = family.required?.filter((doc) => !(doc.path === "docs/architecture.md" && doc.anchor === "adr-28"));
+      }
+      const contract = classifyChangedFiles([file]);
+      const context = buildRouteContext(contract);
+      expect(context.total.bytes).toBeLessThan(before.total.bytes);
+      expect(context.status).toBe("within-budget");
+      expect(() => expectIntegrityObligations(contract, false)).toThrow();
+    } finally {
+      families.forEach((family, index) => { family.required = originals[index]; });
+    }
+  });
+
+  it("does not accept a budget-bypass flag", () => {
+    const result = spawnSync(process.execPath, [
+      "--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--ignore-budget",
+      "--file", "shared/lib/safety-score-v9/evaluate-asset.ts",
+    ], { encoding: "utf8" });
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("--ignore-budget");
+  });
+});
+
 describe("representative --file routing", () => {
   function route(file: string) {
     return classifyChangedFiles([file]);
   }
+
+  it("reports evaluator JSON accounting without changing references or synthesized checks", () => {
+    const file = "shared/lib/safety-score-v9/evaluate-asset.ts";
+    const result = spawnSync(process.execPath,
+      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--file", file, "--json"],
+      { encoding: "utf8" });
+    expect(result.status).toBe(0);
+    const output = JSON.parse(result.stdout);
+    const contract = route(file);
+    expect(output.docs).toEqual(contract.docs);
+    expect(output.background).toEqual(contract.background);
+    expect(output.scopedContext).toEqual(contract.scopedContext);
+    expect(output.context).toEqual(buildRouteContext(contract));
+    expect(output.checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
+  });
 
   it("caps single-path guidance while preserving ranked overflow in background", () => {
     const originalLength = PATH_FAMILIES.length;
@@ -95,6 +758,8 @@ describe("representative --file routing", () => {
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
     expect(JSON.parse(result.stdout).checks).not.toContain("npm run check:structural");
+    const contract = classifyChangedFiles([file]);
+    expect(JSON.parse(result.stdout).context).toEqual(buildRouteContext(contract));
   });
 
   it.each([

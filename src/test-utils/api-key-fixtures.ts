@@ -1,4 +1,4 @@
-import type { ApiKeyListResponse, ApiKeySummary } from "@shared/types";
+import type { ApiKeyListResponse, ApiKeySummary } from "@pharos/contracts/api-keys";
 import { STATUS_FIXTURE_NOW_SECONDS } from "./status-fixtures";
 
 export function makeApiKeySummary(index: number, overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {

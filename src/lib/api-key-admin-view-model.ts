@@ -5,7 +5,7 @@ import {
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import { THIRTY_DAYS_SECONDS, WEEK_SECONDS } from "@shared/lib/time-constants";
-import type { ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@shared/types";
+import type { ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
 
 export interface EditableKeyState {
   name: string;

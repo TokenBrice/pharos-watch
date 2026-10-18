@@ -24,7 +24,7 @@ import {
   type OutputWriter,
 } from "../lib/report-violations.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
-import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
+import { PATH_FAMILIES, enumerateDocReferences, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
 import { SENSITIVE_COPY_ROOTS } from "../ci/check-sensitive-page-copy.ts";
@@ -131,7 +131,8 @@ export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
   return changedFiles.some((file) => {
     if (file.startsWith("docs/") || file === "README.md" || file === "CLAUDE.md") return false;
     return PATH_FAMILIES.some(
-      (family) => family.docs.length > 0 && family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)),
+      (family) => enumerateDocReferences(family, { includeBackground: false }).length > 0 &&
+        family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)),
     );
   });
 }

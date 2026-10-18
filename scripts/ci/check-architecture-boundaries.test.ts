@@ -11,7 +11,7 @@ function fixture() {
   const root = makeRoot();
   writeText(root, "tsconfig.json", JSON.stringify({ compilerOptions: {
     target: "ES2022", module: "ESNext", moduleResolution: "Bundler", resolveJsonModule: true,
-    paths: { "@/*": ["./src/*"], "@shared/*": ["./shared/*"], "transport": ["./worker/src/lib/fetch-retry.ts"] },
+    paths: { "@/*": ["./src/*"], "@shared/*": ["./shared/*"], "repo/*": ["./*"], "transport": ["./worker/src/lib/fetch-retry.ts"] },
   } }));
   return root;
 }
@@ -89,6 +89,33 @@ describe("resolved architecture boundaries", () => {
     expect(checkArchitectureBoundaries(root, ["frontend-routes"])).toEqual([]);
   });
 
+  it("follows workspace exports to forbidden route dependencies", () => {
+    const root = fixture();
+    writeText(root, "package.json", JSON.stringify({ workspaces: ["shared/contracts"] }));
+    writeText(root, "shared/contracts/package.json", JSON.stringify({
+      name: "@pharos/contracts", exports: { "./content": "./content.ts" },
+    }));
+    writeText(root, "src/components/card.ts", 'export { value } from "@pharos/contracts/content";');
+    writeText(root, "shared/contracts/content.ts", 'export { value } from "../../src/app/learn/content";');
+    writeText(root, "src/app/learn/content.ts", "export const value = 1;");
+    expect(checkArchitectureBoundaries(root, ["frontend-routes"])).toEqual([
+      "frontend-routes: src/components/card.ts -> shared/contracts/content.ts -> src/app/learn/content.ts: forbidden dependency",
+    ]);
+  });
+
+  it("fails closed on an unexported workspace dependency", () => {
+    const root = fixture();
+    writeText(root, "package.json", JSON.stringify({ workspaces: ["shared/contracts"] }));
+    writeText(root, "shared/contracts/package.json", JSON.stringify({
+      name: "@pharos/contracts", exports: { "./public": "./public.ts" },
+    }));
+    writeText(root, "shared/contracts/public.ts", "export const value = 1;");
+    writeText(root, "src/components/card.ts", 'export { value } from "@pharos/contracts/private";');
+    expect(checkArchitectureBoundaries(root, ["frontend-routes"])).toEqual([
+      "frontend-routes: src/components/card.ts: unresolved dependency @pharos/contracts/private: Unresolved workspace export @pharos/contracts/private: subpath is not exported",
+    ]);
+  });
+
   it("rejects route-owned script content registries, while permitting an index re-export", () => {
     const root = fixture();
     writeText(root, "src/lib/content.ts", "export const value = 1;");
@@ -126,6 +153,22 @@ describe("resolved architecture boundaries", () => {
     expect(checkArchitectureBoundaries(root, ["verification-url"])).toEqual([
       `verification-url: google-analytics must reach ${SCRUBBER}`,
     ]);
+  });
+
+  it("keeps the verification scrubber out of workspace contracts while erasing type-only edges", () => {
+    const root = fixture();
+    writeText(root, "package.json", JSON.stringify({ workspaces: ["shared/contracts"] }));
+    writeText(root, "shared/contracts/package.json", JSON.stringify({
+      name: "@pharos/contracts", exports: { "./api-meta": "./api-meta.ts" },
+    }));
+    writeText(root, ANALYTICS, 'export { scrub } from "@/lib/api-key-verification-url";');
+    writeText(root, SCRUBBER, 'export { scrub } from "@pharos/contracts/api-meta";');
+    writeText(root, "shared/contracts/api-meta.ts", "export const scrub = () => 1; export type Meta = string;");
+    expect(checkArchitectureBoundaries(root, ["verification-url"])).toEqual([
+      `verification-url: ${SCRUBBER} -> shared/contracts/api-meta.ts: forbidden dependency`,
+    ]);
+    writeText(root, SCRUBBER, 'import type { Meta } from "@pharos/contracts/api-meta"; export const scrub = () => 1;');
+    expect(checkArchitectureBoundaries(root, ["verification-url"])).toEqual([]);
   });
 
   it("rejects transitive full stability schemas but erases type-only imports", () => {
@@ -180,6 +223,105 @@ describe("resolved architecture boundaries", () => {
     writeText(root, "worker/src/cron/data/weekly-recap.ts", "export const value = 1;");
     expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
       `recap-cost: ${RECAP} -> worker/src/cron/data/weekly-recap.ts: forbidden dependency`,
+    ]);
+  });
+});
+
+describe("Telegram public surface", () => {
+  it.each([
+    "worker/src/telegram/webhook/telegram-webhook-private.ts",
+    "worker/src/telegram/commands/private.ts",
+    "worker/src/telegram/callbacks/private.ts",
+    "worker/src/telegram/common/private.ts",
+    "worker/src/cron/telegram/target-plans/private.ts",
+    "worker/src/telegram/store/private.ts",
+  ].flatMap((target) => [
+    [`import { value } from "repo/${target}"; export { value };`, target],
+    [`export const load = () => import("repo/${target}");`, target],
+    [`export { value } from "repo/${target}";`, target],
+    [`import type { Value } from "repo/${target}"; export type Result = Value;`, target],
+    [`export type { Value } from "repo/${target}";`, target],
+    [`import { type Value } from "repo/${target}"; export type Result = Value;`, target],
+    [`export { type Value } from "repo/${target}";`, target],
+    [`export type Result = import("repo/${target}").Value;`, target],
+  ]))("rejects an external deep edge: %s", (source, target) => {
+    const root = fixture();
+    writeText(root, "worker/src/lib/consumer.ts", source);
+    writeText(root, target, "export const value = 1; export type Value = number;");
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([
+      `telegram-public-surface: worker/src/lib/consumer.ts -> ${target}: forbidden dependency`,
+    ]);
+  });
+
+  it.each([
+    "worker/src/telegram/webhook/telegram-webhook.ts",
+  ])("permits the exact registered entry %s and its internal dependencies", (target) => {
+    const root = fixture();
+    writeText(root, "worker/src/routes/messaging-routes.ts", `export const load = () => import("repo/${target}");`);
+    writeText(root, target, 'export { value } from "repo/worker/src/telegram/store/private";');
+    writeText(root, "worker/src/telegram/store/private.ts", "export const value = 1;");
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([]);
+    writeText(root, "worker/src/lib/unregistered.ts", `export * from "repo/${target}";`);
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([
+      `telegram-public-surface: worker/src/lib/unregistered.ts -> ${target}: forbidden dependency`,
+    ]);
+  });
+
+  it("permits core-to-cron imports and unrelated shared infrastructure", () => {
+    const root = fixture();
+    writeText(root, "worker/src/telegram/webhook/telegram-webhook.ts", `
+      export { value } from "../../cron/telegram/target-plans/private";
+      export type { Value } from "@shared/lib/infrastructure";
+    `);
+    writeText(root, "worker/src/cron/telegram/target-plans/private.ts", 'export { value } from "../../../telegram/store/private";');
+    writeText(root, "worker/src/telegram/store/private.ts", "export const value = 1;");
+    writeText(root, "worker/src/lib/consumer.ts", 'export { value } from "@shared/lib/infrastructure";');
+    writeText(root, "shared/lib/infrastructure.ts", "export const value = 1; export type Value = number;");
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([]);
+  });
+
+  it("checks external re-export bridges without treating public entries as transitive bans", () => {
+    const root = fixture();
+    writeText(root, "worker/src/lib/consumer.ts", 'export { value } from "./bridge";');
+    writeText(root, "worker/src/lib/bridge.ts", 'export { value } from "../telegram/store/private";');
+    writeText(root, "worker/src/telegram/store/private.ts", "export const value = 1;");
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([
+      "telegram-public-surface: worker/src/lib/bridge.ts -> worker/src/telegram/store/private.ts: forbidden dependency",
+    ]);
+  });
+
+  it.each([
+    ["worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts"],
+    ["worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/cron/telegram/recap/telegram-recap-planner.ts"],
+    ["worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/cron/telegram/maintenance/telegram-degradation-watchdog.ts"],
+    ["worker/src/handlers/scheduled/daily-0300.ts", "worker/src/cron/telegram/maintenance/telegram-inactive-cleanup.ts"],
+    ["worker/src/handlers/scheduled/daily-0300.ts", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts"],
+    ["worker/src/cron/reserve-post-sync-watchdog.ts", "worker/src/cron/telegram/sources/telegram-alert-snapshots.ts"],
+  ])("permits the registered cron entry from %s to %s", (importer, target) => {
+    const root = fixture();
+    writeText(root, importer, `export const load = () => import("repo/${target}");`);
+    writeText(root, target, "export const value = 1;");
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([]);
+    writeText(root, "worker/src/lib/unregistered.ts", `export * from "repo/${target}";`);
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([
+      `telegram-public-surface: worker/src/lib/unregistered.ts -> ${target}: forbidden dependency`,
+    ]);
+  });
+
+  it.each([
+    "worker/src/telegram/delivery/telegram.ts",
+  ])("permits the retained type-only transport integration with %s", (target) => {
+    const root = fixture();
+    writeText(root, "worker/src/api/admin-actions.ts", `import type { Value } from "repo/${target}"; export type Result = Value;`);
+    writeText(root, target, "export type Value = number;");
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([]);
+  });
+
+  it("fails closed when a registered entry is missing", () => {
+    const root = fixture();
+    writeText(root, "worker/src/routes/messaging-routes.ts", 'export const load = () => import("../telegram/webhook/telegram-webhook");');
+    expect(checkArchitectureBoundaries(root, ["telegram-public-surface"])).toEqual([
+      "telegram-public-surface: worker/src/routes/messaging-routes.ts: unresolved dependency ../telegram/webhook/telegram-webhook",
     ]);
   });
 });

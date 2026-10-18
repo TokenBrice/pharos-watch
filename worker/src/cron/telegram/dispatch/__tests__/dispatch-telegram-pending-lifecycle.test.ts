@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { runPendingQueueLifecycle, type PendingQueueLifecycleContext } from "../dispatch-telegram-pending-lifecycle";
-import { readTelegramPendingCapacitySnapshot } from "../../../../lib/telegram/pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../../../../telegram/outbox/pending-capacity";
 import { reconcilePendingQueueMaintenance } from "../../delivery/drain";
 import { insertPendingSqlite, insertRecapDeliveryFixture } from "../../delivery/__tests__/telegram-pending-queue.test-support";
-import type * as TelegramModule from "../../../../lib/telegram";
+import type * as TelegramModule from "../../../../telegram/delivery/telegram";
 
 const mocks = vi.hoisted(() => ({ send: vi.fn(), outcome: vi.fn() }));
-vi.mock("../../../../lib/telegram", async (importOriginal) => ({
+vi.mock("../../../../telegram/delivery/telegram", async (importOriginal) => ({
   ...(await importOriginal<typeof TelegramModule>()), sendToChat: mocks.send,
 }));
 vi.mock("../../../../lib/circuit-breaker", () => ({ recordOutcome: mocks.outcome }));

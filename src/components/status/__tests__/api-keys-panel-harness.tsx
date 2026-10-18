@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import type { ApiKeyListResponse, ApiKeySummary } from "@shared/types";
+import type { ApiKeyListResponse, ApiKeySummary } from "@pharos/contracts/api-keys";
 
 const { useApiKeysMock, useApiKeyAuditLogMock } = vi.hoisted(() => ({
   useApiKeysMock: vi.fn(),

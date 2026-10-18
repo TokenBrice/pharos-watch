@@ -26,19 +26,19 @@ import { throwIfAborted } from "../../../lib/abort";
 import { createCronResult } from "../../../lib/cron-result";
 import { buildInClause } from "../../../lib/db";
 import { sha256Hex } from "../../../lib/hash";
-import { serializePendingMarkupPolicy } from "../../../lib/telegram/pending-provenance";
-import { listTelegramPresets, resolveTelegramPresetTargets } from "../../../lib/telegram/presets";
+import { serializePendingMarkupPolicy } from "../../../telegram/outbox/pending-provenance";
+import { listTelegramPresets, resolveTelegramPresetTargets } from "../../../telegram/common/presets";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
-import { formatTelegramRecap } from "../../../lib/telegram/recap-formatting";
-import { parseTelegramRecapFacts, type TelegramRecapFact, type TelegramRecapTapeRow } from "../../../lib/telegram/recap-facts";
-import { type TelegramRecapMembership, type TelegramRecapScopedFact } from "../../../lib/telegram/recap-ranking";
+import { formatTelegramRecap } from "../../../telegram/recap/recap-formatting";
+import { parseTelegramRecapFacts, type TelegramRecapFact, type TelegramRecapTapeRow } from "../../../telegram/recap/recap-facts";
+import { type TelegramRecapMembership, type TelegramRecapScopedFact } from "../../../telegram/recap/recap-ranking";
 import {
   buildTelegramRecapDedupeKey,
   listDueTelegramRecapPreferences,
   queueTelegramRecapTarget,
   recordTelegramRecapSkip,
   type DueTelegramRecapPreference,
-} from "../../../lib/telegram/recap-store";
+} from "../../../telegram/recap/recap-store";
 
 /** Maximum age of the project Tape run accepted as fresh planning input. */
 const TELEGRAM_RECAP_TAPE_FRESHNESS_SEC = 90 * 60;

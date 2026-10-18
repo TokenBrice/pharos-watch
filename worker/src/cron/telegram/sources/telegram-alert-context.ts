@@ -1,16 +1,16 @@
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
-import { TELEGRAM_USD_PROFILE, TELEGRAM_SIGNED_USD_PROFILE } from "../../../lib/telegram/usd-profile";
+import { TELEGRAM_USD_PROFILE, TELEGRAM_SIGNED_USD_PROFILE } from "../../../telegram/common/usd-profile";
 import {
   TELEGRAM_CONTEXT_BUDGET_SEC,
   assessTelegramContextClock,
   projectTelegramSupplyContext,
   type TelegramSupplyContext,
-} from "../../../lib/telegram/context-freshness";
+} from "../../../telegram/common/context-freshness";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../../../lib/stablecoins-cache";
 import { loadActiveAlertSafetySourceAssessment } from "../../../lib/alert-safety-source-cache";
 import { buildInClause, chunkArray } from "../../../lib/db";
-import { classifyTelegramLogError, logTelegramEvent } from "../../../lib/telegram/log";
+import { classifyTelegramLogError, logTelegramEvent } from "../../../telegram/common/log";
 import { getMintBurnConfigsForStablecoin } from "../../../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../../../lib/mint-burn-flows-service";
 import { getCache } from "../../../lib/db-cache";

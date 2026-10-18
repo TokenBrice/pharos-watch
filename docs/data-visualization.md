@@ -1,5 +1,7 @@
 # Data Visualization Language
 
+> **Agent navigation** — Start with [Encoding](#encoding) and [Stablecoin Detail Primitives](#stablecoin-detail-primitives). Grep the matching heading for Architecture · Scene Kit · Composition · Accessibility · Interaction · Motion · Responsive Behavior · Axes, Ticks And Chart Theme · Tests · Review Checklist instead of reading wholesale.
+
 Implementation contract for charts, SVG scenes, and data-driven visual metaphors in Pharos. [design-language.md](./design-language.md) owns general UI rules; this document covers visualization-specific behavior.
 
 ## Principle

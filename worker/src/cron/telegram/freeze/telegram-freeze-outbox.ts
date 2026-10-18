@@ -6,21 +6,21 @@ import {
   formatConsolidatedMessage,
   resolveAlertLinkPreviewOptions,
   splitMessage,
-} from "../../../lib/telegram/alerts";
+} from "../../../telegram/common/alerts-formatting";
 import {
   buildPendingAlertScope,
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
-} from "../../../lib/telegram/pending-provenance";
+} from "../../../telegram/outbox/pending-provenance";
 import {
   buildDedupeKey,
   buildPendingAlertEnqueueStatement,
-} from "../../../lib/telegram/pending-queue";
+} from "../../../telegram/outbox/pending-queue";
 import { emptyAlerts } from "../dispatch/dispatch-telegram-routing";
 import { loadFreshFreezeAlerts } from "./telegram-alert-freeze";
-import type { FreezeAlert } from "../../../lib/telegram/alerts-formatting";
+import type { FreezeAlert } from "../../../telegram/common/alerts-formatting";
 import { prepareTelegramAlertJobCounterReconciliation } from "../delivery/telegram-alert-job-target-outcomes";
-import { isQuietHoursActive } from "../../../lib/telegram/quiet-hours";
+import { isQuietHoursActive } from "../../../telegram/common/quiet-hours";
 
 const FREEZE_CURSOR_KEY = "alert:freeze-tape-cursor";
 

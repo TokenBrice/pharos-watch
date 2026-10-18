@@ -8,7 +8,7 @@ import {
   applyRecapPreference,
   buildTelegramRecapDedupeKey,
   projectTelegramRecapTerminalOutcome,
-} from "../../../../lib/telegram/recap-store";
+} from "../../../../telegram/recap/recap-store";
 import { insertTelegramSubscriber } from "../../dispatch/__tests__/telegram-subscriber.test-support";
 
 const NOW = 1_800_000_000;

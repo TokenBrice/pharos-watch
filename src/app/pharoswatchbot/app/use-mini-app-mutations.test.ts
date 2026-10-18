@@ -30,7 +30,7 @@ vi.mock("./mini-app-api", async (importOriginal) => ({
 
 // Load the Worker boundary before timed test execution; the persisted scenarios
 // still exercise its real mutations against an isolated current-schema database.
-const persistedMutationModule = await vi.importActual("../../../../worker/src/api/telegram-mini-app-mutations");
+const persistedMutationModule = await vi.importActual("../../../../worker/src/telegram/mini-app/telegram-mini-app-mutations");
 
 function makeSnapshot(state: TelegramMiniAppState = baseState): TelegramMiniAppClientSnapshot {
   return { state, stateRevision: "state-v1-test" };

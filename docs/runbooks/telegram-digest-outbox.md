@@ -143,7 +143,7 @@ reviewed, identity-bound edition instead of resetting it.
 Terminal rows preserved for audit stop degrading the `telegram-digest-outbox-drain`
 surface once their `updated_at` is older than the 7-day operator-review window
 (`TELEGRAM_DIGEST_OUTBOX_TERMINAL_REVIEW_SEC` in
-`worker/src/lib/telegram/digest-outbox.ts`); they remain in the table and in the
+`worker/src/telegram/outbox/digest-outbox.ts`); they remain in the table and in the
 drain summary's `retained*Total` counts. The review window bounds status
 classification only — it never deletes, resets, or mutates a row.
 

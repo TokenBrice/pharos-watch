@@ -1,7 +1,7 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { mergeTelegramDepegWorseningSteps } from "@shared/lib/telegram-delivery-policy";
 import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS } from "../../../lib/db";
-import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../../../lib/telegram/broadcast-targets";
+import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../../../telegram/delivery/broadcast-targets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import {
   TELEGRAM_FANOUT_FAMILIES,

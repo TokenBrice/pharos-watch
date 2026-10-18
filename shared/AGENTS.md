@@ -18,7 +18,7 @@ Applies to `shared/`; `shared/data/stablecoins/AGENTS.md` is the more specific s
 
 ## Wire contracts
 
-- Own each cross-runtime wire shape and vocabulary once in `shared/types/`; derive TypeScript types from its schema (`z.output<typeof Schema>`) rather than maintaining parallel interfaces or literal unions in consumers. Worker and frontend readers import that authority.
+- Own each cross-runtime wire shape and vocabulary once in `shared/types/` or the source-only `shared/contracts/` workspace (consume its exact `@pharos/contracts/{api-meta,api-keys,request-source}` exports); derive TypeScript types from its schema (`z.output<typeof Schema>`) rather than maintaining parallel interfaces or literal unions in consumers. Worker and frontend readers import that authority.
 - Reuse primitive authorities: `shared/types/safety-schema-primitives.ts`, `shared/lib/evm-address.ts`, and `shared/lib/stablecoin-id.ts`. Compose existing schemas instead of retyping their validation.
 - Derive registry-backed lists from the registry; a necessary explicit mapping must have a registry-iterating completeness test (ADR-32).
 - At absence-sensitive supply boundaries use `getCirculatingRawOrNull()` and historical `*OrNull` helpers. Zero-default helpers are deleted and banned by ESLint; absent, empty, or invalid buckets are not observed zero.

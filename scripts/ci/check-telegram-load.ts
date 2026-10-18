@@ -238,7 +238,7 @@ const TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH = resolve(
 );
 const TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH = resolve(
   process.cwd(),
-  "worker/src/lib/telegram/broadcast-targets.ts",
+  "worker/src/telegram/delivery/broadcast-targets.ts",
 );
 
 export interface ProductionSubscriberFanoutSql {
@@ -605,7 +605,7 @@ export function extractProductionStatusSql(sourceText: string): Map<string, stri
 
 function loadProductionPendingStates(): string[] {
   const source = ts.createSourceFile("constants.ts",
-    readFileSync(resolve("worker/src/lib/telegram/constants.ts"), "utf8"), ts.ScriptTarget.Latest, true);
+    readFileSync(resolve("worker/src/telegram/common/constants.ts"), "utf8"), ts.ScriptTarget.Latest, true);
   const declaration = findVariableInitializer(source, "PENDING_DELIVERY_STATES");
   let initializer = declaration;
   while (ts.isAsExpression(initializer) || ts.isSatisfiesExpression(initializer)) initializer = initializer.expression;
@@ -616,7 +616,7 @@ function loadProductionPendingStates(): string[] {
 }
 
 export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
-  const statusSql = extractProductionStatusSql(readFileSync(resolve("worker/src/lib/telegram/usage-analytics.ts"), "utf8"));
+  const statusSql = extractProductionStatusSql(readFileSync(resolve("worker/src/telegram/store/usage-analytics.ts"), "utf8"));
   const productionFanoutSql = loadProductionSubscriberFanoutSql();
   const depegFanoutSql = productionFanoutSql.get("depeg");
   const dewsFanoutSql = productionFanoutSql.get("dews");

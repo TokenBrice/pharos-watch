@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 import { RatioSchema } from "./ratio";
-import { ApiDependencyMetaSchema, ApiMetaSchema } from "./api-meta";
+import { ApiDependencyMetaSchema, ApiMetaSchema } from "@pharos/contracts/api-meta";
 
 export const ChainsFreshnessMetaSchema = ApiMetaSchema.extend({
   warning: z.string().optional(),

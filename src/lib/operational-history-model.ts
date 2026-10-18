@@ -1,4 +1,4 @@
-import type { ApiKeyAuditEntry } from "@shared/types";
+import type { ApiKeyAuditEntry } from "@pharos/contracts/api-keys";
 import { readRecord } from "@shared/lib/type-guards";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 

@@ -1,5 +1,7 @@
 # Runbook: Cron Slot Abandonment
 
+> **Agent navigation** — Start with [First checks](#first-checks). Grep the matching heading for Symptom · Remediation · Safety Score accepted projection recovery · Prevention · Related instead of reading wholesale.
+
 Triggered by synthetic `cron_runs` rows written by `worker/src/lib/scheduled-slot-reconciliation.ts`:
 
 - `scheduled slot abandoned before child job started`

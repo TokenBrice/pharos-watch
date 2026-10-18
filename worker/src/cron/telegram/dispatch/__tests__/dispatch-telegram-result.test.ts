@@ -5,8 +5,8 @@ import {
 } from "../dispatch-telegram-result";
 import {
   emptyPendingCapacitySnapshot,
-} from "../../../../lib/telegram/pending-capacity";
-import { TelegramSendOriginatedError } from "../../../../lib/telegram/transport-errors";
+} from "../../../../telegram/outbox/pending-capacity";
+import { TelegramSendOriginatedError } from "../../../../telegram/delivery/transport-errors";
 
 describe("shouldRecordTelegramDispatchFailure", () => {
   it("does not attribute a snapshot write failure after a successful drain to Telegram", () => {

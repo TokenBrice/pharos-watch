@@ -418,14 +418,14 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "dex-liquidity",
     summary: "DEX liquidity",
-    description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata. Volume, activity and NR follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability-dec-19-active-since-v69). Empty datasets retain the confirmed producer output clock; absent authority publishes unavailable freshness, never request time.",
+    description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata. Volume, activity and NR follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability). Empty datasets retain the confirmed producer output clock; absent authority publishes unavailable freshness, never request time.",
     tags: ["Liquidity"],
     responseSchema: "DexLiquidityResponse",
   },
   {
     key: "dex-liquidity-history",
     summary: "DEX liquidity history",
-    description: "Bounded historical liquidity-score data for a stablecoin. `volume24h` and `score` follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability-dec-19-active-since-v69).",
+    description: "Bounded historical liquidity-score data for a stablecoin. `volume24h` and `score` follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability).",
     tags: ["Liquidity", "History"],
     responseSchema: "DexLiquidityHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, DEX_LIQUIDITY_HISTORY_DAYS_PARAM],

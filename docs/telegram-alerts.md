@@ -37,7 +37,7 @@ Public route/pulse/privacy are owned by [Mini App frontend](./telegram-mini-app.
 
 Subscriber alert keyboards have at most two rows. Multi-coin first chunks offer coin snooze for the top one/two severe coins, then chat snooze; overflow chunks offer only chat snooze. `rankAlertCoins` deduplicates by coin and ranks maximum depeg/DEWS/safety severity; displayed symbols may truncate but callback data uses canonical IDs. Single-coin first chunks offer status/depeg/safety context plus coin/chat snooze and private-only Open app. Group coin snooze remains admin-gated.
 
-Callback data is `action:arg`, at most 64 bytes. `CALLBACK_ACTIONS` in `worker/src/api/telegram-webhook-callbacks.ts` and its `webhook-callbacks/` registry own prefix/argument syntax; keyboard builders and allowlist change together. Namespaces cover snooze, status/why/coverage/quicksub, manage/unsubscribe, bulk/forget confirmation, selection/help, setup, timezone, settings and recap. Unknown actions receive a visible toast, not an error.
+Callback data is `action:arg`, at most 64 bytes. `CALLBACK_ACTIONS` in `worker/src/telegram/webhook/telegram-webhook-callbacks.ts` and its `worker/src/telegram/callbacks/` registry own prefix/argument syntax; keyboard builders and allowlist change together. Namespaces cover snooze, status/why/coverage/quicksub, manage/unsubscribe, bulk/forget confirmation, selection/help, setup, timezone, settings and recap. Unknown actions receive a visible toast, not an error.
 
 Settings edits the message in place with fresh-message fallback on refusal. Read-only pagination does not mutate; per-coin controls share Store semantics with `/set`. Quick-subscribe enables DEWS+depeg, adding a Mini App tuning confirmation in private chats and an admin-gated toast in groups.
 
@@ -45,7 +45,7 @@ Ingress flood admission precedes action-specific D1 work. Status/why/coverage ca
 
 ## Inline Mode Status Cards
 
-When BotFather Inline Mode is enabled, a user can type `@PharosWatchBot <ticker-or-id>` in any Telegram chat and choose one read-only Pharos status card. `worker/src/api/telegram-inline-queries.ts` accepts only an exact tracked symbol or canonical coin id, caps the query at 64 characters, returns at most one article, and reuses the existing `/status` loader and formatter. Empty, malformed, unknown, and ambiguous input receives an empty answer without market-data reads.
+When BotFather Inline Mode is enabled, a user can type `@PharosWatchBot <ticker-or-id>` in any Telegram chat and choose one read-only Pharos status card. `worker/src/telegram/webhook/telegram-inline-queries.ts` accepts only an exact tracked symbol or canonical coin id, caps the query at 64 characters, returns at most one article, and reuses the existing `/status` loader and formatter. Empty, malformed, unknown, and ambiguous input receives an empty answer without market-data reads.
 
 Successful cards are shared-cacheable through Telegram for 30 seconds; empty answers use 5 seconds. The message names Pharos as the source and retains the formatter's per-field freshness labels. Inline cards never subscribe, mutate settings, or include private watchlist state. The result id is display-independent and bounded to Telegram's 64-byte limit.
 
@@ -59,7 +59,7 @@ Flow freshness is a distinct **context tolerance**, not a claim about `/api/mint
 
 ### Webhook Command Flow
 
-`worker/src/api/telegram-webhook.ts` coordinates ingress; adjacent `telegram-webhook-*` modules own command parsing, formatting, and D1 persistence.
+`worker/src/telegram/webhook/telegram-webhook.ts` coordinates ingress; `worker/src/telegram/webhook/` owns parsing and ingress gates, `worker/src/telegram/commands/` owns command handlers, `worker/src/telegram/callbacks/` owns callback dispatch, and `worker/src/telegram/store/` owns D1 persistence.
 
 The webhook validates `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET` or, during rotation, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets and malformed JSON return `200 ok` without side effects. A missing bot token is acknowledged with a rate-limited configuration warning. If all D1-backed command flood checks are unavailable, ingress fails closed with the standard busy reply. Pending/setup handlers run before non-command text is acknowledged: they may clear expired rows or execute plain-text disambiguation selections; without an active flow, non-command messages have no side effects.
 
@@ -74,7 +74,7 @@ disambiguation cannot mask account deletion.
 
 ### Group Admin Gating
 
-Group admins alone may use `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/forget`, `/unmutehours`, `/unsnooze`, and `/import`. `/timezone <IANA-zone>` and `tz:<zone>` callbacks also require admin authorization; argument-free `/timezone` is read-only and omits the common-zone keyboard. The gate is a code toggle in `worker/src/api/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not an env binding. Mutating setup callbacks are gated; `setup:cancel` and `setup:branch:skip` are non-mutating exits requiring only wizard initiator ownership.
+Group admins alone may use `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/forget`, `/unmutehours`, `/unsnooze`, and `/import`. `/timezone <IANA-zone>` and `tz:<zone>` callbacks also require admin authorization; argument-free `/timezone` is read-only and omits the common-zone keyboard. The gate is a code toggle in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not an env binding. Mutating setup callbacks are gated; `setup:cancel` and `setup:branch:skip` are non-mutating exits requiring only wizard initiator ownership.
 
 - **Hard (default):** refuse non-admins with command-specific copy ("Only group admins can /subscribe. Ask @Alice or Bob.") without dispatch. `getChatAdministrators` supplies up to three already-public display names plus an overflow phrase.
 - **Soft (emergency rollback):** set the code toggle to `"soft"` and redeploy; non-admins receive the same warning but the command runs.
@@ -94,7 +94,7 @@ the send succeeded.
 
 ### Setup Wizard
 
-`/start` (with an empty payload or `?start=setup`) opens a two-branch inline-keyboard wizard handled in `worker/src/api/telegram-webhook-setup.ts`. The keyboard uses the `setup:*` callback namespace:
+`/start` (with an empty payload or `?start=setup`) opens a two-branch inline-keyboard wizard handled in `worker/src/telegram/webhook/telegram-webhook-setup.ts`. The keyboard uses the `setup:*` callback namespace:
 
 - `setup:branch:recommended` — confirms `dews,depeg` alerts for the `usd-top25` preset.
 - `setup:branch:custom` — toggles alert types (`setup:type-toggle:<type>`), then `setup:next` to pick a target (`setup:target:<preset|all|type>`), then `setup:confirm`.
@@ -108,7 +108,7 @@ Wizard state lives in `telegram_pending_disambiguation`: `action_type = "setup-s
 
 ### Supported Commands
 
-`TELEGRAM_COMMAND_REFERENCE` in `shared/lib/telegram-bot-registration.ts` is the syntax, audience, example, alias, and help-text authority. `COMMAND_HANDLERS` in `worker/src/api/webhook-commands/index.ts` is the dispatch authority. Do not mirror their command roster here. Product/side-effect contracts that are not just syntax:
+`TELEGRAM_COMMAND_REFERENCE` in `shared/lib/telegram-bot-registration.ts` is the syntax, audience, example, alias, and help-text authority. `COMMAND_HANDLERS` in `worker/src/telegram/commands/index.ts` is the dispatch authority. Do not mirror their command roster here. Product/side-effect contracts that are not just syntax:
 
 - `/start` opens setup (unknown/malformed payloads safely fall back); non-admin group users receive read-only start copy. `/help` derives rows from the shared manifest and private replies link to Mini App settings. `/presets` renders the canonical dynamic catalog.
 - `/sample` is a private-only synthetic USDC DEWS preview: no live read or preference mutation.
@@ -127,7 +127,7 @@ Wizard state lives in `telegram_pending_disambiguation`: `action_type = "setup-s
 
 ### /start Deep-Link Payloads
 
-Telegram supports `https://t.me/PharosWatchBot?start=<payload>` deep links. The payload arrives as the `/start` argument string and is dispatched through `parseStartPayload` in `worker/src/api/telegram-webhook-parsing.ts`.
+Telegram supports `https://t.me/PharosWatchBot?start=<payload>` deep links. The payload arrives as the `/start` argument string and is dispatched through `parseStartPayload` in `worker/src/telegram/webhook/telegram-webhook-parsing.ts`.
 
 Supported payload schemes (lowercase, no spaces, max 64 characters, characters `[A-Za-z0-9_-]` only):
 
@@ -166,7 +166,7 @@ The freeze outbox is intentionally separate from `telegram_alert_target_plans`, 
 
 ### Preset Watchlists
 
-Preset watchlists are persistent dynamic sources, never copied into direct coin rows. Canonical aliases/filters live in `shared/lib/telegram-presets.ts`; `/presets` renders that source. Dashed top-N aliases canonicalize before storage. Resolution in `worker/src/lib/telegram/presets.ts` uses the strict stablecoins cache plus tracked metadata; only active assets expand into presets, and non-USD means peg currency is not USD. Command/setup resolution is preview; dispatch-time resolution is authoritative. Missing cache fails closed with retry copy, never stale/incomplete subscription.
+Preset watchlists are persistent dynamic sources, never copied into direct coin rows. Canonical aliases/filters live in `shared/lib/telegram-presets.ts`; `/presets` renders that source. Dashed top-N aliases canonicalize before storage. Resolution in `worker/src/telegram/common/presets.ts` uses the strict stablecoins cache plus tracked metadata; only active assets expand into presets, and non-USD means peg currency is not USD. Command/setup resolution is preview; dispatch-time resolution is authoritative. Missing cache fails closed with retry copy, never stale/incomplete subscription.
 
 `/subscribe ... <preset>` writes only `telegram_preset_subscriptions`; `/unsubscribe <preset>` deletes only that follow and does not require successful membership preview. Mixed direct/preset mutations remain separate in one atomic intent. `/list` does not expand dynamic members. Existing rows of uncertain legacy provenance remain direct/local and are never deleted/reclassified by backfill. Presets support DEWS/depeg/safety only, with default DEWS ALERT floor and safety all-changes; no preset DEWS/safety tuning exists. Launch/reserve/freeze require explicit coins or `all`.
 
@@ -183,7 +183,7 @@ Tuning semantics:
 
 ### Ticker Resolution
 
-Ticker parsing lives in `worker/src/lib/telegram/alerts-parser.ts`; `worker/src/lib/telegram/alerts.ts` is the stable two-line re-export barrel. It is built from `TRACKED_STABLECOINS`.
+Ticker parsing lives in `worker/src/telegram/common/alerts-parser.ts`, built from `TRACKED_STABLECOINS`. Callers import parsing and formatting helpers directly from their owning modules.
 
 - Resolution is symbol-first and case-insensitive.
 - Preset aliases are matched before ticker resolution in the shared target parser.
@@ -204,7 +204,7 @@ Ticker parsing lives in `worker/src/lib/telegram/alerts-parser.ts`; `worker/src/
 
 Telegram may redeliver the same `update_id`. The webhook owner/generation-claims each update, persists its normalized intent as `planned`, and atomically proves local D1 mutation before any reply. Stale `unstarted` claims reparse the inbound update; stale `planned` claims resume the stored intent instead of rereading mutable/deleted pending state. Already processed duplicates return `200 ok`; fresh in-flight duplicates return `503 retry`. A retry that finds `started` or `execution_unknown` returns `200 ok` without rerunning the operation. This deliberate at-most-once boundary prevents duplicate Telegram effects after timeouts or post-send crashes. Operators reconcile `telegramBot.webhookEffectLifecycle` and the processed-update row before any manual repair.
 
-Setup takeover resumes stored callback action/state rather than rereading former steps. Applied mutation proof skips domain writes and resumes the original prompt; a refused ownership-protected transition records no proof or success prompt. Type-toggle recovery uses the saved selection, not absent callback arguments. Intent equality/persistence share the canonical byte encoder in `worker/src/lib/telegram/processed-updates.ts` (recursively sorted object keys, array order preserved); persistence alone owns version/schema/size admission.
+Setup takeover resumes stored callback action/state rather than rereading former steps. Applied mutation proof skips domain writes and resumes the original prompt; a refused ownership-protected transition records no proof or success prompt. Type-toggle recovery uses the saved selection, not absent callback arguments. Intent equality/persistence share the canonical byte encoder in `worker/src/telegram/store/processed-updates.ts` (recursively sorted object keys, array order preserved); persistence alone owns version/schema/size admission.
 
 Ordinary processed-update rows are retained for 7 days. `started` and `execution_unknown` evidence is retained for 90 days. The daily `telegram-retention-cleanup` job owns capped processed-update pruning alongside the other Telegram audit and analytics retention passes; webhook requests only claim and mark update rows for idempotency.
 
@@ -299,7 +299,7 @@ If the cached safety snapshot is missing a coin, the dispatcher suppresses its g
 
 The separate `alert:dews-alertable-snapshot` cache key prevents duplicate same-band DEWS alerts when a coin silently dips to `WATCH` or `CALM` and then returns to the same alert band. Example: `ALERT → WATCH` produces no message and does not reset the alert dedupe baseline, so a later `WATCH → ALERT` does not resend the same `ALERT` notification.
 
-The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/lib/telegram/alerts-formatting.ts`.
+The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/telegram/common/alerts-formatting.ts`.
 
 ## Dispatch Routing And Formatting
 
@@ -355,7 +355,7 @@ All new risk chunks enter `telegram_pending_alerts` as exact pre-split HTML only
 
 **Backoff/dedupe.** Retry uses exponential 60/120/240/480/600 seconds, capped at 600, with Telegram Retry-After overriding. Re-enqueue collisions retain the prior attempt count, not a fresh weaker delay. `not_before_at` also defers snoozes, generation races, malformed provenance and unavailable preset membership. Quiet hours are re-evaluated and silence, never defer. `last_error_class`/`retry_after_sec` preserve transport evidence.
 
-`buildDedupeKey` in `worker/src/lib/telegram/pending-queue.ts` binds chat, split version, chunk index and canonical pre-split body hash (chunk HTML for legacy). Freeze instead binds immutable source-event ID, preserving distinct identical-looking Tape events. Change split version with splitting algorithms. Group migration rewrites chat-prefix keys; collisions retain one deliverable new-chat copy.
+`buildDedupeKey` in `worker/src/telegram/outbox/pending-queue.ts` binds chat, split version, chunk index and canonical pre-split body hash (chunk HTML for legacy). Freeze instead binds immutable source-event ID, preserving distinct identical-looking Tape events. Change split version with splitting algorithms. Group migration rewrites chat-prefix keys; collisions retain one deliverable new-chat copy.
 
 **Rate limits.** One chat's 429 defers its rows and short-circuits later same-chat chunks while peers continue. Long Retry-After alone is not global. Explicit bot-wide response or distinct-chat systemic inference gates the untouched tail; [rate-limit incidents](./runbooks/telegram-no-delivery.md#rate-limit-storm) owns the durable 3-chat/60-second escalation. Handoff propagates future chat backoff atomically. Missing retry_after uses a 60-second floor. Global backoff raises `telegram:global-send-backoff-until` monotonically; if that durable write fails, row deadlines retain the same bound rather than send early.
 
@@ -379,7 +379,7 @@ Stop rollout verification when planning is degraded, expiry debt remains, or exc
 
 ## Digest Appendices
 
-[Digest Telegram delivery](./digest-pipeline.md#telegram) owns appendix shape, cache keys, identity equivalence and edition-bound snapshot advancement; implementation is `worker/src/lib/telegram/digest-appendices.ts`. Queued notices survive retries and ambiguous delivery: only acceptance of every persisted chunk consumes them. This is channel edition state, not subscriber-event replay.
+[Digest Telegram delivery](./digest-pipeline.md#telegram) owns appendix shape, cache keys, identity equivalence and edition-bound snapshot advancement; implementation is `worker/src/telegram/digest/digest-appendices.ts`. Queued notices survive retries and ambiguous delivery: only acceptance of every persisted chunk consumes them. This is channel edition state, not subscriber-event replay.
 
 ## Admin Visibility
 
@@ -414,7 +414,7 @@ The dispatcher is protected by `CIRCUIT_SOURCE.TELEGRAM_API`.
 
 ## Message Types
 
-Formatting helpers in `worker/src/lib/telegram/alerts.ts` emit:
+Formatting helpers in `worker/src/telegram/common/alerts-formatting.ts` emit:
 
 - DEWS band transitions with top two stress sub-signals
 - Depeg-triggered messages with direction, bps deviation, and price
@@ -422,7 +422,7 @@ Formatting helpers in `worker/src/lib/telegram/alerts.ts` emit:
 - Depeg-resolved messages with duration, peak deviation, and recovery price
 - Safety-grade changes with old/new grade and score when present
 - One contextual line when cached report-card, liquidity, or supply data is available for the affected coin. For mint/burn-tracked coins the same line also carries a `Flow24h <signed compact USD>` segment sourced from the cached per-coin 24h flow (`perCoinFlowCacheKey(id, 24)`); dispatch reads only the tracked subset of alerting coins in one bounded `Promise.all` (no recompute) and omits the segment when that flow is stale or net-zero. Rendered as an expandable Telegram blockquote (`<blockquote expandable>…</blockquote>`) so it collapses by default on mobile; requires Telegram Bot API 7.0+ (Mar 2024) — older clients render it as a regular blockquote.
-- Supply and DEX liquidity context carry their producer clocks through `worker/src/cron/telegram/sources/telegram-alert-context.ts` and are assessed with existing budgets only (`worker/src/lib/telegram/context-freshness.ts`): supply uses the asset's `supplyObservedAt` bounded by the stablecoins publication time against the `/api/stablecoins` endpoint budget (`API_FRESHNESS_MAX_AGE_SEC.stablecoins`), and DEX liquidity uses the `dex_liquidity.updated_at` row clock against the DEWS DEX-liquidity budget (`DEWS_STALE_DEX_LIQUIDITY_SEC`). Boundaries are inclusive. Supply is read through `getCirculatingRawOrNull()`: missing, empty or invalid-only buckets are omitted, never rendered as `Supply $0`; an explicit observed zero renders `Supply $0`. Stale, unclocked or unavailable supply…
+- Supply and DEX liquidity context carry their producer clocks through `worker/src/cron/telegram/sources/telegram-alert-context.ts` and are assessed with existing budgets only (`worker/src/telegram/common/context-freshness.ts`): supply uses the asset's `supplyObservedAt` bounded by the stablecoins publication time against the `/api/stablecoins` endpoint budget (`API_FRESHNESS_MAX_AGE_SEC.stablecoins`), and DEX liquidity uses the `dex_liquidity.updated_at` row clock against the DEWS DEX-liquidity budget (`DEWS_STALE_DEX_LIQUIDITY_SEC`). Boundaries are inclusive. Supply is read through `getCirculatingRawOrNull()`: missing, empty or invalid-only buckets are omitted, never rendered as `Supply $0`; an explicit observed zero renders `Supply $0`. Stale, unclocked or unavailable supply…
 
 Alert context uses the published report-card snapshot cache. This keeps the five-minute dispatch lane from rebuilding the full report-card corpus just to attach a short annotation.
 
@@ -459,7 +459,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 
 ## Operational Notes
 
-- The dedicated 5-minute Telegram trigger checks webhook, commands, profile, and menu reconciliation serially on every tick through `worker/src/lib/telegram/webhook-registration.ts`. Each unit may skip independently on its 15-minute fresh-cache/rate-limit marker. After deploying a command-list change, the production `/` menu should update on the next tick whose command unit is not skipped.
+- The dedicated 5-minute Telegram trigger checks webhook, commands, profile, and menu reconciliation serially on every tick through `worker/src/telegram/webhook/webhook-registration.ts`. Each unit may skip independently on its 15-minute fresh-cache/rate-limit marker. After deploying a command-list change, the production `/` menu should update on the next tick whose command unit is not skipped.
 - The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a group-safe list under `scope: { type: "all_group_chats" }`. Both lists derive from the runtime-neutral command reference in `shared/lib/telegram-bot-registration.ts`, which also owns the per-command syntax variants, concise `/help` lines, public-reference examples, and deprecated aliases (`/market` → `/brief`) that the bot's `/help` reply and the `/pharoswatchbot/` command reference render. The group menu includes read-only commands and group-valid subscription/settings controls, but intentionally omits `/start`, `/forget`, and `/recap` because setup deep links, destructive data deletion, and the private daily recap stay private-chat only. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
 - The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `shared/lib/telegram-bot-registration.ts` so changes flow through code review and are reused by manual recovery tooling. The description's alert-family list derives from the canonical manifest in `shared/lib/telegram-alert-families.ts` (shared with the landing page, its metadata, and JSON-LD), and the profile copy is intentionally count-free so a growing tracked universe cannot stale it. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Current Bot API versions expose `setMyProfilePhoto`, but Pharos does not yet reconcile it; until that path is reviewed, set the avatar manually through @BotFather using `public/pharos-mark.png`. The brand mark was refreshed on 2026-07-31 and the former pharos-icon asset was removed — re-upload the avatar so the bot matches the current identity.
 - The cron connection-budget check includes the four serial command/profile/menu/webhook reconciliation checks as one budget-only surface on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job. `/api/status.budgetOnlySurfaces` records each unit as skipped, succeeded, or failed, including stable skip reasons; the serial Bot API call budget remains visible to `npm run check:cron-connections`.

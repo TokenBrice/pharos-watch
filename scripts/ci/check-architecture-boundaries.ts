@@ -7,6 +7,7 @@ import ts from "typescript";
 import { collectSourceFiles } from "../lib/source-files.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { getScriptKind, parseSourceFile } from "../lib/ts-ast.mts";
+import { resolveLocalPackageImport } from "../lib/package-imports.mts";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const ADAPTERS = "worker/src/cron/reserve-adapters/";
@@ -16,8 +17,100 @@ const NETWORK_PACKAGES = /^(?:node:)?(?:https?|http2|net|tls|dgram)$|^(?:undici|
 const NETWORK_GLOBALS: Record<string, true> = { fetch: true, XMLHttpRequest: true, WebSocket: true, EventSource: true };
 const GLOBAL_OBJECTS: Record<string, true> = { globalThis: true, window: true, self: true, global: true };
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
+const TELEGRAM_IMPLEMENTATION = /^worker\/src\/(?:telegram\/|cron\/telegram\/)/;
 
-type Rule = "reserve-network" | "frontend-routes" | "recap-cost" | "verification-url" | "stability-light";
+// Exact public entries and importer pairs, derived from production referrers.
+const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[] = [
+  ["worker/src/telegram/admin/admin-telegram-broadcast.ts", [
+    "worker/src/routes/admin-routes.ts",
+  ]],
+  ["worker/src/telegram/adoption/telegram-adoption.ts", [
+    "worker/src/routes/messaging-routes.ts",
+  ]],
+  ["worker/src/telegram/mini-app/telegram-mini-app.ts", [
+    "worker/src/routes/messaging-routes.ts",
+  ]],
+  ["worker/src/telegram/webhook/telegram-pulse.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/routes/public-routes.ts",
+  ]],
+  ["worker/src/telegram/store/disambiguation.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts",
+  ]],
+  ["worker/src/telegram/webhook/telegram-webhook.ts", [
+    "worker/src/routes/messaging-routes.ts",
+  ]],
+  ["worker/src/telegram/webhook/telegram-ingress-abuse.ts", [
+    "worker/src/handlers/http/request-dispatch.ts",
+  ]],
+  ["worker/src/telegram/delivery/telegram.ts", [
+    "worker/src/api/admin-actions.ts",
+    "worker/src/cron/cron-sentinel-rules.ts", "worker/src/cron/cron-sentinel.ts",
+    "worker/src/cron/cron-staleness-watchdog.ts", "worker/src/cron/daily-digest.ts",
+    "worker/src/cron/digest-publication-watchdog.ts", "worker/src/cron/digest/publish.ts",
+    "worker/src/cron/digest/telegram-transport.ts", "worker/src/cron/digest/wrapper-style-gate.ts",
+    "worker/src/cron/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
+  ]],
+  ["worker/src/telegram/adoption/adoption-analytics.ts", [
+    "worker/src/handlers/http/gates.ts", "worker/src/routes/messaging-routes.ts",
+  ]],
+  ["worker/src/telegram/delivery/delivery-sli.ts", [
+    "worker/src/lib/status/telegram-bot-stats.ts",
+  ]],
+  ["worker/src/telegram/digest/digest-appendices.ts", [
+    "worker/src/cron/daily-digest.ts", "worker/src/cron/digest/publish.ts",
+    "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts",
+  ]],
+  ["worker/src/telegram/outbox/digest-outbox.ts", [
+    "worker/src/cron/digest/publish.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts",
+  ]],
+  ["worker/src/telegram/common/log.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts",
+  ]],
+  ["worker/src/telegram/outbox/pending-capacity.ts", [
+    "worker/src/lib/status/supplements.ts", "worker/src/lib/status/telegram-bot-stats.ts",
+  ]],
+  ["worker/src/telegram/recap/recap-store.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts",
+  ]],
+  ["worker/src/telegram/delivery/transport-control.ts", [
+    "worker/src/cron/digest/telegram-transport.ts",
+  ]],
+  ["worker/src/telegram/delivery/transport-errors.ts", [
+    "worker/src/cron/digest/telegram-transport.ts",
+  ]],
+  ["worker/src/telegram/store/usage-analytics.ts", [
+    "worker/src/lib/status/telegram-bot-stats.ts",
+  ]],
+  ["worker/src/telegram/webhook/webhook-registration.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts",
+  ]],
+  ["worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts",
+  ]],
+  ["worker/src/cron/telegram/recap/telegram-recap-planner.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts",
+  ]],
+  ["worker/src/cron/telegram/maintenance/telegram-degradation-watchdog.ts", [
+    "worker/src/handlers/scheduled/five-minute-telegram.ts",
+  ]],
+  ["worker/src/cron/telegram/maintenance/telegram-inactive-cleanup.ts", [
+    "worker/src/handlers/scheduled/daily-0300.ts",
+  ]],
+  ["worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", [
+    "worker/src/handlers/scheduled/daily-0300.ts",
+  ]],
+  ["worker/src/cron/telegram/sources/telegram-alert-snapshots.ts", [
+    "worker/src/cron/reserve-post-sync-watchdog.ts",
+  ]],
+];
+const TELEGRAM_PUBLIC_PAIRS: Record<string, true> = {};
+for (const [entry, importers] of TELEGRAM_PUBLIC_ENTRIES) {
+  for (const importer of importers) {
+    TELEGRAM_PUBLIC_PAIRS[`${importer} -> ${entry}`] = true;
+  }
+}
+
+type Rule = "reserve-network" | "frontend-routes" | "recap-cost" | "verification-url" | "stability-light" | "telegram-public-surface";
 interface Module {
   dependencies: string[];
   network: boolean;
@@ -93,11 +186,12 @@ class DependencyGraph {
     this.cache = ts.createModuleResolutionCache(root, (file) => file, this.options);
   }
 
-  module(file: string): Module {
-    const cached = this.modules.get(file);
+  module(file: string, authored = false): Module {
+    const key = authored ? `authored:${file}` : file;
+    const cached = this.modules.get(key);
     if (cached) return cached;
     const result: Module = { dependencies: [], network: false, errors: [] };
-    this.modules.set(file, result);
+    this.modules.set(key, result);
     if (file.startsWith("package:")) return result;
     const absolute = resolve(this.root, file);
     if (!existsSync(absolute)) {
@@ -105,8 +199,8 @@ class DependencyGraph {
       return result;
     }
     if (!SOURCE_EXTENSIONS.has(extname(file))) return result;
-    // Emit only executable syntax: erased types, including inline type-only
-    // imports/re-exports, must not create runtime reachability edges.
+    // Reachability policies erase types; the public-surface policy inspects
+    // authored syntax so type imports cannot bypass the feature's API.
     const original = parseSourceFile(absolute);
     const emitted = ts.transpileModule(original.source, {
       fileName: absolute,
@@ -118,9 +212,21 @@ class DependencyGraph {
         result.errors.push(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
       }
     }
-    const source = ts.createSourceFile(absolute, emitted.outputText, ts.ScriptTarget.Latest, true, getScriptKind(absolute));
-    result.network = usesNetwork(source);
+    const source = authored ? original.sourceFile
+      : ts.createSourceFile(absolute, emitted.outputText, ts.ScriptTarget.Latest, true, getScriptKind(absolute));
+    result.network = !authored && usesNetwork(source);
     const add = (specifier: string) => {
+      try {
+        const local = resolveLocalPackageImport(specifier, this.root);
+        if (local) {
+          result.dependencies.push(repoPath(this.root, realpathSync(local)));
+          return;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        result.errors.push(`unresolved dependency ${specifier}: ${message}`);
+        return;
+      }
       const resolved = ts.resolveModuleName(specifier, absolute, this.options, ts.sys, this.cache).resolvedModule;
       if (resolved && !resolved.isExternalLibraryImport && !resolved.resolvedFileName.includes("/node_modules/")) {
         result.dependencies.push(repoPath(this.root, realpathSync(resolved.resolvedFileName)));
@@ -149,7 +255,7 @@ class DependencyGraph {
     // ESNext emit can lower import-equals to a generated require alias; retain
     // its resolved edge from the original syntax rather than guessing that name.
     for (const statement of original.sourceFile.statements) {
-      if (ts.isImportEqualsDeclaration(statement) && !statement.isTypeOnly
+      if (ts.isImportEqualsDeclaration(statement) && (authored || !statement.isTypeOnly)
         && ts.isExternalModuleReference(statement.moduleReference)
         && statement.moduleReference.expression && ts.isStringLiteralLike(statement.moduleReference.expression)) {
         add(statement.moduleReference.expression.text);
@@ -158,6 +264,8 @@ class DependencyGraph {
     const visit = (node: ts.Node) => {
       if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier
         && ts.isStringLiteralLike(node.moduleSpecifier)) add(node.moduleSpecifier.text);
+      if (authored && ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
+        && ts.isStringLiteralLike(node.argument.literal)) add(node.argument.literal.text);
       if (ts.isIdentifier(node) && node.text === "require"
         && !(ts.isCallExpression(node.parent) && node.parent.expression === node)) {
         result.errors.push("non-literal executable dependency (escaped require)");
@@ -190,9 +298,9 @@ class DependencyGraph {
   }
 }
 
-/** One gate, five independently selectable policies for synthetic graph tests. */
+/** One gate with independently selectable policies for synthetic graph tests. */
 export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] = [
-  "reserve-network", "frontend-routes", "recap-cost", "verification-url", "stability-light",
+  "reserve-network", "frontend-routes", "recap-cost", "verification-url", "stability-light", "telegram-public-surface",
 ]): string[] {
   // Entries and resolved dependencies use real paths; the root must share
   // their identity (for example macOS /var is a symlink to /private/var).
@@ -243,12 +351,27 @@ export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] 
         (file) => /(?:^|\/)(?:daily-digest|weekly-recap|anthropic|openai|ai-request)(?:\.|\/|$)|\/cron\/digest\//i.test(file), true);
     } else if (rule === "verification-url") {
       walk(rule, [SCRUBBER], (file) => /^package:zod(?:\/|$)/.test(file)
-        || file.startsWith("shared/types/"));
+        || file.startsWith("shared/types/") || file.startsWith("shared/contracts/"));
       const reachable = walk(rule, ["src/components/google-analytics.tsx"], () => false);
       if (!reachable.has(SCRUBBER)) violations.add(`${rule}: google-analytics must reach ${SCRUBBER}`);
-    } else {
+    } else if (rule === "stability-light") {
       walk(rule, [LIGHT], (file) => /^package:zod(?:\/|$)/.test(file)
         || file === "shared/types/stability.ts" || file.startsWith("shared/types/stability/"));
+    } else if (rule === "telegram-public-surface") {
+      const entries = sources("worker/src").filter((file) => !file.startsWith("worker/src/test-helpers/"));
+      if (entries.length === 0) violations.add(`${rule}: no entrypoints`);
+      for (const file of entries) {
+        if (TELEGRAM_IMPLEMENTATION.test(file)) continue;
+        // This is a direct authored-edge rule, not a transitive ban: legitimate
+        // entries may reach implementation details inside either Telegram owner.
+        const resolved = graph.module(file, true);
+        for (const error of resolved.errors) violations.add(`${rule}: ${file}: ${error}`);
+        for (const dependency of resolved.dependencies) {
+          if (TELEGRAM_IMPLEMENTATION.test(dependency) && !TELEGRAM_PUBLIC_PAIRS[`${file} -> ${dependency}`]) {
+            violations.add(`${rule}: ${file} -> ${dependency}: forbidden dependency`);
+          }
+        }
+      }
     }
   }
   return [...violations].sort();
@@ -261,6 +384,6 @@ runDirectCli(import.meta.url, () => {
     process.exitCode = 1;
     return;
   }
-  console.log("Architecture boundaries: OK (5 resolved-dependency policies)");
+  console.log("Architecture boundaries: OK (6 resolved-dependency policies)");
   process.exitCode = 0;
 });

@@ -5,7 +5,7 @@ import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
   type PendingAlertScopeItem,
-} from "../../../../lib/telegram/pending-provenance";
+} from "../../../../telegram/outbox/pending-provenance";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {

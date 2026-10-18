@@ -13,8 +13,8 @@ vi.mock("../../lib/digest-safety-map", async (importOriginal) => {
   const { mockDigestSafetyMapModule } = await import("./daily-digest.test-support");
   return mockDigestSafetyMapModule(await importOriginal<typeof import("../../lib/digest-safety-map")>());
 });
-vi.mock("../../lib/telegram/digest-appendices", async () => (await import("./daily-digest.test-support")).mockDailyDigestAppendicesModule());
-vi.mock("../../lib/telegram/digest-outbox", async () => (await import("./daily-digest.test-support")).mockDailyDigestOutboxModule());
+vi.mock("../../telegram/digest/digest-appendices", async () => (await import("./daily-digest.test-support")).mockDailyDigestAppendicesModule());
+vi.mock("../../telegram/outbox/digest-outbox", async () => (await import("./daily-digest.test-support")).mockDailyDigestOutboxModule());
 vi.mock("../digest/telegram-transport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../digest/telegram-transport")>();
   return (await import("./daily-digest.test-support")).mockTelegramDigestTransportModule(actual);

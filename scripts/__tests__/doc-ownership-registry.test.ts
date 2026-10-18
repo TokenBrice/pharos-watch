@@ -3,21 +3,30 @@ import { existsSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
+import {
+  collectMarkdownReferences,
+  mergeMarkdownSectionRanges,
+  parseMarkdownSections,
+  requiresDocNavigation,
+  resolveMarkdownSectionRange,
+  type MarkdownSections,
+} from "../lib/doc-markdown.mts";
 import { getVerifiedDocFiles } from "../lib/doc-files.mts";
-import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
+import { createOwnershipGlobMatcher, enumerateDocReferences, type DocReference as StructuredDocReference, type ReadingSelector } from "../lib/doc-ownership-registry.mts";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const COVERAGE_ROOTS = ["src/", "shared/", "worker/", "functions/", "scripts/", "docs/", ".github/"];
 const SPECIFIC_COVERAGE_THRESHOLD = 80;
 
-type DocReference = string | { anchor: string; path: string };
+type DocReference = string | StructuredDocReference;
 type RegistryMapping = {
   alsoRead?: string[];
   background?: DocReference[];
   checks?: string[];
   docs: DocReference[];
+  reading?: ReadingSelector[];
+  required?: StructuredDocReference[];
   id: string;
   sources: string[];
   tier?: "specific" | "fallback";
@@ -40,10 +49,6 @@ const trackedFiles = execFileSync("git", ["ls-files", "-z"], {
   encoding: "utf8",
 }).split("\0").filter(Boolean);
 
-function normalizeDoc(reference: DocReference): { anchor?: string; path: string } {
-  return typeof reference === "string" ? { path: reference } : reference;
-}
-
 const matcherCache = new Map<readonly string[], (file: string) => boolean>();
 
 function matchesAny(file: string, patterns: readonly string[]): boolean {
@@ -59,6 +64,77 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
   const matchers = sources.map(createOwnershipGlobMatcher);
   return (file: string) => matchers.some((matcher) => matcher(file));
 }
+
+describe("Markdown section ranges", () => {
+  it("uses renderer slugs, UTF-8 source, nested sections, and global duplicate headings", () => {
+    const content = "# Guide\n\n## Café\né😀\n### Child\nnested\n## Café\nsecond\n# End\n";
+    const document = parseMarkdownSections(content);
+    expect([...document.sections.keys()]).toEqual([...collectMarkdownReferences(content).anchors]);
+    const first = resolveMarkdownSectionRange(document, "café");
+    expect(first).toEqual({ startLine: 2, endLine: 6, start: content.indexOf("## Café"), end: content.lastIndexOf("## Café") });
+    const section = content.slice(first.start, first.end);
+    expect(section).toBe("## Café\né😀\n### Child\nnested\n");
+    expect(Buffer.byteLength(section, "utf8")).toBeGreaterThan(section.length);
+    const second = resolveMarkdownSectionRange(document, "café-1");
+    expect(content.slice(second.start, second.end)).toBe("## Café\nsecond\n");
+    const child = resolveMarkdownSectionRange(document, "child");
+    expect(content.slice(child.start, child.end)).toBe("### Child\nnested\n");
+  });
+
+  it("ignores backtick and tilde fenced headings and supports renderer setext headings", () => {
+    const content = "# Guide\n## Real\n```md\n## Fake\n```\n~~~md\n# Also fake\n~~~\nText\n## Next\nend\n\nSetext\n======\nlast";
+    const document = parseMarkdownSections(content);
+    expect([...document.sections.keys()]).toEqual(["guide", "real", "next", "setext"]);
+    const range = resolveMarkdownSectionRange(document, "real");
+    expect(content.slice(range.start, range.end)).toBe("## Real\n```md\n## Fake\n```\n~~~md\n# Also fake\n~~~\nText\n");
+    const setext = resolveMarkdownSectionRange(document, "setext");
+    expect(content.slice(setext.start, setext.end)).toBe("Setext\n======\nlast");
+    expect(() => resolveMarkdownSectionRange(document, "fake")).toThrow("Missing Markdown anchor: #fake");
+  });
+
+  it("preserves the legacy join-without-final-newline section budget convention", () => {
+    const document = parseMarkdownSections("# Guide\n## One\né\n## Two\nlast\n");
+    const range = resolveMarkdownSectionRange(document, "one");
+    const legacy = document.lines.slice(range.startLine, range.endLine).join("\n");
+    expect(legacy).toBe("## One\né");
+    expect(Buffer.byteLength(legacy)).toBe(9);
+    expect(Buffer.byteLength(document.content.slice(range.start, range.end))).toBe(10);
+    const last = resolveMarkdownSectionRange(document, "two");
+    expect(document.lines.slice(last.startLine, last.endLine).join("\n")).toBe("## Two\nlast\n");
+  });
+
+  it("unions overlapping and adjacent sections without mutating source ranges", () => {
+    const document = parseMarkdownSections("# Guide\n## One\none\n### Child\nchild\n## Two\ntwo\n# End\n");
+    const one = resolveMarkdownSectionRange(document, "one");
+    const child = resolveMarkdownSectionRange(document, "child");
+    const two = resolveMarkdownSectionRange(document, "two");
+    const original = { ...one };
+    expect(mergeMarkdownSectionRanges([two, child, one, one])).toEqual([
+      { ...one, end: two.end, endLine: two.endLine },
+    ]);
+    expect(one).toEqual(original);
+    expect(mergeMarkdownSectionRanges([child, document.whole, two])).toEqual([document.whole]);
+    expect(mergeMarkdownSectionRanges([])).toEqual([]);
+  });
+});
+
+describe("ownership reference enumeration", () => {
+  it("retains every selector mode, required ref and runbook label for downstream consumers", () => {
+    const runbook: StructuredDocReference = { path: "docs/runbooks/selector.md",
+      runbook: { label: "Selector recovery", kind: "procedure" } };
+    const mapping = {
+      docs: ["default.md"], background: ["background.md"], required: [{ path: "required.md" }],
+      reading: [{ sources: ["src/**"], local: [runbook], contract: [{ path: "contract.md" }],
+        required: [{ path: "selector-required.md", anchor: "rule" }] }],
+    };
+    expect(enumerateDocReferences(mapping)).toEqual([
+      { path: "default.md" }, { path: "required.md" }, runbook, { path: "contract.md" },
+      { path: "selector-required.md", anchor: "rule" }, { path: "background.md" },
+    ]);
+    expect(enumerateDocReferences(mapping, { includeBackground: false }).map((reference) => reference.path))
+      .toEqual(["default.md", "required.md", runbook.path, "contract.md", "selector-required.md"]);
+  });
+});
 
 describe("doc-ownership registry integrity", () => {
   it("keeps unconditional root guidance and hints out of the routing model", () => {
@@ -77,10 +153,50 @@ describe("doc-ownership registry integrity", () => {
       .toContain("npm run check:failure-scenarios");
   });
 
+  it("selects every owned scoring source instead of falling back to the broad publication roster", () => {
+    const scoring = mappings.find((mapping) => mapping.id === "safety-score-v9");
+    expect(scoring).toBeDefined();
+    const owned = trackedFiles.filter((file) => matchesAny(file, scoring!.sources));
+    expect(owned.length).toBeGreaterThan(0);
+    for (const file of owned) {
+      expect(scoring!.reading?.some((selector) => matchesAny(file, selector.sources)), file).toBe(true);
+    }
+  });
+
+  it("keeps distinct scoring-document inputs explicitly selected by their existing owners", () => {
+    for (const file of [
+      "docs/safety-score-map.md", "docs/process/report-cards-appendix.md",
+      "docs/report-cards.md", "docs/process/report-cards-evidence-log.md",
+    ]) {
+      const owner = mappings.find((mapping) =>
+        mapping.tier !== "fallback" && matchesAny(file, mapping.sources) &&
+        mapping.reading?.some((selector) => matchesAny(file, selector.sources)),
+      );
+      expect(owner, file).toBeDefined();
+    }
+  });
+
+  it("keeps Functions in CI check ownership while selecting runtime and applicable proxy contracts", () => {
+    const policy = mappings.find((mapping) => mapping.id === "validation-ci-policy");
+    expect(policy?.sources).toContain("functions/**");
+    expect(policy?.checks).toEqual(["npx vitest run scripts/__tests__"]);
+    const generic = policy?.reading?.find((selector) => selector.sources.includes("functions/**"));
+    expect(generic?.local).toEqual([
+      { path: "docs/architecture.md", anchor: "pages-function-endpoints-not-worker-api" },
+      { path: "docs/worker-infrastructure.md", anchor: "http-request-handling-entry" },
+    ]);
+    const refs = enumerateDocReferences(policy!);
+    expect(refs).toEqual(expect.arrayContaining([
+      { path: "docs/operator-origin-access.md", anchor: "pages-functions-proxy" },
+      { path: "docs/process/worker-infrastructure-appendix.md", anchor: "site-data-auth" },
+      { path: "docs/deployment-process.md", anchor: "ci-deploy-sequence" },
+    ]));
+    expect(policy?.background).toContainEqual({ path: "docs/testing.md", anchor: "ci-pipeline" });
+  });
+
   const references: Array<{ path: string; anchor?: string }> = [
     ...mappings.flatMap((mapping) => [
-      ...mapping.docs.map(normalizeDoc),
-      ...(mapping.background ?? []).map(normalizeDoc),
+      ...enumerateDocReferences(mapping),
       ...(mapping.alsoRead ?? []).map((path) => ({ path })),
     ]),
   ];
@@ -99,14 +215,11 @@ describe("doc-ownership registry integrity", () => {
     }
   });
   it("routes every verified doc under docs through a primary or background reference", () => {
-    const routedDocs = new Set(mappings.flatMap((mapping) => [
-      ...mapping.docs,
-      ...(mapping.background ?? []),
-    ]).map((reference) => normalizeDoc(reference).path));
+    const routedDocs = new Set(mappings.flatMap((mapping) => enumerateDocReferences(mapping)).map((reference) => reference.path));
     const unrouted = getVerifiedDocFiles(REPO_ROOT)
       .map((path) => relative(REPO_ROOT, path))
       .filter((path) => path.startsWith("docs/") && !routedDocs.has(path));
-    expect(unrouted, "Every verified doc needs a docs/background owner, not just a source glob").toEqual([]);
+    expect(unrouted, "Every verified doc needs a docs/background/reading/required owner, not just a source glob").toEqual([]);
   });
   it("keeps primary Markdown sections within 25KB and ratchets legacy exceptions", () => {
     // Existing out-of-scope sections only. Remove entries once bounded; new
@@ -123,39 +236,23 @@ describe("doc-ownership registry integrity", () => {
       "live-reserves", "yield-intelligence", "homepage", "about-page",
       "coverage-page", "start-page", "feedback-pipeline", "compliance", "worker-admin-api",
     ];
+    const documentCache = new Map<string, MarkdownSections>();
     for (const mapping of mappings) {
       const newDomain = domainIds.includes(mapping.id);
       if (newDomain) expect(mapping.checks ?? [], mapping.id).toEqual([]);
-      for (const reference of mapping.docs.map(normalizeDoc)) {
+      for (const reference of enumerateDocReferences(mapping, { includeBackground: false })) {
         if (!reference.path.endsWith(".md")) continue;
         if (newDomain) expect(reference.anchor, mapping.id).toBeTruthy();
         const key = reference.path + (reference.anchor ? `#${reference.anchor}` : "");
-        const lines = readFileSync(resolve(REPO_ROOT, reference.path), "utf8").split("\n");
-        let start = reference.anchor ? -1 : 0;
-        let level = 0;
-        let end = lines.length;
-        let fence: string | undefined;
-        for (let index = 0; reference.anchor && index < lines.length; index++) {
-          const marker = /^\s*(`{3,}|~{3,})/.exec(lines[index])?.[1];
-          if (marker) {
-            if (!fence) fence = marker;
-            else if (marker[0] === fence[0] && marker.length >= fence.length) fence = undefined;
-            continue;
-          }
-          if (fence) continue;
-          const heading = /^(#{1,6}) /.exec(lines[index]);
-          if (!heading) continue;
-          if (start >= 0 && heading[1].length <= level) {
-            end = index;
-            break;
-          }
-          if (start < 0 && collectMarkdownReferences(lines[index]).anchors.has(reference.anchor!)) {
-            start = index;
-            level = heading[1].length;
-          }
+        let document = documentCache.get(reference.path);
+        if (!document) {
+          document = parseMarkdownSections(readFileSync(resolve(REPO_ROOT, reference.path), "utf8"));
+          documentCache.set(reference.path, document);
         }
-        expect(start, key).toBeGreaterThanOrEqual(0);
-        const bytes = Buffer.byteLength(lines.slice(start, end).join("\n"));
+        const range = resolveMarkdownSectionRange(document, reference.anchor);
+        // Keep the historic byte ratchet: joining selected split lines omits
+        // the separator before the next heading, unlike route payload bytes.
+        const bytes = Buffer.byteLength(document.lines.slice(range.startLine, range.endLine).join("\n"));
         expect(bytes, key).toBeLessThanOrEqual(newDomain ? 25_000 : legacySectionCeilings[key] ?? 25_000);
         if (Object.hasOwn(legacySectionCeilings, key)) {
           expect(bytes, `Remove resolved section exception: ${key}`).toBeGreaterThan(25_000);

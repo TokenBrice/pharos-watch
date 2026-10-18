@@ -1,5 +1,5 @@
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
-import type { ApiKeySummary } from "@shared/types";
+import type { ApiKeySummary } from "@pharos/contracts/api-keys";
 import {
   createApiKey,
   deactivateApiKey,

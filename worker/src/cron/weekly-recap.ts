@@ -4,7 +4,7 @@ import { formatIsoDate } from "@shared/lib/format";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, createNeutralSkippedCronResult } from "../lib/cron-result";
-import type { TelegramCreds } from "../lib/telegram";
+import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TwitterCreds } from "../lib/twitter";
 import { SECONDS } from "../lib/time-constants";

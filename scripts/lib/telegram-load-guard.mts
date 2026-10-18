@@ -30,7 +30,7 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
     reason: "runtime delivery limits, scheduled timeout, Worker compatibility exports, and CPU cap",
     paths: [
       "shared/lib/telegram-delivery-policy.ts",
-      "worker/src/lib/telegram/constants.ts",
+      "worker/src/telegram/common/constants.ts",
       "worker/src/lib/cron-timeouts.ts",
       "worker/wrangler.toml",
     ],
@@ -60,28 +60,27 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
   {
     id: "sender",
     reason: "Bot API transport, response classification, batching, and global rate-limit detection",
-    paths: ["worker/src/lib/telegram.ts"],
-    examples: ["worker/src/lib/telegram.ts"],
+    paths: ["worker/src/telegram/delivery/telegram.ts"],
+    examples: ["worker/src/telegram/delivery/telegram.ts"],
   },
   {
     id: "preset-resolution",
     reason: "dynamic preset membership and persisted preset intent affect fan-out size",
     paths: [
       "shared/lib/telegram-presets.ts",
-      "worker/src/lib/telegram/presets.ts",
-      "worker/src/api/telegram-store/presets.ts",
+      "worker/src/telegram/common/presets.ts",
+      "worker/src/telegram/store/presets.ts",
     ],
-    examples: ["worker/src/lib/telegram/presets.ts"],
+    examples: ["worker/src/telegram/common/presets.ts"],
   },
   {
     id: "formatter-and-chunker",
     reason: "message consolidation and splitting determine chunk count and send demand",
     paths: [
-      "worker/src/api/telegram-format.ts",
-      "worker/src/lib/telegram/alerts.ts",
-      "worker/src/lib/telegram/alerts-formatting.ts",
+      "worker/src/telegram/common/telegram-format.ts",
+      "worker/src/telegram/common/alerts-formatting.ts",
     ],
-    examples: ["worker/src/lib/telegram/alerts-formatting.ts"],
+    examples: ["worker/src/telegram/common/alerts-formatting.ts"],
   },
   {
     id: "scheduled-lane",
@@ -96,14 +95,14 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
   {
     id: "status-readers",
     reason: "production lifecycle, top-coin and pending status SQL plus canonical alert predicates",
-    paths: ["worker/src/lib/telegram/usage-analytics.ts", "shared/lib/telegram-alert-families.ts"],
-    examples: ["worker/src/lib/telegram/usage-analytics.ts"],
+    paths: ["worker/src/telegram/store/usage-analytics.ts", "shared/lib/telegram-alert-families.ts"],
+    examples: ["worker/src/telegram/store/usage-analytics.ts"],
   },
   {
     id: "admin-broadcast",
     reason: "broadcast fan-out shares the pending queue and delivery budget",
-    paths: ["worker/src/api/admin-telegram-broadcast.ts"],
-    examples: ["worker/src/api/admin-telegram-broadcast.ts"],
+    paths: ["worker/src/telegram/admin/admin-telegram-broadcast.ts"],
+    examples: ["worker/src/telegram/admin/admin-telegram-broadcast.ts"],
   },
 ];
 

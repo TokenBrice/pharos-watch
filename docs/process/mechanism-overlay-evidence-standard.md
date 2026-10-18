@@ -1,5 +1,7 @@
 # Mechanism-overlay evidence standard
 
+> **Agent navigation** — Start with [Evidence classes](#evidence-classes) and [Component applicability states](#component-applicability-states). Grep the matching heading for scoped reports · metric applicability · process requirements · native-family admission · mixed allocation · bounded reserve facts instead of reading wholesale.
+
 Status: canonical. Ratified by the owner on 2026-07-27 (wave-7 decision D3); extended to the
 `commodity-claim` archetype by methodology v9.14. This is the owner-approved evidence standard
 referenced by the compiler-bounded overlay gate in

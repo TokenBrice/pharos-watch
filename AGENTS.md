@@ -4,14 +4,18 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 ## Do this first
 
-1. Locate a likely file, then route it: `npm run agent:route -- --file <path>` (repeatable).
-2. Read required entry docs/anchors and every returned scoped `AGENTS.md`, then inspect entrypoints and local imports. All returned rules, checks, and warnings still apply; conditional background reading does not make them optional.
+1. Locate a likely file, then route it: `npm run agent:route -- --file <path>` (repeatable). Searching to locate it? Never start with a repo-root search: pass the discovery roots below as the search path (see Tool routing), then do the impact pass.
+2. In every harness (omp, Claude Code, Codex), read the router's exact `Read first` anchors and every returned scoped `AGENTS.md`; none is assumed to auto-load nested guides. More-specific instructions take precedence. Inspect entrypoints/local imports; all returned rules, checks and warnings apply.
 3. For onboarding, scratch, handoff, or commit conventions, consult `docs/process/agent-start-here.md` when relevant.
+
+`--context=auto` selects local or contract reading from the inputs; `--context=contract` upgrades explicitly, never downgrades obligations. Required refs bypass the ordinary reading cap. The enforced `context` total unions root/scoped instructions and selected sections; conditional background, source, skills and framework reads remain additional context.
 
 ## Tool routing
 
 - Native read/grep/glob/edit tools first; Bash only for commands that need a shell. If the harness rejects a shell command as shadowed by a native tool, switch tools — never retry it.
 - Codex/omp: once root `AGENTS.md` is loaded, do not reread `CLAUDE.md`; read all scoped `AGENTS.md` files returned by the router, with more-specific rules taking precedence.
+- Discovery search (the first broad search, any tool): pass explicit roots `src`, `worker`, `shared/lib`, `shared/types`, `shared/contracts`, `scripts`, `functions`, `docs` — as a path list (`src;worker;shared/lib;…` in omp grep), one call per root, or `rg <pattern> <roots> -g '!**/__tests__/**' -g '!**/*.test.*'`. A search with no path, or `git grep` from the root, is the impact pass, not discovery. Listing roots keeps `shared/data/` out where tools lack negative globs. Integration authorities stay in scope for the task they govern: `package.json`, `eslint.config.mjs`, `.github/workflows/`, `public/_headers`, `worker/wrangler*.toml`.
+- Impact pass: before finalizing the affected-file set or claiming completion, rerun the same pattern unscoped from the repo root and reconcile every new hit; `shared/data/stablecoins` is source-of-truth data. Search data, fixtures and tests directly for data, curation or test work.
 
 ## Working rules
 
@@ -28,7 +32,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 - Tailwind classes must be static strings. Classification labels/colors live only in `shared/lib/classification.ts`.
 - Supply: use `getCirculatingRawOrNull()` / historical `*OrNull` helpers from `shared/lib/supply.ts`; zero-default alternatives are deleted and banned by ESLint. Preserve unavailable values and aggregate completeness; only admitted observed members contribute numeric values, including explicit zero. DefiLlama list `circulating` is already USD — never multiply by price or apply arbitrary manual/on-chain/CMC/DEX overrides. Bounded CoinGecko aggregate gap-fill is a permitted supplemental path under ADR-8: explicit, documented, fail-closed, double-count safe, with ratio bound, hysteresis, coherent buckets, and per-asset provenance; the reviewed chain-dropout repair/quarantine path is the other permitted supplemental path ([ADR-8](docs/architecture.md#adr-8), clause (c)).
-- Imports across runtime boundaries: use `@shared/lib/...` / `@shared/types...` (ESLint rejects relative imports into root `shared/` from `src/`, `worker/`, and `functions/`); within production `shared/lib/`, use relative imports (ESLint bans `@shared/*`); root TS config excludes `worker/`, and runtime-neutral logic belongs in `shared/lib/`.
+- Imports across runtime boundaries: use `@shared/lib/...` / `@shared/types...` for unpackaged shared code and exact `@pharos/contracts/{api-meta,api-keys,request-source}` workspace exports (never `@shared/contracts` or physical package paths); ESLint rejects relative imports into root `shared/` from `src/`, `worker/`, and `functions/`. Within production `shared/lib/`, use relative imports for unpackaged shared code (ESLint bans `@shared/*`); root TS config excludes `worker/`, and runtime-neutral logic belongs in `shared/lib/`.
 - Cron-backed hooks: derive `staleTime = producer interval` and `refetchInterval = 2x producer interval` with `getPollingWindow()` / `createApiPollingQueryOptions()`.
 - Worker fetches: Cloudflare caps six simultaneous requests waiting on response headers per invocation; Pharos statically budgets a stricter trigger-wide six-connection model (`npm run check:cron-connections`; not runtime admission control) — consume bodies before opening more fetches (`docs/worker-and-api-limits.md#connection-budget-operating-assumption`).
 - D1 migrations run before the new Worker is live; destructive cleanup is a separate coordinated rollout (`npm run check:migrations`).

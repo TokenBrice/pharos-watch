@@ -5,8 +5,8 @@ const { sendToChatMock } = vi.hoisted(() => ({
   sendToChatMock: vi.fn(async (..._args: unknown[]) => ({ ok: true })),
 }));
 
-vi.mock("../../lib/telegram", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/telegram")>()),
+vi.mock("../../telegram/delivery/telegram", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../telegram/delivery/telegram")>()),
   sendToChat: sendToChatMock,
 }));
 

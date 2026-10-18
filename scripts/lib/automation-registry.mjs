@@ -158,6 +158,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/data/stablecoins/canonical-order.json",
       "shared/lib/stablecoins/**",
       "shared/types/**",
+      "shared/contracts/**",
       "scripts/lib/stablecoin-catalog-sources.ts",
     ],
   }),
@@ -257,7 +258,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     outputPaths: ["public/openapi.json"],
     phase: 0,
     script: "scripts/maintenance/generate-openapi-spec.ts",
-    sourcePaths: ["scripts/lib/public-api-artifact-catalog.ts", "shared/lib/chains/health.ts"],
+    sourcePaths: [
+      "scripts/lib/public-api-artifact-catalog.ts",
+      "scripts/lib/public-api-response-schemas.ts",
+      "shared/contracts/api-meta.ts",
+      "shared/lib/chains/health.ts",
+    ],
   }),
   generatedArtifact({
     id: "world-map",

@@ -112,7 +112,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The exact fixed input, evidence clock, validated methodology policy and bundled execution reviews are authoritative. Policy reuse also checks the input clock; distinct input/policy objects cannot inherit cached admission, so no cross-request history grows or stale capture is reused.",
   },
   {
-    sourcePath: "worker/src/api/telegram-webhook.ts",
+    sourcePath: "worker/src/telegram/webhook/telegram-webhook.ts",
     stateNames: ["lastMissingBotTokenWarnAtMs"],
     owner: "Telegram webhook missing-token telemetry",
     kind: "counter",
@@ -172,7 +172,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Horizon's server-side rate limit is authoritative; this state only spaces requests within one isolate to stay under it.",
   },
   {
-    sourcePath: "worker/src/lib/telegram/quiet-hours.ts",
+    sourcePath: "worker/src/telegram/common/quiet-hours.ts",
     stateNames: ["quietHoursTzFallbackLastLoggedAt"],
     owner: "Telegram quiet-hours telemetry",
     kind: "cache",
@@ -268,7 +268,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The write-once D1 worker-version-first-seen cache row is authoritative; this flag only suppresses repeat attempts in one isolate.",
   },
   {
-    sourcePath: "worker/src/lib/telegram/log.ts",
+    sourcePath: "worker/src/telegram/common/log.ts",
     stateNames: [
       "invalidSecretWindowStartedAt",
       "invalidSecretWindowCount",
@@ -313,7 +313,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The cache-table row rpc:dwellir:credits:v1:<YYYY-MM> is authoritative; pending month buckets are per-isolate write buffers only.",
   },
   {
-    sourcePath: "worker/src/lib/telegram/mini-app-auth.ts",
+    sourcePath: "worker/src/telegram/mini-app/mini-app-auth.ts",
     stateNames: ["warnedNovelMiniAppChatTypes"],
     owner: "Telegram Mini App auth telemetry",
     kind: "cache",

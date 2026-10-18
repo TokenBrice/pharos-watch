@@ -4,12 +4,11 @@ Applies to `worker/`.
 
 ## Read First
 
-- Start with the routed owning sections and `docs/worker-infrastructure.md#module-initialization`.
-- Fetch/API work: `docs/worker-and-api-limits.md#connection-budget-operating-assumption` and `docs/worker-infrastructure.md#http-request-handling`.
-- Cron, scheduled dispatch, lease, timeout, or slot lifecycle work: `docs/worker-infrastructure.md#cron-scheduling` and `docs/process/cron-trigger-policy.md#target`; use the routed pipeline section of `docs/data-flow-map.md` when data flow changes.
+- Read the router-selected owning and runtime sections: module initialization and connection budgeting, plus HTTP handling for API work or scheduling/trigger policy for cron, dispatch, lease, timeout and slot lifecycle work.
+- Use the routed pipeline section of `docs/data-flow-map.md` when data flow changes.
 - Migration/deploy work: `docs/deployment-process.md` § “CI Deploy Sequence” and `worker/migrations/MANIFEST.md` § “Baseline (0000)” / § “Individual Migrations (current active files)”. Never reuse a migration sequence.
 - Safety Score: `docs/report-cards.md#v10-model`, `docs/process/safety-score-equivalence-harness.md` § “When to use it”, and `docs/process/safety-score-curation-expiry-sweep.md` § “1. Capture the current production input”.
-- DEX work: `docs/dex-liquidity.md` § “Discovery Cron”; Telegram/digest work: `docs/telegram-architecture.md` § “Seam overview” and `docs/digest-pipeline.md` § “Overview”.
+- DEX work: read the routed discovery contract; Telegram/digest work: `docs/telegram-architecture.md` § “Seam overview” and `docs/digest-pipeline.md` § “Overview”.
 
 ## Rules
 

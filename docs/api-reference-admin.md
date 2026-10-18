@@ -214,7 +214,7 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 
 Malformed numeric params return `400`; out-of-range numeric params are clamped to the documented bounds.
 
-**Response shape:** `ApiRequestAttributionResponse` (defined in `shared/types/index.ts`)
+**Response shape:** `ApiRequestAttributionResponse` (defined in `shared/contracts/request-source.ts`, exported as `@pharos/contracts/request-source`)
 
 `ApiRequestAttributionResponse` includes:
 
@@ -233,13 +233,13 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 
 Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
-**Response shape:** `ApiKeyListResponse` (defined in `shared/types/api-keys.ts`)
+**Response shape:** `ApiKeyListResponse` (defined in `shared/contracts/api-keys.ts`)
 
 ### `GET /api/api-keys/lifecycle-summary`
 
 Admin-only counts projection for the Triage workspace. Returns aggregate credential lifecycle counts and the 7-day rotate/deactivate anomaly count without exposing API-key row metadata, owner emails, masked tokens, audit actors, or audit detail payloads.
 
-**Response shape:** `CredentialLifecycleSummaryResponse` (defined in `shared/types/api-keys.ts`)
+**Response shape:** `CredentialLifecycleSummaryResponse` (defined in `shared/contracts/api-keys.ts`)
 
 ```json
 {
@@ -293,7 +293,7 @@ Admin-only API key creation route.
 | -------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
 | `ownerEmail`         | `string \| null`       | No       | Optional owner contact; null clears it. |
-| `tier`               | `ApiKeyTier \| null`   | No       | Vocabulary in `shared/types/api-keys.ts`; omission/null defaults to `"standard"`. |
+| `tier`               | `ApiKeyTier \| null`   | No       | Vocabulary in `shared/contracts/api-keys.ts`; omission/null defaults to `"standard"`. |
 | `rateLimitPerMinute` | `integer \| null`      | No       | Per-key threshold (`1`–`10000`); omission/null defaults to `120`. |
 | `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 

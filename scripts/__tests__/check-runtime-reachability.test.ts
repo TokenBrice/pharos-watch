@@ -217,6 +217,79 @@ describe("runtime reachability policies", () => {
     ]);
   });
 
+  it.each(["static", "dynamic"])("traverses a %s workspace export to a forbidden dependency", async (kind) => {
+    const root = makeRoot();
+    writeText(root, "package.json", JSON.stringify({ workspaces: ["shared/local", "worker"] }));
+    writeText(root, "shared/local/package.json", JSON.stringify({
+      name: "@fixture/local", exports: { "./public": "./public.ts" },
+    }));
+    writeText(root, "worker/package.json", JSON.stringify({ name: "stablecoin-api" }));
+    writeText(root, "functions/example.ts", kind === "static"
+      ? 'import { secret } from "@fixture/local/public";\nexport { secret };\n'
+      : 'export const load = () => import("@fixture/local/public");\n');
+    writeText(root, "shared/local/public.ts", 'import "ordinary-third-party";\nimport "stablecoin-api/private";\nexport { secret } from "../../worker/src/secret";\n');
+    writeText(root, "worker/src/secret.ts", "export const secret = true;\n");
+
+    const result = await checkRuntimeReachabilityPolicy(policy("pages-functions"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toContainEqual({
+      entrypoint: "functions/example.ts", forbidden: "worker/src/secret.ts", kind: "reachable",
+    });
+  });
+
+  it("rejects unexported workspace paths instead of externalizing them", async () => {
+    const root = makeRoot();
+    writeText(root, "package.json", JSON.stringify({ workspaces: ["shared/local"] }));
+    writeText(root, "shared/local/package.json", JSON.stringify({
+      name: "@fixture/local", exports: { "./public": "./public.ts" },
+    }));
+    writeText(root, "shared/local/public.ts", "export const value = true;\n");
+    writeText(root, "functions/example.ts", 'export { value } from "@fixture/local/private";\n');
+    await expect(checkRuntimeReachabilityPolicy(policy("pages-functions"), root))
+      .rejects.toThrow(/Unresolved workspace export/);
+  });
+
+  it("keeps erased workspace type imports out of the runtime graph", async () => {
+    const root = makeRoot();
+    writeText(root, "package.json", JSON.stringify({ workspaces: ["shared/local"] }));
+    writeText(root, "shared/local/package.json", JSON.stringify({
+      name: "@fixture/local", exports: { "./public": "./public.ts" },
+    }));
+    writeText(root, "functions/example.ts", 'import type { Payload } from "@fixture/local/public";\nexport const value: Payload = { ok: true };\n');
+    writeText(root, "shared/local/public.ts", 'export interface Payload { ok: boolean }\nexport { secret } from "../../worker/src/secret";\n');
+    writeText(root, "worker/src/secret.ts", "export const secret = true;\n");
+    const result = await checkRuntimeReachabilityPolicy(policy("pages-functions"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("preserves static-only policy exclusion of dynamic workspace imports", async () => {
+    const root = makeRoot();
+    writePublicInitializationFixture(root);
+    writeText(root, "package.json", JSON.stringify({ workspaces: ["shared/local"] }));
+    writeText(root, "shared/local/package.json", JSON.stringify({
+      name: "@fixture/local", exports: { "./public": "./public.ts" },
+    }));
+    const entrypoint = "worker/src/index.ts";
+    const forbidden = "worker/src/lib/safety-score-v9/accepted-projections.ts";
+    writeText(root, entrypoint, 'export const load = () => import("@fixture/local/public");\n');
+    writeText(root, "shared/local/public.ts", 'export { value } from "../../worker/src/lib/safety-score-v9/accepted-projections";\n');
+    writeText(root, forbidden, "export const value = true;\n");
+    const result = await checkRuntimeReachabilityPolicy(policy("public-safety-projections"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("preserves package-private imports as external leaves in runtime reachability", async () => {
+    const root = makeRoot();
+    writeText(root, "package.json", JSON.stringify({ imports: { "#private": "./worker/src/secret.ts" } }));
+    writeText(root, "functions/example.ts", 'export { secret } from "#private";\n');
+    writeText(root, "worker/src/secret.ts", "export const secret = true;\n");
+    const result = await checkRuntimeReachabilityPolicy(policy("pages-functions"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toEqual([]);
+  });
+
   it("rejects the full registry from memory-constrained cron lanes", async () => {
     const root = makeRoot();
     writeText(root, "worker/src/handlers/scheduled/hourly-blacklist.ts", 'import { coins } from "@shared/lib/stablecoins/registry";\nexport { coins };\n');

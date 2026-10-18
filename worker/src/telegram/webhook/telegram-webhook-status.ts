@@ -1,0 +1,293 @@
+import type { V9RatingStatus, V9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
+import {
+  TELEGRAM_CONTEXT_BUDGET_SEC,
+  assessTelegramContextClock,
+  projectTelegramSupplyContext,
+} from "../common/context-freshness";
+import { YieldRankingsResponseSchema } from "@shared/types/yield";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
+import { perCoinFlowCacheKey } from "../../lib/mint-burn-flows-service";
+import { getCache } from "../../lib/db-cache";
+import { handleYieldRankings } from "../../api/cache-handlers";
+import { safeJsonParse } from "../../lib/api-cache-read";
+import {
+  loadActiveSafetyScoreIndex,
+  type ActiveSafetyScoreIndex,
+} from "../../lib/safety-score-index";
+import { loadStressSignalCurrentRowForCoin } from "../../lib/stress-signals-current-rows";
+
+import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+
+/**
+ * Data loader for the `/status <ticker>` command.
+ *
+ * Sources:
+ * - published `stress_signals` generation for the latest DEWS band + score per coin
+ * - canonical Safety Score V9 publication and identity
+ * - `depeg_events`            only rows with `ended_at IS NULL` (an active event)
+ * - `price_cache`             latest cached price by `asset_id = stablecoin_id`
+ *
+ * Peg math is NOT recomputed here. If a user wants live deviation context on a
+ * stable coin, the formatted message links back to the Pharos detail page.
+ */
+
+export interface StatusForCoin {
+  stablecoinId: string;
+  priceUsd: number | null;
+  priceUpdatedAt: number | null;
+  /** `null` when the stablecoins publication, the asset, or its current peg buckets are unavailable. */
+  supplyUsd: number | null;
+  /** Supply observation clock (asset `supplyObservedAt` bounded by the publication time). */
+  supplyObservedAt: number | null;
+  /** True only when `supplyObservedAt` is within the stablecoins endpoint budget. */
+  supplyCurrent: boolean;
+  dews: { band: string; score: number; computedAt: number } | null;
+  safety: {
+    grade: string | null;
+    ratingStatus: V9RatingStatus;
+    partialEvidence: V9CompactPartialEvidence | null;
+    score: number | null;
+    model: "v9";
+    methodologyVersion: string;
+    publicationGenerationId: string;
+    publishedAt: number;
+    /** Compatibility alias for status consumers that label the publication age. */
+    recordedAt: number;
+  } | null;
+  safetyUnavailableReason?: string | null;
+  liquidity: {
+    score: number | null;
+    totalTvlUsd: number;
+    updatedAt: number;
+    /** True only when `updatedAt` is within the DEWS DEX-liquidity budget. */
+    current: boolean;
+  } | null;
+  liquidityUnavailableReason?: "invalid-coverage-evidence" | null;
+  yield: {
+    currentApy: number;
+    apy30d: number;
+    source: string;
+    pharosYieldScore: number | null;
+    pysUnavailableReason?: string | null;
+    updatedAt: number;
+  } | null;
+  flow: { netFlowUsd: number; updatedAt: number; stale: boolean; assessedAt: number; freshBudgetSec: number } | null;
+  depeg:
+    | { status: "stable" }
+    | {
+        status: "active";
+        direction: "above" | "below";
+        peakDeviationBps: number;
+        pegReference: number;
+        startedAt: number;
+      };
+}
+
+interface TelegramSafetyState {
+  unavailableReason: string | null;
+  source: Extract<ActiveSafetyScoreIndex, { kind: "v9" }> | null;
+}
+
+async function loadTelegramPysState(
+  db: D1Database,
+  stablecoinId: string,
+): Promise<{ score: number | null; unavailableReason: string | null }> {
+  try {
+    const response = await handleYieldRankings(db);
+    if (!response.ok) return { score: null, unavailableReason: "yield-rankings-unavailable" };
+    const parsed = YieldRankingsResponseSchema.safeParse(await response.json());
+    if (!parsed.success) return { score: null, unavailableReason: "yield-rankings-malformed" };
+    const ranking = parsed.data.rankings.find((row) => row.id === stablecoinId);
+    if (!ranking) return { score: null, unavailableReason: "yield-ranking-not-found" };
+    return {
+      score: ranking.pharosYieldScore,
+      unavailableReason: ranking.pharosYieldScore == null
+        ? ranking.pysNullReason ?? "pys-unavailable"
+        : null,
+    };
+  } catch {
+    return { score: null, unavailableReason: "yield-rankings-unavailable" };
+  }
+}
+
+async function loadTelegramSafetyState(db: D1Database): Promise<TelegramSafetyState> {
+  let activeSource;
+  try {
+    activeSource = await loadActiveSafetyScoreIndex(db);
+  } catch {
+    return {
+      unavailableReason: "active-source-unavailable",
+      source: null,
+    };
+  }
+
+  if (activeSource.kind !== "v9") {
+    return {
+      unavailableReason: activeSource.reason,
+      source: null,
+    };
+  }
+  return {
+    unavailableReason: null,
+    source: activeSource,
+  };
+}
+
+export async function loadStatusForCoin(db: D1Database, stablecoinId: string): Promise<StatusForCoin> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const isMintBurnTracked = getMintBurnConfigsForStablecoin(stablecoinId).length > 0;
+  const [dewsRow, safetyState, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] =
+    await Promise.all([
+      loadStressSignalCurrentRowForCoin(db, stablecoinId, nowSec, { staleAfterSec: 30 * 60 }),
+      loadTelegramSafetyState(db),
+      db
+        .prepare(
+          "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
+        )
+        .bind(stablecoinId)
+        .first<{
+          direction: "above" | "below";
+          peak_deviation_bps: number;
+          peg_reference: number;
+          started_at: number;
+        }>(),
+      db
+        .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
+        .bind(stablecoinId)
+        .first<{ price: number; updated_at: number }>(),
+      db
+        .prepare(
+          `SELECT liquidity_score, total_tvl_usd, updated_at, coverage_class, coverage_confidence
+         FROM dex_liquidity
+         WHERE stablecoin_id = ?
+           AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+        )
+        .bind(stablecoinId)
+        .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number;
+          coverage_class: string | null; coverage_confidence: number | null }>(),
+      db
+        .prepare(
+          `SELECT current_apy, apy_30d, yield_source, updated_at
+           FROM yield_data
+          WHERE stablecoin_id = ? AND is_best = 1
+            AND (publication_generation_id IS NULL OR publication_state = 'published')
+          ORDER BY apy_30d DESC, updated_at DESC
+          LIMIT 1`,
+        )
+        .bind(stablecoinId)
+        .first<{
+          current_apy: number;
+          apy_30d: number;
+          yield_source: string;
+          updated_at: number;
+        }>(),
+      loadStablecoinsCache(db, { mode: "strict" }).catch(() => null),
+      isMintBurnTracked ? getCache(db, perCoinFlowCacheKey(stablecoinId, 24)).catch(() => null) : Promise.resolve(null),
+    ]);
+
+  let flow: StatusForCoin["flow"] = null;
+  if (flowCache) {
+    const parsed = safeJsonParse<{ netFlowUsd?: unknown; updatedAt?: unknown } | null>(
+      flowCache.value,
+      null,
+      "telegram-status-flow",
+    );
+    if (parsed && typeof parsed.netFlowUsd === "number" && Number.isFinite(parsed.netFlowUsd)) {
+      const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : flowCache.updatedAt;
+      flow = {
+        netFlowUsd: parsed.netFlowUsd,
+        updatedAt,
+        stale: nowSec - updatedAt > TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC,
+        assessedAt: nowSec,
+        freshBudgetSec: TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC,
+      };
+    }
+  }
+
+  let supplyUsd: number | null = null;
+  let supplyObservedAt: number | null = null;
+  let supplyCurrent = false;
+  if (stablecoinsCache?.kind === "ok") {
+    const asset = stablecoinsCache.payload.peggedAssets.find((candidate) => candidate.id === stablecoinId);
+    const supplyContext = projectTelegramSupplyContext(asset, stablecoinsCache.updatedAt, nowSec);
+    supplyUsd = supplyContext.supplyUsd;
+    supplyObservedAt = supplyContext.observedAt;
+    supplyCurrent = supplyContext.current;
+  }
+
+  const safetyCard =
+    safetyState.source !== null
+      ? safetyState.source.snapshot.cards.find((card) => card.id === stablecoinId)
+      : null;
+
+  const pysState = yieldRow ? await loadTelegramPysState(db, stablecoinId) : null;
+  let liquidityUnavailableReason: StatusForCoin["liquidityUnavailableReason"] = null;
+  if (liquidityRow) {
+    try {
+      normalizeDexLiquidityEvidence({ ...liquidityRow, stablecoin_id: stablecoinId });
+    } catch {
+      liquidityUnavailableReason = "invalid-coverage-evidence";
+    }
+  }
+
+  return {
+    stablecoinId,
+    priceUsd: priceRow?.price ?? null,
+    priceUpdatedAt: priceRow?.updated_at ?? null,
+    supplyUsd,
+    supplyObservedAt,
+    supplyCurrent,
+    dews: dewsRow ? { band: dewsRow.band, score: dewsRow.score, computedAt: dewsRow.computed_at } : null,
+    safety:
+      safetyCard && safetyState.source !== null
+        ? {
+            grade: safetyCard.grade,
+            score: safetyCard.score,
+            ratingStatus: safetyCard.ratingStatus,
+            partialEvidence: safetyCard.partialEvidence,
+            model: safetyState.source.snapshot.safetyScoreIdentity.model,
+            methodologyVersion: safetyState.source.snapshot.safetyScoreIdentity.methodologyVersion,
+            publicationGenerationId:
+              safetyState.source.snapshot.safetyScoreIdentity.publicationGenerationId,
+            publishedAt: safetyState.source.snapshot.updatedAt,
+            recordedAt: safetyState.source.snapshot.updatedAt,
+          }
+        : null,
+    safetyUnavailableReason: safetyState.source === null ? safetyState.unavailableReason : null,
+    liquidityUnavailableReason,
+    liquidity: liquidityRow && !liquidityUnavailableReason
+      ? {
+          score: liquidityRow.liquidity_score,
+          totalTvlUsd: liquidityRow.total_tvl_usd,
+          updatedAt: liquidityRow.updated_at,
+          current: assessTelegramContextClock(
+            liquidityRow.updated_at,
+            nowSec,
+            TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity,
+          ).current,
+        }
+      : null,
+    yield: yieldRow
+      ? {
+          currentApy: yieldRow.current_apy,
+          apy30d: yieldRow.apy_30d,
+          source: yieldRow.yield_source,
+          pharosYieldScore: pysState?.score ?? null,
+          pysUnavailableReason: pysState?.unavailableReason ?? null,
+          updatedAt: yieldRow.updated_at,
+        }
+      : null,
+    flow,
+    depeg: depegRow
+      ? {
+          status: "active",
+          direction: depegRow.direction,
+          peakDeviationBps: depegRow.peak_deviation_bps,
+          pegReference: depegRow.peg_reference,
+          startedAt: depegRow.started_at,
+        }
+      : { status: "stable" },
+  };
+}

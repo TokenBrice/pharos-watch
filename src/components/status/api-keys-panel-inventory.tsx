@@ -1,6 +1,6 @@
 "use client";
 
-import type { ApiKeySummary, ApiKeyTrafficClass } from "@shared/types";
+import type { ApiKeySummary, ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";

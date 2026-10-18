@@ -61,7 +61,7 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | symptom | [Blacklist gap checks](./runbooks/blacklist-sync.md) |
 | symptom | [Blocked digest edition](./runbooks/blocked-digest-edition.md) |
 | symptom | [Scheduled delivery stall](./runbooks/cron-delivery-stall.md) |
-| symptom | [Cron slot abandonment](./runbooks/cron-slot-abandonment.md) |
+| symptom | [Cron slot abandonment](./runbooks/cron-slot-abandonment.md#first-checks) |
 | symptom | [D1 connectivity, capacity and telemetry pressure](./runbooks/db-connectivity.md) |
 | symptom | [Mint/burn integrity diagnosis](./runbooks/mint-burn-integrity.md) |
 | symptom | [Stablecoin cache or publication failure](./runbooks/stablecoins-cache.md) |
@@ -114,7 +114,8 @@ Historical Markdown timeline files are intentionally not maintained.
 - Give any doc at or above roughly 50 KB or 400 lines a top `Agent navigation` block (short heading list with grep hints) so agents section-read instead of loading it wholesale; the ~1,500-line rule for `docs/api-reference.md` stays the hard case.
 - Keep temporary audits, calibration captures, screenshots, and handoffs under ignored `/agents/` paths.
 - Put repeatable operating policy in `docs/process/` and incident remediation in `docs/runbooks/`.
-- Runbook navigation is generated from curated `runbook` labels and applicability (`symptom`, `procedure`, or `reference`) on existing `docs`/`background` references in [doc-ownership.json](./doc-ownership.json). Label each new incident page there and regenerate with `node --import tsx scripts/maintenance/generate-runbook-index.ts`; the generator rejects missing or stale coverage.
+- Runbook navigation is generated from curated `runbook` labels and applicability (`symptom`, `procedure`, or `reference`) on existing `docs`/`background`, selector `reading.local`/`contract`/`required`, and mapping `required` references in [doc-ownership.json](./doc-ownership.json). Metadata-preserving enumeration deduplicates repeated identical entries and rejects conflicting labels. Label each new incident page there and regenerate with `node --import tsx scripts/maintenance/generate-runbook-index.ts`; the generator rejects missing or stale coverage.
+- Reading selectors apply per input file, with default `docs` fallback; contract refs augment local refs and required refs bypass the six-ref cap. [`agent:route`](./process/agent-start-here.md#2-route-a-task) accepts only `--context=auto|contract`; mode and selectors do not change checks. Enforced context totals union root/scoped/primary reading per file, reporting retained-newline UTF-8 bytes, lines and `ceil(chars/4)` approximate tokens; background, source/tests and skills are excluded. Over-budget routes fail without dropping required refs; use bounded owner sections, reviewed ceiling changes or smaller route groups, while keeping the full affected-file set in check planning.
 - Add a new document only when no existing owner can hold the durable material cleanly.
 
 ## Validation

@@ -1,6 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it } from "vitest";
-import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../lib/telegram/pending-capacity";
+import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../telegram/outbox/pending-capacity";
 import { handleStatusCronDetailRoute } from "../status-cron-detail";
 import {
   handleStatus,

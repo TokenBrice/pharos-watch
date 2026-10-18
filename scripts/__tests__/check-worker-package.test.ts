@@ -79,7 +79,17 @@ describe("check-worker-package", () => {
     "../../src/api/og.tsx",
     "./.././src/api/og.tsx",
     `${"./../".repeat(10_000)}src/api/og.tsx`,
-    "../../worker/src/api/telegram-webhook.ts",
+    "../../worker/src/telegram/webhook/telegram-webhook.ts",
+    "../../worker/src/telegram/mini-app/telegram-mini-app.ts",
+    "../../worker/src/telegram/adoption/telegram-adoption.ts",
+    "../../worker/src/telegram/admin/admin-telegram-broadcast.ts",
+    "../../worker/src/telegram/webhook/telegram-pulse.ts",
+    "../../src/telegram/webhook/telegram-webhook.ts",
+    "../../worker/src/telegram/commands/start.ts",
+    "/repo/worker/src/telegram/mini-app/telegram-mini-app.ts",
+    "../../worker/src/telegram/callbacks/confirm.ts",
+    "/repo/worker/src/telegram/webhook/telegram-ingress-abuse.ts",
+    "..\\..\\worker\\src\\telegram\\webhook\\telegram-webhook.ts",
     "/repo/worker/src/api/og.tsx",
     "../../worker/src/handlers/http/request-dispatch.ts",
     "../../worker/src/routes/public-routes.ts",
@@ -115,7 +125,10 @@ describe("check-worker-package", () => {
     "../../src/lib/api-methodology.ts",
     "../../node_modules/zod/v4/core/api.js",
     "../../node_modules/example/src/api/helpers.js",
-  ])("permits shared API primitives in the heavy graph (%s)", (source) => {
+    "../../worker/src/telegram/delivery/telegram.ts",
+    "../../worker/src/telegram/outbox/digest-outbox.ts",
+    "../../worker/src/cron/telegram/delivery/telegram-digest-transport.ts",
+  ])("permits shared primitives and Telegram transport/outbox in the heavy graph (%s)", (source) => {
     writeFileSync(join(root, "worker.js.map"), JSON.stringify({ sources: [source] }));
     expect(checkHeavyReachability(root)).toBe(true);
   });

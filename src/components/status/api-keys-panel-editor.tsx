@@ -1,8 +1,8 @@
 "use client";
 
 import { API_KEY_MAX_RATE_LIMIT_PER_MINUTE, API_KEY_MIN_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import { API_KEY_TIER_VALUES } from "@shared/types/api-keys";
-import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier } from "@shared/types";
+import { API_KEY_TIER_VALUES } from "@pharos/contracts/api-keys";
+import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier } from "@pharos/contracts/api-keys";
 import { RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CreateKeyState, EditableKeyState } from "@/lib/api-key-admin-view-model";

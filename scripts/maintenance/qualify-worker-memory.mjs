@@ -29,6 +29,7 @@ export function assertQualificationHeavyGraph(inputs) {
     const path = input.replaceAll("\\", "/");
     if (
       /(?:^|\/)worker\/src\/(?:api\/|routes\/|handlers\/http\/|router\.[jt]s)/.test(path) ||
+      /(?:^|\/)worker\/src\/telegram\/(?:webhook|commands|callbacks|mini-app|adoption|admin)\//.test(path) ||
       /(?:^|\/)(?:@resvg|satori|yoga-wasm-web|fonts?)(?:\/|$)/.test(path) ||
       /\.(?:wasm|ttf|otf|woff2?)$/i.test(path)
     ) throw new Error(`invalid-heavy-http-graph:${input}`);

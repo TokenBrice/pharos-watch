@@ -797,13 +797,12 @@ function hasExportModifier(node: ts.Node): boolean {
 }
 
 function resolveModule(fromFile: string, specifier: string): string | null {
-  let candidate: string | null = null;
-
-  if (specifier.startsWith("#")) {
-    candidate = resolveLocalPackageImport(specifier, ROOT);
-  } else if (specifier.startsWith(".")) {
+  // Resolve declared workspace exports before treating a bare import as an
+  // external/alias leaf, so symbol usage reaches the actual source module.
+  let candidate = resolveLocalPackageImport(specifier, ROOT);
+  if (!candidate && specifier.startsWith(".")) {
     candidate = resolve(dirname(fromFile), specifier);
-  } else {
+  } else if (!candidate && !specifier.startsWith("#")) {
     candidate = resolveAliasSpecifier(specifier);
   }
 

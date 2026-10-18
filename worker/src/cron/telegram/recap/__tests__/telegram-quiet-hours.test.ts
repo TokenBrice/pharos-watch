@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DISAMBIGUATION_TTL_SEC } from "../../../../api/telegram-webhook-shared";
-import { cleanExpiredDisambiguations } from "../../../../api/telegram-store/disambiguation";
+import { DISAMBIGUATION_TTL_SEC } from "../../../../telegram/webhook/telegram-webhook-shared";
+import { cleanExpiredDisambiguations } from "../../../../telegram/store/disambiguation";
 import {
   isQuietHoursActive,
   isValidIanaTimezone,
   resetQuietHoursFallbackTelemetryForTests,
-} from "../../../../lib/telegram/quiet-hours";
+} from "../../../../telegram/common/quiet-hours";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const hour = (hourUtc: number) => hourUtc * 3600;

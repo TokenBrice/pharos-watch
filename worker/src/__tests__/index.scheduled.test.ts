@@ -193,8 +193,8 @@ vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }))
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../lib/dews/service", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
 vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
-vi.mock("../lib/telegram/recap-store", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/telegram/recap-store")>();
+vi.mock("../telegram/recap/recap-store", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../telegram/recap/recap-store")>();
   return {
     ...original,
     cancelQueuedTelegramRecapsForRollout: cronMocks.cancelQueuedTelegramRecapsForRollout,
@@ -204,10 +204,10 @@ vi.mock("../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchT
 vi.mock("../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
 }));
-vi.mock("../api/telegram-store/disambiguation", () => ({
+vi.mock("../telegram/store/disambiguation", () => ({
   cleanExpiredDisambiguations: cronMocks.cleanExpiredDisambiguations,
 }));
-vi.mock("../api/telegram-pulse", () => ({
+vi.mock("../telegram/webhook/telegram-pulse", () => ({
   publishTelegramPulseSnapshotWithOutcome: cronMocks.publishTelegramPulseSnapshotWithOutcome,
 }));
 vi.mock("../handlers/scheduled/preflight-skip", () => ({
@@ -387,8 +387,8 @@ vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/telegram/webhook-registration", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/telegram/webhook-registration")>();
+vi.mock("../telegram/webhook/webhook-registration", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../telegram/webhook/webhook-registration")>();
   return {
     ...original,
     reconcileTelegramCommandRegistration: cronMocks.reconcileTelegramCommandRegistration,

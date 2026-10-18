@@ -1,5 +1,7 @@
 # OG Images
 
+> **Agent navigation** — Start with [Route cards](#1-route-cards) and [CI guardrails](#ci-guardrails). Grep the numbered card-family heading for editorial · mechanism explainer · case-study · Cemetery · selector · blog · dynamic Worker cards; use each family's renewal instructions rather than reading wholesale.
+
 Pharos serves eight classes of Open Graph / Twitter preview images. They have different generation pipelines and different renewal cadences.
 
 ## 1. Route cards

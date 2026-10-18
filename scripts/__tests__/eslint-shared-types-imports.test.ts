@@ -21,6 +21,8 @@ tester.run("pharos/shared-types-imports", rule, {
     { code: 'import type { Value } from "../lib/value";', filename: resolve("shared/types/value.test.ts") },
     { code: 'import type { Value } from "./value";', filename },
     { code: 'import type { Value } from "../../lib-other/value";', filename },
+    { code: 'import { z } from "zod";', filename: resolve("shared/contracts/api-meta.ts") },
+    { code: 'import { Value } from "./api-keys";', filename: resolve("shared/contracts/request-source.ts") },
   ],
   invalid: [
     ...[
@@ -35,5 +37,10 @@ tester.run("pharos/shared-types-imports", rule, {
       'export type { Value } from "../lib/value";',
       'export * from "../lib/value";',
     ].map((code) => ({ code, filename, errors: [{ messageId: "dependency" }] })),
+    ...[
+      'import type { Value } from "../lib/value";',
+      'export { Value } from "@shared/lib/value";',
+      'export * from "../lib/value";',
+    ].map((code) => ({ code, filename: resolve("shared/contracts/api-meta.ts"), errors: [{ messageId: "dependency" }] })),
   ],
 });
