@@ -112,7 +112,7 @@ export async function runSafetyScoreCaptureArchiveCli(argv: readonly string[], d
       while (true) {
         // SAFETY: from/to and cursor clocks are validated integer seconds; cursor strings use sqlString.
         // Table/column names, accepted outcome, ordering and page limit are fixed, not user identifiers.
-        const page = select(`SELECT a.attempt_id, a.generation_id, a.published_at,
+        const page = select(`SELECT a.attempt_id, a.generation_id, a.attempted_at, a.published_at,
           a.methodology_version, a.policy_digest, a.evaluation_build_digest
           FROM safety_score_publication_attempts a
           WHERE a.outcome = 'accepted' AND a.published_at >= ${from} AND a.published_at < ${to}

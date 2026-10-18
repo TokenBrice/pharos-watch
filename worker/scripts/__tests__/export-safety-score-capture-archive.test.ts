@@ -160,7 +160,7 @@ describe("Safety Score capture archive export", () => {
     expect(queryRaw.mock.calls).toHaveLength(4);
     expect(queryRaw.mock.calls.every(([sql]) => sql.startsWith("SELECT "))).toBe(true);
     expect(report.recentCronEvidence).toMatchObject({
-      job: PUBLICATION_PRODUCER_JOB, clock: "run-started-at", window: { fromSec: from, toSec: to }, coverage: "incomplete-window",
+      job: PUBLICATION_PRODUCER_JOB, clock: "run-started-at", window: { fromSec: from, toSec: to }, coverage: "complete-window",
       retention: { sec: CRON_RUNS_RETENTION_SEC, earliestRetainedSec: from + 3_600 - CRON_RUNS_RETENTION_SEC, observedAtSec: from + 3_600 },
       rows: { productive: 0, validGeneration: 0, archiveIndexed: 0, missingGeneration: 0, malformedGeneration: 0, gapGenerations: 0 },
     });
