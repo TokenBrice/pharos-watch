@@ -875,6 +875,53 @@ describe("live-reserves-store", () => {
     }
   });
 
+  it("persists full-cohort clocks including the consumer tail and computes p95 once per source slot", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      for (const slotStartedAt of [1000, 2000, 9600]) {
+        await beginLiveReserveCheckpoint(db, { slotStartedAt, invocationId: `producer-${slotStartedAt}`, nowSec: slotStartedAt });
+      }
+      sqlite.prepare(`UPDATE worker_scheduled_checkpoints
+        SET state = 'completed', next_item_key = NULL, items_done = items_total,
+            completed_at = slot_started_at + CASE WHEN slot_started_at = 1000 THEN 1800 ELSE 1801 END
+        WHERE slot_started_at < 9600`).run();
+      sqlite.prepare(`UPDATE worker_scheduled_checkpoints
+        SET state = 'ready', next_item_key = NULL, items_done = items_total,
+            child_dispositions_json = json_set(child_dispositions_json, '$."sync-live-reserves"', 'completed')
+        WHERE slot_started_at = 9600`).run();
+      expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+        cohort: { slotStartedAt: 9600, completedAt: null, ageSec: 400,
+          continuationPending: true, completedCohorts: 2, completionP95Sec: 1801 },
+      });
+      sqlite.prepare(`UPDATE worker_scheduled_checkpoints
+        SET state = 'completed', completed_at = 10100 WHERE slot_started_at = 9600`).run();
+      expect(await computeReserveCompositionOverview(db, 10_200, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+        cohort: { slotStartedAt: 9600, completedAt: 10100, ageSec: 500,
+          continuationPending: false, completedCohorts: 3, completionP95Sec: 1801 },
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps intentional ready and actively recovering suffixes out of budget truncation", async () => {
+    const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint({
+      state: "ready", producer_disposition: "continuation_pending", producer_state: "finished", producer_finished_at: 9900,
+    }) }]);
+    expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      inProgressCoins: 0, deferredCoins: 0, runBudgetTruncated: false,
+      cohort: { continuationPending: true, ageSec: 400 },
+    });
+    const recovering = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint({
+      state: "recovering", producer_disposition: "running", recovery_lease_until: 10500,
+      producer_state: "finished", producer_finished_at: 9900, slot_started_at: 8000,
+    }) }]);
+    expect(await computeReserveCompositionOverview(recovering, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      inProgressCoins: 9, deferredCoins: 0, runBudgetTruncated: false,
+      cohort: { continuationPending: true, ageSec: 2000 },
+    });
+  });
+
   it("reports a fresh exact-slot running checkpoint as in-progress without inventing deferred coins", async () => {
     const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint() }]);
     const overview = await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"));

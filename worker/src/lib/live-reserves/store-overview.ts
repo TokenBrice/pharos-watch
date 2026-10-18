@@ -1,5 +1,7 @@
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
+import { percentileNearestRank } from "@shared/lib/stats";
 import { WORKER_TRACKED_META_BY_ID, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./store-shared";
 import {
@@ -31,6 +33,9 @@ interface LiveReserveResumePointer {
   items_done: number;
   items_total: number;
   updated_at: number;
+  completed_at: number | null;
+  recovery_lease_until: number | null;
+  producer_disposition: string | null;
   producer_state: string | null;
   producer_finished_at: number | null;
 }
@@ -39,6 +44,8 @@ async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveR
   return db
     .prepare(
       `SELECT c.state, c.slot_started_at, c.next_item_key, c.items_done, c.items_total, c.updated_at,
+              c.completed_at, c.recovery_lease_until,
+              json_extract(c.child_dispositions_json, '$."sync-live-reserves"') AS producer_disposition,
               s.state AS producer_state, s.finished_at AS producer_finished_at
          FROM worker_scheduled_checkpoints c
          LEFT JOIN cron_slot_executions s
@@ -49,6 +56,32 @@ async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveR
         LIMIT 1`,
     )
     .first<LiveReserveResumePointer>();
+}
+
+async function loadReserveCohortCompletions(db: D1Database, now: number) {
+  // Group by root slot, not attempts; continuations never inflate the sample.
+  // Seven days contain at most 43 four-hour opportunities including endpoints.
+  const rows = await db.prepare(
+    `SELECT slot_started_at, MIN(completed_at) AS completed_at
+       FROM worker_scheduled_checkpoints
+      WHERE schedule_key = 'fourHourlyReserveSync' AND job = 'sync-live-reserves'
+        AND state = 'completed' AND completed_at IS NOT NULL
+        AND next_item_key IS NULL AND items_done = items_total
+        AND slot_started_at >= ? AND slot_started_at <= ?
+      GROUP BY slot_started_at ORDER BY slot_started_at DESC LIMIT 64`,
+  ).bind(now - STATUS_RESERVE_COHORT_SLO.windowSec, now)
+    .all<{ slot_started_at: number; completed_at: number }>();
+  const durations = (rows.results ?? []).map((row) => {
+    if (!Number.isFinite(row.slot_started_at) || !Number.isFinite(row.completed_at)
+      || row.completed_at < row.slot_started_at || row.completed_at > now) {
+      throw new Error("reserve-cohort-completion-clock-invalid");
+    }
+    return row.completed_at - row.slot_started_at;
+  });
+  return {
+    completedCohorts: durations.length,
+    completionP95Sec: percentileNearestRank(durations, 95),
+  };
 }
 
 function isPersistentlyStaleIndependentStatus(syncState: ReserveSyncStateRecord): boolean {
@@ -248,10 +281,11 @@ export async function computeReserveCompositionOverview(
     return emptyReserveCompositionOverview();
   }
 
-  const [syncById, compositionById, checkpoint, adapterReliability] = await Promise.all([
+  const [syncById, compositionById, checkpoint, cohortCompletions, adapterReliability] = await Promise.all([
     loadReserveSyncStateMap(db),
     loadReserveCompositionRowMap(db),
     loadLatestLiveReserveResumePointer(db),
+    loadReserveCohortCompletions(db, now),
     loadReserveSyncReliabilityRollup(db, now).catch((error) => {
       logWorkerEvent({
         scope: "status",
@@ -271,25 +305,36 @@ export async function computeReserveCompositionOverview(
     && checkpoint.next_item_key != null
     && checkpoint.items_done < checkpoint.items_total;
   const pointerInProgress = pointerPending
-    && checkpoint!.state === "running"
-    && checkpoint!.producer_state === "running"
-    && checkpoint!.producer_finished_at == null
+    && ((checkpoint!.state === "running"
+      && checkpoint!.producer_state === "running"
+      && checkpoint!.producer_finished_at == null)
+      || (checkpoint!.state === "recovering" && checkpoint!.producer_disposition === "running"
+        && (checkpoint!.recovery_lease_until ?? 0) >= now))
     && Number.isFinite(checkpoint!.updated_at)
     && Number.isFinite(checkpoint!.slot_started_at)
     && checkpoint!.slot_started_at > 0
     && checkpoint!.slot_started_at <= checkpoint!.updated_at
     && checkpoint!.updated_at <= now
     && now - checkpoint!.updated_at <= checkpointLiveness.slotSilenceSec
-    && now - checkpoint!.slot_started_at < checkpointLiveness.hardDeadSec;
+    && (checkpoint!.state === "recovering" || now - checkpoint!.slot_started_at < checkpointLiveness.hardDeadSec);
   const pointerRemainingCount = pointerPending
     ? Math.max(0, checkpoint!.items_total - checkpoint!.items_done)
     : 0;
   const pointerDeferred = pointerPending && !pointerInProgress;
-  const pointerDeferredCount = pointerDeferred ? pointerRemainingCount : 0;
+  const pointerDeferredCount = pointerDeferred && checkpoint!.producer_disposition !== "continuation_pending" ? pointerRemainingCount : 0;
 
 
   const counts = countCoinsByStatus(configuredCoins, syncById, compositionById, now, freshnessSec);
-  const hasDeferredCheckpoint = pointerDeferred || (pointerPending && counts.deferredCoins > 0);
+  const hasDeferredCheckpoint = (pointerDeferred && checkpoint!.producer_disposition !== "continuation_pending")
+    || (pointerPending && counts.deferredCoins > 0);
+  const completedAt = checkpoint?.state === "completed" ? checkpoint.completed_at ?? null : null;
+  const cohort = checkpoint ? {
+    slotStartedAt: checkpoint.slot_started_at,
+    completedAt,
+    ageSec: (completedAt ?? now) - checkpoint.slot_started_at,
+    continuationPending: checkpoint.state !== "completed" && checkpoint.state !== "failed",
+    ...cohortCompletions,
+  } : null;
   const reviews = resolveReserveFeedReviews(now);
   const matched = await Promise.all(configuredCoins.map((coin) => {
     const state = syncById.get(coin.id) ?? null;
@@ -322,6 +367,7 @@ export async function computeReserveCompositionOverview(
     writeTimeoutUncertain: counts.writeTimeoutUncertain,
     deferredCoins: Math.max(counts.deferredCoins, pointerDeferredCount),
     inProgressCoins: pointerInProgress ? pointerRemainingCount : 0,
+    cohort,
     runBudgetTruncated: hasDeferredCheckpoint,
     deferredAt: hasDeferredCheckpoint ? checkpoint!.updated_at : null,
     nextCursorStablecoinId: pointerPending ? checkpoint!.next_item_key : null,

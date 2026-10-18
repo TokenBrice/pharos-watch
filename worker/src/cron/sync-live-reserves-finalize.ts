@@ -214,8 +214,13 @@ async function recordFinalizationWarning(
 }
 
 export function resolveReserveSyncRunStatus(
-  args: Pick<FinalizeReserveSyncRunArgs, "counts" | "total">,
+  args: Pick<FinalizeReserveSyncRunArgs, "counts" | "total" | "checkpointOwned">,
 ): CronResult["status"] {
+  if (args.checkpointOwned && args.counts.failed === 0 && args.counts.circuitSkipped === 0) {
+    // A bounded, checkpointed slice positively completed its admitted work.
+    // Unadmitted suffix work is normal continuation, not an adapter failure.
+    return "ok";
+  }
   if (args.counts.synced === 0 && (args.counts.failed > 0 || args.counts.skipped > 0)) {
     // A run that synced nothing because the circuit breaker legitimately held
     // every candidate (no genuine failures, no budget-deferred tail) is healthy
@@ -228,8 +233,9 @@ export function resolveReserveSyncRunStatus(
     }
     return "error";
   }
-  if (args.counts.deferredCoins > 0) return "degraded";
-  return (args.counts.failed + args.counts.skipped) > Math.ceil(args.total * 0.1) ? "degraded" : "ok";
+  if (!args.checkpointOwned && args.counts.deferredCoins > 0) return "degraded";
+  const attempted = args.counts.attemptedCoins;
+  return (args.counts.failed + args.counts.circuitSkipped) > Math.ceil(attempted * 0.1) ? "degraded" : "ok";
 }
 
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {
@@ -329,7 +335,8 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   finalizationBudget.remainingMs = Math.max(0, finalizationBudget.deadlineMs - Date.now());
   const reasons = [
     ...(args.counts.failed > 0 ? ["reserve-adapter-or-persistence-failed"] : []),
-    ...(args.counts.deferredCoins > 0 || args.counts.deferredSkipped > 0 ? ["reserve-run-budget-deferred"] : []),
+    ...(args.counts.deferredCoins > 0 || args.counts.deferredSkipped > 0
+      ? [args.checkpointOwned ? "reserve-continuation-pending" : "reserve-run-budget-deferred"] : []),
     ...(args.counts.circuitSkipped > 0 ? ["reserve-circuit-open"] : []),
   ];
 
@@ -343,9 +350,9 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         ? {
             reason: args.counts.failed > 0
               ? "reserve-adapter-or-persistence-failed"
-              : args.counts.deferredCoins > 0 || args.counts.deferredSkipped > 0
-                ? "reserve-run-budget-deferred"
-                : "reserve-circuit-open",
+              : args.counts.circuitSkipped > 0
+                ? "reserve-circuit-open"
+                : args.checkpointOwned ? "reserve-continuation-pending" : "reserve-run-budget-deferred",
           }
         : {}),
       reasons,
@@ -355,7 +362,8 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       skipped: args.counts.skipped,
       total: args.total,
       warningCount: args.warningMessages.length,
-      runBudgetTruncated: args.counts.deferredCoins > 0,
+      runBudgetTruncated: args.counts.deferredCoins > 0 && !args.checkpointOwned,
+      continuationPending: args.counts.deferredCoins > 0 && args.checkpointOwned,
       deferredCoins: args.counts.deferredCoins,
       nextCursorStablecoinId: args.deferredTail.nextCursorStablecoinId,
       deferredAt: args.deferredTail.cursorRecordedAt,
@@ -366,6 +374,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       cursorTailFailedAt: args.deferredTail.cursorTailFailedAt,
       runBudgetTruncationCount: args.deferredTail.runBudgetTruncationCount,
       budgetMs: args.budgetConfig.runBudgetMs,
+      maxCoinsPerSlice: args.budgetConfig.maxCoinsPerSlice,
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
       finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
@@ -399,7 +408,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       artifactCleanupSkipped: finalizationBudget.artifactCleanupSkipped,
       historyPruneSkipped: finalizationBudget.historyPruneSkipped,
       ...(args.checkpointOwned
-        ? { childDisposition: args.counts.deferredCoins > 0 ? "not_started" : "completed" }
+        ? { childDisposition: args.counts.deferredCoins > 0 ? "continuation_pending" : "completed" }
         : {}),
       artifactCleanup,
       artifactCleanupWarningCount: artifactCleanupWarnings.length,

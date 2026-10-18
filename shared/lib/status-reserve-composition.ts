@@ -20,6 +20,7 @@ export function unavailableReserveComposition(
     writeTimeoutUncertain: null,
     deferredCoins: null,
     inProgressCoins: null,
+    cohort: null,
     runBudgetTruncated: null,
     deferredAt: null,
     nextCursorStablecoinId: null,

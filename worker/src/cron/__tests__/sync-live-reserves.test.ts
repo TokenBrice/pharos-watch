@@ -269,7 +269,7 @@ describe("syncLiveReserves", () => {
     });
     try {
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      await syncLiveReserves(mockD1(), new AbortController().signal, {});
+      await syncLiveReserves(mockD1(), new AbortController().signal, {}, undefined, { runBudgetMs: 720_000 });
       expect(fetch).toHaveBeenCalledWith(
         expect.anything(), expect.anything(), expect.anything(),
         expect.objectContaining({ nowSec: Math.floor(startedMs / 1_000) + 180 }),
@@ -1138,7 +1138,7 @@ describe("syncLiveReserves", () => {
     await vi.advanceTimersByTimeAsync(25_001);
     const result = await pending;
     expect(adapterFetch.mock.calls.filter(([coin]) => coin.id === target.id)).toHaveLength(2);
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ failed: 1, runBudgetTruncated: true });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ failed: 1, runBudgetTruncated: false, continuationPending: true });
     const key = `live-reserves:${target.liveReservesConfig!.breakerScope ?? target.liveReservesConfig!.adapter}`;
     expect(recordOutcomeSafeMock).not.toHaveBeenCalledWith(expect.anything(), key, false);
     expect(db.getHistory().some((entry) =>
