@@ -1,8 +1,10 @@
 /**
  * Depeg Early Warning Score (DEWS) — pure, stateless compute function.
  *
- * Estimates per-coin depeg probability using 8 sub-signals (0-100 each),
- * combined via weighted average with redistribution for missing signals.
+ * Computes a per-coin depeg stress score (0-100) from 8 sub-signals (0-100 each),
+ * combined by a weighted average over available signals with proportional weight
+ * redistribution for missing ones, then PSI and contagion amplifiers clamped to
+ * 0-100. It is a stress score, not a calibrated probability.
  *
  * Pattern: same as stability-index.ts — no DB access, no side effects.
  *

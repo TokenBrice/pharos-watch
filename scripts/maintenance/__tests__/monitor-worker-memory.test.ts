@@ -107,6 +107,51 @@ describe("sampled Worker memory correlation", () => {
     expect(report.exceededMemory.groups[0]?.lane).toBeNull();
     expect(report.verdict).toMatchObject({ status: "observed-kills", heavyKillObserved: false, collectionIncomplete: false, exitCode: 0, knownPublicRequests: 1 });
   });
+  it("retains Adaptive coloCode evidence without relaxing singleton attribution", async () => {
+    const report = await capture([adaptive({ dimensions: { ...fixtures.adaptive[0]!.dimensions, coloCode: "MEL" } })]);
+    const kill = report.exceededMemory.groups[0]!;
+    expect(kill.adaptive.dimensions.coloCode).toBe("MEL");
+    expect(kill.correlation).toBe("unique-singleton");
+    expect(report.queries.find((query) => query.kind === "kills")!.query).toContain("coloCode");
+    const dir = await mkdtemp(join(tmpdir(), "worker-memory-colo-"));
+    try {
+      await writeWorkerMemoryReport(report, dir);
+      const retained = (await readFile(join(dir, "exceeded-memory.ndjson"), "utf8")).trim().split("\n").map((line) => JSON.parse(line));
+      expect(retained[0].adaptive.dimensions.coloCode).toBe("MEL");
+      expect(await readFile(join(dir, "report.md"), "utf8")).toContain("MEL");
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+  it("keeps colo codes out of role-day quantiles and never pools lane/day memory across a colo change", async () => {
+    const base = {
+      dimensions: { ...fixtures.adaptive[0]!.dimensions, status: "success" },
+      quantiles: { ...fixtures.adaptive[0]!.quantiles, memoryUsageBytesP999: null },
+      sum: { requests: 1, subrequests: 0 },
+      avg: { sampleInterval: 1 },
+    };
+    const mel = { ...base, dimensions: { ...base.dimensions, datetime: "2026-10-14T01:16:39Z", coloCode: "MEL" }, quantiles: { ...base.quantiles, memoryUsageBytesP50: 10 * 1048576 } };
+    const fra = { ...base, dimensions: { ...base.dimensions, datetime: "2026-10-14T01:16:40Z", coloCode: "FRA" }, quantiles: { ...base.quantiles, memoryUsageBytesP50: 20 * 1048576 } };
+    const version = base.dimensions.scriptVersion;
+    const report = await collectWorkerMemory({ ...options(), fetchImpl: injectedFetch((query, variables) => {
+      const isScheduled = query.includes("workersInvocationsScheduled");
+      const broadAdaptive = !isScheduled && query.includes("datetime scriptVersion") && !query.includes('status:"exceededMemory"');
+      const rows = isScheduled
+        ? [{ ...scheduled }, { ...scheduled, datetime: "2026-10-14T01:16:40Z" }]
+        : broadAdaptive ? [mel, fra] : [];
+      return response(isScheduled ? "workersInvocationsScheduled" : "workersInvocationsAdaptive", variables.s === "stablecoin-heavy" ? rows : []);
+    }) });
+    expect(report.queries.find((query) => query.kind === "role-day")!.query).not.toContain("coloCode");
+    const lanes = report.laneDays.filter((row) => row.rollup === "logical" && row.scriptVersion === version);
+    expect(lanes.map((row) => row.coloCode).sort()).toEqual(["FRA", "MEL"]);
+    expect(lanes.map((row) => row.sampledRowMemoryP50DistributionBytes?.p50 ?? null).sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual([10 * 1048576, 20 * 1048576]);
+    expect(lanes.every((row) => row.memoryMeasuredRows === 1)).toBe(true);
+  });
+  it("leaves colo unknown instead of inferring it for rows without the dimension", async () => {
+    const report = await capture([adaptive()], [scheduled], true);
+    expect(report.laneDays.length).toBeGreaterThan(0);
+    expect(report.laneDays.every((row) => row.coloCode === null)).toBe(true);
+    expect(report.samples.every((row) => row.adaptive.dimensions.coloCode === undefined)).toBe(true);
+    expect(report.exceededMemory.groups[0]!.adaptive.dimensions.coloCode).toBeUndefined();
+  });
 });
 
 describe("bounded Analytics collection and unavailable evidence", () => {

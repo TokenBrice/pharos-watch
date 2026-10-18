@@ -44,8 +44,12 @@ export async function syncStablecoins(
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
   const binanceSession = createBinanceFetchSession();
-  // Shared across native-peg hardening, depeg detection, and pending-depeg
-  // confirmation so their overlapping fiat-peg batches cost one fetch, not three.
+  // Per-run memo shared by native-peg hardening, depeg detection, and
+  // pending-depeg confirmation. Their geckoId sets overlap but are rarely
+  // identical, so a later caller reuses a cached batch only when it already
+  // covers every id that caller needs — coverage-based reuse, not general
+  // partial-overlap deduplication. Failed/non-2xx/malformed batches are evicted
+  // so they never suppress a later caller's own attempt.
   const nativePegSession = createNativePegQuoteSession();
   const intake = await runStablecoinsIntakeStage({
     db,
