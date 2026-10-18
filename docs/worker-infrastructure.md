@@ -176,6 +176,26 @@ Cron expressions are source-owned by the two Wrangler configs. Logical schedule 
 
 Regenerate only the schedule inventory with `node --import tsx scripts/maintenance/generate-cron-doc-view.ts`; use `--check` for read-only freshness or select `cron-doc-view` through `check:generated-artifacts`. The table validates source/Wrangler agreement before writing. CPU-class rationale, fencing and incident interpretation remain authored contracts, not inferred from the table.
 
+### Event-entry lifecycle and admission
+
+`runScheduledSlotWithFence()` arms the inherited absolute deadline before the first D1 await, not after claim or child-protocol stamping. Same-key presweeps no longer precede admission; same-slot stale takeover remains CAS-fenced. Mandatory await boundaries recheck expiry before admitting the next stage. Replay keeps the executing event's deadline and its separate producer/source identity.
+
+| Await boundary | Contract |
+| --- | --- |
+| Version first-seen stamp | Best-effort telemetry off the admission path, observed within the same deadline. Missing telemetry cannot prevent claim. |
+| Slot insert/read, live-child admission, takeover/reconciliation | Mandatory fencing; expired results cannot start a runner or issue the next admission mutation. |
+| Child protocol stamp, memory-lane wait, runner import | Mandatory admission; recheck before child work. Protocol stamping is required evidence, not optional version telemetry. |
+| Child start/lease-owner marker, lease acquire/renew, terminal arbitration | Mandatory ownership/accounting inside the executing slot deadline. |
+| Detailed progress and completion reports | Best-effort telemetry behind the inherited deadline; progress stalls cannot extend the allowance. Dwellir credit flushes run off the child-result path. |
+| Heartbeat drain, slot terminal write, failure cleanup | Mandatory settlement under the original deadline. Late writes retain observed continuations and ownership fencing; takeover wins over the old invocation. |
+
+Expiry returns a controlled failure even when D1 has not resolved. A late admission continuation rechecks expiry before starting anything and attempts owner-fenced cleanup only without unterminated children. If the isolate disappears, the stale sweep remains recovery authority. Background observation grants no deadline extension. `scheduled-slot-delivery` structured events distinguish `delivered-not-admitted` (also duplicate/live-slot refusals) from `claimed-failed`, carrying executing slot, invocation and event-entry deadline. An absent D1 slot is not proof of missing platform delivery.
+
+The existing public `digestTriggerPoll` lane starts with a DB-only sweep-only stage before outbox/demand/generation work, capped at 30 seconds and ten candidates and clipped to the inherited deadline. No trigger, fetch surface or connection reservation is added; connection peak and CPU placement stay unchanged. Global cleanup no longer shares reserve-recovery's lease/replay; reserve recovery retains targeted producer-slot preparation only. Every path imports `scheduled-slot-policy.ts`.
+
+`scheduled-slot-sweep` events record counts, applied policies and `maxReconciliationLagSec` from policy eligibility to the sweep observation clock (null without reconciled observations). After deployment require lag within two poll intervals outside documented platform/D1 stalls; fixtures are not production acceptance. Reconciled child errors and abandonment events share `parentIncidentId`; event `childIncidentCounts` groups started and proven-not-started children without making required unstarted errors neutral.
+
+
 ## Shared Database Helpers
 
 **Files:** `worker/src/lib/db.ts` for generic D1 helpers and `worker/src/lib/db-cache.ts` for cache-table helpers (`getCache`, `setCache`, `setCacheIfAbsent`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`).

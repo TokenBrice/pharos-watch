@@ -128,7 +128,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     const running = runScheduledSlotWithFence(db, "depegResolverOffset", async () => {
       enter();
       await work;
-    }, { slotStartedAt: base, owner: "original", invocationId: "original", preSweepStale: false });
+    }, { slotStartedAt: base, owner: "original", invocationId: "original" });
     await entered;
 
     await vi.advanceTimersByTimeAsync(60_000);

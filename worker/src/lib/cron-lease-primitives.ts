@@ -7,6 +7,7 @@ import {
   resolveCronTimeoutBudget,
   type CronTimeoutBudgetMetadata,
   type ResolvedCronTimeoutBudget,
+  assertSlotDeadline,
 } from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -313,25 +314,31 @@ export async function runCronWithLease<T>(
     blockedBy, leaseWaitDurationMs: Date.now() - acquisitionStartedMs, leaseAcquisitionAttempts: attempts,
   });
   for (;;) {
+    assertSlotDeadline(opts?.deadline, opts?.abortSignal);
     if (opts?.abortSignal?.aborted) throw normalizeAbortError(opts.abortSignal.reason, new Error("Lease acquisition aborted"));
     if (attempts > 0 && opts?.acquisitionWait && Date.now() > waitDeadlineMs) {
       blockedBy = await readCronLeaseBlocker(db, job);
+      assertSlotDeadline(opts?.deadline, opts?.abortSignal);
       return skipped();
     }
     if (opts?.reserveRecoveryAdmission) {
       const priority = await getReserveProducerPriority(db);
+      assertSlotDeadline(opts?.deadline, opts?.abortSignal);
       if (priority) return skipped(priority);
     }
     attempts++;
     acquisition = await runWithOverloadRetry(
       () => acquireCronLeaseState(db, job, owner, ttlSec, opts?.reserveRecoveryAdmission), 3, opts?.abortSignal,
     );
+    assertSlotDeadline(opts?.deadline, opts?.abortSignal);
     if (acquisition.acquired) break;
     if (opts?.reserveRecoveryAdmission) {
       const priority = await getReserveProducerPriority(db);
+      assertSlotDeadline(opts?.deadline, opts?.abortSignal);
       if (priority) return skipped(priority);
     }
     blockedBy = await readCronLeaseBlocker(db, job);
+    assertSlotDeadline(opts?.deadline, opts?.abortSignal);
     if (opts?.acquisitionWait && !blockerDeadlineCaptured && blockedBy) {
       const blocker = blockedBy;
       // Include the next eligible second: acquisition uses strict lease_until < now.
@@ -339,16 +346,20 @@ export async function runCronWithLease<T>(
       const claim = await runWithOverloadRetry(() => db.prepare(
         "SELECT MAX(recovery_lease_until) AS lease_until FROM worker_scheduled_checkpoints WHERE state = 'recovering' AND recovery_owner = ? AND recovery_lease_until >= ?",
       ).bind(blocker.invocationId ?? blocker.leaseOwner, blocker.observedAt).first<{ lease_until: number | null }>());
+      assertSlotDeadline(opts?.deadline, opts?.abortSignal);
       if (claim?.lease_until != null) waitDeadlineMs = Math.min(waitDeadlineMs, (claim.lease_until + 1) * 1000);
       blockerDeadlineCaptured = true;
     }
     if (!opts?.acquisitionWait || Date.now() >= waitDeadlineMs) return skipped();
     if (blockedBy) await opts.acquisitionWait.onWait?.(blockedBy, attempts);
+    assertSlotDeadline(opts?.deadline, opts?.abortSignal);
     await sleepWithSignal(Math.min(15_000, waitDeadlineMs - Date.now()), opts.abortSignal);
+    assertSlotDeadline(opts?.deadline, opts?.abortSignal);
   }
   const leaseWaitDurationMs = Date.now() - acquisitionStartedMs;
   try {
     await notifyLeaseState("acquired", acquisition);
+    assertSlotDeadline(opts?.deadline, opts?.abortSignal);
   } catch (error) {
     try {
       await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
@@ -401,6 +412,7 @@ export async function runCronWithLease<T>(
         leaseLastRenewedAt = renewal.heartbeatAt;
         renewFailures = 0;
         await notifyLeaseState("renewed", renewal);
+        assertSlotDeadline(opts?.deadline, opts?.abortSignal);
       })
       .catch((error) => {
         if (error instanceof CronLeaseStateObserverError) {

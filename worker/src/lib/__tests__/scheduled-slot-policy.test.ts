@@ -9,7 +9,7 @@ const fixtures = createLatestSchemaFixtureTracker();
 const longKeys = ["fiveMinuteReserveRecovery", "sixHourlyBlacklist", "halfHourlyMintBurnCritical", "twoHourlyDexDiscovery",
   "halfHourlyMintBurnExtended", "fourHourlyReserveSync", "hourlyYieldSync", "fourHourlyYieldSupplemental", "daily0300Utc",
   "daily0800Utc", "daily0805Utc", "daily0810Utc", "monthlyYieldAudit"];
-const routes = ["global", "keyed", "presweep", "takeover"] as const;
+const routes = ["global", "keyed", "takeover"] as const;
 const boundaries = [299, 300, 359, 360, 960];
 
 describe("scheduled slot policy authority", () => {
@@ -35,14 +35,10 @@ describe("scheduled slot policy authority", () => {
           const result = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 300,
             ...(route === "keyed" ? { slotKey: key } : {}) });
           expect(result.slotsReconciled).toBe(stale ? 1 : 0);
-        } else if (route === "presweep") {
-          await runScheduledSlotWithFence(db, key, async () => {}, { slotStartedAt: 2000, invocationId: "new", owner: "new" });
-          expect(sqlite.prepare("SELECT state FROM cron_slot_executions WHERE slot_started_at=1000").get())
-            .toEqual({ state: stale ? "finished" : "running" });
         } else {
           const work = vi.fn(async () => {});
           const result = await runScheduledSlotWithFence(db, key, work,
-            { slotStartedAt, preSweepStale: false, owner: "new", invocationId: "new" });
+            { slotStartedAt, owner: "new", invocationId: "new" });
           expect(result.status).toBe(stale ? "ok" : "skipped_running");
           expect(work).toHaveBeenCalledTimes(stale ? 1 : 0);
         }
@@ -67,13 +63,8 @@ describe("scheduled slot policy authority", () => {
           VALUES (?,'child-owner',2200,?,?)`).run(job, 2000 - silence, 2000 - silence);
         if (route === "takeover") {
           const result = await runScheduledSlotWithFence(db, key, async () => {},
-            { slotStartedAt: 1000, owner: "new", invocationId: "new", preSweepStale: false });
+            { slotStartedAt: 1000, owner: "new", invocationId: "new" });
           expect(result.status).toBe(silence === 299 ? "skipped_running" : "ok");
-        } else if (route === "presweep") {
-          await runScheduledSlotWithFence(db, key, async () => {},
-            { slotStartedAt: 2000, owner: "new", invocationId: "new" });
-          expect(sqlite.prepare("SELECT state FROM cron_slot_executions WHERE slot_started_at=1000").get())
-            .toEqual({ state: silence === 299 ? "running" : "finished" });
         } else {
           const result = await sweepStaleScheduledSlotExecutions(db, { nowSec: 2000,
             ...(route === "keyed" ? { slotKey: key } : {}) });

@@ -128,8 +128,11 @@ export interface SlotDeadline {
   latestAdmissionMs(budgetMs: number, reservedWorkMs: number): number;
 }
 
-export function createSlotDeadline(eventEntryMs: number): SlotDeadline {
-  const platformDeadlineMs = eventEntryMs + SCHEDULED_SLOT_JOB_BUDGET_MS;
+export function createSlotDeadline(
+  eventEntryMs: number,
+  controlledDeadlineMs = eventEntryMs + SCHEDULED_SLOT_JOB_BUDGET_MS,
+): SlotDeadline {
+  const platformDeadlineMs = controlledDeadlineMs;
   return Object.freeze({
     eventEntryMs,
     platformDeadlineMs,
@@ -139,6 +142,14 @@ export function createSlotDeadline(eventEntryMs: number): SlotDeadline {
     latestAdmissionMs: (budgetMs: number, reservedWorkMs: number) =>
       platformDeadlineMs - budgetMs - reservedWorkMs,
   });
+}
+
+/** Check both sides of mandatory awaits; an expired delivery never admits work. */
+export function assertSlotDeadline(deadline: SlotDeadline | undefined, signal?: AbortSignal): void {
+  signal?.throwIfAborted();
+  if (deadline && deadline.remainingMs() <= 0) {
+    throw new Error("scheduled-slot-deadline-exceeded");
+  }
 }
 
 export function resolveCronTimeoutBudget(
