@@ -29,7 +29,7 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
 }));
-vi.mock("../hourly-live-reserves", () => {
+vi.mock("../four-hourly-reserves", () => {
   mocks.reserveSlotInitialized = true;
   return { runFourHourlyReserveSyncSlot: mocks.runReserveSlot };
 });

@@ -10,7 +10,7 @@ import { stageDexLiquidityScoring } from "../../cron/dex-liquidity/orchestrator"
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
-export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext) {
+export async function runHourlyDexSourceSlot(runtime: ScheduledRuntimeContext) {
   return runSingleScheduledJob(runtime, "half-hour dex slot", {
     job: "sync-dex-liquidity-stage",
     run: (signal, reportProgress) =>

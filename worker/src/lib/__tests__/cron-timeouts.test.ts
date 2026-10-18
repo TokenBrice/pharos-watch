@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_CRON_TIMEOUT_MS } from "@shared/lib/scheduled-runner-registry";
 import {
-  DEFAULT_CRON_TIMEOUT_MS,
   SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS,
   SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
   SCHEDULED_SLOT_JOB_BUDGET_MS,

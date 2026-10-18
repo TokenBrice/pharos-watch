@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { createSlotDeadline, DEFAULT_CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
+import { DEFAULT_CRON_TIMEOUT_MS } from "@shared/lib/scheduled-runner-registry";
+import { createSlotDeadline } from "../../lib/cron-timeouts";
 
 const ASSET_ID = "usdc-circle";
 const CLOCK_SEC = 1_783_891_200;

@@ -6,6 +6,9 @@ import {
 } from "@shared/lib/cron-jobs";
 import {
   CONDITIONALLY_ADMITTED_SCHEDULED_TASKS,
+  DEFAULT_CRON_TIMEOUT_MS,
+  getScheduledTaskDescriptor,
+  SCHEDULED_TASK_DESCRIPTORS,
   flattenScheduledSlotPlanJobs,
   getScheduledWorkerRoleForExpression,
   listScheduledExpressionsForWorker,
@@ -19,7 +22,7 @@ import { CRON_TIMEOUT_MS } from "../../../lib/cron-timeouts";
 import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
-} from "../../../lib/public-dataset-snapshot-budget";
+} from "@shared/lib/public-dataset-snapshot-budget";
 import { PUBLIC_SLOT_RUNNER_LOADERS } from "../public-runners";
 import { HEAVY_SLOT_RUNNER_LOADERS } from "../heavy-runners";
 
@@ -28,6 +31,49 @@ function sorted(values: Iterable<string>): string[] {
 }
 
 describe("scheduled runner contract", () => {
+  it("projects timeout and lease policies from every executable descriptor without changing job caps", () => {
+    const timeoutOverrides: Record<string, number> = {
+      "sync-stablecoins": 8 * 60_000,
+      "reserve-recovery": 13 * 60_000,
+      "cron-sentinel": 13 * 60_000,
+      "sync-live-reserves": 12 * 60_000,
+      "sync-cl-exit-depth": 9 * 60_000,
+      "sync-dex-liquidity-stage": 13 * 60_000,
+      "sync-dex-liquidity": 13 * 60_000,
+      "sync-dex-discovery": 13 * 60_000,
+      "sync-yield-data": 10 * 60_000,
+      "sync-yield-supplemental": 12 * 60_000,
+      "sync-blacklist": 12 * 60_000,
+      "sync-mint-burn": 10 * 60_000,
+      "sync-mint-burn-extended": 10 * 60_000,
+      "dispatch-telegram-alerts": 4 * 60_000 + 30_000,
+      "snapshot-public-dataset": PUBLIC_DATASET_CRON_TIMEOUT_MS,
+      "daily-digest": 14 * 60_000,
+      "weekly-recap": 14 * 60_000,
+    };
+    const longRunningJobs = [
+      ...Object.keys(timeoutOverrides).filter((job) => job !== "cron-sentinel"),
+      "sync-v9-supply-attribution",
+    ];
+    for (const descriptor of SCHEDULED_TASK_DESCRIPTORS) {
+      expect(getScheduledTaskDescriptor(descriptor.scheduleKey, descriptor.job)).toBe(descriptor);
+      expect(descriptor.timeoutMs).toBe(timeoutOverrides[descriptor.job] ?? DEFAULT_CRON_TIMEOUT_MS);
+      expect(descriptor.leaseOptions).toEqual(longRunningJobs.includes(descriptor.job)
+        ? { heartbeatSec: 30, maxRenewFailures: 3 } : {});
+      if (descriptor.statusTracked) expect(CRON_TIMEOUT_MS[descriptor.job]).toBe(descriptor.timeoutMs);
+    }
+  });
+
+  it("retains per-occurrence Monday and DEX publication due gates on descriptors", () => {
+    const monday = Date.UTC(2026, 9, 12, 8, 10) / 1_000;
+    expect(getScheduledTaskDescriptor("daily0810Utc", "weekly-recap").due).toBe("monday");
+    expect(isScheduledTaskDueAt("daily0810Utc", "weekly-recap", monday)).toBe(true);
+    expect(isScheduledTaskDueAt("daily0810Utc", "weekly-recap", monday + 86_400)).toBe(false);
+    expect(getScheduledTaskDescriptor("halfHourlyChartsOffset", "cron-sentinel").due).toBe("dex-publication");
+    expect(isScheduledTaskDueAt("halfHourlyChartsOffset", "cron-sentinel", Date.UTC(2026, 9, 12, 8, 16) / 1_000)).toBe(true);
+    expect(isScheduledTaskDueAt("halfHourlyChartsOffset", "cron-sentinel", Date.UTC(2026, 9, 12, 8, 46) / 1_000)).toBe(false);
+  });
+
   it("keeps conditional admissions on registered secondary lanes without excusing canonical producers", () => {
     const monday = Date.UTC(2026, 9, 12) / 1_000;
     for (const { scheduleKey, job } of CONDITIONALLY_ADMITTED_SCHEDULED_TASKS) {

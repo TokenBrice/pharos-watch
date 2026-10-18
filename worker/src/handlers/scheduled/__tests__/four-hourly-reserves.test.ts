@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
-import { runFourHourlyReserveSyncSlot } from "../hourly-live-reserves";
+import { runFourHourlyReserveSyncSlot } from "../four-hourly-reserves";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 

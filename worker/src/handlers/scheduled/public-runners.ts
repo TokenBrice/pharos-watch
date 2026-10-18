@@ -19,9 +19,9 @@ export const PUBLIC_SLOT_RUNNER_LOADERS = {
     import("./half-hourly-measured-execution").then((mod) => mod.runHalfHourlyMeasuredExecutionSlot),
   halfHourlyMeasuredExecutionSupplemental: () =>
     import("./half-hourly-measured-execution").then((mod) => mod.runSupplementalMeasuredExecutionSlot),
-  halfHourlyOffset: () => import("./half-hourly").then((mod) => mod.runHalfHourlySlot),
+  halfHourlyOffset: () => import("./hourly-dex-source").then((mod) => mod.runHourlyDexSourceSlot),
   dewsPsiOffset: () => import("./dews-psi").then((mod) => mod.runDewsPsiSlot),
-  fourHourlyReserveSync: () => import("./hourly-live-reserves").then((mod) => mod.runFourHourlyReserveSyncSlot),
+  fourHourlyReserveSync: () => import("./four-hourly-reserves").then((mod) => mod.runFourHourlyReserveSyncSlot),
   hourlyYieldSync: () => import("./hourly-yield").then((mod) => mod.runHourlyYieldSlot),
   fourHourlyYieldSupplemental: () => import("./yield-supplemental").then((mod) => mod.runYieldSupplementalSlot),
   fiveMinuteTelegramAlerts: () => import("./five-minute-telegram").then((mod) => mod.runFiveMinuteTelegramSlot),

@@ -26,7 +26,7 @@ vi.mock("../../../cron/cron-sentinel", () => {
 describe("reserve consumer module boundaries", () => {
   it("does not initialize downstream policy and sentinel graphs when loading the producer runner", async () => {
     // This test intentionally exercises module initialization, not just task calls.
-    const runner = await import("../hourly-live-reserves");
+    const runner = await import("../four-hourly-reserves");
     expect(runner.runFourHourlyReserveSyncSlot).toBeTypeOf("function");
     expect(initialized).toEqual({ reserves: false, backstops: false, sentinel: false });
   });

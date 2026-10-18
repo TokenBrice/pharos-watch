@@ -25,7 +25,8 @@ import {
 import {
   buildSafetyScoreV9CaptureControl, commitCaptureControl, v9WorkerProvenance, type V9WorkerProvenance,
 } from "../lib/safety-score-v9/capture-control";
-import { DEFAULT_CRON_TIMEOUT_MS, type SlotDeadline } from "../lib/cron-timeouts";
+import { DEFAULT_CRON_TIMEOUT_MS } from "@shared/lib/scheduled-runner-registry";
+import type { SlotDeadline } from "../lib/cron-timeouts";
 
 export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
 const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
