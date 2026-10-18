@@ -2009,52 +2009,32 @@
     ]
   },
   "dola-inverse-finance": {
-    "title": "FiRM Lending With Uncapped Mint Authority",
-    "text": "DOLA is Inverse Finance's {{term:cdp}}CDP{{/term}}-style dollar, issued through FiRM's fixed-rate lending markets and permissioned minters. Its {{grade}} overall grade is constrained by economic control, the weakest pillar, where mint authority is binding. The 48-hour Timelock operator can mint to any recipient without a collateral check or numeric token cap. The Frontier Fed chair can expand into a fixed cToken without that delay, but borrowing there is paused and chair-only extraction to a chosen recipient has not been established. In Ethereum FiRM markets on October 17, 2026, roughly three-quarters of drawn debt was secured by DOLA-sUSDe Curve LP collateral, including Yearn-wrapped positions. About three-quarters of that pool's normalized value was DOLA itself, so this is circular collateral exposure, not three-quarters external sUSDe backing. Both reviewed USDS {{term:psm}}PSM{{/term}} deployments held no USDS or sUSDS at the same checkpoint, leaving no funded PSM redemption capacity. The roughly 10% Curve dislocation on March 22, 2026 was real; the near-$0.10 February 2024 feed print was an artifact. FiRM's lending and liquidation mechanisms do not constrain every authorized mint path.",
-    "updatedAt": "2026-10-17",
+    "title": "Fixed-Rate Lending on Circular Collateral",
+    "text": "DOLA is Inverse Finance's {{term:cdp}}CDP{{/term}}-style dollar, minted into FiRM's fixed-rate lending markets and lent against posted collateral. Most FiRM debt is secured by Curve LP positions in which DOLA itself is the larger leg, so much of the collateral base is DOLA backing DOLA. The {{grade}} overall grade is held down by economic control, the weakest pillar. The Fed chair can only expand supply into registered markets and fixed modules within governance-set ceilings, but the DAO's 48-hour Timelock can mint to any address without collateral or a cap. One delegated key holds enough votes to meet quorum alone, so that governance path earns no governed-issuance credit. The USDS {{term:psm}}PSM{{/term}} held no USDS at Pharos's October 2026 review, leaving it without redemption capacity. Permissionless jrDOLA slashing reaches most FiRM markets, but its capital is a small fraction of outstanding debt. Bad debt from the 2022 Frontier oracle exploits is still being repaid. The durable constraint is collateral whose value rests largely on DOLA's own price.",
+    "updatedAt": "2026-10-18",
     "authoredBy": "ai",
-    "model": "openai-codex/gpt-6.1-sol",
-    "factsAsOf": "2026-10-17",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-18",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-17"
+        "factsAsOf": "2026-10-18"
       }
     ],
     "sources": [
       {
-        "label": "Inverse FiRM markets: Ethereum drawn-debt denominator, observed 2026-10-17T20:52:45Z",
+        "label": "Inverse Finance FiRM markets",
         "url": "https://www.inverse.finance/api/f2/fixed-markets"
       },
       {
-        "label": "Ethereum block 26214783, 2026-10-17T20:51:59Z: LP constituents and both PSM reserve checkpoints",
-        "url": "https://etherscan.io/block/26214783"
-      },
-      {
-        "label": "DOLA verified mint logic; operator reviewed at Ethereum block 26214783 on 2026-10-17",
+        "label": "DOLA token contract (verified source)",
         "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
       },
       {
-        "label": "Frontier Fed fixed-recipient expansion; Ethereum block 26214981, 2026-10-17T21:31:47Z",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7"
-      },
-      {
-        "label": "Inverse USDS PSM mechanics and deployment identities",
-        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module"
-      },
-      {
-        "label": "March 22 Curve dislocation: Ethereum block 24710180, 2026-03-22T02:51:59Z",
-        "url": "https://etherscan.io/block/24710180"
-      },
-      {
-        "label": "February 2024 artifact cross-check: Curve trade near $0.995 at block 19201299, 2024-02-11T00:35:47Z",
-        "url": "https://etherscan.io/tx/0xd993da53705884ec3fab6b6262f52ebbab570858bcf345830b7f387a5de12474"
-      },
-      {
-        "label": "Pharos live Safety Score publication reviewed 2026-10-17",
-        "url": "https://pharos.watch/_site-data/report-cards/v9"
+        "label": "Inverse Finance jrDOLA documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
       }
     ]
   },
