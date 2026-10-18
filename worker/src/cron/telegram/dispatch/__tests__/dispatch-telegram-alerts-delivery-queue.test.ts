@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { seedDispatchSnapshots } from "../../../__tests__/dispatch-telegram-snapshots.test-support";
+import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
@@ -13,7 +13,7 @@ import {
   telegramDeliveryTranscript,
   type CronProgressUpdate,
   type DispatchHarness,
-} from "../../../__tests__/dispatch-telegram-alerts.test-support";
+} from "./dispatch-telegram-alerts.test-support";
 
 function seedFreezeTapeObservation(harness: DispatchHarness, now: number): void {
   // A fresh project-tape run plus a cursor behind one parseable freeze row makes

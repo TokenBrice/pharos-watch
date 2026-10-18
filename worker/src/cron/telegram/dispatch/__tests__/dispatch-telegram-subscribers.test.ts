@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { loadPerCoinExplicitlyOffMap } from "../dispatch-telegram-subscribers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { insertTelegramSubscriber } from "../../../__tests__/telegram-subscriber.test-support";
+import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

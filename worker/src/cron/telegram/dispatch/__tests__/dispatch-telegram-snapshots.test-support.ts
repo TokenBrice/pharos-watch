@@ -1,5 +1,5 @@
-import { makeSafetySnapshotCache, seedActiveSafetySource } from "../../../__tests__/dispatch-telegram-alerts.test-support";
-import type { DispatchHarness } from "../../../__tests__/dispatch-telegram-alerts.test-support";
+import { makeSafetySnapshotCache, seedActiveSafetySource } from "./dispatch-telegram-alerts.test-support";
+import type { DispatchHarness } from "./dispatch-telegram-alerts.test-support";
 
 type SafetySnapshot = Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
 

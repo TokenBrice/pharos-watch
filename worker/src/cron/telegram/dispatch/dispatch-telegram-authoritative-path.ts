@@ -30,7 +30,7 @@ import {
 import { resolveTelegramAlertSourcePresetPages } from "../sources/telegram-alert-source-memberships";
 import { loadTelegramTargetPlanProgress } from "../target-plans/read-model";
 import { runTelegramTargetPlanCoordinator } from "../target-plans/coordinator";
-import { TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN } from "../../telegram-alert-target-plans/@shared/lib/telegram-delivery-policy";
+import { TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN } from "@shared/lib/telegram-delivery-policy";
 import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../../../lib/telegram/constants";
 import { readTelegramFreshHandoffAllowance } from "../../../lib/telegram/transport-control";
 

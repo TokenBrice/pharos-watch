@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { seedDispatchSnapshots } from "../../../__tests__/dispatch-telegram-snapshots.test-support";
+import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
@@ -8,7 +8,7 @@ import {
   readCacheValue,
   resetDispatchTelegramAlertsTest,
   telegramDeliveryTranscript,
-} from "../../../__tests__/dispatch-telegram-alerts.test-support";
+} from "./dispatch-telegram-alerts.test-support";
 
 
 

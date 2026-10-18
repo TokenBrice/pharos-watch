@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE, TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN } from "@shared/lib/telegram-delivery-policy";
-import { seedDispatchSnapshots } from "../../../__tests__/dispatch-telegram-snapshots.test-support";
+import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
@@ -16,7 +16,7 @@ import {
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   type CronProgressUpdate,
-} from "../../../__tests__/dispatch-telegram-alerts.test-support";
+} from "./dispatch-telegram-alerts.test-support";
 
 
 function dewsSubscribers(count: number, prefix = "chat") {
