@@ -319,6 +319,10 @@ Files any seam may import:
 
 Behavior changes stay inside current seams. Bug fixes, handlers, tests and fields inside an owner are routine. Cross-seam extraction/moves, new top-level directories, dispatch-registry restructuring or a new pipeline/framework require updating ownership and dependency direction in the same change.
 
+`scripts/ci/check-architecture-boundaries.ts` enforces `telegram-public-surface` on production Worker sources outside the Telegram owners. Each resolved incoming edge must match an exact importer/entry-module pair; static imports, re-exports, literal dynamic imports and authored type-only dependencies are covered. The owners are the Telegram API/library/HTTP-handler implementations and `worker/src/cron/telegram/`, plus the destination `worker/src/telegram/` subtree. Imports between these owners are internal; passing through a permitted public entry does not prohibit its internal dependencies. Unrelated features do not gain a directory-wide or scheduled-handler exemption.
+
+Telegram moves must rename the corresponding public-entry allowlist paths atomically with their callers, removing obsolete locations rather than adding compatibility re-exports. The checker recognizes the planned feature subtree before moves, so a new deep destination import is not an escape hatch. `scripts/ci/check-worker-package.ts` separately rejects Heavy source-map reachability into Telegram's HTTP-bearing destinations (`webhook/`, including pulse, `mini-app/`, `adoption/`, and `admin/`); it does not ban generic delivery or outbox modules.
+
 Re-evaluate a boundary when one fix repeatedly crosses seams, callbacks accumulate unrelated dependencies, Ingress becomes business logic, or SQL/policy is duplicated. Delivery policy stays in `shared/lib/telegram-delivery-policy.ts`; State owns shared SQL. These are design signals, not numerical acceptance gates.
 
 ---
