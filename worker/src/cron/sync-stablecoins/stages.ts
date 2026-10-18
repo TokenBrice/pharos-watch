@@ -271,6 +271,10 @@ export async function runStablecoinsPricingStage(
     itemsTotal: options.assets.length,
     metadata: {
       subphase: "authoritative-overrides",
+      gtProbe: {
+        inlineDisabled: gtProbe.stats.inlineDisabled,
+        isolationReason: gtProbe.stats.isolationReason,
+      },
     },
   });
   const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(
@@ -294,22 +298,6 @@ export async function runStablecoinsPricingStage(
     authoritativeOverrideStats,
   });
   const enrichStats = null;
-
-  await reportStablecoinsStage(
-    options.reportProgress,
-    "price-enrichment-gt-probe-disabled",
-    "Skipping memory-isolated GeckoTerminal corroboration",
-    {
-      itemsDone:
-        options.assets.length -
-        options.assets.filter(hasMissingPrice).length,
-      itemsTotal: options.assets.length,
-      metadata: {
-        subphase: "gt-probe-disabled",
-        isolationReason: "worker-memory-boundary",
-      },
-    },
-  );
 
   const priceCompletion = await runSharedPriceCompletion({
     chainRpcs: options.chainRpcs,

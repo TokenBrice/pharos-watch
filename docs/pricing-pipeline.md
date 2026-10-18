@@ -53,6 +53,10 @@ The DefiLlama-list consensus input accepts only intake prices with an absent sou
 
 Tracked NAV classification is authoritative in both intake normalization and price-validation context: an omitted curated NAV flag means false, and a provider's `navToken: true` cannot bypass fixed-peg validation. Untracked rows retain their source classification.
 
+Primary provider fetch results are independent of circuit-outcome bookkeeping. After admission, each completed fetch records its success/failure once through best-effort outcome persistence; a circuit-storage failure emits `circuit_outcome_write_failed` without relabeling a successful quote as a provider failure or discarding it. Required circuit-admission reads remain fail-closed, and cancellation still propagates.
+
+Inline GeckoTerminal corroboration remains disabled at the Worker memory boundary. Final `sync-stablecoins` metadata retains `gtProbe.inlineDisabled = true` and `gtProbe.isolationReason = "worker-memory-boundary"`; the real authoritative-override progress boundary also carries that provenance. Disabled work has no dedicated progress stage. Primary collection, authoritative overrides, shared completion and price validation retain their real progress boundaries.
+
 ### Source Weights
 
 | Source | Weight | Module / Origin | Cadence and role |

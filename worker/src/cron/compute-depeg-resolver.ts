@@ -20,7 +20,7 @@ import {
 } from "./depeg-resolver/incident-state";
 import { resolveDdrIncidents } from "./depeg-resolver/incident-resolution";
 import { normalizeComputeOptions } from "./depeg-resolver/options";
-import { persistDepegResolverReviewArtifacts } from "./depeg-resolver/persistence";
+import { persistDepegResolverReviewArtifacts, type DepegResolverReviewArtifacts } from "./depeg-resolver/persistence";
 import {
   loadErrataForSealedPredictions,
   loadSealedAndPublicationState,
@@ -134,6 +134,21 @@ async function alertNewQuarantinedEvents(
   }
 }
 
+function reviewArtifactMetadata(
+  artifacts: DepegResolverReviewArtifacts,
+) {
+  const ddrrDegraded = artifacts.reviewError != null || artifacts.reviewDegraded;
+  return {
+    ddrrDegraded,
+    ddrrDegradedReason: artifacts.reviewError ?? artifacts.reviewDegradedReason,
+    ...(ddrrDegraded ? {
+      quality: {
+        reason: artifacts.reviewError != null ? "ddrr-review-failed" : "ddrr-review-degraded",
+      },
+    } : {}),
+  };
+}
+
 async function persistDegradedArtifacts(input: {
   db: D1Database;
   nowSec: number;
@@ -141,7 +156,7 @@ async function persistDegradedArtifacts(input: {
   lineage: DdrLineage;
   signal?: AbortSignal;
   storeContracts: NonNullable<ComputeDepegResolverV2Options["storeContracts"]>;
-}): Promise<{ reviewRows: number; reviewError: string | null }> {
+}): Promise<DepegResolverReviewArtifacts> {
   const publicSnapshot = await degradedPublicSnapshotFromCache({
     db: input.db,
     nowSec: input.nowSec,
@@ -151,16 +166,12 @@ async function persistDegradedArtifacts(input: {
   await writeDepegResolverSnapshot(input.db, publicSnapshot);
 
   const diagnosticSnapshot = buildDiagnosticSnapshot({ rows: [], lineage: input.lineage, nowSec: input.nowSec });
-  const reviewArtifacts = await persistDepegResolverReviewArtifacts(
+  return persistDepegResolverReviewArtifacts(
     input.db,
     diagnosticSnapshot,
     input.storeContracts,
     input.signal,
   );
-  return {
-    reviewRows: reviewArtifacts.reviewRows,
-    reviewError: reviewArtifacts.reviewError,
-  };
 }
 
 export async function computeDepegResolver(
@@ -198,9 +209,6 @@ export async function computeDepegResolver(
   let rows: DdrRow[] = [];
   let lineage: DdrLineage = emptyDdrLineage(nowSec);
   let activeEventById = new Map(activeRows.map((row) => [row.id, row]));
-  let assessmentWriteCount = 0;
-  let reviewRows = 0;
-  let reviewError: string | null = null;
   let v2LockDeferrals = 0;
   let v2PendingLocks = 0;
   let v2LockedPredictions = 0;
@@ -252,8 +260,7 @@ export async function computeDepegResolver(
         v2LockDeferrals,
         v2FreezeSkipped: true,
         v2PublicationAttempted: false,
-        ddrrDegraded: degradedArtifacts.reviewError != null,
-        ddrrDegradedReason: degradedArtifacts.reviewError,
+        ...reviewArtifactMetadata(degradedArtifacts),
         reviewRows: degradedArtifacts.reviewRows,
       }),
     };
@@ -355,9 +362,6 @@ export async function computeDepegResolver(
   }
   await writeDepegResolverSnapshot(db, publicSnapshot);
   const reviewArtifacts = await persistDepegResolverReviewArtifacts(db, diagnosticSnapshot, storeContracts, options.signal);
-  assessmentWriteCount = reviewArtifacts.assessmentWriteCount;
-  reviewRows = reviewArtifacts.reviewRows;
-  reviewError = reviewArtifacts.reviewError;
 
   return {
     itemCount: rows.length,
@@ -368,10 +372,9 @@ export async function computeDepegResolver(
       repairRequiredEventCount: quarantinedEvents.length,
       repairTaskPersistError,
       v2PreLockIncidentsClosed,
-      assessmentWriteCount,
-      reviewRows,
-      ddrrDegraded: reviewError != null,
-      ddrrDegradedReason: reviewError,
+      assessmentWriteCount: reviewArtifacts.assessmentWriteCount,
+      reviewRows: reviewArtifacts.reviewRows,
+      ...reviewArtifactMetadata(reviewArtifacts),
       incidentCount: lineage?.incidentCount ?? 0,
       quarantinedCoins: lineage?.quarantinedCoins ?? 0,
       v2PolicyUniverseEvents: policyUniverseEventCount,

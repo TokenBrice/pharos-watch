@@ -6,6 +6,7 @@ import {
   buildStablecoinsSyncResult,
 } from "../metadata";
 import type { PricingAssetAttemptRecord } from "../../../lib/pricing-provider-diagnostics";
+import { createEmptyGtProbeStats } from "../../../lib/geckoterminal-price-probe-stats";
 import {
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
@@ -142,6 +143,25 @@ function sizeGuardRungBudget(
 }
 
 describe("stablecoins pricing metadata", () => {
+  it("retains disabled inline GeckoTerminal provenance in final publication metadata", () => {
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 1 },
+    }));
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(assets),
+      gtProbe: {
+        stats: { ...createEmptyGtProbeStats(), inlineDisabled: true, isolationReason: "worker-memory-boundary" },
+      },
+    });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      cacheWriteMode: "published",
+      capabilities: { stablecoinsCache: true },
+      gtProbe: { inlineDisabled: true, isolationReason: "worker-memory-boundary" },
+    });
+  });
+
   it.each([false, true])("reports completed supply publication with bounded quality findings (quarantined=%s)", (quarantined) => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
       id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
