@@ -1,5 +1,6 @@
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { syncMintBurn, type MintBurnLane } from "../../cron/sync-mint-burn";
+import { syncMintBurn } from "../../cron/sync-mint-burn";
+import type { MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { runCircuitGatedLeasedScheduledJob } from "./run-circuit-gated-job";

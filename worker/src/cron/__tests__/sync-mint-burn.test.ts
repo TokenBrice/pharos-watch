@@ -99,6 +99,7 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
 });
 
 import { syncMintBurn } from "../sync-mint-burn";
+import { MintBurnRun } from "../mint-burn/run";
 import { mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
 import { syncMintBurnConfig } from "../mint-burn/sync-config";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
@@ -172,7 +173,7 @@ describe("syncMintBurn", () => {
     sqliteFixtures.closeAll();
   });
 
-  it("reports inserted rows (not parsed rows) in itemCount", async () => {
+  it("reports inserted rows (not parsed rows) through the MintBurnRun aggregate", async () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
@@ -188,7 +189,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(1)
       .mockResolvedValueOnce(0);
 
-    const result = await syncMintBurn(db, "alchemy-key");
+    const result = await new MintBurnRun(db, "alchemy-key").execute();
 
     expect(result.itemCount).toBe(1);
     const meta = JSON.parse(result.metadata);
@@ -207,6 +208,22 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     expect(meta.configsDisabled).toBe(1);
     expect(meta.sourceCoverage.contractsEnabled).toBe(1);
+  });
+
+  it("returns an empty disabled run before requiring the API key", async () => {
+    const result = await new MintBurnRun(makeDb(), null, {
+      lane: "extended",
+      disabledSymbols: ["USDT", "USDC"],
+    }).execute();
+
+    expect(result).toMatchObject({ itemCount: 0, status: "ok" });
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      lane: "extended",
+      jobName: "sync-mint-burn-extended",
+      outputPublishedAt: null,
+      sourceCoverage: { contractsEnabled: 0, contractsDisabled: 1 },
+    });
+    expect(fetchAlchemyLogs).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -525,7 +542,7 @@ describe("syncMintBurn", () => {
     const frontier = sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?");
     const bucket = sqlite.prepare("SELECT mint_count, mint_volume_usd, mint_unpriced_event_count FROM mint_burn_hourly WHERE hour_ts = ?");
 
-    const first = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
+    const first = await new MintBurnRun(db, "alchemy-key", { lane: "critical" }).execute();
     expect(first.status).toBe("degraded");
     expect(frontier.get(USDT_CONFIG_KEY)).toEqual({ last_block: 21_950_000 });
     expect(bucket.get(hourTs)).toEqual({ mint_count: 1, mint_volume_usd: 50000, mint_unpriced_event_count: 0 });

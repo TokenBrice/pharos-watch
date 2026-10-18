@@ -11,10 +11,8 @@
  * The registry/checker therefore treats this slot as headroom-full.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
-import {
-  consumeDexLiquidityScoringStage,
-  DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
-} from "../../cron/dex-liquidity/orchestrator";
+import { consumeDexLiquidityScoringStage } from "../../cron/dex-liquidity/orchestrator";
+import { DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON } from "../../cron/dex-liquidity/lifecycle/source-slot";
 import {
   DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
   isDailyDexShadowTargetPublicationSlot,

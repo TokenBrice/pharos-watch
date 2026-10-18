@@ -97,6 +97,19 @@ describe("representative --file routing", () => {
     expect(JSON.parse(result.stdout).checks).not.toContain("npm run check:structural");
   });
 
+  it.each([
+    ["worker/src/cron/dex-liquidity/orchestrator.ts", "docs/dex-liquidity.md"],
+    ["worker/src/cron/dex-liquidity/lifecycle/source-slot.ts", "docs/process/dex-liquidity-appendix.md"],
+    ["worker/src/cron/mint-burn/run.ts", "docs/mint-burn-flows.md"],
+    ["worker/src/cron/sync-mint-burn.ts", "docs/mint-burn-flows.md"],
+  ])("routes %s to its domain contract", (file, ownerDoc) => {
+    const contract = route(file);
+
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("methodology-scoring");
+    expect([...contract.docs, ...contract.background].map((doc) => doc.path)).toContain(ownerDoc);
+  });
+
   it("returns only routed docs and rules without unconditional onboarding or hints", () => {
     const contract = route("functions/social-posts/example.ts");
     expect(docKeys(contract)).not.toContain("docs/process/agent-start-here.md");
