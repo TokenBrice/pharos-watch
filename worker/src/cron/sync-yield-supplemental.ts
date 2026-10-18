@@ -10,6 +10,7 @@ import {
   getYieldSupplementalFamilyCacheKey,
   getYieldSupplementalRunOutcomeCacheKey,
   type SupplementalFamilyCacheResult,
+  parseYieldSupplementalSourcesCache,
   supplementalFamilySnapshotHash,
 } from "./yield-sync/cache/supplemental-cache-keys";
 import {
@@ -108,19 +109,30 @@ function dedupeCandidates(candidates: ResolvedYieldCandidate[]): {
 }
 
 /**
- * C16: newest family cache marker. A missing marker means no family snapshot
- * exists yet, so the catch-up must run.
+ * A timestamp gates cadence, but only validated, current family artifacts prove
+ * the supplemental output satisfied. A lone recent marker is not that proof.
  */
-async function loadNewestSupplementalFamilyMarkerSec(db: D1Database): Promise<number | null> {
+async function loadSupplementalCatchUpEvidence(db: D1Database, nowSec: number, maxAgeSec: number) {
   const familyCacheRows = await getCaches(
     db,
     SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family)),
   );
   let newestMarkerSec: number | null = null;
-  for (const row of familyCacheRows.values()) {
+  const provenFamilies: Array<{ family: SupplementalSourceFamilyKey; updatedAt: number; snapshotHash: string }> = [];
+  for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+    const row = familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family));
+    if (!row || !Number.isSafeInteger(row.updatedAt) || row.updatedAt <= 0 || row.updatedAt > nowSec) continue;
     newestMarkerSec = newestMarkerSec == null ? row.updatedAt : Math.max(newestMarkerSec, row.updatedAt);
+    const parsed = parseYieldSupplementalSourcesCache(row.value, row.updatedAt, nowSec);
+    if (!parsed || parsed.updatedAt !== row.updatedAt || parsed.ageSeconds >= maxAgeSec
+      || parsed.sourceCount !== parsed.candidates.length) continue;
+    const payload = JSON.parse(row.value) as { source?: unknown; updatedAt?: unknown; sourceCount?: unknown; data?: unknown };
+    if (payload.source !== "sync-yield-supplemental" || payload.updatedAt !== row.updatedAt
+      || payload.sourceCount !== parsed.candidates.length || !Array.isArray(payload.data)
+      || payload.data.length !== parsed.candidates.length) continue;
+    provenFamilies.push({ family, updatedAt: parsed.updatedAt, snapshotHash: supplementalFamilySnapshotHash(row) });
   }
-  return newestMarkerSec;
+  return { newestMarkerSec, provenFamilies };
 }
 
 export async function syncYieldSupplemental(
@@ -133,21 +145,26 @@ export async function syncYieldSupplemental(
   const startSec = Math.floor(Date.now() / 1000);
   const catchUpMinMarkerAgeSec = options?.catchUpMinMarkerAgeSec;
   if (catchUpMinMarkerAgeSec != null) {
-    const newestFamilyMarkerSec = await loadNewestSupplementalFamilyMarkerSec(db);
+    const { newestMarkerSec: newestFamilyMarkerSec, provenFamilies } =
+      await loadSupplementalCatchUpEvidence(db, startSec, catchUpMinMarkerAgeSec);
     const newestFamilyMarkerAgeSec =
       newestFamilyMarkerSec == null ? null : Math.max(0, startSec - newestFamilyMarkerSec);
     if (newestFamilyMarkerAgeSec != null && newestFamilyMarkerAgeSec < catchUpMinMarkerAgeSec) {
+      const artifactProven = provenFamilies.length === SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length;
+      const reason = artifactProven ? "supplemental-catch-up-not-due" : "supplemental-catch-up-marker-not-due";
       return {
         status: "skipped_neutral",
         itemCount: 0,
         metadata: JSON.stringify({
-          reason: "supplemental-catch-up-not-due",
+          reason,
           newestFamilyMarkerSec,
           newestFamilyMarkerAgeSec,
           minMarkerAgeSec: catchUpMinMarkerAgeSec,
           syncStartSec: startSec,
+          artifactProven,
+          provenFamilies,
         }),
-        productivity: { productive: false, reason: "supplemental-catch-up-not-due" },
+        productivity: { productive: false, reason },
       };
     }
   }

@@ -202,6 +202,7 @@ import { batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS } from "../blacklist/config-scan";
 
 const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
@@ -719,6 +720,33 @@ describe("syncBlacklist", () => {
     expect(meta.producerSummarySnapshot).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
   });
+
+  it.each([
+    { lag: 52, expectedStatus: "ok" },
+    { lag: BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, expectedStatus: "ok" },
+    { lag: BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS + 1, expectedStatus: "degraded" },
+  ])("uses the measured lag tolerance for run status ($lag blocks)", async ({ lag, expectedStatus }) => {
+    const priorSuccess = Math.floor(Date.now() / 1000) - 3600;
+    const db = makeDb(CONTRACT_CONFIGS.map((config) => ({
+      config_key: config.configKey, last_block: 0, cursor_value: 0,
+      attempt_generation: 1, last_succeeded_at: priorSuccess,
+    })));
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
+      logs: [], complete: true, scannedToBlock: 20_000_000 - lag, calls: 1, maxDepth: 0,
+    });
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    }));
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    const metadata = JSON.parse(result.metadata);
+    expect(result.status).toBe(expectedStatus);
+    expect(metadata.coverageLagToleranceBlocks).toBe(BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS);
+    expect(metadata.coverageFailures).toBe(expectedStatus === "ok" ? 0 : 1);
+    expect(metadata.coverageLaggingWithinTolerance).toBe(expectedStatus === "ok" ? 1 : 0);
+    expect(metadata.oldestConfigSuccessAt).toBe(priorSuccess);
+    expect(metadata.coverageFailureConfigs).toEqual([expect.objectContaining({ lag, samples: ["behind-safe-head"] })]);
+  });
+
 
   it.each([
     { complete: true, previouslySucceeded: true },

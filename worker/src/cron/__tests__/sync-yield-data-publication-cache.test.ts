@@ -133,13 +133,19 @@ describe("syncYieldData", () => {
     // next run re-aligns. Withholding the publish would only pin an older,
     // equally mismatched cache.
     expect(result.itemCount).toBeGreaterThan(0);
-    expect(result.productivity).toBeUndefined();
+    expect(result.productivity).toMatchObject({
+      productive: true,
+      publications: [{ surface: "yield-rankings", generationId: expect.any(String), artifactCacheKey: "yield-rankings" }],
+    });
     expect(result.metadata).toContain("yield-safety-identity-changed-before-publish");
     expect(getPublishedYieldRows(db).length).toBeGreaterThan(0);
     const cachePayload = getYieldRankingsCachePayload(db) as {
+      publication?: { generationId?: string };
       provenance?: { safetySnapshot?: { safetyScoreIdentity?: { evaluationBuildDigest?: string } } };
     } | undefined;
     expect(cachePayload?.provenance?.safetySnapshot?.safetyScoreIdentity?.evaluationBuildDigest).toBe("b".repeat(64));
+    expect(result.productivity?.publications).toHaveLength(1);
+    expect(result.productivity?.publications?.[0].generationId).toBe(cachePayload?.publication?.generationId);
     expect(db.getHistory().some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(true);
   });
 
