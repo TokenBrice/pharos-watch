@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: ArchivePageProps) {
   if (!archive) return { title: "Archive Not Found" };
   return buildPageMetadata({
     title: `Pharos Changelog: ${archive.label}`,
-    description: `Complete weekly release notes for ${archive.label}: coverage additions, pipeline improvements and product changes.`,
+    description: `Complete weekly Pharos release notes for ${archive.label}: stablecoin coverage additions, data pipeline improvements and product changes.`,
     canonical: archive.path,
     ogImage: "/og-changelog.png",
   });

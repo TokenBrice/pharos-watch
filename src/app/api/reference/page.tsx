@@ -4,7 +4,7 @@ import { ApiReferencePanel } from "../api-reference-panel";
 import { ApiTabs } from "../api-tabs";
 
 export const metadata = buildPageMetadata({
-  title: "Pharos Stablecoin API Reference: Endpoints and Response Contracts",
+  title: "Pharos API Reference: Endpoints and Response Contracts",
   description: "Public Pharos API authentication, endpoints, response contracts, datasets, OpenAPI and Postman integration resources.",
   canonical: "/api/reference/",
 });
