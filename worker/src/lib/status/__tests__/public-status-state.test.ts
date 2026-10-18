@@ -17,6 +17,46 @@ function lateCharts(): HealthResponse {
 }
 
 describe("reconcilePublicStatusState", () => {
+  it("records a new Safety Scores component without backdating its history", async () => {
+    const { db } = fixtures.open();
+    await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());
+    const row = await db.prepare("SELECT causes_json FROM status_state WHERE scope = 'public'").first<{ causes_json: string }>();
+    const stored = JSON.parse(row!.causes_json) as {
+      components: { id: string }[];
+      componentHistoryStartedAt?: Record<string, number>;
+    };
+    stored.components = stored.components.filter((component) => component.id !== "safety-scores");
+    delete stored.componentHistoryStartedAt;
+    await db.prepare("UPDATE status_state SET causes_json = ? WHERE scope = 'public'").bind(JSON.stringify(stored)).run();
+
+    await reconcilePublicStatusState(db, NOW + 900, makeHealthyHealthResponse());
+    const history = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(history.startedAt).toBe(NOW);
+    expect(history.componentHistoryStartedAt["safety-scores"]).toBe(NOW + 900);
+    expect(history.componentHistoryStartedAt["risk-signals"]).toBe(NOW);
+    expect(history.transitions).toHaveLength(2);
+    expect(history.transitions[0].components).toEqual([]);
+  });
+
+  it("persists held and recovered Safety Scores in the public transition stream", async () => {
+    const { db } = fixtures.open();
+    const health = makeHealthyHealthResponse();
+    await reconcilePublicStatusState(db, NOW, health);
+    health.safetyScorePublication = {
+      ...health.safetyScorePublication!, status: "held",
+      attemptedAtSec: health.timestamp, heldSinceSec: health.timestamp - 10,
+      reasons: [{ code: "redemption-stale" }],
+    };
+    await reconcilePublicStatusState(db, NOW + 900, health);
+    await reconcilePublicStatusState(db, NOW + 1800, makeHealthyHealthResponse());
+    const history = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(history.transitions[1]).toMatchObject({
+      source: "public", transitionType: "degrade", headline: { state: "degraded" },
+      components: [{ id: "safety-scores", state: "degraded", reasons: ["safety-score-publication-held", "safety-score-publication-held:redemption-stale"] }],
+    });
+    expect(history.transitions[0]).toMatchObject({ transitionType: "recover", components: [] });
+  });
+
   it("persists an init row, then one row per component change, with since carried forward", async () => {
     const { db } = fixtures.open();
 

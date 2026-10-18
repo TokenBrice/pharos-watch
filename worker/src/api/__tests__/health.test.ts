@@ -180,6 +180,18 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         updated_at: now,
       },
     }]),
+    ...(extras.some((entry) => entry.matchBinds?.includes("report-cards:v9:publication-health")) ? [] : [{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["report-cards:v9:publication-health"],
+      rows: [],
+      first: {
+        value: stableJsonStringifyV1({
+          schemaVersion: 2, status: "current", acceptedPublicationGenerationId: "fixture-safety-generation",
+          acceptedAtSec: now - 60, attemptedAtSec: now - 60, heldSinceSec: null, reasons: [],
+        }),
+        updated_at: now - 60,
+      },
+    }]),
   ]);
 }
 
@@ -413,6 +425,7 @@ describe("handleHealth", () => {
     const db = healthD1([
       completePublicationEntry(now),
       dewsPublicationEntry(now),
+      yieldHealthEntry(now),
       {
         match: "GROUP BY job",
         rows: ["sync-dex-liquidity", "sync-yield-data", "compute-dews"].map((job) => ({
@@ -774,7 +787,7 @@ describe("handleHealth", () => {
   it.each([
     [3600, 3600, "healthy"], [86400, 86400, "healthy"],
     [86401, 3600, "degraded"], [3600, 86401, "degraded"],
-  ] as const)("assesses same-identity held clocks %s/%s as %s", async (yieldAge, safetyAge, status) => {
+  ] as const)("keeps yield held-clock verdict %s/%s at %s while Safety Scores are degraded", async (yieldAge, safetyAge, status) => {
     const now = Math.floor(Date.now() / 1000);
     const identity = JSON.parse(stampedYieldIdentityJson("a".repeat(64)));
     const envelope = JSON.parse(publicationEnvelopeIdentityJson("a".repeat(64)));
@@ -785,7 +798,9 @@ describe("handleHealth", () => {
       yieldHealthEntry(now, true, identity.publicationGenerationId),
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
-    expect(body.status).toBe(status);
+    expect(body.status).toBe("degraded");
+    expect(body.components!.find((component) => component.id === "safety-scores")).toMatchObject({ state: "degraded" });
+    expect(body.components!.find((component) => component.id === "yield")!.state).toBe(status === "healthy" ? "operational" : "degraded");
     expect(body.warnings).toContain(status === "healthy"
       ? "yield-safety-publish-time-fallback:safety-snapshot-held"
       : "yield-safety-unrated-serving:safety-snapshot-held");
@@ -795,10 +810,11 @@ describe("handleHealth", () => {
     const now = Math.floor(Date.now() / 1000);
     const entry = yieldHealthEntry(now, false, "wrong-generation");
     if (kind === "malformed") entry.first = { updated_at: now, value: "{}" };
+    if (kind === "missing") entry.first = null;
     const db = makeHealthyHealthDb(now, { extras: [
       { match: "stamped_identity", rows: [], first: { updated_at: now - 60, stamped_identity: stampedYieldIdentityJson("a".repeat(64)), safety_published_at: now - 60 } },
       { match: "publication_identity", rows: [], first: { publication_identity: publicationEnvelopeIdentityJson("a".repeat(64)) } },
-      ...(kind === "missing" ? [] : [entry]),
+      entry,
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
     expect(body.status).toBe("degraded");

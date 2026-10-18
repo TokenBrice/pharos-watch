@@ -9,6 +9,16 @@ export function makeHealthyHealthResponse(): HealthResponse {
     status: "healthy",
     timestamp: 1_700_000_000,
     warnings: [],
+    safetyScorePublication: {
+      schemaVersion: 2,
+      status: "current",
+      acceptedPublicationGenerationId: "test-safety-publication",
+      acceptedAtSec: 1_699_999_970,
+      attemptedAtSec: 1_699_999_970,
+      heldSinceSec: null,
+      reasons: [],
+    },
+    safetyScorePublicationUnavailableReason: null,
     schedulerLiveness: {
       status: "healthy", observedAt: 1_700_000_000,
       lastAnyStartedAt: 1_699_999_970, lastFiveMinuteStartedAt: 1_699_999_970, ageSeconds: 30,

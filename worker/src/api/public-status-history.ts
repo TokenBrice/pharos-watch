@@ -84,7 +84,7 @@ export const handlePublicStatusHistory = async (db: D1Database, request: Request
     const [publicHistory, publicHealth] = await Promise.all([
       listPublicStatusTransitions(db, parsed.limit, from).catch(() => {
         transitionQueryFailed = true;
-        return { transitions: [] as PublicStatusTransition[], startedAt: null, hasMore: false };
+        return { transitions: [] as PublicStatusTransition[], startedAt: null, componentHistoryStartedAt: {}, hasMore: false };
       }),
       assessPublicHealth(db, now, { logPrefix: "public-status-history" }),
     ]);
@@ -121,6 +121,7 @@ export const handlePublicStatusHistory = async (db: D1Database, request: Request
       lastChangedAt: getPublicLastChangedAt(transitions, publicCurrentStatus, headlineLevel),
       transitions,
       publicHistoryStartedAt: startedAt,
+      componentHistoryStartedAt: publicHistory.componentHistoryStartedAt,
       // R7: a bounded page says so instead of passing for the whole window.
       hasMore: publicHistory.hasMore || legacyTransitions.length >= parsed.limit || merged.length > parsed.limit,
     };

@@ -15,6 +15,25 @@ function components(overrides: Partial<Record<string, Partial<PublicStatusCompon
 }
 
 describe("PublicServiceSummarySection", () => {
+  it("renders the dedicated Safety Scores row with its scope and held reason", () => {
+    render(<PublicServiceSummarySection
+      components={components({
+        "safety-scores": {
+          state: "degraded",
+          summary: "Safety Score publication is held.",
+          reasons: ["safety-score-publication-held:redemption-stale"],
+        },
+      })}
+      dayCells={null} historyState="loading" historyDays={30} nowSec={NOW} publicHistoryStartedAt={null}
+    />);
+    const row = within(screen.getByTestId("public-component-safety-scores"));
+    expect(row.getByText("Safety Scores")).toBeTruthy();
+    expect(row.getByText("Pharos Safety Scores and their publication.")).toBeTruthy();
+    expect(row.getByText("Degraded")).toBeTruthy();
+    expect(row.getByText("safety-score-publication-held:redemption-stale")).toBeTruthy();
+    expect(screen.getByTestId("public-component-risk-signals")).toBeTruthy();
+  });
+
   it("names the summary, budget and machine reason of a non-operational component (R3/R4)", () => {
     render(<PublicServiceSummarySection
       components={components({

@@ -70,6 +70,12 @@ export function makePublicHealth(
     d1Capacity: null,
     d1CapacityImpactStatus: "healthy",
     d1CapacityQueryError: null,
+    safetyScorePublication: {
+      ...healthy.safetyScorePublication!,
+      acceptedAtSec: Math.floor(Date.now() / 1000) - 30,
+      attemptedAtSec: Math.floor(Date.now() / 1000) - 30,
+    },
+    safetyScorePublicationUnavailableReason: null,
     stablecoinPublication: {
       status: "complete",
       expectedActiveCount: 0,
