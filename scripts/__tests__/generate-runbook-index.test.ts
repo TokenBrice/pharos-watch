@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DocOwnershipRegistry, DocReference } from "../lib/doc-ownership-registry.mts";
 import {
   END_MARKER,
+  collectRunbookIndex,
+  renderRunbookIndex,
   main,
   START_MARKER,
 } from "../maintenance/generate-runbook-index";
@@ -22,6 +24,20 @@ const procedure: DocReference = {
 };
 
 describe("runbook index generator", () => {
+  it("renders selector and required runbook metadata once across repeated reading modes", () => {
+    const registry = registryWith();
+    const mapping = registry.mappings![0];
+    mapping.reading = [{ sources: ["worker/**"], local: [procedure], contract: [procedure],
+      required: [{ ...procedure, path: "docs/runbooks/required.md", runbook: { label: "Required recovery", kind: "symptom" } }] }];
+    mapping.required = [procedure];
+    const entries = collectRunbookIndex(registry);
+    expect(entries).toHaveLength(2);
+    expect(renderRunbookIndex(entries)).toContain("| procedure | [Reviewed operator task](./runbooks/opaque-name.md) |");
+    expect(renderRunbookIndex(entries)).toContain("| symptom | [Required recovery](./runbooks/required.md) |");
+    mapping.reading[0].contract = [{ ...procedure, runbook: { label: "Conflicting label", kind: "procedure" } }];
+    expect(() => collectRunbookIndex(registry)).toThrow("Duplicate runbook index metadata");
+  });
+
   it("writes its owned output and check mode detects drift without rewriting", () => {
     const fixture = roots.makeRoot();
     roots.writeText(fixture, "docs/doc-ownership.json", JSON.stringify(registryWith(procedure)));

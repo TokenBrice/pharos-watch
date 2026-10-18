@@ -11,6 +11,10 @@
  * Optional `testOwnership` declarations bind inspected source globs to invariant
  * tests that Vitest cannot discover through imports. PR selection consumes all
  * declarations independently of focused-check tier precedence.
+ * Optional `reading` selectors replace default docs per matching input file;
+ * contract refs augment local refs, while `required` refs bypass display caps.
+ * Enumerate authored references before display normalization so coverage and
+ * generators retain all modes and curated metadata.
  *
  * Document references stay structured through the runtime boundary so text and
  * JSON formatters can render `path#anchor` while still exposing `{path, anchor}`.
@@ -42,11 +46,20 @@ export interface DeclaredTestOwnership {
   tests: string[];
 }
 
+export interface ReadingSelector {
+  sources: string[];
+  local?: DocReference[];
+  contract?: DocReference[];
+  required?: DocReference[];
+}
+
 interface RawMapping {
   alsoRead?: string[];
   background?: RawDocReference[];
   checks?: string[];
   docs: RawDocReference[];
+  reading?: ReadingSelector[];
+  required?: DocReference[];
   id: string;
   label: string;
   risk: "low" | "medium" | "high";
@@ -64,6 +77,8 @@ export interface PathFamily {
   background: DocReference[];
   checks: string[];
   docs: DocReference[];
+  reading?: ReadingSelector[];
+  required?: DocReference[];
   hardRules: string[];
   id: string;
   label: string;
@@ -120,18 +135,39 @@ function readDocOwnership(path: string = DOC_OWNERSHIP_PATH): DocOwnershipRegist
   return JSON.parse(readFileSync(path, "utf8")) as DocOwnershipRegistry;
 }
 
-function normalizeDocReference(reference: RawDocReference): DocReference {
+/** Enumerate authored references without stripping curated runbook metadata. */
+export function enumerateDocReferences(
+  mapping: {
+    docs: RawDocReference[];
+    background?: RawDocReference[];
+    reading?: ReadingSelector[];
+    required?: DocReference[];
+  },
+  { includeBackground = true }: { includeBackground?: boolean } = {},
+): DocReference[] {
+  return [
+    ...mapping.docs,
+    ...(mapping.required ?? []),
+    ...(mapping.reading ?? []).flatMap((selector) => [
+      ...(selector.local ?? []), ...(selector.contract ?? []), ...(selector.required ?? []),
+    ]),
+    ...(includeBackground ? mapping.background ?? [] : []),
+  ].map((reference) => typeof reference === "string" ? { path: reference } : reference);
+}
+
+export function normalizeDocReference(reference: RawDocReference): DocReference {
   if (typeof reference === "string") return { path: reference };
   if (!reference.runbook) return reference;
   return reference.anchor ? { path: reference.path, anchor: reference.anchor } : { path: reference.path };
 }
 
 function normalizeMapping(mapping: RawMapping): PathFamily {
-  const docs = mapping.docs.map(normalizeDocReference);
   return {
-    background: (mapping.background ?? []).map(normalizeDocReference),
+    background: enumerateDocReferences({ docs: mapping.background ?? [] }),
     checks: mapping.checks ?? [],
-    docs,
+    docs: enumerateDocReferences({ docs: mapping.docs }),
+    reading: mapping.reading,
+    required: mapping.required,
     hardRules: mapping.rules ?? [],
     id: mapping.id,
     label: mapping.label,

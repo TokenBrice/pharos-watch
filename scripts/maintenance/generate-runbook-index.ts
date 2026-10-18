@@ -5,7 +5,7 @@ import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { getVerifiedDocFiles } from "../lib/doc-files.mts";
-import type { DocOwnershipRegistry, DocReference } from "../lib/doc-ownership-registry.mts";
+import { enumerateDocReferences, type DocOwnershipRegistry, type DocReference } from "../lib/doc-ownership-registry.mts";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -21,14 +21,19 @@ export function isRunbookPath(path: string): boolean {
 export function collectRunbookIndex(registry: DocOwnershipRegistry): RunbookIndexEntry[] {
   const entries = new Map<string, RunbookIndexEntry>();
   for (const mapping of registry.mappings ?? []) {
-    for (const reference of [...mapping.docs, ...(mapping.background ?? [])]) {
-      if (typeof reference === "string" || !reference.runbook) continue;
+    for (const reference of enumerateDocReferences(mapping)) {
+      if (!reference.runbook) continue;
       const { label, kind } = reference.runbook;
       if (!isRunbookPath(reference.path) || typeof label !== "string" || !label.trim() ||
           !KINDS.includes(kind)) {
         throw new Error(`Invalid runbook index metadata: ${mapping.id}: ${reference.path}`);
       }
-      if (entries.has(reference.path)) throw new Error(`Duplicate runbook index metadata: ${reference.path}`);
+      const previous = entries.get(reference.path);
+      if (previous) {
+        if (previous.anchor === reference.anchor && previous.runbook.label === label.trim() &&
+            previous.runbook.kind === kind) continue;
+        throw new Error(`Duplicate runbook index metadata: ${reference.path}`);
+      }
       entries.set(reference.path, { ...reference, runbook: { label: label.trim(), kind } });
     }
   }

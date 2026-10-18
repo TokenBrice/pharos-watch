@@ -14,6 +14,7 @@ import {
 } from "../lib/deploy-impact.mts";
 import { collectGitPaths } from "../lib/changed-files.mts";
 import type { DocReference } from "../lib/doc-ownership-registry.mts";
+import type { ReadingSelector } from "../lib/doc-ownership-registry.mts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
 import type * as FocusedChecks from "../maintenance/run-focused-checks.ts";
 import type { MarkdownSectionRange, MarkdownSections } from "../lib/doc-markdown.mts";
@@ -47,6 +48,8 @@ interface PathFamilyRule {
   background: DocReference[];
   checks: string[];
   docs: DocReference[];
+  reading?: ReadingSelector[];
+  required?: DocReference[];
   hardRules: string[];
   id: string;
   label: string;
@@ -74,6 +77,12 @@ interface ChangeContract {
     workerImpact: boolean;
   };
   docs: DocReference[];
+  requiredDocs: DocReference[];
+  contextMode: {
+    requested: "auto" | "contract";
+    effective: "local" | "contract";
+    reasons: string[];
+  };
   hardRules: string[];
   mappings: MatchedMapping[];
   scopedContext: string[];
@@ -112,6 +121,7 @@ interface CliOptions {
   allowMissing: boolean;
   baseRef?: string;
   diagnostics: boolean;
+  context: "auto" | "contract";
   format: "json" | "text";
   headRef?: string;
   help: boolean;
@@ -126,6 +136,53 @@ const RISK_RANK: ReadonlyMap<string, number> = new Map([
   ["low", 1],
 ]);
 const MAX_SINGLE_PATH_READ_FIRST_DOCS = 6;
+const CONTRACT_SENSITIVE_GLOBS = [
+  "shared/types/**", "shared/lib/api-endpoints/**", "shared/lib/*contract*.ts",
+  "shared/lib/classification.ts", "shared/lib/methodology-versions/**",
+  "shared/data/methodology-changelogs/**", "shared/data/stablecoins/**",
+  "shared/lib/safety-score-v9/**", "shared/data/safety-score-v9/**",
+  "worker/migrations/**", "shared/contracts/**",
+];
+
+function selectContextMode(files: readonly string[], requested: "auto" | "contract"): ChangeContract["contextMode"] {
+  if (requested === "contract") return { requested, effective: "contract", reasons: ["Explicit contract context"] };
+  const surfaces = unique(files.filter((file) =>
+    !/(?:^|\/)(?:__tests__|__fixtures__|test|tests|fixtures)\//.test(file) &&
+    !/\.(?:test|spec|test-support)\.[cm]?[jt]sx?$/.test(file) &&
+    /\.[cm]?[jt]sx?$/.test(file) && !/\.d\.[cm]?ts$/.test(file),
+  ).map((file) => file.split("/")[0]).filter((surface) => ["src", "functions", "worker", "shared"].includes(surface)));
+  const reasons: string[] = [];
+  if (surfaces.length >= 2) reasons.push(`Implementation inputs span surfaces: ${surfaces.join(", ")}`);
+  for (const glob of CONTRACT_SENSITIVE_GLOBS) {
+    if (files.some((file) => getRoutingRegistry().matchesOwnershipGlob(file, glob))) reasons.push(`Contract-sensitive input: ${glob}`);
+  }
+  return { requested, effective: reasons.length > 0 ? "contract" : "local",
+    reasons: reasons.length > 0 ? reasons : ["Fewer than two implementation surfaces and no contract-sensitive paths"] };
+}
+
+function selectFamilyReading(family: PathFamilyRule, files: readonly string[], mode: "local" | "contract") {
+  const docs: DocReference[] = [];
+  const required = [...family.required ?? []];
+  const selected = new Set<ReadingSelector>();
+  let includedDefaults = false;
+  for (const file of files) {
+    let matchedSelector = false;
+    for (const selector of family.reading ?? []) {
+      if (!selector.sources.some((glob) => getRoutingRegistry().matchesOwnershipGlob(file, glob))) continue;
+      matchedSelector = true;
+      if (selected.has(selector)) continue;
+      selected.add(selector);
+      docs.push(...selector.local ?? []);
+      if (mode === "contract") docs.push(...selector.contract ?? []);
+      required.push(...selector.required ?? []);
+    }
+    if (!matchedSelector && !includedDefaults) {
+      docs.push(...family.docs);
+      includedDefaults = true;
+    }
+  }
+  return { docs, required, hasSelector: selected.size > 0 };
+}
 
 const SQL_MUTATING_KEYWORDS = new Set([
   "alter",
@@ -182,7 +239,7 @@ function uniqueDocs(values: readonly DocReference[]): DocReference[] {
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  });
+  }).map(getRoutingRegistry().normalizeDocReference);
 }
 
 function normalizeLocalPath(value: unknown): string {
@@ -383,12 +440,13 @@ export function normalizeExplicitFiles(
   return normalizeChangedFiles(resolvedFiles);
 }
 
-export function classifyChangedFiles(files: readonly string[]): ChangeContract {
-  return classifyChangedFilesWithSource(files, "explicit files");
+export function classifyChangedFiles(files: readonly string[], context: "auto" | "contract" = "auto"): ChangeContract {
+  return classifyChangedFilesWithSource(files, "explicit files", context);
 }
 
-function classifyChangedFilesWithSource(files: readonly string[], source: ChangeSource): ChangeContract {
+function classifyChangedFilesWithSource(files: readonly string[], source: ChangeSource, context: "auto" | "contract" = "auto"): ChangeContract {
   const changedFiles = normalizeChangedFiles(files);
+  const contextMode = selectContextMode(changedFiles, context);
   const { PATH_FAMILIES } = getRoutingRegistry();
   const matchedFamilies = PATH_FAMILIES.map((family) => ({
     ...family,
@@ -397,18 +455,20 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
     .filter((family) => family.matchedFiles.length > 0)
     .sort(compareFamilyRisk);
 
-  const specificFamilies = matchedFamilies.filter((family) => family.tier === "specific");
-  const fallbackFamilies = matchedFamilies.filter((family) => family.tier === "fallback");
-  const rankedDocs = uniqueDocs([
-    ...specificFamilies.flatMap((family) => family.docs),
-    ...fallbackFamilies.flatMap((family) => family.docs),
-  ]);
-  const docs = changedFiles.length === 1
-    ? rankedDocs.slice(0, MAX_SINGLE_PATH_READ_FIRST_DOCS)
-    : rankedDocs;
+  // Reading relevance is independent of mapping order, which controls checks.
+  const readings = matchedFamilies.map((family) => ({
+    ...selectFamilyReading(family, family.matchedFiles, contextMode.effective), tier: family.tier,
+  })).sort((a, b) =>
+    Number(a.tier === "fallback") - Number(b.tier === "fallback") || Number(b.hasSelector) - Number(a.hasSelector));
+  const requiredDocs = uniqueDocs(readings.flatMap((reading) => reading.required));
+  const requiredKeys = new Set(requiredDocs.map((doc) => `${doc.path}#${doc.anchor ?? ""}`));
+  const rankedDocs = uniqueDocs(readings.flatMap((reading) => reading.docs));
+  const ordinaryDocs = rankedDocs.filter((doc) => !requiredKeys.has(`${doc.path}#${doc.anchor ?? ""}`));
+  const selectedDocs = changedFiles.length === 1 ? ordinaryDocs.slice(0, MAX_SINGLE_PATH_READ_FIRST_DOCS) : ordinaryDocs;
+  const docs = uniqueDocs([...selectedDocs, ...requiredDocs]);
   const readFirstDocKeys = new Set(docs.map((doc) => `${doc.path}#${doc.anchor ?? ""}`));
   const background = uniqueDocs([
-    ...rankedDocs.slice(docs.length),
+    ...ordinaryDocs.slice(selectedDocs.length),
     ...matchedFamilies.flatMap((family) => family.background),
   ]).filter((doc) => !readFirstDocKeys.has(`${doc.path}#${doc.anchor ?? ""}`));
   const scopedContext = unique([
@@ -427,13 +487,15 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
   return {
     background,
     changedFiles,
-    checks,
+    checks: unmappedPaths.length > 0 ? [] : checks,
     deploy: {
       deployImpact: hasDeployImpact(changedFiles),
       pagesImpact: hasPagesDeployImpact(changedFiles),
       workerImpact: hasWorkerDeployImpact(changedFiles),
     },
     docs,
+    requiredDocs,
+    contextMode,
     hardRules,
     mappings: matchedFamilies.map((family) => ({
       id: family.id,
@@ -502,7 +564,7 @@ function sumContextSizes(sizes: readonly ContextSize[]): ContextSize {
  * cached only for this invocation; background references are not preloaded.
  */
 export function buildRouteContext(
-  contract: Pick<ChangeContract, "docs" | "scopedContext" | "background">,
+  contract: Pick<ChangeContract, "docs" | "scopedContext" | "background"> & Partial<Pick<ChangeContract, "requiredDocs">>,
   { repoRoot = REPO_ROOT }: { repoRoot?: string } = {},
 ): RouteContext {
   const { parseMarkdownSections, resolveMarkdownSectionRange, mergeMarkdownSectionRanges } =
@@ -521,7 +583,9 @@ export function buildRouteContext(
       path, kind: "scoped" as const, requiredReason: "Applicable scoped instructions",
     })),
     ...contract.docs.map((doc) => ({
-      ...doc, kind: "primary" as const, requiredReason: "Selected primary ownership reference",
+      ...doc, kind: "primary" as const, requiredReason: contract.requiredDocs?.some((required) =>
+        required.path === doc.path && required.anchor === doc.anchor)
+        ? "Required ownership reference (not subject to the reading cap)" : "Selected primary ownership reference",
     })),
   ];
   for (const reference of requested) {
@@ -1418,6 +1482,7 @@ export function formatContract(
   const sections = [
     "Pharos change contract:",
     `Source: ${contract.source}`,
+    `Reading context: ${contract.contextMode.requested} → ${contract.contextMode.effective} (${contract.contextMode.reasons.join("; ")})`,
     "",
     "Matched mappings:",
     formatMappings(contract.mappings),
@@ -1671,6 +1736,7 @@ function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options:
   const { values } = parseStrictCliArgs(argv, { conflicts: [["base", "base-ref"], ["head", "head-ref"]], options: {
     json: { type: "boolean" },
     diagnostics: { type: "boolean" },
+    context: { type: "string" },
     "new-file": { type: "boolean", multiple: true },
     staged: { type: "boolean" },
     hook: { type: "string" },
@@ -1684,10 +1750,13 @@ function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options:
   if (hook && !["session-start", "pre-tool-use", "permission-request"].includes(hook)) {
     throw new CliUsageError(`Unknown hook mode: ${hook}`);
   }
+  const context = values.context ?? "auto";
+  if (context !== "auto" && context !== "contract") throw new CliUsageError(`Invalid --context: ${context}; expected auto or contract`);
   return {
     explicitFiles: (values.file ?? []) as string[],
     options: {
       allowMissing: Array.isArray(values["new-file"]) && values["new-file"].some(Boolean),
+      context,
       baseRef: (values.base ?? values["base-ref"]) as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
       headRef: (values.head ?? values["head-ref"]) as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
       diagnostics: values.diagnostics === true,
@@ -1714,6 +1783,7 @@ Classify the current Pharos diff into docs, checks, and agent guardrails.
 
 Options:
   --json                  Emit the contract as JSON instead of text
+  --context=auto|contract  Select reading context (default auto; local is internal only)
   --diagnostics            Append safe per-hook diagnostics when a hook is selected
   --staged                Classify staged files only
   --new-file              Suppress missing explicit-file warnings (repeatable)
@@ -1822,7 +1892,8 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     throw error;
   }
 
-  const contract = classifyChangedFilesWithSource(changedFiles, source);
+  const contract = classifyChangedFilesWithSource(changedFiles, source, options.context);
+  if (contract.unmappedPaths.length > 0) process.exitCode = 1;
 
   if (hookMode === "session-start") {
     if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
@@ -1833,6 +1904,10 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   }
   const { buildFocusedCheckPlan } = require("../maintenance/run-focused-checks.ts") as typeof FocusedChecks;
   contract.checks = buildFocusedCheckPlan(changedFiles).checks.map((check) => check.command);
+  if (contract.unmappedPaths.length > 0) {
+    contract.checks = [];
+    process.exitCode = 1;
+  }
   const context = buildRouteContext(contract);
 
 

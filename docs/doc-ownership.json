@@ -53,6 +53,16 @@
     },
     {
       "id": "stablecoin-registry",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Stablecoin data and research sidecars",
       "risk": "high",
       "sources": [
@@ -108,6 +118,17 @@
     },
     {
       "id": "pricing-pipeline",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" },
+        { "path": "docs/architecture.md", "anchor": "adr-3" }
+      ],
       "label": "Pricing and supply pipelines",
       "risk": "high",
       "sources": [
@@ -149,6 +170,16 @@
     },
     {
       "id": "live-reserves",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Live reserve evidence and consumers",
       "risk": "high",
       "sources": [
@@ -230,6 +261,17 @@
     },
     {
       "id": "yield-intelligence",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" },
+        { "path": "docs/architecture.md", "anchor": "adr-3" }
+      ],
       "label": "Domain yield producers and consumers",
       "risk": "high",
       "sources": [
@@ -335,6 +377,16 @@
     },
     {
       "id": "worker-admin-api",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Admin API bindings and handlers",
       "risk": "high",
       "sources": [
@@ -371,6 +423,16 @@
     },
     {
       "id": "worker-api-auth",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Worker API and authentication",
       "risk": "high",
       "sources": [
@@ -414,6 +476,16 @@
     },
     {
       "id": "worker-cron",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Worker cron and scheduled pipelines",
       "risk": "high",
       "sources": [
@@ -524,6 +596,16 @@
     },
     {
       "id": "d1-migration",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "D1 schema or migration",
       "risk": "high",
       "sources": [
@@ -557,6 +639,17 @@
     },
     {
       "id": "methodology-scoring",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" },
+        { "path": "docs/architecture.md", "anchor": "adr-3" }
+      ],
       "label": "Methodology and scoring",
       "risk": "high",
       "sources": [
@@ -622,6 +715,17 @@
     },
     {
       "id": "safety-score-v9",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" },
+        { "path": "docs/architecture.md", "anchor": "adr-3" }
+      ],
       "label": "Safety Score V9 and publication surfaces",
       "risk": "high",
       "sources": [
@@ -810,6 +914,16 @@
     },
     {
       "id": "validation-ci-policy",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Deployment, CI, and repository policy",
       "risk": "high",
       "sources": [
@@ -1031,6 +1145,16 @@
     },
     {
       "id": "worker-runtime",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Worker runtime implementation",
       "risk": "medium",
       "sources": [
@@ -1063,6 +1187,16 @@
     },
     {
       "id": "shared-runtime",
+      "required": [
+        { "path": "docs/architecture.md", "anchor": "adr-28" },
+        { "path": "docs/architecture.md", "anchor": "adr-29" },
+        { "path": "docs/architecture.md", "anchor": "adr-30" },
+        { "path": "docs/architecture.md", "anchor": "adr-31" },
+        { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-33" },
+        { "path": "docs/architecture.md", "anchor": "adr-34" },
+        { "path": "docs/architecture.md", "anchor": "adr-35" }
+      ],
       "label": "Shared runtime contracts",
       "risk": "medium",
       "sources": ["shared/**"],

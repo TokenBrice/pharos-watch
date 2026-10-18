@@ -12,19 +12,21 @@ import {
   type MarkdownSections,
 } from "../lib/doc-markdown.mts";
 import { getVerifiedDocFiles } from "../lib/doc-files.mts";
-import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
+import { createOwnershipGlobMatcher, enumerateDocReferences, type DocReference as StructuredDocReference, type ReadingSelector } from "../lib/doc-ownership-registry.mts";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const COVERAGE_ROOTS = ["src/", "shared/", "worker/", "functions/", "scripts/", "docs/", ".github/"];
 const SPECIFIC_COVERAGE_THRESHOLD = 80;
 
-type DocReference = string | { anchor: string; path: string };
+type DocReference = string | StructuredDocReference;
 type RegistryMapping = {
   alsoRead?: string[];
   background?: DocReference[];
   checks?: string[];
   docs: DocReference[];
+  reading?: ReadingSelector[];
+  required?: StructuredDocReference[];
   id: string;
   sources: string[];
   tier?: "specific" | "fallback";
@@ -46,10 +48,6 @@ const trackedFiles = execFileSync("git", ["ls-files", "-z"], {
   cwd: REPO_ROOT,
   encoding: "utf8",
 }).split("\0").filter(Boolean);
-
-function normalizeDoc(reference: DocReference): { anchor?: string; path: string } {
-  return typeof reference === "string" ? { path: reference } : reference;
-}
 
 const matcherCache = new Map<readonly string[], (file: string) => boolean>();
 
@@ -120,6 +118,24 @@ describe("Markdown section ranges", () => {
   });
 });
 
+describe("ownership reference enumeration", () => {
+  it("retains every selector mode, required ref and runbook label for downstream consumers", () => {
+    const runbook: StructuredDocReference = { path: "docs/runbooks/selector.md",
+      runbook: { label: "Selector recovery", kind: "procedure" } };
+    const mapping = {
+      docs: ["default.md"], background: ["background.md"], required: [{ path: "required.md" }],
+      reading: [{ sources: ["src/**"], local: [runbook], contract: [{ path: "contract.md" }],
+        required: [{ path: "selector-required.md", anchor: "rule" }] }],
+    };
+    expect(enumerateDocReferences(mapping)).toEqual([
+      { path: "default.md" }, { path: "required.md" }, runbook, { path: "contract.md" },
+      { path: "selector-required.md", anchor: "rule" }, { path: "background.md" },
+    ]);
+    expect(enumerateDocReferences(mapping, { includeBackground: false }).map((reference) => reference.path))
+      .toEqual(["default.md", "required.md", runbook.path, "contract.md", "selector-required.md"]);
+  });
+});
+
 describe("doc-ownership registry integrity", () => {
   it("keeps unconditional root guidance and hints out of the routing model", () => {
     expect(ownership).not.toHaveProperty("baseDocs");
@@ -139,8 +155,7 @@ describe("doc-ownership registry integrity", () => {
 
   const references: Array<{ path: string; anchor?: string }> = [
     ...mappings.flatMap((mapping) => [
-      ...mapping.docs.map(normalizeDoc),
-      ...(mapping.background ?? []).map(normalizeDoc),
+      ...enumerateDocReferences(mapping),
       ...(mapping.alsoRead ?? []).map((path) => ({ path })),
     ]),
   ];
@@ -159,14 +174,11 @@ describe("doc-ownership registry integrity", () => {
     }
   });
   it("routes every verified doc under docs through a primary or background reference", () => {
-    const routedDocs = new Set(mappings.flatMap((mapping) => [
-      ...mapping.docs,
-      ...(mapping.background ?? []),
-    ]).map((reference) => normalizeDoc(reference).path));
+    const routedDocs = new Set(mappings.flatMap((mapping) => enumerateDocReferences(mapping)).map((reference) => reference.path));
     const unrouted = getVerifiedDocFiles(REPO_ROOT)
       .map((path) => relative(REPO_ROOT, path))
       .filter((path) => path.startsWith("docs/") && !routedDocs.has(path));
-    expect(unrouted, "Every verified doc needs a docs/background owner, not just a source glob").toEqual([]);
+    expect(unrouted, "Every verified doc needs a docs/background/reading/required owner, not just a source glob").toEqual([]);
   });
   it("keeps primary Markdown sections within 25KB and ratchets legacy exceptions", () => {
     // Existing out-of-scope sections only. Remove entries once bounded; new
@@ -187,7 +199,7 @@ describe("doc-ownership registry integrity", () => {
     for (const mapping of mappings) {
       const newDomain = domainIds.includes(mapping.id);
       if (newDomain) expect(mapping.checks ?? [], mapping.id).toEqual([]);
-      for (const reference of mapping.docs.map(normalizeDoc)) {
+      for (const reference of enumerateDocReferences(mapping, { includeBackground: false })) {
         if (!reference.path.endsWith(".md")) continue;
         if (newDomain) expect(reference.anchor, mapping.id).toBeTruthy();
         const key = reference.path + (reference.anchor ? `#${reference.anchor}` : "");
