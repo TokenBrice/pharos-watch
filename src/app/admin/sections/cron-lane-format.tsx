@@ -20,7 +20,7 @@ export function getCronStatusColor(status: string | undefined): string {
 
 export function formatLastGood(row: CronWorkbenchRow, nowSeconds: number): string {
   if (row.cron.telemetryUnknown) return `Unknown${row.cron.telemetryUnknownReason ? `: ${row.cron.telemetryUnknownReason}` : ""}`;
-  const lastSuccessfulRun = getLastSuccessfulRun(row.cron.recentRuns ?? []);
+  const lastSuccessfulRun = getLastSuccessfulRun(row.cron.runs);
   if (!lastSuccessfulRun) return "No successful run in recent history";
   return `${formatElapsedSeconds(Math.max(0, nowSeconds - lastSuccessfulRun.startedAt))} ago`;
 }

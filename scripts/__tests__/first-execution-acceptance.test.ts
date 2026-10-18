@@ -8,12 +8,16 @@ import { evaluateFirstExecutionAcceptance, runFirstExecutionAcceptanceCli } from
 const run = { startedAt: 1_800_000_010, durationMs: 1_000, status: "ok",
   metadata: { workerVersion: "exact-version", syncStartSec: 1_800_000_010, cacheWriteMode: "published" } };
 const input = { job: "sync-stablecoins", workerVersion: "exact-version", notBefore: 1_800_000_000,
-  status: { timestamp: 1_800_000_100, crons: { "sync-stablecoins": { lastRun: run } } } };
-const withRun = (lastRun: unknown) => ({ ...input, status: { ...input.status, crons: { "sync-stablecoins": { lastRun } } } });
+  status: { timestamp: 1_800_000_100, job: "sync-stablecoins", cron: { runs: [run] } } };
+const withRun = (latestRun: unknown) => ({ ...input, status: { ...input.status, cron: { runs: [latestRun] } } });
 
 describe("collected execution acceptance", () => {
   it("accepts a completed matching execution without claiming publication", () => {
     expect(evaluateFirstExecutionAcceptance(input)).toEqual({ outcome: "passed", reason: "execution-confirmed" });
+  });
+  it("keeps a detail payload for another job pending", () => {
+    expect(evaluateFirstExecutionAcceptance({ ...input, status: { ...input.status, job: "sync-blacklist" } }))
+      .toEqual({ outcome: "pending", reason: "run-missing" });
   });
   it.each([null, { ...run, metadata: null }, { ...run, metadata: { workerVersion: "old" } },
     { ...run, metadata: { workerVersion: "newer-unrelated" } }, { ...run, startedAt: input.notBefore - 1 },

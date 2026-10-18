@@ -650,6 +650,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probePath: API_PATHS.statusHistory({ limit: 10 }),
     opsProxyTimeoutMs: 20_000,
   }),
+  // Per-job cron detail (full run/progress metadata) opened from the workbench;
+  // the default /api/status serves only the per-job summary.
+  adminGet({
+    key: "status-cron-detail",
+    path: API_PATHS.statusCronDetailBase(),
+    opsProxyTimeoutMs: 20_000,
+  }),
   adminGet({
     key: "reserve-attempt-history",
     path: API_PATHS.reserveAttemptHistoryBase(),

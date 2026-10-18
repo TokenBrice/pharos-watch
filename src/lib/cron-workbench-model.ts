@@ -1,10 +1,9 @@
 import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, CRON_SCHEDULE_DEFINITIONS, CRON_TRIGGER_SCHEDULES, getCronJobMeta, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
-import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import type { OperatorVerdict } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type {
   BudgetOnlySurfaceStatus,
-  CronRun,
+  CronRunSummary,
   CronRunStatus,
   CronStatus,
   StatusCause,
@@ -233,9 +232,10 @@ function compareStableRegistryOrder(
 }
 
 function isFreshNeutralSkip(cron: CronStatus, nowSeconds?: number): boolean {
-  if (cron.lastRun?.status !== "skipped_neutral") return false;
+  const latestRun = cron.runs[0];
+  if (latestRun?.status !== "skipped_neutral") return false;
   if (nowSeconds == null) return true;
-  return nowSeconds - cron.lastRun.startedAt <= cron.expectedIntervalSec * 2;
+  return nowSeconds - latestRun.startedAt <= cron.expectedIntervalSec * 2;
 }
 
 function getRunningState(cron: CronStatus): CronRunningState {
@@ -246,8 +246,8 @@ function getRunningState(cron: CronStatus): CronRunningState {
 type InheritedRequiredOutcome = Extract<CronRunStatus, "degraded" | "error"> | null;
 
 function getInheritedRequiredOutcome(cron: CronStatus, nowSeconds?: number): InheritedRequiredOutcome {
-  if (cron.lastRun?.status !== "skipped_neutral") return null;
-  const latestRequiredRun = cron.recentRuns.find((run) => run.status !== "skipped_neutral");
+  if (cron.runs[0]?.status !== "skipped_neutral") return null;
+  const latestRequiredRun = cron.runs.find((run) => run.status !== "skipped_neutral");
   if (latestRequiredRun?.status !== "degraded" && latestRequiredRun?.status !== "error") return null;
   if (nowSeconds != null && nowSeconds - latestRequiredRun.startedAt > cron.expectedIntervalSec * 2) return null;
   // The backend supersedes an inherited error when a fresh skip proves the
@@ -259,8 +259,8 @@ function getInheritedRequiredOutcome(cron: CronStatus, nowSeconds?: number): Inh
   // A required attempt after the readback still wins. An inherited degraded
   // run stays a warning: the artifact existing does not prove that run's
   // inputs were clean.
-  const provenSatisfiedRun = cron.recentRuns.find((run) => run.status === "skipped_neutral"
-    && isProvenSatisfiedNeutralSkipReason(run.metadata?.reason));
+  const provenSatisfiedRun = cron.runs.find((run) => run.status === "skipped_neutral"
+    && isProvenSatisfiedNeutralSkipReason(run.reason));
   if (
     latestRequiredRun.status === "error"
     && provenSatisfiedRun != null
@@ -273,11 +273,11 @@ function getInheritedRequiredOutcome(cron: CronStatus, nowSeconds?: number): Inh
 }
 
 function getWorkbenchQualityReasons(cron: CronStatus, nowSeconds?: number): string[] {
-  const run = cron.lastRun?.status === "skipped_neutral"
-    ? cron.recentRuns.find((candidate) => candidate.status !== "skipped_neutral")
-    : cron.lastRun;
+  const run = cron.runs[0]?.status === "skipped_neutral"
+    ? cron.runs.find((candidate) => candidate.status !== "skipped_neutral")
+    : cron.runs[0];
   if (!run || (nowSeconds != null && nowSeconds - run.startedAt > cron.expectedIntervalSec * 2)) return [];
-  return getCronQualityReasons(run.metadata);
+  return run.qualityReasons ?? [];
 }
 
 function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean {
@@ -332,10 +332,11 @@ function summarizeGroup(allRows: CronWorkbenchRow[], visibleRows: CronWorkbenchR
 
 /** Consecutive failed required runs; generic neutral skips are not required attempts. */
 function countRequiredErrorStreak(cron: CronStatus, nowSeconds?: number): number {
-  if (cron.lastRun?.status !== "error" && getInheritedRequiredOutcome(cron, nowSeconds) !== "error") return 0;
-  if (nowSeconds != null && cron.lastRun && nowSeconds - cron.lastRun.startedAt > cron.expectedIntervalSec * 2) return 0;
+  const latestRun = cron.runs[0];
+  if (latestRun?.status !== "error" && getInheritedRequiredOutcome(cron, nowSeconds) !== "error") return 0;
+  if (nowSeconds != null && latestRun && nowSeconds - latestRun.startedAt > cron.expectedIntervalSec * 2) return 0;
   let streak = 0;
-  for (const run of cron.recentRuns) {
+  for (const run of cron.runs) {
     if (run.status === "skipped_neutral") continue;
     if (run.status !== "error") break;
     streak += 1;
@@ -379,7 +380,7 @@ export function getCronNextExpected(cron: CronStatus, nowSeconds: number, job?: 
       budget: `${budget} Next primary trigger opportunity; admission and catch-up runs may differ.`,
     };
   }
-  const lastStart = cron.lastRun?.startedAt;
+  const lastStart = cron.runs[0]?.startedAt;
   if (lastStart == null) {
     return { kind: "unknown", label: cron.telemetryUnknown ? "Unknown" : "No runs", budget };
   }
@@ -476,10 +477,11 @@ export function deriveCronVerdict(
   if (cron.bootstrap) {
     return { verdict: "ok", code: "bootstrap", sentence: "This job is in its initial admission window; no required run has completed yet." };
   }
-  if (!cron.lastRun) {
+  const latestRun = cron.runs[0];
+  if (!latestRun) {
     return { verdict: "unavailable", code: "no-runs", sentence: "No run has been recorded for this job." };
   }
-  if (cron.lastRun.status.startsWith("skipped_")) {
+  if (latestRun.status.startsWith("skipped_")) {
     return { verdict: "ok", code: "skipped", sentence: "The latest run was skipped and no required run is outstanding." };
   }
   return { verdict: "ok", code: "ok", sentence: `The latest run succeeded within the ${budget} budget.` };
@@ -489,27 +491,17 @@ export function classifyCronWorkbenchState(cron: CronStatus, nowSeconds?: number
   if (cron.telemetryUnknown) return "unknown";
   const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron, nowSeconds);
   if (
-    cron.lastRun?.status === "error" ||
+    cron.runs[0]?.status === "error" ||
     inheritedRequiredOutcome === "error" ||
     cron.inFlight?.stale
   ) {
     return "unhealthy";
   }
-  if (cron.lastRun?.status === "degraded" || inheritedRequiredOutcome === "degraded") return "degraded";
+  if (cron.runs[0]?.status === "degraded" || inheritedRequiredOutcome === "degraded") return "degraded";
   if (cron.inFlight && !cron.inFlight.stale) return "running";
   if (isFreshNeutralSkip(cron, nowSeconds)) return "skipped";
   if (!cron.healthy) return "unhealthy";
   return "healthy";
-}
-
-function readMetadataString(metadata: Record<string, unknown> | undefined, key: string): string | null {
-  const value = metadata?.[key];
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function readMetadataNumber(metadata: Record<string, unknown> | undefined, key: string): number | null {
-  const value = metadata?.[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 type CronRunNotStartedReason =
@@ -518,42 +510,41 @@ type CronRunNotStartedReason =
   | "upstream-failure"
   | "upstream-blocked";
 
-function getCronRunNotStartedReason(run: Pick<CronRun, "metadata">): CronRunNotStartedReason | null {
-  if (readMetadataString(run.metadata, "childDisposition") !== "not_started") return null;
-  if (readMetadataString(run.metadata, "reason") === "stale-slot-reconciled") {
+/** Outcome fields of a summary or detail run that classify how it ended. */
+type CronRunOutcomeFields = Pick<CronRunSummary, "reason" | "skippedReason" | "childDisposition" | "qualityReasons">;
+
+function getCronRunNotStartedReason(run: CronRunOutcomeFields | undefined): CronRunNotStartedReason | null {
+  if (run?.childDisposition !== "not_started") return null;
+  if (run.reason === "stale-slot-reconciled") {
     return "upstream-abandoned";
   }
-  const skippedReason = readMetadataString(run.metadata, "skippedReason");
   for (const reason of ["upstream-incomplete", "upstream-failure", "upstream-blocked"] as const) {
-    if (skippedReason?.startsWith(`${reason}:`)) return reason;
+    if (run.skippedReason?.startsWith(`${reason}:`)) return reason;
   }
   return null;
 }
 
-export function isCronRunNotStarted(run: Pick<CronRun, "metadata">): boolean {
+export function isCronRunNotStarted(run: CronRunOutcomeFields): boolean {
   return getCronRunNotStartedReason(run) != null;
 }
 
-function isCronRunPlatformAbandoned(run: Pick<CronRun, "metadata">): boolean {
-  return (
-    readMetadataString(run.metadata, "reason") === "stale-slot-reconciled"
-    && !isCronRunNotStarted(run)
-  );
+function isCronRunPlatformAbandoned(run: CronRunOutcomeFields | undefined): boolean {
+  return run?.reason === "stale-slot-reconciled" && !isCronRunNotStarted(run);
 }
 
 export function formatCronRunStatus(
   status: CronRunStatus | null | undefined,
-  metadata?: Record<string, unknown>,
+  run?: CronRunOutcomeFields,
 ): string {
-  const notStartedReason = getCronRunNotStartedReason({ metadata });
+  const notStartedReason = getCronRunNotStartedReason(run);
   if (notStartedReason === "upstream-abandoned") return "Not started: upstream abandoned";
   if (notStartedReason === "upstream-incomplete") return "Not started: upstream incomplete";
   if (notStartedReason === "upstream-failure") return "Not started: prerequisite failed";
   if (notStartedReason === "upstream-blocked") return "Not started: prerequisite blocked";
-  if (isCronRunPlatformAbandoned({ metadata })) return "Abandoned";
-  if (status === "ok" && getCronQualityReasons(metadata).length > 0) return "Succeeded with findings";
+  if (isCronRunPlatformAbandoned(run)) return "Abandoned";
+  if (status === "ok" && (run?.qualityReasons?.length ?? 0) > 0) return "Succeeded with findings";
   if (status === "skipped_neutral") {
-    const reason = readMetadataString(metadata, "reason");
+    const reason = run?.reason;
     if (reason && NEUTRAL_SKIP_REASON_LABELS[reason]) return NEUTRAL_SKIP_REASON_LABELS[reason];
   }
   return status ? RUN_STATUS_LABELS[status] : "No runs";
@@ -597,7 +588,7 @@ function formatCronDuration(durationMs: number): FormattedCronDuration {
   return { label: parts.join(" "), exactLabel: formatExactSeconds(safeDurationMs) };
 }
 
-export function formatCronRunTiming(run: CronRun): FormattedCronRunTiming {
+export function formatCronRunTiming(run: CronRunSummary): FormattedCronRunTiming {
   const notStartedReason = getCronRunNotStartedReason(run);
   if (notStartedReason) {
     return {
@@ -616,13 +607,13 @@ export function formatCronRunTiming(run: CronRun): FormattedCronRunTiming {
     };
   }
 
-  const metadataActiveDurationMs = readMetadataNumber(run.metadata, "activeDurationMs");
-  const progressUpdatedAt = readMetadataNumber(run.metadata, "progressUpdatedAt");
-  const reconciledAt = readMetadataNumber(run.metadata, "reconciledAt");
+  const metadataActiveDurationMs = run.activeDurationMs ?? null;
+  const progressUpdatedAt = run.progressUpdatedAt ?? null;
+  const reconciledAt = run.reconciledAt ?? null;
   const activeDurationMs =
     metadataActiveDurationMs
     ?? (progressUpdatedAt == null ? null : Math.max(0, progressUpdatedAt - run.startedAt) * 1000);
-  const metadataReconciliationDelayMs = readMetadataNumber(run.metadata, "reconciliationDelayMs");
+  const metadataReconciliationDelayMs = run.reconciliationDelayMs ?? null;
   const reconciliationDelayMs =
     metadataReconciliationDelayMs
     ?? (progressUpdatedAt == null || reconciledAt == null
@@ -658,7 +649,7 @@ export function buildCronWorkbenchModel(
     const rows = group.entries.map(([job, cron]) => {
       const state = classifyCronWorkbenchState(cron, nowSeconds);
       const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
-      const rawStatus = cron.lastRun?.status ?? null;
+      const rawStatus = cron.runs[0]?.status ?? null;
       const qualityReasons = getWorkbenchQualityReasons(cron, nowSeconds);
       const verdictReason = deriveCronVerdict(cron, impactClass, state, qualityReasons, nowSeconds, job);
       const row: CronWorkbenchRow = {
@@ -679,7 +670,7 @@ export function buildCronWorkbenchModel(
           ? "Telemetry unknown"
           : rawStatus === "ok" && qualityReasons.length > 0
             ? RUN_STATUS_LABELS.ok
-            : formatCronRunStatus(rawStatus, cron.lastRun?.metadata),
+            : formatCronRunStatus(rawStatus, cron.runs[0]),
         qualityReasons,
         errorStreak: countRequiredErrorStreak(cron, nowSeconds),
         registryIndex: getRegistryIndex(job),
@@ -840,7 +831,7 @@ export function getCronRunbooks(
   for (const cause of causes) {
     if (cause.runbookUrl && cause.subjects?.includes(row.job)) hrefs.push(cause.runbookUrl);
   }
-  const lastRun = row.cron.lastRun;
+  const lastRun = row.cron.runs[0];
   if (lastRun && isCronRunPlatformAbandoned(lastRun)) hrefs.push(`${RUNBOOK_BLOB_URL}/cron-slot-abandonment.md`);
   if (
     row.cron.inFlight?.stale
