@@ -97,17 +97,6 @@ const cronMocks = vi.hoisted(() => ({
       persistence: { generationId: "dex-liquidity-1785060960" },
     }),
   })),
-  reuseCurrentDexLiquidityScoringGeneration: vi.fn(async () => ({
-    status: "skipped_neutral",
-    itemCount: 0,
-    metadata: JSON.stringify({
-      persistence: {
-        generationId: "dex-liquidity-1785060960",
-        skipped: false,
-        skippedReason: "liquidity-cadence-reuse",
-      },
-    }),
-  })),
   runWorkerRepairTaskRunner: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
   refreshAggregateMintBurnFlowCache: vi.fn(async () => new Response("{}")),
   logCronRun: vi.fn(async (
@@ -308,7 +297,6 @@ vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syn
 vi.mock("../cron/dex-liquidity/orchestrator", () => ({
   stageDexLiquidityScoring: cronMocks.stageDexLiquidityScoring,
   consumeDexLiquidityScoringStage: cronMocks.consumeDexLiquidityScoringStage,
-  reuseCurrentDexLiquidityScoringGeneration: cronMocks.reuseCurrentDexLiquidityScoringGeneration,
 }));
 vi.mock("../cron/measured-execution/sync", () => ({
   syncDexMeasuredExecution: cronMocks.syncDexMeasuredExecution,

@@ -98,6 +98,7 @@ import {
   persistDexLiquidityScoringStage,
   probeDexLiquidityScoringStageSlot,
   type LoadedDexLiquidityScoringStage,
+  type DexLiquidityScoringStageSlotProbe,
 } from "./scoring-stage";
 import type {
   DexLiquidityPoolState,
@@ -180,8 +181,12 @@ async function buildDexLiquidityScoringStageState(
   scoringSourceState: DexLiquidityScoringSourceState;
   poolState: DexLiquidityPoolState;
 }> {
+  const sourceStartedAtMs = Date.now();
   const sourceState = await loadDexLiquiditySourceState(ctx);
+  const poolsStartedAtMs = Date.now();
+  if (ctx.phaseTimingsMs) ctx.phaseTimingsMs.sourceLoading = poolsStartedAtMs - sourceStartedAtMs;
   const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
+  if (ctx.phaseTimingsMs) ctx.phaseTimingsMs.poolConstruction = Date.now() - poolsStartedAtMs;
   return {
     scoringSourceState: buildDexLiquidityScoringSourceState(sourceState),
     poolState,
@@ -214,6 +219,7 @@ export async function stageDexLiquidityScoring(
   const d1Cost = createD1CostTracker(db, DEX_D1_COST_EXCLUSIONS);
   db = d1Cost.db;
   const fallbackCounters = initLiquidityFallbackCounters();
+  const phaseTimingsMs = { sourceLoading: 0, poolConstruction: 0, stagePersistence: 0 };
   const reportDexProgress = createDexProgressReporter(reportProgress, {
     totalStablecoins: ACTIVE_STABLECOINS.length,
   });
@@ -229,6 +235,7 @@ export async function stageDexLiquidityScoring(
     sourceSlotStartedAt,
     deadline,
     fallbackCounters,
+    phaseTimingsMs,
   };
   const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
   const itemCount = poolState.metrics.size;
@@ -243,6 +250,7 @@ export async function stageDexLiquidityScoring(
   const materialPoolRejections = hasMaterialPoolRejections(
     poolState.poolRejections,
   );
+  const persistenceStartedAtMs = Date.now();
   const stored = await persistDexLiquidityScoringStage(
     db,
     {
@@ -259,6 +267,7 @@ export async function stageDexLiquidityScoring(
     },
     signal,
   );
+  phaseTimingsMs.stagePersistence = Date.now() - persistenceStartedAtMs;
   throwIfAborted(signal);
   const cursorPersistence = await acknowledgeDexSourcePagination(db, ctx.pendingPaginationUpdates ?? []);
   const targetEnrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
@@ -275,6 +284,8 @@ export async function stageDexLiquidityScoring(
     metadata: JSON.stringify({
       ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
       d1Cost: d1Cost.snapshot(),
+      phaseTimingsMs,
+      stagedWritebackRows: poolState.stagedWritebackRows ?? null,
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,
       syncStartSec,
@@ -336,6 +347,25 @@ class DexScoringStageProducerRunningError extends Error {
   }
 }
 
+/** One source-slot transition policy for both consumer deliveries and readiness probes. */
+export function decideDexLiquiditySourceSlot(
+  probe: DexLiquidityScoringStageSlotProbe,
+  acceptedGenerationId: string | null,
+  readinessExpired: boolean,
+): { action: "reuse" | "consume" | "wait" } | { action: "recover"; reason: DexLiquidityStageRecoveryReason } {
+  if (probe.manifestState === "consumed"
+    || (probe.syncStartedAt != null
+      && acceptedGenerationId === buildDexLiquidityPublicationGenerationId(probe.syncStartedAt))) {
+    return { action: "reuse" };
+  }
+  if (probe.manifestState === "ready") return { action: "consume" };
+  // Even a failed manifest can belong to a new live rewrite; never overwrite it.
+  if (probe.activeStageRun) return { action: "wait" };
+  if (probe.manifestState === "failed") return { action: "recover", reason: "stage-generation-failed" };
+  if (probe.lastStageRunStatus === "error") return { action: "recover", reason: "stage-run-errored" };
+  return readinessExpired ? { action: "recover", reason: "stage-missing" } : { action: "wait" };
+}
+
 export async function consumeDexLiquidityScoringStage(
   db: D1Database,
   signal?: AbortSignal,
@@ -345,9 +375,8 @@ export async function consumeDexLiquidityScoringStage(
     publishShadowTargets?: boolean;
     stageReadyDeadlineMs?: number;
     deadline?: SlotDeadline;
-    /** Recovery configuration for an exact failed/missing slot. Reconstruction
-     * additionally requires Graph capability, the source-job lease and deadline;
-     * scheduled heavy intentionally lacks Graph credentials and fails preflight. */
+    /** Recovery requires Graph capability, the source-job lease and the
+     * inherited invocation deadline; both scheduled roles have Graph access. */
     stageRecovery?: DexLiquidityStageRecoveryInput;
   } = {},
 ): Promise<CronResult> {
@@ -355,16 +384,38 @@ export async function consumeDexLiquidityScoringStage(
   db = d1Cost.db;
   const expectedSourceSlotStartedAt = consumerSlotStartedAt == null
     ? undefined
-    : consumerSlotStartedAt - DEX_LIQUIDITY_STAGE_LEAD_SEC;
+    : dexLiquidityStageSourceSlotForConsumerSlot(consumerSlotStartedAt);
+  if (expectedSourceSlotStartedAt != null) {
+    const [probe, acceptedGenerationId] = await Promise.all([
+      probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, signal),
+      loadCurrentDexScoringGenerationId(db, signal),
+    ]);
+    if (decideDexLiquiditySourceSlot(probe, acceptedGenerationId, false).action === "reuse") {
+      if (!acceptedGenerationId) throw new Error("Consumed DEX source slot has no accepted generation");
+      return withDexD1CostMetadata(createCronResult({
+        status: "skipped_neutral",
+        itemCount: 0,
+        metadata: {
+          reason: "liquidity-cadence-reuse",
+          cadenceReuse: true,
+          sourceSlotStartedAt: expectedSourceSlotStartedAt,
+          sourceState: probe.manifestState,
+          acceptedGeneration: acceptedGenerationId,
+          persistence: { generationId: acceptedGenerationId, skipped: false, skippedReason: "liquidity-cadence-reuse" },
+        },
+        productivity: { productive: false, reason: "liquidity-cadence-reuse" },
+      }), d1Cost);
+    }
+  }
   let staged: LoadedDexLiquidityScoringStage;
   let recovery: DexLiquidityStageRecoveryOutcome | null = null;
-  if (expectedSourceSlotStartedAt != null && options.stageReadyDeadlineMs != null) {
+  if (expectedSourceSlotStartedAt != null) {
     try {
       ({ staged, recovery } = await loadDexLiquidityScoringStageForConsumer(
         db,
         {
           expectedSourceSlotStartedAt,
-          readyDeadlineMs: options.stageReadyDeadlineMs,
+          readyDeadlineMs: options.stageReadyDeadlineMs ?? Date.now(),
           recovery: options.stageRecovery ?? null,
           deadline: options.deadline,
         },
@@ -400,6 +451,9 @@ export async function consumeDexLiquidityScoringStage(
       },
       signal,
     );
+  }
+  if (recovery == null && consumerSlotStartedAt != null && !isHourlyDexPriceSlot(consumerSlotStartedAt)) {
+    recovery = { reason: "stage-unconsumed", sourceSlotStartedAt: staged.sourceSlotStartedAt, generationId: staged.generationId };
   }
   const result = await consumeLoadedDexLiquidityScoringStage(
     db,
@@ -452,15 +506,26 @@ async function consumeLoadedDexLiquidityScoringStage(
     scoreState,
     persistenceState,
   );
-  try {
-    await markDexLiquidityScoringStageConsumed(db, staged.generationId, Math.floor(Date.now() / 1000), signal);
-  } catch (error) {
-    logWorkerEventArgs("handler", "warn", JSON.stringify({
-      scope: "dex-liquidity",
-      message: "Failed to mark scoring stage consumed after publication",
-      error: toErrorMessage(error),
-    }));
+  // A rejected candidate remains ready for a later attempt. Only an accepted
+  // publication closes the source slot; source completion is not publication.
+  const acceptedGeneration = persistenceState.persistence.skipped
+    ? null : persistenceState.persistence.generationId ?? null;
+  if (acceptedGeneration != null) {
+    try {
+      await markDexLiquidityScoringStageConsumed(db, staged.generationId, Math.floor(Date.now() / 1000), signal);
+    } catch (error) {
+      logWorkerEventArgs("handler", "warn", JSON.stringify({
+        scope: "dex-liquidity",
+        message: "Failed to mark scoring stage consumed after publication",
+        error: toErrorMessage(error),
+      }));
+    }
   }
+  const publicationMetadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+  publicationMetadata.sourceSlotStartedAt = staged.sourceSlotStartedAt;
+  publicationMetadata.sourceState = acceptedGeneration == null ? "ready" : "consumed";
+  publicationMetadata.acceptedGeneration = acceptedGeneration;
+  result.metadata = JSON.stringify(publicationMetadata);
   if (recovery != null) {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     metadata.stageRecovery = recovery;
@@ -469,42 +534,6 @@ async function consumeLoadedDexLiquidityScoringStage(
   return result;
 }
 
-export async function reuseCurrentDexLiquidityScoringGeneration(
-  db: D1Database,
-  signal?: AbortSignal,
-  reportProgress?: CronProgressReporter,
-  consumerSlotStartedAt?: number,
-  options: { stageRecovery?: DexLiquidityStageRecoveryInput; deadline?: SlotDeadline } = {},
-): Promise<CronResult> {
-  const d1Cost = createD1CostTracker(db, DEX_D1_COST_EXCLUSIONS);
-  db = d1Cost.db;
-  if (consumerSlotStartedAt != null) {
-    const published = await publishHourStageAtHalfHourTick(
-      db,
-      dexLiquidityStageSourceSlotForConsumerSlot(consumerSlotStartedAt),
-      options.stageRecovery ?? null,
-      reportProgress,
-      signal,
-      options.deadline,
-    );
-    if (published != null) return withDexD1CostMetadata(published, d1Cost);
-  }
-  const generationId = await loadCurrentDexScoringGenerationId(db, signal);
-  if (!generationId) {
-    return createCronResult({
-      status: "degraded",
-      itemCount: 0,
-      metadata: { d1Cost: { ...d1Cost.snapshot() }, reason: "current-dex-liquidity-generation-missing", persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" } },
-      productivity: { productive: false, reason: "current-dex-liquidity-generation-missing" },
-    });
-  }
-  return createCronResult({
-    status: "skipped_neutral",
-    itemCount: 0,
-    metadata: { d1Cost: { ...d1Cost.snapshot() }, reason: "liquidity-cadence-reuse", cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
-    productivity: { productive: false, reason: "liquidity-cadence-reuse" },
-  });
-}
 
 /** The hour's :10 source slot a charts-offset consumer occurrence maps to:
  *  :16 leads it by the registered stage lead; the half-hour :46 occurrence
@@ -516,81 +545,6 @@ function dexLiquidityStageSourceSlotForConsumerSlot(consumerSlotStartedAt: numbe
     : publicationLeadSlot - CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec;
 }
 
-/**
- * The half-hour consumer's second chance at the hour's source stage. A stage
- * that is ready but was never consumed is published; a terminal (failed,
- * errored, or abandoned) or never-started stage is bounded-recovered for the
- * exact slot first. A consumed stage — the healthy :16 publication — and a
- * stage with a live producer keep the existing cadence-reuse path, so a
- * successful hourly publication still yields the neutral skip. Never throws:
- * an unusable stage defers to the reuse path and the next hourly stage run.
- */
-async function publishHourStageAtHalfHourTick(
-  db: D1Database,
-  expectedSourceSlotStartedAt: number,
-  recovery: DexLiquidityStageRecoveryInput | null,
-  reportProgress: CronProgressReporter | undefined,
-  signal?: AbortSignal,
-  deadline?: SlotDeadline,
-): Promise<CronResult | null> {
-  try {
-    const probe = await probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, signal);
-    if (probe.manifestState === "consumed") return null;
-    if (recovery == null && probe.manifestState !== "ready") return null;
-    if (probe.manifestState === "ready") {
-      const staged = await loadDexLiquidityScoringStage(
-        db,
-        {
-          nowSec: Math.floor(Date.now() / 1000),
-          expectedSourceSlotStartedAt,
-        },
-        signal,
-      );
-      return await consumeLoadedDexLiquidityScoringStage(
-        db,
-        staged,
-        { publishShadowTargets: false, deadline },
-        reportProgress,
-        signal,
-        {
-          reason: "stage-unconsumed",
-          sourceSlotStartedAt: expectedSourceSlotStartedAt,
-          generationId: staged.generationId,
-        },
-      );
-    }
-    // Missing, writing, or failed without a live producer: re-run the stage for
-    // the exact slot if it is terminal or absent, then publish what it wrote.
-    const { staged, recovery: outcome } = await loadDexLiquidityScoringStageForConsumer(
-      db,
-      {
-        expectedSourceSlotStartedAt,
-        readyDeadlineMs: Date.now(),
-        recovery,
-        deadline,
-      },
-      reportProgress,
-      signal,
-    );
-    return await consumeLoadedDexLiquidityScoringStage(
-      db,
-      staged,
-      { publishShadowTargets: false, deadline },
-      reportProgress,
-      signal,
-      outcome,
-    );
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    logWorkerEventArgs("handler", "warn", JSON.stringify({
-      scope: "dex-liquidity",
-      message: "Half-hour DEX stage publication deferred to the next hourly stage run",
-      sourceSlotStartedAt: expectedSourceSlotStartedAt,
-      error: toErrorMessage(error),
-    }));
-    return null;
-  }
-}
 
 const DEX_LIQUIDITY_STAGE_RECOVERY_JOB = "sync-dex-liquidity-stage";
 const DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC = 14 * 60;
@@ -600,8 +554,8 @@ const DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC = 14 * 60;
  * stop waiting the moment the slot's stage is provably terminal: a failed
  * generation, or an errored stage run with no live lease. Terminal slots are
  * either re-run inline by a capability-equipped caller (Graph preflight, stage
- * lease and remaining deadline required), or fail fast. Passing recovery config
- * does not establish Graph capability; scheduled heavy intentionally lacks it.
+ * lease and remaining deadline required), or fail fast. Heavy has Graph access
+ * and uses exactly the same recovery admission as the public source lane.
  */
 async function loadDexLiquidityScoringStageForConsumer(
   db: D1Database,
@@ -626,17 +580,9 @@ async function loadDexLiquidityScoringStageForConsumer(
         onMissing: async (waitSignal) => {
           const probe = await probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, waitSignal);
           producerLiveAtLastProbe = probe.activeStageRun;
-          // A live producer is never overwritten: keep waiting for it.
-          if (probe.activeStageRun) return "wait";
-          const generationFailed = probe.manifestState === "failed";
-          if (generationFailed || probe.lastStageRunStatus === "error") {
-            stopReason = generationFailed ? "stage-generation-failed" : "stage-run-errored";
-            return "stop";
-          }
-          // Deadline reached with no live producer: the stage can no longer
-          // appear on its own, so the caller may stage the slot itself.
-          if (Date.now() >= options.readyDeadlineMs) {
-            stopReason = "stage-missing";
+          const decision = decideDexLiquiditySourceSlot(probe, null, Date.now() >= options.readyDeadlineMs);
+          if (decision.action === "recover") {
+            stopReason = decision.reason;
             return "stop";
           }
           return "wait";
@@ -698,6 +644,10 @@ async function recoverDexLiquidityScoringStageOutput(
       `DEX liquidity scoring stage recovery refused for source slot ${expectedSourceSlotStartedAt}: missing-graph-api-key`,
     );
   }
+  throwIfAborted(signal);
+  if (deadline != null && deadline.remainingMs() <= 0) {
+    throw new Error("DEX liquidity scoring stage recovery refused: invocation-deadline-exhausted");
+  }
   const leaseOwner = createLeaseOwner(DEX_LIQUIDITY_STAGE_RECOVERY_JOB);
   const acquired = await runWithOverloadRetry(
     () => acquireCronLease(db, DEX_LIQUIDITY_STAGE_RECOVERY_JOB, leaseOwner, DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC),
@@ -705,12 +655,25 @@ async function recoverDexLiquidityScoringStageOutput(
     signal,
   );
   if (!acquired) {
-    throw new Error(
-      `DEX liquidity scoring stage recovery skipped for source slot ${expectedSourceSlotStartedAt}: stage lease is held`,
-    );
+    throw new DexScoringStageProducerRunningError(expectedSourceSlotStartedAt);
   }
   let stageResult: CronResult;
   try {
+    throwIfAborted(signal);
+    if (deadline != null && deadline.remainingMs() <= 0) {
+      throw new Error("DEX liquidity scoring stage recovery refused: invocation-deadline-exhausted");
+    }
+    // A producer may have completed between the missing probe and lease claim.
+    const latest = await probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, signal);
+    if (latest.manifestState === "ready" || latest.manifestState === "consumed") {
+      const staged = await loadDexLiquidityScoringStage(db, {
+        nowSec: Math.floor(Date.now() / 1000), expectedSourceSlotStartedAt,
+      }, signal);
+      return {
+        staged,
+        recovery: { reason: "stage-unconsumed", sourceSlotStartedAt: expectedSourceSlotStartedAt, generationId: staged.generationId },
+      };
+    }
     stageResult = await stageDexLiquidityScoring(
       db,
       recovery.graphApiKey,
@@ -767,6 +730,7 @@ export interface DexLiquidityRunContext {
   fallbackCounters?: LiquidityFallbackCounters;
   /** In-memory until both registry writeback and scoring-stage finalization succeed. */
   pendingPaginationUpdates?: PendingDexSourcePaginationUpdate[];
+  phaseTimingsMs?: { sourceLoading: number; poolConstruction: number; stagePersistence: number };
 }
 
 type DexLiquidityDataSources = NonNullable<Awaited<ReturnType<typeof fetchDataSources>>>;
@@ -887,8 +851,11 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     counts: { activeStablecoins: ACTIVE_STABLECOINS.length },
   });
 
-  const validationReferences = await loadPriceValidationReferences(ctx.db);
-  const { stablecoinPriceById, stablecoinMcapById, stablecoinPriceProvenanceById } = await loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec);
+  const [validationReferences, trackedMaps] = await Promise.all([
+    loadPriceValidationReferences(ctx.db),
+    loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec),
+  ]);
+  const { stablecoinPriceById, stablecoinMcapById, stablecoinPriceProvenanceById } = trackedMaps;
   const lookups = buildSymbolLookups();
 
   const directApiFetchers = buildDexDirectApiFetchers({
@@ -1256,25 +1223,35 @@ async function buildDexLiquidityPoolState(
       rows: stagedWriteback.pools.length,
     }));
   }
-  const quoterEnrichment = await enrichQuoterV2ExecutionTargets({
-    metrics,
-    chainAddressToId: sourceState.lookups.chainAddressToId,
-    stablecoinPriceById: sourceState.stablecoinPriceById,
-    chainRpcs: ctx.chainRpcs,
-    signal: ctx.signal,
-    capturedAt: ctx.syncStartSec,
-    deadline: ctx.deadline,
-    pancakeMeasuredTargets: sourceState.pancakeMeasuredExecutionTargets,
-    slipstreamMeasuredTargets: sourceState.slipstreamMeasuredExecutionTargets,
-  });
-  const v4Enrichment = await enrichUniswapV4ExecutionTargets({
-    metrics,
-    chainAddressToId: sourceState.lookups.chainAddressToId,
-    stablecoinPriceById: sourceState.stablecoinPriceById,
-    chainRpcs: ctx.chainRpcs,
-    signal: ctx.signal,
-    deadline: ctx.deadline,
-  });
+  // Disjoint V3/Slipstream and V4 pool families each issue serial RPCs. Their
+  // bounded pair peaks at two, below the existing five-connection reservation.
+  // Keep Curve rate -> factory ordering and direct provider intake unchanged.
+  const [quoterResult, v4Result] = await Promise.allSettled([
+    enrichQuoterV2ExecutionTargets({
+      metrics,
+      chainAddressToId: sourceState.lookups.chainAddressToId,
+      stablecoinPriceById: sourceState.stablecoinPriceById,
+      chainRpcs: ctx.chainRpcs,
+      signal: ctx.signal,
+      capturedAt: ctx.syncStartSec,
+      deadline: ctx.deadline,
+      pancakeMeasuredTargets: sourceState.pancakeMeasuredExecutionTargets,
+      slipstreamMeasuredTargets: sourceState.slipstreamMeasuredExecutionTargets,
+    }),
+    enrichUniswapV4ExecutionTargets({
+      metrics,
+      chainAddressToId: sourceState.lookups.chainAddressToId,
+      stablecoinPriceById: sourceState.stablecoinPriceById,
+      chainRpcs: ctx.chainRpcs,
+      signal: ctx.signal,
+      deadline: ctx.deadline,
+    }),
+  ]);
+  // Settle both before releasing the source lease, including unexpected failures.
+  if (quoterResult.status === "rejected") throw quoterResult.reason;
+  if (v4Result.status === "rejected") throw v4Result.reason;
+  const quoterEnrichment = quoterResult.value;
+  const v4Enrichment = v4Result.value;
   await enrichEvmV2ExecutionModels({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,

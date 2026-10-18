@@ -64,6 +64,47 @@ describe("hasValidStagedPoolTvl", () => {
 });
 
 describe("upsertStagedPools", () => {
+  it("packs live writeback into bounded batches with the same complete rows as serial upserts", async () => {
+    const bulk = fixtures.open();
+    const serial = fixtures.open();
+    const widths: number[] = [];
+    const db = makeNoopD1({
+      prepare: bulk.db.prepare.bind(bulk.db),
+      batch: async <T>(statements: D1PreparedStatement[]) => {
+        widths.push(statements.length);
+        return bulk.db.batch<T>(statements);
+      },
+    });
+    const rows = Array.from({ length: 803 }, (_, index) => stagedPool({
+      poolId: `ethereum:0xpool${index}`, source: index % 2 === 0 ? "dl" : "direct_api",
+      tvlUsd: index, volume24h: index % 3 === 0 ? null : index * 10,
+      priceUsd: index % 7 === 0 ? null : 1,
+    }));
+    expect(await upsertStagedPools(db, rows)).toBe(rows.length);
+    for (const row of rows) await upsertStagedPools(serial.db, [row]);
+    expect(widths).toEqual([50, 50, 50, 50, 1]);
+    const sql = "SELECT * FROM dex_pool_registry ORDER BY stablecoin_id, pool_id, source";
+    expect(bulk.sqlite.prepare(sql).all()).toEqual(serial.sqlite.prepare(sql).all());
+  });
+
+  it("preserves duplicate order, null overwrites and legacy cleanup inside packed writes", async () => {
+    const bulk = fixtures.open();
+    const serial = fixtures.open();
+    const base = stagedPool({ discoveredAt: 1_000, refreshedAt: 2_000 });
+    const rows = [
+      base,
+      { ...base, tvlUsd: null, volume24h: null, priceUsd: null, refreshedAt: 3_000 },
+      { ...base, tvlUsd: 99_000, refreshedAt: 2_500 },
+      stagedPool({ poolId: "orderbook:exchange", source: "cg_tickers" }),
+      stagedPool({ poolId: "orderbook:exchange:usdc-circle", source: "cg_tickers", stablecoinId: "usdc-circle" }),
+      stagedPool({ poolId: "orderbook:exchange", source: "cg_tickers" }),
+    ];
+    await upsertStagedPools(bulk.db, rows, undefined, { minRefreshGapSec: 500 });
+    for (const row of rows) await upsertStagedPools(serial.db, [row], undefined, { minRefreshGapSec: 500 });
+    const sql = "SELECT * FROM dex_pool_registry ORDER BY stablecoin_id, pool_id, source";
+    expect(bulk.sqlite.prepare(sql).all()).toEqual(serial.sqlite.prepare(sql).all());
+  });
+
   it("stores source observations independently without relabeling or clearing another source's price", async () => {
     const { sqlite, db } = fixtures.open();
     const nowSec = 1_710_000_000;

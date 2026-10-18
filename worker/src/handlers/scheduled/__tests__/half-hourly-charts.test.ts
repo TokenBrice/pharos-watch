@@ -5,7 +5,6 @@ import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const mocks = vi.hoisted(() => ({
   consumeDexLiquidityScoringStage: vi.fn(),
-  reuseCurrentDexLiquidityScoringGeneration: vi.fn(),
   runCronSentinel: vi.fn(),
   prepareSafetyScoreV9Input: vi.fn(),
   syncStablecoinCharts: vi.fn(),
@@ -14,7 +13,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../../cron/dex-liquidity/orchestrator", () => ({
   consumeDexLiquidityScoringStage: mocks.consumeDexLiquidityScoringStage,
   DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON: "scoring-stage-producer-running",
-  reuseCurrentDexLiquidityScoringGeneration: mocks.reuseCurrentDexLiquidityScoringGeneration,
 }));
 vi.mock("../../../cron/prepare-safety-score-v9-input", () => ({
   prepareSafetyScoreV9Input: mocks.prepareSafetyScoreV9Input,
@@ -98,7 +96,7 @@ function producerRunningResult(): CronResult {
 describe("half-hourly charts scheduling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.reuseCurrentDexLiquidityScoringGeneration.mockResolvedValue({
+    mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
       status: "skipped_neutral",
       itemCount: 0,
       metadata: JSON.stringify({
@@ -112,6 +110,28 @@ describe("half-hourly charts scheduling", () => {
     mocks.runCronSentinel.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.prepareSafetyScoreV9Input.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.syncStablecoinCharts.mockResolvedValue({ status: "ok", itemCount: 1 });
+  });
+
+  it("passes heavy's configured Graph key and inherited deadline to inline recovery", async () => {
+    const scheduledRuntime = runtime();
+    scheduledRuntime.env.GRAPH_API_KEY = "heavy-graph-key";
+    mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
+      status: "ok", itemCount: 1,
+      metadata: JSON.stringify({ persistence: { generationId: "dex-liquidity-recovered", skipped: false } }),
+    });
+    await runHalfHourlyChartsSlot(scheduledRuntime);
+    expect(mocks.consumeDexLiquidityScoringStage).toHaveBeenCalledWith(
+      scheduledRuntime.db, expect.any(AbortSignal), expect.any(Function), scheduledRuntime.slotStartedAt,
+      expect.objectContaining({
+        deadline: scheduledRuntime.deadline,
+        stageRecovery: expect.objectContaining({ graphApiKey: "heavy-graph-key" }),
+      }),
+    );
+    expect(mocks.runCronSentinel).toHaveBeenCalledOnce();
+    expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
+      scheduledRuntime.db, expect.any(AbortSignal), "dex-liquidity-recovered",
+      scheduledRuntime.chainRpcs, scheduledRuntime.env.CF_VERSION_METADATA, scheduledRuntime.deadline,
+    );
   });
 
   it("skips V9 input after a DEX failure while keeping charts independent", async () => {
@@ -333,21 +353,22 @@ describe("half-hourly charts scheduling", () => {
     });
   });
 
-  it("reuses the exact current generation at :46 without consuming a source stage", async () => {
+  it("uses the shared consume decision to reuse the exact accepted generation at :46", async () => {
     const scheduledRuntime = runtime();
     scheduledRuntime.slotStartedAt = 2_760; // 1970-01-01 00:46 UTC
     const results = captureJobResults(scheduledRuntime);
 
     await runHalfHourlyChartsSlot(scheduledRuntime);
 
-    expect(mocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
-    expect(mocks.reuseCurrentDexLiquidityScoringGeneration).toHaveBeenCalledWith(
+    expect(mocks.consumeDexLiquidityScoringStage).toHaveBeenCalledWith(
       scheduledRuntime.db,
       expect.any(AbortSignal),
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
       {
         deadline: scheduledRuntime.deadline,
+        publishShadowTargets: false,
+        stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
         stageRecovery: {
           graphApiKey: null,
           coingeckoApiKey: scheduledRuntime.coingeckoApiKey,
@@ -496,7 +517,7 @@ describe("half-hourly charts scheduling", () => {
 
   it.each(["ok", "degraded"] as const)("checks turnover after a real %s :46 publication before preparation", async (status) => {
     const order: string[] = [];
-    mocks.reuseCurrentDexLiquidityScoringGeneration.mockImplementation(async () => {
+    mocks.consumeDexLiquidityScoringStage.mockImplementation(async () => {
       order.push("reuse");
       return {
         status,
@@ -538,7 +559,7 @@ describe("half-hourly charts scheduling", () => {
     { status: "degraded", skipped: true, generationId: "old" },
     { status: "ok", skipped: false, generationId: null },
   ] as const)("does not check turnover for an unavailable :46 publication ($status/$skipped/$generationId)", async ({ status, skipped, generationId }) => {
-    mocks.reuseCurrentDexLiquidityScoringGeneration.mockResolvedValue({
+    mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
       status, itemCount: 0, metadata: JSON.stringify({ persistence: { generationId, skipped } }),
     });
     const scheduledRuntime = runtime();
