@@ -16,6 +16,7 @@ import {
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
 import { parseSourceFile } from "../lib/ts-ast.mts";
+import { resolveLocalPackageImport } from "../lib/package-imports.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
@@ -243,7 +244,7 @@ function resolveForbidden(root: string, selector: ForbiddenSelector): ResolvedFo
   return { allowedImporters: [], paths: new Set(paths), prefixes: [] };
 }
 
-function externalPackagesPlugin(staticImportsOnly = false): Plugin {
+function externalPackagesPlugin(root: string, staticImportsOnly = false): Plugin {
   return {
     name: "external-packages",
     setup(buildContext) {
@@ -251,6 +252,10 @@ function externalPackagesPlugin(staticImportsOnly = false): Plugin {
         if (staticImportsOnly && args.kind === "dynamic-import") {
           return { path: args.path, external: true };
         }
+        // Preserve the existing package-private import policy; only declared
+        // workspace packages gain source traversal here.
+        const localPackage = args.path.startsWith("#") ? null : resolveLocalPackageImport(args.path, root);
+        if (localPackage) return { path: localPackage };
         if (
           args.path.startsWith(".") ||
           args.path.startsWith("/") ||
@@ -309,7 +314,7 @@ async function buildReachability(root: string, entrypoints: string[], policy: Ru
     metafile: true,
     outdir: "runtime-reachability-out",
     platform: "neutral",
-    plugins: [externalPackagesPlugin(policy.staticImportsOnly)],
+    plugins: [externalPackagesPlugin(root, policy.staticImportsOnly)],
     tsconfig,
     write: false,
   });

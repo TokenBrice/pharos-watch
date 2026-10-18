@@ -98,6 +98,35 @@ describe("check-unused-code export resolution", () => {
     expect(status).toBe(1);
   });
 
+  it("credits package-consumed exports without exempting unused workspace exports", () => {
+    const { status, output } = runChecker({
+      "package.json": JSON.stringify({ workspaces: ["shared/local", "worker"] }),
+      "shared/local/package.json": JSON.stringify({
+        name: "@fixture/local", exports: { "./public": "./public.ts" },
+      }),
+      "worker/package.json": JSON.stringify({ name: "stablecoin-api" }),
+      "shared/local/public.ts": "export const used = 1;\nexport const neverImported = 2;\n",
+      "src/app/page.tsx": 'import { used } from "@fixture/local/public";\n' +
+        'import "ordinary-third-party";\nimport "stablecoin-api/private";\nexport default function Page() { return used; }\n',
+    }, ["--skip-allowlist-audit"], { "vitest.config.ts": SCAFFOLD["vitest.config.ts"] });
+
+    expect(output).toContain("shared/local/public.ts :: neverImported");
+    expect(output).not.toContain("shared/local/public.ts :: used");
+    expect(output).not.toContain("shared/local/public.ts (");
+    expect(status).toBe(1);
+  });
+
+  it("does not silently externalize an unexported workspace subpath", () => {
+    expect(() => runChecker({
+      "package.json": JSON.stringify({ workspaces: ["shared/local"] }),
+      "shared/local/package.json": JSON.stringify({
+        name: "@fixture/local", exports: { "./public": "./public.ts" },
+      }),
+      "shared/local/public.ts": "export const value = 1;\n",
+      "src/app/page.tsx": 'import { value } from "@fixture/local/private";\nexport default function Page() { return value; }\n',
+    }, ["--skip-allowlist-audit"])).toThrow(/Unresolved workspace export @fixture\/local\/private/);
+  });
+
 });
 
 describe("check-unused-code production reachability", () => {

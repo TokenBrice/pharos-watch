@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, extname, isAbsolute, join, matchesGlob, relative, resolve } from "node:path";
 
@@ -63,7 +63,10 @@ export interface CriticalOwnershipFs {
   existsSync(path: string): boolean;
   readFileSync(path: string, encoding: "utf8"): string;
   statSync?(path: string): { isFile(): boolean };
+  realpathSync?(path: string): string;
 }
+
+const ownershipFs: CriticalOwnershipFs = { existsSync, readFileSync, realpathSync, statSync };
 
 export interface CriticalOwnershipOptions {
   cwd?: string;
@@ -103,21 +106,20 @@ export function collectCriticalOwnershipTestFiles(cwd = process.cwd()): string[]
 
 /**
  * Resolve the repository module named by a test's runtime import.
- * External packages are ignored; exact local package-private imports and
- * paths inside this checkout can own a critical source.
+ * External packages are ignored; exact local package-private/workspace imports
+ * and paths inside this checkout can own a critical source.
  */
 export function resolveCriticalImport(
   specifier: string,
   importer: string,
   cwd = process.cwd(),
-  fsImpl: CriticalOwnershipFs = { existsSync, readFileSync, statSync },
+  fsImpl: CriticalOwnershipFs = ownershipFs,
 ): string | null {
   let modulePath: string;
-  if (specifier.startsWith("#")) {
-    const target = resolveLocalPackageImport(specifier, cwd, fsImpl);
-    if (!target) return null;
-    modulePath = target;
-  } else if (specifier.startsWith("@shared/")) modulePath = specifier.slice("@shared/".length) ? `shared/${specifier.slice("@shared/".length)}` : "shared";
+  const target = resolveLocalPackageImport(specifier, cwd, fsImpl);
+  if (target) modulePath = target;
+  else if (specifier.startsWith("#")) return null;
+  else if (specifier.startsWith("@shared/")) modulePath = specifier.slice("@shared/".length) ? `shared/${specifier.slice("@shared/".length)}` : "shared";
   else if (specifier.startsWith("@data/")) modulePath = `data/${specifier.slice("@data/".length)}`;
   else if (specifier.startsWith("@/")) modulePath = `src/${specifier.slice(2)}`;
   else if (specifier.startsWith("./") || specifier.startsWith("../")) modulePath = join(dirname(importer), specifier);
@@ -185,7 +187,7 @@ export function deriveCriticalOwnership({
   cwd = process.cwd(),
   testFiles = collectCriticalOwnershipTestFiles(cwd),
   sourceFiles,
-  fsImpl = { existsSync, readFileSync, statSync },
+  fsImpl = ownershipFs,
 }: CriticalOwnershipOptions = {}): Map<string, string[]> {
   const sourceFilter = sourceFiles
     ? new Set([...sourceFiles].map((file) => normalizeOwnershipPath(isAbsolute(file) ? relative(cwd, file) : file)))
@@ -291,7 +293,10 @@ export function deriveBaseCriticalOwnership(
   const inventory = new Set(execFile("git", ["ls-tree", "-r", "--name-only", "-z", ref], { encoding: "utf8" }).toString().split("\0").filter(Boolean));
   const existingTests = tests.filter((file) => inventory.has(file));
   if (existingTests.length === 0) return new Map();
-  const contents = readBaseBlobs(ref, [...existingTests, ...(inventory.has("package.json") ? ["package.json"] : [])], execFile);
+  // Manifest data must come from the same revision as the importing tests,
+  // never from current node_modules links or the working checkout.
+  const manifests = [...inventory].filter((file) => file === "package.json" || file.endsWith("/package.json"));
+  const contents = readBaseBlobs(ref, [...existingTests, ...manifests], execFile);
   return deriveCriticalOwnership({
     testFiles: existingTests,
     fsImpl: {

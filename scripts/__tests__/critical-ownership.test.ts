@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   deriveCriticalOwnership,
   deriveBaseCriticalOwnership,
+  collectOwningTests,
 } from "../lib/critical-ownership.mts";
 
 const temporaryDirectories: string[] = [];
@@ -88,6 +89,86 @@ describe("critical ownership derivation", () => {
     });
     expect(ownership.get("src/first.ts")).toEqual([tests[0]]);
     expect(ownership.get("src/second.ts")).toEqual([tests[1]]);
+  });
+
+  it("derives reverse owners through workspace exports using only injected filesystem data", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-workspace-"));
+    temporaryDirectories.push(cwd);
+    const files: Record<string, string> = {
+      [join(cwd, "package.json")]: JSON.stringify({ workspaces: ["shared/local"] }),
+      [join(cwd, "shared/local/package.json")]: JSON.stringify({
+        name: "@fixture/local", exports: { "./public": "./public.ts" },
+      }),
+      [join(cwd, "shared/local/public.ts")]: "export const value = true;\n",
+      [join(cwd, "shared/local/private.ts")]: "export const unused = true;\n",
+      [join(cwd, "src/owner.test.ts")]: 'import { value } from "@fixture/local/public";\nvoid value;\n',
+      [join(cwd, "src/types.test.ts")]: 'import type { Value } from "@fixture/local/public";\n',
+      [join(cwd, "src/mock.test.ts")]: 'vi.mock("@fixture/local/public");\n',
+    };
+    const reads: string[] = [];
+    const fsImpl = {
+      existsSync: (path: string) => Object.hasOwn(files, path),
+      readFileSync: (path: string) => {
+        reads.push(path);
+        if (!Object.hasOwn(files, path)) throw new Error(`Unexpected fixture read: ${path}`);
+        return files[path];
+      },
+    };
+    const ownership = deriveCriticalOwnership({
+      cwd, fsImpl,
+      testFiles: ["src/owner.test.ts", "src/types.test.ts", "src/mock.test.ts"],
+      sourceFiles: ["shared/local/public.ts", "shared/local/private.ts"],
+    });
+    expect(ownership.get("shared/local/public.ts")).toEqual(["src/owner.test.ts"]);
+    expect(ownership.has("shared/local/private.ts")).toBe(false);
+    expect(collectOwningTests(["shared/local/public.ts"], ownership)).toEqual(["src/owner.test.ts"]);
+    expect(reads.filter((path) => path.endsWith("package.json"))).toEqual([
+      join(cwd, "package.json"), join(cwd, "shared/local/package.json"),
+    ]);
+  });
+
+  it("does not hide an unknown workspace export in injected ownership analysis", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-private-"));
+    temporaryDirectories.push(cwd);
+    const files: Record<string, string> = {
+      [join(cwd, "package.json")]: JSON.stringify({ workspaces: ["shared/local"] }),
+      [join(cwd, "shared/local/package.json")]: JSON.stringify({
+        name: "@fixture/local", exports: { "./public": "./public.ts" },
+      }),
+      [join(cwd, "src/owner.test.ts")]: 'import "@fixture/local/private";\n',
+    };
+    expect(() => deriveCriticalOwnership({
+      cwd, testFiles: ["src/owner.test.ts"],
+      fsImpl: {
+        existsSync: (path) => Object.hasOwn(files, path),
+        readFileSync: (path) => files[path],
+      },
+    })).toThrow(/Unresolved workspace export/);
+  });
+
+  it("reads workspace manifests from the base revision alongside deleted importing tests", () => {
+    const test = "src/removed.test.ts";
+    const source = "shared/local/public.ts";
+    const blobs: Record<string, string> = {
+      [test]: 'import { value } from "@fixture/local/public";\nvoid value;\n',
+      "package.json": JSON.stringify({ workspaces: ["shared/local"] }),
+      "shared/local/package.json": JSON.stringify({
+        name: "@fixture/local", exports: { "./public": "./public.ts" },
+      }),
+    };
+    const requests: string[][] = [];
+    const ownership = deriveBaseCriticalOwnership("base", [test], (_file, args, options) => {
+      if (args[0] === "ls-tree") return [...Object.keys(blobs), source].join("\0") + "\0";
+      const paths = options.input!.split("\0").filter(Boolean).map((spec) => spec.slice("base:".length));
+      requests.push(paths);
+      return Buffer.concat(paths.map((path) => {
+        const body = blobs[path];
+        if (body === undefined) throw new Error(`Unexpected base blob: ${path}`);
+        return Buffer.from(`deadbeef blob ${Buffer.byteLength(body)}\0${body}\0`);
+      }));
+    });
+    expect(requests).toEqual([[test, "package.json", "shared/local/package.json"]]);
+    expect(ownership.get(source)).toEqual([test]);
   });
 
 });
