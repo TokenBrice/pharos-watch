@@ -72,6 +72,12 @@ export interface PublicStatusReconciliation {
   persistenceSucceeded: boolean;
 }
 
+/** Only bounded forensic identities participate; ages, clocks and metric counts are not heartbeat events. */
+function causeIdentity(reasons: readonly string[]): string {
+  return reasons.filter((reason) => /^(?:upstream-circuits-open:|circuits-unavailable:|(?:heavy-)?scheduler:unavailable:)/.test(reason))
+    .slice(0, 16).sort().join("|");
+}
+
 /**
  * Project the public health payload, carry each component's `since` forward,
  * and persist a public transition whenever any component or the headline
@@ -117,9 +123,12 @@ export async function reconcilePublicStatusState(
     if (prior && prior.state !== component.state) component.since = now;
   }
 
+  const causesChanged = previous != null && projection.components.some((component) =>
+    causeIdentity(component.reasons) !== causeIdentity(previousById.get(component.id)?.reasons ?? []));
   const changed = previous == null
     || PublicStatusHeadlineSchema.safeParse(previous.headline).data?.state !== projection.headline.state
-    || projection.components.some((component) => previousById.get(component.id)?.state !== component.state);
+    || projection.components.some((component) => previousById.get(component.id)?.state !== component.state)
+    || causesChanged;
   const nextLevel = headlineToStatusLevel(projection.headline.state);
   const previousLevel = row?.current_status ?? null;
   const worsened = previous != null && projection.components.some((component) =>
@@ -128,9 +137,11 @@ export async function reconcilePublicStatusState(
   const transitionType = previous == null
     ? "init"
     : (previousLevel != null && getStatusSeverity(nextLevel) > getStatusSeverity(previousLevel)) || worsened
+      || (causesChanged && nextLevel !== "healthy")
       ? "degrade"
       : "recover";
-  const reason = previous == null ? "public-projection-initialized" : "public-projection-changed";
+  const reason = previous == null ? "public-projection-initialized"
+    : causesChanged ? "public-projection-causes-changed" : "public-projection-changed";
 
   const stateJson = JSON.stringify({
     version: 1,

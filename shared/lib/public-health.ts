@@ -8,6 +8,9 @@ export type PublicStatusTone = StatusHealthValue;
 /** Public mint/burn freshness tolerates one missed critical-lane run; the next half-window is degraded. */
 export const MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO = 1.5;
 
+/** Source-wide open circuits required to affect public availability and admin causes. */
+export const PUBLIC_CIRCUIT_IMPACT_QUORUM = 3;
+
 /**
  * Public component grace: an age-graded component past its stale band stays
  * `degraded` (last good data still served) until its age reaches this multiple
@@ -71,7 +74,7 @@ export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>)
 }
 
 export function getCircuitImpactStatus(openCircuitCount: number | null): PublicStatusTone {
-  return openCircuitCount == null || openCircuitCount >= 3 ? "degraded" : "healthy";
+  return openCircuitCount == null || openCircuitCount >= PUBLIC_CIRCUIT_IMPACT_QUORUM ? "degraded" : "healthy";
 }
 
 export function isPublicImpactCircuitKey(key: string): boolean {

@@ -95,6 +95,36 @@ describe("reconcilePublicStatusState", () => {
     expect(await listRecentStatusTransitions(db, 50, { from: NOW - 1 })).toEqual([]);
   });
 
+  it("records changed breaker identities once without heartbeat or ordering noise", async () => {
+    const { db } = fixtures.open();
+    const health = makeHealthyHealthResponse();
+    const open = { state: "open" as const, consecutiveFailures: 3, lastFailureAt: NOW,
+      lastSuccessAt: null, openedAt: NOW };
+    health.circuits = { "source-c": open, "source-a": open, "source-b": open };
+    await reconcilePublicStatusState(db, NOW, health);
+    health.circuits = { "source-b": { ...open, lastFailureAt: NOW + 1 }, "source-c": open, "source-a": open };
+    await reconcilePublicStatusState(db, NOW + 1, health);
+    health.circuits = { "source-a": open, "source-b": open, "source-d": open };
+    const changed = await reconcilePublicStatusState(db, NOW + 2, health);
+    expect(changed.projection.components.find((component) => component.id === "data-refresh")?.since).toBeNull();
+    const history = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(history.transitions).toHaveLength(2);
+    expect(history.transitions[0]).toMatchObject({ reason: "public-projection-causes-changed",
+      components: [expect.objectContaining({ reasons: ["upstream-circuits-open:3:source-a,source-b,source-d"] })] });
+  });
+
+  it("records a changed scheduler unavailable subreason without repeated poll events", async () => {
+    const { db } = fixtures.open();
+    const health = makeHealthyHealthResponse();
+    health.schedulerLiveness = { ...health.schedulerLiveness!, status: "unavailable", ageSeconds: null,
+      unavailableReason: "clock-invalid" };
+    await reconcilePublicStatusState(db, NOW, health);
+    health.schedulerLiveness.unavailableReason = "slot-start-query-failed";
+    await reconcilePublicStatusState(db, NOW + 1, health);
+    await reconcilePublicStatusState(db, NOW + 2, health);
+    expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(2);
+  });
+
   it("ignores a persisted component this release does not know instead of resetting every since", async () => {
     const { db } = fixtures.open();
     await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());

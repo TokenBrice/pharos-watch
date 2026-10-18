@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { getCircuitImpactStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM } from "@shared/lib/public-health";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import type { PublicHealthAssessment } from "../public-health-assessment";
@@ -87,6 +88,17 @@ function makeDataQualityEvaluationInput(
 }
 
 describe("status evaluation policy", () => {
+  it.each([2, 3])("uses the public circuit quorum for admin causes at %i open groups", (openCircuitCount) => {
+    const circuitImpactStatus = getCircuitImpactStatus(openCircuitCount);
+    expect(circuitImpactStatus).toBe(openCircuitCount === 2 ? "healthy" : "degraded");
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth(circuitImpactStatus, {
+      openCircuitCount, circuitImpactStatus,
+    })));
+    const cause = result.causes.find((entry) => entry.code === "open_circuit_groups");
+    if (openCircuitCount === 2) expect(cause).toBeUndefined();
+    else expect(cause).toMatchObject({ threshold: PUBLIC_CIRCUIT_IMPACT_QUORUM, value: 3 });
+  });
+
   it.each([
     { circuitQueryError: "circuits-read-failed", circuitImpactStatus: "degraded" as const },
     { mintBurnQueryError: "mint-burn-read-failed", mintBurnImpactStatus: "degraded" as const },

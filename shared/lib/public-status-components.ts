@@ -5,6 +5,7 @@ import {
   countPublicImpactOpenCircuits,
   getCircuitImpactStatus,
   getPublicMintBurnStatus,
+  isPublicImpactCircuitKey,
   MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO,
   PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER,
 } from "./public-health";
@@ -361,6 +362,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         warningAfterSec: scheduler.warningAfterSec,
         staleAfterSec: scheduler.staleAfterSec,
         reason: "scheduler",
+        unavailableReason: scheduler.unavailableReason,
       },
       {
         subject: "Background computation",
@@ -369,6 +371,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         warningAfterSec: scheduler.heavy.warningAfterSec,
         staleAfterSec: scheduler.heavy.staleAfterSec,
         reason: "heavy-scheduler",
+        unavailableReason: scheduler.heavy.unavailableReason,
       },
     ];
     for (const lane of lanes) {
@@ -377,7 +380,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         add("data-refresh", {
           state: "degraded",
           summary: `${lane.subject} evidence is unavailable, so delivery cannot be confirmed.`,
-          reason: `${lane.reason}:unavailable`,
+          reason: `${lane.reason}:unavailable:${(lane.unavailableReason ?? "unknown").slice(0, 80)}`,
         });
         continue;
       }
@@ -389,12 +392,16 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
 
   const openCircuits = health.circuits ? countPublicImpactOpenCircuits(health.circuits) : null;
   if (getCircuitImpactStatus(openCircuits) !== "healthy") {
+    const sources = Object.entries(health.circuits ?? {})
+      .filter(([key, circuit]) => isPublicImpactCircuitKey(key) && circuit.state === "open")
+      .map(([key]) => key).sort().slice(0, 12).map((key) => key.slice(0, 80));
     add("data-refresh", {
       state: "degraded",
       summary: openCircuits == null
         ? "Upstream source health cannot be read right now."
         : `${openCircuits} upstream data sources are paused after repeated failures. Affected data keeps its last good value.`,
-      reason: openCircuits == null ? "circuits-unavailable" : `upstream-circuits-open:${openCircuits}`,
+      reason: openCircuits == null ? `circuits-unavailable:${health.circuitsUnavailableReason ?? "unknown"}`
+        : `upstream-circuits-open:${openCircuits}:${sources.join(",")}`,
     });
   }
 

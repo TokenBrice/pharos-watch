@@ -100,6 +100,13 @@ Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
 
+`PUBLIC_CIRCUIT_IMPACT_QUORUM` in `shared/lib/public-health.ts` is the sole source-wide circuit quorum
+authority (3), shared by public grading and admin cause thresholds. Public circuit reasons retain the full
+open count plus up to 12 sorted source keys (80 characters each). Unavailable circuit/scheduler reasons retain
+their named subreason. A change in these bounded identities writes one deduplicated public cause-change
+event, without resetting the component's `since`; changing failure clocks or source-map ordering alone does
+not create an event. Source identity in older count-only history remains unknown.
+
 Public/operator copy uses actual health warning evidence; unknown codes remain visible. Blacklist read failures expose null measurements with `unavailableReason: blacklist-read-failed|db-unavailable`; successful empty reads retain zeros. Browser probes and cards admit this unavailable branch without claiming zero gaps. Critical-duration labels use only the warning's named price-gap IDs; other missing prices stay in the separate coverage warning. Thresholds and recovery policy are unchanged.
 
 The public `HealthResponse.blacklist` contract (`shared/types/status/public-health.ts`) makes all five measurements nullable: `totalEvents`, `missingAmounts`, `recentMissingAmounts`, `recentWindowSec`, and `missingRatio`. A failed read sets these to `null` and supplies `unavailableReason: "blacklist-read-failed"`; an unavailable database supplies `"db-unavailable"`. The reason is nullable/optional for available or retained payloads. Consumers must show unavailable measurements, not zero events, zero gaps, or a healthy ratio. A successful empty observation may publish numeric zeros.
@@ -201,6 +208,32 @@ unknown jobs or column-only rows; canonical quality findings append without repl
 summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
 warnings. Errors and freshness remain independently evaluated.
+
+### Cron metadata persistence budget
+
+`worker/src/lib/cron-metadata-persistence.ts` owns write-time UTF-8 admission: **8 KiB per job** by default,
+including scheduler/lease identity. Explicit exceptions preserve existing consumer contracts: **16 KiB**
+for `sync-dex-liquidity` source coverage; **32 KiB** for each mint/burn lane's cursor/head coverage and
+`sync-live-reserves` exact breaker names / warning cohorts; **64 KiB minus one byte** for
+`sync-stablecoins` complete missing-asset continuity and `cron-sentinel` nested source /
+stale-generation evidence. These are ceilings, not producer targets.
+
+Above budget, named forensic diagnostics (`adapterLatency`, `priceSourceAttemptLedger`,
+`providerDiagnostics`, `fullAssets`, `bridgeJoinDiagnostics`) are summarized first. Remaining unread
+collections can move into bounded `diagnostics`; compaction records its original size, budget and omitted
+diagnostic count. Consumer-read fields stay at their original paths and retain their complete shape:
+publication/reason/quality, mode, stale rows and source evidence, `resourcePressure`, `d1Cost`, retention /
+truncation flags, coverage, ledger and scheduler identity. `breakerKeys` remains an exact list because the
+reserve summary renders names; `activePriceCoverage` retains full missing IDs/state because the next run
+and public health reconstruct streaks from it. These two fields must not become counts. If contractual
+evidence alone exceeds its job exception, admission fails explicitly with
+`cron-metadata-consumer-evidence-over-budget`; it never silently drops evidence or writes an oversized row.
+
+`cron_runs.metadata` is the sole rich terminal payload. Producer history keeps only `mxLedger*` activation
+evidence plus accepted-terminal arbitration scalars; the child-attempt table stores fencing columns, not
+another JSON copy. Live `cron_run_progress` remains a separate bounded, temporary observation. Lease
+normalization never sacrifices consumer evidence to reserve space for adapter diagnostics.
+
 
 The retired `compute-safety-score-v9-workflow` observer is no longer a registered producer or freshness/watchdog obligation. Historical failures remain in D1 as forensic evidence. Raw snapshot loading compares the entire cached cron membership against the current registered cohort; mismatches invalidate the whole assessment and trigger live recomputation, including severity. Filtering a retired job while preserving its cached OOM severity is not a valid cutover. Newly produced post-activation snapshots must use the current cohort, and genuine canonical/other failures remain visible.
 
@@ -840,6 +873,12 @@ The operator card is **Mint/Burn Integrity**, a permanent per-contract native co
 ### Matched-block integrity
 
 The existing mint/burn producers write compact audit records into `cache` under `mint-burn:conservation:<configKey>`. Status reads these records in bounded batches; it never makes archive RPC calls. Each record identifies the contract, decimals, config fingerprint, audit time, exact block boundaries/hashes, raw mint/burn totals, supply delta and residual in native integer units. Raw events include amounts below the public cutoff and atomic/bridge activity.
+
+The published `mintBurnReconciliation` projection omits `configFingerprint` after validating the cached
+record against the current configuration. The shared record schema permits that omission for status
+payloads; cached evidence still requires an exact fingerprint match for admission. No fingerprint-less
+cached record can certify a conservation pass.
+
 
 A successful record proves the reviewed law exactly: by default, `rawMint - rawBurn = totalSupply(toBlock) - totalSupply(fromBlock)` for logs after the displayed opening checkpoint through the closing checkpoint; USDO instead records net raw shares against the `totalShares` delta (`units: "raw-shares"`). The card shows individual contract ranges; different ranges are not added into a fabricated coin-wide 24-hour audit. This is a latest-scan integrity check, not a proof of complete historical coverage or issuer reserves.
 

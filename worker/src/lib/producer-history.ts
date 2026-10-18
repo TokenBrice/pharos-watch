@@ -104,6 +104,9 @@ function normalizeHistoryMetadata(metadata: string | null | undefined): string |
   if (!parsed) return null;
   const scalars: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of Object.entries(parsed)) {
+    // cron_runs is the sole forensic payload. History retains only the activation
+    // ledger; accepted-terminal arbitration fields are added by the guarded writer.
+    if (!key.startsWith("mxLedger")) continue;
     if (value === null || typeof value === "number" || typeof value === "boolean") {
       scalars[key] = value;
     } else if (typeof value === "string") {

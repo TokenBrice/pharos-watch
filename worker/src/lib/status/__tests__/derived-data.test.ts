@@ -71,6 +71,11 @@ describe("conservation compatibility schema", () => {
     expect(parsed.rows[0].conservation).toBeUndefined();
   });
 
+  it("accepts the published record without the internal configuration fingerprint", () => {
+    const { configFingerprint: _fingerprint, ...published } = conservationFixture();
+    expect(MintBurnConservationRecordSchema.safeParse(published).success).toBe(true);
+  });
+
   it.each(["01", "-0", "+1", "1e3", "1.0", "", "9".repeat(101)])("rejects noncanonical raw integer %s", (raw) => {
     expect(MintBurnConservationRecordSchema.safeParse({ ...conservationFixture(), residualRaw: raw }).success).toBe(false);
   });
@@ -93,6 +98,7 @@ describe("getMintBurnReconciliation verified conservation", () => {
     expect(result.rows[0]).not.toHaveProperty("flowNet24hUsd");
     expect(result).not.toHaveProperty("comparedCoins");
     expect(result).not.toHaveProperty("insufficientCount");
+    expect(result.rows.flatMap((row) => row.conservation ?? []).every((record) => !("configFingerprint" in record))).toBe(true);
   });
 
   it.each([
@@ -102,6 +108,7 @@ describe("getMintBurnReconciliation verified conservation", () => {
     ["old block", { toTimestamp: NOW - 4501, fromTimestamp: NOW - 4600 }],
     ["future", { checkedAt: NOW + 1 }],
     ["configuration changed", { configFingerprint: "different" }],
+    ["missing internal fingerprint", { configFingerprint: undefined }],
     ["wrong identity", { stablecoinId: "dai-makerdao" }],
     ["wrong address", { address: "0x" + "c".repeat(40) }],
     ["wrong decimals", { decimals: 6 }],
