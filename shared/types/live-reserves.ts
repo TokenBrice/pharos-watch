@@ -29,6 +29,11 @@ export { ReserveFreshnessViewSchema } from "./reserve-input";
 export type { ReserveFreshnessView, LiveReserveAdmissionRejectionCode } from "./reserve-input";
 
 export { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey };
+
+export const ScheduledChildDispositionSchema = /* @__PURE__ */ (() => z.enum([
+  "not_started", "running", "continuation_pending", "completed", "failed", "platform_abandoned",
+]))();
+export type ScheduledChildDisposition = z.output<typeof ScheduledChildDispositionSchema>;
 export * from "./live-reserve-core";
 
 // Pure scopes let bundlers omit unused schema graphs, including nested Zod
@@ -156,6 +161,16 @@ export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
 }).strict())();
 export type ReserveFeedReview = z.output<typeof ReserveFeedReviewSchema>;
 
+export const ReserveCohortStatusSchema = /* @__PURE__ */ (() => z.object({
+  slotStartedAt: z.number().int().nonnegative(),
+  completedAt: z.number().int().nonnegative().nullable(),
+  ageSec: z.number().finite().nonnegative(),
+  continuationPending: z.boolean(),
+  completionP95Sec: z.number().finite().nonnegative().nullable(),
+  completedCohorts: z.number().int().nonnegative(),
+}).strict())();
+export type ReserveCohortStatus = z.output<typeof ReserveCohortStatusSchema>;
+
 export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object({
   configuredCoins: z.number(),
   freshCoins: z.number(),
@@ -171,6 +186,7 @@ export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object(
   writeTimeoutUncertain: z.number(),
   deferredCoins: z.number(),
   inProgressCoins: z.number().int().nonnegative().optional(),
+  cohort: ReserveCohortStatusSchema.nullable().optional(),
   runBudgetTruncated: z.boolean(),
   deferredAt: z.number().nullable(),
   nextCursorStablecoinId: z.string().nullable(),
@@ -219,6 +235,7 @@ export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCom
     writeTimeoutUncertain: 0,
     deferredCoins: 0,
     inProgressCoins: 0,
+    cohort: null,
     runBudgetTruncated: false,
     deferredAt: null,
     nextCursorStablecoinId: null,

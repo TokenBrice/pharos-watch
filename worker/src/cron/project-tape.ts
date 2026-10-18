@@ -12,8 +12,8 @@
  * first-observation static catalogs (methodology `*-version` changelogs,
  * cemetery entries, frozen stablecoins).
  *
- * Runs on the `26,56 * * * *` DEWS/PSI DB-only lane (purely D1-bound, no
- * outbound fetches), so it adds zero connection budget to the trigger.
+ * Runs on the `26,56 * * * *` DEWS/PSI lane. Projection is D1-only;
+ * the placed-fetch canary driver separately reserves one service-binding call.
  */
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { TAPE_PROJECTOR_JOBS } from "../lib/tape-projectors/registry";

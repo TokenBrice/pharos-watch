@@ -25,6 +25,9 @@ export type FreshnessStatus = z.output<typeof FreshnessStatusSchema>;
 /** Admin-only pending-candidate budget; never changes publication acceptance or public health. */
 export const STATUS_PUBLICATION_PENDING_MAX_AGE_SEC = 2 * 3600;
 
+/** D7: full reserve cohort (producer plus consumers), ops-only, nearest-rank p95. */
+export const STATUS_RESERVE_COHORT_SLO = { maxAgeSec: 30 * 60, windowSec: 7 * 24 * 3600 } as const;
+
 export function classifyPublicationDiagnostic(surface: PublicationSurfaceHealth | undefined): {
   status: StatusHealthOrUnknown;
   reason: string | null;

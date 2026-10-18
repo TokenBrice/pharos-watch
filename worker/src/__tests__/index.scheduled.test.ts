@@ -8,6 +8,7 @@ import type * as V9SlotWindow from "../lib/v9-slot-window";
 import type { ScheduledExecutionFence } from "../lib/scheduled-slot-fence";
 import type { SlotDeadline } from "../lib/cron-timeouts";
 import type { CronRunLoggerOptions } from "../lib/cron-logger";
+import type { ScheduledChildDisposition } from "@shared/types/live-reserves";
 
 // 44 of this suite's cron entrypoints are mocked only so the slot stays
 // dispatchable; they share one result shape. Entrypoints whose payload a test
@@ -247,11 +248,12 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
         ...latestCheckpoint,
         childDispositions: {
           ...latestCheckpoint.childDispositions,
-          [job]: disposition as import("../lib/scheduled-recovery-checkpoint").ScheduledChildDisposition,
+          [job]: disposition as ScheduledChildDisposition,
         },
       };
     }),
     finishLiveReserveCheckpoint: vi.fn(async () => undefined),
+    continueLiveReserveCheckpoint: vi.fn(async () => undefined),
     claimNextLiveReserveCheckpointRecovery: vi.fn(async () => ({ disposition: "none" })),
   };
 });
@@ -514,6 +516,12 @@ describe("worker.scheduled", () => {
       TWITTER_ACCESS_TOKEN: "tw-token",
       TWITTER_ACCESS_TOKEN_SECRET: "tw-token-secret",
       COINGECKO_API_KEY: "coingecko",
+      HEAVY_EXECUTOR_SHARED_SECRET: "test-placed-executor-secret",
+      PROJECT_TAPE_PLACED_EXECUTOR: "on",
+      HEAVY_EXECUTOR: { fetch: vi.fn(async () => Response.json({
+        status: "ok", itemCount: 1,
+        metadata: JSON.stringify({ reason: "tape-projection-completed", executorColo: "FRA" }),
+      })), connect: () => { throw new Error("Unexpected executor socket connection"); } },
     });
     const schedules = Object.entries(CRON_TRIGGER_SCHEDULES).flatMap(
       ([scheduleKey, triggerSchedules]) =>
@@ -552,6 +560,8 @@ describe("worker.scheduled", () => {
         expect(call[3]).toEqual(expect.objectContaining({ slotStartedAt: expect.any(Number) }));
       }
       expect(fetchSpy).not.toHaveBeenCalled();
+      expect(env.HEAVY_EXECUTOR!.fetch).toHaveBeenCalledOnce();
+      expect(cronMocks.projectTape).not.toHaveBeenCalled();
     } finally {
       fetchSpy.mockRestore();
     }

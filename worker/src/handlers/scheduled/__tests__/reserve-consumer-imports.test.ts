@@ -10,6 +10,7 @@ vi.mock("../../../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: vi.fn()
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   beginLiveReserveCheckpoint: vi.fn(),
   finishLiveReserveCheckpoint: vi.fn(),
+  continueLiveReserveCheckpoint: vi.fn(),
   loadLiveReserveCheckpoint: vi.fn(),
   setLiveReserveCheckpointChildDisposition: vi.fn(),
 }));

@@ -159,6 +159,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         attemptedCoins: 99,
       },
       total: 100,
+      checkpointOwned: false,
     })).toBe("degraded");
   });
 
@@ -226,7 +227,54 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     }
   });
 
-  it("advances an authoritative crash item once, then completes only its remaining suffix", async () => {
+  it("drains one cohort across a producer and two bounded continuations without double-processing", async () => {
+    const visited: string[] = [];
+    mockAdapterRegistry(async () => {
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+    // This suite resets the module graph before installing each adapter mock.
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const sliceSize = Math.ceil(SYNC_ORDERED_CONFIGURED_COINS.length / 3);
+    let frontier = 0;
+    for (let slice = 0; slice < 3; slice++) {
+      // One checkpoint root/attempt; the normal handoff only replaces its owner.
+      const identity = checkpointIdentity(1, `slice-${slice}`);
+      const db = mockD1([checkpointTable({
+        attemptNo: 1, invocationId: identity.invocationId,
+        nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[frontier]?.id ?? null,
+        itemsDone: frontier, state: slice === 0 ? "running" : "recovering",
+      })]);
+      const result = await syncLiveReserves(db, new AbortController().signal, {}, undefined,
+        { ...TIGHT_BUDGET, maxCoinsPerSlice: sliceSize }, identity);
+      const expectedDone = Math.min(frontier + sliceSize, SYNC_ORDERED_CONFIGURED_COINS.length);
+      expect(result.status).toBe("ok");
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        cohortItemsDoneBeforeRun: frontier, cohortItemsDoneAfterRun: expectedDone,
+        continuationPending: slice < 2, runBudgetTruncated: false,
+        childDisposition: slice < 2 ? "continuation_pending" : "completed",
+      });
+      // Count lifecycle admission, not adapter calls (source-invariant
+      // adapters legitimately share one fetch across multiple coin lifecycles).
+      for (const entry of db.getHistory()) {
+        if (entry.sql.includes("UPDATE worker_scheduled_checkpoints") && entry.sql.includes("current_item_key = ?")) {
+          visited.push(String(entry.binds[0]));
+        }
+      }
+      const boundary = db.getHistory().find((entry) =>
+        entry.sql.includes("UPDATE worker_scheduled_checkpoints") && entry.sql.includes("current_item_key = NULL"));
+      expect(boundary?.binds.slice(0, 2)).toEqual([
+        SYNC_ORDERED_CONFIGURED_COINS[expectedDone]?.id ?? null, expectedDone,
+      ]);
+      expect(db.getHistory().some((entry) =>
+        entry.sql.includes("last_status = 'skipped'") || entry.binds.includes("run-budget-exhausted"))).toBe(false);
+      frontier = expectedDone;
+    }
+    expect(visited).toEqual(SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id));
+    expect(new Set(visited).size).toBe(visited.length);
+    expect(sealAcceptedReserveGeneration).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([1, 2])("renews the claimed recovery lease while advancing an authoritative crash item once (attempt %s)", async (attemptNo) => {
     const visited: string[] = [];
     mockAdapterRegistry(async (coin) => {
       visited.push(coin?.id ?? "unknown");
@@ -234,10 +282,11 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     });
     const crashedCoin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
     const suffixCoin = SYNC_ORDERED_CONFIGURED_COINS[1]!;
-    const identity = checkpointIdentity(2, "recovery-owner");
+    const identity = checkpointIdentity(attemptNo, "recovery-owner");
     const db = mockD1([
       checkpointTable({
-        attemptNo: 2,
+        attemptNo,
+        state: "recovering",
         invocationId: identity.invocationId,
         nextItemKey: crashedCoin.id,
         itemsDone: 0,
@@ -281,6 +330,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(boundaryWrites).toHaveLength(2);
     expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
     expect(authoritativeAdvance).toBeDefined();
+    expect(authoritativeAdvance?.binds[3]).toBe(Math.floor(nowMs / 1000) + 15 * 60);
     expect(terminalAdvance).toBeDefined();
   });
 

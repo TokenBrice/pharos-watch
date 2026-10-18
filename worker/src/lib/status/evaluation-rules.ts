@@ -2,6 +2,7 @@ import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_RESERVE_COMPOSITION_THRESHOLDS,
+  STATUS_RESERVE_COHORT_SLO,
   STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC,
   assessActivePriceGapDuration,
   getCacheRatioThresholds,
@@ -26,7 +27,6 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
   stale: 2,
 };
 
-const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed
 // four-hour scoring runway). This is the cache's endpoint freshness budget from
@@ -60,12 +60,8 @@ export function evaluateReserveCompositionStatus(
   const authoritativeFreshCoverageRatio = configured > 0 ? authoritativeFreshCoins / configured : reserveComposition.configuredCoins > 0 ? 1 : 0;
   const hasPersistentlyStaleIndependentFeeds = (reserveComposition.unacknowledgedPersistentlyStaleIndependentCoins
     ?? reserveComposition.persistentlyStaleIndependentCoins).length > 0;
-  const deferredShare =
-    reserveComposition.configuredCoins > 0 ? reserveComposition.deferredCoins / reserveComposition.configuredCoins : 0;
   const hasUncertainWrites = reserveComposition.writeTimeoutUncertain > 0;
-  const hasMaterialDeferredTail =
-    reserveComposition.runBudgetTruncated && deferredShare >= STATUS_RESERVE_HIGH_DEFERRED_RATIO;
-  const hasReserveCapacityPressure = hasUncertainWrites || hasMaterialDeferredTail;
+  const hasReserveCapacityPressure = hasUncertainWrites;
   const status: StatusResponse["reserveComposition"]["status"] =
     hasReserveCapacityPressure
       ? "degraded"
@@ -669,22 +665,27 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
       ),
     );
   }
-  if (reserve.runBudgetTruncated) {
-    const deferredRatio = reserve.configuredCoins > 0 ? reserve.deferredCoins / reserve.configuredCoins : 0;
-    const pressureReasons = [
-      deferredRatio >= STATUS_RESERVE_HIGH_DEFERRED_RATIO ? `high deferred share ${formatPercentFromRatio(deferredRatio)}` : null,
-    ].filter((entry): entry is string => entry != null);
-    causes.push(
-      makeCause(
+  const cohort = reserve.cohort;
+  if (cohort) {
+    const ageExceeded = cohort.completedAt == null && cohort.ageSec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
+    const p95Exceeded = cohort.completionP95Sec != null
+      && cohort.completionP95Sec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
+    if (ageExceeded || p95Exceeded) {
+      causes.push(makeCause(
         "data-quality",
-        "reserve_sync_budget_truncated",
+        "reserve_cohort_slo_exceeded",
         "warning",
-        `Latest live reserve run deferred ${reserve.deferredCoins} coin(s)` +
-          (reserve.nextCursorStablecoinId ? `; next cursor ${reserve.nextCursorStablecoinId}` : "") +
-          (pressureReasons.length > 0 ? ` (${pressureReasons.join(", ")}).` : "."),
-        { metric: "reserveDeferredRatio", value: deferredRatio, threshold: STATUS_RESERVE_HIGH_DEFERRED_RATIO },
-      ),
-    );
+        `Reserve full-cohort completion exceeds the ${STATUS_RESERVE_COHORT_SLO.maxAgeSec}s SLO: `
+          + (ageExceeded ? `open cohort age ${cohort.ageSec}s. ` : "")
+          + (p95Exceeded ? `Seven-day p95 ${cohort.completionP95Sec}s across ${cohort.completedCohorts} completed cohorts.` : ""),
+        {
+          metric: ageExceeded ? "reserveCohortAgeSec" : "reserveCohortCompletionP95Sec",
+          value: ageExceeded ? cohort.ageSec : cohort.completionP95Sec!,
+          threshold: STATUS_RESERVE_COHORT_SLO.maxAgeSec,
+          subjects: ["sync-live-reserves", "reserve-recovery", "sync-redemption-backstops"],
+        },
+      ));
+    }
   }
   return ruleResult("healthy", causes);
 }

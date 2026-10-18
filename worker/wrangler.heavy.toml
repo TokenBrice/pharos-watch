@@ -16,6 +16,11 @@ upload_source_maps = true
 [version_metadata]
 binding = "CF_VERSION_METADATA"
 
+# Placement hint near the known EEUR D1-primary region, not a pin or D1 host.
+# Only default fetch handlers benefit; heavy scheduled handlers are unaffected.
+[placement]
+region = "aws:eu-central-1"
+
 [[rules]]
 type = "Data"
 globs = ["**/*.ttf"]

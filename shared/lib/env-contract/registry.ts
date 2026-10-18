@@ -59,6 +59,24 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "HEAVY_EXECUTOR",
+    valueType: "Fetcher",
+    description: "Public-only HTTP service binding to stablecoin-heavy's private default fetch handler for the project-tape placement canary.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
+    key: "HEAVY_EXECUTOR_SHARED_SECRET",
+    valueType: "string",
+    description: "Matching Wrangler-managed secret on public and heavy authenticating the private placed executor; required when the project-tape canary is on.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
+    key: "PROJECT_TAPE_PLACED_EXECUTOR",
+    valueType: "string",
+    description: "Project-tape-only placed-fetch canary, checked-in on; only literal on or off is accepted. Missing/invalid modes warn and use in-process execution for future slots without a transport retry.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
     key: "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
     valueType: "RateLimit",
     description: "Cloudflare pre-authentication rate limiter for Telegram webhook requests.",

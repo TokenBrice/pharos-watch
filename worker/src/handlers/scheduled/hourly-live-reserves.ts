@@ -4,10 +4,9 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  *   sync-live-reserves (2) → sync-redemption-backstops (3) → cron-sentinel (1)
  *   sync-kinesis-supply (1)
  *
- * Redemption consumes a sealed accepted reserve view after the producer settles,
- * even when the current cohort is incomplete. Only the sentinel requires this
- * slot's successful queue exhaustion. Recovery completing the producer forces
- * another redemption pass; consumer-only replay remains idempotent.
+ * Redemption is a cohort tail, never a consumer of a partially drained head.
+ * A producer slice yields to the existing five-minute continuation lane; even
+ * the final slice hands off its consumers to a fresh wall/CPU budget.
  *
  * Reserve and redemption phases are serial; redemption resolves three assets at a time.
  * Recovery serializes Kinesis behind the head to retain its separate 3/6 budget.
@@ -19,12 +18,12 @@ import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 import {
   buildScheduledSlotSummary,
   mergeScheduledSlotSummaries,
-  summarizeSkippedScheduledJob,
   type ScheduledSlotSummary,
 } from "./slot-summary";
 import { logSkippedCronRun } from "./preflight-skip";
 import {
   beginLiveReserveCheckpoint,
+  continueLiveReserveCheckpoint,
   finishLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
   releaseUnstartedLiveReserveRecoveryClaim,
@@ -34,6 +33,7 @@ import {
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { getReserveProducerPriority } from "../../lib/reserve-producer-priority";
+import { LIVE_RESERVE_CONTINUATION_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
 
 const SLOT_LABEL = "four-hourly reserve sync slot";
 
@@ -70,13 +70,11 @@ function checkpointTask(
           throw new Error("live reserve checkpoint missing after queue execution");
         }
         const childDisposition =
-          result?.status === "skipped_neutral" ||
-          result?.status === "skipped_locked" ||
-          (checkpointAfterTask != null && !isReserveQueueExhausted(checkpointAfterTask))
-            ? "not_started"
-            : result?.status === "error"
-              ? "failed"
-              : "completed";
+          result?.status === "error" ? "failed"
+            : result?.status === "skipped_neutral" || result?.status === "skipped_locked" ? "not_started"
+              : checkpointAfterTask != null && !isReserveQueueExhausted(checkpointAfterTask)
+                ? checkpointAfterTask.itemsDone > 0 ? "continuation_pending" : "not_started"
+                : "completed";
         await setLiveReserveCheckpointChildDisposition(runtime.db, identity, task.job, childDisposition);
         return result;
       } catch (error) {
@@ -109,6 +107,9 @@ function buildReserveSyncSlotGroups(
             // An exhausted recovery checkpoint needs only its consumers, not
             // the complete reserve-adapter graph retained beside their inputs.
             const { syncLiveReserves } = await import("../../cron/sync-live-reserves");
+            const slice = resolveLiveReserveSyncBudgetConfig(runtime.recoveryCheckpoint ? LIVE_RESERVE_CONTINUATION_BUDGETS : undefined);
+            const runBudgetMs = Math.max(1, Math.min(slice.runBudgetMs,
+              runtime.deadline.remainingMs() - slice.d1FinalizeTimeoutMs - slice.finalizationMarginMs));
             return syncLiveReserves(
               runtime.db,
               signal,
@@ -121,7 +122,7 @@ function buildReserveSyncSlotGroups(
                 dwellirNative: runtime.dwellirNative,
               },
               reportProgress,
-              undefined,
+              { ...slice, runBudgetMs },
               checkpointIdentity(checkpoint),
             );
           },
@@ -181,7 +182,10 @@ function buildReserveSyncSlotGroups(
       if (!taskCompleted || !durableFrontierCompleted) shouldRunJobs.add(task.job);
     }
   }
-  if (shouldRunJobs.has("sync-live-reserves")) shouldRunJobs.add("sync-redemption-backstops");
+  if (shouldRunJobs.has("sync-live-reserves")) {
+    shouldRunJobs.add("sync-redemption-backstops");
+    shouldRunJobs.add("cron-sentinel");
+  }
   return groups.map((group) => ({
     ...group,
     tasks: group.tasks
@@ -190,23 +194,24 @@ function buildReserveSyncSlotGroups(
   }));
 }
 
-async function recordBlockedReserveTasks(
+
+async function recordContinuationTasks(
   runtime: ScheduledRuntimeContext,
   checkpoint: ScheduledCheckpointIdentity,
   tasks: readonly ScheduledSlotGroup["tasks"][number][],
-  blockedBy: string,
 ): Promise<ScheduledSlotSummary> {
-  const reason = `upstream-incomplete:${blockedBy}`;
+  const reason = "reserve-cohort-continuation";
   for (const task of tasks) {
     await setLiveReserveCheckpointChildDisposition(runtime.db, checkpoint, task.job, "not_started");
     await logSkippedCronRun(runtime, {
-      job: task.job,
-      reason,
-      message: `${task.job} did not start because ${blockedBy} did not complete`,
+      job: task.job, status: "skipped_neutral", reason,
+      message: "Cohort tail waits for a fresh continuation budget after the reserve frontier settles",
       metadata: { childDisposition: "not_started" },
     });
   }
-  return buildScheduledSlotSummary(tasks.map((task) => summarizeSkippedScheduledJob(task.job, reason)));
+  return buildScheduledSlotSummary(tasks.map((task) => ({
+    job: task.job, outcome: "skipped", status: "skipped_neutral", reason, neutral: true,
+  })));
 }
 
 async function recordPriorityDeferredReserveTasks(
@@ -253,8 +258,8 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const redemptionTasks = redemptionGroup?.tasks ?? [];
   const kinesisTasks = kinesisGroup?.tasks ?? [];
   const postSyncTasks = postSyncGroup?.tasks ?? [];
-  // Kinesis is independent. Redemption reads only sealed acceptance after the
-  // head settles, while the sentinel still requires this slot's full cohort.
+  // Kinesis is independent. Consumers run only on an exhausted cohort in a
+  // fresh invocation, avoiding repeated redemption behind partial slices.
   const main = syncTask
     ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
     : Promise.resolve(buildScheduledSlotSummary([]));
@@ -284,44 +289,36 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     isReserveQueueExhausted(checkpointAfterMain)
     && mainSummary.jobsErrored === 0
     && mainSummary.jobsSkipped === 0;
+  if (!reserveStageCompleted || syncTask) {
+    summaries.push(await recordContinuationTasks(runtime, identity, [...redemptionTasks, ...postSyncTasks]));
+    if (mainSummary.jobsErrored === 0 && mainSummary.jobsSkipped === 0) {
+      await continueLiveReserveCheckpoint(runtime.db, identity);
+    } else if (mainFailedAfterQueueExhaustion) {
+      await finishLiveReserveCheckpoint(runtime.db, identity, {
+        state: "failed", error: "live reserve queue exhausted without a successful result",
+      });
+    }
+    return mergeScheduledSlotSummaries(summaries);
+  }
   if (redemptionTasks.length > 0 && redemptionGroup) {
     summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
-    const redemptionSkip = summaries[summaries.length - 1]?.jobs.find((job) =>
+    const admissionSkip = summaries[summaries.length - 1]?.jobs.find((job) =>
       job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy");
-    if (runtime.recoveryCheckpoint && redemptionSkip) {
+    if (admissionSkip) {
       summaries.push(await recordPriorityDeferredReserveTasks(runtime,
-        postSyncTasks.map((task) => task.job), redemptionSkip.reason!, {}));
+        postSyncTasks.map((task) => task.job), admissionSkip.reason!, {}));
       return mergeScheduledSlotSummaries(summaries);
     }
   }
-  if (!reserveStageCompleted) {
-    // an unfinished or failed reserve stage must not refresh the drift envelope
-    // from the previous one. It re-runs with the replayed suffix.
-    summaries.push(
-      await recordBlockedReserveTasks(
-        runtime,
-        identity,
-        postSyncTasks,
-        "sync-live-reserves",
-      ),
-    );
-  } else {
-    // Redemption has already settled before the sentinel starts.
-    if (postSyncTasks.length > 0 && postSyncGroup) {
-      summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup]));
-    }
+  if (postSyncTasks.length > 0 && postSyncGroup) {
+    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup]));
   }
   const summary = mergeScheduledSlotSummaries(summaries);
   const checkpointAfterChildren = await loadLiveReserveCheckpoint(runtime.db, identity);
   if (!checkpointAfterChildren) {
     throw new Error("live reserve checkpoint missing before slot finalization");
   }
-  if (mainFailedAfterQueueExhaustion) {
-    await finishLiveReserveCheckpoint(runtime.db, identity, {
-      state: "failed",
-      error: "live reserve queue exhausted without a successful result",
-    });
-  } else if (
+  if (
     summary.jobsErrored === 0 &&
     summary.jobsSkipped === 0 &&
     isReserveQueueExhausted(checkpointAfterChildren)
@@ -330,6 +327,10 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
       state: "completed",
       error: null,
     });
+  } else if (isReserveQueueExhausted(checkpointAfterChildren)) {
+    // A settled failed consumer is still a real error, but retries need not
+    // wait for a synthetic abandonment or the expired 15-minute claim.
+    await continueLiveReserveCheckpoint(runtime.db, identity);
   }
   return summary;
 }

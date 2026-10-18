@@ -96,7 +96,7 @@ describe("reserve recovery mode", () => {
     mocks.claim.mockResolvedValue({ disposition: "none" });
     mocks.release.mockReset().mockResolvedValue({ disposition: "released" });
     mocks.priority.mockReset().mockResolvedValue(null);
-    mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
+    mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0, jobs: [] });
   });
   it("keeps disabled and config-only polls outside the heavy checkpoint replay import graph", async () => {
     expect(mocks.reserveSlotInitialized).toBe(false);
@@ -141,7 +141,7 @@ describe("reserve recovery mode", () => {
         mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint({
           state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
         }) });
-        mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+        mocks.priority.mockResolvedValueOnce(null);
         if (phase === "post-claim") mocks.priority.mockResolvedValueOnce(priority);
         else {
           mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(priority);
@@ -157,7 +157,7 @@ describe("reserve recovery mode", () => {
       expect(confirmedCronOutputAt(latestLeasedResult, JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}"), 1000)).toBeNull();
       expect(mocks.runReserveSlot).toHaveBeenCalledTimes(phase === "child-summary" ? 1 : 0);
       if (phase === "preflight") expect(mocks.configRecovery).not.toHaveBeenCalled();
-      if (phase === "preflight" || phase === "config") expect(mocks.claim).not.toHaveBeenCalled();
+      if (phase === "preflight") expect(mocks.claim).not.toHaveBeenCalled();
       if (phase === "post-claim") expect(mocks.release).toHaveBeenCalledTimes(1);
     });
   });
@@ -189,7 +189,7 @@ describe("reserve recovery mode", () => {
     mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint({
       state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
     }) });
-    mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(null)
+    mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
       .mockResolvedValueOnce(condition ? {
         reason: "producer-slot-priority", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1000,
         observedAt: 1100, lookaheadSec: 1440, condition,
@@ -269,7 +269,6 @@ describe("reserve recovery mode", () => {
       staleAfterSec: resolveScheduledSlotPolicy("fourHourlyReserveSync").slotSilenceSec, limit: 1,
     });
     expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
-      "recovering-reserve-config",
       "preparing-reserve-checkpoint",
       "replaying-reserve-checkpoint",
     ]);
@@ -286,7 +285,7 @@ describe("reserve recovery mode", () => {
       childDispositionsAtClaim: {},
       sweep: { slotsReconciled: 0 },
       preparation: { inspection: EMPTY_INSPECTION, prepared: [] },
-      summary: { jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 },
+      summary: { jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0, jobs: [] },
     });
   });
 
@@ -302,7 +301,7 @@ describe("reserve recovery mode", () => {
         reason: "heavy-slot-co-tenancy", scheduleKey: "halfHourlyChartsOffset", slotStartedAt: 900,
         observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
       };
-      mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(priority);
+      mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(priority);
       let completeRelease!: () => void;
       let releaseStarted!: () => void;
       const gate = new Promise<void>((resolve) => { completeRelease = resolve; });
@@ -335,19 +334,21 @@ describe("reserve recovery mode", () => {
     },
   );
 
-  it.each(["current-slot-unfinished", "next-slot-lookahead", "producer-slot-live"])("preserves config degradation when %s defers an owned claim", async (condition) => {
+  it.each(["current-slot-unfinished", "next-slot-lookahead", "producer-slot-live"])("keeps config repair outside a claimed cohort's budget when %s defers it", async (condition) => {
     mocks.configRecovery.mockResolvedValue({ attempted: ["coin"], healed: [], failed: ["coin"] });
     mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint({
       state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
     }) });
-    mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce({
+    mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce({
       reason: "producer-slot-priority", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1000,
       observedAt: 1000, lookaheadSec: 1440, condition,
     });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
-    expect(latestLeasedResult).toMatchObject({ status: "degraded" });
+    expect(latestLeasedResult).toMatchObject({ status: condition === "current-slot-unfinished" ? "skipped_neutral" : "ok" });
+    expect(mocks.configRecovery).not.toHaveBeenCalled();
     expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
-      reason: "reserve-config-recovery-failed", recoveryClaimRelease: { disposition: "released" },
+      reason: condition === "producer-slot-live" ? "producer-slot-live" : "producer-slot-priority",
+      recoveryClaimRelease: { disposition: "released" },
     });
     expect(mocks.runReserveSlot).not.toHaveBeenCalled();
   });
@@ -360,9 +361,9 @@ describe("reserve recovery mode", () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(result.jobsErrored).toBe(1);
     expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
-      "recovering-reserve-config",
+      "preparing-reserve-checkpoint", "recovering-reserve-config",
     ]);
-    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.claim).toHaveBeenCalledTimes(1);
   });
 
   it("keeps historical incompatible checkpoint debt in telemetry on a successful idle poll", async () => {
@@ -390,7 +391,7 @@ describe("reserve recovery mode", () => {
       jobsErrored: errors, jobsDegraded: degraded, jobsSkipped: 1,
       jobs: [{ job: "sync-live-reserves", status: "skipped_neutral", reason: "producer-slot-priority" }],
     });
-    if (observedPriority) mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
+    if (observedPriority) mocks.priority.mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null).mockResolvedValueOnce({
         reason: "producer-slot-priority", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1000,
         observedAt: 1000, lookaheadSec: 1440, condition: "next-slot-lookahead",
@@ -402,19 +403,20 @@ describe("reserve recovery mode", () => {
     });
   });
 
-  it("preserves checkpoint replay when targeted config recovery fails", async () => {
+  it("prioritizes checkpoint continuation over targeted config repair", async () => {
     mocks.configRecovery.mockResolvedValue({ disposition: "config-recovery-checked", attempted: ["usdt-tether"], healed: [], failed: ["usdt-tether"], deferredCount: 0 });
     mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: {
       scheduleKey: "fourHourlyReserveSync", slotStartedAt: 800,
       attemptNo: 2, executionGeneration: 2, sourceAttemptNo: 1, childDispositions: {},
     } });
     const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
-    expect(result.jobsDegraded).toBe(1);
+    expect(result.jobsDegraded).toBe(0);
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
     expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
       disposition: "recovery-executed", checkpointsClaimed: 1,
-      configRecovery: { failed: ["usdt-tether"], healed: [] },
+      configRecovery: { disposition: "deferred-for-cohort" },
     });
+    expect(mocks.configRecovery).not.toHaveBeenCalled();
   });
 
   it("reports capacity deferral but not producer-lease contention as degraded", async () => {
@@ -442,10 +444,11 @@ describe("reserve recovery mode", () => {
         attemptNo: 2, executionGeneration: 2, sourceAttemptNo: 1, childDispositions: {},
       } });
     }
-    expect((await runFiveMinuteReserveRecoverySlot(runtime("recover"))).jobsDegraded).toBe(1);
+    expect((await runFiveMinuteReserveRecoverySlot(runtime("recover"))).jobsDegraded).toBe(hasCheckpoint ? 0 : 1);
     expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
       checkpointsClaimed: hasCheckpoint ? 1 : 0,
-      configRecovery: { disposition: "config-recovery-partial", healed: ["covered"], warnings },
+      configRecovery: hasCheckpoint ? { disposition: "deferred-for-cohort" }
+        : { disposition: "config-recovery-partial", healed: ["covered"], warnings },
     });
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(hasCheckpoint ? 1 : 0);
   });
@@ -453,7 +456,6 @@ describe("reserve recovery mode", () => {
     [1, 1, 1, "reserve-replay-child-error", "error"],
     [0, 1, 1, "reserve-replay-child-degraded", "degraded"],
     [0, 0, 1, "reserve-replay-deferred", "degraded"],
-    [0, 0, 0, "reserve-config-recovery-failed", "degraded"],
   ])("names the primary reason with child precedence (%s/%s/%s)", async (errors, degraded, skipped, reason, status) => {
     mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: {
       scheduleKey: "fourHourlyReserveSync", slotStartedAt: 800, attemptNo: 2,
@@ -462,13 +464,12 @@ describe("reserve recovery mode", () => {
     mocks.configRecovery.mockResolvedValue({
       attempted: ["coin"], healed: [], failed: ["coin"], missingFetcherCount: 1, deferredCount: 1,
     });
-    mocks.runReserveSlot.mockResolvedValue({ jobsErrored: errors, jobsDegraded: degraded, jobsSkipped: skipped });
+    mocks.runReserveSlot.mockResolvedValue({ jobsErrored: errors, jobsDegraded: degraded, jobsSkipped: skipped, jobs: [] });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status });
     expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
-      reason, reasons: expect.arrayContaining([
-        "reserve-config-recovery-failed", "reserve-config-recovery-missing-fetcher", "reserve-config-recovery-deferred",
-      ]), configRecovery: { failed: ["coin"] },
+      reason, reasons: expect.arrayContaining([reason]),
+      configRecovery: { disposition: "deferred-for-cohort" },
     });
   });
 
@@ -484,7 +485,25 @@ describe("reserve recovery mode", () => {
       reason: "reserve-config-recovery-failed",
       reasons: ["reserve-config-recovery-failed", condition === "producer-slot-live" ? "producer-slot-live" : "producer-slot-priority"],
     });
-    expect(mocks.prepare).not.toHaveBeenCalled();
-    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.prepare).toHaveBeenCalledTimes(1);
+    expect(mocks.claim).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports bounded cohort continuation as normal work, not recovery degradation", async () => {
+    mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint({
+      state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
+    }) });
+    mocks.runReserveSlot.mockResolvedValue({
+      jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0, jobsNeutralSkipped: 2,
+      jobs: ["sync-redemption-backstops", "cron-sentinel"].map((job) => ({
+        job, status: "skipped_neutral", reason: "reserve-cohort-continuation",
+      })),
+    });
+    await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(latestLeasedResult).toMatchObject({ status: "ok", itemCount: 1 });
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      disposition: "cohort-continuation", continuationPending: true, reasons: [],
+    });
+    expect(mocks.configRecovery).not.toHaveBeenCalled();
   });
 });

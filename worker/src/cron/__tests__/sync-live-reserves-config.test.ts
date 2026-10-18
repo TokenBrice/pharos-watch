@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
+import { LIVE_RESERVE_CONTINUATION_BUDGETS, LIVE_RESERVE_SLICE_COST, resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 
 describe("live reserve execution budgets", () => {
   it("sanitizes unavailable overrides to the lease-safe defaults", () => {
@@ -9,6 +9,7 @@ describe("live reserve execution budgets", () => {
     })).toEqual({
       adapterTimeoutMs: 20_000, runBudgetMs: 540_000,
       d1FinalizeTimeoutMs: 30_000, finalizationMarginMs: 5_000, minimumAttemptBudgetMs: 55_000,
+      maxCoinsPerSlice: 1933,
     });
   });
 
@@ -19,6 +20,16 @@ describe("live reserve execution budgets", () => {
     })).toEqual({
       adapterTimeoutMs: 10_000, runBudgetMs: 400_000,
       d1FinalizeTimeoutMs: 5_000, finalizationMarginMs: 1_000, minimumAttemptBudgetMs: 16_000,
+      maxCoinsPerSlice: 1933,
     });
+  });
+
+  it("sizes five-minute slices to both measured wall throughput and the 30-second CPU class", () => {
+    const config = resolveLiveReserveSyncBudgetConfig(LIVE_RESERVE_CONTINUATION_BUDGETS);
+    expect(config.maxCoinsPerSlice).toBe(125);
+    expect(config.maxCoinsPerSlice * LIVE_RESERVE_SLICE_COST.wallMsPerCoin + config.minimumAttemptBudgetMs)
+      .toBeLessThanOrEqual(config.runBudgetMs);
+    expect(config.maxCoinsPerSlice * LIVE_RESERVE_SLICE_COST.cpuMsPerCoin + LIVE_RESERVE_SLICE_COST.cpuMarginMs)
+      .toBeLessThan(30_000);
   });
 });

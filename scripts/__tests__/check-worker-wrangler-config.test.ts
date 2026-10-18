@@ -29,6 +29,10 @@ binding = "CF_VERSION_METADATA"
 binding = "DB"
 database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 
+[[services]]
+binding = "HEAVY_EXECUTOR"
+service = "stablecoin-heavy"
+
 [limits]
 cpu_ms = 300000
 
@@ -42,6 +46,7 @@ invocation_logs = true
 
 [vars]
 ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
+PROJECT_TAPE_PLACED_EXECUTOR = "on"
 
 [[rules]]
 type = "Data"
@@ -55,7 +60,7 @@ fallthrough = true
 `;
 
 describe("check-worker-wrangler-config", () => {
-  it("validates the heavy scheduled-only configuration", () => {
+  it("validates the private heavy configuration with fetch-only placement", () => {
     const toml = readFileSync("worker/wrangler.heavy.toml", "utf8");
     expect(evaluateWorkerWranglerConfig(toml, { workerRole: "heavy" })).toEqual({ failed: false, issues: [] });
     for (const mutation of [
@@ -71,6 +76,9 @@ describe("check-worker-wrangler-config", () => {
       toml.replace('bucket_name = "pharos-measurements"', 'bucket_name = "wrong-bucket"'),
       `${toml}\n[vars]\nWORKER_V9_WORKFLOW_MODE = "shadow"\n`,
       `${toml}\n[vars]\nWORKER_V9_WORKFLOW_MODE = "off"\n`,
+      toml.replace('region = "aws:eu-central-1"', 'region = "aws:us-east-1"'),
+      toml.replace('[placement]', '[placement]\nmode = "smart"'),
+      `${toml}\n[[services]]\nbinding = "HEAVY_EXECUTOR"\nservice = "stablecoin-heavy"\n`,
     ]) {
       expect(evaluateWorkerWranglerConfig(mutation, { workerRole: "heavy" }).failed).toBe(true);
     }
@@ -160,6 +168,21 @@ describe("check-worker-wrangler-config", () => {
   });
   it("accepts root-owned custom domains and fallthrough asset rules", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG)).toEqual({ failed: false, issues: [] });
+  });
+  it("accepts the project-tape rollback flag without removing the binding", () => {
+    expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
+      'PROJECT_TAPE_PLACED_EXECUTOR = "on"', 'PROJECT_TAPE_PLACED_EXECUTOR = "off"',
+    ))).toEqual({ failed: false, issues: [] });
+  });
+
+  it("rejects missing, misdirected or RPC executor bindings and invalid flags", () => {
+    for (const mutation of [
+      VALID_CONFIG.replace('binding = "HEAVY_EXECUTOR"', 'binding = "OTHER"'),
+      VALID_CONFIG.replace('service = "stablecoin-heavy"', 'service = "stablecoin-api"'),
+      VALID_CONFIG.replace('service = "stablecoin-heavy"', 'service = "stablecoin-heavy"\nentrypoint = "Executor"'),
+      VALID_CONFIG.replace('PROJECT_TAPE_PLACED_EXECUTOR = "on"', 'PROJECT_TAPE_PLACED_EXECUTOR = "maybe"'),
+      `${VALID_CONFIG}\n[placement]\nregion = "aws:eu-central-1"\n`,
+    ]) expect(evaluateWorkerWranglerConfig(mutation).failed).toBe(true);
   });
 
   it("rejects routes nested under an asset rule and missing fallthrough", () => {
