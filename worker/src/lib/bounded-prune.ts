@@ -9,6 +9,16 @@ interface BoundedPruneOptions {
   deleteBatch: (limit: number) => Promise<MinimalD1RunResult>;
 }
 
+/**
+ * Shared ceiling for the daily high-growth retention passes. D1 gives every
+ * statement a 30-second budget, so a batch stays at 10,000 rows; the per-run
+ * ceiling bounds a multi-week lapse to 100,000 rows so the daily job still
+ * finishes inside its slot. Call sites with a different cost profile keep
+ * passing their own limits.
+ */
+export const RETENTION_DELETE_BATCH_LIMIT = 10_000;
+export const RETENTION_DELETE_RUN_LIMIT = 100_000;
+
 export async function runBoundedPrune({
   batchLimit,
   runLimit,
