@@ -23,6 +23,8 @@ const BLOCK_TIMESTAMP_CACHE_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 const SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
 const REQUEST_TELEMETRY_RETENTION_SEC = REQUEST_ATTRIBUTION_RETENTION_DAYS * SECONDS.ONE_DAY;
 const SELF_SERVE_RATE_LIMIT_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
+/** Oldest `cron_runs.started_at` the daily housekeeping pass keeps; offline diagnostics import this bound. */
+export const CRON_RUNS_RETENTION_SEC = SECONDS.ONE_WEEK;
 
 function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
@@ -76,7 +78,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   const simpleRetentionPolicies = {
     cronRuns: {
       sql: "DELETE FROM cron_runs WHERE started_at < ? AND rowid IN (SELECT rowid FROM cron_runs WHERE started_at < ? ORDER BY started_at ASC LIMIT ?)",
-      cutoff: now - SECONDS.ONE_WEEK,
+      cutoff: now - CRON_RUNS_RETENTION_SEC,
     },
     selectorSnapshotDailyQuota: {
       sql: "DELETE FROM selector_snapshot_daily_quota WHERE quota_date < ?",
@@ -227,7 +229,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
         siteDataRequestStats: siteDataRequestStats.cappedAtLimit,
         apiKeyRequestStats: apiKeyRequestStats.cappedAtLimit,
       },
-      cutoffCronRunsSec: now - SECONDS.ONE_WEEK,
+      cutoffCronRunsSec: now - CRON_RUNS_RETENTION_SEC,
       cutoffRepairTasksSec: now - SECONDS.ONE_WEEK,
       cutoffCanaryRunsSec: now - WORKER_CANARY_RUN_RETENTION_SEC,
       cutoffRecoveryCheckpointsSec: now - SLOT_EXECUTION_RETENTION_SEC,

@@ -17,13 +17,107 @@ export const SafetyScoreCaptureArchiveIndexSchema = z.object({
   archived_at: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
 });
 export type SafetyScoreCaptureArchiveIndex = z.infer<typeof SafetyScoreCaptureArchiveIndexSchema>;
-export const SafetyScoreCaptureArchiveGapSchema = SafetyScoreCaptureArchiveIndexSchema.pick({
+const unixSeconds = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+/** Accepted V9 publications are named `report-cards:v9:v1:<sha256>` by `safety-score-v9/candidate.ts`. */
+export const SafetyScorePublicationGenerationIdSchema = z.string().regex(/^report-cards:v9:v1:[a-f0-9]{64}$/u);
+export const SafetyScoreCaptureArchiveJournalGapSchema = SafetyScoreCaptureArchiveIndexSchema.pick({
   generation_id: true, published_at: true, methodology_version: true, policy_digest: true, evaluation_build_digest: true,
 }).extend({
   attempt_id: z.string().min(1),
-  attempted_at: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  attempted_at: unixSeconds,
+});
+export type SafetyScoreCaptureArchiveJournalGap = z.infer<typeof SafetyScoreCaptureArchiveJournalGapSchema>;
+/** One productive `compute-safety-score-v9` run whose metadata names an accepted publication generation. */
+export const SafetyScoreCaptureArchiveRecentCronRowSchema = z.object({
+  run_id: z.number().int().positive(),
+  started_at: unixSeconds,
+  status: z.string().min(1),
+  generation_id: z.unknown(),
+  archive_indexed: z.number().int().min(0).max(1),
+});
+export type SafetyScoreCaptureArchiveRecentCronRow = z.infer<typeof SafetyScoreCaptureArchiveRecentCronRowSchema>;
+export const SAFETY_SCORE_CAPTURE_ARCHIVE_GAP_EVIDENCE_SOURCES = ["accepted-attempt-journal", "recent-cron"] as const;
+export type SafetyScoreCaptureArchiveGapEvidenceSource = (typeof SAFETY_SCORE_CAPTURE_ARCHIVE_GAP_EVIDENCE_SOURCES)[number];
+export const SafetyScoreCaptureArchiveRecentCronRunSchema = SafetyScoreCaptureArchiveRecentCronRowSchema.pick({
+  run_id: true, started_at: true, status: true,
+});
+/** One run naming a generation that carries no archive index row. */
+export type SafetyScoreCaptureArchiveCronGapEvidence = Pick<SafetyScoreCaptureArchiveRecentCronRun, "generation_id" | "run_id" | "started_at" | "status">;
+/** A generation with no archive index row, carrying whichever optional evidence sources still retain it. */
+export const SafetyScoreCaptureArchiveGapSchema = z.object({
+  generation_id: z.string().min(1),
+  evidence_sources: z.array(z.enum(SAFETY_SCORE_CAPTURE_ARCHIVE_GAP_EVIDENCE_SOURCES)).min(1),
+  journal: SafetyScoreCaptureArchiveJournalGapSchema.omit({ generation_id: true }).nullable(),
+  recent_cron_runs: z.array(SafetyScoreCaptureArchiveRecentCronRunSchema),
+}).superRefine((gap, ctx) => {
+  const expected: SafetyScoreCaptureArchiveGapEvidenceSource[] = [
+    ...(gap.journal === null ? [] : ["accepted-attempt-journal" as const]),
+    ...(gap.recent_cron_runs.length === 0 ? [] : ["recent-cron" as const]),
+  ];
+  if (gap.evidence_sources.length !== expected.length || gap.evidence_sources.some((source, index) => source !== expected[index])) {
+    ctx.addIssue({ code: "custom", path: ["evidence_sources"], message: "Gap provenance must name exactly the evidence sources present" });
+  }
 });
 export type SafetyScoreCaptureArchiveGap = z.infer<typeof SafetyScoreCaptureArchiveGapSchema>;
+export const SafetyScoreCaptureArchiveRecentCronEvidenceSchema = z.object({
+  job: z.string().min(1),
+  clock: z.literal("run-started-at"),
+  window: z.object({ fromSec: unixSeconds, toSec: unixSeconds }).nullable(),
+  retention: z.object({ sec: z.number().int().positive(), earliestRetainedSec: unixSeconds, observedAtSec: unixSeconds }),
+  coverage: z.enum(["complete-window", "incomplete-window"]),
+  rows: z.object({
+    productive: z.number().int().nonnegative(),
+    validGeneration: z.number().int().nonnegative(),
+    archiveIndexed: z.number().int().nonnegative(),
+    missingGeneration: z.number().int().nonnegative(),
+    malformedGeneration: z.number().int().nonnegative(),
+    gapGenerations: z.number().int().nonnegative(),
+  }),
+});
+export type SafetyScoreCaptureArchiveRecentCronEvidence = z.infer<typeof SafetyScoreCaptureArchiveRecentCronEvidenceSchema>;
+
+/**
+ * Union journal and recent-cron evidence per generation. Journal page order is
+ * `(published_at, generation_id, attempt_id)`, so the earliest retained accepted
+ * attempt names each generation; repeated cron rows for one run collapse by
+ * `run_id`. Nothing is invented: a cron-only gap has no publication clock,
+ * identity digests or attempt.
+ */
+export function mergeArchiveGapEvidence(
+  journal: readonly SafetyScoreCaptureArchiveJournalGap[],
+  recentCron: readonly SafetyScoreCaptureArchiveCronGapEvidence[],
+): SafetyScoreCaptureArchiveGap[] {
+  const merged = new Map<string, { journal: SafetyScoreCaptureArchiveGap["journal"]; runs: Map<number, SafetyScoreCaptureArchiveRecentCronRun> }>();
+  const entryFor = (generationId: string) => {
+    let entry = merged.get(generationId);
+    if (!entry) { entry = { journal: null, runs: new Map() }; merged.set(generationId, entry); }
+    return entry;
+  };
+  for (const row of journal) {
+    const entry = entryFor(row.generation_id);
+    entry.journal ??= {
+      published_at: row.published_at, methodology_version: row.methodology_version,
+      policy_digest: row.policy_digest, evaluation_build_digest: row.evaluation_build_digest,
+      attempt_id: row.attempt_id, attempted_at: row.attempted_at,
+    };
+  }
+  for (const row of recentCron) {
+    entryFor(row.generation_id).runs.set(row.run_id, { run_id: row.run_id, started_at: row.started_at, status: row.status });
+  }
+  const gaps = [...merged].map(([generationId, entry]) => ({
+    generation_id: generationId,
+    evidence_sources: SAFETY_SCORE_CAPTURE_ARCHIVE_GAP_EVIDENCE_SOURCES.filter(
+      (source) => (source === "accepted-attempt-journal" ? entry.journal !== null : entry.runs.size > 0),
+    ),
+    journal: entry.journal,
+    recent_cron_runs: [...entry.runs.values()].sort((left, right) => left.started_at - right.started_at || left.run_id - right.run_id),
+  }));
+  const firstClock = (gap: SafetyScoreCaptureArchiveGap): number =>
+    gap.journal?.published_at ?? gap.recent_cron_runs[0]?.started_at ?? 0;
+  gaps.sort((left, right) => firstClock(left) - firstClock(right)
+    || (left.generation_id < right.generation_id ? -1 : left.generation_id > right.generation_id ? 1 : 0));
+  return SafetyScoreCaptureArchiveGapSchema.array().parse(gaps);
+}
 export type ArchiveBoundary = { dateSec: number } | { field: "methodology_version" | "policy_digest" | "evaluation_build_digest"; identity: string };
 
 export function parseArchiveDate(value: string): number {
