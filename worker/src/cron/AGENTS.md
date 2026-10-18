@@ -4,9 +4,9 @@ Applies to worker/src/cron and its scheduled dispatch wiring.
 
 ## Read First
 
-- Read the routed `docs/process/cron-trigger-policy.md#source-of-truth` and `#target`; schedule declarations or new scheduled work also require `#process-for-new-scheduled-work`.
+- Read the routed `docs/process/cron-trigger-policy.md#source-of-truth` and `#target`. Changes to work, fetch pressure, CPU placement or topology also require `#current-growth-gate`; adding scheduled work requires `#process-for-new-scheduled-work`.
 - `docs/worker-and-api-limits.md#connection-budget-operating-assumption`
-- `docs/worker-infrastructure.md#cron-scheduling`
+- `docs/worker-infrastructure.md#event-entry-lifecycle-and-admission`; schedule/dispatch/fence changes also require `#cron-scheduling`. Job-local changes do not need the generated inventory of every other slot.
 
 ## Invariants
 
