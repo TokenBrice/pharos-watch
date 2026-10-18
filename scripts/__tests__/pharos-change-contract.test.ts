@@ -417,6 +417,16 @@ describe("reading selectors and context modes", () => {
   });
 
   it.each([
+    "worker/src/cron/compute-safety-score-v9.ts",
+    "worker/src/cron/prepare-safety-score-v9-input.ts",
+    "worker/src/lib/safety-score-v9/publication-runner.ts",
+  ])("routes a lone scoring publication path %s through the contract seam", (file) => {
+    const contract = classifyChangedFiles([file]);
+    expect(contract.contextMode.effective).toBe("contract");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining(["docs/report-cards.md#api", "docs/report-cards.md#consumers"]));
+  });
+
+  it.each([
     ["worker/src/lib/safety-score-v9/supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
     ["worker/src/cron/sync-v9-supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
     ["worker/src/lib/safety-score-v9/extension-bridge.ts", "bridge-in-flight-accounting"],
