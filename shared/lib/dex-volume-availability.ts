@@ -28,6 +28,7 @@ import {
   type DexVolumeAvailabilityRecord,
   type DexVolumeCompleteness,
   type DexVolumeWindow,
+  type LiquidityScoreUnavailableReason,
 } from "../types/market";
 
 const DEX_VOLUME_WINDOW_SEC = {
@@ -347,11 +348,7 @@ function computeVolumeActivityScore(volume24hUsd: number, totalTvlUsd: number): 
   return vtRatio <= 0 ? 0 : clampScore(38 * (Math.log10(vtRatio) + 3));
 }
 
-type VolumeActivityUnavailableReason =
-  | "activity-coverage-below-floor"
-  | "activity-missing"
-  | "activity-stale"
-  | "activity-completeness-unknown";
+type VolumeActivityUnavailableReason = Extract<LiquidityScoreUnavailableReason, `activity-${string}`>;
 
 type VolumeActivityComponent =
   | { status: "measured"; score: number }

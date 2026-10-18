@@ -91,6 +91,7 @@ import type {
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
   LiquidityCoverageClass,
+  LiquidityScoreUnavailableReason,
 } from "@shared/types/market";
 import type {
   DexMeasuredExecutionProfile,
@@ -399,6 +400,8 @@ export interface ScoreResult {
   vol24h: number | null;
   /** Composite LiquidityScore; null (NR) when required 24h activity is unavailable (DEC-19). */
   score: number | null;
+  /** Why `score` is null; null when rated. Persisted in `score_components_json`. */
+  liquidityScoreUnavailableReason?: LiquidityScoreUnavailableReason | null;
   /** Per-window availability behind `vol24h`, persisted as `volume_availability_json`. */
   volumeAvailability: DexVolumeAvailabilityRecord;
 }

@@ -15,10 +15,17 @@ import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
-import { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
+import {
+  compareLiquidityRows,
+  informativeVolumeLowerBound,
+  LIQUIDITY_NR_REASON_LABELS,
+  type LiquidityRow,
+  type LiquiditySortKey,
+} from "@/components/liquidity-table-logic";
 import { describeDexVolume } from "@/lib/dex-volume-display";
 import { dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
 import { MethodologyHint } from "@/components/methodology-hint";
+import type { LiquidityScoreUnavailableReason } from "@shared/types/market";
 
 export { type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
 
@@ -31,28 +38,58 @@ interface LiquidityTableProps {
   toolbar?: ReactNode;
 }
 
+// Every column has a width so the fixed layout never ellipsizes a header; lower-value
+// columns appear only where their width fits (7d volume at 2xl, Vol/TVL at xl).
 const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
-  { id: "rank", label: "#", className: "w-9 px-2 text-right sm:w-[50px] sm:px-3" },
-  { id: "name", label: "Name", className: "w-[122px] max-w-[122px] sm:w-[150px] sm:max-w-[150px] xl:w-[200px] xl:max-w-none" },
+  { id: "rank", label: "#", className: "w-9 px-2 text-right sm:w-12 sm:px-3" },
+  { id: "name", label: "Name", className: "w-[122px] max-w-[122px] sm:w-[150px] sm:max-w-[150px] xl:w-[170px] xl:max-w-none" },
   {
     id: "score",
     label: "Score",
-    headerAdornment: <MethodologyHint topic="liquidityScore" />,
+    // Hidden below sm so "Score" fits the narrow phone column; the hero row keeps the hint.
+    headerAdornment: <span className="hidden sm:inline-flex"><MethodologyHint topic="liquidityScore" /></span>,
     sortKey: "score",
-    className: "w-[100px] text-right",
+    className: "w-[5.25rem] text-right sm:w-[7.25rem]",
   },
-  { id: "tvl", label: "DEX TVL", sortKey: "tvl", className: "w-[104px] text-right" },
-  { id: "tvlTrend", label: "7d Trend", sortKey: "tvlTrend", className: "hidden lg:table-cell text-right" },
-  { id: "volume", label: "24h Vol", sortKey: "volume", className: "w-[104px] text-right" },
-  { id: "volume7d", label: "7d Vol", sortKey: "volume7d", className: "hidden lg:table-cell text-right" },
-  { id: "vtRatio", label: "Vol/TVL", sortKey: "vtRatio", className: "hidden sm:table-cell text-right" },
-  { id: "pools", label: "Pools", sortKey: "pools", className: "hidden sm:table-cell text-right" },
-  { id: "chains", label: "Chains", sortKey: "chains", className: "hidden sm:table-cell text-right" },
-  { id: "topProtocol", label: "Top protocol", className: "hidden md:table-cell min-w-[10rem] text-left" },
-  { id: "balance", label: "Balance", sortKey: "balance", className: "hidden xl:table-cell w-[7.5rem] text-right" },
-  { id: "organic", label: "Organic", sortKey: "organic", className: "hidden xl:table-cell text-right" },
-  { id: "durability", label: "Durability", sortKey: "durability", className: "hidden xl:table-cell text-right" },
+  { id: "tvl", label: "DEX TVL", sortKey: "tvl", className: "w-[6.5rem] text-right" },
+  { id: "tvlTrend", label: "TVL 7d", sortKey: "tvlTrend", className: "hidden w-24 lg:table-cell text-right" },
+  { id: "volume", label: "24h vol", sortKey: "volume", className: "w-[6.5rem] text-right" },
+  { id: "volume7d", label: "7d vol", sortKey: "volume7d", className: "hidden w-[6.5rem] 2xl:table-cell text-right" },
+  { id: "vtRatio", label: "Vol/TVL", sortKey: "vtRatio", className: "hidden w-24 xl:table-cell text-right" },
+  { id: "pools", label: "Pools", sortKey: "pools", className: "hidden w-[4.75rem] sm:table-cell text-right" },
+  { id: "chains", label: "Chains", sortKey: "chains", className: "hidden w-[5.25rem] sm:table-cell text-right" },
+  { id: "topProtocol", label: "Top protocol", className: "hidden w-36 md:table-cell text-left" },
+  { id: "balance", label: "Balance", sortKey: "balance", className: "hidden w-28 xl:table-cell text-right" },
+  { id: "organic", label: "Organic", sortKey: "organic", className: "hidden w-[5.5rem] xl:table-cell text-right" },
+  { id: "durability", label: "Durability", sortKey: "durability", className: "hidden w-28 xl:table-cell text-right" },
 ] as const;
+
+/** NR plus the producer's reason; a row without a recorded reason says only NR. */
+function NotRatedScore({ reason }: { reason: LiquidityScoreUnavailableReason | null }) {
+  const label = reason ? LIQUIDITY_NR_REASON_LABELS[reason] : undefined;
+  return (
+    <span
+      className="text-muted-foreground"
+      data-reason-code={reason ?? undefined}
+      title={label}
+      aria-label={label ? `NR: ${label}` : "NR"}
+    >
+      NR
+      {/* Below sm the label lives in the title so DEX TVL still fits on a phone. */}
+      {label ? <span className="hidden text-2xs font-sans leading-tight sm:block">{label}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * A partial window shows its admitted sum as a muted lower bound, never as the
+ * total (R1/R7). A bound of zero says nothing and reads like a measured zero, so
+ * it stays an unavailable dash with the partial title.
+ */
+function VolumeCell({ volume }: { volume: ReturnType<typeof describeDexVolume> }) {
+  if (volume.view.valueUsd != null) return volume.text;
+  return <span className="text-muted-foreground">{informativeVolumeLowerBound(volume) ?? volume.text}</span>;
+}
 
 export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }: LiquidityTableProps) {
   const {
@@ -108,7 +145,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
           total: totalRows,
           onPrevious: onPreviousPage,
           onNext: onNextPage,
-          noun: "stables tracked on DEXes",
+          noun: "coins observed on DEX",
         }}
       >
         {paginated.map((row, index) => {
@@ -129,9 +166,10 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
               className="h-11 sm:h-auto"
             >
               <TableCell className="px-2 text-right text-muted-foreground text-xs pharos-numeric sm:px-3">
-                {pageStartIndex + index + 1}
+                {/* NR rows are not ranked: their order within the NR group is the active column's. */}
+                {liq.liquidityScore != null ? pageStartIndex + index + 1 : "—"}
               </TableCell>
-              <TableCell className="w-[122px] max-w-[122px] overflow-hidden sm:w-[150px] sm:max-w-[150px] xl:w-[200px] xl:max-w-none">
+              <TableCell className="w-[122px] max-w-[122px] overflow-hidden sm:w-[150px] sm:max-w-[150px] xl:w-[170px] xl:max-w-none">
                 <StablecoinIdentity
                   logoSrc={logos?.[row.meta.id]}
                   name={row.meta.name}
@@ -157,7 +195,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                 {liq.liquidityScore != null ? (
                   <span className={getScoreColor(liq.liquidityScore)}>{liq.liquidityScore}</span>
                 ) : (
-                  <span className="text-muted-foreground">NR</span>
+                  <NotRatedScore reason={liq.liquidityScoreUnavailableReason ?? null} />
                 )}
               </TableCell>
               <TableCell className="text-right pharos-numeric">{formatCurrency(liq.totalTvlUsd)}</TableCell>
@@ -172,23 +210,19 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                 )}
               </TableCell>
               <TableCell className="text-right pharos-numeric" title={volume24h.title}>
-                {volume24h.view.valueUsd != null ? volume24h.text : (
-                  <span className="text-muted-foreground">{volume24h.text}</span>
-                )}
+                <VolumeCell volume={volume24h} />
               </TableCell>
-              <TableCell className="hidden lg:table-cell text-right pharos-numeric" title={volume7d.title}>
-                {volume7d.view.valueUsd != null ? volume7d.text : (
-                  <span className="text-muted-foreground">{volume7d.text}</span>
-                )}
+              <TableCell className="hidden 2xl:table-cell text-right pharos-numeric" title={volume7d.title}>
+                <VolumeCell volume={volume7d} />
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-right pharos-numeric text-sm">
+              <TableCell className="hidden xl:table-cell text-right pharos-numeric text-sm">
                 {vtRatio != null ? formatPercent(vtRatio * 100, 1) : <span className="text-muted-foreground">—</span>}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-right pharos-numeric">{liq.poolCount}</TableCell>
               <TableCell className="hidden sm:table-cell text-right pharos-numeric">{liq.chainCount}</TableCell>
               <TableCell className="hidden md:table-cell text-left text-sm text-muted-foreground">
                 {topProtocol ? (
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex min-w-0 items-center gap-1.5">
                     {PROTOCOL_LOGOS[topProtocol[0]] && (
                       <Image
                         src={PROTOCOL_LOGOS[topProtocol[0]]}
@@ -199,7 +233,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                         aria-hidden="true"
                       />
                     )}
-                    {prettifyProtocol(topProtocol[0])}
+                    <span className="truncate">{prettifyProtocol(topProtocol[0])}</span>
                   </span>
                 ) : (
                   "—"

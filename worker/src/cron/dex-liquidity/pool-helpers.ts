@@ -12,6 +12,7 @@ import {
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
+import type { LiquidityScoreUnavailableReason } from "@shared/types/market";
 import {
   QUALITY_MULTIPLIERS,
   COMPOSITE_POOL_NAMES,
@@ -199,7 +200,7 @@ export function computeLiquidityScore(
   durabilityScore: number,
   circulatingUsd?: number,
   counters?: LiquidityFallbackCounters,
-): { score: number | null; components: ScoreComponents } {
+): { score: number | null; unavailableReason: LiquidityScoreUnavailableReason | null; components: ScoreComponents } {
   // Component 1: TVL depth (30%) — uses effectiveTvl
   const tvlInput = m.effectiveTvl;
   let tvlDepth: number;
@@ -233,7 +234,11 @@ export function computeLiquidityScore(
     durability: durabilityScore,
     pairDiversity: Math.min(100, m.poolCount * 5),
   });
-  return { score: composite.score, components: composite.components };
+  return {
+    score: composite.score,
+    unavailableReason: composite.status === "not-rated" ? composite.activityReason : null,
+    components: composite.components,
+  };
 }
 
 export function initMetrics(id: string, symbol: string): LiquidityMetrics {

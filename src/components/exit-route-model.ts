@@ -13,11 +13,11 @@ import { getHhiBand } from "@shared/lib/classification";
 
 const MAX_EXIT_ROUTE_ITEMS = 5;
 const ROUTE_SCALE_DOMAIN_PCT = 75;
-const OTHER_ROUTE_COLOR = "oklch(0.68 0.02 248)";
+export const OTHER_ROUTE_COLOR = "oklch(0.68 0.02 248)";
 
 export const EXIT_ROUTE_SCENE = {
   width: 1000,
-  height: 430,
+  height: 400,
   doorX: 58,
   doorY: 76,
   doorRowGap: 50,
@@ -61,6 +61,15 @@ export interface LiquidityExitRouteItem {
   packetCount: number;
   colorHex: string;
   logoPath?: string;
+  /** Dark mark that must invert on the dark theme (`CHAIN_META.darkInvert`). */
+  logoDarkInvert?: boolean;
+}
+
+/** One route folded into "Other routes", kept for the ledger's exact tail. */
+export interface LiquidityExitRouteTailEntry {
+  key: string;
+  label: string;
+  valueUsd: number;
 }
 
 export type ExitRouteSelectionKind = "protocol" | "chain" | "throat";
@@ -83,6 +92,9 @@ export interface LiquidityExitRouteModel {
   poolCount: number;
   protocolRoutes: LiquidityExitRouteItem[];
   chainRoutes: LiquidityExitRouteItem[];
+  /** Every protocol/chain inside "Other routes", largest first. */
+  protocolTail: LiquidityExitRouteTailEntry[];
+  chainTail: LiquidityExitRouteTailEntry[];
   topProtocol: LiquidityExitRouteItem | null;
   topChain: LiquidityExitRouteItem | null;
   concentrationHhi: number | null;
@@ -222,12 +234,6 @@ export function selectionFromRoute(
   };
 }
 
-export function defaultExitRouteSelection(model: LiquidityExitRouteModel): LiquidityExitRouteSelection {
-  const route = model.topProtocol ?? model.topChain;
-  if (route) return selectionFromRoute(model.topProtocol ? "protocol" : "chain", route);
-  return aggregateThroatSelection(model);
-}
-
 export function aggregateThroatSelection(model: LiquidityExitRouteModel): LiquidityExitRouteSelection {
   return {
     kind: "throat",
@@ -308,15 +314,15 @@ function buildExitRouteItems(
   }: {
     labelForKey: (key: string) => string;
     colorHexForKey: (key: string, index: number) => string;
-    logoForKey?: (key: string) => { path: string } | null;
+    logoForKey?: (key: string) => { path: string; darkInvert?: boolean } | null;
     denominatorUsd?: number;
   },
-): LiquidityExitRouteItem[] {
+): { routes: LiquidityExitRouteItem[]; tail: LiquidityExitRouteTailEntry[] } {
   const sortedEntries = Object.entries(values)
     .filter(([, value]) => value > 0)
     .sort(([, a], [, b]) => b - a);
   const total = sortedEntries.reduce((sum, [, value]) => sum + value, 0);
-  if (total <= 0) return [];
+  if (total <= 0) return { routes: [], tail: [] };
   const shareBase = denominatorUsd && denominatorUsd > 0 ? denominatorUsd : total;
   const visibleEntries = sortedEntries.slice(0, MAX_EXIT_ROUTE_ITEMS);
   const omittedTotal = sortedEntries.slice(MAX_EXIT_ROUTE_ITEMS).reduce((sum, [, value]) => sum + value, 0);
@@ -335,6 +341,7 @@ function buildExitRouteItems(
       packetCount: routePacketCount(sharePct),
       colorHex: colorHexForKey(key, index),
       logoPath: logo?.path,
+      logoDarkInvert: logo?.darkInvert,
     };
   });
 
@@ -351,10 +358,16 @@ function buildExitRouteItems(
       packetCount: routePacketCount(sharePct),
       colorHex: OTHER_ROUTE_COLOR,
       logoPath: undefined,
+      logoDarkInvert: undefined,
     });
   }
 
-  return routes;
+  const tail = sortedEntries.slice(MAX_EXIT_ROUTE_ITEMS).map(([key, value]) => ({
+    key,
+    label: labelForKey(key),
+    valueUsd: value,
+  }));
+  return { routes, tail };
 }
 
 export function buildLiquidityExitRouteModel(
@@ -362,15 +375,15 @@ export function buildLiquidityExitRouteModel(
   aggregateStats?: Pick<LiquidityStatsData, "avgBalance" | "avgOrganic">,
 ): LiquidityExitRouteModel | null {
   const globalData = liquidityMap[DEX_GLOBAL_KEY];
-  if (!globalData || globalData.totalTvlUsd <= 0) return null;
+  if (!globalData || globalData.unavailableReason != null || globalData.totalTvlUsd <= 0) return null;
 
-  const protocolRoutes = buildExitRouteItems(globalData.protocolTvl ?? {}, {
+  const { routes: protocolRoutes, tail: protocolTail } = buildExitRouteItems(globalData.protocolTvl ?? {}, {
     labelForKey: prettifyProtocol,
     colorHexForKey: (protocol) => PROTOCOL_HEX[protocol] ?? stableRouteAccentColor(`protocol:${protocol}`),
     logoForKey: protocolLogo,
     denominatorUsd: globalData.totalTvlUsd,
   });
-  const chainRoutes = buildExitRouteItems(globalData.chainTvl ?? {}, {
+  const { routes: chainRoutes, tail: chainTail } = buildExitRouteItems(globalData.chainTvl ?? {}, {
     labelForKey: normalizeChain,
     colorHexForKey: (chain) => CHAIN_HEX[chain.toLowerCase()] ?? stableRouteAccentColor(`chain:${chain.toLowerCase()}`),
     logoForKey: chainLogo,
@@ -398,6 +411,8 @@ export function buildLiquidityExitRouteModel(
     poolCount: globalData.poolCount,
     protocolRoutes,
     chainRoutes,
+    protocolTail,
+    chainTail,
     topProtocol: protocolRoutes[0] ?? null,
     topChain: chainRoutes[0] ?? null,
     concentrationHhi,

@@ -1,57 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildLiquidityExitRouteModel } from "@/components/exit-route-model";
-import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
-
-describe("buildProtocolBreakdown", () => {
-  it("caps the protocol legend at 10 entries by grouping everything after the top 9", () => {
-    const { displayEntries, total } = buildProtocolBreakdown({
-      curve: 1_500,
-      raydium: 990,
-      "uniswap-v3": 850,
-      uniswap: 670,
-      pancakeswap: 560,
-      quickswap: 440,
-      fluid: 250,
-      orca: 195,
-      "sunswap-v3": 176,
-      aerodrome: 154,
-      balancer: 120,
-    });
-
-    expect(total).toBe(5_905);
-    expect(displayEntries).toEqual([
-      ["curve", 1_500],
-      ["raydium", 990],
-      ["uniswap-v3", 850],
-      ["uniswap", 670],
-      ["pancakeswap", 560],
-      ["quickswap", 440],
-      ["fluid", 250],
-      ["orca", 195],
-      ["sunswap-v3", 176],
-      ["_other", 274],
-    ]);
-  });
-
-  it("does not add Other when there are 9 or fewer protocols", () => {
-    const { displayEntries } = buildProtocolBreakdown({
-      curve: 1_500,
-      raydium: 990,
-      "uniswap-v3": 850,
-      uniswap: 670,
-      pancakeswap: 560,
-      quickswap: 440,
-      fluid: 250,
-      orca: 195,
-      "sunswap-v3": 176,
-    });
-
-    expect(displayEntries).toHaveLength(9);
-    expect(displayEntries.some(([protocol]) => protocol === "_other")).toBe(false);
-  });
-});
 
 describe("buildLiquidityExitRouteModel", () => {
   it("derives exit routes from the global DEX liquidity row", () => {
@@ -167,6 +117,24 @@ describe("buildLiquidityExitRouteModel", () => {
       sharePct: 11,
       isOther: true,
     });
+    // The ledger names the tail the map folds into "Other routes".
+    expect(model?.protocolTail).toEqual([
+      { key: "aerodrome", label: "Aerodrome", valueUsd: 700 },
+      { key: "quickswap", label: "QuickSwap", valueUsd: 400 },
+    ]);
+    expect(model?.chainTail).toEqual([]);
+  });
+
+  it("carries the chain registry's dark-invert flag onto lane logos", () => {
+    const model = buildLiquidityExitRouteModel({
+      [DEX_GLOBAL_KEY]: makeDexLiquidityData({
+        totalTvlUsd: 10_000,
+        protocolTvl: { curve: 10_000 },
+        chainTvl: { robinhood: 6_000, ethereum: 4_000 },
+      }),
+    });
+    expect(model?.chainRoutes.find((route) => route.key === "robinhood")?.logoDarkInvert).toBe(true);
+    expect(model?.chainRoutes.find((route) => route.key === "ethereum")?.logoDarkInvert).toBeFalsy();
   });
 
   it("does not build an exit map without global TVL", () => {
@@ -174,6 +142,11 @@ describe("buildLiquidityExitRouteModel", () => {
     expect(
       buildLiquidityExitRouteModel({
         [DEX_GLOBAL_KEY]: makeDexLiquidityData({ totalTvlUsd: 0 }),
+      }),
+    ).toBeNull();
+    expect(
+      buildLiquidityExitRouteModel({
+        [DEX_GLOBAL_KEY]: makeDexLiquidityData({ totalTvlUsd: 10_000, unavailableReason: "invalid-coverage-evidence" }),
       }),
     ).toBeNull();
   });

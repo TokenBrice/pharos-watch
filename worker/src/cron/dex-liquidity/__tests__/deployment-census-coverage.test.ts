@@ -130,6 +130,7 @@ describe("DEX placeholder deployment-census coverage", () => {
         }),
       ),
     ).toMatchObject({
+      liquidityScoreUnavailableReason: "no-retained-pools",
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "populated",

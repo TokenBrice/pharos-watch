@@ -302,6 +302,9 @@ export function buildDexScoreDetailsJson(
   const coverage = census?.classification.coverage ?? p4aResult.exitRouteObservationCoverage;
   return JSON.stringify({
     ...scoreResult.components,
+    ...(scoreResult.liquidityScoreUnavailableReason != null
+      ? { liquidityScoreUnavailableReason: scoreResult.liquidityScoreUnavailableReason }
+      : {}),
     ...(p4aResult.exitRouteObservations != null ? { exitRouteObservations: p4aResult.exitRouteObservations } : {}),
     ...(coverage != null ? { exitRouteObservationCoverage: coverage } : {}),
     ...(census != null ? { dexDeploymentCensus: buildDexDeploymentCensusDetail(census) } : {}),

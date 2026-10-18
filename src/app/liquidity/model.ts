@@ -1,5 +1,5 @@
 import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import type { DexLiquidityMap, PegCurrency } from "@shared/types";
+import type { DexLiquidityData, DexLiquidityMap, PegCurrency } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import type { LiquidityRow } from "@/components/liquidity-table";
@@ -13,9 +13,21 @@ export const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
 
 export interface LiquidityViewModel {
   rows: LiquidityRow[];
-  scoredRows: LiquidityRow[];
-  unratedRows: LiquidityRow[];
+  /** Rated rows plus observed NR rows; the table sorts the NR rows last. */
+  leaderboardRows: LiquidityRow[];
+  /** Tracked coins with no observed DEX market (the compact fold). */
+  unobservedRows: LiquidityRow[];
   summaryStats: LiquidityStatsData | null;
+}
+
+/**
+ * A retained DEX market with classified evidence. Rated or NR, it counts as
+ * observed: an NR score is a missing activity reading, not a missing market.
+ */
+export function isObservedOnDex(liq: DexLiquidityData): boolean {
+  return liq.poolCount > 0 && liq.totalTvlUsd > 0 &&
+    liq.coverageClass != null && liq.coverageClass !== "unobserved" &&
+    liq.liquidityEvidenceClass != null && liq.liquidityEvidenceClass !== "unobserved";
 }
 
 const WARNING_DETAIL_SUFFIX = /\s*\([^()]*\)\s*$/;
@@ -42,11 +54,14 @@ function computeLiquidityStats(
   allRows: LiquidityRow[],
 ): LiquidityStatsData {
   const globalData = liquidityMap[DEX_GLOBAL_KEY];
-  const totalTvl = globalData?.totalTvlUsd ?? null;
+  // A quarantined global row publishes no depth; its reason travels with the null.
+  const totalTvlUnavailableReason = globalData == null ? "global-row-missing" : globalData.unavailableReason ?? null;
+  const totalTvl = totalTvlUnavailableReason == null ? globalData.totalTvlUsd : null;
   // Unavailable global volume stays null; it is never rendered as zero activity.
-  const totalVol = globalData?.totalVolume24hUsd ?? null;
-  let scoreSum = 0;
-  let scoreCount = 0;
+  // A quarantined global row withholds its volume together with its depth.
+  const totalVol = totalTvlUnavailableReason == null ? globalData.totalVolume24hUsd : null;
+  let ratedCount = 0;
+  let nrObservedCount = 0;
   let withLiquidity = 0;
   let highConfidenceCoverage = 0;
   let fallbackCoverage = 0;
@@ -58,17 +73,11 @@ function computeLiquidityStats(
   let organicWeight = 0;
 
   for (const { liq } of allRows) {
-    if (liq.liquidityScore != null) {
-      scoreSum += liq.liquidityScore;
-      scoreCount++;
-    }
+    if (liq.liquidityScore != null) ratedCount++;
     // Retained markets remain covered when required activity makes the score NR.
-    if (
-      liq.poolCount > 0 && liq.totalTvlUsd > 0 &&
-      liq.coverageClass != null && liq.coverageClass !== "unobserved" &&
-      liq.liquidityEvidenceClass != null && liq.liquidityEvidenceClass !== "unobserved"
-    ) {
+    if (isObservedOnDex(liq)) {
       withLiquidity++;
+      if (liq.liquidityScore == null) nrObservedCount++;
       if (liq.coverageClass === "primary" || liq.coverageClass === "mixed") highConfidenceCoverage++;
       if (liq.coverageClass === "fallback") fallbackCoverage++;
     }
@@ -94,8 +103,12 @@ function computeLiquidityStats(
   return {
     totalTvl,
     totalVol,
-    ...(globalData?.volume24hAvailability ? { totalVolAvailability: globalData.volume24hAvailability } : {}),
-    avgScore: scoreCount > 0 ? Math.round(scoreSum / scoreCount) : null,
+    ...(totalTvlUnavailableReason == null && globalData.volume24hAvailability
+      ? { totalVolAvailability: globalData.volume24hAvailability }
+      : {}),
+    totalTvlUnavailableReason,
+    ratedCount,
+    nrObservedCount,
     withLiquidity,
     highConfidenceCoverage,
     fallbackCoverage,
@@ -112,7 +125,7 @@ export function buildLiquidityViewModel(
   searchQuery: string,
 ): LiquidityViewModel {
   if (!liquidityMap) {
-    return { rows: [], scoredRows: [], unratedRows: [], summaryStats: null };
+    return { rows: [], leaderboardRows: [], unobservedRows: [], summaryStats: null };
   }
   // Single pass: build all rows, then filter for display.
   const q = searchQuery.toLowerCase().trim();
@@ -125,8 +138,8 @@ export function buildLiquidityViewModel(
   });
   return {
     rows,
-    scoredRows: rows.filter((row) => row.liq.liquidityScore != null),
-    unratedRows: rows.filter((row) => row.liq.liquidityScore == null),
+    leaderboardRows: rows.filter((row) => row.liq.liquidityScore != null || isObservedOnDex(row.liq)),
+    unobservedRows: rows.filter((row) => row.liq.liquidityScore == null && !isObservedOnDex(row.liq)),
     summaryStats: computeLiquidityStats(liquidityMap, allRows),
   };
 }

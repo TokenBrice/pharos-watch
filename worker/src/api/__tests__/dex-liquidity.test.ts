@@ -830,4 +830,40 @@ describe("handleDexLiquidity DEC-19 volume availability (release A readers)", ()
     expect(pools[0]).toMatchObject({ volumeUsd1d: null, volumeObservation: { status: "missing", observedAtSec: null } });
     expect(pools[1]).not.toHaveProperty("volumeObservation");
   });
+
+  it("publishes the producer-recorded NR reason only for a null score", async () => {
+    const nr = await publish({
+      liquidity_score: null,
+      score_components_json: JSON.stringify({
+        tvlDepth: 70, volumeActivity: null, poolQuality: 60, durability: 50, pairDiversity: 40,
+        liquidityScoreUnavailableReason: "activity-coverage-below-floor",
+      }),
+    });
+    expect(nr.liquidityScoreUnavailableReason).toBe("activity-coverage-below-floor");
+    expect(nr.scoreComponents).not.toHaveProperty("liquidityScoreUnavailableReason");
+
+    // A row scored before the reason was recorded stays NR without an invented cause.
+    const legacy = await publish({
+      liquidity_score: null,
+      score_components_json: JSON.stringify({
+        tvlDepth: 70, volumeActivity: null, poolQuality: 60, durability: 50, pairDiversity: 40,
+      }),
+    });
+    expect(legacy.liquidityScoreUnavailableReason).toBeNull();
+
+    const unknownCode = await publish({
+      liquidity_score: null,
+      score_components_json: JSON.stringify({ liquidityScoreUnavailableReason: "made-up" }),
+    });
+    expect(unknownCode.liquidityScoreUnavailableReason).toBeNull();
+
+    const rated = await publish({
+      liquidity_score: 64,
+      score_components_json: JSON.stringify({
+        tvlDepth: 70, volumeActivity: 20, poolQuality: 60, durability: 50, pairDiversity: 40,
+        liquidityScoreUnavailableReason: "activity-missing",
+      }),
+    });
+    expect(rated.liquidityScoreUnavailableReason).toBeNull();
+  });
 });

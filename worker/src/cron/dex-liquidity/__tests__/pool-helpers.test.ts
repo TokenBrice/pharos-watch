@@ -191,8 +191,19 @@ describe("computeLiquidityScore", () => {
     // effectiveTvl=0 → uses absolute fallback: 35*log10(1/700_000) → very negative → clamped to 0
     // all other components also 0 → total = 0
     const m = initMetrics("test", "TEST");
-    const { score } = computeLiquidityScore(withCompleteVolume(m), 0);
+    const { score, unavailableReason } = computeLiquidityScore(withCompleteVolume(m), 0);
     expect(score).toBe(0);
+    expect(unavailableReason).toBeNull();
+  });
+
+  it("names the volume-activity outcome that makes the composite NR", () => {
+    const m = initMetrics("test", "TEST");
+    m.effectiveTvl = 1_000_000;
+    m.totalTvlUsd = 1_000_000;
+    m.poolCount = 5;
+    const { score, unavailableReason } = computeLiquidityScore(m, 50, 10_000_000);
+    expect(score).toBeNull();
+    expect(unavailableReason).toBe("activity-completeness-unknown");
   });
 });
 
