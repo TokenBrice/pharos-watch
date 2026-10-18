@@ -6,6 +6,9 @@ export const SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC =
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC =
   30 * 60;
 
+/** Resolver pool and both natural/recovery connection reservations share this ceiling. */
+export const REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY = 3;
+
 export type CronGroupKey =
   | "quarter-hourly"
   | "five-minute"
@@ -453,7 +456,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     triggerMode: "isolated",
     statusImpact: "critical",
     freshnessSurface: "none",
-    maxConnections: 2,
+    maxConnections: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY, // Serial phases: reserve adapters 2, redemption resolver pool 3
     connectionGroup: "reserve-recovery-chain",
   },
   {
@@ -732,7 +735,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 2, // 11 */4: serial coins, adapter max2; Morpho book runs after reserve/redemption, serial 32-call chunks (20s), bodies consumed before fallback; reserve-sync-chain2 + Kinesis1 = 3/6
+    maxConnections: 2, // Serial coins, adapter max2; Morpho uses serial 32-call chunks; the later redemption pool sets the chain peak
     connectionGroup: "reserve-sync-chain",
   },
   {
@@ -741,7 +744,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 1, // Serial direct RPC observers plus sealed accepted reserve inputs
+    maxConnections: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY, // Independent resolvers; each observer drains one request before the next
     connectionGroup: "reserve-sync-chain",
   },
   {

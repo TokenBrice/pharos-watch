@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
+import { REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY } from "@shared/lib/cron-jobs";
 import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
@@ -14,6 +15,7 @@ import {
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquidityScores } from "../lib/dex-liquidity";
@@ -33,6 +35,7 @@ import {
 import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop/route-status";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { throwIfAborted } from "../lib/abort";
+import { mapWithConcurrency } from "../lib/concurrency";
 import { fnv1aHash } from "../lib/hash";
 import type { EvmRpcOptions } from "../lib/evm-rpc";
 
@@ -196,18 +199,20 @@ export async function syncRedemptionBackstops(
     }
   }
 
-  const collectedSnapshots = [];
-  const failedIds: string[] = [];
+  let completedCount = 0;
+  let lastReportedCount = 0;
+  let lastProgressAtMs = Date.now();
+  let progressReporting = Promise.resolve();
 
   await reportProgress?.({ stage: "resolving-redemption-backstops", itemsDone: 0, itemsTotal: configuredIds.length });
-  for (const stablecoinId of configuredIds) {
-    throwIfAborted(signal);
-
+  const results = await mapWithConcurrency(configuredIds, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY, async (stablecoinId) => {
+    let resolved: RedemptionBackstopEntry | null = null;
+    let failed = false;
     try {
       const asset = stablecoinAssetById.get(stablecoinId);
       const dexLiquidityScore = dexLiquidityMap[stablecoinId]?.liquidityScore ?? null;
       const routeAvailability = routeAvailabilityById.get(stablecoinId) ?? null;
-      let resolved = null;
+      // Every resolver owns its sequential, body-draining observer requests.
 
       if (asset) {
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
@@ -232,17 +237,32 @@ export async function syncRedemptionBackstops(
         }
       }
 
-      if (resolved) collectedSnapshots.push(resolved);
+      throwIfAborted(signal);
     } catch (error) {
+      throwIfAborted(signal);
       logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
-      failedIds.push(stablecoinId);
+      failed = true;
       const config = configById.get(stablecoinId);
       if (config) {
-        collectedSnapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now));
+        resolved = buildFailedRedemptionBackstopEntry(stablecoinId, config, now);
       }
     }
-  }
+    completedCount++;
+    if (completedCount === configuredIds.length || completedCount - lastReportedCount >= 10 || Date.now() - lastProgressAtMs >= 15_000) {
+      const itemsDone = completedCount;
+      lastReportedCount = itemsDone;
+      lastProgressAtMs = Date.now();
+      // Serialize coalesced reports so a slow write cannot overwrite newer progress.
+      progressReporting = progressReporting.then(() => reportProgress?.({
+        stage: "resolving-redemption-backstops", itemsDone, itemsTotal: configuredIds.length,
+      }));
+      await progressReporting;
+    }
+    return { snapshot: resolved, failed };
+  }, { signal });
   throwIfAborted(signal);
+  const collectedSnapshots = results.flatMap(({ snapshot }) => snapshot ? [snapshot] : []);
+  const failedIds = configuredIds.filter((_id, index) => results[index].failed);
   const snapshots = applyOutputDependencyResolution(collectedSnapshots, configById);
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;

@@ -5,7 +5,8 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { ConsumedReserveInputSchema, RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
 import type * as SourcesModule from "../../lib/redemption-backstop/sources";
 import type * as RedemptionConfigsModule from "@shared/lib/redemption-backstops";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { CRON_INTERVALS, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY } from "@shared/lib/cron-jobs";
+import { createDeferredPromise } from "../../lib/__tests__/deferred.test-support";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
@@ -269,6 +270,95 @@ describe("syncRedemptionBackstops", () => {
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   });
 
+  it("bounds independent resolvers, publishes input order and isolates failures while advancing progress", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 13 }, (_, index) => `resolver-${index}`);
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok", updatedAt: now,
+      payload: { peggedAssets: configuredIdsMock.map((id) => makeAsset({ id })) },
+    });
+    const gates = configuredIdsMock.map(() => createDeferredPromise());
+    const started: number[] = [];
+    let active = 0;
+    let peak = 0;
+    resolveRedemptionBackstopEntryMock.mockImplementation(async (_db: unknown, asset: { id: string }) => {
+      const index = configuredIdsMock.indexOf(asset.id);
+      started.push(index);
+      active++;
+      peak = Math.max(peak, active);
+      try {
+        await gates[index].promise;
+        if (index === 1) throw new Error("isolated observer failure");
+        return makeResolvedSnapshot(asset.id, now);
+      } finally {
+        active--;
+      }
+    });
+    // Non-hoisted mock variables must initialize before the cron module loads.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const reportProgress = vi.fn().mockResolvedValue(undefined);
+    const pending = syncRedemptionBackstops(mockD1(), new AbortController().signal, undefined, reportProgress);
+    await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY));
+    gates[2].resolve();
+    await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY + 1));
+    gates[1].resolve();
+    await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY + 2));
+    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+    gates[0].resolve();
+    for (const gate of gates.slice(3)) gate.resolve();
+    const result = await pending;
+    expect(peak).toBe(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY);
+    expect(active).toBe(0);
+    const rows = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
+    expect(rows.map((row) => row.stablecoinId)).toEqual(configuredIdsMock);
+    expect(rows[1].resolutionState).toBe("failed");
+    expect(rows.filter((row) => row.resolutionState === "resolved")).toHaveLength(12);
+    expect(JSON.parse(result.metadata ?? "{}").failedIds).toEqual(["resolver-1"]);
+    expect(result.status).toBe("degraded");
+    expect(reportProgress.mock.calls
+      .filter(([update]) => update.stage === "resolving-redemption-backstops")
+      .map(([update]) => update.itemsDone)).toEqual([0, 10, 13]);
+  });
+
+  it("stops admitting resolvers on abort, drains in-flight work and never publishes a partial snapshot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY + 3 }, (_, index) => `abort-${index}`);
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok", updatedAt: now,
+      payload: { peggedAssets: configuredIdsMock.map((id) => makeAsset({ id })) },
+    });
+    const controller = new AbortController();
+    const gates = configuredIdsMock.map(() => createDeferredPromise());
+    const started: number[] = [];
+    const finished: number[] = [];
+    resolveRedemptionBackstopEntryMock.mockImplementation(async (_db: unknown, asset: { id: string }, _score: unknown, _now: unknown, options: { signal: AbortSignal }) => {
+      const index = configuredIdsMock.indexOf(asset.id);
+      expect(options.signal).toBe(controller.signal);
+      started.push(index);
+      await gates[index].promise;
+      finished.push(index);
+      return makeResolvedSnapshot(asset.id, now);
+    });
+    // Non-hoisted mock variables must initialize before the cron module loads.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const pending = syncRedemptionBackstops(mockD1(), controller.signal);
+    let settled = false;
+    const observed = pending.catch((error: unknown) => { settled = true; return error; });
+    await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY));
+    const reason = new Error("parent aborted");
+    controller.abort(reason);
+    gates[0].resolve();
+    await vi.waitFor(() => expect(finished).toEqual([0]));
+    expect(settled).toBe(false);
+    expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY);
+    for (const gate of gates.slice(1, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY)) gate.resolve();
+    expect(await observed).toBe(reason);
+    expect(finished).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY);
+    expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY);
+    expect(buildFailedRedemptionBackstopEntryMock).not.toHaveBeenCalled();
+    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+  });
+
   it.each([false, true])("persists completed downstream disclosures after success/failure collection (%s)", async (reverse) => {
     const now = Math.floor(Date.now() / 1000);
     outputAssetsByIdMock = { "cusd-cap": ["iusd-infinifi"] };
@@ -349,7 +439,7 @@ describe("syncRedemptionBackstops", () => {
 
     expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
       "loading-redemption-reserves", "loading-redemption-stablecoins", "loading-redemption-liquidity",
-      "loading-redemption-availability", "resolving-redemption-backstops", "publishing-redemption-backstops",
+      "loading-redemption-availability", "resolving-redemption-backstops", "resolving-redemption-backstops", "publishing-redemption-backstops",
     ]);
 
     expect(result.status).toBe("ok");

@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Four-hourly reserve-sync trigger (11 * / 4 * * *), two chains:
- *   sync-live-reserves (2) → sync-redemption-backstops (1) → cron-sentinel (1)
+ *   sync-live-reserves (2) → sync-redemption-backstops (3) → cron-sentinel (1)
  *   sync-kinesis-supply (1)
  *
  * Redemption consumes a sealed accepted reserve view after the producer settles,
@@ -9,9 +9,9 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * slot's successful queue exhaustion. Recovery completing the producer forces
  * another redemption pass; consumer-only replay remains idempotent.
  *
- * Reserve adapters and redemption RPC observers run sequentially.
- * Recovery serializes Kinesis behind the head to retain its separate 2/6 budget.
- * Connection budget: 3/6 peak (2 + 1) while both chains are in flight
+ * Reserve and redemption phases are serial; redemption resolves three assets at a time.
+ * Recovery serializes Kinesis behind the head to retain its separate 3/6 budget.
+ * Connection budget: 4/6 peak (3 + 1) across the declared chains.
  */
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
 import type { ScheduledRuntimeContext } from "./context";
@@ -258,7 +258,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const main = syncTask
     ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
     : Promise.resolve(buildScheduledSlotSummary([]));
-  // The independent five-minute lane declares 2/6, unlike the regular 3/6
+  // The independent five-minute lane declares 3/6, unlike the regular 4/6
   // producer slot. Keep the independent child, but never overlap its fetch.
   if (runtime.recoveryCheckpoint) await main;
   const [mainSummary, kinesisSummary] = await Promise.all([

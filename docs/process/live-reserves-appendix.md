@@ -85,6 +85,8 @@ Schemas own fields. Ratios/reported headlines/share prices/NAV conformance diffe
 
 `syncLiveReserves()` executes active configured feeds sequentially, independent→static→weak, grouping source-invariant results. The checkpoint is the sole suffix cursor, never wraps; attempt clocks exclude queue wait. Finalization/full-cohort seal precedes lease release. Redemption consumes the newest seal even after failed/incomplete heads; completed recovery forces new-seal consumption. Sentinel requires successful exhaustion. Ordinary Kinesis is parallel; recovery serializes it to preserve its lower connection peak.
 
+Redemption resolves independent assets through a three-worker pool, while each observer's RPC/proof sequence remains serial and body-draining. `REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY` in `shared/lib/cron-jobs.ts` is the execution/budget authority: natural reserve slot **4/6** including the parallel Kinesis reservation; serial recovery **3/6**. Ordered all-resolver collection, per-asset failure isolation, cancellation drain and complete-manifest publication are unchanged; [Redemption Cron Schedule](../redemption-backstops.md#cron-schedule) owns progress and publication details.
+
 A failed post-sync reserve-overview read returns named `persistent-stale-overview-failed` degradation through `cron-sentinel` while preserving independent producer/redemption/Kinesis outcomes; unreadable checkpoint evidence never becomes an empty healthy overview.
 
 Status/history/watchdog callers supply the overview's checkpoint-liveness bounds from `resolveScheduledSlotPolicy("fourHourlyReserveSync")`; the overview reader accepts those numeric bounds without importing scheduler dispatch policy into the heap-sensitive V9 evaluator graph.
