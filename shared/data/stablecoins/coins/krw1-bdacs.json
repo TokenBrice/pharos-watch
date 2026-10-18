@@ -11,32 +11,24 @@
   "collateral": "1:1 South Korean won held in escrow at Woori Bank with real-time banking-API proof of reserves",
   "pegMechanism": "Custodian-managed mint/redemption against KRW deposits at Woori Bank; KRW1 is a brand trademarked by BDACS (December 2023) and operated by BDACS as the regulated digital asset custodian",
   "mechanismArchetype": "fiat-cash",
+  "llamaId": "429",
+  "geckoId": "krw1",
   "detailProvider": "defillama",
   "contracts": [
     {
-      "chain": "bsc",
-      "address": "0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
-      "decimals": 0
-    },
-    {
       "chain": "ethereum",
-      "address": "0x3e6847e5420e1e529619379b004c2f7cc61d0d0d",
-      "decimals": 0
-    },
-    {
-      "chain": "polygon",
-      "address": "0xd9d335045dd7cfec24ca8bd2ba18102cad6ae1e0",
-      "decimals": 0
+      "address": "0xb83fc84df7028251066c25f5d61d12fd9d9c8be4",
+      "decimals": 18
     },
     {
       "chain": "avalanche",
-      "address": "0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318",
-      "decimals": 0
+      "address": "0x45617d14ff85f0f93ac9ab33f4344e87ea6669fd",
+      "decimals": 18
     },
     {
-      "chain": "plume",
-      "address": "0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f",
-      "decimals": 0
+      "chain": "arc",
+      "address": "0x303dbb88ba14626c7a927e983b73267c575315f7",
+      "decimals": 18
     }
   ],
   "links": [
@@ -64,7 +56,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. May 2026 Aptos Foundation partnership brings KRW1 to its first non-EVM chain, leveraging Aptos's payment infrastructure for cross-border remittances and RWA tokenisation. A February 2026 MoU with Com2uS Holdings targets KRW1-based payment infrastructure on the XPLA/CONX chain. KRW1 is live on Aptos with 30M tokens per rwa.xyz, which reported 141.8M KRW1 (about $97K) across Polygon, Aptos, Plume, Ethereum, and BNB Chain with 33 holders on September 13 2026. On September 7 2026 BDACS adopted LayerZero's OFT standard to unify that supply across chains, and on September 8 agreed card-payment rails with XBITU. Korea's Digital Asset Basic Act (the gate for commercial launch) was excluded from the National Assembly's pre-recess agenda on May 12 2026; the first public hearing planned for late September was effectively cancelled on September 22 2026 after the government bill was delayed, with the FSC targeting a November subcommittee and year-end passage uncertain. September 2026 brought a dense partnership run (Rain/Visa card rails, Arc mainnet at launch, Fireblocks custody) alongside scrutiny of the 2026 whitepaper's claim that KRW1 is a commercial product in operation, which BDACS said it would review; commercial launch remains contingent on the unenacted framework.",
+  "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. May 2026 Aptos Foundation partnership brings KRW1 to its first non-EVM chain, leveraging Aptos's payment infrastructure for cross-border remittances and RWA tokenisation. A February 2026 MoU with Com2uS Holdings targets KRW1-based payment infrastructure on the XPLA/CONX chain. KRW1 is live on Aptos with 30M tokens per rwa.xyz, which reported 141.8M KRW1 (about $97K) across Polygon, Aptos, Plume, Ethereum, and BNB Chain with 33 holders on September 13 2026. On September 7 2026 BDACS adopted LayerZero's OFT standard to unify that supply across chains, and on September 8 agreed card-payment rails with XBITU. Korea's Digital Asset Basic Act (the gate for commercial launch) was excluded from the National Assembly's pre-recess agenda on May 12 2026; the first public hearing planned for late September was effectively cancelled on September 22 2026 after the government bill was delayed, with the FSC targeting a November subcommittee and year-end passage uncertain. September 2026 brought a dense partnership run (Rain/Visa card rails, Arc mainnet at launch, Fireblocks custody) alongside scrutiny of the 2026 whitepaper's claim that KRW1 is a commercial product in operation, which BDACS said it would review; commercial launch remains contingent on the unenacted framework. On October 18 2026 Pharos replaced the registry's zero-supply proof-of-concept Ethereum and Avalanche contracts with the July 2026 production contracts named in BDACS's September 2026 accountant reserve report (Ethereum, Avalanche and Arc, 18 decimals), linked DefiLlama id 429 and CoinGecko id krw1, and dropped the BSC, Polygon and Plume proof-of-concept rows that krw1.kr lists as PoC only.",
   "featuredContent": [
     {
       "type": "article",
