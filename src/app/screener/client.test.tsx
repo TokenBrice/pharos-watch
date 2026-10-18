@@ -154,13 +154,15 @@ describe("ScreenerClient freshness notices", () => {
     expect(mocks.QueryFreshnessNotices.mock.calls.at(-1)?.[0]).toMatchObject({ persistent: true });
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ triggerClassName: "min-w-24" });
     const unavailableCount = view.getByText("Screener counts unavailable.");
-    expect(unavailableCount.classList.contains("min-h-8")).toBe(true);
+    expect(unavailableCount.classList.contains("min-h-12")).toBe(true);
+    expect(unavailableCount.classList.contains("lg:min-h-8")).toBe(true);
+    expect(unavailableCount.parentElement?.parentElement?.classList.contains("grid")).toBe(true);
 
     mocks.useStablecoins.mockReturnValue({
       data: undefined, isLoading: true, error: null, dataUpdatedAt: 0, meta: null, refetch,
     });
     view.rerender(<ScreenerClient />);
-    expect(view.getByText("Loading screener inputs…").classList.contains("min-h-8")).toBe(true);
+    expect(view.getByText("Loading screener inputs…").classList.contains("min-h-12")).toBe(true);
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
       triggerLabel: "Loading", triggerClassName: "min-w-24", disabled: true,
     });
@@ -170,7 +172,9 @@ describe("ScreenerClient freshness notices", () => {
       dataUpdatedAt: 1_700_000_000, meta: null, refetch,
     });
     view.rerender(<ScreenerClient />);
-    expect(view.getByText(/tracked/).closest("p")?.classList.contains("min-h-8")).toBe(true);
+    const readyCount = view.getByText(/tracked/).closest("p");
+    expect(readyCount?.classList.contains("min-h-12")).toBe(true);
+    expect(readyCount?.classList.contains("lg:min-h-8")).toBe(true);
     expect(mocks.QueryFreshnessNotices.mock.calls.at(-1)?.[0]).toMatchObject({ persistent: true });
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
       triggerLabel: "Export", triggerClassName: "min-w-24", disabled: false,

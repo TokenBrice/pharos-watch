@@ -135,10 +135,10 @@ export function ScreenerToolbar({
 
   return (
     <div className="pharos-card-shell space-y-3 p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="grid items-center gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0" aria-live="polite">
           {dataState === "ready" ? (
-            <p className="flex min-h-8 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <p className="flex min-h-12 flex-wrap items-baseline gap-x-2 gap-y-0.5 lg:min-h-8">
               {/* One Beam: the live matched-coin count is the page's single frost figure. */}
               <span className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
                 {matchingRows.toLocaleString("en-US")}
@@ -149,13 +149,13 @@ export function ScreenerToolbar({
               </span>
             </p>
           ) : (
-            <p className="min-h-8 text-sm text-muted-foreground">
+            <p className="min-h-12 text-sm text-muted-foreground lg:min-h-8">
               {dataState === "loading" ? "Loading screener inputs…" : "Screener counts unavailable."}
             </p>
           )}
           <p className="pharos-meta mt-0.5">{filterCountLabel}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-self-end">
           {rightSlot}
           <Button
             variant="ghost"
