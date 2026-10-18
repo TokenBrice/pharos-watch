@@ -138,7 +138,7 @@ export function ScreenerToolbar({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0" aria-live="polite">
           {dataState === "ready" ? (
-            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <p className="flex min-h-8 flex-wrap items-baseline gap-x-2 gap-y-0.5">
               {/* One Beam: the live matched-coin count is the page's single frost figure. */}
               <span className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
                 {matchingRows.toLocaleString("en-US")}
@@ -149,7 +149,7 @@ export function ScreenerToolbar({
               </span>
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="min-h-8 text-sm text-muted-foreground">
               {dataState === "loading" ? "Loading screener inputs…" : "Screener counts unavailable."}
             </p>
           )}
