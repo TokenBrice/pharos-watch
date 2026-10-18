@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
-import { CRON_RUNS_RETENTION_SEC } from "../../src/cron/prune-cron-history";
+import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { runSafetyScoreCaptureArchiveCli } from "../export-safety-score-capture-archive";
 import { parseReportCardsAcceptedCacheExport, runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
 import { archiveObjectKey, decodeArchiveExport, parseArchiveBoundary, resolveArchiveBoundary, type SafetyScoreCaptureArchiveIndex } from "../lib/safety-score-capture-archive";

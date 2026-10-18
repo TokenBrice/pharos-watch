@@ -5,7 +5,7 @@ import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
 import { CliUsageError, parseStrictCliArgs, runDirectCli, writeFileResolved } from "../../scripts/lib/cli-args.mjs";
 import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
-import { CRON_RUNS_RETENTION_SEC } from "../src/cron/prune-cron-history";
+import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 import { archiveObjectKey, decodeArchiveExport, mergeArchiveGapEvidence, parseArchiveBoundary, parseArchiveTimeBoundary, parseArchiveDate, resolveArchiveBoundary, SafetyScoreCaptureArchiveIndexSchema, SafetyScoreCaptureArchiveJournalGapSchema, SafetyScoreCaptureArchiveRecentCronEvidenceSchema, SafetyScoreCaptureArchiveRecentCronRowSchema, SafetyScorePublicationGenerationIdSchema, type ArchiveBoundary, type SafetyScoreCaptureArchiveCronGapEvidence, type SafetyScoreCaptureArchiveGap, type SafetyScoreCaptureArchiveIndex, type SafetyScoreCaptureArchiveJournalGap, type SafetyScoreCaptureArchiveRecentCronEvidence, type SafetyScoreCaptureArchiveRecentCronRow } from "./lib/safety-score-capture-archive";
 

@@ -17,8 +17,6 @@ import {
   type ReserveProducerPriority,
 } from "./reserve-producer-priority";
 
-export { pruneLiveReserveRecoveryCheckpoints } from "./scheduled-recovery-prune";
-
 export type ScheduledCheckpointState =
   | "running"
   | "ready"

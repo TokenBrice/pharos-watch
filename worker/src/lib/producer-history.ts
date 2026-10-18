@@ -2,7 +2,8 @@ import type { PublicationSurfaceId } from "@shared/types/status";
 import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { type CappedDeleteResult, deleteCapped } from "../cron/shared/capped-delete";
+import { type CappedDeleteResult, runRetentionPolicies } from "../cron/shared/capped-delete";
+import { producerHistoryRetentionPolicy } from "@shared/lib/retention-policy";
 import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "./bounded-prune";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 
@@ -95,9 +96,6 @@ interface ProducerHeadRow {
 
 const MAX_HISTORY_METADATA_CHARS = 16_000;
 const MAX_HISTORY_ERROR_CHARS = 1_000;
-const REGULAR_HISTORY_RETENTION_SEC = 30 * 24 * 60 * 60;
-const BUDGET_HISTORY_RETENTION_SEC = 90 * 24 * 60 * 60;
-const CALENDAR_HISTORY_RETENTION_SEC = 550 * 24 * 60 * 60;
 
 function normalizeHistoryMetadata(metadata: string | null | undefined): string | null {
   const parsed = parseObjectMetadata(metadata);
@@ -452,24 +450,13 @@ export async function pruneProducerHistory(
   signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
   throwIfAborted(signal);
-  const calendarCutoff = nowSec - CALENDAR_HISTORY_RETENTION_SEC;
-  const budgetCutoff = nowSec - BUDGET_HISTORY_RETENTION_SEC;
-  const regularCutoff = nowSec - REGULAR_HISTORY_RETENTION_SEC;
-  const result = await deleteCapped(
+  const { producerHistory: result } = await runRetentionPolicies(
     db,
-    `DELETE FROM worker_producer_history
-      WHERE rowid IN (
-        SELECT rowid
-          FROM worker_producer_history
-         WHERE (calendar_period IS NOT NULL AND completed_at < ?)
-            OR (calendar_period IS NULL AND producer_kind = 'budget-only' AND completed_at < ?)
-            OR (calendar_period IS NULL AND producer_kind != 'budget-only' AND completed_at < ?)
-         ORDER BY completed_at ASC
-         LIMIT ?
-      )`,
-    (limit) => [calendarCutoff, budgetCutoff, regularCutoff, limit],
-    RETENTION_DELETE_BATCH_LIMIT,
-    RETENTION_DELETE_RUN_LIMIT,
+    { producerHistory: producerHistoryRetentionPolicy({
+      batchLimit: RETENTION_DELETE_BATCH_LIMIT,
+      runLimit: RETENTION_DELETE_RUN_LIMIT,
+    }) },
+    nowSec,
     signal,
   );
   throwIfAborted(signal);
