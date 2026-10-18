@@ -251,9 +251,14 @@ Subject to a successful history read, cron availability is healthy when:
   `ok`/`degraded` observation, or
 - A fresh `skipped_neutral` attempt inherits such evidence from the latest required successful or locked run, or
 - Last run status is `skipped_neutral` whose `metadata.reason` is in `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS`
-  (`shared/lib/cron-jobs.ts`: `same_day_snapshot_exists`, `weekly-recap-exists`) — the skip was recorded only after a
-  successful precheck read found the period's write-once artifact, so it is fresh positive evidence the period's
-  output exists. Such a skip also supersedes an earlier fresh error for the same period in `summary.cronErrors`
+  (`shared/lib/cron-jobs.ts`: `same_day_snapshot_exists`, `weekly-recap-exists`) — the skip follows a
+  successful precheck read of the period's write-once artifact. Quarter-hourly daily-snapshot admission
+  retains this proof only in the finished parent slot's `metadata.jobs[]`, with its actual `observedAt`
+  clock; status projects it as a zero-work neutral observation (`source: scheduled-slot-admission`).
+  It creates no child/lease/cron rows and never advances the confirmed output/publication clock.
+  The bounded parent-slot read admits only explicit neutral `same_day_snapshot_exists` observations;
+  generic `before_daily_slot`, unfinished parents and invalid/future observation clocks prove nothing.
+  Such a readback also supersedes an earlier fresh error for the same period in `summary.cronErrors`
   (the error row and its machine-readable reason stay in history; one transient precheck read failure must not keep
   a write-once daily artifact's producer red until the next day's real run). An inherited `degraded` run stays a
   warning: the artifact existing proves availability, not that the producing run's inputs were clean.

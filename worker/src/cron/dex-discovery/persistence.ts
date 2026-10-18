@@ -12,6 +12,7 @@ import {
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
   type DiscoveryMeta,
+  type DiscoveryRunCheckpoint,
   type StagedPool,
 } from "./types";
 
@@ -58,6 +59,7 @@ const STAGING_RAW_JSON_TTL_SEC = 4 * 60 * 60;
 const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
 const RUN_SEQ_KEY = "discovery_run_seq";
 const TARGET_CURSOR_KEY = "discovery_target_cursors";
+const RUN_CHECKPOINT_KEY = "discovery_run_checkpoint";
 const ORDERBOOK_POOL_ID_PREFIX = "orderbook:";
 
 /**
@@ -572,24 +574,69 @@ export async function readDiscoveryTargetCursors(
   return cursors;
 }
 
-export async function writeDiscoveryTargetCursors(
+/** A failed/malformed checkpoint read must not silently advance the cohort. */
+export async function readDiscoveryRunCheckpoint(
   db: D1Database,
-  cursors: ReadonlyMap<string, string>,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<DiscoveryRunCheckpoint | null> {
   throwIfAborted(signal);
-  await runWithOverloadRetry(
-    () =>
-      db
-        .prepare(
-          `INSERT INTO kv_config (key, value)
-           VALUES (?, ?)
-           ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        )
-        .bind(TARGET_CURSOR_KEY, JSON.stringify(Object.fromEntries(cursors)))
-        .run(),
+  const row = await runWithOverloadRetry(
+    () => db.prepare("SELECT value FROM kv_config WHERE key = ?")
+      .bind(RUN_CHECKPOINT_KEY).first<{ value: string }>(),
     3,
     signal,
   );
+  throwIfAborted(signal);
+  if (row == null) return null;
+  const parsed: unknown = JSON.parse(row.value);
+  if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Invalid DEX discovery run checkpoint");
+  }
+  const checkpoint = parsed as Record<string, unknown>;
+  if (typeof checkpoint.runSeq !== "number" || !Number.isSafeInteger(checkpoint.runSeq) || checkpoint.runSeq < 1 ||
+      typeof checkpoint.refreshPending !== "boolean" || !Array.isArray(checkpoint.pendingCandidates)) {
+    throw new Error("Invalid DEX discovery run checkpoint");
+  }
+  const pendingCandidates: DiscoveryRunCheckpoint["pendingCandidates"] = [];
+  const seen = new Set<string>();
+  for (const value of checkpoint.pendingCandidates) {
+    if (value == null || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("Invalid DEX discovery checkpoint candidate");
+    }
+    const candidate = value as Record<string, unknown>;
+    const tier = candidate.tier;
+    if (typeof candidate.stablecoinId !== "string" || !candidate.stablecoinId ||
+        seen.has(candidate.stablecoinId) ||
+        (tier !== "refresh" && tier !== "t1" && tier !== "t2" && tier !== "t3" && tier !== "dormant")) {
+      throw new Error("Invalid DEX discovery checkpoint candidate");
+    }
+    seen.add(candidate.stablecoinId);
+    pendingCandidates.push({ stablecoinId: candidate.stablecoinId, tier });
+  }
+  return { runSeq: checkpoint.runSeq, refreshPending: checkpoint.refreshPending, pendingCandidates };
+}
+
+/** Commit the cohort frontier and deployment-window cursors together. Replays
+ * may repeat observations, but must never skip an uncommitted target window. */
+export async function writeDiscoveryRunCheckpoint(
+  db: D1Database,
+  checkpoint: DiscoveryRunCheckpoint | null,
+  cursors: ReadonlyMap<string, string> | null,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  const statements = [
+    checkpoint == null
+      ? db.prepare("DELETE FROM kv_config WHERE key = ?").bind(RUN_CHECKPOINT_KEY)
+      : db.prepare(`INSERT INTO kv_config (key, value) VALUES (?, ?)
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
+        .bind(RUN_CHECKPOINT_KEY, JSON.stringify(checkpoint)),
+  ];
+  if (cursors != null) {
+    statements.push(db.prepare(`INSERT INTO kv_config (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
+      .bind(TARGET_CURSOR_KEY, JSON.stringify(Object.fromEntries(cursors))));
+  }
+  await runWithOverloadRetry(() => db.batch(statements), 3, signal);
   throwIfAborted(signal);
 }

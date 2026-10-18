@@ -259,6 +259,72 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     },
   );
 
+  it.each(["snapshot-psi", "snapshot-public-dataset"])(
+    "recovers %s from a parent admission readback without child or lease rows",
+    async (job) => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      try {
+        const outputAt = NOW - 30_000;
+        const insert = sqlite.prepare(`INSERT INTO cron_runs
+          (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, 100, ?, ?, ?)`);
+        insert.run(job, outputAt, "ok", 1, JSON.stringify({ outputPublishedAt: outputAt }));
+        insert.run(job, NOW - 20_000, "error", 0, JSON.stringify({ reason: "precheck-read-failed" }));
+        sqlite.prepare(`INSERT INTO cron_slot_executions
+          (slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, metadata)
+          VALUES ('quarterHourly', ?, 'finished', 'ok', 'fixture', ?, ?, ?, ?)`)
+          .run(NOW - 600, NOW - 600, NOW - 100, NOW - 100, JSON.stringify({ jobs: [{
+            job, outcome: "skipped", status: "skipped_neutral", neutral: true,
+            reason: "same_day_snapshot_exists", observedAt: NOW - 300,
+          }] }));
+
+        const snapshot = await loadCronHealth(db, NOW);
+        expect(snapshot.crons[job].healthy).toBe(true);
+        expect(snapshot.cronErrorCount).toBe(0);
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = ?").get(job)).toEqual({ count: 2 });
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM scheduled_child_attempts").get()).toEqual({ count: 0 });
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
+        expect(sqlite.prepare(`SELECT json_extract(metadata, '$.outputPublishedAt') AS output_at
+          FROM cron_runs WHERE job = ? AND status = 'ok'`).get(job)).toEqual({ output_at: outputAt });
+      } finally { sqlite.close(); }
+    },
+  );
+
+  it.each([
+    { reason: "same_day_snapshot_exists", errorAge: 100, observationAge: 300, state: "finished" },
+    { reason: "before_daily_slot", errorAge: 20_000, observationAge: 300, state: "finished" },
+    { reason: "same_day_snapshot_exists", errorAge: 20_000, observationAge: -1, state: "finished" },
+    { reason: "same_day_snapshot_exists", errorAge: 20_000, observationAge: 300, state: "running" },
+  ])("rejects non-authoritative parent readback ($reason/$state/$observationAge/$errorAge)", async ({
+    reason, errorAge, observationAge, state,
+  }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const job = "snapshot-psi";
+    try {
+      sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+        VALUES (?, ?, 100, 'error', ?)`).run(job, NOW - errorAge, JSON.stringify({ reason: "precheck-read-failed" }));
+      sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, metadata)
+        VALUES ('quarterHourly', ?, ?, 'ok', 'fixture', ?, ?, ?, ?)`)
+        .run(NOW - 600, state, NOW - 600, NOW - 100, NOW - 100, JSON.stringify({ jobs: [
+          "malformed-job-entry",
+          { job, outcome: "skipped", status: "skipped_neutral", neutral: true, reason, observedAt: NOW - observationAge },
+        ] }));
+      const snapshot = await loadCronHealth(db, NOW);
+      expect(snapshot.crons[job].healthy).toBe(false);
+      expect(snapshot.cronErrorCount).toBe(1);
+    } finally { sqlite.close(); }
+  });
+
+  it("keeps snapshot telemetry unknown when parent admission evidence cannot be read", async () => {
+    const db = mockD1([
+      { match: "WITH finished_slots", rows: [], throwError: new Error("parent evidence unavailable") },
+      { match: "UNION ALL", rows: seedWithOverrides(NOW, []) },
+    ]);
+    const snapshot = await loadCronHealth(db, NOW);
+    expect(snapshot.crons["snapshot-psi"].healthy).toBeNull();
+    expect(snapshot.crons["snapshot-psi"].telemetryUnknown).toBe(true);
+  });
+
   it.each([
     { order: "readback newer than the error", provenAgeSec: 26_000, errorAgeSec: 49_000, healthy: true },
     { order: "error newer than the readback", provenAgeSec: 49_000, errorAgeSec: 26_000, healthy: false },

@@ -58,6 +58,15 @@ export interface DiscoveryMeta {
   lastHitAt: number | null;
 }
 
+export type DiscoveryCrawlTier = "refresh" | "t1" | "t2" | "t3" | "dormant";
+
+/** The admitted cohort remains fixed until its bounded cron slices finish. */
+export interface DiscoveryRunCheckpoint {
+  runSeq: number;
+  refreshPending: boolean;
+  pendingCandidates: Array<{ stablecoinId: string; tier: DiscoveryCrawlTier }>;
+}
+
 export type DexDeploymentProviderCheckStatus = "success" | "failure" | "degraded";
 
 export interface DexDeploymentProviderCheck {

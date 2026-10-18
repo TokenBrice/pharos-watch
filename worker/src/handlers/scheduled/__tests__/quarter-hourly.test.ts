@@ -103,7 +103,7 @@ describe("runQuarterHourlySlot", () => {
     expect(summary.jobsSkipped).toBe(4);
   });
 
-  it("records an already-completed daily snapshot as not due instead of cache-gated", async () => {
+  it("keeps completed daily snapshots out of leased children even when cache-gated", async () => {
     mocks.syncStablecoins.mockResolvedValue({
       status: "degraded",
       itemCount: 0,
@@ -111,9 +111,14 @@ describe("runQuarterHourlySlot", () => {
     });
     const order: string[] = [];
 
-    await runQuarterHourlySlot(runtime(order, { psi: true, publicDataset: true }));
+    const summary = await runQuarterHourlySlot(runtime(order, { psi: true, publicDataset: true }));
 
-    expect(order).toEqual(["sync-fx-rates", "sync-stablecoins", "snapshot-psi", "snapshot-public-dataset"]);
+    expect(order).toEqual(["sync-fx-rates", "sync-stablecoins"]);
+    expect(summary.jobsNeutralSkipped).toBe(2);
+    expect(summary.jobs.filter(({ neutral }) => neutral)).toEqual([
+      expect.objectContaining({ job: "snapshot-psi", reason: "same_day_snapshot_exists" }),
+      expect.objectContaining({ job: "snapshot-public-dataset", reason: "same_day_snapshot_exists" }),
+    ]);
     expect(mocks.snapshotPsiDaily).not.toHaveBeenCalled();
     expect(mocks.snapshotPublicDataset).not.toHaveBeenCalled();
     const skippedJobs = vi.mocked(logSkippedCronRun).mock.calls.map(([, entry]) => entry.job);
@@ -165,8 +170,6 @@ describe("runQuarterHourlySlot", () => {
         "sync-stablecoins",
         "snapshot-supply",
         "snapshot-chain-supply",
-        "snapshot-psi",
-        "snapshot-public-dataset",
       ]);
       expect(summary.jobsErrored).toBe(0);
       expect(summary.jobsSkipped).toBe(0);
@@ -193,7 +196,7 @@ describe("runQuarterHourlySlot", () => {
     expect(mocks.snapshotChainSupply).toHaveBeenCalledOnce();
   });
 
-  it("fills missing same-day snapshots once the 08:00 slot has passed, then no-ops", async () => {
+  it.each([SLOT_0800, SLOT_0900])("runs a missing daily snapshot once when due at %s, then admits no child", async (slotStartedAt) => {
     const presence = { psi: false, publicDataset: false };
     mocks.syncStablecoins.mockResolvedValue({
       status: "ok",
@@ -209,8 +212,18 @@ describe("runQuarterHourlySlot", () => {
       return { status: "ok", itemCount: 1 };
     });
 
-    await runQuarterHourlySlot(runtime([], presence, SLOT_0900));
-    await runQuarterHourlySlot(runtime([], presence, SLOT_0900));
+    const first = runtime([], presence, slotStartedAt);
+    const second = runtime([], presence, slotStartedAt);
+    await runQuarterHourlySlot(first);
+    const summary = await runQuarterHourlySlot(second);
+
+    expect(vi.mocked(first.runLeasedCron).mock.calls.filter(([job]) => (
+      job === "snapshot-psi" || job === "snapshot-public-dataset"
+    )).map(([job]) => job)).toEqual(["snapshot-psi", "snapshot-public-dataset"]);
+    expect(vi.mocked(second.runLeasedCron).mock.calls.some(([job]) => (
+      job === "snapshot-psi" || job === "snapshot-public-dataset"
+    ))).toBe(false);
+    expect(summary.jobsNeutralSkipped).toBe(2);
 
     expect(mocks.snapshotPsiDaily).toHaveBeenCalledOnce();
     expect(mocks.snapshotPsiDaily).toHaveBeenCalledWith(
@@ -230,7 +243,7 @@ describe("runQuarterHourlySlot", () => {
     );
   });
 
-  it("leaves a missing daily snapshot to the 08:00 slot while the day is still before it", async () => {
+  it("creates no snapshot leases or child writes before the preferred daily slot", async () => {
     const presence = { psi: false, publicDataset: false };
     mocks.syncStablecoins.mockResolvedValue({
       status: "ok",
@@ -238,7 +251,20 @@ describe("runQuarterHourlySlot", () => {
       metadata: JSON.stringify({ downstreamSafe: true }),
     });
 
-    await runQuarterHourlySlot(runtime([], presence, SLOT_0700));
+    const value = runtime([], presence, SLOT_0700);
+    const prepare = vi.spyOn(value.db, "prepare");
+    const summary = await runQuarterHourlySlot(value);
+
+    expect(vi.mocked(value.runLeasedCron).mock.calls.map(([job]) => job)).toEqual([
+      "sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply",
+    ]);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(logSkippedCronRun).not.toHaveBeenCalled();
+    expect(summary.jobsNeutralSkipped).toBe(2);
+    expect(summary.jobs.filter(({ neutral }) => neutral)).toEqual([
+      expect.objectContaining({ job: "snapshot-psi", reason: "before_daily_slot" }),
+      expect.objectContaining({ job: "snapshot-public-dataset", reason: "before_daily_slot" }),
+    ]);
 
     expect(mocks.snapshotPsiDaily).not.toHaveBeenCalled();
     expect(mocks.snapshotPublicDataset).not.toHaveBeenCalled();
