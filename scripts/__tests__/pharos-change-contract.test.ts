@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPermissionRequestHookOutput,
   buildPreToolUseHookOutput,
+  buildRouteContext,
   classifyChangedFiles,
   findShellCommandViolation,
   formatContract,
@@ -61,10 +62,144 @@ function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
   }
 }
 
+describe("route context accounting", () => {
+  function withContextFixture(callback: (repoRoot: string) => void) {
+    const repoRoot = mkdtempSync(join(tmpdir(), "pharos-route-context-"));
+    writeFileSync(join(repoRoot, "AGENTS.md"), "# Root\né😀\n");
+    writeFileSync(join(repoRoot, "CLAUDE.md"), "@AGENTS.md\n");
+    writeFileSync(join(repoRoot, "scope.md"), "# Scope\n");
+    writeFileSync(join(repoRoot, "guide.md"), "# Guide\n\n## One\né😀\n### Child\nnested\n## Two\nlast\n");
+    try {
+      callback(repoRoot);
+    } finally {
+      rmSync(repoRoot, { force: true, recursive: true });
+    }
+  }
+
+  it("counts UTF-8 bytes, physical lines and character-based tokens over the range union", () => {
+    withContextFixture((repoRoot) => {
+      const context = buildRouteContext({
+        docs: [
+          { path: "guide.md", anchor: "one" },
+          { path: "guide.md", anchor: "child" },
+          { path: "guide.md", anchor: "two" },
+          { path: "./guide.md", anchor: "one" },
+        ],
+        scopedContext: ["scope.md"],
+        // Conditional references must not be opened or charged.
+        background: [{ path: "not-preloaded.md", anchor: "conditional" }],
+      }, { repoRoot });
+      expect(context.total).toEqual({ bytes: 65, characters: 59, lines: 9, approximateTokens: 15 });
+      expect(context.files.find((file) => file.path === "guide.md")).toEqual({
+        path: "guide.md", bytes: 43, characters: 40, lines: 6, approximateTokens: 10,
+        ranges: [{ startLine: 3, endLine: 8, bytes: 43, characters: 40, lines: 6, approximateTokens: 10 }],
+      });
+      expect(context.references.find((ref) => ref.anchor === "one")).toEqual({
+        path: "guide.md", anchor: "one", kind: "primary", requiredReason: "Selected primary ownership reference",
+        startLine: 3, endLine: 6, bytes: 31, characters: 28, lines: 4, approximateTokens: 7,
+      });
+      expect(context.references.filter((ref) => ref.anchor === "one")).toHaveLength(1);
+      expect(context.background).toEqual([{ path: "not-preloaded.md", anchor: "conditional" }]);
+    });
+  });
+
+  it("counts the authored root once through scoped, primary, canonical-path and Claude aliases", () => {
+    withContextFixture((repoRoot) => {
+      symlinkSync(join(repoRoot, "AGENTS.md"), join(repoRoot, "root-link.md"));
+      const context = buildRouteContext({
+        docs: [{ path: "AGENTS.md" }, { path: "./AGENTS.md" }, { path: "CLAUDE.md" }, { path: "root-link.md" }],
+        scopedContext: ["AGENTS.md"],
+        background: [],
+      }, { repoRoot });
+      expect(context.total).toEqual({ bytes: 14, characters: 11, lines: 2, approximateTokens: 3 });
+      expect(context.references).toEqual([{
+        path: "AGENTS.md", kind: "root", requiredReason: "Root repository instructions",
+        startLine: 1, endLine: 2, bytes: 14, characters: 11, lines: 2, approximateTokens: 3,
+      }]);
+      expect(context.files).toHaveLength(1);
+    });
+  });
+
+  it("lets whole-file reads subsume sections and merges adjacent selected ranges", () => {
+    withContextFixture((repoRoot) => {
+      const contract = {
+        docs: [{ path: "guide.md", anchor: "child" }, { path: "guide.md", anchor: "two" }],
+        scopedContext: [], background: [],
+      };
+      const adjacent = buildRouteContext(contract, { repoRoot });
+      expect(adjacent.files.find((file) => file.path === "guide.md")?.ranges).toHaveLength(1);
+      // Child and Two are adjacent. One omitted preceding section is not charged.
+      expect(adjacent.total).toEqual({ bytes: 43, characters: 40, lines: 6, approximateTokens: 10 });
+      const whole = buildRouteContext({ ...contract, docs: [...contract.docs, { path: "guide.md" }] }, { repoRoot });
+      expect(whole.total).toEqual({ bytes: 66, characters: 60, lines: 10, approximateTokens: 15 });
+      expect(whole.files.find((file) => file.path === "guide.md")?.ranges).toEqual([
+        { startLine: 1, endLine: 8, bytes: 52, characters: 49, lines: 8, approximateTokens: 13 },
+      ]);
+    });
+  });
+
+  it("does not charge gaps and counts the final physical line without a trailing newline", () => {
+    withContextFixture((repoRoot) => {
+      writeFileSync(join(repoRoot, "guide.md"), "# Guide\n## One\none\n## Gap\nskip\n## Two\ntwo");
+      const context = buildRouteContext({
+        docs: [{ path: "guide.md", anchor: "one" }, { path: "guide.md", anchor: "two" }],
+        scopedContext: [], background: [],
+      }, { repoRoot });
+      expect(context.total).toEqual({ bytes: 35, characters: 32, lines: 6, approximateTokens: 8 });
+      expect(context.files.find((file) => file.path === "guide.md")?.ranges).toEqual([
+        { startLine: 2, endLine: 3, bytes: 11, characters: 11, lines: 2, approximateTokens: 3 },
+        { startLine: 6, endLine: 7, bytes: 10, characters: 10, lines: 2, approximateTokens: 3 },
+      ]);
+    });
+  });
+
+  it("fails on missing required files and anchors without changing classification", () => {
+    withContextFixture((repoRoot) => {
+      expect(() => buildRouteContext({
+        docs: [{ path: "missing.md" }], scopedContext: [], background: [],
+      }, { repoRoot })).toThrow("Cannot account for missing.md");
+      expect(() => buildRouteContext({
+        docs: [{ path: "guide.md", anchor: "missing" }], scopedContext: [], background: [],
+      }, { repoRoot })).toThrow("Cannot account for guide.md#missing: Missing Markdown anchor: #missing");
+      expect(() => buildRouteContext({
+        docs: [], scopedContext: ["missing/AGENTS.md"], background: [],
+      }, { repoRoot })).toThrow("Cannot account for missing/AGENTS.md");
+    });
+  });
+
+  it("prints the same measured payload in text and keeps accounting outside check selection", () => {
+    const contract = classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"]);
+    const original = JSON.stringify(contract);
+    const context = buildRouteContext(contract);
+    expect(JSON.stringify(contract)).toBe(original);
+    const text = formatContract(contract, { context });
+    expect(text).toContain(`Total initial routed context: ${context.total.bytes} B, ${context.total.lines} lines, ~${context.total.approximateTokens} tokens (merged per file).`);
+    for (const reference of context.references) {
+      expect(text).toContain(`${reference.bytes} B, ${reference.lines} lines, ~${reference.approximateTokens} tokens`);
+    }
+    expect(text).toContain("Background references are not counted.");
+  });
+});
+
 describe("representative --file routing", () => {
   function route(file: string) {
     return classifyChangedFiles([file]);
   }
+
+  it("reports evaluator JSON accounting without changing references or synthesized checks", () => {
+    const file = "shared/lib/safety-score-v9/evaluate-asset.ts";
+    const result = spawnSync(process.execPath,
+      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--file", file, "--json"],
+      { encoding: "utf8" });
+    expect(result.status).toBe(0);
+    const output = JSON.parse(result.stdout);
+    const contract = route(file);
+    expect(output.docs).toEqual(contract.docs);
+    expect(output.background).toEqual(contract.background);
+    expect(output.scopedContext).toEqual(contract.scopedContext);
+    expect(output.context).toEqual(buildRouteContext(contract));
+    expect(output.checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
+  });
 
   it("caps single-path guidance while preserving ranked overflow in background", () => {
     const originalLength = PATH_FAMILIES.length;
@@ -95,6 +230,8 @@ describe("representative --file routing", () => {
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
     expect(JSON.parse(result.stdout).checks).not.toContain("npm run check:structural");
+    const contract = classifyChangedFiles([file]);
+    expect(JSON.parse(result.stdout).context).toEqual(buildRouteContext(contract));
   });
 
   it.each([

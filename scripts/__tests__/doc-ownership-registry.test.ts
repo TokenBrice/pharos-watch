@@ -3,7 +3,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
+import {
+  collectMarkdownReferences,
+  mergeMarkdownSectionRanges,
+  parseMarkdownSections,
+  requiresDocNavigation,
+  resolveMarkdownSectionRange,
+  type MarkdownSections,
+} from "../lib/doc-markdown.mts";
 import { getVerifiedDocFiles } from "../lib/doc-files.mts";
 import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
 import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
@@ -59,6 +66,59 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
   const matchers = sources.map(createOwnershipGlobMatcher);
   return (file: string) => matchers.some((matcher) => matcher(file));
 }
+
+describe("Markdown section ranges", () => {
+  it("uses renderer slugs, UTF-8 source, nested sections, and global duplicate headings", () => {
+    const content = "# Guide\n\n## Café\né😀\n### Child\nnested\n## Café\nsecond\n# End\n";
+    const document = parseMarkdownSections(content);
+    expect([...document.sections.keys()]).toEqual([...collectMarkdownReferences(content).anchors]);
+    const first = resolveMarkdownSectionRange(document, "café");
+    expect(first).toEqual({ startLine: 2, endLine: 6, start: content.indexOf("## Café"), end: content.lastIndexOf("## Café") });
+    const section = content.slice(first.start, first.end);
+    expect(section).toBe("## Café\né😀\n### Child\nnested\n");
+    expect(Buffer.byteLength(section, "utf8")).toBeGreaterThan(section.length);
+    const second = resolveMarkdownSectionRange(document, "café-1");
+    expect(content.slice(second.start, second.end)).toBe("## Café\nsecond\n");
+    const child = resolveMarkdownSectionRange(document, "child");
+    expect(content.slice(child.start, child.end)).toBe("### Child\nnested\n");
+  });
+
+  it("ignores backtick and tilde fenced headings and supports renderer setext headings", () => {
+    const content = "# Guide\n## Real\n```md\n## Fake\n```\n~~~md\n# Also fake\n~~~\nText\n## Next\nend\n\nSetext\n======\nlast";
+    const document = parseMarkdownSections(content);
+    expect([...document.sections.keys()]).toEqual(["guide", "real", "next", "setext"]);
+    const range = resolveMarkdownSectionRange(document, "real");
+    expect(content.slice(range.start, range.end)).toBe("## Real\n```md\n## Fake\n```\n~~~md\n# Also fake\n~~~\nText\n");
+    const setext = resolveMarkdownSectionRange(document, "setext");
+    expect(content.slice(setext.start, setext.end)).toBe("Setext\n======\nlast");
+    expect(() => resolveMarkdownSectionRange(document, "fake")).toThrow("Missing Markdown anchor: #fake");
+  });
+
+  it("preserves the legacy join-without-final-newline section budget convention", () => {
+    const document = parseMarkdownSections("# Guide\n## One\né\n## Two\nlast\n");
+    const range = resolveMarkdownSectionRange(document, "one");
+    const legacy = document.lines.slice(range.startLine, range.endLine).join("\n");
+    expect(legacy).toBe("## One\né");
+    expect(Buffer.byteLength(legacy)).toBe(9);
+    expect(Buffer.byteLength(document.content.slice(range.start, range.end))).toBe(10);
+    const last = resolveMarkdownSectionRange(document, "two");
+    expect(document.lines.slice(last.startLine, last.endLine).join("\n")).toBe("## Two\nlast\n");
+  });
+
+  it("unions overlapping and adjacent sections without mutating source ranges", () => {
+    const document = parseMarkdownSections("# Guide\n## One\none\n### Child\nchild\n## Two\ntwo\n# End\n");
+    const one = resolveMarkdownSectionRange(document, "one");
+    const child = resolveMarkdownSectionRange(document, "child");
+    const two = resolveMarkdownSectionRange(document, "two");
+    const original = { ...one };
+    expect(mergeMarkdownSectionRanges([two, child, one, one])).toEqual([
+      { ...one, end: two.end, endLine: two.endLine },
+    ]);
+    expect(one).toEqual(original);
+    expect(mergeMarkdownSectionRanges([child, document.whole, two])).toEqual([document.whole]);
+    expect(mergeMarkdownSectionRanges([])).toEqual([]);
+  });
+});
 
 describe("doc-ownership registry integrity", () => {
   it("keeps unconditional root guidance and hints out of the routing model", () => {
@@ -123,6 +183,7 @@ describe("doc-ownership registry integrity", () => {
       "live-reserves", "yield-intelligence", "homepage", "about-page",
       "coverage-page", "start-page", "feedback-pipeline", "compliance", "worker-admin-api",
     ];
+    const documentCache = new Map<string, MarkdownSections>();
     for (const mapping of mappings) {
       const newDomain = domainIds.includes(mapping.id);
       if (newDomain) expect(mapping.checks ?? [], mapping.id).toEqual([]);
@@ -130,32 +191,15 @@ describe("doc-ownership registry integrity", () => {
         if (!reference.path.endsWith(".md")) continue;
         if (newDomain) expect(reference.anchor, mapping.id).toBeTruthy();
         const key = reference.path + (reference.anchor ? `#${reference.anchor}` : "");
-        const lines = readFileSync(resolve(REPO_ROOT, reference.path), "utf8").split("\n");
-        let start = reference.anchor ? -1 : 0;
-        let level = 0;
-        let end = lines.length;
-        let fence: string | undefined;
-        for (let index = 0; reference.anchor && index < lines.length; index++) {
-          const marker = /^\s*(`{3,}|~{3,})/.exec(lines[index])?.[1];
-          if (marker) {
-            if (!fence) fence = marker;
-            else if (marker[0] === fence[0] && marker.length >= fence.length) fence = undefined;
-            continue;
-          }
-          if (fence) continue;
-          const heading = /^(#{1,6}) /.exec(lines[index]);
-          if (!heading) continue;
-          if (start >= 0 && heading[1].length <= level) {
-            end = index;
-            break;
-          }
-          if (start < 0 && collectMarkdownReferences(lines[index]).anchors.has(reference.anchor!)) {
-            start = index;
-            level = heading[1].length;
-          }
+        let document = documentCache.get(reference.path);
+        if (!document) {
+          document = parseMarkdownSections(readFileSync(resolve(REPO_ROOT, reference.path), "utf8"));
+          documentCache.set(reference.path, document);
         }
-        expect(start, key).toBeGreaterThanOrEqual(0);
-        const bytes = Buffer.byteLength(lines.slice(start, end).join("\n"));
+        const range = resolveMarkdownSectionRange(document, reference.anchor);
+        // Keep the historic byte ratchet: joining selected split lines omits
+        // the separator before the next heading, unlike route payload bytes.
+        const bytes = Buffer.byteLength(document.lines.slice(range.startLine, range.endLine).join("\n"));
         expect(bytes, key).toBeLessThanOrEqual(newDomain ? 25_000 : legacySectionCeilings[key] ?? 25_000);
         if (Object.hasOwn(legacySectionCeilings, key)) {
           expect(bytes, `Remove resolved section exception: ${key}`).toBeGreaterThan(25_000);

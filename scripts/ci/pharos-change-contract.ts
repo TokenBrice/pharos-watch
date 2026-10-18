@@ -16,6 +16,8 @@ import { collectGitPaths } from "../lib/changed-files.mts";
 import type { DocReference } from "../lib/doc-ownership-registry.mts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
 import type * as FocusedChecks from "../maintenance/run-focused-checks.ts";
+import type { MarkdownSectionRange, MarkdownSections } from "../lib/doc-markdown.mts";
+import type * as DocMarkdown from "../lib/doc-markdown.mts";
 import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import {
   GIT_GLOBAL_FLAG_OPTIONS,
@@ -444,6 +446,140 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
     source,
     unmappedPaths,
     warnings,
+  };
+}
+
+interface ContextSize {
+  bytes: number;
+  characters: number;
+  lines: number;
+  approximateTokens: number;
+}
+
+interface ContextRange extends ContextSize {
+  startLine: number;
+  endLine: number;
+}
+
+interface ContextReference extends DocReference, ContextRange {
+  kind: "root" | "scoped" | "primary";
+  requiredReason: string;
+}
+
+export interface RouteContext {
+  status: "diagnostic-only";
+  scope: string;
+  references: ContextReference[];
+  files: Array<ContextSize & { path: string; ranges: ContextRange[] }>;
+  total: ContextSize;
+  background: DocReference[];
+  excluded: string[];
+}
+
+function contextSize(content: string): ContextSize {
+  return {
+    bytes: Buffer.byteLength(content, "utf8"),
+    characters: content.length,
+    lines: content.length === 0 ? 0 : content.split("\n").length - Number(content.endsWith("\n")),
+    approximateTokens: Math.ceil(content.length / 4),
+  };
+}
+
+function sumContextSizes(sizes: readonly ContextSize[]): ContextSize {
+  const total = { bytes: 0, characters: 0, lines: 0, approximateTokens: 0 };
+  for (const size of sizes) {
+    total.bytes += size.bytes;
+    total.characters += size.characters;
+    total.lines += size.lines;
+  }
+  total.approximateTokens = Math.ceil(total.characters / 4);
+  return total;
+}
+
+/**
+ * Explicit route-rendering boundary: no document reads in classification,
+ * focused check selection, or hooks. File contents and Markdown parsing are
+ * cached only for this invocation; background references are not preloaded.
+ */
+export function buildRouteContext(
+  contract: Pick<ChangeContract, "docs" | "scopedContext" | "background">,
+  { repoRoot = REPO_ROOT }: { repoRoot?: string } = {},
+): RouteContext {
+  const { parseMarkdownSections, resolveMarkdownSectionRange, mergeMarkdownSectionRanges } =
+    require("../lib/doc-markdown.mts") as typeof DocMarkdown;
+  const cache = new Map<string, {
+    path: string;
+    content: string;
+    document?: MarkdownSections;
+    ranges: MarkdownSectionRange[];
+  }>();
+  const references: ContextReference[] = [];
+  const seen = new Set<string>();
+  const requested: Array<DocReference & Pick<ContextReference, "kind" | "requiredReason">> = [
+    { path: "AGENTS.md", kind: "root", requiredReason: "Root repository instructions" },
+    ...contract.scopedContext.map((path) => ({
+      path, kind: "scoped" as const, requiredReason: "Applicable scoped instructions",
+    })),
+    ...contract.docs.map((doc) => ({
+      ...doc, kind: "primary" as const, requiredReason: "Selected primary ownership reference",
+    })),
+  ];
+  for (const reference of requested) {
+    try {
+      let absolute = resolve(repoRoot, reference.path);
+      // The Claude facade imports the authored root; it is not a second body.
+      if (absolute === resolve(repoRoot, "CLAUDE.md") && readFileSync(absolute, "utf8").trim() === "@AGENTS.md") {
+        absolute = resolve(repoRoot, "AGENTS.md");
+      }
+      const canonical = realpathSync(absolute);
+      const key = `${canonical}#${reference.anchor ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      let file = cache.get(canonical);
+      if (!file) {
+        file = { path: normalizeRepoPath(relative(repoRoot, canonical)), content: readFileSync(canonical, "utf8"), ranges: [] };
+        cache.set(canonical, file);
+      }
+      let range: MarkdownSectionRange;
+      if (reference.anchor !== undefined) {
+        file.document ??= parseMarkdownSections(file.content);
+        range = resolveMarkdownSectionRange(file.document, reference.anchor);
+      } else {
+        range = { start: 0, end: file.content.length, startLine: 0, endLine: file.content.split("\n").length };
+      }
+      file.ranges.push(range);
+      const size = contextSize(file.content.slice(range.start, range.end));
+      references.push({
+        path: file.path,
+        ...(reference.anchor === undefined ? {} : { anchor: reference.anchor }),
+        kind: reference.kind,
+        requiredReason: reference.requiredReason,
+        startLine: range.startLine + 1,
+        endLine: range.startLine + size.lines,
+        ...size,
+      });
+    } catch (error) {
+      throw new Error(`Cannot account for ${formatDocReference(reference)}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  const files = [...cache.values()].map((file) => {
+    const ranges = mergeMarkdownSectionRanges(file.ranges).map((range) => {
+      const size = contextSize(file.content.slice(range.start, range.end));
+      return { startLine: range.startLine + 1, endLine: range.startLine + size.lines, ...size };
+    });
+    return { path: file.path, ranges, ...sumContextSizes(ranges) };
+  });
+  return {
+    status: "diagnostic-only",
+    scope: "Initial routed documents only; UTF-8 bytes include retained source newlines",
+    references,
+    files,
+    total: sumContextSizes(files),
+    background: contract.background,
+    excluded: [
+      "Conditional background references and additional reads mandated by scoped guides",
+      "Source and test bodies, skills, framework guides, and route-envelope text",
+    ],
   };
 }
 
@@ -1267,12 +1403,18 @@ function formatDocReference(doc: DocReference): string {
 
 export function formatContract(
   contract: ChangeContract,
-  { mode = "full" }: { mode?: "full" | "stop" } = {},
+  { mode = "full", context }: { mode?: "full" | "stop"; context?: RouteContext } = {},
 ): string {
   const changedSummary =
     contract.changedFiles.length > 0
       ? formatBullets(contract.changedFiles, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY })
       : "- No current changed files detected.";
+  const formatReading = (doc: DocReference): string => {
+    const measured = context?.references.find((ref) => ref.path === doc.path && ref.anchor === doc.anchor);
+    return formatDocReference(doc) + (measured
+      ? ` (${measured.bytes} B, ${measured.lines} lines, ~${measured.approximateTokens} tokens; ${measured.requiredReason})`
+      : "");
+  };
   const sections = [
     "Pharos change contract:",
     `Source: ${contract.source}`,
@@ -1284,15 +1426,25 @@ export function formatContract(
     changedSummary,
     "",
     "Read first:",
-    formatBullets(contract.docs.map(formatDocReference), { limit: mode === "stop" ? 8 : Number.POSITIVE_INFINITY }),
+    formatBullets(contract.docs.map(formatReading), { limit: mode === "stop" ? 8 : Number.POSITIVE_INFINITY }),
   ];
 
   if (contract.scopedContext.length > 0) {
-    sections.push("", "Scoped context:", formatBullets(contract.scopedContext, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
+    sections.push("", "Scoped context:", formatBullets(contract.scopedContext.map((path) => formatReading({ path })), { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
   if (contract.background.length > 0) {
     sections.push("", "Also relevant:", formatBullets(contract.background.map(formatDocReference), { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
+  }
+  if (context) {
+    const root = context.references.find((reference) => reference.kind === "root")!;
+    sections.push(
+      "",
+      "Context accounting (diagnostic only):",
+      `- ${formatReading(root)} (counted once)`,
+      `Total initial routed context: ${context.total.bytes} B, ${context.total.lines} lines, ~${context.total.approximateTokens} tokens (merged per file).`,
+      "Background references are not counted. Additional scoped-guide reads, source/tests, skills, framework guides, and route-envelope text are excluded.",
+    );
   }
 
   if (contract.checks.length > 0) {
@@ -1681,14 +1833,15 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   }
   const { buildFocusedCheckPlan } = require("../maintenance/run-focused-checks.ts") as typeof FocusedChecks;
   contract.checks = buildFocusedCheckPlan(changedFiles).checks.map((check) => check.command);
+  const context = buildRouteContext(contract);
 
 
   if (options.format === "json") {
-    console.log(JSON.stringify(contract, null, 2));
+    console.log(JSON.stringify({ ...contract, context }, null, 2));
     return;
   }
 
-  console.log(formatContract(contract));
+  console.log(formatContract(contract, { context }));
 }
 
 runDirectCli(import.meta.url, () => runCli(), { label: "pharos-change-contract" });
