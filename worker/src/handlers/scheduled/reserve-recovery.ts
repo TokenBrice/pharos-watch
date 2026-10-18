@@ -55,15 +55,6 @@ async function runReserveRecovery(
   reportProgress: CronProgressReporter,
 ) {
   const mode = normalizeReserveRecoveryMode(runtime.env.WORKER_RESERVE_RECOVERY_MODE);
-  // This lane runs every five minutes, so it is the fast global reconciler
-  // for slots whose isolate was killed without a terminal write (OOM leaves
-  // state='running' with a silent heartbeat). Runs in every recovery mode:
-  // sweeping is DB-only and independent of the reserve checkpoint machinery.
-  await reportProgress({ stage: "sweeping-stale-slots" });
-  await sweepStaleScheduledSlotExecutions(runtime.db, {
-    limit: 10,
-    signal,
-  });
   if (mode === "off") {
     return createCronResult({
       status: "ok", itemCount: 0,

@@ -39,7 +39,6 @@ describe("runScheduledSlotWithFence", () => {
         {
           slotStartedAt: Math.floor(Date.now() / 1000),
           owner: "slot-owner",
-          preSweepStale: false,
         },
       );
 
@@ -381,7 +380,7 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("claims a new slot after sweeping stale previous slots for the same schedule key", async () => {
+  it("claims a new slot without sweeping unrelated previous executions on the admission path", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
     const currentSlotStartedAt = now;
@@ -400,16 +399,10 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(result.status).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(1);
-    expect(result.metadata).toMatchObject({
-      staleSlotPreSweep: {
-        candidateSlots: 1,
-        slotsReconciled: 1,
-      },
-    });
-
-    const staleSlot = db.getSlot("halfHourlyOffset", staleSlotStartedAt);
-    expect(staleSlot?.state).toBe("finished");
-    expect(staleSlot?.result_status).toBe("error");
+    expect(db.getSlot("halfHourlyOffset", staleSlotStartedAt)?.state).toBe("running");
+    const sweep = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    expect(sweep.slotsReconciled).toBe(1);
+    expect(db.getSlot("halfHourlyOffset", staleSlotStartedAt)?.result_status).toBe("error");
   });
 
   it("reconciles stale slot progress into a synthetic child cron run and clears expired ownership", async () => {

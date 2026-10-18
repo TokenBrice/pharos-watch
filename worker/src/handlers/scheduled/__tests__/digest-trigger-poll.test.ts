@@ -33,6 +33,13 @@ vi.mock("../../../lib/telegram/digest-outbox", () => ({
   drainTelegramDigestOutbox: vi.fn(),
 }));
 
+vi.mock("../../../lib/scheduled-slot-fence", () => ({
+  sweepStaleScheduledSlotExecutions: vi.fn(async () => ({
+    candidateSlots: 0, slotsReconciled: 0, maxReconciliationLagSec: null,
+  })),
+}));
+
+import { sweepStaleScheduledSlotExecutions } from "../../../lib/scheduled-slot-fence";
 import { generateDailyDigest, resumeDailyDigestDelivery } from "../../../cron/daily-digest";
 import { resolveDigestSafetyMap } from "../../../lib/digest-safety-map";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
@@ -194,6 +201,20 @@ describe("runDigestTriggerPollSlot", () => {
         },
       ],
     });
+  });
+
+  it("runs the bounded global sweep on a poll with no digest demand", async () => {
+    vi.mocked(getCache).mockResolvedValueOnce(null);
+    const runtime = buildRuntime();
+    await runDigestTriggerPollSlot(runtime);
+    expect(sweepStaleScheduledSlotExecutions).toHaveBeenCalledWith(runtime.db, {
+      limit: 10, signal: expect.any(AbortSignal),
+    });
+    const options = vi.mocked(sweepStaleScheduledSlotExecutions).mock.calls[0]![1]!;
+    expect(options).not.toHaveProperty("slotKey");
+    expect(options).not.toHaveProperty("staleAfterSec");
+    expect(vi.mocked(sweepStaleScheduledSlotExecutions).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(getCache).mock.invocationCallOrder[0]!);
   });
 
   it("surfaces retained terminal rows from the authoritative outbox drain", async () => {

@@ -10,6 +10,7 @@ import {
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
   type SlotDeadline,
+  assertSlotDeadline,
 } from "../../lib/cron-timeouts";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { normalizeCgApiKey } from "../../lib/coingecko";
@@ -17,6 +18,7 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { flushDwellirCredits, loadDwellirBudgetState } from "../../lib/rpc-provider-budget";
+import { settleAfterAbort } from "../../lib/cron-abort-settlement";
 import { createDwellirNativeCapability, type DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
@@ -280,6 +282,7 @@ export function createScheduledRuntimeContext(
         // Contract C: opt this runtime into the Dwellir supplemental endpoints
         // (memoized, fail-closed) before the job body can read chainRpcs.
         await ensureDwellirEndpointsEnabled(runtime);
+        assertSlotDeadline(runtime.deadline, combinedSlotSignal);
         try {
           return await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
             const slotMeta = {
@@ -339,18 +342,12 @@ export function createScheduledRuntimeContext(
               };
             }
             const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
+              // This update also persists the required attempt's lease owner;
+              // unlike optional progress detail, it must precede child work.
               await reportProgress({
-                stage: "started",
-                message: `Starting ${job}`,
-                leaseOwner,
-                metadata: slotMeta,
+                stage: "lease-acquired", message: `Lease acquired for ${job}`, leaseOwner, metadata: slotMeta,
               });
-              await reportProgress({
-                stage: "lease-acquired",
-                message: `Lease acquired for ${job}`,
-                leaseOwner,
-                metadata: slotMeta,
-              });
+              assertSlotDeadline(runtime.deadline, leaseSignal);
               return fn(leaseSignal, reportProgress);
             }, leaseOptions);
 
@@ -412,7 +409,11 @@ export function createScheduledRuntimeContext(
         } finally {
           // Contract C: drain this isolate's Dwellir credits after the job body
           // settles; flushing never throws, so it cannot change the job result.
-          await flushDwellirCredits(db, Math.floor(Date.now() / 1000));
+          ctx.waitUntil(settleAfterAbort(
+            () => flushDwellirCredits(db, Math.floor(Date.now() / 1000)),
+            AbortSignal.timeout(runtime.deadline.remainingMs()),
+            { platformDeadlineMs: runtime.deadline.platformDeadlineMs },
+          ));
         }
       });
     },

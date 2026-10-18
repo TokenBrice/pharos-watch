@@ -46,6 +46,8 @@ import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
 import { runSafetyMapProducerKick } from "../../cron/safety-map-producer-kick";
+import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
+import { settleAfterAbort } from "../../lib/cron-abort-settlement";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
 const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
@@ -461,6 +463,30 @@ async function finishSkippedDigestTriggerPoll(
 
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const startedMs = Date.now();
+  // DB-only control-plane stage, independent of reserve replay/admission.
+  // No trigger or fetch capacity is added; every poll gets a bounded turn.
+  const sweepDeadlineMs = Math.min(runtime.deadline.platformDeadlineMs, startedMs + 30_000);
+  const sweepSignal = AbortSignal.any([
+    AbortSignal.timeout(Math.max(0, sweepDeadlineMs - Date.now())),
+    ...(runtime.slotSignal ? [runtime.slotSignal] : []),
+  ]);
+  const sweep = sweepStaleScheduledSlotExecutions(runtime.db, { limit: 10, signal: sweepSignal });
+  const observedSweep = sweep.catch((error: unknown) => {
+    logWorkerEvent({ scope: "handler", level: "warn", event: "scheduled-slot-sweep-failed",
+      message: "Bounded global stale-slot sweep did not complete", metadata: { reason: "scheduled-slot-sweep-failed" }, error });
+  });
+  const sweepOutcome = await settleAfterAbort(() => sweep, sweepSignal, { platformDeadlineMs: sweepDeadlineMs });
+  if (sweepOutcome.status === "aborted") {
+    runtime.ctx.waitUntil(settleAfterAbort(() => observedSweep, sweepSignal, { platformDeadlineMs: sweepDeadlineMs }));
+    logWorkerEvent({ scope: "handler", level: "warn", event: "scheduled-slot-sweep-deadline",
+      message: "Global stale-slot sweep reached its bounded deadline",
+      metadata: { reason: "scheduled-slot-sweep-deadline", sweepDeadlineMs } });
+  }
+  if (sweepOutcome.status === "fulfilled") {
+    logWorkerEvent({ scope: "handler", level: "info", event: "scheduled-slot-sweep",
+      message: "Global stale-slot sweep completed", metadata: { ...sweepOutcome.value } });
+  }
+  runtime.slotSignal?.throwIfAborted();
   await runTelegramDigestOutboxDrain(runtime);
   await runSafetyMapProducerKickSurface(runtime);
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
