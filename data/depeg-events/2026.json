@@ -5,11 +5,11 @@
     "symbol": "apxUSD",
     "pegType": "peggedUSD",
     "direction": "below",
-    "peakDeviationBps": -230,
+    "peakDeviationBps": -297,
     "startedAt": 1792065693,
     "endedAt": null,
     "startPrice": 0.9890987198271314,
-    "peakPrice": 0.9770038117,
+    "peakPrice": 0.9702893262,
     "recoveryPrice": null,
     "pegReference": 1,
     "source": "live",
@@ -28,12 +28,12 @@
         ],
         [
           1792091817,
-          1792232134
+          1792280884
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792232134,
+      "lastTrustedObservationAt": 1792280884,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -3817,12 +3817,12 @@
         ],
         [
           1792191637,
-          1792232134
+          1792280884
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792232134,
+      "lastTrustedObservationAt": 1792280884,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -3950,12 +3950,12 @@
         ],
         [
           1792091817,
-          1792232134
+          1792280884
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792232134,
+      "lastTrustedObservationAt": 1792280884,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -4287,12 +4287,16 @@
         ],
         [
           1792187224,
-          1792232134
+          1792269194
+        ],
+        [
+          1792270990,
+          1792280884
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792232134,
+      "lastTrustedObservationAt": 1792280884,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -4740,12 +4744,12 @@
         ],
         [
           1792224041,
-          1792232134
+          1792280884
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792232134,
+      "lastTrustedObservationAt": 1792280884,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -8379,12 +8383,12 @@
         ],
         [
           1792180948,
-          1792232134
+          1792280884
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792232134,
+      "lastTrustedObservationAt": 1792280884,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -8500,12 +8504,12 @@
         ],
         [
           1792191637,
-          1792232134
+          1792280884
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1792232134,
+      "lastTrustedObservationAt": 1792280884,
       "gapStartedAt": null
     },
     "provenance": null,

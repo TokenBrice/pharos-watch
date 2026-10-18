@@ -120604,28 +120604,6 @@
     "slug": "gyd-2024-02-11"
   },
   {
-    "id": 31369,
-    "stablecoinId": "dola-inverse-finance",
-    "symbol": "DOLA",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -8984,
-    "startedAt": 1707609828,
-    "endedAt": 1707652985,
-    "startPrice": 0.10164941797218909,
-    "peakPrice": 0.10164941797218909,
-    "recoveryPrice": 0.9937135588835395,
-    "pegReference": 1,
-    "source": "backfill",
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "constituentEventCount": 1,
-    "slug": "dola-2024-02-11-down-31369"
-  },
-  {
     "id": 49638,
     "stablecoinId": "eusd-electronic-usd",
     "symbol": "EUSD",
