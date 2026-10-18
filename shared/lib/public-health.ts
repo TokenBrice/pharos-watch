@@ -1,3 +1,4 @@
+import { API_FRESHNESS_MAX_AGE_SEC } from "./api-freshness";
 import { getCacheImpactStatus } from "./cache-health";
 import { getCircuitScope } from "./circuit-sources";
 import type { CacheStatus, CircuitRecord, HealthResponse, StatusHealthValue } from "../types/status";
@@ -43,6 +44,17 @@ export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"]
     return "degraded";
   }
   return "healthy";
+}
+
+/** The accepted publication clock, not a newer held attempt, owns freshness. */
+export function getPublicSafetyScoreStatus(
+  publication: HealthResponse["safetyScorePublication"],
+  now: number,
+): PublicStatusTone {
+  if (!publication || publication.acceptedAtSec == null) return "degraded";
+  const age = Math.max(0, now - publication.acceptedAtSec);
+  if (age > API_FRESHNESS_MAX_AGE_SEC.reportCards * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER) return "stale";
+  return publication.status === "held" || age > API_FRESHNESS_MAX_AGE_SEC.reportCards ? "degraded" : "healthy";
 }
 
 export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>): PublicStatusTone {

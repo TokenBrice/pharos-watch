@@ -74,6 +74,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
       transitions: historyData.transitions,
       liveComponents: projection.components,
       publicHistoryStartedAt: historyData.publicHistoryStartedAt,
+      componentHistoryStartedAt: historyData.componentHistoryStartedAt,
       nowSec: historyData.timestamp,
       days: HISTORY_DAYS,
       truncated: historyData.hasMore === true,

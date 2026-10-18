@@ -26,11 +26,39 @@ function live(overrides: Partial<Record<string, PublicStatusComponent["state"]>>
 }
 
 describe("buildComponentDayCells", () => {
+  it("does not invent Safety Score history before its first observation", () => {
+    const cells = buildComponentDayCells({
+      transitions: [
+        row(1, TODAY - 3 * DAY, [], { transitionType: "init", from: null }),
+        row(2, TODAY - DAY + 3600, []),
+      ],
+      liveComponents: live(),
+      publicHistoryStartedAt: TODAY - 3 * DAY,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [
+        id, id === "safety-scores" ? TODAY - DAY + 3600 : TODAY - 3 * DAY,
+      ])),
+      nowSec: NOW,
+      days: 4,
+    });
+    expect(cells["safety-scores"].map((cell) => cell.state)).toEqual(["no-data", "no-data", "operational", "operational"]);
+    expect(cells["risk-signals"].map((cell) => cell.state)).toEqual(["operational", "operational", "operational", "operational"]);
+  });
+
+  it("shows no past history when a component has no admitted monitoring start", () => {
+    const cells = buildComponentDayCells({
+      transitions: [row(1, TODAY - DAY, [])], liveComponents: live(),
+      publicHistoryStartedAt: TODAY - 3 * DAY, componentHistoryStartedAt: {},
+      nowSec: NOW, days: 2,
+    });
+    expect(cells["safety-scores"].map((cell) => cell.state)).toEqual(["no-data", "operational"]);
+  });
+
   it("renders days before public history started as no data, never operational", () => {
     const cells = buildComponentDayCells({
       transitions: [row(1, TODAY - DAY + 3600, [], { transitionType: "init", from: null })],
       liveComponents: live(),
       publicHistoryStartedAt: TODAY - DAY + 3600,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - DAY + 3600])),
       nowSec: NOW,
       days: 4,
     });
@@ -46,6 +74,7 @@ describe("buildComponentDayCells", () => {
       ],
       liveComponents: live(),
       publicHistoryStartedAt: TODAY - 10 * DAY,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 10 * DAY])),
       nowSec: NOW,
       days: 3,
     });
@@ -59,6 +88,7 @@ describe("buildComponentDayCells", () => {
       transitions: [row(5, TODAY - DAY, [], { from: "degraded" })],
       liveComponents: live(),
       publicHistoryStartedAt: TODAY - 40 * DAY,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 40 * DAY])),
       nowSec: NOW,
       days: 3,
     });
@@ -73,6 +103,7 @@ describe("buildComponentDayCells", () => {
       ],
       liveComponents: live(),
       publicHistoryStartedAt: TODAY - 10 * DAY,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 10 * DAY])),
       nowSec: NOW,
       days: 3,
       truncated: true,

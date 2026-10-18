@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assessPublicHealth, getPublicHealthEvidenceReadFailures } from "../public-health-assessment";
+import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthEvidenceReadFailures } from "../public-health-assessment";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
@@ -12,6 +12,9 @@ import { assessD1Capacity } from "@shared/lib/d1-capacity";
 import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import type { PublicHealthAssessment } from "../public-health-assessment";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const MATERIAL_MARKET_CAP_USD = STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
@@ -85,6 +88,7 @@ function makeMintBurnAssessmentDb(
     yieldSafetyIdentity?: SafetyScoreV9PublicationIdentity;
     yieldSafetyLiveReadError?: unknown;
     yieldSafetyHealthReadError?: unknown;
+    safetyScorePublication?: V9PublicationHealth | null;
     producerHistoryError?: unknown;
     blacklistError?: unknown;
     dbError?: unknown;
@@ -100,6 +104,15 @@ function makeMintBurnAssessmentDb(
   const latestSuccessfulSyncAt =
     options.latestSuccessfulSyncAt !== undefined ? options.latestSuccessfulSyncAt : nowSec - 300;
   const rowCount = options.rowCount !== undefined ? options.rowCount : 4321;
+  const safetyScorePublication = options.safetyScorePublication === undefined ? {
+    schemaVersion: 2 as const,
+    status: "current" as const,
+    acceptedPublicationGenerationId: options.yieldSafetyIdentity?.publicationGenerationId ?? "fixture-safety-publication",
+    acceptedAtSec: nowSec - 60,
+    attemptedAtSec: nowSec - 60,
+    heldSinceSec: null,
+    reasons: [],
+  } : options.safetyScorePublication;
   const cacheRows = [
     { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
     { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
@@ -167,17 +180,9 @@ function makeMintBurnAssessmentDb(
       ...(options.yieldSafetyHealthReadError
         ? { throwError: options.yieldSafetyHealthReadError }
         : {
-            first: options.yieldSafetyIdentity ? {
-              value: stableJsonStringifyV1({
-                schemaVersion: 2,
-                status: "current",
-                acceptedPublicationGenerationId: options.yieldSafetyIdentity.publicationGenerationId,
-                acceptedAtSec: nowSec - 60,
-                attemptedAtSec: nowSec - 60,
-                heldSinceSec: null,
-                reasons: [],
-              }),
-              updated_at: nowSec - 60,
+            first: safetyScorePublication ? {
+              value: stableJsonStringifyV1(safetyScorePublication),
+              updated_at: safetyScorePublication.attemptedAtSec,
             } : null,
           }),
     },
@@ -239,6 +244,54 @@ function makeMintBurnAssessmentDb(
     { match: "FROM cron_runs", rows: [], first: null },
   ]);
 }
+
+describe("assessPublicHealth Safety Score publication", () => {
+  const now = 1_800_000_000;
+  const current: V9PublicationHealth = {
+    schemaVersion: 2, status: "current", acceptedPublicationGenerationId: "safety-generation",
+    acceptedAtSec: now - 60, attemptedAtSec: now - 60, heldSinceSec: null, reasons: [],
+  };
+  const scoreComponent = (result: PublicHealthAssessment) =>
+    buildPublicHealthResponse(result, now).components!.find((component) => component.id === "safety-scores")!;
+
+  it("grades held publication even without a yield safety identity", async () => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
+      safetyScorePublication: { ...current, status: "held", attemptedAtSec: now, heldSinceSec: now - 30, reasons: [{ code: "redemption-stale" }] },
+    }), now);
+    expect(scoreComponent(result)).toMatchObject({ state: "degraded" });
+    expect(scoreComponent(result).reasons).toContain("safety-score-publication-held:redemption-stale");
+    expect(result.overallStatus).not.toBe("healthy");
+  });
+
+  it("keeps fresh accepted publication operational", async () => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, { safetyScorePublication: current }), now);
+    expect(scoreComponent(result)).toMatchObject({ state: "operational", reasons: [] });
+  });
+
+  it("grades accepted age, not a newer attempted publication clock", async () => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
+      safetyScorePublication: { ...current, acceptedAtSec: now - API_FRESHNESS_MAX_AGE_SEC.reportCards - 1, attemptedAtSec: now },
+    }), now);
+    expect(scoreComponent(result)).toMatchObject({ state: "degraded", reasons: ["safety-score-publication:stale"] });
+  });
+
+  it("keeps a failed publication-health read unavailable without yield", async () => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
+      yieldSafetyHealthReadError: new Error("publication health unavailable"),
+    }), now);
+    expect(result.safetyScorePublication).toBeNull();
+    expect(scoreComponent(result)).toMatchObject({ state: "degraded", reasons: ["safety-score-publication-read-failed"] });
+    expect(getPublicHealthEvidenceReadFailures(result)).toContain("safety-score-publication:read-failed");
+  });
+
+  it("does not admit missing publication or a future accepted clock", async () => {
+    for (const publication of [null, { ...current, acceptedAtSec: now + 3600, attemptedAtSec: now + 3600 }]) {
+      const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, { safetyScorePublication: publication }), now);
+      expect(scoreComponent(result).state).toBe("degraded");
+      expect(result.safetyScorePublication).toBeNull();
+    }
+  });
+});
 
 describe("assessPublicHealth upstream provider enrichment", () => {
   it("propagates rejected FX publication clocks through the public cache boundary", async () => {

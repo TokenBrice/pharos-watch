@@ -259,6 +259,46 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
     }
   }
 
+  const safety = health.safetyScorePublication;
+  if (!safety || health.safetyScorePublicationUnavailableReason) {
+    add("safety-scores", {
+      state: "degraded",
+      summary: "Safety Score publication health is unavailable, so current scores cannot be confirmed.",
+      reason: health.safetyScorePublicationUnavailableReason ?? "safety-score-publication-unavailable",
+    });
+  } else {
+    const budget = buildBudget(API_FRESHNESS_MAX_AGE_SEC.reportCards, API_FRESHNESS_MAX_AGE_SEC.reportCards);
+    const ageSeconds = safety.acceptedAtSec == null ? null : Math.max(0, health.timestamp - safety.acceptedAtSec);
+    if (ageSeconds == null) {
+      add("safety-scores", {
+        state: "degraded",
+        summary: "No accepted Safety Score publication is available.",
+        reason: "safety-score-publication-missing",
+        budget,
+      });
+    } else {
+      add("safety-scores", gradeAge("Safety Scores", ageSeconds, budget, "safety-score-publication"));
+    }
+    if (safety.status === "held") {
+      add("safety-scores", {
+        state: "degraded",
+        summary: "Safety Score publication is held while required inputs recover. The last accepted scores are still served when available.",
+        reason: "safety-score-publication-held",
+        ageSeconds,
+        budget,
+      });
+      for (const reason of safety.reasons) {
+        add("safety-scores", {
+          state: "degraded",
+          summary: "Safety Score publication is held while required inputs recover.",
+          reason: `safety-score-publication-held:${reason.code}`,
+          ageSeconds,
+          budget,
+        });
+      }
+    }
+  }
+
   const yieldWarning = hasWarning(health, (warning) =>
     warning.startsWith("yield-safety-unrated-serving") || warning === "yield-safety-availability-unknown");
   if (yieldWarning) {

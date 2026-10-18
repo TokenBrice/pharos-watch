@@ -103,6 +103,7 @@ export function buildComponentDayCells({
   transitions,
   liveComponents,
   publicHistoryStartedAt,
+  componentHistoryStartedAt,
   nowSec,
   days = 30,
   truncated = false,
@@ -110,6 +111,7 @@ export function buildComponentDayCells({
   transitions: readonly PublicStatusTransition[];
   liveComponents: readonly Pick<PublicStatusComponent, "id" | "state">[];
   publicHistoryStartedAt: number | null | undefined;
+  componentHistoryStartedAt?: Readonly<Record<string, number>>;
   nowSec: number;
   days?: number;
   /** True when the history page did not hold the whole window (`hasMore`). */
@@ -127,12 +129,17 @@ export function buildComponentDayCells({
     const dayStart = windowStart + index * DAY_SEC;
     const dayEnd = dayStart + DAY_SEC;
     const date = new Date(dayStart * 1000).toISOString().slice(0, 10);
-    const active: ReadonlyMap<PublicStatusComponentId, PublicComponentState>[] = [];
-    for (const segment of segments) {
-      if (segment.snapshot && segment.start < dayEnd && segment.end > dayStart) active.push(segment.snapshot);
-    }
-    if (dayStart === todayStart && live) active.push(live);
     for (const id of PUBLIC_STATUS_COMPONENT_IDS) {
+      const monitoredSince = componentHistoryStartedAt?.[id] ?? null;
+      const active: ReadonlyMap<PublicStatusComponentId, PublicComponentState>[] = [];
+      if (monitoredSince != null && monitoredSince < dayEnd) {
+        for (const segment of segments) {
+          if (segment.snapshot && segment.start < dayEnd && segment.end > Math.max(dayStart, monitoredSince)) {
+            active.push(segment.snapshot);
+          }
+        }
+      }
+      if (dayStart === todayStart && live) active.push(live);
       const state: ComponentDayState = active.length === 0
         ? "no-data"
         : active.reduce<PublicComponentState>((lead, snapshot) => worse(lead, snapshot.get(id) ?? "operational"), "operational");
