@@ -1,7 +1,8 @@
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { runBoundedPrune } from "../../lib/bounded-prune";
+import { runBoundedPrune, runBoundedPruneGroup } from "../../lib/bounded-prune";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { retentionDeleteStatement, type WindowedRetentionPolicy } from "@shared/lib/retention-policy";
 
 export interface CappedDeleteResult {
   pruned: number;
@@ -46,6 +47,70 @@ export interface CappedPruneStatement {
   runLimit: number;
 }
 
+/** Up to five independent statements share one binding call per drain round. */
+export const RETENTION_STATEMENTS_PER_BATCH = 5;
+
+export async function deleteCappedGroup(
+  db: D1Database,
+  statements: readonly CappedPruneStatement[],
+  signal?: AbortSignal,
+): Promise<CappedDeleteResult[]> {
+  const results: CappedDeleteResult[] = [];
+  for (let offset = 0; offset < statements.length; offset += RETENTION_STATEMENTS_PER_BATCH) {
+    const group = statements.slice(offset, offset + RETENTION_STATEMENTS_PER_BATCH);
+    const passes = await runBoundedPruneGroup(
+      group,
+      (batches) => db.batch(batches.map(({ index, limit }) => {
+        const statement = group[index];
+        return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
+      })),
+      signal,
+    );
+    results.push(...passes.map((pass) => ({ pruned: pass.deleted, cappedAtLimit: pass.truncated })));
+  }
+  return results;
+}
+
+/** Execute registry entries, preserving shared-budget priority in declaration order. */
+export async function runRetentionPolicies<Key extends string>(
+  db: D1Database,
+  policies: Record<Key, WindowedRetentionPolicy>,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<Record<Key, CappedDeleteResult>> {
+  const results = {} as Record<Key, CappedDeleteResult>;
+  const used = new Map<string, number>();
+  const keys = Object.keys(policies) as Key[];
+  let offset = 0;
+  while (offset < keys.length) {
+    throwIfAborted(signal);
+    const group: Key[] = [];
+    const budgets = new Set<string>();
+    while (offset < keys.length && group.length < RETENTION_STATEMENTS_PER_BATCH) {
+      const key = keys[offset];
+      const budget = policies[key].budgetGroup;
+      if (budget && budgets.has(budget)) break;
+      group.push(key);
+      if (budget) budgets.add(budget);
+      offset += 1;
+    }
+    const statements = group.map((key) => {
+      const policy = policies[key];
+      const statement = retentionDeleteStatement(policy, nowSec);
+      if (policy.budgetGroup) statement.runLimit = Math.max(0, policy.runLimit - (used.get(policy.budgetGroup) ?? 0));
+      return statement;
+    });
+    const passes = await deleteCappedGroup(db, statements, signal);
+    for (let index = 0; index < group.length; index += 1) {
+      const key = group[index];
+      const budget = policies[key].budgetGroup;
+      results[key] = passes[index];
+      if (budget) used.set(budget, (used.get(budget) ?? 0) + passes[index].pruned);
+    }
+  }
+  return results;
+}
+
 /** A read issued after the statements, reporting what the pass left behind. */
 export interface CappedPruneProbe {
   sql: string;
@@ -59,6 +124,7 @@ export interface CappedPruneFamilyResult<StatementKey extends string, ProbeKey e
   changedRows: number;
   changed: Record<StatementKey, number>;
   cappedAtLimit: boolean;
+  retentionTruncated: Record<StatementKey, boolean>;
   probes: Record<ProbeKey, CappedPruneProbeRow>;
   durationMs: number;
   error: string | null;
@@ -84,8 +150,12 @@ export async function runCappedPruneFamily<StatementKey extends string, ProbeKey
 }): Promise<CappedPruneFamilyResult<StatementKey, ProbeKey>> {
   const startedAtMs = Date.now();
   const changed = {} as Record<StatementKey, number>;
+  const retentionTruncated = {} as Record<StatementKey, boolean>;
   const probes = {} as Record<ProbeKey, CappedPruneProbeRow>;
-  for (const key of Object.keys(input.statements) as StatementKey[]) changed[key] = 0;
+  for (const key of Object.keys(input.statements) as StatementKey[]) {
+    changed[key] = 0;
+    retentionTruncated[key] = false;
+  }
   for (const key of Object.keys(input.probes ?? {}) as ProbeKey[]) probes[key] = {};
   let changedRows = 0;
   let cappedAtLimit = false;
@@ -102,6 +172,7 @@ export async function runCappedPruneFamily<StatementKey extends string, ProbeKey
         input.signal,
       );
       changed[key] = pass.pruned;
+      retentionTruncated[key] = pass.cappedAtLimit;
       changedRows += pass.pruned;
       cappedAtLimit ||= pass.cappedAtLimit;
       throwIfAborted(input.signal);
@@ -127,6 +198,7 @@ export async function runCappedPruneFamily<StatementKey extends string, ProbeKey
     changedRows,
     changed,
     cappedAtLimit,
+    retentionTruncated,
     probes,
     durationMs: Math.max(0, Date.now() - startedAtMs),
     error,

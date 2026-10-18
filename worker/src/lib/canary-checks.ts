@@ -20,8 +20,6 @@ import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 import { classifyFreshness } from "./status/freshness-oracle";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 
-export { pruneWorkerCanaryRuns, WORKER_CANARY_RUN_RETENTION_SEC } from "./canary-prune";
-
 export {
   normalizeWorkerCanaryMode,
   type WorkerCanaryMode,

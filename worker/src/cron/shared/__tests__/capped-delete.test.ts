@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { deleteCapped, runCappedPruneFamily } from "../capped-delete";
-import { pruneOldApiKeyRequestRateLimits } from "../../../lib/api-key-request-rate-limit-prune";
 
 interface RecordedCall {
   sql: string;
@@ -74,12 +73,6 @@ describe("capped batch lifecycle", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("shares the retired API-key row budget across both tables", async () => {
-    const { db, calls } = makeScriptedD1({ run: (call) => call.sql.includes("api_key_request_rate_limit_v2") ? 1 : Number(call.binds[1]) });
-    expect(await pruneOldApiKeyRequestRateLimits(db, 123, 2, 4)).toEqual({ deleted: 4, truncated: true });
-    expect(calls.map((call) => call.binds)).toEqual([[123, 2], [123, 2], [123, 1]]);
-    expect(calls.map((call) => call.sql.includes("api_key_request_rate_limit_v2"))).toEqual([true, false, false]);
-  });
 });
 
 describe("runCappedPruneFamily", () => {

@@ -8,7 +8,6 @@ import {
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
   DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
   loadDdrRepairDebtDetails,
-  pruneRepairTasks,
   runWorkerRepairTaskRunner,
   syncDdrRepairDebtTasks,
 } from "../repair-tasks";
@@ -62,20 +61,6 @@ function seedNaturalPredecessorFixture(
 }
 
 describe("repair tasks", () => {
-  it("surfaces a missing mandatory repair-task table during pruning", async () => {
-    const db = mockRepairD1([
-      {
-        match: "DELETE FROM worker_repair_tasks",
-        rows: [],
-        throwError: new Error("D1_ERROR: no such table: worker_repair_tasks"),
-      },
-    ]);
-
-    await expect(pruneRepairTasks(db, NOW - 1)).rejects.toThrow(
-      "D1_ERROR: no such table: worker_repair_tasks",
-    );
-  });
-
   it("surfaces a missing mandatory repair-task table from the runner", async () => {
     const db = mockRepairD1([
       {
@@ -175,68 +160,6 @@ describe("repair tasks", () => {
         { subject_id: "6", state: "open", next_attempt_at: null },
         { subject_id: "7", state: "closed", next_attempt_at: null },
       ]);
-    } finally {
-      db.close();
-    }
-  });
-
-  it("prunes only old closed repair tasks in SQLite", async () => {
-    const db = makeSqliteD1();
-    try {
-      db.sqlite.exec(`
-        INSERT INTO worker_repair_tasks
-          (task_id, kind, subject_id, state, created_at, updated_at)
-        VALUES
-          ('repair:ddr-repair-required-event:old-closed', 'ddr-repair-required-event', 'old-closed', 'closed', ${NOW}, ${NOW - 200}),
-          ('repair:ddr-repair-required-event:new-closed', 'ddr-repair-required-event', 'new-closed', 'closed', ${NOW}, ${NOW - 50}),
-          ('repair:ddr-repair-required-event:old-failed', 'ddr-repair-required-event', 'old-failed', 'failed', ${NOW}, ${NOW - 200});
-      `);
-
-      await expect(pruneRepairTasks(db, NOW - 100)).resolves.toEqual({
-        deleted: 1,
-        truncated: false,
-      });
-      expect(db.sqlite.prepare(
-        "SELECT subject_id, state FROM worker_repair_tasks ORDER BY subject_id",
-      ).all()).toEqual([
-        { subject_id: "new-closed", state: "closed" },
-        { subject_id: "old-failed", state: "failed" },
-      ]);
-    } finally {
-      db.close();
-    }
-  });
-
-  it("caps a 50k terminal-row backlog and reports truncation", async () => {
-    const db = makeSqliteD1();
-    try {
-      db.sqlite.exec(`
-        WITH RECURSIVE rows(n) AS (
-          SELECT 1
-          UNION ALL
-          SELECT n + 1 FROM rows WHERE n < 50000
-        )
-        INSERT INTO worker_repair_tasks
-          (task_id, kind, subject_id, state, created_at, updated_at)
-        SELECT
-          'repair:test:' || n,
-          'test',
-          CAST(n AS TEXT),
-          'closed',
-          ${NOW - 1000},
-          ${NOW - 1000}
-        FROM rows;
-      `);
-
-      const result = await pruneRepairTasks(db, NOW - 100, undefined, {
-        batchLimit: 5_000,
-        runLimit: 20_000,
-      });
-
-      expect(result).toEqual({ deleted: 20_000, truncated: true });
-      expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM worker_repair_tasks").get()).toEqual({
-        count: 30_000,
-      });
     } finally {
       db.close();
     }

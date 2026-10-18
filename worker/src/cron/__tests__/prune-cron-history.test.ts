@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPruneCronHistory } from "../prune-cron-history";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { WORKER_CANARY_RUN_RETENTION_SEC } from "../../lib/canary-checks";
+import { WORKER_CANARY_RUN_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -34,6 +34,40 @@ function toUtcDateString(timestampSec: number): string {
 }
 
 describe("runPruneCronHistory", () => {
+  it("executes the sixteen registry entries in four binding calls and reports every cap", async () => {
+    const { db } = createTestDb();
+    const batch = vi.spyOn(db, "batch");
+    const result = await runPruneCronHistory(db);
+    expect(batch).toHaveBeenCalledTimes(4);
+    const metadata = JSON.parse(result.metadata!);
+    expect(Object.keys(metadata.retentionTruncated)).toEqual(expect.arrayContaining([
+      "cronRuns", "producerHistory", "repairTasks", "canaryRuns", "recoveryCheckpoints",
+      "selectorSnapshotDailyQuota", "blockTimestampCache", "slotExecutions",
+      "apiRequestConsumerStats", "siteDataRequestStats", "apiKeyRequestStats",
+      "safetyScoreJournal", "safetyScoreAttempts", "safetyScoreCaptureArchive",
+      "selfServeRequestRateLimits", "selfServeIssuanceRateLimits",
+    ]));
+    expect(Object.values(metadata.retentionTruncated).every((flag) => flag === false)).toBe(true);
+  });
+
+  it("surfaces a missing repair table rather than treating the failed batch as empty", async () => {
+    const { db, sqlite } = createTestDb();
+    sqlite.exec("DROP TABLE worker_repair_tasks");
+    await expect(runPruneCronHistory(db)).rejects.toThrow("worker_repair_tasks");
+  });
+
+  it("preserves the smaller repair-task ceiling and leaves failed tasks untouched", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 50000)
+      INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at)
+      SELECT 'repair-' || id, 'test', CAST(id AS TEXT), 'closed', ?, ? FROM n`).run(now, now - ONE_WEEK_SEC - 1);
+    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES ('failed', 'test', 'failed', 'failed', ?, ?)", now, now - ONE_WEEK_SEC - 1);
+    const result = await runPruneCronHistory(db);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ repairTasksDeleted: 20_000, retentionTruncated: { repairTasks: true } });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_repair_tasks").get()).toEqual({ count: 30_001 });
+  });
+
   it("throws before D1 work when the cron signal is already aborted", async () => {
     const { db } = createTestDb();
     const controller = new AbortController();

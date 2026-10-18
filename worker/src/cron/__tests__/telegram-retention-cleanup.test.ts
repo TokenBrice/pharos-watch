@@ -348,6 +348,22 @@ function countForSource(sqlite: DatabaseSync, table: string, sourceEventId: stri
 }
 
 describe("runTelegramRetentionCleanup", () => {
+  it("batches independent retention steps and reports previously grouped per-entry caps", async () => {
+    const { db } = setupLatestSchema();
+    const batch = vi.spyOn(db, "batch");
+    const result = await runTelegramRetentionCleanup(db);
+    const metadata = JSON.parse(result.metadata!);
+    expect(batch.mock.calls.length).toBeLessThanOrEqual(15);
+    expect(batch.mock.calls.filter(([statements]) => statements.length > 1).length).toBeGreaterThanOrEqual(6);
+    expect(metadata.retentionTruncated).toMatchObject({
+      legacyTargetItems: false, legacyTargets: false, legacyTerminalJobs: false,
+      staleUnresolvedJobs: false, staleUnresolvedSources: false,
+      replayJobTargetItems: false, replayJobTargets: false, replayJobs: false,
+      replaySourceEvents: false, auditJobTargetItems: false, auditJobTargets: false,
+      auditSourceEvents: false, commandCooldownCache: false, miniAppAdoptionSessionCache: false,
+    });
+  });
+
   it("throws before D1 work when the cron signal is already aborted", async () => {
     const { db } = setupLatestSchema();
     const controller = new AbortController();

@@ -2,7 +2,9 @@ import { throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { type CappedDeleteResult, deleteCapped, runCappedPruneFamily } from "./shared/capped-delete";
+import { type CappedDeleteResult, type CappedPruneStatement, deleteCapped, deleteCappedGroup, runCappedPruneFamily } from "./shared/capped-delete";
+import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "../lib/bounded-prune";
+import { TELEGRAM_RETENTION_WINDOWS } from "@shared/lib/retention-policy";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
   countTelegramProcessedUpdateBacklog,
@@ -17,17 +19,18 @@ import {
 } from "../lib/telegram/adoption-analytics";
 
 const DAY_SEC = 24 * 60 * 60;
-const ALERT_AUDIT_RETENTION_SEC = 90 * DAY_SEC;
-const AUTHORITATIVE_WORKFLOW_RETENTION_SEC = DAY_SEC;
-const AUTHORITATIVE_REPLAY_RETENTION_SEC = 14 * DAY_SEC;
-const STALE_UNRESOLVED_RETENTION_SEC = 30 * DAY_SEC;
-const USAGE_DAILY_RETENTION_SEC = 400 * DAY_SEC;
-const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
-const SHORT_LIVED_CHAT_CACHE_RETENTION_SEC = 7 * DAY_SEC;
-const RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC = 30 * DAY_SEC;
+const {
+  alertAudit: ALERT_AUDIT_RETENTION_SEC,
+  authoritativeWorkflow: AUTHORITATIVE_WORKFLOW_RETENTION_SEC,
+  authoritativeReplay: AUTHORITATIVE_REPLAY_RETENTION_SEC,
+  staleUnresolved: STALE_UNRESOLVED_RETENTION_SEC,
+  usageDaily: USAGE_DAILY_RETENTION_SEC,
+  chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC,
+  shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+  reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC,
+} = TELEGRAM_RETENTION_WINDOWS;
 const MINI_APP_MUTATION_BURST_CACHE_PREFIX = "telegram:mini-app-mutation-burst:";
-const RETENTION_DELETE_BATCH_LIMIT = 10_000;
-const HIGH_VOLUME_RETENTION_DELETE_LIMIT = 100_000;
+const HIGH_VOLUME_RETENTION_DELETE_LIMIT = RETENTION_DELETE_RUN_LIMIT;
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT = 1_000;
 const TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS = 2_000;
 
@@ -147,6 +150,7 @@ interface TelegramHighGrowthRetentionResult {
   oldestLegacyTargetEligibleAt: number | null;
   oldestUnresolvedSourceRemainingAt: number | null;
   cappedAtLimit: boolean;
+  retentionTruncated: Record<string, boolean>;
   durationMs: number;
   error: string | null;
 }
@@ -197,29 +201,6 @@ async function pruneTelegramProcessedUpdatesCapped(
 
 export type { CappedDeleteResult };
 
-interface CappedDeleteOptions {
-  signal?: AbortSignal;
-  totalLimit?: number;
-  /** Cutoff placeholders the statement binds ahead of its LIMIT. */
-  cutoffBindCount?: 1 | 2;
-}
-
-function deleteOlderThanCapped(
-  db: D1Database,
-  sql: string,
-  cutoff: number | string,
-  options: CappedDeleteOptions = {},
-): Promise<CappedDeleteResult> {
-  const { signal, totalLimit = RETENTION_DELETE_BATCH_LIMIT, cutoffBindCount = 2 } = options;
-  return deleteCapped(
-    db,
-    sql,
-    (limit) => (cutoffBindCount === 2 ? [cutoff, cutoff, limit] : [cutoff, limit]),
-    RETENTION_DELETE_BATCH_LIMIT,
-    totalLimit,
-    signal,
-  );
-}
 
 async function pruneTelegramHighGrowthRetention(
   db: D1Database,
@@ -350,6 +331,7 @@ ${indentSqlFragment(buildSourceEventChildAbsenceSql(true), 21)}
     oldestLegacyTargetEligibleAt: family.probes.oldestEligibleTarget.oldest_eligible_at ?? null,
     oldestUnresolvedSourceRemainingAt: family.probes.oldestUnresolvedSource.oldest_remaining_at ?? null,
     cappedAtLimit: family.cappedAtLimit,
+    retentionTruncated: family.retentionTruncated,
     durationMs: family.durationMs,
     error: family.error,
   };
@@ -488,18 +470,24 @@ function makeSourceChildRetentionDeleteStep(
   };
 }
 
-function runTelegramRetentionDeleteStep(
-  db: D1Database,
-  step: TelegramRetentionDeleteStep,
-  signal?: AbortSignal,
-): Promise<CappedDeleteResult> {
-  return "cachePrefix" in step
-    ? deleteCachePrefixOlderThanCapped(db, step.cachePrefix, step.cutoff, signal)
-    : deleteOlderThanCapped(db, step.sql, step.cutoff, {
-      signal,
-      totalLimit: step.totalLimit,
-      cutoffBindCount: step.cutoffBindCount,
-    });
+function telegramRetentionStatement(step: TelegramRetentionDeleteStep): CappedPruneStatement {
+  if ("cachePrefix" in step) {
+    return {
+      sql: `DELETE FROM cache WHERE key IN (
+        SELECT key FROM cache WHERE key LIKE ? AND updated_at < ?
+        ORDER BY updated_at ASC, key ASC LIMIT ?
+      )`,
+      bindsForLimit: (limit) => [`${step.cachePrefix}%`, step.cutoff, limit],
+      batchLimit: RETENTION_DELETE_BATCH_LIMIT,
+      runLimit: RETENTION_DELETE_BATCH_LIMIT,
+    };
+  }
+  return {
+    sql: step.sql,
+    bindsForLimit: (limit) => step.cutoffBindCount === 2 ? [step.cutoff, step.cutoff, limit] : [step.cutoff, limit],
+    batchLimit: RETENTION_DELETE_BATCH_LIMIT,
+    runLimit: step.totalLimit ?? RETENTION_DELETE_BATCH_LIMIT,
+  };
 }
 
 function buildRetentionStepReport(
@@ -781,11 +769,25 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
     },
   ] as const satisfies readonly TelegramRetentionDeleteStep[];
 
-  const stepResults = {} as Record<(typeof retentionDeleteSteps)[number]["name"], CappedDeleteResult>;
+  const stepResults: Record<string, CappedDeleteResult> = {};
+  // These boundaries drain multi-batch children before any parent can be
+  // deleted. Within a phase, statements are independent OR single-batch steps
+  // whose declaration order is preserved by D1's transactional batch.
+  const phaseStarts: Record<string, true> = {
+    replayJobTargets: true, targetPlans: true, replaySourceEvents: true,
+    auditJobTargetItems: true, auditJobTargets: true, auditJobs: true,
+  };
+  let phase: TelegramRetentionDeleteStep[] = [];
+  const drainPhase = async () => {
+    const results = await deleteCappedGroup(db, phase.map(telegramRetentionStatement), signal);
+    for (let index = 0; index < phase.length; index += 1) stepResults[phase[index].name] = results[index];
+    phase = [];
+  };
   for (const step of retentionDeleteSteps) {
-    throwIfAborted(signal);
-    stepResults[step.name] = await runTelegramRetentionDeleteStep(db, step, signal);
+    if (phaseStarts[step.name] && phase.length > 0) await drainPhase();
+    phase.push(step);
   }
+  if (phase.length > 0) await drainPhase();
 
   const retentionStepReport = buildRetentionStepReport(retentionDeleteSteps, stepResults);
 
@@ -813,6 +815,13 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
       highGrowthRetention: { ...highGrowthRetention },
       ...retentionStepReport.pruned,
       expiredTargetsReconciled,
+      retentionTruncated: {
+        processedUpdates: processedUpdates.cappedAtLimit || processedUpdates.timeBudgetExhausted || processedUpdates.remainingBacklog.count > 0,
+        recapTargets: recapTargets.cappedAtLimit,
+        highGrowthRetention: highGrowthRetention.cappedAtLimit,
+        ...highGrowthRetention.retentionTruncated,
+        ...Object.fromEntries(Object.entries(stepResults).map(([key, result]) => [key, result.cappedAtLimit])),
+      },
       runBudgetTruncated: processedUpdates.remainingBacklog.count > 0 || recapTargets.cappedAtLimit || retentionDeleteCapped,
       deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
       highVolumeDeleteLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
