@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import {
@@ -13,7 +14,8 @@ import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-publi
 import { projectSafetyScoreV9PublicationForMaterialization } from "./report-cards-v9-cache";
 import { SafetyScoreV9StorageMetadataSchema, SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES, parseSafetyScoreV9Publication, publicationIdentityFromStorageEnvelope } from "./safety-score-v9/publication-codec";
 import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
-import { executeAtomicBatch, prepareMultiRowInsertStatements } from "./db";
+import { D1_MAX_BOUND_PARAMETERS, executeAtomicBatch, prepareMultiRowInsertStatements } from "./db";
+import { D1_BATCH_SIZE } from "./constants";
 import { sha256HexFromUtf8Chunks } from "./hash";
 import { getCache } from "./db-cache";
 import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
@@ -64,9 +66,11 @@ function* buildV9PublicMaterializations(
 }
 
 /**
- * Immutable, unselected rows can be staged before acceptance. Only the final
- * canonical-pointer transaction makes them readable. Keep at most one artifact,
- * and bind at most four fragments (1 MiB) per write; release bodies after IO.
+ * Generate one artifact at a time, but coalesce its rows with consecutive small
+ * representations. Per-representation IO makes the cohort exceed the lane
+ * deadline. Bound each serial write to the old four-fragment byte envelope,
+ * including manifests, other bindings and SQL, without retaining all details.
+ * Only the final canonical-pointer transaction makes staged rows readable.
  */
 export async function stageV9PublicMaterialization(
   db: D1Database,
@@ -77,36 +81,69 @@ export async function stageV9PublicMaterialization(
 ): Promise<V9StagedPublicMaterialization> {
   let manifest: V9PublicRepresentationManifest | undefined;
   let siteCount = 0;
+  const groups = [
+    { sql: `INSERT OR IGNORE INTO safety_score_public_manifests
+      (generation_id, projection_version, payload_sha256, manifest, created_at, retired_at)`, columns: 6, rows: [] as (string | number)[][] },
+    { sql: `INSERT OR IGNORE INTO safety_score_public_fragments
+      (generation_id, projection_version, payload_sha256, ordinal, body)`, columns: 5, rows: [] as (string | number)[][] },
+    { sql: `INSERT OR IGNORE INTO safety_score_site_manifests
+      (generation_id, projection_version, payload_sha256, representation_key, manifest, created_at, retired_at)`, columns: 7, rows: [] as (string | number)[][] },
+    { sql: `INSERT OR IGNORE INTO safety_score_site_fragments
+      (generation_id, projection_version, payload_sha256, representation_key, ordinal, body)`, columns: 6, rows: [] as (string | number)[][] },
+  ];
+  const maxBatchBytes = 4 * V9_PUBLIC_FRAGMENT_MAX_BYTES;
+  let batchBytes = 0;
+  let statementCount = 0;
+  const flush = async () => {
+    throwIfAborted(signal);
+    if (statementCount === 0) return;
+    await executeAtomicBatch(db, groups.flatMap(group =>
+      prepareMultiRowInsertStatements(db, group.sql, group.rows)), { signal });
+    for (const group of groups) group.rows.length = 0;
+    batchBytes = 0;
+    statementCount = 0;
+  };
+  const appendRow = async (group: typeof groups[number], row: (string | number)[], bodyBytes?: number) => {
+    const rowsPerStatement = Math.floor(D1_MAX_BOUND_PARAMETERS / group.columns);
+    // Fragment byte lengths were already authenticated by the materializer;
+    // do not allocate/encode their bodies a second time just to budget IO.
+    const bindingBytes = row.reduce<number>((bytes, value, index) => bytes +
+      (bodyBytes !== undefined && index === row.length - 1 ? bodyBytes
+        : typeof value === "string" ? Buffer.byteLength(value, "utf8") : 8), 0);
+    const newStatementBytes = Buffer.byteLength(group.sql, "utf8") + " VALUES ".length + 3 * group.columns;
+    const continuedStatementBytes = 2 + 3 * group.columns;
+    if (bindingBytes + newStatementBytes > maxBatchBytes) throw new Error("v9-materialization-staging-row-oversized");
+    let startsStatement = group.rows.length % rowsPerStatement === 0;
+    let sqlBytes = startsStatement ? newStatementBytes : continuedStatementBytes;
+    if (batchBytes + bindingBytes + sqlBytes > maxBatchBytes ||
+        statementCount + Number(startsStatement) > D1_BATCH_SIZE) {
+      await flush();
+      startsStatement = true;
+      sqlBytes = newStatementBytes;
+    }
+    group.rows.push(row);
+    batchBytes += bindingBytes + sqlBytes;
+    statementCount += Number(startsStatement);
+  };
   for (const artifact of buildV9PublicMaterializations(publication, health, payloadSha256)) {
     throwIfAborted(signal);
     const m = artifact.manifest;
     const key = m.representationKey;
     const now = Math.floor(Date.now() / 1000);
-    for (let offset = 0; offset < artifact.fragments.length; offset += 4) {
-      const identity = [m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256];
-      const manifestStatement = key === undefined
-        ? db.prepare(`INSERT OR IGNORE INTO safety_score_public_manifests
-          (generation_id, projection_version, payload_sha256, manifest, created_at, retired_at)
-          VALUES (?, ?, ?, ?, ?, ?)`).bind(...identity, stableJsonStringifyV1(m), now, now)
-        : db.prepare(`INSERT OR IGNORE INTO safety_score_site_manifests
-          (generation_id, projection_version, payload_sha256, representation_key, manifest, created_at, retired_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(...identity, key, stableJsonStringifyV1(m), now, now);
-      const rows = artifact.fragments.slice(offset, offset + 4).map((body, index) =>
-        key === undefined ? [...identity, offset + index, body] : [...identity, key, offset + index, body]);
-      await executeAtomicBatch(db, [
-        manifestStatement,
-        ...prepareMultiRowInsertStatements(db, key === undefined
-          ? `INSERT OR IGNORE INTO safety_score_public_fragments
-            (generation_id, projection_version, payload_sha256, ordinal, body)`
-          : `INSERT OR IGNORE INTO safety_score_site_fragments
-            (generation_id, projection_version, payload_sha256, representation_key, ordinal, body)`, rows),
-      ], { signal });
-      artifact.fragments.fill("", offset, offset + 4);
+    const identity = [m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256];
+    const manifestGroup = key === undefined ? groups[0]! : groups[2]!;
+    const fragmentGroup = key === undefined ? groups[1]! : groups[3]!;
+    const representation = key === undefined ? identity : [...identity, key];
+    await appendRow(manifestGroup, [...representation, stableJsonStringifyV1(m), now, now]);
+    for (let ordinal = 0; ordinal < artifact.fragments.length; ordinal++) {
+      await appendRow(fragmentGroup, [...representation, ordinal, artifact.fragments[ordinal]!], m.fragments[ordinal]!.bytes);
+      artifact.fragments[ordinal] = "";
     }
     artifact.fragments.length = 0;
     if (key === undefined) manifest = m;
     else siteCount++;
   }
+  await flush();
   if (!manifest) throw new Error("v9-public-materialization-missing");
   return { manifest, siteCount };
 }
