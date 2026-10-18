@@ -6,6 +6,7 @@ import { makeCaptureDb, type DbCall } from "../../../lib/__tests__/cron-progress
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import type { ScheduledExecutionFence } from "../../../lib/scheduled-slot-fence";
+import { loadProducerHeads } from "../../../lib/producer-history";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
@@ -142,6 +143,6 @@ describe("scheduled runtime context", () => {
     });
     expect(sqlite.prepare("SELECT terminal_source FROM scheduled_child_attempts").get()).toEqual({ terminal_source: "real" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT invocation_count FROM worker_producer_heads").get()).toEqual({ invocation_count: 1 });
+    expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1 })]);
   });
 });

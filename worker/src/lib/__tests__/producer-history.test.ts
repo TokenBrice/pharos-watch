@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { loadProducerHeads, prepareProducerOutcomeStatements, pruneProducerHistory, recordProducerOutcome, utcCalendarMonth } from "../producer-history";
 import { recordBudgetSurfaceTelemetry } from "../budget-surface-telemetry";
@@ -19,7 +19,7 @@ describe("producer history", () => {
     expect(statements).toHaveLength(3);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_producer_history").get()).toEqual({ count: 0 });
     await db.batch(statements);
-    expect(sqlite.prepare("SELECT invocation_count FROM worker_producer_heads").get()).toEqual({ invocation_count: 1 });
+    expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1, productiveCount: 1 })]);
   });
   it("separates latest invocation from latest productive publication without double-counting retries", async () => {
     const { sqlite, db } = createMigratedDb();
@@ -262,6 +262,69 @@ describe("producer history", () => {
         productiveCount: 1,
       }),
     ]);
+  });
+
+  it("keeps completion writes constant and never recounts retained history", async () => {
+    const { db } = createMigratedDb();
+    const prepare = vi.spyOn(db, "prepare");
+    await recordProducerOutcome(db, {
+      scheduleKey: "quarterHourly", job: "sync-stablecoins", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "constant", idempotencyKey: "constant",
+      invokedAt: 100, completedAt: 101, outcome: "ok", productivity: { productive: true },
+    });
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare.mock.calls.every(([sql]) => !/\bCOUNT\s*\(/i.test(sql))).toBe(true);
+  });
+
+  it("matches legacy recounts after retention deletes without another completion", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const now = 2_000_000_000;
+    const identities = [
+      { scheduleKey: "daily0300Utc", job: "regular", producerPath: "path", producerKind: "scheduled-job" },
+      { scheduleKey: "daily0300Utc", job: "budget", producerPath: "path", producerKind: "budget-only" },
+      { scheduleKey: "daily0300Utc", job: "monthly", producerPath: "path", producerKind: "scheduled-job" },
+      { scheduleKey: "daily0300Utc", job: "empty", producerPath: "path", producerKind: "scheduled-job" },
+    ];
+    for (const identity of identities) {
+      for (const [ageDays, productive] of [[600, true], [40, false], [0, true]] as const) {
+        if (identity.job === "empty" && ageDays !== 600) continue;
+        const completedAt = now - ageDays * 86_400;
+        await recordProducerOutcome(db, {
+          ...identity, invocationId: `${identity.job}-${ageDays}`, idempotencyKey: `${identity.job}-${ageDays}`,
+          invokedAt: completedAt, completedAt, outcome: "ok",
+          calendarPeriod: identity.job === "monthly" ? utcCalendarMonth(completedAt) : null,
+          productivity: { productive },
+        });
+      }
+    }
+    const before = await loadProducerHeads(db);
+    const expectLegacyCounts = async () => {
+      const heads = await loadProducerHeads(db);
+      for (const head of heads) {
+        const counts = sqlite.prepare(`SELECT COUNT(*) AS invocationCount,
+          COUNT(CASE WHEN productive = 1 THEN 1 END) AS productiveCount FROM worker_producer_history
+          WHERE schedule_key = ? AND job = ? AND producer_path = ? AND producer_kind = ?`)
+          .get(head.scheduleKey, head.job, head.producerPath, head.producerKind);
+        expect(head).toMatchObject(counts as Record<string, number>);
+      }
+      return heads;
+    };
+    expect(await expectLegacyCounts()).toEqual(before);
+    await pruneProducerHistory(db, now);
+    const after = await expectLegacyCounts();
+    expect(after.map(({ job, invocationCount, productiveCount }) => ({ job, invocationCount, productiveCount })))
+      .toEqual([
+        { job: "budget", invocationCount: 2, productiveCount: 1 },
+        { job: "empty", invocationCount: 0, productiveCount: 0 },
+        { job: "monthly", invocationCount: 2, productiveCount: 1 },
+        { job: "regular", invocationCount: 1, productiveCount: 1 },
+      ]);
+    expect(after.map(({ invocationCount: _invocations, productiveCount: _productive, ...head }) => head))
+      .toEqual(before.map(({ invocationCount: _invocations, productiveCount: _productive, ...head }) => head));
+    // More than D1's positional-parameter budget still uses one JSON identity binding.
+    expect(await loadProducerHeads(db, Array.from({ length: 40 }, () => identities[0]!)))
+      .toEqual(after.filter((head) => head.job === "regular"));
+    expect(await loadProducerHeads(db, [])).toEqual([]);
   });
 
   it("retains budget and calendar history beyond the regular window", async () => {

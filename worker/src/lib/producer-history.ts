@@ -2,7 +2,8 @@ import type { PublicationSurfaceId } from "@shared/types/status";
 import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { type CappedDeleteResult, deleteCapped } from "../cron/shared/capped-delete";
+import { producerHistoryRetentionPolicy } from "@shared/lib/retention-policy";
+import { runRetentionPolicies, type CappedDeleteResult } from "../cron/shared/capped-delete";
 import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "./bounded-prune";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 
@@ -95,9 +96,6 @@ interface ProducerHeadRow {
 
 const MAX_HISTORY_METADATA_CHARS = 16_000;
 const MAX_HISTORY_ERROR_CHARS = 1_000;
-const REGULAR_HISTORY_RETENTION_SEC = 30 * 24 * 60 * 60;
-const BUDGET_HISTORY_RETENTION_SEC = 90 * 24 * 60 * 60;
-const CALENDAR_HISTORY_RETENTION_SEC = 550 * 24 * 60 * 60;
 
 function normalizeHistoryMetadata(metadata: string | null | undefined): string | null {
   const parsed = parseObjectMetadata(metadata);
@@ -206,9 +204,9 @@ function prepareGenericSurfacePublications(
 }
 
 /**
- * Persists an append-only invocation row and its path-scoped head. Head counts
- * are derived from the idempotent history table so retrying a partial write
- * cannot double count an invocation.
+ * Persists an idempotent invocation row and its path-scoped latest head.
+ * Retained-history counts are aggregated only by loadProducerHeads, so retries,
+ * terminal replacements and pruning never require completion-path recounts.
  */
 export function prepareProducerOutcomeStatements(
   db: D1Database, input: RecordProducerOutcomeInput, guard?: ProducerTerminalGuard,
@@ -304,8 +302,8 @@ export function prepareProducerOutcomeStatements(
          last_invocation_id, last_worker_version, last_invoked_at, last_completed_at,
          last_outcome, last_error, last_productive_invocation_id,
          last_productive_at, last_productive_item_count, last_publication_at,
-         last_publications_json, invocation_count, productive_count, updated_at
-       ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?
+         last_publications_json, updated_at
+       ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE ${guard ? `EXISTS (
          SELECT 1 FROM worker_producer_history WHERE idempotency_key = ?
        ) AND EXISTS (SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?)` : "1"}
@@ -350,21 +348,6 @@ export function prepareProducerOutcomeStatements(
               OR excluded.last_publication_at >= worker_producer_heads.last_publication_at)
            THEN excluded.last_publications_json
            ELSE worker_producer_heads.last_publications_json END,
-         invocation_count = (
-           SELECT COUNT(*) FROM worker_producer_history history
-            WHERE history.schedule_key = excluded.schedule_key
-              AND history.job = excluded.job
-              AND history.producer_path = excluded.producer_path
-              AND history.producer_kind = excluded.producer_kind
-         ),
-         productive_count = (
-           SELECT COUNT(*) FROM worker_producer_history history
-            WHERE history.schedule_key = excluded.schedule_key
-              AND history.job = excluded.job
-              AND history.producer_path = excluded.producer_path
-              AND history.producer_kind = excluded.producer_kind
-              AND history.productive = 1
-         ),
          updated_at = MAX(worker_producer_heads.updated_at, excluded.updated_at)`,
       )
       .bind(
@@ -383,7 +366,6 @@ export function prepareProducerOutcomeStatements(
         productive ? (input.itemCount ?? null) : null,
         publicationAt,
         publicationsJson,
-        productive ? 1 : 0,
         input.completedAt,
         ...(guard ? [guard.attemptKey, guard.attemptKey, guard.terminalToken] : []),
       ),
@@ -403,34 +385,42 @@ export async function loadProducerHeads(
   db: D1Database,
   identities?: readonly Pick<ProducerIdentity, "scheduleKey" | "job" | "producerPath" | "producerKind">[],
 ): Promise<ProducerHead[]> {
+  if (identities?.length === 0) return [];
+  const identityWhere = identities
+    ? `WHERE (heads.schedule_key, heads.job, heads.producer_path, heads.producer_kind) IN (
+         SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]'),
+                json_extract(value, '$[2]'), json_extract(value, '$[3]')
+           FROM json_each(?)
+       )`
+    : "";
+  // The identity/productive index ranges each selected head once for both counts.
+  // Count retained rows, not a wall-clock cutoff: capped pruning may leave older rows.
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT schedule_key, job, producer_path, producer_kind,
-              last_invocation_id, last_worker_version, last_invoked_at,
-              last_completed_at, last_outcome, last_error,
-              last_productive_invocation_id, last_productive_at,
-              last_productive_item_count, last_publication_at,
-              invocation_count, productive_count
-         FROM worker_producer_heads
-        ORDER BY schedule_key, producer_path, job, producer_kind`,
+        `SELECT heads.schedule_key, heads.job, heads.producer_path, heads.producer_kind,
+              heads.last_invocation_id, heads.last_worker_version, heads.last_invoked_at,
+              heads.last_completed_at, heads.last_outcome, heads.last_error,
+              heads.last_productive_invocation_id, heads.last_productive_at,
+              heads.last_productive_item_count, heads.last_publication_at,
+              COUNT(history.productive) AS invocation_count,
+              COUNT(CASE WHEN history.productive = 1 THEN 1 END) AS productive_count
+         FROM worker_producer_heads heads
+         LEFT JOIN worker_producer_history history
+           ON history.schedule_key = heads.schedule_key
+          AND history.job = heads.job
+          AND history.producer_path = heads.producer_path
+          AND history.producer_kind = heads.producer_kind
+         ${identityWhere}
+        GROUP BY heads.schedule_key, heads.job, heads.producer_path, heads.producer_kind
+        ORDER BY heads.schedule_key, heads.producer_path, heads.job, heads.producer_kind`,
       )
+      .bind(...(identities ? [JSON.stringify(identities.map((identity) => [
+        identity.scheduleKey, identity.job, identity.producerPath, identity.producerKind,
+      ]))] : []))
       .all<ProducerHeadRow>(),
   );
-  const identityKeys = identities
-    ? new Set(
-        identities.map(
-          (identity) =>
-            `${identity.scheduleKey}\u0000${identity.job}\u0000${identity.producerPath}\u0000${identity.producerKind}`,
-        ),
-      )
-    : null;
   return (rows.results ?? [])
-    .filter(
-      (row) =>
-        !identityKeys ||
-        identityKeys.has(`${row.schedule_key}\u0000${row.job}\u0000${row.producer_path}\u0000${row.producer_kind}`),
-    )
     .map((row) => ({
       scheduleKey: row.schedule_key,
       job: row.job,

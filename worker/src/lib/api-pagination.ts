@@ -50,6 +50,8 @@ interface PaginatedEventQueryConfig<TRow, TEvent> {
   limit: number;
   offset: number;
   includeTotal?: boolean;
+  /** Atomic count preparation; the final statement must return one { total } row. */
+  countStatements?: readonly D1PreparedStatement[];
   mapRow: (row: TRow) => TEvent;
   cursor?: PaginatedEventCursorConfig<TRow>;
   cursorValues?: CursorPrimitive[] | null;
@@ -85,6 +87,7 @@ interface PaginatedEventResponseConfig<TRow, TEvent, TExtra extends Record<strin
   queryComment?: string;
   conditions: string[];
   filterBindings: (string | number)[];
+  countStatements?: readonly D1PreparedStatement[];
   mapRow: (row: TRow) => TEvent;
   searchParams: URLSearchParams;
   pagination: PaginatedEventPaginationConfig;
@@ -267,15 +270,17 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
       limit: 0,
       offset: 0,
     });
-    const [countBatch, dataResult] = await executeAtomicBatch(db, [
+    const countStatements = config.countStatements ?? [
       // SAFETY: `tableName` has already passed the explicit `PAGINATED_TABLES` allowlist check above.
       db.prepare(
         `SELECT ${buildSqlComment(config.queryComment, "count")}COUNT(*) as total FROM ${fromClause}${countWhere}`,
       ).bind(...config.filterBindings),
-      dataStatement,
-    ], { returnResults: true });
+    ];
+    if (countStatements.length === 0) throw new Error("Pagination count statements must not be empty");
+    const results = await executeAtomicBatch(db, [...countStatements, dataStatement], { returnResults: true });
+    const countBatch = results[countStatements.length - 1]!;
     total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
-    dataBatch = dataResult as D1Result<TRow>;
+    dataBatch = results[countStatements.length] as D1Result<TRow>;
   } else {
     dataBatch = await dataStatement.all<TRow>();
   }
@@ -367,6 +372,7 @@ export async function buildPaginatedEventResponse<
     limit: pagination.limit,
     offset: pagination.offset,
     includeTotal: pagination.includeTotal,
+    countStatements: config.countStatements,
     mapRow: config.mapRow,
     cursor: config.cursor,
     cursorValues: pagination.cursorValues,

@@ -556,7 +556,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     expect(
       sqlite
         .prepare(
-          `SELECT last_invocation_id, last_outcome, invocation_count
+          `SELECT last_invocation_id, last_outcome
          FROM worker_producer_heads`,
         )
         .all(),

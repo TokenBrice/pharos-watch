@@ -18,7 +18,7 @@ describe("handleDepegEvents", () => {
         rows: [],
         throwError: new Error("projection read timed out"),
       },
-      { match: "COUNT", rows: [{ total: 2 }] },
+      { match: "pharos:depeg-events:count", rows: [{ total: 2 }] },
       { match: "depeg_events", rows: [row, { ...row, id: 2 }] },
     ]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
@@ -50,7 +50,7 @@ describe("handleDepegEvents", () => {
   it("keeps a successful empty incident projection readable", async () => {
     const db = mockD1([
       { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
-      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "pharos:depeg-events:count", rows: [{ total: 1 }] },
       { match: "depeg_events", rows: [row] },
     ]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
@@ -60,7 +60,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("returns 200 with events and total", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]);
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=usdt-tether"));
     const body = (await readJsonResponse(res, 200)) as {
       events: unknown[];
@@ -75,7 +75,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("maps snake_case to camelCase via rowToDepegEvent", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]);
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     const body = (await res.json()) as { events: Array<Record<string, unknown>> };
     const event = body.events[0];
@@ -89,7 +89,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("exposes closeReason for terminal depeg rows", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 1 }] }, {
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, {
       match: "depeg_events",
       rows: [
         makeDepegRow({
@@ -105,7 +105,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("maps optional provenance JSON while preserving legacy rows", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 2 }] }, {
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 2 }] }, {
       match: "depeg_events",
       rows: [
         {
@@ -132,7 +132,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("returns 200 with empty results when no data", async () => {
-    const emptyDb = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 0 }] }, { match: "depeg_events", rows: [] },]);
+    const emptyDb = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 0 }] }, { match: "depeg_events", rows: [] },]);
     const res = await handleDepegEvents(emptyDb, new URL("https://x/api/depeg-events"));
     const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(0);
@@ -147,7 +147,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("filters active events", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [makeDepegRow({ ended_at: null })] },]) as MockD1Database;
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [makeDepegRow({ ended_at: null })] },]) as MockD1Database;
 
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true"));
 
@@ -156,7 +156,7 @@ describe("handleDepegEvents", () => {
     expect(body.total).toBe(1);
     const dataQuery = db
       .getHistory()
-      .find((entry) => entry.sql.includes("FROM depeg_events") && !entry.sql.includes("COUNT(*)"));
+      .find((entry) => entry.sql.includes("pharos:depeg-events:page"));
     expect(dataQuery?.sql).toContain("ended_at IS NULL");
   });
 
@@ -167,14 +167,14 @@ describe("handleDepegEvents", () => {
   });
 
   it("excludes superseded rows from active DDR incident repairs", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]) as MockD1Database;
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]) as MockD1Database;
 
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx"));
 
     expect(res.status).toBe(200);
     const dataQuery = db
       .getHistory()
-      .find((entry) => entry.sql.includes("FROM depeg_events") && !entry.sql.includes("COUNT(*)"));
+      .find((entry) => entry.sql.includes("pharos:depeg-events:page"));
     expect(dataQuery?.sql).toContain("depeg_resolver_incident_event_links");
     expect(dataQuery?.sql).toContain("links.event_id != incidents.current_event_id");
   });
@@ -200,7 +200,7 @@ describe("handleDepegEvents", () => {
           },
         ],
       },
-      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "pharos:depeg-events:count", rows: [{ total: 1 }] },
       { match: "FROM depeg_events_with_provenance", rows: [currentRow] },
     ]) as MockD1Database;
 
@@ -220,7 +220,7 @@ describe("handleDepegEvents", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "COUNT", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [makeDepegRow({ started_at: now - 7 * 86400 })] },
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [makeDepegRow({ started_at: now - 7 * 86400 })] },
     { match: "cron_runs", rows: [], first: { started_at: now - 45 } },]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     expect(res.headers.get("X-Data-Age")).toBe("45");
@@ -272,7 +272,7 @@ describe("handleDepegEvents", () => {
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
     expect(body.totalExact).toBe(false);
-    expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*) as total"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("depeg-events:count") || entry.sql.includes("INSERT INTO cache"))).toBe(false);
   });
 
   it("does not query or emit derived incident counts", async () => {
