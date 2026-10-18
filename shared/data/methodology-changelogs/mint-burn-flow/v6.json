@@ -8,7 +8,7 @@
     "impact": [
       "A known-valuation subtotal is a lower bound, and a ratio of two lower bounds bounds nothing: a day with unpriced burns could read Balanced while the true balance was burn-dominated. getLiteralMintingPressureReading() now returns NR with valuation-partial or valuation-unknown when either side is not complete, and no-24h-volume when nothing was counted. Stablecoin detail pages show the reason instead of a dial; the aggregate /flows page no longer renders the literal gauge and leads with the Bank Run Gauge",
       "The aggregate API adds an optional per-coin gaugeWeightUsd: the observed tracked-chain supply weight the Bank Run Gauge applies to that coin, null when the weight is unavailable (excluded, not zeroed). A coin moves the score only when its pressureShiftScore is non-null. Additive; pressure formulas, valuation gates, gauge weighting, bands and flight-to-quality are unchanged",
-      "Activation is provisionally 2026-10-19 00:00 UTC (1792368000); re-date effectiveAt at release."
+      "Activation is 2026-10-19 00:00 UTC (1792368000), the release cut."
     ],
     "commits": [],
     "reconstructed": false
