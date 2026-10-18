@@ -3,7 +3,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
-import { fetchMorphoVaultSources } from "../yield-sync/sources";
+import { fetchMorphoVaultSources } from "../yield-sync/sources-optional";
 
 describe("fetchMorphoVaultSources", () => {
   afterEach(cleanupYieldSourceTest);

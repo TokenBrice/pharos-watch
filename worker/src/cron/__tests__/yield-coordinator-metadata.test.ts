@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
-import {
-  buildComparisonAnchorFreshnessMeta,
-  buildYieldDegradationReasons,
-  buildYieldSafetySnapshotMeta,
-  buildYieldSyncMetadata,
-} from "../yield-sync/coordinator-metadata";
-import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
+import { buildComparisonAnchorFreshnessMeta, buildYieldDegradationReasons, buildYieldSafetySnapshotMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator";
+import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";
 
 const START_SEC = 1_800_000_000;

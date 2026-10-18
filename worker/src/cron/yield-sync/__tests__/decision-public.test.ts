@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildPublicDecisionLedger, deriveYieldSourceRole } from "../decision-public";
-import { buildYieldPublicationViews } from "../publication-view";
-import type { EvaluatedYieldSource } from "../evaluation-types";
+import { buildPublicDecisionLedger, deriveYieldSourceRole } from "../publication";
+import { buildYieldPublicationViews } from "../publication";
+import type { EvaluatedYieldSource } from "../evaluation";
 import type { YieldSourceInputMeta, YieldSourceRisk } from "@shared/types/yield";
 import { makeBenchmarkMeta } from "../../__tests__/yield-publication.test-support";
 

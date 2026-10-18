@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-import {
-  STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY,
-  TRACKED_OPTIONAL_SOURCE_REGISTRY,
-} from "../tracked-optional-source-registry";
+import { STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY, TRACKED_OPTIONAL_SOURCE_REGISTRY } from "../sources-optional";
 
 /**
  * Cohort-gated optional sources must resolve to an active yield-bearing coin or

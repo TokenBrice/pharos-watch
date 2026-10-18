@@ -12,8 +12,8 @@ import { logWorkerEventArgs } from "../lib/structured-log";
  * - Warning detection:  detectWarningSignals()
  * - Pool matching:      matchAllDlPools() (3-layer resolution), findBestLendingPool()
  *
- * I/O counterparts live in yield-sync/: sources.ts (pool discovery), resolve.ts
- * (APY resolution), cache.ts (KV caching), rankings.ts (DB row mapping).
+ * I/O counterparts live in yield-sync/: sources-dl.ts (pool discovery),
+ * resolve.ts (APY resolution), cache.ts (D1 cache serialization), publication.ts (DB row mapping).
  */
 
 export const DETERMINISTIC_APY_SANITY_MAX = 300;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
+import { isYieldRelevantDlPool } from "../yield-sync/cache";
 
 describe("isYieldRelevantDlPool", () => {
   it("retains stablecoin single-exposure pools", () => {

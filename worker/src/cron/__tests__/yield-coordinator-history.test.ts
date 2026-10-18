@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildYieldHistoryEvaluationInputs } from "../yield-sync/coordinator-history";
+import { buildYieldHistoryEvaluationInputs } from "../yield-sync/history";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history";
 import { evaluateYieldSources } from "../yield-sync/evaluation";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";

@@ -8,8 +8,9 @@ vi.mock("../../lib/evm-rpc", () => ({
 // Every sibling supplemental family reaches the network. Only the Aave family is
 // under test here, so the other fetchers reject and their families fall back to an
 // empty result, which is what the runtime does for a real upstream failure.
-vi.mock("../yield-sync/sources", async (importOriginal) => {
-  const actual = await importOriginal<typeof YieldSourcesModule>();
+vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional")>();
+
   const failingFamilyFetch = vi.fn(async () => {
     throw new Error("family stubbed by the Aave suite");
   });
@@ -20,14 +21,25 @@ vi.mock("../yield-sync/sources", async (importOriginal) => {
     fetchYearnKongSources: failingFamilyFetch,
     fetchBeefySources: failingFamilyFetch,
     fetchRoycoDawnSources: failingFamilyFetch,
+  };
+});
+
+vi.mock("../yield-sync/sources-rpc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-rpc")>();
+
+  const failingFamilyFetch = vi.fn(async () => {
+    throw new Error("family stubbed by the Aave suite");
+  });
+  return {
+    ...actual,
     fetchCompoundV3SupplyRates: failingFamilyFetch,
   };
 });
 
-import type * as YieldSourcesModule from "../yield-sync/sources";
+
 import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sources-rpc";
-import { loadSupplementalSourceFamilies } from "../yield-sync/supplemental-source-families";
+import { loadSupplementalSourceFamilies } from "../yield-sync/sources-supplemental";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 

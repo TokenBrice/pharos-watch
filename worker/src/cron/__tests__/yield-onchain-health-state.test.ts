@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state-loading";
+import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state";
 import {
   getDefaultDeterministicOnChainHealthState,
   parseDeterministicOnChainHealthState,
   type DeterministicOnChainHealthState,
 } from "../yield-sync/cache";
 
-// Mirrors the module-private constants in state-loading.ts.
+// Mirrors the module-private constants in state.ts.
 const COOLDOWN_THRESHOLD = 2;
 const COOLDOWN_SEC = 6 * 3600;
 const START = 1_000_000;

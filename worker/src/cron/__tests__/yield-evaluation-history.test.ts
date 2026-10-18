@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { buildHistoryKey, pickHistoryRowsForSource } from "../yield-sync/evaluation-history";
+import { buildHistoryKey, pickHistoryRowsForSource } from "../yield-sync/history";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history";
 
 // Legacy carry-forward decides whether a switched row inherits or empties its

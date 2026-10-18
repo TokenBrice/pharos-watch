@@ -1,24 +1,44 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AAVE_V3_PINNED_RESERVES } from "../yield-sync/sources-optional-protocols-constants";
+import { AAVE_V3_PINNED_RESERVES } from "../yield-sync/family-registry";
 import type { AaveV3RateTarget } from "../yield-sync/sources-rpc";
 
-vi.mock("../yield-sync/sources", async () => {
-  // Vitest hoists this factory before static fixture imports initialize.
-  const { emptyRpcTelemetry, healthyFamilyFetch } = await import("./sync-yield-supplemental.test-support");
+vi.mock("../yield-sync/family-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/family-registry")>();
   return {
+    ...actual,
     COMPOUND_V3_COMETS: [],
+  };
+});
+
+vi.mock("../yield-sync/sources-rpc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-rpc")>();
+
+  // Vitest hoists this factory before static fixture imports initialize.
+  const { emptyRpcTelemetry } = await import("./sync-yield-supplemental.test-support");
+  return {
+    ...actual,
     createOptionalRpcFamilyTelemetry: (targetCount: number) => ({ ...emptyRpcTelemetry(), targetCount }),
-    fetchMorphoVaultSources: async () => healthyFamilyFetch(),
-    fetchPendleMarketSources: async () => healthyFamilyFetch(),
-    fetchRoycoDawnSources: async () => ({ candidates: [], degraded: false }),
-    fetchYearnKongSources: async () => healthyFamilyFetch(),
-    fetchBeefySources: async () => healthyFamilyFetch(),
     fetchCompoundV3SupplyRates: async () => ({ results: [], telemetry: emptyRpcTelemetry() }),
     fetchAaveV3SupplyRates: async (targets: AaveV3RateTarget[]) => ({
       results: targets.map((target) => ({ ...target, apy: 4, sourceTvlUsd: 100_000_000 })),
       telemetry: { ...emptyRpcTelemetry(), targetCount: targets.length, attemptedCount: targets.length,
         resolvedTargetCount: targets.length, emittedCount: targets.length },
     }),
+  };
+});
+
+vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional")>();
+
+  // Vitest hoists this factory before static fixture imports initialize.
+  const { healthyFamilyFetch } = await import("./sync-yield-supplemental.test-support");
+  return {
+    ...actual,
+    fetchMorphoVaultSources: async () => healthyFamilyFetch(),
+    fetchPendleMarketSources: async () => healthyFamilyFetch(),
+    fetchRoycoDawnSources: async () => ({ candidates: [], degraded: false }),
+    fetchYearnKongSources: async () => healthyFamilyFetch(),
+    fetchBeefySources: async () => healthyFamilyFetch(),
   };
 });
 vi.mock("../../lib/db-cache", () => ({

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
-import { deriveYieldSourceRole } from "../yield-sync/decision-public";
+import { deriveYieldSourceRole } from "../yield-sync/publication";
 import { evaluateYieldSources } from "../yield-sync/evaluation";
-import { appendLinkedVariantParentYieldSources } from "../yield-sync/resolve-helpers";
-import { buildYieldSourceRisk } from "../yield-sync/source-risk";
+import { appendLinkedVariantParentYieldSources } from "../yield-sync/resolve";
+import { buildYieldSourceRisk } from "../yield-sync/evaluation";
 import type { ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { baseEvaluationInput } from "./yield-evaluation.test-support";

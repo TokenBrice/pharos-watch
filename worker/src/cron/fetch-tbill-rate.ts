@@ -9,16 +9,10 @@ import {
   serializeRiskFreeRateCache,
   serializeRiskFreeRatesCache,
 } from "./yield-sync/cache";
-import {
-  buildHardcodedUsdBenchmark,
-  withYieldBenchmarkStaticMeta,
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
-  benchmarkRecordAgeSeconds,
-  type ParsedYieldBenchmarkMeta,
-  type ParsedYieldBenchmarkRegistry,
-} from "./yield-sync/benchmarks";
+import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./yield-sync/benchmarks";
+import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC, benchmarkRecordAgeSeconds } from "@shared/lib/yield-benchmark-freshness";
 import { throwIfAborted } from "../lib/abort";
-import { loadRiskFreeRateRegistryWithState } from "./yield-sync/sources-riskfree";
+import { loadRiskFreeRateRegistryWithState } from "./yield-sync/state";
 import { isRecord, numberValue } from "@shared/lib/type-guards";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldBenchmarkKey } from "@shared/types/yield";

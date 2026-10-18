@@ -5,12 +5,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule } from "./yield
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
-import {
-  BASEDOLLAR_SP_CONFIG,
-  LIQUITY_V2_SP_CONFIG,
-  fetchLiquityV2StabilityPoolSource,
-  type LiquityV2SpSourceConfig,
-} from "../yield-sync/sources";
+import { BASEDOLLAR_SP_CONFIG, LIQUITY_V2_SP_CONFIG, fetchLiquityV2StabilityPoolSource, type LiquityV2SpSourceConfig } from "../yield-sync/sources-optional";
 
 const TEST_START_SEC = 1_800_000_000;
 

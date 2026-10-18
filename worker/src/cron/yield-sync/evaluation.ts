@@ -1,57 +1,784 @@
-import { assessYieldEvidence } from "@shared/lib/yield-evidence";
-import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
-import {
-  derivePysSourceRiskPenalty,
-  PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE,
-  PYS_MAX_SOURCE_RISK_PENALTY,
-  yieldStabilityToApyVarianceScore,
-} from "@shared/lib/yield-scoring";
-import type { PysSourceRiskPenaltyInput } from "@shared/lib/yield-scoring";
 import type {
+  YieldType,
+} from "@shared/types/core";
+import type {
+  YieldBenchmarkKey,
+  YieldBenchmarkSelectionMode,
+  YieldCalculationMode,
+  YieldEvidenceClass,
+  YieldPysNullReason,
   YieldSafetyProvenance,
   YieldSafetyReason,
+  YieldScoreQualification,
+  YieldSourceRisk,
+  YieldDeploymentPlace,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
-import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import {
+  type PysSourceRiskPenaltyReason,
+  computePYSFromComponents,
+  computePysComponents,
+  derivePysSourceRiskPenalty,
+  PYS_MAX_SOURCE_RISK_PENALTY,
+  type PysSourceRiskPenaltyInput,
+  computePysRewardShare,
+  computeSourceRiskScoreFromPenalty,
+  PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE,
+  yieldStabilityToApyVarianceScore,
+} from "@shared/lib/yield-scoring";
+import {
+  type ParsedYieldBenchmarkMeta,
+  resolveBenchmarkForStablecoin,
+  type ParsedYieldBenchmarkRegistry,
+} from "./benchmarks";
+import {
+  type YieldBenchmarkFreshness,
+  classifyYieldBenchmarkFreshness,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+} from "@shared/lib/yield-benchmark-freshness";
+import {
+  type YieldSourceFreshness,
+  derivePysNullReasonFromComponents,
+  resolveEvidenceNullReason,
   classifyYieldSourceFreshness,
   getComparisonAnchorStaleThresholdMs,
 } from "../../lib/yield-ranking-helpers";
+import type {
+  SafetyScorePublicationIdentity,
+} from "@shared/types/safety-score-publication";
+import {
+  TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/registry";
+import {
+  LENDING_PROTOCOL_LABELS,
+  EXPLICIT_YIELD_SOURCE_POOL_MAP,
+} from "../../lib/yield-config/yield-config";
+import type {
+  ResolvedYield,
+  ResolvedYieldEntry,
+} from "./types";
+import {
+  PYS_SCALING_FACTOR,
+} from "../../lib/constants";
+import {
+  isRealSourceSwitch,
+} from "../../lib/yield-history-ownership-handoffs";
+import {
+  countSourceSwitchesWithTail,
+  type YieldHistorySnapshotRow,
+  buildHistoryKey,
+  pickHistoryRowsForSource,
+} from "./history";
+import {
+  resolveReviewedYieldRiskConfig,
+  venueRiskTierOf,
+  venueRiskWeightedOf,
+  YIELD_VARIANT_CHILD_VENUE_PROTOCOLS,
+  resolveDependencyConcentration,
+} from "@shared/lib/yield-source-risk-registry";
+import {
+  numberValue as finiteNumber,
+} from "@shared/lib/type-guards";
+import {
+  resolveYieldSourceKeyRoute,
+} from "./family-registry";
+import {
+  weightedMedian,
+} from "@shared/lib/stats";
+import {
+  assessYieldEvidence,
+} from "@shared/lib/yield-evidence";
+import {
+  resolveYieldRowSafety,
+} from "@shared/lib/yield-opportunity-risk";
+import {
+  DAY_SECONDS,
+} from "@shared/lib/time-constants";
+import {
+  isOnChainBootstrapYieldSeed,
+} from "../../lib/yield-utils";
 import {
   computeYieldStability,
   detectWarningSignals,
 } from "../yield-helpers";
-import type { YieldHistorySnapshotRow } from "./history";
-import { computeTvlWeightedMedianApy } from "./rankings";
-import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import {
-  classifyYieldBenchmarkFreshness,
-  resolveBenchmarkForStablecoin,
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
-  type ParsedYieldBenchmarkRegistry,
-  type YieldBenchmarkFreshness,
-} from "./benchmarks";
-import { resolveDependencyConcentration, resolveYieldRewardShare, resolveYieldVenueProtocol } from "./source-risk";
-import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
+  throwIfAborted,
+  yieldToEventLoop as defaultYieldToEventLoop,
+} from "../../lib/abort";
 import {
-  getConfidenceTier,
-  resolveCalculationMode,
-  resolveEvidenceClass,
-  resolveYieldSourceLabel,
-  resolveYieldTypeLabel,
-} from "./evaluation-arbitration";
-import type { EvaluatedYieldSource } from "./evaluation-types";
-import { resolvePenaltyOrderingFields } from "./evaluation-scoring";
-import { resolveEvidenceNullReason } from "../../lib/yield-ranking-helpers";
-import { selectYieldSourceGroup } from "./evaluation-selection";
-import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
-import { resolveYieldBenchmarkDependencies } from "../../lib/yield-config/yield-benchmark-dependencies";
+  resolveYieldBenchmarkDependencies,
+} from "../../lib/yield-config/yield-benchmark-dependencies";
 
-export { buildHistoryKey } from "./evaluation-history";
-export { buildSelectionReason } from "./evaluation-arbitration";
-export type { EvaluatedYieldSource } from "./evaluation-types";
+export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
+
+export interface EvaluatedYieldSource {
+  id: string;
+  symbol: string;
+  sourceKey: string;
+  yieldSource: string;
+  yieldType: YieldType;
+  currentApy: number;
+  apyBase: number | null;
+  apyReward: number | null;
+  sourcePool: string | null;
+  sourceTvlUsd: number | null;
+  venueProtocol?: string | null;
+  venueChain?: string | null;
+  sourceRisk: YieldSourceRisk | null;
+  sourceRiskPenalty: number;
+  sourceRiskPenaltyReason: PysSourceRiskPenaltyReason;
+  sourceRiskPenaltyProvided: boolean;
+  sourceRiskAdjustedUtility: number;
+  dataSource: string;
+  exchangeRate: number | null;
+  sourceObservedAt: number | null;
+  comparisonAnchorObservedAt: number | null;
+  apy7d: number;
+  apy30d: number;
+  apyVarianceScore: number | null;
+  stdDev30d: number | null;
+  apyMin30d: number | null;
+  apyMax30d: number | null;
+  yieldStability: number | null;
+  safetyScore: number;
+  safetyGrade: string;
+  safetyProvenance: YieldSafetyProvenance;
+  safetyReason: YieldSafetyReason | null;
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
+  yieldToRisk: number | null;
+  excessYield: number;
+  benchmarkKey: YieldBenchmarkKey;
+  benchmarkLabel: string;
+  benchmarkCurrency: string;
+  benchmarkRate: number;
+  /**
+   * Reference (USD) risk-free rate the row's hurdle was re-based onto, retained
+   * so the publish-time audit snapshot can replay the score (yield v8.43, B4).
+   * Null when the reference rate was unavailable.
+   */
+  usdBenchmarkRate: number | null;
+  /** `usdBenchmarkRate - benchmarkRate` as scored; 0 when no re-base applied. */
+  hurdleRebase: number;
+  benchmarkRecordDate: string | null;
+  benchmarkIsFallback: boolean;
+  benchmarkFallbackMode: string | null;
+  benchmarkSelectionMode: YieldBenchmarkSelectionMode;
+  benchmarkIsProxy: boolean;
+  benchmarkMeta: ParsedYieldBenchmarkMeta;
+  pharosYieldScore: number | null;
+  pysNullReason: YieldPysNullReason | null;
+  sourceFreshness: YieldSourceFreshness;
+  benchmarkFreshness: YieldBenchmarkFreshness;
+  calculationMode: YieldCalculationMode;
+  evidenceClass: YieldEvidenceClass;
+  evidenceCompleteness: number;
+  scoreQualification: YieldScoreQualification;
+  scoreQualified: boolean;
+  prevExchangeRate: number | null;
+  prevTvlUsd: number | null;
+  sourceDepthRatio: number | null;
+  observationCount30d: number | null;
+  sourceSwitchCount30d: number | null;
+  anomalies: string[];
+  warnings: string[];
+  confidenceTier: ConfidenceTier;
+  rejected: boolean;
+  usedLegacyHistory: boolean;
+  usedDefaultSafety: boolean;
+  previousBestSourceKey: string | null;
+}
+
+export function resolveYieldSourceLabel(params: {
+  id: string;
+  dataSource: string;
+  project?: string;
+  explicitSource?: string;
+}): string {
+  const meta = TRACKED_META_BY_ID.get(params.id);
+  const yieldConfig = meta?.yieldConfig;
+  return (
+    params.explicitSource ??
+    (params.dataSource === "defillama-auto" && params.project
+      ? (LENDING_PROTOCOL_LABELS[params.project] ??
+        params.project.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
+      : (yieldConfig?.yieldSource ?? "Unknown"))
+  );
+}
+
+export function resolveYieldTypeLabel(params: {
+  id: string;
+  dataSource: string;
+  explicitType?: YieldType;
+  pool?: { symbol: string; chain?: string | null };
+}): YieldType {
+  const meta = TRACKED_META_BY_ID.get(params.id);
+  const yieldConfig = meta?.yieldConfig;
+  // A pool's symbol and deposit addresses do not establish receipt ownership.
+  // Native holder typing requires a curated source or an explicit type.
+  return (
+    params.explicitType ??
+    (params.dataSource === "defillama-auto"
+      ? "lending-opportunity"
+      : (yieldConfig?.yieldType ?? "nav-appreciation"))
+  );
+}
+
+export function getConfidenceTier(source: Pick<ResolvedYield, "dataSource" | "yieldType">): ConfidenceTier {
+  if (source.yieldType === "lending-opportunity") return "discovered";
+
+  switch (source.dataSource) {
+    case "onchain":
+    case "rate-derived":
+      return "deterministic";
+    case "defillama":
+    case "protocol-api":
+      return "curated";
+    case "defillama-auto":
+      return "discovered";
+    case "price-derived":
+    default:
+      return "fallback";
+  }
+}
+
+export function getConfidencePriority(tier: ConfidenceTier): number {
+  switch (tier) {
+    case "deterministic":
+      return 4;
+    case "curated":
+      return 3;
+    case "discovered":
+      return 2;
+    case "fallback":
+    default:
+      return 1;
+  }
+}
+
+export function resolveCalculationMode(source: ResolvedYield): YieldCalculationMode {
+  if (source.dataSource === "rate-derived") return "benchmark-model";
+  if (source.dataSource === "price-derived") return "price-return";
+  if (source.exchangeRate != null || source.comparisonAnchorObservedAt != null) {
+    return "exchange-rate-math";
+  }
+  if (source.dataSource === "onchain") return "direct-read";
+  return "market-api";
+}
+
+export function resolveEvidenceClass(source: ResolvedYield): YieldEvidenceClass {
+  if (source.yieldType === "lending-opportunity") return "discovered-observation";
+
+  switch (source.dataSource) {
+    case "onchain":
+      return "direct-onchain";
+    case "protocol-api":
+      return source.sourceKey.startsWith("protocol-api:vaults-fyi:")
+        ? "curated-observation"
+        : "direct-first-party";
+    case "defillama":
+      return "curated-observation";
+    case "defillama-auto":
+      return "discovered-observation";
+    case "rate-derived":
+      return "modeled-proxy";
+    case "price-derived":
+    default:
+      return "fallback";
+  }
+}
+
+function getEvidencePriority(evidenceClass: YieldEvidenceClass): number {
+  switch (evidenceClass) {
+    case "direct-first-party":
+    case "direct-onchain":
+      return 6;
+    case "curated-observation":
+      return 5;
+    case "discovered-observation":
+      return 4;
+    case "modeled-proxy":
+      return 2;
+    case "fallback":
+    default:
+      return 1;
+  }
+}
+
+export function relativeDivergence(a: number, b: number): number {
+  const maxValue = Math.max(Math.abs(a), Math.abs(b), 1e-9);
+  return Math.abs(a - b) / maxValue;
+}
+
+export function compareCandidates(a: EvaluatedYieldSource, b: EvaluatedYieldSource): number {
+  if (a.rejected !== b.rejected) return a.rejected ? 1 : -1;
+
+  const aHasPositiveApy = a.currentApy > 0;
+  const bHasPositiveApy = b.currentApy > 0;
+  if (aHasPositiveApy !== bHasPositiveApy) return aHasPositiveApy ? -1 : 1;
+
+  const aFixedYield = a.yieldType === "fixed-yield";
+  const bFixedYield = b.yieldType === "fixed-yield";
+  if (aFixedYield !== bFixedYield) return aFixedYield ? 1 : -1;
+
+  const evidenceDiff = getEvidencePriority(b.evidenceClass) - getEvidencePriority(a.evidenceClass);
+  if (evidenceDiff !== 0) return evidenceDiff;
+
+  const confidenceDiff = getConfidencePriority(b.confidenceTier) - getConfidencePriority(a.confidenceTier);
+  if (confidenceDiff !== 0) return confidenceDiff;
+
+  if (a.sourceRiskPenaltyProvided || b.sourceRiskPenaltyProvided) {
+    const utilityDiff = b.sourceRiskAdjustedUtility - a.sourceRiskAdjustedUtility;
+    if (utilityDiff !== 0) return utilityDiff;
+  }
+
+  if (a.currentApy !== b.currentApy) return b.currentApy - a.currentApy;
+
+  const tvlDiff = (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0);
+  if (tvlDiff !== 0) return tvlDiff;
+
+  // B30: fully-tied distinct candidates must not be decided by provider array
+  // order; the source key is the last, stable discriminator (and never 0 for two
+  // distinct keys, so the arbitration is antisymmetric).
+  return a.sourceKey.localeCompare(b.sourceKey);
+}
+
+export function buildSelectionReason(source: EvaluatedYieldSource, rejectedPeers: number): string {
+  if (source.rejected) {
+    return "Selected as the least-bad remaining source after arbitration penalties";
+  }
+
+  const confidenceLabel =
+    source.evidenceClass === "modeled-proxy"
+      ? "modeled proxy"
+      : source.confidenceTier === "deterministic"
+      ? "deterministic"
+      : source.confidenceTier === "curated"
+        ? "curated canonical"
+        : source.confidenceTier === "discovered"
+          ? "discovered opportunity"
+          : "fallback-derived";
+
+  if (source.usedLegacyHistory) {
+    return `${confidenceLabel} source selected by confidence-weighted arbitration using legacy history carry-forward`;
+  }
+
+  if (rejectedPeers > 0) {
+    return `${confidenceLabel} source selected by confidence-weighted arbitration after rejecting ${rejectedPeers} conflicting candidate${rejectedPeers > 1 ? "s" : ""}`;
+  }
+
+  return `${confidenceLabel} source selected by confidence-weighted arbitration`;
+}
+
+interface PenaltyFieldsInput {
+  apy30d: number;
+  safetyScore: number;
+  apyVarianceScore: number | null;
+  benchmarkRate: number;
+  benchmarkCurrency: string;
+  usdBenchmarkRate: number | null;
+  sourceRiskPenalty: number;
+  safetySnapshotUnavailable: boolean;
+  evidenceNullReason: YieldPysNullReason | null;
+}
+
+type PenaltyDerivedFields = Pick<
+  EvaluatedYieldSource,
+  | "sourceRiskPenalty"
+  | "sourceRiskPenaltyReason"
+  | "sourceRiskPenaltyProvided"
+  | "sourceRiskAdjustedUtility"
+  | "hurdleRebase"
+  | "pharosYieldScore"
+  | "pysNullReason"
+>;
+
+
+/** Ordering needs utility and penalty provenance, but not a PYS value. */
+export function resolvePenaltyOrderingFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
+  const components = computePysComponents(params);
+  return {
+    sourceRiskPenalty: components.sourceRiskPenalty,
+    sourceRiskPenaltyReason: components.sourceRiskPenaltyReason,
+    sourceRiskPenaltyProvided: components.sourceRiskPenaltyProvided,
+    sourceRiskAdjustedUtility: components.rowUtility,
+    hurdleRebase: components.hurdleRebase,
+    pharosYieldScore: null,
+    pysNullReason: params.safetySnapshotUnavailable
+      ? "safety-unrated"
+      : params.evidenceNullReason,
+  };
+}
+
+/** Full score computation is reserved for the final published candidate shape. */
+export function resolvePenaltyDerivedFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
+  const components = computePysComponents(params);
+  const computedPharosYieldScore = computePYSFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
+  // One ladder decides both fields: a published reason always means no score,
+  // while a legitimately rounded-zero score keeps a null reason.
+  const pysNullReason = params.safetySnapshotUnavailable
+    ? "safety-unrated"
+    : params.evidenceNullReason
+      ?? derivePysNullReasonFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
+  return {
+    sourceRiskPenalty: components.sourceRiskPenalty,
+    sourceRiskPenaltyReason: components.sourceRiskPenaltyReason,
+    sourceRiskPenaltyProvided: components.sourceRiskPenaltyProvided,
+    sourceRiskAdjustedUtility: components.rowUtility,
+    hurdleRebase: components.hurdleRebase,
+    pharosYieldScore: pysNullReason == null && Number.isFinite(computedPharosYieldScore)
+      ? computedPharosYieldScore
+      : null,
+    pysNullReason,
+  };
+}
+
+const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
+const PYS_SWITCH_ARBITRATION_MARGIN = 0.1;
+
+export interface YieldSourceGroupSelectionResult {
+  evaluatedSources: EvaluatedYieldSource[];
+  bestSourceKey: string;
+  rowsRejected: number;
+  divergenceFlags: number;
+  sourceSwitches: number;
+}
+
+export function selectYieldSourceGroup(params: {
+  stablecoinId: string;
+  provisional: EvaluatedYieldSource[];
+  previousBestSourceKey: string | null;
+  priorSwitches30d: number;
+  derivedPenaltyInputByKey: Map<string, PysSourceRiskPenaltyInput>;
+  bestRowsByCoin?: Map<string, YieldHistorySnapshotRow[]>;
+  safetySnapshotUnavailable: boolean;
+  referenceBenchmarkFreshness: YieldBenchmarkFreshness;
+  usdBenchmarkRate: number | null;
+}): YieldSourceGroupSelectionResult | null {
+  let canonicalReference: EvaluatedYieldSource | undefined;
+  for (const candidate of params.provisional) {
+    if (candidate.rejected || candidate.confidenceTier === "discovered") continue;
+    if (!canonicalReference || compareCandidates(candidate, canonicalReference) < 0) {
+      canonicalReference = candidate;
+    }
+  }
+
+  let divergenceFlags = 0;
+  const candidates = params.provisional.map((candidate) => {
+    const anomalies = [...candidate.anomalies];
+    let rejected = candidate.rejected;
+
+    if (
+      canonicalReference &&
+      canonicalReference.sourceKey !== candidate.sourceKey &&
+      getConfidencePriority(candidate.confidenceTier) < getConfidencePriority(canonicalReference.confidenceTier)
+    ) {
+      const divergence = relativeDivergence(candidate.currentApy, canonicalReference.currentApy);
+      if (
+        canonicalReference.currentApy > 0 &&
+        candidate.currentApy > 0 &&
+        divergence > CROSS_SOURCE_DIVERGENCE_THRESHOLD
+      ) {
+        anomalies.push("diverges-from-canonical");
+        divergenceFlags++;
+        if (candidate.dataSource === "defillama-auto" || candidate.dataSource === "price-derived") {
+          rejected = true;
+        }
+      }
+    }
+
+    if (
+      canonicalReference &&
+      canonicalReference.currentApy === 0 &&
+      candidate.currentApy > 1 &&
+      canonicalReference.sourceKey !== candidate.sourceKey &&
+      getConfidencePriority(canonicalReference.confidenceTier) > getConfidencePriority(candidate.confidenceTier)
+    ) {
+      anomalies.push("canonical-zero-vs-positive");
+    }
+    if (anomalies.includes("source-zero-vs-history")) rejected = true;
+    return { ...candidate, anomalies, rejected };
+  });
+
+  const previousWinnerStillCandidate =
+    params.previousBestSourceKey != null &&
+    candidates.some(
+      (candidate) => candidate.sourceKey === params.previousBestSourceKey && !candidate.rejected,
+    );
+  const arbitratedCandidates = !previousWinnerStillCandidate
+    ? candidates
+    : candidates.map((candidate) => {
+        const derivedPenaltyInput = params.derivedPenaltyInputByKey.get(candidate.sourceKey);
+        if (
+          derivedPenaltyInput == null ||
+          !isRealSourceSwitch(params.previousBestSourceKey, candidate.sourceKey)
+        ) {
+          return candidate;
+        }
+        return {
+          ...candidate,
+          ...resolvePenaltyOrderingFields({
+            apy30d: candidate.apy30d,
+            safetyScore: candidate.safetyScore,
+            apyVarianceScore: candidate.apyVarianceScore,
+            benchmarkRate: candidate.benchmarkRate,
+            benchmarkCurrency: candidate.benchmarkCurrency,
+            usdBenchmarkRate: params.usdBenchmarkRate,
+            sourceRiskPenalty: Math.min(
+              PYS_MAX_SOURCE_RISK_PENALTY,
+              candidate.sourceRiskPenalty + PYS_SWITCH_ARBITRATION_MARGIN,
+            ),
+            safetySnapshotUnavailable: params.safetySnapshotUnavailable,
+            evidenceNullReason: resolveEvidenceNullReason({
+              sourceFreshness: candidate.sourceFreshness,
+              // The evaluator emits this warning exactly when opportunity evidence is incomplete.
+              opportunityEvidenceComplete: !candidate.warnings.includes("opportunity-evidence-missing"),
+              benchmarkFreshness: candidate.benchmarkFreshness,
+              referenceBenchmarkFreshness:
+                candidate.benchmarkCurrency === "USD" ? "healthy" : params.referenceBenchmarkFreshness,
+            }),
+          }),
+        };
+      });
+
+  const sortedCandidates = [...arbitratedCandidates].sort(compareCandidates);
+  // Curated venue ownership outranks discovery of the same instrument/type,
+  // including an incumbent's switch margin. Keep discovered rows as alternatives.
+  const explicitPools = EXPLICIT_YIELD_SOURCE_POOL_MAP[params.stablecoinId] ?? [];
+  const curatedTypes = new Set(sortedCandidates
+    .filter((candidate) => !candidate.rejected && explicitPools.some((config) =>
+      config.poolId === candidate.sourceKey && config.yieldType === candidate.yieldType,
+    ))
+    .map((candidate) => candidate.yieldType));
+  const winner = sortedCandidates.find((candidate) =>
+    !candidate.rejected
+    && !(candidate.dataSource === "defillama-auto" && curatedTypes.has(candidate.yieldType)
+      && !explicitPools.some((config) => config.poolId === candidate.sourceKey)),
+  ) ?? sortedCandidates[0];
+  if (!winner) return null;
+
+  const winnerWouldChangeSource = isRealSourceSwitch(params.previousBestSourceKey, winner.sourceKey);
+  const sourceSwitchCount30d = params.bestRowsByCoin != null
+    ? countSourceSwitchesWithTail(params.bestRowsByCoin.get(params.stablecoinId) ?? [], winner.sourceKey)
+    : winnerWouldChangeSource && previousWinnerStillCandidate
+      ? params.priorSwitches30d + 1
+      : params.priorSwitches30d;
+  const sourceSwitches = sourceSwitchCount30d > params.priorSwitches30d ? 1 : 0;
+
+  const evaluatedSources = candidates.map((candidate) => {
+    const isBest = candidate.sourceKey === winner.sourceKey;
+    const publishedSwitchCount = isBest ? sourceSwitchCount30d : null;
+    const derivedPenaltyInput = params.derivedPenaltyInputByKey.get(candidate.sourceKey);
+    return {
+      ...candidate,
+      ...resolvePenaltyDerivedFields({
+        apy30d: candidate.apy30d,
+        safetyScore: candidate.safetyScore,
+        apyVarianceScore: candidate.apyVarianceScore,
+        benchmarkRate: candidate.benchmarkRate,
+        benchmarkCurrency: candidate.benchmarkCurrency,
+        usdBenchmarkRate: params.usdBenchmarkRate,
+        sourceRiskPenalty: derivedPenaltyInput
+          ? derivePysSourceRiskPenalty({
+              ...derivedPenaltyInput,
+              sourceSwitchCount30d: publishedSwitchCount,
+            })
+          : candidate.sourceRiskPenalty,
+        safetySnapshotUnavailable: params.safetySnapshotUnavailable,
+        evidenceNullReason: resolveEvidenceNullReason({
+          sourceFreshness: candidate.sourceFreshness,
+          opportunityEvidenceComplete: !candidate.warnings.includes("opportunity-evidence-missing"),
+          benchmarkFreshness: candidate.benchmarkFreshness,
+          referenceBenchmarkFreshness:
+            candidate.benchmarkCurrency === "USD" ? "healthy" : params.referenceBenchmarkFreshness,
+        }),
+      }),
+      sourceSwitchCount30d: publishedSwitchCount,
+      anomalies:
+        isBest && winnerWouldChangeSource && !previousWinnerStillCandidate
+          ? [...candidate.anomalies, "previous-source-transiently-missing"]
+          : candidate.anomalies,
+    };
+  });
+
+  return {
+    evaluatedSources,
+    bestSourceKey: winner.sourceKey,
+    rowsRejected: sortedCandidates.filter((candidate) => candidate.rejected).length,
+    divergenceFlags,
+    sourceSwitches,
+  };
+}
+
+export { resolveDependencyConcentration } from "@shared/lib/yield-source-risk-registry";
+
+/**
+ * Derivation methods are a property of the row's calculation lane, not a venue.
+ * A stored `sourceRisk.venueProtocol` from an earlier publication must not
+ * re-enter the published payload as if it named an operator (A8).
+ */
+const DERIVATION_LANE_TOKENS: Readonly<Record<string, true>> = {
+  "price-derived": true,
+  "rate-derived": true,
+};
+
+/**
+ * The single venue resolver (A8), used by both the scoring path
+ * (`evaluation.ts`) and the publisher (`buildYieldSourceRisk`) so a row can no
+ * longer be scored against one venue and labelled with another.
+ *
+ * Order: explicit `venueProtocol` → DeFiLlama project slug → `sourceKey`
+ * route → tracked variant child-id fallback. Returns `null` when no venue is known —
+ * never the row's derivation method.
+ */
+export function resolveYieldVenueProtocol(input: {
+  venueProtocol?: string | null;
+  sourceKey: string;
+  project?: string | null;
+  stablecoinId?: string | null;
+}): string | null {
+  const candidates = [
+    input.venueProtocol,
+    input.project,
+    resolveYieldSourceKeyRoute(input.sourceKey)?.venueProtocol,
+    input.stablecoinId ? YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[input.stablecoinId] : null,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const trimmed = candidate.trim();
+    if (trimmed && DERIVATION_LANE_TOKENS[trimmed] !== true) return trimmed;
+  }
+  return null;
+}
+
+/**
+ * The one reward-share resolution (A9) shared by the penalty input and the
+ * published field. `computePysRewardShare` returns `null` whenever the payload
+ * omits `apyReward`, but a base-only payload — `apyBase` finite and already
+ * equal to the current APY — proves the reward share is zero rather than
+ * unknown. A value stored by an earlier publication is never reused, so the
+ * published evidence always reproduces the penalty that was actually scored.
+ */
+export function resolveYieldRewardShare(params: {
+  apyReward: number | null | undefined;
+  apyBase: number | null | undefined;
+  currentApy: number | null | undefined;
+}): number | null {
+  const derived = computePysRewardShare(params.apyReward, params.currentApy);
+  if (derived != null) return derived;
+  if (
+    params.apyReward == null &&
+    params.apyBase != null &&
+    params.currentApy != null &&
+    params.apyBase >= params.currentApy - 1e-9
+  ) {
+    return 0;
+  }
+  return null;
+}
+
+function inferDeploymentPlace(source: EvaluatedYieldSource): YieldDeploymentPlace | null {
+  if (source.dataSource === "rate-derived") return "rate-derived";
+  if (source.dataSource === "price-derived") return "price-derived";
+  if (source.yieldType === "lp-receipt") return "lp-or-dex";
+  if (source.yieldType === "structured-tranche") return "structured-tranche";
+  if (source.yieldType === "fixed-yield") return "lending-market";
+  if (source.yieldType === "lending-opportunity") return "lending-market";
+  if (source.yieldType === "lending-vault") return "strategy-vault";
+  if (source.yieldType === "nav-appreciation" || source.yieldType === "rebase") return "native-wrapper";
+  if (source.yieldType === "governance-set" || source.yieldType === "fee-sharing") return "issuer-savings";
+  return null;
+}
+
+function inferVenueChain(sourceKey: string): string | null {
+  const route = resolveYieldSourceKeyRoute(sourceKey);
+  if (!route || route.chainSegmentIndex == null) return null;
+  return sourceKey.split(":")[route.chainSegmentIndex] ?? null;
+}
+
+function optionalSourceRiskFields(existing: YieldSourceRisk): Partial<YieldSourceRisk> {
+  return {
+    ...(existing.trancheSide !== undefined ? { trancheSide: existing.trancheSide } : {}),
+    ...(existing.trancheSafetyScore !== undefined ? { trancheSafetyScore: existing.trancheSafetyScore } : {}),
+    ...(existing.trancheSafetyPenalty !== undefined ? { trancheSafetyPenalty: existing.trancheSafetyPenalty } : {}),
+    ...(existing.underlyingSafetyScore !== undefined ? { underlyingSafetyScore: existing.underlyingSafetyScore } : {}),
+    ...(existing.opportunityRisk !== undefined ? { opportunityRisk: existing.opportunityRisk } : {}),
+    ...(existing.marketCoverageRatio !== undefined ? { marketCoverageRatio: existing.marketCoverageRatio } : {}),
+    ...(existing.marketMinCoverageRatio !== undefined ? { marketMinCoverageRatio: existing.marketMinCoverageRatio } : {}),
+    ...(existing.marketUtilizationRatio !== undefined ? { marketUtilizationRatio: existing.marketUtilizationRatio } : {}),
+    ...(existing.marketUtilizationLimitRatio !== undefined ? { marketUtilizationLimitRatio: existing.marketUtilizationLimitRatio } : {}),
+    ...(existing.marketDrawdownRatio !== undefined ? { marketDrawdownRatio: existing.marketDrawdownRatio } : {}),
+    ...(existing.marketTotalDrawdowns !== undefined ? { marketTotalDrawdowns: existing.marketTotalDrawdowns } : {}),
+    ...(existing.marketStatus !== undefined ? { marketStatus: existing.marketStatus } : {}),
+    ...(existing.marketTvlUsd !== undefined ? { marketTvlUsd: existing.marketTvlUsd } : {}),
+    ...(existing.trancheTvlUsd !== undefined ? { trancheTvlUsd: existing.trancheTvlUsd } : {}),
+    ...(existing.trancheShareTokenAddress !== undefined ? { trancheShareTokenAddress: existing.trancheShareTokenAddress } : {}),
+    ...(existing.trancheDepositTokenAddress !== undefined ? { trancheDepositTokenAddress: existing.trancheDepositTokenAddress } : {}),
+    ...(existing.withdrawalDelaySeconds !== undefined ? { withdrawalDelaySeconds: existing.withdrawalDelaySeconds } : {}),
+    ...(existing.kycRequired !== undefined ? { kycRequired: existing.kycRequired } : {}),
+    ...(existing.accessRestricted !== undefined ? { accessRestricted: existing.accessRestricted } : {}),
+  };
+}
+
+export function buildYieldSourceRisk(params: {
+  source: EvaluatedYieldSource;
+  provenance: Record<string, unknown> | null;
+  isBest: boolean;
+}): YieldSourceRisk {
+  const existing = params.source.sourceRisk ?? {};
+  const sourceAgeSeconds = finiteNumber(params.provenance?.sourceAgeSeconds);
+  // A8: the publisher resolves the venue through the same resolver the scoring
+  // path uses, so the published label and the scored tier can no longer diverge.
+  const venueProtocol = resolveYieldVenueProtocol({
+    venueProtocol: existing.venueProtocol ?? params.source.venueProtocol,
+    sourceKey: params.source.sourceKey,
+    stablecoinId: params.source.id,
+  });
+  const reviewedConfig = resolveReviewedYieldRiskConfig(venueProtocol);
+  const reviewedWeighted = reviewedConfig ? venueRiskWeightedOf(reviewedConfig) : null;
+  const reviewedTier = reviewedConfig ? venueRiskTierOf(reviewedConfig) : "unknown";
+
+  return {
+    sourceRiskScore:
+      existing.sourceRiskScore ?? computeSourceRiskScoreFromPenalty(params.source.sourceRiskPenalty),
+    sourceRiskPenalty: params.source.sourceRiskPenalty,
+    sourceDepthRatio: params.source.sourceDepthRatio ?? existing.sourceDepthRatio ?? null,
+    // A9: re-derived every publication. A base-only payload proves the reward
+    // share is zero; an earlier publication's stored value is never reused.
+    rewardShare: resolveYieldRewardShare(params.source),
+    sourceAgeSeconds:
+      sourceAgeSeconds == null
+        ? (existing.sourceAgeSeconds ?? null)
+        : Math.trunc(sourceAgeSeconds),
+    observationCount30d: params.source.observationCount30d ?? existing.observationCount30d ?? null,
+    sourceSwitchCount30d: params.isBest ? params.source.sourceSwitchCount30d : null,
+    deploymentPlace: existing.deploymentPlace ?? inferDeploymentPlace(params.source),
+    venueProtocol,
+    venueChain: existing.venueChain ?? params.source.venueChain ?? inferVenueChain(params.source.sourceKey),
+    venueRiskTier: existing.venueRiskTier ?? reviewedTier,
+    venueRiskScores: existing.venueRiskScores ?? reviewedConfig?.scores ?? null,
+    venueRiskWeighted: existing.venueRiskWeighted ?? reviewedWeighted,
+    venueRiskConfidence: existing.venueRiskConfidence ?? reviewedConfig?.confidence ?? null,
+    ...(existing.dependencyConcentration
+      ? { dependencyConcentration: existing.dependencyConcentration }
+      : {}),
+    ...optionalSourceRiskFields(existing),
+    investabilityFlags: existing.investabilityFlags ?? [],
+  };
+}
+
+export function computeTvlWeightedMedianApy(
+  rows: Array<{ apy_30d: number; source_tvl_usd: number | null }>,
+): number | null {
+  const validRows = rows.filter(
+    (row) => row.source_tvl_usd != null && Number.isFinite(row.source_tvl_usd)
+      && row.source_tvl_usd > 0 && Number.isFinite(row.apy_30d) && row.apy_30d > 0,
+  );
+  if (validRows.length === 0) return null;
+
+  return weightedMedian(
+    validRows.map((row) => ({ value: row.apy_30d, weight: row.source_tvl_usd! })),
+  );
+}
 
 const LOW_SOURCE_TVL_USD = 250_000;
 

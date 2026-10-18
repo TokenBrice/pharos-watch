@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type { EvaluatedYieldSource } from "../evaluation";
-import { classifyDecisionRetention } from "../publication-decision-persistence";
-import { drainDecisionRowsBeforeCutoff } from "../publication";
+import { classifyDecisionRetention } from "../publication";
+import { drainDecisionRowsBeforeCutoff } from "../history";
 
 function decisionSource(
   sourceKey: string,

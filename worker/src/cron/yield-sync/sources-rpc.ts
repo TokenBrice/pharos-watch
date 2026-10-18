@@ -1,18 +1,162 @@
-import { getCronJobMeta } from "@shared/lib/cron-jobs";
-import { CHAIN_META } from "@shared/types/chain-identity";
-import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
-import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
+import {
+  registryRpcEndpoints,
+  type ChainRpcConfig,
+  getChainRpc,
+} from "../../lib/chain-registry";
+import {
+  logWorkerEventArgs,
+  logWorkerEvent,
+} from "../../lib/structured-log";
+import {
+  getCronJobMeta,
+} from "@shared/lib/cron-jobs";
+import {
+  CHAIN_META,
+} from "@shared/types/chain-identity";
+import {
+  finiteDecimalNumberFromBigInt,
+} from "../../lib/bigint";
 import {
   fetchEtherscanUint256AtBlock,
   fetchEvmCallHexAtBlock,
   fetchEvmUint256AtBlock,
 } from "../../lib/evm-rpc";
-import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
-import { createOptionalSourceBudget, resolveRpcUrls } from "./sources-helpers";
-import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config";
-import type { ResolvedYield } from "./types";
-import { toErrorMessage } from "@shared/lib/error-utils";
-import { logWorkerEvent } from "../../lib/structured-log";
+import {
+  encodeAddress,
+  encodeUint256,
+} from "../../lib/evm-selectors";
+import {
+  ON_CHAIN_RATE_CONFIGS,
+} from "../../lib/yield-config/yield-config";
+import type {
+  ResolvedYield,
+} from "./types";
+import {
+  toErrorMessage,
+} from "@shared/lib/error-utils";
+
+/**
+ * Build a deduped list of incumbent registry RPC URLs. Dwellir is excluded
+ * independently of placement; supplemental-aware EVM transports own its routing.
+ * @param order  'fallback-first' (default) | 'primary-first' | 'rotate'
+ * @param seed   Rotation index used when order='rotate' (even → fallback-first, odd → primary-first)
+ */
+export function resolveRpcUrls(
+  rpc: ChainRpcConfig | undefined,
+  options: { order?: "fallback-first" | "primary-first" | "rotate"; seed?: number } = {},
+): string[] {
+  if (!rpc) return [];
+  const { order = "fallback-first", seed = 0 } = options;
+  const [primaryUrl, fallbackUrl] = registryRpcEndpoints(rpc)
+    .filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
+  const primary = primaryUrl || null;
+  const fallback = fallbackUrl || null;
+  let ordered: (string | null)[];
+  if (order === "primary-first") {
+    ordered = [primary, fallback];
+  } else if (order === "rotate") {
+    ordered = seed % 2 === 0 ? [fallback, primary] : [primary, fallback];
+  } else {
+    ordered = [fallback, primary];
+  }
+  return Array.from(new Set(ordered.filter((url): url is string => url !== null)));
+}
+
+export function createOptionalSourceBudget(
+  label: string,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): {
+  signal: AbortSignal;
+  budgetController: AbortController;
+  /**
+   * Absolute wall-clock deadline of the family budget. Callers that pace one
+   * target at a time derive each target's share from what is still left.
+   */
+  deadlineMs: number;
+  cleanup: () => void;
+} {
+  const budgetController = new AbortController();
+  const deadlineMs = Date.now() + timeoutMs;
+  const timer = setTimeout(() => {
+    budgetController.abort(new Error(`${label} budget exhausted after ${Math.round(timeoutMs / 1000)}s`));
+  }, timeoutMs);
+
+  return {
+    signal: signal ? AbortSignal.any([signal, budgetController.signal]) : budgetController.signal,
+    budgetController,
+    deadlineMs,
+    cleanup: () => clearTimeout(timer),
+  };
+}
+
+const OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS = 12_000;
+
+export const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
+export const OPTIONAL_PROTOCOL_API_BUDGET_MS = 25_000;
+
+/**
+ * A swallowed optional-source failure. The callers of the registry live in the
+ * coordinator, so the outcome is reported through this callback instead of the
+ * log alone: an unrecorded failure is indistinguishable from a source that
+ * returned nothing.
+ */
+export interface YieldOptionalSourceOutcome {
+  label: string;
+  outcome: "failed" | "timeout";
+}
+
+export function getFiniteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export async function runTimedOptionalSource<T>(
+  label: string,
+  signal: AbortSignal | undefined,
+  fn: (budgetSignal: AbortSignal) => Promise<T>,
+  fallback: T,
+  onOutcome?: (outcome: YieldOptionalSourceOutcome) => void,
+): Promise<T> {
+  const budgetController = new AbortController();
+  const timer = setTimeout(() => {
+    budgetController.abort(new Error(`${label} timed out after ${Math.round(OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS / 1000)}s`));
+  }, OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS);
+  const budgetSignal = signal ? AbortSignal.any([signal, budgetController.signal]) : budgetController.signal;
+
+  try {
+    return await fn(budgetSignal);
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    if (budgetController.signal.aborted) {
+      logWorkerEventArgs("handler", "warn", `[yield] ${label} timed out; continuing without this source`);
+      onOutcome?.({ label, outcome: "timeout" });
+    } else {
+      onOutcome?.({ label, outcome: "failed" });
+    }
+    return fallback;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function runOptionalSourceFamily<T>(
+  label: string,
+  signal: AbortSignal | undefined,
+  fn: () => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    logWorkerEventArgs("handler", "warn", `[yield] ${label} failed:`, error);
+    return fallback;
+  }
+}
 
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
 const OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS = 10_000;

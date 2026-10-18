@@ -10,8 +10,11 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcome: vi.fn(async () => {}),
 }));
 vi.mock("../../lib/db-cache", () => ({ setCache: vi.fn(async () => {}) }));
-vi.mock("../yield-sync/cache", () => ({ buildDlStablecoinPoolsCache: vi.fn(() => "{}") }));
-vi.mock("../yield-sync/pool-filter", () => ({ isYieldRelevantDlPool: vi.fn(() => false) }));
+vi.mock("../yield-sync/cache", () => ({
+  buildDlStablecoinPoolsCache: vi.fn(() => "{}"),
+  isYieldRelevantDlPool: vi.fn(() => false),
+}));
+
 vi.mock("../../lib/coingecko-onchain", () => ({
   onchainRateLimit: vi.fn(async () => {}),
   CG_CHAIN_MAP: {},

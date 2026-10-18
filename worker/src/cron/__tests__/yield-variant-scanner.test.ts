@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scanForNewVariants } from "../yield-sync/variant-scanner";
+import { scanForNewVariants } from "../yield-sync/resolve";
 import type { DlPool } from "../yield-sync/types";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
