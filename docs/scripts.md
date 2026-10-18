@@ -105,16 +105,22 @@ prints a schema-v1 JSON report to stdout. It reads Cloudflare zone `httpRequests
 at the fixed `https://api.cloudflare.com/client/v4/graphql` endpoint, rejecting redirects;
 it never writes local files, D1, Worker request-path telemetry, or remote state.
 Export **`CLOUDFLARE_ZONE_ANALYTICS_READ`** with **Zone → Analytics → Read** permission for
-the `pharos.watch` zone and **`CLOUDFLARE_ZONE_ID`** explicitly. The Account Analytics token
-used by `ops:worker-memory` does not authorize this zone read. Credentials are not printed.
+the `pharos.watch` zone. The collector resolves that zone with a read-only, exact-hostname
+`GET https://api.cloudflare.com/client/v4/zones?name=pharos.watch&per_page=2` lookup;
+empty, ambiguous, or failed lookups remain unavailable. **`CLOUDFLARE_ZONE_ID`** optionally
+supplies the zone ID explicitly and bypasses discovery. Both endpoints reject redirects.
+The Account Analytics token used by `ops:worker-memory` does not authorize this zone read.
+Credentials are not printed.
 Use shell redirection into ignored `agents/` if a local evidence artifact is needed.
 
 The default half-open window is 15 minutes ending five minutes behind now. Explicit bounds
 must be paired, increasing, timezone-qualified, at most 24 hours, and end at least five
 minutes behind now. These bounds allow ingestion lag but do not prove ingestion completeness.
-Help exits `0`, invalid usage `2`, available evidence `0`, and missing/failed/capped evidence
-`1` after printing its machine-readable reason. Failed or empty reads never become zero
-traffic or zero error rates; only routes observed in discovery are emitted.
+Help exits `0`, invalid usage `2`, fully available evidence `0`, and partial/missing/failed/capped
+evidence `1` after printing its machine-readable reason. GraphQL failures retain up to four
+512-character messages per failed query in `reasonDetails`, redacting the token and discovered
+request paths; HTTP response bodies and headers are never retained. Failed or empty reads never
+become zero traffic or zero error rates; only routes observed in discovery are emitted.
 
 The report combines `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
 eyeball HTTP traffic. This is an edge HTTP population, including authentication, security,
@@ -124,10 +130,11 @@ closed without publishing partial rates. Static paths come from
 `shared/lib/api-endpoints/definitions.ts`, dynamic families from its canonical descriptors.
 Unknown paths share one `unmatched` bucket. Raw paths, stablecoin/API-key identifiers,
 and query strings are not emitted. Cardinality is bounded by the endpoint registry plus
-one unmatched bucket, with at most eight route pairs per sequential query.
+one unmatched bucket, with at most eight routes per sequential query. HTTP-status and latency
+selections are separate queries so a denied latency field cannot discard valid status counts.
 
 Each normalized route reports HTTP status counts, the estimated 5xx response count/rate,
-and **p95 edge time to first byte in milliseconds**. Counts/rates are explicitly adaptive
+and, **when the zone is entitled to the field**, p95 edge time to first byte in milliseconds. Counts/rates are explicitly adaptive
 estimates; the report retains sampling-interval ranges and unknown-interval counts.
 The rate denominator is the sum of returned status-group estimates, not an independently
 sampled pooled count. A known zero 5xx count is different from missing traffic.
@@ -135,7 +142,14 @@ The collector asks Cloudflare to compute one pooled p95 over all discovered path
 each normalized route; it never averages path/status percentiles. Discovery and metric
 queries are separate reads, not an atomic snapshot, so later ingestion may change coverage.
 **Full-response/client latency is unavailable from this collector**: TTFB is neither
-response completion nor Worker wall time. Missing TTFB or HTTP statuses remain unavailable.
+response completion nor Worker wall time. The production zone currently rejects
+`edgeTimeToFirstByteMsP95` with "does not have access to the field"; schema introspection
+alone does not establish entitlement. The collector retains counts/rates with `status: partial`,
+`reason: ttfb-field-not-entitled`, and null latency, preserving the actual error in `reasonDetails`.
+After one failed latency query it skips further latency queries in that run, while continuing
+status collection. Obtaining p95 requires that zone-field entitlement or a separately authorized
+Workers Observability source; a broader Analytics token alone is not proven to grant the field.
+Missing HTTP status evidence also remains partial, never a successful availability claim.
 No workflow is scheduled; this is an operator-invoked read-only collector.
 
 ## D1 Insights Capture
