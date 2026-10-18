@@ -922,12 +922,14 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
 const TIMELESS_CACHE_CONTROL = API_CACHE_PROFILES.custom;
 
 async function renderOgPageTimeless(slug: OgPageSlug, reason: OgPageUnavailableReason, nowSec: number): Promise<Response> {
+  // A by-decision timeless route is the expected path, not a degraded card.
+  const byDecision = reason === "timeless-by-decision";
   logWorkerEvent({
     scope: "api",
-    level: reason === "render-error" || reason === "owner-error" ? "error" : "warn",
+    level: byDecision ? "info" : reason === "render-error" || reason === "owner-error" ? "error" : "warn",
     event: "og.page_timeless",
     route: "/api/og/page",
-    message: "Live route card unavailable; serving the timeless card",
+    message: byDecision ? "Route card is timeless by decision" : "Live route card unavailable; serving the timeless card",
     metadata: { slug, reason },
   });
   const png = await renderPng(<RouteCard cardKey={slug} variant="timeless" />);

@@ -12,7 +12,10 @@ vi.mock("satori/standalone", () => ({
   init: vi.fn(),
   default: vi.fn(async () => "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"628\"></svg>"),
 }));
-vi.mock("../og-page", () => ({ OG_PAGE_LOADERS: loaders }));
+vi.mock("../og-page", async () => ({
+  // `upcoming` runs its real loader: the route is timeless by decision.
+  OG_PAGE_LOADERS: { ...loaders, upcoming: (await import("../og-page/upcoming")).loadUpcomingOgPage },
+}));
 
 import { handleOg, resetOgWasmInitializationForTests } from "../og";
 
@@ -71,6 +74,29 @@ describe("/api/og/page/:slug", () => {
     expect(res?.headers.get("X-Og-Reason")).toBe("stale-cache");
     expect(res?.headers.get("Cache-Control")).toBe(API_CACHE_PROFILES.custom);
     expect(renderToStaticMarkup(lastRenderedElement())).toContain("Live figures at pharos.watch/chains");
+  });
+
+  it("serves Upcoming's timeless card by decision, logged as info rather than a failure", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await handleOg(mockD1([]), "/api/og/page/upcoming");
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Content-Type")).toBe("image/png");
+      expect(res?.headers.get("X-Og-Status")).toBe("timeless");
+      expect(res?.headers.get("X-Og-Reason")).toBe("timeless-by-decision");
+      expect(res?.headers.get("Cache-Control")).toBe(API_CACHE_PROFILES.custom);
+      expect(renderToStaticMarkup(lastRenderedElement())).toContain("Live figures at pharos.watch/upcoming");
+      expect(warn).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+      const record = JSON.parse(String(info.mock.calls[info.mock.calls.length - 1]?.[0]));
+      expect(record).toMatchObject({ level: "info", event: "og.page_timeless", metadata: { slug: "upcoming", reason: "timeless-by-decision" } });
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+      error.mockRestore();
+    }
   });
 
   it("degrades a loader throw and a render failure to the timeless card, never a 503 or a stale number", async () => {

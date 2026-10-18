@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { dateScore, getDriftStatus, parseFuzzyDate, parseFuzzyDeadline } from "../pre-launch";
+import {
+  DRIFT_STATUS_BADGE,
+  DRIFT_STATUS_LABEL,
+  dateScore,
+  getDriftStatus,
+  parseFuzzyDate,
+  parseFuzzyDeadline,
+  resolveDriftDisplay,
+  selectPreLaunchClockView,
+} from "../pre-launch";
 
 describe("pre-launch fuzzy dates", () => {
   it("parses supported fuzzy date formats to deterministic period ends", () => {
@@ -39,4 +48,57 @@ describe("pre-launch drift deadlines", () => {
       }
     },
   );
+});
+
+describe("pre-launch clock view", () => {
+  const pushed = [{ date: "2026-03", setOn: "2026-01-01" }];
+  const coins = [
+    { id: "expired", expectedLaunchDate: "2026-Q2" },
+    { id: "pushed", expectedLaunchDate: "2026-Q4", dateHistory: pushed },
+    { id: "delayed", expectedLaunchDate: "2026-08", dateHistory: [...pushed, ...pushed] },
+    { id: "untargeted", dateHistory: pushed },
+    { id: "fresh", expectedLaunchDate: "2027" },
+  ];
+
+  it("counts slipped coins and never picks an overdue target as soonest", () => {
+    const view = selectPreLaunchClockView(coins, Date.parse("2026-07-15T00:00:00Z"));
+    expect(view.overdue).toBe(1);
+    expect(view.pushed).toBe(2);
+    expect(view.slipped).toBe(3);
+    expect(view.soonest?.id).toBe("delayed");
+    expect(view.driftById.get("expired")).toBe("overdue");
+    expect(view.driftById.get("fresh")).toBe("on-track");
+    expect(view.nextDeadlineMs).toBe(Date.parse("2026-09-01T00:00:00Z"));
+  });
+
+  it("has no soonest target once every target has expired", () => {
+    const view = selectPreLaunchClockView(coins, Date.parse("2028-01-01T00:00:00Z"));
+    expect(view.soonest).toBeNull();
+    expect(view.nextDeadlineMs).toBeNull();
+    expect(view.overdue).toBe(4);
+    expect(view.slipped).toBe(4);
+  });
+});
+
+describe("drift display", () => {
+  it("shows a pushed coin with no current target as a neutral No current target", () => {
+    expect(resolveDriftDisplay("pushed-once", undefined)).toBe("no-current-target");
+    expect(resolveDriftDisplay("pushed-multiple", undefined)).toBe("no-current-target");
+    expect(DRIFT_STATUS_LABEL["no-current-target"]).toBe("No current target");
+    expect(DRIFT_STATUS_BADGE["no-current-target"]).not.toMatch(/amber|red|state-warn|state-danger/);
+  });
+
+  it("passes every other status through unchanged", () => {
+    expect(resolveDriftDisplay("pushed-once", "2026-Q4")).toBe("pushed-once");
+    expect(resolveDriftDisplay("pushed-multiple", "2026-Q4")).toBe("pushed-multiple");
+    expect(resolveDriftDisplay("overdue", "2026-Q2")).toBe("overdue");
+    expect(resolveDriftDisplay("on-track", undefined)).toBe("on-track");
+  });
+
+  it("never counts a coin without a current target as slipped", () => {
+    const view = selectPreLaunchClockView([{ id: "n", dateHistory: [{ date: "2026-Q1", setOn: "2025-06-01" }] }], 0);
+    expect(view.driftById.get("n")).toBe("no-current-target");
+    expect(view.slipped).toBe(0);
+    expect(view.pushed).toBe(0);
+  });
 });

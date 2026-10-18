@@ -20,7 +20,7 @@ export const HORIZON_PHASE_SHORT_LABELS: Record<LaunchPhase, string> = {
   testnet: "Testnet",
   auditing: "Auditing",
   beta: "Beta",
-  "launching-soon": "Launching",
+  "launching-soon": "Launching soon",
 };
 
 export const HORIZON_PHASE_FIELD_CLASSES: Record<LaunchPhase, string> = {
@@ -63,6 +63,11 @@ export const HORIZON_CONSTELLATION_LAYOUT = {
 export const HORIZON_PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
   (coin): coin is HorizonPreLaunchCoin => isPreLaunchStablecoinMeta(coin) && Boolean(coin.launchPhase),
 );
+
+/** Pre-launch coins with no authored phase; `/upcoming/` shows them as their own cell so cells sum to the tracker count. */
+export const HORIZON_UNPHASED_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
+  (coin) => isPreLaunchStablecoinMeta(coin) && !coin.launchPhase,
+).sort((a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate));
 
 export const HORIZON_COINS_BY_PHASE = HORIZON_PHASE_ORDER.map((phase) =>
   HORIZON_PRE_LAUNCH_STABLECOINS.filter((coin) => coin.launchPhase === phase).sort(
@@ -121,6 +126,7 @@ function layoutHorizonPhase(count: number): HorizonPhaseLayout {
 }
 
 export const HORIZON_PHASE_LAYOUTS = HORIZON_COINS_BY_PHASE.map((coins) => layoutHorizonPhase(coins.length));
+export const HORIZON_UNPHASED_LAYOUT = layoutHorizonPhase(HORIZON_UNPHASED_STABLECOINS.length);
 
 function phaseFieldRadius(count: number, layout: HorizonPhaseLayout): number {
   const { countFieldScale, maxFieldRadius, minFieldRadius } = HORIZON_CONSTELLATION_LAYOUT;
