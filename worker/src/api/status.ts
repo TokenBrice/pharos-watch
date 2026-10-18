@@ -34,6 +34,7 @@ import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { maxStatus } from "../lib/status/evaluation-state";
 import { computeReserveCompositionOverview } from "../lib/live-reserves/store-overview";
 import { getActiveWorkerVersionMarker } from "../lib/worker-version-first-seen";
+import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";
 
 async function loadWorkerVersions(db: D1Database): Promise<{
   versions: StatusResponse["workerVersions"];
@@ -167,7 +168,7 @@ async function resolveRawStatusForResponse(
 
   const snapshot = await loadStatusRawSnapshot(db, now);
   const currentReserve = snapshot.kind === "fresh"
-    ? await computeReserveCompositionOverview(db, now).catch(() => null) : null;
+    ? await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync")).catch(() => null) : null;
   const cachedReserve = snapshot.kind === "fresh" ? snapshot.raw.reserveComposition : null;
   const reviewApplicabilityChanged = cachedReserve?.status === "unavailable" || !currentReserve
     || JSON.stringify([currentReserve.acknowledgedFeeds, currentReserve.expiredFeedReviewIds, currentReserve.invalidFeedReviewIds])

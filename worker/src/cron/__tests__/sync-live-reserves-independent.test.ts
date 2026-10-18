@@ -7,6 +7,7 @@ import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 import { syncReserveCoin } from "../sync-live-reserves-core";
 import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap } from "../../lib/live-reserves/store";
 import { resolveReserveResult } from "../../lib/live-reserves/store-views";
+import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 import { buildDocumentedRedemptionTelemetry } from "../reserve-adapters/redemption";
 import {
   mockLiveReserveD1,
@@ -342,7 +343,7 @@ describe("syncLiveReserves", () => {
     expect(JSON.parse(snapshot.metadata)).toHaveProperty("sourceTimestamp", timestamp);
     expect(JSON.parse(snapshot.metadata)).not.toHaveProperty("redemption");
     expect(JSON.parse(snapshot.warnings)).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
-    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000));
+    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000), resolveScheduledSlotPolicy("fourHourlyReserveSync"));
     expect(overview.staleCoins).toBe(0);
     expect(overview.degradedCoins).toBe(1);
     expect(overview.errorCoins).toBe(0);

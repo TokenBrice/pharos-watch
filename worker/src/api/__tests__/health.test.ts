@@ -328,14 +328,12 @@ describe("handleHealth", () => {
     row.value = JSON.stringify(snapshot);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
-      { match: "AS last_any", rows: [], first: { last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201, heavy: now - 30 } },
+      { match: "AS last_any", rows: [], first: { observed_at: now, last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201, heavy: now - 30 } },
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
     expect(body.status).toBe("stale");
     expect(body.warnings).toContain("scheduled_delivery_stalled");
-    // The handler samples its own clock; allow the one-second boundary.
-    expect(body.schedulerLiveness?.ageSeconds).toBeGreaterThanOrEqual(1201);
-    expect(body.schedulerLiveness?.ageSeconds).toBeLessThanOrEqual(1203);
+    expect(body.schedulerLiveness?.ageSeconds).toBe(1201);
   });
   it.each([
     [1801, "degraded", "heavy_scheduled_delivery_stalled"],
@@ -352,6 +350,7 @@ describe("handleHealth", () => {
     const db = buildStatusD1Scenario({ sections: [], overrides: [
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
       { match: "AS last_any", rows: [], first: {
+        observed_at: now,
         last_any: now - 1, reserve: now - 30, telegram: now - 30, digest: now - 30,
         heavy: age == null ? null : now - age,
       } },

@@ -825,7 +825,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const executionFailed = sampleCount === 0 || failCount > 0 || transportStatus !== "healthy";
   const reason = failedOutputs.size > 0 ? "status-self-check-persistence-failed"
     : evidenceReadFailed ? "status-self-check-evidence-read-failed"
-      : executionFailed ? "probe-execution-failed" : null;
+      : executionFailed ? (failCount === 0 && passCount > 0 ? "probe-latency-exceeded" : "probe-execution-failed") : null;
 
   return {
     status: reason ? "degraded" : "ok",

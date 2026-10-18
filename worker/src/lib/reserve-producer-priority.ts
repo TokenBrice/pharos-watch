@@ -4,6 +4,7 @@ import { RESERVE_RECOVERY_HEAVY_SLOT_KEYS } from "@shared/lib/scheduled-runner-r
 import { resolveLiveReserveSyncBudgetConfig } from "../cron/sync-live-reserves-config";
 import { CRON_TIMEOUT_MS, SCHEDULED_SLOT_JOB_BUDGET_MS } from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { resolveScheduledSlotPolicy } from "./scheduled-slot-policy";
 
 export const CRON_LEASE_TTL_ALLOWANCE_SEC = 60;
 export const RESERVE_RECOVERY_CLAIM_SEC = 15 * 60;
@@ -23,7 +24,7 @@ export type ReserveProducerPriority = {
   slotStartedAt: number;
   observedAt: number;
   lookaheadSec: number;
-  condition: "next-slot-lookahead" | "current-slot-unfinished" | "heavy-slot-running";
+  condition: "next-slot-lookahead" | "current-slot-unfinished" | "heavy-slot-running" | "producer-slot-live";
 };
 
 function getReserveRecoveryLookaheadSec(): number {
@@ -60,10 +61,22 @@ export async function getReserveProducerPriority(
   const next = current + CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec;
   const lookaheadSec = getReserveRecoveryLookaheadSec();
   const row = await runWithOverloadRetry(() => db.prepare(
-    "SELECT state, finished_at FROM cron_slot_executions WHERE slot_key = ? AND slot_started_at = ?",
-  ).bind(scheduleKey, current).first<{ state: string; finished_at: number | null }>());
+    "SELECT state, finished_at, updated_at FROM cron_slot_executions WHERE slot_key = ? AND slot_started_at = ?",
+  ).bind(scheduleKey, current).first<{ state: string; finished_at: number | null; updated_at: number | null }>());
   if (!row || row.state !== "finished" || row.finished_at == null) {
-    return { reason: "producer-slot-priority", scheduleKey, slotStartedAt: current, observedAt, lookaheadSec, condition: "current-slot-unfinished" };
+    const policy = resolveScheduledSlotPolicy(scheduleKey);
+    const producerLive = row?.state === "running"
+      && row.finished_at == null
+      && typeof row.updated_at === "number"
+      && Number.isFinite(row.updated_at)
+      && Number.isFinite(observedAt)
+      && current > 0
+      && current <= row.updated_at
+      && row.updated_at <= observedAt
+      && observedAt - row.updated_at <= policy.slotSilenceSec
+      && observedAt - current < policy.hardDeadSec;
+    return { reason: "producer-slot-priority", scheduleKey, slotStartedAt: current, observedAt, lookaheadSec,
+      condition: producerLive ? "producer-slot-live" : "current-slot-unfinished" };
   }
   // Upcoming-slot protection must not hide missing delivery of the current slot.
   if (next - observedAt <= lookaheadSec) {

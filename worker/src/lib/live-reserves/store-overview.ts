@@ -26,27 +26,29 @@ import { matchReserveFeedReview, resolveReserveFeedReviews } from "../reserve-fe
 
 interface LiveReserveResumePointer {
   state: string;
+  slot_started_at: number;
   next_item_key: string | null;
   items_done: number;
   items_total: number;
   updated_at: number;
+  producer_state: string | null;
+  producer_finished_at: number | null;
 }
 
 async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveReserveResumePointer | null> {
-  try {
-    return await db
-      .prepare(
-        `SELECT state, next_item_key, items_done, items_total, updated_at
-           FROM worker_scheduled_checkpoints
-          WHERE schedule_key = 'fourHourlyReserveSync'
-            AND job = 'sync-live-reserves'
-          ORDER BY slot_started_at DESC, attempt_no DESC
-          LIMIT 1`,
-      )
-      .first<LiveReserveResumePointer>();
-  } catch {
-    return null;
-  }
+  return db
+    .prepare(
+      `SELECT c.state, c.slot_started_at, c.next_item_key, c.items_done, c.items_total, c.updated_at,
+              s.state AS producer_state, s.finished_at AS producer_finished_at
+         FROM worker_scheduled_checkpoints c
+         LEFT JOIN cron_slot_executions s
+           ON s.slot_key = c.schedule_key AND s.slot_started_at = c.slot_started_at
+        WHERE c.schedule_key = 'fourHourlyReserveSync'
+          AND c.job = 'sync-live-reserves'
+        ORDER BY c.slot_started_at DESC, c.attempt_no DESC
+        LIMIT 1`,
+    )
+    .first<LiveReserveResumePointer>();
 }
 
 function isPersistentlyStaleIndependentStatus(syncState: ReserveSyncStateRecord): boolean {
@@ -238,6 +240,7 @@ function countCoinsByStatus(
 export async function computeReserveCompositionOverview(
   db: D1Database,
   now: number,
+  checkpointLiveness: { readonly slotSilenceSec: number; readonly hardDeadSec: number },
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
 ): Promise<ReserveCompositionOverview> {
   const configuredCoins = getConfiguredLiveReserveCoins();
@@ -267,12 +270,26 @@ export async function computeReserveCompositionOverview(
     && (checkpoint.state === "running" || checkpoint.state === "recovering" || checkpoint.state === "ready")
     && checkpoint.next_item_key != null
     && checkpoint.items_done < checkpoint.items_total;
-  const pointerDeferredCount = pointerPending
+  const pointerInProgress = pointerPending
+    && checkpoint!.state === "running"
+    && checkpoint!.producer_state === "running"
+    && checkpoint!.producer_finished_at == null
+    && Number.isFinite(checkpoint!.updated_at)
+    && Number.isFinite(checkpoint!.slot_started_at)
+    && checkpoint!.slot_started_at > 0
+    && checkpoint!.slot_started_at <= checkpoint!.updated_at
+    && checkpoint!.updated_at <= now
+    && now - checkpoint!.updated_at <= checkpointLiveness.slotSilenceSec
+    && now - checkpoint!.slot_started_at < checkpointLiveness.hardDeadSec;
+  const pointerRemainingCount = pointerPending
     ? Math.max(0, checkpoint!.items_total - checkpoint!.items_done)
     : 0;
+  const pointerDeferred = pointerPending && !pointerInProgress;
+  const pointerDeferredCount = pointerDeferred ? pointerRemainingCount : 0;
 
 
   const counts = countCoinsByStatus(configuredCoins, syncById, compositionById, now, freshnessSec);
+  const hasDeferredCheckpoint = pointerDeferred || (pointerPending && counts.deferredCoins > 0);
   const reviews = resolveReserveFeedReviews(now);
   const matched = await Promise.all(configuredCoins.map((coin) => {
     const state = syncById.get(coin.id) ?? null;
@@ -304,8 +321,9 @@ export async function computeReserveCompositionOverview(
     weakProbeFresh: counts.weakProbeFresh,
     writeTimeoutUncertain: counts.writeTimeoutUncertain,
     deferredCoins: Math.max(counts.deferredCoins, pointerDeferredCount),
-    runBudgetTruncated: pointerPending,
-    deferredAt: pointerPending ? checkpoint!.updated_at : null,
+    inProgressCoins: pointerInProgress ? pointerRemainingCount : 0,
+    runBudgetTruncated: hasDeferredCheckpoint,
+    deferredAt: hasDeferredCheckpoint ? checkpoint!.updated_at : null,
     nextCursorStablecoinId: pointerPending ? checkpoint!.next_item_key : null,
     cursorRecordedAt: pointerPending ? checkpoint!.updated_at : null,
     persistentlyStaleIndependentCoins: counts.persistentlyStaleIndependentCoins.sort(

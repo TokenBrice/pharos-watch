@@ -3,7 +3,12 @@ import {
   decodeLiveReserveRedemptionTelemetry,
   LiveReserveDiagnosticsSchema,
   LiveReserveRedemptionTelemetrySchema,
+  emptyReserveCompositionOverview,
+  ReserveCompositionOverviewSchema,
 } from "../live-reserves";
+import { StatusResponseSchema } from "../status";
+import { unavailableReserveComposition } from "../../lib/status-reserve-composition";
+import { statusResponse } from "./status.test-support";
 
 describe("live-reserve redemption telemetry numeric policy", () => {
   it("rejects impossible values the producer validator would reject", () => {
@@ -76,5 +81,32 @@ describe("live-reserve redemption telemetry numeric policy", () => {
     const diag = { publishedAllocationSumPct: 99, roundingEnvelopePct: 2 };
     expect(LiveReserveDiagnosticsSchema.parse(diag)).toEqual(diag);
     expect(LiveReserveDiagnosticsSchema.parse({ rawSumDeviation: 0 }).rawSumDeviation).toBe(0);
+  });
+});
+
+describe("reserve overview progress evidence", () => {
+  it("preserves measured in-progress counts without inventing missing legacy measurements", () => {
+    const overview = emptyReserveCompositionOverview();
+    for (const inProgressCoins of [0, 12]) {
+      expect(ReserveCompositionOverviewSchema.parse({ ...overview, inProgressCoins }).inProgressCoins).toBe(inProgressCoins);
+    }
+    const legacy = { ...overview };
+    delete legacy.inProgressCoins;
+    expect(ReserveCompositionOverviewSchema.parse(legacy).inProgressCoins).toBeUndefined();
+  });
+
+  it.each([-1, 0.5, Number.NaN, Infinity, null])("rejects invalid in-progress counts: %s", (inProgressCoins) => {
+    expect(ReserveCompositionOverviewSchema.safeParse({
+      ...emptyReserveCompositionOverview(), inProgressCoins,
+    }).success).toBe(false);
+  });
+
+  it("preserves null in-progress evidence for an unavailable status observation", () => {
+    const parsed = StatusResponseSchema.parse({ ...statusResponse(), reserveComposition: unavailableReserveComposition() });
+    expect(parsed.reserveComposition.inProgressCoins).toBeNull();
+    const legacy = unavailableReserveComposition();
+    delete legacy.inProgressCoins;
+    expect(StatusResponseSchema.parse({ ...statusResponse(), reserveComposition: legacy }).reserveComposition.inProgressCoins)
+      .toBeUndefined();
   });
 });

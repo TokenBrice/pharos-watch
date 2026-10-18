@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { CronResult } from "../cron-logger";
 import { normalizeCronMetadataWithLease } from "../cron-metadata";
-import { MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../cron-metadata-persistence";
+import { compactCronMetadataForPersistence, MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../cron-metadata-persistence";
 
 describe("normalizeCronMetadataWithLease", () => {
   it("applies row defaults and merges lease meta when job metadata is absent", () => {
@@ -41,11 +41,14 @@ describe("normalizeCronMetadataWithLease", () => {
       groups: [{ adapterKey: "example", attemptCount: 1 }],
       overflow: false,
     };
+    const reason = "reserve-adapter-or-persistence-failed";
+    const reasons = [reason, "reserve-run-budget-deferred", "reserve-circuit-open"];
     const normalized = normalizeCronMetadataWithLease(
       {
         status: "degraded",
         metadata: JSON.stringify({
           adapterLatency,
+          reason, reasons,
           warnings: Array.from({ length: 2_000 }, (_, index) => `warning-${index}-${"x".repeat(80)}`),
           attemptFailureSummaries: Array.from(
             { length: 500 },
@@ -59,6 +62,8 @@ describe("normalizeCronMetadataWithLease", () => {
       adapterLatency?: unknown;
       adapterLatencyMetadataCompaction?: { compactedFields?: number };
       leaseOwner?: string;
+      reason?: string;
+      reasons?: string[];
     };
 
     expect(new TextEncoder().encode(normalized).length)
@@ -66,5 +71,8 @@ describe("normalizeCronMetadataWithLease", () => {
     expect(parsed.adapterLatency).toEqual(adapterLatency);
     expect(parsed.adapterLatencyMetadataCompaction?.compactedFields).toBeGreaterThan(0);
     expect(parsed.leaseOwner).toBe("job:scheduled:test");
+    expect(parsed.reason).toBe(reason);
+    expect(parsed.reasons).toEqual(reasons);
+    expect(JSON.parse(compactCronMetadataForPersistence(normalized).metadata!)).toMatchObject({ reason, reasons });
   });
 });

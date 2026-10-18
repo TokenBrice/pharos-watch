@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { loadSchedulerLiveness, schedulerLivenessWarnings } from "../status/scheduler-liveness";
 import { evaluateSchedulerLiveness } from "../status/evaluation-rules";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 
 const now = 1_791_321_600;
+const observedAt = now + 120;
+const heavyLane = SCHEDULED_SLOT_PLANS.v9SupplyAttributionOffset.scheduleKey;
 function slotDb(age: number, overrides: Record<string, unknown> = {}) {
   return mockD1([{ match: "AS last_any", rows: [], first: {
-    last_any: now - age, reserve: now - age, telegram: now - age, digest: now - age, heavy: now - 30, ...overrides,
+    observed_at: observedAt,
+    last_any: observedAt - age, reserve: observedAt - age, telegram: observedAt - age,
+    digest: observedAt - age, heavy: observedAt - 30, ...overrides,
   } }]);
 }
 
@@ -31,22 +36,22 @@ describe("live scheduled delivery", () => {
   it.each([[600, "healthy"], [601, "degraded"], [1200, "degraded"], [1201, "stale"]] as const)(
     "classifies strictly at %ss", async (age, status) => {
       const observation = await loadSchedulerLiveness(slotDb(age), now);
-      expect(observation).toMatchObject({ status, ageSeconds: age, observedAt: now, warningAfterSec: 600, staleAfterSec: 1200 });
+      expect(observation).toMatchObject({ status, ageSeconds: age, observedAt, warningAfterSec: 600, staleAfterSec: 1200 });
       expect(evaluateSchedulerLiveness(observation).status).toBe(status);
     },
   );
   it("does not let hourly delivery mask five-minute loss", async () => {
-    expect(await loadSchedulerLiveness(slotDb(1201, { last_any: now - 1 }), now)).toMatchObject({ status: "stale", lastAnyStartedAt: now - 1 });
+    expect(await loadSchedulerLiveness(slotDb(1201, { last_any: observedAt - 1 }), now)).toMatchObject({ status: "stale", lastAnyStartedAt: observedAt - 1 });
   });
   it("retains partial lane loss as diagnostic while a canonical lane delivers", async () => {
-    const observation = await loadSchedulerLiveness(slotDb(1201, { last_any: now - 1, digest: now - 1, telegram: null }), now);
+    const observation = await loadSchedulerLiveness(slotDb(1201, { last_any: observedAt - 1, digest: observedAt - 1, telegram: null }), now);
     expect(observation.status).toBe("healthy");
     expect(observation.lanes[1].lastStartedAt).toBeNull();
   });
   it.each([
     { last_any: null, reserve: null, telegram: null, digest: null },
     { reserve: null, telegram: null, digest: null },
-    { reserve: now + 1 }, { last_any: now + 1 }, { reserve: 0 },
+    { reserve: observedAt + 1 }, { last_any: observedAt + 1 }, { reserve: 0 }, { reserve: Number.NaN },
   ])("fails closed on missing/invalid clocks %j", async (overrides) => {
     const observation = await loadSchedulerLiveness(slotDb(30, overrides), now);
     expect(observation.status).toBe("unavailable");
@@ -58,17 +63,17 @@ describe("live scheduled delivery", () => {
   });
   it.each([[1800, "healthy"], [1801, "degraded"], [2700, "degraded"], [2701, "stale"]] as const)(
     "classifies heavy delivery strictly at %ss without altering public delivery", async (age, status) => {
-      const observation = await loadSchedulerLiveness(slotDb(30, { heavy: now - age }), now);
+      const observation = await loadSchedulerLiveness(slotDb(30, { heavy: observedAt - age }), now);
       expect(observation.status).toBe("healthy");
       expect(observation.heavy).toEqual({
-        scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: now - age, ageSeconds: age,
+        scheduleKey: heavyLane, lastStartedAt: observedAt - age, ageSeconds: age,
         warningAfterSec: 1800, staleAfterSec: 2700, status, unavailableReason: null,
       });
       expect(evaluateSchedulerLiveness(observation).status).toBe(status);
       expect(schedulerLivenessWarnings(observation)).toEqual(status === "healthy" ? [] : ["heavy_scheduled_delivery_stalled"]);
     },
   );
-  it.each([null, 0, now + 1, Number.NaN])("keeps missing/invalid heavy clocks unavailable (%s)", async (heavy) => {
+  it.each([null, 0, observedAt + 1, Number.NaN])("keeps missing/invalid heavy clocks unavailable (%s)", async (heavy) => {
     const observation = await loadSchedulerLiveness(slotDb(30, { heavy }), now);
     expect(observation.status).toBe("healthy");
     expect(observation.heavy).toMatchObject({ status: "unavailable", ageSeconds: null,
@@ -82,4 +87,90 @@ describe("live scheduled delivery", () => {
     expect(observation.heavy).toMatchObject({ status: "unavailable", unavailableReason: "slot-start-query-failed" });
     expect(schedulerLivenessWarnings(observation)).toEqual(["scheduler_liveness_unavailable", "heavy_scheduler_liveness_unavailable"]);
   });
+  it("accepts slot starts after caller time when the database observation admits them", async () => {
+    const observation = await loadSchedulerLiveness(slotDb(1), now);
+    expect(observation).toMatchObject({
+      status: "healthy", observedAt, ageSeconds: 1, unavailableReason: null,
+      heavy: { status: "healthy", ageSeconds: 30, unavailableReason: null },
+    });
+    expect(evaluateSchedulerLiveness(observation).status).toBe("healthy");
+  });
+  it("does not let a later caller clock change the database age", async () => {
+    const observation = await loadSchedulerLiveness(slotDb(601), observedAt + 10_000);
+    expect(observation).toMatchObject({ status: "degraded", observedAt, ageSeconds: 601 });
+  });
+  it("keeps starts exactly at the database observation valid", async () => {
+    const observation = await loadSchedulerLiveness(slotDb(0, { heavy: observedAt }), now);
+    expect(observation).toMatchObject({
+      status: "healthy", observedAt, ageSeconds: 0,
+      heavy: { status: "healthy", ageSeconds: 0 },
+    });
+  });
+  it.each([undefined, null, Number.NaN, Infinity, 0, -1, String(observedAt)])(
+    "does not admit delivery without a valid database observation clock (%s)", async (clock) => {
+      const observation = await loadSchedulerLiveness(slotDb(1, { observed_at: clock }), now);
+      expect(observation).toMatchObject({
+        status: "unavailable", observedAt: now, unavailableReason: "slot-start-query-failed",
+        lastAnyStartedAt: null, lastFiveMinuteStartedAt: null, ageSeconds: null,
+        heavy: { status: "unavailable", lastStartedAt: null, ageSeconds: null, unavailableReason: "slot-start-query-failed" },
+      });
+      expect(observation.lanes.every((lane) => lane.lastStartedAt === null)).toBe(true);
+      expect(schedulerLivenessWarnings(observation)).toEqual(["scheduler_liveness_unavailable", "heavy_scheduler_liveness_unavailable"]);
+      expect(evaluateSchedulerLiveness(observation).status).toBe("degraded");
+    },
+  );
+  it("keeps both scheduler observations healthy across a digest start after the assessment clock", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    let dbObservedAt = 1_792_283_090;
+    sqlite.function("unixepoch", () => dbObservedAt);
+    try {
+      const seed = sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, started_at, updated_at)
+        VALUES (?, ?, 'running', 's1-observation', ?, ?)`);
+      const start = (key: string, at: number) => seed.run(key, at, at, at);
+      start("fiveMinuteReserveRecovery", 1_792_282_963);
+      start("digestTriggerPoll", 1_792_282_843);
+      start("v9SupplyAttributionOffset", 1_792_283_080);
+      start("quarterHourly", 1_792_283_084);
+      const raw = await loadSchedulerLiveness(db, 1_792_283_090);
+      dbObservedAt = 1_792_283_145;
+      start("digestTriggerPoll", 1_792_283_143);
+      start("quarterHourly", 1_792_283_144);
+      const publicRead = await loadSchedulerLiveness(db, 1_792_283_090);
+      expect(raw).toMatchObject({ status: "healthy", observedAt: 1_792_283_090, ageSeconds: 127 });
+      expect(publicRead).toMatchObject({
+        status: "healthy", observedAt: 1_792_283_145,
+        lastAnyStartedAt: 1_792_283_144, lastFiveMinuteStartedAt: 1_792_283_143,
+        ageSeconds: 2, unavailableReason: null,
+        heavy: { status: "healthy", ageSeconds: 65 },
+      });
+      expect(evaluateSchedulerLiveness(raw).status).toBe("healthy");
+      expect(evaluateSchedulerLiveness(publicRead).status).toBe("healthy");
+    } finally {
+      sqlite.close();
+    }
+  });
+  it.each(["digestTriggerPoll", "v9SupplyAttributionOffset"])(
+    "rejects actual slot evidence later than its database observation (%s)", async (futureSlot) => {
+      const { db, sqlite } = createLatestSchemaSqlite();
+      sqlite.function("unixepoch", () => observedAt);
+      try {
+        const seed = sqlite.prepare(`INSERT INTO cron_slot_executions
+          (slot_key, slot_started_at, state, execution_owner, started_at, updated_at)
+          VALUES (?, ?, 'running', 's1-observation', ?, ?)`);
+        seed.run("digestTriggerPoll", observedAt - 30, observedAt - 30, observedAt - 30);
+        seed.run("v9SupplyAttributionOffset", observedAt - 30, observedAt - 30, observedAt - 30);
+        seed.run(futureSlot, observedAt + 1, observedAt + 1, observedAt + 1);
+        const observation = await loadSchedulerLiveness(db, now);
+        expect(observation).toMatchObject({
+          status: "unavailable", observedAt, ageSeconds: null, unavailableReason: "slot-start-clock-invalid",
+        });
+        expect(observation.heavy).toMatchObject(futureSlot === "v9SupplyAttributionOffset"
+          ? { status: "unavailable", ageSeconds: null, unavailableReason: "slot-start-clock-invalid" }
+          : { status: "healthy", ageSeconds: 30, unavailableReason: null });
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
 });
