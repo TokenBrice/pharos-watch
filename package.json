@@ -86,6 +86,7 @@
     "ops:watch-worker-cron": "node scripts/maintenance/watch-worker-cron.mjs",
     "ops:cron-delivery": "node scripts/maintenance/cron-delivery.mjs",
     "ops:worker-memory": "node --import tsx scripts/maintenance/monitor-worker-memory.ts",
+    "ops:http-telemetry": "node --import tsx scripts/maintenance/collect-http-telemetry.ts",
     "ops:night-watch-worker": "node scripts/maintenance/night-watch-worker.mjs",
     "calibrate:yield-venue-risk": "tsx scripts/maintenance/yield-venue-risk-calibration.ts",
     "calibrate:ddrr": "tsx scripts/maintenance/generate-ddrr-calibration-report.ts",

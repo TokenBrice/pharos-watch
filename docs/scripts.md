@@ -96,6 +96,46 @@ replays against the capture-time registry.
 
 Use `jq '(.fixedInput // .).clockSec'` to read either export shape. The [equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay) owns snapshot admission, trusted-Git execution, production-digest limitations, and the `--registry-ref`, `--normalized-only`, and `--allow-registry-mismatch` mode contracts.
 
+## HTTP Route Telemetry
+
+`npm run ops:http-telemetry -- [--from <timezone-qualified ISO> --to <timezone-qualified ISO>]`
+prints a schema-v1 JSON report to stdout. It reads Cloudflare zone `httpRequestsAdaptiveGroups`
+at the fixed `https://api.cloudflare.com/client/v4/graphql` endpoint, rejecting redirects;
+it never writes local files, D1, Worker request-path telemetry, or remote state.
+Export **`CLOUDFLARE_ZONE_ANALYTICS_READ`** with **Zone → Analytics → Read** permission for
+the `pharos.watch` zone and **`CLOUDFLARE_ZONE_ID`** explicitly. The Account Analytics token
+used by `ops:worker-memory` does not authorize this zone read. Credentials are not printed.
+Use shell redirection into ignored `agents/` if a local evidence artifact is needed.
+
+The default half-open window is 15 minutes ending five minutes behind now. Explicit bounds
+must be paired, increasing, timezone-qualified, at most 24 hours, and end at least five
+minutes behind now. These bounds allow ingestion lag but do not prove ingestion completeness.
+Help exits `0`, invalid usage `2`, available evidence `0`, and missing/failed/capped evidence
+`1` after printing its machine-readable reason. Failed or empty reads never become zero
+traffic or zero error rates; only routes observed in discovery are emitted.
+
+The report combines `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
+eyeball HTTP traffic. This is an edge HTTP population, including authentication, security,
+and platform responses, **not exclusively `stablecoin-api` invocations**. Path discovery
+is capped at 1,000 distinct paths (requesting one sentinel row); exceeding the cap fails
+closed without publishing partial rates. Static paths come from
+`shared/lib/api-endpoints/definitions.ts`, dynamic families from its canonical descriptors.
+Unknown paths share one `unmatched` bucket. Raw paths, stablecoin/API-key identifiers,
+and query strings are not emitted. Cardinality is bounded by the endpoint registry plus
+one unmatched bucket, with at most eight route pairs per sequential query.
+
+Each normalized route reports HTTP status counts, the estimated 5xx response count/rate,
+and **p95 edge time to first byte in milliseconds**. Counts/rates are explicitly adaptive
+estimates; the report retains sampling-interval ranges and unknown-interval counts.
+The rate denominator is the sum of returned status-group estimates, not an independently
+sampled pooled count. A known zero 5xx count is different from missing traffic.
+The collector asks Cloudflare to compute one pooled p95 over all discovered paths in
+each normalized route; it never averages path/status percentiles. Discovery and metric
+queries are separate reads, not an atomic snapshot, so later ingestion may change coverage.
+**Full-response/client latency is unavailable from this collector**: TTFB is neither
+response completion nor Worker wall time. Missing TTFB or HTTP statuses remain unavailable.
+No workflow is scheduled; this is an operator-invoked read-only collector.
+
 ## D1 Insights Capture
 
 Use `npm run ops:d1-insights -- --dry-run` to preview the default read-only Wrangler calls. Without `--dry-run`, the helper captures `7d` reads, `30d` reads, and `30d` time for `stablecoin-db`, then writes `agents/d1-insights-<timestamp>.json`.
