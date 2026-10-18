@@ -82,6 +82,9 @@ describe("check-env-contract Wrangler binding parser", () => {
       [[r2_buckets]]
       binding = "SAFETY_CAPTURE_ARCHIVE"
       bucket_name = "pharos-measurements"
+      [[services]]
+      binding = "HEAVY_EXECUTOR"
+      service = "stablecoin-heavy"
       [triggers]
       crons = ["*/15 * * * *"]
     `);
@@ -91,6 +94,7 @@ describe("check-env-contract Wrangler binding parser", () => {
       ["SELF_URL", { source: "[vars]", type: "string" }],
       ["DB", { source: "[[d1_databases]]", type: "D1Database" }],
       ["SAFETY_CAPTURE_ARCHIVE", { source: "[[r2_buckets]]", type: "R2Bucket" }],
+      ["HEAVY_EXECUTOR", { source: "[[services]]", type: "Fetcher" }],
     ]);
     expect([...result.duplicates]).toEqual([]);
     expect(result.unsupported).toEqual([]);

@@ -28,7 +28,7 @@ Read rows must pass JSON/object and `TapeEventSchema` validation. Invalid payloa
 
 ## Backing Pipeline
 
-`worker/src/cron/project-tape.ts` materializes existing producers on the scheduled DB-only lane. `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts` owns projector enrollment. The job is idempotent on `(source_table, source_row_id, transition)` with zero outbound connection budget. `TAPE_CLASSES` owns the UI roster; a class earns a chip only when its projector ships. Do not restate either registry as a second roster.
+`worker/src/cron/project-tape.ts` materializes existing producers on the scheduled DEWS/PSI lane. `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts` owns projector enrollment. The job is idempotent on `(source_table, source_row_id, transition)` and its projection work is D1-only. The [placed-fetch canary](./worker-infrastructure.md#project-tape-placed-fetch-canary) reserves one service-binding connection on the public driver; only project-tape delegates, and its flag-off rollback runs in-process. `TAPE_CLASSES` owns the UI roster; a class earns a chip only when its projector ships. Do not restate either registry as a second roster.
 
 `tape_events` is a permanent product archive. Filters/cursors/windows/severity bound reads, not retention: all-time browsing, permalinks, homepage reads and DDRR review need historical events. The baseline migration owns table schema; event IDs remain `${ts_ms}-${type}-${hash8}` for permalinks.
 

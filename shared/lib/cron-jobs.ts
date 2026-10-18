@@ -236,7 +236,9 @@ export const CRON_GROWTH_HEADROOM_POLICY = {
   // U-DEX-CAPACITY adds two hourly expressions and another schedule-bound
   // 3/6 entry for the existing shared job. Fetch-capable jobs are deduplicated,
   // so the ceiling remains 34. Neither existing 5/6 DEX slot gains work.
-  maxFetchCapableEntriesBeforeRebalance: 34,
+  // WS4/D12 admits one private project-tape service-binding fetch (2026-10-18):
+  // dewsPsiOffset rises 0/6 -> 1/6; no expressions or headroom-full slots added.
+  maxFetchCapableEntriesBeforeRebalance: 35,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
     p95DurationMs: 10 * 60 * 1000,
@@ -445,7 +447,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "dewsPsiOffset",
     triggerMode: "shared",
-    maxConnections: 0, // Pure D1 projection from existing source tables
+    maxConnections: 1, // Private placed executor fetch; in-process rollback uses zero.
     connectionGroup: "dews-psi-chain",
   },
   {

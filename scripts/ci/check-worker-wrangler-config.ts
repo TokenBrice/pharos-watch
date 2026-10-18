@@ -66,6 +66,24 @@ export function evaluateWorkerWranglerConfig(
   if (workflows.length > 0) {
     issues.push(`${role} must not declare retired Workflow bindings.`);
   }
+  const services = assignments.filter(({ section }) => section === "services");
+  const placement = assignments.filter(({ section }) => section === "placement");
+  if (role === "public") {
+    expectValue("services", "binding", '"HEAVY_EXECUTOR"');
+    expectValue("services", "service", '"stablecoin-heavy"');
+    if (services.length !== 2 || services.some(({ key }) => key !== "binding" && key !== "service")) {
+      issues.push("Public must declare exactly the HEAVY_EXECUTOR default-fetch service binding (no RPC entrypoint).");
+    }
+    const mode = values.get(assignmentKey("vars", "PROJECT_TAPE_PLACED_EXECUTOR"));
+    if (mode !== '"on"' && mode !== '"off"') {
+      issues.push('Public PROJECT_TAPE_PLACED_EXECUTOR must be "on" or "off".');
+    }
+    if (placement.length > 0) issues.push("Placement belongs only to the heavy fetch executor.");
+  } else {
+    expectValue("placement", "region", '"aws:eu-central-1"');
+    if (placement.length !== 1) issues.push("Heavy placement must declare only the reviewed region hint.");
+    if (services.length > 0) issues.push("Heavy must not declare an executor service binding.");
+  }
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");
     expectValue("root", "preview_urls", "false");

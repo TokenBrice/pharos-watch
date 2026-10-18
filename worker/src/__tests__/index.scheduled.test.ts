@@ -514,6 +514,11 @@ describe("worker.scheduled", () => {
       TWITTER_ACCESS_TOKEN: "tw-token",
       TWITTER_ACCESS_TOKEN_SECRET: "tw-token-secret",
       COINGECKO_API_KEY: "coingecko",
+      HEAVY_EXECUTOR_SHARED_SECRET: "test-placed-executor-secret",
+      HEAVY_EXECUTOR: { fetch: vi.fn(async () => Response.json({
+        status: "ok", itemCount: 1,
+        metadata: JSON.stringify({ reason: "tape-projection-completed", executorColo: "FRA" }),
+      })) } as Fetcher,
     });
     const schedules = Object.entries(CRON_TRIGGER_SCHEDULES).flatMap(
       ([scheduleKey, triggerSchedules]) =>
@@ -552,6 +557,8 @@ describe("worker.scheduled", () => {
         expect(call[3]).toEqual(expect.objectContaining({ slotStartedAt: expect.any(Number) }));
       }
       expect(fetchSpy).not.toHaveBeenCalled();
+      expect(env.HEAVY_EXECUTOR!.fetch).toHaveBeenCalledOnce();
+      expect(cronMocks.projectTape).not.toHaveBeenCalled();
     } finally {
       fetchSpy.mockRestore();
     }

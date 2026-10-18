@@ -20,6 +20,10 @@ export interface Env {
   CF_VERSION_METADATA: WorkerVersionMetadata;
   /** Heavy-only binding; public scheduled paths do not require archive access. */
   SAFETY_CAPTURE_ARCHIVE?: R2Bucket;
+  /** Public driver only; invokes heavy's private default fetch handler. */
+  HEAVY_EXECUTOR?: Fetcher;
+  HEAVY_EXECUTOR_SHARED_SECRET?: string;
+  PROJECT_TAPE_PLACED_EXECUTOR?: string;
   CORS_ORIGIN: string;
   SELF_URL?: string;
   OPS_UI_ORIGIN?: string;

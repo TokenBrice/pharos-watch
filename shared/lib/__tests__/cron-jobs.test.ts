@@ -44,6 +44,16 @@ describe("cron job schedule metadata", () => {
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "price-corroboration")).toMatchObject({ maxConnections: 4 });
     expect(CRON_TRIGGER_SCHEDULES.statusSelfCheckOffset).toEqual(["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"]);
   });
+  it("reserves one project-tape service-binding connection without adding a trigger", () => {
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "project-tape")).toMatchObject({
+      scheduleKey: "dewsPsiOffset", maxConnections: 1, connectionGroup: "dews-psi-chain",
+    });
+    expect(CRON_TRIGGER_SCHEDULES.dewsPsiOffset).toEqual(["26,56 * * * *"]);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxFetchCapableEntriesBeforeRebalance).toBe(35);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(43);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxHeadroomFullTriggersBeforeRebalance).toBe(2);
+  });
+
 
   it("keeps the DEX source lane hourly while preserving the half-hourly consumer aliases", () => {
     expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10 * * * *");
