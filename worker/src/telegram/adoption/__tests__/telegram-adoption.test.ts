@@ -1,0 +1,129 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeJsonRequest } from "../../../test-helpers/__shared/auth";
+import { handleTelegramAdoption } from "../telegram-adoption";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import type { FullRouteContext } from "../../../routes/shared";
+import { getRouteMatch } from "../../../routes/registry";
+import { routeContextFactory } from "../../../test-helpers/__shared/routes";
+
+function request(body: unknown, headers: HeadersInit = {}): Request {
+  return makeJsonRequest("https://site-api.pharos.watch/api/telegram-adoption", body, {
+    headers: {
+      Origin: "https://pharos.watch",
+      "X-Pharos-Telegram-Adoption-Client-Hash": "0123456789abcdef0123456789abcdef",
+      ...headers,
+    },
+  });
+}
+
+function rawRequest(body: BodyInit | null, headers: HeadersInit = {}): Request {
+  return new Request("https://site-api.pharos.watch/api/telegram-adoption", {
+    method: "POST",
+    body,
+    headers: {
+      Origin: "https://pharos.watch",
+      "Content-Type": "application/json",
+      "X-Pharos-Telegram-Adoption-Client-Hash": "0123456789abcdef0123456789abcdef",
+      ...headers,
+    },
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+}
+
+function context(db: MockD1Database, req: Request): FullRouteContext {
+  return routeContextFactory({ db })({ request: req });
+}
+
+function quotaDb(): MockD1Database {
+  return mockD1([
+    { match: "telegram_adoption_client_quota", rows: [], first: { request_count: 1 } },
+    { match: "telegram_adoption_ingress_quota", rows: [], first: { request_count: 1 } },
+    { match: "INSERT INTO telegram_adoption_daily", rows: [] },
+  ]);
+}
+
+describe("Telegram adoption Worker endpoint", () => {
+  beforeEach(() => vi.useFakeTimers().setSystemTime(new Date("2026-07-10T12:34:56Z")));
+  afterEach(() => vi.useRealTimers());
+
+  it("registers the additive site-api route as POST-only", () => {
+    const route = getRouteMatch("/api/telegram-adoption");
+
+    expect(route?.methods).toEqual(["POST"]);
+    expect(route?.endpoint).toBeUndefined();
+  });
+
+  it("rejects foreign origins and arbitrary placements before D1", async () => {
+    const db = quotaDb();
+    expect(
+      (
+        await handleTelegramAdoption(
+          context(db, request({ campaign: "landing", placement: "hero" }, { Origin: "https://evil.example" })),
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await handleTelegramAdoption(
+          context(db, request({ campaign: "landing", placement: "custom" })),
+        )
+      ).status,
+    ).toBe(400);
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it.each([
+    ["missing body", () => rawRequest(null)],
+    ["malformed JSON", () => rawRequest("{")],
+    ["declared overflow", () => rawRequest("{}", { "Content-Length": "513" })],
+    ["streamed overflow", () => rawRequest(new Blob(["x".repeat(513)]).stream())],
+    ["reader failure", () => rawRequest(new ReadableStream({ pull() { throw new Error("read failed"); } }))],
+  ])("preserves the exact 400 response for %s", async (_name, makeRequest) => {
+    const result = await handleTelegramAdoption(context(quotaDb(), makeRequest()));
+    expect({ status: result.status, body: await result.text(), headers: Object.fromEntries(result.headers) }).toEqual({
+      status: 400,
+      body: "",
+      headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" },
+    });
+  });
+
+  it("rejects an exhausted per-client quota before consuming the global quota", async () => {
+    const db = mockD1([
+      { match: "telegram_adoption_client_quota", rows: [], first: null },
+    ]);
+
+    const result = await handleTelegramAdoption(
+      context(db, request({ campaign: "landing", placement: "hero" })),
+    );
+
+    expect(result.status).toBe(429);
+    expect(result.headers.get("Retry-After")).toBe("60");
+    expect(db.getHistory()).toHaveLength(1);
+  });
+
+  it("passes an exhausted global quota after the client reservation", async () => {
+    const db = mockD1([
+      { match: "telegram_adoption_client_quota", rows: [], first: { request_count: 1 } },
+      { match: "telegram_adoption_ingress_quota", rows: [], first: null },
+    ]);
+
+    const result = await handleTelegramAdoption(
+      context(db, request({ campaign: "landing", placement: "hero" })),
+    );
+
+    expect(result.status).toBe(429);
+    expect(db.getHistory()).toHaveLength(2);
+  });
+
+  it("fails closed when the forwarded client-IP hash is missing", async () => {
+    const db = quotaDb();
+    const result = await handleTelegramAdoption(
+      context(db, request({ campaign: "landing", placement: "hero" }, {
+        "X-Pharos-Telegram-Adoption-Client-Hash": "",
+      })),
+    );
+
+    expect(result.status).toBe(503);
+    expect(db.getHistory()).toHaveLength(0);
+  });
+});

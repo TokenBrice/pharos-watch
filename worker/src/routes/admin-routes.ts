@@ -65,7 +65,7 @@ export const ADMIN_STATIC_ROUTES = [
     ),
   ),
   defineLazyStaticRoute("admin-telegram-broadcast", () =>
-    import("../api/admin-telegram-broadcast").then(({ handleAdminTelegramBroadcast }) => handleAdminTelegramBroadcast),
+    import("../telegram/admin/admin-telegram-broadcast").then(({ handleAdminTelegramBroadcast }) => handleAdminTelegramBroadcast),
   ),
   defineReadOnlyAdminRoute("rpc-provider-trial", () =>
     import("../api/rpc-provider-trial").then(({ handleRpcProviderTrialReport }) => handleRpcProviderTrialReport),

@@ -69,7 +69,7 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
     paths: [
       "shared/lib/telegram-presets.ts",
       "worker/src/telegram/common/presets.ts",
-      "worker/src/api/telegram-store/presets.ts",
+      "worker/src/telegram/store/presets.ts",
     ],
     examples: ["worker/src/telegram/common/presets.ts"],
   },
@@ -77,7 +77,7 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
     id: "formatter-and-chunker",
     reason: "message consolidation and splitting determine chunk count and send demand",
     paths: [
-      "worker/src/api/telegram-format.ts",
+      "worker/src/telegram/common/telegram-format.ts",
       "worker/src/telegram/common/alerts-formatting.ts",
     ],
     examples: ["worker/src/telegram/common/alerts-formatting.ts"],
@@ -101,8 +101,8 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
   {
     id: "admin-broadcast",
     reason: "broadcast fan-out shares the pending queue and delivery budget",
-    paths: ["worker/src/api/admin-telegram-broadcast.ts"],
-    examples: ["worker/src/api/admin-telegram-broadcast.ts"],
+    paths: ["worker/src/telegram/admin/admin-telegram-broadcast.ts"],
+    examples: ["worker/src/telegram/admin/admin-telegram-broadcast.ts"],
   },
 ];
 

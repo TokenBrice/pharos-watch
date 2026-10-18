@@ -61,7 +61,7 @@ describe("lazy route loading", () => {
     // Static imports would warm the module graph before the factory assertions.
     await Promise.all([
       import("../../router"), import("../../handlers/http/gates"),
-      import("../../handlers/http/telegram-ingress-abuse"), import("../../lib/api-key-core"),
+      import("../../telegram/webhook/telegram-ingress-abuse"), import("../../lib/api-key-core"),
       import("../../lib/auth"), import("../../lib/idempotency"), import("../../lib/route-wrappers"),
     ]);
     expect(loads.apiUtils).not.toHaveBeenCalled();

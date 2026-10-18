@@ -14,7 +14,7 @@ import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "../types/status/te
  *
  * Every value is a load-bearing identifier: the column names are real D1
  * columns (asserted against the migrated schema by
- * `worker/src/api/telegram-store/__tests__/alert-type-registry-schema.test.ts`)
+ * `worker/src/telegram/store/__tests__/alert-type-registry-schema.test.ts`)
  * and `settingCode` is the token embedded in `/settings` callback data and in
  * mini-app coin patches, so it is part of the stored/inflight wire format.
  */

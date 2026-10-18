@@ -206,7 +206,7 @@ export const useStabilityIndex = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCR
 export const useStabilityIndexDetail = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail);
 
 // Public /pharoswatchbot telemetry contract. Keep rendered fields and
-// docs/telegram-alerts.md in sync with worker/src/api/telegram-pulse.ts.
+// docs/telegram-alerts.md in sync with worker/src/telegram/webhook/telegram-pulse.ts.
 export const useTelegramPulse = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.telegramPulse);
 export const useUsdsStatus = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.usdsStatus);
 

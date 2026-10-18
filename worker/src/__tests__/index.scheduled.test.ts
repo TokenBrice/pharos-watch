@@ -204,10 +204,10 @@ vi.mock("../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchT
 vi.mock("../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
 }));
-vi.mock("../api/telegram-store/disambiguation", () => ({
+vi.mock("../telegram/store/disambiguation", () => ({
   cleanExpiredDisambiguations: cronMocks.cleanExpiredDisambiguations,
 }));
-vi.mock("../api/telegram-pulse", () => ({
+vi.mock("../telegram/webhook/telegram-pulse", () => ({
   publishTelegramPulseSnapshotWithOutcome: cronMocks.publishTelegramPulseSnapshotWithOutcome,
 }));
 vi.mock("../handlers/scheduled/preflight-skip", () => ({

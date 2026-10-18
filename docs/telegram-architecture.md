@@ -46,16 +46,16 @@ Nine seams: **Ingress**, **Command parsing**, **Callback routing**, **Action han
 **Responsibility.** Authenticate `POST /api/telegram-webhook`, claim each update by owner/generation, and route through flood, pending-flow, group-admin, and cooldown gates. [Update deduplication](./telegram-alerts.md#update-deduplication) owns normalized-intent recovery and effect fences; [ingress incidents](./runbooks/telegram-webhook-retry-dedupe.md) owns admission/retry diagnosis. Parsing/authorization precede replay-safe local mutation; only the irreversible Bot API boundary starts an external effect.
 
 **Owned files.**
-- `worker/src/api/telegram-webhook.ts` — HTTP entry/claim bootstrap.
-- `worker/src/api/telegram-webhook-auth.ts` — secret/admin validation.
-- `worker/src/api/telegram-webhook-update-normalization.ts` — pure update/chat/migration shapes; no D1 or Bot API.
-- `worker/src/api/telegram-webhook-effect-fence.ts` — claim/normalized-intent effect boundary.
-- `worker/src/api/telegram-webhook-update-dispatch.ts` — policy/pending-gated intent routing.
-- `worker/src/api/telegram-webhook-ingress-policy.ts` — flood, cooldown, admin and channel gates.
-- `worker/src/api/telegram-webhook-pending-gate.ts` — pending-flow decisions.
-- `worker/src/api/telegram-webhook-group-welcome.ts` — group lifecycle/welcome.
-- `worker/src/api/telegram-inline-queries.ts` — read-only inline cards.
-- `worker/src/api/telegram-webhook-shared.ts` — cross-seam types/copy.
+- `worker/src/telegram/webhook/telegram-webhook.ts` — HTTP entry/claim bootstrap.
+- `worker/src/telegram/webhook/telegram-webhook-auth.ts` — secret/admin validation.
+- `worker/src/telegram/webhook/telegram-webhook-update-normalization.ts` — pure update/chat/migration shapes; no D1 or Bot API.
+- `worker/src/telegram/webhook/telegram-webhook-effect-fence.ts` — claim/normalized-intent effect boundary.
+- `worker/src/telegram/webhook/telegram-webhook-update-dispatch.ts` — policy/pending-gated intent routing.
+- `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` — flood, cooldown, admin and channel gates.
+- `worker/src/telegram/webhook/telegram-webhook-pending-gate.ts` — pending-flow decisions.
+- `worker/src/telegram/webhook/telegram-webhook-group-welcome.ts` — group lifecycle/welcome.
+- `worker/src/telegram/webhook/telegram-inline-queries.ts` — read-only inline cards.
+- `worker/src/telegram/webhook/telegram-webhook-shared.ts` — cross-seam types/copy.
 
 **Allowed inbound dependencies.** `worker/src/index.ts` request router (this is an HTTP entrypoint).
 
@@ -78,7 +78,7 @@ Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `tele
 **Responsibility.** Pure command/target/deep-link/pending-action parsing; no I/O.
 
 **Owned files.**
-- `worker/src/api/telegram-webhook-parsing.ts`
+- `worker/src/telegram/webhook/telegram-webhook-parsing.ts`
 - `worker/src/telegram/common/alerts-parser.ts` — pure target/argument parsing.
 - `worker/src/telegram/common/presets.ts` — pure alias parsing; its cache-reading target resolver is consumed by Action handlers/Dispatch.
 
@@ -99,10 +99,10 @@ Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `tele
 **Responsibility.** Validate callback prefixes against `CALLBACK_ACTIONS` before handler D1 work, authorize mutating group actions, invoke shared builders/store helpers, and acknowledge the callback. Ingress owns flood/cooldown admission; `setup:*` and `settings:*` have bounded sub-dispatchers. [Commands](./telegram-alerts.md#commands) owns callback behavior.
 
 **Owned files.**
-- `worker/src/api/telegram-webhook-callbacks.ts`
-- `worker/src/api/webhook-callbacks/` — registry and per-action implementation.
-- `worker/src/api/telegram-webhook-setup.ts` — state machine shared with Ingress ticker input.
-- `worker/src/api/telegram-webhook-settings.ts`, `telegram-webhook-settings-render.ts`, `telegram-webhook-settings-mutations.ts`, `telegram-webhook-settings-shared.ts` — settings subsystem.
+- `worker/src/telegram/webhook/telegram-webhook-callbacks.ts`
+- `worker/src/telegram/callbacks/` — registry and per-action implementation.
+- `worker/src/telegram/webhook/telegram-webhook-setup.ts` — state machine shared with Ingress ticker input.
+- `worker/src/telegram/webhook/telegram-webhook-settings.ts`, `telegram-webhook-settings-render.ts`, `telegram-webhook-settings-mutations.ts`, `telegram-webhook-settings-shared.ts` — settings subsystem.
 
 **Allowed inbound dependencies.** Ingress only (`handleCallbackQuery` is called from `handleTelegramWebhook`).
 
@@ -111,7 +111,7 @@ Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `tele
 **Must NOT.**
 - Bypass `CALLBACK_ACTIONS`; add every prefix and its keyboard builder together.
 - Duplicate Store write logic; route new mutations through `telegram-webhook-store.ts`.
-- Inline subscription upserts for settings; use `telegram-store/subscriptions.ts` builders to preserve `/set` parity.
+- Inline subscription upserts for settings; use `worker/src/telegram/store/subscriptions.ts` builders to preserve `/set` parity.
 - Depend on a concrete action handler; reuse its `build*Message` helper, not `handle*`.
 
 ---
@@ -121,9 +121,9 @@ Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `tele
 **Responsibility.** Command-domain reads, Common response composition, Store mutations and audited transport; one handler per command.
 
 **Owned files.**
-- `worker/src/api/webhook-commands/` — `index.ts` dispatch, `context.ts` request shape, `action-runner.ts` shared resolution/confirmation, and per-command handlers.
-- `worker/src/api/telegram-webhook-disambiguation-selection.ts` — pending-selection execution through the action runner.
-- `worker/src/api/telegram-webhook-messages.ts`, `telegram-webhook-insights.ts`, `telegram-webhook-status.ts`, `telegram-webhook-resolution.ts` — shared builders and domain loaders/resolution.
+- `worker/src/telegram/commands/` — `index.ts` dispatch, `context.ts` request shape, `action-runner.ts` shared resolution/confirmation, and per-command handlers.
+- `worker/src/telegram/store/telegram-webhook-disambiguation-selection.ts` — pending-selection execution through the action runner.
+- `worker/src/telegram/webhook/telegram-webhook-messages.ts`, `telegram-webhook-insights.ts`, `telegram-webhook-status.ts`, `telegram-webhook-resolution.ts` — shared builders and domain loaders/resolution.
 
 **Allowed inbound dependencies.** Ingress (via `COMMAND_HANDLERS`), Callback routing (which re-invokes some handlers via their build-message helpers and may call `action-runner` for the disambiguation reply path).
 
@@ -162,7 +162,7 @@ Structural boundaries:
 - `worker/src/cron/digest/telegram-transport.ts` — digest channel-edition publication, outside risk targeting.
 - `worker/src/telegram/common/quiet-hours.ts` — shared quiet-hours predicate and callback timezone validation.
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` — serial orchestration with deferred imports of cron entrypoints.
-- `worker/src/api/admin-telegram-broadcast.ts` — operator broadcast, not webhook Ingress.
+- `worker/src/telegram/admin/admin-telegram-broadcast.ts` — operator broadcast, not webhook Ingress.
 
 **Allowed inbound dependencies.** Worker scheduled-event router, Worker admin route entrypoints. Not Ingress, not Callback routing.
 
@@ -208,7 +208,7 @@ Direct/local coin intent and persistent preset intent remain separate; neither s
 Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecycle snapshot when pending-delivery evidence is unavailable.
 
 **Owned files.**
-- `worker/src/api/telegram-webhook-store.ts`, `worker/src/api/telegram-store/*` — stable import barrel and topic-specific SQL builders.
+- `worker/src/telegram/store/telegram-webhook-store.ts`, `worker/src/telegram/store/*` — stable import barrel and topic-specific SQL builders.
 - `worker/src/telegram/webhook/chat-member.ts` — chat-admin read policy.
 - `worker/src/telegram/store/usage-analytics.ts`, `worker/src/telegram/adoption/adoption-analytics.ts` — usage/lifecycle and identifier-free adoption.
 - `worker/src/telegram/webhook/webhook-registration.ts` — registration cadence/cache state; HTTP through Outbound.
@@ -231,7 +231,7 @@ Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecyc
 
 **Owned files.**
 - `worker/src/telegram/delivery/telegram.ts` (`postTelegramBotApi`, `sendToChat`, `sendBatch`, `answerCallbackQuery`, `editMessage`, `escapeHtml`, link-preview helpers, send-error classification)
-- `worker/src/api/telegram-webhook-replies.ts` (`sendAuditedTelegramReply` — chunks + diagnostics + replyMarkup)
+- `worker/src/telegram/webhook/telegram-webhook-replies.ts` (`sendAuditedTelegramReply` — chunks + diagnostics + replyMarkup)
 - `worker/src/telegram/common/log.ts` (structured Telegram event logger)
 
 **Allowed inbound dependencies.** Action handlers, Callback routing, Ingress (for replies), Dispatch (alert sends), Queue (drains), admin routes, daily digest, registration reconciliation, chat-admin membership probes.
@@ -263,16 +263,16 @@ Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecyc
 - `src/app/pharoswatchbot/app/use-mini-app-mutations.ts`
 - `src/app/pharoswatchbot/app/use-telegram-bridge.ts`
 - `src/app/pharoswatchbot/app/use-telegram-main-button.ts`
-- `worker/src/api/telegram-mini-app.ts`
-- `worker/src/api/telegram-mini-app-state.ts`
-- `worker/src/api/telegram-mini-app-mutations.ts`
+- `worker/src/telegram/mini-app/telegram-mini-app.ts`
+- `worker/src/telegram/mini-app/telegram-mini-app-state.ts`
+- `worker/src/telegram/mini-app/telegram-mini-app-mutations.ts`
 - `worker/src/telegram/recap/recap-store.ts` (shared generation-fenced recap preference mutation)
 - `worker/src/telegram/mini-app/mini-app-auth.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
 - `shared/lib/telegram-mini-app-catalog.ts`
 - `shared/lib/telegram-presets.ts`
 - `shared/data/stablecoins/coins.telegram-mini-app.generated.json`
-- `worker/src/api/telegram-mini-app-rate-limit.ts`
+- `worker/src/telegram/mini-app/telegram-mini-app-rate-limit.ts`
 - `shared/lib/telegram-recap-policy.ts`
 - `shared/lib/iana-local-time.ts`
 
@@ -318,9 +318,9 @@ Files any seam may import:
 
 Behavior changes stay inside current seams. Bug fixes, handlers, tests and fields inside an owner are routine. Cross-seam extraction/moves, new top-level directories, dispatch-registry restructuring or a new pipeline/framework require updating ownership and dependency direction in the same change.
 
-`scripts/ci/check-architecture-boundaries.ts` enforces `telegram-public-surface` on production Worker sources outside the Telegram owners. Each resolved incoming edge must match an exact importer/entry-module pair; static imports, re-exports, literal dynamic imports and authored type-only dependencies are covered. The owners are the Telegram API/HTTP-handler implementations, `worker/src/cron/telegram/`, and the feature core in `worker/src/telegram/`. Imports between these owners are internal; passing through a permitted public entry does not prohibit its internal dependencies. Unrelated features do not gain a directory-wide or scheduled-handler exemption.
+`scripts/ci/check-architecture-boundaries.ts` enforces `telegram-public-surface` on production Worker sources outside the Telegram owners. Each resolved incoming edge must match an exact importer/entry-module pair; static imports, re-exports, literal dynamic imports and authored type-only dependencies are covered. The owners are the feature core in `worker/src/telegram/` and the scheduler implementation in `worker/src/cron/telegram/`; registered route and HTTP-handler adapters remain external consumers. Imports between the two owners are internal; passing through a permitted public entry does not prohibit its internal dependencies. Unrelated features do not gain a directory-wide or scheduled-handler exemption.
 
-Telegram moves must rename the corresponding public-entry allowlist paths atomically with their callers, removing obsolete locations rather than adding compatibility re-exports. The checker recognizes the feature subtree, so a new deep destination import is not an escape hatch. `scripts/ci/check-worker-package.ts` separately rejects Heavy source-map reachability into Telegram's HTTP-bearing destinations (`webhook/`, including pulse, `mini-app/`, `adoption/`, and `admin/`); it does not ban generic delivery or outbox modules.
+Telegram moves must rename the corresponding public-entry allowlist paths atomically with their callers, removing obsolete locations rather than adding compatibility re-exports. The checker recognizes the feature subtree, so a new deep destination import is not an escape hatch. `scripts/ci/check-worker-package.ts` separately rejects Heavy source-map reachability into Telegram's HTTP-bearing destinations (`webhook/`, including pulse, `commands/`, `callbacks/`, `mini-app/`, `adoption/`, and `admin/`); it does not ban generic delivery or outbox modules.
 
 Re-evaluate a boundary when one fix repeatedly crosses seams, callbacks accumulate unrelated dependencies, Ingress becomes business logic, or SQL/policy is duplicated. Delivery policy stays in `shared/lib/telegram-delivery-policy.ts`; State owns shared SQL. These are design signals, not numerical acceptance gates.
 

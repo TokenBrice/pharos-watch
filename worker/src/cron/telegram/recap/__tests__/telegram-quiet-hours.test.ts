@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DISAMBIGUATION_TTL_SEC } from "../../../../api/telegram-webhook-shared";
-import { cleanExpiredDisambiguations } from "../../../../api/telegram-store/disambiguation";
+import { DISAMBIGUATION_TTL_SEC } from "../../../../telegram/webhook/telegram-webhook-shared";
+import { cleanExpiredDisambiguations } from "../../../../telegram/store/disambiguation";
 import {
   isQuietHoursActive,
   isValidIanaTimezone,

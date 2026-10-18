@@ -50,5 +50,5 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbUrlRoute("chains", () => import("../api/chains").then(({ handleChains }) => handleChains)),
   defineLazyDbUrlRoute("non-usd-share", () => import("../api/non-usd-share").then(({ handleNonUsdShare }) => handleNonUsdShare)),
   defineLazyDbRequestRoute("public-status-history", () => import("../api/public-status-history").then(({ handlePublicStatusHistory }) => handlePublicStatusHistory)),
-  defineLazyDbRoute("telegram-pulse", () => import("../api/telegram-pulse").then(({ handleTelegramPulse }) => handleTelegramPulse)),
+  defineLazyDbRoute("telegram-pulse", () => import("../telegram/webhook/telegram-pulse").then(({ handleTelegramPulse }) => handleTelegramPulse)),
 ] as const satisfies readonly StaticRouteDefinition[];

@@ -61,7 +61,7 @@ vi.mock("../gates", () => ({
   warnWorkerEnvIssuesOnce: mocks.warnWorkerEnvIssuesOnce,
 }));
 
-vi.mock("../telegram-ingress-abuse", () => ({
+vi.mock("../../../telegram/webhook/telegram-ingress-abuse", () => ({
   evaluateTelegramIngressAbuseGate: mocks.evaluateTelegramIngressAbuseGate,
   recordTelegramIngressHandlerResponse: mocks.recordTelegramIngressHandlerResponse,
 }));

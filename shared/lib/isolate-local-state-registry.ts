@@ -112,7 +112,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The exact fixed input, evidence clock, validated methodology policy and bundled execution reviews are authoritative. Policy reuse also checks the input clock; distinct input/policy objects cannot inherit cached admission, so no cross-request history grows or stale capture is reused.",
   },
   {
-    sourcePath: "worker/src/api/telegram-webhook.ts",
+    sourcePath: "worker/src/telegram/webhook/telegram-webhook.ts",
     stateNames: ["lastMissingBotTokenWarnAtMs"],
     owner: "Telegram webhook missing-token telemetry",
     kind: "counter",

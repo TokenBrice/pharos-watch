@@ -12,7 +12,7 @@ import {
   setTelegramRecapPreference,
 } from "../../../../telegram/recap/recap-store";
 import { insertTelegramSubscriber } from "../../dispatch/__tests__/telegram-subscriber.test-support";
-import { setSubscriberTimezone } from "../../../../api/telegram-store/snooze";
+import { setSubscriberTimezone } from "../../../../telegram/store/snooze";
 
 const NOW = 1_800_000_000;
 const dbs: DatabaseSync[] = [];

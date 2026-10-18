@@ -440,6 +440,12 @@
         "worker/src/routes/**",
         "worker/src/router.ts",
         "worker/src/api/**",
+        "worker/src/telegram/webhook/**",
+        "worker/src/telegram/commands/**",
+        "worker/src/telegram/callbacks/**",
+        "worker/src/telegram/mini-app/**",
+        "worker/src/telegram/adoption/**",
+        "worker/src/telegram/admin/**",
         "worker/src/handlers/http/**",
         "worker/src/lib/auth.ts",
         "worker/src/lib/idempotency.ts",
@@ -581,9 +587,6 @@
       "risk": "high",
       "sources": [
         "functions/pharoswatchbot-adoption.ts",
-        "worker/src/api/telegram*.ts",
-        "worker/src/api/telegram-*/**",
-        "worker/src/api/webhook-commands/**",
         "worker/src/cron/telegram/**",
         "worker/src/handlers/scheduled/*telegram*.ts",
         "worker/src/telegram/**",
@@ -1347,7 +1350,7 @@
           ]
         },
         {
-          "sources": ["worker/src/api/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/handlers/http/**"],
+          "sources": ["worker/src/api/**", "worker/src/telegram/webhook/**", "worker/src/telegram/commands/**", "worker/src/telegram/callbacks/**", "worker/src/telegram/mini-app/**", "worker/src/telegram/adoption/**", "worker/src/telegram/admin/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/handlers/http/**"],
           "required": [{ "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling-entry" }]
         },
         {
@@ -1359,7 +1362,7 @@
           ]
         },
         {
-          "sources": ["worker/src/api/telegram*.ts", "worker/src/api/telegram-*/**", "worker/src/api/webhook-commands/**", "worker/src/cron/telegram/**", "worker/src/lib/telegram/**", "worker/src/telegram/**", "worker/src/lib/digest*.ts", "worker/src/cron/daily-digest.ts", "worker/src/cron/daily-digest/**", "worker/src/cron/digest/**", "worker/src/cron/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts"],
+          "sources": ["worker/src/cron/telegram/**", "worker/src/telegram/**", "worker/src/lib/digest*.ts", "worker/src/cron/daily-digest.ts", "worker/src/cron/daily-digest/**", "worker/src/cron/digest/**", "worker/src/cron/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts"],
           "required": [
             { "path": "docs/telegram-architecture.md", "anchor": "seam-overview" },
             { "path": "docs/digest-pipeline.md", "anchor": "overview" }

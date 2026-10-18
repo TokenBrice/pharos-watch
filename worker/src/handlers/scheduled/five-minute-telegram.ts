@@ -317,7 +317,7 @@ function buildTelegramSlotGroups(
       job: "telegram-disambiguation-cleanup",
       errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
       run: async (signal) => {
-        const { cleanExpiredDisambiguations } = await import("../../api/telegram-store/disambiguation");
+        const { cleanExpiredDisambiguations } = await import("../../telegram/store/disambiguation");
         return cleanExpiredDisambiguations(runtime.db, signal);
       },
     },
@@ -326,7 +326,7 @@ function buildTelegramSlotGroups(
       errorMessage: "[cron] telegram-pulse-snapshot failed:",
       run: async (signal) => {
         const d1Cost = createD1CostTracker(runtime.db, ["outer-cron-lifecycle-excluded"]);
-        const { publishTelegramPulseSnapshotWithOutcome } = await import("../../api/telegram-pulse");
+        const { publishTelegramPulseSnapshotWithOutcome } = await import("../../telegram/webhook/telegram-pulse");
         const outcome = await publishTelegramPulseSnapshotWithOutcome(d1Cost.db, undefined, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           signal,

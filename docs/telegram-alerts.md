@@ -37,7 +37,7 @@ Public route/pulse/privacy are owned by [Mini App frontend](./telegram-mini-app.
 
 Subscriber alert keyboards have at most two rows. Multi-coin first chunks offer coin snooze for the top one/two severe coins, then chat snooze; overflow chunks offer only chat snooze. `rankAlertCoins` deduplicates by coin and ranks maximum depeg/DEWS/safety severity; displayed symbols may truncate but callback data uses canonical IDs. Single-coin first chunks offer status/depeg/safety context plus coin/chat snooze and private-only Open app. Group coin snooze remains admin-gated.
 
-Callback data is `action:arg`, at most 64 bytes. `CALLBACK_ACTIONS` in `worker/src/api/telegram-webhook-callbacks.ts` and its `webhook-callbacks/` registry own prefix/argument syntax; keyboard builders and allowlist change together. Namespaces cover snooze, status/why/coverage/quicksub, manage/unsubscribe, bulk/forget confirmation, selection/help, setup, timezone, settings and recap. Unknown actions receive a visible toast, not an error.
+Callback data is `action:arg`, at most 64 bytes. `CALLBACK_ACTIONS` in `worker/src/telegram/webhook/telegram-webhook-callbacks.ts` and its `worker/src/telegram/callbacks/` registry own prefix/argument syntax; keyboard builders and allowlist change together. Namespaces cover snooze, status/why/coverage/quicksub, manage/unsubscribe, bulk/forget confirmation, selection/help, setup, timezone, settings and recap. Unknown actions receive a visible toast, not an error.
 
 Settings edits the message in place with fresh-message fallback on refusal. Read-only pagination does not mutate; per-coin controls share Store semantics with `/set`. Quick-subscribe enables DEWS+depeg, adding a Mini App tuning confirmation in private chats and an admin-gated toast in groups.
 
@@ -45,7 +45,7 @@ Ingress flood admission precedes action-specific D1 work. Status/why/coverage ca
 
 ## Inline Mode Status Cards
 
-When BotFather Inline Mode is enabled, a user can type `@PharosWatchBot <ticker-or-id>` in any Telegram chat and choose one read-only Pharos status card. `worker/src/api/telegram-inline-queries.ts` accepts only an exact tracked symbol or canonical coin id, caps the query at 64 characters, returns at most one article, and reuses the existing `/status` loader and formatter. Empty, malformed, unknown, and ambiguous input receives an empty answer without market-data reads.
+When BotFather Inline Mode is enabled, a user can type `@PharosWatchBot <ticker-or-id>` in any Telegram chat and choose one read-only Pharos status card. `worker/src/telegram/webhook/telegram-inline-queries.ts` accepts only an exact tracked symbol or canonical coin id, caps the query at 64 characters, returns at most one article, and reuses the existing `/status` loader and formatter. Empty, malformed, unknown, and ambiguous input receives an empty answer without market-data reads.
 
 Successful cards are shared-cacheable through Telegram for 30 seconds; empty answers use 5 seconds. The message names Pharos as the source and retains the formatter's per-field freshness labels. Inline cards never subscribe, mutate settings, or include private watchlist state. The result id is display-independent and bounded to Telegram's 64-byte limit.
 
@@ -59,7 +59,7 @@ Flow freshness is a distinct **context tolerance**, not a claim about `/api/mint
 
 ### Webhook Command Flow
 
-`worker/src/api/telegram-webhook.ts` coordinates ingress; adjacent `telegram-webhook-*` modules own command parsing, formatting, and D1 persistence.
+`worker/src/telegram/webhook/telegram-webhook.ts` coordinates ingress; `worker/src/telegram/webhook/` owns parsing and ingress gates, `worker/src/telegram/commands/` owns command handlers, `worker/src/telegram/callbacks/` owns callback dispatch, and `worker/src/telegram/store/` owns D1 persistence.
 
 The webhook validates `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET` or, during rotation, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets and malformed JSON return `200 ok` without side effects. A missing bot token is acknowledged with a rate-limited configuration warning. If all D1-backed command flood checks are unavailable, ingress fails closed with the standard busy reply. Pending/setup handlers run before non-command text is acknowledged: they may clear expired rows or execute plain-text disambiguation selections; without an active flow, non-command messages have no side effects.
 
@@ -74,7 +74,7 @@ disambiguation cannot mask account deletion.
 
 ### Group Admin Gating
 
-Group admins alone may use `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/forget`, `/unmutehours`, `/unsnooze`, and `/import`. `/timezone <IANA-zone>` and `tz:<zone>` callbacks also require admin authorization; argument-free `/timezone` is read-only and omits the common-zone keyboard. The gate is a code toggle in `worker/src/api/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not an env binding. Mutating setup callbacks are gated; `setup:cancel` and `setup:branch:skip` are non-mutating exits requiring only wizard initiator ownership.
+Group admins alone may use `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/forget`, `/unmutehours`, `/unsnooze`, and `/import`. `/timezone <IANA-zone>` and `tz:<zone>` callbacks also require admin authorization; argument-free `/timezone` is read-only and omits the common-zone keyboard. The gate is a code toggle in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not an env binding. Mutating setup callbacks are gated; `setup:cancel` and `setup:branch:skip` are non-mutating exits requiring only wizard initiator ownership.
 
 - **Hard (default):** refuse non-admins with command-specific copy ("Only group admins can /subscribe. Ask @Alice or Bob.") without dispatch. `getChatAdministrators` supplies up to three already-public display names plus an overflow phrase.
 - **Soft (emergency rollback):** set the code toggle to `"soft"` and redeploy; non-admins receive the same warning but the command runs.
@@ -94,7 +94,7 @@ the send succeeded.
 
 ### Setup Wizard
 
-`/start` (with an empty payload or `?start=setup`) opens a two-branch inline-keyboard wizard handled in `worker/src/api/telegram-webhook-setup.ts`. The keyboard uses the `setup:*` callback namespace:
+`/start` (with an empty payload or `?start=setup`) opens a two-branch inline-keyboard wizard handled in `worker/src/telegram/webhook/telegram-webhook-setup.ts`. The keyboard uses the `setup:*` callback namespace:
 
 - `setup:branch:recommended` — confirms `dews,depeg` alerts for the `usd-top25` preset.
 - `setup:branch:custom` — toggles alert types (`setup:type-toggle:<type>`), then `setup:next` to pick a target (`setup:target:<preset|all|type>`), then `setup:confirm`.
@@ -108,7 +108,7 @@ Wizard state lives in `telegram_pending_disambiguation`: `action_type = "setup-s
 
 ### Supported Commands
 
-`TELEGRAM_COMMAND_REFERENCE` in `shared/lib/telegram-bot-registration.ts` is the syntax, audience, example, alias, and help-text authority. `COMMAND_HANDLERS` in `worker/src/api/webhook-commands/index.ts` is the dispatch authority. Do not mirror their command roster here. Product/side-effect contracts that are not just syntax:
+`TELEGRAM_COMMAND_REFERENCE` in `shared/lib/telegram-bot-registration.ts` is the syntax, audience, example, alias, and help-text authority. `COMMAND_HANDLERS` in `worker/src/telegram/commands/index.ts` is the dispatch authority. Do not mirror their command roster here. Product/side-effect contracts that are not just syntax:
 
 - `/start` opens setup (unknown/malformed payloads safely fall back); non-admin group users receive read-only start copy. `/help` derives rows from the shared manifest and private replies link to Mini App settings. `/presets` renders the canonical dynamic catalog.
 - `/sample` is a private-only synthetic USDC DEWS preview: no live read or preference mutation.
@@ -127,7 +127,7 @@ Wizard state lives in `telegram_pending_disambiguation`: `action_type = "setup-s
 
 ### /start Deep-Link Payloads
 
-Telegram supports `https://t.me/PharosWatchBot?start=<payload>` deep links. The payload arrives as the `/start` argument string and is dispatched through `parseStartPayload` in `worker/src/api/telegram-webhook-parsing.ts`.
+Telegram supports `https://t.me/PharosWatchBot?start=<payload>` deep links. The payload arrives as the `/start` argument string and is dispatched through `parseStartPayload` in `worker/src/telegram/webhook/telegram-webhook-parsing.ts`.
 
 Supported payload schemes (lowercase, no spaces, max 64 characters, characters `[A-Za-z0-9_-]` only):
 

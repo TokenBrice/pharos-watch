@@ -8,8 +8,8 @@ import {
   refreshTelegramLifecycleSnapshotIfStale,
 } from "../usage-analytics";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { publishTelegramPulseSnapshot } from "../../../api/telegram-pulse";
-import { cachedPulse, pulseCacheTables } from "../../../api/__tests__/telegram-pulse.test-support";
+import { publishTelegramPulseSnapshot } from "../../webhook/telegram-pulse";
+import { cachedPulse, pulseCacheTables } from "../../webhook/__tests__/telegram-pulse.test-support.ts";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);

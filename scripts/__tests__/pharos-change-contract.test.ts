@@ -189,7 +189,7 @@ describe("reading selectors and context modes", () => {
     ["shared/lib/safety-score-v9/evaluate-asset.ts", true],
     ["worker/src/cron/dex-liquidity/orchestrator.ts", true],
     ["worker/src/api/yield-history.ts", true],
-    ["worker/src/api/telegram-webhook.ts", false],
+    ["worker/src/telegram/webhook/telegram-webhook.ts", false],
     ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", false],
     ["functions/safety-scores/map.json.ts", true],
     ["functions/pharoswatchbot-adoption.ts", false],
@@ -308,7 +308,7 @@ describe("reading selectors and context modes", () => {
     "worker/src/cron/dex-liquidity/orchestrator.ts", "worker/src/api/yield-history.ts",
     "shared/lib/safety-score-v9/evaluate-asset.ts", "shared/lib/classification.ts",
     "functions/safety-scores/map.json.ts", "shared/data/stablecoins/coins/usdt-tether.json",
-    "worker/src/api/telegram-webhook.ts", "worker/migrations/0268_telegram_planning_lookup_indexes.sql",
+    "worker/src/telegram/webhook/telegram-webhook.ts", "worker/migrations/0268_telegram_planning_lookup_indexes.sql",
     "scripts/maintenance/worker-evidence-report.mjs", "functions/pharoswatchbot-adoption.ts",
   ])("keeps the emitted check plan byte-identical across modes for %s", (file) => {
     const outputs = (["auto", "contract"] as const).map((context) => {

@@ -229,10 +229,9 @@ describe("resolved architecture boundaries", () => {
 
 describe("Telegram public surface", () => {
   it.each([
-    "worker/src/api/telegram-webhook-private.ts",
-    "worker/src/api/webhook-commands/private.ts",
-    "worker/src/api/webhook-callbacks/private.ts",
-    "worker/src/api/telegram-store/private.ts",
+    "worker/src/telegram/webhook/telegram-webhook-private.ts",
+    "worker/src/telegram/commands/private.ts",
+    "worker/src/telegram/callbacks/private.ts",
     "worker/src/telegram/common/private.ts",
     "worker/src/cron/telegram/target-plans/private.ts",
     "worker/src/telegram/store/private.ts",
@@ -255,7 +254,6 @@ describe("Telegram public surface", () => {
   });
 
   it.each([
-    "worker/src/api/telegram-webhook.ts",
     "worker/src/telegram/webhook/telegram-webhook.ts",
   ])("permits the exact registered entry %s and its internal dependencies", (target) => {
     const root = fixture();
@@ -271,8 +269,8 @@ describe("Telegram public surface", () => {
 
   it("permits core-to-cron imports and unrelated shared infrastructure", () => {
     const root = fixture();
-    writeText(root, "worker/src/api/telegram-webhook.ts", `
-      export { value } from "../cron/telegram/target-plans/private";
+    writeText(root, "worker/src/telegram/webhook/telegram-webhook.ts", `
+      export { value } from "../../cron/telegram/target-plans/private";
       export type { Value } from "@shared/lib/infrastructure";
     `);
     writeText(root, "worker/src/cron/telegram/target-plans/private.ts", 'export { value } from "../../../telegram/store/private";');
