@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.22",
+    "title": "Exact UTC admission for mechanism-review evidence",
+    "date": "2026-10-18",
+    "effectiveAt": 1792368000,
+    "summary": "Safety Score v10.22 lets mechanism overlays and independently reviewed components carry an exact UTC evidence timestamp, admitted at that instant rather than waiting for the UTC day to elapse. This is admission-timing only and score-neutral for all existing date-only reviews.",
+    "impact": [
+      "Strict YYYY-MM-DD values retain next-UTC-midnight admission bit-for-bit. Exact YYYY-MM-DDTHH:MM:SSZ pins, optionally with milliseconds, admit when the scoring clock reaches the pin; future timestamps, timezone offsets and impossible dates are rejected.",
+      "The 365-day expiry budget remains measured from the original review start: UTC day start for date-only reviews and the exact instant for timestamped reviews. Component-only evidence never renews whole-overlay metrics, measurements or sibling components.",
+      "No existing overlay or component review dates are converted or renewed. Existing admission instants, grades, quality ladders, pillar weights and scoring formulas are unchanged. Future authored exact timestamps can make independently evidenced claims score-bearing earlier within their UTC day.",
+      "Activation is provisionally 2026-10-19 00:00 UTC (1792368000), following the next-UTC-midnight convention; re-date effectiveAt at release. This entry does not claim deployment or production acceptance."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.21",
     "title": "Coherent historical heads for economic supply attribution",
     "date": "2026-10-16",

@@ -248,7 +248,7 @@ Reserve composition admission gives captured live rows precedence, then judges r
 
 A named agreed-upon-procedures report may establish complete historical reserve composition through the same source identity, period, chronology, scope and named-report expiry gates. Its proof type and report method must both be `agreed-upon-procedures`; composition enters only at `static-validated`, even for a prudential issuer. This grants no independent financial-assurance, complete liability reconciliation, custody segregation or current-book coverage.
 
-Mechanism overlay components may carry `review: { reviewedAt, reviewer, rationale, sources }`, with sources pinned in the overlay's source list. Their own date controls component admission, evidence binding and expiry; untouched metrics, collateralization measurements and sibling components keep the overlay's original date. Date-only component reviews wait until their UTC day has elapsed. A component review cannot renew an expired whole overlay or make its old metrics current.
+Mechanism overlay components may carry `review: { reviewedAt, reviewer, rationale, sources }`, with sources pinned in the overlay's source list. Their own date or exact UTC timestamp controls component admission, evidence binding and expiry; untouched metrics, collateralization measurements and sibling components keep the overlay's original pin. Date-only component reviews wait until their UTC day has elapsed; exact UTC instants enter when the capture clock reaches them. The 365-day expiry starts at the original review start, not admission. A component review cannot renew an expired whole overlay or make its old metrics current.
 
 ## Report schema v8
 

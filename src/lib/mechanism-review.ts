@@ -19,7 +19,7 @@ export interface MechanismReviewSource {
 
 export interface MechanismReviewView {
   archetype: MechanismArchetype;
-  /** ISO date the evidence was pinned. */
+  /** Calendar date or exact UTC instant at which the evidence was pinned. */
   reviewedAt: string;
   /** Dated analyst prose measured against the sources below. */
   notes: string;

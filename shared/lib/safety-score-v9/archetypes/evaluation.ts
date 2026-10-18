@@ -1,5 +1,6 @@
 import type { V9AssetFactsBase } from "../../../types/safety-score-v9-facts";
 import type { V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
+import { parseIsoDateOrUtcInstantSec, reviewAdmissionSec } from "../../../types/date-primitives";
 import { clampScore } from "../../math";
 import { sha256Hex } from "../../sha256";
 import { stableJsonStringifyV1 } from "../../stable-json";
@@ -120,11 +121,11 @@ export function applyV9MeasuredCollateralization(
     asOfSec === undefined ||
     !Number.isFinite(asOfSec)
   ) return result;
-  const measuredAtSec = Date.parse(`${measurement.measuredAt}T00:00:00.000Z`) / 1_000;
+  const measuredAtSec = parseIsoDateOrUtcInstantSec(measurement.measuredAt);
   const maxAgeSec = policy.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
   if (
     !Number.isFinite(measuredAtSec) ||
-    measuredAtSec + 86_400 > asOfSec ||
+    reviewAdmissionSec(measurement.measuredAt) > asOfSec ||
     measuredAtSec + maxAgeSec <= asOfSec ||
     result.collateralizationApplications?.some(
       (application) => application.measurementId === measurement.measurementId,

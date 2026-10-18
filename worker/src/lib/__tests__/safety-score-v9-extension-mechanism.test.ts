@@ -15,6 +15,7 @@ import {
   getSafetyScoreV9MechanismReviewedUnavailableComponents,
   getSafetyScoreV9MechanismOverlayEvidence,
   MechanismReviewOverlaySchema,
+  isMechanismOverlayCurrent,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
   type MechanismReviewOverlay,
 } from "../safety-score-v9/extension-mechanism";
@@ -386,6 +387,55 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       assuranceAndReconciliation: { quality: null, status: { observationState: "stale" } },
     });
   });
+
+  it("admits exact UTC pins at their instant, including within the same day, and expires from that pin", () => {
+    const reviewedAt = "2026-10-18T12:30:01.125Z";
+    const startSec = Date.parse(reviewedAt) / 1_000;
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+    expect(isMechanismOverlayCurrent({ reviewedAt }, startSec - 0.001)).toBe(false);
+    expect(isMechanismOverlayCurrent({ reviewedAt }, startSec)).toBe(true);
+    expect(isMechanismOverlayCurrent({ reviewedAt }, startSec + 60)).toBe(true);
+    expect(isMechanismOverlayCurrent({ reviewedAt }, startSec + maxAgeSec - 0.001)).toBe(true);
+    expect(isMechanismOverlayCurrent({ reviewedAt }, startSec + maxAgeSec)).toBe(false);
+    expect(isMechanismOverlayCurrent({ reviewedAt: "2026-10-18T14:00:00Z" }, startSec)).toBe(false);
+    expect(isMechanismOverlayCurrent({ reviewedAt: "2026-10-18T10:00:00Z" }, startSec)).toBe(true);
+  });
+
+  it("preserves every authored overlay and component's date-only admission instant", () => {
+    for (const raw of mechanismReviewOverlaysAsset.overlays) {
+      const overlay = MechanismReviewOverlaySchema.parse(raw);
+      for (const review of [overlay, ...Object.values(overlay.components).flatMap(row => row.review ? [row.review] : [])]) {
+        expect(review.reviewedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        const admissionSec = Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1_000 + 86_400;
+        expect(isMechanismOverlayCurrent(review, admissionSec - 1)).toBe(false);
+        expect(isMechanismOverlayCurrent(review, admissionSec)).toBe(true);
+      }
+    }
+  });
+
+  it.each(["2026-10-18T12:30:01Z", "2026-10-18T12:30:01.125Z"])(
+    "admits an independently reviewed component at %s without an elapsed-day gap", (reviewedAt) => {
+      const overlay = MechanismReviewOverlaySchema.parse({
+        assetId: "fixture", archetype: "fiat-cash", reviewedAt: "2026-10-01",
+        sources: [{ label: "Pinned evidence", url: "https://example.com/evidence" }],
+        notes: "Independent component pin.", metrics: {}, components: { claimAndSegregation: {
+          quality: "adequate", review: { reviewedAt, reviewer: "Fixture reviewer",
+            rationale: "Current claim evidence.", sources: [{ label: "Pinned evidence", url: "https://example.com/evidence" }] },
+        } },
+      });
+      const pinSec = Date.parse(reviewedAt) / 1_000;
+      const before = expandOverlayReview(overlay, null, pinSec - 0.001);
+      const admitted = expandOverlayReview(overlay, null, pinSec);
+      const expiresSec = pinSec + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+      const expired = expandOverlayReview(overlay, null, expiresSec);
+      if (before.archetype !== "fiat-cash" || admitted.archetype !== "fiat-cash" || expired.archetype !== "fiat-cash") {
+        throw new Error("Expected fiat-cash fixture");
+      }
+      expect(before.claimAndSegregation).toMatchObject({ quality: null, status: { observationState: "missing" } });
+      expect(admitted.claimAndSegregation).toMatchObject({ quality: "adequate", status: { observationState: "known" } });
+      expect(expired.claimAndSegregation).toMatchObject({ quality: null, status: { observationState: "stale" } });
+    },
+  );
 
 
   it("projects exit facts from current overlays only, and none for profile-less cdp", () => {

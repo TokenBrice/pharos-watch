@@ -301,6 +301,13 @@ function SafetyScoresVersionNotes() {
         Neither a later review nor publication refreshes old holdings.
       </p>
       <p>
+        Mechanism reviews can pin an exact UTC evidence timestamp and enter scoring at that instant,
+        never before it. Date-only reviews still wait until the next UTC midnight. Both expire 365 days
+        from their original review start, not their admission time; a component-only review does not
+        renew sibling evidence. Existing dated reviews are unchanged, so this timing capability alone
+        moves no existing scores.
+      </p>
+      <p>
         Since methodology v9.31, curated collateral links share the reserve-envelope admission gate. When no live
         reserve slices exist and the curated composition is stale or otherwise inadmissible, the dependency overlay
         publishes no curated basket edges; the existing reserve-envelope gap carries the bounded consequence instead

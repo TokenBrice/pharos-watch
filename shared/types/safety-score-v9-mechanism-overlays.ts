@@ -5,12 +5,12 @@ import {
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
-import { StrictIsoDateSchema, uniqueKeyedCollectionSchema, reviewedAssetCollectionEnvelopeSchema } from "./safety-schema-primitives";
+import { StrictIsoDateOrUtcInstantSchema, uniqueKeyedCollectionSchema, reviewedAssetCollectionEnvelopeSchema } from "./safety-schema-primitives";
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum(MECHANISM_ARCHETYPE_VALUES);
 
 const SafetyScoreV9MechanismComponentReviewSchema = z.object({
-  reviewedAt: StrictIsoDateSchema,
+  reviewedAt: StrictIsoDateOrUtcInstantSchema,
   reviewer: z.string().trim().min(1),
   rationale: z.string().trim().min(1),
   sources: z.array(z.object({ label: z.string().min(1), url: z.string().url() }).strict()).min(1),
@@ -63,7 +63,7 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
   .object({
     assetId: z.string().min(1),
     archetype: SafetyScoreV9MechanismArchetypeSchema,
-    reviewedAt: StrictIsoDateSchema,
+    reviewedAt: StrictIsoDateOrUtcInstantSchema,
     sources: z.array(SafetyScoreV9MechanismOverlaySourceSchema).min(1),
     notes: z.string().min(1),
     metrics: z.record(z.string(), z.number().finite().nullable()),

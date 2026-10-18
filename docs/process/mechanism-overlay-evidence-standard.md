@@ -136,9 +136,9 @@ context, not direct coverage; these scope corrections do not refresh evidence da
 The optional collateralization measurement is a sourced reserve-to-liability
 pin, not a reserve-composition or surplus-credit claim. The compiler carries
 its source URL, evidence references, and `measuredAt` (the overlay's evidence-pin
-`reviewedAt` date); it uses the existing
-`evidenceExpiry.mechanismOverlayMaxAgeSec` budget, including the elapsed-UTC-day
-admission guard. An expired, undated, or unevidenced measurement is unknown and
+`reviewedAt` date or exact UTC instant); it uses the existing
+`evidenceExpiry.mechanismOverlayMaxAgeSec` budget and the same admission rule as
+the overlay. An expired, undated, or unevidenced measurement is unknown and
 produces neither a haircut nor credit; a current measured ratio below one
 scales Backing and its ceiling, while ratios at or above one grant no credit.
 
@@ -155,22 +155,29 @@ receives a new identity.
 
 ## Process requirements
 
-- Every overlay entry carries `reviewedAt` (ISO date of the evidence pin), descriptive
+- Every overlay entry carries `reviewedAt` (the evidence pin as strict `YYYY-MM-DD`
+  or `YYYY-MM-DDTHH:MM:SSZ`, optionally with 1–3 fractional-second digits), descriptive
   source labels, and notes stating what was measured, at what timestamp/block, and why each
   grade was assigned.
 - A changed component may carry its own `review` with `reviewedAt`, `reviewer`,
   `rationale` and primary `sources`. Its sources must also occur in the overlay
   source list (and its applicability source, if any, in its own review). That
-  component uses its own elapsed-day/expiry gate and evidence reference; never
+  component uses its own admission/expiry gate and evidence reference; never
   replace the global date to renew untouched metrics, measurements or siblings.
   A component-only review does not extend an expired whole overlay's admission.
 - Date-only overlay claims become score-bearing only after the reviewed UTC day has elapsed.
   During that day the admission gap is method-owned; clocks before the review date receive
   neither the future overlay nor its disposition.
-  Curate with the evidence date, never the capture date: a same-day promotion starts with the next capture and temporarily re-attributes the component `method-unsupported` (the elapsed-UTC-day guard in `worker/src/lib/safety-score-v9/extension-mechanism.ts`).
-- Curated overlay claims expire. An overlay stops being score-bearing 365 days after its
-  `reviewedAt` date (`evidenceExpiry.mechanismOverlayMaxAgeSec`); its components re-bound to
-  the conservative compiler path until the evidence is re-pinned.
+- An exact UTC timestamp is admitted at that instant (`clockSec >= admissionInstant`),
+  including earlier on the capture's UTC day; a later instant remains future evidence.
+  Only uppercase `T`/`Z` UTC timestamps with seconds and optional milliseconds are accepted;
+  offsets, missing seconds and impossible calendar dates are rejected.
+  Curate the actual evidence pin, never substitute the capture clock to gain admission.
+  Existing date-only reviews are not converted and keep their next-midnight admission.
+- Curated overlay claims expire 365 days after their own review start
+  (`evidenceExpiry.mechanismOverlayMaxAgeSec`): UTC day start for date-only values,
+  the exact instant for timestamp values, not the delayed admission instant.
+  At expiry components re-bound to the conservative compiler path until re-pinned.
 - Metric-applicability and non-measured component `sourceUrl`s must match an entry in the
   overlay's `sources` array (validator-enforced).
 - Overlays are identity-bound: every batch lands through a replay on the pinned production

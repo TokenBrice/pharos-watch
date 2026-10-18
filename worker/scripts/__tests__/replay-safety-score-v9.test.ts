@@ -416,6 +416,23 @@ describe("future-dated curated review guard", () => {
     const rows = findFutureDatedCuratedReviews(sec - 86_400);
     expect(rows.some((row) => row.assetId === assetId && row.field === "reviewedAt")).toBe(true);
   });
+
+  it("compares exact overlay and component instants without delaying same-day date-only reviews", () => {
+    const clockSec = Date.parse("2026-10-18T12:00:00Z") / 1_000;
+    const meta = ACTIVE_META_BY_ID.values().next().value!;
+    const rows = findFutureDatedCuratedReviews(clockSec, new Map([["fixture", meta]]), [{
+      assetId: "fixture", reviewedAt: "2026-10-18T12:00:00.125Z", components: {
+        earlier: { review: { reviewedAt: "2026-10-18T11:59:59Z" } },
+        exact: { review: { reviewedAt: "2026-10-18T12:00:00Z" } },
+        later: { review: { reviewedAt: "2026-10-18T12:00:01Z" } },
+        dateOnly: { review: { reviewedAt: "2026-10-18" } },
+      },
+    }]);
+    expect(rows.filter(row => row.field.startsWith("mechanism."))).toEqual([
+      { assetId: "fixture", field: "mechanism.components.later.review.reviewedAt", date: "2026-10-18T12:00:01Z" },
+      { assetId: "fixture", field: "mechanism.reviewedAt", date: "2026-10-18T12:00:00.125Z" },
+    ]);
+  });
 });
 
 describe("mechanism capture replay resolution", () => {

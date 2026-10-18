@@ -18,9 +18,26 @@ import { describe, expect, it } from "vitest";
 import {
   generateV9MissingDataRegistry,
   classifyV9ScoreProjectionWorkType,
+  mechanismOverlayAdmissionWarnings,
 } from "../maintenance/generate-safety-score-v9-missing-data-registry";
 
 const SHARED_EXIT_MESSAGE = "Comparable exit route evidence is missing for the reviewed settlement window of this fixture.";
+
+it("warns only before each mechanism review's admission instant", () => {
+  const clockSec = Date.parse("2026-10-18T12:00:00Z") / 1_000;
+  const fixture = (reviewedAt: string, componentReviewedAt?: string) => [{
+    assetId: "fixture", reviewedAt, components: {
+      claim: componentReviewedAt ? { review: { reviewedAt: componentReviewedAt } } : {},
+    },
+  }];
+  expect(mechanismOverlayAdmissionWarnings(clockSec, fixture("2026-10-18"))).toHaveLength(1);
+  expect(mechanismOverlayAdmissionWarnings(clockSec + 43_200, fixture("2026-10-18"))).toHaveLength(0);
+  expect(mechanismOverlayAdmissionWarnings(clockSec, fixture("2026-10-18T11:00:00Z"))).toHaveLength(0);
+  expect(mechanismOverlayAdmissionWarnings(clockSec, fixture("2026-10-18T12:00:00Z"))).toHaveLength(0);
+  expect(mechanismOverlayAdmissionWarnings(clockSec, fixture("2026-10-18T12:00:00.125Z"))).toHaveLength(1);
+  expect(mechanismOverlayAdmissionWarnings(clockSec, fixture("2026-10-01", "2026-10-18"))).toHaveLength(1);
+  expect(mechanismOverlayAdmissionWarnings(clockSec, fixture("2026-10-01", "2026-10-18T12:00:00Z"))).toHaveLength(0);
+});
 
 function generateExitProjectionFixture(
   reasonCodes: readonly ("unproven-settlement-bound" | "unsupported-same-notional-route")[],

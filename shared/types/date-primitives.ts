@@ -21,3 +21,18 @@ export function isValidIsoDateOnly(value: unknown): value is string {
   const day = Number(match[3]);
   return isValidCalendarDate(year, month, day);
 }
+
+/** Parse a strict calendar date or UTC instant (seconds, optionally 1–3 fractional digits). */
+export function parseIsoDateOrUtcInstantSec(value: unknown): number {
+  if (typeof value !== "string") return NaN;
+  if (isValidIsoDateOnly(value)) return Date.parse(`${value}T00:00:00.000Z`) / 1_000;
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:Z|\.\d{1,3}Z)$/.exec(value);
+  if (!match || !isValidIsoDateOnly(match[1])
+    || Number(match[2]) > 23 || Number(match[3]) > 59 || Number(match[4]) > 59) return NaN;
+  return Date.parse(value) / 1_000;
+}
+
+/** Date-only evidence waits for its UTC day to elapse; an exact UTC pin needs no delay. */
+export function reviewAdmissionSec(value: string): number {
+  return parseIsoDateOrUtcInstantSec(value) + (value.length === 10 ? 86_400 : 0);
+}

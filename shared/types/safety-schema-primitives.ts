@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isValidIsoDateOnly } from "./date-primitives";
+import { isValidIsoDateOnly, parseIsoDateOrUtcInstantSec } from "./date-primitives";
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const BASE_INPUT_GENERATION_ID_PATTERN = /^report-cards-input:v1:[a-f0-9]{64}$/u;
@@ -36,6 +36,10 @@ export const NonNegativeFiniteSchema = z.number().finite().nonnegative();
 /** A published 0-100 score point. */
 export const ScoreSchema = z.number().finite().min(0).max(100);
 export const StrictIsoDateSchema = z.string().refine(isValidIsoDateOnly, "Expected YYYY-MM-DD");
+export const StrictIsoDateOrUtcInstantSchema = z.string().refine(
+  (value) => Number.isFinite(parseIsoDateOrUtcInstantSec(value)),
+  "Expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS[.SSS]Z",
+);
 
 /** Strict versioned envelope for authored collections with unique item keys. */
 export function uniqueKeyedCollectionSchema<

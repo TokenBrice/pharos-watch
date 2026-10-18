@@ -46,7 +46,7 @@ export interface MechanismBackingNote {
 
 export interface MechanismBackingView {
   archetype: MechanismArchetype;
-  /** ISO date the evidence was pinned. */
+  /** Calendar date or exact UTC instant at which the evidence was pinned. */
   reviewedAt: string;
   /** Leading metric first; empty when every metric was ruled out or unmeasured. */
   metrics: MechanismBackingMetric[];
