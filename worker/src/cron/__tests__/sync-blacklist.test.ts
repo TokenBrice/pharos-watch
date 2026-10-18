@@ -728,7 +728,11 @@ describe("syncBlacklist", () => {
   ])("uses the measured lag tolerance for run status ($lag blocks)", async ({ lag, expectedStatus }) => {
     const priorSuccess = Math.floor(Date.now() / 1000) - 3600;
     const db = makeDb(CONTRACT_CONFIGS.map((config) => ({
-      config_key: config.configKey, last_block: 0, cursor_value: 0,
+      config_key: config.configKey,
+      // Finish Base's complete 50,000-block request window just below safe head.
+      // A short response to a larger requested range is a provider gap, not tolerated lag.
+      last_block: config.chain.chainId === "base" ? 19_950_000 - lag : 0,
+      cursor_value: config.chain.chainId === "base" ? 19_950_000 - lag : 0,
       attempt_generation: 1, last_succeeded_at: priorSuccess,
     })));
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
