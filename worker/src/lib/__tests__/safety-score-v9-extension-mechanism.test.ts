@@ -401,12 +401,14 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(isMechanismOverlayCurrent({ reviewedAt: "2026-10-18T10:00:00Z" }, startSec)).toBe(true);
   });
 
-  it("preserves every authored overlay and component's date-only admission instant", () => {
+  it("admits every authored date-only review at next UTC midnight and exact pins at their instant", () => {
     for (const raw of mechanismReviewOverlaysAsset.overlays) {
       const overlay = MechanismReviewOverlaySchema.parse(raw);
       for (const review of [overlay, ...Object.values(overlay.components).flatMap(row => row.review ? [row.review] : [])]) {
-        expect(review.reviewedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        const admissionSec = Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1_000 + 86_400;
+        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt);
+        const admissionSec = dateOnly
+          ? Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1_000 + 86_400
+          : Math.ceil(Date.parse(review.reviewedAt) / 1_000);
         expect(isMechanismOverlayCurrent(review, admissionSec - 1)).toBe(false);
         expect(isMechanismOverlayCurrent(review, admissionSec)).toBe(true);
       }
