@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import { memo, useCallback, useMemo, type CSSProperties } from "react";
-import { PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { formatCompactUsd, formatPercentFromRatio } from "@shared/lib/format";
+import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { formatCompactUsd, formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
 import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 
-export type EmblemVariant = "fiat" | "sun-core" | "sun-planet" | "moon" | "star";
+export type EmblemVariant = "fiat" | "shelf";
 type HoverCardYPlacement = "auto" | "above" | "below";
-type CoinEmblemStyle = CSSProperties & { "--coin-z": number; "--coin-size": string };
+type CoinEmblemStyle = CSSProperties & { "--coin-z": number; "--coin-size": string; "--peg": string };
 
 function CoinEmblemInner({
   coin,
@@ -44,12 +44,14 @@ function CoinEmblemInner({
   const onLeave = useCallback(() => setHoveredCoin(null), [setHoveredCoin]);
 
   const mcap = coin.marketCap !== null ? formatCompactUsd(coin.marketCap) : null;
-  const cohortCap = cohortMarketCap != null ? formatCompactUsd(cohortMarketCap) : null;
+  // Cohort figures use the ranking's one rounding.
+  const cohortCap = cohortMarketCap != null ? formatCurrency(cohortMarketCap, 1) : null;
   const cohortShare =
     cohortSupplyUnavailableCount === 0 && cohortMarketCap != null && cohortMarketCap > 0 && coin.marketCap !== null
       ? formatPercentFromRatio(coin.marketCap / cohortMarketCap, 1)
       : null;
   const pegLabel = PEG_LABELS_SHORT[coin.pegCurrency] ?? coin.pegCurrency;
+  const pegHex = PEG_CHART_COLORS[coin.pegCurrency]?.hex ?? PEG_CHART_COLORS.OTHER.hex;
   const cohortLabel = `${pegLabel} cohort`;
   const coinCountLabel = `${cohortCoinCount} ${cohortCoinCount === 1 ? "coin" : "coins"}`;
   const showCoinName = coin.name.trim().toLowerCase() !== coin.symbol.trim().toLowerCase();
@@ -63,7 +65,9 @@ function CoinEmblemInner({
     width: "calc(var(--coin-size) * var(--peg-coin-scale, 1))",
     height: "calc(var(--coin-size) * var(--peg-coin-scale, 1))",
     "--coin-size": `${coin.sizePx}px`,
-    "--coin-z": Math.min(24, Math.max(5, Math.round(coin.sizePx / 4))),
+    // Smaller emblems stack above larger ones, so a crowded home never hides a coin.
+    "--coin-z": Math.min(24, Math.max(5, 30 - Math.round(coin.sizePx / 2))),
+    "--peg": pegHex,
   };
 
   const cls = [
@@ -100,6 +104,7 @@ function CoinEmblemInner({
       onBlur={onLeave}
       data-coin-id={coin.id}
       data-peg={coin.pegCurrency}
+      data-supply={coin.marketCap === null ? "unavailable" : undefined}
       data-card-x={cardX}
       data-card-y={cardY}
     >

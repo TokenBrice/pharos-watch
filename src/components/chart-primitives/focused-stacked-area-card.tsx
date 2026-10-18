@@ -5,6 +5,7 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import { Area, AreaChart } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { type TimeRangeOption, useTimeRangeFilter } from "@/hooks/use-time-range-filter";
@@ -53,7 +54,16 @@ interface FocusedStackedAreaCardProps<T extends Record<K, number>, K extends key
   cardClassName: string;
   contentClassName?: string;
   legendClassName: string;
+  /**
+   * `false` renders the chart as an unframed hairline band (no card around the
+   * chart stage) for pages that stack evidence bands; `cardClassName` is then
+   * ignored. Defaults to the framed card.
+   */
+  framed?: boolean;
 }
+
+/** The unframed band: a top hairline and no surface, so the chart stage is the only frame. */
+const UNFRAMED_CARD_CLASS = "rounded-none border-0 border-t border-border/50 bg-transparent py-5 shadow-none";
 
 export function FocusedStackedAreaCard<T extends Record<K, number>, K extends keyof T>({
   data,
@@ -84,6 +94,7 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
   tableCaption,
   cardClassName,
   contentClassName,
+  framed = true,
   legendClassName,
 }: FocusedStackedAreaCardProps<T, K>) {
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } =
@@ -120,11 +131,11 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
 
   if (isLoading) {
     return (
-      <Card className="pharos-card-shell">
-        <CardHeader>
+      <Card className={framed ? "pharos-card-shell" : UNFRAMED_CARD_CLASS}>
+        <CardHeader className={framed ? undefined : "px-0"}>
           <CardTitle as="h2" className={titleClassName}>{loadingTitle}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={framed ? undefined : "px-0"}>
           <Skeleton className={`${CHART_HEIGHT} w-full`} />
         </CardContent>
       </Card>
@@ -132,8 +143,8 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
   }
 
   return (
-    <Card className={cardClassName}>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <Card className={framed ? cardClassName : UNFRAMED_CARD_CLASS}>
+      <CardHeader className={framed ? "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between" : "flex flex-col gap-3 px-0 sm:flex-row sm:items-start sm:justify-between"}>
         <div className="space-y-1">
           <CardTitle as="h2" className={titleClassName}>{title}</CardTitle>
           {subtitle}
@@ -167,7 +178,7 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
           )}
         </div>
       </CardHeader>
-      <CardContent className={contentClassName}>
+      <CardContent className={framed ? contentClassName : cn(contentClassName, "px-0")}>
         {filteredData.length > 0 ? (
           <>
             <div className="pharos-chart-stage">

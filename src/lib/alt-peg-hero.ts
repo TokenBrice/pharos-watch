@@ -1,11 +1,10 @@
-import { PEG_CHART_COLORS } from "@shared/lib/classification";
+import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
-import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SKY_COHORT_SIZE_CEIL } from "@/lib/alt-peg-sizing";
+import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SHELF_SIZE_CEIL } from "@/lib/alt-peg-sizing";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { compareFiniteDesc } from "@shared/lib/sort";
@@ -34,34 +33,23 @@ export interface PegCluster {
   coins: readonly PlacedCoin[];
 }
 
-export type SkyCohortKind = "sun" | "moon" | "constellation";
-
-export interface SkyCohort {
-  kind: SkyCohortKind;
+/**
+ * A non-geographic peg (commodity, index, unmapped) on the shelf above the map.
+ * Groups and their coins are in market-cap order; the shelf lays them out, so
+ * position is rank, never a decorative orbit.
+ */
+export interface ShelfGroup {
+  peg: PegCurrency;
   label: string;
-  href: string;
   rank?: number;
+  colorHex: string;
   coins: readonly PlacedCoin[];
 }
 
 export interface PegDiversityHero {
   pegClusters: readonly PegCluster[];
-  skyCohorts: readonly SkyCohort[];
+  shelfGroups: readonly ShelfGroup[];
 }
-
-const EMPTY_SKY: readonly SkyCohort[] = [
-  { kind: "sun", label: "Gold", href: "/alt-pegs/gold", coins: [] },
-  { kind: "moon", label: "Silver", href: "/alt-pegs/silver", coins: [] },
-  { kind: "constellation", label: "CPI", href: "/stablecoins/cpi", coins: [] },
-];
-
-// Sky cohort centers & spread (percentages of the sky layer). The sun sits
-// left, moon center, constellation right; secondary coins ring outward.
-const SKY_LAYOUT: Record<SkyCohortKind, { cx: number; cy: number; spreadX: number; spreadY: number }> = {
-  sun: { cx: 19, cy: 48, spreadX: 18, spreadY: 28 },
-  moon: { cx: 50, cy: 42, spreadX: 9, spreadY: 26 },
-  constellation: { cx: 82, cy: 52, spreadX: 13, spreadY: 30 },
-};
 
 function resolveLogo(coin: StablecoinData): string | undefined {
   return getLogoSrc(logosById, coin.id);
@@ -107,40 +95,49 @@ function placeFiatCluster(peg: PegCurrency, coins: HeroCoin[], rank?: number): P
   };
 }
 
-function placeSkyCohort(kind: SkyCohortKind, coins: HeroCoin[], rank?: number): SkyCohort {
-  const template = EMPTY_SKY.find((c) => c.kind === kind)!;
-  if (coins.length === 0) return template;
-
-  const sorted = [...coins].sort(compareFiniteDesc<HeroCoin>((coin) => coin.marketCap ?? Number.NaN));
-  const layout = SKY_LAYOUT[kind];
-  const placed: PlacedCoin[] = sorted.map((coin, index) => {
-    const sizePx = coinEmblemSize(coin.marketCap, { ceil: SKY_COHORT_SIZE_CEIL });
-    if (index === 0) return { ...coin, x: layout.cx, y: layout.cy, sizePx };
-    const angle = ((index - 1) / Math.max(1, sorted.length - 1)) * Math.PI * 2;
-    const orbitRx = layout.spreadX * (0.35 + (index % 3) * 0.25);
-    const orbitRy = layout.spreadY * (0.25 + (index % 3) * 0.22);
-    return {
-      ...coin,
-      x: layout.cx + Math.cos(angle) * orbitRx,
-      y: layout.cy + Math.sin(angle) * orbitRy,
-      sizePx,
-    };
-  });
-
+function placeShelfGroup(peg: PegCurrency, coins: HeroCoin[], rank?: number): ShelfGroup {
+  const byCap = compareFiniteDesc<HeroCoin>((coin) => coin.marketCap ?? Number.NaN);
   return {
-    ...template,
+    peg,
+    label: PEG_LABELS_SHORT[peg] ?? peg,
     rank,
-    coins: resolvePackedCoinOverlaps(placed, {
-      frameWidthPx: 1000,
-      frameHeightPx: 180,
-      paddingPx: 7,
-      getMobility: (coin) => (coin.id === placed[0]?.id ? 0.18 : 1),
-    }),
+    colorHex: PEG_CHART_COLORS[peg]?.hex ?? "#64748b",
+    // Shelf emblems sit centred in their own slot, so the slot owns position.
+    coins: [...coins].sort(byCap).map((coin) => ({
+      ...coin,
+      x: 50,
+      y: 50,
+      sizePx: coinEmblemSize(coin.marketCap, { ceil: SHELF_SIZE_CEIL }),
+    })),
   };
 }
 
+function knownCap(coins: readonly HeroCoin[]): number | null {
+  const observed = coins.filter((coin) => coin.marketCap !== null);
+  return observed.length > 0 ? observed.reduce((sum, coin) => sum + coin.marketCap!, 0) : null;
+}
+
+/**
+ * Furthest a coin may sit from its peg's anchor, in the 900×460 map plane. The
+ * overlap pass may not push a dense cluster (the euro) onto another continent:
+ * past this radius emblems stack (smaller ones on top) instead of spreading.
+ */
+export const PEG_HOME_RADIUS_PX = 34;
+const PLANE_PX_PER_PCT = { x: 9, y: 4.6 };
+
+function keepNearHome(coin: PlacedCoin, anchor: { x: number; y: number }): PlacedCoin {
+  const dxPx = (coin.x - anchor.x) * PLANE_PX_PER_PCT.x;
+  const dyPx = (coin.y - anchor.y) * PLANE_PX_PER_PCT.y;
+  const distPx = Math.hypot(dxPx, dyPx);
+  if (distPx <= PEG_HOME_RADIUS_PX) return coin;
+  const k = PEG_HOME_RADIUS_PX / distPx;
+  return { ...coin, x: anchor.x + (coin.x - anchor.x) * k, y: anchor.y + (coin.y - anchor.y) * k };
+}
+
 function separateFiatClusterLogos(clusters: readonly PegCluster[]): PegCluster[] {
-  if (clusters.length < 2) return [...clusters];
+  if (clusters.length < 2) {
+    return clusters.map((cluster) => ({ ...cluster, coins: cluster.coins.map((coin) => keepNearHome(coin, cluster.anchor)) }));
+  }
 
   const flat = clusters.flatMap((cluster) => cluster.coins);
   const leaderIds = new Set(clusters.map((cluster) => cluster.coins[0]?.id).filter(Boolean));
@@ -152,25 +149,23 @@ function separateFiatClusterLogos(clusters: readonly PegCluster[]): PegCluster[]
 
   return clusters.map((cluster) => ({
     ...cluster,
-    coins: cluster.coins.map((coin) => byId.get(coin.id) ?? coin),
+    coins: cluster.coins.map((coin) => keepNearHome(byId.get(coin.id) ?? coin, cluster.anchor)),
   }));
 }
 
 export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | undefined): PegDiversityHero {
   if (!peggedAssets || peggedAssets.length === 0) {
-    return { pegClusters: [], skyCohorts: EMPTY_SKY };
+    return { pegClusters: [], shelfGroups: [] };
   }
 
   const byPeg = new Map<PegCurrency, HeroCoin[]>();
   for (const raw of peggedAssets) {
-    if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(raw.id)) continue;
-    const meta = ACTIVE_META_BY_ID.get(raw.id);
-    if (!meta) continue;
-    const peg = meta.flags.pegCurrency;
-    if (peg === "USD") continue;
+    const peg = getCoreNonUsdPeg(raw.id);
+    if (peg === null) continue;
     const hero = toHeroCoin(raw, peg);
     if (!hero) continue;
     const list = byPeg.get(peg) ?? [];
+    if (list.some((coin) => coin.id === hero.id)) continue;
     list.push(hero);
     byPeg.set(peg, list);
   }
@@ -185,25 +180,13 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
   }
 
   const pegClusters: PegCluster[] = [];
-  const goldCoins: HeroCoin[] = [];
-  const silverCoins: HeroCoin[] = [];
-  const varCoins: HeroCoin[] = [];
+  const shelfGroups: ShelfGroup[] = [];
 
   for (const [peg, coins] of byPeg) {
-    if (peg === "GOLD") {
-      goldCoins.push(...coins);
-      continue;
-    }
-    if (peg === "SILVER") {
-      silverCoins.push(...coins);
-      continue;
-    }
-    if (peg === "VAR") {
-      varCoins.push(...coins);
-      continue;
-    }
+    // A peg with no home territory (commodities, indexes, unmapped currencies) goes on the shelf, never off the atlas.
     const cluster = placeFiatCluster(peg, coins, cohortRankByPeg.get(peg));
     if (cluster) pegClusters.push(cluster);
+    else shelfGroups.push(placeShelfGroup(peg, coins, cohortRankByPeg.get(peg)));
   }
 
   pegClusters.sort((a, b) => {
@@ -213,13 +196,7 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
     if (bMax === null) return 1;
     return aMax - bMax;
   });
-  const separatedPegClusters = separateFiatClusterLogos(pegClusters);
+  shelfGroups.sort(compareFiniteDesc<ShelfGroup>((group) => knownCap(group.coins) ?? Number.NaN));
 
-  const skyCohorts: readonly SkyCohort[] = [
-    placeSkyCohort("sun", goldCoins, cohortRankByPeg.get("GOLD")),
-    placeSkyCohort("moon", silverCoins, cohortRankByPeg.get("SILVER")),
-    placeSkyCohort("constellation", varCoins, cohortRankByPeg.get("VAR")),
-  ];
-
-  return { pegClusters: separatedPegClusters, skyCohorts };
+  return { pegClusters: separateFiatClusterLogos(pegClusters), shelfGroups };
 }

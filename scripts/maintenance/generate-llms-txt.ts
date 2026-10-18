@@ -66,7 +66,7 @@ const coreDataLinks = [
   ["Liquidity", absolute("/liquidity/"), "DEX liquidity scores, pool counts, TVL depth."],
   ["Yield", absolute("/yield/"), "Yield-bearing stablecoin intelligence."],
   [
-    "Non-USD Market Structure",
+    "Non-USD Pegs",
     absolute("/alt-pegs/"),
     "Historical and current market structure for non-USD stablecoin cohorts.",
   ],

@@ -4,10 +4,9 @@ import { useEffect, useRef } from "react";
 import { RequestSequence, isRequestCancellation, requestTextWithResponse } from "@/lib/request";
 
 const STYLE_BLOCK = `
-.fiat-world-map{--world-default-fill:oklch(0.79 0.015 248 / 1);--world-stroke:oklch(0.48 0.02 248 / 0.58)}
-.dark .fiat-world-map{--world-default-fill:oklch(0.22 0.014 248 / 1);--world-stroke:oklch(0.62 0.02 248 / 0.55)}
+.fiat-world-map{--world-default-fill:var(--atlas-land);--world-stroke:var(--atlas-coast)}
 .fiat-world-map svg{display:block;width:100%;height:100%}
-.fiat-world-map .world-countries{stroke-width:0.7}
+.fiat-world-map .world-countries path{stroke-width:0.75;vector-effect:non-scaling-stroke}
 `;
 
 // URL-/navigation-bearing attributes that can drive data exfiltration or

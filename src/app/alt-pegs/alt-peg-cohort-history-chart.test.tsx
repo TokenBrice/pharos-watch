@@ -6,7 +6,7 @@ import { AltPegCohortHistoryChart } from "@/app/alt-pegs/alt-peg-cohort-history-
 import { Tooltip } from "recharts";
 import type { ReactElement } from "react";
 import type * as ChartAxes from "@/components/chart-primitives/axes";
-import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const { useStablecoinChartsMock, handleAnimationEndMock, chartState } = vi.hoisted(() => ({
@@ -78,7 +78,7 @@ describe("AltPegCohortHistoryChart", () => {
 
     render(<AltPegCohortHistoryChart onOpenFocus={onOpenFocus} />);
 
-    expect(screen.getByRole("heading", { name: /alt-peg market cap by cohort/i })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /non-usd market cap by peg/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/coverage starts/i)).toBeTruthy();
     expect(screen.getByText(/historical provider-wide cohort feed includes selected structural history overlays/i)).toBeTruthy();
@@ -101,12 +101,11 @@ describe("AltPegCohortHistoryChart", () => {
       ],
     });
     render(<AltPegCohortHistoryChart initialRange="all" />);
-    expect(screen.getByText(/latest provider-wide sample/).textContent).toContain("$10.0M");
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("3 peg currencies");
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
     expect((await screen.findByText("Total")).nextElementSibling?.textContent).toBe("$9.00M");
-    expect(screen.getAllByText(PEG_CHART_COLORS.EUR.label)).toHaveLength(3);
-    expect(screen.getByText(`(${PEG_CHART_COLORS.BRL.label}, ${PEG_CHART_COLORS.JPY.label})`)).toBeTruthy();
+    expect(screen.getAllByText(PEG_LABELS_SHORT.EUR)).toHaveLength(3);
+    expect(screen.getByText(`(${PEG_LABELS_SHORT.BRL}, ${PEG_LABELS_SHORT.JPY})`)).toBeTruthy();
     expect(screen.queryByText(PEG_LABELS_SHORT.USD)).toBeNull();
   });
 
@@ -122,7 +121,6 @@ describe("AltPegCohortHistoryChart", () => {
     });
     render(<AltPegCohortHistoryChart initialRange="all" />);
     expect((await screen.findByText("Total")).nextElementSibling?.textContent).toBe("Unavailable");
-    expect(screen.getByText(/latest provider-wide sample/).textContent).toContain("Unavailable");
     expect(within(screen.getByRole("table")).getAllByText("Unavailable").length).toBeGreaterThan(0);
   });
 
@@ -154,7 +152,7 @@ describe("AltPegCohortHistoryChart", () => {
       meta: { updatedAt: Math.floor(now / 1000) - ageSeconds, ageSeconds, status: "fresh" },
     });
     render(<AltPegCohortHistoryChart />);
-    expect(screen.getByText(/latest provider-wide sample/).textContent).toContain("April 21, 2024");
+    expect(screen.getByText(/latest sample April 21, 2024/)).toBeTruthy();
     expect(screen.getByText(/historical provider-wide cohort feed/)).toBeTruthy();
     expect(screen.queryByText("Showing an older snapshot") !== null).toBe(budgets > 0);
     if (budgets > 0) expect(screen.getByText(/Alt-Peg Cohort History/)).toBeTruthy();

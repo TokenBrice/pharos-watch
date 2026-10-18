@@ -4,18 +4,21 @@ import { useCallback, useMemo } from "react";
 import { type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { formatCurrency, formatChartDate, formatPercent } from "@shared/lib/format";
 import { useNonUsdShare } from "@/hooks/api-hooks";
-import { CHART_GREEN, CHART_AMBER } from "@/lib/chart-colors";
+import { CHART_GREEN } from "@/lib/chart-colors";
+import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import {
   FocusedStackedAreaCard,
   type StackedAreaSeries,
 } from "@/components/chart-primitives/focused-stacked-area-card";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { formatPercentTick } from "@/lib/chart-ticks";
 import type { NonUsdSharePoint } from "@shared/types/market";
 
-const COMMODITY_COLOR = CHART_AMBER;
+// Commodities are dominated by gold: draw them in the gold peg hue the hero, ranking and atlas use.
+const COMMODITY_COLOR = PEG_CHART_COLORS.GOLD.hex;
 const FIAT_COLOR = CHART_GREEN;
 const RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
 const DEFAULT_RANGE: TimeRangeOption = "1y";
@@ -109,9 +112,9 @@ export function NonUsdShareChart({
 }: NonUsdShareChartProps = {}) {
   const { data, isLoading } = useNonUsdShare();
 
-  const { chartData, latestShare, latestNonUsd, latestTotal } = useMemo(() => {
+  const { chartData, latestShare } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0)
-      return { chartData: [] as SharePoint[], latestShare: null, latestNonUsd: null, latestTotal: null };
+      return { chartData: [] as SharePoint[], latestShare: null };
 
     const points: SharePoint[] = data.map((point) => ({
       ts: point.date * 1000,
@@ -127,8 +130,6 @@ export function NonUsdShareChart({
     return {
       chartData: points,
       latestShare: last.commodityShare + last.fiatNonUsdShare,
-      latestNonUsd: last.commodity + last.fiatNonUsd,
-      latestTotal: last.total,
     };
   }, [data]);
 
@@ -152,22 +153,23 @@ export function NonUsdShareChart({
       title="Share of total stablecoin market outside USD"
       loadingTitle="Non-USD Market Share"
       subtitle={
-        latestTotal != null && latestTotal > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            As of {asOfLabel}: {formatPercent(latestShare)} of total stablecoin market &middot; outside-USD
-            segment size: {formatCurrency(latestNonUsd, 1)}
-            {" · "}{coverageLabel(latestSample?.coverage)}
-          </p>
-        ) : null
+        <p className="pharos-meta">Commodity and other non-USD pegs as a share of all stablecoins, from provider-wide snapshots.</p>
       }
       coverageNote={
         coverageStartLabel ? (
-          <p className="text-xs text-muted-foreground">
-            Coverage starts {coverageStartLabel}. Built from supply-history snapshots: daily over the last 90d, then
-            weekly to 2y, then monthly across the loaded history window. The non-commodity bucket includes
-            currency-linked plus other non-commodity pegs.
-            {" "}Value coverage estimates interior history gaps at each asset&apos;s prior observed value, not missing-history assets.
-          </p>
+          <ModuleDisclosure label="How this series is built" className="text-xs text-muted-foreground">
+            <div className="space-y-1.5 pt-1">
+              <p>
+                Coverage starts {coverageStartLabel}. Built from supply-history snapshots: daily over the last 90d, then
+                weekly to 2y, then monthly across the loaded history window. The non-commodity bucket includes
+                currency-linked plus other non-commodity pegs.
+              </p>
+              <p>
+                Value coverage estimates interior history gaps at each asset&apos;s prior observed value, not missing-history
+                assets. Latest sample ({asOfLabel}): {coverageLabel(latestSample?.coverage)}.
+              </p>
+            </div>
+          </ModuleDisclosure>
         ) : null
       }
       focusedNote={
@@ -197,6 +199,7 @@ export function NonUsdShareChart({
         `Share of total stablecoin market outside USD over ${total} points${truncated ? "; showing the latest 90" : ""}.`
       }
       cardClassName="pharos-card-shell animate-in fade-in duration-300"
+      framed={false}
       legendClassName="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-muted-foreground"
     />
   );

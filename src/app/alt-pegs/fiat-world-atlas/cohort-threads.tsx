@@ -1,15 +1,11 @@
 "use client";
 
+import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
 
-export function CohortThreads({
-  coins,
-  colorHex,
-}: {
-  coins: readonly PlacedCoin[];
-  colorHex: string;
-}) {
+/** Hover-only cohort membership: hairlines from the hovered coin to its same-peg siblings, in the peg's hue. */
+export function CohortThreads({ coins }: { coins: readonly PlacedCoin[] }) {
   const { hoveredCoinId, hoveredPeg } = useHoverState();
   if (!hoveredCoinId || !hoveredPeg) return null;
   const origin = coins.find((c) => c.id === hoveredCoinId);
@@ -18,6 +14,7 @@ export function CohortThreads({
     (c) => c.pegCurrency === hoveredPeg && c.id !== hoveredCoinId,
   );
   if (siblings.length === 0) return null;
+  const colorHex = PEG_CHART_COLORS[hoveredPeg]?.hex ?? PEG_CHART_COLORS.OTHER.hex;
 
   return (
     <svg
@@ -34,9 +31,9 @@ export function CohortThreads({
           x2={s.x}
           y2={s.y}
           stroke={colorHex}
-          strokeOpacity={0.55}
-          strokeWidth={0.25}
-          strokeDasharray="0.8 1.4"
+          strokeOpacity={0.7}
+          strokeWidth={0.6}
+          strokeDasharray="2 3"
           vectorEffect="non-scaling-stroke"
         />
       ))}

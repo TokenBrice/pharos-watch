@@ -5,7 +5,7 @@
  * territory. Consumed by alt-peg-hero.ts when packing coin emblems.
  */
 export const PEG_ANCHORS: Record<string, { x: number; y: number }> = {
-  EUR: { x: 53, y: 28 },
+  EUR: { x: 53, y: 25 },
   CHF: { x: 50, y: 28 },
   GBP: { x: 49, y: 23 },
   CZK: { x: 53, y: 27 },
@@ -29,4 +29,12 @@ export const PEG_ANCHORS: Record<string, { x: number; y: number }> = {
   MXN: { x: 22, y: 42 },
   ZAR: { x: 57, y: 76 },
   AUD: { x: 86, y: 74 },
+  COP: { x: 30, y: 54 },
+  PEN: { x: 29, y: 62 },
+  CLP: { x: 31, y: 79 },
+  GHS: { x: 50, y: 52 },
+  KES: { x: 61, y: 57 },
+  INR: { x: 72, y: 42 },
+  VND: { x: 79, y: 46 },
+  HKD: { x: 79, y: 42 },
 };

@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Maximize2 } from "lucide-react";
-import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
+import { ChevronDown, Maximize2 } from "lucide-react";
+import { MAP_SIZE_CAP_LABEL, PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import { AtlasFullscreenDialog } from "@/app/alt-pegs/fiat-world-atlas/atlas-fullscreen-dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import "./peg-hero.css";
 
-function AtlasHeroHeader({
+function AtlasHeader({
   onExpand,
   open,
 }: {
@@ -17,13 +17,13 @@ function AtlasHeroHeader({
   open: boolean;
 }) {
   return (
-    <div className="relative z-10 flex items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 lg:px-6">
-      <h2
-        id="alt-peg-link-hub"
-        className="pharos-section-title"
-      >
-        Peg Diversity Atlas
-      </h2>
+    <div className="flex items-start justify-between gap-3">
+      <div className="space-y-1">
+        <h2 id="alt-peg-link-hub" className="pharos-section-title">
+          Peg diversity atlas
+        </h2>
+        <p className="pharos-meta">Every core non-USD coin at its peg&apos;s home. Size is market cap, capped at {MAP_SIZE_CAP_LABEL} on the map; crowded homes stack.</p>
+      </div>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -31,6 +31,7 @@ function AtlasHeroHeader({
               type="button"
               variant="ghost"
               size="icon-sm"
+              className="hidden md:inline-flex"
               aria-label="Expand atlas"
               aria-haspopup="dialog"
               aria-expanded={open}
@@ -46,28 +47,37 @@ function AtlasHeroHeader({
   );
 }
 
-const ATLAS_SHELL_STANDALONE =
-  "pharos-card-shell relative overflow-hidden text-foreground dark:bg-[oklch(0.105_0.012_248)] dark:text-white";
-
-// Embedded inside the `FeatureHeroSplit` right slot: the hero card already
-// supplies the flat `pharos-card-shell` chrome, so the atlas drops its own
-// border/rounding/shadow to avoid a nested card and fills the slot edge to
-// edge. The deep cosmic sky (peg-hero.css) remains the drawn-metaphor surface.
-const ATLAS_SHELL_EMBEDDED = "relative h-full overflow-hidden text-foreground dark:text-white";
-
-export function FiatWorldAtlas({ embedded = false }: { embedded?: boolean } = {}) {
+/**
+ * The atlas band: on the page ground in light mode, a night sea in dark mode
+ * (peg-hero.css scene tokens). Phones get it behind a disclosure, since its
+ * emblems are too small to inspect there and the ranking above carries the facts.
+ */
+export function FiatWorldAtlas() {
   const [open, setOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
 
   return (
-    <section
-      aria-labelledby="alt-peg-link-hub"
-      className={embedded ? ATLAS_SHELL_EMBEDDED : ATLAS_SHELL_STANDALONE}
-    >
-      <AtlasHeroHeader onExpand={() => setOpen(true)} open={open} />
+    <section aria-labelledby="alt-peg-link-hub" className="peg-atlas space-y-4 border-t border-border/50 pt-5">
+      <AtlasHeader onExpand={() => setOpen(true)} open={open} />
 
-      <div data-alt-peg-layout="responsive-atlas" className="block">
+      <button
+        type="button"
+        className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground md:hidden"
+        aria-expanded={phoneOpen}
+        aria-controls="alt-peg-atlas-body"
+        onClick={() => setPhoneOpen((value) => !value)}
+      >
+        {phoneOpen ? "Hide map" : "Show map"}
+        <ChevronDown className={phoneOpen ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"} aria-hidden="true" />
+      </button>
+
+      <div
+        id="alt-peg-atlas-body"
+        data-alt-peg-layout="responsive-atlas"
+        className={phoneOpen ? "block" : "hidden md:block"}
+      >
         <a
-          href="#alt-peg-history-share"
+          href="#alt-peg-ranking"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-skip focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
         >
           Skip peg map
