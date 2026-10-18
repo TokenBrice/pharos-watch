@@ -22,6 +22,8 @@ Supply uses `getCirculatingRawOrNull()`. Missing assets or absent/empty/invalid 
 
 Rows wait for the stablecoin list. Toolbar and pagination counts require available primary data, including retained data after refresh failure; pending and unavailable reads show explicit state copy instead of zero counts, and disable export. Successful empty filtered results still disclose zero. `buildQueryFreshnessGroup()` combines all five live sources for shared notices/retry; retained data may remain visible with stale/error metadata. The route invents no local freshness windows.
 
+Freshness uses the shared persistent, fixed-height notice slot: pending, fresh, stale and failed reads retain the same footprint, with genuine warnings visible and generation/budget details opening outside document flow. Toolbar count lines and the export trigger reserve their loading-to-ready geometry; actions occupy a separate row below desktop widths so longer ready-state count copy cannot displace them.
+
 Active DEWS/report-card filters (including safety/pillar/evidence and mint score/band) hold the loading presentation and disable export during initial loading without retained data. Failed fetches end that gate and missing readings are excluded. PegScore and liquidity floors are not initially gated: they use whatever has arrived and can narrow the first view.
 
 ## Sorting And Export

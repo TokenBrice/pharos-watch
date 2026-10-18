@@ -405,7 +405,7 @@ DEX selects its row and full published census in one SQL snapshot; generation an
 
 `GET /api/dex-liquidity-table` is the separate site-only homepage table transport. It reads only score/coverage admission/clock/methodology columns plus producer advisories, omitting histories, prices, deployments and pool JSON. Rows contain `liquidityScore` plus warning/unavailable/producer identity fields; the table uses the same nullable score for display, sorting and CSV export. Full cohort endpoints remain available for actual cohort consumers. No new migration or producer cadence is required.
 
-DEX table/full transport lifetimes use the oldest transported row clock, so a newer sibling cannot refresh retained evidence.
+DEX table/full cohort lifetimes follow the newest published producer row; row-local clocks, freshness warnings and unavailable reasons remain independent. See [DEX freshness](../api-reference.md#response-headers). Coin-scoped transport lifetimes remain bound to the selected row, not a sibling.
 
 `GET /api/dex-liquidity-chart-history?stablecoin=<id>&days=<n>` is the detail TVL chart's site-only history transport. It uses the same bounded coin/date query, coverage admission, volume availability and producer polling cadence as public DEX history, but never selects or parses `exit_route_summary_json`. Full executable-route observations remain on `/api/dex-liquidity-history`. The chart uses a distinct path and `dex-liquidity-chart-history` query key, retains schema validation before query-cache admission, and has no public probes or OpenAPI/Postman enrollment.
 

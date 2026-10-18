@@ -342,6 +342,7 @@ export function ScreenerClient() {
         hasData={hasStablecoinRows}
         onRetry={freshnessGroup.refetchAll}
         queries={freshnessGroup.queries}
+        persistent
       />
       <SafetyScoreV9StatusNotice response={reportData} />
 
@@ -367,6 +368,7 @@ export function ScreenerClient() {
             // standalone mint-authority lane no longer produces this value.
             methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included)`}
             triggerLabel={dataState === "loading" ? "Loading" : "Export"}
+            triggerClassName="min-w-24"
             disabled={dataState !== "ready"}
           />
         }
