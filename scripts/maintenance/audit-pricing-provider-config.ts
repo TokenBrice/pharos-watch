@@ -1,5 +1,5 @@
 import { isRecord } from "@shared/lib/type-guards";
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import {
   BINANCE_MARKETS,
   BITSTAMP_MARKETS,
@@ -333,8 +333,17 @@ export async function runPricingProviderAudit(
   return sections;
 }
 
+export function parsePricingProviderAuditArgs(argv: readonly string[]) {
+  return parseStrictCliArgs(argv, { options: { "live-source-shapes": { type: "boolean" } } }).values;
+}
+
 async function main(): Promise<void> {
-  const liveSourceShapes = process.argv.includes("--live-source-shapes");
+  const values = parsePricingProviderAuditArgs(process.argv.slice(2));
+  if (values.help) {
+    console.log("Usage: npm run audit:pricing-providers -- [--live-source-shapes]\nRead-only provider metadata audit; --live-source-shapes also probes live source shapes.");
+    return;
+  }
+  const liveSourceShapes = values["live-source-shapes"] === true;
   const sections = await runPricingProviderAudit({
     liveSourceShapes,
     cmcApiKey: process.env.CMC_API_KEY,
@@ -342,7 +351,4 @@ async function main(): Promise<void> {
   sections.forEach(printSection);
 }
 
-runDirectCli(import.meta.url, () => main().catch((error) => {
-  console.error("[pricing-provider-audit] failed:", error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-}));
+runDirectCli(import.meta.url, main, { label: "[pricing-provider-audit] failed" });

@@ -110,7 +110,6 @@ describe("runScheduledSlotWithFence", () => {
     const result = await runScheduledSlotWithFence(db, "halfHourlyOffset", fn, {
       slotStartedAt,
       owner: "owner-b",
-      staleAfterSec: 1200,
     });
 
     expect(result.status).toBe("ok");
@@ -173,7 +172,6 @@ describe("runScheduledSlotWithFence", () => {
     const result = await runScheduledSlotWithFence(db, "hourlyYieldSync", fn, {
       slotStartedAt,
       owner: "slot-owner-b",
-      staleAfterSec: 1200,
       workerVersion: "worker-v2",
       workerRole,
     });
@@ -267,7 +265,6 @@ describe("runScheduledSlotWithFence", () => {
     const result = await runScheduledSlotWithFence(db, "hourlyYieldSync", fn, {
       slotStartedAt,
       owner: "slot-owner-b",
-      staleAfterSec: 1200,
     });
 
     expect(result.status).toBe("skipped_running");
@@ -310,7 +307,7 @@ describe("runScheduledSlotWithFence", () => {
       },
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 0 });
     expect(db.getRuns()).toEqual([]);
@@ -371,7 +368,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 300 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 1 });
     expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({
@@ -394,7 +391,6 @@ describe("runScheduledSlotWithFence", () => {
     const result = await runScheduledSlotWithFence(db, "halfHourlyOffset", fn, {
       slotStartedAt: currentSlotStartedAt,
       owner: "owner-b",
-      staleAfterSec: 1200,
     });
 
     expect(result.status).toBe("ok");
@@ -421,7 +417,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: currentSlotStartedAt, staleAfterSec: 1200 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: currentSlotStartedAt });
 
     expect(summary).toMatchObject({
       candidateSlots: 1, slotsReconciled: 1, syntheticCronRuns: 2,
@@ -535,7 +531,7 @@ describe("runScheduledSlotWithFence", () => {
       failSlotProgressReads: 1,
     });
 
-    await expect(sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 })).rejects.toThrow(
+    await expect(sweepStaleScheduledSlotExecutions(db, { nowSec: now })).rejects.toThrow(
       "simulated reconciliation crash",
     );
 
@@ -547,13 +543,11 @@ describe("runScheduledSlotWithFence", () => {
 
     const tooEarly = await sweepStaleScheduledSlotExecutions(db, {
       nowSec: now + 359,
-      staleAfterSec: 1200,
     });
     expect(tooEarly).toMatchObject({ candidateSlots: 0, slotsReconciled: 0 });
 
     const recovered = await sweepStaleScheduledSlotExecutions(db, {
       nowSec: now + 1201,
-      staleAfterSec: 1200,
     });
     expect(recovered).toMatchObject({ candidateSlots: 1, slotsReconciled: 1 });
     expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({
@@ -573,7 +567,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
@@ -619,7 +613,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
@@ -670,7 +664,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
 
     expect(summary).toMatchObject({
       candidateSlots: 1,
@@ -709,7 +703,6 @@ describe("runScheduledSlotWithFence", () => {
 
     const missingLeaseSummary = await sweepStaleScheduledSlotExecutions(missingLeaseDb, {
       nowSec: now,
-      staleAfterSec: 1200,
     });
 
     expect(missingLeaseSummary).toMatchObject({
@@ -748,7 +741,7 @@ describe("runScheduledSlotWithFence", () => {
       result_status: "error",
     });
     await expect(
-      sweepStaleScheduledSlotExecutions(missingLeaseDb, { nowSec: now + 60, staleAfterSec: 1200 }),
+      sweepStaleScheduledSlotExecutions(missingLeaseDb, { nowSec: now + 60 }),
     ).resolves.toMatchObject({ candidateSlots: 0, slotsReconciled: 0, syntheticCronRuns: 0 });
     expect(missingLeaseDb.getRuns()).toHaveLength(2);
 
@@ -766,7 +759,6 @@ describe("runScheduledSlotWithFence", () => {
 
     const newerLeaseSummary = await sweepStaleScheduledSlotExecutions(newerLeaseDb, {
       nowSec: now,
-      staleAfterSec: 1200,
     });
 
     expect(newerLeaseSummary).toMatchObject({
@@ -807,7 +799,7 @@ describe("runScheduledSlotWithFence", () => {
     });
 
     await expect(
-      sweepStaleScheduledSlotExecutions(fenceLostDb, { nowSec: now, staleAfterSec: 1200 }),
+      sweepStaleScheduledSlotExecutions(fenceLostDb, { nowSec: now }),
     ).rejects.toThrow("scheduled slot ownership lost");
     expect(fenceLostDb.getProgress("sync-yield-data")).toBeDefined();
     // Chain members that already got not-started runs before the fence was lost
@@ -835,7 +827,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 0 });
     expect(db.getRuns()).toEqual([]);
@@ -860,7 +852,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 1 });
     expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({

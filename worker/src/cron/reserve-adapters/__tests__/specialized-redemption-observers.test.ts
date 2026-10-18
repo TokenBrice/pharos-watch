@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../../../lib/evm-rpc";
-import { observeExecutableRedemptionRoute, type ExecutableRedemptionObserverDescriptor, type ExecutableRedemptionReadClient } from "../executable-redemption-observers";
+import { observeExecutableRedemptionRoute } from "../executable-redemption-observers";
+import type { ExecutableRedemptionObserverDescriptor, ExecutableRedemptionReadClient } from "../executable-redemption-read-client";
 import { FOREST_ROAD_USDFR_OBSERVER } from "../forest-road-usdfr-observer";
 import { MONETRIX_FUNDED_QUEUE_OBSERVER, observeMonetrixRedeemRequest } from "../monetrix-funded-queue-observer";
 import { SATURN_V2_QUEUE_OBSERVER, observeSaturnV2Queue } from "../saturn-v2-queue-observer";

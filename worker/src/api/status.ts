@@ -32,7 +32,7 @@ import { loadProducerHeads } from "../lib/producer-history";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus } from "../lib/status/scheduler-liveness";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
-import { maxStatus } from "../lib/status/evaluation-state";
+import { maxStatus } from "../lib/status-reliability-shared";
 import { computeReserveCompositionOverview } from "../lib/live-reserves/store-overview";
 import { getActiveWorkerVersionMarker } from "../lib/worker-version-first-seen";
 import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";

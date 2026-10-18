@@ -1,6 +1,6 @@
 import { parseAbi } from "viem/utils";
 import { abiObservation } from "./evm-observation-plan";
-import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor, type ExecutableRedemptionReadClient } from "./executable-redemption-observers";
+import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor, type ExecutableRedemptionReadClient } from "./executable-redemption-read-client";
 import type { EvmRpcOptions } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
 

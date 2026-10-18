@@ -5,10 +5,26 @@ import stablecoinsFixture from "./fixtures/audit-price-source-depth/stablecoins.
 
 import {
   buildPriceSourceDepthAudit,
+  parseArgs,
   type AuditStablecoinMeta,
 } from "../maintenance/audit-price-source-depth";
 
 describe("audit-price-source-depth", () => {
+  it("retains ordered source and format selection after strict parsing", () => {
+    expect(parseArgs(["--prod", "--json"])).toMatchObject({
+      source: "prod", format: "json", reportPath: null, generatedAt: null, writeAgentsBaseline: false,
+    });
+    expect(parseArgs(["--prod", "--input=fixtures", "--write-agents-baseline", "--markdown"]))
+      .toMatchObject({ source: "input", inputDir: "fixtures", writeAgentsBaseline: true, format: "markdown" });
+  });
+
+  it.each([
+    ["--unknown"], ["--prod", "--report"], ["--prod", "--prod"], ["extra"], [],
+    ["--peg-summary=one"], ["--prod", "--report=one", "--report=two"],
+  ])("rejects invalid depth-audit usage %j", (...argv) => {
+    expect(() => parseArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
   it("reduces missing, null, empty, 1, 2, 3, and 5+ source rows", () => {
     const audit = buildPriceSourceDepthAudit({
       activeStablecoins: activeStablecoinsFixture as AuditStablecoinMeta[],

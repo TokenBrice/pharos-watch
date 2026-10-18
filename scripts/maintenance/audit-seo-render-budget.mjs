@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { CliUsageError, parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
 
 const DEFAULT_BASE_URL = process.env.SEO_RENDER_BUDGET_URL ?? "https://pharos.watch";
 const DEFAULT_ROUTES = [
@@ -16,36 +16,26 @@ const DEFAULT_ROUTES = [
   "/api/",
 ];
 
-function parseArgs(argv) {
+export function parseSeoRenderBudgetArgs(argv) {
+  const { values } = parseStrictCliArgs(argv, {
+    options: {
+      url: { type: "string", default: DEFAULT_BASE_URL },
+      routes: { type: "string" },
+      json: { type: "boolean" },
+      "wait-ms": { type: "string", default: "4000" },
+    },
+  });
   const args = {
-    baseUrl: DEFAULT_BASE_URL,
-    routes: DEFAULT_ROUTES,
-    json: false,
-    waitMs: 4000,
+    baseUrl: values.url,
+    routes: values.routes === undefined ? DEFAULT_ROUTES
+      : values.routes.split(",").map((route) => route.trim()).filter(Boolean),
+    json: values.json === true,
+    waitMs: parseCliInteger(values["wait-ms"], { name: "--wait-ms", min: 0 }),
+    help: values.help === true,
   };
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--url") {
-      args.baseUrl = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--routes") {
-      args.routes = (argv[i + 1] ?? "")
-        .split(",")
-        .map((route) => route.trim())
-        .filter(Boolean);
-      i += 1;
-    } else if (arg === "--json") {
-      args.json = true;
-    } else if (arg === "--wait-ms") {
-      const value = Number.parseInt(argv[i + 1] ?? "", 10);
-      if (Number.isFinite(value) && value >= 0) args.waitMs = value;
-      i += 1;
-    }
-  }
-
   if (args.routes.length === 0) {
-    throw new Error("At least one route is required. Pass --routes /,/stablecoin/usdt-tether/.");
+    throw new CliUsageError("At least one route is required. Pass --routes /,/stablecoin/usdt-tether/.");
   }
 
   return args;
@@ -295,7 +285,11 @@ function formatTable(rows) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseSeoRenderBudgetArgs(process.argv.slice(2));
+  if (args.help) {
+    console.log("Usage: node scripts/maintenance/audit-seo-render-budget.mjs [--url <url>] [--routes <comma-separated-routes>] [--wait-ms <n>] [--json]\nRead-only browser render-budget audit; defaults to the live site and waits 4000 ms.");
+    return;
+  }
   const baseUrl = normalizeBaseUrl(args.baseUrl);
   const chromium = await loadChromium();
   const browser = await chromium.launch(getLaunchOptions());
@@ -316,9 +310,4 @@ async function main() {
   }
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
-  main().catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
-}
+runDirectCli(import.meta.url, main);

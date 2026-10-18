@@ -32,7 +32,7 @@ describe("scheduled slot policy authority", () => {
           .run(key, slotStartedAt, hardDead ? now - 960 : now - 500, hardDead ? now : now - silence);
         const stale = hardDead || silence >= resolveScheduledSlotPolicy(key).slotSilenceSec;
         if (route === "global" || route === "keyed") {
-          const result = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 300,
+          const result = await sweepStaleScheduledSlotExecutions(db, { nowSec: now,
             ...(route === "keyed" ? { slotKey: key } : {}) });
           expect(result.slotsReconciled).toBe(stale ? 1 : 0);
         } else {

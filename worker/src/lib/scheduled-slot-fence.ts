@@ -32,7 +32,6 @@ export interface ScheduledSlotExecutionOptions {
   slotStartedAt: number;
   owner?: string;
   heartbeatSec?: number;
-  staleAfterSec?: number;
   deadlineMs?: number;
   deadline?: SlotDeadline;
   invocationId?: string | null;
@@ -101,7 +100,6 @@ class ScheduledSlotDeadlineExceededError extends Error {
 }
 
 export interface ScheduledSlotSweepOptions {
-  staleAfterSec?: number;
   limit?: number;
   nowSec?: number;
   slotKey?: string;
@@ -397,7 +395,6 @@ async function claimScheduledSlotExecution(
   slotKey: string,
   slotStartedAt: number,
   owner: string,
-  staleAfterSec: number,
   invocationId: string | null,
   workerVersion: string | null,
   checkpoint: () => void,
@@ -405,7 +402,7 @@ async function claimScheduledSlotExecution(
   const nowSec = Math.floor(Date.now() / 1000);
   checkpoint();
   const policy = resolveScheduledSlotPolicy(slotKey);
-  const staleBefore = nowSec - staleAfterSec;
+  const staleBefore = nowSec - policy.slotSilenceSec;
   const inserted = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -643,14 +640,12 @@ async function runScheduledSlotLifecycle(
   const owner = opts.owner ?? createLeaseOwner(slotKey);
   const policy = resolveScheduledSlotPolicy(slotKey);
   const heartbeatSec = Math.max(15, opts.heartbeatSec ?? policy.heartbeatSec);
-  const staleAfterSec = policy.slotSilenceSec;
   checkpoint();
   const claimResult = await claimScheduledSlotExecution(
     db,
     slotKey,
     opts.slotStartedAt,
     owner,
-    staleAfterSec,
     opts.invocationId ?? owner,
     opts.workerVersion ?? null,
     checkpoint,
