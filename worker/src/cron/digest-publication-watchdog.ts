@@ -3,7 +3,7 @@ import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import { readSafetyMapManifestDate, type SafetyMapManifestDateObservation } from "../lib/digest-safety-map";
-import { escapeHtml, type TelegramCreds } from "../lib/telegram";
+import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
 import type { CronResult } from "../lib/cron-logger";
 import {
   NON_BLOCKED_DIGEST_SQL_FILTER,

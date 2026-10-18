@@ -125,8 +125,6 @@ describe("check-worker-package", () => {
     "../../src/lib/api-methodology.ts",
     "../../node_modules/zod/v4/core/api.js",
     "../../node_modules/example/src/api/helpers.js",
-    "../../worker/src/lib/telegram.ts",
-    "../../worker/src/lib/telegram/digest-outbox.ts",
     "../../worker/src/telegram/delivery/telegram.ts",
     "../../worker/src/telegram/outbox/digest-outbox.ts",
     "../../worker/src/cron/telegram/delivery/telegram-digest-transport.ts",

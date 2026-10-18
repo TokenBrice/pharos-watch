@@ -1,4 +1,4 @@
-import { answerCallbackQuery, editMessage } from "../../lib/telegram";
+import { answerCallbackQuery, editMessage } from "../../telegram/delivery/telegram";
 import {
   buildManageWatchlistKeyboard,
   buildManageWatchlistMessage,

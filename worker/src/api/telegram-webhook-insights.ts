@@ -1,14 +1,14 @@
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { formatTelegramAge } from "../lib/telegram/format-age";
+import { formatTelegramAge } from "../telegram/common/format-age";
 import type { DigestInputData } from "@shared/types/digest";
-import { escapeHtml } from "../lib/telegram";
+import { escapeHtml } from "../telegram/delivery/telegram";
 import { isRecord } from "@shared/lib/type-guards";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { suggestClosestToken } from "../lib/telegram/alerts";
-import { TOP_VIEW_NAMES } from "../lib/telegram/constants";
+import { suggestClosestToken } from "../telegram/common/alerts-parser";
+import { TOP_VIEW_NAMES } from "../telegram/common/constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
 import { formatTelegramSafety } from "./telegram-webhook-messages";

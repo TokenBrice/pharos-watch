@@ -8,7 +8,7 @@ vi.mock("../../lib/fetch-retry", async () => {
   return mockDailyDigestFetchRetryModule();
 });
 
-vi.mock("../../lib/telegram/digest-outbox", async () => {
+vi.mock("../../telegram/outbox/digest-outbox", async () => {
   const { mockDailyDigestOutboxModule } = await import("./daily-digest.test-support");
   return mockDailyDigestOutboxModule();
 });
@@ -57,7 +57,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
   deliverTelegramDigestEdition,
   enqueueTelegramDigestEdition,
-} from "../../lib/telegram/digest-outbox";
+} from "../../telegram/outbox/digest-outbox";
 import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transport";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../../lib/constants";

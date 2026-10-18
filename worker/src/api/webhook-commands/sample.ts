@@ -1,7 +1,7 @@
 import {
   formatConsolidatedMessage,
   type ConsolidatedAlerts,
-} from "../../lib/telegram/alerts";
+} from "../../telegram/common/alerts-formatting";
 import { isGroupChatType } from "../telegram-webhook-auth";
 import type { WebhookCommandHandler } from "./context";
 

@@ -5,7 +5,7 @@ import {
 } from "@shared/types/safety-score-publication";
 import { executeAtomicBatch } from "../../../lib/db";
 import { sha256Hex } from "../../../lib/hash";
-import { TELEGRAM_ALERT_TTL_SEC } from "../../../lib/telegram/constants";
+import { TELEGRAM_ALERT_TTL_SEC } from "../../../telegram/common/constants";
 import { parseJson } from "../../../lib/json-parse";
 import type { TelegramDispatchEvents } from "./dispatch-telegram-events";
 import { PRESET_ALERT_TYPES, type PresetAlertType } from "../dispatch/telegram-preset-subscriber-store";

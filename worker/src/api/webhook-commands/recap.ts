@@ -3,14 +3,14 @@ import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   isTelegramRecapAvailable,
 } from "@shared/lib/telegram-recap-rollout";
-import { escapeHtml } from "../../lib/telegram";
-import { formatTelegramIsoTimestamp } from "../../lib/telegram/format-age";
-import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { escapeHtml } from "../../telegram/delivery/telegram";
+import { formatTelegramIsoTimestamp } from "../../telegram/common/format-age";
+import { recordTelegramUsageEvent } from "../../telegram/store/usage-analytics";
 import {
   applyRecapPreference,
   getTelegramRecapPreference,
   type TelegramRecapPreferenceMutationOptions,
-} from "../../lib/telegram/recap-store";
+} from "../../telegram/recap/recap-store";
 import { loadSubscriberByChat, unixNow } from "../telegram-webhook-store";
 import {
   confirmCommandMutation,

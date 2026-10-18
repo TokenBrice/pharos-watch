@@ -1,12 +1,12 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../../../lib/db";
-import { PENDING_TTL_SEC } from "../../../lib/telegram/constants";
+import { PENDING_TTL_SEC } from "../../../telegram/common/constants";
 import { parseTelegramTargetPlan } from "./telegram-alert-target-plan-contract";
 import { reconcileTelegramAlertJobCounters } from "../delivery/telegram-alert-job-target-outcomes";
 import {
   buildPendingAlertUpsertSql,
   pendingPrioritySql,
-} from "../../../lib/telegram/pending-queue";
+} from "../../../telegram/outbox/pending-queue";
 import {
   markTelegramTargetPlanDegraded,
   PENDING_TERMINAL_DUPLICATE_PREDICATE,

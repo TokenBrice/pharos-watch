@@ -3,7 +3,7 @@ import {
   TELEGRAM_CONTEXT_BUDGET_SEC,
   assessTelegramContextClock,
   projectTelegramSupplyContext,
-} from "../lib/telegram/context-freshness";
+} from "../telegram/common/context-freshness";
 import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";

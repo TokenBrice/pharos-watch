@@ -1,8 +1,8 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import { parseJsonObject } from "../../../lib/json-parse";
-import { logTelegramEvent } from "../../../lib/telegram/log";
-import type { FreezeAlert } from "../../../lib/telegram/alerts-formatting";
+import { logTelegramEvent } from "../../../telegram/common/log";
+import type { FreezeAlert } from "../../../telegram/common/alerts-formatting";
 
 /** The tape projector runs every 30 minutes; two missed slots fail closed. */
 const TAPE_FRESHNESS_SEC = 60 * 60;

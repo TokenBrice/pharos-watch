@@ -4,7 +4,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { executeAtomicBatch } from "../../lib/db";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { canonicalTelegramWebhookIntentBytes } from "../../lib/telegram/processed-updates";
+import { canonicalTelegramWebhookIntentBytes } from "../../telegram/store/processed-updates";
 import {
   TelegramWebhookEffectFence,
   buildMutationOperations,

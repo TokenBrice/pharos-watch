@@ -56,6 +56,8 @@ export default tseslint.config(
       "worker/src/lib/**/*.tsx",
       "worker/src/api/**/*.ts",
       "worker/src/api/**/*.tsx",
+      "worker/src/telegram/**/*.ts",
+      "worker/src/telegram/**/*.tsx",
     ],
     ignores: IGNORES,
     languageOptions: {

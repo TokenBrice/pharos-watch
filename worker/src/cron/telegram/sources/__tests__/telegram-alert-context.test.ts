@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildAlertContextLines } from "../telegram-alert-context";
-import { TELEGRAM_CONTEXT_BUDGET_SEC } from "../../../../lib/telegram/context-freshness";
+import { TELEGRAM_CONTEXT_BUDGET_SEC } from "../../../../telegram/common/context-freshness";
 import { makeNoopD1 } from "../../../../test-helpers/noop-d1";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../../lib/safety-score-v9/consumer-freshness";
 
@@ -44,8 +44,8 @@ vi.mock("../../../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: mocks.loadStablecoinsCache,
 }));
 
-vi.mock("../../../../lib/telegram/log", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../../lib/telegram/log")>()),
+vi.mock("../../../../telegram/common/log", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../telegram/common/log")>()),
   logTelegramEvent: mocks.logTelegramEvent,
 }));
 

@@ -1,9 +1,9 @@
-import { answerCallbackQuery, postTelegramBotApi } from "../lib/telegram";
+import { answerCallbackQuery, postTelegramBotApi } from "../telegram/delivery/telegram";
 import { timingSafeCompare } from "../lib/auth";
 import {
   logTelegramInvalidSecretAttempt,
   logTelegramMissingSecretAttempt,
-} from "../lib/telegram/log";
+} from "../telegram/common/log";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../lib/response-body";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 

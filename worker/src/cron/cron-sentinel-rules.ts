@@ -1,4 +1,4 @@
-import { sendToChat, type TelegramCreds } from "../lib/telegram";
+import { sendToChat, type TelegramCreds } from "../telegram/delivery/telegram";
 
 export type CronSentinelRuleSource =
   | "freshness"

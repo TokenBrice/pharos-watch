@@ -4,7 +4,7 @@ import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeNoopD1 } from "../../../../test-helpers/noop-d1";
-import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../../../lib/telegram/pending-provenance";
+import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../../../telegram/outbox/pending-provenance";
 import { insertTelegramSubscriber, type TelegramSubscriberSeed } from "../../dispatch/__tests__/telegram-subscriber.test-support";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [

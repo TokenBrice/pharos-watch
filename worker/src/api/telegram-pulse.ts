@@ -14,7 +14,7 @@ import {
   loadTelegramLifecycleHistory,
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
-} from "../lib/telegram/usage-analytics";
+} from "../telegram/store/usage-analytics";
 import {
   loadTelegramMiniAppDailyAggregate,
   utcDayFromUnixSeconds,
@@ -22,7 +22,7 @@ import {
 import {
   loadTelegramFirstMutationP50,
   refreshTelegramAdoptionRetention,
-} from "../lib/telegram/adoption-analytics";
+} from "../telegram/adoption/adoption-analytics";
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
 const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;

@@ -17,7 +17,7 @@ const NETWORK_PACKAGES = /^(?:node:)?(?:https?|http2|net|tls|dgram)$|^(?:undici|
 const NETWORK_GLOBALS: Record<string, true> = { fetch: true, XMLHttpRequest: true, WebSocket: true, EventSource: true };
 const GLOBAL_OBJECTS: Record<string, true> = { globalThis: true, window: true, self: true, global: true };
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
-const TELEGRAM_IMPLEMENTATION = /^worker\/src\/(?:telegram\/|cron\/telegram\/|api\/(?:telegram(?:[.-]|\/)|webhook-(?:commands|callbacks)\/|admin-telegram-broadcast(?:[.-]|\/))|lib\/telegram(?:[.-]|\/)|handlers\/http\/telegram-)/;
+const TELEGRAM_IMPLEMENTATION = /^worker\/src\/(?:telegram\/|cron\/telegram\/|api\/(?:telegram(?:[.-]|\/)|webhook-(?:commands|callbacks)\/|admin-telegram-broadcast(?:[.-]|\/))|handlers\/http\/telegram-)/;
 
 // Exact current/destination entry pairs, derived from production referrers.
 // Move PRs remove retired paths atomically; null means no planned rename.
@@ -43,7 +43,7 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, string | null, readon
   ["worker/src/handlers/http/telegram-ingress-abuse.ts", "worker/src/telegram/webhook/telegram-ingress-abuse.ts", [
     "worker/src/handlers/http/request-dispatch.ts",
   ]],
-  ["worker/src/lib/telegram.ts", "worker/src/telegram/delivery/telegram.ts", [
+  ["worker/src/telegram/delivery/telegram.ts", null, [
     "worker/src/api/admin-actions.ts",
     "worker/src/cron/cron-sentinel-rules.ts", "worker/src/cron/cron-sentinel.ts",
     "worker/src/cron/cron-staleness-watchdog.ts", "worker/src/cron/daily-digest.ts",
@@ -51,38 +51,38 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, string | null, readon
     "worker/src/cron/digest/telegram-transport.ts", "worker/src/cron/digest/wrapper-style-gate.ts",
     "worker/src/cron/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
   ]],
-  ["worker/src/lib/telegram/adoption-analytics.ts", "worker/src/telegram/adoption/adoption-analytics.ts", [
+  ["worker/src/telegram/adoption/adoption-analytics.ts", null, [
     "worker/src/handlers/http/gates.ts", "worker/src/routes/messaging-routes.ts",
   ]],
-  ["worker/src/lib/telegram/delivery-sli.ts", "worker/src/telegram/delivery/delivery-sli.ts", [
+  ["worker/src/telegram/delivery/delivery-sli.ts", null, [
     "worker/src/lib/status/telegram-bot-stats.ts",
   ]],
-  ["worker/src/lib/telegram/digest-appendices.ts", "worker/src/telegram/digest/digest-appendices.ts", [
+  ["worker/src/telegram/digest/digest-appendices.ts", null, [
     "worker/src/cron/daily-digest.ts", "worker/src/cron/digest/publish.ts",
     "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts",
   ]],
-  ["worker/src/lib/telegram/digest-outbox.ts", "worker/src/telegram/outbox/digest-outbox.ts", [
+  ["worker/src/telegram/outbox/digest-outbox.ts", null, [
     "worker/src/cron/digest/publish.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts",
   ]],
-  ["worker/src/lib/telegram/log.ts", "worker/src/telegram/common/log.ts", [
+  ["worker/src/telegram/common/log.ts", null, [
     "worker/src/handlers/scheduled/five-minute-telegram.ts",
   ]],
-  ["worker/src/lib/telegram/pending-capacity.ts", "worker/src/telegram/outbox/pending-capacity.ts", [
+  ["worker/src/telegram/outbox/pending-capacity.ts", null, [
     "worker/src/lib/status/supplements.ts", "worker/src/lib/status/telegram-bot-stats.ts",
   ]],
-  ["worker/src/lib/telegram/recap-store.ts", "worker/src/telegram/recap/recap-store.ts", [
+  ["worker/src/telegram/recap/recap-store.ts", null, [
     "worker/src/handlers/scheduled/five-minute-telegram.ts",
   ]],
-  ["worker/src/lib/telegram/transport-control.ts", "worker/src/telegram/delivery/transport-control.ts", [
+  ["worker/src/telegram/delivery/transport-control.ts", null, [
     "worker/src/cron/digest/telegram-transport.ts",
   ]],
-  ["worker/src/lib/telegram/transport-errors.ts", "worker/src/telegram/delivery/transport-errors.ts", [
+  ["worker/src/telegram/delivery/transport-errors.ts", null, [
     "worker/src/cron/digest/telegram-transport.ts",
   ]],
-  ["worker/src/lib/telegram/usage-analytics.ts", "worker/src/telegram/store/usage-analytics.ts", [
+  ["worker/src/telegram/store/usage-analytics.ts", null, [
     "worker/src/lib/status/telegram-bot-stats.ts",
   ]],
-  ["worker/src/lib/telegram/webhook-registration.ts", "worker/src/telegram/webhook/webhook-registration.ts", [
+  ["worker/src/telegram/webhook/webhook-registration.ts", null, [
     "worker/src/handlers/scheduled/five-minute-telegram.ts",
   ]],
   ["worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts", null, [

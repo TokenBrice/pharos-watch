@@ -2,9 +2,9 @@ import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runti
 import { TELEGRAM_ALERT_FAMILIES } from "@shared/lib/telegram-alert-families";
 import type { TelegramAlertType } from "@shared/types/status/telegram";
 import { TELEGRAM_COMMAND_REFERENCE } from "@shared/lib/telegram-bot-registration";
-import type { ResolvedCoin } from "../lib/telegram/alerts";
-import { DISAMBIGUATION_TTL_SEC } from "../lib/telegram/constants";
-import { escapeHtml } from "../lib/telegram/html";
+import type { ResolvedCoin } from "../telegram/common/alerts-parser";
+import { DISAMBIGUATION_TTL_SEC } from "../telegram/common/constants";
+import { escapeHtml } from "../telegram/common/html";
 
 // Re-export so existing callers importing this constant from this module keep working.
 export { DISAMBIGUATION_TTL_SEC };
@@ -120,7 +120,7 @@ Preset aliases accept compact or dashed top-N spelling, e.g. <code>usd-top25</co
 
 In groups, use addressed commands like <code>/subscribe@PharosWatchBot dews usd-top25</code>. Settings apply to the current chat, and pending ticker selections can only be completed by the user who started them.`;
 
-// `DISAMBIGUATION_TTL_SEC` is defined in `../lib/telegram/constants` and
+// `DISAMBIGUATION_TTL_SEC` is defined in `../telegram/common/constants` and
 // re-exported from the top of this module.
 
 export type PendingActionType = "subscribe" | "unsubscribe" | "set" | "confirm-bulk" | "forget-confirm";

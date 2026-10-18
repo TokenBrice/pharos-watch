@@ -47,7 +47,7 @@ import { loadYieldHealthSummary } from "./yield-health";
 import { logWorkerEvent } from "../structured-log";
 import { loadPublicationHealth } from "../publication-contract";
 import { loadProviderCircuitHealth } from "../provider-circuit-health";
-import { readTelegramPendingCapacity, toPendingDeliveryBacklog } from "../telegram/pending-capacity";
+import { readTelegramPendingCapacity, toPendingDeliveryBacklog } from "../../telegram/outbox/pending-capacity";
 import { loadCanaryStatus } from "../canary-checks";
 import type { WorkerCanaryMode } from "../canary-checks";
 import type { StatusSupplements } from "./raw-snapshot";

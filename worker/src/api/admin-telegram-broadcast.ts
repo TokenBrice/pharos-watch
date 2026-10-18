@@ -8,29 +8,29 @@ import { parseRequestJsonWithSchema } from "../lib/api-json-body";
 import { logAdminAction } from "../lib/admin-action-audit";
 import {
   enqueuePendingAlerts,
-} from "../lib/telegram/pending-queue";
+} from "../telegram/outbox/pending-queue";
 import {
   estimateTelegramDrainTimeSec,
   readTelegramPendingCapacitySnapshot,
-} from "../lib/telegram/pending-capacity";
+} from "../telegram/outbox/pending-capacity";
 import {
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-} from "../lib/telegram/constants";
+} from "../telegram/common/constants";
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   TELEGRAM_ALERT_TTL_SEC,
-} from "../lib/telegram/constants";
-import { splitMessage } from "../lib/telegram/alerts";
-import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../lib/telegram/broadcast-targets";
-import { sendToChat, type BatchMessage } from "../lib/telegram";
+} from "../telegram/common/constants";
+import { splitMessage } from "../telegram/common/alerts-formatting";
+import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../telegram/delivery/broadcast-targets";
+import { sendToChat, type BatchMessage } from "../telegram/delivery/telegram";
 import { z } from "zod";
 import {
   claimTelegramTransportPermit,
   readTelegramDeliveryPause,
   readTelegramTransportCircuit,
   recordTelegramTransportOutcomes,
-} from "../lib/telegram/transport-control";
+} from "../telegram/delivery/transport-control";
 
 const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = TelegramBroadcastScope;

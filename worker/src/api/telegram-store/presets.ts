@@ -11,7 +11,7 @@ import {
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "../../lib/telegram/operation-batch";
+} from "../../telegram/delivery/operation-batch";
 import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 export interface SubscribeIntentInput {

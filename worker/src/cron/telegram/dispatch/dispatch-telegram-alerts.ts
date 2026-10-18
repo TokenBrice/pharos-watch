@@ -11,7 +11,7 @@ import {
   writePresetFailureCount,
   assignSharedDispatchState,
 } from "./dispatch-telegram-state";
-import { readTelegramPendingCapacitySnapshot } from "../../../lib/telegram/pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../../../telegram/outbox/pending-capacity";
 import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,

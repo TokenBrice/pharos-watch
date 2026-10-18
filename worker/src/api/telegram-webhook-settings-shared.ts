@@ -5,7 +5,7 @@
  */
 
 import type { SubscriberRow } from "./telegram-webhook-shared";
-import { isDepegStepValue } from "../lib/telegram/constants";
+import { isDepegStepValue } from "../telegram/common/constants";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import {
   TELEGRAM_ALERT_TYPES,

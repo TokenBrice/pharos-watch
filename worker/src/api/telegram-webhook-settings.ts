@@ -14,9 +14,9 @@
  * content rejected by Telegram), the handler sends a fresh message instead.
  */
 
-import { answerCallbackQuery, editMessage } from "../lib/telegram";
-import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
-import { resolveTicker } from "../lib/telegram/alerts";
+import { answerCallbackQuery, editMessage } from "../telegram/delivery/telegram";
+import { recordTelegramUsageEvent } from "../telegram/store/usage-analytics";
+import { resolveTicker } from "../telegram/common/alerts-parser";
 import {
   isKnownStablecoinId,
   isSubscribableStablecoinId,

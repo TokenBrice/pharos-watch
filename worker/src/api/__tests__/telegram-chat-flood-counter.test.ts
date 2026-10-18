@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   recordTelegramChatCommandFlood,
   TELEGRAM_CHAT_FLOOD_UPSERT_SQL,
-} from "../../lib/telegram/processed-updates";
+} from "../../telegram/store/processed-updates";
 import { createCacheSqlite } from "./telegram-sqlite.test-support";
 
 const databases: DatabaseSync[] = [];

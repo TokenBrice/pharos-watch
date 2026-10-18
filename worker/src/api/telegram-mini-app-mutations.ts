@@ -19,7 +19,7 @@ import {
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { isTelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../lib/db";
-import { isSubscribableCoin } from "../lib/telegram/subscription-eligibility";
+import { isSubscribableCoin } from "../telegram/store/subscription-eligibility";
 import {
   decodeWatchlistToken,
   encodeWatchlistTokenV3,
@@ -29,15 +29,15 @@ import {
   type WatchlistTokenDirectState,
   type WatchlistTokenPresetState,
   type WatchlistTokenV2State,
-} from "../lib/telegram/watchlist-token";
-import type { TelegramMiniAppAuthContext } from "../lib/telegram/mini-app-auth";
+} from "../telegram/mini-app/watchlist-token";
+import type { TelegramMiniAppAuthContext } from "../telegram/mini-app/mini-app-auth";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
   type TelegramPresetId,
-} from "../lib/telegram/presets";
-import { SNOOZE_SECONDS } from "../lib/telegram/constants";
-import { isValidIanaTimezone } from "../lib/telegram/quiet-hours";
+} from "../telegram/common/presets";
+import { SNOOZE_SECONDS } from "../telegram/common/constants";
+import { isValidIanaTimezone } from "../telegram/common/quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
 import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
 import {
@@ -63,7 +63,7 @@ import {
   type WatchlistImportPreview,
 } from "./telegram-store/watchlist-import";
 import { loadSubscriberByChat } from "./telegram-store/subscribers";
-import { setTelegramRecapPreference } from "../lib/telegram/recap-store";
+import { setTelegramRecapPreference } from "../telegram/recap/recap-store";
 
 export type TelegramMiniAppMutationErrorCode =
   | "not-private"

@@ -3,19 +3,19 @@
  * /unsubscribe, /set, and the disambiguation reply path. Moved out of
  * telegram-webhook.ts during the P1-M1 dispatch split — behavior is unchanged.
  */
-import { escapeHtml } from "../../lib/telegram";
-import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
-import { recordTelegramFirstFollow } from "../../lib/telegram/adoption-analytics";
+import { escapeHtml } from "../../telegram/delivery/telegram";
+import { recordTelegramUsageEvent } from "../../telegram/store/usage-analytics";
+import { recordTelegramFirstFollow } from "../../telegram/adoption/adoption-analytics";
 import {
   type ResolvedCoin,
   type TickerResolutionScope,
-} from "../../lib/telegram/alerts";
+} from "../../telegram/common/alerts-parser";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
   type TelegramPresetId,
-} from "../../lib/telegram/presets";
-import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
+} from "../../telegram/common/presets";
+import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../telegram/store/subscription-eligibility";
 import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnsubscribeSummaryMessage,
@@ -40,12 +40,12 @@ import {
   type SubscribeActionPayload,
   type UnsubscribeActionPayload,
 } from "../telegram-webhook-shared";
-import { dedupeCoins } from "../../lib/telegram/coin-dedupe";
+import { dedupeCoins } from "../../telegram/common/coin-dedupe";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import {
   BULK_CONFIRM_COIN_THRESHOLD,
   BULK_CONFIRM_PREVIEW_LIMIT,
-} from "../../lib/telegram/constants";
+} from "../../telegram/common/constants";
 import {
   createTelegramWebhookIntent,
   type TelegramCommandMutationContext,

@@ -1,5 +1,5 @@
-import { BLOCK_STRIKE_WINDOW_SEC } from "../../../lib/telegram/constants";
-import { logTelegramEvent } from "../../../lib/telegram/log";
+import { BLOCK_STRIKE_WINDOW_SEC } from "../../../telegram/common/constants";
+import { logTelegramEvent } from "../../../telegram/common/log";
 import { buildInClause, chunkArray, executeAtomicBatch } from "../../../lib/db";
 
 /**

@@ -10,7 +10,7 @@ import { parseSetCommand } from "../telegram-webhook-parsing";
 import { handleSetupBranch } from "../telegram-webhook-setup";
 import { applySettingToSubscriptions, loadSubscriptionRowsByChat, upsertSubscriberAndSubscriptions } from "../telegram-store/subscriptions";
 import { describeSubscriptionSettings } from "../telegram-webhook-messages";
-import { buildPendingAlertEnqueueStatement } from "../../lib/telegram/pending-queue";
+import { buildPendingAlertEnqueueStatement } from "../../telegram/outbox/pending-queue";
 import { revalidatePendingAlertPreferences } from "../../cron/telegram/delivery/preference-revalidation";
 import type { PendingAlertRow } from "../../cron/telegram/delivery/types";
 import {

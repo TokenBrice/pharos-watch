@@ -11,7 +11,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
 import { getCache, setCache } from "../lib/db-cache";
-import { escapeHtml, type TelegramCreds } from "../lib/telegram";
+import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
 import {
   classifyFreshness,
   loadProducerFreshnessFacts,

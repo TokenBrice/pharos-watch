@@ -26,8 +26,8 @@
  * single-import dispatcher entry point.
  */
 
-import { answerCallbackQuery } from "../lib/telegram";
-import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
+import { answerCallbackQuery } from "../telegram/delivery/telegram";
+import { recordTelegramUsageEvent } from "../telegram/store/usage-analytics";
 import {
   CALLBACK_HANDLERS,
   type CallbackAction,

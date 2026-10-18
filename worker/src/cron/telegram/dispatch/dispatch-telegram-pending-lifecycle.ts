@@ -1,15 +1,15 @@
 import { recordOutcome } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../../../lib/telegram/constants";
+import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../../../telegram/common/constants";
 import {
   assignSharedDispatchState,
   type TelegramDispatchSharedState,
 } from "./dispatch-telegram-state";
-import { readTelegramPendingCapacitySnapshot } from "../../../lib/telegram/pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../../../telegram/outbox/pending-capacity";
 import { archiveAgedExecutionUnknownPendingAlerts, cleanupExpiredPendingAlerts } from "../delivery/cleanup";
 import { drainPendingQueue, reconcilePendingQueueMaintenance, type PendingQueueMaintenanceResult } from "../delivery/drain";
 import { emptyDrainResult, type PendingCapacitySnapshot, type PendingDrainResult } from "../delivery/types";
-import { TELEGRAM_PENDING_DRAIN_BUDGET } from "../../../lib/telegram/constants";
+import { TELEGRAM_PENDING_DRAIN_BUDGET } from "../../../telegram/common/constants";
 
 /**
  * The pending-outbox tail every dispatch path runs: drain due rows, archive

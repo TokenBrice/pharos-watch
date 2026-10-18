@@ -25,7 +25,7 @@ Review the resolver and its inputs:
 
 ```bash
 # Source-of-truth for resolver behavior
-worker/src/lib/telegram/presets.ts
+worker/src/telegram/common/presets.ts
 # Specifically: resolveTelegramPresetTargets
 ```
 
@@ -58,7 +58,7 @@ After fixing the upstream cause, the next five-minute `dispatch-telegram-alerts`
 
 1. **Schema drift.** Apply the missing migration. Standard deploys apply D1 migrations before the new Worker is live, so a drift here indicates a partial rollback or a manually-applied environment.
 2. **Stablecoins-cache miss.** Trigger or wait for the next `sync-stablecoins` run; the resolver will succeed on the next dispatch tick once the strict stablecoins cache is readable. Confirm via the stablecoins-cache fields in `/api/status`.
-3. **Registry or supply drift.** Check followed IDs against `shared/lib/telegram-presets.ts` and verify the active lifecycle, peg, and observed supply inputs in `worker/src/lib/telegram/presets.ts`. Repair a confirmed registry/cache defect; do not restore a legitimately inactive asset or remove a preset merely because its current target set is empty.
+3. **Registry or supply drift.** Check followed IDs against `shared/lib/telegram-presets.ts` and verify the active lifecycle, peg, and observed supply inputs in `worker/src/telegram/common/presets.ts`. Repair a confirmed registry/cache defect; do not restore a legitimately inactive asset or remove a preset merely because its current target set is empty.
 4. **Transient D1.** No operator action; the counter resets on the next clean run. If the counter sticks above zero for three consecutive runs, escalate via [`db-connectivity.md`](./db-connectivity.md).
 
 ## Cross-References

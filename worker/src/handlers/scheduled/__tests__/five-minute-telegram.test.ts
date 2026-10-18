@@ -7,11 +7,11 @@ import type { CronResult } from "../../../lib/cron-logger";
 
 vi.mock("../../../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: vi.fn() }));
 vi.mock("../../../cron/telegram/recap/telegram-recap-planner", () => ({ planTelegramPersonalizedRecaps: vi.fn() }));
-vi.mock("../../../lib/telegram/recap-store", () => ({ cancelQueuedTelegramRecapsForRollout: vi.fn() }));
+vi.mock("../../../telegram/recap/recap-store", () => ({ cancelQueuedTelegramRecapsForRollout: vi.fn() }));
 vi.mock("../../../api/telegram-pulse", () => ({ publishTelegramPulseSnapshotWithOutcome: vi.fn() }));
 vi.mock("../../../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({ runTelegramDegradationWatchdog: vi.fn() }));
 vi.mock("../../../api/telegram-store/disambiguation", () => ({ cleanExpiredDisambiguations: vi.fn() }));
-vi.mock("../../../lib/telegram/webhook-registration", () => ({
+vi.mock("../../../telegram/webhook/webhook-registration", () => ({
   reconcileTelegramCommandRegistration: vi.fn(),
   reconcileTelegramMenuButton: vi.fn(),
   reconcileTelegramProfileRegistration: vi.fn(),
@@ -25,7 +25,7 @@ import { logSkippedCronRun } from "../preflight-skip";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { dispatchTelegramAlerts } from "../../../cron/telegram/dispatch/dispatch-telegram-alerts";
 import { planTelegramPersonalizedRecaps } from "../../../cron/telegram/recap/telegram-recap-planner";
-import { cancelQueuedTelegramRecapsForRollout } from "../../../lib/telegram/recap-store";
+import { cancelQueuedTelegramRecapsForRollout } from "../../../telegram/recap/recap-store";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram/maintenance/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../../api/telegram-store/disambiguation";
@@ -34,7 +34,7 @@ import {
   reconcileTelegramMenuButton,
   reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
-} from "../../../lib/telegram/webhook-registration";
+} from "../../../telegram/webhook/webhook-registration";
 
 function buildRuntime(token?: string, recapRolloutMode: string = "public"): ScheduledRuntimeContext {
   return makeScheduledRuntime({

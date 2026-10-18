@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DewsChange } from "../../../../lib/telegram/alerts";
+import type { DewsChange } from "../../../../telegram/common/alerts-formatting";
 import {
   buildTelegramAlertsByChat,
   renderTelegramSubscriberPage,

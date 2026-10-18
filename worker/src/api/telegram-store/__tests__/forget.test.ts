@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
+import { mockTelegramD1 as mockD1 } from "../../../telegram/test-helpers/telegram";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
+import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../../../telegram/store/subscriber-lifecycle";
 
 const fixtures = createLatestSchemaFixtureTracker({ uncached: true });
 afterEach(() => fixtures.closeAll());

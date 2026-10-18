@@ -1,4 +1,4 @@
-import { answerCallbackQuery } from "../../lib/telegram";
+import { answerCallbackQuery } from "../../telegram/delivery/telegram";
 import { loadPendingDisambiguation, unixNow } from "../telegram-webhook-store";
 import {
   handleSetupBranch,

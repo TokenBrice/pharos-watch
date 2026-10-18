@@ -1,6 +1,6 @@
 import { makeSubscriptionRow } from "./telegram-rows.test-support";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
-import { telegramApiCallBody } from "../../test-helpers/__shared/telegram";
+import { telegramApiCallBody } from "../../telegram/test-helpers/telegram";
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   firstAckBody,

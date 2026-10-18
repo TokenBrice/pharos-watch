@@ -1,6 +1,6 @@
 import { makeBulkPendingRow, pendingDisambiguationTable, pendingRowFromForget } from "./telegram-rows.test-support";
 import { describe, expect, it, beforeEach } from "vitest";
-import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
+import { mockTelegramMembership } from "../../telegram/test-helpers/telegram";
 import {
   fetchSpy,
   firstAckBody,

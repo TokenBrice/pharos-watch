@@ -8,7 +8,7 @@ import {
 import { classifyTelegramPlanningOutcome } from "../types";
 import { estimateTelegramTargetPlanCoordinatorBound } from "../coordinator";
 import { emptyAlerts, type RoutedSubscriberAlert } from "../../dispatch/dispatch-telegram-routing";
-import { parsePendingAlertProvenance } from "../../../../lib/telegram/pending-provenance";
+import { parsePendingAlertProvenance } from "../../../../telegram/outbox/pending-provenance";
 import { PENDING_TTL_SEC, TELEGRAM_DISPATCH_INTERVAL_SEC } from "@shared/lib/telegram-delivery-policy";
 
 function routed(): RoutedSubscriberAlert {

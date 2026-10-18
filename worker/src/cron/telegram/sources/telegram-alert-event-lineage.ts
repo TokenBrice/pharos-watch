@@ -1,4 +1,4 @@
-import type { ConsolidatedAlerts } from "../../../lib/telegram/alerts";
+import type { ConsolidatedAlerts } from "../../../telegram/common/alerts-formatting";
 import type { AlertsByChatEntry } from "../dispatch/dispatch-telegram-routing";
 
 type StablecoinAlert = { stablecoinId: string };

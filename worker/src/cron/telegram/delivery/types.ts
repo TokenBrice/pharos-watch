@@ -1,6 +1,6 @@
-import type { BatchMessage, TelegramSendErrorClass } from "../../../lib/telegram";
-import type { TelegramPendingCapacitySnapshot } from "../../../lib/telegram/pending-capacity";
-import type { PendingDeliveryState } from "../../../lib/telegram/constants";
+import type { BatchMessage, TelegramSendErrorClass } from "../../../telegram/delivery/telegram";
+import type { TelegramPendingCapacitySnapshot } from "../../../telegram/outbox/pending-capacity";
+import type { PendingDeliveryState } from "../../../telegram/common/constants";
 import type { TelegramAlertType } from "@shared/types/status";
 
 export interface PendingAlertRow {

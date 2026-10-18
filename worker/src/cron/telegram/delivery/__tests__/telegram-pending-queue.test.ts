@@ -5,7 +5,7 @@ import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils
 import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
-} from "../../../../lib/telegram/pending-provenance";
+} from "../../../../telegram/outbox/pending-provenance";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
@@ -44,12 +44,12 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
  */
 
 
-vi.mock("../../../../lib/telegram", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../lib/telegram")>();
+vi.mock("../../../../telegram/delivery/telegram", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../telegram/delivery/telegram")>();
   return { ...actual, sendToChat: mockSendToChat };
 });
-vi.mock("../../../../lib/telegram/transport-control", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../lib/telegram/transport-control")>();
+vi.mock("../../../../telegram/delivery/transport-control", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../telegram/delivery/transport-control")>();
   return {
     ...actual,
     claimTelegramTransportPermit: transportMocks.claim,
@@ -57,19 +57,19 @@ vi.mock("../../../../lib/telegram/transport-control", async (importOriginal) => 
     recordTelegramTransportOutcomes: transportMocks.record,
   };
 });
-vi.mock("../../../../lib/telegram/subscriber-lifecycle", () => ({
+vi.mock("../../../../telegram/store/subscriber-lifecycle", () => ({
   migrateTelegramChatId: mockMigrateTelegramChatId,
 }));
 
 const { cleanupExpiredPendingAlerts, archiveAgedExecutionUnknownPendingAlerts, EXPIRED_PENDING_CLEANUP_BATCH_LIMIT, clearPendingAlertsForDisabledChat } = await import("../cleanup");
 const { disableBlockedSubscriber, registerSubscriberBlockAndShouldDisable } = await import("../lifecycle");
-const { PENDING_TTL_SEC, TELEGRAM_PENDING_PRIORITY, SEND_BATCH_SIZE } = await import("../../../../lib/telegram/constants");
-const { enqueuePendingAlerts, buildDedupeKey, buildPendingAlertEnqueueStatement } = await import("../../../../lib/telegram/pending-queue");
+const { PENDING_TTL_SEC, TELEGRAM_PENDING_PRIORITY, SEND_BATCH_SIZE } = await import("../../../../telegram/common/constants");
+const { enqueuePendingAlerts, buildDedupeKey, buildPendingAlertEnqueueStatement } = await import("../../../../telegram/outbox/pending-queue");
 const { buildSetBasedPendingHandoffStatements } = await import("../../target-plans/delivery");
 const {
   readTelegramPendingCapacitySnapshot,
-} = await import("../../../../lib/telegram/pending-capacity");
-const { TELEGRAM_SPLIT_VERSION } = await import("../../../../lib/telegram/alerts");
+} = await import("../../../../telegram/outbox/pending-capacity");
+const { TELEGRAM_SPLIT_VERSION } = await import("../../../../telegram/common/alerts-formatting");
 
 beforeEach(() => {
   resetTelegramPendingMocks({

@@ -6,7 +6,7 @@ import {
 } from "../../lib/db";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
-import type { ResolvedCoin } from "../../lib/telegram/alerts";
+import type { ResolvedCoin } from "../../telegram/common/alerts-parser";
 import type {
   ParsedSetCommand,
   SubscriptionRow,
@@ -20,7 +20,7 @@ import {
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "../../lib/telegram/operation-batch";
+} from "../../telegram/delivery/operation-batch";
 import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 export type DewsMinBandValue = "ALERT" | "WARNING" | "DANGER" | null;

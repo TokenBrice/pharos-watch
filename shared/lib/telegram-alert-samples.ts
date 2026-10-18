@@ -4,7 +4,7 @@ import type { TelegramAlertType } from "../types/status/telegram";
  * Public sample messages, one per alert family, rendered verbatim as
  * "shown exactly as the bot sends them" example bubbles on /pharoswatchbot.
  * Keep these literals aligned with `formatConsolidatedMessage` in
- * `worker/src/lib/telegram/alerts-formatting.ts` when changing formatter output.
+ * `worker/src/telegram/common/alerts-formatting.ts` when changing formatter output.
  */
 export const TELEGRAM_PUBLIC_ALERT_SAMPLES: Record<TelegramAlertType, { message: string }> = {
   dews: {

@@ -6,13 +6,13 @@ import {
   TELEGRAM_ALERT_PERSISTENCE,
 } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
-import { escapeHtml, type InlineKeyboardButton } from "../lib/telegram";
-import { formatTelegramAge } from "../lib/telegram/format-age";
-import { MANAGE_PAGE_SIZE } from "../lib/telegram/constants";
-import { buildTelegramMiniAppUrl } from "../lib/telegram/webhook-registration";
-import type { ResolvedCoin } from "../lib/telegram/alerts";
-import type { TelegramPresetDefinition, TelegramPresetId } from "../lib/telegram/presets";
-import { isQuietHoursActive } from "../lib/telegram/quiet-hours";
+import { escapeHtml, type InlineKeyboardButton } from "../telegram/delivery/telegram";
+import { formatTelegramAge } from "../telegram/common/format-age";
+import { MANAGE_PAGE_SIZE } from "../telegram/common/constants";
+import { buildTelegramMiniAppUrl } from "../telegram/webhook/webhook-registration";
+import type { ResolvedCoin } from "../telegram/common/alerts-parser";
+import type { TelegramPresetDefinition, TelegramPresetId } from "../telegram/common/presets";
+import { isQuietHoursActive } from "../telegram/common/quiet-hours";
 import { formatTelegramCompactUsd, formatTelegramSignedCompactUsd } from "./telegram-format";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";

@@ -1,9 +1,6 @@
-import { escapeHtml } from "../lib/telegram";
-import {
-  formatDisambiguation,
-  findInvalidDisambiguationToken,
-  parseDisambiguationReply,
-} from "../lib/telegram/alerts";
+import { escapeHtml } from "../telegram/delivery/telegram";
+import { findInvalidDisambiguationToken, parseDisambiguationReply } from "../telegram/common/alerts-parser";
+import { formatDisambiguation } from "../telegram/common/alerts-formatting";
 import {
   canActOnPendingOwner,
   SETUP_PENDING_ACTION_TYPE,

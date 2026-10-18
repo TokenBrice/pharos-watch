@@ -1,5 +1,5 @@
 import { scanEditorialText, type EditorialFinding } from "@shared/lib/editorial-style";
-import { escapeHtml } from "../../lib/telegram";
+import { escapeHtml } from "../../telegram/delivery/telegram";
 
 export interface DigestWrapperEditorialFinding {
   ruleId: string;

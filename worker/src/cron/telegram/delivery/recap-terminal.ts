@@ -1,7 +1,7 @@
 import {
   projectTelegramRecapTerminalOutcome,
   type TelegramRecapTerminalOutcome,
-} from "../../../lib/telegram/recap-store";
+} from "../../../telegram/recap/recap-store";
 import type { DeadLetterPendingRow, PendingAlertRow } from "./types";
 import { PENDING_DELETE_CHUNK_SIZE } from "./dead-letter";
 

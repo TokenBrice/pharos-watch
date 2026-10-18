@@ -1,4 +1,4 @@
-import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
+import { classifyTelegramLogError, logTelegramEvent } from "../../telegram/common/log";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial: dispatch (with token) -> recap planner/off-mode cleanup -> watchdog -> cleanup -> pulse
@@ -13,8 +13,8 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/l
 // Heavy entrypoints cannot reach this lane; public isolates still defer its
 // job initialization until dispatch. Only types may be imported statically.
 import type { TelegramDispatchSharedState } from "../../cron/telegram/dispatch/dispatch-telegram-alerts";
-import type * as TelegramRegistrationModule from "../../lib/telegram/webhook-registration";
-import type { TelegramRecapRolloutCleanupResult } from "../../lib/telegram/recap-store";
+import type * as TelegramRegistrationModule from "../../telegram/webhook/webhook-registration";
+import type { TelegramRecapRolloutCleanupResult } from "../../telegram/recap/recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import {
   TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
@@ -179,7 +179,7 @@ function buildTelegramSlotGroups(
       return { targetRowsCancelled: 0, pendingRowsDeleted: 0 };
     }
     if (recapRolloutCleanup == null) {
-      const { cancelQueuedTelegramRecapsForRollout } = await import("../../lib/telegram/recap-store");
+      const { cancelQueuedTelegramRecapsForRollout } = await import("../../telegram/recap/recap-store");
       recapRolloutCleanup = await cancelQueuedTelegramRecapsForRollout(
         runtime.db,
         recapRollout,
@@ -435,7 +435,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     runtime,
     "telegram-registration-reconciliation",
     async (signal) => {
-      const registration = await import("../../lib/telegram/webhook-registration");
+      const registration = await import("../../telegram/webhook/webhook-registration");
       const results: TelegramReconciliationTelemetry[] = [];
       for (const entry of TELEGRAM_REGISTRATIONS) {
         results.push(await runTelegramReconciliation(

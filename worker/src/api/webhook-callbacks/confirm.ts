@@ -1,5 +1,5 @@
-import { logTelegramEvent } from "../../lib/telegram/log";
-import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { logTelegramEvent } from "../../telegram/common/log";
+import { recordTelegramUsageEvent } from "../../telegram/store/usage-analytics";
 import {
   applySubscribeIntent,
   applyUnsubscribeIntent,

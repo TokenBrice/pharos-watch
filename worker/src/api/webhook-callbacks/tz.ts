@@ -1,7 +1,7 @@
-import { editMessage, escapeHtml } from "../../lib/telegram";
-import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
-import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
-import { isValidIanaTimezone } from "../../lib/telegram/quiet-hours";
+import { editMessage, escapeHtml } from "../../telegram/delivery/telegram";
+import { classifyTelegramLogError, logTelegramEvent } from "../../telegram/common/log";
+import { recordTelegramUsageEvent } from "../../telegram/store/usage-analytics";
+import { isValidIanaTimezone } from "../../telegram/common/quiet-hours";
 import { setSubscriberTimezone } from "../telegram-webhook-store";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import { isGroupChatType } from "../telegram-webhook-auth";

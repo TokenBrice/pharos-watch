@@ -1,5 +1,5 @@
 import type { Env } from "./env";
-import type { TelegramCreds } from "./telegram";
+import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { TwitterCreds } from "./twitter";
 
 type TwitterCredentialEnv = Pick<

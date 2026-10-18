@@ -4,8 +4,8 @@ import { D1_BATCH_SIZE } from "../../../lib/constants";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/db";
 import { sha256Hex } from "../../../lib/hash";
 import { parseJson } from "../../../lib/json-parse";
-import type { BatchMessage } from "../../../lib/telegram";
-import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../../lib/telegram/constants";
+import type { BatchMessage } from "../../../telegram/delivery/telegram";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../../telegram/common/constants";
 import {
   parsePendingAlertScope,
   parsePendingAlertProvenance,
@@ -13,10 +13,10 @@ import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
   isValidPendingSourceEventId,
-} from "../../../lib/telegram/pending-provenance";
+} from "../../../telegram/outbox/pending-provenance";
 import { expandSubscriberChunks, type RoutedSubscriberAlert } from "../dispatch/dispatch-telegram-routing";
 import { listTelegramAlertItemKeys } from "../sources/telegram-alert-event-lineage";
-import { buildDedupeKey } from "../../../lib/telegram/pending-queue";
+import { buildDedupeKey } from "../../../telegram/outbox/pending-queue";
 
 const TELEGRAM_TARGET_PLAN_SCHEMA_VERSION = 1;
 const TELEGRAM_TARGET_PLAN_MAX_JSON_CHARS = 262_144;

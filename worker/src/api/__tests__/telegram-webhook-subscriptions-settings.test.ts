@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { TelegramWebhookEffectFence, createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import { claimTelegramProcessedUpdate } from "../telegram-webhook-store";
-import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
+import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../telegram/store/subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 
 import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../webhook-commands";

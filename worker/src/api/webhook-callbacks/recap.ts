@@ -2,12 +2,12 @@ import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   isTelegramRecapAvailable,
 } from "@shared/lib/telegram-recap-rollout";
-import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
-import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { classifyTelegramLogError, logTelegramEvent } from "../../telegram/common/log";
+import { recordTelegramUsageEvent } from "../../telegram/store/usage-analytics";
 import {
   applyRecapPreference,
   getTelegramRecapPreference,
-} from "../../lib/telegram/recap-store";
+} from "../../telegram/recap/recap-store";
 import { loadSubscriberByChat, unixNow } from "../telegram-webhook-store";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import {

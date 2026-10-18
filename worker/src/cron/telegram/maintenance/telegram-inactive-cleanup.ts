@@ -5,7 +5,7 @@ import { getCache, setCache } from "../../../lib/db-cache";
 import {
   INACTIVE_TELEGRAM_SUBSCRIBER_ELIGIBILITY_SQL,
   purgeInactiveTelegramSubscriber,
-} from "../../../lib/telegram/subscriber-lifecycle";
+} from "../../../telegram/store/subscriber-lifecycle";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 
 /**

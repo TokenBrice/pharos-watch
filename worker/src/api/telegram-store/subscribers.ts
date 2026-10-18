@@ -5,7 +5,7 @@ import type { SubscriberRow } from "../telegram-webhook-shared";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "../../lib/telegram/operation-batch";
+} from "../../telegram/delivery/operation-batch";
 import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 /** Re-exported under the worker-local name every Telegram store module already imports. */

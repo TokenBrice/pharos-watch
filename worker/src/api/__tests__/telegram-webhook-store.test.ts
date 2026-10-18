@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { mockTelegramD1 as mockD1 } from "../../test-helpers/__shared/telegram";
+import { mockTelegramD1 as mockD1 } from "../../telegram/test-helpers/telegram";
 import {
   countTelegramProcessedUpdateBacklog,
   persistPendingConfirmBulk,

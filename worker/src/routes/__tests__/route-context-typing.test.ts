@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { FeedbackEnv } from "../../api/feedback";
-import type { TelegramCreds } from "../../lib/telegram";
+import type { TelegramCreds } from "../../telegram/delivery/telegram";
 import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-support";
 import { buildRouteContext } from "../../handlers/http/context";
 import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";

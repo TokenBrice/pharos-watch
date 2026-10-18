@@ -23,7 +23,7 @@ vi.mock("../../live-reserves/store", () => ({ loadFreshIndependentLiveReserveMap
 vi.mock("../../collateral-drift", () => ({
   summarizeCollateralDriftFromLiveReserveMap: vi.fn(() => ({ driftCoins: [] })),
 }));
-vi.mock("../../telegram/pending-capacity", () => ({
+vi.mock("../../../telegram/outbox/pending-capacity", () => ({
   readTelegramPendingCapacity: vi.fn(async () => ({
     status: "available",
     value: {

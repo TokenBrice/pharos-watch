@@ -559,7 +559,7 @@
         "worker/src/api/webhook-commands/**",
         "worker/src/cron/telegram/**",
         "worker/src/handlers/scheduled/*telegram*.ts",
-        "worker/src/lib/telegram/**",
+        "worker/src/telegram/**",
         "shared/lib/telegram-*.ts",
         "shared/lib/telegram-delivery-policy.ts",
         "src/app/pharoswatchbot/**",
@@ -588,7 +588,8 @@
         { "path": "docs/runbooks/telegram-secret-rotation.md", "runbook": { "label": "Telegram secret rotation", "kind": "procedure" } },
         { "path": "docs/runbooks/telegram-webhook-retry-dedupe.md", "runbook": { "label": "Telegram ingress, abuse controls, retries and setup incidents", "kind": "symptom" } }
       ],
-      "checks": ["npx vitest run worker/src/api worker/src/cron"],
+      "alsoRead": ["worker/src/telegram/AGENTS.md"],
+      "checks": ["npx vitest run worker/src/api worker/src/cron worker/src/telegram"],
       "rules": [
         "Preserve webhook authentication, signed initData validation, and idempotent update handling.",
         "Preserve the durable delivery evidence trail."

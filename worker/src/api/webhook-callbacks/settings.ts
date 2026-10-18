@@ -1,4 +1,4 @@
-import { answerCallbackQuery } from "../../lib/telegram";
+import { answerCallbackQuery } from "../../telegram/delivery/telegram";
 import { handleSettingsCallback, type SettingsWebhookEffect } from "../telegram-webhook-settings";
 import {
   requireAdminForMutatingCallback,

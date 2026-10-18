@@ -4,7 +4,7 @@ import {
   type FanoutSubscriptionInputs,
 } from "./dispatch-telegram-alerts-fanout";
 import { hasEscalation } from "./dispatch-telegram-predicates";
-import { isQuietHoursActive } from "../../../lib/telegram/quiet-hours";
+import { isQuietHoursActive } from "../../../telegram/common/quiet-hours";
 import {
   formatPlannedSubscribers,
   planSubscriberQueue,

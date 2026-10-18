@@ -25,7 +25,7 @@ import { resolveTelegramAlertSourcePresetPages } from "../../sources/telegram-al
 import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { resolveTelegramTargetExpiresAt } from "../materialization";
 import { insertTelegramSubscriber } from "../../dispatch/__tests__/telegram-subscriber.test-support";
-import { loadTelegramPendingCapacity } from "../../../../lib/telegram/pending-capacity";
+import { loadTelegramPendingCapacity } from "../../../../telegram/outbox/pending-capacity";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../../lib/safety-score-v9/consumer-freshness";
 
 const NOW = 1_800_000_000;

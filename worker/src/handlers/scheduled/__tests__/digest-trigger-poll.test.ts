@@ -29,7 +29,7 @@ vi.mock("../../../lib/db-cache", () => ({
 vi.mock("../../../lib/budget-surface-telemetry", () => ({
   recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
 }));
-vi.mock("../../../lib/telegram/digest-outbox", () => ({
+vi.mock("../../../telegram/outbox/digest-outbox", () => ({
   drainTelegramDigestOutbox: vi.fn(),
 }));
 
@@ -45,7 +45,7 @@ import { resolveDigestSafetyMap } from "../../../lib/digest-safety-map";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-credentials";
-import { drainTelegramDigestOutbox } from "../../../lib/telegram/digest-outbox";
+import { drainTelegramDigestOutbox } from "../../../telegram/outbox/digest-outbox";
 import {
   DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
   DIGEST_TRIGGER_POLL_INTERVAL_SECONDS,

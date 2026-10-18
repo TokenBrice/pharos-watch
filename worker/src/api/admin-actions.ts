@@ -1,4 +1,4 @@
-import type { TelegramCreds } from "../lib/telegram";
+import type { TelegramCreds } from "../telegram/delivery/telegram";
 import { DigestKindSchema, type DigestKind, type DigestLlmProfile } from "@shared/types/digest";
 import { makeAdminRoute, makeIdempotentAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { setCache } from "../lib/db-cache";

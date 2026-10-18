@@ -8,9 +8,9 @@
  * Callback namespace: `setup:*` (see telegram-webhook-callbacks.ts).
  */
 
-import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../lib/telegram";
-import { buildTelegramMiniAppUrl } from "../lib/telegram/webhook-registration";
-import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
+import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../telegram/delivery/telegram";
+import { buildTelegramMiniAppUrl } from "../telegram/webhook/webhook-registration";
+import { recordTelegramUsageEvent } from "../telegram/store/usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";
 import {
@@ -21,13 +21,13 @@ import {
   recordTelegramFirstFollow,
   recordTelegramFirstSetupComplete,
   telegramAdoptionDimensionsForStart,
-} from "../lib/telegram/adoption-analytics";
+} from "../telegram/adoption/adoption-analytics";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
   type TelegramPresetId,
-} from "../lib/telegram/presets";
-import { resolveTicker } from "../lib/telegram/alerts";
+} from "../telegram/common/presets";
+import { resolveTicker } from "../telegram/common/alerts-parser";
 import {
   buildNotFoundMessage,
   buildPresetSubscriptionSummaryMessage,

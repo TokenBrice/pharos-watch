@@ -4,8 +4,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 
 const sendToChatMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../lib/telegram", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/telegram")>();
+vi.mock("../../telegram/delivery/telegram", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../telegram/delivery/telegram")>();
   return {
     ...actual,
     sendToChat: sendToChatMock,

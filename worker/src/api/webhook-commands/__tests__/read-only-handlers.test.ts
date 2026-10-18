@@ -13,7 +13,7 @@ import { handlePresets } from "../presets";
 import { handleSample } from "../sample";
 import { handleStatus } from "../status";
 import { handleWhy } from "../why";
-import { createTelegramFetchSpy } from "../../../test-helpers/__shared/telegram";
+import { createTelegramFetchSpy } from "../../../telegram/test-helpers/telegram";
 
 vi.mock("../../telegram-webhook-insights", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../telegram-webhook-insights")>();

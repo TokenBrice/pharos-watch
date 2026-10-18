@@ -1,4 +1,4 @@
-import { TelegramSendOriginatedError } from "../../../lib/telegram/transport-errors";
+import { TelegramSendOriginatedError } from "../../../telegram/delivery/transport-errors";
 import type { TelegramDispatchCronResult } from "@shared/types";
 import type { PendingCapacitySnapshot, PendingDrainResult } from "../delivery/types";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
@@ -6,7 +6,7 @@ import type { TelegramAlertType } from "@shared/types/status";
 import {
   emptyPendingCapacitySnapshot,
   pendingCapacityProgressFields,
-} from "../../../lib/telegram/pending-capacity";
+} from "../../../telegram/outbox/pending-capacity";
 
 import type { AlertSafetySourceAssessment } from "../../../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../../../lib/alert-reserve-source-cache";

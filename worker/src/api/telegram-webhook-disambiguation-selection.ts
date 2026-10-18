@@ -1,11 +1,11 @@
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTelegramAlertType } from "@shared/types/status";
-import type { ResolvedCoin } from "../lib/telegram/alerts";
+import type { ResolvedCoin } from "../telegram/common/alerts-parser";
 import type {
   TelegramPendingWriteContext,
 } from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
-import { dedupeCoins } from "../lib/telegram/coin-dedupe";
+import { dedupeCoins } from "../telegram/common/coin-dedupe";
 import type { ParsedSetCommand, PendingAction } from "./telegram-webhook-shared";
 import { makeActionRunner } from "./webhook-commands/action-runner";
 

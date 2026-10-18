@@ -1,5 +1,5 @@
-import { coerceCount } from "../../lib/telegram/usage-analytics";
-import { PENDING_DELIVERY_STATES } from "../../lib/telegram/constants";
+import { coerceCount } from "../../telegram/store/usage-analytics";
+import { PENDING_DELIVERY_STATES } from "../../telegram/common/constants";
 
 export interface TelegramPendingAlertCountRow {
   pending_count?: number | string | null;

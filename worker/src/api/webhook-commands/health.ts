@@ -1,8 +1,8 @@
-import { escapeHtml } from "../../lib/telegram";
+import { escapeHtml } from "../../telegram/delivery/telegram";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
-import { formatTelegramAge, formatTelegramIsoTimestamp } from "../../lib/telegram/format-age";
-import { coerceCount, loadTelegramChatHealthDiagnostics } from "../../lib/telegram/usage-analytics";
-import { isQuietHoursActive } from "../../lib/telegram/quiet-hours";
+import { formatTelegramAge, formatTelegramIsoTimestamp } from "../../telegram/common/format-age";
+import { coerceCount, loadTelegramChatHealthDiagnostics } from "../../telegram/store/usage-analytics";
+import { isQuietHoursActive } from "../../telegram/common/quiet-hours";
 import {
   buildMiniAppOnlyKeyboard,
   formatQuietHours,

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { telegramAdoptionEntryForPlacement } from "@shared/lib/telegram-adoption-analytics";
-import { writeTelegramAdoptionEvent } from "../../lib/telegram/adoption-analytics";
+import { writeTelegramAdoptionEvent } from "../../telegram/adoption/adoption-analytics";
 import { parseSetupState } from "../telegram-webhook-setup";
 import {
   handleTelegramWebhook, inlineButtons, latestSendMessageBody, makeCallbackRequest,

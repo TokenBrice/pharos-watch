@@ -1,5 +1,5 @@
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
-import { TELEGRAM_USD_PROFILE, TELEGRAM_SIGNED_USD_PROFILE } from "../lib/telegram/usd-profile";
+import { TELEGRAM_USD_PROFILE, TELEGRAM_SIGNED_USD_PROFILE } from "../telegram/common/usd-profile";
 
 export function formatTelegramCompactUsd(value: number | null | undefined): string | null {
   if (value == null || !Number.isFinite(value)) return null;

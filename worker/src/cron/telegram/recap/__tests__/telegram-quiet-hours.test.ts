@@ -5,7 +5,7 @@ import {
   isQuietHoursActive,
   isValidIanaTimezone,
   resetQuietHoursFallbackTelemetryForTests,
-} from "../../../../lib/telegram/quiet-hours";
+} from "../../../../telegram/common/quiet-hours";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const hour = (hourUtc: number) => hourUtc * 3600;

@@ -9,8 +9,8 @@ import {
   listTelegramPresets,
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
-} from "../../../lib/telegram/presets";
-import { logTelegramEvent } from "../../../lib/telegram/log";
+} from "../../../telegram/common/presets";
+import { logTelegramEvent } from "../../../telegram/common/log";
 import type { PresetSubscriberLoadResult } from "../dispatch/dispatch-telegram-alerts-fanout";
 import type { SubscriberRow } from "../dispatch/dispatch-telegram-routing";
 import {

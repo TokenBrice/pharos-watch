@@ -116,7 +116,7 @@ Each direct/local coin row's `CoinCard` renders a compact source chip derived pu
 
 ## Auth Model
 
-`validateTelegramMiniAppInitData` in `worker/src/lib/telegram/mini-app-auth.ts` owns Telegram HMAC validation and timing-safe comparison. Require signed hash, auth date and user; untrusted browser fields or launch hints are not identity. Try current bot token then configured previous token for overlap ([secret rotation](./runbooks/telegram-secret-rotation.md)); outbound sends use current token only.
+`validateTelegramMiniAppInitData` in `worker/src/telegram/mini-app/mini-app-auth.ts` owns Telegram HMAC validation and timing-safe comparison. Require signed hash, auth date and user; untrusted browser fields or launch hints are not identity. Try current bot token then configured previous token for overlap ([secret rotation](./runbooks/telegram-secret-rotation.md)); outbound sends use current token only.
 
 Freshness windows:
 

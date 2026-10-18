@@ -193,8 +193,8 @@ vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }))
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../lib/dews/service", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
 vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
-vi.mock("../lib/telegram/recap-store", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/telegram/recap-store")>();
+vi.mock("../telegram/recap/recap-store", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../telegram/recap/recap-store")>();
   return {
     ...original,
     cancelQueuedTelegramRecapsForRollout: cronMocks.cancelQueuedTelegramRecapsForRollout,
@@ -387,8 +387,8 @@ vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/telegram/webhook-registration", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/telegram/webhook-registration")>();
+vi.mock("../telegram/webhook/webhook-registration", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../telegram/webhook/webhook-registration")>();
   return {
     ...original,
     reconcileTelegramCommandRegistration: cronMocks.reconcileTelegramCommandRegistration,

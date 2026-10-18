@@ -4,9 +4,9 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import {
   createTelegramFetchSpy,
   lastSendMessageBody,
-} from "../../../test-helpers/__shared/telegram";
+} from "../../../telegram/test-helpers/telegram";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
-import { resolveTicker } from "../../../lib/telegram/alerts";
+import { resolveTicker } from "../../../telegram/common/alerts-parser";
 import type { WebhookCommandContext } from "../context";
 import { handleHealth } from "../health";
 import { handleMute } from "../mute";

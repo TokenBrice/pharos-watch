@@ -6,7 +6,7 @@ import {
   parseStartPayload,
 } from "../telegram-webhook-parsing";
 import { resolveCoinTargets } from "../telegram-webhook-resolution";
-import { parseSubscribeArgs, resolveTicker, validateSubscribeArgs } from "../../lib/telegram/alerts";
+import { parseSubscribeArgs, resolveTicker, validateSubscribeArgs } from "../../telegram/common/alerts-parser";
 import type { PendingDisambiguationRow } from "../telegram-webhook-shared";
 
 function canonicalPayload(overrides: Record<string, unknown> = {}): string {

@@ -2,10 +2,10 @@ import { vi } from "vitest";
 import {
   createTelegramFetchSpy,
   telegramApiCallBody,
-} from "../../test-helpers/__shared/telegram";
+} from "../../telegram/test-helpers/telegram";
 import type { TelegramCallbackQuery } from "../webhook-callbacks";
 
-export { mockTelegramD1 } from "../../test-helpers/__shared/telegram";
+export { mockTelegramD1 } from "../../telegram/test-helpers/telegram";
 
 // Keep the callback suites focused on action-specific fixtures and assertions.
 vi.mock("../telegram-webhook-insights", async (importOriginal) => {
@@ -28,7 +28,7 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
 
 const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
 const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
-const { resolveTicker } = await import("../../lib/telegram/alerts");
+const { resolveTicker } = await import("../../telegram/common/alerts-parser");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 

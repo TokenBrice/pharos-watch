@@ -233,7 +233,7 @@ describe("Telegram public surface", () => {
     "worker/src/api/webhook-commands/private.ts",
     "worker/src/api/webhook-callbacks/private.ts",
     "worker/src/api/telegram-store/private.ts",
-    "worker/src/lib/telegram/private.ts",
+    "worker/src/telegram/common/private.ts",
     "worker/src/cron/telegram/target-plans/private.ts",
     "worker/src/telegram/store/private.ts",
   ].flatMap((target) => [
@@ -311,7 +311,6 @@ describe("Telegram public surface", () => {
   });
 
   it.each([
-    "worker/src/lib/telegram.ts",
     "worker/src/telegram/delivery/telegram.ts",
   ])("permits the retained type-only transport integration with %s", (target) => {
     const root = fixture();

@@ -1,6 +1,6 @@
 import { batchExecute, buildInClause, chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../../lib/db";
-import { TELEGRAM_PENDING_PRIORITY, type PendingDeliveryState } from "../../../lib/telegram/constants";
-import { logTelegramEvent } from "../../../lib/telegram/log";
+import { TELEGRAM_PENDING_PRIORITY, type PendingDeliveryState } from "../../../telegram/common/constants";
+import { logTelegramEvent } from "../../../telegram/common/log";
 import type {
   DeadLetterPendingRow,
   PendingDeadLetterReason,

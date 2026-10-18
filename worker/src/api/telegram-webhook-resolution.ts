@@ -1,10 +1,6 @@
-import { escapeHtml } from "../lib/telegram";
-import {
-  formatDisambiguation,
-  resolveTicker,
-  type ResolvedCoin,
-  type TickerResolutionScope,
-} from "../lib/telegram/alerts";
+import { escapeHtml } from "../telegram/delivery/telegram";
+import { resolveTicker, type ResolvedCoin, type TickerResolutionScope } from "../telegram/common/alerts-parser";
+import { formatDisambiguation } from "../telegram/common/alerts-formatting";
 import { buildNotFoundMessage } from "./telegram-webhook-messages";
 import type {
   CoinResolution,
@@ -14,7 +10,7 @@ import {
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguation,
 } from "./telegram-webhook-store";
-import { dedupeCoins } from "../lib/telegram/coin-dedupe";
+import { dedupeCoins } from "../telegram/common/coin-dedupe";
 
 export function resolveCoinTargets(
   tickers: string[],

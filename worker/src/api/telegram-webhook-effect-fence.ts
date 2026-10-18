@@ -14,8 +14,8 @@ import {
 import {
   canonicalTelegramWebhookIntentBytes,
   classifyTelegramTerminalMarkerFailure,
-} from "../lib/telegram/processed-updates";
-import { logTelegramEvent } from "../lib/telegram/log";
+} from "../telegram/store/processed-updates";
+import { logTelegramEvent } from "../telegram/common/log";
 import {
   resolveUpdateChatId,
   resolveUpdateType,

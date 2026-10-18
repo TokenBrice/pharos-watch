@@ -7,7 +7,7 @@ import {
   parsePendingMarkupPolicy,
   type PendingAlertScopeItem,
   type PendingMarkupPolicyV1,
-} from "../../../lib/telegram/pending-provenance";
+} from "../../../telegram/outbox/pending-provenance";
 import {
   alertSafetyIdentitiesAreComparable,
   loadActiveAlertSafetySourceAssessment,
@@ -17,7 +17,7 @@ import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
-} from "../../../lib/telegram/presets";
+} from "../../../telegram/common/presets";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import type { PendingAlertRow } from "./types";
 

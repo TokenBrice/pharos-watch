@@ -9,7 +9,7 @@ import {
 } from "@shared/lib/api-endpoints";
 import type { CloudflareD1StatusBindings } from "../lib/env";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
-import type { TelegramCreds } from "../lib/telegram";
+import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { RpcProviderTrialEnv } from "../lib/rpc-provider-parity/report";
 import type { FeedbackEnv } from "../api/feedback";

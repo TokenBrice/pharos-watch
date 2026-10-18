@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import type { ResolvedCoin } from "../lib/telegram/alerts";
-import { dedupeCoins } from "../lib/telegram/coin-dedupe";
-import { isDepegStepValue } from "../lib/telegram/constants";
+import type { ResolvedCoin } from "../telegram/common/alerts-parser";
+import { dedupeCoins } from "../telegram/common/coin-dedupe";
+import { isDepegStepValue } from "../telegram/common/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,

@@ -4,7 +4,7 @@ import { handleForget } from "../forget";
 import type { WebhookCommandContext } from "../context";
 import { makeCommandContext } from "./webhook-commands.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { prepareTelegramProcessedUpdatePendingMutationApplied } from "../../../lib/telegram/processed-updates";
+import { prepareTelegramProcessedUpdatePendingMutationApplied } from "../../../telegram/store/processed-updates";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

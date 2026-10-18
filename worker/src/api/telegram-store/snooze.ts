@@ -3,14 +3,14 @@ import {
   preparePreferenceGenerationBump,
   unixNow,
 } from "./subscribers";
-import { assertSubscribableCoin } from "../../lib/telegram/subscription-eligibility";
+import { assertSubscribableCoin } from "../../telegram/store/subscription-eligibility";
 import { executeAtomicBatch } from "../../lib/db";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "../../lib/telegram/operation-batch";
+} from "../../telegram/delivery/operation-batch";
 import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
-import { prepareCancelUnstartedTelegramRecaps } from "../../lib/telegram/recap-store";
+import { prepareCancelUnstartedTelegramRecaps } from "../../telegram/recap/recap-store";
 
 /**
  * Replace the subscriber's IANA timezone (used to interpret quiet hours
