@@ -76,6 +76,7 @@ const WRANGLER_BINDING_SECTIONS = new Map([
   ["d1_databases", { property: "binding", type: "D1Database" }],
   ["version_metadata", { property: "binding", type: "WorkerVersionMetadata" }],
   ["r2_buckets", { property: "binding", type: "R2Bucket" }],
+  ["services", { property: "binding", type: "Fetcher" }],
 ]);
 
 interface EnvInterfaceBinding {

@@ -1,6 +1,6 @@
 export type EnvRuntimeName = "worker" | "pagesOps" | "pagesSiteData" | "frontend";
 export type EnvRuntimeStatus = "required" | "optional" | "reserved";
-export type EnvBindingValueType = "string" | "D1Database" | "KVNamespace" | "R2Bucket" | "WorkerVersionMetadata" | "RateLimit";
+export type EnvBindingValueType = "string" | "D1Database" | "KVNamespace" | "R2Bucket" | "WorkerVersionMetadata" | "RateLimit" | "Fetcher";
 
 export type EnvExampleSection =
   | "frontend"
