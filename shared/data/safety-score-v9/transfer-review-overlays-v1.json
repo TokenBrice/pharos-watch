@@ -2217,6 +2217,34 @@
       ]
     },
     {
+      "assetId": "dola-inverse-finance",
+      "reviewedAt": "2026-10-18",
+      "reviewer": "Inverse feedback freeze review 2026-10-18",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x865377367054516e17014ccded1e7d814edc9ce4",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Canonical Ethereum DOLA is Etherscan-verified ERC20 with Proxy: 0. At Ethereum mainnet block 26218090 (2026-10-18T07:55:59Z; block hash 0x34bd6a2053f765627143843da128f7fc8d1f2680028cc2c5344bca4c2afc3488), its runtime keccak256 was 0x85535d07c451426f90a5d2b57b28d137ca5294437a6edfc770290d4859411389 and its deployed runtime matched Blockscout's verified source runtime byte-for-byte. The immutable source's transfer and transferFrom perform balance and holder-authorized allowance arithmetic only, with no transfer hook, pause, blacklist, allowlist, forced transfer, privileged holder burn or upgrade path. burn(uint256) burns only msg.sender's balance. Operator/minter authority controls issuance, not holder transfers, and is a separate economic-control power. This review covers only the canonical deployment; asset-level applicability remains subject to complete captured material deployment scope.",
+          "sources": [
+            {
+              "label": "Etherscan verified canonical Ethereum DOLA ERC20 source",
+              "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+            },
+            {
+              "label": "Blockscout verified DOLA source and deployed runtime",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x865377367054516e17014ccded1e7d814edc9ce4"
+            },
+            {
+              "label": "Pinned Ethereum block 26218090",
+              "url": "https://eth.blockscout.com/block/26218090"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "assetId": "sdola-inverse-finance",
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACCESS acc-A",

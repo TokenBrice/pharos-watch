@@ -75,7 +75,7 @@ function buildStatusNote(status: BlacklistabilityClientStatus, upstreamLabel: st
     case "freezable":
       return "A reviewed issuer or protocol control can freeze or seize this token in holders' wallets.";
     case "not-freezable":
-      return "The reviewed deployments expose no issuer freeze, seizure, or holder blacklist path.";
+      return "Under the reviewed deployment-materiality scope, no issuer freeze, seizure, or holder blacklist path sets the verdict. Peripheral deployment controls, if any, are described in the review notes.";
     case "possible":
       return "A freeze or seizure path is plausible but was not established across the reviewed deployments.";
     case "inherited":

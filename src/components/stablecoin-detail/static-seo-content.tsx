@@ -19,6 +19,7 @@ import {
 } from "@shared/lib/ai-summary-claims";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
+import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import type { FaqItem } from "@/lib/faq";
@@ -226,7 +227,7 @@ function describeFreezeControl(coin: StablecoinMeta): string {
     case "inherited":
       return "freeze exposure is inherited through upstream collateral, custody, or wrapper dependencies";
     case false:
-      return "no direct freeze-control signal is recorded";
+      return "no direct freeze-control path sets the verdict under the reviewed deployment-materiality scope";
     default:
       return "freeze-control coverage is not conclusive from static metadata alone";
   }
@@ -316,9 +317,13 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
     coin.status === "frozen"
       ? `${coin.symbol} is a frozen Pharos archive; the recorded history below is read-only.`
       : isActiveStablecoinMeta(coin)
-        ? `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the dossier below.`
+        ? isBlacklistStablecoin(coin.symbol.toUpperCase())
+          ? `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the dossier below.`
+          : null
         : `${coin.symbol} is outside active monitoring; this static record preserves the reviewed control context.`,
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const identityQuestion =
     coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase()
