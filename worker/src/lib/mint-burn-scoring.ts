@@ -7,6 +7,7 @@
 
 import { clamp } from "@shared/lib/math";
 import { mintBurnSignedNetRange } from "@shared/lib/mint-burn-valuation";
+import { PRESSURE_SHIFT_MIN_BASELINE_DAYS } from "@shared/lib/mint-burn-signals";
 import type { MintBurnValuation } from "@shared/types/mint-burn";
 
 // ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ const FLOW_INTENSITY_DENOMINATOR_FLOOR_USD = 1_000_000;
 // Calibrated so z ≈ 2 (a ~2σ flow move) maps to the ±100 score bound.
 const FLOW_INTENSITY_Z_MULTIPLIER = 50;
 /** Minimum baseline history for a pressure score; a shorter baseline is NR regardless of valuation. */
-export const FLOW_INTENSITY_MIN_DATA_DAYS = 7;
+export const FLOW_INTENSITY_MIN_DATA_DAYS = PRESSURE_SHIFT_MIN_BASELINE_DAYS;
 const FLOW_INTENSITY_MIN = -100;
 const FLOW_INTENSITY_MAX = 100;
 const MIN_ACTIVITY_USD = 50_000;
@@ -68,29 +69,13 @@ export function computeFlowIntensity(
 // Gauge bands
 // ---------------------------------------------------------------------------
 
-/** Exhaustive union of gauge-band labels returned by {@link getGaugeBand}. */
-export type GaugeBand = "CRISIS" | "STRESS" | "CAUTIOUS" | "NEUTRAL" | "HEALTHY" | "CONFIDENT" | "SURGE";
-
-/**
- * Return the band label for the band that contains `score`.
- * Boundary convention: each band is [min, max).  The last band includes 100.
- *
- * NaN/out-of-range returns "NEUTRAL" as a sentinel — intrinsic to the design
- * and documented here; callers do not need to handle it separately.
- */
-export function getGaugeBand(score: number): GaugeBand {
-  // Score-visible [min, max) assignments; boundary tests pin these labels.
-  // Out-of-range/NaN sentinel (distinct from the real [-10,10) NEUTRAL band below);
-  // unreachable for mcap-weighted intensity inputs, which are already clamped to [-100,100].
-  if (Number.isNaN(score) || score < -100) return "NEUTRAL";
-  if (score < -70) return "CRISIS";
-  if (score < -40) return "STRESS";
-  if (score < -10) return "CAUTIOUS";
-  if (score < 10) return "NEUTRAL";
-  if (score < 40) return "HEALTHY";
-  if (score < 70) return "CONFIDENT";
-  return "SURGE";
-}
+// Thresholds live in shared/lib so the frontend draws the same band zones (R5).
+export {
+  getGaugeBand,
+  getGaugeScoreInterval,
+  isGaugeBandRobustToWithheldWeight,
+  type GaugeBand,
+} from "@shared/lib/mint-burn-gauge-bands";
 
 // ---------------------------------------------------------------------------
 // Bank Run Gauge (market-cap-weighted composite)
@@ -120,48 +105,6 @@ export function computeGaugeScore(
 
   if (totalMcap === 0) return null;
   return weightedSum / totalMcap;
-}
-
-/**
- * Whether the published gauge band is independent of weight withheld from it.
- * `computeGaugeScore` re-weights over the scored weight `W`; a withheld coin
- * of weight `w` has an unknown true intensity `x` in [-100, 100] (or none),
- * so the full-cohort score lies in [(W·S − 100w)/(W+w), (W·S + 100w)/(W+w)].
- * The band is robust only when both ends fall in the band of `S` (bands are
- * contiguous, so the whole interval does). The implied shift is at most
- * w/(W+w)·(100 + |S|).
- */
-export function isGaugeBandRobustToWithheldWeight(input: {
-  score: number;
-  scoredMcapUsd: number;
-  withheldMcapUsd: number;
-}): boolean {
-  const interval = getGaugeScoreInterval(input);
-  if (!interval) return false;
-  const [lower, upper] = interval;
-  const { score } = input;
-  const band = getGaugeBand(score);
-  return getGaugeBand(lower) === band && getGaugeBand(upper) === band;
-}
-
-/** Full-cohort bounds for an unknown withheld intensity in [-100, 100]. */
-export function getGaugeScoreInterval(input: {
-  score: number;
-  scoredMcapUsd: number;
-  withheldMcapUsd: number;
-}): readonly [number, number] | null {
-  const { score, scoredMcapUsd, withheldMcapUsd } = input;
-  if (![score, scoredMcapUsd, withheldMcapUsd].every(Number.isFinite)
-      || score < FLOW_INTENSITY_MIN || score > FLOW_INTENSITY_MAX
-      || !(scoredMcapUsd > 0) || withheldMcapUsd < 0) return null;
-  const total = scoredMcapUsd + withheldMcapUsd;
-  if (!Number.isFinite(total)) return null;
-  const scoredFraction = scoredMcapUsd / total;
-  const withheldFraction = withheldMcapUsd / total;
-  return [
-    clamp(scoredFraction * score + FLOW_INTENSITY_MIN * withheldFraction, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX),
-    clamp(scoredFraction * score + FLOW_INTENSITY_MAX * withheldFraction, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX),
-  ];
 }
 
 // ---------------------------------------------------------------------------

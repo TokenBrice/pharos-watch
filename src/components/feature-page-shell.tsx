@@ -12,6 +12,8 @@ export interface FeaturePageShellProps {
   methodology?: {
     version: string;
     changelogPath: string;
+    /** Names what the version governs when it is not the page's hero (e.g. "Chain Health methodology"). */
+    label?: string;
   };
   headerActions?: React.ReactNode;
   leadParagraphs?: readonly React.ReactNode[];
@@ -85,7 +87,7 @@ export function FeaturePageShell({
           </div>
           {methodology && (
             <p className="pharos-meta">
-              Methodology {methodology.version}.{" "}
+              {methodology.label ?? "Methodology"} {methodology.version}.{" "}
               <Link
                 href={methodology.changelogPath}
                 className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
@@ -131,7 +133,7 @@ function InstrumentHeader({
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           {methodology ? (
             <p className="pharos-meta">
-              Methodology {methodology.version} &middot;{" "}
+              {methodology.label ?? "Methodology"} {methodology.version} &middot;{" "}
               <Link
                 href={methodology.changelogPath}
                 className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
