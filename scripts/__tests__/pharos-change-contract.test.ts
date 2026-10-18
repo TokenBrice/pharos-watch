@@ -419,6 +419,8 @@ describe("reading selectors and context modes", () => {
   it.each([
     "worker/src/cron/compute-safety-score-v9.ts",
     "worker/src/cron/prepare-safety-score-v9-input.ts",
+    "worker/src/lib/safety-score-v9/publication-journal.ts",
+    "worker/src/lib/safety-score-v9/publication-replay-capture.ts",
     "worker/src/lib/safety-score-v9/publication-runner.ts",
   ])("routes a lone scoring publication path %s through the contract seam", (file) => {
     const contract = classifyChangedFiles([file]);
