@@ -12,14 +12,14 @@ const NOW_SECONDS = 1_700_001_000;
 
 function dispatchCron(metadata: Record<string, unknown>, status: "ok" | "degraded" | "error" = "ok"): CronStatus {
   return {
-    lastRun: {
+    runs: [{
       startedAt: NOW_SECONDS - 60,
       durationMs: 1_200,
       status,
       itemCount: 0,
-      metadata,
-    },
-    recentRuns: [],
+    }],
+    latestRunFacts: metadata,
+    confirmedOutputAt: status === "ok" ? NOW_SECONDS - 60 : null,
     expectedIntervalSec: 300,
     healthy: status === "ok",
   };

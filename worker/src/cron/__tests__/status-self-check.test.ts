@@ -54,6 +54,7 @@ const adminProbePaths = vi.hoisted(() => ["/api/status", "/api/status-history?li
 const routeMock = vi.fn();
 const writeStatusProbeRunMock = vi.fn(async () => true);
 const writeStatusRawSnapshotMock = vi.fn(async () => true);
+const writeStatusPublicHealthSnapshotMock = vi.fn(async () => true);
 const loadStatusSupplementsMock = vi.fn(async () => ({ sectionErrors: {} }));
 const assessPublicHealthMock = vi.fn(async () => makePublicHealth());
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
@@ -84,6 +85,10 @@ vi.mock("../../lib/status-evaluation", () => ({
 }));
 vi.mock("../../lib/status/raw-snapshot", () => ({
   writeStatusRawSnapshot: writeStatusRawSnapshotMock,
+}));
+vi.mock("../../lib/status/public-health-snapshot", () => ({
+  STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY: "status:public-health-snapshot:v1",
+  writeStatusPublicHealthSnapshot: writeStatusPublicHealthSnapshotMock,
 }));
 vi.mock("../../lib/status/supplements", () => ({
   loadStatusSupplements: loadStatusSupplementsMock,
@@ -170,6 +175,7 @@ describe("runStatusSelfCheck", () => {
     adminProbePaths.splice(0, adminProbePaths.length, "/api/status", "/api/status-history?limit=10");
     writeStatusProbeRunMock.mockResolvedValue(true);
     writeStatusRawSnapshotMock.mockResolvedValue(true);
+    writeStatusPublicHealthSnapshotMock.mockResolvedValue(true);
     loadStatusSupplementsMock.mockResolvedValue({ sectionErrors: {} });
     assessPublicHealthMock.mockResolvedValue(makePublicHealth());
     fetchMock = mockFetch([], { requireMatch: true });
@@ -399,7 +405,6 @@ describe("runStatusSelfCheck", () => {
       number,
       { rawOverallStatus: string },
       {
-        publicHealth?: { status?: string };
         supplements?: Record<string, unknown>;
       },
     ];
@@ -407,7 +412,10 @@ describe("runStatusSelfCheck", () => {
       rawOverallStatus: "healthy",
     });
     expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
-    expect(firstSnapshotWrite[3]?.publicHealth?.status).toBeTypeOf("string");
+    expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }),
+    );
+    expect(firstSnapshotWrite[3]).not.toHaveProperty("publicHealth");
     expect(firstSnapshotWrite[3]?.supplements).toBeDefined();
     expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);
   });
@@ -486,11 +494,12 @@ describe("runStatusSelfCheck", () => {
     expect(latestProbeWrite.failCount).toBe(0);
   });
 
-  it.each(["status_probe_runs", "status_state", "status:raw-snapshot:v1", "status_discrepancy_state"])(
+  it.each(["status_probe_runs", "status_state", "status:raw-snapshot:v1", "status:public-health-snapshot:v1", "status_discrepancy_state"])(
     "requires the %s output before marking self-check publication successful", async (output) => {
       if (output === "status_probe_runs") writeStatusProbeRunMock.mockResolvedValueOnce(false);
       if (output === "status_state") reconcileStatusStateMock.mockResolvedValueOnce({ effectiveStatus: "healthy", persistenceSucceeded: false });
       if (output === "status:raw-snapshot:v1") writeStatusRawSnapshotMock.mockResolvedValueOnce(false);
+      if (output === "status:public-health-snapshot:v1") writeStatusPublicHealthSnapshotMock.mockResolvedValueOnce(false);
       if (output === "status_discrepancy_state") updateDiscrepancyObservationMock.mockResolvedValueOnce({
         consecutiveDivergent: 0, consecutiveProbeFailures: 0, persistenceSucceeded: false,
       });

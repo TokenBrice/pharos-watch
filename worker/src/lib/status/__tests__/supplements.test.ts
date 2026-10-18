@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { StatusResponse } from "@shared/types/status";
+import type { CronStatusDetail } from "@shared/types/status";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload, type StablecoinsCacheLoadResult } from "../../stablecoins-cache";
 
 vi.mock("../../stablecoins-cache", () => ({
@@ -69,28 +69,32 @@ function statusDb(dispatchMetadata: Record<string, unknown> = {}) {
   ]);
 }
 
-function cronsWithPriceSourceHealth(priceSourceHealth: unknown): StatusResponse["crons"] {
+function cronsWithPriceSourceHealth(priceSourceHealth: unknown): Record<string, CronStatusDetail> {
   return {
     "sync-stablecoins": {
-      lastRun: {
+      expectedIntervalSec: 900,
+      healthy: true,
+      runs: [{
+        startedAt: NOW - 60,
+        durationMs: 100,
         status: "ok",
         metadata: { priceSourceHealth },
-      },
+      }],
     },
-  } as unknown as StatusResponse["crons"];
+  };
 }
 
 function cronsWithDexLiquidityRuns(
-  runs: Array<Record<string, unknown>>,
+  runs: CronStatusDetail["runs"],
   expectedIntervalSec = 1800,
-): StatusResponse["crons"] {
+): Record<string, CronStatusDetail> {
   return {
     "sync-dex-liquidity": {
-      lastRun: runs[0] ?? null,
-      recentRuns: runs,
+      runs,
+      healthy: true,
       expectedIntervalSec,
     },
-  } as unknown as StatusResponse["crons"];
+  };
 }
 
 

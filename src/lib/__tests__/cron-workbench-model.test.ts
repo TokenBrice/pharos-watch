@@ -17,8 +17,8 @@ import {
 
 function makeCron(overrides: Partial<CronStatus> = {}): CronStatus {
   return {
-    lastRun: { startedAt: 1_700_000_000, durationMs: 1_200, status: "ok" },
-    recentRuns: [{ startedAt: 1_700_000_000, durationMs: 1_200, status: "ok" }],
+    runs: [{ startedAt: 1_700_000_000, durationMs: 1_200, status: "ok" }],
+    confirmedOutputAt: null,
     expectedIntervalSec: 900,
     healthy: true,
     ...overrides,
@@ -39,7 +39,7 @@ function makeGroups(): CronWorkbenchGroupInput[] {
       entries: [
         ["snapshot-chain-supply", makeCron()],
         ["sync-stablecoins", makeCron({ healthy: false })],
-        ["sync-fx-rates", makeCron({ lastRun: { startedAt: 1_700_000_000, durationMs: 500, status: "degraded" } })],
+        ["sync-fx-rates", makeCron({ runs: [{ startedAt: 1_700_000_000, durationMs: 500, status: "degraded" }] })],
       ],
     },
     {
@@ -49,7 +49,7 @@ function makeGroups(): CronWorkbenchGroupInput[] {
       description: "Delivery work.",
       entries: [
         ["dispatch-telegram-alerts", makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: false } })],
-        ["reserve-recovery", makeCron({ telemetryUnknown: true, lastRun: null, recentRuns: [] })],
+        ["reserve-recovery", makeCron({ telemetryUnknown: true, runs: [] })],
       ],
     },
   ];
@@ -110,7 +110,7 @@ describe("cron workbench model", () => {
   it("shows findings on a successful watch-tier run as OK with a findings chip, not a warning", () => {
     const groups = makeGroups();
     groups[0]!.entries = [["status-self-check", makeCron({
-      lastRun: { startedAt: 1_700_000_000, durationMs: 500, status: "ok", metadata: { quality: { reason: "probe-plane-degraded" } } },
+      runs: [{ startedAt: 1_700_000_000, durationMs: 500, status: "ok", qualityReasons: ["probe-plane-degraded"] }],
     })]];
     const model = buildCronWorkbenchModel([groups[0]!], makeFilters(), 1_700_000_100);
     expect(model.rows[0]).toMatchObject({
@@ -121,14 +121,14 @@ describe("cron workbench model", () => {
       verdictReason: { code: "findings" },
     });
     expect(buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, 1_700_000_100).rows).toHaveLength(0);
-    expect(formatCronRunStatus("ok", { quality: { reason: "producer-output-stale" } })).toBe("Succeeded with findings");
+    expect(formatCronRunStatus("ok", { qualityReasons: ["producer-output-stale"] })).toBe("Succeeded with findings");
   });
 
   it("inherits findings behind neutral skips only while the required observation is fresh", () => {
-    const run = { startedAt: 1_700_000_000, durationMs: 500, status: "ok" as const, metadata: { quality: { reasons: ["producer-output-stale"] } } };
+    const run = { startedAt: 1_700_000_000, durationMs: 500, status: "ok" as const, qualityReasons: ["producer-output-stale"] };
     const skip = { startedAt: 1_700_000_100, durationMs: 0, status: "skipped_neutral" as const };
     const groups = makeGroups();
-    groups[0]!.entries = [["cron-sentinel", makeCron({ lastRun: skip, recentRuns: [skip, run] })]];
+    groups[0]!.entries = [["cron-sentinel", makeCron({ runs: [skip, run] })]];
     const fresh = buildCronWorkbenchModel([groups[0]!], makeFilters(), run.startedAt + 1_800);
     expect(fresh.rows[0]).toMatchObject({ state: "skipped", qualityReasons: ["producer-output-stale"], verdictReason: { code: "findings" } });
     expect(buildCronWorkbenchModel([groups[0]!], makeFilters(), run.startedAt + 1_801).rows[0]?.qualityReasons).toEqual([]);
@@ -137,24 +137,24 @@ describe("cron workbench model", () => {
   it.each(["sync-dex-liquidity", "sync-dex-liquidity-stage"])("keeps fresh %s findings in attention without changing execution or public impact", (job) => {
     const run = {
       startedAt: 1_700_000_000, durationMs: 500, status: "ok" as const,
-      metadata: { quality: { reasons: ["source-failed:uniswap-v4-subgraph:ethereum"] } },
+      qualityReasons: ["source-failed:uniswap-v4-subgraph:ethereum"],
     };
     const skip = { startedAt: run.startedAt + 100, durationMs: 0, status: "skipped_neutral" as const };
     const group = makeGroups()[0]!;
-    for (const lastRun of [run, skip]) {
-      group.entries = [[job, makeCron({ lastRun, recentRuns: lastRun === run ? [run] : [skip, run] })]];
+    for (const latestRun of [run, skip]) {
+      group.entries = [[job, makeCron({ runs: latestRun === run ? [run] : [skip, run] })]];
       const model = buildCronWorkbenchModel([group], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 200);
       expect(model.rows).toHaveLength(1);
       expect(model.rows[0]).toMatchObject({
-        state: lastRun === run ? "healthy" : "skipped",
+        state: latestRun === run ? "healthy" : "skipped",
         verdict: "watch",
         impactClass: "admin-watch",
-        statusLabel: lastRun === run ? "Succeeded" : "Skipped: no work required",
+        statusLabel: latestRun === run ? "Succeeded" : "Skipped: no work required",
         qualityReasons: ["source-failed:uniswap-v4-subgraph:ethereum"],
         verdictReason: { code: "findings" },
       });
     }
-    group.entries = [[job, makeCron({ healthy: false, lastRun: skip, recentRuns: [skip, run] })]];
+    group.entries = [[job, makeCron({ healthy: false, runs: [skip, run] })]];
     const expired = buildCronWorkbenchModel([group], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 1_801);
     expect(expired.rows[0]).toMatchObject({ qualityReasons: [], verdictReason: { code: "no-fresh-run" } });
   });
@@ -210,8 +210,7 @@ describe("cron workbench model", () => {
   it("shows a fresh expected no-op as skipped without hiding missing availability evidence", () => {
     const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
     const cron = makeCron({
-      lastRun: neutralRun,
-      recentRuns: [neutralRun],
+      runs: [neutralRun],
       healthy: false,
     });
 
@@ -245,8 +244,7 @@ describe("cron workbench model", () => {
   it("keeps a stale neutral skip unhealthy", () => {
     const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
     const cron = makeCron({
-      lastRun: neutralRun,
-      recentRuns: [neutralRun],
+      runs: [neutralRun],
       healthy: false,
     });
 
@@ -272,8 +270,7 @@ describe("cron workbench model", () => {
     const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
     const requiredRun = { startedAt: 1_699_999_000, durationMs: 800, status: requiredStatus };
     const cron = makeCron({
-      lastRun: neutralRun,
-      recentRuns: [neutralRun, requiredRun],
+      runs: [neutralRun, requiredRun],
       healthy: cronHealthy,
     });
 
@@ -309,12 +306,11 @@ describe("cron workbench model", () => {
       startedAt: 1_700_000_000,
       durationMs: 200,
       status: "skipped_neutral" as const,
-      metadata: { reason: "same_day_snapshot_exists", snapshotDate: "2026-09-23" },
+      reason: "same_day_snapshot_exists",
     };
     const errorRun = { startedAt: 1_699_999_000, durationMs: 1_600, status: "error" as const };
     const cron = makeCron({
-      lastRun: neutralRun,
-      recentRuns: [neutralRun, errorRun],
+      runs: [neutralRun, errorRun],
       expectedIntervalSec: 86_400,
       healthy: true,
     });
@@ -353,18 +349,17 @@ describe("cron workbench model", () => {
       startedAt: 1_700_000_000,
       durationMs: 200,
       status: "skipped_neutral" as const,
-      metadata: { reason: "before_daily_slot" },
+      reason: "before_daily_slot",
     };
     const provenRun = {
       startedAt: provenStartedAt,
       durationMs: 200,
       status: "skipped_neutral" as const,
-      metadata: { reason: "same_day_snapshot_exists" },
+      reason: "same_day_snapshot_exists",
     };
     const errorRun = { startedAt: errorStartedAt, durationMs: 0, status: "error" as const };
     const cron = makeCron({
-      lastRun: neutralRun,
-      recentRuns: [neutralRun, ...[provenRun, errorRun].sort((a, b) => b.startedAt - a.startedAt)],
+      runs: [neutralRun, ...[provenRun, errorRun].sort((a, b) => b.startedAt - a.startedAt)],
       expectedIntervalSec: 86_400,
       healthy: expected === "skipped",
     });
@@ -377,12 +372,11 @@ describe("cron workbench model", () => {
       startedAt: 1_700_000_000,
       durationMs: 200,
       status: "skipped_neutral" as const,
-      metadata: { reason: "before_daily_slot" },
+      reason: "before_daily_slot",
     };
     const errorRun = { startedAt: 1_699_999_000, durationMs: 1_600, status: "error" as const };
     const cron = makeCron({
-      lastRun: neutralRun,
-      recentRuns: [neutralRun, errorRun],
+      runs: [neutralRun, errorRun],
       healthy: false,
     });
 
@@ -394,13 +388,11 @@ describe("cron workbench model", () => {
       startedAt: 1_000,
       durationMs: 2_580_000,
       status: "error" as const,
-      metadata: {
-        reason: "stale-slot-reconciled",
-        progressUpdatedAt: 1_059,
-        reconciledAt: 3_580,
-      },
+      reason: "stale-slot-reconciled",
+      progressUpdatedAt: 1_059,
+      reconciledAt: 3_580,
     };
-    expect(formatCronRunStatus(abandonedRun.status, abandonedRun.metadata)).toBe("Abandoned");
+    expect(formatCronRunStatus(abandonedRun.status, abandonedRun)).toBe("Abandoned");
     expect(formatCronRunTiming(abandonedRun)).toEqual({
       duration: { label: "59s", exactLabel: "59s (59000ms)" },
       unavailableLabel: null,
@@ -411,13 +403,11 @@ describe("cron workbench model", () => {
       startedAt: 3_580,
       durationMs: 0,
       status: "error" as const,
-      metadata: {
-        reason: "stale-slot-reconciled",
-        childDisposition: "not_started",
-        reconciledAt: 3_580,
-      },
+      reason: "stale-slot-reconciled",
+      childDisposition: "not_started",
+      reconciledAt: 3_580,
     };
-    expect(formatCronRunStatus(notStartedRun.status, notStartedRun.metadata)).toBe(
+    expect(formatCronRunStatus(notStartedRun.status, notStartedRun)).toBe(
       "Not started: upstream abandoned",
     );
     expect(formatCronRunTiming(notStartedRun)).toEqual({
@@ -430,12 +420,10 @@ describe("cron workbench model", () => {
       startedAt: 3_600,
       durationMs: 0,
       status: "degraded" as const,
-      metadata: {
-        skippedReason: "upstream-incomplete:sync-live-reserves",
-        childDisposition: "not_started",
-      },
+      skippedReason: "upstream-incomplete:sync-live-reserves",
+      childDisposition: "not_started",
     };
-    expect(formatCronRunStatus(prerequisiteIncompleteRun.status, prerequisiteIncompleteRun.metadata)).toBe(
+    expect(formatCronRunStatus(prerequisiteIncompleteRun.status, prerequisiteIncompleteRun)).toBe(
       "Not started: upstream incomplete",
     );
     expect(formatCronRunTiming(prerequisiteIncompleteRun)).toEqual({
@@ -450,9 +438,9 @@ describe("cron workbench model", () => {
     ] as const) {
       const prerequisiteRun = {
         ...prerequisiteIncompleteRun,
-        metadata: { skippedReason, childDisposition: "not_started" },
+        skippedReason, childDisposition: "not_started",
       };
-      expect(formatCronRunStatus(prerequisiteRun.status, prerequisiteRun.metadata)).toBe(expectedLabel);
+      expect(formatCronRunStatus(prerequisiteRun.status, prerequisiteRun)).toBe(expectedLabel);
       expect(formatCronRunTiming(prerequisiteRun).unavailableLabel).toBe("N/A");
     }
   });
@@ -507,15 +495,15 @@ describe("cron operator verdict", () => {
 
   it("does not turn old required errors behind fresh neutral polls into repeated failures", () => {
     const skip = { startedAt: 10_000, durationMs: 1, status: "skipped_neutral" as const };
-    const cron = makeCron({ healthy: false, lastRun: skip, recentRuns: [skip, error(1), error(0)] });
+    const cron = makeCron({ healthy: false, runs: [skip, error(1), error(0)] });
     expect(deriveCronVerdict(cron, "admin-watch", classifyCronWorkbenchState(cron, 10_010), [], 10_010))
       .toMatchObject({ verdict: "watch", code: "no-fresh-run" });
   });
 
   it.each([
-    { cron: makeCron({ lastRun: null, recentRuns: [], bootstrap: true }), code: "bootstrap", verdict: "ok" },
-    { cron: makeCron({ lastRun: null, recentRuns: [] }), code: "no-runs", verdict: "unavailable" },
-    { cron: makeCron({ lastRun: { startedAt: 100, durationMs: 1, status: "skipped_locked" } }), code: "skipped", verdict: "ok" },
+    { cron: makeCron({ runs: [], bootstrap: true }), code: "bootstrap", verdict: "ok" },
+    { cron: makeCron({ runs: [] }), code: "no-runs", verdict: "unavailable" },
+    { cron: makeCron({ runs: [{ startedAt: 100, durationMs: 1, status: "skipped_locked" }] }), code: "skipped", verdict: "ok" },
   ] as const)("describes $code without claiming a successful run", ({ cron, code, verdict }) => {
     const result = deriveCronVerdict(cron, "admin-watch", classifyCronWorkbenchState(cron), [], 100);
     expect(result).toMatchObject({ code, verdict });
@@ -541,7 +529,7 @@ describe("cron operator verdict", () => {
 
   it("does not let a daily neutral admission reset the next daily opportunity", () => {
     const now = Date.parse("2026-10-14T07:17:00Z") / 1000;
-    const cron = makeCron({ expectedIntervalSec: 86_400, lastRun: { startedAt: now - 1, durationMs: 1, status: "skipped_neutral" } });
+    const cron = makeCron({ expectedIntervalSec: 86_400, runs: [{ startedAt: now - 1, durationMs: 1, status: "skipped_neutral" }] });
     expect(getCronNextExpected(cron, now, "snapshot-psi")).toMatchObject({ kind: "scheduled", label: "in 43m" });
   });
 
@@ -550,15 +538,15 @@ describe("cron operator verdict", () => {
     { name: "watch job without a usable run", cron: makeCron({ healthy: false }), impact: "admin-watch", verdict: "watch", code: "no-fresh-run" },
     {
       name: "watch job failing twice in a row",
-      cron: makeCron({ healthy: false, lastRun: error(2), recentRuns: [error(2), { startedAt: 1, durationMs: 0, status: "skipped_neutral" as const }, error(0)] }),
+      cron: makeCron({ healthy: false, runs: [error(2), { startedAt: 1, durationMs: 0, status: "skipped_neutral" as const }, error(0)] }),
       impact: "admin-watch",
       verdict: "act",
       code: "repeated-failures",
     },
-    { name: "single failure on a watch job", cron: makeCron({ healthy: false, lastRun: error(2), recentRuns: [error(2)] }), impact: "admin-watch", verdict: "watch", code: "latest-run-failed" },
+    { name: "single failure on a watch job", cron: makeCron({ healthy: false, runs: [error(2)] }), impact: "admin-watch", verdict: "watch", code: "latest-run-failed" },
     {
       name: "run warnings",
-      cron: makeCron({ lastRun: { startedAt: 1, durationMs: 1, status: "degraded" as const } }),
+      cron: makeCron({ runs: [{ startedAt: 1, durationMs: 1, status: "degraded" as const }] }),
       impact: "public-critical",
       verdict: "watch",
       code: "run-warnings",
@@ -568,8 +556,7 @@ describe("cron operator verdict", () => {
       name: "a fresh in-flight retry after an abandoned failure",
       cron: makeCron({
         healthy: false,
-        lastRun: { ...error(1), metadata: { reason: "stale-slot-reconciled" } },
-        recentRuns: [{ ...error(1), metadata: { reason: "stale-slot-reconciled" } }, error(0)],
+        runs: [{ ...error(1), reason: "stale-slot-reconciled" }, error(0)],
         inFlight: { startedAt: 10, updatedAt: 20, stale: false },
       }),
       impact: "public-critical",
@@ -579,7 +566,7 @@ describe("cron operator verdict", () => {
     { name: "stale heartbeat on a critical job", cron: makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: true } }), impact: "public-critical", verdict: "act", code: "stale-heartbeat" },
     {
       name: "findings on a critical job",
-      cron: makeCron({ lastRun: { startedAt: 1, durationMs: 1, status: "ok" as const, metadata: { quality: { reason: "x" } } } }),
+      cron: makeCron({ runs: [{ startedAt: 1, durationMs: 1, status: "ok" as const, qualityReasons: ["x"] }] }),
       impact: "public-critical",
       verdict: "watch",
       code: "findings",
@@ -587,7 +574,7 @@ describe("cron operator verdict", () => {
     { name: "healthy job", cron: makeCron(), impact: "public-critical", verdict: "ok", code: "ok" },
   ] as const)("$name -> $verdict", ({ cron, impact, verdict, code }) => {
     const state = classifyCronWorkbenchState(cron);
-    const quality = cron.lastRun?.metadata?.quality ? ["x"] : [];
+    const quality = cron.runs[0]?.qualityReasons ?? [];
     expect(deriveCronVerdict(cron, impact, state, quality, 100)).toMatchObject({ verdict, code });
   });
 
@@ -599,7 +586,7 @@ describe("cron operator verdict", () => {
     expect(getCronNextExpected(cron, start + 2_700)).toMatchObject({ kind: "overdue", label: "Overdue by 30m" });
     expect(getCronNextExpected(cron, start).budget).toBe("Expected every 15m, stale after 30m without a usable run.");
     expect(getCronNextExpected(makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: false } }), start).kind).toBe("running");
-    expect(getCronNextExpected(makeCron({ lastRun: null, recentRuns: [], telemetryUnknown: true }), start).label).toBe("Unknown");
+    expect(getCronNextExpected(makeCron({ runs: [], telemetryUnknown: true }), start).label).toBe("Unknown");
   });
 
 });

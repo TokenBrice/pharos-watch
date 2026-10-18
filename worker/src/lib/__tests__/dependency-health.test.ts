@@ -18,12 +18,11 @@ function cache(overrides: Partial<CacheStatus> = {}): CacheStatus {
 
 function cron(overrides: Partial<CronStatus> = {}): CronStatus {
   return {
-    lastRun: {
+    runs: [{
       startedAt: NOW - 120,
       durationMs: 250,
       status: "ok",
-    },
-    recentRuns: [],
+    }],
     expectedIntervalSec: 1_800,
     healthy: true,
     ...overrides,
@@ -82,7 +81,7 @@ describe("buildDependencyHealth", () => {
     const result = buildDependencyHealth({
       now: NOW, publicationHealth: null,
       caches: { "dex-liquidity": cache({ producerJob: "sync-dex-liquidity" }) },
-      crons: { "sync-dex-liquidity": cron({ healthy: false, lastRun: skip, recentRuns: [skip, failedRun] }) },
+      crons: { "sync-dex-liquidity": cron({ healthy: false, runs: [skip, failedRun] }) },
     });
     expect(result.dependencies["dex-liquidity"]).toMatchObject({
       status: "degraded", updatedAt: failedRun.startedAt, ageSeconds: 2_400,
@@ -96,7 +95,7 @@ describe("buildDependencyHealth", () => {
       publishedAt, ageSeconds: 120,
       ...(kind === "sentinel" ? { generationId: "generation", freshnessSource: "freshness-sentinel" as const } : {}),
     }) };
-    const crons = { "sync-stablecoins": cron({ lastRun: { startedAt: NOW - 1_000, durationMs: 1, status: "ok" } }) };
+    const crons = { "sync-stablecoins": cron({ runs: [{ startedAt: NOW - 1_000, durationMs: 1, status: "ok" }] }) };
     const first = buildDependencyHealth({ now: NOW, caches, crons, publicationHealth: null }).dependencies.stablecoins;
     const later = buildDependencyHealth({ now: NOW + 60, caches, crons, publicationHealth: null }).dependencies.stablecoins;
     expect(first).toMatchObject({ updatedAt: publishedAt, ageSeconds: 420 });
@@ -281,22 +280,22 @@ describe("buildDependencyHealth", () => {
       crons: {
         "sync-stablecoins": cron(),
         "sync-dex-liquidity": cron({
-          lastRun: { startedAt: NOW - 600, durationMs: 300, status: "error" },
+          runs: [{ startedAt: NOW - 600, durationMs: 300, status: "error" }],
           healthy: false,
         }),
         "sync-yield-data": cron({
           expectedIntervalSec: 3_600,
         }),
         "compute-dews": cron({
-          lastRun: { startedAt: NOW - 3_600, durationMs: 300, status: "error" },
+          runs: [{ startedAt: NOW - 3_600, durationMs: 300, status: "error" }],
           healthy: false,
         }),
         "compute-safety-score-v9": cron({
-          lastRun: { startedAt: NOW - 3_000, durationMs: 300, status: "error" },
+          runs: [{ startedAt: NOW - 3_000, durationMs: 300, status: "error" }],
           healthy: false,
         }),
         "sync-redemption-backstops": cron({
-          lastRun: { startedAt: NOW - 3_000, durationMs: 300, status: "error" },
+          runs: [{ startedAt: NOW - 3_000, durationMs: 300, status: "error" }],
           healthy: false,
         }),
       },

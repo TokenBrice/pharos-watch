@@ -7,7 +7,7 @@
 Detection signals:
 
 - `/api/status` -> `telegramBot.presetQueryFailures` shows a non-zero counter (only emitted when greater than zero).
-- `crons["dispatch-telegram-alerts"].lastRun.metadata` contains `presetQueryFailures > 0` or `presetResolutionFailures > 0`. `presetFailure: true` only means source resolution was incomplete on that run — it is also set when preset resolution pages were merely deferred to the next tick (`last_error_class = 'preset_pages_pending'`), so confirm one of the counters before treating it as a failure.
+- `GET /api/status-cron-detail?job=dispatch-telegram-alerts` -> `cron.runs[0].metadata` contains `presetQueryFailures > 0` or `presetResolutionFailures > 0`. `presetFailure: true` only means source resolution was incomplete on that run — it is also set when preset resolution pages were merely deferred to the next tick (`last_error_class = 'preset_pages_pending'`), so confirm one of the counters before treating it as a failure.
 - Wrangler tail logs `dynamic preset source page query failed` (`failureKind: 'query-failed'`) or `dynamic preset source page resolution failed` (`failureKind: 'resolution-failed'`) from `module: telegram-alert-source-events` when `telegram_preset_subscriptions` has rows but the preset query throws or the strict stablecoins cache is missing; a failing follower page logs `dynamic preset follower page query failed` from the same module.
 
 Behavior: the alert source event stays incomplete and new target planning stays closed for every target family — direct, global, and preset — rather than treating preset-backed recipients as an empty list. This source-wide hold is intentional; never bypass `allComplete`. Existing pending work may still drain and freeze uses an independent outbox. Snapshot baselines stay held until resolution completes or bounded source-expiry cleanup finishes; expiry advances the stored baseline without delivering the unresolved source. A later dispatch run resumes a still-live source without replaying terminal targets. After expiry, do not hand-enqueue or assume an operator resend exists. See [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Preset Watchlists" for the fail-closed contract.
@@ -46,7 +46,10 @@ npx wrangler tail stablecoin-api --format pretty
 # Look for sync-stablecoins run completions and stablecoins cache writes.
 curl -sS -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
-        https://ops-api.pharos.watch/api/status | jq '.dataQuality.stablecoinsCacheStatus, .dataQuality.stablecoinsCacheReason, .telegramBot.presetQueryFailures, .crons["dispatch-telegram-alerts"].lastRun.metadata.presetResolutionFailures'
+        https://ops-api.pharos.watch/api/status | jq '.dataQuality.stablecoinsCacheStatus, .dataQuality.stablecoinsCacheReason, .telegramBot.presetQueryFailures'
+curl -sS -H "CF-Access-Client-Id: $CF_ID" \
+        -H "CF-Access-Client-Secret: $CF_SECRET" \
+        'https://ops-api.pharos.watch/api/status-cron-detail?job=dispatch-telegram-alerts' | jq '.cron.runs[0].metadata | {presetQueryFailures, presetResolutionFailures}'
 ```
 
 After fixing the upstream cause, the next five-minute `dispatch-telegram-alerts` tick retries a live source. There is no preset-only re-fire. The persistent `telegram:preset-query-failure-count` resets on a run without query or resolution failures, even if pages remain deferred; confirm resolution completion and target-plan progress separately before claiming delivery resumed.

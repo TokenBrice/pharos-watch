@@ -62,8 +62,8 @@ describe("cron availability retains independently confirmed publication evidence
     for (const { job } of CONDITIONALLY_ADMITTED_SCHEDULED_TASKS) {
       const cron = snapshot.crons[job];
       expect(cron.healthy, job).toBe(output === "fresh");
-      expect(cron.lastRun?.status).toBe("skipped_neutral");
-      expect(cron.recentRuns.some((run) => run.status === "error")).toBe(false);
+      expect(cron.runs[0]?.status).toBe("skipped_neutral");
+      expect(cron.runs.some((run) => run.status === "error")).toBe(false);
       expect(snapshot.cronFindingJobs.watchErrors).not.toContain(job);
       expect(fixture.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = ? AND status = 'error'")
         .get(job)?.count).toBe(2);
@@ -88,8 +88,8 @@ describe("cron availability retains independently confirmed publication evidence
     ).run(job, NOW - 2_000, status, JSON.stringify({ reason, childDisposition: disposition }), schedule);
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
-    expect(cron.lastRun?.status).toBe(status);
-    expect(cron.recentRuns).toHaveLength(2);
+    expect(cron.runs[0]?.status).toBe(status);
+    expect(cron.runs).toHaveLength(2);
     if (status === "error") expect(cron.healthy).toBe(false);
   });
 
@@ -110,9 +110,9 @@ describe("cron availability retains independently confirmed publication evidence
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
     expect(cron.healthy).toBe(true);
-    expect(cron.recentRuns.some((run) => run.status === "ok")).toBe(true);
-    expect(cron.recentRuns.some((run) => run.metadata?.reason === "same_day_snapshot_exists")).toBe(true);
-    expect(cron.recentRuns.some((run) => run.status === "error")).toBe(false);
+    expect(cron.runs.some((run) => run.status === "ok")).toBe(true);
+    expect(cron.runs.some((run) => run.metadata?.reason === "same_day_snapshot_exists")).toBe(true);
+    expect(cron.runs.some((run) => run.status === "error")).toBe(false);
   });
 
   it.each([
@@ -127,8 +127,8 @@ describe("cron availability retains independently confirmed publication evidence
     for (let index = 0; index < 12; index++) insertRun(fixture, job, 400 + index * 400, "skipped_locked", 0);
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
-    expect(cron.lastRun?.status).toBe("skipped_locked");
-    expect(cron.recentRuns).toHaveLength(10);
+    expect(cron.runs[0]?.status).toBe("skipped_locked");
+    expect(cron.runs).toHaveLength(10);
     expect(cron.healthy).toBe(healthy);
   });
 
@@ -145,8 +145,8 @@ describe("cron availability retains independently confirmed publication evidence
     const { crons } = await loadCronHealth(fixture.db, NOW);
     expect(crons[job]).toMatchObject({
       healthy: true,
-      lastRun: { startedAt: NOW - latestAge, status: "ok", itemCount: 0 },
     });
+    expect(crons[job].runs[0]).toMatchObject({ startedAt: NOW - latestAge, status: "ok", itemCount: 0 });
     expect(await outputAt(fixture, job)).toBe(NOW - outputAge);
   });
 
@@ -174,9 +174,9 @@ describe("cron availability retains independently confirmed publication evidence
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons["snapshot-supply"];
     expect(cron.healthy).toBe(healthy);
-    expect(cron.lastRun).toMatchObject({ startedAt: NOW - 404, status: "ok", itemCount: 0 });
-    expect(cron.recentRuns).toHaveLength(10);
-    expect(cron.recentRuns.every((run) => run.itemCount === 0)).toBe(true);
+    expect(cron.runs[0]).toMatchObject({ startedAt: NOW - 404, status: "ok", itemCount: 0 });
+    expect(cron.runs).toHaveLength(10);
+    expect(cron.runs.every((run) => run.itemCount === 0)).toBe(true);
     expect(await outputAt(fixture, "snapshot-supply")).toBe(NOW - outputAge);
   });
 
@@ -194,8 +194,8 @@ describe("cron availability retains independently confirmed publication evidence
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
     expect(cron.healthy).toBe(true);
-    expect(cron.lastRun).toMatchObject({ startedAt: NOW - 400, status: "skipped_neutral" });
-    expect(cron.recentRuns.filter((run) => run.status === "skipped_neutral")).toHaveLength(10);
+    expect(cron.runs[0]).toMatchObject({ startedAt: NOW - 400, status: "skipped_neutral" });
+    expect(cron.runs.filter((run) => run.status === "skipped_neutral")).toHaveLength(10);
     expect(await outputAt(fixture, job)).toBe(NOW - outputAge);
   });
 
@@ -208,7 +208,7 @@ describe("cron availability retains independently confirmed publication evidence
     insertRun(fixture, job, NOW - 1_790_556_422, "skipped_neutral", 0, { reason: "before_daily_slot" });
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
-    expect(cron.lastRun?.status).toBe("skipped_neutral");
+    expect(cron.runs[0]?.status).toBe("skipped_neutral");
     expect(cron.healthy).toBe(!laterError);
     expect(await outputAt(fixture, job)).toBeNull();
   });
@@ -251,7 +251,7 @@ describe("cron availability retains independently confirmed publication evidence
     }
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
-    expect(cron.lastRun?.status).toBe("skipped_neutral");
+    expect(cron.runs[0]?.status).toBe("skipped_neutral");
     expect(cron.healthy).toBe(false);
     expect(await outputAt(fixture, job)).toBe(NOW - 60_000);
   });
@@ -277,7 +277,7 @@ describe("cron availability retains independently confirmed publication evidence
       persistence: { generationId: null, skipped: true, skippedReason: "scoring-stage-producer-running" },
     });
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
-    expect(cron.lastRun).toMatchObject({
+    expect(cron.runs[0]).toMatchObject({
       status: "skipped_neutral", metadata: { reason: "scoring-stage-producer-running", outputPublishedAt: null },
     });
     expect(cron.healthy).toBe(true);
@@ -309,9 +309,9 @@ describe("cron availability retains independently confirmed publication evidence
     }
     const snapshot = await loadCronHealth(fixture.db, NOW);
     const cron = snapshot.crons[job];
-    expect(cron.lastRun?.status).toBe("skipped_neutral");
+    expect(cron.runs[0]?.status).toBe("skipped_neutral");
     expect(cron.healthy).toBe(false);
-    expect(cron.recentRuns).toContainEqual(expect.objectContaining({
+    expect(cron.runs).toContainEqual(expect.objectContaining({
       status: "error", metadata: expect.objectContaining({ reason: "source-failed" }),
     }));
     expect(snapshot.cronFindingJobs.watchErrors).toContain(job);

@@ -1,12 +1,23 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary, statusResponse } from "@shared/types/__tests__/status.test-support";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { RawStatusComputation } from "../../status-evaluation";
 import { compactCronMetadataForPersistence } from "../../cron-metadata-persistence";
+import { StatusCronDetailResponseSchema } from "@shared/types/status";
+import { handleStatusCronDetailRoute } from "../../../api/status-cron-detail";
+import { summarizeCronStatus } from "../cron-status-summary";
+import {
+  loadStatusPublicHealthSnapshot,
+  STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
+  writeStatusPublicHealthSnapshot,
+} from "../public-health-snapshot";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(fixtures.closeAll);
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   loadStatusRawSnapshot,
@@ -26,7 +37,7 @@ function minimalRawStatus(): RawStatusComputation {
     causes: { availability: [], dataQuality: [], overall: [] },
     caches: {},
     crons: Object.fromEntries(Object.entries(CRON_INTERVALS).map(([job, expectedIntervalSec]) => [
-      job, { expectedIntervalSec, healthy: true, lastRun: null, recentRuns: [] },
+      job, { expectedIntervalSec, healthy: true, runs: [] },
     ])),
     budgetOnlySurfaces: [],
     dataQuality: makeDataQuality(),
@@ -39,6 +50,21 @@ function minimalRawStatus(): RawStatusComputation {
   };
 }
 
+function snapshotPayload(raw = minimalRawStatus(), producedAt = NOW) {
+  const { crons, ...assessment } = raw;
+  return { version: 2, producedAt, cronJobs: Object.keys(crons), raw: assessment };
+}
+
+async function cronDetail(db: D1Database, job: string) {
+  vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+  const request = new Request(`https://ops-api.pharos.watch/api/status-cron-detail?job=${job}`);
+  const response = await handleStatusCronDetailRoute({
+    db, trustedAdmin: true, request, url: new URL(request.url),
+  });
+  expect(response.status).toBe(200);
+  return StatusCronDetailResponseSchema.parse(await response.json()).cron;
+}
+
 describe("writeStatusRawSnapshot", () => {
   it.each([
     [NOW + 60, NOW + 60, "fresh"],
@@ -48,22 +74,24 @@ describe("writeStatusRawSnapshot", () => {
   ] as const)("checks cache %s and generation %s clocks", async (updatedAt, producedAt, kind) => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
-      first: { value: JSON.stringify({ version: 1, producedAt, raw: minimalRawStatus() }), updated_at: updatedAt },
+      first: { value: JSON.stringify(snapshotPayload(minimalRawStatus(), producedAt)), updated_at: updatedAt },
     }]);
     expect(await loadStatusRawSnapshot(db, NOW)).toMatchObject(kind === "fresh"
       ? { kind, ageSec: 0 }
       : { kind, ageSec: null, error: "future-timestamp" });
   });
 
-  it.each(["extra", "missing"] as const)("rejects a %s registered cron cohort rather than retaining cached severity", async (mismatch) => {
+  it.each(["extra", "missing", "duplicate"] as const)("rejects a %s registered cron cohort rather than retaining cached severity", async (mismatch) => {
     const raw = minimalRawStatus();
-    if (mismatch === "extra") raw.crons["retired-observer"] = { expectedIntervalSec: 900, healthy: true, lastRun: null, recentRuns: [] };
-    else delete raw.crons[Object.keys(CRON_INTERVALS)[0]];
     raw.availabilityStatus = "degraded";
     raw.rawOverallStatus = "degraded";
+    const payload = snapshotPayload(raw);
+    if (mismatch === "extra") payload.cronJobs.push("retired-observer");
+    else if (mismatch === "duplicate") payload.cronJobs.push(payload.cronJobs[0]);
+    else payload.cronJobs.shift();
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
-      first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw }), updated_at: NOW },
+      first: { value: JSON.stringify(payload), updated_at: NOW },
     }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
       kind: "unreadable", error: "status raw snapshot cron cohort mismatch",
@@ -88,7 +116,7 @@ describe("writeStatusRawSnapshot", () => {
       match: "SELECT value, updated_at FROM cache",
       rows: [],
       first: {
-        value: JSON.stringify({ version: 1, producedAt: NOW, raw: minimalRawStatus() }),
+        value: JSON.stringify(snapshotPayload()),
         updated_at: NOW,
       },
     }]);
@@ -118,21 +146,27 @@ describe("writeStatusRawSnapshot", () => {
   ])("rejects malformed required nested raw evidence %j", async (overrides) => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
-      first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw: { ...minimalRawStatus(), ...overrides } }), updated_at: NOW },
+      first: { value: JSON.stringify({ ...snapshotPayload(), raw: { ...snapshotPayload().raw, ...overrides } }), updated_at: NOW },
     }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
-      kind: "unreadable", error: "invalid status raw snapshot payload",
+      kind: "unreadable", error: "invalid status:raw-snapshot:v1 payload",
     });
   });
 
-  it("rejects a complete cron cohort containing an invalid nested cron status", async () => {
-    const raw = minimalRawStatus();
+  it.each([undefined, {}, [null]])("rejects a malformed required cron cohort %j", async (cronJobs) => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
-      first: { value: JSON.stringify({
-        version: 1, producedAt: NOW,
-        raw: { ...raw, crons: { ...raw.crons, "sync-stablecoins": {} } },
-      }), updated_at: NOW },
+      first: { value: JSON.stringify({ ...snapshotPayload(), cronJobs }), updated_at: NOW },
+    }]);
+    await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
+      kind: "unreadable", error: "invalid status:raw-snapshot:v1 payload",
+    });
+  });
+
+  it("rejects the retired v1 operator envelope until a v2 assessment is published", async () => {
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache", rows: [],
+      first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw: minimalRawStatus() }), updated_at: NOW },
     }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({ kind: "unreadable" });
   });
@@ -142,7 +176,7 @@ describe("writeStatusRawSnapshot", () => {
     delete raw.budgetOnlySurfaces;
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache", rows: [],
-      first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw }), updated_at: NOW },
+      first: { value: JSON.stringify(snapshotPayload(raw as RawStatusComputation)), updated_at: NOW },
     }]);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({ kind: "fresh", raw: { budgetOnlySurfaces: [] } });
   });
@@ -153,9 +187,8 @@ describe("writeStatusRawSnapshot", () => {
       rows: [],
       first: {
         value: JSON.stringify({
-          version: 1,
-          producedAt: NOW,
-          raw: { ...minimalRawStatus(), reserveComposition: {} },
+          ...snapshotPayload(),
+          raw: { ...snapshotPayload().raw, reserveComposition: {} },
         }),
         updated_at: NOW,
       },
@@ -163,7 +196,7 @@ describe("writeStatusRawSnapshot", () => {
 
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
       kind: "unreadable",
-      error: "invalid status raw snapshot payload",
+      error: "invalid status:raw-snapshot:v1 payload",
     });
   });
 
@@ -173,7 +206,7 @@ describe("writeStatusRawSnapshot", () => {
     sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(STATUS_RAW_SNAPSHOT_CACHE_KEY, "{", NOW);
     await expect(loadStatusRawSnapshot(db, NOW, 60)).resolves.toMatchObject({ kind: "unreadable", updatedAt: NOW });
     sqlite.prepare("UPDATE cache SET value = ?").run(JSON.stringify({
-      version: 1, producedAt: NOW, raw: minimalRawStatus(), supplements: "invalid", publicHealth: [],
+      ...snapshotPayload(), supplements: "invalid",
     }));
     await expect(loadStatusRawSnapshot(db, NOW + 60, 60)).resolves.toMatchObject({
       kind: "unreadable", updatedAt: NOW, ageSec: 60,
@@ -183,95 +216,62 @@ describe("writeStatusRawSnapshot", () => {
     await expect(loadStatusRawSnapshot(db, NOW, 60)).resolves.toMatchObject({ kind: "read-error", updatedAt: null });
   });
 
-  it("compacts cron run metadata before writing the raw snapshot", async () => {
-    const { db } = fixtures.open();
-    const raw = {
-      ...minimalRawStatus(),
-      crons: {
-        ...minimalRawStatus().crons,
-        "status-self-check": {
-          expectedIntervalSec: CRON_INTERVALS["status-self-check"],
-          healthy: false,
-          lastRun: {
-            startedAt: 1_777_000_000,
-            durationMs: 16_500,
-            status: "degraded",
-            itemCount: 17,
-            error: "x".repeat(2_200),
-            metadata: {
-              sampleCount: 17,
-              slowestProbes: Array.from({ length: 50 }, (_, index) => ({ probe: `probe-${index}` })),
-              detail: "y".repeat(2_200),
-            },
-          },
-          recentRuns: Array.from({ length: 12 }, (_, index) => ({
-            startedAt: 1_777_000_000 - index * 900,
-            durationMs: 100 + index,
-            status: index === 0 ? "degraded" : "ok",
-            itemCount: 1,
-            metadata: { oversized: "z".repeat(2_200) },
-          })),
-          staleArtifacts: Array.from({ length: 10 }, (_, index) => ({
-            kind: "orphaned-progress", job: "status-self-check", progressUpdatedAt: NOW - index,
-          })),
-        },
-      },
-    } as unknown as Parameters<typeof writeStatusRawSnapshot>[2];
-
-    const written = await writeStatusRawSnapshot(db, NOW, raw);
-
-    expect(written).toBe(true);
+  it("keeps cron histories out of the assessment and serves full metadata through job detail", async () => {
+    const { db, sqlite } = fixtures.open();
+    const metadata = {
+      sampleCount: 17,
+      slowestProbes: Array.from({ length: 50 }, (_, index) => ({ probe: `probe-${index}` })),
+      detail: "y".repeat(2_200),
+    };
+    const insert = sqlite.prepare(`INSERT INTO cron_runs
+      (job, started_at, duration_ms, status, item_count, error, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+    for (let index = 0; index < 12; index++) {
+      insert.run("status-self-check", NOW - index * 900, 100 + index,
+        index === 0 ? "degraded" : "ok", 17, "x".repeat(2_200),
+        JSON.stringify(index === 0 ? metadata : { oversized: "z".repeat(2_200) }));
+    }
+    const detail = await cronDetail(db, "status-self-check");
+    const raw = minimalRawStatus();
+    raw.crons["status-self-check"] = detail;
+    expect(await writeStatusRawSnapshot(db, NOW, raw)).toBe(true);
     const snapshot = await loadStatusRawSnapshot(db, NOW);
     expect(snapshot.kind).toBe("fresh");
-    if (snapshot.kind !== "fresh") throw new Error("Expected compacted snapshot");
-    const payload = snapshot as unknown as {
-      raw: {
-        crons: {
-          "status-self-check": {
-            lastRun: {
-              error: string;
-              metadata: { detail: string; slowestProbes: unknown[] };
-            };
-            recentRuns: Array<{ metadata?: Record<string, unknown> }>;
-            staleArtifacts: unknown[];
-          };
-        };
-      };
-    };
-    const cron = payload.raw.crons["status-self-check"];
-    expect(cron.lastRun.error.length).toBeLessThan(2_200);
-    expect(cron.lastRun.metadata.detail.length).toBeLessThan(2_200);
-    expect(cron.lastRun.metadata.slowestProbes).toHaveLength(40);
-    expect(cron.recentRuns).toHaveLength(10);
-    expect(cron.recentRuns[0].metadata).toBeDefined();
-    expect(cron.recentRuns[1].metadata).toBeUndefined();
-    expect(cron.staleArtifacts).toHaveLength(8);
+    if (snapshot.kind !== "fresh") throw new Error("Expected assessment snapshot");
+    expect(snapshot.raw).not.toHaveProperty("crons");
+    const persisted = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(STATUS_RAW_SNAPSHOT_CACHE_KEY)!.value as string);
+    expect(persisted).toMatchObject({ version: 2, producedAt: NOW, cronJobs: Object.keys(CRON_INTERVALS) });
+    expect(persisted.raw).not.toHaveProperty("crons");
+    expect(persisted).not.toHaveProperty("publicHealth");
+    expect(detail.runs).toHaveLength(10);
+    expect(detail.runs[0].error).toHaveLength(2_200);
+    expect(detail.runs[0].metadata).toEqual(metadata);
+    expect(detail.runs[1].metadata).toEqual({ oversized: "z".repeat(2_200) });
+    const summary = summarizeCronStatus("status-self-check", detail);
+    expect(summary.runs[0].error!.length).toBeLessThan(2_200);
+    expect(summary.runs.every((run) => !("metadata" in run))).toBe(true);
   });
 
   it("preserves all bounded reserve latency groups and histogram samples", async () => {
-    const { db } = fixtures.open();
+    const { db, sqlite } = fixtures.open();
     const groups = Array.from({ length: 89 }, (_, index) => ({
       adapterKey: `adapter-${index}`,
       elapsedMs: { count: 1, sumMs: index + 1, buckets: [0, 1, 1] },
     }));
     const adapterLatency = { schemaVersion: 1, groups, omittedGroups: 0, total: { elapsedMs: { sumMs: 4005 } } };
-    const raw = {
-      ...minimalRawStatus(),
-      crons: { ...minimalRawStatus().crons, "sync-live-reserves": {
-        ...minimalRawStatus().crons["sync-live-reserves"],
-        lastRun: { startedAt: NOW, durationMs: 0, status: "ok", metadata: { adapterLatency } },
-      } },
-    } as unknown as Parameters<typeof writeStatusRawSnapshot>[2];
-    await writeStatusRawSnapshot(db, NOW, raw);
+    sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+      VALUES ('sync-live-reserves', ?, 0, 'ok', ?)`).run(NOW, JSON.stringify({ adapterLatency }));
+    const detail = await cronDetail(db, "sync-live-reserves");
+    expect(detail.runs[0].metadata?.adapterLatency).toEqual(adapterLatency);
+    expect(await writeStatusRawSnapshot(db, NOW, minimalRawStatus())).toBe(true);
     const snapshot = await loadStatusRawSnapshot(db, NOW);
-    expect(snapshot).toMatchObject({
-      kind: "fresh",
-      raw: { crons: { "sync-live-reserves": { lastRun: { metadata: { adapterLatency } } } } },
-    });
+    expect(snapshot.kind).toBe("fresh");
+    if (snapshot.kind !== "fresh") throw new Error("Expected assessment snapshot");
+    expect(snapshot.raw).not.toHaveProperty("crons");
   });
 
-  it("persists the public-health projection and status supplements alongside raw data", async () => {
-    const { db } = fixtures.open();
+  it("persists supplements with the operator assessment and public health in its independent snapshot", async () => {
+    const { db, sqlite } = fixtures.open();
     const publicHealth = {
       status: "healthy" as const, timestamp: NOW, warnings: [], caches: {}, circuits: {},
       blacklist: { totalEvents: 0, missingAmounts: 0, recentMissingAmounts: 0, recentWindowSec: 86400, missingRatio: 0 },
@@ -298,18 +298,30 @@ describe("writeStatusRawSnapshot", () => {
       db,
       NOW,
       minimalRawStatus() as unknown as Parameters<typeof writeStatusRawSnapshot>[2],
-      { publicHealth, supplements } as never,
+      { supplements },
     );
 
     expect(written).toBe(true);
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
-      kind: "fresh", publicHealth, supplements,
+      kind: "fresh", supplements,
     });
+    expect(await writeStatusPublicHealthSnapshot(db, NOW, publicHealth)).toBe(true);
+    await expect(loadStatusPublicHealthSnapshot(db, NOW)).resolves.toMatchObject({
+      kind: "fresh", payload: { version: 1, producedAt: NOW, publicHealth },
+    });
+    const operator = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(STATUS_RAW_SNAPSHOT_CACHE_KEY)!.value as string);
+    const publicSnapshot = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY)!.value as string);
+    expect(operator).not.toHaveProperty("publicHealth");
+    expect(operator.raw).not.toHaveProperty("crons");
+    expect(publicSnapshot).not.toHaveProperty("raw");
+    expect(publicSnapshot).not.toHaveProperty("supplements");
   });
 });
 
-it("preserves watchdog generation clocks and budgets through persistence and raw-status compaction", async () => {
-  const { db } = fixtures.open();
+it("preserves watchdog generation clocks and budgets through persistence and job detail", async () => {
+  const { db, sqlite } = fixtures.open();
   const stale = Array.from({ length: 50 }, (_, index) => ({
     laneKey: "dexLiquidity", cacheKey: "dex-liquidity", producerJob: `producer-${index}`,
     ageSeconds: 7201, publishedAt: NOW - 7201, generationId: `generation-${index}`, assessedAt: NOW,
@@ -318,17 +330,13 @@ it("preserves watchdog generation clocks and budgets through persistence and raw
   }));
   const original = { sources: { freshness: { observedAt: NOW, status: "degraded", metadata: { stale } } },
     oversized: "x".repeat(70_000) };
-  const compacted = compactCronMetadataForPersistence(JSON.stringify(original));
+  const compacted = compactCronMetadataForPersistence(JSON.stringify(original), undefined, "cron-sentinel");
   expect(compacted.compacted).toBe(true);
   expect(compacted.persistedBytes).toBeLessThan(64 * 1024);
-  const raw = minimalRawStatus();
-  raw.crons["cron-sentinel"].lastRun = {
-    startedAt: NOW, durationMs: 1, status: "degraded", metadata: JSON.parse(compacted.metadata!),
-  };
-  await writeStatusRawSnapshot(db, NOW, raw);
-  expect(await loadStatusRawSnapshot(db, NOW)).toMatchObject({
-    kind: "fresh", raw: { crons: { "cron-sentinel": { lastRun: {
-      metadata: { sources: { freshness: { metadata: { stale } } } },
-    } } } },
+  sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+    VALUES ('cron-sentinel', ?, 1, 'degraded', ?)`).run(NOW, compacted.metadata);
+  const detail = await cronDetail(db, "cron-sentinel");
+  expect(detail.runs[0].metadata).toMatchObject({
+    sources: { freshness: { metadata: { stale } } },
   });
 });

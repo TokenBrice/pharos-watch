@@ -20,20 +20,18 @@ function withReservePressure(base: StatusResponse): StatusResponse {
     crons: {
       ...base.crons,
       "sync-live-reserves": {
-        lastRun: {
+        runs: [{
           startedAt: 1_699_998_000,
           durationMs: 720_000,
           status: "error",
           itemCount: 52,
-          metadata: {
-            synced: 52,
-            total: 100,
-            deferredCoins: 48,
-            runBudgetTruncated: true,
-            nextCursorStablecoinId: "a7a5-old-vector",
-          },
+        }],
+        latestRunFacts: {
+          synced: 52,
+          total: 100,
+          nextCursorStablecoinId: "a7a5-old-vector",
         },
-        recentRuns: [],
+        confirmedOutputAt: null,
         expectedIntervalSec: 14_400,
         healthy: false,
       },
@@ -84,8 +82,8 @@ describe("admin ops insights", () => {
   it("leaves estimates unknown for zero or missing throughput", () => {
     for (const throughput of [0, undefined]) {
       const data = withReservePressure(makeHealthyStatusResponse());
-      data.crons["sync-live-reserves"].lastRun!.metadata = { synced: throughput };
-      data.crons["sync-live-reserves"].lastRun!.itemCount = throughput;
+      data.crons["sync-live-reserves"].latestRunFacts = { synced: throughput };
+      data.crons["sync-live-reserves"].runs[0]!.itemCount = throughput;
       expect(buildReserveRecoveryForecast(data)).toMatchObject({
         state: "catching-up", estimatedRunsToClear: null, lastThroughput: null,
       });
