@@ -67,7 +67,7 @@ interface MatchedMapping {
   tier: "specific" | "fallback";
 }
 
-interface ChangeContract {
+export interface ChangeContract {
   background: DocReference[];
   changedFiles: string[];
   checks: string[];
@@ -143,6 +143,46 @@ const CONTRACT_SENSITIVE_GLOBS = [
   "shared/lib/safety-score-v9/**", "shared/data/safety-score-v9/**",
   "worker/migrations/**", "shared/contracts/**",
 ];
+
+// Decimal bytes, measured across every tracked single-path reading signature
+// in auto and contract modes. Ratchet down only; increases require review of
+// the mandatory closure. Batches deliberately retain the 160 KB union guard.
+export const ROUTE_CONTEXT_CEILINGS = {
+  "local-frontend": 24_000,
+  "domain-frontend": 68_000,
+  "worker-cron": 140_000,
+  "worker-api": 124_000,
+  scoring: 100_000,
+  functions: 100_000,
+  "registry-data": 56_000,
+  telegram: 100_000,
+  migration: 28_000,
+  docs: 108_000,
+  "other-one-domain": 84_000,
+  "multi-domain-batch": 160_000,
+} as const;
+
+export type RouteClass = keyof typeof ROUTE_CONTEXT_CEILINGS;
+
+export function classifyRouteContext(
+  contract: Pick<ChangeContract, "changedFiles" | "mappings">,
+): RouteClass {
+  if (contract.changedFiles.length > 1) return "multi-domain-batch";
+  const path = contract.changedFiles[0] ?? "";
+  const ids = new Set(contract.mappings.map((mapping) => mapping.id));
+  if (path.startsWith("docs/")) return "docs";
+  if (path.startsWith("functions/")) return "functions";
+  if (path.startsWith("worker/migrations/")) return "migration";
+  if (ids.has("telegram")) return "telegram";
+  if (path.startsWith("worker/src/cron/") || ids.has("worker-cron")) return "worker-cron";
+  if (path.startsWith("worker/src/api/") || ids.has("worker-api-auth")) return "worker-api";
+  if (ids.has("safety-score-v9")) return "scoring";
+  if (ids.has("stablecoin-registry")) return "registry-data";
+  if (path.startsWith("src/") && ids.has("frontend-routes")) {
+    return ids.size === 1 ? "local-frontend" : "domain-frontend";
+  }
+  return "other-one-domain";
+}
 
 function selectContextMode(files: readonly string[], requested: "auto" | "contract"): ChangeContract["contextMode"] {
   if (requested === "contract") return { requested, effective: "contract", reasons: ["Explicit contract context"] };
@@ -529,7 +569,10 @@ interface ContextReference extends DocReference, ContextRange {
 }
 
 export interface RouteContext {
-  status: "diagnostic-only";
+  class: RouteClass;
+  ceiling: number;
+  status: "within-budget" | "over-budget";
+  remediation?: string;
   scope: string;
   references: ContextReference[];
   files: Array<ContextSize & { path: string; ranges: ContextRange[] }>;
@@ -537,6 +580,13 @@ export interface RouteContext {
   background: DocReference[];
   excluded: string[];
 }
+
+interface RouteContextDocument {
+  content: string;
+  document?: MarkdownSections;
+}
+
+export type RouteContextDocumentCache = Map<string, RouteContextDocument>;
 
 function contextSize(content: string): ContextSize {
   return {
@@ -560,19 +610,23 @@ function sumContextSizes(sizes: readonly ContextSize[]): ContextSize {
 
 /**
  * Explicit route-rendering boundary: no document reads in classification,
- * focused check selection, or hooks. File contents and Markdown parsing are
- * cached only for this invocation; background references are not preloaded.
+ * focused check selection, or hooks. By default the document snapshot lasts
+ * one invocation. A batch reader may share `documents` while files are
+ * unchanged; discard that cache after any edit. Ranges always remain per-route.
  */
 export function buildRouteContext(
-  contract: Pick<ChangeContract, "docs" | "scopedContext" | "background"> & Partial<Pick<ChangeContract, "requiredDocs">>,
-  { repoRoot = REPO_ROOT }: { repoRoot?: string } = {},
+  contract: Pick<ChangeContract, "docs" | "scopedContext" | "background"> &
+    Partial<Pick<ChangeContract, "requiredDocs" | "changedFiles" | "mappings">>,
+  { repoRoot = REPO_ROOT, documents = new Map() }: {
+    repoRoot?: string;
+    documents?: RouteContextDocumentCache;
+  } = {},
 ): RouteContext {
   const { parseMarkdownSections, resolveMarkdownSectionRange, mergeMarkdownSectionRanges } =
     require("../lib/doc-markdown.mts") as typeof DocMarkdown;
   const cache = new Map<string, {
     path: string;
-    content: string;
-    document?: MarkdownSections;
+    source: RouteContextDocument;
     ranges: MarkdownSectionRange[];
   }>();
   const references: ContextReference[] = [];
@@ -601,18 +655,23 @@ export function buildRouteContext(
       seen.add(key);
       let file = cache.get(canonical);
       if (!file) {
-        file = { path: normalizeRepoPath(relative(repoRoot, canonical)), content: readFileSync(canonical, "utf8"), ranges: [] };
+        let source = documents.get(canonical);
+        if (!source) {
+          source = { content: readFileSync(canonical, "utf8") };
+          documents.set(canonical, source);
+        }
+        file = { path: normalizeRepoPath(relative(repoRoot, canonical)), source, ranges: [] };
         cache.set(canonical, file);
       }
       let range: MarkdownSectionRange;
       if (reference.anchor !== undefined) {
-        file.document ??= parseMarkdownSections(file.content);
-        range = resolveMarkdownSectionRange(file.document, reference.anchor);
+        file.source.document ??= parseMarkdownSections(file.source.content);
+        range = resolveMarkdownSectionRange(file.source.document, reference.anchor);
       } else {
-        range = { start: 0, end: file.content.length, startLine: 0, endLine: file.content.split("\n").length };
+        range = { start: 0, end: file.source.content.length, startLine: 0, endLine: file.source.content.split("\n").length };
       }
       file.ranges.push(range);
-      const size = contextSize(file.content.slice(range.start, range.end));
+      const size = contextSize(file.source.content.slice(range.start, range.end));
       references.push({
         path: file.path,
         ...(reference.anchor === undefined ? {} : { anchor: reference.anchor }),
@@ -628,17 +687,27 @@ export function buildRouteContext(
   }
   const files = [...cache.values()].map((file) => {
     const ranges = mergeMarkdownSectionRanges(file.ranges).map((range) => {
-      const size = contextSize(file.content.slice(range.start, range.end));
+      const size = contextSize(file.source.content.slice(range.start, range.end));
       return { startLine: range.startLine + 1, endLine: range.startLine + size.lines, ...size };
     });
     return { path: file.path, ranges, ...sumContextSizes(ranges) };
   });
+  const routeClass = classifyRouteContext({
+    changedFiles: contract.changedFiles ?? [], mappings: contract.mappings ?? [],
+  });
+  const ceiling = ROUTE_CONTEXT_CEILINGS[routeClass];
+  const total = sumContextSizes(files);
   return {
-    status: "diagnostic-only",
+    class: routeClass,
+    ceiling,
+    status: total.bytes > ceiling ? "over-budget" : "within-budget",
+    ...(total.bytes > ceiling ? {
+      remediation: "Use bounded owner sections or a reviewed ceiling change. For batches, route smaller explicit path groups, each retaining its shared obligations; send the full file set to the check planner.",
+    } : {}),
     scope: "Initial routed documents only; UTF-8 bytes include retained source newlines",
     references,
     files,
-    total: sumContextSizes(files),
+    total,
     background: contract.background,
     excluded: [
       "Conditional background references and additional reads mandated by scoped guides",
@@ -1505,11 +1574,19 @@ export function formatContract(
     const root = context.references.find((reference) => reference.kind === "root")!;
     sections.push(
       "",
-      "Context accounting (diagnostic only):",
+      `Context budget: ${context.class} — ${context.status} (ceiling ${context.ceiling} B)`,
       `- ${formatReading(root)} (counted once)`,
       `Total initial routed context: ${context.total.bytes} B, ${context.total.lines} lines, ~${context.total.approximateTokens} tokens (merged per file).`,
       "Background references are not counted. Additional scoped-guide reads, source/tests, skills, framework guides, and route-envelope text are excluded.",
     );
+    if (context.status === "over-budget") {
+      sections.push(
+        `Over budget by ${context.total.bytes - context.ceiling} B. No required references have been dropped.`,
+        context.remediation!,
+        "Contributions (merged per file, largest first):",
+        formatBullets([...context.files].sort((a, b) => b.bytes - a.bytes).map((file) => `${file.path}: ${file.bytes} B`), { limit: Number.POSITIVE_INFINITY }),
+      );
+    }
   }
 
   if (contract.checks.length > 0) {
@@ -1909,8 +1986,7 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     process.exitCode = 1;
   }
   const context = buildRouteContext(contract);
-
-
+  if (context.status === "over-budget") process.exitCode = 1;
   if (options.format === "json") {
     console.log(JSON.stringify({ ...contract, context }, null, 2));
     return;
