@@ -1,72 +1,71 @@
 import { describe, expect, it } from "vitest";
 import { makeAltPegCoin } from "@shared/test-utils/stablecoin";
+import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
+import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
 import { NonUsdShareResponseSchema } from "@shared/types/market";
-import { buildAltPegSnapshot, buildAltPegTrendStats } from "@/lib/alt-peg-market";
+import { buildAltPegSnapshot, buildAltPegTrendStats, parseAltPegParam } from "@/lib/alt-peg-market";
 
 
 describe("alt-peg-market", () => {
-  it("joins live rows to tracked metadata and filters out USD assets", () => {
-    const snapshot = buildAltPegSnapshot([
-      makeAltPegCoin("usdc-circle", 120_000_000),
-      makeAltPegCoin("eurc-circle", 55_000_000),
-      makeAltPegCoin("brz-transfero", 12_000_000),
-      makeAltPegCoin("paxg-paxos", 18_000_000),
-    ]);
+  const coin = (id: string, cap: number | null) => cap === null ? { ...makeAltPegCoin(id, 0), circulating: {} } : makeAltPegCoin(id, cap);
+  const complete = (caps: Record<string, number | null | "omit">, extra: ReturnType<typeof makeAltPegCoin>[] = []) =>
+    [...extra, ...coreNonUsdRows(coin, caps)];
 
-    expect(snapshot.altCoinCount).toBe(3);
-    expect(snapshot.altPegCount).toBe(3);
+  it("joins live rows to tracked metadata and filters out USD assets", () => {
+    const snapshot = buildAltPegSnapshot(complete(
+      { "eurc-circle": 55_000_000, "brz-transfero": 12_000_000, "paxg-paxos": 18_000_000 },
+      [makeAltPegCoin("usdc-circle", 120_000_000)],
+    ));
+
+    expect(snapshot.altCoinCount).toBe(CORE_NON_USD_IDS.length);
+    expect(snapshot.altSupplyUnavailableCount).toBe(0);
     expect(snapshot.totalMarketCap).toBe(205_000_000);
     expect(snapshot.altMarketCap).toBe(85_000_000);
-    expect(snapshot.altSharePct).toBeCloseTo(41.46, 1);
-    expect(snapshot.fiatNonUsdMarketCap).toBe(67_000_000);
-    expect(snapshot.commodityMarketCap).toBe(18_000_000);
+    expect(snapshot.altSharePct).toBeNull(); // core USD members are absent from this fixture
+    expect(snapshot.nonCommodityMarketCap).toBe(67_000_000);
+    expect(snapshot.commoditySharePct).toBeCloseTo(21.18, 1);
   });
 
   it("ranks peg distribution rows by market cap and exposes leader links", () => {
-    const snapshot = buildAltPegSnapshot([
-      makeAltPegCoin("eurc-circle", 60_000_000),
-      makeAltPegCoin("brz-transfero", 15_000_000),
-      makeAltPegCoin("paxg-paxos", 25_000_000),
-    ]);
+    const snapshot = buildAltPegSnapshot(complete({ "eurc-circle": 60_000_000, "brz-transfero": 15_000_000, "paxg-paxos": 25_000_000 }));
 
-    expect(snapshot.distributionRows.map((row) => row.peg)).toEqual(["EUR", "GOLD", "BRL"]);
+    expect(snapshot.distributionRows.slice(0, 3).map((row) => row.peg)).toEqual(["EUR", "GOLD", "BRL"]);
     expect(snapshot.distributionRows[0]?.leaderHref).toBe("/stablecoin/eurc-circle/");
     expect(snapshot.distributionRows[0]?.href).toBe("/stablecoins/eur/");
     expect(snapshot.distributionRows[1]?.group).toBe("Commodity");
   });
 
-  it("keeps an unavailable EUR cohort visible without publishing a zero cap or share", () => {
-    const missing = { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} };
-    const snapshot = buildAltPegSnapshot([makeAltPegCoin("usdc-circle", 100), missing]);
-    expect(snapshot.altCoinCount).toBe(1);
-    expect(snapshot.altMarketCap).toBeNull();
-    expect(snapshot.altSharePct).toBeNull();
-    expect(snapshot.supplyUnavailableCount).toBe(1);
-    expect(snapshot.distributionRows[0]).toMatchObject({
-      peg: "EUR", marketCap: null, sharePct: null, supplyObservedCount: 0, supplyUnavailableCount: 1,
+  it("keeps an unavailable EUR coin visible without publishing a zero cap or share", () => {
+    const eurIds = CORE_NON_USD_IDS.filter((id) => getCoreNonUsdPeg(id) === "EUR");
+    const snapshot = buildAltPegSnapshot(complete(Object.fromEntries(eurIds.map((id) => [id, null]))));
+    expect(snapshot.altSupplyUnavailableCount).toBe(eurIds.length);
+    expect(snapshot.commoditySharePct).toBeNull();
+    expect(snapshot.distributionRows.find((row) => row.peg === "EUR")).toMatchObject({
+      marketCap: null, sharePct: null, supplyObservedCount: 0, supplyUnavailableCount: eurIds.length,
     });
-    expect(snapshot.topRows).toEqual([]);
   });
 
   it("publishes mixed coverage as a known subtotal and withholds complete shares", () => {
-    const snapshot = buildAltPegSnapshot([
-      makeAltPegCoin("eurc-circle", 100), { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} },
-      makeAltPegCoin("usdc-circle", 100),
-    ]);
+    const snapshot = buildAltPegSnapshot(complete({ "eurc-circle": 100, "eurs-stasis": null }));
     expect(snapshot.altMarketCap).toBe(100);
-    expect(snapshot.altSharePct).toBeNull();
     expect(snapshot.distributionRows[0]).toMatchObject({
-      marketCap: 100, sharePct: null, supplyObservedCount: 1, supplyUnavailableCount: 1,
+      peg: "EUR", marketCap: 100, sharePct: null, supplyObservedCount: expect.any(Number), supplyUnavailableCount: 1,
       leaderHref: "/stablecoin/eurc-circle/",
     });
   });
 
+  it("counts a core coin missing from the list as unavailable, never as complete", () => {
+    const snapshot = buildAltPegSnapshot(complete({ "eurc-circle": 100, "eurs-stasis": "omit" }));
+    expect(snapshot.altCoinCount).toBe(CORE_NON_USD_IDS.length);
+    expect(snapshot.altSupplyUnavailableCount).toBe(1);
+    expect(snapshot.commoditySharePct).toBeNull();
+    expect(snapshot.distributionRows.find((row) => row.peg === "EUR")?.supplyUnavailableCount).toBe(1);
+  });
+
   it("distinguishes explicit zero from empty and invalid supply buckets", () => {
-    const zero = buildAltPegSnapshot([makeAltPegCoin("usdc-circle", 100), makeAltPegCoin("eurs-stasis", 0)]);
+    const zero = buildAltPegSnapshot(complete({}));
     expect(zero.altMarketCap).toBe(0);
-    expect(zero.altSharePct).toBe(0);
-    expect(zero.distributionRows[0].marketCap).toBe(0);
-    expect(zero.supplyUnavailableCount).toBe(0);
+    expect(zero.altSupplyUnavailableCount).toBe(0);
     const unavailableBuckets: Record<string, number>[] = [{}, { usd: Number.NaN }, { usd: -1 }];
     for (const circulating of unavailableBuckets) {
       const missing = buildAltPegSnapshot([{ ...makeAltPegCoin("eurs-stasis", 0), circulating }]);
@@ -111,7 +110,7 @@ describe("alt-peg-market", () => {
       point(cutoff - 100, 1), point(cutoff, 2), point(cutoff + 1, 3),
       point(cutoff + 365 * 86400, 5),
     ])).toEqual({
-      latestSharePct: 5, latestAltMarketCap: 50,
+      latestDate: cutoff + 365 * 86400, latestSharePct: 5, latestCoverageIncomplete: true, latestAltMarketCap: 50,
       yearlyShareDeltaPctPoints: 3, yearlyMarketCapChangePct: 150,
       valueCoverageIncomplete: true,
     });
@@ -129,7 +128,7 @@ describe("alt-peg-market", () => {
       { date: 1, commodityShare: 0, fiatNonUsdShare: 0, commodity: 0, fiatNonUsd: 0, total: 100 },
       { date: 1 + 365 * 86400, commodityShare: 2, fiatNonUsdShare: 0, commodity: 0, fiatNonUsd: 20, total: 100 },
     ])).toEqual({
-      latestSharePct: 2, latestAltMarketCap: 20,
+      latestDate: 1 + 365 * 86400, latestSharePct: 2, latestCoverageIncomplete: true, latestAltMarketCap: 20,
       yearlyShareDeltaPctPoints: 2, yearlyMarketCapChangePct: null,
       valueCoverageIncomplete: true,
     });
@@ -163,4 +162,12 @@ describe("alt-peg-market", () => {
     },
   );
 
+
+  it("parses ?peg= case-insensitively and rejects USD and unknown values", () => {
+    expect(parseAltPegParam("eur")).toBe("EUR");
+    expect(parseAltPegParam("GOLD")).toBe("GOLD");
+    expect(parseAltPegParam("usd")).toBeNull();
+    expect(parseAltPegParam("nope")).toBeNull();
+    expect(parseAltPegParam(null)).toBeNull();
+  });
 });

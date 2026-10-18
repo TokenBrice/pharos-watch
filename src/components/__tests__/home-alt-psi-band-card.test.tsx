@@ -86,10 +86,10 @@ describe("PsiBandCard", () => {
     const { getByText, queryByTestId } = render(<PsiBandCard />);
 
     expect(getByText("· Steady").className).toContain("text-teal-700");
-    expect(queryByTestId("psi-band-card-retained")).toBeNull();
+    expect(queryByTestId("psi-band-card-as-of")).toBeNull();
   });
 
-  it("drops the band hue and names the retained observation when stale", () => {
+  it("drops the band hue and dates the stale observation without a state word", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const data = makePsiResponse();
     data.current!.computedAt = nowSec - 8 * 3600;
@@ -100,10 +100,11 @@ describe("PsiBandCard", () => {
       meta: { updatedAt: nowSec - 8 * 3600, ageSeconds: 8 * 3600, status: "stale" },
     });
 
-    const { getByText, getByTestId } = render(<PsiBandCard />);
+    const { container, getByText, getByTestId } = render(<PsiBandCard />);
 
     expect(getByText("· Steady").className).toContain("text-muted-foreground");
     expect(getByText("· Steady").className).not.toContain("text-teal");
-    expect(getByTestId("psi-band-card-retained").textContent).toMatch(/^Retained observation as of /);
+    expect(getByTestId("psi-band-card-as-of").textContent).toMatch(/^As of /);
+    expect(container.textContent).not.toMatch(/retained|stale/i);
   });
 });

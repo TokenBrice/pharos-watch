@@ -49,11 +49,6 @@
       "count": 2
     }
   },
-  "src/components/flow-brrr-overview.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
   "src/components/horizon-constellation.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 1
@@ -107,11 +102,6 @@
   "src/components/stablecoin-detail/mint-authority-section.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4
-    }
-  },
-  "src/components/stablecoin-detail/ops-status-chip.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
     }
   },
   "src/components/stablecoin-detail/peg-stability-card.tsx": {

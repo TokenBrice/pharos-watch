@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { formatChainShare } from "@/lib/chain-ui";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import type { ChainSummary } from "@shared/types/chains";
@@ -11,6 +12,9 @@ const ink = (pct: number) => `color-mix(in oklab, var(--foreground) ${pct}%, var
 const dominanceColor = (idx: number) => ink(DOMINANCE_INK_PCT[Math.min(idx, DOMINANCE_INK_PCT.length - 1)]!);
 const OTHER_CHAINS_COLOR = ink(18);
 const UNATTRIBUTED_COLOR = ink(12);
+/** The hatch stays legible on the dark card, where a 30% stripe over ink(12) all but vanished. */
+const UNATTRIBUTED_HATCH = (from: number, to: number) =>
+  `repeating-linear-gradient(135deg, transparent 0 ${from}px, color-mix(in oklab, var(--foreground) 45%, transparent) ${from}px ${to}px)`;
 
 interface DominanceBreakdownProps {
   /** Top chains by supply (independent of table sort), already sliced to the legend size. */
@@ -24,13 +28,11 @@ interface DominanceBreakdownProps {
   dominanceGeometryTotalUsd?: number;
   /** Used only as a fallback total when chainAttributedTotalUsd is not finite. */
   chains: readonly ChainSummary[];
+  /** The chain whose share the hero beam prints: its legend key names it without repeating the figure. */
+  beamChainId?: string;
 }
 
 const RESIDUAL_LABEL_MIN_SHARE = 0.005;
-
-function formatSharePct(share: number): string {
-  return `${(share * 100).toFixed(1)}%`;
-}
 
 export function DominanceBreakdown({
   topBySupply,
@@ -40,6 +42,7 @@ export function DominanceBreakdown({
   attributionDiscrepancyUsd,
   dominanceGeometryTotalUsd,
   chains,
+  beamChainId,
 }: DominanceBreakdownProps) {
   // Labels are shares of the canonical global supply (`dominanceShare`); they are never rescaled.
   const topShare = topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
@@ -65,15 +68,15 @@ export function DominanceBreakdown({
   const showUnattributed = unattributedShare > RESIDUAL_LABEL_MIN_SHARE;
   const showOverAttribution = overAttributedShare > RESIDUAL_LABEL_MIN_SHARE;
   const ariaLabel = [
-    `Supply dominance: ${topBySupply.map((c) => `${c.name} ${formatSharePct(c.dominanceShare)}`).join(", ")}`,
-    showOtherChains ? `Other chains ${formatSharePct(otherChainsShare)}` : null,
-    showUnattributed ? `Unattributed ${formatSharePct(unattributedShare)}` : null,
-    showOverAttribution ? `Chain rows exceed global supply by ${formatSharePct(overAttributedShare)}` : null,
+    `Supply dominance: ${topBySupply.map((c) => `${c.name} ${formatChainShare(c.dominanceShare)}`).join(", ")}`,
+    showOtherChains ? `Other chains ${formatChainShare(otherChainsShare)}` : null,
+    showUnattributed ? `Unattributed ${formatChainShare(unattributedShare)}` : null,
+    showOverAttribution ? `Chain rows exceed global supply by ${formatChainShare(overAttributedShare)}` : null,
   ].filter((part): part is string => part != null).join(", ");
   return (
     <>
       <div
-        className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full"
+        className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full"
         role="img"
         aria-label={ariaLabel}
       >
@@ -99,8 +102,7 @@ export function DominanceBreakdown({
             style={{
               width: `${unattributedShare * geometryScale * 100}%`,
               backgroundColor: UNATTRIBUTED_COLOR,
-              backgroundImage:
-                "repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in oklab, var(--foreground) 30%, transparent) 4px 6px)",
+              backgroundImage: UNATTRIBUTED_HATCH(4, 6),
             }}
           />
         )}
@@ -120,8 +122,8 @@ export function DominanceBreakdown({
               className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
               style={{ width: 14, height: 14 }}
             />
-            <span>{chain.name}</span>
-            <span className="pharos-numeric">{formatSharePct(chain.dominanceShare)}</span>
+            <span className={chain.id === beamChainId ? "font-medium text-foreground" : undefined}>{chain.name}</span>
+            {chain.id === beamChainId ? null : <span className="pharos-numeric">{formatChainShare(chain.dominanceShare)}</span>}
           </span>
         ))}
         {showOtherChains && (
@@ -131,7 +133,7 @@ export function DominanceBreakdown({
               style={{ backgroundColor: OTHER_CHAINS_COLOR }}
             />
             <span>Other chains</span>
-            <span className="pharos-numeric">{formatSharePct(otherChainsShare)}</span>
+            <span className="pharos-numeric">{formatChainShare(otherChainsShare)}</span>
           </span>
         )}
         {showUnattributed && (
@@ -140,12 +142,11 @@ export function DominanceBreakdown({
               className="inline-block h-2 w-2 rounded-full"
               style={{
                 backgroundColor: UNATTRIBUTED_COLOR,
-                backgroundImage:
-                  "repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in oklab, var(--foreground) 40%, transparent) 3px 4px)",
+                backgroundImage: UNATTRIBUTED_HATCH(2, 4),
               }}
             />
             <span>Unattributed</span>
-            <span className="pharos-numeric">{formatSharePct(unattributedShare)}</span>
+            <span className="pharos-numeric">{formatChainShare(unattributedShare)}</span>
           </span>
         )}
         {showOverAttribution && (
@@ -154,7 +155,7 @@ export function DominanceBreakdown({
             title="Chain rows sum above the canonical global supply. Percentages stay shares of global supply; the bar is scaled to the larger chain-row total."
           >
             <span>Chain rows exceed global supply by</span>
-            <span className="pharos-numeric">{formatSharePct(overAttributedShare)}</span>
+            <span className="pharos-numeric">{formatChainShare(overAttributedShare)}</span>
           </span>
         )}
       </div>

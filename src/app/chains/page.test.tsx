@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { getActiveChainIds } from "@shared/lib/chains";
 import ChainsPage from "./page";
 
 vi.mock("./client", () => ({
@@ -7,27 +8,29 @@ vi.mock("./client", () => ({
 }));
 
 describe("ChainsPage", () => {
-  it("renders a visible chain directory and visible FAQ copy around the client leaderboard", () => {
+  it("keeps every chain profile link and the ItemList in the static HTML, folded after the leaderboard", () => {
     const html = renderToStaticMarkup(<ChainsPage />);
 
-    expect(html).toContain("Chain Profile Directory");
-    expect(html).toContain('href="/chains/ethereum"');
-    expect(html).toContain('href="/chains/iota"');
-    expect(html).toContain("tracked deployment");
-    expect(html).not.toContain("sr-only");
+    // the directory is a fold, but its links ship in the server HTML for crawlers
+    const ids = getActiveChainIds();
+    expect(html).toContain(`All ${ids.length} chain profiles`);
+    for (const id of ids) expect(html).toContain(`href="/chains/${id}"`);
+    expect(html).toContain('"@type":"ItemList"');
+    expect(html).not.toContain("tracked deployment");
 
+    expect(html).toContain("Where stablecoin supply lives, how concentrated it is, and which chains are moving.");
+    expect(html).toContain("Chain Health methodology 1.7");
     expect(html).toContain("Chains FAQ");
     expect(html).toContain("What is the Chain Health Score?");
-    expect(html).toContain("Which chains have the most stablecoin supply?");
+    expect(html).toContain('"@type":"FAQPage"');
 
     const client = html.indexOf("chains client");
-    const faq = html.indexOf("Chains FAQ");
-    const directory = html.indexOf("Chain Profile Directory");
+    const faq = html.indexOf("FAQ and Chain Health methodology");
+    const directory = html.indexOf(`All ${ids.length} chain profiles`);
+    const footer = html.indexOf("Supply from the Pharos stablecoin snapshot");
     expect(client).toBeGreaterThan(-1);
-    expect(faq).toBeGreaterThan(-1);
-    expect(directory).toBeGreaterThan(-1);
     expect(client).toBeLessThan(faq);
     expect(faq).toBeLessThan(directory);
+    expect(directory).toBeLessThan(footer);
   });
-
 });

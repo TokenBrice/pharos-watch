@@ -66,31 +66,29 @@ describe("homepage evidence after hydration", () => {
     expect(liveRead).toHaveBeenCalledOnce();
     expect(queryClient.getQueryData(["homepage-snapshot"])).toBeUndefined();
     await act(async () => { disk.resolve(makeHomepageEvidence(now / 1000 - 60)); });
-    await waitFor(() => expect(screen.getByText(/^Retained · as of/)).toBeTruthy());
-    const label = screen.getByText(/^Retained · as of/).textContent;
-    expect(label).toContain("2026-10-18T11:59:00.000Z");
-    expect(label).toContain(`stale after ${makeHomepageEvidence().market.meta.freshBudgetSec / 60} min`);
-    expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("(retained)");
-    expect(screen.getByRole("link", { name: /PSI/ }).getAttribute("title")).toContain("stale after");
-    expect(screen.getByRole("link", { name: /active depeg/ }).textContent).toContain("(retained)");
+    // Retained lanes render as-is; the homepage never labels them (docs/homepage.md#data-health).
+    await waitFor(() => expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("91.9"));
+    expect(screen.getByRole("link", { name: /active depeg/ }).textContent).toContain("1active depeg");
+    expect(document.body.textContent).not.toMatch(/Retained|retained|stale after/);
+    expect(screen.getByText(/^As of October 18, 2026/)).toBeTruthy();
     expect(queryClient.getQueryData(["homepage-snapshot"])).toBeUndefined();
-    expect(screen.queryByText(/^Live ·/)).toBeNull();
     await act(async () => { live.resolve(makeHomepageEvidence()); });
-    await waitFor(() => expect(screen.getByText(/^Live · as of/)).toBeTruthy());
-    expect(screen.queryByText(/^Retained ·/)).toBeNull();
+    await waitFor(() => expect(queryClient.getQueryData(["homepage-snapshot"])).toEqual(makeHomepageEvidence()));
+    expect(screen.getByText(/^As of October 18, 2026/)).toBeTruthy();
     expect(persist).toHaveBeenCalledWith(makeHomepageEvidence());
     expect(liveRead).toHaveBeenCalledOnce();
     expect(errors.mock.calls.flat().join(" ")).not.toMatch(/hydration|did not match/i);
     container.remove();
   });
 
-  it("retains dated stale evidence after a failed live read, without a fresh/calm claim", async () => {
+  it("retains dated evidence after a failed live read, without a warning or a calm claim", async () => {
     render(<Page queryClient={client()} />);
     await act(async () => { disk.resolve(makeHomepageEvidence(now / 1000 - 60)); });
-    await waitFor(() => expect(screen.getByText(/^Retained ·/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("91.9"));
     await act(async () => { live.reject(new Error("live offline")); });
-    await waitFor(() => expect(screen.getByText(/^Refresh failed · Retained ·/)).toBeTruthy());
-    expect(screen.queryByText(/^Live ·/)).toBeNull();
+    await waitFor(() => expect(screen.getByRole("link", { name: /active depeg/ }).textContent).toContain("1active depeg"));
+    expect(document.body.textContent).not.toMatch(/Refresh failed|Retained|retained/);
+    expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByText("Bedrock").className).toContain("text-foreground");
     expect(persist).not.toHaveBeenCalled();
   });
@@ -99,9 +97,9 @@ describe("homepage evidence after hydration", () => {
     const queryClient = client();
     render(<Page queryClient={queryClient} />);
     await act(async () => { live.resolve(makeHomepageEvidence()); });
-    await waitFor(() => expect(screen.getByText(/^Live ·/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("91.9"));
     await act(async () => { disk.resolve(makeHomepageEvidence(now / 1000 - 60)); });
-    expect(screen.queryByText(/^Retained ·/)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Retained|retained/);
     expect(queryClient.getQueryData(["homepage-snapshot"])).toEqual(makeHomepageEvidence());
   });
 });

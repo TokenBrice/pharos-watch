@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 
 import { HomeAltDdrOverview } from "@/components/home-alt-ddr-overview";
-import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import type * as FreshnessNotices from "@/components/query-freshness-notices";
-import { ApiMetaEnvelopeSchema, type ApiMetaEnvelope } from "@pharos/contracts/api-meta";
 import { applyDurationStaleness } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 
@@ -17,11 +14,6 @@ const { useDepegResolverSurfacesMock } = vi.hoisted(() => ({
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({
   useDepegResolverSurfaces: useDepegResolverSurfacesMock,
 }));
-
-vi.mock("@/components/query-freshness-notices", async (importOriginal) => {
-  const original = await importOriginal<typeof FreshnessNotices>();
-  return { ...original, QueryFreshnessNotices: vi.fn(original.QueryFreshnessNotices) };
-});
 
 afterEach(() => {
   cleanup();
@@ -134,12 +126,13 @@ describe("HomeAltDdrOverview", () => {
     expect(screen.queryByText("-300 bps")).toBeNull();
   });
 
-  it("discloses independent stale-cache generations without promoting retained rows to live forecasts", () => {
+  // Homepage rule (docs/homepage.md): source health never renders as a warning.
+  it("renders stale-cache generations with a neutral as-of stamp and no warning", () => {
     setSources({ stale: true });
-    render(<HomeAltDdrOverview />);
-    expect(screen.getByText(/Resolver: Retained snapshot/).textContent).toContain("stale-cache");
-    expect(screen.getByText(/Reviewer: Retained snapshot/).textContent).toContain("stale-cache");
-    expect(screen.getByText(/Resolver: Retained snapshot/).textContent).not.toBe(screen.getByText(/Reviewer: Retained snapshot/).textContent);
+    const view = render(<HomeAltDdrOverview />);
+    expect(screen.getByText(/^Resolver · as of/)).toBeTruthy();
+    expect(screen.getByText(/^Reviewer · as of/)).toBeTruthy();
+    expect(view.container.textContent).not.toMatch(/Retained|stale-cache|Unavailable/);
     expect(screen.getByText("TUSD")).toBeTruthy();
     expect(screen.queryByText(/live forecasts|1 live/i)).toBeNull();
   });
@@ -149,68 +142,26 @@ describe("HomeAltDdrOverview", () => {
     render(<HomeAltDdrOverview />);
     expect(screen.getByText(/No published active forecasts/)).toBeTruthy();
     expect(screen.queryByText(/all clear|every monitored coin is on peg/i)).toBeNull();
-    if (stale) expect(screen.getByText(/Resolver: Retained snapshot/)).toBeTruthy();
   });
 
-  it("keeps retained values with independent refetch errors and retry actions", () => {
+  it("keeps retained values after refetch errors without failure notices or retry actions", () => {
     setSources({ resolverError: new Error("resolver refresh failed"), reviewerError: new Error("reviewer refresh failed") });
     render(<HomeAltDdrOverview />);
     expect(screen.getByText("TUSD")).toBeTruthy();
     expect(screen.getByText("80.0%")).toBeTruthy();
-    expect(screen.getByText(/Resolver: Retained snapshot/)).toBeTruthy();
-    expect(screen.getByText(/Reviewer: Retained snapshot/)).toBeTruthy();
-    const retries = screen.getAllByRole("button", { name: "Retry" });
-    fireEvent.click(retries[0]!);
-    fireEvent.click(retries[1]!);
-    expect(refetchResolver).toHaveBeenCalledTimes(1);
-    expect(refetchReviewer).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
   });
 
-  it("shows both unavailable sources and retries when initial reads fail", () => {
+  it("shows neutral placeholders when initial reads fail", () => {
     setSources({ unavailable: true, resolverError: new Error("resolver failed"), reviewerError: new Error("reviewer failed") });
-    render(<HomeAltDdrOverview />);
-    expect(screen.getByText(/Resolver: Unavailable/)).toBeTruthy();
-    expect(screen.getByText(/Reviewer: Unavailable/)).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Retry" })).toHaveLength(2);
+    const view = render(<HomeAltDdrOverview />);
+    expect(screen.getByText("Resolver · Updating")).toBeTruthy();
+    expect(screen.getByText("Reviewer · Updating")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+    expect(view.container.textContent).not.toMatch(/Unavailable|failed/);
     expect(screen.queryByText(/No published active forecasts/)).toBeNull();
-  });
-
-  const metaCases: { label: string; meta: ApiMetaEnvelope | undefined; status: string }[] = [
-    { label: "absent", meta: undefined, status: "fresh" },
-    { label: "unknown unavailable", meta: { updatedAt: null, ageSeconds: null, status: "unknown", reason: "missing-generation" }, status: "fresh" },
-    { label: "stale unavailable", meta: { updatedAt: null, ageSeconds: null, status: "stale", reason: "missing-generation" }, status: "stale" },
-    { label: "warning-only", meta: { status: "degraded", warning: "source warning" }, status: "degraded" },
-    { label: "assessed available", meta: { updatedAt: COMPUTED_AT - 60, ageSeconds: 60, status: "degraded",
-      warning: "source warning", dependencies: { source: { status: "stale" } },
-      assessedAt: COMPUTED_AT, freshBudgetSec: 900, degradedBudgetSec: 1800 }, status: "degraded" },
-  ];
-  it.each(metaCases)(
-    "normalizes $label metadata to a valid producer-generation envelope",
-    ({ meta, status }) => {
-      setSources();
-      const configured = useDepegResolverSurfacesMock();
-      configured.resolver.meta = meta;
-      render(<HomeAltDdrOverview />);
-      const envelope = vi.mocked(QueryFreshnessNotices).mock.calls[0]![0].queries[0]!.meta;
-      expect(ApiMetaEnvelopeSchema.safeParse(envelope).success).toBe(true);
-      expect(envelope).toEqual({
-        ...(meta?.updatedAt != null ? {
-          warning: meta.warning, dependencies: meta.dependencies, assessedAt: meta.assessedAt,
-          freshBudgetSec: meta.freshBudgetSec, degradedBudgetSec: meta.degradedBudgetSec,
-        } : {}),
-        updatedAt: COMPUTED_AT, ageSeconds: meta?.ageSeconds ?? 0, status,
-      });
-      expect(envelope).not.toHaveProperty("reason");
-    },
-  );
-
-  it("preserves unavailable metadata when no producer generation exists", () => {
-    setSources({ unavailable: true, resolverError: new Error("resolver unavailable") });
-    const configured = useDepegResolverSurfacesMock();
-    const meta: ApiMetaEnvelope = { updatedAt: null, ageSeconds: null, status: "unknown", reason: "missing-generation" };
-    configured.resolver.meta = meta;
-    render(<HomeAltDdrOverview />);
-    expect(vi.mocked(QueryFreshnessNotices).mock.calls[0]![0].queries[0]!.meta).toBe(meta);
   });
 
   it("switches the same frozen duration to overdue after the authoritative live overlay deadline", () => {
@@ -221,7 +172,7 @@ describe("HomeAltDdrOverview", () => {
     const aged = applyDurationStaleness(payload, COMPUTED_AT + 86_401);
     setSources({ rows: aged.rows as unknown as typeof forecast[] });
     view.rerender(<HomeAltDdrOverview />);
-    expect(screen.getByText("overdue ~1d").getAttribute("title")).toContain("duration-exceeded");
+    expect(screen.getByText("overdue ~1d").getAttribute("title")).toContain("median deadline passed");
     expect(screen.queryByText("locked ~1d")).toBeNull();
     expect(aged.rows[0]!.frozen).toBe(payload.rows[0]!.frozen);
     expect(payload.rows[0]!.live.stale).toBe(false);

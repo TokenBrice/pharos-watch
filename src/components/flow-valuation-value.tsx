@@ -18,6 +18,7 @@ export function FlowSignedNetValue({
   colorClassName,
   className,
   placeholder = "—",
+  unknownMarker = "visible",
 }: {
   net: MintBurnSignedNetView;
   format: (valueUsd: number) => string;
@@ -25,6 +26,12 @@ export function FlowSignedNetValue({
   colorClassName?: (valueUsd: number) => string;
   className?: string;
   placeholder?: string;
+  /**
+   * `sr-only`: keep the coverage-unknown reason for assistive tech but drop the
+   * visible `*`, for surfaces (the flows table) that state it once in a column
+   * header chip instead of on almost every cell.
+   */
+  unknownMarker?: "visible" | "sr-only";
 }) {
   if (net.valueUsd == null && net.bound) {
     const { kind, valueUsd } = net.bound;
@@ -54,7 +61,9 @@ export function FlowSignedNetValue({
       {format(net.valueUsd)}
       {net.completeness === "unknown" ? (
         <>
-          <span aria-hidden="true" className="ml-0.5 align-super text-[0.65em] text-muted-foreground">*</span>
+          {unknownMarker === "visible" ? (
+            <span aria-hidden="true" className="ml-0.5 align-super text-[0.65em] text-muted-foreground">*</span>
+          ) : null}
           <span className="sr-only"> (coverage unknown)</span>
         </>
       ) : null}

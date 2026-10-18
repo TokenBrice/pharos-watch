@@ -1,18 +1,17 @@
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { formatCurrency, formatSignedCurrency } from "@shared/lib/format";
-import { aggregateCoinFlows24h } from "@shared/lib/mint-burn-coin-helpers";
-import { combineMintBurnValuationCompleteness } from "@shared/lib/mint-burn-valuation";
-import { formatMintBurnVolume } from "@shared/lib/mint-burn-valuation-display";
+import { GAUGE_BAND_LABELS } from "@shared/lib/classification";
+import { assessGaugeBandSettlement } from "@shared/lib/mint-burn-gauge-bands";
+import { formatBankRunGaugeScore, resolvePublishedGaugeBand } from "@shared/lib/mint-burn-signals";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { freshnessReason, ownerUrl, readOwnerJson, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 
 /**
- * `/flows` card: the 24h net mint/burn the overview sums with
- * `aggregateCoinFlows24h`. A signed net is published only for a complete
- * window; a partial window shows its known gross subtotal as a lower bound,
- * never a signed partial net. No pressure verdict: a share card states the
- * figure, not a reading of it.
+ * `/flows` card: the Bank Run Gauge and its published band, the page's beam.
+ * A null score is unavailable (timeless card), never 0. When valuation withheld
+ * weighted coins, the score is re-weighted over the rest and the stamp says so;
+ * when that weight could carry it across a band edge the band is not printed.
+ * No net figure: the gauge is the page's one answer.
  */
 export const loadFlowsOgPage: OgPageLoader = async (db, nowSec) => {
   const body = await readOwnerJson(await handleMintBurnFlows(db, ownerUrl(API_PATHS.mintBurnFlows({ hours: 24 }))), MintBurnFlowsResponseSchema);
@@ -21,36 +20,26 @@ export const loadFlowsOgPage: OgPageLoader = async (db, nowSec) => {
   const stale = freshnessReason(nowSec, body.updatedAt, budgetSec);
   if (stale) return unavailable(stale);
 
-  const flows = aggregateCoinFlows24h(body.coins);
-  const generation = `mint-burn-flows:${body.updatedAt}`;
-  const volume = (value: number) => formatCurrency(value, 1);
-  if (flows.net.valueUsd != null && flows.net.completeness === "complete") {
-    return {
-      kind: "ok",
-      hero: formatSignedCurrency(flows.net.valueUsd, 1),
-      context: "net mint/burn on tracked issuance chains, last 24h",
-      support: [],
-      visual: {
-        kind: "pair-bars",
-        bars: [
-          { label: "printed", value: flows.mintVolumeUsd, text: `Printed ${formatMintBurnVolume(flows.mintVolumeUsd, flows.mintCompleteness, volume)}` },
-          { label: "shredded", value: flows.burnVolumeUsd, text: `Shredded ${formatMintBurnVolume(flows.burnVolumeUsd, flows.burnCompleteness, volume)}` },
-        ],
-      },
-      asOfSec: body.updatedAt,
-      budgetSec,
-      generation,
-    };
-  }
-  const grossCompleteness = combineMintBurnValuationCompleteness(flows.mintCompleteness, flows.burnCompleteness);
-  if (grossCompleteness !== "partial") return unavailable("incomplete-coverage");
+  const { score, partialValuationInputs } = body.gauge;
+  const band = resolvePublishedGaugeBand(body.gauge.band, score);
+  if (score == null || band == null) return unavailable("figure-null");
+  // One authority with the digest and the page: a band that withheld weight could move is not printed.
+  const { settled } = assessGaugeBandSettlement(body.gauge);
+  const withheld = `${partialValuationInputs} weighted ${partialValuationInputs === 1 ? "coin" : "coins"} withheld`;
   return {
     kind: "ok",
-    hero: formatMintBurnVolume(flows.mintVolumeUsd + flows.burnVolumeUsd, grossCompleteness, volume),
-    context: "gross mint + burn on tracked issuance chains, last 24h (known subtotal)",
+    hero: formatBankRunGaugeScore(score),
+    context: settled
+      ? `Bank Run Gauge · ${GAUGE_BAND_LABELS[band]} · pressure vs each coin's 30-day norm`
+      : "Bank Run Gauge · pressure vs each coin's 30-day norm",
     support: [],
     asOfSec: body.updatedAt,
     budgetSec,
-    generation,
+    generation: `mint-burn-flows:${body.updatedAt}`,
+    ...(!settled
+      ? { stampNote: `band unsettled: ${withheld}` }
+      : partialValuationInputs
+        ? { stampNote: `partial: ${withheld}` }
+        : {}),
   };
 };

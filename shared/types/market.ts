@@ -306,6 +306,22 @@ export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamily
 export const LiquidityCoverageClassSchema = z.enum(["primary", "mixed", "fallback", "legacy", "unobserved"]);
 export type LiquidityCoverageClass = z.infer<typeof LiquidityCoverageClassSchema>;
 
+/**
+ * Why a published LiquidityScore is null (NR). The `activity-*` codes are the
+ * DEC-19 volume-activity outcomes decided by `resolveVolumeActivityComponent`;
+ * `no-retained-pools` marks a placeholder row with no DEX pool; the publisher
+ * adds `invalid-coverage-evidence` when it quarantines a row's coverage.
+ */
+export const LiquidityScoreUnavailableReasonSchema = z.enum([
+  "activity-coverage-below-floor",
+  "activity-missing",
+  "activity-stale",
+  "activity-completeness-unknown",
+  "no-retained-pools",
+  "invalid-coverage-evidence",
+]);
+export type LiquidityScoreUnavailableReason = z.infer<typeof LiquidityScoreUnavailableReasonSchema>;
+
 const LiquiditySourceMixEntrySchema = z.object({
   poolCount: z.number(),
   tvlUsd: z.number(),
@@ -730,6 +746,8 @@ const DexLiquidityDataSchema = z
     chainTvl: z.record(z.string(), z.number()),
     topPools: z.array(DexLiquidityPoolSchema),
     liquidityScore: z.number().min(0).max(100).nullable(),
+    // Producer reason for a null score; null when rated, absent on rows scored before it was recorded.
+    liquidityScoreUnavailableReason: LiquidityScoreUnavailableReasonSchema.nullable().optional(),
     concentrationHhi: z.number().min(0).max(1).nullable(),
     depthStability: z.number().nullable(),
     tvlChange24h: z.number().nullable(),

@@ -75,9 +75,10 @@ describe("RegimeBar freshness", () => {
         expect(html).toContain(`background-color:${PSI_HEX_COLORS.BEDROCK}`);
         expect(html).not.toContain("Retained observation");
       } else {
-        expect(html).toContain("Current market regime unavailable");
-        expect(html).toContain("Current regime unavailable");
-        expect(html).toContain("Retained observation as of");
+        // Global chrome: a neutral date, never data-health state words.
+        expect(html).toContain('aria-label="Market regime as of ');
+        expect(html).toMatch(/>As of [^<]+</);
+        expect(html).not.toMatch(/unavailable|Retained observation|refresh failed|stale|degraded/i);
         expect(html).toContain(`background-color:${PSI_UNKNOWN_BAND_HEX}`);
         expect(html).not.toContain('aria-label="Market regime:');
         expect(html).not.toContain(`background-color:${PSI_HEX_COLORS.BEDROCK}`);

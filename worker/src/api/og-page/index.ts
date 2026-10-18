@@ -1,4 +1,5 @@
 import type { OgPageSlug } from "@shared/lib/og-route-cards";
+import { loadAltPegsOgPage } from "./alt-pegs";
 import { loadChainsOgPage } from "./chains";
 import { loadDependencyMapOgPage } from "./dependency-map";
 import { loadFlowsOgPage } from "./flows";
@@ -7,6 +8,7 @@ import { loadHomeOgPage } from "./home";
 import { loadLiquidityOgPage } from "./liquidity";
 import { loadTimelineOgPage } from "./timeline";
 import type { OgPageLoader } from "./types";
+import { loadUpcomingOgPage } from "./upcoming";
 import { loadYieldOgPage } from "./yield";
 
 /** One loader per live route card; the `Record` keeps the registry complete over `OG_LIVE_PAGE_SLUGS`. */
@@ -19,6 +21,8 @@ export const OG_PAGE_LOADERS: Readonly<Record<OgPageSlug, OgPageLoader>> = {
   freezewatch: loadFreezewatchOgPage,
   liquidity: loadLiquidityOgPage,
   yield: loadYieldOgPage,
+  "alt-pegs": loadAltPegsOgPage,
+  upcoming: loadUpcomingOgPage,
 };
 
 export type { OgPageLoad } from "./types";

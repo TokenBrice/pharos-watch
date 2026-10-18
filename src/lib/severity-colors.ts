@@ -11,25 +11,9 @@ import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   getPegDeviationLevel,
-  MINT_PRESSURE_TONE_CLASSES,
   PEG_DEVIATION_TONE_CLASSES,
   QUALITY_TIER_3_CLASSES,
-  type MintPressureBand,
 } from "@shared/lib/classification";
-
-export interface MintPressureStyle {
-  badgeClass: string;
-  valueClass: string;
-  panelClass: string;
-}
-
-/** Presentation styles for the canonical mint-pressure bands. */
-export const MINT_PRESSURE_STYLES: Record<MintPressureBand, MintPressureStyle> = Object.fromEntries(
-  Object.entries(MINT_PRESSURE_TONE_CLASSES).map(([band, tone]) => [
-    band,
-    { badgeClass: tone.badge, valueClass: tone.value, panelClass: tone.panel },
-  ]),
-) as Record<MintPressureBand, MintPressureStyle>;
 
 /** Severity border class with accent opacity — suitable for outlined badges. */
 export function deviationBorderClass(absBps: number): string {

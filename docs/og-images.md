@@ -17,12 +17,13 @@ The live routes' metadata selects `buildLiveRouteOgImageUrl(slug)` (`src/lib/pag
 | Slug | Route | Hero (owner → reducer) | Support (each dropped independently on failure) | Budget |
 | --- | --- | --- | --- | --- |
 | `home` | `/` | Total stablecoin market cap: stablecoins cache → `buildLiveHomepageHeroSnapshot` | Displayed PSI band and score; active depegs | `stablecoins` |
-| `chains` | `/chains/` | `globalTotalUsd` and chain count: `handleChains` body, with the homepage completeness verdict over the same stablecoins generation | Top three chains by dominance (only with no unavailable chain observation) | `chains` |
+| `chains` | `/chains/` | Largest chain's share of observed global supply (max `dominanceShare`): `handleChains` body, with the homepage completeness verdict over the same stablecoins generation; timeless (`incomplete-coverage`) when the leader or runner-up has an unavailable chain observation | Next two chains' shares and the observed (or known-subtotal) global supply; share bar only when shares sum to at most 1 | `chains` |
 | `dependency-map` | `/dependency-map/` | Mapped direct exposure: `projectDependencyGraph` + market caps → `buildDependencyHubsModel` | Upstream hubs; direct dependents | `stablecoins` and `reportCards`; stamped with the older read |
 | `timeline` | `/timeline/` | Open depeg incidents: `selectActiveDepegCoins` (`shared/lib/active-depegs.ts`) over `/api/peg-summary`, the homepage census | — | `pegSummary` |
-| `flows` | `/flows/` | 24h signed net mint/burn: mint-burn-flows body → `aggregateCoinFlows24h`; a partial window shows its known gross subtotal (`≥ $X`) instead | Printed; shredded | `mintBurnFlows` |
+| `flows` | `/flows/` | Bank Run Gauge score and published band: mint-burn-flows body `gauge.score` / `gauge.band` (`formatBankRunGaugeScore`, `resolvePublishedGaugeBand`); a null score falls back to the timeless card (`figure-null`); the stamp adds "partial: N weighted coins withheld" when `partialValuationInputs > 0`; a band that withheld weight could move is omitted and the stamp reads "band unsettled: N weighted coins withheld" (`assessGaugeBandSettlement`, same rule as the digest) | — | `mintBurnFlows` |
 | `freezewatch` | `/freezewatch/` | Freezable share: stablecoins cache → `buildBlacklistStatusBuckets` → `computeFreezableSummary` | Freezable market cap; freezable coin count | `stablecoins` |
 | `liquidity` | `/liquidity/` | Total DEX TVL: `handleDexLiquidity` global row | — | `dexLiquidity` |
+| `alt-pegs` | `/alt-pegs/` | Non-USD market cap of the core universe: stablecoins cache → `buildNonUsdMarketSnapshot` (`shared/lib/alt-peg-snapshot.ts`), the same reducer as the page; a partial total shows as a known subtotal stamped `Partial · x/y non-USD coins observed` | Top three peg shares (only when every non-USD coin reports supply) | `stablecoins` |
 | `yield` | `/yield/` | Ranked yields: summary projection → `dedupeYieldRankings` | Median 30D APY of A/B-graded rows (never the top APY) | `yieldRankings` |
 
 The timeline card counts the full open set the homepage reads, not the feed's windowed event page, so an incident opened before the feed window still counts (ADR-34). The `/api/og/depeg` summary card counts open `depeg_events` rows instead and labels that figure **OPEN DEPEG EVENTS**.
@@ -31,10 +32,10 @@ The Budget column names the source; its admission budget is `OG_SOURCE_BUDGET_SE
 
 Fail-closed contract:
 
-- The hero source must be present, inside its admission budget, not a held publication, and published by its page. Otherwise the Worker serves the route's timeless card with `200`, `X-Og-Status: timeless` and a closed-vocabulary `X-Og-Reason` (`cache-missing`, `stale-cache`, `held-publication`, `incomplete-coverage`, `figure-null`, `owner-error`, `render-error`). A card mirrors its page: where the page publishes a partial total as a labelled known subtotal (home, chains, dependency map), the card shows the same figure and names the gap in its stamp (`Partial · 266/267 assets observed`, `excl. 3 coins without supply data`); it goes timeless only where the page itself withholds the number (for example a partial FreezeWatch share).
+- The hero source must be present, inside its admission budget, not a held publication, and published by its page. Otherwise the Worker serves the route's timeless card with `200`, `X-Og-Status: timeless` and a closed-vocabulary `X-Og-Reason` (`cache-missing`, `stale-cache`, `held-publication`, `incomplete-coverage`, `figure-null`, `owner-error`, `render-error`, `timeless-by-decision`). A card mirrors its page: where the page publishes a partial total as a labelled known subtotal (home, chains, dependency map), the card shows the same figure and names the gap in its stamp (`Partial · 266/267 assets observed`, `excl. 3 coins without supply data`); it goes timeless only where the page itself withholds the number (for example a partial FreezeWatch share).
 - The stamp names the hero's generation time (`As of 12 Oct 2026, 14:05 UTC`), never the render clock. A cached copy on a social platform is therefore self-dating. Live responses carry `X-Og-Status: live`, `X-Og-Generation`, `X-Og-As-Of`, `X-Og-Freshness-Budget` and `X-Og-Assessed-At`, cached for the 15-minute `ogImage` lifetime or until the figure leaves its admission budget, whichever is sooner (`buildOgImageCacheControl`, floored at one minute). Timeless responses use the 5-minute `custom` profile so the live card returns soon after its source recovers.
-- There are no colored verdicts. The flows card states the signed net, not "minting, but softer…". The top rule is neutral ink on every card; the only data hue is the PSI band swatch on the home card, drawn only when that render read a fresh PSI. Each card shows its route's navigation glyph (`shared/lib/og-route-glyphs.ts`, drift-tested against `src/lib/nav-config.ts`). An optional neutral share bar or pair of bars re-draws figures the card already prints, and a share bar is omitted when chain shares over-attribute (sum above 1).
-- Sublabels name the figure's basis: the chains hero is the same core-aggregate market cap as the homepage (chain rows only split it), dependency exposure is gross, and flows cover tracked issuance chains.
+- There are no colored verdicts. The flows card states the gauge score and its band name, never a net-direction verdict. The top rule is neutral ink on every card; the only data hue is the PSI band swatch on the home card, drawn only when that render read a fresh PSI. Each card shows its route's navigation glyph (`shared/lib/og-route-glyphs.ts`, drift-tested against `src/lib/nav-config.ts`). An optional neutral share bar or pair of bars re-draws figures the card already prints, and a share bar is omitted when chain shares over-attribute (sum above 1).
+- Sublabels name the figure's basis: the chains hero is a share of the same core-aggregate supply as the homepage, and unavailable chain observations are named in its stamp (`Partial · N chain observations unavailable`), dependency exposure is gross, and flows cover tracked issuance chains.
 - A share card is presentation that inherits its page's methodology. It must show the page's exact published figure and needs no methodology-changelog entry of its own.
 
 ### Timeless cards (`public/og-*.png`)
@@ -44,8 +45,7 @@ Generated by `scripts/maintenance/build-og-route-timeless.ts` through the shared
 | Image | Route | Selected by |
 | --- | --- | --- |
 | `og-card.png` | `/` | Live-card fallback; default image in `src/lib/page-metadata.ts` and `src/app/layout.tsx`; `/compliance/`; docs JSON-LD |
-| `og-chains.png`, `og-dependency-map.png`, `og-timeline.png`, `og-flows.png`, `og-blacklist.png`, `og-liquidity.png`, `og-yield.png` | live routes | Worker fail-closed twin; legacy inbound links |
-| `og-alt-pegs.png` | `/alt-pegs/` | route metadata |
+| `og-chains.png`, `og-dependency-map.png`, `og-timeline.png`, `og-flows.png`, `og-blacklist.png`, `og-liquidity.png`, `og-yield.png`, `og-alt-pegs.png` | live routes | Worker fail-closed twin; legacy inbound links |
 | `og-coverage.png` | `/coverage/` | route metadata |
 | `og-stablecoins.png` | `/stablecoins/`, peg and taxonomy pages | route metadata; quarantined/delisted dossier fallback |
 | `og-upcoming.png` | `/upcoming/` | route metadata; pre-launch dossier fallback |
@@ -56,7 +56,7 @@ Generated by `scripts/maintenance/build-og-route-timeless.ts` through the shared
 | `og-changelog.png` | `/changelog/` | route metadata |
 | `og-portfolio.png` | `/portfolio/` | route metadata |
 
-Registry-derived counts (coverage, upcoming, stablecoins), funding and bot figures and the portfolio fixture stay timeless by decision: a count that changes per deploy or a demo portfolio adds nothing a shared card needs. `/alt-pegs/` stays timeless until `buildAltPegSnapshot` moves to `shared/lib/` so the Worker can publish the page's exact figure.
+Registry-derived counts (coverage, upcoming, stablecoins), funding and bot figures and the portfolio fixture stay timeless by decision: a count that changes per deploy or a demo portfolio adds nothing a shared card needs. `/upcoming/` shares through `/api/og/page/upcoming`: its loader always answers `timeless-by-decision`, so the route serves the timeless card (200, `X-Og-Status: timeless`, `X-Og-Reason: timeless-by-decision`, logged at info, not as a failure).
 
 ### How to renew
 

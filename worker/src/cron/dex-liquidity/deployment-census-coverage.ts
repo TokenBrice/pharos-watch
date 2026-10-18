@@ -1,5 +1,5 @@
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
-import type { ExitRouteObservationCoverage } from "@shared/types/market";
+import type { ExitRouteObservationCoverage, LiquidityScoreUnavailableReason } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import {
@@ -448,6 +448,8 @@ export function buildDexPlaceholderScoreDetailsJson(
   params: DexDeploymentCensusDetailParams,
 ): string {
   return JSON.stringify({
+    // A placeholder retains no pool, so its LiquidityScore is NR for that reason.
+    liquidityScoreUnavailableReason: "no-retained-pools" satisfies LiquidityScoreUnavailableReason,
     exitRouteObservations: [],
     exitRouteObservationCoverage: params.classification.coverage,
     dexDeploymentCensus: buildDexDeploymentCensusDetail(params),

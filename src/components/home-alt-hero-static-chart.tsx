@@ -4,14 +4,14 @@ import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot"
 import { HomeAltHeroChartFallback } from "@/components/home-alt-hero-chart-fallback";
 
 /** A bounded dated preview, never a live query seed or a replacement census. */
-export function HomeAltHeroStaticChart({ history, nowMs }: { history?: HomepageHistory; nowMs: number }): React.JSX.Element {
+export function HomeAltHeroStaticChart({ history, nowMs, settled = false }: { history?: HomepageHistory; nowMs: number; settled?: boolean }): React.JSX.Element {
   const updatedAt = history?.sources.total.updatedAt;
   if (!history || updatedAt == null || updatedAt * 1000 > nowMs || nowMs - updatedAt * 1000 > HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS) {
-    return <HomeAltHeroChartFallback />;
+    return <HomeAltHeroChartFallback settled={settled} />;
   }
   const rows = history.rows;
   const observed = rows.filter((row) => row.total !== null);
-  if (rows.length < 2 || observed.length < 2) return <HomeAltHeroChartFallback />;
+  if (rows.length < 2 || observed.length < 2) return <HomeAltHeroChartFallback settled={settled} />;
   const path = buildStaticHistoryPath(rows, Math.max(1, ...observed.map((row) => row.total!)));
   return (
     <figure className="flex h-[305px] flex-col justify-center gap-3 p-5 sm:p-6">
@@ -19,8 +19,8 @@ export function HomeAltHeroStaticChart({ history, nowMs }: { history?: HomepageH
         <path d={path} fill="none" stroke="var(--color-muted-foreground)" strokeWidth="2" />
       </svg>
       <figcaption className="pharos-meta">
-        Fallback history · as of {formatLongDate(new Date(updatedAt * 1000), { utc: true })}
-        <span className="block">Latest observed total {formatCurrency(observed[observed.length - 1]!.total!, 1)} · live full history loading</span>
+        Total market cap history · as of {formatLongDate(new Date(updatedAt * 1000), { utc: true })}
+        <span className="block">Latest observed total {formatCurrency(observed[observed.length - 1]!.total!, 1)}</span>
       </figcaption>
     </figure>
   );

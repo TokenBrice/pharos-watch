@@ -35,6 +35,15 @@ describe("compareLiquidityRows", () => {
     expect(compareLiquidityRows(highRatio, lowRatio, { key: "vtRatio", direction: "desc" })).toBeLessThan(0);
   });
 
+  it.each(["asc", "desc"] as const)("keeps NR rows after rated rows on every column (%s)", (direction) => {
+    const deepNr = makeRow({ liquidityScore: null, totalTvlUsd: 1_000_000 });
+    const shallowRated = makeRow({ liquidityScore: 10, totalTvlUsd: 1 });
+    expect(compareLiquidityRows(deepNr, shallowRated, { key: "tvl", direction })).toBeGreaterThan(0);
+    expect(compareLiquidityRows(shallowRated, deepNr, { key: "tvl", direction })).toBeLessThan(0);
+    const smallerNr = makeRow({ liquidityScore: null, totalTvlUsd: 10 });
+    expect(Math.sign(compareLiquidityRows(deepNr, smallerNr, { key: "tvl", direction }))).toBe(direction === "desc" ? -1 : 1);
+  });
+
   it("treats zero TVL as a zero ratio", () => {
     const positive = makeRow({ totalVolume24hUsd: 100, totalTvlUsd: 1_000 });
     const zeroTvl = makeRow({ totalVolume24hUsd: 100, totalTvlUsd: 0 });

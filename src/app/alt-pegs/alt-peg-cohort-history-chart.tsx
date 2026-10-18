@@ -10,11 +10,13 @@ import {
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { formatCurrencyTick } from "@/lib/chart-ticks";
-import { PEG_CHART_COLORS } from "@shared/lib/classification";
+import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import type { PegCurrency } from "@shared/types";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { admitSupplyBuckets } from "@shared/lib/supply";
 
@@ -25,8 +27,12 @@ const RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
 const DEFAULT_RANGE: TimeRangeOption = "1y";
 const FOCUSED_CHART_HEIGHT = "h-[24rem] sm:h-[30rem]";
 
+// The provider's history keys the Brazilian real as `peggedREAL`; colour and name it as the BRL peg.
+const PROVIDER_PEG_CODE_ALIASES: Record<string, string> = { REAL: "BRL" };
+
 function pegKeyToCode(key: string): string {
-  return key.replace(/^pegged/, "");
+  const code = key.replace(/^pegged/, "");
+  return PROVIDER_PEG_CODE_ALIASES[code] ?? code;
 }
 
 function pegKeyToHex(key: string): string {
@@ -36,7 +42,9 @@ function pegKeyToHex(key: string): string {
 
 function pegKeyToLabel(key: string): string {
   if (key === OTHER_KEY) return "Other";
-  return PEG_CHART_COLORS[pegKeyToCode(key)]?.label ?? pegKeyToCode(key);
+  // The same short names as the hero and ranking ("Japanese Yen", not "Yen").
+  const code = pegKeyToCode(key);
+  return PEG_LABELS_SHORT[code as PegCurrency] ?? PEG_CHART_COLORS[code]?.label ?? code;
 }
 
 interface ChartRow extends Record<string, number | null> {
@@ -109,12 +117,11 @@ export function AltPegCohortHistoryChart({
   const query = useStablecoinCharts();
   const { data, isLoading } = query;
 
-  const { chartData, pegKeys, totalNonUsd, pegCount, otherLabels } = useMemo(() => {
+  const { chartData, pegKeys, pegCount, otherLabels } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) {
       return {
         chartData: [] as ChartRow[],
         pegKeys: [] as string[],
-        totalNonUsd: null,
         pegCount: 0,
         otherLabels: [] as string[],
       };
@@ -127,7 +134,6 @@ export function AltPegCohortHistoryChart({
       }
     }
 
-    const latest = data[data.length - 1]?.totalCirculatingUSD ?? {};
     // Missing latest observations do not reclassify a previously major cohort as a collapse.
     const latestObserved = new Map<string, number>();
     for (const point of data) {
@@ -163,12 +169,9 @@ export function AltPegCohortHistoryChart({
       return row;
     });
 
-    const total = sumCohorts(latest, sorted);
-
     return {
       chartData: points,
       pegKeys: displayKeys,
-      totalNonUsd: total,
       pegCount: sorted.length,
       otherLabels: minorKeys.map((key) => pegKeyToLabel(key)),
     };
@@ -183,7 +186,7 @@ export function AltPegCohortHistoryChart({
       pegKeys.map((key) => ({
         dataKey: key,
         color: pegKeyToHex(key),
-        gradientId: `altPegGrad-${pegKeyToCode(key)}`,
+        gradientId: `altPegGrad-${key}`,
         stackId: "alt-pegs",
         handleAnimationEnd: true,
         legend: legendKeys.includes(key) ? (
@@ -234,23 +237,29 @@ export function AltPegCohortHistoryChart({
       data={chartData}
       tsKey="ts"
       isLoading={isLoading}
-      title="Alt-peg market cap by cohort"
+      title="Non-USD market cap by peg"
       loadingTitle="Alt-Peg Cohort Growth"
       titleClassName="pharos-section-title"
       subtitle={
         <p className="pharos-meta">
-          {legendKeys.length} cohorts in this feed &middot; latest provider-wide sample
-          {latestSampleLabel ? ` (${latestSampleLabel})` : ""}: {formatObservation(totalNonUsd, 1)}.
+          Provider-wide market cap per peg; pegs under {formatCurrency(OTHER_THRESHOLD, 0)} roll into Other.
         </p>
       }
       coverageNote={
         coverageStartLabel ? (
-          <p className="text-xs text-muted-foreground">
-            Coverage starts {coverageStartLabel}. This historical provider-wide cohort feed includes selected
-            structural history overlays. No current core-universe point is appended because the populations differ.
-            Cohorts below ${OTHER_THRESHOLD.toLocaleString("en-US")} at their latest observed sample roll into
-            Other. Missing or invalid buckets remain gaps; incomplete totals are unavailable.
-          </p>
+          <ModuleDisclosure label="How this series is built" className="text-xs text-muted-foreground">
+            <div className="space-y-1.5 pt-1">
+              <p>
+                {legendKeys.length} cohorts in this feed, latest sample {latestSampleLabel}. Coverage starts {coverageStartLabel}.
+              </p>
+              <p>
+                This historical provider-wide cohort feed includes selected structural history overlays. No current
+                core-universe point is appended because the populations differ. Cohorts below $
+                {OTHER_THRESHOLD.toLocaleString("en-US")} at their latest observed sample roll into Other. Missing or
+                invalid buckets remain gaps; incomplete totals are unavailable.
+              </p>
+            </div>
+          </ModuleDisclosure>
         ) : null
       }
       focusedNote={
@@ -280,6 +289,7 @@ export function AltPegCohortHistoryChart({
       }
       cardClassName="pharos-card-shell animate-in fade-in duration-200 motion-reduce:animate-none"
       contentClassName="space-y-4"
+      framed={false}
       legendClassName="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground"
     />
     </>

@@ -59,13 +59,6 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
       expandLabel="Open Mint/Burn Flows"
       label="Mint / Burn"
       state={state}
-      notice={{
-        label: "Mint and burn flow data",
-        dataUpdatedAt: query.dataUpdatedAt,
-        queries: [{ preset: "mintBurnFlows", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
-        onRetry: () => void query.refetch(),
-        compact: true,
-      }}
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-4">

@@ -4,25 +4,33 @@ Public `/upcoming/` is the pre-launch tracker, separate from active monitoring. 
 
 ## Data Contract
 
-Membership is checked-in `status: "pre-launch"` metadata via `PRE_LAUNCH_STABLECOINS`, not live API inference. Regenerate full/client projections with `npm run bootstrap:generated` after catalog changes. The route uses static logos and optional authored/generated teaser copy; no Worker request or new endpoint belongs here.
+Membership is checked-in `status: "pre-launch"` metadata via `PRE_LAUNCH_STABLECOINS`, not live API inference. Regenerate full/client projections with `npm run bootstrap:generated` after catalog changes. The route uses static logos and optional authored/generated teaser copy; no Worker data request or new endpoint belongs here (the Share image is the only API call, on demand).
 
 Keep full server metadata available for JSON-LD and crawlable profile links, but send clients only the card/filter projection. The shared Horizon constellation is also used on homepage; that teaser is not a second full tracker.
 
+## Page Shape
+
+Instrument header (one-line deck, folded usage note, Alerts then Share), then one stacked `FeatureHeroSplit`: the tracked count as the beam with the `preLaunch` universe chip, three facts (soonest open target, Slipped with its pushed/overdue split, no target date), and the Horizon constellation beneath. The `/upcoming/` constellation adds an Unphased cell for coins without `launchPhase`, so its cells sum to the beam; the homepage teaser keeps the five phase cells. Below the hero, one `DataTableShell` carries a hairline filter toolbar and the listing; "How targets and drift are read" folds after it.
+
 ## Filter And Sort Model
 
-Filtering starts from the full pre-launch projection before sorting. Shared URL codec owns phase/peg/backing comma-delimited multiselects and sort; default expected-launch order is omitted. Invalid state is normalized under the schema, not guessed from labels. Conditional controls depend on actual cohort diversity, not a hardcoded roster. Empty results retain a Clear filters action; exact empty copy lives in source.
+Filtering starts from the full pre-launch projection before sorting. Shared URL codec owns phase/peg/backing comma-delimited multiselects plus `sort` and `dir`; the default (expected launch, ascending) is omitted. Phase values include `unphased`. Sorting is by column header (coin, phase, peg, backing, expected, drift, milestones); a first click uses the column's reading direction (dates and names ascending, phase/drift/milestones descending), a second flips it. Coins without a target always sort last, ties fall back to target then name. Invalid state, including retired sort values, is normalized under the schema, not guessed from labels. Toolbar: phase and backing pills with cohort counts, peg in a checkbox menu, inline Clear and result count; below `sm` it folds behind a "Filters (n)" button. Conditional controls depend on actual cohort diversity, not a hardcoded roster. Empty results retain a Clear filters action; exact empty copy lives in source. Teasers, governance and announcement date sit in the row expansion; missing targets render "—".
 
 ## Deadline Contract
 
-Year/month/quarter/half-year/day targets describe inclusive UTC periods and expire at the following midnight, not their sorting date. Drift depends on the current target, not revision history. `ExpectedLaunchDriftBadge` is a clock-aware client island that hydrates/updates at expiry without fetch; phase/milestone metadata remains server-renderable. Never interpret fuzzy dates as precise launch promises.
+Year/month/quarter/half-year/day targets describe inclusive UTC periods and expire at the following midnight, not their sorting date. Drift depends on the current target, not revision history. The tracker reads the visitor clock once, after mount, through `selectPreLaunchClockView` (`src/lib/pre-launch.ts`): it feeds Slipped (coins with a current target that was pushed once, delayed or is overdue; a coin whose earlier target was retired with none set resolves through `resolveDriftDisplay` to a neutral "No current target", carries no ring and is not counted), the soonest open target (overdue targets never qualify), the drift column and the constellation rings (amber = target pushed, red = overdue; coins folded into a "+N" marker are tallied on it, so rings plus tallies equal Slipped), and re-reads at the next target expiry without fetch. Detail pages read their own launch clock (`src/lib/pre-launch-dossier.ts`). Phase/milestone metadata remains server-renderable. Never interpret fuzzy dates as precise launch promises.
 
 ## Launch Alert Promotion
 
-Preserve the copyable global `/subscribe launch all` command for `@PharosWatchBot`. Asset-specific exact commands belong on destination pre-launch detail pages and use canonical identity, not ticker guessing. [Stablecoin detail](./stablecoin-detail-page.md) owns those commands/landing contracts.
+The global launch alert is the header's Alerts action, linking to the bot landing (`/pharoswatchbot/#getting-started`); its accessible name carries `/subscribe launch all` for `@PharosWatchBot`. No body callout. Asset-specific exact commands belong on destination pre-launch detail pages and use canonical identity, not ticker guessing. [Stablecoin detail](./stablecoin-detail-page.md) owns those commands/landing contracts.
+
+## Share Card
+
+Share is timeless by decision ([OG images](./og-images.md)): the header `ShareButton` requests `/api/og/page/upcoming`, which serves the figure-free `upcoming` route card; route metadata keeps the static `og-upcoming.png`.
 
 ## SEO And Crawlability
 
-Keep public indexability, canonical `/upcoming/`, route OG and sitemap membership. The static shell emits CollectionPage/ItemList JSON-LD and a crawlable nav to every pre-launch `/stablecoin/[id]/` profile, even when visible cards need hydration. Each card links through `buildStablecoinUrl`, never a separate invented upcoming profile URL.
+Keep public indexability, canonical `/upcoming/`, route OG and sitemap membership. The static shell emits CollectionPage/ItemList JSON-LD and a crawlable nav to every pre-launch `/stablecoin/[id]/` profile, even when visible rows need hydration. Each row links through `buildStablecoinUrl`, never a separate invented upcoming profile URL.
 
 ## Update Rules
 

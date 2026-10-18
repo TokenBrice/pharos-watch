@@ -10,7 +10,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { useSceneLayout } from "@/components/scene/use-scene-layout";
-import { formatEventTimestamp } from "@/lib/depeg-event-display";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { formatCompactUsd, formatSignedPercent } from "@shared/lib/format";
 import { buildHarborScene, isHarborChainVessel, stepHarborBerth, type HarborSceneInput, type HarborVessel } from "@shared/lib/harbor-scene";
 import { buildHarborGeometry, type HarborBerthGeometry } from "@shared/lib/harbor-scene-geometry";
@@ -28,11 +28,6 @@ const DOCK_QUERY = "(min-width: 1280px)";
 /** Sticky chrome height and the Feedback button's corner (viewport px), as the Cemetery's card avoids them. */
 const CHROME_TOP = 67;
 const FEEDBACK_CORNER = { width: 170, height: 84 } as const;
-
-function utcStamp(seconds: number): string {
-  const d = new Date(seconds * 1000);
-  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
-}
 
 function tagText(vessel: HarborVessel): string {
   if (!isHarborChainVessel(vessel)) return vessel.label;
@@ -216,13 +211,11 @@ export function HarborHero({ data, retainedAfterError = false }: HarborHeroProps
       <a className={styles.skip} href="#chains-leaderboard">
         Skip the harbor
       </a>
+      {/* the snapshot stamp lives in the page hero above; retained data still desaturates the scene here */}
       <div className={styles.head}>
         <h2 id="harbor-title" className="pharos-label">
-          Harbor · chains by observed stablecoin supply
+          Harbor · chains by observed stablecoin supply{retained ? " · retained" : ""}
         </h2>
-        <span className={styles.stamp} data-retained={retained ? "true" : undefined}>
-          {retained ? `Retained · as of ${formatEventTimestamp(scene.updatedAt, true)}` : `as of ${utcStamp(scene.updatedAt)}`}
-        </span>
       </div>
       <p id={HARBOR_KEYS_ID} className="sr-only">
         Arrow keys move between berths in rank order, Home and End jump to the ends, Enter pins a berth&apos;s record card, Escape closes it.
@@ -271,7 +264,9 @@ export function HarborHero({ data, retainedAfterError = false }: HarborHeroProps
       {scene.overAttributionRatio !== null ? (
         <p className={styles.caption}>Chain rows exceed global supply by {(scene.overAttributionRatio * 100).toFixed(2)}%; no unattributed barge is drawn.</p>
       ) : null}
-      <HarborLegend tiered={scene.tiered} />
+      <ModuleDisclosure label="How to read the harbor" className="mt-1">
+        <HarborLegend tiered={scene.tiered} />
+      </ModuleDisclosure>
       {preset === "narrow" && card
         ? createPortal(
             <div className={styles.tokens} style={harborTokenStyle}>

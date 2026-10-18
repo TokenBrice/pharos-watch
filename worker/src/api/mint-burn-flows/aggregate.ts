@@ -67,6 +67,8 @@ export interface CoinFlowSummary {
   baselineDailyNetUsd: number | null;
   baselineDailyAbsUsd: number | null;
   baselineDataDays: number | null;
+  /** Observed tracked-chain supply weight in the gauge; `null` when unavailable (excluded, never zeroed). */
+  gaugeWeightUsd: number | null;
   netFlow24hUsd: number | null;
   mintVolume24hUsd: number;
   burnVolume24hUsd: number;
@@ -508,6 +510,7 @@ export function buildCoinSummaries(
       baselineDailyNetUsd: baseline?.avgNet ?? null,
       baselineDailyAbsUsd: baseline?.avgAbs ?? null,
       baselineDataDays: baseline?.dataDays ?? null,
+      gaugeWeightUsd: mcap,
       netFlow24hUsd: valuation24h.completeness === "partial" ? null : knownNetFlow24h,
       mintVolume24hUsd: agg?.mintVolume ?? 0,
       burnVolume24hUsd: agg?.burnVolume ?? 0,

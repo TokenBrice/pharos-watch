@@ -253,6 +253,11 @@ export const handleDexLiquidity = async (
       chainTvl: safeJsonParse<Record<string, number>>(row.chain_tvl_json, {}, `dex-liquidity:${id}:chain_tvl_json`),
       topPools,
       liquidityScore: evidence == null ? null : row.liquidity_score,
+      // The reason comes from whoever nulled the score: this publisher's
+      // quarantine, else the producer's recorded decision. Never inferred.
+      liquidityScoreUnavailableReason: evidence == null
+        ? "invalid-coverage-evidence"
+        : row.liquidity_score == null ? scoreDetails.liquidityScoreUnavailableReason : null,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,
       tvlChange24h: evidence != null && tvlChange24h != null ? Math.round(tvlChange24h * 100) / 100 : null,

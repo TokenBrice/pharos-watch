@@ -1,6 +1,6 @@
 "use client";
 
-import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { HomeSectionErrorBoundary } from "@/components/home-section-error-boundary";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import { DailyDigestCard } from "@/components/home-alt-mini-cards/daily-digest-card";
@@ -19,7 +19,7 @@ export function HomeAltMiniCardGrid(): React.JSX.Element {
   const [digestSlotRef, digestSlotWidth] = useElementWidth<HTMLDivElement>();
 
   return (
-    <SectionErrorBoundary name="mini-card grid">
+    <HomeSectionErrorBoundary name="mini-card grid">
       <div className="@container space-y-3">
         <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:auto-rows-[322px] @4xl:grid-cols-3">
           <PegHealthCard />
@@ -42,6 +42,6 @@ export function HomeAltMiniCardGrid(): React.JSX.Element {
           <ActiveDepegsCard />
         </div>
       </div>
-    </SectionErrorBoundary>
+    </HomeSectionErrorBoundary>
   );
 }

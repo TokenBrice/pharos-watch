@@ -92,11 +92,18 @@ describe("HarborHero keyboard and pin contract", () => {
     expect(card.textContent).toContain("Show in table");
   });
 
-  it("draws the retained state and stamp when the snapshot is not fresh", () => {
+  it("draws the retained state when the snapshot is not fresh; the stamp lives in the page hero", () => {
     renderHero({ ...LIVE, _meta: { status: "stale" } });
     const hero = document.querySelector("[data-retained]") as HTMLElement;
     expect(hero.dataset.retained).toBe("true");
-    expect(hero.textContent).toContain("Retained · as of");
-    expect(hero.textContent).toMatch(/Retained · as of \w+ \d+, \d{4} at \d{2}:\d{2}/);
+    expect(hero.textContent).toContain("Harbor · chains by observed stablecoin supply · retained");
+    expect(hero.textContent).not.toContain("as of");
+  });
+
+  it("folds the legend behind a native disclosure that keeps it in the DOM", () => {
+    renderHero();
+    const fold = screen.getByText("How to read the harbor").closest("details") as HTMLDetailsElement;
+    expect(fold.open).toBe(false);
+    expect(fold.querySelector('[aria-label="Harbor legend"]')).toBeTruthy();
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { IntentLink } from "@/components/intent-link";
-import { ArrowLeftRight, ArrowRight, BookOpen, ExternalLink, FileText, Flag, Globe, X } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, BookOpen, Flag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
@@ -24,6 +24,7 @@ import {
 } from "./hero-card-sections";
 import { HeroVariantChip, SafetyGradeHero, SafetyPartialEvidenceNote } from "./hero-card-identity";
 import { HeroPassportStrip } from "./hero-passport-strip";
+import { linkIconFor } from "./link-icon";
 
 interface HeroCardProps {
   model: HeroCardViewModel;
@@ -79,14 +80,6 @@ function toMetricConfig(metric: HeroTertiaryMetricViewModel): HeroTertiaryMetric
     colorClass: metric.display.color,
     accentClass: metric.accentClass,
   };
-}
-
-function linkIconFor(label: string) {
-  const normalized = label.toLowerCase();
-  if (normalized.includes("website")) return Globe;
-  if (normalized.includes("twitter") || normalized === "x") return X;
-  if (normalized.includes("doc")) return FileText;
-  return ExternalLink;
 }
 
 /**

@@ -21,12 +21,13 @@ afterEach(cleanup);
 describe("dated hero history preview", () => {
   it("renders real dated content through the inclusive 72-hour bound and preserves the gap", () => {
     const { container } = render(<HomeAltHeroStaticChart history={history((now - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS) / 1000)} nowMs={now} />);
-    expect(screen.getByText(/Fallback history/)).toBeTruthy();
+    expect(screen.getByText(/^Total market cap history · as of/)).toBeTruthy();
+    expect(screen.queryByText(/Fallback|loading/i)).toBeNull();
     expect(screen.queryByText(/^Live ·/)).toBeNull();
     expect(container.querySelector("path")?.getAttribute("d")?.match(/M/g)).toHaveLength(2);
   });
   it.each([null, (now - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS - 1) / 1000, now / 1000 + 1])("withholds an undated, expired or future generation (%s)", (updatedAt) => {
     render(<HomeAltHeroStaticChart history={history(updatedAt)} nowMs={now} />);
-    expect(screen.queryByText(/Fallback history/)).toBeNull();
+    expect(screen.queryByText(/Total market cap history/)).toBeNull();
   });
 });

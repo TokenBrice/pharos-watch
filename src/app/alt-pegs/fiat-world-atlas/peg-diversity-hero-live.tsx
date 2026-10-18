@@ -1,71 +1,54 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import Link from "next/link";
-import { formatCompactUsd, formatPercent } from "@shared/lib/format";
-import { coinEmblemSize, FIAT_MAP_SIZE_CAP_MARKET_CAP, FIAT_MAP_SIZE_CEIL } from "@/lib/alt-peg-sizing";
-import { buildAltPegSnapshot, type AltPegDistributionRow } from "@/lib/alt-peg-market";
+import { formatCompactUsd } from "@shared/lib/format";
+import {
+  coinEmblemSize,
+  FIAT_MAP_SIZE_CEIL,
+  SHELF_SIZE_CEIL,
+  sizeCapMarketCap,
+} from "@/lib/alt-peg-sizing";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
-import { SkyLayer } from "@/app/alt-pegs/fiat-world-atlas/sky-layer";
+import { OffMapShelf } from "@/app/alt-pegs/fiat-world-atlas/off-map-shelf";
 import { FiatEmblems } from "@/app/alt-pegs/fiat-world-atlas/fiat-emblems";
-
-function formatFriendlyCap(value: number): string {
-  const rounded = Math.max(100_000_000, Math.round(value / 100_000_000) * 100_000_000);
-  const compact = formatCompactUsd(rounded).replace(/\.0+(?=[KMBT]$)/u, "");
-  return `~${compact}`;
-}
 
 function formatSizeStep(value: number): string {
   return formatCompactUsd(value).replace(/\.0+(?=[KMBT]$)/u, "");
 }
 
-const FIAT_SIZE_KEY_STEPS = [
-  { value: 1_000_000, label: "$1M" },
-  { value: 25_000_000, label: "$25M" },
-  { value: 100_000_000, label: "$100M" },
-  { value: 200_000_000, label: "$200M" },
-  { value: FIAT_MAP_SIZE_CAP_MARKET_CAP, label: `${formatFriendlyCap(FIAT_MAP_SIZE_CAP_MARKET_CAP)}+` },
-] as const;
+function formatCeiling(value: number): string {
+  return `~${formatSizeStep(Math.round(value / 10_000_000) * 10_000_000)}`;
+}
 
-function FiatSizeKey() {
+/** "~$1.2B": where map emblems stop growing (named in the atlas subtitle and the key). */
+export const MAP_SIZE_CAP_LABEL = formatCeiling(sizeCapMarketCap(FIAT_MAP_SIZE_CEIL));
+
+const SIZE_KEY_STEPS = [1_000_000, 25_000_000, 100_000_000, 500_000_000] as const;
+
+/** One sqrt scale for every emblem; the map and the shelf only stop growing at different caps. */
+function SizeKey() {
   return (
-    <div className="peg-hero__scale-key" aria-label="Fiat market cap size key">
-      {FIAT_SIZE_KEY_STEPS.map(({ value, label }) => {
-        const dotSize = Math.max(7, Math.round(coinEmblemSize(value, { ceil: FIAT_MAP_SIZE_CEIL }) / 2));
+    <div className="peg-hero__scale-key" aria-label="Emblem size key">
+      <span className="peg-hero__scale-title">Size is market cap</span>
+      {SIZE_KEY_STEPS.map((value) => {
+        const size = coinEmblemSize(value, { ceil: SHELF_SIZE_CEIL });
         return (
-          <span key={label} className="peg-hero__scale-item" title={`${formatSizeStep(value)} market cap`}>
-            <span className="peg-hero__scale-dot" style={{ width: dotSize, height: dotSize }} />
-            {label}
+          <span key={value} className="peg-hero__scale-item">
+            <span className="peg-hero__scale-dot" style={{ width: `calc(${size}px * var(--peg-coin-scale, 1))`, height: `calc(${size}px * var(--peg-coin-scale, 1))` }} aria-hidden="true" />
+            <span className="pharos-numeric">{formatSizeStep(value)}</span>
           </span>
         );
       })}
-      <span className="peg-hero__scale-item">Unknown supply: neutral size</span>
-    </div>
-  );
-}
-
-function TopCohortStrip({ rows, partial }: { rows: AltPegDistributionRow[]; partial: boolean }) {
-  if (rows.length === 0) return null;
-  return (
-    <div className="peg-hero__top-cohorts" aria-label={partial ? "Largest known cohort subtotals" : "Top cohorts by market cap"}>
-      <span className="peg-hero__top-label">{partial ? "Known cohort subtotals · partial" : "Largest cohorts"}</span>
-      <div className="peg-hero__top-grid">
-        {rows.map((row, index) => (
-          <Link key={row.peg} href={row.href} className="peg-hero__top-row pharos-focus-ring">
-            <span className="peg-hero__top-head">
-              {!partial && row.marketCap !== null ? <span className="peg-hero__top-rank">#{index + 1}</span> : null}
-              <span className="peg-hero__top-dot" style={{ backgroundColor: row.colorHex }} aria-hidden="true" />
-              <span className="peg-hero__top-name">{row.label}</span>
-            </span>
-            <span className="peg-hero__top-metrics">
-              <span className="peg-hero__top-cap">{row.marketCap !== null ? formatCompactUsd(row.marketCap) : "Supply unavailable"}</span>
-              <span className="peg-hero__top-share">{row.sharePct !== null ? `${formatPercent(row.sharePct, 1)} share` : "Share unavailable"}</span>
-            </span>
-          </Link>
-        ))}
-      </div>
+      <span className="peg-hero__scale-note">
+        Map emblems stop growing at <span className="pharos-numeric">{MAP_SIZE_CAP_LABEL}</span>,
+        shelf emblems at <span className="pharos-numeric">{formatCeiling(sizeCapMarketCap(SHELF_SIZE_CEIL))}</span>
+      </span>
+      <span className="peg-hero__scale-item">
+        <span className="peg-hero__scale-dot peg-hero__scale-dot--unavailable" style={{ width: 20, height: 20 }} aria-hidden="true" />
+        Supply unavailable
+      </span>
     </div>
   );
 }
@@ -81,12 +64,10 @@ export function PegDiversityHeroLive({
   const { data } = stablecoinsQuery;
   const peggedAssets = data?.peggedAssets;
   const hero = useMemo(() => buildPegDiversityHero(peggedAssets), [peggedAssets]);
-  const snapshot = useMemo(() => buildAltPegSnapshot(peggedAssets), [peggedAssets]);
-  const topCohorts = snapshot.distributionRows.slice(0, 5);
   const showStatusOverlay = !data?.peggedAssets?.length || stablecoinsQuery.isError;
   const statusCopy =
     stablecoinsQuery.isError || (!stablecoinsQuery.isLoading && !data?.peggedAssets?.length)
-      ? "Live coin layer unavailable; cohort links remain below."
+      ? "Live coin layer unavailable; the ranking and table below still list every peg."
       : "Loading live coin positions.";
 
   return (
@@ -98,30 +79,21 @@ export function PegDiversityHeroLive({
             : "peg-hero__live-shell"
         }
       >
-        {variant === "default" ? (
-          <div className="peg-hero__legend-stack">
-            <TopCohortStrip rows={topCohorts} partial={snapshot.altSupplyUnavailableCount > 0} />
-          </div>
-        ) : null}
-        <div
-          className={
-            variant === "fullscreen" ? "peg-hero peg-hero--fullscreen" : "peg-hero"
-          }
-        >
+        <div className={variant === "fullscreen" ? "peg-hero peg-hero--fullscreen" : "peg-hero"}>
           {showStatusOverlay ? (
             <div className="peg-hero__status-overlay" role="status" aria-live="polite">
               {statusCopy}
             </div>
           ) : null}
-          <SkyLayer cohorts={hero.skyCohorts} />
+          <OffMapShelf groups={hero.shelfGroups} />
           <div className="peg-hero__earth">
-            <FiatSizeKey />
             <div className="peg-hero__map-frame">
               {worldMap}
               <FiatEmblems clusters={hero.pegClusters} />
             </div>
           </div>
         </div>
+        <SizeKey />
       </div>
     </HoverProvider>
   );

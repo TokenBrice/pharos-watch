@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { QueryStateNotice } from "@/components/query-state-notice";
 import type { QueryViewState } from "@/lib/query-view-state";
-import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 
 // Small square button that links a pulse card to its detail route — the
 // "expand" affordance in the top-right corner of every Market Pulse card.
@@ -31,14 +29,6 @@ export function CardExpandButton({
     </Link>
   );
 }
-interface PulseCardNotice {
-  label: string;
-  dataUpdatedAt?: number;
-  onRetry?: () => void;
-  compact?: boolean;
-  queries: readonly StaleQuery[];
-}
-
 interface PulseCardProps {
   className: string;
   label: React.ReactNode;
@@ -46,7 +36,6 @@ interface PulseCardProps {
   expandLabel: string;
   aside?: React.ReactNode;
   state: QueryViewState;
-  notice: PulseCardNotice;
   loadingContent?: React.ReactNode;
   emptyContent?: React.ReactNode;
   unavailableWhen?: boolean;
@@ -61,31 +50,27 @@ export function PulseCard({
   expandLabel,
   aside,
   state,
-  notice,
   loadingContent,
   emptyContent,
   unavailableWhen = false,
   hasRenderableData = true,
   children,
 }: PulseCardProps): React.JSX.Element {
-  const noticeOnly =
+  // The homepage never renders data-health UI (docs/homepage.md): retained or
+  // degraded data renders as-is, and no usable data is a neutral placeholder.
+  const noData =
     state === "unavailable" || unavailableWhen || (state === "stale-with-data" && !hasRenderableData);
   const content =
     state === "loading" && loadingContent !== undefined
       ? loadingContent
-      : noticeOnly
-        ? <QueryStateNotice state={state === "stale-with-data" ? state : "unavailable"} {...notice} />
-        : (
-            <>
-              {state !== "loading" ? <StaleDataBanner queries={notice.queries} /> : null}
-              {state === "stale-with-data" && notice.onRetry ? (
-                <button type="button" onClick={notice.onRetry} aria-label={`Retry ${notice.label.toLowerCase()}`} className="pharos-focus-ring min-h-11 self-start rounded-sm px-2 text-xs font-medium">
-                  Retry
-                </button>
-              ) : null}
-              {state === "empty" && emptyContent !== undefined ? emptyContent : children}
-            </>
-          );
+      : noData
+        ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-1 py-4 text-center">
+              <span aria-hidden="true" className="pharos-numeric text-4xl font-bold tracking-tight text-muted-foreground/50">—</span>
+              <span className="pharos-meta">Updating</span>
+            </div>
+          )
+        : state === "empty" && emptyContent !== undefined ? emptyContent : children;
 
   return (
     <div className={className}>

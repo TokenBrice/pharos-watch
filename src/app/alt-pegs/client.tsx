@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -13,220 +12,29 @@ import { useDexLiquidityTable, useNonUsdShare, usePegSummary, useReportCardsV9Ta
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { CHART_AMBER } from "@/lib/chart-colors";
 import { logosById } from "@/lib/logos";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
 import { AltPegStablecoinTable } from "./alt-peg-stablecoin-table";
 import { FiatWorldAtlas } from "./fiat-world-atlas/world-atlas";
+import { NonUsdHero } from "./non-usd-hero";
+import { PegRanking } from "./peg-ranking";
 import {
   buildAltPegSnapshot,
   buildAltPegTrendStats,
+  parseAltPegParam,
 } from "@/lib/alt-peg-market";
-import type { AltPegDistributionRow } from "@/lib/alt-peg-market";
-import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import type { PegCurrency } from "@shared/types";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 
 type FocusedChart = "share" | "cohorts";
 
 const DEFAULT_HISTORY_RANGE: TimeRangeOption = "1y";
+const STABLECOINS_INTERVAL_SEC = CRON_INTERVALS["sync-stablecoins"]!;
 
 function isFocusedChart(value: string | null): value is FocusedChart {
   return value === "share" || value === "cohorts";
-}
-
-function formatMarketCap(value: number | null): string {
-  return value === null ? "Unavailable" : formatCurrency(value, 1);
-}
-
-function formatShare(value: number | null): string {
-  return value === null ? "Unavailable" : formatPercent(value);
-}
-
-// Commodities vs. all other non-USD pegs — demoted out of the hero into a flat
-// band below the workbench table.
-function AltPegMixBand({
-  marketCap,
-  fiatNonUsdMarketCap,
-  commodityMarketCap,
-  supplyUnavailableCount,
-}: {
-  marketCap: number | null;
-  fiatNonUsdMarketCap: number | null;
-  commodityMarketCap: number | null;
-  supplyUnavailableCount: number;
-}) {
-  const commodityShare = supplyUnavailableCount === 0 && marketCap !== null && marketCap > 0 && commodityMarketCap !== null
-    ? (commodityMarketCap / marketCap) * 100 : null;
-  const nonCommodityShare = supplyUnavailableCount === 0 && marketCap !== null && marketCap > 0 && fiatNonUsdMarketCap !== null
-    ? (fiatNonUsdMarketCap / marketCap) * 100 : null;
-
-  return (
-    <section aria-label="All alt-peg mix" className="pharos-card-shell space-y-4 p-5 sm:p-6">
-      <div className="space-y-1">
-        <p className="pharos-label">All alt-peg mix</p>
-        <p className="pharos-meta">Commodities vs. all other non-USD pegs across the tracked alt-peg market.</p>
-        {supplyUnavailableCount > 0 ? <p className="pharos-meta">Known supply subtotals · {supplyUnavailableCount} assets without supply observations; mix shares unavailable.</p> : null}
-      </div>
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/35">
-        <div className="h-full" style={{ width: `${commodityShare ?? 0}%`, backgroundColor: CHART_AMBER }} />
-        <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare ?? 0}%` }} />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <p className="pharos-label flex items-center gap-2">
-            <span className="size-2 rounded-full" style={{ backgroundColor: CHART_AMBER }} aria-hidden="true" />
-            Commodities
-          </p>
-          <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
-            {formatMarketCap(commodityMarketCap)}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{formatShare(commodityShare)} of alt-peg market</p>
-        </div>
-        <div>
-          <p className="pharos-label flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[color:var(--brand-accent)]" aria-hidden="true" />
-            Non-commodity non-USD
-          </p>
-          <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
-            {formatMarketCap(fiatNonUsdMarketCap)}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{formatShare(nonCommodityShare)} of alt-peg market</p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// The long tail of small pegs folds below the leaders; it stays in the static HTML.
-const ALT_PEG_DISTRIBUTION_OPEN_ROWS = 8;
-
-function AltPegDistributionListRow({ row }: { row: AltPegDistributionRow }) {
-  return (
-    <div
-      className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1.35fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.85fr)] md:items-center"
-    >
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: row.colorHex }}
-          />
-          <Link
-            href={row.href}
-            className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground hover:text-primary"
-          >
-            {row.label}
-          </Link>
-          <span className="pharos-numeric rounded-full border border-border/60 bg-muted/15 px-2 py-0.5 text-2xs text-muted-foreground">
-            {row.coinCount} coin{row.coinCount === 1 ? "" : "s"}
-          </span>
-        </div>
-        <div className="space-y-1">
-          <div className="h-2 overflow-hidden rounded-full bg-muted/30">
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${row.sharePct === null ? 0 : Math.max(row.sharePct, 2)}%`, backgroundColor: row.colorHex }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {row.group} cohort · {formatShare(row.sharePct)} of alt-peg market
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <p className="pharos-label md:hidden">Market cap</p>
-        <p className="pharos-numeric text-sm font-semibold text-foreground">{formatMarketCap(row.marketCap)}</p>
-        {row.supplyUnavailableCount > 0 ? <p className="text-xs text-muted-foreground">{row.supplyObservedCount}/{row.coinCount} assets observed · {row.marketCap !== null ? "known subtotal" : "supply unavailable"}</p> : null}
-      </div>
-
-      <div className="space-y-1">
-        <p className="pharos-label md:hidden">Share</p>
-        <p className="pharos-numeric text-sm font-semibold text-foreground">{formatShare(row.sharePct)}</p>
-      </div>
-
-      <div className="space-y-1">
-        <p className="pharos-label md:hidden">Leading observed coin</p>
-        {row.supplyObservedCount > 0 ? (
-          <>
-            <Link
-              href={row.leaderHref}
-              className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground hover:text-primary"
-            >
-              {row.leaderSymbol}
-            </Link>
-            <p className="text-xs text-muted-foreground">{row.leaderName}</p>
-          </>
-        ) : <p className="text-xs text-muted-foreground">Supply unavailable</p>}
-      </div>
-    </div>
-  );
-}
-
-function AltPegDistributionCard({
-  rows,
-  altMarketCap,
-  supplyUnavailableCount,
-}: {
-  rows: AltPegDistributionRow[];
-  altMarketCap: number | null;
-  supplyUnavailableCount: number;
-}) {
-  return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <p className="pharos-label">Current distribution</p>
-          <h2 className="pharos-section-title">Which non-USD pegs matter now</h2>
-          <p className="pharos-meta">
-            Ranked by observed market cap; incomplete cohorts publish known subtotals, not complete ranks, with direct links into each peg cohort page. EUR stablecoins are
-            reshaped by EU MiCA rules — see the{" "}
-            <Link
-              href="/compliance/?regime=mica"
-              className="pharos-focus-ring rounded-sm font-medium text-foreground underline-offset-2 hover:underline"
-            >
-              Compliance Tracker
-            </Link>
-            .
-          </p>
-        </div>
-        <div className="pharos-numeric rounded-full border border-border/60 bg-muted/15 px-3 py-1.5 text-xs text-muted-foreground">
-          {formatMarketCap(altMarketCap)} {supplyUnavailableCount > 0 ? "known alt-peg subtotal" : "alt-peg market cap"}
-        </div>
-      </div>
-
-      <div className="pharos-card-shell overflow-hidden">
-        <div className="pharos-panel-header hidden grid-cols-[minmax(0,1.35fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.85fr)] gap-4 md:grid">
-          <span className="pharos-label">Peg</span>
-          <span className="pharos-label">Market cap</span>
-          <span className="pharos-label">Share</span>
-          <span className="pharos-label">Leading observed coin</span>
-        </div>
-        <div className="divide-y divide-border/40">
-          {rows.slice(0, ALT_PEG_DISTRIBUTION_OPEN_ROWS).map((row) => (
-            <AltPegDistributionListRow key={row.peg} row={row} />
-          ))}
-        </div>
-        {rows.length > ALT_PEG_DISTRIBUTION_OPEN_ROWS ? (
-          <details className="group border-t border-border/40">
-            <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
-              <span className="group-open:hidden">
-                Show all <span className="pharos-numeric">{rows.length}</span> pegs
-              </span>
-              <span className="hidden group-open:inline">Show top {ALT_PEG_DISTRIBUTION_OPEN_ROWS} only</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-            </summary>
-            <div className="divide-y divide-border/40 border-t border-border/40">
-              {rows.slice(ALT_PEG_DISTRIBUTION_OPEN_ROWS).map((row) => (
-                <AltPegDistributionListRow key={row.peg} row={row} />
-              ))}
-            </div>
-          </details>
-        ) : null}
-      </div>
-    </section>
-  );
 }
 
 export function AltPegsClient() {
@@ -238,12 +46,21 @@ export function AltPegsClient() {
   const dexLiquidityQuery = useDexLiquidityTable();
   const reportCardsQuery = useReportCardsV9Table();
   const logos = logosById;
-  const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
+  const { searchParams, setParam, pushSearchParams, replaceParams } = useUrlFilters();
+  const setSelectedPeg = useCallback(
+    (peg: PegCurrency | null) => setParam("peg", peg ? peg.toLowerCase() : ""),
+    [setParam],
+  );
 
   const snapshot = useMemo(
     () => buildAltPegSnapshot(stablecoinsQuery.data?.peggedAssets),
     [stablecoinsQuery.data?.peggedAssets],
   );
+  // A peg with no core coins (or an unknown code) is not a filter: the page shows every peg, never an empty table.
+  const selectedPeg = useMemo(() => {
+    const peg = parseAltPegParam(searchParams.get("peg"));
+    return peg && snapshot.distributionRows.some((row) => row.peg === peg) ? peg : null;
+  }, [searchParams, snapshot.distributionRows]);
   const tableInputs = useMemo(
     () =>
       buildStablecoinTableInputs({
@@ -338,6 +155,7 @@ export function AltPegsClient() {
           {
             preset: "stablecoins",
             dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
+            isLoading: stablecoinsQuery.isLoading,
             error: stablecoinsQuery.error,
             hasData: snapshot.altCoinCount > 0,
             meta: stablecoinsQuery.meta,
@@ -346,6 +164,7 @@ export function AltPegsClient() {
             label: "Non-USD Share",
             dataUpdatedAt: shareQuery.dataUpdatedAt,
             staleTime: API_FRESHNESS_MAX_AGE_SEC.nonUsdShare * 1000,
+            isLoading: shareQuery.isLoading,
             error: shareQuery.error,
             hasData: !!shareQuery.data?.length,
             meta: shareQuery.meta,
@@ -357,13 +176,28 @@ export function AltPegsClient() {
       ) : null}
       <SafetyScoreV9StatusNotice response={reportCardsQuery.data} />
 
-      {/* The celestial atlas is the sole page hero — full-width, its own chrome. */}
+      <NonUsdHero
+        snapshot={snapshot}
+        trendStats={trendStats}
+        supplyAsOfSec={stablecoinsQuery.meta?.updatedAt ?? null}
+      />
+
       <FiatWorldAtlas />
+
+      <PegRanking
+        rows={snapshot.distributionRows}
+        partial={snapshot.altSupplyUnavailableCount > 0}
+        selectedPeg={selectedPeg}
+        onSelect={setSelectedPeg}
+      />
 
       <SectionErrorBoundary name="alt-peg-stablecoin-table">
         <AltPegStablecoinTable
           data={stablecoinsQuery.data?.peggedAssets}
           isLoading={stablecoinsQuery.isLoading}
+          pegRows={snapshot.distributionRows}
+          selectedPeg={selectedPeg}
+          onSelectPeg={setSelectedPeg}
           logos={logos}
           pegScores={tableInputs.pegScores}
           dexLiquidity={dexLiquidityQuery.data ?? undefined}
@@ -371,41 +205,8 @@ export function AltPegsClient() {
         />
       </SectionErrorBoundary>
 
-      <AltPegMixBand
-        marketCap={snapshot.altMarketCap}
-        fiatNonUsdMarketCap={snapshot.fiatNonUsdMarketCap}
-        commodityMarketCap={snapshot.commodityMarketCap}
-        supplyUnavailableCount={snapshot.altSupplyUnavailableCount}
-      />
-
       <SectionErrorBoundary name="non-usd-share">
-        <section id="alt-peg-history-share" className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="space-y-1">
-              <p className="pharos-label">History</p>
-              <h2 className="pharos-section-title">How much of the stablecoin market sits outside USD?</h2>
-              <p className="pharos-meta">
-                {trendStats?.yearlyMarketCapChangePct != null ? (
-                  <>
-                    Observed outside-USD segment size is {formatSignedPercent(trendStats.yearlyMarketCapChangePct, 1)}{" "}
-                    versus the nearest point one year ago.
-                    {trendStats.valueCoverageIncomplete ? " Partial or unavailable value coverage in the compared snapshots." : ""}
-                  </>
-                ) : (
-                  "This first history view tracks share of the total stablecoin market outside USD before you split the segment into individual cohorts."
-                )}
-              </p>
-            </div>
-            {snapshot.topRows[0] ? (
-              <Link
-                href={snapshot.topRows[0].href}
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
-              >
-                {snapshot.altSupplyUnavailableCount > 0 ? "Largest known subtotal" : "Largest current cohort"}: {snapshot.topRows[0].label}
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            ) : null}
-          </div>
+        <section id="alt-peg-history-share" className="scroll-mt-24">
           <NonUsdShareChart
             key={focusedChart === "share" ? `share-focused-${focusedRange}` : `share-overview-${shareRange}`}
             initialRange={focusedChart === "share" ? focusedRange : shareRange}
@@ -438,7 +239,20 @@ export function AltPegsClient() {
         />
       </SectionErrorBoundary>
 
-      <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} supplyUnavailableCount={snapshot.altSupplyUnavailableCount} />
+      <footer className="space-y-1 border-t border-border/50 pt-4 text-xs text-muted-foreground">
+        <p>
+          Current figures: Pharos stablecoin list over the core universe, refreshed every{" "}
+          <span className="pharos-numeric">{Math.round(STABLECOINS_INTERVAL_SEC / 60)}</span> minutes. History: provider-wide
+          supply snapshots, a different population, so its latest sample is never read as the current cap.
+        </p>
+        <p>
+          Euro stablecoins are reshaped by EU MiCA rules; see the{" "}
+          <Link href="/compliance/?regime=mica" className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+            Compliance Tracker
+          </Link>
+          .
+        </p>
+      </footer>
     </div>
   );
 }

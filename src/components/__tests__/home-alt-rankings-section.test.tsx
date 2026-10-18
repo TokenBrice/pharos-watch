@@ -105,8 +105,8 @@ describe("HomeAltRankingsSection", () => {
 
     render(<HomeAltRankingsSection titleId="home-alt-rankings-title" />);
 
-    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
-    expect(screen.getByText("Stablecoin rankings are temporarily unavailable.")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("Stablecoin rankings are updating.")).toBeTruthy();
     expect(screen.queryByTestId("stablecoin-table")).toBeNull();
   });
 });

@@ -1,31 +1,27 @@
 import { MINT_PRESSURE_TONE_CLASSES } from "@shared/lib/classification";
+import type { GaugeBand } from "@shared/lib/mint-burn-gauge-bands";
 import type {
   NetFlowDirection24h,
   PressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 
-type FlowSignalVariant = "summary" | "overview";
-type FlowSceneMode = "printer" | "shredder";
+type FlowSignalVariant = "summary";
 /** `unavailable`: partial valuation leaves the 24h direction unproven (`null` on the wire or proven-direction helper). */
 type FlowDirectionKey = NetFlowDirection24h | "unavailable";
 
 interface FlowDirectionBase {
   badgeClass: string;
   valueClass: string;
-  accentHex: string;
-  sceneMode: FlowSceneMode;
 }
 
 interface FlowPressureBase {
   badgeClass: string;
   valueClass: string;
-  panelClass: string;
 }
 
 export interface FlowDirectionUi extends FlowDirectionBase {
   label: string;
   helper: string;
-  sceneTitle: string;
 }
 
 export interface FlowPressureUi extends FlowPressureBase {
@@ -37,32 +33,22 @@ const FLOW_DIRECTION_BASE: Record<FlowDirectionKey, FlowDirectionBase> = {
   minting: {
     badgeClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].badge,
     valueClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].value,
-    accentHex: "#22c55e",
-    sceneMode: "printer",
   },
   burning: {
     badgeClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].badge,
     valueClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].value,
-    accentHex: "#ef4444",
-    sceneMode: "shredder",
   },
   flat: {
     badgeClass: "border-border/70 bg-muted/40 text-foreground",
     valueClass: "text-foreground",
-    accentHex: "#6b7280",
-    sceneMode: "printer",
   },
   inactive: {
     badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
     valueClass: "text-muted-foreground",
-    accentHex: "#6b7280",
-    sceneMode: "printer",
   },
   unavailable: {
     badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
     valueClass: "text-muted-foreground",
-    accentHex: "#6b7280",
-    sceneMode: "printer",
   },
 };
 
@@ -73,30 +59,6 @@ const FLOW_DIRECTION_LABELS: Record<FlowSignalVariant, Record<FlowDirectionKey, 
     flat: "Flat",
     inactive: "No activity",
     unavailable: "Direction unavailable",
-  },
-  overview: {
-    minting: "Net minting",
-    burning: "Net burning",
-    flat: "Flat net flow",
-    inactive: "No activity",
-    unavailable: "Net direction unavailable",
-  },
-};
-
-const FLOW_DIRECTION_SCENE_TITLES: Record<FlowSignalVariant, Record<FlowDirectionKey, string>> = {
-  summary: {
-    minting: "Printer",
-    burning: "Shredder",
-    flat: "Flow Desk",
-    inactive: "Flow Desk",
-    unavailable: "Flow Desk",
-  },
-  overview: {
-    minting: "Mint Desk",
-    burning: "Burn Desk",
-    flat: "Flow Desk",
-    inactive: "Flow Desk",
-    unavailable: "Flow Desk",
   },
 };
 
@@ -112,22 +74,18 @@ const FLOW_PRESSURE_BASE: Record<PressureShiftState, FlowPressureBase> = {
   improving: {
     badgeClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].badge,
     valueClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].value,
-    panelClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].panel,
   },
   stable: {
     badgeClass: "border-border/70 bg-muted/40 text-foreground",
     valueClass: "text-foreground",
-    panelClass: "border-border/60 bg-background/55 dark:bg-background/35",
   },
   worsening: {
     badgeClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].badge,
     valueClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].value,
-    panelClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].panel,
   },
   nr: {
     badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
     valueClass: "text-muted-foreground",
-    panelClass: "border-border/60 bg-background/35",
   },
 };
 
@@ -137,12 +95,6 @@ const FLOW_PRESSURE_LABELS: Record<FlowSignalVariant, Record<PressureShiftState,
     stable: "Stable vs 30D",
     worsening: "Worsening",
     nr: "NR",
-  },
-  overview: {
-    improving: "Pressure improving",
-    stable: "Pressure stable",
-    worsening: "Pressure worsening",
-    nr: "Pressure NR",
   },
 };
 
@@ -162,7 +114,6 @@ export function getFlowDirectionUi(
     ...FLOW_DIRECTION_BASE[key],
     label: FLOW_DIRECTION_LABELS[variant][key],
     helper: FLOW_DIRECTION_HELPERS[key],
-    sceneTitle: FLOW_DIRECTION_SCENE_TITLES[variant][key],
   };
 }
 
@@ -225,58 +176,40 @@ export function buildFlowSummaryNarrative(
   return "Flows are flat, but pressure is weaker than the baseline.";
 }
 
-export function buildFlowOverviewHeadline(
-  direction: NetFlowDirection24h | null,
-  pressureState: PressureShiftState,
-): string {
-  if (direction === null) {
-    return "Net direction unavailable: partial valuation";
-  }
-  if (direction === "inactive") {
-    return "No aggregate mint/burn activity";
-  }
-  if (direction === "burning" && pressureState === "improving") {
-    return "Net burn day, but market pressure is easing";
-  }
-  if (direction === "burning" && pressureState === "stable") {
-    return "Net burn day with steady pressure";
-  }
-  if (direction === "burning" && pressureState === "worsening") {
-    return "Net burn day with worsening pressure";
-  }
-  if (direction === "minting" && pressureState === "improving") {
-    return "Net mint day with improving pressure";
-  }
-  if (direction === "minting" && pressureState === "stable") {
-    return "Net mint day with steady pressure";
-  }
-  if (direction === "minting" && pressureState === "worsening") {
-    return "Minting, but softer than the 30D pace";
-  }
-  if (pressureState === "improving") {
-    return "Balanced net flow, but pressure is improving";
-  }
-  if (pressureState === "stable") {
-    return "Balanced net flow, neutral market pressure";
-  }
-  if (pressureState === "worsening") {
-    return "Balanced net flow, but pressure is weakening";
-  }
-  return "Balanced net flow while the gauge recalibrates";
+const GAUGE_BAND_VERDICTS: Record<GaugeBand, string> = {
+  CRISIS: "Weighted pressure is at crisis levels against the 30-day norm.",
+  STRESS: "Weighted redemption pressure is heavy against the 30-day norm.",
+  CAUTIOUS: "Weighted pressure is elevated against the 30-day norm.",
+  NEUTRAL: "Weighted pressure is in line with the 30-day norm.",
+  HEALTHY: "Weighted issuance is running ahead of the 30-day norm.",
+  CONFIDENT: "Weighted issuance is running well ahead of the 30-day norm.",
+  SURGE: "Weighted issuance is surging against the 30-day norm.",
+};
+
+function joinSymbols(symbols: readonly string[]): string {
+  return symbols.length === 2 ? `${symbols[0]} and ${symbols[1]}` : symbols[0];
 }
 
-export function buildFlowOverviewDescription(
-  direction: NetFlowDirection24h | null,
-  pressureState: PressureShiftState,
+/**
+ * The hero's one-sentence read (at most 25 words), built only from structured
+ * fields: the published band, then the coins with the largest weighted pull on
+ * the score (`selectRunLineDrivers`), when per-coin weights are published. An
+ * unsettled band (withheld weight could cross an edge) drops the band sentence.
+ */
+export function buildGaugeVerdict(
+  band: GaugeBand | "unsettled" | null,
+  drivers: { down: readonly { symbol: string }[]; up: readonly { symbol: string }[] },
 ): string {
-  if (direction === null) {
-    return "Unpriced mint or burn events leave the aggregate 24-hour net unproven, so no net direction is claimed. The Bank Run Gauge still compares pressure with the recent 30-day norm.";
+  if (band == null) return "No weighted coin has the history and fully valued 24h flow needed to score.";
+  const down = drivers.down.map((tick) => tick.symbol);
+  const up = drivers.up.map((tick) => tick.symbol);
+  const pulls = [
+    down.length > 0 ? `${joinSymbols(down)} ${down.length === 1 ? "pulls" : "pull"} it down most` : null,
+    up.length > 0 ? `${joinSymbols(up)} ${up.length === 1 ? "lifts" : "lift"} it most` : null,
+  ].filter((part): part is string => part != null);
+  const pullSentence = pulls.length > 0 ? `${pulls.join("; ")}.` : null;
+  if (band === "unsettled") {
+    return pullSentence ?? "Weight withheld for valuation could move the gauge across a band edge, so no band is claimed.";
   }
-  if (direction === "inactive") {
-    return "No aggregate mint or burn events were recorded in the active 24-hour window.";
-  }
-  if (pressureState === "nr") {
-    return "Net flow answers what the market is doing now; pressure shift is NR until enough history is available.";
-  }
-  return "Net flow tells you what the market is doing right now. The Bank Run Gauge tells you how unusual that pressure is versus the recent 30-day norm.";
+  return pullSentence ? `${GAUGE_BAND_VERDICTS[band]} ${pullSentence}` : GAUGE_BAND_VERDICTS[band];
 }

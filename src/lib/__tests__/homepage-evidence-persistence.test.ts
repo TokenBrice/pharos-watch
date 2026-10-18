@@ -3,7 +3,7 @@ import {
   HOMEPAGE_EVIDENCE_MAX_CHARS, HOMEPAGE_EVIDENCE_METHODOLOGY, HOMEPAGE_EVIDENCE_VERSION,
   mergeHomepageEvidence, parseHomepageEvidence, persistHomepageEvidence, restoreHomepageEvidence,
 } from "@/lib/homepage-evidence-persistence";
-import { reconcileHomepageEvidence, describeRetainedHomepageLane } from "@/lib/homepage-evidence";
+import { reconcileHomepageEvidence } from "@/lib/homepage-evidence";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
 import { HOMEPAGE_EVIDENCE_TEST_NOW as now, makeHomepageEvidence } from "@/test/fixtures/homepage-evidence";
 import { deriveDataHealth } from "@/lib/data-health";
@@ -26,10 +26,6 @@ describe("compact homepage evidence admission", () => {
     const health = deriveDataHealth({ ...DATA_HEALTH_PRESETS.stablecoins, hasData: true,
       dataUpdatedAt: now, meta: selected.data?.market.meta }, now);
     expect(health.state).toBe("stale");
-    const label = describeRetainedHomepageLane(selected.data!.market.meta);
-    expect(label).toContain("Retained");
-    expect(label).toContain(new Date((now / 1000 - 60) * 1000).toISOString());
-    expect(label).toContain(`stale after ${saved.market.meta.freshBudgetSec / 60} min`);
   });
 
   it("expires at the producer-age limit, inclusively, and rejects future/unknown clocks", () => {

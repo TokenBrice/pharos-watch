@@ -56,7 +56,9 @@ describe("NonUsdShareChart", () => {
   it("defaults to 1Y and renders explicit coverage/provenance copy", () => {
     const onOpenFocus = vi.fn();
 
-    render(<NonUsdShareChart onOpenFocus={onOpenFocus} />);
+    const { container } = render(<NonUsdShareChart onOpenFocus={onOpenFocus} />);
+    // Unframed on /alt-pegs/: the chart stage is the only frame (no card around it).
+    expect(container.querySelector(".pharos-card-shell")).toBeNull();
 
     expect(screen.getByRole("heading", { name: /share of total stablecoin market outside usd/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
@@ -79,7 +81,9 @@ describe("NonUsdShareChart", () => {
     });
     render(<NonUsdShareChart />);
     const latestDate = formatChartDate(saved.data[1].date * 1000, "long");
-    expect(screen.getByText(`As of ${latestDate}:`, { exact: false }).textContent).toContain("2.20%");
+    // The dated share figure itself is the page hero's; the chart names the sample in its label and fold.
+    expect(screen.getByRole("figure").getAttribute("aria-label")).toContain(`2.20% share as of ${latestDate}`);
+    expect(screen.getByText(`Latest sample (${latestDate})`, { exact: false })).toBeTruthy();
     expect(screen.queryByText(/current share/i)).toBeNull();
   });
 
@@ -101,8 +105,8 @@ describe("NonUsdShareChart", () => {
     });
     render(<NonUsdShareChart />);
     const latestDate = formatChartDate(saved.data[1].date * 1000, "long");
-    const headline = screen.getByText(`As of ${latestDate}:`, { exact: false });
-    expect(headline.textContent).toContain("Partial value coverage: total 99.0%, commodities 80.0%, non-commodity 60.0%");
+    const note = screen.getByText(`Latest sample (${latestDate})`, { exact: false });
+    expect(note.textContent).toContain("Partial value coverage: total 99.0%, commodities 80.0%, non-commodity 60.0%");
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("Partial value coverage");
     expect(screen.getByRole("table").textContent).toContain("Partial value coverage");
   });

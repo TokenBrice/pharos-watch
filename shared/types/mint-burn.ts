@@ -154,6 +154,13 @@ const MintBurnCoinFlowSchema = z.object({
   baselineDailyAbsUsd: z.number().nullable(),
   baselineDataDays: z.number().nullable(),
   /**
+   * Observed tracked-chain supply weight the Bank Run Gauge applies to this coin (mint-burn-flow
+   * v6.27). `null` when the weight is unavailable: the coin is excluded from the gauge and counted in
+   * `gauge.mcapUnavailableCoins`, never weighted as zero. The coin moves `gauge.score` only when its
+   * `pressureShiftScore` is non-null. Absent on payloads produced before the field existed.
+   */
+  gaugeWeightUsd: z.number().finite().nonnegative().nullable().optional(),
+  /**
    * Signed nets are `null` when the matching window valuation is `partial` (a partial signed net is
    * not a bound in either direction). An `unknown` window (legacy buckets aggregated before
    * completeness was recorded) keeps its known-valuation net, labelled by `valuation`.

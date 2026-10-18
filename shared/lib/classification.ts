@@ -424,13 +424,6 @@ export const SAFETY_EVIDENCE_BADGE_CLASSES = {
   nr: "border-border/60 bg-muted/30 text-muted-foreground",
 } as const;
 
-export const MINT_PRESSURE_BANDS = {
-  burnDominated: -35,
-  burnTilt: -10,
-  mintTilt: 10,
-  mintDominated: 35,
-} as const;
-
 export type MintPressureBand =
   | "no-activity"
   | "burn-dominated"
@@ -438,21 +431,3 @@ export type MintPressureBand =
   | "balanced"
   | "mint-tilt"
   | "mint-dominated";
-
-export const MINT_PRESSURE_LABELS: Record<MintPressureBand, string> = {
-  "no-activity": "No activity",
-  "burn-dominated": "Burn dominated",
-  "burn-tilt": "Burn tilt",
-  balanced: "Balanced",
-  "mint-tilt": "Mint tilt",
-  "mint-dominated": "Mint dominated",
-};
-
-export function getMintPressureBand(score: number | null): MintPressureBand {
-  if (score == null) return "no-activity";
-  if (score >= MINT_PRESSURE_BANDS.mintDominated) return "mint-dominated";
-  if (score >= MINT_PRESSURE_BANDS.mintTilt) return "mint-tilt";
-  if (score > MINT_PRESSURE_BANDS.burnTilt) return "balanced";
-  if (score > MINT_PRESSURE_BANDS.burnDominated) return "burn-tilt";
-  return "burn-dominated";
-}

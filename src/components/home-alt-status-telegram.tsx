@@ -3,14 +3,11 @@
 import Link from "next/link";
 import { Send, SquareArrowRight } from "lucide-react";
 
-import { useHealth } from "@/hooks/api-hooks";
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatDecimal, timeAgo } from "@shared/lib/format";
+import { formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
-import { PUBLIC_COMPONENT_LABEL, PUBLIC_HEADLINE_TONE } from "@shared/lib/classification/operational-status";
-import type { PublicStatusHeadline } from "@shared/types";
 
 const LINE_LINK_CLASS =
   "pharos-focus-ring group flex min-w-0 items-center gap-2 rounded-md py-0.5 transition-colors";
@@ -18,36 +15,14 @@ const LINE_LINK_CLASS =
 const ARROW_CLASS =
   "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground";
 
-// Headline-derived prose only: component names, never the machine slugs in
-// `health.warnings`; the line links to /status/ for the detail.
-function statusMessage(headline: PublicStatusHeadline): string {
-  if (headline.state === "operational") return "All public components operational";
-  return headline.affected.length > 0
-    ? headline.affected.map((id) => PUBLIC_COMPONENT_LABEL[id]).join(", ")
-    : "Some public checks are not passing";
-}
-
-/** Left line: system health as a single clickable status line → /status/. */
+/**
+ * Left line: a plain entry point to /status/. The homepage never renders
+ * data-health state (docs/homepage.md#data-health); the status page owns it.
+ */
 function StatusLine(): React.JSX.Element {
-  const { data: health, isLoading, isError } = useHealth();
-
-  if (isLoading) return <Skeleton className="h-5 w-60" />;
-  if (!health || isError) {
-    return <span className="text-sm text-muted-foreground">System status unavailable</span>;
-  }
-  // Server headline only: the homepage must not bundle the projection. A
-  // pre-projection payload (Worker rollback) maps its raw level conservatively.
-  const headline: PublicStatusHeadline = health.headline ?? (health.status === "healthy"
-    ? { state: "operational", title: "All systems operational", affected: [] }
-    : { state: "degraded", title: "Degraded", affected: [] });
-  const tone = PUBLIC_HEADLINE_TONE[headline.state];
-
   return (
-    <Link href="/status/" prefetch={false} className={cn(LINE_LINK_CLASS, "text-foreground hover:text-frost-blue")}>
-      <span aria-hidden="true" className={cn("h-2 w-2 shrink-0 rounded-full", tone.dot)} />
-      <span className="shrink-0 text-sm font-semibold">{tone.label}</span>
-      <span className="hidden truncate text-sm text-muted-foreground sm:inline">· {statusMessage(headline)}</span>
-      <span className="hidden shrink-0 text-xs text-muted-foreground/70 lg:inline">· updated {timeAgo(health.timestamp)}</span>
+    <Link href="/status/" prefetch={false} className={cn(LINE_LINK_CLASS, "text-muted-foreground hover:text-foreground")}>
+      <span className="text-sm">System status</span>
       <SquareArrowRight aria-hidden="true" className={ARROW_CLASS} strokeWidth={2} />
     </Link>
   );

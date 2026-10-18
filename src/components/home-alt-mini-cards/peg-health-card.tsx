@@ -49,12 +49,6 @@ export function PegHealthCard(): React.JSX.Element {
       expandLabel="Open Screener"
       label="Peg health"
       state={state}
-      notice={{
-        label: "Peg health data",
-        dataUpdatedAt: query.dataUpdatedAt,
-        queries: [{ preset: "pegSummary", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
-        onRetry: () => void query.refetch(),
-      }}
       loadingContent={
         <>
           <Skeleton className="h-9 w-32" />

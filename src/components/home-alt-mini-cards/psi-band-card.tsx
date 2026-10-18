@@ -9,6 +9,7 @@ import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { useStabilityIndex } from "@/hooks/api-hooks";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { CHART_BLUE } from "@/lib/chart-colors";
+import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { type ConditionBand, DIRECTION_TONE_CLASSES, PSI_BAND_CLASSES } from "@shared/lib/classification";
 import { formatScore } from "@shared/lib/format";
@@ -91,13 +92,6 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
         </span>
       }
       state={state}
-      notice={{
-        label: "Stability Index",
-        dataUpdatedAt: query.dataUpdatedAt,
-        queries: [{ preset: "stabilityIndex", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
-        onRetry: () => void query.refetch(),
-        compact: true,
-      }}
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-4">
@@ -112,8 +106,11 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
               </RailHeroFigureTransition>
             ) : null}
             <p className="pharos-meta mt-1.5">
-              {current && !beacon.isCurrent && beacon.retainedLabel ? (
-                <span className="block" data-testid="psi-band-card-retained">{beacon.retainedLabel}</span>
+              {/* Homepage rule (docs/homepage.md#data-health): an aged reading gets a neutral date, not a state word. */}
+              {current && !beacon.isCurrent ? (
+                <span className="block" data-testid="psi-band-card-as-of">
+                  As of {formatDataHealthTimestamp(current.computedAt * 1000, "en-US", "UTC")}
+                </span>
               ) : null}
               {current && displayedPsiBasis ? (
                 <>

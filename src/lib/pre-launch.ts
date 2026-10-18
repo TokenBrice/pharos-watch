@@ -2,6 +2,7 @@ import {
   PRE_LAUNCH_DRIFT_BADGE_CLASSES,
   PRE_LAUNCH_MILESTONE_BADGE_CLASSES,
   PRE_LAUNCH_PHASE_CLASSES,
+  PRE_LAUNCH_NO_CURRENT_TARGET_BADGE_CLASS,
   type PreLaunchDriftStatus,
 } from "@shared/lib/classification";
 import { formatUtcDayLabel } from "@shared/lib/format";
@@ -16,7 +17,7 @@ export const LAUNCH_PHASE_LABELS: Record<LaunchPhase, string> = {
   testnet: "Testnet",
   auditing: "Auditing",
   beta: "Beta",
-  "launching-soon": "Launching Soon",
+  "launching-soon": "Launching soon",
 };
 
 /** Phase → solid accent dot class (static for Tailwind scanner). */
@@ -60,15 +61,33 @@ export const MILESTONE_TYPE_BADGE: Record<LaunchMilestoneType, string> = PRE_LAU
 
 export type DriftStatus = PreLaunchDriftStatus;
 
-/** Drift status → badge class string (static for Tailwind scanner). */
-export const DRIFT_STATUS_BADGE: Record<DriftStatus, string> = PRE_LAUNCH_DRIFT_BADGE_CLASSES;
+/**
+ * What a drift badge shows. `no-current-target`: the history holds an earlier
+ * target but none is current (retired by curation or by the issuer; the record
+ * does not say which). With nothing to slip against it is neutral and never
+ * counts as slipped.
+ */
+export type DriftDisplayStatus = DriftStatus | "no-current-target";
 
-export const DRIFT_STATUS_LABEL: Record<DriftStatus, string> = {
+/** Drift display status → badge class string (static for Tailwind scanner). */
+export const DRIFT_STATUS_BADGE: Record<DriftDisplayStatus, string> = {
+  ...PRE_LAUNCH_DRIFT_BADGE_CLASSES,
+  "no-current-target": PRE_LAUNCH_NO_CURRENT_TARGET_BADGE_CLASS,
+};
+
+export const DRIFT_STATUS_LABEL: Record<DriftDisplayStatus, string> = {
   "on-track": "On track",
   "pushed-once": "Pushed once",
   "pushed-multiple": "Delayed",
   overdue: "Overdue",
+  "no-current-target": "No current target",
 };
+
+/** The one mapping from a drift status to what tracker rows and the dossier display. */
+export function resolveDriftDisplay(status: DriftStatus, expectedLaunchDate: string | undefined): DriftDisplayStatus {
+  if (!expectedLaunchDate && (status === "pushed-once" || status === "pushed-multiple")) return "no-current-target";
+  return status;
+}
 
 export function getDriftStatus(
   dateHistory: DateHistoryEntry[] | undefined,
@@ -82,6 +101,54 @@ export function getDriftStatus(
   if (!dateHistory || dateHistory.length === 0) return "on-track";
   if (dateHistory.length >= 2) return "pushed-multiple";
   return "pushed-once";
+}
+
+/** Slipped = a current target that has moved at least once or has expired. */
+export function isSlippedDrift(status: DriftDisplayStatus): boolean {
+  return status === "pushed-once" || status === "pushed-multiple" || status === "overdue";
+}
+
+export interface PreLaunchClockCoin {
+  id: string;
+  expectedLaunchDate?: string;
+  dateHistory?: DateHistoryEntry[];
+}
+
+/** Everything on the tracker that depends on the visitor clock, read once per tick. */
+export interface PreLaunchClockView<C extends PreLaunchClockCoin> {
+  /** Display status per coin (`resolveDriftDisplay`). */
+  driftById: ReadonlyMap<string, DriftDisplayStatus>;
+  /** Current target pushed once or more, not yet expired. */
+  pushed: number;
+  overdue: number;
+  slipped: number;
+  /** Earliest target that has not expired; overdue targets never qualify. */
+  soonest: C | null;
+  /** Next future target expiry, when the view must be recomputed. */
+  nextDeadlineMs: number | null;
+}
+
+export function selectPreLaunchClockView<C extends PreLaunchClockCoin>(
+  coins: readonly C[],
+  nowMs: number,
+): PreLaunchClockView<C> {
+  const driftById = new Map<string, DriftDisplayStatus>();
+  let pushed = 0;
+  let overdue = 0;
+  let soonest: C | null = null;
+  let nextDeadlineMs: number | null = null;
+  for (const coin of coins) {
+    const status = resolveDriftDisplay(getDriftStatus(coin.dateHistory, coin.expectedLaunchDate, nowMs), coin.expectedLaunchDate);
+    driftById.set(coin.id, status);
+    if (status === "overdue") overdue += 1;
+    else if (isSlippedDrift(status)) pushed += 1;
+    if (!coin.expectedLaunchDate || status === "overdue") continue;
+    const deadlineMs = parseFuzzyDeadline(coin.expectedLaunchDate)?.getTime();
+    if (deadlineMs == null) continue;
+    if (nextDeadlineMs == null || deadlineMs < nextDeadlineMs) nextDeadlineMs = deadlineMs;
+    if (!soonest || dateScore(coin.expectedLaunchDate) < dateScore(soonest.expectedLaunchDate)) soonest = coin;
+  }
+  return { driftById, pushed, overdue, slipped: pushed + overdue, soonest, nextDeadlineMs };
 }
 
 // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import {
   ACTIVE_STABLECOIN_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,
   CORE_AGGREGATE_STABLECOIN_COUNT,
+  PRE_LAUNCH_STABLECOIN_COUNT,
   TRACKED_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 import { PSI_HISTORICAL_ASSETS } from "@shared/lib/psi-historical-assets";
@@ -44,6 +45,12 @@ export const UNIVERSES = {
       "Core stablecoins plus historical collapsed assets (such as UST) kept for PSI continuity. Variants and stable-value investments are excluded.",
     // CORE_PSI_ELIGIBLE_IDS: historical assets are off-catalog, so the union is a plain sum.
     count: CORE_AGGREGATE_STABLECOIN_COUNT + PSI_HISTORICAL_ASSETS.length,
+  },
+  preLaunch: {
+    label: "Pre-launch",
+    definition:
+      "Announced stablecoins that are not live yet, from announcement through launch. They join the active set when they go live.",
+    count: PRE_LAUNCH_STABLECOIN_COUNT,
   },
   scored: {
     label: "Scored",

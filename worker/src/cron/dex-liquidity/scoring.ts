@@ -500,7 +500,7 @@ export async function computeStablecoinScores(
 
     // v2: Compute 6-component score
     const circulatingUsd = mcapById?.get(id);
-    const { score, components } = computeLiquidityScore(m, durability, circulatingUsd, fallbackCounters);
+    const { score, unavailableReason, components } = computeLiquidityScore(m, durability, circulatingUsd, fallbackCounters);
 
     // v2: Compute aggregate metrics
     const weightedBalanceRatio = weightedRatio(m.balanceRatioWeightedSum, m.totalTvlForBalance);
@@ -526,6 +526,7 @@ export async function computeStablecoinScores(
       vol24h: m.totalVolume24hUsd,
       volumeAvailability: volume.volumeAvailability,
       score,
+      liquidityScoreUnavailableReason: unavailableReason,
       hhi: Math.round(rebuilt.hhi * 10000) / 10000,
       durability,
       components,

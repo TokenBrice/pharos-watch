@@ -1,4 +1,5 @@
 import type { MintBurnCoverageStatus } from "../../types/mint-burn";
+import type { GaugeBand } from "../mint-burn-gauge-bands";
 import type { MintPressureBand } from "../classification";
 
 /**
@@ -72,3 +73,28 @@ export const FLOW_COVERAGE_BADGE_CLASSES = {
   bootstrapping: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
   unknown: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
 } as const satisfies Record<Exclude<MintBurnCoverageStatus, "full" | "disabled">, string>;
+
+/**
+ * Bank Run Gauge band display labels (sentence case) and tones. Stress bands
+ * carry danger/warn, the neutral band stays ink, and inflow bands carry the
+ * positive tone; the band name is always printed, so tone is never the only cue.
+ */
+export const GAUGE_BAND_LABELS = {
+  CRISIS: "Crisis",
+  STRESS: "Stress",
+  CAUTIOUS: "Cautious",
+  NEUTRAL: "Neutral",
+  HEALTHY: "Healthy",
+  CONFIDENT: "Confident",
+  SURGE: "Surge",
+} as const satisfies Record<GaugeBand, string>;
+
+export const GAUGE_BAND_TONE_CLASSES = {
+  CRISIS: "border-state-danger bg-state-danger-subtle text-state-danger-strong",
+  STRESS: "border-state-danger bg-state-danger-subtle text-state-danger-strong",
+  CAUTIOUS: "border-state-warn bg-state-warn-subtle text-state-warn-strong",
+  NEUTRAL: "border-border bg-muted/40 text-foreground",
+  HEALTHY: "border-state-positive bg-state-positive-subtle text-state-positive-strong",
+  CONFIDENT: "border-state-positive bg-state-positive-subtle text-state-positive-strong",
+  SURGE: "border-state-positive bg-state-positive-subtle text-state-positive-strong",
+} as const satisfies Record<GaugeBand, string>;

@@ -114,10 +114,10 @@ describe("home route card", () => {
 describe("chains route card", () => {
   const chainsBody = (overrides: Record<string, unknown> = {}) => ({
     chains: [
-      { name: "Tron", totalUsd: 30, dominanceShare: 0.3 },
-      { name: "Ethereum", totalUsd: 50, dominanceShare: 0.5 },
-      { name: "BSC", totalUsd: 10, dominanceShare: 0.1 },
-      { name: "Base", totalUsd: 5, dominanceShare: 0.05 },
+      { id: "tron", name: "Tron", totalUsd: 30, dominanceShare: 0.3 },
+      { id: "ethereum", name: "Ethereum", totalUsd: 50, dominanceShare: 0.5 },
+      { id: "bsc", name: "BSC", totalUsd: 10, dominanceShare: 0.1 },
+      { id: "base", name: "Base", totalUsd: 5, dominanceShare: 0.05 },
     ],
     globalTotalUsd: 100_000_000_000,
     supplyCoverage: { aggregateUnavailableAssetCount: 0, chainUnavailableObservationCount: 0, chainIdsWithUnavailableObservations: [] },
@@ -127,16 +127,18 @@ describe("chains route card", () => {
 
   const coreAssets = () => [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => makeAsset({ id, circulating: { peggedUSD: 1_000_000 } }));
 
-  it("publishes the global total with the top three chains by supply", async () => {
+  it("leads with the largest chain's share, then the next two and the observed total", async () => {
     mocks.handleChains.mockResolvedValue(json(chainsBody()));
     mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(coreAssets()));
-    await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toMatchObject({
+    const card = await OG_PAGE_LOADERS.chains(db, NOW);
+    expect(card).toMatchObject({
       kind: "ok",
-      hero: "$100.00B",
-      context: "total market cap of tracked stablecoins, on 4 chains",
-      support: ["Ethereum 50.0%", "Tron 30.0%", "BSC 10.0%"],
+      hero: "50.0%",
+      context: "of observed supply is on Ethereum, the largest of 4 chains",
+      support: ["Tron 30.0%", "BSC 10.0%", "$100.00B observed supply"],
       visual: { kind: "share-bar", shares: [0.5, 0.3, 0.1] },
     });
+    expect(card).not.toHaveProperty("stampNote");
   });
 
   it("labels a partial total with the homepage completeness verdict, counting absent members too", async () => {
@@ -148,7 +150,8 @@ describe("chains route card", () => {
     const expected = CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size;
     await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toMatchObject({
       kind: "ok",
-      context: "known market cap subtotal of tracked stablecoins, on 4 chains",
+      hero: "50.0%",
+      support: ["Tron 30.0%", "BSC 10.0%", "$100.00B known supply subtotal"],
       stampNote: `Partial · ${expected - 1}/${expected} assets observed`,
     });
 
@@ -157,15 +160,52 @@ describe("chains route card", () => {
     await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "owner-error" });
   });
 
-  it("drops chain shares that exclude unavailable observations", async () => {
+  it("keeps the share over gaps outside the top two, labelled partial with one Partial prefix", async () => {
     mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(coreAssets()));
-
-    mocks.handleChains.mockResolvedValue(json(chainsBody({
-      supplyCoverage: { aggregateUnavailableAssetCount: 0, chainUnavailableObservationCount: 3, chainIdsWithUnavailableObservations: ["tron"] },
+    mocks.handleChains.mockImplementation(async () => json(chainsBody({
+      supplyCoverage: { aggregateUnavailableAssetCount: 0, chainUnavailableObservationCount: 3, chainIdsWithUnavailableObservations: ["base"] },
     })));
-    const partialShares = await OG_PAGE_LOADERS.chains(db, NOW);
-    expect(partialShares).toMatchObject({ kind: "ok", support: [] });
-    expect(partialShares).not.toHaveProperty("visual");
+    await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toMatchObject({
+      kind: "ok",
+      hero: "50.0%",
+      context: "of observed supply is on Ethereum, the largest of 4 chains · partial",
+      stampNote: "Partial · 3 chain observations unavailable",
+    });
+
+    // both gaps: the homepage verdict carries the prefix, the chain gap joins it without repeating "Partial"
+    const partial = coreAssets();
+    partial.pop();
+    mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(partial));
+    const expected = CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size;
+    await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toMatchObject({
+      stampNote: `Partial · ${expected - 1}/${expected} assets observed · 3 chain observations unavailable`,
+    });
+  });
+
+  it("goes timeless when the leader or runner-up has an unobserved row, since the identity claim is unproven", async () => {
+    mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(coreAssets()));
+    for (const id of ["ethereum", "tron"]) {
+      mocks.handleChains.mockResolvedValue(json(chainsBody({
+        supplyCoverage: { aggregateUnavailableAssetCount: 0, chainUnavailableObservationCount: 1, chainIdsWithUnavailableObservations: [id] },
+      })));
+      await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "incomplete-coverage" });
+    }
+  });
+
+  it("drops the bar when chain rows over-attribute supply and goes timeless without a chain or owner body", async () => {
+    mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(coreAssets()));
+    mocks.handleChains.mockResolvedValue(json(chainsBody({
+      chains: [
+        { id: "ethereum", name: "Ethereum", totalUsd: 60, dominanceShare: 0.6 },
+        { id: "tron", name: "Tron", totalUsd: 45, dominanceShare: 0.45 },
+      ],
+    })));
+    const overAttributed = await OG_PAGE_LOADERS.chains(db, NOW);
+    expect(overAttributed).toMatchObject({ kind: "ok", hero: "60.0%" });
+    expect(overAttributed).not.toHaveProperty("visual");
+
+    mocks.handleChains.mockResolvedValue(json(chainsBody({ chains: [] })));
+    await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "figure-null" });
 
     mocks.handleChains.mockResolvedValue(json({ error: "Data not yet available" }, 503));
     await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "owner-error" });
@@ -193,38 +233,63 @@ describe("timeline route card", () => {
 });
 
 describe("flows route card", () => {
-  const coin = (overrides: Record<string, unknown>) => ({
-    id: "usdt-tether",
-    mintVolume24hUsd: 0,
-    burnVolume24hUsd: 0,
-    netFlow24hUsd: 0,
+  const gauge = (overrides: Record<string, unknown> = {}) => ({
+    score: -5.64,
+    band: "NEUTRAL",
+    partialValuationInputs: 0,
     ...overrides,
   });
-  const flowsBody = (coins: unknown[]) => ({ coins, updatedAt: NOW - 60 });
+  const coin = (pressureShiftScore: number | null) => ({ id: "usdt-tether", pressureShiftScore, mintVolume24hUsd: 0, burnVolume24hUsd: 0 });
+  const flowsBody = (gaugeBody: unknown, coins: unknown[] = [coin(-5.64)]) => ({ gauge: gaugeBody, coins, updatedAt: NOW - 60 });
 
-  it("publishes a signed net only for a complete window, with no verdict", async () => {
-    mocks.handleMintBurnFlows.mockResolvedValue(json(flowsBody([
-      coin({ mintVolume24hUsd: 300_000_000, burnVolume24hUsd: 100_000_000, netFlow24hUsd: 200_000_000,
-        valuation: { window24h: { completeness: "complete", mintCompleteness: "complete", burnCompleteness: "complete", unpricedMintEventCount: 0, unpricedBurnEventCount: 0 } } }),
-    ])));
+  it("leads with the Bank Run Gauge and its published band, with no net figure", async () => {
+    mocks.handleMintBurnFlows.mockResolvedValue(json(flowsBody(gauge())));
     const load = await OG_PAGE_LOADERS.flows(db, NOW);
     expect(load).toMatchObject({
       kind: "ok",
-      hero: "+$200.0M",
-      visual: { kind: "pair-bars", bars: [{ value: 300_000_000, text: "Printed $300.0M" }, { value: 100_000_000, text: "Shredded $100.0M" }] },
+      hero: "\u22126",
+      context: "Bank Run Gauge · Neutral · pressure vs each coin's 30-day norm",
+      support: [],
     });
-    expect(JSON.stringify(load)).not.toMatch(/softer|stronger|minting,|burning,/i);
+    expect(load).not.toHaveProperty("visual");
+    expect(load).not.toHaveProperty("stampNote");
+    expect(JSON.stringify(load)).not.toMatch(/\$|printed|shredded/i);
   });
 
-  it("shows a partial window's known gross as a lower bound, never a signed partial net", async () => {
-    mocks.handleMintBurnFlows.mockResolvedValue(json(flowsBody([
-      coin({ mintVolume24hUsd: 50_000_000, burnVolume24hUsd: 150_000_000, netFlow24hUsd: null,
-        valuation: { window24h: { completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 2, unpricedBurnEventCount: 0 } } }),
-    ])));
-    const load = await OG_PAGE_LOADERS.flows(db, NOW);
-    expect(load).toMatchObject({ kind: "ok", hero: "≥ $200.0M", support: [] });
-    expect(load).not.toHaveProperty("visual");
-    expect(JSON.stringify(load)).not.toContain("-$100.0M");
+  it("keeps the band when withheld weight cannot move it, and names the withheld coins", async () => {
+    // -48 with 1% of the weight withheld stays in Stress whatever the withheld intensity.
+    mocks.handleMintBurnFlows.mockResolvedValue(json(flowsBody(gauge({
+      score: -48, band: "STRESS", partialValuationInputs: 2, scoredMcapUsd: 99, partialValuationMcapUsd: 1,
+    }))));
+    await expect(OG_PAGE_LOADERS.flows(db, NOW)).resolves.toMatchObject({
+      kind: "ok",
+      hero: "\u221248",
+      context: "Bank Run Gauge · Stress · pressure vs each coin's 30-day norm",
+      stampNote: "partial: 2 weighted coins withheld",
+    });
+  });
+
+  it("drops the band when withheld weight could carry the score across an edge (same rule as the digest)", async () => {
+    for (const unsettled of [
+      gauge({ score: -48, band: "STRESS", partialValuationInputs: 1, scoredMcapUsd: 50, partialValuationMcapUsd: 50 }),
+      // A withheld count without published weights is unbounded.
+      gauge({ score: -48, band: "STRESS", partialValuationInputs: 1 }),
+    ]) {
+      mocks.handleMintBurnFlows.mockResolvedValue(json(flowsBody(unsettled)));
+      const load = await OG_PAGE_LOADERS.flows(db, NOW);
+      expect(load).toMatchObject({
+        kind: "ok",
+        hero: "\u221248",
+        context: "Bank Run Gauge · pressure vs each coin's 30-day norm",
+        stampNote: "band unsettled: 1 weighted coin withheld",
+      });
+      expect(JSON.stringify(load)).not.toContain("Stress");
+    }
+  });
+
+  it("falls back to the timeless card when the gauge is not rated, never 0", async () => {
+    mocks.handleMintBurnFlows.mockResolvedValue(json(flowsBody(gauge({ score: null, band: null }))));
+    await expect(OG_PAGE_LOADERS.flows(db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "figure-null" });
   });
 });
 

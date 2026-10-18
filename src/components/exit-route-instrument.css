@@ -4,48 +4,41 @@
  * route map.
  */
 
+/* The scene sits unframed on the hero surface: no stage fill of its own. */
 .exit-route-instrument {
-  --route-stage-top: oklch(0.985 0.006 248);
-  --route-stage-bottom: oklch(0.948 0.014 248);
   --route-grid: oklch(0.46 0.024 248 / 0.20);
   --route-frame: oklch(0.74 0.018 248);
   --route-channel-edge: oklch(0.93 0.022 222 / 0.86);
   --route-channel-throat: oklch(0.87 0.034 226 / 0.94);
   --route-rail: oklch(0.46 0.024 248 / 0.46);
-  --route-throat-panel: oklch(0.992 0.008 248 / 0.92);
+  --route-throat-panel: var(--card);
   --route-throat-marker: oklch(0.52 0.14 178);
   --route-flow-marker: oklch(0.52 0.14 178 / 0.38);
   --route-lane-highlight: oklch(1 0 0 / 0.62);
-  --route-chip-bg: oklch(0.992 0.006 248 / 0.96);
+  --route-chip-bg: var(--card);
   --route-hero: oklch(0.20 0.024 248);
   --route-caption: oklch(0.42 0.022 248);
   --route-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dark .exit-route-instrument {
-  --route-stage-top: oklch(0.15 0.018 248);
-  --route-stage-bottom: oklch(0.08 0.012 248);
   --route-grid: oklch(0.58 0.024 248 / 0.16);
   --route-frame: oklch(0.34 0.018 248);
   --route-channel-edge: oklch(0.20 0.034 222 / 0.92);
   --route-channel-throat: oklch(0.14 0.022 226 / 0.96);
   --route-rail: oklch(0.68 0.026 248 / 0.46);
-  --route-throat-panel: oklch(0.08 0.014 248 / 0.86);
+
   --route-throat-marker: oklch(0.78 0.14 178);
   --route-flow-marker: oklch(0.78 0.14 178 / 0.34);
   --route-lane-highlight: oklch(0.94 0.006 248 / 0.42);
-  --route-chip-bg: oklch(0.06 0.012 248 / 0.94);
   --route-hero: oklch(0.96 0.006 248);
   --route-caption: oklch(0.70 0.018 248);
 }
 
 .exit-route-instrument {
   min-width: 0;
-  max-width: 100%;
-}
-
-.exit-route-map__summary {
-  max-width: 48rem;
+  max-width: 70rem;
+  margin-inline: auto;
 }
 
 .exit-route-instrument__viewport {
@@ -124,81 +117,38 @@
   pointer-events: none;
 }
 
+/* A door's halo overlaps its neighbour's hit area; only the door itself is a target. */
+.exit-route-instrument__gate-shadow {
+  pointer-events: none;
+}
+
 .exit-route-instrument__packets circle {
   offset-rotate: 0deg;
   transform-box: fill-box;
   filter: drop-shadow(0 0 5px currentColor);
 }
 
+/* One hairline readout row for the hovered or focused route; no fill. */
 .exit-route-selection-panel {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, auto)) minmax(12rem, 1fr);
-  gap: 10px 14px;
-  align-items: center;
-  border-top: 1px solid hsl(var(--border) / 0.6);
-  background:
-    linear-gradient(90deg, oklch(0.52 0.14 178 / 0.10), transparent 52%),
-    oklch(0.97 0.012 248 / 0.78);
-  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  padding-top: 10px;
+  font-size: 0.875rem;
   min-width: 0;
   max-width: 100%;
 }
 
-.dark .exit-route-selection-panel {
-  border-top-color: oklch(1 0 0 / 0.08);
-  background:
-    linear-gradient(90deg, oklch(0.78 0.14 178 / 0.09), transparent 52%),
-    oklch(0.05 0.012 248 / 0.46);
-}
-
 .exit-route-fallback-list {
   display: none;
-  gap: 8px;
-}
-
-.exit-route-fallback-list__row {
-  display: flex;
-  min-height: 44px;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: 1px solid hsl(var(--border) / 0.6);
-  background: hsl(var(--background) / 0.4);
-  padding: 9px 10px;
-  text-align: left;
-}
-
-.exit-route-fallback-list__row--active {
-  border-color: oklch(0.78 0.14 178 / 0.42);
-  background: oklch(0.78 0.14 178 / 0.08);
-}
-
-.exit-route-metric {
-  transition:
-    background-color 180ms var(--route-ease-out),
-    border-color 180ms var(--route-ease-out),
-    box-shadow 180ms var(--route-ease-out);
-}
-
-.exit-route-metric--active {
-  border-color: oklch(0.78 0.14 178 / 0.44);
-  background: oklch(0.78 0.14 178 / 0.08);
-  box-shadow:
-    inset 0 1px 0 oklch(1 0 0 / 0.06),
-    0 0 0 1px oklch(0.78 0.14 178 / 0.08);
+  gap: 16px;
 }
 
 @media (min-width: 768px) {
   .exit-route-instrument__scene {
     min-width: 0;
-  }
-}
-
-@media (min-width: 1180px) {
-  .exit-route-map__summary {
-    max-width: none;
-    white-space: nowrap;
   }
 }
 
@@ -256,18 +206,16 @@
   to { stroke-dashoffset: -42; }
 }
 
+/* Below 768px the 680px scene would crop: the two short route lists replace it. */
 @media (max-width: 767px) {
-  .exit-route-instrument__scene {
-    min-width: 760px;
-  }
-
+  .exit-route-instrument,
   .exit-route-selection-panel {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: 100%;
+    display: none;
   }
 
   .exit-route-fallback-list {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -280,8 +228,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .exit-route-instrument__route,
-  .exit-route-instrument__route-path,
-  .exit-route-metric {
+  .exit-route-instrument__route-path {
     transition: none;
   }
 

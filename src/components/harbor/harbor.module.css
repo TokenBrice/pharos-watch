@@ -29,6 +29,7 @@
   --beam-blend: multiply;
   --cargo-mix: 62%;
   --cargo-base: oklch(0.97 0.006 88);
+  --unattr-base: var(--cargo-base);
   --shade-s: 16%;
   --shade-e: 28%;
   --wake-up: oklch(0.55 0.13 155);
@@ -39,8 +40,9 @@
 
 /* ------------------------------------------------------------------ tokens: lamplit night */
 :global(.dark) .tokens {
-  --sea: oklch(0.2 0.014 230);
-  --sea-line: oklch(0.7 0.02 220 / 0.14);
+  /* one step above the page ground so the scene keeps its edge on the dark card */
+  --sea: oklch(0.255 0.018 230);
+  --sea-line: oklch(0.72 0.02 220 / 0.2);
   --quay-t: oklch(0.27 0.008 80);
   --quay-e: oklch(0.22 0.008 70);
   --quay-s: oklch(0.18 0.008 70);
@@ -57,6 +59,9 @@
   --beam-blend: screen;
   --cargo-mix: 70%;
   --cargo-base: oklch(0.3 0.008 250);
+  /* the unobserved plate lifts off the hulls so its hatch reads on the night palette */
+  --unattr-base: oklch(0.44 0.008 250);
+  --hatch: oklch(1 0 0 / 0.45);
   --shade-s: 30%;
   --shade-e: 45%;
   --wake-up: oklch(0.72 0.14 155);
@@ -85,14 +90,6 @@
   justify-content: space-between;
   gap: 4px 16px;
   margin-bottom: 6px;
-}
-.stamp {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted-foreground);
-}
-.stamp[data-retained="true"] {
-  color: var(--foreground);
 }
 .skip {
   position: absolute;
@@ -230,15 +227,15 @@
 /* unattributed and partial: a plain plate under the kit's "not recorded" hatch */
 .cg-unattr-t,
 .partial-t {
-  fill: var(--cargo-base);
+  fill: var(--unattr-base);
 }
 .cg-unattr-s,
 .partial-s {
-  fill: color-mix(in oklab, var(--cargo-base), black var(--shade-s));
+  fill: color-mix(in oklab, var(--unattr-base), black var(--shade-s));
 }
 .cg-unattr-e,
 .partial-e {
-  fill: color-mix(in oklab, var(--cargo-base), black var(--shade-e));
+  fill: color-mix(in oklab, var(--unattr-base), black var(--shade-e));
 }
 .hatch-t,
 .hatch-e,
@@ -354,9 +351,12 @@
   color: var(--foreground);
   padding-right: 4px;
 }
+/* narrow preset: labels sit over hulls and the pier, so each carries a halo plate of the page card */
 .label[data-side="above"] {
-  transform: translate(0, -100%);
-  padding: 0 0 3px;
+  transform: translate(0, calc(-100% - 2px));
+  padding: 0 4px 1px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--card) 86%, transparent);
 }
 .label b {
   font-weight: 600;

@@ -190,6 +190,11 @@ describe("mint/burn valuation completeness on real SQLite", () => {
       partialValuationMcapUsd: 100_000_000_000,
       scoredMcapUsd: 1_000_000_000,
     });
+    // Each row publishes the weight the gauge applies to it, scored or withheld; an
+    // unavailable weight is null (excluded), never zero.
+    expect(usdt.gaugeWeightUsd).toBe(100_000_000_000);
+    expect(usdai.gaugeWeightUsd).toBe(1_000_000_000);
+    expect(byId.get(emptyCoin)!.gaugeWeightUsd).toBeNull();
 
     const empty = byId.get(emptyCoin)!;
     expect(empty.valuation).toEqual({

@@ -7,7 +7,8 @@ import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/r
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { OpsStatusChip, PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
+import { OpsStatusChip } from "@/components/ops-status-chip";
+import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {

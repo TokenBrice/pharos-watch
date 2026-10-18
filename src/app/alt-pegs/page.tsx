@@ -1,6 +1,8 @@
+import { ShareButton } from "@/components/share-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 
 const description =
   "Non-USD stablecoin market structure across euro, gold, CPI-linked, and other alternative peg cohorts tracked by Pharos.";
@@ -8,22 +10,23 @@ const description =
 const route = createClientFeaturePage({
   path: "/alt-pegs/",
   metadata: {
-    title: "Non-USD Stablecoins: Market Structure",
+    title: "Non-USD Pegs: Stablecoins Beyond the Dollar",
     description,
-    ogImage: `${SITE_URL}/og-alt-pegs.png`,
+    ogImage: buildLiveRouteOgImageUrl("alt-pegs"),
   },
   loadClient: () => import("./client").then((mod) => ({ default: mod.AltPegsClient })),
   loading: (
     <div className="space-y-6">
-      <Skeleton className="h-[280px] w-full rounded-xl" />
+      <Skeleton className="h-[300px] w-full rounded-xl" />
+      <Skeleton className="h-[420px] w-full rounded-xl" />
       <Skeleton className="h-[520px] w-full rounded-xl" />
-      <Skeleton className="h-[360px] w-full rounded-xl" />
-      <Skeleton className="h-[260px] w-full rounded-xl" />
     </div>
   ),
   shell: {
-    breadcrumbName: "Non-USD Market Structure",
-    title: "Non-USD Market Structure",
+    breadcrumbName: "Non-USD Pegs",
+    title: "Non-USD Pegs",
+    header: "instrument",
+    headerActions: <ShareButton ogPath={API_PATHS.ogPage("alt-pegs")} />,
     leadParagraphs: [
       "See where stablecoin growth is broadening beyond the dollar.",
     ],

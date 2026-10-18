@@ -7,9 +7,11 @@ import {
   DexPoolVolumeObservationSchema,
   DexRetiredSolidlyLegacyModelSchema,
   ExitRouteObservationCoverageSchema,
+  LiquidityScoreUnavailableReasonSchema,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
   type LiquidityPoolSourceFamily,
+  type LiquidityScoreUnavailableReason,
 } from "@shared/types/market";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteChain } from "@shared/types/exit-route-identity";
@@ -62,6 +64,8 @@ export interface NormalizedDexScoreDetails {
   scoreComponents: unknown;
   exitRouteObservations: ExitRouteObservation[] | null;
   exitRouteObservationCoverage: ExitRouteObservationCoverage;
+  /** Producer-recorded NR reason; null when absent (rated, or scored before it was recorded). */
+  liquidityScoreUnavailableReason: LiquidityScoreUnavailableReason | null;
 }
 
 const UNKNOWN_EXIT_ROUTE_COVERAGE: ExitRouteObservationCoverage = {
@@ -103,16 +107,19 @@ export function normalizeDexScoreDetails(
       scoreComponents: parsed,
       exitRouteObservations: null,
       exitRouteObservationCoverage: UNKNOWN_EXIT_ROUTE_COVERAGE,
+      liquidityScoreUnavailableReason: null,
     };
   }
 
   const details = parsed as Record<string, unknown>;
   const observations = DexExitRouteObservationsSchema.safeParse(details.exitRouteObservations);
   const coverage = ExitRouteObservationCoverageSchema.safeParse(details.exitRouteObservationCoverage);
+  const unavailableReason = LiquidityScoreUnavailableReasonSchema.safeParse(details.liquidityScoreUnavailableReason);
   return {
     scoreComponents: projectLegacyScoreComponents(details),
     exitRouteObservations: observations.success ? observations.data : null,
     exitRouteObservationCoverage: coverage.success ? coverage.data : UNKNOWN_EXIT_ROUTE_COVERAGE,
+    liquidityScoreUnavailableReason: unavailableReason.success ? unavailableReason.data : null,
   };
 }
 

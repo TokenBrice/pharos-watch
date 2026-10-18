@@ -6,6 +6,7 @@ import { FiatWorldAtlas } from "@/app/alt-pegs/fiat-world-atlas/world-atlas";
 
 vi.mock("@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live", () => ({
   PegDiversityHeroLive: () => <div data-testid="hero-live" />,
+  MAP_SIZE_CAP_LABEL: "~$220M",
 }));
 
 vi.mock("@/app/alt-pegs/fiat-world-atlas/world-map", () => ({

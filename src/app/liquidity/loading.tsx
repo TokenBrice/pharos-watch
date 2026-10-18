@@ -1,38 +1,34 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  PageLoadingChartBlock,
-  PageLoadingRowList,
-  PageLoadingStatGrid,
-} from "@/components/page-loading-skeleton";
+import { PageLoadingRowList } from "@/components/page-loading-skeleton";
 import { createPageLoadingRoute } from "@/app/page-loading-route";
 
-// Analytics tier: filter strip + DEX depth chart placeholder + cohort table.
+// Stacked One Beam hero (beam row, exit route map, ledger) + leaderboard.
 const LIQUIDITY_SKELETON_ROW_COUNT = 10;
 
 export function LiquidityContentLoadingState() {
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="pharos-card-shell space-y-2 p-4">
-          <Skeleton className="h-3 w-32 rounded-sm" />
-          <Skeleton className="h-4 w-full rounded-sm" />
-          <Skeleton className="h-4 w-3/4 rounded-sm" />
+      <div className="pharos-card-shell overflow-hidden">
+        <div className="grid gap-5 border-b border-border/50 p-5 sm:p-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8 lg:p-7">
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-40 rounded-sm" />
+            <Skeleton className="h-10 w-44 rounded-sm" />
+            <Skeleton className="h-6 w-56 rounded-full" />
+          </div>
+          <div className="space-y-3 lg:self-end">
+            <Skeleton className="h-4 w-full rounded-sm" />
+            <Skeleton className="h-4 w-full rounded-sm" />
+            <Skeleton className="h-4 w-full rounded-sm" />
+          </div>
         </div>
-        <div className="pharos-card-shell space-y-2 p-4">
-          <Skeleton className="h-3 w-28 rounded-sm" />
-          <Skeleton className="h-4 w-full rounded-sm" />
-          <Skeleton className="h-4 w-5/6 rounded-sm" />
+        <div className="p-5 sm:p-6 lg:p-7">
+          <Skeleton className="h-[240px] w-full rounded-lg md:h-[440px]" />
+        </div>
+        <div className="space-y-4 border-t border-border/50 p-5 sm:p-6 lg:px-7 lg:py-5">
+          <Skeleton className="h-2 w-full rounded-full" />
+          <Skeleton className="h-2 w-full rounded-full" />
         </div>
       </div>
-
-      <PageLoadingStatGrid
-        count={6}
-        className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6"
-        labelWidth="w-24"
-        valueWidth="w-32"
-      />
-
-      <PageLoadingChartBlock className="h-[320px] rounded-xl" />
 
       <PageLoadingRowList
         rowCount={LIQUIDITY_SKELETON_ROW_COUNT}

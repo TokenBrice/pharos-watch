@@ -20,6 +20,17 @@ describe("P4 route observation persistence envelope", () => {
     });
   });
 
+  it("records the producer NR reason beside the score components", () => {
+    const result = Object.assign(makeP4ScoreResult(), {
+      score: null,
+      liquidityScoreUnavailableReason: "activity-stale" as const,
+    });
+    expect(JSON.parse(buildDexScoreDetailsJson(result))).toMatchObject({
+      tvlDepth: 10,
+      liquidityScoreUnavailableReason: "activity-stale",
+    });
+  });
+
   it("adds observations without replacing legacy score component keys", () => {
     const result = Object.assign(makeP4ScoreResult(), {
       exitRouteObservations: [

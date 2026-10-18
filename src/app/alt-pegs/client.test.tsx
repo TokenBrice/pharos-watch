@@ -7,6 +7,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
 import { makeAltPegCoin } from "@shared/test-utils/stablecoin";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
+
+const completeNonUsd = (caps: Record<string, number | null | "omit">) =>
+  coreNonUsdRows((id, cap) => (cap === null ? { ...makeAltPegCoin(id, 0), circulating: {} } : makeAltPegCoin(id, cap)), caps);
 
 const refetchMock = vi.fn();
 
@@ -39,9 +43,11 @@ vi.mock("@/hooks/api-hooks", () => ({
 }));
 
 vi.mock("@/app/alt-pegs/alt-peg-stablecoin-table", () => ({
-  AltPegStablecoinTable: ({ dexLiquidity }: { dexLiquidity?: Record<string, { liquidityScore: number | null }> }) => (
-    <div data-testid="alt-peg-stablecoin-table">
-      <h2>Drill into each alt-peg cohort</h2>
+  AltPegStablecoinTable: ({ dexLiquidity, selectedPeg }: {
+    dexLiquidity?: Record<string, { liquidityScore: number | null }>;
+    selectedPeg: string | null;
+  }) => (
+    <div data-testid="alt-peg-stablecoin-table" data-selected-peg={selectedPeg ?? ""}>
       <span data-testid="alt-peg-liquidity-score">{dexLiquidity?.["eurc-circle"]?.liquidityScore ?? "unavailable"}</span>
     </div>
   ),
@@ -101,9 +107,8 @@ describe("AltPegsClient", () => {
     useStablecoinsMock.mockReturnValue({
       data: {
         peggedAssets: [
-          makeAltPegCoin("eurc-circle", 60_000_000),
-          makeAltPegCoin("paxg-paxos", 20_000_000),
           makeAltPegCoin("usdc-circle", 100_000_000),
+          ...completeNonUsd({ "eurc-circle": 60_000_000, "paxg-paxos": 20_000_000 }),
         ],
       },
       isLoading: false,
@@ -213,7 +218,7 @@ describe("AltPegsClient", () => {
     render(<AltPegsClient />);
     expect(screen.queryByTestId("alt-peg-stablecoin-table") !== null).toBe(hasData);
     expect(screen.queryByTestId("alt-peg-cohort-chart") !== null).toBe(hasData);
-    expect(screen.queryByText("Peg Diversity Atlas") !== null).toBe(hasData);
+    expect(screen.queryByText("Peg diversity atlas") !== null).toBe(hasData);
     if (hasData) expect(screen.getByText("Refresh failed; showing saved data")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetchMock).toHaveBeenCalledOnce();
@@ -228,35 +233,90 @@ describe("AltPegsClient", () => {
       })),
     });
     render(<AltPegsClient />);
-    expect(screen.getByText(/Observed outside-USD segment size/).textContent)
-      .toContain("Partial or unavailable value coverage in the compared snapshots");
+    const row = screen.getByText("1-year change").parentElement!;
+    expect(row.textContent).toContain("+65.0%");
+    expect(row.textContent).toContain("partial coverage");
+  });
+
+  it("leads with the core non-USD cap, a computed universe chip and a dated share", () => {
+    render(<AltPegsClient />);
+    const hero = screen.getByRole("group", { name: "Non-USD stablecoin market" });
+    expect(hero.textContent).toContain("Non-USD stablecoin market cap");
+    expect(hero.textContent).toContain("$80.0M");
+    expect(hero.textContent).toContain(`${CORE_NON_USD_IDS.length} non-USD of`);
+    expect(screen.getByText("Share of all stablecoins").parentElement!.textContent).toMatch(/2\.60%.*as of/);
+    expect(screen.queryByText("Partial supply")).toBeNull();
+    expect(screen.getByTestId("cohort-mix").textContent).toContain("Commodities");
   });
 
   it("retains an unknown-supply cohort without formatting its segment as $0", () => {
     useStablecoinsMock.mockReturnValue({
       ...useStablecoinsMock(),
-      data: { peggedAssets: [makeAltPegCoin("usdc-circle", 100), { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} }] },
+      data: { peggedAssets: [makeAltPegCoin("usdc-circle", 100), ...completeNonUsd(Object.fromEntries(CORE_NON_USD_IDS.map((id) => [id, null])))] },
     });
     render(<AltPegsClient />);
-    const mix = screen.getByRole("region", { name: "All alt-peg mix" });
-    expect(mix.textContent).toContain("Unavailable");
+    const mix = screen.getByTestId("cohort-mix");
+    expect(mix.textContent).toContain("Mix withheld");
     expect(mix.textContent).not.toContain("$0");
+    expect(screen.getByRole("group", { name: "Non-USD stablecoin market" }).textContent).toContain("—");
     expect(screen.getByTestId("alt-peg-stablecoin-table")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Which non-USD pegs matter now" })).toBeTruthy();
-    expect(screen.getByText(/0\/1 assets observed/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Pegs by market cap" })).toBeTruthy();
+    expect(screen.getAllByText("supply unavailable").length).toBeGreaterThan(0);
   });
 
-  it("labels retained partial supply totals and withholds unsupported distribution shares", () => {
+  it("labels retained partial supply totals on the beam and chip and withholds shares and ranks", () => {
     useStablecoinsMock.mockReturnValue({
       ...useStablecoinsMock(),
-      data: { peggedAssets: [
-        makeAltPegCoin("eurc-circle", 100), { ...makeAltPegCoin("eurs-stasis", 0), circulating: {} },
-      ] },
+      data: { peggedAssets: completeNonUsd({ "eurc-circle": 100, "eurs-stasis": null }) },
     });
     render(<AltPegsClient />);
-    expect(screen.getByText(/1\/2 assets observed/)).toBeTruthy();
-    expect(screen.getByText(/known alt-peg subtotal/)).toBeTruthy();
-    expect(screen.getByRole("region", { name: "All alt-peg mix" }).textContent).toContain("mix shares unavailable");
+    expect(screen.getByText(/known subtotal, partial/)).toBeTruthy();
+    const chip = screen.getByRole("button", { name: /Partial supply/ });
+    expect(chip.getAttribute("data-reason-codes")).toBe("supply-unavailable");
+    expect(screen.getByText(/known · \d+\/\d+ observed/)).toBeTruthy();
+    expect(screen.getByTestId("cohort-mix").textContent).toContain("Mix withheld");
+  });
+
+  it("orders hero, atlas, ranking, then the coin table", () => {
+    render(<AltPegsClient />);
+    const order = [
+      screen.getByRole("group", { name: "Non-USD stablecoin market" }),
+      screen.getByRole("heading", { name: "Peg diversity atlas" }),
+      screen.getByRole("heading", { name: "Pegs by market cap" }),
+      screen.getByTestId("alt-peg-stablecoin-table"),
+    ];
+    for (let i = 1; i < order.length; i++) {
+      expect(order[i - 1]!.compareDocumentPosition(order[i]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it("labels the beam partial when a core non-USD coin is missing from the list", () => {
+    useStablecoinsMock.mockReturnValue({
+      ...useStablecoinsMock(),
+      data: { peggedAssets: completeNonUsd({ "eurc-circle": 100, "eurs-stasis": "omit" }) },
+    });
+    render(<AltPegsClient />);
+    expect(screen.getByText(/known subtotal, partial/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Partial supply/ })).toBeTruthy();
+    expect(screen.getByTestId("cohort-mix").textContent).toContain("Mix withheld");
+  });
+
+  it("ignores a ?peg= value with no core coins instead of showing an empty table", () => {
+    window.history.replaceState(null, "", "/alt-pegs/?peg=inr");
+    render(<AltPegsClient />);
+    expect(screen.getByTestId("alt-peg-stablecoin-table").getAttribute("data-selected-peg")).toBe("");
+  });
+
+  it("drives the table's peg filter from a ranking row through ?peg=", async () => {
+    render(<AltPegsClient />);
+    fireEvent.click(screen.getByRole("button", { name: /^Euro/ }));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("peg")).toBe("eur"));
+    expect(screen.getByTestId("alt-peg-stablecoin-table").getAttribute("data-selected-peg")).toBe("EUR");
+    const euro = screen.getByRole("button", { name: /^Euro/ });
+    expect(euro.getAttribute("aria-pressed")).toBe("true");
+    expect(euro.closest("li")!.getAttribute("style")).toContain("inset 3px 0 0");
+    fireEvent.click(screen.getByRole("button", { name: "Show all pegs" }));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("peg")).toBeNull());
   });
 
   it("restores a focused share chart from the URL", () => {

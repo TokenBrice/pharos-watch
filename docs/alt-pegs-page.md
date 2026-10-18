@@ -1,12 +1,14 @@
 # Alt-Pegs Page
 
-Public `/alt-pegs/` explains growth/structure beyond dollar pegs and links crawlable [peg taxonomy](./stablecoin-taxonomy-pages.md) cohorts. It is not a second Screener. `src/app/alt-pegs/` owns shell/client/chart and `src/lib/alt-peg-market.ts` the current snapshot. Shared tables reuse ordinary peg/liquidity/report-card overlays; no dedicated Worker endpoint is needed while existing joins suffice.
+Public `/alt-pegs/` (H1 and navigation label **Non-USD Pegs**) explains growth/structure beyond dollar pegs and links crawlable [peg taxonomy](./stablecoin-taxonomy-pages.md) cohorts. It is not a second Screener. `src/app/alt-pegs/` owns shell/client/chart; `shared/lib/alt-peg-snapshot.ts` (`buildNonUsdMarketSnapshot`) is the one current-snapshot reducer, shared by the page (`src/lib/alt-peg-market.ts` adds labels, links and colours) and the live share card. Shared tables reuse ordinary peg/liquidity/report-card overlays; no dedicated Worker endpoint is needed while existing joins suffice.
 
 ## Route Shape
 
-Canonical remains `/alt-pegs/`; focused `view=focused`, `chart=share|cohorts`, `range=7d|30d|90d|1y|all` are shareable views, not separate canonical pages. Closing focus preserves range even for hydrated deep links. Share all means all currently loaded endpoint-window points, not unlimited history. Both history cards default one year and disclose unit, denominator, provenance and coverage start; share additionally names cadence.
+Canonical remains `/alt-pegs/`. Order: instrument header (deck, Share; no methodology line, as no versioned methodology exists) → hero → atlas → peg ranking → coin table → share and cohort history → footer (source, cadence, MiCA link). `?peg=<code>` is the ranking's and table's shared peg filter (unknown or USD values are ignored). Focused `view=focused`, `chart=share|cohorts`, `range=7d|30d|90d|1y|all` are shareable views, not separate canonical pages. Closing focus preserves range even for hydrated deep links. Share all means all currently loaded endpoint-window points, not unlimited history. Both history cards default one year with a one-line caption; unit, denominator, provenance, coverage start and (for share) cadence sit in a "How this series is built" fold.
 
 ## Data Contract
+
+The hero beam is the core non-USD market cap (`altMarketCap`); while any non-USD member lacks supply or is absent from the list (counted as unavailable, as the homepage reducer does) its label reads "known subtotal, partial" and an amber `Partial supply` chip carries reason `supply-unavailable`. The universe chip names the computed count ("N non-USD of 268" core). Supporting facts are the provider-wide share of all stablecoins (dated by its latest sample, never "current"), its 1-year change, and the peg count. The cohort-mix bar (commodity pegs, then currency/index pegs) is hatched and labelled when shares are withheld, never empty. The ranking, coin table and hero all read the core universe, so counts agree; non-core coins stay reachable through dossiers and the Screener. Ranks print only when every member reports supply. Cohort figures use one rounding (`formatCurrency(…, 1)`; shares through `formatNonUsdShare`, one decimal and `<0.1%` for a nonzero sliver). A `?peg=` code with no core coins is ignored rather than producing an empty table.
 
 Current aggregation admits each `CLIENT_CORE_AGGREGATE_ACTIVE_IDS` member once and joins active client metadata before non-USD classification. API stablecoin rows do not directly carry pegCurrency. Never aggregate all catalog rows or infer peg from ticker.
 
@@ -32,11 +34,15 @@ Initial stablecoin failure without usable snapshot replaces the page. Failed ref
 
 ## Atlas And Drill-down
 
-Geographic/commodity/index markers use shared peg labels/anchors, never a local Other catch-all for supported currencies. The asset table is the equivalent inspection surface. Expand/fullscreen are progressive presentation and do not rewrite route query state. `public/maps/world-countries.svg` is generated with `npm run build:world-map`. Distribution collapses only display rows behind native details; full peg links remain in static HTML.
+The atlas follows the theme through scene tokens in `peg-hero.css`: light mode draws the map on the page ground; dark mode keeps a night sea with land lifted clear of it. Every mark is a coin: position is its peg's home (`PEG_ANCHORS`; the overlap pass never moves a coin more than `PEG_HOME_RADIUS_PX` from it, so a crowded home stacks smaller emblems on top instead of spilling onto another continent), size is market cap on one sqrt scale (map and shelf only differ in ceiling, stated in the size key), the ring is the peg hue, and a dashed ring marks unavailable supply. Pegs without a territory (gold, silver, CPI, unmapped currencies) stand on a shelf above the map in market-cap order; no core non-USD coin with a logo is left off the atlas. There is no starfield, halo, ray or orbit. Phones get the atlas behind a "Show map" disclosure. Geographic/commodity/index markers use shared peg labels/anchors, never a local Other catch-all for supported currencies. The asset table is the equivalent inspection surface. Expand/fullscreen are progressive presentation and do not rewrite route query state. `public/maps/world-countries.svg` is generated with `npm run build:world-map`. The ranking shows the top eight pegs and folds the rest behind native details ("Show all N pegs"); each row filters the table and links its peg page.
+
+## Share Card
+
+`/alt-pegs/` selects the live route card `/api/og/page/alt-pegs` (`worker/src/api/og-page/alt-pegs.ts`): the same `buildNonUsdMarketSnapshot` beam over the published stablecoins cache, top three peg shares when complete, a `Partial · x/y non-USD coins observed` stamp when not. A missing, stale or null source, or a render failure, serves the timeless `og-alt-pegs.png` ([OG images](./og-images.md#1-route-cards)).
 
 ## Crawlability And Discoverability
 
-Keep indexability, sitemap and shared nav/command palette/LLM-index discovery. Navigation label Non-USD Pegs does not rename page title/canonical. All cohort hrefs derive from shared taxonomy, not route-local templates or copied route lists.
+Keep indexability, sitemap and shared nav/command palette/LLM-index discovery. The H1 matches the navigation label (Non-USD Pegs); the canonical path is unchanged. All cohort hrefs derive from shared taxonomy, not route-local templates or copied route lists.
 
 ## Homepage Integration
 

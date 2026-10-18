@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -8,6 +8,8 @@ import {
   Tooltip,
   ReferenceLine,
   ReferenceArea,
+  ReferenceDot,
+  DefaultZIndexes,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
@@ -157,6 +159,14 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const prefersReducedMotion = usePrefersReducedMotion();
   const entranceMs = useMotionDurationMs();
+  // Bars animate once, on entrance. A later re-render (polling refetch, range
+  // switch, layout shift from a fold) draws them at rest: a restarted
+  // animation was seen to leave the plot without bars (review round 2).
+  const [hasEntered, setHasEntered] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setHasEntered(true), entranceMs + 100);
+    return () => window.clearTimeout(timer);
+  }, [entranceMs]);
 
   /**
    * Range probe: needs a separate pass on raw hourly so the threshold check is
@@ -220,10 +230,19 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   }, [hourly, bucketSeconds]);
 
   const hasInterpolated = useMemo(() => chartData.some((d) => d.isInterpolated), [chartData]);
-  const partialBucketCount = useMemo(
-    () => chartData.filter((d) => !d.isInterpolated && d.net == null).length,
+  const partialBuckets = useMemo(
+    () => chartData.filter((d) => !d.isInterpolated && d.net == null),
     [chartData],
   );
+  const partialBucketCount = partialBuckets.length;
+  // Where the running total stops being proven: the last plotted cumulative
+  // point before the first partial bucket. Labelled in the plot, not only below it.
+  const firstPartialIndex = chartData.findIndex((d) => !d.isInterpolated && d.net == null);
+  const lastProven = firstPartialIndex > 0
+    ? chartData.slice(0, firstPartialIndex).findLast((d) => d.cumulative != null)
+    : undefined;
+  const cumulativeStop = lastProven?.cumulative != null ? { ts: lastProven.ts, value: lastProven.cumulative } : null;
+  const hatchId = `flow-chart-hatch-${useId().replace(/:/g, "")}`;
 
   const { bandX1, bandX2, bandY1, bandY2 } = useMemo(() => {
     // Reference area uses the min/max of the rolling-net series so the band
@@ -280,23 +299,31 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     return <Skeleton className={`${CHART_HEIGHT} w-full rounded-xl`} />;
   }
 
-  const animationActive = !prefersReducedMotion;
+  const animationActive = !prefersReducedMotion && !hasEntered;
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-4 mb-4">
         <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_GREEN }}>
-          Net Mint
+          Net mint
         </ChartLegendChip>
         <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_RED }}>
-          Net Burn
+          Net burn
         </ChartLegendChip>
         <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_BLUE }}>
           Cumulative
         </ChartLegendChip>
-        <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_SLATE, opacity: 0.35 }}>
-          7{useDailyBuckets ? "d" : "h"} rolling-net band
-        </ChartLegendChip>
+        {partialBucketCount > 0 ? (
+          <ChartLegendChip
+            markerClassName="inline-block h-2.5 w-2.5 rounded-sm border"
+            markerStyle={{
+              borderColor: CHART_SLATE,
+              backgroundImage: `repeating-linear-gradient(135deg, ${CHART_SLATE} 0 1px, transparent 1px 4px)`,
+            }}
+          >
+            Net withheld: unpriced events
+          </ChartLegendChip>
+        ) : null}
         <span className="ml-auto text-2xs text-muted-foreground/70">
           {useDailyBuckets ? "Daily" : "Hourly"}
         </span>
@@ -326,6 +353,11 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
             <TimeXAxis dataKey="ts" domain={xDomain} minTickGap={72} tickFormatter={formatXAxisTick} />
             <MonoYAxis tickFormatter={formatCurrencyTick} {...valueAxis} />
             <Tooltip content={<FlowTooltip useDailyBuckets={useDailyBuckets} />} cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }} />
+            <defs>
+              <pattern id={hatchId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="6" stroke={CHART_SLATE} strokeWidth="1.5" strokeOpacity="0.45" />
+              </pattern>
+            </defs>
             {bandX2 > bandX1 && bandY2 > bandY1 && (
               <ReferenceArea
                 x1={bandX1}
@@ -333,13 +365,25 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
                 y1={bandY1}
                 y2={bandY2}
                 fill={CHART_SLATE}
-                fillOpacity={0.08}
+                fillOpacity={0.04}
                 stroke={CHART_SLATE}
-                strokeOpacity={0.18}
-                strokeDasharray="3 4"
+                strokeOpacity={0.45}
+                strokeWidth={1}
                 ifOverflow="extendDomain"
               />
             )}
+            {/* A partial bucket's net is withheld, not zero: a hatched column marks the hole. */}
+            {partialBuckets.map((bucket) => (
+              <ReferenceArea
+                key={bucket.ts}
+                x1={bucket.ts - (bucketSeconds * 1000) / 2}
+                x2={bucket.ts + (bucketSeconds * 1000) / 2}
+                fill={`url(#${hatchId})`}
+                fillOpacity={1}
+                strokeOpacity={0}
+                ifOverflow="hidden"
+              />
+            ))}
             <ReferenceLine y={0} stroke="var(--color-border)" strokeWidth={1} />
             <Bar
               dataKey="positiveDelta"
@@ -371,6 +415,56 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
               isAnimationActive={false}
               connectNulls={false}
             />
+            {/* The band's direct label in its own layer above the bars (a ReferenceArea label otherwise sits under them). */}
+            {bandX2 > bandX1 && bandY2 > bandY1 && (
+              <ReferenceArea
+                x1={bandX1}
+                x2={bandX2}
+                y1={bandY1}
+                y2={bandY2}
+                fillOpacity={0}
+                strokeOpacity={0}
+                ifOverflow="extendDomain"
+                zIndex={DefaultZIndexes.label}
+                label={(props: { viewBox?: { x?: number; y?: number } }) => (
+                  // Direct label just above the band's top edge, haloed so bars never erase it.
+                  <text
+                    x={(props.viewBox?.x ?? 0) + 6}
+                    y={(props.viewBox?.y ?? 0) - 5}
+                    fill={CHART_SLATE}
+                    fontSize={10}
+                    stroke="var(--background)"
+                    strokeWidth={3}
+                    paintOrder="stroke"
+                  >
+                    {`7${useDailyBuckets ? "d" : "h"} rolling net range`}
+                  </text>
+                )}
+              />
+            )}
+            {cumulativeStop ? (
+              <ReferenceDot
+                x={cumulativeStop.ts}
+                y={cumulativeStop.value}
+                r={3}
+                fill={CHART_BLUE}
+                stroke="none"
+                ifOverflow="extendDomain"
+                label={(props: { viewBox?: { x?: number; y?: number } }) => (
+                  <text
+                    x={(props.viewBox?.x ?? 0) + 8}
+                    y={(props.viewBox?.y ?? 0) - 8}
+                    fill={CHART_BLUE}
+                    fontSize={10}
+                    stroke="var(--background)"
+                    strokeWidth={3}
+                    paintOrder="stroke"
+                  >
+                    Cumulative stops: unpriced events
+                  </text>
+                )}
+              />
+            ) : null}
           </ComposedChart>
         )}
       />
@@ -382,8 +476,8 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
       {partialBucketCount > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">
           Partial valuation: {partialBucketCount} {useDailyBuckets ? "daily" : "hourly"}{" "}
-          {partialBucketCount === 1 ? "bucket has" : "buckets have"} unpriced events, so no net bar is drawn and the
-          cumulative line stops at the first one. Mint and burn volumes there are lower bounds.
+          {partialBucketCount === 1 ? "bucket has" : "buckets have"} unpriced events. Hatched columns mark the
+          withheld nets, and the cumulative line stops before the first one. Mint and burn volumes there are lower bounds.
         </p>
       )}
     </div>

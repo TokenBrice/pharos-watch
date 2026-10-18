@@ -3,18 +3,18 @@
 import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/api-hooks";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { LiquidityStats } from "@/components/liquidity-stats";
+import { LiquidityHero } from "@/components/liquidity-hero";
 import { LiquidityTable } from "@/components/liquidity-table";
+import { LIQUIDITY_NR_REASON_LABELS } from "@/components/liquidity-table-logic";
+import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { HeroMetricRow } from "@/components/feature-hero-split";
+import { ModuleDisclosure, MODULE_FOLD_RHYTHM_CLASS } from "@/components/stablecoin-detail/module-disclosure";
 import type { PegCurrency } from "@shared/types";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
@@ -22,10 +22,13 @@ import { type UrlStateSchema } from "@/lib/url-state";
 import { useUrlState } from "@/hooks/use-url-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { formatDateTimeLocale, timeAgo } from "@shared/lib/format";
+import { LiquidityStatusChip } from "./status-chip";
+import { LiquidityContentLoadingState } from "./loading";
 import {
   PEG_FILTERS,
   buildLiquidityViewModel,
-  formatLiquidityWarningMessage,
+  type LiquidityViewModel,
 } from "./model";
 
 interface LiquidityUrlState {
@@ -67,7 +70,7 @@ export function LiquidityClient() {
     { getParam, setParam },
   );
 
-  const { scoredRows, unratedRows, summaryStats } = useMemo(
+  const { leaderboardRows, unobservedRows, summaryStats } = useMemo(
     () => buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch),
     [liquidityMap, pegFilter, deferredSearch],
   );
@@ -81,7 +84,7 @@ export function LiquidityClient() {
   const handleRetry = useCallback(() => {
     void refetch();
   }, [refetch]);
-  const showDataHealthBanner = !meta?.warning;
+  const searchActive = deferredSearch.trim().length > 0;
 
   const leaderboardToolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -107,25 +110,7 @@ export function LiquidityClient() {
     </div>
   );
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="rounded-xl">
-              <CardHeader className="pb-1">
-                <Skeleton className="h-3 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-32" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <Skeleton className="h-[400px]" />
-      </div>
-    );
-  }
+  if (isLoading) return <LiquidityContentLoadingState />;
 
   return (
     <div className="space-y-6">
@@ -134,24 +119,22 @@ export function LiquidityClient() {
         hasData={!!liquidityMap}
         onRetry={handleRetry}
         queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap, meta }]}
-        showFreshnessBanner={showDataHealthBanner}
+        // Degraded or stale data is the hero's status chip; the body only reports a hard error.
+        showFreshnessBanner={false}
       />
-      {meta?.warning && (
-        <div
-          role="alert"
-          title={meta.warning}
-          className="rounded-xl border border-state-warn bg-state-warn-subtle px-4 py-3 text-sm text-state-warn-bright"
-        >
-          {formatLiquidityWarningMessage(meta.warning)}
-        </div>
-      )}
 
-      {summaryStats && liquidityMap && <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />}
+      {summaryStats && liquidityMap && (
+        <LiquidityHero
+          stats={summaryStats}
+          liquidityMap={liquidityMap}
+          status={<LiquidityStatusChip meta={meta} stats={summaryStats} />}
+        />
+      )}
 
       {/* Leaderboard workbench: filters live in the table toolbar */}
       <section id="data" aria-label="Data table" tabIndex={-1}>
         <LiquidityTable
-          rows={scoredRows}
+          rows={leaderboardRows}
           logos={logos}
           searchQuery={deferredSearch}
           onRowClick={handleRowClick}
@@ -159,44 +142,89 @@ export function LiquidityClient() {
         />
       </section>
 
-      {unratedRows.length > 0 && (
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <h2 className="pharos-label">Unrated / not observed</h2>
-            <p className="text-sm text-muted-foreground">
-              These assets are tracked, but the current liquidity pipeline has not observed enough DEX coverage to
-              assign a Liquidity Score.
-            </p>
-          </div>
-          {/* Folded by default: the tail is long (100+ assets) and secondary to the scored leaderboard. */}
-          <details id="unrated" className="group" open={deferredSearch.trim().length > 0 || undefined}>
-            <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 text-sm font-medium text-foreground hover:bg-muted/40 sm:min-h-9 [&::-webkit-details-marker]:hidden">
-              <span>
-                <span className="pharos-numeric">{unratedRows.length.toLocaleString("en-US")}</span> unrated
-              </span>
-              <span className="text-muted-foreground group-open:hidden">· Show</span>
-              <span className="hidden text-muted-foreground group-open:inline">· Hide</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-            </summary>
-            <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {unratedRows.map((row) => (
-                <li key={row.meta.id}>
-                  <Link
-                    href={buildStablecoinUrl(row.meta.id)}
-                    className="pharos-focus-ring flex items-center gap-2 rounded-xl border border-border/60 bg-background/60 px-3 py-2 transition hover:border-border hover:bg-muted/40"
-                  >
-                    <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={28} />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">{row.meta.symbol}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{row.meta.name}</span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </details>
-        </div>
-      )}
+      <div className={MODULE_FOLD_RHYTHM_CLASS}>
+        {summaryStats ? <PoolQualityFold stats={summaryStats} /> : null}
+        {unobservedRows.length > 0 ? (
+          // Remounts open while a search is active so matching coins are visible.
+          <UnobservedFold key={searchActive ? "search" : "browse"} rows={unobservedRows} defaultOpen={searchActive} />
+        ) : null}
+      </div>
+
+      {meta?.updatedAt != null ? (
+        <p className="pharos-meta border-t border-border/50 pt-3">
+          Source: Pharos DEX liquidity lane, published hourly. Snapshot{" "}
+          <time dateTime={new Date(meta.updatedAt * 1000).toISOString()} title={formatDateTimeLocale(meta.updatedAt)}>
+            {timeAgo(meta.updatedAt)}
+          </time>
+          . Secondary-market depth only; issuer redemption capacity is scored separately.
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+/** Pool quality and coverage behind the hero: TVL-weighted aggregates the map encodes as dashes. */
+function PoolQualityFold({ stats }: { stats: LiquidityStatsData }) {
+  return (
+    <ModuleDisclosure label="Pool quality and coverage">
+      <div className="max-w-2xl space-y-3 pt-2">
+        <div className="divide-y divide-border/50">
+          <HeroMetricRow
+            label="Pool balance, TVL-weighted"
+            value={stats.avgBalance == null ? "—" : `${stats.avgBalance}%`}
+          />
+          <HeroMetricRow
+            label="Organic liquidity, fee-based share of TVL"
+            value={stats.avgOrganic == null ? "—" : `${stats.avgOrganic}%`}
+          />
+          <HeroMetricRow
+            label="Coverage of observed markets"
+            value={`${stats.highConfidenceCoverage.toLocaleString("en-US")} primary or mixed · ${stats.fallbackCoverage.toLocaleString("en-US")} fallback`}
+          />
+        </div>
+        <p className="pharos-meta">
+          On the map, rails turn dashed when pool balance is under 70% and flow lines turn dashed when organic
+          liquidity is under 60%. Durability is scored per coin; see the Durability column in the leaderboard.
+        </p>
+      </div>
+    </ModuleDisclosure>
+  );
+}
+
+/** Tracked coins with no observed DEX market: a compact link list, not a logo grid. */
+function UnobservedFold({ rows, defaultOpen }: { rows: LiquidityViewModel["unobservedRows"]; defaultOpen: boolean }) {
+  const symbolCounts = new Map<string, number>();
+  for (const row of rows) symbolCounts.set(row.meta.symbol, (symbolCounts.get(row.meta.symbol) ?? 0) + 1);
+  return (
+    <ModuleDisclosure id="unrated" label="Not observed on DEX" count={rows.length} defaultOpen={defaultOpen}>
+      <div className="space-y-2 pt-2">
+        <p className="pharos-meta max-w-3xl">
+          Tracked coins with no retained DEX pool in this snapshot. They carry no Liquidity Score.
+        </p>
+        <ul className="columns-2 gap-x-6 text-sm sm:columns-3 lg:columns-5">
+          {rows.map((row) => {
+            const reason = row.liq.liquidityScoreUnavailableReason;
+            return (
+              <li key={row.meta.id} className="break-inside-avoid py-0.5">
+                <Link
+                  href={buildStablecoinUrl(row.meta.id)}
+                  className="pharos-focus-ring rounded-sm hover:underline"
+                  title={row.meta.name}
+                >
+                  {row.meta.symbol}
+                </Link>
+                {/* A shared symbol names its coin so the two entries are distinguishable. */}
+                {(symbolCounts.get(row.meta.symbol) ?? 0) > 1 ? (
+                  <span className="ml-1.5 text-2xs text-muted-foreground">{row.meta.name}</span>
+                ) : null}
+                {reason && reason !== "no-retained-pools" ? (
+                  <span className="ml-1.5 text-2xs text-muted-foreground">{LIQUIDITY_NR_REASON_LABELS[reason]}</span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </ModuleDisclosure>
   );
 }

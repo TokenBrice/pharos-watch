@@ -30,9 +30,8 @@ export const PRE_LAUNCH_PHASE_CLASSES = {
   },
 } as const satisfies Record<LaunchPhase, { dot: string; badge: string; orbit: string }>;
 
-/** Pre-launch detail page: launch-window section, pre-launch card and progress fill. */
+/** Pre-launch detail page: pre-launch card and progress fill. */
 export const PRE_LAUNCH_ACCENT_CLASSES = {
-  launchSection: { border: "border-sky-500/25", bg: "bg-sky-500/[0.05]", text: "text-sky-700 dark:text-sky-300" },
   preLaunchCard: { border: "border-indigo-500/25", bg: "bg-indigo-500/[0.06]", text: "text-indigo-600 dark:text-indigo-400" },
   progressFill: "bg-indigo-500/60",
 } as const;
@@ -49,9 +48,13 @@ export const PRE_LAUNCH_MILESTONE_BADGE_CLASSES = {
 
 export type PreLaunchDriftStatus = "on-track" | "pushed-once" | "pushed-multiple" | "overdue";
 
+/** Amber = the target moved (stronger once it moved twice); red only once it expired. */
 export const PRE_LAUNCH_DRIFT_BADGE_CLASSES = {
   "on-track": "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   "pushed-once": "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  "pushed-multiple": "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
+  "pushed-multiple": "border-amber-500/55 bg-amber-500/20 text-amber-800 dark:text-amber-300",
   overdue: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
 } as const satisfies Record<PreLaunchDriftStatus, string>;
+
+/** Display-only drift state: an earlier target exists but none is current. Neutral: nothing to slip against. */
+export const PRE_LAUNCH_NO_CURRENT_TARGET_BADGE_CLASS = "border-border/60 bg-muted/40 text-muted-foreground";

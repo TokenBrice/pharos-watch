@@ -32,9 +32,12 @@ import {
   HEALTH_BADGE_CLASSES,
   HEALTH_FILL_CLASSES,
   HEALTH_TEXT_CLASSES,
+  deltaColor,
+  formatChainShare,
   trendColor,
 } from "@/lib/chain-ui";
 import { cn } from "@/lib/utils";
+import { ChainsFreshnessChip } from "../freshness-chip";
 
 type TrendKey = "change24hPct" | "change7dPct" | "change30dPct";
 
@@ -131,11 +134,11 @@ function formatPegStabilityContext(
   return `${parts.join("; ")}.`;
 }
 
-function TrendValue({ value }: { value: number | null }) {
+function TrendValue({ value, windowKey }: { value: number | null; windowKey: TrendKey }) {
   if (value == null) return <span className="font-mono text-sm text-muted-foreground">—</span>;
   const Icon = value > 0.001 ? TrendingUp : value < -0.001 ? TrendingDown : Minus;
   return (
-    <span className={cn("inline-flex items-center gap-1 font-mono text-sm font-semibold tabular-nums", trendColor(value))}>
+    <span className={cn("inline-flex items-center gap-1 font-mono text-sm font-semibold tabular-nums", windowKey === "change7dPct" ? trendColor(value) : deltaColor(value))}>
       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
       {formatSignedPercent(value * 100, 2)}
     </span>
@@ -199,45 +202,35 @@ function formatChainEnvironmentContext(evidence: ChainEnvironmentEvidence | unde
   return `Pharos resilience tier ${evidence.resilienceTier} fallback.`;
 }
 
-function IdentityRow({ meta, chainName }: { meta: ChainMeta; chainName: string }) {
+/** Identity context only: the name is the page H1 and raw identifiers (EVM chain ID) stay out of the summary. */
+function IdentityRow({ meta, status }: { meta: ChainMeta; status: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-4">
-        <div className="shrink-0 rounded-xl border border-border/60 bg-background/80 p-2.5">
-          <Image
-            src={resolveCompactLogoSrc(meta.logoPath, 48)!}
-            alt=""
-            width={48}
-            height={48}
-            className={cn("h-12 w-12 rounded-full", meta.darkInvert && "dark:invert")}
-          />
-        </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h2 className="text-lg font-semibold leading-none tracking-tight">{chainName}</h2>
-            <ChainTypeBadge type={meta.type} />
-            {meta.evmChainId != null && (
-              <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-                Chain ID {meta.evmChainId}
-              </span>
-            )}
-            {meta.explorerUrl && (
-              <a
-                href={meta.explorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                Explorer
-                <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-              </a>
-            )}
-          </div>
-        </div>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-2.5">
+        <Image
+          src={resolveCompactLogoSrc(meta.logoPath, 24)!}
+          alt=""
+          width={24}
+          height={24}
+          className={cn("h-6 w-6 rounded-full", meta.darkInvert && "dark:invert")}
+        />
+        <ChainTypeBadge type={meta.type} />
+        {meta.explorerUrl && (
+          <a
+            href={meta.explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Explorer
+            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </a>
+        )}
+        {status}
       </div>
       <Link
         href="/chains/"
-        className="pharos-focus-ring inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="pharos-focus-ring inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-border/60 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         All chains
       </Link>
@@ -255,7 +248,7 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
       <div>
-        <p className="pharos-label">{unavailableCount > 0 ? "Partial Supply" : "Total Supply"}</p>
+        <p className="pharos-label">{unavailableCount > 0 ? "Partial supply" : "Total supply"}</p>
         <div className="pharos-numeric mt-1 text-2xl font-bold leading-none text-foreground">
           {chain ? formatCompactUsd(chain.totalUsd) : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-24" />}
         </div>
@@ -264,9 +257,9 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
         ) : null}
       </div>
       <div>
-        <p className="pharos-label">{partialShare ? "Partial Global Share" : "Global Share"}</p>
+        <p className="pharos-label">{partialShare ? "Partial global share" : "Global share"}</p>
         <div className="mt-1 font-mono text-2xl font-bold leading-none tabular-nums">
-          {chain ? `${(chain.dominanceShare * 100).toFixed(1)}%` : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-16" />}
+          {chain ? formatChainShare(chain.dominanceShare) : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-16" />}
         </div>
         {(supplyCoverage?.aggregateUnavailableAssetCount ?? 0) > 0 ? (
           <p className="mt-1 text-xs text-muted-foreground">{supplyCoverage?.aggregateUnavailableAssetCount} assets excluded from global supply</p>
@@ -276,7 +269,7 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
         <div key={key}>
           <p className="pharos-label">{label}</p>
           <div className="mt-1 leading-none">
-            {chain ? <TrendValue value={chain[key]} /> : <Skeleton className="h-5 w-16" />}
+            {chain ? <TrendValue value={chain[key]} windowKey={key} /> : <Skeleton className="h-5 w-16" />}
           </div>
         </div>
       ))}
@@ -379,12 +372,12 @@ export function ChainHero({
   supplyUnavailable?: boolean;
 }) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="gap-0 overflow-hidden py-0">
+      {/* identity context rides the card's top edge as a slim band; the chain name is the page H1 */}
+      <div className="border-b border-border/60 px-5 py-2.5 sm:px-6">
+        <IdentityRow meta={meta} status={<ChainsFreshnessChip meta={apiMeta} />} />
+      </div>
       <div className="space-y-6 px-5 py-6 sm:px-6">
-        <IdentityRow meta={meta} chainName={chain?.name ?? meta.name} />
-
-        <div className="h-px w-full bg-border/60" />
-
         <MarketMetrics chain={chain} supplyCoverage={supplyCoverage} supplyUnavailable={supplyUnavailable} />
 
         <div className="h-px w-full bg-border/60" />

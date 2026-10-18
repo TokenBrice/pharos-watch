@@ -1,10 +1,51 @@
+/*
+ * Peg diversity atlas (`/alt-pegs/`): scene tokens, shelf, map plane, emblems, hover card and fullscreen.
+ *
+ * Light "surveyor's daylight": the map sits on the page ground, land a quiet plate with hairline coasts.
+ * Dark "lamplit night": the same plan on a night sea, land lifted well clear of the water. Data hue arrives only
+ * as `--peg` on each emblem (PEG_CHART_COLORS); everything else here is material and encodes nothing. One
+ * hairline weight, no filters, no idle motion.
+ */
+
+/* ------------------------------------------------------------------ tokens: surveyor's daylight */
+.peg-atlas,
+.atlas-fullscreen-dialog__content {
+  --atlas-sea: transparent;
+  --atlas-sea-edge: transparent;
+  --atlas-land: oklch(0.9 0.006 250);
+  --atlas-coast: oklch(0.55 0.012 250 / 0.42);
+  --atlas-baseline: oklch(0.45 0.01 250 / 0.35);
+  --atlas-plate: var(--card);
+  --atlas-plate-ring: oklch(0.2 0 0 / 0.16);
+  --atlas-shadow: 0 1px 2px oklch(0.2 0.01 250 / 0.2);
+  --atlas-shadow-lift: 0 4px 14px oklch(0.2 0.01 250 / 0.22);
+  --atlas-unavailable: oklch(0.45 0.01 250 / 0.7);
+  --atlas-key-dot: oklch(0.45 0.01 250 / 0.1);
+  --atlas-key-ring: oklch(0.45 0.01 250 / 0.45);
+  --atlas-dim: 0.42;
+}
+
+/* ------------------------------------------------------------------ tokens: lamplit night */
+:where(.dark) .peg-atlas,
+:where(.dark) .atlas-fullscreen-dialog__content {
+  --atlas-sea: oklch(0.17 0.022 252);
+  --atlas-sea-edge: oklch(1 0 0 / 0.08);
+  --atlas-land: oklch(0.33 0.016 250);
+  --atlas-coast: oklch(0.72 0.02 250 / 0.32);
+  --atlas-baseline: oklch(1 0 0 / 0.22);
+  --atlas-plate: oklch(0.97 0.004 250);
+  --atlas-plate-ring: oklch(1 0 0 / 0.3);
+  --atlas-shadow: 0 1px 3px oklch(0 0 0 / 0.5);
+  --atlas-shadow-lift: 0 6px 18px oklch(0 0 0 / 0.55);
+  --atlas-unavailable: oklch(0.85 0.01 250 / 0.75);
+  --atlas-key-dot: oklch(1 0 0 / 0.08);
+  --atlas-key-ring: oklch(1 0 0 / 0.4);
+  --atlas-dim: 0.38;
+}
+
+/* ------------------------------------------------------------------ layout */
 .peg-hero__viewport {
-  overflow-x: hidden;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  scrollbar-color: oklch(0.62 0.13 248 / 0.65) oklch(0.12 0.03 252 / 0.55);
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 
 .peg-hero__viewport:focus-visible {
@@ -13,239 +54,174 @@
 }
 
 .peg-hero__live-shell {
-  border-top: 1px solid oklch(0.6 0 0 / 0.12);
-  background: oklch(0.035 0.012 255 / 0.9);
   width: 100%;
   --peg-coin-scale: 1;
-  --peg-coin-hover-scale: 1.07;
+  --peg-coin-hover-scale: 1.08;
   --peg-hit-scale: 1;
-  --peg-sky-scale: 1;
-}
-
-.peg-hero__legend-stack {
-  padding: 10px 12px 8px;
 }
 
 .peg-hero {
   position: relative;
-  width: 100%;
-  height: clamp(390px, 48vw, 590px);
-  border-radius: 0 0 12px 12px;
-  overflow: hidden;
-  border-top: 1px solid oklch(0.6 0 0 / 0.12);
-  background: linear-gradient(
-    to bottom,
-    oklch(0.02 0 0) 0%,
-    oklch(0.08 0.02 260) 18%,
-    oklch(0.12 0.03 260) 30%,
-    oklch(0.15 0.04 260) 34%,
-    oklch(0.16 0.04 260) 37%,
-    oklch(0.12 0.03 260) 45%,
-    oklch(0.08 0.02 260) 65%,
-    oklch(0.04 0.01 260) 100%
-  );
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--atlas-sea-edge);
+  border-radius: 12px;
+  background: var(--atlas-sea);
+  padding: 12px 0 0;
 }
 
-.peg-hero__sky {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 30%;
-  z-index: 2;
-}
-.peg-hero__sky:has(.coin-emblem.is-hovered),
-.peg-hero__sky:has(.coin-emblem:focus-visible) {
-  z-index: 5;
-}
+/* Capped so the plan stays inspectable without becoming a 700px wall on wide screens. */
 .peg-hero__earth {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 70%;
+  position: relative;
   z-index: 3;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
   container-type: inline-size;
 }
+
 .peg-hero__map-frame {
   position: relative;
   isolation: isolate;
   width: 100%;
-  height: 100%;
   aspect-ratio: 900 / 460;
-  max-width: 100%;
 }
 
-/* Keep country paths and percentage-positioned logos on the same 900x460 plane. */
-@supports (height: 100cqw) {
-  .peg-hero__map-frame {
-    height: min(100%, calc(100cqw * 460 / 900));
-  }
+/* The shelf sits above the map's sky; a hovered shelf coin's card must clear the map plane. */
+.peg-hero:has(.peg-shelf .coin-emblem.is-hovered) .peg-shelf,
+.peg-hero:has(.peg-shelf .coin-emblem:focus-visible) .peg-shelf {
+  z-index: 5;
 }
 
-.peg-hero__scale-key {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  z-index: 6;
-  max-width: calc(100% - 24px);
-}
 .fiat-world-map {
   z-index: 1;
   pointer-events: none;
   transition: opacity 180ms ease-out;
 }
-.peg-hero__map-frame .fiat-world-map svg {
-  filter: drop-shadow(0 -4px 18px oklch(0.5 0.15 250 / 0.18));
-}
 .peg-hero__map-frame:has(.coin-emblem.is-hovered) .fiat-world-map,
 .peg-hero__map-frame:has(.coin-emblem:focus-visible) .fiat-world-map {
-  opacity: 0.58;
+  opacity: 0.6;
 }
 
-/* ===== Starfield ===== */
-.peg-hero-starfield {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-.peg-hero-starfield__star {
-  position: absolute;
-  border-radius: 50%;
-  background: #fff;
-  transform: translate(-50%, -50%) scale(var(--peg-coin-scale, 1));
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.7);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .peg-hero-starfield__star {
-    animation: peg-twinkle 4s ease-in-out infinite;
-  }
-  @keyframes peg-twinkle {
-    0%,
-    100% {
-      opacity: var(--star-o, 0.5);
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-}
-
-/* ===== Sky region tag ===== */
-.sky-region-tag {
-  position: absolute;
-  transform: translate(-50%, -50%) scale(var(--peg-coin-scale, 1));
-  font-size: 11px;
-  color: oklch(0.85 0.02 250 / 0.72);
-  font-weight: 600;
-  padding: 3px 8px;
-  background: oklch(0 0 0 / 0.45);
-  border-radius: 10px;
-  white-space: nowrap;
-  pointer-events: none;
+/* ------------------------------------------------------------------ off-map shelf */
+.peg-shelf {
+  position: relative;
   z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  padding: 0 16px;
 }
 
-/* ===== Sun / Moon / Constellation wrappers ===== */
-.sun-cohort,
-.moon-cohort,
-.constellation-cohort {
-  position: absolute;
-  inset: 0;
-}
-.sun-cohort__halo,
-.moon-cohort__halo {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  z-index: 1;
-  pointer-events: none;
-}
-.sun-cohort__halo {
-  width: calc(260px * var(--peg-sky-scale, 1));
-  height: calc(260px * var(--peg-sky-scale, 1));
-  background: radial-gradient(
-    circle at center,
-    oklch(0.92 0.16 90 / 0.38) 0%,
-    oklch(0.82 0.17 75 / 0.18) 20%,
-    oklch(0.68 0.14 55 / 0.08) 42%,
-    transparent 65%
-  );
-}
-.sun-cohort__rays {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: calc(340px * var(--peg-sky-scale, 1));
-  height: calc(340px * var(--peg-sky-scale, 1));
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.26;
-}
-.moon-cohort__halo {
-  width: calc(128px * var(--peg-sky-scale, 1));
-  height: calc(128px * var(--peg-sky-scale, 1));
-  background: radial-gradient(
-    circle at center,
-    oklch(0.9 0.02 250 / 0.28) 0%,
-    oklch(0.75 0.02 250 / 0.1) 42%,
-    transparent 70%
-  );
-}
-.constellation-cohort__traces {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
+.peg-shelf__title {
+  align-self: center;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .sun-cohort__halo {
-    animation: peg-pulse-sun 5s ease-in-out infinite;
-  }
-  .moon-cohort__halo {
-    animation: peg-pulse-moon 6s ease-in-out infinite;
-  }
-  @keyframes peg-pulse-sun {
-    0%,
-    100% {
-      transform: translate(-50%, -50%) scale(0.96);
-      opacity: 0.9;
-    }
-    50% {
-      transform: translate(-50%, -50%) scale(1);
-      opacity: 1;
-    }
-  }
-  @keyframes peg-pulse-moon {
-    0%,
-    100% {
-      transform: translate(-50%, -50%) scale(0.97);
-      opacity: 0.9;
-    }
-    50% {
-      transform: translate(-50%, -50%) scale(1);
-      opacity: 1;
-    }
-  }
+.peg-shelf__groups {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-/* ===== Coin emblem ===== */
+.peg-shelf__group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.peg-shelf__coins {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 0 2px 5px;
+  border-bottom: 1px solid var(--atlas-baseline);
+}
+
+.peg-shelf__slot {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  width: calc(var(--slot-size) * var(--peg-coin-scale, 1));
+  height: calc(var(--slot-size) * var(--peg-coin-scale, 1));
+}
+
+.peg-shelf__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.peg-shelf__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.peg-shelf .coin-emblem__hover-card,
+.peg-shelf .coin-emblem[data-card-x] .coin-emblem__hover-card {
+  left: 0;
+  right: auto;
+  transform: none;
+}
+
+/* ------------------------------------------------------------------ size key */
+.peg-hero__scale-key {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 10px 2px 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.peg-hero__scale-title {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.peg-hero__scale-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.peg-hero__scale-dot {
+  display: inline-block;
+  border-radius: 999px;
+  background: var(--atlas-key-dot);
+  border: 1px solid var(--atlas-key-ring);
+}
+
+.peg-hero__scale-dot--unavailable {
+  background: transparent;
+  border: 1.5px dashed var(--atlas-unavailable);
+}
+
+/* ------------------------------------------------------------------ coin emblem */
 .coin-emblem {
   position: absolute;
   border-radius: 50%;
   overflow: visible;
-  background: #f1f5f9;
-  border: 1px solid rgba(255, 255, 255, 0.92);
+  background: var(--atlas-plate);
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.48),
-    0 1px 4px rgba(0, 0, 0, 0.36);
+    0 0 0 1.5px var(--peg, var(--atlas-plate-ring)),
+    var(--atlas-shadow);
   transform: translate(-50%, -50%);
   cursor: pointer;
   display: block;
@@ -253,13 +229,12 @@
   transition:
     transform 180ms ease-out,
     box-shadow 180ms ease-out,
-    opacity 180ms ease-out,
-    border-color 180ms ease-out;
+    opacity 180ms ease-out;
   text-decoration: none;
 }
 .coin-emblem:focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 5px;
+  outline-offset: 4px;
 }
 .coin-emblem__img {
   width: 100%;
@@ -269,53 +244,29 @@
   border-radius: inherit;
 }
 
-.coin-emblem--sun-core {
-  border: 2px solid oklch(0.85 0.18 90 / 0.92);
-  box-shadow:
-    0 0 0 2px oklch(0.85 0.18 90 / 0.18),
-    0 0 22px oklch(0.78 0.2 80 / 0.58),
-    0 0 48px oklch(0.78 0.2 80 / 0.24);
-}
-.coin-emblem--sun-planet {
-  border: 1px solid oklch(0.58 0.12 75 / 0.85);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    0 0 10px oklch(0.78 0.2 80 / 0.25);
-}
-.coin-emblem--moon {
-  border: 2px solid oklch(0.9 0.02 250 / 0.92);
-  box-shadow:
-    0 0 0 2px oklch(0.9 0.02 250 / 0.18),
-    0 0 18px oklch(0.85 0.02 250 / 0.52),
-    0 0 40px oklch(0.85 0.02 250 / 0.2);
-}
-.coin-emblem--star {
-  border: 2px solid oklch(0.86 0.04 260 / 0.9);
-  box-shadow:
-    0 0 14px oklch(0.77 0.08 250 / 0.7),
-    0 0 30px oklch(0.65 0.1 250 / 0.35);
+/* Unknown supply: neutral size, and a dashed ring instead of the peg ring so it never reads as measured. */
+.coin-emblem[data-supply="unavailable"] {
+  box-shadow: var(--atlas-shadow);
+  outline: 1.5px dashed var(--atlas-unavailable);
+  outline-offset: 2px;
 }
 
 .coin-emblem.is-hovered,
 .coin-emblem:focus-visible {
-  transform: translate(-50%, -50%) scale(var(--peg-coin-hover-scale, 1.07));
+  transform: translate(-50%, -50%) scale(var(--peg-coin-hover-scale, 1.08));
   z-index: 30;
   box-shadow:
-    0 0 0 3px oklch(0.75 0.15 250 / 0.55),
-    0 0 28px oklch(0.75 0.2 250 / 0.65),
-    0 6px 18px rgba(0, 0, 0, 0.6);
+    0 0 0 2.5px var(--peg, var(--ring)),
+    var(--atlas-shadow-lift);
 }
 .coin-emblem.is-sibling {
-  border-color: oklch(0.86 0.08 250 / 0.95);
   box-shadow:
-    0 0 14px oklch(0.78 0.14 250 / 0.55),
-    0 0 28px oklch(0.7 0.15 250 / 0.3),
-    0 4px 10px rgba(0, 0, 0, 0.5);
+    0 0 0 2.5px var(--peg, var(--ring)),
+    var(--atlas-shadow);
   z-index: 6;
 }
 .coin-emblem.is-dimmed {
-  opacity: 0.58;
-  filter: saturate(0.82) brightness(0.9);
+  opacity: var(--atlas-dim);
 }
 
 .coin-emblem-hit-layer {
@@ -340,21 +291,20 @@
   left: 50%;
   bottom: -18px;
   transform: translateX(-50%);
-  border: 1px solid oklch(0.8 0.04 250 / 0.28);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: oklch(0.08 0.018 255 / 0.82);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.42);
-  color: oklch(0.94 0.04 250);
+  background: var(--popover);
+  color: var(--popover-foreground);
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
   font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-weight: 700;
   line-height: 1;
   padding: 4px 6px;
   pointer-events: none;
   white-space: nowrap;
 }
 
+/* ------------------------------------------------------------------ hover card */
 .coin-emblem__hover-card {
   position: absolute;
   bottom: calc(100% + 10px);
@@ -363,22 +313,19 @@
   width: max-content;
   min-width: 190px;
   max-width: 232px;
-  background:
-    linear-gradient(135deg, oklch(0.18 0.025 254 / 0.98), oklch(0.095 0.018 260 / 0.98)), oklch(0.11 0.018 260 / 0.98);
-  border: 1px solid oklch(0.75 0.05 260 / 0.36);
+  background: var(--popover);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 11px;
-  color: oklch(0.98 0 0);
-  backdrop-filter: blur(10px);
+  color: var(--popover-foreground);
   z-index: 40;
   white-space: normal;
   display: flex;
   flex-direction: column;
   gap: 7px;
-  box-shadow:
-    0 16px 42px rgba(0, 0, 0, 0.58),
-    inset 0 1px 0 oklch(1 0 0 / 0.08);
+  box-shadow: var(--atlas-shadow-lift);
   pointer-events: none;
+  font-size: 12px;
 }
 .coin-emblem[data-card-y="below"] .coin-emblem__hover-card {
   top: calc(100% + 10px);
@@ -399,47 +346,39 @@
   justify-content: space-between;
   gap: 10px;
 }
+.coin-emblem__hover-card-symbol {
+  font-size: 13px;
+  font-weight: 650;
+}
+.coin-emblem__hover-card-peg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+}
+.coin-emblem__hover-card-peg::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--peg);
+}
+.coin-emblem__hover-card-name {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.25;
+}
+.coin-emblem__hover-card-rank {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
 .coin-emblem__hover-card-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 7px 10px;
-}
-.coin-emblem__hover-card-symbol {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-.coin-emblem__hover-card-peg {
-  border-radius: 999px;
-  background: oklch(0.74 0.11 250 / 0.14);
-  border: 1px solid oklch(0.78 0.09 250 / 0.22);
-  color: oklch(0.82 0.08 248);
-  padding: 2px 6px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.coin-emblem__hover-card-name {
-  color: oklch(0.88 0.025 250);
-  font-size: 11px;
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-.coin-emblem__hover-card-rank {
-  border-radius: 999px;
-  background: oklch(0.74 0.11 250 / 0.11);
-  color: oklch(0.86 0.08 248);
-  font-size: 10px;
-  font-weight: 750;
-  line-height: 1.2;
-  padding: 4px 7px;
-  width: fit-content;
-}
-
-.coin-emblem__hover-card-grid {
-  border-top: 1px solid oklch(1 0 0 / 0.1);
+  border-top: 1px solid var(--border);
   padding-top: 7px;
 }
 .coin-emblem__hover-card-label,
@@ -447,279 +386,28 @@
   display: block;
 }
 .coin-emblem__hover-card-label {
-  color: oklch(0.78 0.03 250 / 0.86);
+  color: var(--muted-foreground);
   font-size: 11px;
-  font-weight: 600;
 }
 .coin-emblem__hover-card-value {
   margin-top: 2px;
-  color: oklch(0.9 0.09 245);
+  color: var(--foreground);
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.coin-emblem__hover-card-peers {
-  border-top: 1px solid oklch(1 0 0 / 0.1);
+.coin-emblem__hover-card-peers,
+.coin-emblem__hover-card-action {
+  border-top: 1px solid var(--border);
   padding-top: 6px;
 }
 .coin-emblem__hover-card-action {
-  border-top: 1px solid oklch(1 0 0 / 0.1);
-  padding-top: 6px;
-  color: oklch(0.86 0.12 245);
+  color: var(--muted-foreground);
   font-size: 11px;
-  font-weight: 600;
 }
 
-.fiat-region-section {
-  border-radius: 8px;
-  scroll-margin-top: 6rem;
-  transition:
-    background-color 180ms ease-out,
-    box-shadow 180ms ease-out;
-}
-
-.fiat-region-section:target,
-.fiat-region-section:focus {
-  background: oklch(0.74 0.11 250 / 0.08);
-  box-shadow: 0 0 0 1px oklch(0.74 0.11 250 / 0.22);
-}
-
-.fiat-region-section:focus {
-  outline: none;
-}
-
-.fiat-region-section:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 4px;
-}
-
-.peg-hero__scale-key,
-.peg-hero__top-cohorts {
-  border: 1px solid oklch(0.8 0.03 250 / 0.18);
-  border-radius: 8px;
-  background: oklch(0.07 0.018 255 / 0.78);
-  color: oklch(0.92 0.035 250);
-  backdrop-filter: blur(10px);
-  box-shadow:
-    0 14px 30px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 oklch(1 0 0 / 0.06);
-}
-
-.peg-hero__scale-key {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
-  padding: 7px 9px;
-  pointer-events: none;
-}
-
-.peg-hero__top-label {
-  color: oklch(0.76 0.03 250 / 0.9);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.peg-hero__scale-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
-  font-size: 10px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.peg-hero__scale-dot {
-  display: inline-block;
-  border-radius: 999px;
-  background: oklch(0.72 0.14 248 / 0.2);
-  border: 1px solid oklch(0.78 0.12 248 / 0.55);
-}
-
-.peg-hero__top-cohorts {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-  padding: 10px 12px;
-}
-
-.peg-hero__top-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 8px;
-  min-width: 0;
-}
-
-.peg-hero__top-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 56px;
-  border-radius: 8px;
-  background: oklch(1 0 0 / 0.04);
-  box-shadow: inset 0 0 0 1px oklch(0.75 0.05 260 / 0.1);
-  color: inherit;
-  padding: 10px 12px;
-  text-decoration: none;
-  transition:
-    background-color 160ms ease-out,
-    box-shadow 160ms ease-out;
-}
-
-.peg-hero__top-row:hover,
-.peg-hero__top-row:focus-visible {
-  background: oklch(1 0 0 / 0.085);
-  box-shadow: inset 0 0 0 1px oklch(0.78 0.09 250 / 0.38);
-}
-
-.peg-hero__top-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-}
-
-.peg-hero__top-rank {
-  flex-shrink: 0;
-  color: oklch(0.72 0.04 250 / 0.9);
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
-  font-size: 10px;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-.peg-hero__top-dot {
-  flex-shrink: 0;
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.4);
-}
-
-.peg-hero__top-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: oklch(0.96 0.02 250);
-  font-size: 13px;
-  font-weight: 750;
-  letter-spacing: -0.005em;
-}
-
-.peg-hero__top-metrics {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-.peg-hero__top-cap {
-  color: oklch(0.96 0.02 250);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.peg-hero__top-share {
-  color: oklch(0.72 0.04 250 / 0.88);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-@media (max-width: 1279px) {
-  .peg-hero__live-shell {
-    --peg-coin-scale: 0.72;
-    --peg-coin-hover-scale: 0.8;
-    --peg-hit-scale: 1.12;
-    --peg-sky-scale: 0.88;
-  }
-
-  .peg-hero {
-    height: clamp(360px, 54vw, 470px);
-  }
-}
-
-@media (max-width: 639px) {
-  .peg-hero__live-shell {
-    --peg-coin-scale: 0.54;
-    --peg-coin-hover-scale: 0.64;
-    --peg-hit-scale: 1.35;
-    --peg-sky-scale: 0.72;
-  }
-
-  .peg-hero__legend-stack {
-    padding: 8px 8px 6px;
-  }
-
-  .peg-hero {
-    height: clamp(395px, 104vw, 470px);
-  }
-
-  .peg-hero__sky {
-    height: 38%;
-  }
-
-  .peg-hero__earth {
-    height: 62%;
-  }
-
-  .peg-hero__top-cohorts {
-    padding: 8px;
-  }
-
-  .peg-hero__top-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .peg-hero__top-row {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 46px;
-    gap: 10px;
-    padding: 8px 10px;
-  }
-
-  .peg-hero__top-metrics {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-
-  .peg-hero__scale-key {
-    left: 8px;
-    bottom: 8px;
-    max-width: calc(100% - 16px);
-  }
-
-  .coin-emblem__mini-label {
-    bottom: -14px;
-    font-size: 8px;
-    padding: 3px 5px;
-  }
-}
-
-@media (max-width: 480px) {
-  .peg-hero__top-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 1280px) {
-  .peg-hero__viewport {
-    overflow-x: visible;
-  }
-}
-
+/* ------------------------------------------------------------------ status, threads */
 .peg-hero__status-overlay {
   position: absolute;
   left: 50%;
@@ -727,21 +415,17 @@
   transform: translate(-50%, -50%);
   z-index: 13;
   max-width: min(24rem, calc(100% - 2rem));
-  border: 1px solid oklch(0.8 0.03 250 / 0.2);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: oklch(0.055 0.018 255 / 0.84);
-  box-shadow:
-    0 16px 34px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 oklch(1 0 0 / 0.07);
-  color: oklch(0.88 0.035 250);
+  background: var(--popover);
+  color: var(--muted-foreground);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.35;
   padding: 10px 12px;
   text-align: center;
 }
 
-/* ===== Cohort threads ===== */
 .cohort-threads {
   position: absolute;
   inset: 0;
@@ -757,23 +441,45 @@
   z-index: 2;
 }
 
+/* ------------------------------------------------------------------ responsive */
+@media (max-width: 1279px) {
+  .peg-hero__live-shell {
+    --peg-coin-scale: 0.78;
+    --peg-coin-hover-scale: 0.86;
+    --peg-hit-scale: 1.12;
+  }
+}
+
+@media (max-width: 767px) {
+  .peg-hero__live-shell {
+    --peg-coin-scale: 0.56;
+    --peg-coin-hover-scale: 0.66;
+    --peg-hit-scale: 1.35;
+  }
+
+  .peg-shelf {
+    padding: 0 8px;
+  }
+
+  .coin-emblem__mini-label {
+    bottom: -14px;
+    font-size: 8px;
+    padding: 3px 5px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .coin-emblem {
+  .coin-emblem,
+  .fiat-world-map {
     transition: none;
   }
 }
 
-/* ===== Fullscreen inspection mode ===== */
-
+/* ------------------------------------------------------------------ fullscreen inspection */
 .atlas-fullscreen-dialog__content {
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at 64% 16%, oklch(0.18 0.045 252 / 0.24), transparent 36%), oklch(0.035 0.012 255 / 0.98);
-}
-
-.atlas-fullscreen-dialog__content:fullscreen {
-  background: oklch(0.035 0.012 255);
+  background: var(--background);
 }
 
 .atlas-fullscreen-dialog__toolbar {
@@ -784,80 +490,29 @@
   gap: 12px;
   min-height: 48px;
   padding: 10px 16px;
-  border-bottom: 1px solid oklch(0.6 0 0 / 0.14);
-  background: oklch(0.045 0.014 255 / 0.92);
-  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
 }
 
 .atlas-fullscreen-dialog__title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: -0.01em;
-  color: oklch(0.92 0.03 250);
+  color: var(--foreground);
 }
 
 .atlas-fullscreen-dialog__body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  display: flex;
-}
-
-.atlas-fullscreen-dialog__body .peg-hero__viewport {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  padding: 16px;
 }
 
 .peg-hero__live-shell--fullscreen {
-  --peg-coin-scale: 1.2;
-  --peg-coin-hover-scale: 1.3;
+  --peg-coin-scale: 1.15;
+  --peg-coin-hover-scale: 1.25;
   --peg-hit-scale: 1.1;
-  --peg-sky-scale: 1.15;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.peg-hero__live-shell--fullscreen .peg-hero__legend-stack {
-  flex-shrink: 0;
-}
-
-.peg-hero--fullscreen {
-  flex: 1;
-  min-height: 0;
-  height: auto;
-  border-radius: 0;
-}
-
-@media (min-width: 1024px) and (min-height: 640px) {
-  .peg-hero__live-shell--fullscreen {
-    --peg-coin-scale: 1.08;
-    --peg-coin-hover-scale: 1.18;
-    --peg-hit-scale: 1.12;
-    --peg-sky-scale: 1.05;
-    border-top: 0;
-  }
-
-  .peg-hero__live-shell--fullscreen .peg-hero {
-    height: 100%;
-    border-top: 0;
-  }
-
-  .peg-hero__live-shell--fullscreen .peg-hero__sky {
-    height: 34%;
-  }
-
-  .peg-hero__live-shell--fullscreen .peg-hero__earth {
-    height: 66%;
-  }
-
-  .peg-hero__live-shell--fullscreen .peg-hero__scale-key {
-    left: 18px;
-    bottom: 18px;
-    max-width: calc(100% - 36px);
-  }
+  max-width: calc((100dvh - 210px) * 900 / 460);
+  margin: 0 auto;
 }
 
 @media (max-width: 1279px) {
@@ -865,55 +520,13 @@
     --peg-coin-scale: 0.9;
     --peg-coin-hover-scale: 0.98;
     --peg-hit-scale: 1.18;
-    --peg-sky-scale: 1;
   }
 }
 
 @media (max-width: 639px) {
-  .peg-hero__live-shell--fullscreen {
-    --peg-coin-scale: 0.7;
-    --peg-coin-hover-scale: 0.8;
-    --peg-hit-scale: 1.35;
-    --peg-sky-scale: 0.85;
-  }
-
   .atlas-fullscreen-dialog__toolbar {
     min-height: 56px;
     padding: 6px 10px 6px 12px;
     padding-top: max(6px, env(safe-area-inset-top));
-    gap: 8px;
-  }
-
-  .atlas-fullscreen-dialog__title {
-    font-size: 12px;
-    max-width: calc(100vw - 5.5rem);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .peg-hero__live-shell--fullscreen .peg-hero__scale-key {
-    left: 8px;
-    right: 8px;
-    bottom: max(8px, env(safe-area-inset-bottom));
-    max-width: none;
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding: 7px 8px;
-    border: 1px solid oklch(0.8 0.03 250 / 0.16);
-    border-radius: 999px;
-    background: oklch(0.035 0.012 255 / 0.82);
-    backdrop-filter: blur(10px);
-    scrollbar-width: none;
-  }
-
-  .peg-hero__live-shell--fullscreen .peg-hero__scale-key::-webkit-scrollbar {
-    display: none;
-  }
-
-  .peg-hero__live-shell--fullscreen .peg-hero__scale-item {
-    flex: 0 0 auto;
   }
 }

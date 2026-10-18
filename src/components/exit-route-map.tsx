@@ -1,19 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
-import { DoorOpen, Gauge, Route, Split } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MethodologyLabel } from "@/components/methodology-hint";
+import { useCallback, useState, type KeyboardEvent } from "react";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
-import type { DexLiquidityData } from "@shared/types";
-import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
+import { getHhiBand } from "@shared/lib/classification";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import {
   aggregateThroatSelection,
-  buildLiquidityExitRouteModel,
   chainRouteGeometry,
   compactRouteLabel,
-  defaultExitRouteSelection,
   EXIT_ROUTE_INSTRUMENT_GEOMETRY,
   EXIT_ROUTE_SCENE,
   protocolRouteGeometry,
@@ -27,50 +21,27 @@ import {
 } from "@/components/exit-route-model";
 import "./exit-route-instrument.css";
 
-function ExitRouteMetric({
-  icon,
-  label,
-  value,
-  detail,
-  active = false,
-}: {
-  icon: React.ReactNode;
-  label: React.ReactNode;
-  value: React.ReactNode;
-  detail: string;
-  active?: boolean;
-}) {
-  return (
-    <div className={`exit-route-metric rounded-xl border p-3 ${active ? "exit-route-metric--active" : "border-border/60 bg-background/35"}`}>
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span className="pharos-label">{label}</span>
-      </div>
-      <p className="pharos-numeric mt-1 text-lg font-bold">{value}</p>
-      <p className="text-xs text-muted-foreground">{detail}</p>
-    </div>
-  );
-}
-
 function SelectedExitRoutePanel({ selection }: { selection: LiquidityExitRouteSelection }) {
-  const kindLabel = selection.kind === "protocol" ? "Protocol door" : selection.kind === "chain" ? "Chain lane" : "Exit throat";
+  if (selection.kind === "throat") {
+    // The aggregate depth is the hero beam; the readout gives the crowding read instead of repeating it.
+    return (
+      <div className="exit-route-selection-panel" data-testid="selected-exit-route-panel" aria-live="polite">
+        <span className="pharos-label">Exit throat</span>
+        <span className="min-w-0 text-muted-foreground">
+          <span className="font-semibold text-foreground">{selection.detail}.</span> Hover or focus a door or lane for its depth.
+        </span>
+      </div>
+    );
+  }
   return (
-    <div className="exit-route-selection-panel" data-testid="selected-exit-route-panel">
-      <div>
-        <p className="pharos-label">{kindLabel}</p>
-        <p className="mt-1 text-sm font-semibold text-foreground">{selection.label}</p>
-      </div>
-      <div>
-        <p className="pharos-label">Depth</p>
-        <p className="mt-1 font-mono text-sm font-bold tabular-nums">{formatCurrency(selection.valueUsd, 0)}</p>
-      </div>
-      <div>
-        <p className="pharos-label">Share</p>
-        <p className="mt-1 font-mono text-sm font-bold tabular-nums">
-          {selection.sharePct == null ? "100%" : formatPercent(selection.sharePct, 1)}
-        </p>
-      </div>
-      <p className="min-w-0 text-xs text-muted-foreground sm:col-span-3 xl:col-span-1">{selection.detail}</p>
+    <div className="exit-route-selection-panel" data-testid="selected-exit-route-panel" aria-live="polite">
+      <span className="pharos-label">{selection.kind === "protocol" ? "Protocol door" : "Chain lane"}</span>
+      <span className="font-semibold text-foreground">{selection.label}</span>
+      <span className="pharos-numeric font-semibold text-foreground">{formatCurrency(selection.valueUsd)}</span>
+      <span className="pharos-numeric text-muted-foreground">
+        {selection.sharePct == null ? "100%" : formatPercent(selection.sharePct, 1)} of depth
+      </span>
+      <span className="min-w-0 text-muted-foreground">{selection.detail}</span>
     </div>
   );
 }
@@ -142,13 +113,13 @@ function InteractiveExitRouteGroup({
       data-testid={testId}
       data-flow-intensity={route.flowIntensity}
       data-share-pct={route.sharePct.toFixed(2)}
-      aria-label={`${route.label} ${kindLabel}, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
+      aria-label={`${route.label} ${kindLabel}, ${formatCurrency(route.valueUsd)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
       onFocus={() => onSelect(nextSelection)}
       onMouseEnter={() => onSelect(nextSelection)}
       onClick={() => onSelect(nextSelection)}
       onKeyDown={handleKeyDown}
     >
-      <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} ${kindLabel} (${formatPercent(route.sharePct, 1)})`}</title>
+      <title>{`${route.label}: ${formatCurrency(route.valueUsd)} ${kindLabel} (${formatPercent(route.sharePct, 1)})`}</title>
       {children}
     </g>
   );
@@ -164,8 +135,9 @@ function ExitRouteInstrumentScene({
   onSelect: (selection: LiquidityExitRouteSelection) => void;
 }) {
   const throat = throatGeometry(model);
+  const crowding = model.concentrationHhi == null ? null : getHhiBand(model.concentrationHhi);
   const routeSummary = [
-    `${formatCurrency(model.totalTvlUsd, 0)} DEX TVL`,
+    `${formatCurrency(model.totalTvlUsd)} DEX TVL`,
     model.topProtocol ? `${model.topProtocol.label} leading protocol` : null,
     model.topChain ? `${model.topChain.label} leading chain` : null,
     model.concentrationHhi == null ? null : `${model.concentrationHhi.toFixed(2)} crowding index`,
@@ -179,7 +151,7 @@ function ExitRouteInstrumentScene({
   };
 
   return (
-    <div className="exit-route-instrument overflow-hidden rounded-xl border border-border/70">
+    <div className="exit-route-instrument">
       <div className="exit-route-instrument__viewport">
         <svg
           viewBox={`0 0 ${EXIT_ROUTE_SCENE.width} ${EXIT_ROUTE_SCENE.height}`}
@@ -189,10 +161,6 @@ function ExitRouteInstrumentScene({
           data-testid="exit-route-instrument"
         >
           <defs>
-            <linearGradient id="exit-route-instrument-stage" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--route-stage-top)" />
-              <stop offset="100%" stopColor="var(--route-stage-bottom)" />
-            </linearGradient>
             <linearGradient id="exit-route-channel-fill" x1="0" x2="1">
               <stop offset="0%" stopColor="var(--route-channel-edge)" />
               <stop offset="50%" stopColor="var(--route-channel-throat)" />
@@ -200,7 +168,6 @@ function ExitRouteInstrumentScene({
             </linearGradient>
           </defs>
 
-          <rect x="0" y="0" width={EXIT_ROUTE_SCENE.width} height={EXIT_ROUTE_SCENE.height} fill="url(#exit-route-instrument-stage)" aria-hidden="true" />
           <g stroke="var(--route-grid)" strokeWidth="1" aria-hidden="true">
             {EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridVerticalX.map((x) => (
               <line key={`grid-v-${x}`} x1={x} y1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridTop} x2={x} y2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridBottom} />
@@ -256,15 +223,15 @@ function ExitRouteInstrumentScene({
                 <text className="exit-route-instrument__route-label" x="78" y={geometry.y - 4} fill="var(--route-hero)" fontSize="12" fontWeight="700" aria-hidden="true">
                   {label}
                 </text>
-                <text x="78" y={geometry.y + 10} fill="var(--route-caption)" fontSize="10" fontFamily="var(--font-geist-mono)" aria-hidden="true">
-                  {`${formatCurrency(route.valueUsd, 0)} · ${formatPercent(route.sharePct, 1)}`}
+                <text x="78" y={geometry.y + 11} fill="var(--route-caption)" fontSize="10.5" fontFamily="var(--font-geist-mono)" aria-hidden="true">
+                  {formatPercent(route.sharePct, 1)}
                 </text>
               </InteractiveExitRouteGroup>
             );
           })}
 
           {model.chainRoutes.map((route, i) => {
-            const label = compactRouteLabel(route.label, 14);
+            const label = compactRouteLabel(route.label, 16);
             const geometry = chainRouteGeometry(route, i);
             return (
               <InteractiveExitRouteGroup
@@ -288,14 +255,14 @@ function ExitRouteInstrumentScene({
                 <text className="exit-route-instrument__route-label" x={EXIT_ROUTE_SCENE.laneLabelX} y={geometry.y} fill="var(--route-hero)" fontSize="12" fontWeight="700" aria-hidden="true">
                   {label}
                 </text>
-                <text x={EXIT_ROUTE_SCENE.laneLabelX} y={geometry.y + 13} fill="var(--route-caption)" fontSize="10" fontFamily="var(--font-geist-mono)" aria-hidden="true">
-                  {`${formatCurrency(route.valueUsd, 0)} · ${formatPercent(route.sharePct, 1)}`}
+                <text x={EXIT_ROUTE_SCENE.laneX + EXIT_ROUTE_SCENE.laneMaxWidth} y={geometry.y} textAnchor="end" fill="var(--route-caption)" fontSize="10.5" fontFamily="var(--font-geist-mono)" aria-hidden="true">
+                  {formatPercent(route.sharePct, 1)}
                 </text>
                 <rect x={EXIT_ROUTE_SCENE.laneX} y={geometry.laneBarY} width={geometry.laneWidth} height={geometry.laneHeight} rx="3" fill={route.colorHex} opacity="0.78" />
                 <line x1={EXIT_ROUTE_SCENE.laneX} y1={geometry.laneBarY + 3} x2={EXIT_ROUTE_SCENE.laneX + geometry.laneWidth} y2={geometry.laneBarY + 3} stroke="var(--route-lane-highlight)" strokeWidth="0.7" opacity="0.5" />
                 <circle cx={EXIT_ROUTE_SCENE.laneLogoX} cy={geometry.logoY} r="12" fill="var(--route-chip-bg)" stroke={route.colorHex} strokeWidth="1.2" />
                 {route.logoPath ? (
-                  <image aria-hidden="true" href={resolveCompactLogoSrc(route.logoPath, 16)} x={EXIT_ROUTE_SCENE.laneLogoX - 8} y={geometry.logoY - 8} width="16" height="16" preserveAspectRatio="xMidYMid meet" />
+                  <image aria-hidden="true" className={route.logoDarkInvert ? "dark:invert" : undefined} href={resolveCompactLogoSrc(route.logoPath, 16)} x={EXIT_ROUTE_SCENE.laneLogoX - 8} y={geometry.logoY - 8} width="16" height="16" preserveAspectRatio="xMidYMid meet" />
                 ) : (
                   <text x={EXIT_ROUTE_SCENE.laneLogoX} y={geometry.logoY + 4} textAnchor="middle" fill="var(--route-hero)" fontSize="12" fontWeight="800" aria-hidden="true">+</text>
                 )}
@@ -310,7 +277,7 @@ function ExitRouteInstrumentScene({
             className={`exit-route-instrument__throat ${selected.kind === "throat" ? "exit-route-instrument__route-selected" : ""}`}
             data-testid="exit-throat"
             data-crowding-band={throat.band}
-            aria-label={`Aggregate exit throat, ${formatCurrency(model.totalTvlUsd, 0)} total DEX TVL, crowding ${throat.band}`}
+            aria-label={`Aggregate exit throat, ${formatCurrency(model.totalTvlUsd)} total DEX TVL, crowding index ${model.concentrationHhi == null ? "not scored" : `${model.concentrationHhi.toFixed(2)}, ${crowding?.concentrationLabel.toLowerCase()} crowding`}`}
             onFocus={() => onSelect(throatSelection)}
             onMouseEnter={() => onSelect(throatSelection)}
             onClick={() => onSelect(throatSelection)}
@@ -333,14 +300,15 @@ function ExitRouteInstrumentScene({
                 aria-hidden="true"
               />
             ))}
-            <text x={EXIT_ROUTE_SCENE.throatX} y="211" textAnchor="middle" fill="var(--route-hero)" fontSize="34" fontWeight="800" fontFamily="var(--font-geist-mono)" style={{ fontVariantNumeric: "tabular-nums slashed-zero" }} aria-hidden="true">
-              {formatCurrency(model.totalTvlUsd, 0)}
+            {/* The throat is drawn from HHI, so it carries the crowding index; the depth it passes is the hero beam above. */}
+            <text x={EXIT_ROUTE_SCENE.throatX} y="212" textAnchor="middle" fill="var(--route-hero)" fontSize="30" fontWeight="700" fontFamily="var(--font-geist-mono)" style={{ fontVariantNumeric: "tabular-nums slashed-zero" }} aria-hidden="true">
+              {model.concentrationHhi == null ? "NR" : model.concentrationHhi.toFixed(2)}
             </text>
-            <text x={EXIT_ROUTE_SCENE.throatX} y="231" textAnchor="middle" fill="var(--route-caption)" fontSize="9" fontWeight="700" letterSpacing="0.45" textLength="116" lengthAdjust="spacingAndGlyphs" fontFamily="ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
-              Secondary exit TVL
+            <text x={EXIT_ROUTE_SCENE.throatX} y="231" textAnchor="middle" fill="var(--route-caption)" fontSize="10.5" fontWeight="500" fontFamily="var(--font-sans), ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
+              Crowding index
             </text>
-            <text x={EXIT_ROUTE_SCENE.throatX} y="249" textAnchor="middle" fill="var(--route-throat-marker)" fontSize="10" fontWeight="700" letterSpacing="1.4" fontFamily="ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
-              {throat.band.toUpperCase()} CROWDING
+            <text x={EXIT_ROUTE_SCENE.throatX} y="248" textAnchor="middle" fill="var(--route-throat-marker)" fontSize="10.5" fontWeight="600" fontFamily="var(--font-sans), ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
+              {crowding ? `${crowding.concentrationLabel} crowding` : "Not scored"}
             </text>
           </g>
 
@@ -355,145 +323,87 @@ function ExitRouteInstrumentScene({
   );
 }
 
-function ExitRouteFallbackList({
-  model,
-  selected,
-  onSelect,
+function FallbackRouteColumn({
+  title,
+  routes,
 }: {
-  model: LiquidityExitRouteModel;
-  selected: LiquidityExitRouteSelection;
-  onSelect: (selection: LiquidityExitRouteSelection) => void;
+  title: string;
+  routes: readonly LiquidityExitRouteItem[];
 }) {
-  const rows = [
-    ...model.protocolRoutes.map((route) => selectionFromRoute("protocol", route)),
-    ...model.chainRoutes.map((route) => selectionFromRoute("chain", route)),
-    aggregateThroatSelection(model),
-  ];
-  const selectedKey = selectionKey(selected.kind, selected.key);
-
   return (
-    <div className="exit-route-fallback-list" data-testid="exit-route-fallback-list" aria-label="Exit routes as a linear list">
-      {rows.map((row) => {
-        const isSelected = selectedKey === selectionKey(row.kind, row.key);
-        return (
-          <button
-            key={selectionKey(row.kind, row.key)}
-            type="button"
-            className={`exit-route-fallback-list__row ${isSelected ? "exit-route-fallback-list__row--active" : ""}`}
-            aria-pressed={isSelected}
-            aria-label={`${row.label} ${row.kind === "protocol" ? "protocol door" : row.kind === "chain" ? "chain lane" : "exit throat"}, ${formatCurrency(row.valueUsd, 0)}, ${row.sharePct == null ? "100%" : formatPercent(row.sharePct, 1)} of DEX TVL`}
-            onClick={() => onSelect(row)}
-          >
-            <span>
-              <span className="pharos-label block">{row.kind === "protocol" ? "Protocol door" : row.kind === "chain" ? "Chain lane" : "Exit throat"}</span>
-              <span className="font-medium text-foreground">{row.label}</span>
-            </span>
-            <span className="text-right font-mono text-sm font-semibold tabular-nums">
-              {formatCurrency(row.valueUsd, 0)}
-              <span className="block text-xs font-normal text-muted-foreground">{row.sharePct == null ? "100%" : formatPercent(row.sharePct, 1)}</span>
-            </span>
-          </button>
-        );
-      })}
+    <div className="min-w-0">
+      <p className="pharos-label pb-1">{title}</p>
+      <ol className="divide-y divide-border/50">
+        {routes.map((route) => (
+          <li key={route.key} className="flex min-h-9 items-center gap-2 text-sm">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: route.colorHex }} aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate">{route.label}</span>
+            <span className="pharos-numeric text-xs text-muted-foreground">{formatPercent(route.sharePct, 1)}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
 
-export function LiquidityExitRouteMap({
-  data,
-  stats,
-}: {
-  data: Record<string, DexLiquidityData>;
-  stats: LiquidityStatsData;
-}) {
-  const model = useMemo(() => buildLiquidityExitRouteModel(data, stats), [data, stats]);
-  const fallbackSelection = useMemo(() => model ? defaultExitRouteSelection(model) : null, [model]);
+/**
+ * Below 768px the scene would crop; the same doors and lanes read as two short
+ * lists, and the throat's crowding index (shown nowhere else) leads them.
+ */
+function ExitRouteFallbackList({ model }: { model: LiquidityExitRouteModel }) {
+  const crowding = model.concentrationHhi == null ? null : getHhiBand(model.concentrationHhi);
+  return (
+    <div className="exit-route-fallback-list" data-testid="exit-route-fallback-list" aria-label="Exit routes as a list">
+      <p className="col-span-2 flex items-baseline justify-between gap-3 border-b border-border/50 pb-2 text-sm" data-testid="exit-route-fallback-crowding">
+        <span className="text-muted-foreground">Crowding index</span>
+        <span>
+          <span className="pharos-numeric font-semibold">
+            {model.concentrationHhi == null ? "NR" : model.concentrationHhi.toFixed(2)}
+          </span>
+          <span className="ml-2 text-xs text-muted-foreground">
+            {crowding ? `${crowding.concentrationLabel} crowding` : "Not scored"}
+          </span>
+        </span>
+      </p>
+      <FallbackRouteColumn title="Protocol doors" routes={model.protocolRoutes} />
+      <FallbackRouteColumn title="Chain lanes" routes={model.chainRoutes} />
+    </div>
+  );
+}
+
+/**
+ * The exit route instrument as a hero visual: unframed on the hero surface, the
+ * selection readout under the scene, and the route census as its caption.
+ * Shares are drawn here; exact dollar depth lives in the ledger beneath.
+ */
+export function LiquidityExitRouteMap({ model }: { model: LiquidityExitRouteModel }) {
   const [selectedRouteKey, setSelectedRouteKey] = useState<string | null>(null);
   const handleSelectRoute = useCallback((selection: LiquidityExitRouteSelection) => {
     setSelectedRouteKey(selectionKey(selection.kind, selection.key));
   }, []);
-  if (!model) return null;
   const allSelections = [
     ...model.protocolRoutes.map((route) => selectionFromRoute("protocol", route)),
     ...model.chainRoutes.map((route) => selectionFromRoute("chain", route)),
     aggregateThroatSelection(model),
   ];
   const selected = allSelections.find((selection) => selectionKey(selection.kind, selection.key) === selectedRouteKey)
-    ?? fallbackSelection
-    ?? allSelections[0];
-  const activeMetric = selected.kind === "throat"
-    ? "crowding"
-    : "routes";
+    // At rest the aggregate throat is selected, so no route is dimmed.
+    ?? aggregateThroatSelection(model);
 
   return (
-    <Card className="overflow-hidden rounded-xl">
-      <CardHeader className="pb-2">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold tracking-tight">Exit route map</CardTitle>
-            <p className="exit-route-map__summary text-sm text-muted-foreground">
-              DEX depth by venue and chain. This maps secondary-market exits only; issuer redemption capacity is scored separately.
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_14rem]">
-          <div className="pharos-chart-stage min-w-0 max-w-full space-y-3 overflow-hidden">
-            <ExitRouteInstrumentScene model={model} selected={selected} onSelect={handleSelectRoute} />
-            <SelectedExitRoutePanel selection={selected} />
-            <ExitRouteFallbackList model={model} selected={selected} onSelect={handleSelectRoute} />
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-              <span>
-                Leading door:{" "}
-                <span className="font-medium text-foreground">{model.topProtocol?.label ?? "n/a"}</span>
-              </span>
-              <span>
-                Leading lane:{" "}
-                <span className="font-medium text-foreground">{model.topChain?.label ?? "n/a"}</span>
-              </span>
-              <span className="font-mono tabular-nums">{formatCurrency(model.totalTvlUsd, 0)} total DEX TVL</span>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <ExitRouteMetric
-              icon={<DoorOpen className="h-4 w-4" aria-hidden />}
-              label="Open routes"
-              value={`${model.protocolCount} / ${model.chainCount}`}
-              detail={`${model.poolCount} pools across protocol doors / chain lanes`}
-              active={activeMetric === "routes"}
-            />
-            <ExitRouteMetric
-              icon={<Gauge className="h-4 w-4" aria-hidden />}
-              label="Crowding index"
-              value={model.concentrationHhi == null ? "NR" : model.concentrationHhi.toFixed(2)}
-              detail="HHI concentration; lower means more route diversity"
-              active={activeMetric === "crowding"}
-            />
-            <ExitRouteMetric
-              icon={<Split className="h-4 w-4" aria-hidden />}
-              label="Pool balance"
-              value={model.weightedBalancePct == null ? "NR" : `${model.weightedBalancePct}%`}
-              detail="TVL-weighted balance across measured pools"
-              active={selected.kind === "throat"}
-            />
-            <ExitRouteMetric
-              icon={<Route className="h-4 w-4" aria-hidden />}
-              label={<MethodologyLabel topic="liquidityScore">Organic</MethodologyLabel>}
-              value={model.organicPct == null ? "NR" : `${model.organicPct}%`}
-              detail={
-                model.totalVolume24hUsd != null
-                  ? `${formatCurrency(model.totalVolume24hUsd, 0)} 24h routed volume`
-                  : "24h routed volume not measured"
-              }
-            />
-          </div>
-        </div>
-        <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
-          Source: DEX liquidity snapshot. Exit routes show secondary-market depth, not issuer redemption capacity. Updated with the liquidity snapshot cadence.
-        </p>
-      </CardContent>
-    </Card>
+    <div className="space-y-3 px-5 py-5 sm:px-6 lg:px-7" data-testid="exit-route-map">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="pharos-section-title">Exit route map</h2>
+        <p className="pharos-meta">Protocol doors and chain lanes, sized by their share of DEX depth</p>
+      </div>
+      <ExitRouteInstrumentScene model={model} selected={selected} onSelect={handleSelectRoute} />
+      <SelectedExitRoutePanel selection={selected} />
+      <ExitRouteFallbackList model={model} />
+      <p className="pharos-meta">
+        <span className="pharos-numeric">{model.protocolCount.toLocaleString("en-US")}</span> protocol doors ·{" "}
+        <span className="pharos-numeric">{model.chainCount.toLocaleString("en-US")}</span> chain lanes ·{" "}
+        <span className="pharos-numeric">{model.poolCount.toLocaleString("en-US")}</span> pools
+      </p>
+    </div>
   );
 }

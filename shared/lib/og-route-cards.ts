@@ -71,7 +71,7 @@ export const OG_ROUTE_CARDS = {
     file: "og-yield.png",
   },
   "alt-pegs": {
-    kicker: "Alt pegs",
+    kicker: "Non-USD pegs",
     promise: ["Stablecoins pegged to", "more than the dollar."],
     path: "/alt-pegs/",
     file: "og-alt-pegs.png",
@@ -144,6 +144,11 @@ const OG_LIVE_PAGE_SLUGS = [
   "freezewatch",
   "liquidity",
   "yield",
+  "alt-pegs",
+  // Timeless by decision: registry-derived counts never go on a share card, so
+  // the loader always answers `timeless-by-decision` and the route serves the
+  // static card. Listed here so the page shares through the same route.
+  "upcoming",
 ] as const satisfies readonly OgRouteCardKey[];
 
 export type OgPageSlug = (typeof OG_LIVE_PAGE_SLUGS)[number];
@@ -218,7 +223,8 @@ export type OgPageUnavailableReason =
   | "incomplete-coverage"
   | "figure-null"
   | "owner-error"
-  | "render-error";
+  | "render-error"
+  | "timeless-by-decision";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 

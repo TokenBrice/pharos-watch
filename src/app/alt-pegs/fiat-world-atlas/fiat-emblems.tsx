@@ -46,7 +46,7 @@ export function FiatEmblems({ clusters }: { clusters: readonly PegCluster[] }) {
   const allCoins = clusters.flatMap((c) => [...c.coins]);
   return (
     <div className="fiat-emblems">
-      <CohortThreads coins={allCoins} colorHex="#60a5fa" />
+      <CohortThreads coins={allCoins} />
       {clusters.map((cluster) => {
         const rankedCoins = [...cluster.coins].sort(compareFiniteDesc<PlacedCoin>((coin) => coin.marketCap ?? Number.NaN));
         return (

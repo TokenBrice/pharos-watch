@@ -87,12 +87,14 @@ describe("liquidity page model", () => {
     const model = buildLiquidityViewModel(liquidityMap, "USD", usdScored.name.toLowerCase());
 
     expect(model.rows.map((row) => row.meta.id)).toEqual([usdScored.id]);
-    expect(model.scoredRows.map((row) => row.meta.id)).toEqual([usdScored.id]);
-    expect(model.unratedRows).toEqual([]);
+    expect(model.leaderboardRows.map((row) => row.meta.id)).toEqual([usdScored.id]);
+    expect(model.unobservedRows).toEqual([]);
     expect(model.summaryStats).toMatchObject({
       totalTvl: 999,
+      totalTvlUnavailableReason: null,
       totalVol: 111,
-      avgScore: 50,
+      ratedCount: 2,
+      nrObservedCount: 0,
       withLiquidity: 2,
       highConfidenceCoverage: 1,
       fallbackCoverage: 1,
@@ -102,24 +104,29 @@ describe("liquidity page model", () => {
     });
   });
 
-  it("splits unfiltered rows into scored and unrated groups", () => {
-    const [first, second] = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === "USD");
-    if (!first || !second) {
-      throw new Error("Expected at least two USD stablecoins in active registry");
+  it("keeps observed NR rows in the leaderboard and folds unobserved coins", () => {
+    const [first, second, third] = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === "USD");
+    if (!first || !second || !third) {
+      throw new Error("Expected at least three USD stablecoins in active registry");
     }
 
     const model = buildLiquidityViewModel(
       {
         [first.id]: makeLiquidity({ liquidityScore: 70 }),
-        [second.id]: makeLiquidity({ liquidityScore: null }),
+        [second.id]: makeLiquidity({ liquidityScore: null, liquidityScoreUnavailableReason: "activity-missing" }),
+        [third.id]: makeLiquidity({
+          liquidityScore: null, totalTvlUsd: 0, poolCount: 0, coverageClass: "unobserved",
+          liquidityEvidenceClass: "unobserved", liquidityScoreUnavailableReason: "no-retained-pools",
+        }),
       },
       "all",
       "",
     );
 
-    expect(model.rows.map((row) => row.meta.id)).toEqual([first.id, second.id]);
-    expect(model.scoredRows.map((row) => row.meta.id)).toEqual([first.id]);
-    expect(model.unratedRows.map((row) => row.meta.id)).toEqual([second.id]);
+    expect(model.rows.map((row) => row.meta.id)).toEqual([first.id, second.id, third.id]);
+    expect(model.leaderboardRows.map((row) => row.meta.id)).toEqual([first.id, second.id]);
+    expect(model.unobservedRows.map((row) => row.meta.id)).toEqual([third.id]);
+    expect(model.summaryStats).toMatchObject({ ratedCount: 1, nrObservedCount: 1, withLiquidity: 2 });
   });
 
   it("counts observed primary mixed and fallback NR markets independently of rated scores", () => {
@@ -144,7 +151,7 @@ describe("liquidity page model", () => {
     }, "all", "");
 
     expect(model.summaryStats).toMatchObject({
-      withLiquidity: 4, highConfidenceCoverage: 3, fallbackCoverage: 1, avgScore: 80,
+      withLiquidity: 4, highConfidenceCoverage: 3, fallbackCoverage: 1, ratedCount: 1, nrObservedCount: 3,
     });
   });
 
@@ -153,7 +160,9 @@ describe("liquidity page model", () => {
       [ACTIVE_STABLECOINS[0].id]: makeLiquidity({ liquidityScore: null }),
     }, "all", "");
 
-    expect(model.summaryStats).toMatchObject({ totalTvl: null, avgScore: null, withLiquidity: 1 });
+    expect(model.summaryStats).toMatchObject({
+      totalTvl: null, totalTvlUnavailableReason: "global-row-missing", ratedCount: 0, withLiquidity: 1,
+    });
   });
 
   it("preserves a measured global zero TVL and a rated zero score as numeric aggregates", () => {
@@ -162,6 +171,17 @@ describe("liquidity page model", () => {
       [ACTIVE_STABLECOINS[0].id]: makeLiquidity({ liquidityScore: 0 }),
     }, "all", "");
 
-    expect(model.summaryStats).toMatchObject({ totalTvl: 0, avgScore: 0 });
+    expect(model.summaryStats).toMatchObject({ totalTvl: 0, ratedCount: 1 });
+  });
+
+  it("withholds a quarantined global row's depth and names its reason", () => {
+    const model = buildLiquidityViewModel({
+      [DEX_GLOBAL_KEY]: makeLiquidity({ totalTvlUsd: 999, unavailableReason: "invalid-coverage-evidence" }),
+    }, "all", "");
+
+    expect(model.summaryStats).toMatchObject({
+      totalTvl: null, totalTvlUnavailableReason: "invalid-coverage-evidence", totalVol: null,
+    });
+    expect(model.summaryStats).not.toHaveProperty("totalVolAvailability");
   });
 });
