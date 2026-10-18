@@ -14,6 +14,8 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 - Native read/grep/glob/edit tools first; Bash only for commands that need a shell. If the harness rejects a shell command as shadowed by a native tool, switch tools — never retry it.
 - Codex/omp: once root `AGENTS.md` is loaded, do not reread `CLAUDE.md`; read all scoped `AGENTS.md` files returned by the router, with more-specific rules taking precedence.
+- Discovery search: start broad searches in `src`, `worker`, `shared/lib`, `shared/types`, `shared/contracts`, `scripts`, `functions`, `docs` (listing roots keeps `shared/data/` out where tools lack negative globs); where supported, also exclude `**/__tests__/**` and `**/*.test.*`. Integration authorities stay in scope for the task they govern: `package.json`, `eslint.config.mjs`, `.github/workflows/`, `public/_headers`, `worker/wrangler*.toml`.
+- Impact pass: before finalizing the affected-file set or claiming completion, rerun the same pattern unscoped from the repo root and reconcile every new hit; `shared/data/stablecoins` is source-of-truth data. Search data, fixtures and tests directly for data, curation or test work.
 
 ## Working rules
 
