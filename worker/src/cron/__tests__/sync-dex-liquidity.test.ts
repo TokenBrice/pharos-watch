@@ -1455,6 +1455,19 @@ describe("dex liquidity stage same-hour recovery", () => {
     ).run(sourceSlot + 13, sourceSlot);
   }
 
+  function recordLiveStageLease(harness: RecoveryHarness, leaseUntil = Math.floor(scheduledAtMs / 1000) + 300) {
+    harness.sqlite.prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES ('sync-dex-liquidity-stage', 'stage-owner', ?, ?, ?)`,
+    ).run(leaseUntil, Math.floor(scheduledAtMs / 1000), Math.floor(scheduledAtMs / 1000));
+  }
+
+  function usePollingClock() {
+    vi.useRealTimers();
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(scheduledAtMs);
+  }
+
   /** Produce the exact slot's real stage generation through the real producer. */
   async function stageHourGeneration(harness: RecoveryHarness) {
     await stageDexLiquidityScoring(
@@ -1677,28 +1690,105 @@ describe("dex liquidity stage same-hour recovery", () => {
     ).toEqual({ count: 0 });
   });
 
-  it("keeps waiting for a live producer instead of recovering over it", async () => {
+  it("returns a nonproductive producer-running neutral at the unchanged readiness deadline", async () => {
+    usePollingClock();
     const harness = openHarness();
-    const leaseUntil = Math.floor(scheduledAtMs / 1000) + 60;
-    harness.sqlite.prepare(
-      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
-       VALUES ('sync-dex-liquidity-stage', 'stage-owner', ?, ?, ?)`,
-    ).run(leaseUntil, leaseUntil - 1, leaseUntil - 1);
-
-    await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
-      stageReadyDeadlineMs: scheduledAtMs - 1,
-      stageRecovery: { graphApiKey: "graph-key" },
-    })).rejects.toBeInstanceOf(MissingDexLiquidityScoringStageError);
-    expect(
-      harness.sqlite
-        .prepare(`SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages`)
-        .get(),
-    ).toEqual({ count: 0 });
+    recordLiveStageLease(harness);
+    let completed = false;
+    const pending = consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs + 90_000,
+      stageRecovery: { graphApiKey: null },
+    }).then((result) => {
+      completed = true;
+      return result;
+    });
+    await vi.advanceTimersByTimeAsync(89_999);
+    expect(completed).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await pending;
+    expect(Date.now()).toBe(scheduledAtMs + 90_000);
+    expect(result).toMatchObject({
+      status: "skipped_neutral", itemCount: 0,
+      productivity: { productive: false, reason: "scoring-stage-producer-running" },
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "scoring-stage-producer-running", sourceSlotStartedAt: sourceSlot,
+      readinessDeadlineMs: scheduledAtMs + 90_000,
+      persistence: { generationId: null, skipped: true, skippedReason: "scoring-stage-producer-running" },
+      d1Cost: { coverage: "partial" },
+    });
+    expect(JSON.parse(result.metadata ?? "{}").d1Cost.bindingCalls).toBeGreaterThan(0);
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
+    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
+    for (const table of ["dex_liquidity_scoring_stages", "dex_liquidity_scoring_stage_chunks", "dex_liquidity"]) {
+      expect(harness.sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 0 });
+    }
+    expect(harness.sqlite.prepare(
+      `SELECT lease_owner FROM cron_leases WHERE job = 'sync-dex-liquidity-stage'`,
+    ).get()).toEqual({ lease_owner: "stage-owner" });
   });
 
-  it("publishes the hour's unconsumed stage from the half-hour reuse tick", async () => {
+  it.each(["absent", "expired"] as const)("does not classify an %s producer lease as a live wait", async (lease) => {
+    usePollingClock();
     const harness = openHarness();
+    if (lease === "expired") recordLiveStageLease(harness, Math.floor(scheduledAtMs / 1000) + 60);
+    const rejected = expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs + 90_000,
+    })).rejects.toBeInstanceOf(MissingDexLiquidityScoringStageError);
+    await vi.advanceTimersByTimeAsync(90_000);
+    await rejected;
+    expect(Date.now()).toBe(scheduledAtMs + 90_000);
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages").get()).toEqual({ count: 0 });
+  });
+
+  it("keeps producer probe failures as errors instead of neutral waits", async () => {
+    const harness = openHarness();
+    harness.sqlite.exec("DROP TABLE cron_leases");
+    await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs - 1,
+    })).rejects.toThrow("no such table: cron_leases");
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(persistScores).not.toHaveBeenCalled();
+  });
+
+  it("propagates cancellation during a live producer wait without publishing", async () => {
+    usePollingClock();
+    const harness = openHarness();
+    recordLiveStageLease(harness);
+    const controller = new AbortController();
+    const failure = new Error("slot budget exhausted");
+    const rejected = expect(consumeDexLiquidityScoringStage(harness.db, controller.signal, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs + 90_000,
+      stageRecovery: { graphApiKey: "graph-key" },
+    })).rejects.toBe(failure);
+    await vi.advanceTimersByTimeAsync(10_000);
+    controller.abort(failure);
+    await rejected;
+    expect(Date.now()).toBe(scheduledAtMs + 10_000);
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("publishes the same late exact stage at :46 after a producer-running :16 wait", async () => {
+    const harness = openHarness();
+    recordLiveStageLease(harness);
+    const waiting = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs - 1,
+      stageRecovery: { graphApiKey: null },
+    });
+    expect(waiting.status).toBe("skipped_neutral");
+    expect(JSON.parse(waiting.metadata ?? "{}").reason).toBe("scoring-stage-producer-running");
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
+    vi.setSystemTime(scheduledAtMs + 120_000);
     await stageHourGeneration(harness);
+    vi.mocked(fetchDataSources).mockClear();
     vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
 
     const result = await reuseCurrentDexLiquidityScoringGeneration(
@@ -1706,10 +1796,12 @@ describe("dex liquidity stage same-hour recovery", () => {
       undefined,
       undefined,
       halfHourSlot,
-      { stageRecovery: { graphApiKey: "graph-key" } },
+      { stageRecovery: { graphApiKey: null } },
     );
 
     expect(result.status).toBe("ok");
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(persistScores).toHaveBeenCalledOnce();
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       stageRecovery: {
         reason: "stage-unconsumed",

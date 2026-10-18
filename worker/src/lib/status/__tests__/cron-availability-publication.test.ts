@@ -267,4 +267,54 @@ describe("cron availability retains independently confirmed publication evidence
     expect((await loadCronHealth(fixture.db, NOW)).crons[job].healthy).toBe(false);
     expect(await outputAt(fixture, job)).toBe(outputAge == null ? null : NOW - outputAge);
   });
+
+  it("inherits real DEX output without renewing it after a producer-running neutral", async () => {
+    const fixture = fixtures.open();
+    const job = "sync-dex-liquidity";
+    insertRun(fixture, job, 3_600, "ok", 1, { outputPublishedAt: NOW - 3_600 });
+    insertRun(fixture, job, 30, "skipped_neutral", 0, {
+      reason: "scoring-stage-producer-running", outputPublishedAt: null,
+      persistence: { generationId: null, skipped: true, skippedReason: "scoring-stage-producer-running" },
+    });
+    const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
+    expect(cron.lastRun).toMatchObject({
+      status: "skipped_neutral", metadata: { reason: "scoring-stage-producer-running", outputPublishedAt: null },
+    });
+    expect(cron.healthy).toBe(true);
+    expect(await outputAt(fixture, job)).toBe(NOW - 3_600);
+  });
+
+  it.each([null, 7_201])("does not make missing or stale DEX output fresh through producer-running neutrals (%s)", async (outputAge) => {
+    const fixture = fixtures.open();
+    const job = "sync-dex-liquidity";
+    if (outputAge != null) insertRun(fixture, job, outputAge, "ok", 1, { outputPublishedAt: NOW - outputAge });
+    for (const age of [1_800, 30]) {
+      insertRun(fixture, job, age, "skipped_neutral", 0, {
+        reason: "scoring-stage-producer-running", outputPublishedAt: null,
+      });
+    }
+    expect((await loadCronHealth(fixture.db, NOW)).crons[job].healthy).toBe(false);
+    expect(await outputAt(fixture, job)).toBe(outputAge == null ? null : NOW - outputAge);
+  });
+
+  it("keeps an actual DEX error actionable behind producer-running neutrals", async () => {
+    const fixture = fixtures.open();
+    const job = "sync-dex-liquidity";
+    insertRun(fixture, job, 3_600, "ok", 1, { outputPublishedAt: NOW - 3_600 });
+    insertRun(fixture, job, 3_000, "error", 0, { reason: "source-failed", outputPublishedAt: null });
+    for (let index = 0; index < 12; index++) {
+      insertRun(fixture, job, 30 + index * 10, "skipped_neutral", 0, {
+        reason: "scoring-stage-producer-running", outputPublishedAt: null,
+      });
+    }
+    const snapshot = await loadCronHealth(fixture.db, NOW);
+    const cron = snapshot.crons[job];
+    expect(cron.lastRun?.status).toBe("skipped_neutral");
+    expect(cron.healthy).toBe(false);
+    expect(cron.recentRuns).toContainEqual(expect.objectContaining({
+      status: "error", metadata: expect.objectContaining({ reason: "source-failed" }),
+    }));
+    expect(snapshot.cronFindingJobs.watchErrors).toContain(job);
+    expect(await outputAt(fixture, job)).toBe(NOW - 3_600);
+  });
 });

@@ -2,6 +2,18 @@ export interface D1Cost {
   queries: number;
   rowsRead: number;
   rowsWritten: number;
+  bindingCalls: number;
+  batchCalls: number;
+  /** Sum of observed waits, including failures and overlapping operations. */
+  awaitElapsedMs: number;
+  /** Sum of available server SQL durations, not a complete invocation total. */
+  sqlDurationMs: number | null;
+  sqlDurationResults: number;
+  servedByRegion: string | null;
+  servedByRegionMixed: boolean;
+  servedByRegionResults: number;
+  servedByPrimaryResults: number;
+  servedByReplicaResults: number;
   coverage: "complete" | "partial";
   reasons: string[];
 }
@@ -16,8 +28,46 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
   let queries = 0;
   let rowsRead = 0;
   let rowsWritten = 0;
+  let bindingCalls = 0;
+  let batchCalls = 0;
+  let awaitElapsedMs = 0;
+  let sqlDurationMs: number | null = null;
+  let sqlDurationResults = 0;
+  let servedByRegion: string | null = null;
+  let servedByRegionMixed = false;
+  let servedByRegionResults = 0;
+  let servedByPrimaryResults = 0;
+  let servedByReplicaResults = 0;
   const reasons = new Set(exclusions);
   const originalStatements = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
+
+  function recordServerMetadata(meta: object): void {
+    const timings = "timings" in meta ? meta.timings : null;
+    const timedDuration = timings != null && typeof timings === "object" && "sql_duration_ms" in timings
+      ? timings.sql_duration_ms : undefined;
+    const legacyDuration = "duration" in meta ? meta.duration : undefined;
+    const duration = typeof timedDuration === "number" && Number.isFinite(timedDuration) && timedDuration >= 0
+      ? timedDuration : legacyDuration;
+    if (typeof duration === "number" && Number.isFinite(duration) && duration >= 0) {
+      sqlDurationMs = sqlDurationMs === null ? duration : sqlDurationMs + duration;
+      sqlDurationResults++;
+    }
+    if ("served_by_region" in meta && typeof meta.served_by_region === "string"
+      && meta.served_by_region.length > 0 && meta.served_by_region.length <= 64) {
+      servedByRegionResults++;
+      if (!servedByRegionMixed) {
+        if (servedByRegion === null) servedByRegion = meta.served_by_region;
+        else if (servedByRegion !== meta.served_by_region) {
+          servedByRegion = null;
+          servedByRegionMixed = true;
+        }
+      }
+    }
+    if ("served_by_primary" in meta && typeof meta.served_by_primary === "boolean") {
+      if (meta.served_by_primary) servedByPrimaryResults++;
+      else servedByReplicaResults++;
+    }
+  }
 
   function recordResult(result: unknown): void {
     if (result == null || typeof result !== "object" || !("meta" in result)) {
@@ -29,6 +79,7 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
       reasons.add("result-meta-unavailable");
       return;
     }
+    recordServerMetadata(meta);
     if ("rows_read" in meta && typeof meta.rows_read === "number" && Number.isFinite(meta.rows_read) && meta.rows_read >= 0) {
       rowsRead += meta.rows_read;
     } else {
@@ -48,6 +99,8 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
 
   async function observe<T>(count: number, operation: () => Promise<T>, readResults: (result: T) => void): Promise<T> {
     queries += count;
+    bindingCalls++;
+    const startedAtMs = performance.now();
     try {
       const result = await operation();
       readResults(result);
@@ -55,6 +108,8 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
     } catch (error) {
       reasons.add("failed-attempt-rows-unavailable");
       throw error;
+    } finally {
+      awaitElapsedMs += performance.now() - startedAtMs;
     }
   }
 
@@ -89,11 +144,14 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
       get(target, property) {
         if (property === "prepare") return (sql: string) => wrapStatement(target.prepare(sql));
         if (property === "batch") {
-          return (statements: D1PreparedStatement[]) => observe(
-            statements.length,
-            () => target.batch(statements.map((statement) => originalStatements.get(statement) ?? statement)),
-            (results) => results.forEach(recordResult),
-          );
+          return (statements: D1PreparedStatement[]) => {
+            batchCalls++;
+            return observe(
+              statements.length,
+              () => target.batch(statements.map((statement) => originalStatements.get(statement) ?? statement)),
+              (results) => results.forEach(recordResult),
+            );
+          };
         }
         if (property === "withSession" && "withSession" in target) {
           return (constraint?: D1SessionBookmark | D1SessionConstraint) => wrapDatabase(target.withSession(constraint));
@@ -107,7 +165,7 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
         if (property === "dump" && "dump" in target) {
           return () => {
             reasons.add("dump-no-meta");
-            return target.dump();
+            return observe(0, () => target.dump(), () => {});
           };
         }
         const value: unknown = Reflect.get(target, property, target);
@@ -120,6 +178,11 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
 
   return {
     db: wrapDatabase(database),
-    snapshot: () => ({ queries, rowsRead, rowsWritten, coverage: reasons.size > 0 ? "partial" : "complete", reasons: [...reasons].sort() }),
+    snapshot: () => ({
+      queries, rowsRead, rowsWritten, bindingCalls, batchCalls, awaitElapsedMs,
+      sqlDurationMs, sqlDurationResults, servedByRegion, servedByRegionMixed,
+      servedByRegionResults, servedByPrimaryResults, servedByReplicaResults,
+      coverage: reasons.size > 0 ? "partial" : "complete", reasons: [...reasons].sort(),
+    }),
   };
 }
