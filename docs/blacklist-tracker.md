@@ -46,11 +46,18 @@ Review scoping rules (owner ruling, 2026-09-29):
 - **Deployment scope follows the Safety Score V9 materiality threshold**
   (`semantic.materiality.deploymentMaterialSharePct`). A control on a deployment below that share of
   circulating supply is recorded in the review evidence but does not set the verdict.
+  The detail card's `Not freezable` note and static quick answers describe that materiality-scoped
+  verdict, not an absence of controls on every peripheral deployment. Peripheral controls remain
+  disclosed in the review notes even when they do not set the verdict.
 
 The public buckets read `blacklistabilityReview.reviewedStatus` through the generated client-registry
 `blacklistStatus`. That reviewed registry value is the sole product-level status authority. Safety
 Score V9 consumes the same review for evidence freshness, scoring gaps, and failure-domain attribution,
 but its `accessPosture.freezeExposure` is not a fallback status source.
+
+Static detail quick answers advertise live freeze/blacklist events only for active assets whose
+uppercase symbol belongs to `BLACKLIST_STABLECOINS`, checked through `isBlacklistStablecoin()`.
+An active listing or a reviewed freeze verdict alone does not establish event-tracker coverage.
 
 Bucket **counts** come from the reviewed registry and never depend on runtime supply. Bucket **market
 cap** sums only observed current supply read through `getCirculatingRawOrNull()`: a reviewed active coin
