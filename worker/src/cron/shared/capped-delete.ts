@@ -48,7 +48,7 @@ export interface CappedPruneStatement {
 }
 
 /** Up to five independent statements share one binding call per drain round. */
-export const RETENTION_STATEMENTS_PER_BATCH = 5;
+const RETENTION_STATEMENTS_PER_BATCH = 5;
 
 export async function deleteCappedGroup(
   db: D1Database,

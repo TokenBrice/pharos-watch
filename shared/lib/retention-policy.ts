@@ -40,7 +40,7 @@ export interface PermanentRetentionPolicy {
 
 export type RetentionPolicy = WindowedRetentionPolicy | PermanentRetentionPolicy | OwnerManagedRetentionPolicy;
 
-export const PRODUCER_HISTORY_WINDOWS = [
+const PRODUCER_HISTORY_WINDOWS = [
   { windowSec: 550 * DAY, predicate: "calendar_period IS NOT NULL" },
   { windowSec: 90 * DAY, predicate: "calendar_period IS NULL AND producer_kind = 'budget-only'" },
   { windowSec: 30 * DAY, predicate: "calendar_period IS NULL AND producer_kind != 'budget-only'" },
@@ -205,7 +205,7 @@ const PERMANENT_TABLE_CLOCKS = [
   ["tape_events", "ts", "Tape product archive (D15)"],
 ] as const;
 
-export const PERMANENT_RETENTION_POLICIES: readonly PermanentRetentionPolicy[] = PERMANENT_TABLE_CLOCKS.map(
+const PERMANENT_RETENTION_POLICIES: readonly PermanentRetentionPolicy[] = PERMANENT_TABLE_CLOCKS.map(
   ([table, timestampColumn, owner]) => ({
     table, timestampColumn, owner, permanent: true,
     windowSec: null, predicate: "no automatic age delete", batchLimit: null, runLimit: null,
@@ -257,7 +257,7 @@ const OWNER_MANAGED_TABLES = [
   ["telegram_chat_delivery_diagnostics", "updated_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "90 days", "strict updated_at cutoff"],
 ] as const;
 
-export const OWNER_MANAGED_RETENTION_POLICIES: readonly OwnerManagedRetentionPolicy[] = OWNER_MANAGED_TABLES.map(
+const OWNER_MANAGED_RETENTION_POLICIES: readonly OwnerManagedRetentionPolicy[] = OWNER_MANAGED_TABLES.map(
   ([table, timestampColumn, owner, window, predicate]) => ({
     table, timestampColumn, owner, permanent: false, execution: "owner",
     windowSec: { authority: owner, description: window },

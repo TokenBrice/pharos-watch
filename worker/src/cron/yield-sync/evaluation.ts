@@ -223,7 +223,7 @@ export function resolveYieldTypeLabel(params: {
   );
 }
 
-export function getConfidenceTier(source: Pick<ResolvedYield, "dataSource" | "yieldType">): ConfidenceTier {
+function getConfidenceTier(source: Pick<ResolvedYield, "dataSource" | "yieldType">): ConfidenceTier {
   if (source.yieldType === "lending-opportunity") return "discovered";
 
   switch (source.dataSource) {
@@ -255,7 +255,7 @@ export function getConfidencePriority(tier: ConfidenceTier): number {
   }
 }
 
-export function resolveCalculationMode(source: ResolvedYield): YieldCalculationMode {
+function resolveCalculationMode(source: ResolvedYield): YieldCalculationMode {
   if (source.dataSource === "rate-derived") return "benchmark-model";
   if (source.dataSource === "price-derived") return "price-return";
   if (source.exchangeRate != null || source.comparisonAnchorObservedAt != null) {
@@ -304,7 +304,7 @@ function getEvidencePriority(evidenceClass: YieldEvidenceClass): number {
   }
 }
 
-export function relativeDivergence(a: number, b: number): number {
+function relativeDivergence(a: number, b: number): number {
   const maxValue = Math.max(Math.abs(a), Math.abs(b), 1e-9);
   return Math.abs(a - b) / maxValue;
 }
@@ -394,7 +394,7 @@ type PenaltyDerivedFields = Pick<
 
 
 /** Ordering needs utility and penalty provenance, but not a PYS value. */
-export function resolvePenaltyOrderingFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
+function resolvePenaltyOrderingFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
   const components = computePysComponents(params);
   return {
     sourceRiskPenalty: components.sourceRiskPenalty,
@@ -443,7 +443,7 @@ export interface YieldSourceGroupSelectionResult {
   sourceSwitches: number;
 }
 
-export function selectYieldSourceGroup(params: {
+function selectYieldSourceGroup(params: {
   stablecoinId: string;
   provisional: EvaluatedYieldSource[];
   previousBestSourceKey: string | null;
@@ -608,8 +608,6 @@ export function selectYieldSourceGroup(params: {
     sourceSwitches,
   };
 }
-
-export { resolveDependencyConcentration } from "@shared/lib/yield-source-risk-registry";
 
 /**
  * Derivation methods are a property of the row's calculation lane, not a venue.

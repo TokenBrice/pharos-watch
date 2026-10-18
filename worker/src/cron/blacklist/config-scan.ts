@@ -42,7 +42,7 @@ const COVERAGE_FAILURE_CONFIG_SAMPLE_LIMIT = 6;
 export const BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS = 64;
 type BlacklistCoverageVerdict = "covered" | "lagging-within-tolerance" | "failed";
 
-export function blacklistCoverageVerdict(
+function blacklistCoverageVerdict(
   result: BlacklistScanResult,
   cursorKind: BlacklistConfigState["cursorKind"],
 ): BlacklistCoverageVerdict {

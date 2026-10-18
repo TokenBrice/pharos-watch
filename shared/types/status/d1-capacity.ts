@@ -17,12 +17,11 @@ const D1CapacityHourlyMinMaxSchema = z.object({
   maxDatabaseSizeBytes: z.number().nonnegative(),
   swingBytes: z.number().nonnegative(),
 });
-export type D1CapacityHourlyMinMax = z.infer<typeof D1CapacityHourlyMinMaxSchema>;
 
 const D1QuotaThresholdStateSchema = z.enum(["normal", "watch", "warning", "unavailable"]);
 export type D1QuotaThresholdState = z.infer<typeof D1QuotaThresholdStateSchema>;
 
-export const D1QuotaMetricSchema = z.object({
+const D1QuotaMetricSchema = z.object({
   observed24h: z.number().nonnegative().nullable(),
   projectedMonthly: z.number().nonnegative().nullable(),
   includedMonthlyAllowance: z.number().positive(),

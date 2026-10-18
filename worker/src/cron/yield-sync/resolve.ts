@@ -263,7 +263,7 @@ export function canUseSymbolOnlyYieldMatch(
   return symbolIds.length === 1 && symbolIds[0] === meta.id;
 }
 
-export function buildDlChainFilter(
+function buildDlChainFilter(
   meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">,
 ): Set<string> | undefined {
   const chainIds = new Set<string>();
@@ -278,7 +278,7 @@ export function buildDlChainFilter(
   return chainIds.size > 0 ? chainIds : undefined;
 }
 
-export function getTrackedContractAddresses(
+function getTrackedContractAddresses(
   meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">,
   chain?: string | null,
 ): string[] {
@@ -510,7 +510,7 @@ function getActiveStablecoinMeta(stablecoinId: string) {
   return ACTIVE_STABLECOINS.find((meta) => meta.id === stablecoinId);
 }
 
-export function buildReservedYieldPoolIds(): Set<string> {
+function buildReservedYieldPoolIds(): Set<string> {
   return new Set([
     ...Object.values(YIELD_POOL_MAP),
     ...Object.values(AUTO_LENDING_POOL_MAP),

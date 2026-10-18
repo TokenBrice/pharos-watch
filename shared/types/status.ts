@@ -17,7 +17,6 @@ export type {
   D1CapacityAssessment,
   D1CapacityGrowthWindow,
   D1CapacityGrowthWindowKey,
-  D1CapacityHourlyMinMax,
   D1CapacityThresholdState,
   D1QuotaAssessment,
   D1QuotaMetric,

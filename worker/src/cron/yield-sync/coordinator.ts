@@ -1293,7 +1293,7 @@ type DeterministicOnChainHealthState = Parameters<
   typeof buildNextDeterministicOnChainHealthState
 >[0]["previous"];
 
-export function logYieldApyDivergences(evaluatedSources: EvaluatedYieldSource[]): void {
+function logYieldApyDivergences(evaluatedSources: EvaluatedYieldSource[]): void {
   const nativeApyByCoin = new Map<string, number>();
   const lendingApyByCoin = new Map<string, number>();
 
@@ -1328,7 +1328,7 @@ export function getPublishableNonOnchainCoverageIds(
   );
 }
 
-export async function computeDeterministicOnChainHealth(params: {
+async function computeDeterministicOnChainHealth(params: {
   db: D1Database;
   startSec: number;
   evaluatedSources: EvaluatedYieldSource[];
