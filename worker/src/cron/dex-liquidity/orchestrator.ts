@@ -432,7 +432,7 @@ export async function consumeDexLiquidityScoringStage(
         metadata: {
           reason: DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
           sourceSlotStartedAt: expectedSourceSlotStartedAt,
-          readinessDeadlineMs: options.stageReadyDeadlineMs,
+          readinessDeadlineMs: options.stageReadyDeadlineMs ?? null,
           persistence: {
             generationId: null,
             skipped: true,

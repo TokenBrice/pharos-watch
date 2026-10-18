@@ -41,8 +41,14 @@ export type SafetyScoreCaptureArchiveGapEvidenceSource = (typeof SAFETY_SCORE_CA
 export const SafetyScoreCaptureArchiveRecentCronRunSchema = SafetyScoreCaptureArchiveRecentCronRowSchema.pick({
   run_id: true, started_at: true, status: true,
 });
-/** One run naming a generation that carries no archive index row. */
-export type SafetyScoreCaptureArchiveCronGapEvidence = Pick<SafetyScoreCaptureArchiveRecentCronRun, "generation_id" | "run_id" | "started_at" | "status">;
+export type SafetyScoreCaptureArchiveRecentCronRun = z.infer<typeof SafetyScoreCaptureArchiveRecentCronRunSchema>;
+/** One run naming a schema-validated generation that carries no archive index row. */
+export type SafetyScoreCaptureArchiveCronGapEvidence = {
+  generation_id: string;
+  run_id: number;
+  started_at: number;
+  status: string;
+};
 /** A generation with no archive index row, carrying whichever optional evidence sources still retain it. */
 export const SafetyScoreCaptureArchiveGapSchema = z.object({
   generation_id: z.string().min(1),

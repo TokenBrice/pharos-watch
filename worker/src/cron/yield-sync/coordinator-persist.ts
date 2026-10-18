@@ -105,6 +105,7 @@ export async function publishYieldCoordinatorResults(params: {
   | { ok: false; result: CronResult }
   | {
       ok: true;
+      /** This attempt's generation, including a failed/CAS-skipped candidate; not publication proof. */
       generationId: string;
       updatedCount: number;
       degradationReasons: string[];
@@ -224,6 +225,7 @@ export async function publishYieldCoordinatorResults(params: {
       await finalizeFailedGeneration(reason);
       return {
         ok: true,
+        generationId,
         updatedCount,
         degradationReasons: params.degradationReasons,
         validationFailures: publicationWrite.validationFailures,

@@ -9,7 +9,7 @@ import type * as nativePegQuotes from "../../lib/native-peg-quotes";
 import type * as confirmationEvidence from "../pending-depeg-confirmation-evidence";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
-import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { insertDexPrice, insertPendingDepeg, makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
 import { buildPrimaryPricePlan } from "../sync-stablecoins/enrich-prices-primary-provider-collection";
 import { hydrateDepegDetection } from "../depeg-detection/hydration";
@@ -40,7 +40,7 @@ const sources = [
   { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.98, tvl: 3_000_000 },
   { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.98, tvl: 2_000_000 },
 ];
-const asset = makeAsset({
+const asset = makePeggedAsset({
   id: "usdt-tether", symbol: "USDT", geckoId: undefined,
   price: 0.98, priceSource: "pool-tvl-weighted", priceConfidence: "low",
   priceObservedAt: NOW - 30, priceUpdatedAt: NOW - 30, priceSyncedAt: NOW - 30,
