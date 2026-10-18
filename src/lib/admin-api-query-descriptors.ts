@@ -6,10 +6,11 @@ import type {
   CredentialLifecycleSummaryResponse,
   StatusHistoryResponse,
   StatusResponse,
+  StatusCronDetailResponse,
 } from "@shared/types";
 import { ApiKeyAuditLogResponseSchema, ApiKeyListResponseSchema, CredentialLifecycleSummaryResponseSchema } from "@shared/types/api-keys";
 import { ApiRequestAttributionResponseSchema } from "@shared/types/request-source";
-import { StatusHistoryResponseSchema, StatusResponseSchema } from "@shared/types/status";
+import { StatusCronDetailResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "@shared/types/status";
 import { AdminActionAuditLogResponseSchema, type AdminActionAuditLogResponse } from "@/lib/actions-workbench-model";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import type { SchemaLikeSource } from "@shared/lib/schema-like";
@@ -112,6 +113,14 @@ export const ADMIN_API_QUERY_DESCRIPTORS = {
       queryKey: ["status-history", window] as const,
       // Thunk: `from` is `Date.now()`-derived and must not freeze at render time.
       path: () => buildStatusHistoryPath(window),
+    }),
+  ),
+  /** Opened cron job's full run/progress metadata; the default status serves summaries only. */
+  statusCronDetail: defineParameterizedAdminApiQuery<[string], StatusCronDetailResponse>(
+    StatusCronDetailResponseSchema,
+    (job) => ({
+      queryKey: ["status-cron-detail", job] as const,
+      path: API_PATHS.statusCronDetail(job),
     }),
   ),
   adminActionLog: defineAdminApiQuery<AdminActionAuditLogResponse>(

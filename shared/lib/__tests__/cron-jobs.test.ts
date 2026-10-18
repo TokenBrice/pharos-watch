@@ -11,6 +11,7 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
+  isProvenSatisfiedNeutralSkipReason,
 } from "../cron-jobs";
 
 function isHourlyCpuTrigger(schedule: string): boolean {
@@ -18,6 +19,11 @@ function isHourlyCpuTrigger(schedule: string): boolean {
 }
 
 describe("cron job schedule metadata", () => {
+  it("resolves only the artifact-proven supplemental catch-up identity", () => {
+    expect(isProvenSatisfiedNeutralSkipReason("supplemental-catch-up-not-due")).toBe(true);
+    expect(isProvenSatisfiedNeutralSkipReason("supplemental-catch-up-marker-not-due")).toBe(false);
+  });
+
   it("excludes the retired Workflow observer from the registered cohort", () => {
     expect(CRON_JOB_DEFINITIONS.some((definition) => definition.job === "compute-safety-score-v9-workflow")).toBe(false);
     expect(CRON_INTERVALS).not.toHaveProperty("compute-safety-score-v9-workflow");

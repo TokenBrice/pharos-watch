@@ -9,9 +9,9 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/l
  */
 // The five job graphs (alert dispatch, recap planner/store, pulse snapshot,
 // degradation watchdog, disambiguation cleanup) are loaded via dynamic
-// import() at dispatch time — mirroring SLOT_RUNNER_LOADER_BY_KEY in ../scheduled.ts —
-// so their module graphs never sit on the heap of isolates that only run the
-// heavy data lanes. Only types may be imported statically from them.
+// import() at dispatch time, like the compile-time public-runners map.
+// Heavy entrypoints cannot reach this lane; public isolates still defer its
+// job initialization until dispatch. Only types may be imported statically.
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
 import type * as TelegramRegistrationModule from "../../lib/telegram/webhook-registration";
 import type { TelegramRecapRolloutCleanupResult } from "../../lib/telegram/recap-store";
@@ -23,6 +23,7 @@ import {
 } from "@shared/lib/telegram-recap-policy";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import { parseJsonObject } from "../../lib/json-parse";
+import { createD1CostTracker } from "../../lib/d1-cost";
 import {
   getRuntimeProducerIdentity,
   runRuntimeBudgetOnlyTask,
@@ -324,8 +325,9 @@ function buildTelegramSlotGroups(
       job: "telegram-pulse-snapshot",
       errorMessage: "[cron] telegram-pulse-snapshot failed:",
       run: async (signal) => {
+        const d1Cost = createD1CostTracker(runtime.db, ["outer-cron-lifecycle-excluded"]);
         const { publishTelegramPulseSnapshotWithOutcome } = await import("../../api/telegram-pulse");
-        const outcome = await publishTelegramPulseSnapshotWithOutcome(runtime.db, undefined, {
+        const outcome = await publishTelegramPulseSnapshotWithOutcome(d1Cost.db, undefined, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           signal,
         });
@@ -334,6 +336,7 @@ function buildTelegramSlotGroups(
           itemCount: outcome.snapshotPublished ? 1 : 0,
           error: outcome.error ?? undefined,
           metadata: JSON.stringify({
+            d1Cost: d1Cost.snapshot(),
             sidecar: "telegram-pulse-snapshot",
             snapshotPublished: outcome.snapshotPublished,
             heavySectionsRecomputed: outcome.heavySectionsRecomputed,

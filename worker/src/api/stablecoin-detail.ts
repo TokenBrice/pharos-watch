@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
 import { errorResponse } from "../lib/api-response";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildFreshnessMeta } from "../lib/api-freshness";

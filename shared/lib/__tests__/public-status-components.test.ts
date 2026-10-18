@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { API_FRESHNESS_MAX_AGE_SEC } from "../api-freshness";
 import { makeHealthyHealthResponse } from "../../test-utils/health-fixtures";
 import {
   buildPublicHeadline,
@@ -32,6 +33,51 @@ describe("public status components", () => {
     const projection = projectPublicStatus(makeHealthyHealthResponse());
     expect(projection.headline).toEqual({ state: "operational", title: "All systems operational", affected: [] });
     expect(projection.components.every((item) => item.state === "operational" && item.reasons.length === 0)).toBe(true);
+  });
+
+  it("degrades held Safety Scores with their machine reason without changing Risk signals", () => {
+    const health = makeHealthyHealthResponse();
+    health.safetyScorePublication = {
+      ...health.safetyScorePublication!,
+      status: "held",
+      attemptedAtSec: NOW,
+      heldSinceSec: NOW - 60,
+      reasons: [{ code: "redemption-stale" }],
+    };
+    expect(component(health, "safety-scores")).toMatchObject({
+      state: "degraded",
+      reasons: ["safety-score-publication-held", "safety-score-publication-held:redemption-stale"],
+      ageSeconds: 30,
+    });
+    expect(component(health, "risk-signals").state).toBe("operational");
+    expect(projectPublicStatus(health).components.filter((item) => item.id !== "safety-scores")
+      .every((item) => item.state === "operational")).toBe(true);
+  });
+
+  it("uses the accepted score clock and existing budget, with the standard outage grace", () => {
+    const health = makeHealthyHealthResponse();
+    const budget = API_FRESHNESS_MAX_AGE_SEC.reportCards;
+    health.safetyScorePublication = { ...health.safetyScorePublication!, acceptedAtSec: NOW - budget, attemptedAtSec: NOW };
+    expect(component(health, "safety-scores").state).toBe("operational");
+    health.safetyScorePublication.acceptedAtSec -= 1;
+    expect(component(health, "safety-scores")).toMatchObject({
+      state: "degraded", reasons: ["safety-score-publication:stale"],
+      budget: { delayedAfterSec: budget, degradedAfterSec: budget, outageAfterSec: budget * 2 },
+    });
+    health.safetyScorePublication.acceptedAtSec = NOW - budget * 2 - 1;
+    expect(component(health, "safety-scores").state).toBe("outage");
+  });
+
+  it("never treats failed or absent Safety Score evidence as operational", () => {
+    const health = makeHealthyHealthResponse();
+    health.safetyScorePublication = null;
+    health.safetyScorePublicationUnavailableReason = "safety-score-publication-read-failed";
+    expect(component(health, "safety-scores")).toMatchObject({
+      state: "degraded", reasons: ["safety-score-publication-read-failed"],
+    });
+    delete health.safetyScorePublication;
+    delete health.safetyScorePublicationUnavailableReason;
+    expect(component(health, "safety-scores").state).toBe("degraded");
   });
 
   it("grades a late scheduler as delayed, then degraded, and only an outage past the grace multiple", () => {
@@ -83,7 +129,19 @@ describe("public status components", () => {
     health.blacklist = { ...health.blacklist, missingRatio: null, unavailableReason: "blacklist-read-failed" };
     health.circuits = null;
     expect(component(health, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-read-failed"] });
-    expect(component(health, "data-refresh").reasons).toContain("circuits-unavailable");
+    expect(component(health, "data-refresh").reasons).toContain("circuits-unavailable:unknown");
+  });
+
+  it("bounds and sorts circuit source identity and retains unavailable subreasons", () => {
+    const health = makeHealthyHealthResponse();
+    const open = { state: "open" as const, consecutiveFailures: 3, lastFailureAt: NOW,
+      lastSuccessAt: null, openedAt: NOW };
+    health.circuits = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`source-${String(i).padStart(2, "0")}`, open]));
+    const reason = component(health, "data-refresh").reasons[0];
+    expect(reason).toBe(`upstream-circuits-open:20:${Array.from({ length: 12 }, (_, i) => `source-${String(i).padStart(2, "0")}`).join(",")}`);
+    health.schedulerLiveness = { ...health.schedulerLiveness!, status: "unavailable",
+      ageSeconds: null, unavailableReason: "slot-start-query-failed" };
+    expect(component(health, "data-refresh").reasons).toContain("scheduler:unavailable:slot-start-query-failed");
   });
 
   it("surfaces a non-healthy raw verdict even when no component explains it", () => {

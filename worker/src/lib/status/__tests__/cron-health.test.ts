@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { loadCronHealth } from "../cron-health";
+
+const mockD1 = createMockD1Preset([
+  { match: "WITH finished_slots", rows: [] },
+  { match: "SELECT MAX(output_at)", rows: [] },
+  { match: "FROM cron_leases", rows: [] },
+  { match: "FROM cron_run_progress", rows: [] },
+  { match: "FROM cache", rows: [] },
+  { match: "WHERE state = 'running'", rows: [] },
+]);
 
 interface SeedRun {
   job: string;
@@ -105,7 +114,7 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
       for (let i = 0; i < 12; i++) insert.run("sync-stablecoins", NOW - 100 + i, "skipped_neutral", JSON.stringify({ reason: "cadence_bucket_completed" }));
       const snapshot = await loadCronHealth(db, NOW);
       expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(expected);
-      expect(snapshot.crons["sync-stablecoins"].recentRuns.filter((run) => run.status !== "skipped_neutral")).toHaveLength(2);
+      expect(snapshot.crons["sync-stablecoins"].runs.filter((run) => run.status !== "skipped_neutral")).toHaveLength(2);
     } finally { sqlite.close(); }
   });
 
@@ -137,9 +146,9 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     runs[1].degraded_reason = "required-stage-failed";
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
     expect(snapshot.degradedCronRuns).toBe(0);
-    expect(snapshot.crons["status-self-check"].lastRun?.degradedReason).toBe("observation-reason");
-    expect(snapshot.crons["status-self-check"].recentRuns[1].degradedReason).toBe("required-stage-failed");
-    expect(snapshot.crons["sync-stablecoins"].lastRun?.degradedReason).toBeUndefined();
+    expect(snapshot.crons["status-self-check"].runs[0]?.degradedReason).toBe("observation-reason");
+    expect(snapshot.crons["status-self-check"].runs[1].degradedReason).toBe("required-stage-failed");
+    expect(snapshot.crons["sync-stablecoins"].runs[0]?.degradedReason).toBeUndefined();
   });
   it("returns 0 when a critical cron has only one error run followed by ok", async () => {
     // After the base ok row is cleared (because sync-stablecoins appears in
@@ -234,8 +243,9 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   it.each([
     { job: "snapshot-public-dataset", reason: "same_day_snapshot_exists" },
     { job: "snapshot-psi", reason: "same_day_snapshot_exists" },
+    { job: "sync-yield-supplemental", reason: "supplemental-catch-up-not-due" },
   ])(
-    "recovers $job availability from a proven same-day skip after a transient precheck error",
+    "recovers $job availability from a proven artifact skip after a transient precheck error",
     async ({ job, reason }) => {
       // Production shape 2026-09-23: the 08:00 run wrote the day's artifact,
       // one 09:31 precheck read failed on a transient D1 internal error, and
@@ -258,6 +268,72 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
       expect(snapshot.degradedCronRuns).toBe(0);
     },
   );
+
+  it.each(["snapshot-psi", "snapshot-public-dataset"])(
+    "recovers %s from a parent admission readback without child or lease rows",
+    async (job) => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      try {
+        const outputAt = NOW - 30_000;
+        const insert = sqlite.prepare(`INSERT INTO cron_runs
+          (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, 100, ?, ?, ?)`);
+        insert.run(job, outputAt, "ok", 1, JSON.stringify({ outputPublishedAt: outputAt }));
+        insert.run(job, NOW - 20_000, "error", 0, JSON.stringify({ reason: "precheck-read-failed" }));
+        sqlite.prepare(`INSERT INTO cron_slot_executions
+          (slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, metadata)
+          VALUES ('quarterHourly', ?, 'finished', 'ok', 'fixture', ?, ?, ?, ?)`)
+          .run(NOW - 600, NOW - 600, NOW - 100, NOW - 100, JSON.stringify({ jobs: [{
+            job, outcome: "skipped", status: "skipped_neutral", neutral: true,
+            reason: "same_day_snapshot_exists", observedAt: NOW - 300,
+          }] }));
+
+        const snapshot = await loadCronHealth(db, NOW);
+        expect(snapshot.crons[job].healthy).toBe(true);
+        expect(snapshot.cronErrorCount).toBe(0);
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = ?").get(job)).toEqual({ count: 2 });
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM scheduled_child_attempts").get()).toEqual({ count: 0 });
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
+        expect(sqlite.prepare(`SELECT json_extract(metadata, '$.outputPublishedAt') AS output_at
+          FROM cron_runs WHERE job = ? AND status = 'ok'`).get(job)).toEqual({ output_at: outputAt });
+      } finally { sqlite.close(); }
+    },
+  );
+
+  it.each([
+    { reason: "same_day_snapshot_exists", errorAge: 100, observationAge: 300, state: "finished" },
+    { reason: "before_daily_slot", errorAge: 20_000, observationAge: 300, state: "finished" },
+    { reason: "same_day_snapshot_exists", errorAge: 20_000, observationAge: -1, state: "finished" },
+    { reason: "same_day_snapshot_exists", errorAge: 20_000, observationAge: 300, state: "running" },
+  ])("rejects non-authoritative parent readback ($reason/$state/$observationAge/$errorAge)", async ({
+    reason, errorAge, observationAge, state,
+  }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const job = "snapshot-psi";
+    try {
+      sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+        VALUES (?, ?, 100, 'error', ?)`).run(job, NOW - errorAge, JSON.stringify({ reason: "precheck-read-failed" }));
+      sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, metadata)
+        VALUES ('quarterHourly', ?, ?, 'ok', 'fixture', ?, ?, ?, ?)`)
+        .run(NOW - 600, state, NOW - 600, NOW - 100, NOW - 100, JSON.stringify({ jobs: [
+          "malformed-job-entry",
+          { job, outcome: "skipped", status: "skipped_neutral", neutral: true, reason, observedAt: NOW - observationAge },
+        ] }));
+      const snapshot = await loadCronHealth(db, NOW);
+      expect(snapshot.crons[job].healthy).toBe(false);
+      expect(snapshot.cronErrorCount).toBe(1);
+    } finally { sqlite.close(); }
+  });
+
+  it("keeps snapshot telemetry unknown when parent admission evidence cannot be read", async () => {
+    const db = mockD1([
+      { match: "WITH finished_slots", rows: [], throwError: new Error("parent evidence unavailable") },
+      { match: "UNION ALL", rows: seedWithOverrides(NOW, []) },
+    ]);
+    const snapshot = await loadCronHealth(db, NOW);
+    expect(snapshot.crons["snapshot-psi"].healthy).toBeNull();
+    expect(snapshot.crons["snapshot-psi"].telemetryUnknown).toBe(true);
+  });
 
   it.each([
     { order: "readback newer than the error", provenAgeSec: 26_000, errorAgeSec: 49_000, healthy: true },
@@ -286,7 +362,7 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
       expect(snapshot.cronErrorCount).toBe(healthy ? 0 : 1);
       // The served history carries whichever evidence decided the verdict so
       // the admin lane resolves it the same way.
-      expect(cron.recentRuns.slice(10).map((run) => [run.status, run.metadata?.reason])).toEqual(healthy
+      expect(cron.runs.slice(10).map((run) => [run.status, run.metadata?.reason])).toEqual(healthy
         ? [["skipped_neutral", "same_day_snapshot_exists"], ["error", "stale-slot-reconciled"]]
         : [["error", "stale-slot-reconciled"]]);
     } finally { sqlite.close(); }
@@ -305,6 +381,19 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
 
     expect(snapshot.crons["snapshot-public-dataset"]?.healthy).toBe(false);
+    expect(snapshot.cronErrorCount).toBe(1);
+  });
+
+  it("does not let a supplemental marker-only skip prove recovery after a failed run", async () => {
+    const job = "sync-yield-supplemental";
+    const rows = seedWithOverrides(NOW, [
+      { job, status: "skipped_neutral", ageSec: 300 },
+      { job, status: "error", ageSec: 3600 },
+    ]);
+    rows.find((row) => row.job === job && row.status === "skipped_neutral")!.metadata =
+      JSON.stringify({ reason: "supplemental-catch-up-marker-not-due" });
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons[job]?.healthy).toBe(false);
     expect(snapshot.cronErrorCount).toBe(1);
   });
 
@@ -337,14 +426,14 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
       for (let hour = 0; hour < 11; hour++) insert.run(NOW - 30 - hour * 3600, "skipped_neutral");
       const snapshot = await loadCronHealth(db, NOW);
       expect(snapshot.crons["fetch-tbill-rate"].healthy).toBe(healthy);
-      expect(snapshot.crons["fetch-tbill-rate"].lastRun?.status).toBe("skipped_neutral");
+      expect(snapshot.crons["fetch-tbill-rate"].runs[0]?.status).toBe("skipped_neutral");
       // The required attempt beyond the display window is served as an
       // eleventh run so the inherited outcome stays attributable in the
       // admin cron table instead of counting silently in the summary.
-      expect(snapshot.crons["fetch-tbill-rate"].recentRuns).toHaveLength(11);
-      expect(snapshot.crons["fetch-tbill-rate"].recentRuns.slice(0, 10).every((run) => run.status === "skipped_neutral"))
+      expect(snapshot.crons["fetch-tbill-rate"].runs).toHaveLength(11);
+      expect(snapshot.crons["fetch-tbill-rate"].runs.slice(0, 10).every((run) => run.status === "skipped_neutral"))
         .toBe(true);
-      expect(snapshot.crons["fetch-tbill-rate"].recentRuns[10]?.status).toBe(status);
+      expect(snapshot.crons["fetch-tbill-rate"].runs[10]?.status).toBe(status);
     } finally { sqlite.close(); }
   });
 
@@ -353,7 +442,7 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     // admin cron table showed 6 "Run warning" rows. snapshot-psi and
     // snapshot-public-dataset each counted via a degraded daily required run
     // hidden behind a display window filled with quarter-hourly neutral
-    // admission skips. The served recentRuns must carry that inherited run so
+    // admission skips. The served runs must carry that inherited run so
     // the count equals what the cron UI can attribute.
     const psiOverrides = [
       { job: "snapshot-psi", status: "degraded" as const, ageSec: 20_000 },
@@ -380,20 +469,20 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.degradedCronRuns).toBe(3);
 
     for (const job of ["snapshot-psi", "snapshot-public-dataset"]) {
-      expect(snapshot.crons[job].lastRun?.status).toBe("skipped_neutral");
-      expect(snapshot.crons[job].recentRuns).toHaveLength(11);
-      expect(snapshot.crons[job].recentRuns[10]?.status).toBe("degraded");
+      expect(snapshot.crons[job].runs[0]?.status).toBe("skipped_neutral");
+      expect(snapshot.crons[job].runs).toHaveLength(11);
+      expect(snapshot.crons[job].runs[10]?.status).toBe("degraded");
     }
 
     // Parity invariant: every counted degraded job is derivable from the
     // served records using the admin table's classification rule (fresh
     // degraded last run, or a neutral last run inheriting a degraded
-    // required run from recentRuns).
+    // required run from runs).
     const visibleDegraded = Object.values(snapshot.crons).filter((cron) => {
-      if (cron.telemetryUnknown || cron.lastRun == null) return false;
-      if (cron.lastRun.status === "degraded") return true;
-      if (cron.lastRun.status !== "skipped_neutral") return false;
-      const requiredRun = cron.recentRuns.find((run) => run.status !== "skipped_neutral");
+      if (cron.telemetryUnknown || cron.runs[0] == null) return false;
+      if (cron.runs[0].status === "degraded") return true;
+      if (cron.runs[0].status !== "skipped_neutral") return false;
+      const requiredRun = cron.runs.find((run) => run.status !== "skipped_neutral");
       return requiredRun?.status === "degraded";
     });
     expect(visibleDegraded).toHaveLength(3);
@@ -453,8 +542,8 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
 
       const snapshot = await loadCronHealth(db, NOW);
 
-      expect(snapshot.crons["daily-digest"]?.lastRun?.status).toBe("error");
-      expect(snapshot.crons["daily-digest"]?.recentRuns.map((run) => run.status)).toEqual([
+      expect(snapshot.crons["daily-digest"]?.runs[0]?.status).toBe("error");
+      expect(snapshot.crons["daily-digest"]?.runs.map((run) => run.status)).toEqual([
         "error",
         "degraded",
         "ok",
@@ -495,8 +584,8 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
 
       const snapshot = await loadCronHealth(db, NOW);
 
-      expect(snapshot.crons["daily-digest"]?.lastRun?.status).toBe("error");
-      expect(snapshot.crons["daily-digest"]?.recentRuns.map((run) => run.status)).toEqual([
+      expect(snapshot.crons["daily-digest"]?.runs[0]?.status).toBe("error");
+      expect(snapshot.crons["daily-digest"]?.runs.map((run) => run.status)).toEqual([
         "error",
         "ok",
       ]);
@@ -543,7 +632,7 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
     expect(snapshot.availabilityImpactingUnhealthyCrons).toBe(0);
     expect(snapshot.crons["yield-coverage-audit"]?.bootstrap).toBe(true);
     expect(snapshot.crons["yield-coverage-audit"]?.healthy).toBe(true);
-    expect(snapshot.crons["yield-coverage-audit"]?.lastRun).toBeNull();
+    expect(snapshot.crons["yield-coverage-audit"]?.runs).toEqual([]);
   });
 
   it("still counts a critical-tier cron with no runs as unhealthy", async () => {
@@ -718,7 +807,7 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
     let runningSlotSql = "";
     const { sqlite, db } = createLatestSchemaSqlite({
       onAll: (sql) => {
-        if (sql.includes("FROM cron_slot_executions")) runningSlotSql = sql;
+        if (sql.includes("WHERE state = 'running'")) runningSlotSql = sql;
       },
     });
     try {
@@ -760,7 +849,7 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
       { match: "FROM cron_run_progress", rows: [] },
       { match: "FROM cache", rows: [] },
       {
-        match: "FROM cron_slot_executions",
+        match: "WHERE state = 'running'",
         rows: [],
         throwError: new Error("cron_slot_executions unavailable"),
       },
@@ -843,7 +932,7 @@ describe("loadCronHealth — cron event markers", () => {
         rows: [],
         throwError: new Error("cache unavailable"),
       },
-      { match: "FROM cron_slot_executions", rows: [] },
+      { match: "WHERE state = 'running'", rows: [] },
     ]);
 
     const snapshot = await loadCronHealth(db, NOW);
@@ -870,7 +959,7 @@ describe("loadCronHealth — cron event markers", () => {
         throwError: new Error("cache unavailable"),
       },
       {
-        match: "FROM cron_slot_executions",
+        match: "WHERE state = 'running'",
         rows: [],
         throwError: new Error("cron_slot_executions unavailable"),
       },
@@ -943,8 +1032,7 @@ describe("recap availability metadata projection", () => {
       }] },
     ]);
     const snapshot = await loadCronHealth(db, now);
-    expect(snapshot.crons[job].lastRun?.metadata).toMatchObject({ rollout });
-    expect(snapshot.crons[job].recentRuns[0].metadata).toMatchObject({ rollout });
+    expect(snapshot.crons[job].runs[0]?.metadata).toMatchObject({ rollout });
     expect(snapshot.crons[job].inFlight?.metadata).toMatchObject({ rollout });
   });
 });

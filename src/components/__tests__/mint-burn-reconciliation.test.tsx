@@ -22,7 +22,6 @@ function record(overrides: Partial<MintBurnConservationRecord> = {}): MintBurnCo
   return {
     version: 1,
     key: "ethereum-token",
-    configFingerprint: "fingerprint",
     stablecoinId: "coin-0",
     chainId: "ethereum",
     address: "0x1111111111111111111111111111111111111111",

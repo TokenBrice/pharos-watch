@@ -143,6 +143,33 @@ describe("getD1UsageSummary", () => {
         nextThresholdAt: null,
         exhaustionAt: null,
         daysUntilExhaustion: null,
+        hourlyMinMax24h: {
+          windowSeconds: 86_400,
+          sampleCount: 1,
+          minDatabaseSizeBytes: 1_589_248_000,
+          maxDatabaseSizeBytes: 1_589_248_000,
+          swingBytes: 0,
+        },
+      },
+      quota: {
+        rowsRead: {
+          observed24h: 1_633_139_670,
+          projectedMonthly: 48_994_190_100,
+          includedMonthlyAllowance: 25_000_000_000,
+          utilizationPercent: 195.98,
+          thresholdState: "warning",
+          crossedThresholdPercent: 95,
+          nextThresholdPercent: null,
+        },
+        rowsWritten: {
+          observed24h: 1_555_568,
+          projectedMonthly: 46_667_040,
+          includedMonthlyAllowance: 50_000_000,
+          utilizationPercent: 93.33,
+          thresholdState: "watch",
+          crossedThresholdPercent: 80,
+          nextThresholdPercent: 95,
+        },
       },
       tableGrowth: null,
     });
@@ -172,6 +199,26 @@ describe("getD1UsageSummary", () => {
       rowsRead24h: 0,
       rowsWritten24h: 0,
       capacity: null,
+      quota: {
+        rowsRead: {
+          observed24h: 0,
+          projectedMonthly: 0,
+          includedMonthlyAllowance: 25_000_000_000,
+          utilizationPercent: 0,
+          thresholdState: "normal",
+          crossedThresholdPercent: null,
+          nextThresholdPercent: 80,
+        },
+        rowsWritten: {
+          observed24h: 0,
+          projectedMonthly: 0,
+          includedMonthlyAllowance: 50_000_000,
+          utilizationPercent: 0,
+          thresholdState: "normal",
+          crossedThresholdPercent: null,
+          nextThresholdPercent: 80,
+        },
+      },
       tableGrowth: null,
     });
   });
@@ -210,6 +257,47 @@ describe("getD1UsageSummary", () => {
     ]);
 
     await expect(getD1UsageSummary(CONFIG, NOW)).rejects.toThrow("database token rejected");
+  });
+
+  it("keeps a present-but-null analytics metric unavailable instead of a zero-volume claim", async () => {
+    mockFetch([
+      mockSuccessfulDatabaseInfo(),
+      mockSuccessfulAnalytics([
+        {
+          sum: {
+            readQueries: null,
+            writeQueries: null,
+            rowsRead: null,
+            rowsWritten: null,
+          },
+        },
+      ]),
+    ]);
+
+    await expect(getD1UsageSummary(CONFIG, NOW)).resolves.toMatchObject({
+      readQueries24h: null,
+      writeQueries24h: null,
+      rowsRead24h: null,
+      rowsWritten24h: null,
+      quota: {
+        rowsRead: {
+          observed24h: null,
+          projectedMonthly: null,
+          utilizationPercent: null,
+          thresholdState: "unavailable",
+          crossedThresholdPercent: null,
+          nextThresholdPercent: null,
+        },
+        rowsWritten: {
+          observed24h: null,
+          projectedMonthly: null,
+          utilizationPercent: null,
+          thresholdState: "unavailable",
+          crossedThresholdPercent: null,
+          nextThresholdPercent: null,
+        },
+      },
+    });
   });
 
   it("fails clearly when GraphQL analytics nodes are missing", async () => {

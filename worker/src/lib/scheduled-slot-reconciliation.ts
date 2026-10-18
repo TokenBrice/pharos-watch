@@ -259,6 +259,7 @@ async function insertSyntheticCronRun(
   slot: StaleSlotExecutionArtifact,
   spec: SyntheticCronRunSpec,
   fence?: StaleSlotReconciliationFence,
+  checkpoint?: () => void,
 ): Promise<boolean> {
   const descriptor = spec.identity ? null : getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, spec.job);
   const identity = spec.identity ?? {
@@ -279,6 +280,7 @@ async function insertSyntheticCronRun(
       AND job = ? AND producer_path = ? AND producer_kind = ? AND invocation_id = ? LIMIT 1`,
   ).bind(identity.scheduleKey, identity.slotStartedAt, identity.job, identity.producerPath,
     identity.producerKind, identity.invocationId).first<{ present: number }>());
+  checkpoint?.();
   if (!spec.identity && existing) return false;
   if (!fence) throw new Error("Scheduled reconciliation requires current CAS authority");
   const metadata = parseJsonObject(spec.metadata);
@@ -293,6 +295,7 @@ async function insertSyntheticCronRun(
     producerOutcome: spec.outcome, itemCount: spec.itemCount, metadata: spec.metadata, error,
     productivity: { productive: false, reason: spec.productivityReason },
   });
+  checkpoint?.();
   return result.accepted;
 }
 
@@ -304,6 +307,7 @@ async function insertSyntheticStaleCronRun(
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
   reconcilerWorkerVersion?: string | null,
+  checkpoint?: () => void,
 ): Promise<boolean> {
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const activeDurationMs = Math.max(0, progress.updated_at - startedAt) * 1000;
@@ -358,9 +362,11 @@ async function insertSyntheticStaleCronRun(
   const reconcilerWorkerVersionFirstSeenAt = hasWorkerVersionDrift
     ? await getWorkerVersionFirstSeenAt(db, currentWorkerVersion)
     : null;
+  checkpoint?.();
   const reconcilerWorkerVersionActivatedAt = hasWorkerVersionDrift
     ? await getWorkerVersionActivatedAt(db, currentWorkerVersion)
     : null;
+  checkpoint?.();
   // Bound death by the latest durable life evidence. An older slot timestamp
   // can legitimately precede activation when eviction happens between ticks.
   // The latest timestamp must lie within 15 seconds before activation through
@@ -396,6 +402,7 @@ async function insertSyntheticStaleCronRun(
         childDisposition: interruptedByWorkerDeploy ? "interrupted-by-deploy" : "abandoned",
         interruptedByWorkerVersionChange: interruptedByWorkerDeploy,
         slotKey: slot.slot_key,
+        parentIncidentId: `scheduled-slot:${slot.slot_key}:${slot.slot_started_at}:${slot.invocation_id ?? slot.execution_owner}`,
         slotStartedAt: slot.slot_started_at,
         slotOwner: slot.execution_owner,
         progressStage: progress.stage,
@@ -424,6 +431,7 @@ async function insertSyntheticStaleCronRun(
       productivityReason: interruptedByWorkerDeploy ? "platform-interrupted-by-deploy" : "platform-abandoned",
     },
     fence,
+    checkpoint,
   );
 }
 
@@ -434,6 +442,7 @@ async function insertSyntheticNotStartedCronRun(
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
   reconcilerWorkerVersion?: string | null,
+  checkpoint?: () => void,
 ): Promise<boolean> {
   const invokedAt = slot.started_at || slot.slot_started_at;
   const knownNotStarted = slot.child_marker_version === 1;
@@ -457,6 +466,7 @@ async function insertSyntheticNotStartedCronRun(
         childDisposition: knownNotStarted ? "not_started" : "execution_unknown",
         durationBasis: knownNotStarted ? "not-started" : "unknown",
         slotKey: slot.slot_key,
+        parentIncidentId: `scheduled-slot:${slot.slot_key}:${slot.slot_started_at}:${slot.invocation_id ?? slot.execution_owner}`,
         slotStartedAt: slot.slot_started_at,
         slotOwner: slot.execution_owner,
         reconciledAt: nowSec,
@@ -468,6 +478,7 @@ async function insertSyntheticNotStartedCronRun(
       productivityReason: knownNotStarted ? "platform-abandoned-before-start" : "platform-abandoned-execution-unknown",
     },
     fence,
+    checkpoint,
   );
 }
 
@@ -491,6 +502,7 @@ async function reconcileStaleSlotArtifacts(
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
   reconcilerWorkerVersion?: string | null,
+  checkpoint?: () => void,
 ): Promise<StaleSlotReconciliationSummary> {
   const summary: StaleSlotReconciliationSummary = {
     syntheticCronRuns: 0,
@@ -509,12 +521,15 @@ async function reconcileStaleSlotArtifacts(
        AND execution_slot_started_at = ? AND terminal_token IS NULL`,
   ).bind(slot.slot_key, slot.slot_started_at)
     .all<ScheduledChildAttemptRow>());
+  checkpoint?.();
   const attempts = attemptsResult.results ?? [];
   const progressRows = await listProgressRowsForStaleSlot(db, slot.slot_started_at, expectedJobs);
+  checkpoint?.();
   // Progress is cleanup evidence, not ledger identity: multiple attempts may
   // share it, but each keeps a separate terminal item under its attempt key.
   const reconciliationItemsByProgress = new Map<StaleSlotProgressRow, StaleSlotReconciliationItem[]>();
   for (const attempt of attempts) {
+    checkpoint?.();
     let progress = progressRows.find((row) => row.job === attempt.job && row.started_at === attempt.started_at
       && row.slot_started_at === attempt.slot_started_at);
     if (!progress) {
@@ -522,6 +537,7 @@ async function reconcileStaleSlotArtifacts(
         `SELECT job, started_at, updated_at, stage, lease_owner, slot_started_at, items_done, items_total, metadata
          FROM cron_run_progress WHERE job = ? AND slot_started_at = ? AND started_at = ?`,
       ).bind(attempt.job, attempt.slot_started_at, attempt.started_at).first<StaleSlotProgressRow>());
+      checkpoint?.();
       progress = persistedProgress ?? {
         job: attempt.job, started_at: attempt.started_at ?? slot.started_at,
         updated_at: attempt.started_at ?? slot.updated_at, stage: null, lease_owner: attempt.lease_owner,
@@ -537,7 +553,9 @@ async function reconcileStaleSlotArtifacts(
   const recordAbandonedProgress = async (progress: StaleSlotProgressRow, lease: StaleSlotLeaseRow | null) => {
     const items = reconciliationItemsByProgress.get(progress) ?? [progress];
     for (const item of items) {
-      if (await insertSyntheticStaleCronRun(db, slot, item, lease, nowSec, fence, reconcilerWorkerVersion)) {
+      const inserted = await insertSyntheticStaleCronRun(db, slot, item, lease, nowSec, fence, reconcilerWorkerVersion, checkpoint);
+      checkpoint?.();
+      if (inserted) {
         summary.syntheticCronRuns++;
       }
       summary.abandonedJobs.push({
@@ -561,6 +579,7 @@ async function reconcileStaleSlotArtifacts(
   // cron-run pruning); do not manufacture a new attempt on a retry.
   const stillMissingProgressJobs: string[] = [];
   for (const job of noProgressJobs) {
+    checkpoint?.();
     const row = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -579,9 +598,11 @@ async function reconcileStaleSlotArtifacts(
         .bind(job, slot.slot_started_at, slot.slot_key, slot.slot_started_at, job)
         .first<{ present: number }>(),
     );
+    checkpoint?.();
     if (!row && (await isSlotFenceCurrent(db, slot, fence))) {
       stillMissingProgressJobs.push(job);
     }
+    checkpoint?.();
   }
   // A member that was not due on this occurrence was never going to start, so
   // it must not be reconciled as an abandoned error (rule R4). The cadence
@@ -590,14 +611,17 @@ async function reconcileStaleSlotArtifacts(
     isScheduledTaskDueAt(slot.slot_key as CronScheduleKey, job, slot.slot_started_at),
   );
   for (const job of unconditionallyDueMissingJobs) {
-    if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence, reconcilerWorkerVersion)) {
+    checkpoint?.();
+    if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence, reconcilerWorkerVersion, checkpoint)) {
       if (slot.child_marker_version === 1) summary.notStartedCronRuns++;
       summary.syntheticCronRuns++;
     }
+    checkpoint?.();
   }
 
   for (const progress of progressRowsWithoutOwner) {
     if (!(await isSlotFenceCurrent(db, slot, fence))) continue;
+    checkpoint?.();
     const progressDelete = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -611,16 +635,20 @@ async function reconcileStaleSlotArtifacts(
         .bind(progress.job, progress.slot_started_at ?? slot.slot_started_at, progress.started_at, progress.updated_at)
         .run(),
     );
+    checkpoint?.();
     const cleared = progressDelete.meta.changes ?? 0;
     summary.progressRowsCleared += cleared;
     if (cleared === 0 && !reconciliationItemsByProgress.has(progress)) continue;
     await recordAbandonedProgress(progress, null);
+    checkpoint?.();
   }
 
   for (const progress of progressRowsWithOwner) {
     const lease = await getCronLeaseForJob(db, progress.job);
+    checkpoint?.();
     if (!lease || lease.lease_owner !== progress.lease_owner) {
       if (!(await isSlotFenceCurrent(db, slot, fence))) continue;
+      checkpoint?.();
       const progressDelete = await runWithOverloadRetry(() =>
         db.prepare(
           `DELETE FROM cron_run_progress
@@ -639,10 +667,12 @@ async function reconcileStaleSlotArtifacts(
           )
           .run(),
       );
+      checkpoint?.();
       const cleared = progressDelete.meta.changes ?? 0;
       summary.progressRowsCleared += cleared;
       if (cleared === 0 && !reconciliationItemsByProgress.has(progress)) continue;
       await recordAbandonedProgress(progress, null);
+      checkpoint?.();
       continue;
     }
     // A lease is dead when its TTL expired OR its heartbeat went silent past
@@ -653,6 +683,7 @@ async function reconcileStaleSlotArtifacts(
     if (!leaseDead) continue;
 
     if (!(await isSlotFenceCurrent(db, slot, fence))) continue;
+    checkpoint?.();
     const progressDelete = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -684,10 +715,12 @@ async function reconcileStaleSlotArtifacts(
         )
         .run(),
     );
+    checkpoint?.();
     const cleared = progressDelete.meta.changes ?? 0;
     summary.progressRowsCleared += cleared;
     if (cleared === 0 && !reconciliationItemsByProgress.has(progress)) continue;
     await recordAbandonedProgress(progress, lease);
+    checkpoint?.();
     const leaseDelete = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -696,6 +729,7 @@ async function reconcileStaleSlotArtifacts(
         .bind(progress.job, progress.lease_owner, lease.lease_until, nowSec, nowSec - resolveScheduledSlotPolicy(slot.slot_key).childSilenceSec)
         .run(),
     );
+    checkpoint?.();
     summary.leasesCleared += leaseDelete.meta.changes ?? 0;
   }
 
@@ -715,11 +749,16 @@ async function writeStaleSlotEventMarker(
     message: `Scheduled slot ${slot.slot_key}@${slot.slot_started_at} stopped heartbeating and was reconciled as abandoned.`,
     metadata: {
       slotKey: slot.slot_key,
+      parentIncidentId: `scheduled-slot:${slot.slot_key}:${slot.slot_started_at}:${slot.invocation_id ?? slot.execution_owner}`,
       slotStartedAt: slot.slot_started_at,
       slotOwner: slot.execution_owner,
       slotStartedAtActual: slot.started_at,
       slotUpdatedAt: slot.updated_at,
       reconciledAt: nowSec,
+      childIncidentCounts: {
+        started: reconciliation.abandonedJobs.length,
+        notStarted: reconciliation.notStartedCronRuns,
+      },
       staleSlotReconciliation: {
         ...reconciliation,
         abandonedJobs: reconciliation.abandonedJobs.map(({ progressSnapshot: _snapshot, ...job }) => job),
@@ -736,14 +775,18 @@ export async function reconcileStaleSlotArtifactsAndRecordEvent(
   slot: StaleSlotExecutionArtifact,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
+  checkpoint?: () => void,
 ): Promise<StaleSlotReconciliationSummary> {
   const owner = SCHEDULED_SLOT_PLANS[slot.slot_key as CronScheduleKey]?.worker;
   let ownerWorkerVersion: string | null = null;
   if (owner) {
     const marker = await getActiveWorkerVersionMarker(db, owner);
+    checkpoint?.();
     if (marker && marker.activatedAt <= nowSec) ownerWorkerVersion = marker.workerVersion;
   }
-  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec, fence, ownerWorkerVersion);
+  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec, fence, ownerWorkerVersion, checkpoint);
+  checkpoint?.();
   await writeStaleSlotEventMarker(db, slot, nowSec, reconciliation);
+  checkpoint?.();
   return reconciliation;
 }

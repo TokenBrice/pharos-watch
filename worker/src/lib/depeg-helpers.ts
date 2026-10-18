@@ -118,22 +118,6 @@ export function isNativeOriginPending(reason: PendingDepegReason | null | undefi
   return reason?.split("+").includes(NATIVE_ORIGIN_PENDING_REASON_FLAG) ?? false;
 }
 
-export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {
-  try {
-    const dexResult = await db
-      .prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
-      .all<DexPriceRow>();
-    return new Map((dexResult.results ?? []).map((row) => [row.stablecoin_id, row]));
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (isMissingTableError(err)) {
-      return new Map<string, DexPriceRow>();
-    }
-    logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading dex_prices:", msg);
-    throw err;
-  }
-}
-
 /** Per-protocol price source stored in dex_prices.price_sources_json */
 export interface DexPoolSource {
   protocol: string;
@@ -293,20 +277,40 @@ export function countDexProtocolCorroborations(
   return collectDexProtocolCorroborations(protocolSources, pegRef, threshold, direction, mode).length;
 }
 
-/** Load per-protocol price breakdowns from dex_prices.price_sources_json for trusted rows. */
-export async function loadDexPriceSources(
+export interface LoadedDexPrices {
+  dexPriceRows: Map<string, DexPriceRow>;
+  dexPriceSources: Map<string, DexPoolSource[]>;
+}
+
+/**
+ * Read aggregate prices and protocol sources from one dex_prices observation.
+ * nowSec is the caller's plan/run clock, not the wall clock after D1 resolves.
+ * Aggregate rows remain unfiltered; only source rows/observations use maxAgeSec.
+ */
+export async function loadDexPrices(
   db: D1Database,
+  nowSec: number,
   maxAgeSec = DEX_PROTOCOL_SOURCE_FRESHNESS_SEC,
   telemetry?: DexPriceSourceLoadTelemetry,
-): Promise<Map<string, DexPoolSource[]>> {
-  const nowSec = Math.floor(Date.now() / 1000);
+): Promise<LoadedDexPrices> {
   try {
     const rows = await db
-      .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
-      .all<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>();
+      .prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
+      .all<DexPriceRow & { price_sources_json: string | null }>();
 
-    const result = new Map<string, DexPoolSource[]>();
+    const dexPriceRows = new Map<string, DexPriceRow>();
+    const dexPriceSources = new Map<string, DexPoolSource[]>();
     for (const row of rows.results ?? []) {
+      dexPriceRows.set(row.stablecoin_id, {
+        stablecoin_id: row.stablecoin_id,
+        dex_price_usd: row.dex_price_usd,
+        deviation_from_primary_bps: row.deviation_from_primary_bps,
+        source_pool_count: row.source_pool_count,
+        source_total_tvl: row.source_total_tvl,
+        updated_at: row.updated_at,
+      });
+      // Match the old source SELECT: NULL is absent, not malformed or stale.
+      if (row.price_sources_json == null) continue;
       const ageSec = nowSec - row.updated_at;
       if (ageSec > maxAgeSec) {
         telemetry?.staleRows.push({
@@ -356,15 +360,15 @@ export async function loadDexPriceSources(
           return ageSec >= 0 && ageSec <= maxAgeSec;
         });
       if (sources.length > 0) {
-        result.set(row.stablecoin_id, sources);
+        dexPriceSources.set(row.stablecoin_id, sources);
       }
     }
-    return result;
+    return { dexPriceRows, dexPriceSources };
   } catch (err) {
     if (isMissingTableError(err)) {
-      return new Map();
+      return { dexPriceRows: new Map(), dexPriceSources: new Map() };
     }
-    logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading dex price sources:", toErrorMessage(err));
+    logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading dex_prices:", toErrorMessage(err));
     throw err;
   }
 }

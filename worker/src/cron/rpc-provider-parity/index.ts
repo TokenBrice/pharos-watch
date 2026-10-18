@@ -7,15 +7,19 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { loadDwellirBudgetState, type DwellirBudgetEnv } from "../../lib/rpc-provider-budget";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { probeRpcProviderParityRun, RPC_PARITY_RUN_BUDGET_MS } from "./probe";
+import {
+  probeRpcProviderParityRun, rpcParityRotation, RPC_PARITY_RUN_BUDGET_MS,
+  RPC_PARITY_MAX_CHAINS_PER_RUN, RPC_PARITY_ROTATION_HOURS,
+} from "./probe";
+import { RPC_PARITY_TARGETS } from "../../lib/rpc-provider-parity/targets";
 import { recordRpcParityRun } from "../../lib/rpc-provider-parity/store";
 import type { RpcParityErrorClass } from "../../lib/rpc-provider-parity/types";
 
 /**
  * Hourly Dwellir observation lane.
  *
- * The lane measures Dwellir against each chain's current first operator and
- * stores one sample per chain per run. It is the health probe for the
+ * The lane measures Dwellir against each selected chain's current first operator
+ * and stores one sample per selected chain per run. It is the health probe for the
  * `dwellir-evm` circuit, so it never consults the circuit's open state — an
  * open breaker is exactly what it is meant to re-test — but it does record the
  * run's verdict through the shared breaker helpers.
@@ -74,6 +78,7 @@ export async function syncRpcProviderParity(
 
   const deadlineMs = Date.now() + RPC_PARITY_RUN_BUDGET_MS;
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
+  const rotation = rpcParityRotation(RPC_PARITY_TARGETS, nowSec);
   const probeRun = options.probe ?? probeRpcProviderParityRun;
   let probe;
   try {
@@ -168,6 +173,16 @@ export async function syncRpcProviderParity(
       skipped: probe.skipped.length,
       deadlineHit: probe.deadlineHit,
       truncated: probe.deadlineHit,
+      truncationReason: probe.deadlineHit ? "rpc-parity-deadline-exhausted" : null,
+      rotation: {
+        position: rotation.position,
+        windowStartedAt: rotation.windowStartedAt,
+        windowHours: RPC_PARITY_ROTATION_HOURS,
+        maxChainsPerRun: RPC_PARITY_MAX_CHAINS_PER_RUN,
+        startIndex: rotation.startIndex,
+        targetCount: RPC_PARITY_TARGETS.length,
+        selectedChains: rotation.targets.map((target) => target.chainId),
+      },
       aborted: probe.aborted,
       runsRetained: write.runs,
       storeBytes: write.bytes,

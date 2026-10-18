@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { loadYieldHealthSummary } from "../yield-health";
-import type { CronRunStatus, CronStatus } from "@shared/types/status";
+import type { CronRunStatus, CronStatusDetail } from "@shared/types/status";
 import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
   emptyYieldAudit,
@@ -45,17 +45,17 @@ function supplementalFamilyRows(updatedAt: number, sourceCount = 0) {
   ));
 }
 
-function cron(status: CronRunStatus = "ok", ageSec = 120, metadata?: Record<string, unknown>): CronStatus {
+function cron(status: CronRunStatus = "ok", ageSec = 120, metadata?: Record<string, unknown>): CronStatusDetail {
   return {
     expectedIntervalSec: CRON_INTERVALS["sync-yield-data"],
     healthy: true,
-    recentRuns: [],
-    lastRun: {
+    confirmedOutputAt: null,
+    runs: [{
       startedAt: NOW - ageSec,
       durationMs: 1000,
       status,
       ...(metadata ? { metadata } : {}),
-    },
+    }],
   };
 }
 

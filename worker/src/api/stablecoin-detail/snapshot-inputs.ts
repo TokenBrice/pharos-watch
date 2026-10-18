@@ -8,7 +8,7 @@ import {
 import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE } from "@shared/types/detail-snapshot-inputs";
 import type { DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/market";
 import { errorResponse, jsonResponse } from "../../lib/api-response";

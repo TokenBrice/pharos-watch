@@ -2,6 +2,8 @@ import { API_FRESHNESS_MAX_AGE_SEC, CACHE_FRESHNESS_LANES } from "@shared/lib/ap
 
 export const TRAINING_WINDOW_SEC = 4 * 365 * 86400;
 export const HISTORICAL_ROW_CAP = 60000;
+/** Maximum closed events rebuilt per incomplete-corpus read in the resolver lane. */
+export const TRAINING_ROLLUP_BACKFILL_EVENT_CAP = 250;
 export const DAY = 86400;
 export const CURRENT_PRICE_MAX_AGE_SEC = CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
 export const DDR_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.depegResolver;

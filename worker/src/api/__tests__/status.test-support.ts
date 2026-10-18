@@ -81,27 +81,6 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
       overall: [],
     },
     caches: {},
-    crons: {
-      ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([job, expectedIntervalSec]) => [
-        job, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
-      ])),
-      "sync-stablecoins": {
-        lastRun: {
-          startedAt: now - 60,
-          durationMs: 1500,
-          status: "ok",
-          itemCount: 100,
-        },
-        recentRuns: [{
-          startedAt: now - 60,
-          durationMs: 1500,
-          status: "ok",
-          itemCount: 100,
-        }],
-        expectedIntervalSec: 900,
-        healthy: true,
-      },
-    },
     budgetOnlySurfaces: [],
     dataQuality: makeDataQuality({
       totalStablecoins: 1,
@@ -137,8 +116,9 @@ function makeRawStatusSnapshotRow(now: number, ageSec: number, overrides: Record
     key: STATUS_RAW_SNAPSHOT_CACHE_KEY,
     updated_at: updatedAt,
     value: JSON.stringify({
-      version: 1,
+      version: 2,
       producedAt: updatedAt,
+      cronJobs: Object.keys(CRON_INTERVALS),
       raw: makeRawStatusForSnapshot(updatedAt, overrides),
     }),
   };

@@ -5,7 +5,7 @@ import { isSubscribableCoin } from "../../lib/telegram/subscription-eligibility"
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   packWatchlistDirectState,
   packWatchlistPresetState,

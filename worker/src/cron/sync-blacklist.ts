@@ -23,7 +23,7 @@ import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
-import { scanBlacklistConfigs } from "./blacklist/config-scan";
+import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, scanBlacklistConfigs } from "./blacklist/config-scan";
 import { reconcileCurrentBalanceDebt } from "../lib/blacklist/current-balance-debt";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
@@ -200,7 +200,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     subrequestBudgetHit: subrequestBudgetReached,
   });
   const { oldestSuccessAt, neverSucceeded } = getOldestBlacklistSuccessAt(configStates);
-  const coverageFailures = Math.max(0, configsAttempted - configsSucceeded);
+  const coverageFailures = Object.values(scan.coverageVerdicts).filter((verdict) => verdict === "failed").length;
+  const coverageLaggingWithinTolerance = Object.values(scan.coverageVerdicts)
+    .filter((verdict) => verdict === "lagging-within-tolerance").length;
   const status: SyncBlacklistResult["status"] =
     derivedStatus === "ok" &&
     (providerCircuitSkips > 0 || coverageFailures > 0 || stateConflicts > 0 || neverSucceeded > 0)
@@ -314,6 +316,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         configsSucceeded,
         coverageFailures,
         coverageFailureConfigs: scan.coverageFailureConfigs,
+        coverageVerdicts: scan.coverageVerdicts,
+        coverageLaggingWithinTolerance,
+        coverageLagToleranceBlocks: BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS,
         stateConflicts,
         rpcLogConfigs,
         providerCircuitSkips,

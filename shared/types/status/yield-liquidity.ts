@@ -325,7 +325,8 @@ const ConservationBlockSchema = z.number().int().nonnegative().max(Number.MAX_SA
 export const MintBurnConservationRecordSchema = z.object({
   version: z.literal(1),
   key: z.string(),
-  configFingerprint: z.string(),
+  // Required by cached evidence admission, omitted from the published status projection.
+  configFingerprint: z.string().optional(),
   stablecoinId: z.string(),
   chainId: z.string(),
   address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),

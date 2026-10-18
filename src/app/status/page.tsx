@@ -14,7 +14,7 @@ const STATUS_FAQ_ITEMS = [
   {
     question: "What does System Status monitor?",
     answer:
-      "System Status shows each public Pharos component, such as the website and API, stablecoin prices, charts, risk signals and event feeds, with its current state and 30 days of history. It is the public view of whether the dashboard and data API are serving fresh enough information.",
+      "System Status shows each public Pharos component, such as the website and API, stablecoin prices, charts, Safety Scores, risk signals and event feeds, with its current state and 30 days of history. Safety Scores are degraded when publication is held or the last accepted scores exceed their freshness budget. History before a component began being monitored is unknown, not operational.",
   },
   {
     question: "Why can status differ from a single endpoint response?",

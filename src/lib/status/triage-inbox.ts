@@ -113,8 +113,8 @@ function describeCronTiming(cron: CronStatus | undefined, nowSec: number, job?: 
 }
 
 function getLastSuccessSec(cron: CronStatus | undefined): number | null {
-  if (!cron?.lastRun || cron.lastRun.status === "ok") return null;
-  return cron.recentRuns.find((run) => run.status === "ok")?.startedAt ?? null;
+  if (!cron?.runs[0] || cron.runs[0].status === "ok") return null;
+  return cron.runs.find((run) => run.status === "ok")?.startedAt ?? null;
 }
 
 /**
@@ -219,7 +219,7 @@ export function describeRecoveryHold(
   const needed = target === "healthy" ? state.thresholds.recoverToHealthy : state.thresholds.recoverToDegraded;
   const streak = Math.max(0, state.consecutiveRaw[target]);
   // Each status self-check run is one state-machine check, newest first.
-  const streakStart = streak > 0 ? data.crons[SELF_CHECK_JOB]?.recentRuns[streak - 1]?.startedAt : undefined;
+  const streakStart = streak > 0 ? data.crons[SELF_CHECK_JOB]?.runs[streak - 1]?.startedAt : undefined;
   const verb = target === "healthy" ? "Recovered" : "Improved to degraded";
   const when = streakStart != null ? ` ${timeAgo(streakStart, data.timestamp)}` : "";
   if (streak >= needed) {
@@ -233,9 +233,9 @@ function formatSeconds(ms: number): string {
   return `${Number((ms / 1000).toFixed(1))} s`;
 }
 
-/** Slowest probe path from the latest status self-check run metadata, when recorded. */
+/** Slowest probe path from the latest status self-check run's summary facts, when recorded. */
 export function readSlowestProbePath(crons: StatusResponse["crons"]): string | null {
-  const slowest = crons[SELF_CHECK_JOB]?.lastRun?.metadata?.slowestProbes;
+  const slowest = crons[SELF_CHECK_JOB]?.latestRunFacts?.slowestProbes;
   const first = Array.isArray(slowest) ? readRecord(slowest[0]) : null;
   return typeof first?.path === "string" && first.path ? first.path : null;
 }

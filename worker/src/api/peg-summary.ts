@@ -6,7 +6,7 @@ import { medianOfRounded } from "@shared/lib/peg-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -86,7 +86,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   };
 
   // 2. Load DEX prices + shared peg analytics snapshot
-  // Narrower column set than dex-liquidity endpoint. Catch pattern mirrors depeg-helpers.ts loadDexPriceRows() (M-3).
+  // Narrower aggregate-only column set than the dex-liquidity endpoint.
   const [dexPriceResult, pegAnalyticsCache] = await Promise.all([
     db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
       .all<DexPriceRow>()

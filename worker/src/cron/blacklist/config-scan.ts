@@ -37,6 +37,32 @@ import {
 
 const COVERAGE_FAILURE_CONFIG_SAMPLE_LIMIT = 6;
 
+// MB-3 observed otherwise-complete scans ending 2-52 blocks below safe head.
+// Tolerance changes the run verdict only, never the full-coverage success clock.
+export const BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS = 64;
+type BlacklistCoverageVerdict = "covered" | "lagging-within-tolerance" | "failed";
+
+export function blacklistCoverageVerdict(
+  result: BlacklistScanResult,
+  cursorKind: BlacklistConfigState["cursorKind"],
+): BlacklistCoverageVerdict {
+  const frontier = result.scannedToCursor;
+  const safeHead = result.safeHead;
+  const measured = frontier != null && safeHead != null
+    && Number.isSafeInteger(frontier) && Number.isSafeInteger(safeHead)
+    && frontier >= 0 && safeHead >= 0;
+  const allTopics = result.topicCount > 0 && result.coveredTopicCount === result.topicCount;
+  if (!result.apiError && !result.incomplete && allTopics && measured && frontier >= safeHead
+    && (result.coverageOutcome === "complete" || result.coverageOutcome === "quiet")) return "covered";
+  if (cursorKind === "evm_block" && !result.apiError && result.incomplete && allTopics && measured
+    && result.coverageOutcome === "incomplete" && frontier < safeHead
+    && safeHead - frontier <= BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS
+    && result.failureSamples.length === 1 && result.failureSamples[0] === "behind-safe-head") {
+    return "lagging-within-tolerance";
+  }
+  return "failed";
+}
+
 type ScanCounters = {
   totalInsertedRows: number;
   enrichCounters: { attempted: number; succeeded: number; failed: number };
@@ -68,6 +94,7 @@ type ScanState = {
   maxProviderSplitDepth: number;
   coverageOutcomeCounts: Record<string, number>;
   configLag: Record<string, { cursorKind: string; frontier: number | null; safeHead: number | null; lag: number | null }>;
+  coverageVerdicts: Record<string, BlacklistCoverageVerdict>;
   coverageFailureConfigs: Array<{
     configKey: string;
     outcome: BlacklistScanResult["coverageOutcome"];
@@ -260,6 +287,7 @@ async function finalizeSuccessfulConfigScan(
   if (!finalized) {
     state.stateConflicts++;
     state.apiErrors++;
+    state.coverageVerdicts[configState.configKey] = "failed";
     recordApiErrorConfig(
       state.apiErrorConfigs,
       configState.configKey,
@@ -386,6 +414,7 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
         ? null : Math.max(0, result.safeHead - result.scannedToCursor),
     };
     state.configLag[configKey] = configLag;
+    state.coverageVerdicts[configKey] = blacklistCoverageVerdict(result, configState.cursorKind);
     if (
       result.coverageOutcome !== "complete"
       && result.coverageOutcome !== "quiet"
@@ -429,6 +458,7 @@ async function recordConfigScanException(args: ScanSingleConfigArgs, err: unknow
   configState.consecutiveSkips = 0;
   configState.lastOutcome = "exception";
   state.coverageOutcomeCounts.exception = (state.coverageOutcomeCounts.exception ?? 0) + 1;
+  state.coverageVerdicts[configKey] = "failed";
   logWorkerEventArgs("handler", "warn", `[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
 }
 
@@ -442,6 +472,7 @@ async function skipTronGridCircuitConfig(args: ScanSingleConfigArgs): Promise<bo
   state.providerCircuitSkips++;
   state.tronGridCircuitSkips++;
   state.coverageOutcomeCounts.provider_skipped = (state.coverageOutcomeCounts.provider_skipped ?? 0) + 1;
+  state.coverageVerdicts[configKey] = "failed";
   recordApiErrorConfig(state.apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "trongrid-circuit-open");
   const completedAt = Math.floor(Date.now() / 1000);
   const finalized = await finalizeBlacklistConfigAttempt(
@@ -487,6 +518,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     maxProviderSplitDepth: 0,
     coverageOutcomeCounts: {},
     configLag: {},
+    coverageVerdicts: {},
     coverageFailureConfigs: [],
   };
   const chainTimestampCaches = new Map<string, Map<string, number>>();
@@ -524,6 +556,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
         skippedState.lastSkippedAt = Math.floor(Date.now() / 1000);
         skippedState.consecutiveSkips++;
         skippedState.lastOutcome = "budget_skipped";
+        state.coverageVerdicts[skippedState.configKey] = "failed";
       }
       logWorkerEventArgs("handler", "warn", `[sync-blacklist] Runtime budget reached, skipping ${state.contractsSkipped} remaining contracts`);
       break;
@@ -547,6 +580,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     if (!attempt) {
       state.stateConflicts++;
       state.contractsSkipped++;
+      state.coverageVerdicts[configKey] = "failed";
       recordApiErrorConfig(state.apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "state-claim-conflict");
       continue;
     }

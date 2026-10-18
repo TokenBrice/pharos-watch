@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { CronRun, CronStaleArtifact } from "@shared/types";
+import type { CronRunDetail, CronRunSummary, CronStaleArtifact } from "@shared/types";
 import { formatCronRunStatus, formatCronRunTiming, isCronRunNotStarted } from "@/lib/cron-workbench-model";
 import { numberValue as readNumber, readRecord } from "@shared/lib/type-guards";
 import {
@@ -28,7 +28,7 @@ const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; clas
   failed: { label: "Failed", className: "rounded-[1px] bg-state-danger-solid ring-1 ring-state-danger-solid ring-offset-1 ring-offset-background" },
 };
 
-function getRecentRunTone(run: CronRun): RecentRunTone {
+function getRecentRunTone(run: CronRunSummary): RecentRunTone {
   if (isCronRunNotStarted(run)) return "skipped";
   if (run.status === "ok") return "success";
   if (run.status === "degraded") return "warning";
@@ -36,7 +36,7 @@ function getRecentRunTone(run: CronRun): RecentRunTone {
   return "failed";
 }
 
-export function CronRunDots({ runs }: { runs: CronRun[] }) {
+export function CronRunDots({ runs }: { runs: readonly CronRunSummary[] }) {
   if (runs.length === 0) {
     return <span className="text-xs text-muted-foreground">No recent runs</span>;
   }
@@ -47,7 +47,7 @@ export function CronRunDots({ runs }: { runs: CronRun[] }) {
         const tone = getRecentRunTone(run);
         const timing = formatCronRunTiming(run);
         const durationLabel = timing.duration?.label ?? timing.unavailableLabel ?? "Unknown";
-        const outcomeLabel = formatCronRunStatus(run.status, run.metadata);
+        const outcomeLabel = formatCronRunStatus(run.status, run);
         const label = `${outcomeLabel}: ${formatTimestamp(run.startedAt)}, ${durationLabel}; raw status ${run.status}`;
         return (
           <span
@@ -67,7 +67,8 @@ export function CronRunDots({ runs }: { runs: CronRun[] }) {
   );
 }
 
-export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
+/** Selected-job history from `/api/status-cron-detail` (runs carry full metadata). */
+export function CronRunHistoryPanel({ runs }: { runs: readonly CronRunDetail[] }) {
   const recentRuns = runs;
   const hasReserveQueueLane = recentRuns.some((run) => {
     const metadata = readRecord(run.metadata);
@@ -120,9 +121,7 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
                     .join(" · ")
                 : !hasReserveQueueLane
                   ? "Not applicable"
-                  : index === 0
-                    ? "No reserve queue metadata"
-                    : "Metadata retained for latest run only";
+                  : "No reserve queue metadata on this run";
             const timing = formatCronRunTiming(run);
 
             return (
@@ -136,7 +135,7 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
                       isCronRunNotStarted(run) ? "skipped_neutral" : run.status,
                     )}`}
                   >
-                    {formatCronRunStatus(run.status, run.metadata)}
+                    {formatCronRunStatus(run.status, run)}
                   </Badge>
                   <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">{run.status}</span>
                 </span>

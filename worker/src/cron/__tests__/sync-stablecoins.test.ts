@@ -24,6 +24,7 @@ import { StablecoinDataSchema } from "@shared/types/market";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import type { CronProgressReporter, CronProgressUpdate } from "../../lib/cron-logger";
+import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 
@@ -133,6 +134,7 @@ describe("syncStablecoins", () => {
 
   it("publishes the DefiLlama snapshot and runs the downstream depeg workflow", async () => {
     const db = makeSyncDb();
+    const assertCost = observeMockD1Cost(db);
     const prepare = vi.fn();
     const originalPrepare = db.prepare.bind(db);
     db.prepare = vi.fn((sql: string) => { prepare(sql); return originalPrepare(sql); }) as typeof db.prepare;
@@ -141,14 +143,17 @@ describe("syncStablecoins", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(result).toMatchObject({ itemCount: 60, productivity: { productive: true, reason: "stablecoins-cache-published" } });
     expect(metadata).toMatchObject({ cacheWriteMode: "published", casSkipped: false, downstreamSafe: true, upstreamFetchOk: true });
+    expect(assertCost(result).bindingCalls).toBeGreaterThan(0);
     expect(prepare.mock.calls.filter(([sql]) => String(sql).includes("INSERT INTO cache")).length).toBeGreaterThan(0);
     const primaryCall = vi.mocked(fetchPrimaryPrices).mock.calls[0];
     expect(primaryCall?.[0]).toHaveLength(60);
-    expect(primaryCall?.[1]).toBe(db);
+    const trackedDb = primaryCall?.[1];
+    expect(trackedDb).toBeDefined();
+    expect(trackedDb).not.toBe(db);
     expect(primaryCall?.[8]).toMatchObject({ previousAssetsById: expect.any(Map) });
     expect(enrichMissingPrices).not.toHaveBeenCalled();
-    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined, expect.any(Object));
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined, expect.any(Object), expect.any(Object));
+    expect(detectDepegEvents).toHaveBeenCalledWith(trackedDb, expect.any(Array), undefined, undefined, undefined, expect.any(Object));
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(trackedDb, expect.any(Array), undefined, undefined, undefined, expect.any(Object), expect.any(Object));
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-stablecoins", true);
   });
 

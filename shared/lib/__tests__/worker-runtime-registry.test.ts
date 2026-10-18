@@ -18,7 +18,25 @@ import {
   WORKER_TRACKED_META_BY_ID,
 } from "../stablecoins/worker-runtime-registry";
 
+import { CORE_AGGREGATE_ACTIVE_IDS } from "../stablecoins/aggregate-registry";
+import { filterCoreAggregateStablecoins } from "../stablecoins/aggregate-universe";
+
 describe("Worker runtime stablecoin registry", () => {
+  it("preserves HTTP identity, peg, lifecycle and core-aggregate field contracts", () => {
+    for (const coin of TRACKED_STABLECOINS) {
+      const projected = WORKER_TRACKED_META_BY_ID.get(coin.id)!;
+      for (const field of ["id", "name", "symbol", "geckoId", "status", "commodityOunces"] as const) {
+        expect(projected[field], `${coin.id}.${field}`).toEqual(coin[field]);
+      }
+      for (const flag of ["pegCurrency", "governance", "navToken"] as const) {
+        expect(projected.flags[flag], `${coin.id}.flags.${flag}`).toEqual(coin.flags[flag]);
+      }
+    }
+    const projectedActive = [...WORKER_ACTIVE_META_BY_ID.values()];
+    expect(new Set(filterCoreAggregateStablecoins(projectedActive).map((coin) => coin.id)))
+      .toEqual(CORE_AGGREGATE_ACTIVE_IDS);
+  });
+
   it("preserves every configured feed's complete reserve adapter inputs", () => {
     for (const coin of TRACKED_STABLECOINS) {
       const projected = WORKER_TRACKED_META_BY_ID.get(coin.id);

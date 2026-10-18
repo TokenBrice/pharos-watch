@@ -377,7 +377,7 @@ describe("stablecoins pricing metadata", () => {
       attemptNo: 1,
       producerKind: "scheduled",
     });
-    const persisted = compactCronMetadataForPersistence(enrichedMetadata);
+    const persisted = compactCronMetadataForPersistence(enrichedMetadata, undefined, "sync-stablecoins");
 
     expect(persisted.compacted).toBe(false);
     const metadata = JSON.parse(persisted.metadata ?? "{}") as Record<string, unknown>;

@@ -260,9 +260,10 @@ export async function syncMintBurn(
     }
   }
 
-  const attemptCoverage = await updateMintBurnAttemptState({
+  const attemptState = await updateMintBurnAttemptState({
     db,
     jobName,
+    lane,
     enabledConfigKeys: enabledConfigs.map((config) => mintBurnConfigKey(config)),
     configBreakdown: phaseResult.configBreakdown,
     activeProviderDeferrals: phaseResult.activeProviderDeferrals,
@@ -306,7 +307,8 @@ export async function syncMintBurn(
     errorConsecutiveThreshold: ERROR_CONSECUTIVE_THRESHOLD,
     criticalContractsEnabled,
     phase: phaseResult,
-    attemptCoverage,
+    attemptCoverage: attemptState.summary,
+    coverageCycle: attemptState.coverageCycle,
     runDrilldown,
     signal,
   });

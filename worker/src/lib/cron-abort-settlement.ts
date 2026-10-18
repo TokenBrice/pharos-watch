@@ -36,9 +36,10 @@ export async function settleAfterAbort<T>(
     ));
     const drained = await Promise.race([
       work,
-      new Promise<{ status: "unsettled" }>((resolve) => {
-        timer = setTimeout(() => resolve({ status: "unsettled" }), graceMs);
-      }),
+      graceMs <= 0 ? Promise.resolve({ status: "unsettled" as const })
+        : new Promise<{ status: "unsettled" }>((resolve) => {
+          timer = setTimeout(() => resolve({ status: "unsettled" }), graceMs);
+        }),
     ]);
     return {
       status: "aborted", reason: signal.reason, settled: drained.status !== "unsettled",
@@ -46,6 +47,21 @@ export async function settleAfterAbort<T>(
     };
   } finally {
     signal.removeEventListener("abort", notifyAbort);
+    clearTimeout(timer);
+  }
+}
+
+/** Retain already-started accounting work without reusing its aborted signal. */
+export async function retainUntilDeadline(work: Promise<unknown>, deadlineMs: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      work,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, Math.max(0, deadlineMs - Date.now()));
+      }),
+    ]);
+  } finally {
     clearTimeout(timer);
   }
 }

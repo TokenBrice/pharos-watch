@@ -9,8 +9,8 @@ import {
   dexPoolIndependentGroupKey,
   isNativeOriginPending,
   loadDexPoolChallengers,
-  loadDexPriceRows,
-  loadDexPriceSources,
+  type DexPriceRow,
+  type DexPoolSource,
 } from "../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
@@ -39,8 +39,8 @@ export type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSigna
 export type ConfirmationTimestampStatus = "fresh" | "missing" | "invalid" | "future" | "stale";
 type PendingOutcome = "promoted" | "rejected" | "expired" | "recovered" | "superseded" | "unconfirmed-severe";
 
-export type DexPriceRowsByCoin = Awaited<ReturnType<typeof loadDexPriceRows>>;
-export type DexPriceSourcesByCoin = Awaited<ReturnType<typeof loadDexPriceSources>>;
+export type DexPriceRowsByCoin = Map<string, DexPriceRow>;
+export type DexPriceSourcesByCoin = Map<string, DexPoolSource[]>;
 export type DexPoolChallengersByCoin = Awaited<ReturnType<typeof loadDexPoolChallengers>>;
 
 export type PeakQuoteDomain = "usd" | `native:${string}`;

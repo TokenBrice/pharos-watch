@@ -359,7 +359,8 @@ export async function getMintBurnReconciliation(
         status,
         coverageStatus,
         conservationIssue,
-        conservation,
+        // Validate against the full cached fingerprint above; never publish its bulky config JSON.
+        conservation: conservation.map(({ configFingerprint: _configFingerprint, ...record }) => record),
       };
     })
     .sort((a, b) => {

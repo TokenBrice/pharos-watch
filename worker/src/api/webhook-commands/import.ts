@@ -1,6 +1,6 @@
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import { isSubscribableCoin } from "../../lib/telegram/subscription-eligibility";

@@ -72,15 +72,15 @@ function dispatchCron(
   error?: string,
 ): CronStatus {
   return {
-    lastRun: {
+    runs: [{
       startedAt: NOW_SECONDS - 60,
       durationMs: 1_200,
       status,
       itemCount: 0,
-      metadata,
       ...(error ? { error } : {}),
-    },
-    recentRuns: [],
+    }],
+    latestRunFacts: metadata,
+    confirmedOutputAt: status === "ok" ? NOW_SECONDS - 60 : null,
     expectedIntervalSec: 300,
     healthy: status === "ok",
   };

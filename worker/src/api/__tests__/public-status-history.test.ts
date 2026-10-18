@@ -48,6 +48,30 @@ describe("handlePublicStatusHistory", () => {
     expect(body).not.toHaveProperty("lastChangedAt");
   });
 
+  it("exposes the actual Safety Scores monitoring start separately from older components", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const starts = { "risk-signals": now - 40 * 86_400, "safety-scores": now - 86_400 };
+    const db = mockD1([
+      {
+        match: "pharos:public-status-started-at", rows: [],
+        first: {
+          started_at: starts["risk-signals"],
+          state_json: JSON.stringify({
+            version: 1, headline: { state: "operational", title: "All systems operational", affected: [] },
+            componentHistoryStartedAt: starts,
+            components: Object.keys(starts).map((id) => ({ id, state: "operational", since: null, reasons: [] })),
+          }),
+        },
+      },
+      { match: "pharos:public-status-transitions", rows: [] },
+    ]);
+    const res = await handlePublicStatusHistory(db, new Request("https://pharos.watch/api/public-status-history"));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      publicHistoryStartedAt: starts["risk-signals"], componentHistoryStartedAt: starts,
+    });
+  });
+
   it("preserves a cacheable empty history after a successful zero-row query", async () => {
     const db = mockD1([{ match: "FROM status_transitions", rows: [] }]);
 

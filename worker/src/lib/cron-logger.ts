@@ -16,6 +16,7 @@ import {
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
   shouldSkipCronProgress,
+  SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
   type ResolvedCronTimeoutBudget,
 } from "./cron-timeouts";
 import {
@@ -320,8 +321,7 @@ function nestedReasonString(value: unknown, key: string): string | null {
  * `metadata.reason` is the contract producers own; the remaining keys are the
  * historical homes other producers (`fallbackMode`), V9 (`publication.code`)
  * and watchdog (`degradedReasons`) still write. The reason is resolved from
- * the producer's own metadata, i.e. before the 64 KiB persistence cap can
- * truncate the diagnostics that explain it.
+ * the producer's own metadata, before write-time diagnostic compaction.
  */
 export function resolveCronDegradedReason(
   job: string,
@@ -347,9 +347,9 @@ export function resolveCronDegradedReason(
 
 // --- Internal helpers ---
 
-function serializeProgressMetadata(metadata: Record<string, unknown> | null | undefined): string | null {
+function serializeProgressMetadata(metadata: Record<string, unknown> | null | undefined, job: string): string | null {
   if (!metadata || Object.keys(metadata).length === 0) return null;
-  return compactCronMetadataForPersistence(JSON.stringify(metadata), metadata).metadata;
+  return compactCronMetadataForPersistence(JSON.stringify(metadata), metadata, job).metadata;
 }
 
 const CRON_PROGRESS_COALESCE_MS = 10_000;
@@ -405,7 +405,7 @@ async function upsertCronProgress(
         progress.itemsTotal,
         progress.message,
         progress.leaseOwner,
-        serializeProgressMetadata(progress.metadata),
+        serializeProgressMetadata(progress.metadata, job),
       )
       .run(),
   );
@@ -542,7 +542,8 @@ export async function logCronRun(
     timeoutHandle = setTimeout(() => ac.abort(timeoutError), timeoutMs);
     const outcome = await settleAfterAbort(() => fn(operationSignal, reportProgress), operationSignal, {
       observer: true,
-      platformDeadlineMs: options?.deadline?.platformDeadlineMs,
+      platformDeadlineMs: options?.deadline
+        ? options.deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS : undefined,
     });
     clearTimeout(timeoutHandle ?? undefined);
     if (outcome.status === "aborted") {
@@ -570,9 +571,10 @@ export async function logCronRun(
       outputPublishedAt,
       resourcePressure,
     };
-    const persistedMetadata = compactCronMetadataForPersistence(
-      JSON.stringify(publicationMetadata), publicationMetadata,
-    ).metadata;
+    const publicationJson = JSON.stringify(publicationMetadata);
+    // Scheduled children enrich the final attempt identity before their one write-time admission.
+    const persistedMetadata = scheduledIdentity ? publicationJson
+      : compactCronMetadataForPersistence(publicationJson, publicationMetadata, job).metadata;
     const resolvedError = resolvedResult?.error == null ? null : describeError(resolvedResult.error, stripSensitive).message;
     const degradedReason = resolveCronDegradedReason(job, resultStatus, resolvedResult, parsedMetadata);
     const producer = options?.producer;
@@ -668,10 +670,10 @@ export async function logCronRun(
     const errorMetadata = parseJsonObject(serializeTerminalCronMetadata(e, classifiedError)) ?? {};
     const resourcePressure = selectLatestResourcePressure(latestResourcePressure, errorMetadata.resourcePressure)
       ?? buildResourcePressure();
-    const terminalMetadata = compactCronMetadataForPersistence(JSON.stringify({
-      ...errorMetadata, resourcePressure,
-    })).metadata;
-    const terminalReason = resolveCronDegradedReason(job, "error", undefined, parseJsonObject(terminalMetadata));
+    const errorJson = JSON.stringify({ ...errorMetadata, resourcePressure });
+    const terminalMetadata = scheduledIdentity ? errorJson
+      : compactCronMetadataForPersistence(errorJson, undefined, job).metadata;
+    const terminalReason = resolveCronDegradedReason(job, "error", undefined, errorMetadata);
     stage = "cron-run";
     try {
       const completedAt = Math.floor(Date.now() / 1000);

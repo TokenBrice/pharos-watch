@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { StatusResponseSchema } from "@shared/types/status";
+import { handleStatusCronDetailRoute } from "../status-cron-detail";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
@@ -142,12 +143,13 @@ describe("handleStatus", () => {
   it.each([false, true])("recomputes an incompatible observer OOM snapshot without hiding current failure (%s)", async (currentProducerFails) => {
     const now = Math.floor(Date.now() / 1000);
     const job = "compute-safety-score-v9-workflow";
-    const priorCrons = Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
-      id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
-    ]));
-    priorCrons[job] = {
-      lastRun: null, recentRuns: [], expectedIntervalSec: 1800, healthy: false,
-    };
+    const incompatibleRow = makeRawStatusSnapshotRow(now, 60, {
+      availabilityStatus: "degraded", rawOverallStatus: "degraded",
+      causes: { availability: [{ code: "observer-oom", message: "Worker exceeded memory limit" }], dataQuality: [], overall: [] },
+    });
+    const snapshot = JSON.parse(incompatibleRow.value);
+    snapshot.cronJobs.push(job);
+    incompatibleRow.value = JSON.stringify(snapshot);
     const liveRows = makeMinimalLiveStatusRows(now, null, true);
     if (currentProducerFails) {
       liveRows.unshift({ match: "cron_runs", rows: Object.keys(CRON_INTERVALS).map((id) =>
@@ -155,10 +157,7 @@ describe("handleStatus", () => {
     }
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
-        rows: [makeRawStatusSnapshotRow(now, 60, {
-          crons: priorCrons, availabilityStatus: "degraded", rawOverallStatus: "degraded",
-          causes: { availability: [{ code: "observer-oom", message: "Worker exceeded memory limit" }], dataQuality: [], overall: [] },
-        })] },
+        rows: [incompatibleRow] },
       ...liveRows,
     ]);
     const response = await handleStatus({ db, trustedAdmin: true });
@@ -251,13 +250,6 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
         makeRawStatusSnapshotRow(now, 120, {
-          crons: {
-            ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
-              id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
-            ])),
-            [job]: { lastRun: { startedAt: now - 1200, durationMs: 0, status: "ok" }, recentRuns: [],
-              expectedIntervalSec: 300, healthy: false, telemetryUnknown: false },
-          },
           sectionErrors: { scheduledSlots: { code: "old-slot-error", message: "old snapshot error" } },
         }),
       ] },
@@ -271,7 +263,7 @@ describe("handleStatus", () => {
     const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.crons[job].healthy).toBe(readFails ? null : true);
     expect(body.crons[job].telemetryUnknown).toBe(readFails);
-    if (!readFails) expect(body.crons[job].lastRun?.startedAt).toBe(now - 30);
+    if (!readFails) expect(body.crons[job].runs[0]?.startedAt).toBe(now - 30);
     expect(body.sectionErrors.scheduledSlots).toBeUndefined();
     expect(body.summary.unhealthyCrons).toBe(Object.values(body.crons)
       .filter((cron) => cron.healthy === false).length);
@@ -332,7 +324,15 @@ describe("handleStatus", () => {
       request: fixtureMakeApiRequest(`/api/status${live ? "?refresh=live" : ""}`, { adminKey: "secret-key" }) });
     const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.summary.degradedCrons).toBe(0);
-    expect(body.crons["cron-sentinel"].lastRun?.metadata?.quality).toEqual({ reason: "observed-staleness" });
+    expect(body.crons["cron-sentinel"].runs[0]?.qualityReasons).toContain("observed-staleness");
+    expect(body.crons["cron-sentinel"].runs[0]).not.toHaveProperty("metadata");
+    const detailResponse = await handleStatusCronDetailRoute({
+      db, trustedAdmin: true,
+      request: fixtureMakeApiRequest("/api/status-cron-detail?job=cron-sentinel", { adminKey: "secret-key" }),
+      url: new URL("https://ops-api.pharos.watch/api/status-cron-detail?job=cron-sentinel"),
+    });
+    const detail = await readJsonResponse<{ cron: { runs: Array<{ metadata?: Record<string, unknown> }> } }>(detailResponse, 200);
+    expect(detail.cron.runs[0]?.metadata?.quality).toEqual({ reason: "observed-staleness" });
     expect(body.causes.availability.find((cause) => cause.code === "degraded_cron_warning")).toBeUndefined();
   });
 

@@ -10,11 +10,12 @@ import {
   summarizeStatusPersistenceIssues,
   type StatusPersistenceIssue,
 } from "../lib/status-reliability";
-import { computeRawStatus } from "../lib/status-evaluation";
+import { computeRawStatus, type RawStatusComputation } from "../lib/status-evaluation";
 import { loadCronHealth } from "../lib/status/cron-health";
+import { summarizeCronStatuses } from "../lib/status/cron-status-summary";
 import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
-import { evaluateSchedulerLiveness, rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
+import { evaluateSchedulerLiveness, mergeD1QuotaCauses, rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
 import { buildStatusSummary } from "../lib/status/summary";
 import {
   loadStatusRawSnapshot,
@@ -61,7 +62,7 @@ async function loadWorkerVersions(db: D1Database): Promise<{
 type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
 
 interface ResolvedRawStatus {
-  raw: Awaited<ReturnType<typeof computeRawStatus>>;
+  raw: RawStatusComputation;
   supplements?: StatusSupplements;
   snapshotFallbackReason: StatusSnapshotFallbackReason | null;
   snapshotError?: string;
@@ -329,6 +330,12 @@ export function handleStatus({
         loadWorkerVersions(db),
       ]);
       persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
+      // D1 billing-quota floors are ops-only: they join the admin cause lists
+      // here, after the usage supplement is known, and never change a status.
+      const availabilityCauses = mergeD1QuotaCauses(
+        raw.causes.availability,
+        supplements.d1Usage?.quota ?? null,
+      );
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
       const snapshotErrorSection = statusSnapshotSectionError(snapshotFallbackReason, snapshotError);
@@ -368,14 +375,20 @@ export function handleStatus({
         rawOverallStatus: raw.rawOverallStatus,
         overallStatus: effectiveOverallStatus,
         confidence: raw.confidence,
-        causes: raw.causes,
+        causes: {
+          ...raw.causes,
+          availability: availabilityCauses,
+          overall: synthesizeOverallCauses(availabilityCauses, raw.causes.dataQuality),
+        },
         state: resolvedState,
         staleness: resolvedStaleness,
         probe,
         discrepancy,
         timeline,
         caches: raw.caches,
-        crons: raw.crons,
+        // Default response: per-job summary only. Full run/progress metadata is
+        // served per job by /api/status-cron-detail.
+        crons: summarizeCronStatuses(raw.crons),
         budgetOnlySurfaces: raw.budgetOnlySurfaces,
         dataQuality: raw.dataQuality,
         telegramBot: raw.telegramBot,

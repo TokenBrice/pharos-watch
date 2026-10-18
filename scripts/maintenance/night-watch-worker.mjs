@@ -7,6 +7,7 @@ import { register as registerCommonJs } from "tsx/cjs/api";
 import { register as registerEsm } from "tsx/esm/api";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
 import { getCronQualityReasons } from "../../shared/lib/cron-quality-reasons.ts";
+import { summarizeWorkerEvidence, renderWorkerEvidenceTable } from "./worker-evidence-report.mjs";
 import {
   collectWorkerCronSnapshot,
   WORKER_WATCH_DEFAULTS,
@@ -372,7 +373,7 @@ export function buildNightWatchCoverage(scheduleMatrix, snapshots, window) {
   const endSec = Math.floor(new Date(window.end).getTime() / 1000);
   const runs = uniqueBy(
     flattenSnapshots(snapshots, "recentRuns").filter((run) => epochInWindow(run.slot_started_at ?? run.started_at, startSec, endSec)),
-    (run) => `${run.job}|${run.slot_started_at ?? "manual"}|${run.started_at ?? "unknown"}`,
+    (run) => `${run.job}|${run.schedule_key ?? "unknown"}|${run.invocation_id ?? run.slot_started_at ?? "manual"}|${run.started_at ?? "unknown"}`,
   );
   const slots = uniqueBy(
     flattenSnapshots(snapshots, "slots").filter((slot) => epochInWindow(slot.slot_started_at, startSec, endSec)),
@@ -397,7 +398,7 @@ export function buildNightWatchCoverage(scheduleMatrix, snapshots, window) {
       const pathKey = `${plan.scheduleKey}:${jobId}`;
       const pathRuns = runs.filter((run) => run.job === jobId && dueSet.has(Number(run.slot_started_at)));
       const latestRun = [...pathRuns].sort((left, right) => Number(right.started_at ?? 0) - Number(left.started_at ?? 0))[0];
-      const statusRun = statusCrons[jobId]?.lastRun;
+      const statusRun = statusCrons[jobId]?.runs?.[0];
       const statusInWindow = epochInWindow(statusRun?.startedAt, startSec, endSec);
       const sharedPath = (scheduleMatrix.sharedJobPaths?.[jobId]?.length ?? 0) > 1;
       const conditional = isConditionallyAdmittedScheduledTask(plan.scheduleKey, jobId);
@@ -520,7 +521,7 @@ function summarizeFindings(snapshots, statusPayload, coverage, args) {
   const endSec = Math.floor(new Date(args.end).getTime() / 1000);
   const runs = uniqueBy(
     flattenSnapshots(snapshots, "recentRuns").filter((run) => epochInWindow(run.slot_started_at ?? run.started_at, startSec, endSec)),
-    (run) => `${run.job}|${run.slot_started_at ?? "manual"}|${run.started_at ?? "unknown"}`,
+    (run) => `${run.job}|${run.schedule_key ?? "unknown"}|${run.invocation_id ?? run.slot_started_at ?? "manual"}|${run.started_at ?? "unknown"}`,
   );
   const nonOkRuns = runs.filter((run) => run.status && run.status !== "ok");
   if (nonOkRuns.length > 0) {
@@ -618,6 +619,14 @@ function summarizeAnalysis(evidence) {
   if (evidence.options.includeWorkerTail) probeGaps.push("Worker tail requested; attach Cloudflare tail output manually in the report appendix");
 
   const findings = summarizeFindings(evidence.snapshots, statusPayload, coverage, evidence.options);
+  const runs = uniqueBy(
+    flattenSnapshots(evidence.snapshots, "recentRuns").filter((run) => epochInWindow(
+      run.slot_started_at ?? run.started_at,
+      Math.floor(new Date(evidence.options.start).getTime() / 1000),
+      Math.floor(new Date(evidence.options.end).getTime() / 1000),
+    )),
+    (run) => `${run.job}|${run.schedule_key ?? "unknown"}|${run.invocation_id ?? run.slot_started_at ?? "manual"}|${run.started_at ?? "unknown"}`,
+  );
   return {
     generatedAt: new Date().toISOString(),
     health: {
@@ -626,6 +635,7 @@ function summarizeAnalysis(evidence) {
       latestStatusRaw: statusPayload?.rawOverallStatus ?? null,
     },
     coverage,
+    runEvidence: summarizeWorkerEvidence(runs, [...evidence.snapshots].reverse().find((snapshot) => snapshot.publicationGenerations)?.publicationGenerations),
     dependencyHealth: statusPayload?.dependencyHealth ?? null,
     publicationHealth: statusPayload?.publicationHealth ?? null,
     providerCircuitHealth: statusPayload?.providerCircuitHealth ?? null,
@@ -747,6 +757,10 @@ export function renderNightWatchMarkdown(evidence) {
     `- Latest admin status: ${analysis.health.latestStatusOverall ?? "not collected"}`,
     `- Cron jobs observed: ${observedJobs}/${totalJobs} (${confirmedJobs} confirmed from D1 rows)`,
     `- Findings generated: ${analysis.findings.length}`,
+    "",
+    "## Literal Terminal Status And Output Evidence",
+    "",
+    renderWorkerEvidenceTable(analysis.runEvidence ?? summarizeWorkerEvidence([])),
     "",
     "## Coverage Matrix",
     "",

@@ -513,7 +513,7 @@ describe("syncLiveReserves", () => {
     };
 
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(1);
-    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, failedBreakerKey, false);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(expect.anything(), failedBreakerKey, false);
     expect(metadata.breakerOutcomesRecorded).toBe(1);
     expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(uniqueBreakerKeys.size - 1);
   });
@@ -568,7 +568,7 @@ describe("syncLiveReserves", () => {
 
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(keysNeedingRecovery.size);
     for (const key of keysNeedingRecovery) {
-      expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, key, true);
+      expect(recordOutcomeSafeMock).toHaveBeenCalledWith(expect.anything(), key, true);
     }
     expect(metadata.breakerOutcomesRecorded).toBe(keysNeedingRecovery.size);
     expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(uniqueBreakerKeys.length - keysNeedingRecovery.size);
@@ -636,7 +636,7 @@ describe("syncLiveReserves", () => {
       breakerOutcomeWriteFailures?: number;
     };
 
-    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, failedBreakerKey, false);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(expect.anything(), failedBreakerKey, false);
     expect(metadata.breakerOutcomesRecorded).toBe(uniqueBreakerKeys.size - 1);
     expect(metadata.breakerOutcomeWriteFailures).toBe(1);
   });
@@ -1140,7 +1140,7 @@ describe("syncLiveReserves", () => {
     expect(adapterFetch.mock.calls.filter(([coin]) => coin.id === target.id)).toHaveLength(2);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ failed: 1, runBudgetTruncated: true });
     const key = `live-reserves:${target.liveReservesConfig!.breakerScope ?? target.liveReservesConfig!.adapter}`;
-    expect(recordOutcomeSafeMock).not.toHaveBeenCalledWith(db, key, false);
+    expect(recordOutcomeSafeMock).not.toHaveBeenCalledWith(expect.anything(), key, false);
     expect(db.getHistory().some((entry) =>
       entry.sql.includes("reserve_sync_attempt_history")
       && entry.binds[0] === target.id

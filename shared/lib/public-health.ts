@@ -1,3 +1,4 @@
+import { API_FRESHNESS_MAX_AGE_SEC } from "./api-freshness";
 import { getCacheImpactStatus } from "./cache-health";
 import { getCircuitScope } from "./circuit-sources";
 import type { CacheStatus, CircuitRecord, HealthResponse, StatusHealthValue } from "../types/status";
@@ -6,6 +7,9 @@ export type PublicStatusTone = StatusHealthValue;
 
 /** Public mint/burn freshness tolerates one missed critical-lane run; the next half-window is degraded. */
 export const MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO = 1.5;
+
+/** Source-wide open circuits required to affect public availability and admin causes. */
+export const PUBLIC_CIRCUIT_IMPACT_QUORUM = 3;
 
 /**
  * Public component grace: an age-graded component past its stale band stays
@@ -45,6 +49,17 @@ export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"]
   return "healthy";
 }
 
+/** The accepted publication clock, not a newer held attempt, owns freshness. */
+export function getPublicSafetyScoreStatus(
+  publication: HealthResponse["safetyScorePublication"],
+  now: number,
+): PublicStatusTone {
+  if (!publication || publication.acceptedAtSec == null) return "degraded";
+  const age = Math.max(0, now - publication.acceptedAtSec);
+  if (age > API_FRESHNESS_MAX_AGE_SEC.reportCards * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER) return "stale";
+  return publication.status === "held" || age > API_FRESHNESS_MAX_AGE_SEC.reportCards ? "degraded" : "healthy";
+}
+
 export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>): PublicStatusTone {
   let worstStatus: PublicStatusTone = "healthy";
 
@@ -59,7 +74,7 @@ export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>)
 }
 
 export function getCircuitImpactStatus(openCircuitCount: number | null): PublicStatusTone {
-  return openCircuitCount == null || openCircuitCount >= 3 ? "degraded" : "healthy";
+  return openCircuitCount == null || openCircuitCount >= PUBLIC_CIRCUIT_IMPACT_QUORUM ? "degraded" : "healthy";
 }
 
 export function isPublicImpactCircuitKey(key: string): boolean {

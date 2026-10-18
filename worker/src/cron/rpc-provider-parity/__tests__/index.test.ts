@@ -121,6 +121,10 @@ describe("rpc parity job", () => {
       deadlineHit: false,
       truncated: false,
       aborted: false,
+      rotation: {
+        windowHours: 3, maxChainsPerRun: 13, targetCount: RPC_PARITY_TARGETS.length,
+        selectedChains: expect.any(Array),
+      },
       runsRetained: 1,
       circuit: "success",
       circuitRecorded: true,
@@ -200,6 +204,7 @@ describe("rpc parity job", () => {
     expect(metadata).toMatchObject({
       attempted: 1, headOk: 1, deadlineHit: true, truncated: true,
       skipped: 1, runsRetained: 1, circuit: "success",
+      truncationReason: "rpc-parity-deadline-exhausted",
     });
     expect(metadata).not.toHaveProperty("reason");
     expect(metadata.outputPublishedAt).toBeGreaterThan(0);

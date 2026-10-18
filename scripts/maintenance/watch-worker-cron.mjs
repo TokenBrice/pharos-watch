@@ -3,6 +3,8 @@
 import { createD1Client, sqlString } from "../lib/remote-d1.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
+import { summarizeWorkerEvidence, renderWorkerEvidenceTable } from "./worker-evidence-report.mjs";
+import { parseStrictCliArgs, parseCliInteger } from "../lib/cli-args.mjs";
 
 export const WORKER_WATCH_DEFAULTS = Object.freeze({
   database: "stablecoin-db",
@@ -66,22 +68,20 @@ export function parseWorkerWatchArgs(argv) {
     cfAccessClientSecret: process.env.CF_ACCESS_CLIENT_SECRET ?? "",
   };
 
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (arg === "--help") {
-      console.log(usage());
-      process.exit(0);
-    }
-    const descriptor = WORKER_WATCH_OPTION_SCHEMA.find(([flag]) => flag === arg);
-    if (!descriptor) throw new Error(`Unknown option: ${arg}`);
-    const [, key, kind] = descriptor;
-    if (kind === "boolean") args[key] = true;
-    else if (kind === "false") args[key] = false;
-    else {
-      const value = argv[++index];
-      if (!value) throw new Error(`Missing value for ${arg}`);
-      args[key] = kind === "integer" ? Number.parseInt(value, 10) : value;
-    }
+  const { values } = parseStrictCliArgs(argv, {
+    options: Object.fromEntries(WORKER_WATCH_OPTION_SCHEMA.map(([flag, , kind]) => [
+      flag.slice(2), { type: kind === "boolean" || kind === "false" ? "boolean" : "string" },
+    ])),
+  });
+  if (values.help) {
+    console.log(usage());
+    process.exit(0);
+  }
+  for (const [flag, key, kind] of WORKER_WATCH_OPTION_SCHEMA) {
+    const value = values[flag.slice(2)];
+    if (value === undefined) continue;
+    args[key] = kind === "false" ? false : kind === "integer"
+      ? parseCliInteger(value, { name: flag, min: 1 }) : value;
   }
 
   if (!Number.isFinite(args.sinceMinutes) || args.sinceMinutes <= 0) {
@@ -219,6 +219,7 @@ function printHuman(report) {
     console.log(`Status history: ${report.probes.statusHistory.status}`);
   }
   console.log(`Recent runs: ${report.recentRuns.length} rows, status counts ${JSON.stringify(report.runStatusCounts)}`);
+  console.log(renderWorkerEvidenceTable(report.runEvidence ?? summarizeWorkerEvidence(report.recentRuns, report.publicationGenerations)));
 
   const notableRuns = report.recentRuns
     .filter((run) => run.status !== "ok")
@@ -287,6 +288,10 @@ export async function collectWorkerCronSnapshot(args, {
   // SAFETY: sinceSec/limit/metadataBytes are positive integers derived from validated CLI numeric options.
   const recentRuns = select(args, `
     SELECT job, started_at, duration_ms, status, error, degraded_reason, item_count, slot_started_at,
+           schedule_key, invocation_id, worker_version, productive, publication_count,
+           CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.reason') ELSE NULL END AS synthetic_reason,
+           CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.childDisposition') ELSE NULL END AS child_disposition,
+           CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.slotOwner') ELSE NULL END AS synthetic_invocation,
            CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality') ELSE NULL END AS quality,
            ${metadataSelect(args, "metadata")}
       FROM cron_runs
@@ -422,6 +427,7 @@ export async function collectWorkerCronSnapshot(args, {
     artifactErrors,
   };
 
+  report.runEvidence = summarizeWorkerEvidence(recentRuns, report.publicationGenerations);
   return report;
 }
 
@@ -434,8 +440,8 @@ export async function runCli(argv = process.argv.slice(2)) {
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  runCli().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+  runCli().then((code) => { process.exitCode = code; }).catch((error) => {
+    console.error(error?.exitCode === 2 ? "Invalid Worker evidence options; use --help." : "Worker evidence collection failed; inspect retained completeness labels.");
+    process.exitCode = error?.exitCode === 2 ? 2 : 1;
   });
 }

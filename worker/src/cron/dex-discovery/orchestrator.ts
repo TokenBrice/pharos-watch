@@ -6,7 +6,7 @@ import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtim
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
-import type { DiscoveryMeta } from "./types";
+import type { DiscoveryCrawlTier, DiscoveryMeta, DiscoveryRunCheckpoint } from "./types";
 import { DISCOVERY_TIERS } from "./types";
 import { crawlCoin } from "./crawl-sources";
 import {
@@ -18,11 +18,12 @@ import {
   incrementRunSeq,
   readDiscoveryCensusSummaries,
   readDiscoveryMeta,
+  readDiscoveryRunCheckpoint,
   readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
-  writeDiscoveryTargetCursors,
+  writeDiscoveryRunCheckpoint,
   type DiscoveryCensusSummary,
 } from "./persistence";
 import {
@@ -42,7 +43,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 import { refreshStaleRegistryPools, type StalePoolRefreshSummary } from "./refresh-stale-pools";
 
-export type EffectiveTier = "refresh" | "t1" | "t2" | "t3" | "dormant" | "skip";
+export type EffectiveTier = DiscoveryCrawlTier | "skip";
 
 interface LiquidityCoverageRow {
   stablecoin_id: string;
@@ -64,9 +65,9 @@ interface DiscoveryCandidate {
   meta: DiscoveryMeta | undefined;
 }
 
-// Keep discovery comfortably below the wrapper timeout so partial staging runs
-// degrade cleanly instead of dying mid-flight and leaving stale progress behind.
-export const DEX_DISCOVERY_RUN_BUDGET_MS = 12 * 60_000;
+// D21: cron-native slices include setup in the wall budget and persist the
+// unfinished cohort, leaving ample distance from the 780s child wrapper.
+export const DEX_DISCOVERY_RUN_BUDGET_MS = 9 * 60_000;
 export const DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS = 20_000;
 
 function summarizeDiscoveryError(err: unknown): string {
@@ -308,7 +309,9 @@ export async function syncDexDiscovery(
   signal?: AbortSignal,
   onProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  const nowSec = Math.floor(Date.now() / 1000);
+  const startedAtMs = Date.now();
+  const deadlineMs = startedAtMs + DEX_DISCOVERY_RUN_BUDGET_MS;
+  const nowSec = Math.floor(startedAtMs / 1000);
   let runSeq = 0;
   let coinsCrawled = 0;
   let poolsDiscovered = 0;
@@ -331,6 +334,10 @@ export async function syncDexDiscovery(
   let windowedDeploymentsDeferred = 0;
   let targetCursors = new Map<string, string>();
   let targetCursorsChanged = false;
+  let resumedFromCheckpoint = false;
+  let refreshPending = true;
+  let pendingCandidates: DiscoveryRunCheckpoint["pendingCandidates"] = [];
+  const completedCandidates = new Set<string>();
   const allUnresolvedChains = new Set<string>();
   const poolsBySource: Record<string, number> = {};
   let stalePoolRefresh: StalePoolRefreshSummary | null = null;
@@ -347,6 +354,9 @@ export async function syncDexDiscovery(
     cleanupSkippedForBudget,
     cleanup,
     runSeq,
+    resumedFromCheckpoint,
+    continuationPending: pendingCandidates.length - completedCandidates.size,
+    runBudgetMs: DEX_DISCOVERY_RUN_BUDGET_MS,
     deploymentOutcomesWritten,
     windowedCoins,
     windowedDeploymentsDeferred,
@@ -361,20 +371,27 @@ export async function syncDexDiscovery(
     ...extra,
   });
 
-  const persistTargetCursors = async () => {
-    if (!targetCursorsChanged) return;
+  const persistCheckpoint = async () => {
+    const remaining = pendingCandidates.filter(({ stablecoinId }) => !completedCandidates.has(stablecoinId));
     try {
-      await writeDiscoveryTargetCursors(db, targetCursors, signal);
+      await writeDiscoveryRunCheckpoint(
+        db,
+        remaining.length > 0 || refreshPending
+          ? { runSeq, refreshPending, pendingCandidates: remaining }
+          : null,
+        targetCursorsChanged ? targetCursors : null,
+        signal,
+      );
       targetCursorsChanged = false;
     } catch (err) {
       rethrowIfAborted(err, signal);
-      persistenceFailures.add("target-cursors");
+      persistenceFailures.add("run-checkpoint");
       logWorkerEvent({
         scope: "lib",
         level: "warn",
-        event: "dex_discovery.target_cursor_write_failed",
+        event: "dex_discovery.checkpoint_write_failed",
         job: "sync-dex-discovery",
-        message: "Failed to persist deployment-window resume markers",
+        message: "Failed to persist discovery continuation",
         error: err,
       });
     }
@@ -409,7 +426,13 @@ export async function syncDexDiscovery(
     const metaById = await readDiscoveryMeta(db, signal);
     const censusById = await readDiscoveryCensusSummaries(db, signal);
     targetCursors = await readDiscoveryTargetCursors(db, signal);
-    runSeq = await incrementRunSeq(db, signal);
+    const checkpoint = await readDiscoveryRunCheckpoint(db, signal);
+    resumedFromCheckpoint = checkpoint != null;
+    refreshPending = checkpoint?.refreshPending ?? true;
+    runSeq = checkpoint?.runSeq ?? await incrementRunSeq(db, signal);
+    const checkpointCandidates = new Map(
+      checkpoint?.pendingCandidates.map((candidate) => [candidate.stablecoinId, candidate] as const) ?? [],
+    );
 
     const eligibleCoins: DiscoveryCandidate[] = [];
     const activeIds = new Set<string>();
@@ -424,7 +447,9 @@ export async function syncDexDiscovery(
       ) {
         censusCadenceHolds += 1;
       }
-      const tier = computeEffectiveTier(
+      const tier = checkpoint
+        ? checkpointCandidates.get(coin.id)?.tier ?? "skip"
+        : computeEffectiveTier(
         coin.id,
         coverage?.poolCount ?? 0,
         coverage?.chainCount ?? 0,
@@ -453,9 +478,23 @@ export async function syncDexDiscovery(
       });
     }
 
-    eligibleCoins.sort(
-      (a, b) => discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) || compareDiscoveryMeta(a.meta, b.meta),
-    );
+    if (checkpoint) {
+      const candidateById = new Map(eligibleCoins.map((candidate) => [candidate.stablecoinId, candidate]));
+      eligibleCoins.splice(0, eligibleCoins.length, ...checkpoint.pendingCandidates.flatMap(({ stablecoinId }) => {
+        const candidate = candidateById.get(stablecoinId);
+        return candidate ? [candidate] : [];
+      }));
+    } else {
+      eligibleCoins.sort(
+        (a, b) => discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) || compareDiscoveryMeta(a.meta, b.meta),
+      );
+    }
+    pendingCandidates = eligibleCoins.map(({ stablecoinId, tier }) => ({ stablecoinId, tier }));
+    // Admit the entire cohort before provider work. If the isolate disappears,
+    // the same cohort is replayed rather than incrementing away its tail.
+    if (!checkpoint) {
+      await writeDiscoveryRunCheckpoint(db, { runSeq, refreshPending, pendingCandidates }, null, signal);
+    }
 
     for (const stablecoinId of [...targetCursors.keys()]) {
       if (activeIds.has(stablecoinId)) continue;
@@ -463,7 +502,6 @@ export async function syncDexDiscovery(
       targetCursorsChanged = true;
     }
 
-    const deadlineMs = Date.now() + DEX_DISCOVERY_RUN_BUDGET_MS;
     const knownPoolIds = new Set<string>();
     await onProgress?.({
       stage: "queue-built",
@@ -476,25 +514,26 @@ export async function syncDexDiscovery(
       },
     });
 
-    // Stale-first pool refresh runs before cohort crawling inside its own
-    // bounded slice of the run budget. It never throws except on run abort, so
-    // a provider outage or open circuit leaves the cohort queue untouched.
-    await onProgress?.({
-      stage: "refresh-stale-pools",
-      itemsDone: 0,
-      itemsTotal: eligibleCoins.length,
-      message: "Refreshing stale registry pool readings",
-      metadata: { runSeq },
-    });
-    stalePoolRefresh = await refreshStaleRegistryPools({
-      db,
-      cgApiKey,
-      stablecoins: WORKER_ACTIVE_STABLECOINS,
-      nowSec,
-      deadlineMs: deadlineMs - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
-      signal,
-      references: validationReferences,
-    });
+    // Refresh once per admitted cohort, not once per continuation slice.
+    if (refreshPending && hasDiscoveryFinalizationWindow(deadlineMs)) {
+      await onProgress?.({
+        stage: "refresh-stale-pools",
+        itemsDone: 0,
+        itemsTotal: eligibleCoins.length,
+        message: "Refreshing stale registry pool readings",
+        metadata: { runSeq },
+      });
+      stalePoolRefresh = await refreshStaleRegistryPools({
+        db,
+        cgApiKey,
+        stablecoins: WORKER_ACTIVE_STABLECOINS,
+        nowSec,
+        deadlineMs: deadlineMs - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
+        signal,
+        references: validationReferences,
+      });
+      refreshPending = false;
+    }
 
     for (let index = 0; index < eligibleCoins.length; index++) {
       const candidate = eligibleCoins[index];
@@ -547,7 +586,10 @@ export async function syncDexDiscovery(
         continue;
       }
       try {
-        const coinDeadline = Math.min(deadlineMs, Date.now() + DEX_DISCOVERY_PER_COIN_BUDGET_MS);
+        const coinDeadline = Math.min(
+          deadlineMs - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
+          Date.now() + DEX_DISCOVERY_PER_COIN_BUDGET_MS,
+        );
         const result = await crawlCoin(
           db,
           candidate.stablecoinId,
@@ -661,6 +703,10 @@ export async function syncDexDiscovery(
         }
       }
 
+      if (!persistenceFailedCoins.has(candidate.stablecoinId)) {
+        completedCandidates.add(candidate.stablecoinId);
+      }
+
       if (Date.now() >= deadlineMs) {
         budgetExhausted = true;
         break;
@@ -668,7 +714,7 @@ export async function syncDexDiscovery(
     }
 
     await finalizeDexScreenerOutcome();
-    await persistTargetCursors();
+    await persistCheckpoint();
 
     if (hasDiscoveryFinalizationWindow(deadlineMs)) {
       cleanup = await cleanupStaging(db, nowSec, signal);
@@ -677,10 +723,12 @@ export async function syncDexDiscovery(
       budgetExhausted = true;
     }
     await onProgress?.({
-      stage: "complete",
-      itemsDone: eligibleCoins.length,
+      stage: completedCandidates.size < eligibleCoins.length || refreshPending ? "deferred" : "complete",
+      itemsDone: completedCandidates.size,
       itemsTotal: eligibleCoins.length,
-      message: "Completed DEX discovery sync",
+      message: completedCandidates.size < eligibleCoins.length || refreshPending
+        ? "Deferred unfinished DEX discovery work to the next cron tick"
+        : "Completed DEX discovery sync",
       metadata: buildRunMetadata(),
     });
 
@@ -691,7 +739,7 @@ export async function syncDexDiscovery(
     const reason = persistenceFailed ? "dex-discovery-persistence-failed"
       : budgetExhausted && !budgetMadeProgress ? "dex-discovery-budget-exhausted"
         : cleanup?.error != null ? "dex-discovery-cleanup-failed"
-          : stalePoolRefresh.outcome === "failed" ? "dex-discovery-stale-pool-refresh-failed" : null;
+          : stalePoolRefresh?.outcome === "failed" ? "dex-discovery-stale-pool-refresh-failed" : null;
     const qualityReasons = [
       ...(failedCoins.some((id) => !persistenceFailedCoins.has(id)) ? ["dex-discovery-coins-failed"] : []),
       ...(budgetExhausted && budgetMadeProgress ? ["dex-discovery-budget-exhausted"] : []),
@@ -700,7 +748,7 @@ export async function syncDexDiscovery(
       status: reason ? "degraded" : "ok",
       itemCount: coinsCrawled,
       metadata: JSON.stringify(buildRunMetadata({
-        outputPublishedAt: stagedRowsChanged > 0 || observedDeploymentOutcomesWritten > 0 || stalePoolRefresh.rowsWritten > 0
+        outputPublishedAt: stagedRowsChanged > 0 || observedDeploymentOutcomesWritten > 0 || (stalePoolRefresh?.rowsWritten ?? 0) > 0
           ? nowSec
           : null,
         ...(reason ? { reason } : {}),

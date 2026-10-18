@@ -1,20 +1,27 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import type { CronStatus, StatusResponse } from "@shared/types";
+import type { UseQueryResult } from "@tanstack/react-query";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CronStatus, CronStatusDetail, StatusCronDetailResponse, StatusResponse } from "@shared/types";
 import { CronsSection, type CronGroup } from "@/app/admin/sections/crons-section";
 import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import { useStatusCronDetail } from "@/hooks/admin-api-hooks";
+
+vi.mock("@/hooks/admin-api-hooks", () => ({
+  useStatusCronDetail: vi.fn(),
+}));
 
 afterEach(() => {
   cleanup();
   window.history.replaceState(null, "", "/");
+  vi.mocked(useStatusCronDetail).mockReset();
 });
 
 function makeCronStatus(overrides: Partial<CronStatus> = {}): CronStatus {
   return {
-    lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "ok" },
-    recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "ok" }],
+    runs: [{ startedAt: 1_699_999_940, durationMs: 200, status: "ok" }],
+    confirmedOutputAt: null,
     expectedIntervalSec: 60,
     healthy: true,
     ...overrides,
@@ -41,10 +48,28 @@ function makeData(overrides: Partial<StatusResponse> = {}): StatusResponse {
 function renderCrons({
   groups,
   data = makeHealthyStatusResponse(),
+  details = {},
+  detailState = "success",
 }: {
   groups: CronGroup[];
   data?: StatusResponse;
+  details?: Record<string, CronStatusDetail>;
+  detailState?: "success" | "loading" | "error";
 }) {
+  const selectedJob = groups.flatMap((group) => group.entries)[0]?.[0];
+  window.history.replaceState(null, "", selectedJob ? `?job=${encodeURIComponent(selectedJob)}` : "/");
+  const summaries = new Map(groups.flatMap((group) => group.entries));
+  vi.mocked(useStatusCronDetail).mockImplementation((job) => ({
+    data: detailState === "success" ? {
+      timestamp: data.timestamp,
+      job,
+      cron: details[job] ?? summaries.get(job)!,
+      sectionErrors: {},
+    } : undefined,
+    isError: detailState === "error",
+    isLoading: detailState === "loading",
+    error: detailState === "error" ? new Error("Access denied") : null,
+  }) as UseQueryResult<StatusCronDetailResponse, Error>);
   return render(<CronsSection data={data} cronGroups={groups} />);
 }
 
@@ -55,7 +80,7 @@ describe("CronsSection", () => {
     }));
     const failedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "error" as const };
     renderCrons({ groups: [makeGroup([["snapshot-psi", makeCronStatus({
-      lastRun: neutralRuns[0], recentRuns: [...neutralRuns, failedRun], expectedIntervalSec: 86_400, healthy: false,
+      runs: [...neutralRuns, failedRun], expectedIntervalSec: 86_400, healthy: false,
     })]])] });
     const row = screen.getByTestId("cron-row-snapshot-psi");
     expect(within(row).getAllByRole("listitem")).toHaveLength(11);
@@ -68,7 +93,7 @@ describe("CronsSection", () => {
   it.each(["unknown", "errors", "empty", "success"] as const)(
     "scopes last-completed evidence for %s history",
     (history) => {
-      const recentRuns = history === "success"
+      const runs = history === "success"
         ? [{ startedAt: 1_699_999_940, durationMs: 200, status: "ok" as const }]
         : history === "errors"
           ? Array.from({ length: 10 }, (_, index) => ({
@@ -76,8 +101,7 @@ describe("CronsSection", () => {
           }))
           : [];
       renderCrons({ groups: [makeGroup([["sync-stablecoins", makeCronStatus({
-        recentRuns,
-        lastRun: recentRuns[0] ?? null,
+        runs,
         healthy: history === "unknown" ? null : false,
         telemetryUnknown: history === "unknown",
         telemetryUnknownReason: history === "unknown" ? "cron-history-read-failed" : undefined,
@@ -115,8 +139,7 @@ describe("CronsSection", () => {
           [
             "weekly-recap",
             makeCronStatus({
-              lastRun: neutralRun,
-              recentRuns: [neutralRun, requiredRun],
+              runs: [neutralRun, requiredRun],
               expectedIntervalSec: 900,
               healthy,
             }),
@@ -149,8 +172,7 @@ describe("CronsSection", () => {
           [
             "compute-safety-score-v9",
             makeCronStatus({
-              lastRun: neutralRun,
-              recentRuns: [neutralRun],
+              runs: [neutralRun],
               healthy: false,
             }),
           ],
@@ -166,7 +188,7 @@ describe("CronsSection", () => {
 
   it("leads the detail panel with the reason, budget, and operator actions", () => {
     renderCrons({
-      groups: [makeGroup([["sync-blacklist", makeCronStatus({ healthy: false, lastRun: null, recentRuns: [] })]])],
+      groups: [makeGroup([["sync-blacklist", makeCronStatus({ healthy: false, runs: [] })]])],
     });
 
     const detail = screen.getByRole("complementary", { name: /Details for/ });
@@ -193,8 +215,7 @@ describe("CronsSection", () => {
     };
     const cron = makeCronStatus({
       healthy: false,
-      lastRun: { startedAt: 1_699_999_700, durationMs: 100, status: "ok",
-        metadata: { resourcePressure: { ...pressure, phase: "last-publication", observedAt: 1_699_999_700, intakeBytes: 123 } } },
+      runs: [{ startedAt: 1_699_999_700, durationMs: 100, status: "ok" }],
       inFlight: {
         startedAt: 1_699_999_800,
         updatedAt: 1_699_999_900,
@@ -202,7 +223,7 @@ describe("CronsSection", () => {
         leaseOwner: "lease-owner-a",
         itemsDone: 4,
         itemsTotal: 10,
-        metadata: { cursor: "coin-a", resourcePressure: pressure },
+        message: "Resuming coin-a",
         stale: true,
       },
       staleArtifacts: [
@@ -221,7 +242,20 @@ describe("CronsSection", () => {
         },
       ],
     });
-    renderCrons({ groups: [makeGroup([["sync-stablecoins", cron]])] });
+    renderCrons({
+      groups: [makeGroup([["sync-stablecoins", cron]])],
+      details: {
+        "sync-stablecoins": {
+          ...cron,
+          runs: [{
+            ...cron.runs[0]!,
+            metadata: { resourcePressure: { ...pressure, phase: "last-publication", observedAt: 1_699_999_700, intakeBytes: 123 } },
+          }],
+          inFlight: { ...cron.inFlight!, metadata: { cursor: "coin-a", resourcePressure: pressure } },
+        },
+      },
+    });
+    expect(useStatusCronDetail).toHaveBeenCalledWith("sync-stablecoins", { enabled: true });
 
     expect(screen.getAllByText("Stale heartbeat").length).toBeGreaterThan(0);
     expect(screen.getByText("lease-owner-a")).toBeTruthy();
@@ -248,8 +282,7 @@ describe("CronsSection", () => {
           [
             "snapshot-supply",
             makeCronStatus({
-              lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "degraded", itemCount },
-              recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded", itemCount }],
+              runs: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded", itemCount }],
             }),
           ],
         ]),
@@ -273,6 +306,25 @@ describe("CronsSection", () => {
 
     expect(screen.getByText("No cron job telemetry was reported. State is unknown.")).toBeTruthy();
     expect(screen.getByText("No budget-only surface telemetry was reported. State is unknown.")).toBeTruthy();
+  });
+
+  it.each(["loading", "error"] as const)("keeps summary evidence visible while detail is %s", (detailState) => {
+    renderCrons({
+      groups: [makeGroup([["sync-stablecoins", makeCronStatus({ healthy: false })]])],
+      detailState,
+    });
+
+    const row = screen.getByTestId("cron-row-sync-stablecoins");
+    expect(within(row).getByText("Succeeded")).toBeTruthy();
+    expect(within(row).getAllByRole("listitem")).toHaveLength(1);
+    const detail = screen.getByRole("complementary", { name: /Details for/ });
+    expect(within(detail).queryByText("Recent runs and retained evidence")).toBeNull();
+    expect(within(detail).queryByText("Full progress metadata")).toBeNull();
+    if (detailState === "error") {
+      expect(within(detail).getByRole("alert").textContent).toContain("Job detail unavailable: Access denied");
+    } else {
+      expect(within(detail).getByText("Loading run history and metadata…").getAttribute("role")).toBe("status");
+    }
   });
 
 });

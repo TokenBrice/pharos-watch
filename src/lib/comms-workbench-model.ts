@@ -277,8 +277,9 @@ export function buildCommsWorkbenchModel(input: {
   nowSeconds: number;
 }): CommsWorkbenchModel {
   const { telegramBot, dispatchCron, sectionError, nowSeconds } = input;
-  const lastDispatch = dispatchCron?.lastRun ?? null;
-  const metadata = readMetadataRecord(lastDispatch?.metadata);
+  const lastDispatch = dispatchCron?.runs[0] ?? null;
+  // Registry-selected dispatch counters of the latest run (`latestRunFacts`).
+  const metadata = readMetadataRecord(dispatchCron?.latestRunFacts);
   const unavailableFields = new Set(telegramBot?.quality?.unavailableFields ?? []);
 
   const pendingTelemetryAvailable =
@@ -453,7 +454,7 @@ export function buildCommsWorkbenchModel(input: {
         durationMs: lastDispatch?.durationMs ?? null,
         itemCount: lastDispatch?.itemCount ?? null,
         error: lastDispatch?.error ?? null,
-        skipped: readMetadataString(metadata?.skipped) ?? readMetadataString(metadata?.skippedReason),
+        skipped: readMetadataString(metadata?.skipped) ?? lastDispatch?.skippedReason ?? null,
         subscribersNotified: readOptionalNumber(metadata?.subscribersNotified),
         messagesSent: readOptionalNumber(metadata?.messagesSent),
         freshAttempted: readOptionalNumber(metadata?.freshAttempted),

@@ -5,6 +5,7 @@ import {
   countPublicImpactOpenCircuits,
   getCircuitImpactStatus,
   getPublicMintBurnStatus,
+  isPublicImpactCircuitKey,
   MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO,
   PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER,
 } from "./public-health";
@@ -259,6 +260,46 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
     }
   }
 
+  const safety = health.safetyScorePublication;
+  if (!safety || health.safetyScorePublicationUnavailableReason) {
+    add("safety-scores", {
+      state: "degraded",
+      summary: "Safety Score publication health is unavailable, so current scores cannot be confirmed.",
+      reason: health.safetyScorePublicationUnavailableReason ?? "safety-score-publication-unavailable",
+    });
+  } else {
+    const budget = buildBudget(API_FRESHNESS_MAX_AGE_SEC.reportCards, API_FRESHNESS_MAX_AGE_SEC.reportCards);
+    const ageSeconds = safety.acceptedAtSec == null ? null : Math.max(0, health.timestamp - safety.acceptedAtSec);
+    if (ageSeconds == null) {
+      add("safety-scores", {
+        state: "degraded",
+        summary: "No accepted Safety Score publication is available.",
+        reason: "safety-score-publication-missing",
+        budget,
+      });
+    } else {
+      add("safety-scores", gradeAge("Safety Scores", ageSeconds, budget, "safety-score-publication"));
+    }
+    if (safety.status === "held") {
+      add("safety-scores", {
+        state: "degraded",
+        summary: "Safety Score publication is held while required inputs recover. The last accepted scores are still served when available.",
+        reason: "safety-score-publication-held",
+        ageSeconds,
+        budget,
+      });
+      for (const reason of safety.reasons) {
+        add("safety-scores", {
+          state: "degraded",
+          summary: "Safety Score publication is held while required inputs recover.",
+          reason: `safety-score-publication-held:${reason.code}`,
+          ageSeconds,
+          budget,
+        });
+      }
+    }
+  }
+
   const yieldWarning = hasWarning(health, (warning) =>
     warning.startsWith("yield-safety-unrated-serving") || warning === "yield-safety-availability-unknown");
   if (yieldWarning) {
@@ -321,6 +362,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         warningAfterSec: scheduler.warningAfterSec,
         staleAfterSec: scheduler.staleAfterSec,
         reason: "scheduler",
+        unavailableReason: scheduler.unavailableReason,
       },
       {
         subject: "Background computation",
@@ -329,6 +371,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         warningAfterSec: scheduler.heavy.warningAfterSec,
         staleAfterSec: scheduler.heavy.staleAfterSec,
         reason: "heavy-scheduler",
+        unavailableReason: scheduler.heavy.unavailableReason,
       },
     ];
     for (const lane of lanes) {
@@ -337,7 +380,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         add("data-refresh", {
           state: "degraded",
           summary: `${lane.subject} evidence is unavailable, so delivery cannot be confirmed.`,
-          reason: `${lane.reason}:unavailable`,
+          reason: `${lane.reason}:unavailable:${(lane.unavailableReason ?? "unknown").slice(0, 80)}`,
         });
         continue;
       }
@@ -349,12 +392,16 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
 
   const openCircuits = health.circuits ? countPublicImpactOpenCircuits(health.circuits) : null;
   if (getCircuitImpactStatus(openCircuits) !== "healthy") {
+    const sources = Object.entries(health.circuits ?? {})
+      .filter(([key, circuit]) => isPublicImpactCircuitKey(key) && circuit.state === "open")
+      .map(([key]) => key).sort().slice(0, 12).map((key) => key.slice(0, 80));
     add("data-refresh", {
       state: "degraded",
       summary: openCircuits == null
         ? "Upstream source health cannot be read right now."
         : `${openCircuits} upstream data sources are paused after repeated failures. Affected data keeps its last good value.`,
-      reason: openCircuits == null ? "circuits-unavailable" : `upstream-circuits-open:${openCircuits}`,
+      reason: openCircuits == null ? `circuits-unavailable:${health.circuitsUnavailableReason ?? "unknown"}`
+        : `upstream-circuits-open:${openCircuits}:${sources.join(",")}`,
     });
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { ApiKeyAuditLogResponse, StatusHistoryResponse } from "@shared/types";
+import type { ApiKeyAuditLogResponse, StatusCronDetailResponse, StatusHistoryResponse } from "@shared/types";
 import {
   ADMIN_API_QUERY_DESCRIPTORS,
   type AdminApiQueryDescriptor,
@@ -46,6 +46,14 @@ export function useStatusHistory(
   options: { enabled?: boolean } = {},
 ): UseQueryResult<StatusHistoryResponse, Error> {
   return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.statusHistory(window), options);
+}
+
+/** Full cron detail; callers must explicitly open the job before enabling its query. */
+export function useStatusCronDetail(
+  job: string,
+  options: { enabled: boolean },
+): UseQueryResult<StatusCronDetailResponse, Error> {
+  return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.statusCronDetail(job), options);
 }
 
 /**

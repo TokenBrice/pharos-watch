@@ -44,6 +44,7 @@ const PersistedComponentSchema = z.object({
 const PersistedStateSchema = z.object({
   version: z.literal(1),
   headline: z.unknown(),
+  componentHistoryStartedAt: z.record(z.string(), z.number()).optional(),
   components: z.array(z.unknown()).transform((items) => items.flatMap((item) => {
     const parsed = PersistedComponentSchema.safeParse(item);
     return parsed.success ? [parsed.data] : [];
@@ -53,6 +54,7 @@ const PersistedStateSchema = z.object({
 const PersistedTransitionSchema = z.object({
   version: z.literal(1),
   headline: PublicStatusHeadlineSchema,
+  componentHistoryStartedAt: z.record(z.string(), z.number()).optional(),
   components: z.array(PublicStatusTransitionComponentSchema),
 });
 
@@ -70,6 +72,12 @@ export interface PublicStatusReconciliation {
   persistenceSucceeded: boolean;
 }
 
+/** Only bounded forensic identities participate; ages, clocks and metric counts are not heartbeat events. */
+function causeIdentity(reasons: readonly string[]): string {
+  return reasons.filter((reason) => /^(?:upstream-circuits-open:|circuits-unavailable:|(?:heavy-)?scheduler:unavailable:)/.test(reason))
+    .slice(0, 16).sort().join("|");
+}
+
 /**
  * Project the public health payload, carry each component's `since` forward,
  * and persist a public transition whenever any component or the headline
@@ -81,10 +89,14 @@ export async function reconcilePublicStatusState(
   health: HealthResponse,
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<PublicStatusReconciliation> {
-  let row: Pick<StatusStateRow, "current_status" | "last_changed_at" | "causes_json"> | null;
+  let row: (Pick<StatusStateRow, "current_status" | "last_changed_at" | "causes_json"> & { history_started_at?: number | null }) | null;
   try {
     row = await db
-      .prepare("SELECT current_status, last_changed_at, causes_json FROM status_state WHERE scope = ?")
+      .prepare(`SELECT current_status, last_changed_at, causes_json,
+        CASE WHEN CASE WHEN json_valid(causes_json)
+          THEN json_type(causes_json, '$.componentHistoryStartedAt') = 'object' ELSE 0 END THEN NULL
+          ELSE (SELECT MIN(created_at) FROM status_transitions WHERE scope = 'public') END AS history_started_at
+        FROM status_state WHERE scope = ?`)
       .bind(PUBLIC_STATUS_SCOPE)
       .first();
   } catch (error) {
@@ -99,15 +111,24 @@ export async function reconcilePublicStatusState(
     [...previousById].map(([id, component]) => [id, { state: component.state, since: component.since }]),
   );
   const projection = projectPublicStatus(health, sinceMap);
+  const componentHistoryStartedAt = Object.fromEntries(projection.components.map((component) => [
+    component.id,
+    previous?.componentHistoryStartedAt?.[component.id]
+      ?? (previousById.has(component.id) ? row?.history_started_at ?? now : now),
+  ]));
   // A state change observed now starts now. An unchanged state keeps its
   // persisted start, which stays null when it was first seen at initialization.
   for (const component of projection.components) {
-    if (previous != null && previousById.get(component.id)?.state !== component.state) component.since = now;
+    const prior = previousById.get(component.id);
+    if (prior && prior.state !== component.state) component.since = now;
   }
 
+  const causesChanged = previous != null && projection.components.some((component) =>
+    causeIdentity(component.reasons) !== causeIdentity(previousById.get(component.id)?.reasons ?? []));
   const changed = previous == null
     || PublicStatusHeadlineSchema.safeParse(previous.headline).data?.state !== projection.headline.state
-    || projection.components.some((component) => previousById.get(component.id)?.state !== component.state);
+    || projection.components.some((component) => previousById.get(component.id)?.state !== component.state)
+    || causesChanged;
   const nextLevel = headlineToStatusLevel(projection.headline.state);
   const previousLevel = row?.current_status ?? null;
   const worsened = previous != null && projection.components.some((component) =>
@@ -116,13 +137,16 @@ export async function reconcilePublicStatusState(
   const transitionType = previous == null
     ? "init"
     : (previousLevel != null && getStatusSeverity(nextLevel) > getStatusSeverity(previousLevel)) || worsened
+      || (causesChanged && nextLevel !== "healthy")
       ? "degrade"
       : "recover";
-  const reason = previous == null ? "public-projection-initialized" : "public-projection-changed";
+  const reason = previous == null ? "public-projection-initialized"
+    : causesChanged ? "public-projection-causes-changed" : "public-projection-changed";
 
   const stateJson = JSON.stringify({
     version: 1,
     headline: projection.headline,
+    componentHistoryStartedAt,
     components: projection.components.map((component) => ({
       id: component.id, state: component.state, since: component.since, reasons: component.reasons,
     })),
@@ -130,6 +154,7 @@ export async function reconcilePublicStatusState(
   const transitionJson = JSON.stringify({
     version: 1,
     headline: projection.headline,
+    componentHistoryStartedAt,
     components: toPublicTransitionComponents(projection.components),
   } satisfies z.input<typeof PersistedTransitionSchema>);
 
@@ -203,7 +228,7 @@ export async function listPublicStatusTransitions(
   db: D1Database,
   limit: number,
   from: number,
-): Promise<{ transitions: PublicStatusTransition[]; startedAt: number | null; hasMore: boolean }> {
+): Promise<{ transitions: PublicStatusTransition[]; startedAt: number | null; componentHistoryStartedAt: Record<string, number>; hasMore: boolean }> {
   const [rows, first] = await Promise.all([
     db.prepare(
       `/* pharos:public-status-transitions */ SELECT id, previous_status, next_status, transition_type, reason, causes_json, created_at
@@ -212,9 +237,11 @@ export async function listPublicStatusTransitions(
        ORDER BY created_at DESC, id DESC
        LIMIT ?`,
     ).bind(PUBLIC_STATUS_SCOPE, from, limit + 1).all<PublicTransitionRow>(),
-    db.prepare("/* pharos:public-status-started-at */ SELECT MIN(created_at) AS started_at FROM status_transitions WHERE scope = ?")
+    db.prepare(`/* pharos:public-status-started-at */ SELECT MIN(created_at) AS started_at,
+      (SELECT causes_json FROM status_state WHERE scope = 'public') AS state_json
+      FROM status_transitions WHERE scope = ?`)
       .bind(PUBLIC_STATUS_SCOPE)
-      .first<{ started_at: number | null }>(),
+      .first<{ started_at: number | null; state_json?: string | null }>(),
   ]);
   const results = rows.results ?? [];
   const transitions = results.slice(0, limit).map((row): PublicStatusTransition => {
@@ -230,5 +257,11 @@ export async function listPublicStatusTransitions(
       ...(parsed.success ? { headline: parsed.data.headline, components: parsed.data.components } : {}),
     };
   });
-  return { transitions, startedAt: first?.started_at ?? null, hasMore: results.length > limit };
+  const state = PersistedStateSchema.safeParse(parseJson(first?.state_json ?? null));
+  const componentHistoryStartedAt = state.success
+    ? state.data.componentHistoryStartedAt ?? Object.fromEntries(
+      state.data.components.flatMap((component) => first?.started_at == null ? [] : [[component.id, first.started_at]]),
+    )
+    : {};
+  return { transitions, startedAt: first?.started_at ?? null, componentHistoryStartedAt, hasMore: results.length > limit };
 }

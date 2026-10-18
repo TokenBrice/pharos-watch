@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getPressureShiftState } from "@shared/lib/mint-burn-signals";
 import {
   addMintBurnValuationTally,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { completeMintBurnRun } from "../mint-burn/run-completion";
+import { completeMintBurnRun, type CompleteMintBurnRunInput } from "../mint-burn/run-completion";
 import type { MintBurnConfigSummary } from "../mint-burn/sync-config";
 import { setMintBurnRunState } from "../mint-burn/run-state";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
@@ -18,7 +18,7 @@ vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
   sweepRecentRoundtrips: vi.fn(),
 }));
 
-function buildRunInput(overrides: { apiErrors?: number; signal?: AbortSignal } = {}): Parameters<typeof completeMintBurnRun>[0] {
+function buildRunInput(overrides: { apiErrors?: number; signal?: AbortSignal } = {}): CompleteMintBurnRunInput {
   return {
     db: {} as D1Database,
     budget: { limit: 200, count: 7 },
@@ -64,12 +64,11 @@ function buildRunInput(overrides: { apiErrors?: number; signal?: AbortSignal } =
       attemptedThisRun: 0,
       providerDeferredThisRun: 0,
       neverAttemptedCount: 0,
-      staleAttemptCount: 0,
       oldestAttemptAgeSec: null,
-      twoCycleCoverageSatisfied: true,
       laggingAttemptSamples: [],
       persistenceFailed: false,
     },
+    coverageCycle: null,
     runDrilldown: {
       cacheKey: "mint-burn:run-detail:sync-mint-burn",
       persistenceFailed: false,
@@ -196,6 +195,93 @@ describe("completeMintBurnRun", () => {
     input.lane = "extended";
     input.runState.degradedStreak = 2;
     expect((await completeMintBurnRun(input)).status).toBe("degraded");
+  });
+
+  it("keeps a rotated extended pass inside its window non-degraded", async () => {
+    const input = buildRunInput();
+    input.lane = "extended";
+    input.coverageCycle = {
+      status: "cycle-in-progress",
+      expectedWindowSec: 7_200,
+      coverageCycleSec: null,
+      cycleElapsedSec: 1_800,
+      lastCompletedAt: null,
+      incompleteConfigs: 89,
+      providerDeferredConfigs: 0,
+    };
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("ok");
+    expect(result.metadata.degradedSignal).toBe(false);
+    expect(result.metadata.coverageCycle).toMatchObject({
+      status: "cycle-in-progress",
+      coverageCycleSec: null,
+    });
+  });
+
+  it("does not degrade a completed pass for a config older than 75 minutes", async () => {
+    const input = buildRunInput();
+    input.lane = "extended";
+    input.attemptCoverage = { ...input.attemptCoverage, oldestAttemptAgeSec: 75 * 60 + 60 };
+    input.coverageCycle = {
+      status: "complete",
+      expectedWindowSec: 7_200,
+      coverageCycleSec: 5_400,
+      cycleElapsedSec: 1_800,
+      lastCompletedAt: 1_790_000_000,
+      incompleteConfigs: 89,
+      providerDeferredConfigs: 0,
+    };
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("ok");
+    expect(result.metadata.coverageCycle).toMatchObject({ coverageCycleSec: 5_400 });
+  });
+
+  it("degrades the extended lane when a full pass misses the window", async () => {
+    const input = buildRunInput();
+    input.lane = "extended";
+    input.coverageCycle = {
+      status: "stalled",
+      expectedWindowSec: 7_200,
+      coverageCycleSec: 5_400,
+      cycleElapsedSec: 7_260,
+      lastCompletedAt: 1_790_000_000,
+      incompleteConfigs: 88,
+      providerDeferredConfigs: 0,
+    };
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata.degradedSignal).toBe(true);
+    expect(result.metadata.reason).toBe("mint-burn-coverage-cycle-stalled");
+    expect(result.metadata.coverageCycle).toMatchObject({
+      status: "stalled",
+      coverageCycleSec: 5_400,
+      expectedWindowSec: 7_200,
+    });
+  });
+
+  it("still degrades an in-window extended pass for a genuinely failing config", async () => {
+    const input = buildRunInput({ apiErrors: 2 });
+    input.lane = "extended";
+    input.runState.degradedStreak = 1;
+    input.coverageCycle = {
+      status: "cycle-in-progress",
+      expectedWindowSec: 7_200,
+      coverageCycleSec: null,
+      cycleElapsedSec: 1_800,
+      lastCompletedAt: null,
+      incompleteConfigs: 89,
+      providerDeferredConfigs: 0,
+    };
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata.degradedSignal).toBe(true);
+    expect(result.metadata.reason).toBe("mint-burn-source-coverage-degraded");
+  });
+
+  it("publishes no coverage cycle for the critical lane", async () => {
+    const result = await completeMintBurnRun(buildRunInput());
+    expect(result.status).toBe("ok");
+    expect(result.metadata).not.toHaveProperty("coverageCycle");
   });
 
   it("degrades healthy completion for each failed persistence surface", async () => {

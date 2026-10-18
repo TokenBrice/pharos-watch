@@ -209,13 +209,9 @@ export function makeHealthyStatusResponse(): StatusResponse & { dataQuality: Non
     caches: {},
     crons: {
       "dispatch-telegram-alerts": {
-        lastRun: {
-          startedAt: 1_699_999_940,
-          durationMs: 200,
-          status: "ok",
-          metadata: makeDispatchMetadata(),
-        },
-        recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "ok" }],
+        runs: [{ startedAt: 1_699_999_940, durationMs: 200, status: "ok" }],
+        latestRunFacts: makeDispatchMetadata(),
+        confirmedOutputAt: 1_699_999_940,
         expectedIntervalSec: 60,
         healthy: true,
       },

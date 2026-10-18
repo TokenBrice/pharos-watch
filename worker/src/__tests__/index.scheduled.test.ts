@@ -97,17 +97,6 @@ const cronMocks = vi.hoisted(() => ({
       persistence: { generationId: "dex-liquidity-1785060960" },
     }),
   })),
-  reuseCurrentDexLiquidityScoringGeneration: vi.fn(async () => ({
-    status: "skipped_neutral",
-    itemCount: 0,
-    metadata: JSON.stringify({
-      persistence: {
-        generationId: "dex-liquidity-1785060960",
-        skipped: false,
-        skippedReason: "liquidity-cadence-reuse",
-      },
-    }),
-  })),
   runWorkerRepairTaskRunner: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
   refreshAggregateMintBurnFlowCache: vi.fn(async () => new Response("{}")),
   logCronRun: vi.fn(async (
@@ -308,7 +297,6 @@ vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syn
 vi.mock("../cron/dex-liquidity/orchestrator", () => ({
   stageDexLiquidityScoring: cronMocks.stageDexLiquidityScoring,
   consumeDexLiquidityScoringStage: cronMocks.consumeDexLiquidityScoringStage,
-  reuseCurrentDexLiquidityScoringGeneration: cronMocks.reuseCurrentDexLiquidityScoringGeneration,
 }));
 vi.mock("../cron/measured-execution/sync", () => ({
   syncDexMeasuredExecution: cronMocks.syncDexMeasuredExecution,
@@ -573,9 +561,12 @@ describe("worker.scheduled", () => {
     ["public", "16 * * * *", worker],
     ["heavy", "0 * * * *", heavyWorker],
   ] as const)("skips %s wrong-owner delivery before loading runner or writing D1", async (_role, cron, entry) => {
-    const { SLOT_RUNNER_LOADER_BY_KEY } = await import("../handlers/scheduled");
-    const runnerKey = cron.startsWith("16") ? "halfHourlyChartsOffset" : "quarterHourly";
-    const loader = vi.spyOn(SLOT_RUNNER_LOADER_BY_KEY, runnerKey);
+    const { HEAVY_SLOT_RUNNER_LOADERS } = await import("../handlers/scheduled/heavy-runners");
+    const { PUBLIC_SLOT_RUNNER_LOADERS } = await import("../handlers/scheduled/public-runners");
+    // The foreign runner is not even reachable from the delivered role's map.
+    const loader = cron.startsWith("16")
+      ? vi.spyOn(HEAVY_SLOT_RUNNER_LOADERS, "halfHourlyChartsOffset")
+      : vi.spyOn(PUBLIC_SLOT_RUNNER_LOADERS, "quarterHourly");
     const env = { ...makeScheduledEnv(), SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
     const prepare = vi.spyOn(env.DB, "prepare");
     const log = vi.spyOn(console, "info").mockImplementation(() => undefined);

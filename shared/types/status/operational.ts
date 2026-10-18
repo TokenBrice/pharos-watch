@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { StatusHealthOrUnknownSchema } from "./schema-primitives";
-import { D1CapacityAssessmentSchema } from "./d1-capacity";
+import { D1CapacityAssessmentSchema, D1QuotaAssessmentSchema } from "./d1-capacity";
 
 export const ProducerHeadStatusSchema = z.object({
   scheduleKey: z.string(),
@@ -246,5 +246,10 @@ export const D1UsageSummarySchema = z.object({
   rowsWritten24h: z.number().nullable(),
   /** Optional while an older Worker or a not-yet-initialized observation store is serving status. */
   capacity: D1CapacityAssessmentSchema.nullable().optional(),
+  /**
+   * Ops-only billing-quota projection (trailing 24h × 30) against the paid
+   * included allowances. Optional while an older Worker serves status.
+   */
+  quota: D1QuotaAssessmentSchema.nullable().optional(),
 });
 export type D1UsageSummary = z.output<typeof D1UsageSummarySchema>;

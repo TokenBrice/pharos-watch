@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { logCronRun } from "../cron-logger";
+import { DEFAULT_CRON_METADATA_BUDGET_BYTES } from "../cron-metadata-persistence";
 
 describe("cron progress cleanup", () => {
   const fixtures = createLatestSchemaFixtureTracker();
@@ -27,6 +28,43 @@ describe("cron progress cleanup", () => {
     });
 
     expect(sqlite.prepare("SELECT * FROM cron_run_progress").all()).toEqual([]);
+  });
+
+  it("enforces the job byte budget on persisted terminals without copying diagnostics into history", async () => {
+    const { sqlite, db } = fixtures.open();
+    await logCronRun(db, "test-budget", async () => ({
+      status: "degraded", itemCount: 0,
+      metadata: JSON.stringify({ reason: "source-incomplete", outputPublishedAt: null,
+        quality: { reasons: ["source-incomplete"] }, mxLedgerV: 1, mxLedger0: "ledger",
+        providerDiagnostics: Array.from({ length: 5_000 }, () => ({ payload: "x".repeat(50) })) }),
+    }), { producer: { scheduleKey: "quarterHourly", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "budget-test" } });
+    const run = sqlite.prepare("SELECT metadata FROM cron_runs WHERE job = 'test-budget'").get() as { metadata: string };
+    expect(new TextEncoder().encode(run.metadata).length).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(JSON.parse(run.metadata)).toMatchObject({ reason: "source-incomplete", outputPublishedAt: null,
+      quality: { reasons: ["source-incomplete"] }, providerDiagnostics: { count: 5_000 } });
+    const history = sqlite.prepare("SELECT metadata_json FROM worker_producer_history WHERE job = 'test-budget'").get() as { metadata_json: string };
+    expect(JSON.parse(history.metadata_json)).toEqual({ mxLedgerV: 1, mxLedger0: "ledger" });
+  });
+
+  it.each(["ok", "degraded", "error"] as const)("persists a %s terminal when consumer evidence exceeds its metadata budget", async (status) => {
+    const { sqlite, db } = fixtures.open();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stale = Array.from({ length: 1_000 }, () => ({ generationId: "generation-a" }));
+    await logCronRun(db, "test-over-budget", async () => ({
+      status, itemCount: 0,
+      metadata: JSON.stringify({ reason: "source-incomplete", outputPublishedAt: null, stale }),
+    }));
+    const runs = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = 'test-over-budget'").all() as Array<{
+      status: string; metadata: string;
+    }>;
+    expect(runs).toHaveLength(1);
+    expect(runs[0].status).toBe(status);
+    expect(JSON.parse(runs[0].metadata)).toMatchObject({
+      reason: "source-incomplete", outputPublishedAt: null, stale,
+      persistenceCompaction: { overBudget: true, budgetBytes: DEFAULT_CRON_METADATA_BUDGET_BYTES },
+    });
+    expect(new TextEncoder().encode(runs[0].metadata).length).toBeGreaterThan(DEFAULT_CRON_METADATA_BUDGET_BYTES);
   });
 
   it("redacts signed URLs from thrown and resolved cron errors before persistence", async () => {

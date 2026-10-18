@@ -65,7 +65,7 @@ The ledger counts only score/grade changes, not every compact diagnostic change.
 
 For intraday release comparison, use the exact deployment instant with `boundary --before-time`; date-only means UTC midnight. Identity boundaries are retrospective predecessors of already archived transitions, not future release markers, and missing archive rows cannot establish the last production generation. Export checks exact hash/bytes, schema, clocks and identities before emitting cache rows; the capture CLI must still admit the paired native envelopes. Optional decoded cards are not a full replay artifact.
 
-`list --gaps` exposes retained accepted attempts with no index row, including unchanged publications, not just card movements. The attempt journal is best effort and shorter-lived than object retention: absent/pruned attempts, missing objects with an index and unindexed orphans are not covered. Empty gaps is never a complete-archive certificate. External R2 lifecycle must be reverified under [release prerequisites](./deployment-process.md#first-heavy-deployment-prerequisites-adr-38); the CLI/migration neither creates nor continuously verifies it.
+`list --gaps` exposes generations with no index row, including unchanged publications and not just card movements: it unions retained accepted attempts (120-day attempt evidence) with productive `compute-safety-score-v9` runs whose metadata names a `publicationGenerationId`, bounded to the retained `cron_runs` window and deduplicated by generation. Each gap carries `evidence_sources` plus its `journal` and `recent_cron_runs` provenance, and report-level `recentCronEvidence` accounts for excluded missing/malformed run ids and for windows that start before the retention floor. Both evidence sources are best effort and shorter-lived than object retention: absent/pruned attempts, cron rows outside the retained window, missing objects with an index and unindexed orphans are not covered. Empty gaps is never a complete-archive certificate. External R2 lifecycle must be reverified under [release prerequisites](./deployment-process.md#first-heavy-deployment-prerequisites-adr-38); the CLI/migration neither creates nor continuously verifies it.
 
 The [historical release/data separation procedure](./process/safety-score-equivalence-harness.md#historical-release-and-data-separation) includes local D1 fixture loading and the explicit lightweight projections needed to compare accepted cards with replay output. Archive creation is best effort, starts when the writer is deployed, and can leave permanent failed/skipped gaps once mutable accepted rows are overwritten. `--gaps` makes retained journal-observable omissions visible; it does not repair them or discover unindexed R2 orphans. No historical captures are invented or backfilled.
 
@@ -95,6 +95,46 @@ replays against the capture-time registry.
 `npm run safety-score-v9:movers` resolves to `worker/scripts/diff-safety-score-v9-movers.ts`. Like replay and diff, this is Worker-bound tooling because full-artifact admission uses the native/legacy capture contracts. Keep its implementation under `worker/scripts/`, outside the root TypeScript program; the npm alias and flags remain unchanged.
 
 Use `jq '(.fixedInput // .).clockSec'` to read either export shape. The [equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay) owns snapshot admission, trusted-Git execution, production-digest limitations, and the `--registry-ref`, `--normalized-only`, and `--allow-registry-mismatch` mode contracts.
+
+## HTTP Route Telemetry
+
+`npm run ops:http-telemetry -- [--from <timezone-qualified ISO> --to <timezone-qualified ISO>]`
+prints a schema-v1 JSON report to stdout. It reads Cloudflare zone `httpRequestsAdaptiveGroups`
+at the fixed `https://api.cloudflare.com/client/v4/graphql` endpoint, rejecting redirects;
+it never writes local files, D1, Worker request-path telemetry, or remote state.
+Export **`CLOUDFLARE_ZONE_ANALYTICS_READ`** with **Zone → Analytics → Read** permission for
+the `pharos.watch` zone and **`CLOUDFLARE_ZONE_ID`** explicitly. The Account Analytics token
+used by `ops:worker-memory` does not authorize this zone read. Credentials are not printed.
+Use shell redirection into ignored `agents/` if a local evidence artifact is needed.
+
+The default half-open window is 15 minutes ending five minutes behind now. Explicit bounds
+must be paired, increasing, timezone-qualified, at most 24 hours, and end at least five
+minutes behind now. These bounds allow ingestion lag but do not prove ingestion completeness.
+Help exits `0`, invalid usage `2`, available evidence `0`, and missing/failed/capped evidence
+`1` after printing its machine-readable reason. Failed or empty reads never become zero
+traffic or zero error rates; only routes observed in discovery are emitted.
+
+The report combines `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
+eyeball HTTP traffic. This is an edge HTTP population, including authentication, security,
+and platform responses, **not exclusively `stablecoin-api` invocations**. Path discovery
+is capped at 1,000 distinct paths (requesting one sentinel row); exceeding the cap fails
+closed without publishing partial rates. Static paths come from
+`shared/lib/api-endpoints/definitions.ts`, dynamic families from its canonical descriptors.
+Unknown paths share one `unmatched` bucket. Raw paths, stablecoin/API-key identifiers,
+and query strings are not emitted. Cardinality is bounded by the endpoint registry plus
+one unmatched bucket, with at most eight route pairs per sequential query.
+
+Each normalized route reports HTTP status counts, the estimated 5xx response count/rate,
+and **p95 edge time to first byte in milliseconds**. Counts/rates are explicitly adaptive
+estimates; the report retains sampling-interval ranges and unknown-interval counts.
+The rate denominator is the sum of returned status-group estimates, not an independently
+sampled pooled count. A known zero 5xx count is different from missing traffic.
+The collector asks Cloudflare to compute one pooled p95 over all discovered paths in
+each normalized route; it never averages path/status percentiles. Discovery and metric
+queries are separate reads, not an atomic snapshot, so later ingestion may change coverage.
+**Full-response/client latency is unavailable from this collector**: TTFB is neither
+response completion nor Worker wall time. Missing TTFB or HTTP statuses remain unavailable.
+No workflow is scheduled; this is an operator-invoked read-only collector.
 
 ## D1 Insights Capture
 
@@ -158,6 +198,30 @@ Pages smoke preserves unrelated `STATIC_EXPORT_*` overrides, but its selected ho
 API smoke validates the complete redemption response with `RedemptionBackstopsResponseSchema`, including score/resolution coherence. A small wire adapter retains map-key identity, explicit status/eligibility fields and nonempty provider, methodology and source labels; it does not mirror the schema vocabulary.
 
 `ops:cron-delivery` reads Cloudflare scheduled-invocation ground truth; see [cron delivery stall](./runbooks/cron-delivery-stall.md).
+
+### Worker Incident Evidence And Status Profile
+
+`ops:watch-worker-cron` and `ops:night-watch-worker` preserve literal `ok`, `degraded`, `error`, `skipped_neutral` and `skipped_locked` counts; `synthetic` counts only the orthogonal `stale-slot-reconciled` subset. Unknown stored statuses retain their own bucket. Productive and publication counts use explicit columns, with unknown counts separate; terminal success is never substituted for publication. Synthetic children group by invocation and slot as “1 started + N not-started”, with execution-unknown children separate; grouping never changes their stored error status. Generation-ledger states are a separate table/count, not extra publications inferred from a terminal.
+
+`npm run ops:worker-evidence-report -- --fixture agents/worker-cron-snapshot.json` renders the same literal-status/output table from a saved watcher JSON snapshot; add `--json` for the computed summary. All three standalone tools use strict CLI parsing. The profiler lives in `worker/scripts/` because it executes Worker source; generic maintenance reporting does not import `worker/src/`.
+
+Read-only status D1 profiling (run from the root):
+
+```sh
+npm run ops:worker-status-profile
+```
+
+Export `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` with D1 read permission. This executes the **actual source `/api/status` handler** with explicit trusted operator authorization over a SELECT-only D1 REST transport and the Worker's `d1-cost` seam. It reports statement count, nullable rows read/server SQL duration, local end-to-end duration, HTTP/section completeness and latest persisted `status-self-check` `d1Cost` with its observation clock. It does not execute the mutating self-check. The adapter retains metadata for `first()` reads, while the seam preserves its own partial-coverage reasons. This is not a production HTTP/colo latency measurement: source revision, local REST RTT and omitted optional provider credentials are explicit limitations. Exit `1` means incomplete route cost evidence, not zero cost. No status payload, SQL, credentials or provider error bodies are emitted.
+
+```sh
+npm run ops:worker-incidents -- \
+  --out-dir agents/worker-incidents --archive-dir agents/previous-worker-incidents
+```
+
+The bundle captures the previous complete UTC day and rolls forward at most **21 days**, reading only bounded D1 `SELECT`s, Cloudflare deployment inventories and scheduled invocation Analytics. Use `CLOUDFLARE_API_TOKEN` (D1/Workers read), `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN` (Analytics read). Credentials go only to Cloudflare; allowlisted artifact fields exclude arbitrary cron metadata/error text, query text and tokens. `bundle.json` and `report.md` include source coverage/reasons, missing days, literal statuses, productivity, publication ledgers and deployment → delivered invocation → child → publication correlations. Joins require a singleton physical cron/slot, one invocation and one exact deployment-version match; unresolved chains remain unattributed. Timestamp-correlated publications explicitly do not establish causality. Deployment history is only a bounded recent inventory, not proof of exact activation time or complete 21-day history.
+
+There was no existing daily production-evidence artifact lane, so the **Worker Memory Monitor** pattern owns a daily `01:17 UTC` incident job (also manual), separate from hourly memory collection. It restores the most recent main-branch incident artifact, drops days outside the rolling window and uploads `worker-incidents-<run>-<attempt>` with **21-day artifact retention** before reporting collection failures. Initial/missing days, row limits (50,000 per D1 source/day), unavailable reads and limited deployment history remain partial; archive bootstrap never fabricates the missing hot-D1 history. No migrations or hot retention changes are made. The [48-job freshness/tolerance matrix](./process/lane-freshness-matrix.md) is draft for owner sign-off, not executable policy.
+
 
 ### Curation Audits
 

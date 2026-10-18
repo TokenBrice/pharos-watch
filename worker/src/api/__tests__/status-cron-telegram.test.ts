@@ -1,6 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it } from "vitest";
 import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../lib/telegram/pending-capacity";
+import { handleStatusCronDetailRoute } from "../status-cron-detail";
 import {
   handleStatus,
   makeCacheRow,
@@ -58,12 +59,16 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
-      crons: Record<string, { lastRun: unknown; healthy: boolean; expectedIntervalSec: number }>;
+      crons: Record<string, { runs: unknown[]; healthy: boolean; expectedIntervalSec: number }>;
     };
 
     expect(body.crons).toHaveProperty("sync-stablecoins");
     const syncStablecoins = body.crons["sync-stablecoins"];
-    expect(syncStablecoins).toHaveProperty("lastRun");
+    expect(syncStablecoins.runs).toHaveLength(1);
+    expect(syncStablecoins.runs[0]).toMatchObject({ status: "ok" });
+    expect(syncStablecoins).not.toHaveProperty("lastRun");
+    expect(syncStablecoins).not.toHaveProperty("recentRuns");
+    expect(syncStablecoins.runs[0]).not.toHaveProperty("metadata");
     expect(syncStablecoins).toHaveProperty("healthy");
     expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
     expect(body.crons["sync-blacklist"]?.expectedIntervalSec).toBe(6 * 3600);
@@ -211,13 +216,20 @@ describe("handleStatus", () => {
       stale: false,
       itemsDone: 2,
       itemsTotal: 7,
-      metadata: {
-        providerFamily: "telegram-api",
-        phase: "pending-drain",
-        countTotals: { pendingAttempted: 2, pendingTotal: 7 },
-        cursor: { queue: "telegram_pending_alerts" },
-        deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
-      },
+    });
+    expect(body.crons["dispatch-telegram-alerts"]?.inFlight).not.toHaveProperty("metadata");
+    const detailResponse = await handleStatusCronDetailRoute({
+      db, trustedAdmin: true,
+      request: fixtureMakeApiRequest("/api/status-cron-detail?job=dispatch-telegram-alerts", { adminKey: "secret-key" }),
+      url: new URL("https://ops-api.pharos.watch/api/status-cron-detail?job=dispatch-telegram-alerts"),
+    });
+    const detail = await readJsonResponse<{ cron: { inFlight: { metadata?: Record<string, unknown> } } }>(detailResponse, 200);
+    expect(detail.cron.inFlight.metadata).toEqual({
+      providerFamily: "telegram-api",
+      phase: "pending-drain",
+      countTotals: { pendingAttempted: 2, pendingTotal: 7 },
+      cursor: { queue: "telegram_pending_alerts" },
+      deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
     });
   });
 

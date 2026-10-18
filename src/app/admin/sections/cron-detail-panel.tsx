@@ -13,6 +13,7 @@ import { CronInFlightProgress } from "@/components/status/cron-in-flight-progres
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
 import { VerdictPill } from "@/components/status/page-primitives";
 import { copyText } from "@/lib/clipboard";
+import { useStatusCronDetail } from "@/hooks/admin-api-hooks";
 import {
   formatCronRunTiming,
   getCronCauses,
@@ -97,20 +98,28 @@ export function CronDetailPanel({
   row,
   causes = [],
   nowSeconds,
+  detailEnabled,
 }: {
   row: CronWorkbenchRow;
   causes?: readonly StatusCause[];
   nowSeconds: number;
+  detailEnabled: boolean;
 }) {
-  const lastRun = row.cron.lastRun;
+  const lastRun = row.cron.runs[0];
   const lastRunTiming = lastRun ? formatCronRunTiming(lastRun) : null;
-  const metadataSummary = summarizeCronMetadata(row.job, lastRun?.metadata, lastRun?.degradedReason);
+  // Full run/progress metadata is fetched for the opened job only.
+  const detailQuery = useStatusCronDetail(row.job, { enabled: detailEnabled });
+  const detail = detailEnabled && detailQuery.data?.job === row.job ? detailQuery.data : undefined;
+  const detailLatestRun = detail?.cron.runs[0];
+  const detailInFlight = detail?.cron.inFlight ?? null;
+  const detailErrors = detail ? Object.values(detail.sectionErrors) : [];
+  const metadataSummary = summarizeCronMetadata(row.job, detailLatestRun?.metadata, lastRun?.degradedReason);
   const next = getCronNextExpected(row.cron, nowSeconds, row.job);
   const jobCauses = getCronCauses(row.job, causes);
   const runbooks = getCronRunbooks(row, causes);
   const actions = getCronActions(row, causes);
   const historyHref = jobCauses[0] ? `/admin/history/?cause=${encodeURIComponent(jobCauses[0].code)}` : "/admin/history/";
-  const resourceMeasured = hasResourcePressure(row.cron.inFlight?.metadata) || hasResourcePressure(lastRun?.metadata);
+  const resourceMeasured = hasResourcePressure(detailInFlight?.metadata) || hasResourcePressure(detailLatestRun?.metadata);
 
   return (
     <aside
@@ -221,13 +230,13 @@ export function CronDetailPanel({
             </div>
           ) : null}
           {row.cron.inFlight.message ? <div className="mt-2 break-words">{row.cron.inFlight.message}</div> : null}
-          {row.cron.inFlight.metadata && Object.keys(row.cron.inFlight.metadata).length > 0 ? (
+          {detailInFlight?.metadata && Object.keys(detailInFlight.metadata).length > 0 ? (
             <details className="mt-3 text-xs">
               <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md">
                 Full progress metadata
               </summary>
               <pre className="mt-2 max-h-40 max-w-full overflow-auto rounded-md bg-background/60 p-2 text-xs text-foreground">
-                {JSON.stringify(row.cron.inFlight.metadata, null, 2)}
+                {JSON.stringify(detailInFlight.metadata, null, 2)}
               </pre>
             </details>
           ) : null}
@@ -236,13 +245,24 @@ export function CronDetailPanel({
 
       <StaleArtifactEvidence artifacts={row.cron.staleArtifacts ?? []} />
 
-      {lastRun?.error ? (
+      {row.cron.confirmedOutputAt != null ? (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Last confirmed output {formatElapsedSeconds(Math.max(0, nowSeconds - row.cron.confirmedOutputAt))} ago
+          ({formatTimestamp(row.cron.confirmedOutputAt)}).
+        </p>
+      ) : (
+        <p className="mt-4 text-xs text-muted-foreground">
+          No confirmed output in the bounded history read; this is not proof the job never published.
+        </p>
+      )}
+
+      {(detailLatestRun?.error ?? lastRun?.error) ? (
         <details className="mt-4 text-xs">
           <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-state-danger-strong">
             Latest run error
           </summary>
           <pre className="mt-2 max-h-40 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted p-2 text-xs">
-            {lastRun.error}
+            {detailLatestRun?.error ?? lastRun?.error}
           </pre>
         </details>
       ) : null}
@@ -257,14 +277,33 @@ export function CronDetailPanel({
         </div>
       ) : null}
 
-      <CronRunHistoryPanel runs={row.cron.recentRuns ?? []} />
+      {!detailEnabled ? (
+        <p className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
+          Select this job to load run history and metadata.
+        </p>
+      ) : detailQuery.isError && !detail ? (
+        <p role="alert" className="mt-4 border-t border-border/55 pt-3 text-xs text-state-danger-strong">
+          Job detail unavailable: {detailQuery.error.message}. Run history and metadata are not shown.
+        </p>
+      ) : !detail ? (
+        <p role="status" className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
+          Loading run history and metadata…
+        </p>
+      ) : (
+        <>
+          {detailErrors.map((error) => (
+            <p key={error.code} role="alert" className="mt-4 text-xs text-state-warn-strong">{error.message}</p>
+          ))}
+          <CronRunHistoryPanel runs={detail.cron.runs} />
+        </>
+      )}
 
       {resourceMeasured ? (
         <>
-          {row.cron.inFlight ? (
-            <ResourcePressureEvidence metadata={row.cron.inFlight.metadata} label="Current progress resource evidence" />
+          {detailInFlight ? (
+            <ResourcePressureEvidence metadata={detailInFlight.metadata} label="Current progress resource evidence" />
           ) : null}
-          <ResourcePressureEvidence metadata={lastRun?.metadata} label="Last terminal resource evidence" />
+          <ResourcePressureEvidence metadata={detailLatestRun?.metadata} label="Last terminal resource evidence" />
         </>
       ) : (
         <p className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
@@ -272,13 +311,13 @@ export function CronDetailPanel({
         </p>
       )}
 
-      {lastRun?.metadata && Object.keys(lastRun.metadata).length > 0 ? (
+      {detailLatestRun?.metadata && Object.keys(detailLatestRun.metadata).length > 0 ? (
         <details className="mt-4 text-xs">
           <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
             Full run metadata
           </summary>
           <pre className="mt-2 max-h-56 max-w-full overflow-auto rounded-md bg-muted p-2 text-xs">
-            {JSON.stringify(lastRun.metadata, null, 2)}
+            {JSON.stringify(detailLatestRun.metadata, null, 2)}
           </pre>
         </details>
       ) : null}

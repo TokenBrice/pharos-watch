@@ -93,7 +93,7 @@ export type ScheduledEnv = Pick<Env, "DB" | "CF_VERSION_METADATA"> &
     | "SAFETY_GRADES_RATE_LIMIT"
   >>;
 
-export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY" | "GRAPH_API_KEY"> & {
+export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY"> & {
   SAFETY_CAPTURE_ARCHIVE: R2Bucket;
 };
 

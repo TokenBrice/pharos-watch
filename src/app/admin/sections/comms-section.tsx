@@ -42,7 +42,7 @@ export function CommsSection({ data }: CommsSectionProps) {
             label="Latest dispatch"
             value={
               model.delivery.latestDispatch.status
-                ? formatCronRunStatus(model.delivery.latestDispatch.status, dispatchCron?.lastRun?.metadata)
+                ? formatCronRunStatus(model.delivery.latestDispatch.status, dispatchCron?.runs[0])
                 : "Unknown"
             }
           />

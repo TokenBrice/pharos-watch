@@ -91,7 +91,7 @@ Group by status and error class: `rate_limit`/`server_error` usually mean transi
 
 ## Setup State
 
-The wizard stores `action_type='setup-step'` in `telegram_pending_disambiguation` with **five-minute TTL**. Ingress ignores expired rows; `telegram-disambiguation-cleanup` retains an extra **600-second grace** before deleting so slow users do not race cleanup. Read `crons["telegram-disambiguation-cleanup"].lastRun` and `disambiguationRowsCleaned`; a recent five-minute-slot run and cleanup count are the operational readback.
+The wizard stores `action_type='setup-step'` in `telegram_pending_disambiguation` with **five-minute TTL**. Ingress ignores expired rows; `telegram-disambiguation-cleanup` retains an extra **600-second grace** before deleting so slow users do not race cleanup. Read `crons["telegram-disambiguation-cleanup"].runs[0]` for the latest attempt and the Access-protected `GET /api/status-cron-detail?job=telegram-disambiguation-cleanup` -> `cron.runs[0].metadata.disambiguationRowsCleaned`; a recent five-minute-slot run and cleanup count are the operational readback.
 
 Distinguish active ownership from stale rows:
 

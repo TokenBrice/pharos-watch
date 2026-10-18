@@ -1,15 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
-import { updateMintBurnAttemptState } from "../mint-burn/run-state";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import {
+  MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC,
+  updateMintBurnAttemptState,
+} from "../mint-burn/run-state";
+
+const EXTENDED_JOB = "sync-mint-burn-extended";
+const EXTENDED_CACHE_KEY = `mint-burn:attempt-state:${EXTENDED_JOB}`;
+const INTERVAL_SEC = 1_800;
 
 const keys = Array.from({ length: 127 }, (_, index) => `config-${index}`);
 
-function breakdown(order: readonly string[], attemptedCount: number) {
-  return order.map((key, index) => ({
+function breakdown(order: readonly string[], attempted: ReadonlySet<string>) {
+  return order.map((key) => ({
     key,
-    attempted: index < attemptedCount,
-    skippedReason: index < attemptedCount ? null : "runtime-budget-exhausted",
+    attempted: attempted.has(key),
+    skippedReason: attempted.has(key) ? null : "extended-deferred-under-pressure",
   }));
+}
+
+function cachedRow(cacheKey: string, value: string, updatedAt: number) {
+  return {
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: [cacheKey],
+    rows: [{ key: cacheKey, value, updated_at: updatedAt }],
+  };
+}
+
+function stateWrite(db: MockD1Database, cacheKey: string) {
+  return db.getHistory().find((entry) =>
+    entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === cacheKey
+  );
+}
+
+function persistedState(db: MockD1Database, cacheKey: string): string {
+  const write = stateWrite(db, cacheKey);
+  expect(write).toBeDefined();
+  return write!.binds[1] as string;
 }
 
 describe("mint/burn per-config attempt state", () => {
@@ -17,50 +44,188 @@ describe("mint/burn per-config attempt state", () => {
     const firstDb = mockD1();
     const first = await updateMintBurnAttemptState({
       db: firstDb,
-      jobName: "sync-mint-burn-extended",
+      jobName: EXTENDED_JOB,
+      lane: "extended",
       enabledConfigKeys: keys,
-      configBreakdown: breakdown(keys, 94),
+      configBreakdown: breakdown(keys, new Set(keys.slice(0, 94))),
       activeProviderDeferrals: new Map(),
       nowSec: 1_000_000,
     });
-    expect(first.attemptedThisRun).toBe(94);
-    expect(first.neverAttemptedCount).toBe(33);
-    expect(first.staleAttemptCount).toBe(0);
-
-    const stateWrite = firstDb.getHistory().find((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "mint-burn:attempt-state:sync-mint-burn-extended"
-    );
-    expect(stateWrite).toBeDefined();
-    const secondOrder = [...keys.slice(94), ...keys.slice(0, 94)];
-    const secondDb = mockD1([{
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["mint-burn:attempt-state:sync-mint-burn-extended"],
-      rows: [{
-        key: "mint-burn:attempt-state:sync-mint-burn-extended",
-        value: stateWrite!.binds[1] as string,
-        updated_at: 1_000_000,
-      }],
-    }]);
-    const second = await updateMintBurnAttemptState({
-      db: secondDb,
-      jobName: "sync-mint-burn-extended",
-      enabledConfigKeys: keys,
-      configBreakdown: breakdown(secondOrder, 94),
-      activeProviderDeferrals: new Map(),
-      nowSec: 1_001_800,
+    expect(first.summary.attemptedThisRun).toBe(94);
+    expect(first.summary.neverAttemptedCount).toBe(33);
+    expect(first.coverageCycle).toMatchObject({
+      status: "cycle-in-progress",
+      coverageCycleSec: null,
+      incompleteConfigs: 33,
     });
 
-    expect(second.attemptedThisRun).toBe(94);
-    expect(second.neverAttemptedCount).toBe(0);
-    expect(second.staleAttemptCount).toBe(0);
-    expect(second.twoCycleCoverageSatisfied).toBe(true);
+    const secondOrder = [...keys.slice(94), ...keys.slice(0, 94)];
+    const secondDb = mockD1([cachedRow(
+      EXTENDED_CACHE_KEY,
+      persistedState(firstDb, EXTENDED_CACHE_KEY),
+      1_000_000,
+    )]);
+    const second = await updateMintBurnAttemptState({
+      db: secondDb,
+      jobName: EXTENDED_JOB,
+      lane: "extended",
+      enabledConfigKeys: keys,
+      configBreakdown: breakdown(secondOrder, new Set(secondOrder.slice(0, 94))),
+      activeProviderDeferrals: new Map(),
+      nowSec: 1_000_000 + INTERVAL_SEC,
+    });
+
+    expect(second.summary.attemptedThisRun).toBe(94);
+    expect(second.summary.neverAttemptedCount).toBe(0);
+    expect(second.coverageCycle).toMatchObject({
+      status: "complete",
+      coverageCycleSec: INTERVAL_SEC,
+      lastCompletedAt: 1_000_000 + INTERVAL_SEC,
+      incompleteConfigs: 0,
+      expectedWindowSec: MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC,
+    });
   });
 
-  it("exempts an active provider deferral but flags an overdue unattempted config", async () => {
-    const cachedState = JSON.stringify({
+  it("covers a 129-config roster 40 per run without ever stalling", async () => {
+    const roster = Array.from({ length: 129 }, (_, index) => `config-${index}`);
+    let persisted: string | null = null;
+    const run = async (runIndex: number) => {
+      const nowSec = 1_000_000 + runIndex * INTERVAL_SEC;
+      const attempted = new Set(
+        Array.from({ length: 40 }, (_, offset) => roster[(runIndex * 40 + offset) % roster.length]!),
+      );
+      const db = mockD1(persisted ? [cachedRow(EXTENDED_CACHE_KEY, persisted, nowSec)] : []);
+      const result = await updateMintBurnAttemptState({
+        db,
+        jobName: EXTENDED_JOB,
+        lane: "extended",
+        enabledConfigKeys: roster,
+        configBreakdown: breakdown(roster, attempted),
+        activeProviderDeferrals: new Map(),
+        nowSec,
+      });
+      persisted = persistedState(db, EXTENDED_CACHE_KEY);
+      return result;
+    };
+
+    const first = await run(0);
+    const second = await run(1);
+    const third = await run(2);
+    const fourth = await run(3);
+
+    for (const [index, update] of [first, second, third].entries()) {
+      expect(update.coverageCycle?.status, `run ${index + 1}`).toBe("cycle-in-progress");
+      expect(update.coverageCycle?.coverageCycleSec, `run ${index + 1}`).toBeNull();
+    }
+    expect(third.coverageCycle?.incompleteConfigs).toBe(9);
+    expect(fourth.coverageCycle).toMatchObject({
+      status: "complete",
+      coverageCycleSec: 3 * INTERVAL_SEC,
+      incompleteConfigs: 0,
+    });
+
+    const fifth = await run(4);
+    expect(fifth.coverageCycle?.status).toBe("complete");
+    expect(fifth.coverageCycle?.coverageCycleSec).toBe(3 * INTERVAL_SEC);
+    expect(fifth.coverageCycle?.cycleElapsedSec).toBe(INTERVAL_SEC);
+  });
+
+  it("reports cycle-in-progress with no completed cycle instead of healthy", async () => {
+    const db = mockD1();
+    const cold = await updateMintBurnAttemptState({
+      db,
+      jobName: EXTENDED_JOB,
+      lane: "extended",
+      enabledConfigKeys: keys,
+      configBreakdown: breakdown(keys, new Set()),
+      activeProviderDeferrals: new Map(),
+      nowSec: 2_000_000,
+    });
+
+    expect(cold.coverageCycle).toEqual({
+      status: "cycle-in-progress",
+      expectedWindowSec: MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC,
+      coverageCycleSec: null,
+      cycleElapsedSec: 0,
+      lastCompletedAt: null,
+      incompleteConfigs: keys.length,
+      providerDeferredConfigs: 0,
+    });
+  });
+
+  it("keeps a config past the old 75-minute clock inside the pass window non-stalled", async () => {
+    const cached = JSON.stringify({
       version: 1,
       updatedAt: 1_000,
+      cycle: { startedAt: 1_000, lastCompletedAt: null, lastDurationSec: null },
+      entries: {
+        "config-0": {
+          firstObservedAt: 1_000,
+          lastAttemptedAt: null,
+          lastDisposition: "extended-deferred-under-pressure",
+          providerDeferredUntil: null,
+        },
+      },
+    });
+    const nowSec = 1_000 + 76 * 60;
+    const db = mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]);
+
+    const result = await updateMintBurnAttemptState({
+      db,
+      jobName: "job",
+      lane: "extended",
+      enabledConfigKeys: ["config-0"],
+      configBreakdown: [{ key: "config-0", attempted: false, skippedReason: "extended-deferred-under-pressure" }],
+      activeProviderDeferrals: new Map(),
+      nowSec,
+    });
+
+    expect(result.summary.oldestAttemptAgeSec).toBe(76 * 60);
+    expect(result.coverageCycle).toMatchObject({
+      status: "cycle-in-progress",
+      cycleElapsedSec: 76 * 60,
+      incompleteConfigs: 1,
+    });
+  });
+
+  it("stalls only once the running pass exceeds the expected window", async () => {
+    const roster = ["config-0", "config-1"];
+    let persisted: string | null = null;
+    const run = async (nowSec: number) => {
+      const db = mockD1(persisted ? [cachedRow(EXTENDED_CACHE_KEY, persisted, nowSec)] : []);
+      const result = await updateMintBurnAttemptState({
+        db,
+        jobName: EXTENDED_JOB,
+        lane: "extended",
+        enabledConfigKeys: roster,
+        configBreakdown: breakdown(roster, new Set([roster[0]!])),
+        activeProviderDeferrals: new Map(),
+        nowSec,
+      });
+      persisted = persistedState(db, EXTENDED_CACHE_KEY);
+      return result;
+    };
+
+    const startedAt = 3_000_000;
+    expect((await run(startedAt)).coverageCycle?.status).toBe("cycle-in-progress");
+
+    const insideWindow = await run(startedAt + MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC);
+    expect(insideWindow.coverageCycle?.status).toBe("cycle-in-progress");
+
+    const stalled = await run(startedAt + MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC + 1);
+    expect(stalled.coverageCycle).toMatchObject({
+      status: "stalled",
+      cycleElapsedSec: MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC + 1,
+      expectedWindowSec: MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC,
+      incompleteConfigs: 1,
+    });
+  });
+
+  it("requires an actual attempt even while a provider deferral is active", async () => {
+    const cached = JSON.stringify({
+      version: 1,
+      updatedAt: 1_000,
+      cycle: { startedAt: 1_000, lastCompletedAt: null, lastDurationSec: null },
       entries: {
         "config-0": {
           firstObservedAt: 1_000,
@@ -70,31 +235,81 @@ describe("mint/burn per-config attempt state", () => {
         },
       },
     });
-    const makeDb = () => mockD1([{
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      rows: [{ key: "mint-burn:attempt-state:job", value: cachedState, updated_at: 1_000 }],
-    }]);
-
     const deferred = await updateMintBurnAttemptState({
-      db: makeDb(),
+      db: mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]),
       jobName: "job",
+      lane: "extended",
       enabledConfigKeys: ["config-0"],
       configBreakdown: [{ key: "config-0", attempted: false, skippedReason: "deferred" }],
       activeProviderDeferrals: new Map([["config-0", 7_000]]),
       nowSec: 6_000,
     });
-    expect(deferred.staleAttemptCount).toBe(0);
-    expect(deferred.providerDeferredThisRun).toBe(1);
 
-    const overdue = await updateMintBurnAttemptState({
-      db: makeDb(),
+    expect(deferred.summary.providerDeferredThisRun).toBe(1);
+    expect(deferred.coverageCycle).toMatchObject({
+      status: "cycle-in-progress",
+      incompleteConfigs: 1,
+      providerDeferredConfigs: 1,
+      coverageCycleSec: null,
+    });
+
+    const attempted = await updateMintBurnAttemptState({
+      db: mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]),
       jobName: "job",
+      lane: "extended",
       enabledConfigKeys: ["config-0"],
-      configBreakdown: [{ key: "config-0", attempted: false, skippedReason: "runtime-budget-exhausted" }],
+      configBreakdown: [{ key: "config-0", attempted: true, skippedReason: null }],
+      activeProviderDeferrals: new Map(),
+      nowSec: 6_100,
+    });
+
+    expect(attempted.coverageCycle).toMatchObject({
+      status: "complete",
+      incompleteConfigs: 0,
+      coverageCycleSec: 5_100,
+    });
+  });
+
+  it("never treats an absent attempt record as coverage", async () => {
+    const cached = JSON.stringify({
+      version: 1,
+      updatedAt: 1_000,
+      cycle: { startedAt: 1_000, lastCompletedAt: null, lastDurationSec: null },
+      entries: {},
+    });
+    const db = mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]);
+
+    const result = await updateMintBurnAttemptState({
+      db,
+      jobName: "job",
+      lane: "extended",
+      enabledConfigKeys: ["config-0"],
+      configBreakdown: [{ key: "config-0", attempted: false, skippedReason: "extended-deferred-under-pressure" }],
       activeProviderDeferrals: new Map(),
       nowSec: 6_000,
     });
-    expect(overdue.staleAttemptCount).toBe(1);
-    expect(overdue.twoCycleCoverageSatisfied).toBe(false);
+
+    expect(result.coverageCycle).toMatchObject({
+      status: "cycle-in-progress",
+      incompleteConfigs: 1,
+      coverageCycleSec: null,
+    });
+  });
+
+  it("carries no cycle verdict for the critical lane", async () => {
+    const db = mockD1();
+    const result = await updateMintBurnAttemptState({
+      db,
+      jobName: "sync-mint-burn",
+      lane: "critical",
+      enabledConfigKeys: keys,
+      configBreakdown: breakdown(keys, new Set(keys)),
+      activeProviderDeferrals: new Map(),
+      nowSec: 4_000_000,
+    });
+
+    expect(result.coverageCycle).toBeNull();
+    const persisted = JSON.parse(persistedState(db, "mint-burn:attempt-state:sync-mint-burn")) as Record<string, unknown>;
+    expect(persisted).not.toHaveProperty("cycle");
   });
 });

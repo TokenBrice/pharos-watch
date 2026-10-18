@@ -3,6 +3,7 @@ import type { StatusHealthValue } from "./core";
 import { ActivePriceCoverageHealthSchema, StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
 import { CacheStatusSchema } from "./schema-primitives";
 import { FreshnessStatusSchema } from "../api-meta";
+import { V9PublicationHealthSchema } from "../report-cards-v9";
 import {
   RESERVE_ALERT_SOURCE_STATE_VALUES,
   SAFETY_ALERT_SOURCE_STATE_VALUES,
@@ -38,6 +39,7 @@ export const PUBLIC_STATUS_COMPONENT_IDS = [
   "stablecoin-data",
   "charts",
   "risk-signals",
+  "safety-scores",
   "liquidity",
   "yield",
   "mint-burn",
@@ -121,6 +123,8 @@ export const PublicStatusHistoryResponseSchema = z
     transitions: z.array(PublicStatusTransitionSchema),
     /** Earliest persisted public-projection row; legacy rows cover only time before it. */
     publicHistoryStartedAt: z.number().nullable().optional(),
+    /** First actual observation per component; absent entries have no known history. */
+    componentHistoryStartedAt: z.record(z.string(), z.number()).optional(),
     /** True when the window holds more rows than `limit` returned (R7). */
     hasMore: z.boolean().optional(),
   })
@@ -212,6 +216,8 @@ export const HealthResponseSchema = z.object({
   circuitsUnavailableReason: z.enum(["db-unavailable", "circuits-read-failed"]).nullable().optional(),
   stablecoinPublication: StablecoinPublicationHealthSchema.optional(),
   activePriceCoverage: ActivePriceCoverageHealthSchema.optional(),
+  safetyScorePublication: V9PublicationHealthSchema.nullable().optional(),
+  safetyScorePublicationUnavailableReason: z.string().nullable().optional(),
   schedulerLiveness: SchedulerLivenessSchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
   /**

@@ -3,54 +3,12 @@ import { getCronSlotStartedAtForSchedule, type CronScheduleKey } from "@shared/l
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import type { ScheduledEnv } from "../lib/env";
 import { runScheduledSlotWithFence } from "../lib/scheduled-slot-fence";
+import type { SlotRunnerLoader } from "./scheduled/runner-types";
 import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { recordScheduledWorkerVersionFirstSeen } from "../lib/worker-version-first-seen";
-import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
-import type { ScheduledSlotSummary } from "./scheduled/slot-summary";
+import { settleAfterAbort } from "../lib/cron-abort-settlement";
 
-type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<ScheduledSlotSummary | void> | ScheduledSlotSummary | void;
-type SlotRunnerLoader = () => Promise<SlotRunner>;
-
-export const SLOT_RUNNER_LOADER_BY_KEY = {
-  quarterHourly: () => import("./scheduled/quarter-hourly").then((mod) => mod.runQuarterHourlySlot),
-  v9SupplyAttributionOffset: () =>
-    import("./scheduled/v9-supply-attribution").then((mod) => mod.runV9SupplyAttributionSlot),
-  depegResolverOffset: () =>
-    import("./scheduled/depeg-resolver").then((mod) => mod.runDepegResolverSlot),
-  v9PublicationOffset: () =>
-    import("./scheduled/v9-publication").then((mod) => mod.runV9PublicationSlot),
-  statusSelfCheckOffset: () => import("./scheduled/status-self-check").then((mod) => mod.runStatusSelfCheckSlot),
-  sixHourlyBlacklist: () => import("./scheduled/hourly-blacklist").then((mod) => mod.runSixHourlyBlacklistSlot),
-  halfHourlyMintBurnCritical: () =>
-    import("./scheduled/twenty-minute-mint-burn-critical").then((mod) => mod.runHalfHourlyMintBurnCriticalSlot),
-  twoHourlyDexDiscovery: () =>
-    import("./scheduled/thirty-minute-dex-discovery").then((mod) => mod.runTwoHourlyDexDiscoverySlot),
-  halfHourlyMintBurnExtended: () =>
-    import("./scheduled/twenty-minute-mint-burn-extended").then((mod) => mod.runHalfHourlyMintBurnExtendedSlot),
-  halfHourlyMeasuredExecution: () =>
-    import("./scheduled/half-hourly-measured-execution").then((mod) => mod.runHalfHourlyMeasuredExecutionSlot),
-  halfHourlyMeasuredExecutionSupplemental: () =>
-    import("./scheduled/half-hourly-measured-execution").then((mod) => mod.runSupplementalMeasuredExecutionSlot),
-  halfHourlyOffset: () => import("./scheduled/half-hourly").then((mod) => mod.runHalfHourlySlot),
-  halfHourlyChartsOffset: () =>
-    import("./scheduled/half-hourly-charts").then((mod) => mod.runHalfHourlyChartsSlot),
-  dewsPsiOffset: () => import("./scheduled/dews-psi").then((mod) => mod.runDewsPsiSlot),
-  fourHourlyReserveSync: () =>
-    import("./scheduled/hourly-live-reserves").then((mod) => mod.runFourHourlyReserveSyncSlot),
-  hourlyYieldSync: () => import("./scheduled/hourly-yield").then((mod) => mod.runHourlyYieldSlot),
-  fourHourlyYieldSupplemental: () =>
-    import("./scheduled/yield-supplemental").then((mod) => mod.runYieldSupplementalSlot),
-  fiveMinuteTelegramAlerts: () =>
-    import("./scheduled/five-minute-telegram").then((mod) => mod.runFiveMinuteTelegramSlot),
-  fiveMinuteReserveRecovery: () =>
-    import("./scheduled/reserve-recovery").then((mod) => mod.runFiveMinuteReserveRecoverySlot),
-  digestTriggerPoll: () => import("./scheduled/digest-trigger-poll").then((mod) => mod.runDigestTriggerPollSlot),
-  daily0300Utc: () => import("./scheduled/daily-0300").then((mod) => mod.runDaily0300Slot),
-  daily0800Utc: () => import("./scheduled/daily-0800").then((mod) => mod.runDaily0800Slot),
-  daily0805Utc: () => import("./scheduled/daily-0805").then((mod) => mod.runDaily0805Slot),
-  daily0810Utc: () => import("./scheduled/daily-0810").then((mod) => mod.runDaily0810Slot),
-  monthlyYieldAudit: () => import("./scheduled/monthly-yield-audit").then((mod) => mod.runMonthlyYieldAuditSlot),
-} satisfies Record<CronScheduleKey, SlotRunnerLoader>;
+import { createScheduledRuntimeContext } from "./scheduled/context";
 
 function buildUnknownScheduleError(cron: string): Error {
   return new Error(`[cron-slot] Unknown scheduled trigger: ${cron}`);
@@ -76,11 +34,11 @@ export async function handleScheduledEvent(
   env: ScheduledEnv,
   ctx: ExecutionContext,
   workerRole: ScheduledWorkerRole,
+  runnerLoaders: Partial<Record<CronScheduleKey, SlotRunnerLoader>>,
+  slotBudgetStartedAtMs: number,
 ): Promise<void> {
-  const slotBudgetStartedAtMs = Date.now();
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
-  const loadRunner = slotPlan ? SLOT_RUNNER_LOADER_BY_KEY[slotPlan.scheduleKey] : undefined;
-  if (!loadRunner || !slotPlan) {
+  if (!slotPlan) {
     const error = buildUnknownScheduleError(event.cron);
     logWorkerEventArgs("handler", "error", error.message);
     throw error;
@@ -97,6 +55,8 @@ export async function handleScheduledEvent(
     return;
   }
 
+  const loadRunner = runnerLoaders[slotPlan.scheduleKey];
+  if (!loadRunner) throw buildUnknownScheduleError(event.cron);
   const scheduledTimeMs = typeof event.scheduledTime === "number" ? event.scheduledTime : null;
   const scheduleKey = slotPlan.scheduleKey;
   const slotStartedAt = getCronSlotStartedAtForSchedule(scheduleKey, scheduledTimeMs);
@@ -108,15 +68,16 @@ export async function handleScheduledEvent(
     slotStartedAt,
     slotBudgetStartedAtMs,
   });
-  try {
-    await recordScheduledWorkerVersionFirstSeen(
-      env.DB,
-      runtime.workerVersion,
-      Math.floor(slotBudgetStartedAtMs / 1000),
-    );
-  } catch (error) {
+  // Version attribution is telemetry, not admission. A stalled write must not
+  // consume the only opportunity to claim and run this delivery.
+  const versionStamp = recordScheduledWorkerVersionFirstSeen(
+    env.DB, runtime.workerVersion, Math.floor(slotBudgetStartedAtMs / 1000),
+  ).catch((error) => {
     logWorkerEventArgs("handler", "warn", "[cron-slot] Failed to record worker version first-seen time:", error);
-  }
+  });
+  ctx.waitUntil(settleAfterAbort(() => versionStamp,
+    AbortSignal.timeout(runtime.deadline.remainingMs()),
+    { platformDeadlineMs: runtime.deadline.platformDeadlineMs }));
 
   let slotResult;
   try {
@@ -132,9 +93,12 @@ export async function handleScheduledEvent(
           slotPlan.scheduleKey !== "v9PublicationOffset"
         ) {
           await waitForV9MemoryLaneRelease(env.DB, slotSignal);
+          slotSignal.throwIfAborted();
         }
         const runner = await loadRunner();
+        slotSignal.throwIfAborted();
         const summary = await runner(runtime);
+        slotSignal.throwIfAborted();
         if (!summary) return;
         return {
           ...summary,
@@ -149,6 +113,7 @@ export async function handleScheduledEvent(
         workerVersion: runtime.workerVersion ?? null,
         workerRole,
         deadline: runtime.deadline,
+        waitUntil: (work) => ctx.waitUntil(work),
       },
     );
   } catch (error) {

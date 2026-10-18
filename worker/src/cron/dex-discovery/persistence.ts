@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { batchExecute } from "../../lib/db";
+import { batchExecute, D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runCappedPruneFamily } from "../shared/capped-delete";
@@ -12,6 +12,7 @@ import {
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
   type DiscoveryMeta,
+  type DiscoveryRunCheckpoint,
   type StagedPool,
 } from "./types";
 
@@ -25,11 +26,13 @@ import {
 //   24 h price pin treat a dead observation as fresh). A null observation must fall out via
 //   hasInvalidTvl in the merge until the pool is genuinely observed again;
 // - minRefreshGapSec: the hourly write-back passes a gap so rows refreshed within it are skipped.
-const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_registry
+const STAGING_INSERT_SQL = `INSERT INTO dex_pool_registry
   (pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol, tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio,
-   is_stable, base_token, quote_token, quote_symbol, price_usd, locked_liq_pct, raw_json, discovered_at, refreshed_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(stablecoin_id, pool_id, source) DO UPDATE SET
+   is_stable, base_token, quote_token, quote_symbol, price_usd, locked_liq_pct, raw_json, discovered_at, refreshed_at)`;
+const STAGING_ROW_COLUMN_COUNT = 22;
+const STAGING_ROW_VALUES_SQL = `(${new Array(STAGING_ROW_COLUMN_COUNT).fill("?").join(", ")})`;
+const STAGING_ROWS_PER_STATEMENT = Math.floor((D1_MAX_BOUND_PARAMETERS - 2) / STAGING_ROW_COLUMN_COUNT);
+const STAGING_CONFLICT_SQL = `ON CONFLICT(stablecoin_id, pool_id, source) DO UPDATE SET
   chain = excluded.chain,
   protocol = excluded.protocol,
   dex_id = excluded.dex_id,
@@ -58,6 +61,7 @@ const STAGING_RAW_JSON_TTL_SEC = 4 * 60 * 60;
 const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
 const RUN_SEQ_KEY = "discovery_run_seq";
 const TARGET_CURSOR_KEY = "discovery_target_cursors";
+const RUN_CHECKPOINT_KEY = "discovery_run_checkpoint";
 const ORDERBOOK_POOL_ID_PREFIX = "orderbook:";
 
 /**
@@ -120,7 +124,8 @@ function legacyOrderbookPoolId(pool: Pick<StagedPool, "poolId" | "stablecoinId" 
  * is not older than the stored one, a null tvl/volume overwrites the stored value instead of
  * preserving stale metrics, and `options.minRefreshGapSec` skips rows another writer
  * refreshed within that gap.
- * Batches in groups of 50 to stay within D1 statement limits.
+ * Packs four rows per statement (90 binds including the shared gap predicate),
+ * then batches 50 statements. Legacy cleanup remains ordered before its insert.
  */
 export interface StagedPoolUpsertOptions {
   /** When set, an existing row refreshed within this many seconds is left untouched (the DO UPDATE becomes a no-op, which D1 counts as zero rows written). */
@@ -150,46 +155,46 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
 
   const minRefreshGapSec = options?.minRefreshGapSec ?? 0;
 
-  const stmts = validPools.flatMap((pool) => {
+  const statements: D1PreparedStatement[] = [];
+  const rows: unknown[][] = [];
+  let changedRows = 0;
+  const flushRows = (): void => {
+    if (rows.length === 0) return;
+    statements.push(db.prepare(
+      `${STAGING_INSERT_SQL} VALUES ${new Array(rows.length).fill(STAGING_ROW_VALUES_SQL).join(", ")} ${STAGING_CONFLICT_SQL}`,
+    ).bind(...rows.flat(), minRefreshGapSec, minRefreshGapSec));
+    rows.length = 0;
+  };
+  const flushStatements = async (): Promise<void> => {
+    if (statements.length === 0) return;
+    changedRows += await batchExecute(db, statements, { chunkSize: STAGING_BATCH_SIZE, signal });
+    statements.length = 0;
+  };
+  for (const pool of validPools) {
+    throwIfAborted(signal);
     const cleanupPoolId = legacyOrderbookPoolId(pool);
-    const cleanupStmt = cleanupPoolId
-      ? db
-          .prepare("DELETE FROM dex_pool_registry WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?")
-          .bind(pool.stablecoinId, cleanupPoolId)
-      : null;
-    const insertStmt = db
-      .prepare(STAGING_UPSERT_SQL)
-      .bind(
-        pool.poolId,
-        pool.stablecoinId,
-        pool.source,
-        pool.chain,
-        pool.protocol,
-        pool.dexId,
-        pool.symbol,
-        pool.tvlUsd,
-        pool.volume24h,
-        pool.qualityMultiplier,
-        pool.poolType,
-        pool.feeTier,
-        pool.balanceRatio,
-        pool.isStable === null ? null : pool.isStable ? 1 : 0,
-        pool.baseToken,
-        pool.quoteToken,
-        pool.quoteSymbol,
-        pool.priceUsd,
-        pool.lockedLiqPct,
-        pool.rawJson,
-        pool.discoveredAt,
-        pool.refreshedAt,
-        minRefreshGapSec,
-        minRefreshGapSec,
-      );
-    return cleanupStmt ? [cleanupStmt, insertStmt] : [insertStmt];
-  });
-
-  throwIfAborted(signal);
-  return batchExecute(db, stmts, { chunkSize: STAGING_BATCH_SIZE, signal });
+    if (cleanupPoolId) {
+      // Never move a legacy delete past an earlier insert (including duplicates).
+      flushRows();
+      if (statements.length === STAGING_BATCH_SIZE) await flushStatements();
+      statements.push(db.prepare(
+        "DELETE FROM dex_pool_registry WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?",
+      ).bind(pool.stablecoinId, cleanupPoolId));
+    }
+    rows.push([
+      pool.poolId, pool.stablecoinId, pool.source, pool.chain, pool.protocol,
+      pool.dexId, pool.symbol, pool.tvlUsd, pool.volume24h, pool.qualityMultiplier,
+      pool.poolType, pool.feeTier, pool.balanceRatio,
+      pool.isStable === null ? null : pool.isStable ? 1 : 0,
+      pool.baseToken, pool.quoteToken, pool.quoteSymbol, pool.priceUsd,
+      pool.lockedLiqPct, pool.rawJson, pool.discoveredAt, pool.refreshedAt,
+    ]);
+    if (rows.length === STAGING_ROWS_PER_STATEMENT) flushRows();
+    if (statements.length === STAGING_BATCH_SIZE) await flushStatements();
+  }
+  flushRows();
+  await flushStatements();
+  return changedRows;
 }
 
 /**
@@ -572,24 +577,69 @@ export async function readDiscoveryTargetCursors(
   return cursors;
 }
 
-export async function writeDiscoveryTargetCursors(
+/** A failed/malformed checkpoint read must not silently advance the cohort. */
+export async function readDiscoveryRunCheckpoint(
   db: D1Database,
-  cursors: ReadonlyMap<string, string>,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<DiscoveryRunCheckpoint | null> {
   throwIfAborted(signal);
-  await runWithOverloadRetry(
-    () =>
-      db
-        .prepare(
-          `INSERT INTO kv_config (key, value)
-           VALUES (?, ?)
-           ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        )
-        .bind(TARGET_CURSOR_KEY, JSON.stringify(Object.fromEntries(cursors)))
-        .run(),
+  const row = await runWithOverloadRetry(
+    () => db.prepare("SELECT value FROM kv_config WHERE key = ?")
+      .bind(RUN_CHECKPOINT_KEY).first<{ value: string }>(),
     3,
     signal,
   );
+  throwIfAborted(signal);
+  if (row == null) return null;
+  const parsed: unknown = JSON.parse(row.value);
+  if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Invalid DEX discovery run checkpoint");
+  }
+  const checkpoint = parsed as Record<string, unknown>;
+  if (typeof checkpoint.runSeq !== "number" || !Number.isSafeInteger(checkpoint.runSeq) || checkpoint.runSeq < 1 ||
+      typeof checkpoint.refreshPending !== "boolean" || !Array.isArray(checkpoint.pendingCandidates)) {
+    throw new Error("Invalid DEX discovery run checkpoint");
+  }
+  const pendingCandidates: DiscoveryRunCheckpoint["pendingCandidates"] = [];
+  const seen = new Set<string>();
+  for (const value of checkpoint.pendingCandidates) {
+    if (value == null || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("Invalid DEX discovery checkpoint candidate");
+    }
+    const candidate = value as Record<string, unknown>;
+    const tier = candidate.tier;
+    if (typeof candidate.stablecoinId !== "string" || !candidate.stablecoinId ||
+        seen.has(candidate.stablecoinId) ||
+        (tier !== "refresh" && tier !== "t1" && tier !== "t2" && tier !== "t3" && tier !== "dormant")) {
+      throw new Error("Invalid DEX discovery checkpoint candidate");
+    }
+    seen.add(candidate.stablecoinId);
+    pendingCandidates.push({ stablecoinId: candidate.stablecoinId, tier });
+  }
+  return { runSeq: checkpoint.runSeq, refreshPending: checkpoint.refreshPending, pendingCandidates };
+}
+
+/** Commit the cohort frontier and deployment-window cursors together. Replays
+ * may repeat observations, but must never skip an uncommitted target window. */
+export async function writeDiscoveryRunCheckpoint(
+  db: D1Database,
+  checkpoint: DiscoveryRunCheckpoint | null,
+  cursors: ReadonlyMap<string, string> | null,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  const statements = [
+    checkpoint == null
+      ? db.prepare("DELETE FROM kv_config WHERE key = ?").bind(RUN_CHECKPOINT_KEY)
+      : db.prepare(`INSERT INTO kv_config (key, value) VALUES (?, ?)
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
+        .bind(RUN_CHECKPOINT_KEY, JSON.stringify(checkpoint)),
+  ];
+  if (cursors != null) {
+    statements.push(db.prepare(`INSERT INTO kv_config (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
+      .bind(TARGET_CURSOR_KEY, JSON.stringify(Object.fromEntries(cursors))));
+  }
+  await runWithOverloadRetry(() => db.batch(statements), 3, signal);
   throwIfAborted(signal);
 }

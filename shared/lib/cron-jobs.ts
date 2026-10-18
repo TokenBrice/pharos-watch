@@ -978,6 +978,8 @@ export const PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS: readonly string[] = [
   "same_day_snapshot_exists",
   // weekly-recap already-generated precheck.
   "weekly-recap-exists",
+  // Supplemental catch-up readback validates every current family artifact.
+  "supplemental-catch-up-not-due",
 ];
 
 export function isProvenSatisfiedNeutralSkipReason(reason: unknown): boolean {

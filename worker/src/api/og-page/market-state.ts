@@ -3,7 +3,7 @@ import { PSI_HEX_COLORS } from "@shared/lib/classification";
 import type { OgRouteSupportItem } from "@shared/lib/og-route-cards";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { PegSummaryResponseSchema } from "@shared/types/market";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
 import { handlePegSummary } from "../peg-summary";

@@ -46,12 +46,32 @@ import { headLagThresholdBlocks } from "../../lib/rpc-provider-parity/report";
 
 const RPC_PARITY_REQUEST_TIMEOUT_MS = 8_000;
 /**
- * Measured full 37-chain passes fit within this four-minute cap; truncation is
- * not a prerequisite for a normal sweep. The cap bounds slow-run wall time.
- * Deadline-skipped chains remain explicit, and hourly rotation shares retained
- * coverage without claiming that a truncated run observed every chain.
+ * A normal full pass took 40-65 seconds in the measured eight-day sample;
+ * the four-minute cap bounds slow-run blowups, not normal full-pass capacity.
+ * Each hourly run selects one fixed-cap slice of a deterministic three-hour
+ * rotation. Selection is not observation: deadline-skipped chains stay explicit.
  */
 export const RPC_PARITY_RUN_BUDGET_MS = 4 * 60_000;
+export const RPC_PARITY_ROTATION_HOURS = 3;
+export const RPC_PARITY_MAX_CHAINS_PER_RUN = 13;
+
+export function rpcParityRotation(targets: readonly RpcParityTarget[], atSec: number) {
+  if (targets.length > RPC_PARITY_MAX_CHAINS_PER_RUN * RPC_PARITY_ROTATION_HOURS) {
+    throw new Error("RPC parity target roster exceeds three-hour rotation capacity");
+  }
+  const position = Math.floor(atSec / 3600) % RPC_PARITY_ROTATION_HOURS;
+  const sliceSize = Math.ceil(targets.length / RPC_PARITY_ROTATION_HOURS);
+  const startIndex = position * sliceSize;
+  return {
+    position,
+    windowStartedAt: Math.floor(atSec / (3600 * RPC_PARITY_ROTATION_HOURS)) * 3600 * RPC_PARITY_ROTATION_HOURS,
+    startIndex,
+    targets: Array.from(
+      { length: Math.min(targets.length, RPC_PARITY_MAX_CHAINS_PER_RUN) },
+      (_, index) => targets[(startIndex + index) % targets.length],
+    ),
+  };
+}
 const RPC_PARITY_MAX_RESPONSE_BYTES = 128 * 1024;
 /**
  * `eth_getLogs` answers are legitimately large: a 10-block address-filtered
@@ -925,7 +945,8 @@ export async function probeRpcProviderParityRun(input: {
   onChainProbed?: (chainId: string, probed: number) => void | Promise<void>;
 }): Promise<RpcParityProbeRunResult> {
   const deps: RpcParityProbeDeps = { ...DEFAULT_PROBE_DEPS, ...input.deps };
-  const targets = input.targets ?? RPC_PARITY_TARGETS;
+  const rotation = rpcParityRotation(input.targets ?? RPC_PARITY_TARGETS, input.atSec ?? deps.nowMs() / 1000);
+  const targets = rotation.targets;
   const result: RpcParityProbeRunResult = {
     samples: [],
     attempted: 0,
@@ -936,13 +957,12 @@ export async function probeRpcProviderParityRun(input: {
   };
   const touchedOrigins = new Set<string>();
 
-  const offset = targets.length === 0 ? 0 : Math.floor((input.atSec ?? deps.nowMs() / 1000) / 3600) % targets.length;
   for (let index = 0; index < targets.length; index++) {
-    const target = targets[(offset + index) % targets.length];
+    const target = targets[index];
     if (input.signal.aborted) {
       result.aborted = true;
       for (let remaining = index; remaining < targets.length; remaining++) {
-        result.skipped.push({ chainId: targets[(offset + remaining) % targets.length].chainId, reason: "aborted" });
+        result.skipped.push({ chainId: targets[remaining].chainId, reason: "aborted" });
       }
       break;
     }
@@ -984,7 +1004,7 @@ export async function probeRpcProviderParityRun(input: {
       }
       result.skipped.push({ chainId: target.chainId, reason: probe.stop });
       for (let remaining = index + 1; remaining < targets.length; remaining++) {
-        result.skipped.push({ chainId: targets[(offset + remaining) % targets.length].chainId, reason: probe.stop });
+        result.skipped.push({ chainId: targets[remaining].chainId, reason: probe.stop });
       }
       break;
     }

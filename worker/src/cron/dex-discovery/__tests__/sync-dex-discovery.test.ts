@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../test-helpers/cron";
+import type { DiscoveryRunCheckpoint } from "../types";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import type { CronProgressReporter } from "../../../lib/cron-logger";
 
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const stablecoins = [
@@ -79,11 +81,12 @@ vi.mock("../persistence", () => ({
   incrementRunSeq: vi.fn(async () => 1),
   readDiscoveryCensusSummaries: vi.fn(async () => new Map()),
   readDiscoveryMeta: vi.fn(async () => new Map()),
+  readDiscoveryRunCheckpoint: vi.fn(async () => null),
   readDiscoveryTargetCursors: vi.fn(async () => new Map()),
   recordDiscoveryAttemptFence: vi.fn(async () => {}),
   updateDiscoveryMeta: vi.fn(async () => {}),
   upsertStagedPools: vi.fn(async (_db: D1Database, pools: unknown[]) => pools.length),
-  writeDiscoveryTargetCursors: vi.fn(async () => {}),
+  writeDiscoveryRunCheckpoint: vi.fn(async () => {}),
 }));
 
 import {
@@ -101,10 +104,12 @@ import {
   cleanupStaging,
   incrementRunSeq,
   readDiscoveryMeta,
+  readDiscoveryRunCheckpoint,
   readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
+  writeDiscoveryRunCheckpoint,
 } from "../persistence";
 import { stagedPool } from "./discovery.test-support";
 import { classifyDexPlaceholderCoverage } from "../../dex-liquidity/deployment-census-coverage";
@@ -247,6 +252,8 @@ describe("syncDexDiscovery", () => {
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);
     vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map());
     vi.mocked(readDiscoveryTargetCursors).mockResolvedValue(new Map());
+    vi.mocked(readDiscoveryRunCheckpoint).mockResolvedValue(null);
+    vi.mocked(writeDiscoveryRunCheckpoint).mockResolvedValue();
     vi.mocked(incrementRunSeq).mockResolvedValue(2);
     vi.mocked(recordDiscoveryAttemptFence).mockResolvedValue();
     vi.mocked(updateDiscoveryMeta).mockResolvedValue();
@@ -338,6 +345,108 @@ describe("syncDexDiscovery", () => {
       coinsCrawled: 2,
       reason: "dex-discovery-stale-pool-refresh-failed",
       stalePoolRefresh: { outcome: "failed", error: "D1_ERROR: registry read failed", requests: 0 },
+    });
+  });
+
+  it("resumes the saved cohort tail without advancing its sequence or repeating refresh", async () => {
+    const cohortDb = makeNoopD1({
+      prepare: (sql: string) => ({ all: async () => ({
+        results: sql.includes("FROM dex_liquidity")
+          ? [{ stablecoin_id: "coin-a", pool_count: 0, chain_count: 0 },
+            { stablecoin_id: "coin-b", pool_count: 0, chain_count: 0 }]
+          : [],
+      }) }),
+    });
+    let checkpoint: DiscoveryRunCheckpoint | null = null;
+    vi.mocked(readDiscoveryRunCheckpoint).mockImplementation(async () => checkpoint);
+    vi.mocked(writeDiscoveryRunCheckpoint).mockImplementation(async (_db, next) => {
+      checkpoint = next == null ? null : structuredClone(next);
+    });
+    let nowMs = 1_700_000_000_000;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    vi.mocked(updateDiscoveryMeta).mockImplementationOnce(async () => {
+      nowMs += DEX_DISCOVERY_RUN_BUDGET_MS - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS + 1;
+    });
+    try {
+      const firstProgress = vi.fn(async () => {});
+      const first = await syncDexDiscovery(cohortDb, null, undefined, firstProgress);
+      expect(vi.mocked(crawlCoin).mock.calls.map((call) => call[1])).toEqual(["coin-a"]);
+      expect(checkpoint).toEqual({
+        runSeq: 2, refreshPending: false,
+        pendingCandidates: [{ stablecoinId: "coin-b", tier: "refresh" }],
+      });
+      expect(JSON.parse(first.metadata ?? "{}")).toMatchObject({
+        budgetExhausted: true, continuationPending: 1, resumedFromCheckpoint: false,
+      });
+      expect(firstProgress).toHaveBeenLastCalledWith(expect.objectContaining({
+        stage: "deferred", itemsDone: 1, itemsTotal: 2,
+      }));
+
+      nowMs += 2 * 3600_000;
+      const nextProgress = vi.fn<CronProgressReporter>(async () => {});
+      const second = await syncDexDiscovery(cohortDb, null, undefined, nextProgress);
+      expect(vi.mocked(crawlCoin).mock.calls.map((call) => call[1])).toEqual(["coin-a", "coin-b"]);
+      expect(incrementRunSeq).toHaveBeenCalledTimes(1);
+      expect(nextProgress.mock.calls.some(([progress]) => progress.stage === "refresh-stale-pools")).toBe(false);
+      expect(JSON.parse(second.metadata ?? "{}")).toMatchObject({
+        runSeq: 2, resumedFromCheckpoint: true, continuationPending: 0,
+      });
+      expect(checkpoint).toBeNull();
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("includes initial reference reads in the wall budget and checkpoints untouched work", async () => {
+    let nowMs = 1_700_000_000_000;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    vi.mocked(loadPriceValidationReferences).mockImplementationOnce(async () => {
+      nowMs += DEX_DISCOVERY_RUN_BUDGET_MS;
+      return mockValidationReferences;
+    });
+    try {
+      const result = await syncDexDiscovery(db, null);
+      expect(crawlCoin).not.toHaveBeenCalled();
+      expect(writeDiscoveryRunCheckpoint).toHaveBeenLastCalledWith(db, {
+        runSeq: 2, refreshPending: true,
+        pendingCandidates: [{ stablecoinId: "coin-a", tier: "refresh" }],
+      }, null, undefined);
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        budgetExhausted: true, continuationPending: 1, coinsCrawled: 0,
+        reason: "dex-discovery-budget-exhausted",
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("retains an unfinished candidate after result persistence fails", async () => {
+    vi.mocked(upsertStagedPools).mockRejectedValueOnce(new Error("D1 unavailable"));
+    const result = await syncDexDiscovery(db, null);
+    expect(result.status).toBe("degraded");
+    expect(writeDiscoveryRunCheckpoint).toHaveBeenLastCalledWith(db, {
+      runSeq: 2, refreshPending: false,
+      pendingCandidates: [{ stablecoinId: "coin-a", tier: "refresh" }],
+    }, null, undefined);
+  });
+
+  it("does not advance the cohort after a failed checkpoint read", async () => {
+    vi.mocked(readDiscoveryRunCheckpoint).mockRejectedValueOnce(new Error("checkpoint unavailable"));
+    const result = await syncDexDiscovery(db, null);
+    expect(result.status).toBe("error");
+    expect(incrementRunSeq).not.toHaveBeenCalled();
+    expect(crawlCoin).not.toHaveBeenCalled();
+    expect(writeDiscoveryRunCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("reports a checkpoint write failure instead of claiming a durable continuation", async () => {
+    vi.mocked(writeDiscoveryRunCheckpoint).mockResolvedValueOnce();
+    vi.mocked(writeDiscoveryRunCheckpoint).mockRejectedValueOnce(new Error("checkpoint write failed"));
+    const result = await syncDexDiscovery(db, null);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "dex-discovery-persistence-failed",
+      persistenceFailures: ["run-checkpoint"],
     });
   });
 

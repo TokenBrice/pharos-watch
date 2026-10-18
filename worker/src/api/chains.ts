@@ -2,8 +2,11 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
+import {
+  WORKER_ACTIVE_IDS,
+  WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/worker-runtime-registry";
+import { isCoreAggregateStablecoinId } from "@shared/lib/stablecoins/aggregate-universe";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -72,7 +75,7 @@ export function isActiveChainAggregateAsset(asset: {
   defunct?: boolean;
 }): boolean {
   return (
-    CORE_AGGREGATE_ACTIVE_IDS.has(asset.id) &&
+    WORKER_ACTIVE_IDS.has(asset.id) && isCoreAggregateStablecoinId(asset.id) &&
     asset.frozen !== true &&
     asset.isDefunct !== true &&
     asset.defunct !== true

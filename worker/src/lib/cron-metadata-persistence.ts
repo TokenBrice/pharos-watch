@@ -1,16 +1,52 @@
 import { stripSensitive } from "./safe-error-message";
 import { parseJsonObject } from "./json-parse";
-import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
-import { ResourcePressureSchema } from "@shared/types/status/cron";
 
+/** Absolute ceiling; individual jobs normally admit only 8 KiB. */
 export const MAX_PERSISTED_CRON_METADATA_BYTES = 64 * 1_024 - 1;
-// The scheduled wrapper appends bounded lease and slot identity after a producer returns.
+export const DEFAULT_CRON_METADATA_BUDGET_BYTES = 8 * 1_024;
+// Producer-side assembly retains its existing headroom; write-time admission owns the job budget.
 const SCHEDULED_CRON_METADATA_ENRICHMENT_HEADROOM_BYTES = 4 * 1_024;
 export const MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES =
   MAX_PERSISTED_CRON_METADATA_BYTES - SCHEDULED_CRON_METADATA_ENRICHMENT_HEADROOM_BYTES;
-const MAX_TOP_LEVEL_DIAGNOSTICS = 80;
+// Exceptions retain consumer-read cohort/coverage evidence, not arbitrary diagnostic payloads.
+const CRON_METADATA_BUDGET_BYTES: Readonly<Record<string, number>> = {
+  "cron-sentinel": MAX_PERSISTED_CRON_METADATA_BYTES, // Nested source evidence and complete stale-generation rows.
+  "sync-stablecoins": MAX_PERSISTED_CRON_METADATA_BYTES, // Complete missing-asset continuity feeds the next run.
+  "sync-mint-burn": 32 * 1_024, // Per-config cursor/head and critical coverage evidence.
+  "sync-mint-burn-extended": 32 * 1_024,
+  "sync-live-reserves": 32 * 1_024, // Exact per-coin breaker names and warning/error cohorts rendered by operators.
+  "sync-dex-liquidity": 16 * 1_024, // Consumer-read sourceCoverage and measured-execution ledger.
+};
+export function getCronMetadataBudgetBytes(job?: string): number {
+  return (job ? CRON_METADATA_BUDGET_BYTES[job] : undefined) ?? DEFAULT_CRON_METADATA_BUDGET_BYTES;
+}
+
 const MAX_DIAGNOSTIC_STRING_CHARS = 500;
 const MAX_NESTED_SCALARS = 24;
+// Audited readers: cron-output, cron-health, freshness oracle, status supplements,
+// public-health reads, cron-metadata-summary and the measured-execution ledger.
+// Scalars remain top-level too. These collections must NEVER turn into counts.
+const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEntries([
+  "reason", "reasons", "degradedReason", "degradedReasons", "quality", "outputPublishedAt",
+  "mode", "stale", "sources", "sourceStatuses", "resourcePressure", "retentionTruncated", "d1Cost", "truncated",
+  "sourceCoverage", "fallbackMode", "publication", "active", "chainHeads", "criticalCoverage", "extendedCoverage",
+  "laggingConfigs", "breakerKeys", "coinsWithWarnings", "coinsWithErrors", "failedCoins", "failedSources",
+  "tierBreakdown", "apiErrorClasses", "artifactCleanup", "invalidSupplyIds", "missingActiveIds", "missingFromCache",
+  "pendingBacklog", "safetySource", "zeroSend", "runtimeBreaching", "slotAbandonmentBreaching",
+  "latencySummary", "slowestProbes", "progress", "lease", "sourceFailures", "sourceFailureReasons",
+  "sourceDistribution", "confidenceDistribution", "sourceDepthDistribution", "supplyCoverage", "priceHealth",
+  "priceSourceHealth", "probePlanes", "internalExternalDiscrepancy", "freshnessDiagnostics",
+  "activePriceCoverage", "activePublicationCoverage", "missingActiveState", "coverageOutcomeCounts", "persistence",
+  "publicationStats", "apiErrorConfigs",
+  "adapterTelemetryProgress",
+  "publicationAbortCause", "publicationPhaseElapsedMs", "publicationPhaseTimingBasis",
+].map((key) => [key, true]));
+// These are forensic-only cron copies. Active-price coverage is deliberately excluded:
+// the next producer and public-health reader reconstruct missing-asset streaks from it.
+// breakerKeys is deliberately excluded: the live-reserves summary renders its exact names.
+const BULKY_DIAGNOSTIC_KEYS = [
+  "adapterLatency", "priceSourceAttemptLedger", "providerDiagnostics", "fullAssets", "bridgeJoinDiagnostics",
+];
 
 export interface CompactedCronMetadata {
   metadata: string | null;
@@ -48,121 +84,73 @@ function summarizeDiagnostic(value: unknown): unknown {
       included++;
     }
   }
-  return Object.keys(summary).length > 0 ? summary : undefined;
+  return Object.keys(summary).length > 0 ? summary : { count: Object.keys(value).length };
 }
 
-function safeParseMetadata(metadata: string): Record<string, unknown> | null {
-  return parseJsonObject(metadata);
-}
-function preserveFreshnessEvidence(parsed: Record<string, unknown> | null): Record<string, unknown> {
-  const sources = parsed?.sources;
-  const freshness = sources && typeof sources === "object" ? (sources as Record<string, unknown>).freshness : null;
-  const source = freshness && typeof freshness === "object" ? freshness as Record<string, unknown> : null;
-  const metadata = source?.metadata && typeof source.metadata === "object" ? source.metadata as Record<string, unknown> : parsed;
-  if (!Array.isArray(metadata?.stale)) return {};
-  const fields = ["laneKey", "cacheKey", "producerJob", "ageSeconds", "publishedAt", "generationId",
-    "assessedAt", "thresholdSec", "producerThresholdSec", "endpointThresholdSec", "availabilityThresholdSec", "availabilityImpacting"];
-  const stale = metadata.stale.slice(0, 80).map((entry: unknown) => {
-    if (!entry || typeof entry !== "object") return null;
-    return Object.fromEntries(fields.flatMap((key) => {
-      const value = boundedScalar((entry as Record<string, unknown>)[key]);
-      return value === undefined ? [] : [[key, typeof value === "string" ? value.slice(0, 128) : value]];
-    }));
-  });
-  const evidence = { stale, ...(metadata.stale.length > stale.length ? { staleOmitted: metadata.stale.length - stale.length } : {}) };
-  const preserved = source ? { sources: { freshness: { ...summarizeDiagnostic(source) as Record<string, unknown>, metadata: evidence } } } : evidence;
-  // Keep contractual evidence below half the persistence cap; never omit rows silently.
-  while (utf8Bytes(JSON.stringify(preserved)) > 32 * 1_024 && stale.length > 0) {
-    stale.pop();
-    Object.assign(evidence, { staleOmitted: metadata.stale.length - stale.length });
-  }
-  return preserved;
-}
 
 export function compactCronMetadataForPersistence(
   metadata: string | null | undefined,
   preparsed?: Record<string, unknown> | null,
+  job?: string,
 ): CompactedCronMetadata {
-  if (!metadata) {
-    return { metadata: null, originalBytes: 0, persistedBytes: 0, compacted: false };
-  }
+  if (!metadata) return { metadata: null, originalBytes: 0, persistedBytes: 0, compacted: false };
+  const budgetBytes = getCronMetadataBudgetBytes(job);
   const originalBytes = utf8Bytes(metadata);
-  if (originalBytes <= MAX_PERSISTED_CRON_METADATA_BYTES) {
+  if (originalBytes <= budgetBytes) {
     return { metadata, originalBytes, persistedBytes: originalBytes, compacted: false };
   }
-
-  const parsed = preparsed !== undefined ? preparsed : safeParseMetadata(metadata);
-  const diagnostics: Record<string, unknown> = {};
+  const parsed = preparsed !== undefined ? preparsed : parseJsonObject(metadata);
   const entries = parsed ? Object.entries(parsed) : [];
-  // Measured-execution ledger chunks must survive compaction as TOP-LEVEL scalars:
-  // producer history keeps only top-level scalars (normalizeHistoryMetadata), and the
-  // durable activation-gate ledger reads them from there. Each is bounded to <=240 chars
-  // and at most a handful of parts, so preserving them cannot re-breach the byte cap.
-  const preservedLedgerScalars: Record<string, string | number | boolean | null> = {};
-  for (const [key, value] of entries) {
-    if (!key.startsWith("mxLedger") && key !== "outputPublishedAt"
-      && key !== "schedulerAttemptKey" && key !== "schedulerTerminalSource"
-      && key !== "schedulerTerminalToken" && key !== "childDisposition") continue;
-    const scalar = boundedScalar(value);
-    if (scalar !== undefined) preservedLedgerScalars[key] = scalar;
-  }
-  // Publication and quality are independent operator contracts, not disposable diagnostics.
-  const qualityReasons = getCronQualityReasons(parsed)
-    .slice(0, MAX_NESTED_SCALARS)
-    .map((reason) => stripSensitive(reason).slice(0, MAX_DIAGNOSTIC_STRING_CHARS));
-  const preservedQuality = qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {};
-  const pressure = ResourcePressureSchema.safeParse(parsed?.resourcePressure);
-  const preservedPressure = pressure.success ? { resourcePressure: pressure.data } : {};
-  const preservedFreshness = preserveFreshnessEvidence(parsed);
-  for (const [key, value] of entries.slice(0, MAX_TOP_LEVEL_DIAGNOSTICS)) {
-    const summary = summarizeDiagnostic(value);
-    if (summary !== undefined) diagnostics[key] = summary;
-  }
-  const reason = typeof parsed?.reason === "string"
-    ? stripSensitive(parsed.reason).slice(0, MAX_DIAGNOSTIC_STRING_CHARS)
-    : "cron-metadata-over-64-kib";
-  const envelope: Record<string, unknown> = {
-    reason,
-    ...preservedLedgerScalars,
-    ...preservedQuality,
-    ...preservedPressure,
-    ...preservedFreshness,
-    persistenceCompaction: {
-      schemaVersion: 1,
-      originalBytes,
-      originalTopLevelKeys: entries.length,
-      retainedTopLevelDiagnostics: Object.keys(diagnostics).length,
-      omittedTopLevelDiagnostics: Math.max(0, entries.length - Object.keys(diagnostics).length),
-    },
-    diagnostics,
+  const retained: Record<string, unknown> = { ...(parsed ?? {}) };
+  if (!parsed) retained.reason = "cron-metadata-invalid-json";
+  const diagnostics: Record<string, unknown> = {};
+  const compaction = {
+    schemaVersion: 2, budgetBytes, originalBytes, originalTopLevelKeys: entries.length,
+    retainedTopLevelDiagnostics: 0, omittedTopLevelDiagnostics: 0, overBudget: false,
   };
+  retained.persistenceCompaction = compaction;
+  let compacted: string;
 
-  let compacted = JSON.stringify(envelope);
-  while (utf8Bytes(compacted) > MAX_PERSISTED_CRON_METADATA_BYTES && Object.keys(diagnostics).length > 0) {
-    const diagnosticKeys = Object.keys(diagnostics);
-    const lastKey = diagnosticKeys[diagnosticKeys.length - 1]!;
-    delete diagnostics[lastKey];
-    (envelope.persistenceCompaction as Record<string, unknown>).retainedTopLevelDiagnostics =
-      Object.keys(diagnostics).length;
-    (envelope.persistenceCompaction as Record<string, unknown>).omittedTopLevelDiagnostics =
-      Math.max(0, entries.length - Object.keys(diagnostics).length);
-    compacted = JSON.stringify(envelope);
+  // First reduce only named diagnostics, leaving every other field and shape untouched.
+  for (const key of BULKY_DIAGNOSTIC_KEYS) {
+    if (!(key in retained)) continue;
+    retained[key] = summarizeDiagnostic(retained[key]);
   }
-
-  if (utf8Bytes(compacted) > MAX_PERSISTED_CRON_METADATA_BYTES) {
-    compacted = JSON.stringify({
-      reason: "cron-metadata-over-64-kib",
-      ...preservedLedgerScalars,
-      ...preservedQuality,
-      ...preservedPressure,
-      ...preservedFreshness,
-      persistenceCompaction: { schemaVersion: 1, originalBytes, diagnosticsDropped: true },
+  compacted = JSON.stringify(retained);
+  if (utf8Bytes(compacted) > budgetBytes) {
+    // Preserve complete consumer contracts at their original paths. Unread forensic
+    // collections and oversized strings move into the existing diagnostics envelope.
+    for (const [key, value] of entries) {
+      if (CONSUMER_METADATA_KEYS[key] || key.startsWith("mxLedger")
+        || key.startsWith("scheduler") || key === "childDisposition") continue;
+      if (value == null || typeof value === "number" || typeof value === "boolean"
+        || (typeof value === "string" && value.length <= MAX_DIAGNOSTIC_STRING_CHARS)) continue;
+      const summary = summarizeDiagnostic(value);
+      if (summary !== undefined) diagnostics[key] = summary;
+      delete retained[key];
+    }
+    retained.diagnostics = diagnostics;
+    compaction.retainedTopLevelDiagnostics = Object.keys(diagnostics).length;
+    compacted = JSON.stringify(retained);
+  }
+  // Trim diagnostics only, largest first. Never discard consumer evidence to make
+  // an oversized row appear valid, and never silently truncate a stale cohort.
+  for (const key of Object.keys(diagnostics).sort((a, b) =>
+    utf8Bytes(JSON.stringify(diagnostics[b])) - utf8Bytes(JSON.stringify(diagnostics[a])))) {
+    if (utf8Bytes(compacted) <= budgetBytes) break;
+    delete diagnostics[key];
+    compaction.retainedTopLevelDiagnostics--;
+    compaction.omittedTopLevelDiagnostics++;
+    compacted = JSON.stringify(retained);
+  }
+  if (utf8Bytes(compacted) > budgetBytes) {
+    // Terminal accounting must survive even when contractual evidence alone exceeds policy.
+    // Keep every consumer key and expose the exception instead of failing the terminal write.
+    compaction.overBudget = true;
+    compacted = JSON.stringify(retained);
+    console.warn("[cron-metadata] Consumer evidence exceeds persistence budget", {
+      job: job ?? "default", budgetBytes, persistedBytes: utf8Bytes(compacted),
     });
   }
-  return {
-    metadata: compacted,
-    originalBytes,
-    persistedBytes: utf8Bytes(compacted),
-    compacted: true,
-  };
+  return { metadata: compacted, originalBytes, persistedBytes: utf8Bytes(compacted), compacted: true };
 }

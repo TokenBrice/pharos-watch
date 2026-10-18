@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+
+const PAGES_ARTIFACT_DIRECTORY = "out";
 
 interface WorkerPackageRunResult {
   status?: number | null;
@@ -12,6 +14,36 @@ interface WorkerPackageRunResult {
 
 interface WorkerPackageOptions {
   run?: (command: string, args: string[], options: { cwd: string; stdio: "inherit" }) => WorkerPackageRunResult;
+}
+
+function findSourceMaps(directory: string): string[] {
+  const maps: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      maps.push(...findSourceMaps(path));
+    } else if (entry.isFile() && entry.name.endsWith(".map")) {
+      maps.push(path);
+    }
+  }
+  return maps;
+}
+
+/**
+ * `upload_source_maps = true` is a deployment-time private upload: Cloudflare
+ * retains the map for Workers Logs and never serves it. The Pages artifact is
+ * public, so a map emitted under `out/` would publish Worker source.
+ */
+function checkPrivateSourceMaps(repoRoot: string): boolean {
+  const pagesRoot = resolve(repoRoot, PAGES_ARTIFACT_DIRECTORY);
+  if (!existsSync(pagesRoot)) return true;
+  const [sourceMap] = findSourceMaps(pagesRoot);
+  if (!sourceMap) return true;
+  console.error(
+    `Pages artifact ${pagesRoot} contains a source map (${sourceMap}). ` +
+    "Worker source maps are uploaded privately by Cloudflare; never emit source maps into Pages assets.",
+  );
+  return false;
 }
 
 function checkLatin1Scripts(directory: string): boolean {
@@ -45,8 +77,66 @@ function checkLatin1Scripts(directory: string): boolean {
   return true;
 }
 
+// Inspect emitted reachability, not source import spelling: Wrangler resolves aliases
+// and dynamic imports before writing the map. Missing evidence must fail closed.
+export function checkHeavyReachability(directory: string): boolean {
+  let sourceCount = 0;
+  let valid = true;
+  function reject(path: string): void {
+    console.error(`Heavy Worker reaches forbidden HTTP/rendering source or asset: ${path}`);
+    valid = false;
+  }
+  function visit(current: string): void {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) {
+        visit(path);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (/\.(?:wasm|ttf|otf|woff2?)$/i.test(entry.name)) reject(path);
+      if (!entry.name.endsWith(".map")) continue;
+      try {
+        const map: unknown = JSON.parse(readFileSync(path, "utf8"));
+        if (
+          !map || typeof map !== "object" || !("sources" in map) ||
+          !Array.isArray(map.sources) ||
+          !map.sources.every((source: unknown) => typeof source === "string" && source.trim().length > 0)
+        ) throw new Error("missing sources array");
+        for (const source of map.sources as string[]) {
+          sourceCount++;
+          const slashed = source.replaceAll("\\", "/");
+          let offset = 0;
+          while (true) {
+            if (slashed.startsWith("./", offset)) offset += 2;
+            else if (slashed.startsWith("../", offset)) offset += 3;
+            else break;
+          }
+          const normalized = slashed.slice(offset);
+          if (
+            /(?:(?:^|\/)worker\/|^)src\/(?:api\/|routes\/|handlers\/http\/|router\.[cm]?[jt]sx?$|handlers\/scheduled\/public-runners\.[cm]?[jt]s$)/.test(normalized) ||
+            /(?:^|\/)fonts?\//.test(normalized) ||
+            /\.(?:wasm|ttf|otf|woff2?)(?:$|\?)/i.test(normalized) ||
+            /(?:^|\/)(?:@resvg|satori|yoga-wasm-web)(?:\/|$)/.test(normalized)
+          ) reject(source);
+        }
+      } catch (error) {
+        console.error(`Cannot inspect heavy Worker source map ${path}: ${String(error)}`);
+        valid = false;
+      }
+    }
+  }
+  visit(directory);
+  if (sourceCount === 0) {
+    console.error("Heavy Worker reachability evidence is missing: no nonempty source map sources.");
+    return false;
+  }
+  return valid;
+}
+
 export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {}): WorkerPackageRunResult {
   const repoRoot = process.cwd();
+  if (!checkPrivateSourceMaps(repoRoot)) return { status: 1 };
   for (const [role, config] of [["public", "wrangler.toml"], ["heavy", "wrangler.heavy.toml"]]) {
     const outputDirectory = resolve(repoRoot, `.cache/release-check/worker-bundle-${role}`);
     rmSync(outputDirectory, { force: true, recursive: true });
@@ -57,6 +147,7 @@ export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {
     );
     if (result.error || result.status !== 0) return { status: result.status ?? 1 };
     if (!checkLatin1Scripts(outputDirectory)) return { status: 1 };
+    if (role === "heavy" && !checkHeavyReachability(outputDirectory)) return { status: 1 };
   }
   return { status: 0 };
 }

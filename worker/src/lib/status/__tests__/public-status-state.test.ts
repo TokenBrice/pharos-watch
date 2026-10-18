@@ -17,6 +17,46 @@ function lateCharts(): HealthResponse {
 }
 
 describe("reconcilePublicStatusState", () => {
+  it("records a new Safety Scores component without backdating its history", async () => {
+    const { db } = fixtures.open();
+    await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());
+    const row = await db.prepare("SELECT causes_json FROM status_state WHERE scope = 'public'").first<{ causes_json: string }>();
+    const stored = JSON.parse(row!.causes_json) as {
+      components: { id: string }[];
+      componentHistoryStartedAt?: Record<string, number>;
+    };
+    stored.components = stored.components.filter((component) => component.id !== "safety-scores");
+    delete stored.componentHistoryStartedAt;
+    await db.prepare("UPDATE status_state SET causes_json = ? WHERE scope = 'public'").bind(JSON.stringify(stored)).run();
+
+    await reconcilePublicStatusState(db, NOW + 900, makeHealthyHealthResponse());
+    const history = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(history.startedAt).toBe(NOW);
+    expect(history.componentHistoryStartedAt["safety-scores"]).toBe(NOW + 900);
+    expect(history.componentHistoryStartedAt["risk-signals"]).toBe(NOW);
+    expect(history.transitions).toHaveLength(2);
+    expect(history.transitions[0].components).toEqual([]);
+  });
+
+  it("persists held and recovered Safety Scores in the public transition stream", async () => {
+    const { db } = fixtures.open();
+    const health = makeHealthyHealthResponse();
+    await reconcilePublicStatusState(db, NOW, health);
+    health.safetyScorePublication = {
+      ...health.safetyScorePublication!, status: "held",
+      attemptedAtSec: health.timestamp, heldSinceSec: health.timestamp - 10,
+      reasons: [{ code: "redemption-stale" }],
+    };
+    await reconcilePublicStatusState(db, NOW + 900, health);
+    await reconcilePublicStatusState(db, NOW + 1800, makeHealthyHealthResponse());
+    const history = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(history.transitions[1]).toMatchObject({
+      source: "public", transitionType: "degrade", headline: { state: "degraded" },
+      components: [{ id: "safety-scores", state: "degraded", reasons: ["safety-score-publication-held", "safety-score-publication-held:redemption-stale"] }],
+    });
+    expect(history.transitions[0]).toMatchObject({ transitionType: "recover", components: [] });
+  });
+
   it("persists an init row, then one row per component change, with since carried forward", async () => {
     const { db } = fixtures.open();
 
@@ -53,6 +93,36 @@ describe("reconcilePublicStatusState", () => {
 
     // Operator history never sees public rows.
     expect(await listRecentStatusTransitions(db, 50, { from: NOW - 1 })).toEqual([]);
+  });
+
+  it("records changed breaker identities once without heartbeat or ordering noise", async () => {
+    const { db } = fixtures.open();
+    const health = makeHealthyHealthResponse();
+    const open = { state: "open" as const, consecutiveFailures: 3, lastFailureAt: NOW,
+      lastSuccessAt: null, openedAt: NOW };
+    health.circuits = { "source-c": open, "source-a": open, "source-b": open };
+    await reconcilePublicStatusState(db, NOW, health);
+    health.circuits = { "source-b": { ...open, lastFailureAt: NOW + 1 }, "source-c": open, "source-a": open };
+    await reconcilePublicStatusState(db, NOW + 1, health);
+    health.circuits = { "source-a": open, "source-b": open, "source-d": open };
+    const changed = await reconcilePublicStatusState(db, NOW + 2, health);
+    expect(changed.projection.components.find((component) => component.id === "data-refresh")?.since).toBeNull();
+    const history = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(history.transitions).toHaveLength(2);
+    expect(history.transitions[0]).toMatchObject({ reason: "public-projection-causes-changed",
+      components: [expect.objectContaining({ reasons: ["upstream-circuits-open:3:source-a,source-b,source-d"] })] });
+  });
+
+  it("records a changed scheduler unavailable subreason without repeated poll events", async () => {
+    const { db } = fixtures.open();
+    const health = makeHealthyHealthResponse();
+    health.schedulerLiveness = { ...health.schedulerLiveness!, status: "unavailable", ageSeconds: null,
+      unavailableReason: "clock-invalid" };
+    await reconcilePublicStatusState(db, NOW, health);
+    health.schedulerLiveness.unavailableReason = "slot-start-query-failed";
+    await reconcilePublicStatusState(db, NOW + 1, health);
+    await reconcilePublicStatusState(db, NOW + 2, health);
+    expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(2);
   });
 
   it("ignores a persisted component this release does not know instead of resetting every since", async () => {

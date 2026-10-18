@@ -39,8 +39,8 @@ export function buildReserveRecoveryForecast(data: StatusResponse): ReserveRecov
       lastThroughput: null,
     };
   }
-  const metadata = readRecord(cron?.lastRun?.metadata);
-  const synced = readNumber(metadata?.synced) ?? cron?.lastRun?.itemCount ?? null;
+  const metadata = readRecord(cron?.latestRunFacts);
+  const synced = readNumber(metadata?.synced) ?? cron?.runs[0]?.itemCount ?? null;
   const total = readNumber(metadata?.total);
   const throughput = synced != null && synced > 0 ? synced : null;
   const estimatedRunsToClear =

@@ -450,6 +450,38 @@ describe("fetchPaginatedEvents", () => {
     });
   });
 
+  it("runs count-cache preparation, total projection and page in one atomic batch", async () => {
+    const db = mockD1([
+      { match: "SELECT 'prepare-summary'", rows: [] },
+      { match: "summary-total", rows: [{ total: 7 }] },
+      { match: "FROM depeg_events", rows: [{ id: 1 }] },
+    ]);
+    const batch = vi.spyOn(db, "batch");
+    const countStatements = [db.prepare("SELECT 'prepare-summary'"), db.prepare("SELECT 'summary-total'")];
+    const result = await fetchPaginatedEvents<{ id: number }, number>(db, {
+      tableName: "depeg_events", orderBy: "id DESC", conditions: [], filterBindings: [],
+      limit: 1, offset: 0, mapRow: (row) => row.id, countStatements,
+    });
+    expect(result).toEqual({ total: 7, events: [1] });
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(batch.mock.calls[0]?.[0]).toHaveLength(3);
+    expect(batch.mock.calls[0]?.[0].slice(0, 2)).toEqual(countStatements);
+    expect(db.getHistory().some(({ sql }) => sql.includes("COUNT(*)"))).toBe(false);
+  });
+
+  it("ignores supplied count preparation when exact totals are disabled", async () => {
+    const db = mockD1([{ match: "FROM depeg_events", rows: [{ id: 1 }] }]);
+    const batch = vi.spyOn(db, "batch");
+    const result = await fetchPaginatedEvents<{ id: number }, number>(db, {
+      tableName: "depeg_events", orderBy: "id DESC", conditions: [], filterBindings: [],
+      limit: 1, offset: 0, mapRow: (row) => row.id, includeTotal: false,
+      countStatements: [db.prepare("SELECT 'must-not-run'")],
+    });
+    expect(result).toEqual({ total: 1, totalExact: false, events: [1] });
+    expect(batch).not.toHaveBeenCalled();
+    expect(db.getHistory().some(({ sql }) => sql.includes("must-not-run"))).toBe(false);
+  });
+
   it("rejects non-allowlisted tables and malformed order clauses", async () => {
     await expect(fetchPaginatedEvents(makeNoopD1(), {
       tableName: "cache",

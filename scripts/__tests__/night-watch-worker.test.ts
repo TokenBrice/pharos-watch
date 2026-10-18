@@ -117,7 +117,7 @@ function evidence() {
               overallStatus: "degraded",
               crons: {
                 "data-invariant-canary": {
-                  lastRun: { status: "ok", startedAt: 1_782_296_900 },
+                  runs: [{ status: "ok", startedAt: 1_782_296_900 }],
                 },
               },
               canaries: {
@@ -214,7 +214,7 @@ describe("night-watch-worker", () => {
       started_at: 1_782_210_000,
       slot_started_at: 1_782_210_000,
     }];
-    snapshot.probes.status.payload.crons["data-invariant-canary"].lastRun.startedAt = 1_782_210_000;
+    snapshot.probes.status.payload.crons["data-invariant-canary"].runs[0]!.startedAt = 1_782_210_000;
 
     const coverage = buildNightWatchCoverage(
       testEvidence.scheduleMatrix,

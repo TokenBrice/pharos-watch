@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { URL as NodeURL } from "node:url";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { loadProducerHeads, prepareProducerOutcomeStatements, pruneProducerHistory, recordProducerOutcome, utcCalendarMonth } from "../producer-history";
 import { recordBudgetSurfaceTelemetry } from "../budget-surface-telemetry";
@@ -19,7 +21,7 @@ describe("producer history", () => {
     expect(statements).toHaveLength(3);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_producer_history").get()).toEqual({ count: 0 });
     await db.batch(statements);
-    expect(sqlite.prepare("SELECT invocation_count FROM worker_producer_heads").get()).toEqual({ invocation_count: 1 });
+    expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1, productiveCount: 1 })]);
   });
   it("separates latest invocation from latest productive publication without double-counting retries", async () => {
     const { sqlite, db } = createMigratedDb();
@@ -39,7 +41,8 @@ describe("producer history", () => {
       completedAt: 110,
       outcome: "ok",
       itemCount: 364,
-      metadata: JSON.stringify({ reconciledAt: 109, largeDiagnostic: { preview: "x".repeat(8_000) } }),
+      metadata: JSON.stringify({ reconciledAt: 109, mxLedgerV: 1, mxLedger0: "ledger-chunk",
+        largeDiagnostic: { preview: "x".repeat(8_000) } }),
       productivity: {
         productive: true,
         publications: [
@@ -109,7 +112,7 @@ describe("producer history", () => {
             WHERE idempotency_key = 'run-1'`,
         )
         .get(),
-    ).toEqual({ metadata_json: JSON.stringify({ reconciledAt: 109 }), publications_json: null });
+    ).toEqual({ metadata_json: JSON.stringify({ mxLedgerV: 1, mxLedger0: "ledger-chunk" }), publications_json: null });
     expect(
       sqlite
         .prepare(
@@ -262,6 +265,144 @@ describe("producer history", () => {
         productiveCount: 1,
       }),
     ]);
+  });
+
+  it("keeps completion writes constant and never recounts retained history", async () => {
+    const { db } = createMigratedDb();
+    const prepare = vi.spyOn(db, "prepare");
+    await recordProducerOutcome(db, {
+      scheduleKey: "quarterHourly", job: "sync-stablecoins", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "constant", idempotencyKey: "constant",
+      invokedAt: 100, completedAt: 101, outcome: "ok", productivity: { productive: true },
+    });
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare.mock.calls.every(([sql]) => !/\bCOUNT\s*\(/i.test(sql))).toBe(true);
+  });
+
+  it("reads only heads and exact counters regardless of retained history size", async () => {
+    const { db } = createMigratedDb();
+    await recordProducerOutcome(db, {
+      scheduleKey: "quarterHourly", job: "sync-stablecoins", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "counter-read", idempotencyKey: "counter-read",
+      invokedAt: 100, completedAt: 101, outcome: "ok", productivity: { productive: true },
+    });
+    const prepare = vi.spyOn(db, "prepare");
+    for (let request = 0; request < 10; request++) {
+      expect(await loadProducerHeads(db)).toEqual([
+        expect.objectContaining({ invocationCount: 1, productiveCount: 1 }),
+      ]);
+    }
+    expect(prepare).toHaveBeenCalledTimes(10);
+    for (const [sql] of prepare.mock.calls) {
+      expect(sql).toContain("LEFT JOIN worker_producer_retained_counts");
+      expect(sql).not.toMatch(/\bworker_producer_history\b|\bCOUNT\s*\(|\bGROUP BY\b/i);
+    }
+  });
+
+  it("maintains retained counters across productivity changes, identity transfers and rollbacks", async () => {
+    const { sqlite, db } = createMigratedDb();
+    await recordProducerOutcome(db, {
+      scheduleKey: "quarterHourly", job: "sync-stablecoins", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "counter-mutate", idempotencyKey: "counter-mutate",
+      invokedAt: 100, completedAt: 101, outcome: "ok", productivity: { productive: true },
+    });
+    sqlite.exec("UPDATE worker_producer_history SET productive = 0");
+    expect(await loadProducerHeads(db)).toEqual([
+      expect.objectContaining({ invocationCount: 1, productiveCount: 0 }),
+    ]);
+    sqlite.exec("BEGIN");
+    sqlite.exec("DELETE FROM worker_producer_history");
+    expect(await loadProducerHeads(db)).toEqual([
+      expect.objectContaining({ invocationCount: 0, productiveCount: 0 }),
+    ]);
+    sqlite.exec("ROLLBACK");
+    sqlite.exec(`UPDATE worker_producer_history SET schedule_key = 'other', job = 'other',
+      producer_path = 'other', producer_kind = 'budget-only', productive = 1`);
+    expect(await loadProducerHeads(db)).toEqual([
+      expect.objectContaining({ invocationCount: 0, productiveCount: 0 }),
+    ]);
+    expect(sqlite.prepare(`SELECT schedule_key, invocation_count, productive_count
+      FROM worker_producer_retained_counts ORDER BY schedule_key`).all()).toEqual([
+      { schedule_key: "other", invocation_count: 1, productive_count: 1 },
+      { schedule_key: "quarterHourly", invocation_count: 0, productive_count: 0 },
+    ]);
+    sqlite.exec("DELETE FROM worker_producer_history");
+    expect(sqlite.prepare(`SELECT SUM(invocation_count) AS invocations, SUM(productive_count) AS productive
+      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 0, productive: 0 });
+  });
+
+  it("initializes 183k existing rows with one covering-index aggregate and reapplies idempotently", () => {
+    const { sqlite } = createMigratedDb();
+    for (const name of ["insert", "delete", "productivity", "identity"]) {
+      sqlite.exec(`DROP TRIGGER trg_producer_retained_counts_${name}`);
+    }
+    sqlite.exec("DROP TABLE worker_producer_retained_counts");
+    sqlite.exec(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 183000)
+      INSERT INTO worker_producer_history (
+        idempotency_key, schedule_key, job, producer_path, producer_kind, invocation_id,
+        invoked_at, completed_at, outcome, productive, created_at
+      ) SELECT printf('backfill-%d', id), 'existing', printf('job-%d', id % 10), 'path',
+        'scheduled-job', printf('invocation-%d', id), 100, 101, 'ok', id % 2, 101 FROM n`);
+    const migration = readFileSync(new NodeURL("../../../migrations/0272_producer_history_retained_counters.sql", import.meta.url), "utf8");
+    sqlite.exec(migration);
+    expect(sqlite.prepare(`SELECT * FROM worker_producer_retained_counts ORDER BY job`).all()).toHaveLength(10);
+    expect(sqlite.prepare(`SELECT SUM(invocation_count) AS invocations, SUM(productive_count) AS productive
+      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 183000, productive: 91500 });
+    sqlite.exec("DELETE FROM worker_producer_history WHERE idempotency_key = 'backfill-1'");
+    sqlite.exec(migration);
+    expect(sqlite.prepare(`SELECT SUM(invocation_count) AS invocations, SUM(productive_count) AS productive
+      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 182999, productive: 91499 });
+  });
+
+  it("matches legacy recounts after retention deletes without another completion", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const now = 2_000_000_000;
+    const identities = [
+      { scheduleKey: "daily0300Utc", job: "regular", producerPath: "path", producerKind: "scheduled-job" },
+      { scheduleKey: "daily0300Utc", job: "budget", producerPath: "path", producerKind: "budget-only" },
+      { scheduleKey: "daily0300Utc", job: "monthly", producerPath: "path", producerKind: "scheduled-job" },
+      { scheduleKey: "daily0300Utc", job: "empty", producerPath: "path", producerKind: "scheduled-job" },
+    ];
+    for (const identity of identities) {
+      for (const [ageDays, productive] of [[600, true], [40, false], [0, true]] as const) {
+        if (identity.job === "empty" && ageDays !== 600) continue;
+        const completedAt = now - ageDays * 86_400;
+        await recordProducerOutcome(db, {
+          ...identity, invocationId: `${identity.job}-${ageDays}`, idempotencyKey: `${identity.job}-${ageDays}`,
+          invokedAt: completedAt, completedAt, outcome: "ok",
+          calendarPeriod: identity.job === "monthly" ? utcCalendarMonth(completedAt) : null,
+          productivity: { productive },
+        });
+      }
+    }
+    const before = await loadProducerHeads(db);
+    const expectLegacyCounts = async () => {
+      const heads = await loadProducerHeads(db);
+      for (const head of heads) {
+        const counts = sqlite.prepare(`SELECT COUNT(*) AS invocationCount,
+          COUNT(CASE WHEN productive = 1 THEN 1 END) AS productiveCount FROM worker_producer_history
+          WHERE schedule_key = ? AND job = ? AND producer_path = ? AND producer_kind = ?`)
+          .get(head.scheduleKey, head.job, head.producerPath, head.producerKind);
+        expect(head).toMatchObject(counts as Record<string, number>);
+      }
+      return heads;
+    };
+    expect(await expectLegacyCounts()).toEqual(before);
+    await pruneProducerHistory(db, now);
+    const after = await expectLegacyCounts();
+    expect(after.map(({ job, invocationCount, productiveCount }) => ({ job, invocationCount, productiveCount })))
+      .toEqual([
+        { job: "budget", invocationCount: 2, productiveCount: 1 },
+        { job: "empty", invocationCount: 0, productiveCount: 0 },
+        { job: "monthly", invocationCount: 2, productiveCount: 1 },
+        { job: "regular", invocationCount: 1, productiveCount: 1 },
+      ]);
+    expect(after.map(({ invocationCount: _invocations, productiveCount: _productive, ...head }) => head))
+      .toEqual(before.map(({ invocationCount: _invocations, productiveCount: _productive, ...head }) => head));
+    // More than D1's positional-parameter budget still uses one JSON identity binding.
+    expect(await loadProducerHeads(db, Array.from({ length: 40 }, () => identities[0]!)))
+      .toEqual(after.filter((head) => head.job === "regular"));
+    expect(await loadProducerHeads(db, [])).toEqual([]);
   });
 
   it("retains budget and calendar history beyond the regular window", async () => {

@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 import type { HealthResponse, PublicStatusHistoryResponse } from "@shared/types";
+import { PUBLIC_STATUS_COMPONENT_IDS } from "@shared/types/status";
 
 const { useHealthMock, useHistoryMock, useProbesMock } = vi.hoisted(() => ({
   useHealthMock: vi.fn(),
@@ -30,6 +31,7 @@ const emptyHistory: PublicStatusHistoryResponse = {
   lastChangedAt: null,
   transitions: [],
   publicHistoryStartedAt: 1_780_000_000,
+  componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, 1_780_000_000])),
   hasMore: false,
 };
 
@@ -59,6 +61,20 @@ afterEach(() => {
 });
 
 describe("public verdict", () => {
+  it("renders held Safety Scores as a separate degraded row", () => {
+    const health = makeHealthyHealthResponse();
+    health.safetyScorePublication = {
+      ...health.safetyScorePublication!, status: "held",
+      attemptedAtSec: health.timestamp, heldSinceSec: health.timestamp - 60,
+      reasons: [{ code: "redemption-stale" }],
+    };
+    mockHealth(health);
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByRole("heading", { name: "Degraded: Safety Scores" })).toBeTruthy();
+    expect(within(screen.getByTestId("public-component-safety-scores")).getByText("Degraded")).toBeTruthy();
+    expect(within(screen.getByTestId("public-component-risk-signals")).getByText("Operational")).toBeTruthy();
+  });
+
   it("reads the worker headline and keeps operational quiet", () => {
     mockHealth({
       ...makeHealthyHealthResponse(),

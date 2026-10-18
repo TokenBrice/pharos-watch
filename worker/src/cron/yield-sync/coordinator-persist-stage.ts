@@ -148,6 +148,18 @@ export async function runYieldCoordinatorPersistStage(
   return {
     itemCount: publicationResult.updatedCount,
     status,
+    productivity: {
+      productive: publicationApplied,
+      reason: publicationApplied ? "yield-rankings-published" : publicationResult.skipReason ?? "yield-publication-not-applied",
+      publications: publicationApplied ? [{
+        surface: "yield-rankings",
+        generationId: publicationResult.generationId,
+        publishedAt: fetched.startSec,
+        candidateRows: health.previewRankingsPayload.rankings.length,
+        publishedRows: health.currentPublishedRankingCount,
+        artifactCacheKey: "yield-rankings",
+      }] : [],
+    },
     metadata: buildYieldSyncMetadata({
       rowsRead: fetched.yieldCoins.length,
       rowsWritten: publicationResult.updatedCount,

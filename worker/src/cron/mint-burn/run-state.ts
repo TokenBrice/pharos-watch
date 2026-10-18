@@ -1,5 +1,7 @@
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { normalizeStringSet } from "../../lib/normalizers";
+import type { MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { getCache, setCache } from "../../lib/db-cache";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -140,8 +142,21 @@ export function shouldDeferConfig(apiErrors: number, coverage: number | null): b
 }
 
 const ATTEMPT_STATE_VERSION = 1;
-const ATTEMPT_SLO_SEC = 75 * 60;
 const ATTEMPT_METADATA_SAMPLE_LIMIT = 6;
+
+/**
+ * Expected window for one complete extended pass, expressed in the lane's own
+ * trigger intervals (the cadence authority owns the seconds).
+ *
+ * MB-1 (2026-10-18): the extended roster is 129 configs and the 200-request
+ * global budget lets a run attempt only 39–44 of them, so a pass needs
+ * ceil(129/39) = 4 run intervals; the observed start-to-finish span was ~96 min.
+ * Four intervals (120 min) keeps ~25 % margin over that measurement, including
+ * the ~132 s/run slowdown regime, without reverting to a per-config clock.
+ */
+const EXTENDED_PASS_INTERVALS = 4;
+export const MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC =
+  EXTENDED_PASS_INTERVALS * CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended.intervalSec;
 
 interface MintBurnAttemptStateEntry {
   firstObservedAt: number;
@@ -150,10 +165,40 @@ interface MintBurnAttemptStateEntry {
   providerDeferredUntil: number | null;
 }
 
+/**
+ * Full-pass bookkeeping for the extended lane, persisted beside the per-config
+ * entries. A pass starts at `startedAt` and completes when every enabled config
+ * has been attempted (or was already up to date) since then.
+ */
+interface MintBurnCoverageCycleState {
+  startedAt: number;
+  lastCompletedAt: number | null;
+  lastDurationSec: number | null;
+}
+
 interface MintBurnAttemptState {
   version: typeof ATTEMPT_STATE_VERSION;
   updatedAt: number;
   entries: Record<string, MintBurnAttemptStateEntry>;
+  cycle?: MintBurnCoverageCycleState;
+}
+
+export type MintBurnCoverageCycleStatus = "cycle-in-progress" | "complete" | "stalled";
+
+/**
+ * The extended lane's coverage verdict. `cycle-in-progress` is neutral: no full
+ * pass has completed since state began, so there is no healthy cycle to prove
+ * yet. `complete` means a full pass has finished and the running pass is still
+ * inside the window. `stalled` means a full pass did not complete in time.
+ */
+export interface MintBurnCoverageCycleSummary {
+  status: MintBurnCoverageCycleStatus;
+  expectedWindowSec: number;
+  coverageCycleSec: number | null;
+  cycleElapsedSec: number;
+  lastCompletedAt: number | null;
+  incompleteConfigs: number;
+  providerDeferredConfigs: number;
 }
 
 export interface MintBurnAttemptCoverageSummary {
@@ -162,9 +207,7 @@ export interface MintBurnAttemptCoverageSummary {
   attemptedThisRun: number;
   providerDeferredThisRun: number;
   neverAttemptedCount: number;
-  staleAttemptCount: number;
   oldestAttemptAgeSec: number | null;
-  twoCycleCoverageSatisfied: boolean;
   laggingAttemptSamples: Array<{
     key: string;
     ageSec: number;
@@ -172,6 +215,29 @@ export interface MintBurnAttemptCoverageSummary {
     providerDeferredUntil: number | null;
   }>;
   persistenceFailed: boolean;
+}
+
+export interface MintBurnAttemptStateUpdate {
+  summary: MintBurnAttemptCoverageSummary;
+  coverageCycle: MintBurnCoverageCycleSummary | null;
+}
+
+/** A malformed cached cycle restarts the pass instead of publishing NaN arithmetic. */
+function parseCoverageCycle(value: unknown): MintBurnCoverageCycleState | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<MintBurnCoverageCycleState>;
+  if (typeof candidate.startedAt !== "number" || !Number.isFinite(candidate.startedAt)) return null;
+  return {
+    startedAt: candidate.startedAt,
+    lastCompletedAt:
+      typeof candidate.lastCompletedAt === "number" && Number.isFinite(candidate.lastCompletedAt)
+        ? candidate.lastCompletedAt
+        : null,
+    lastDurationSec:
+      typeof candidate.lastDurationSec === "number" && Number.isFinite(candidate.lastDurationSec)
+        ? candidate.lastDurationSec
+        : null,
+  };
 }
 
 function parseAttemptState(value: string | undefined): MintBurnAttemptState | null {
@@ -186,6 +252,7 @@ function parseAttemptState(value: string | undefined): MintBurnAttemptState | nu
 export async function updateMintBurnAttemptState(input: {
   db: D1Database;
   jobName: string;
+  lane: MintBurnLane;
   enabledConfigKeys: readonly string[];
   configBreakdown: ReadonlyArray<{
     key: string;
@@ -194,7 +261,7 @@ export async function updateMintBurnAttemptState(input: {
   }>;
   activeProviderDeferrals: ReadonlyMap<string, number>;
   nowSec: number;
-}): Promise<MintBurnAttemptCoverageSummary> {
+}): Promise<MintBurnAttemptStateUpdate> {
   const stateCacheKey = `mint-burn:attempt-state:${input.jobName}`;
   let state: MintBurnAttemptState = {
     version: ATTEMPT_STATE_VERSION,
@@ -263,7 +330,53 @@ export async function updateMintBurnAttemptState(input: {
   const neverAttemptedCount = input.enabledConfigKeys.filter(
     (key) => state.entries[key]?.lastAttemptedAt == null,
   ).length;
-  const staleAttemptCount = lagging.filter((entry) => entry.ageSec > ATTEMPT_SLO_SEC).length;
+
+  // Extended-lane verdict: a full pass (every enabled config attempted) replaces
+  // the fixed per-config age latch. The critical lane keeps its own coverage rules
+  // and no cycle state.
+  let coverageCycle: MintBurnCoverageCycleSummary | null = null;
+  if (input.lane === "extended") {
+    const cycle = parseCoverageCycle(state.cycle) ?? {
+      startedAt: input.nowSec,
+      lastCompletedAt: null,
+      lastDurationSec: null,
+    };
+    const incompleteConfigs = input.enabledConfigKeys.filter((key) => {
+      const entry = state.entries[key];
+      // ADR-29: absent or never-attempted evidence is not coverage. A provider
+      // deferral is recorded evidence, not an attempt, so it cannot complete the
+      // pass either — only an observed attempt (including a proven up-to-date
+      // scan) inside the cycle does.
+      if (!entry || entry.lastAttemptedAt == null) return true;
+      return entry.lastAttemptedAt < cycle.startedAt;
+    }).length;
+    const providerDeferredConfigs = input.enabledConfigKeys.filter(
+      (key) => ((state.entries[key]?.providerDeferredUntil ?? 0) > input.nowSec),
+    ).length;
+
+    if (incompleteConfigs === 0) {
+      cycle.lastDurationSec = Math.max(0, input.nowSec - cycle.startedAt);
+      cycle.lastCompletedAt = input.nowSec;
+      cycle.startedAt = input.nowSec;
+    }
+    state.cycle = cycle;
+
+    const cycleElapsedSec = Math.max(0, input.nowSec - cycle.startedAt);
+    const stalled = incompleteConfigs > 0 && cycleElapsedSec > MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC;
+    coverageCycle = {
+      status: stalled
+        ? "stalled"
+        : cycle.lastCompletedAt == null
+          ? "cycle-in-progress"
+          : "complete",
+      expectedWindowSec: MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC,
+      coverageCycleSec: cycle.lastDurationSec,
+      cycleElapsedSec,
+      lastCompletedAt: cycle.lastCompletedAt,
+      incompleteConfigs,
+      providerDeferredConfigs,
+    };
+  }
 
   try {
     await setCache(input.db, stateCacheKey, JSON.stringify(state));
@@ -280,15 +393,13 @@ export async function updateMintBurnAttemptState(input: {
     });
   }
 
-  return {
+  const summary: MintBurnAttemptCoverageSummary = {
     stateCacheKey,
     expectedConfigs: input.enabledConfigKeys.length,
     attemptedThisRun,
     providerDeferredThisRun,
     neverAttemptedCount,
-    staleAttemptCount,
     oldestAttemptAgeSec: lagging[0]?.ageSec ?? null,
-    twoCycleCoverageSatisfied: staleAttemptCount === 0,
     laggingAttemptSamples: lagging.slice(0, ATTEMPT_METADATA_SAMPLE_LIMIT).map(({ key, ageSec, entry }) => ({
       key,
       ageSec,
@@ -297,6 +408,7 @@ export async function updateMintBurnAttemptState(input: {
     })),
     persistenceFailed,
   };
+  return { summary, coverageCycle };
 }
 
 export async function persistMintBurnRunDrilldown(input: {

@@ -208,6 +208,16 @@ vi.mock("../dex-liquidity/scoring-stage", async () => {
         poolState: decoded.poolState,
       };
     }),
+    loadDexLiquidityScoringStageWhenReady: vi.fn(async () => {
+      const decoded = actual.decodeDexLiquidityScoringStageChunks(scoringStage.chunks);
+      return {
+        generationId: `dex-liquidity-scoring-stage:${scoringStage.sourceSlotStartedAt}`,
+        sourceSlotStartedAt: scoringStage.sourceSlotStartedAt,
+        syncStartSec: scoringStage.syncStartSec,
+        sourceState: decoded.sourceState,
+        poolState: decoded.poolState,
+      };
+    }),
     markDexLiquidityScoringStageConsumed: vi.fn(async () => {}),
   };
 });
@@ -262,12 +272,13 @@ import {
 } from "@shared/lib/cron-jobs";
 import {
   consumeDexLiquidityScoringStage,
-  reuseCurrentDexLiquidityScoringGeneration,
+  decideDexLiquiditySourceSlot,
   stageDexLiquidityScoring,
 } from "../dex-liquidity/orchestrator";
 import {
   MissingDexLiquidityScoringStageError,
   loadDexLiquidityScoringStage,
+  loadDexLiquidityScoringStageWhenReady,
   markDexLiquidityScoringStageConsumed,
   persistDexLiquidityScoringStage,
 } from "../dex-liquidity/scoring-stage";
@@ -362,6 +373,29 @@ describe("dex liquidity scoring stage cycle", () => {
     vi.mocked(convertToGtNewPools).mockReturnValue(new Map());
     vi.mocked(extractPriceObservations).mockReturnValue(new Map());
     vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
+  });
+
+  it("overlaps only the independent serial CL capture families and settles them before staging", async () => {
+    const v4Started = deferred<void>();
+    const quoterFinished = deferred<void>();
+    const order: string[] = [];
+    vi.spyOn(quoterEnrichment, "enrichQuoterV2ExecutionTargets").mockImplementationOnce(async () => {
+      order.push("quoter-start");
+      await v4Started.promise;
+      order.push("quoter-end");
+      quoterFinished.resolve();
+      return { exactPoolCount: 0, exactCapableAssets: [], telemetry: [] };
+    });
+    vi.spyOn(v4Enrichment, "enrichUniswapV4ExecutionTargets").mockImplementationOnce(async () => {
+      order.push("v4-start");
+      v4Started.resolve();
+      await quoterFinished.promise;
+      order.push("v4-end");
+      return [];
+    });
+    await stageDexLiquidityScoring(db, "graph-key");
+    expect(order).toEqual(["quoter-start", "v4-start", "quoter-end", "v4-end"]);
+    expect(persistDexLiquidityScoringStage).toHaveBeenCalledOnce();
   });
 
   it("evaluates late source-stage exact captures at the consumer clock without restamping registry volume", async () => {
@@ -740,7 +774,7 @@ describe("dex liquidity scoring stage cycle", () => {
     await consumeDexLiquidityScoringStage(db, undefined, undefined, consumerSlot);
 
     expect(consumerSlot - DEX_LIQUIDITY_STAGE_LEAD_SEC).toBe(sourceSlot);
-    expect(loadDexLiquidityScoringStage).toHaveBeenLastCalledWith(
+    expect(loadDexLiquidityScoringStageWhenReady).toHaveBeenLastCalledWith(
       expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }),
       expect.objectContaining({ expectedSourceSlotStartedAt: sourceSlot }),
       undefined,
@@ -763,31 +797,6 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("active-and-shadow");
   });
 
-  it("returns explicit neutral and degraded results when reusing a scoring generation", async () => {
-    vi.mocked(loadCurrentDexScoringGenerationId)
-      .mockResolvedValueOnce("dex-liquidity-current")
-      .mockResolvedValueOnce(null);
-
-    const reused = await reuseCurrentDexLiquidityScoringGeneration(db);
-    const missing = await reuseCurrentDexLiquidityScoringGeneration(db);
-
-    expect(reused).toMatchObject({
-      status: "skipped_neutral",
-      productivity: { productive: false, reason: "liquidity-cadence-reuse" },
-    });
-    expect(JSON.parse(reused.metadata ?? "{}")).toMatchObject({
-      cadenceReuse: true,
-      persistence: { generationId: "dex-liquidity-current", skipped: false },
-    });
-    expect(missing).toMatchObject({
-      status: "degraded",
-      productivity: { productive: false, reason: "current-dex-liquidity-generation-missing" },
-    });
-    expect(JSON.parse(missing.metadata ?? "{}")).toMatchObject({
-      reason: "current-dex-liquidity-generation-missing",
-      persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" },
-    });
-  });
 
 
   it("accepts compacted production-scale primary rows while reporting raw counts", async () => {
@@ -1493,6 +1502,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.setSystemTime(scheduledAtMs);
     vi.clearAllMocks();
     phaseFixtures.reset();
+    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
     // The producer, its persistence, its loader, and its consumption marker run
     // for real against SQLite here; only the scoring/publication stages stay mocked.
     vi.mocked(persistDexLiquidityScoringStage).mockImplementation(
@@ -1501,9 +1511,73 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.mocked(loadDexLiquidityScoringStage).mockImplementation(
       actualScoringStage.loadDexLiquidityScoringStage,
     );
+    vi.mocked(loadDexLiquidityScoringStageWhenReady).mockImplementation(
+      actualScoringStage.loadDexLiquidityScoringStageWhenReady,
+    );
     vi.mocked(markDexLiquidityScoringStageConsumed).mockImplementation(
       actualScoringStage.markDexLiquidityScoringStageConsumed,
     );
+  });
+
+  it.each([
+    ["writing", true, null, false, "wait"],
+    ["failed", true, null, true, "wait"],
+    ["failed", false, null, false, "recover"],
+    ["missing", false, null, true, "recover"],
+    ["ready", false, null, false, "consume"],
+    ["consumed", false, "dex-liquidity-10", false, "reuse"],
+    ["ready", false, "dex-liquidity-10", false, "reuse"],
+  ] as const)("decides source state %s with live=%s and accepted=%s", (manifestState, activeStageRun, accepted, expired, action) => {
+    expect(decideDexLiquiditySourceSlot({
+      manifestState, activeStageRun, syncStartedAt: 10, lastStageRunStatus: null,
+    }, accepted, expired)).toMatchObject({ action });
+  });
+
+  it("consumes ready output once across both ticks and retries of :16", async () => {
+    const harness = openHarness();
+    await stageHourGeneration(harness);
+    await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot);
+    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(`dex-liquidity-${Math.floor(scheduledAtMs / 1_000)}`);
+    for (const slot of [consumerSlot, halfHourSlot]) {
+      const result = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, slot);
+      expect(result.status).toBe("skipped_neutral");
+      expect(JSON.parse(result.metadata ?? "{}").reason).toBe("liquidity-cadence-reuse");
+    }
+    expect(persistScores).toHaveBeenCalledOnce();
+    expect(markDexLiquidityScoringStageConsumed).toHaveBeenCalledOnce();
+  });
+
+  it("reuses accepted output when the consumed marker failed without rescoring", async () => {
+    const harness = openHarness();
+    await stageHourGeneration(harness);
+    vi.mocked(markDexLiquidityScoringStageConsumed).mockRejectedValueOnce(new Error("marker unavailable"));
+    await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot);
+    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(`dex-liquidity-${Math.floor(scheduledAtMs / 1_000)}`);
+    const result = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, halfHourSlot);
+    expect(result.status).toBe("skipped_neutral");
+    expect(persistScores).toHaveBeenCalledOnce();
+  });
+
+  it("leaves a source ready when a candidate is rejected by source guards", async () => {
+    const harness = openHarness();
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({ ...phaseFixtures.current.primary, dlProtocolsAvailable: false });
+    await stageHourGeneration(harness);
+    await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot);
+    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
+    expect(harness.sqlite.prepare(
+      `SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`,
+    ).get(sourceSlot)).toEqual({ state: "ready" });
+  });
+
+  it("refuses recovery after its inherited invocation deadline before claiming the source lease", async () => {
+    const harness = openHarness();
+    recordStageRunError(harness);
+    await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      deadline: createSlotDeadline(Date.now() - 900_000),
+      stageRecovery: { graphApiKey: "heavy-graph-key" },
+    })).rejects.toThrow("invocation-deadline-exhausted");
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
   });
 
   it.each(["publication", "reuse"] as const)("passes the %s event deadline through recovery without using the old source slot", async (mode) => {
@@ -1522,7 +1596,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     if (mode === "publication") {
       await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, options);
     } else {
-      await reuseCurrentDexLiquidityScoringGeneration(harness.db, undefined, undefined, halfHourSlot, options);
+      await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, halfHourSlot, options);
     }
     for (const enrichment of [v2, quoter, v4]) {
       expect(enrichment).toHaveBeenCalledTimes(1);
@@ -1601,7 +1675,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     });
   });
 
-  it.each([null, "", "   "])("refuses missing-stage recovery without Graph credentials (%j) before any producer writes", async (graphApiKey) => {
+  it.each([null, "", "   "])("refuses misconfigured caller recovery without Graph (%j), not a heavy role restriction", async (graphApiKey) => {
     const harness = openHarness();
 
     await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
@@ -1652,27 +1726,21 @@ describe("dex liquidity stage same-hour recovery", () => {
     ).get(sourceSlot)).toEqual({ state: "consumed" });
   });
 
-  it("reuses the prior generation at the half-hour tick when recovery lacks Graph credentials", async () => {
+  it("recovers inline with heavy's configured Graph key at the half-hour tick", async () => {
     const harness = openHarness();
     recordStageRunError(harness);
     vi.setSystemTime(halfHourSlot * 1_000);
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue("dex-liquidity-current");
-
-    const result = await reuseCurrentDexLiquidityScoringGeneration(
+    const result = await consumeDexLiquidityScoringStage(
       harness.db, undefined, undefined, halfHourSlot,
-      { stageRecovery: { graphApiKey: null } },
+      { stageRecovery: { graphApiKey: "heavy-graph-key" } },
     );
-
-    expect(result.status).toBe("skipped_neutral");
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      cadenceReuse: true,
-      persistence: { generationId: "dex-liquidity-current" },
-    });
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
+    expect(result.status).toBe("ok");
+    expect(fetchDataSources).toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).toHaveBeenCalledOnce();
+    expect(JSON.parse(result.metadata ?? "{}").stageRecovery).toMatchObject({ reason: "stage-run-errored" });
     expect(harness.sqlite.prepare(
-      `SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages`,
-    ).get()).toEqual({ count: 0 });
+      `SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`,
+    ).get(sourceSlot)).toEqual({ state: "consumed" });
   });
 
   it("fails fast with a machine-readable reason when a terminal stage has no recovery", async () => {
@@ -1791,7 +1859,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.mocked(fetchDataSources).mockClear();
     vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
 
-    const result = await reuseCurrentDexLiquidityScoringGeneration(
+    const result = await consumeDexLiquidityScoringStage(
       harness.db,
       undefined,
       undefined,
@@ -1821,7 +1889,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     recordStageRunError(harness);
     vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
 
-    const result = await reuseCurrentDexLiquidityScoringGeneration(
+    const result = await consumeDexLiquidityScoringStage(
       harness.db,
       undefined,
       undefined,
@@ -1850,7 +1918,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue("dex-liquidity-current");
     vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
 
-    const result = await reuseCurrentDexLiquidityScoringGeneration(
+    const result = await consumeDexLiquidityScoringStage(
       harness.db,
       undefined,
       undefined,

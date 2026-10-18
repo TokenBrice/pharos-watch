@@ -14,6 +14,7 @@ import { computeRawStatus } from "../lib/status-evaluation";
 import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthEvidenceReadFailures } from "../lib/public-health-assessment";
 import { reconcilePublicStatusState } from "../lib/status/public-status-state";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
+import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, writeStatusPublicHealthSnapshot } from "../lib/status/public-health-snapshot";
 import { loadStatusSupplements } from "../lib/status/supplements";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { route } from "../router";
@@ -30,6 +31,7 @@ import type { WorkerCanaryMode } from "../lib/canary-checks";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
 import { refreshD1TableGrowthSnapshot } from "../lib/status/d1-usage";
 import { getCache, setCache } from "../lib/db-cache";
+import { createD1CostTracker } from "../lib/d1-cost";
 
 interface ProbeResult {
   path: string;
@@ -683,6 +685,8 @@ async function collectStatusSelfCheckProbes(
 }
 
 export async function runStatusSelfCheck(db: D1Database, options: StatusSelfCheckOptions = {}): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded", "external-http-d1-excluded"]);
+  db = d1Cost.db;
   const now = Math.floor(Date.now() / 1000);
   await options.reportProgress?.({ stage: "d1-capacity" });
   const d1CapacityMonitoring = options.d1StatusConfig
@@ -802,10 +806,9 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const publicStatus = await reconcilePublicStatusState(db, now, publicHealthBody,
     () => failedOutputs.add("status_state:public"));
   if (!publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
-  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw, {
-    publicHealth: { ...publicHealthBody, ...publicStatus.projection },
-    supplements,
-  });
+  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw, { supplements });
+  const publicHealthSnapshotPersistenceSucceeded = await writeStatusPublicHealthSnapshot(db, now,
+    { ...publicHealthBody, ...publicStatus.projection });
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
   const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure,
@@ -814,6 +817,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   if (!probePersistenceSucceeded) failedOutputs.add("status_probe_runs");
   if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
   if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");
+  if (!publicHealthSnapshotPersistenceSucceeded) failedOutputs.add(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY);
   if (!discrepancyState.persistenceSucceeded) failedOutputs.add("status_discrepancy_state");
   const evidenceReadFailures = [
     ...(raw.dbHealthy === false ? ["db-unavailable"] : []),
@@ -831,6 +835,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     status: reason ? "degraded" : "ok",
     itemCount: sampleCount,
     metadata: JSON.stringify({
+      d1Cost: d1Cost.snapshot(),
       outputPublishedAt: failedOutputs.size === 0 ? now : null,
       failedOutputs: [...failedOutputs],
       evidenceReadFailures,
@@ -850,6 +855,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       probePersistenceSucceeded,
       statusPersistenceSucceeded,
       rawSnapshotPersistenceSucceeded,
+      publicHealthSnapshotPersistenceSucceeded,
       discrepancyPersistenceSucceeded: discrepancyState.persistenceSucceeded,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,

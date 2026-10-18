@@ -9,6 +9,7 @@ import {
   getCircuitImpactStatus,
   getOverallCacheImpactStatus,
   getPublicMintBurnStatus,
+  getPublicSafetyScoreStatus,
   maxPublicStatus,
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
@@ -16,6 +17,7 @@ import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
+import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type {
   ActivePriceCoverageHealth,
   CacheStatus,
@@ -24,6 +26,7 @@ import type {
   StablecoinPublicationHealth,
 } from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-freshness";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
   BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
@@ -120,6 +123,8 @@ export interface PublicHealthAssessment {
   yieldSafetyQueryFailed?: boolean;
   yieldSafetyQueryErrors?: YieldSafetyQueryErrors;
   d1CapacityQueryError: string | null;
+  safetyScorePublication?: HealthResponse["safetyScorePublication"];
+  safetyScorePublicationUnavailableReason?: string | null;
   stablecoinPublication: StablecoinPublicationHealth;
   stablecoinPublicationImpactStatus: HealthResponse["status"];
   activePriceCoverage: ActivePriceCoverageHealth;
@@ -141,6 +146,7 @@ export function getPublicHealthEvidenceReadFailures(assessment: PublicHealthAsse
       ["yield-safety", assessment.yieldSafetyQueryFailed && !assessment.yieldSafetyQueryErrors ? "read-failed" : null],
       ["yield-safety-live-identity", assessment.yieldSafetyQueryErrors?.liveIdentity],
       ["yield-safety-publication-health", assessment.yieldSafetyQueryErrors?.publicationHealth],
+      ["safety-score-publication", assessment.safetyScorePublicationUnavailableReason === "safety-score-publication-read-failed" ? "read-failed" : null],
       ["mint-burn-output", assessment.mintBurn.queryErrors?.latestSuccessfulSyncAt],
       ["mint-burn-count", assessment.mintBurn.queryErrors?.rowCount],
     ].filter(([, error]) => error != null).map(([source]) => `${source}:read-failed`),
@@ -165,6 +171,8 @@ export function buildPublicHealthResponse(
     circuitsUnavailableReason: assessment.circuitsUnavailableReason ?? null,
     stablecoinPublication: assessment.stablecoinPublication,
     activePriceCoverage: assessment.activePriceCoverage,
+    safetyScorePublication: assessment.safetyScorePublication ?? null,
+    safetyScorePublicationUnavailableReason: assessment.safetyScorePublicationUnavailableReason ?? null,
     schedulerLiveness: assessment.schedulerLiveness,
   };
   return { ...body, ...projectPublicStatus(body) };
@@ -476,6 +484,7 @@ async function assessYieldSafetyAvailability(
   db: D1Database,
   now: number,
   logPrefix: string,
+  publicationHealthRead: Promise<PublicHealthReadResult<V9PublicationHealth | null>>,
 ): Promise<YieldSafetyAvailability> {
   try {
     const row = await db
@@ -510,15 +519,7 @@ async function assessYieldSafetyAvailability(
         },
         () => loadSafetyScoreV9PublicationIdentityEnvelope(db),
       ),
-      capturePublicHealthRead(
-        {
-          event: "yield_safety_publication_health_read_failed",
-          source: "yield-safety-publication-health",
-          message: "Yield safety publication health unavailable.",
-          reason: "yield-safety-publication-health-read-failed",
-        },
-        () => loadSafetyScoreV9PublicationHealth(db),
-      ),
+      publicationHealthRead,
     ]);
     if (!liveResult.ok || !healthResult.ok) {
       return {
@@ -527,7 +528,7 @@ async function assessYieldSafetyAvailability(
         queryFailed: true,
         queryErrors: {
           liveIdentity: liveResult.error,
-          publicationHealth: healthResult.error,
+          publicationHealth: healthResult.ok ? null : "yield-safety-publication-health-read-failed",
         },
       };
     }
@@ -614,12 +615,24 @@ export async function assessPublicHealth(
       stablecoinPublication: unknownStablecoinPublicationHealth(),
       stablecoinPublicationImpactStatus: "healthy",
       activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
+      safetyScorePublication: null,
+      safetyScorePublicationUnavailableReason: "db-unavailable",
       activePriceCoverageImpactStatus: "healthy",
       schedulerLiveness,
       schedulerLivenessImpactStatus,
     };
   }
 
+  // Assess Safety Scores even when yield has no stamped scores, reusing this read.
+  const publicationHealthRead = capturePublicHealthRead(
+    {
+      event: "safety_score_publication_health_read_failed",
+      source: "safety-score-publication",
+      message: "Safety Score publication health unavailable.",
+      reason: "safety-score-publication-read-failed",
+    },
+    () => loadSafetyScoreV9PublicationHealth(db),
+  );
   const [
     cacheAssessment,
     blacklistResult,
@@ -628,6 +641,7 @@ export async function assessPublicHealth(
     d1CapacityResult,
     stablecoinCoverageResult,
     yieldSafetyAvailability,
+    safetyScoreResult,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
     queryBlacklistGapMetrics(db, now, {
@@ -684,7 +698,8 @@ export async function assessPublicHealth(
       },
       () => loadStablecoinCoverageHealth(db, now),
     ),
-    assessYieldSafetyAvailability(db, now, logPrefix),
+    assessYieldSafetyAvailability(db, now, logPrefix, publicationHealthRead),
+    publicationHealthRead,
   ]);
   const { publication: stablecoinPublication, activePriceCoverage } = stablecoinCoverageResult.ok
     ? stablecoinCoverageResult.value
@@ -692,6 +707,19 @@ export async function assessPublicHealth(
         publication: unknownStablecoinPublicationHealth(),
         activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
       };
+  const acceptedTimestamp = assessFreshnessTimestamp(now, safetyScoreResult.value?.acceptedAtSec);
+  const safetyScorePublicationUnavailableReason = !safetyScoreResult.ok
+    ? "safety-score-publication-read-failed"
+    : !safetyScoreResult.value
+      ? "safety-score-publication-unavailable"
+      : acceptedTimestamp.reason && safetyScoreResult.value.acceptedAtSec != null
+        ? `safety-score-publication:${acceptedTimestamp.reason}`
+        : null;
+  const safetyScorePublication = safetyScorePublicationUnavailableReason ? null : safetyScoreResult.value;
+  const safetyScoreImpactStatus = getPublicSafetyScoreStatus(safetyScorePublication, now);
+  if (safetyScorePublicationUnavailableReason) warnings.push(safetyScorePublicationUnavailableReason);
+  else if (safetyScorePublication?.status === "held") warnings.push("safety-score-publication-held");
+  else if (safetyScoreImpactStatus !== "healthy") warnings.push("safety-score-publication-stale");
   if (stablecoinCoverageResult.error) {
     warnings.push("stablecoin-coverage-query-failed");
   }
@@ -837,6 +865,7 @@ export async function assessPublicHealth(
     stablecoinPublicationImpactStatus,
     activePriceCoverageImpactStatus,
     yieldSafetyAvailability.impactStatus,
+    safetyScoreImpactStatus,
     schedulerLivenessImpactStatus,
   );
 
@@ -871,6 +900,8 @@ export async function assessPublicHealth(
     d1CapacityQueryFailed: d1CapacityResult.reason === "query-failed",
     yieldSafetyQueryFailed: yieldSafetyAvailability.queryFailed === true,
     ...(yieldSafetyAvailability.queryErrors ? { yieldSafetyQueryErrors: yieldSafetyAvailability.queryErrors } : {}),
+    safetyScorePublication,
+    safetyScorePublicationUnavailableReason,
     stablecoinPublication,
     stablecoinPublicationImpactStatus,
     activePriceCoverage,

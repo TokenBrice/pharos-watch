@@ -721,6 +721,15 @@ function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly 
     if (!executor.hasTable(target)) {
       throw new Error(`seeded pre-migration fixture target does not exist: ${target}`);
     }
+    if (target === "cache") {
+      executor.execute(`
+        INSERT INTO cache (key, value, updated_at)
+        VALUES ('depeg-events:counts:v1', '[{"stablecoinId":"usdt-tether","active":1,"total":1}]', 1);
+        INSERT INTO cache (key, value, updated_at)
+        VALUES ('migration-gate-unrelated-cache', '{"retained":true}', 1);
+      `);
+      continue;
+    }
     if (target === "cron_runs") {
       executor.execute(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('migration-gate-fixture', 1, 0, 'ok');",

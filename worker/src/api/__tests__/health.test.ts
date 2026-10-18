@@ -4,8 +4,8 @@ import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { handleHealth } from "../health";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { buildStatusD1Scenario, cleanupStatusTest, makeRawStatusSnapshotRow } from "./status.test-support";
-import { STATUS_RAW_SNAPSHOT_CACHE_KEY } from "../../lib/status/raw-snapshot";
+import { buildStatusD1Scenario, cleanupStatusTest } from "./status.test-support";
+import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/public-health-snapshot";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { HealthResponse } from "@shared/types/status";
 import { loadStablecoinsPublicationContinuity } from "../../cron/sync-stablecoins/publication";
@@ -26,6 +26,14 @@ type HealthDbOptions = {
   producerCronRows?: Record<string, unknown>[];
   producerCronError?: unknown;
 };
+
+function makePublicHealthSnapshotRow(now: number, publicHealth: HealthResponse) {
+  return {
+    key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
+    updated_at: now - 60,
+    value: JSON.stringify({ version: 1, producedAt: now - 60, publicHealth }),
+  };
+}
 
 const STABLECOIN_COVERAGE_QUERY_MATCH =
   "metadata LIKE '%\"activePublicationCoverage\"%'";
@@ -180,6 +188,18 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         updated_at: now,
       },
     }]),
+    ...(extras.some((entry) => entry.matchBinds?.includes("report-cards:v9:publication-health")) ? [] : [{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["report-cards:v9:publication-health"],
+      rows: [],
+      first: {
+        value: stableJsonStringifyV1({
+          schemaVersion: 2, status: "current", acceptedPublicationGenerationId: "fixture-safety-generation",
+          acceptedAtSec: now - 60, attemptedAtSec: now - 60, heldSinceSec: null, reasons: [],
+        }),
+        updated_at: now - 60,
+      },
+    }]),
   ]);
 }
 
@@ -294,19 +314,16 @@ describe("handleHealth", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(Date.now());
     const now = Math.floor(Date.now() / 1000);
-    const row = makeRawStatusSnapshotRow(now, 60);
-    const snapshot = JSON.parse(row.value) as Record<string, unknown>;
     const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
     expect(publicHealth.status).toBe("healthy");
     expect(publicHealth.caches["fx-rates"].healthy).toBe(true);
     expect(publicHealth.activePriceCoverage).toMatchObject({ status: "complete" });
-    snapshot.publicHealth = publicHealth;
-    row.value = JSON.stringify(snapshot);
+    const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = buildStatusD1Scenario({
       sections: [],
       overrides: [{
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY],
         rows: [],
         first: row,
       }],
@@ -322,12 +339,10 @@ describe("handleHealth", () => {
   });
   it("detects a stall from live starts despite a healthy fresh snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const row = makeRawStatusSnapshotRow(now, 60);
-    const snapshot = JSON.parse(row.value);
-    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
-    row.value = JSON.stringify(snapshot);
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row },
       { match: "AS last_any", rows: [], first: { observed_at: now, last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201, heavy: now - 30 } },
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
@@ -343,12 +358,10 @@ describe("handleHealth", () => {
     // Keep the exact age assertion independent of a wall-clock second boundary.
     vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const now = Math.floor(Date.now() / 1000);
-    const row = makeRawStatusSnapshotRow(now, 60);
-    const snapshot = JSON.parse(row.value);
-    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
-    row.value = JSON.stringify(snapshot);
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row },
       { match: "AS last_any", rows: [], first: {
         observed_at: now,
         last_any: now - 1, reserve: now - 30, telegram: now - 30, digest: now - 30,
@@ -364,13 +377,11 @@ describe("handleHealth", () => {
   });
   it("clears a cached heavy scheduler floor by recomputing independent blockers live", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const row = makeRawStatusSnapshotRow(now, 60);
-    const snapshot = JSON.parse(row.value);
-    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
-    snapshot.publicHealth.status = "stale";
-    snapshot.publicHealth.warnings = ["heavy_scheduled_delivery_stalled"];
-    snapshot.publicHealth.schedulerLiveness.heavy.status = "stale";
-    row.value = JSON.stringify(snapshot);
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    publicHealth.status = "stale";
+    publicHealth.warnings = ["heavy_scheduled_delivery_stalled"];
+    publicHealth.schedulerLiveness!.heavy.status = "stale";
+    const row = makePublicHealthSnapshotRow(now, publicHealth);
     const body = await (await handleHealth(makeHealthyHealthDb(now, { dexAge: 1_000_000, extraCacheRows: [row] }))).json() as HealthResponse;
     expect(body.schedulerLiveness?.heavy.status).toBe("healthy");
     expect(body.warnings).not.toContain("heavy_scheduled_delivery_stalled");
@@ -378,13 +389,11 @@ describe("handleHealth", () => {
   });
   it("clears a cached scheduler floor only through live recomputation, retaining independent stale caches", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const row = makeRawStatusSnapshotRow(now, 60);
-    const snapshot = JSON.parse(row.value);
-    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
-    snapshot.publicHealth.status = "stale";
-    snapshot.publicHealth.warnings = ["scheduled_delivery_stalled"];
-    snapshot.publicHealth.schedulerLiveness.status = "stale";
-    row.value = JSON.stringify(snapshot);
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    publicHealth.status = "stale";
+    publicHealth.warnings = ["scheduled_delivery_stalled"];
+    publicHealth.schedulerLiveness!.status = "stale";
+    const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = makeHealthyHealthDb(now, { dexAge: 1_000_000, extraCacheRows: [row] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
     expect(body.schedulerLiveness?.status).toBe("healthy");
@@ -413,6 +422,7 @@ describe("handleHealth", () => {
     const db = healthD1([
       completePublicationEntry(now),
       dewsPublicationEntry(now),
+      yieldHealthEntry(now),
       {
         match: "GROUP BY job",
         rows: ["sync-dex-liquidity", "sync-yield-data", "compute-dews"].map((job) => ({
@@ -774,7 +784,7 @@ describe("handleHealth", () => {
   it.each([
     [3600, 3600, "healthy"], [86400, 86400, "healthy"],
     [86401, 3600, "degraded"], [3600, 86401, "degraded"],
-  ] as const)("assesses same-identity held clocks %s/%s as %s", async (yieldAge, safetyAge, status) => {
+  ] as const)("keeps yield held-clock verdict %s/%s at %s while Safety Scores are degraded", async (yieldAge, safetyAge, status) => {
     const now = Math.floor(Date.now() / 1000);
     const identity = JSON.parse(stampedYieldIdentityJson("a".repeat(64)));
     const envelope = JSON.parse(publicationEnvelopeIdentityJson("a".repeat(64)));
@@ -785,7 +795,9 @@ describe("handleHealth", () => {
       yieldHealthEntry(now, true, identity.publicationGenerationId),
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
-    expect(body.status).toBe(status);
+    expect(body.status).toBe("degraded");
+    expect(body.components!.find((component) => component.id === "safety-scores")).toMatchObject({ state: "degraded" });
+    expect(body.components!.find((component) => component.id === "yield")!.state).toBe(status === "healthy" ? "operational" : "degraded");
     expect(body.warnings).toContain(status === "healthy"
       ? "yield-safety-publish-time-fallback:safety-snapshot-held"
       : "yield-safety-unrated-serving:safety-snapshot-held");
@@ -795,10 +807,11 @@ describe("handleHealth", () => {
     const now = Math.floor(Date.now() / 1000);
     const entry = yieldHealthEntry(now, false, "wrong-generation");
     if (kind === "malformed") entry.first = { updated_at: now, value: "{}" };
+    if (kind === "missing") entry.first = null;
     const db = makeHealthyHealthDb(now, { extras: [
       { match: "stamped_identity", rows: [], first: { updated_at: now - 60, stamped_identity: stampedYieldIdentityJson("a".repeat(64)), safety_published_at: now - 60 } },
       { match: "publication_identity", rows: [], first: { publication_identity: publicationEnvelopeIdentityJson("a".repeat(64)) } },
-      ...(kind === "missing" ? [] : [entry]),
+      entry,
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
     expect(body.status).toBe("degraded");

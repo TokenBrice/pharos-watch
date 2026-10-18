@@ -8,7 +8,7 @@ Admin broadcasts are lower priority than risk alerts. They enqueue into `telegra
 
 ## Preflight Checklist
 
-1. **Check backlog health.** `/api/status` -> `telegramBot.pendingDeliveries` should be low and decreasing. Do not broadcast if `oldestPendingDeliveryAgeSec > 900`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec > 1800`, `crons["dispatch-telegram-alerts"].lastRun.metadata.pendingNearTtlCount > 0`, `pendingDeliveryBacklog.expired > 0`, or `retryErrorClassCounts.rate_limit` dominates.
+1. **Check backlog health.** `/api/status` -> `telegramBot.pendingDeliveries` should be low and decreasing. Read full run metadata from the Access-protected `GET /api/status-cron-detail?job=dispatch-telegram-alerts` (`cron.runs[0].metadata`). Do not broadcast if `oldestPendingDeliveryAgeSec > 900`, `cron.runs[0].metadata.estimatedDrainTimeSec > 1800`, `cron.runs[0].metadata.pendingNearTtlCount > 0`, `pendingDeliveryBacklog.expired > 0`, or `retryErrorClassCounts.rate_limit` dominates.
 2. **Run a dry run.**
 
    ```bash
@@ -49,7 +49,7 @@ Use a private operator chat that is safe to receive the real notice. Live execut
 
 ## Post-Send Monitoring
 
-1. Watch `telegramBot.pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.pendingNearTtlCount`, and `retryErrorClassCounts` for at least two five-minute runs.
+1. Watch `telegramBot.pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `retryErrorClassCounts`, and the detail payload's `cron.runs[0].metadata.estimatedDrainTimeSec` / `cron.runs[0].metadata.pendingNearTtlCount` (`GET /api/status-cron-detail?job=dispatch-telegram-alerts`) for at least two five-minute runs.
 2. If rate limits appear, stop additional broadcasts and follow [rate-limit storm](./telegram-no-delivery.md#rate-limit-storm).
 3. If pending age approaches 45 minutes, follow [backlog and expiration](./telegram-no-delivery.md#backlog-and-expiration).
 

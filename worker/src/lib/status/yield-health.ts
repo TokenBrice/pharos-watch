@@ -20,7 +20,7 @@ import {
   YieldCoverageAuditRankingsSchema,
 } from "@shared/types/yield";
 import type {
-  CronStatus,
+  CronStatusDetail,
   YieldCoverageAuditQueueAction,
   YieldCoverageAuditQueueItem,
   YieldCoverageAuditQueueItemKind,
@@ -208,9 +208,9 @@ function readComparisonAnchorExamples(value: unknown): YieldHealthSummary["compa
 }
 
 function buildComparisonAnchorFreshnessSummary(
-  crons: Record<string, CronStatus>,
+  crons: Readonly<Record<string, CronStatusDetail>>,
 ): YieldHealthSummary["comparisonAnchorFreshness"] {
-  const sourceCoverage = getObject(crons["sync-yield-data"]?.lastRun?.metadata?.sourceCoverage);
+  const sourceCoverage = getObject(crons["sync-yield-data"]?.runs[0]?.metadata?.sourceCoverage);
   const summary = getObject(sourceCoverage?.comparisonAnchorFreshness);
   const staleAnchorCount = getNumber(summary?.staleAnchorCount);
 
@@ -227,15 +227,15 @@ function buildComparisonAnchorFreshnessSummary(
     oldestAnchorSourceKey: getString(summary?.oldestAnchorSourceKey),
     staleAnchorExamples: readComparisonAnchorExamples(summary?.staleAnchorExamples),
     staleAnchorExamplesTruncated: getBoolean(summary?.staleAnchorExamplesTruncated) ?? false,
-    sourceRunStartedAt: crons["sync-yield-data"]?.lastRun?.startedAt ?? null,
+    sourceRunStartedAt: crons["sync-yield-data"]?.runs[0]?.startedAt ?? null,
   };
 }
 
-function getSyncYieldDataMetadata(crons: Record<string, CronStatus>): Record<string, unknown> | null {
-  return getObject(crons["sync-yield-data"]?.lastRun?.metadata);
+function getSyncYieldDataMetadata(crons: Readonly<Record<string, CronStatusDetail>>): Record<string, unknown> | null {
+  return getObject(crons["sync-yield-data"]?.runs[0]?.metadata);
 }
 
-function getSyncYieldRankingDeltaMetadata(crons: Record<string, CronStatus>): {
+function getSyncYieldRankingDeltaMetadata(crons: Readonly<Record<string, CronStatusDetail>>): {
   previousRankingCount: number | null;
   rankingCountDelta: number | null;
 } {
@@ -872,7 +872,7 @@ async function buildLiveSafetyHydration(
  * unavailable, which silently loses the reproducibility evidence for those rows.
  */
 function buildPysInputsPersistence(
-  crons: Record<string, CronStatus>,
+  crons: Readonly<Record<string, CronStatusDetail>>,
 ): NonNullable<YieldHealthSummary["pysInputs"]> {
   const metadata = getSyncYieldDataMetadata(crons);
   // The writer (`buildYieldSyncMetadata`) publishes the replay-evidence
@@ -898,14 +898,14 @@ function buildPysInputsPersistence(
     nullRate,
     threshold: PYS_INPUTS_NULL_RATE_BUDGET,
     reason: nullRate != null ? null : total === 0 ? "zero-published-rows" : "publisher-counters-incomplete-or-invalid",
-    sourceRunStartedAt: crons["sync-yield-data"]?.lastRun?.startedAt ?? null,
+    sourceRunStartedAt: crons["sync-yield-data"]?.runs[0]?.startedAt ?? null,
   };
 }
 
 export async function loadYieldHealthSummary(
   db: D1Database,
   now: number,
-  crons: Record<string, CronStatus>,
+  crons: Readonly<Record<string, CronStatusDetail>>,
 ): Promise<YieldHealthSummary> {
   const rows = await db
     .prepare(
@@ -1056,8 +1056,8 @@ export async function loadYieldHealthSummary(
     },
     sourceRiskCoverage,
     comparisonAnchorFreshness,
-    latestCronStatus: crons["sync-yield-data"]?.lastRun?.status ?? null,
-    latestCronStartedAt: crons["sync-yield-data"]?.lastRun?.startedAt ?? null,
+    latestCronStatus: crons["sync-yield-data"]?.runs[0]?.status ?? null,
+    latestCronStartedAt: crons["sync-yield-data"]?.runs[0]?.startedAt ?? null,
     liveSafetyHydration,
     pysInputs,
   };

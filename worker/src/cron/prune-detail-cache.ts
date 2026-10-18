@@ -1,10 +1,13 @@
 import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { CACHE_RETENTION_POLICIES } from "@shared/lib/retention-policy";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { SECONDS } from "../lib/time-constants";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { createCronResult } from "../lib/cron-result";
 import { batchExecute } from "../lib/db";
+import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "../lib/bounded-prune";
+import { deleteCappedGroup } from "./shared/capped-delete";
 
 const DETAIL_KEY_PREFIX = "detail:";
 
@@ -28,6 +31,7 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
   let staleCount = 0;
   let scanned = 0;
   let lastKey = "";
+  let detailTruncated = false;
 
   while (true) {
     throwIfAborted(signal);
@@ -47,6 +51,10 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
 
     const doomedKeys: string[] = [];
     for (const row of pageRows) {
+      if (orphanCount + staleCount >= RETENTION_DELETE_RUN_LIMIT) {
+        detailTruncated = true;
+        break;
+      }
       const stablecoinId = row.key.slice(DETAIL_KEY_PREFIX.length);
       if (!WORKER_READABLE_IDS.has(stablecoinId)) {
         orphanCount += 1;
@@ -65,20 +73,46 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
       );
     }
 
+    detailTruncated ||= orphanCount + staleCount >= RETENTION_DELETE_RUN_LIMIT;
     if (pageRows.length < DETAIL_CACHE_PAGE_SIZE) break;
+    if (detailTruncated) break;
     const nextLastKey = pageRows[pageRows.length - 1]?.key;
     if (!nextLastKey || nextLastKey <= lastKey) break;
     lastKey = nextLastKey;
   }
 
+  const hygiene = await deleteCappedGroup(db, CACHE_RETENTION_POLICIES.map((policy) => ({
+    sql: `DELETE FROM cache WHERE rowid IN (
+      SELECT rowid FROM cache WHERE key ${policy.match === "prefix" ? "GLOB" : "="} ?
+      ${policy.windowSec == null ? "" : "AND updated_at < ?"}
+      ORDER BY updated_at ASC, key ASC LIMIT ?
+    )`,
+    bindsForLimit: (limit: number) => [
+      policy.match === "prefix" ? `${policy.key}*` : policy.key,
+      ...(policy.windowSec == null ? [] : [now - policy.windowSec]),
+      limit,
+    ],
+    batchLimit: RETENTION_DELETE_BATCH_LIMIT,
+    runLimit: RETENTION_DELETE_BATCH_LIMIT,
+  })), signal);
+  const cacheHygiene = Object.fromEntries(CACHE_RETENTION_POLICIES.map((policy, index) => [
+    policy.name,
+    { deleted: hygiene[index].pruned, retentionTruncated: hygiene[index].cappedAtLimit },
+  ]));
+  const hygieneDeleted = hygiene.reduce((total, result) => total + result.pruned, 0);
   return createCronResult({
     status: "ok",
-    itemCount: orphanCount + staleCount,
+    itemCount: orphanCount + staleCount + hygieneDeleted,
     metadata: {
       scanned,
       orphansDeleted: orphanCount,
       staleDeleted: staleCount,
       cutoffSec: cutoff,
+      cacheHygiene,
+      retentionTruncated: {
+        detail: detailTruncated,
+        ...Object.fromEntries(CACHE_RETENTION_POLICIES.map((policy, index) => [policy.name, hygiene[index].cappedAtLimit])),
+      },
     },
   });
 }

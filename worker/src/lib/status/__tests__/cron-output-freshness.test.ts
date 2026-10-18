@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import { logCronRun, type CronResult } from "../../cron-logger";
 import { confirmedCronOutputAt } from "../../cron-output";
 import { compactCronMetadataForPersistence } from "../../cron-metadata-persistence";
@@ -93,9 +94,12 @@ describe("confirmed output versus attempted work", () => {
         // Array padding forces compaction without a single huge string (string redaction cost grows superlinearly).
         outputPublishedAt, padding: Array.from({ length: 20_000 }, () => "xxxx"), quality: { reason: "row-count-threshold" },
       }));
+      expect(metadata.compacted).toBe(true);
       const parsed = JSON.parse(metadata.metadata!);
       expect(parsed.outputPublishedAt).toBe(outputPublishedAt);
-      expect(parsed.quality.reasons).toEqual(["row-count-threshold"]);
+      // D14 preserves consumer-read evidence verbatim; normalization belongs to its shared reader.
+      expect(parsed.quality).toEqual({ reason: "row-count-threshold" });
+      expect(getCronQualityReasons(parsed)).toEqual(["row-count-threshold"]);
       expect(confirmedCronOutputAt({ status: "ok", itemCount: 100 }, parsed, NOW)).toBe(outputPublishedAt);
     }
     expect(confirmedCronOutputAt({ status: "degraded", itemCount: 10, productivity: {

@@ -7,14 +7,14 @@ import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/s
 import type {
   CanaryStatus,
   CoinGeckoPriceDiff,
-  CronRun,
+  CronRunDetail,
+  CronStatusDetail,
   LiquidityHealth,
   MintBurnReconciliationSummary,
   PublicationHealth,
   PriceSourceHealth,
   ProviderCircuitHealth,
   ReserveDriftEntry,
-  StatusResponse,
   StatusSectionErrors,
   TelegramDispatchCronMetadata,
   TelegramHealthSummary,
@@ -286,13 +286,11 @@ async function loadCoinGeckoPriceDiff(
 // freshness rule: a sync stalled beyond it publishes null rather than stale
 // numbers (R1/R3).
 function selectDexLiquidityCoverageRun(
-  dexLiquidityCron: StatusResponse["crons"][string] | undefined,
+  dexLiquidityCron: CronStatusDetail | undefined,
   now: number,
-): CronRun | null {
+): CronRunDetail | null {
   if (!dexLiquidityCron) return null;
-  const runs = dexLiquidityCron.recentRuns.length > 0 || dexLiquidityCron.lastRun == null
-    ? dexLiquidityCron.recentRuns
-    : [dexLiquidityCron.lastRun];
+  const runs = dexLiquidityCron.runs;
   // CronStatus always carries the registry interval; the 1800s fallback only
   // guards malformed callers (sync-dex-liquidity runs every 30 minutes).
   const intervalSec = dexLiquidityCron.expectedIntervalSec > 0
@@ -311,7 +309,7 @@ function selectDexLiquidityCoverageRun(
 export async function loadStatusSupplements(
   db: D1Database,
   now: number,
-  crons: StatusResponse["crons"],
+  crons: Readonly<Record<string, CronStatusDetail>>,
   coingeckoApiKey?: string | null,
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings,
   workerCanaryMode: WorkerCanaryMode = "off",
@@ -435,7 +433,7 @@ export async function loadStatusSupplements(
 
   let priceSourceHealth: PriceSourceHealth | null = null;
   // The self-check probe path calls this before any cron map exists; absence is not an error.
-  const priceSourceHealthMetadata: unknown = crons?.["sync-stablecoins"]?.lastRun?.metadata?.priceSourceHealth;
+  const priceSourceHealthMetadata: unknown = crons?.["sync-stablecoins"]?.runs[0]?.metadata?.priceSourceHealth;
   if (priceSourceHealthMetadata != null) {
     const parsedPriceSourceHealth = PriceSourceHealthSchema.safeParse(priceSourceHealthMetadata);
     if (!parsedPriceSourceHealth.success) {

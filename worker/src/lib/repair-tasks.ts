@@ -3,7 +3,6 @@ import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { auditVerdictNotInSql } from "./depeg-audit";
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
-import { runBoundedPrune } from "./bounded-prune";
 import { createCronResult, type StructuredCronResult } from "./cron-result";
 import {
   DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,
@@ -25,7 +24,6 @@ export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "fail
 
 const DDR_REPAIR_TASK_ACTIVE_STATE_SQL = "state IN ('open', 'claimed', 'deferred', 'failed')";
 const DDR_REPAIR_TASK_CLAIMABLE_STATE_SQL = "state IN ('open', 'deferred', 'failed')";
-const DDR_REPAIR_TASK_TERMINAL_STATE_SQL = "state = 'closed'";
 const DDR_REPAIR_TASK_KIND = "ddr-repair-required-event";
 const DDR_REPAIR_DEBT_EVENT_LIMIT = 25;
 export const DDR_REPAIR_RUNNER_BATCH_LIMIT_V1 = 5;
@@ -388,44 +386,6 @@ export async function loadDdrRepairDebtDetails(db: D1Database): Promise<DdrRepai
     events,
     eventsTruncated: count > events.length,
   };
-}
-
-export interface RepairTaskPruneResult {
-  deleted: number;
-  truncated: boolean;
-}
-
-const REPAIR_TASK_PRUNE_BATCH_LIMIT = 5_000;
-const REPAIR_TASK_PRUNE_RUN_LIMIT = 20_000;
-
-export async function pruneRepairTasks(
-  db: D1Database,
-  cutoffSec: number,
-  signal?: AbortSignal,
-  limits: { batchLimit?: number; runLimit?: number } = {},
-): Promise<RepairTaskPruneResult> {
-  const batchLimit = limits.batchLimit ?? REPAIR_TASK_PRUNE_BATCH_LIMIT;
-  const runLimit = limits.runLimit ?? REPAIR_TASK_PRUNE_RUN_LIMIT;
-  return runBoundedPrune({
-    batchLimit,
-    runLimit,
-    signal,
-    deleteBatch: (limit) =>
-      db
-        .prepare(
-          `DELETE FROM worker_repair_tasks
-           WHERE rowid IN (
-             SELECT rowid
-             FROM worker_repair_tasks
-             WHERE updated_at < ?
-               AND ${DDR_REPAIR_TASK_TERMINAL_STATE_SQL}
-             ORDER BY updated_at ASC
-             LIMIT ?
-           )`,
-        )
-        .bind(cutoffSec, limit)
-        .run(),
-  });
 }
 
 async function inspectRepairRunnerBacklog(

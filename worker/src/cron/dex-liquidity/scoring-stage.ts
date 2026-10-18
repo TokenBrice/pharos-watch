@@ -29,6 +29,8 @@ const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 4;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
+// Bound retained payloads to the same four-chunk envelope as the reader.
+export const DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE = DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE;
 const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 55 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FUTURE_TOLERANCE_SEC = 2 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FAILED_RETENTION_SEC = 2 * 3600;
@@ -816,6 +818,13 @@ export async function persistDexLiquidityScoringStage(
   let recordCount = 0;
   let payloadBytes = 0;
   let lastReportedChunkCount = 0;
+  const pendingChunks: D1PreparedStatement[] = [];
+  const flushChunks = async (): Promise<void> => {
+    if (pendingChunks.length === 0) return;
+    await runWithOverloadRetry(() => db.batch(pendingChunks), 3, signal);
+    pendingChunks.length = 0;
+    await reportPersistedProgress();
+  };
   const reportPersistedProgress = async (force = false): Promise<void> => {
     if (
       input.onChunkBatchPersisted == null
@@ -839,25 +848,21 @@ export async function persistDexLiquidityScoringStage(
       true,
     )) {
       throwIfAborted(signal);
-      let statement: D1PreparedStatement | null = prepareScoringStageChunkUpsert(db, [
+      pendingChunks.push(prepareScoringStageChunkUpsert(db, [
         generationId,
         chunkCount,
         chunk.payload,
         chunk.payloadBytes,
         chunk.recordCount,
         createdAt,
-      ]);
-      try {
-        await runWithOverloadRetry(() => statement!.run(), 3, signal);
-      } finally {
-        statement = null;
-      }
+      ]));
       chunkCount++;
       recordCount += chunk.recordCount;
       payloadBytes += chunk.payloadBytes;
       chunk.payload = "";
-      await reportPersistedProgress();
+      if (pendingChunks.length === DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE) await flushChunks();
     }
+    await flushChunks();
     await reportPersistedProgress(true);
     if (chunkCount === 0 || recordCount === 0) {
       throw new Error("DEX liquidity scoring stage produced no records");
@@ -1163,6 +1168,8 @@ const DEX_LIQUIDITY_SCORING_STAGE_JOB = "sync-dex-liquidity-stage";
 export interface DexLiquidityScoringStageSlotProbe {
   /** Current manifest state for the slot's generation; "missing" when no row exists. */
   manifestState: "missing" | "writing" | "failed" | "ready" | "consumed";
+  /** Source clock identifies the exact accepted publication even if its consumed marker failed. */
+  syncStartedAt: number | null;
   /** A live cron lease for the stage job means a producer may still finalize this slot. */
   activeStageRun: boolean;
   /** Status of the newest stage cron run recorded for this exact slot, if any. */
@@ -1182,40 +1189,34 @@ export async function probeDexLiquidityScoringStageSlot(
 ): Promise<DexLiquidityScoringStageSlotProbe> {
   assertTimestamp("sourceSlotStartedAt", sourceSlotStartedAt);
   throwIfAborted(signal);
-  const manifest = await runWithOverloadRetry(
-    () =>
+  const results = await runWithOverloadRetry(
+    () => db.batch([
       db.prepare(
-        `SELECT state
+        `SELECT state, sync_started_at
            FROM dex_liquidity_scoring_stages
           WHERE generation_id = ?
           LIMIT 1`,
-      ).bind(stageGenerationId(sourceSlotStartedAt)).first<{ state: string }>(),
-    3,
-    signal,
-  );
-  const lease = await runWithOverloadRetry(
-    () =>
+      ).bind(stageGenerationId(sourceSlotStartedAt)),
       db.prepare(
         `SELECT lease_until
            FROM cron_leases
           WHERE job = ?
           LIMIT 1`,
-      ).bind(DEX_LIQUIDITY_SCORING_STAGE_JOB).first<{ lease_until: number }>(),
-    3,
-    signal,
-  );
-  const lastRun = await runWithOverloadRetry(
-    () =>
+      ).bind(DEX_LIQUIDITY_SCORING_STAGE_JOB),
       db.prepare(
         `SELECT status
            FROM cron_runs
           WHERE job = ? AND slot_started_at = ?
           ORDER BY started_at DESC
           LIMIT 1`,
-      ).bind(DEX_LIQUIDITY_SCORING_STAGE_JOB, sourceSlotStartedAt).first<{ status: string }>(),
+      ).bind(DEX_LIQUIDITY_SCORING_STAGE_JOB, sourceSlotStartedAt),
+    ]),
     3,
     signal,
   );
+  const manifest = results[0]?.results[0] as { state: string; sync_started_at: number } | undefined;
+  const lease = results[1]?.results[0] as { lease_until: number } | undefined;
+  const lastRun = results[2]?.results[0] as { status: string } | undefined;
   const manifestState = manifest?.state;
   return {
     manifestState:
@@ -1225,6 +1226,7 @@ export async function probeDexLiquidityScoringStageSlot(
       || manifestState === "consumed"
         ? manifestState
         : "missing",
+    syncStartedAt: manifest?.sync_started_at ?? null,
     activeStageRun: lease != null && lease.lease_until > Math.floor(Date.now() / 1000),
     lastStageRunStatus: lastRun?.status ?? null,
   };

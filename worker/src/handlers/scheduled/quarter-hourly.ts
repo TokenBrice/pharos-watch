@@ -29,6 +29,7 @@ import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./co
 import { runBestEffortScheduledJobWithOutcome } from "./run-best-effort-job";
 import {
   buildScheduledSlotSummary,
+  summarizeCronResult,
   summarizeSkippedScheduledJob,
   type ScheduledSlotJobSummary,
 } from "./slot-summary";
@@ -134,10 +135,16 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       } catch (error) {
         checkError = error;
       }
-      if (neutral || checkError) {
+      if (neutral) {
+        // Admission-only no-ops belong to the parent slot summary, not a
+        // leased child/cron run. In particular, they must not refresh the
+        // snapshot producer's last productive publication clock.
+        outcomes.push({ ...summarizeCronResult(job, neutral), observedAt: Math.floor(Date.now() / 1000) });
+        return;
+      }
+      if (checkError) {
         outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, async () => {
-          if (checkError) throw checkError;
-          return neutral!;
+          throw checkError;
         })).summary);
         return;
       }

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { mockRegistry } from "../../test-helpers/cron";
+import { isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
 import {
   beefyCandidate,
   degradedFamilyFetch,
@@ -699,7 +700,7 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.degradedFamilies).toEqual([]);
   });
 
-  it("skips the hourly catch-up while the newest family marker is younger than the cadence", async () => {
+  it("keeps a recent marker-only admission skip distinct from proven artifact availability", async () => {
     const startSec = 1_774_526_400;
     vi.mocked(getCaches).mockResolvedValue(new Map([
       ["yield:supplemental-sources:v1:morpho", { value: "{}", updatedAt: startSec - 3 * 3600 }],
@@ -716,12 +717,69 @@ describe("syncYieldSupplemental", () => {
     expect(result.status).toBe("skipped_neutral");
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "supplemental-catch-up-not-due",
+      reason: "supplemental-catch-up-marker-not-due",
+      artifactProven: false,
       newestFamilyMarkerAgeSec: 3 * 3600,
       minMarkerAgeSec: 4 * 3600,
     });
     expect(fetchMorphoVaultSources).not.toHaveBeenCalled();
     expect(setCacheIfNewer).not.toHaveBeenCalled();
+    expect(isProvenSatisfiedNeutralSkipReason(JSON.parse(result.metadata ?? "{}").reason)).toBe(false);
+  });
+
+  it("proves catch-up satisfied only after validating every current family artifact", async () => {
+    const startSec = Math.floor(Date.now() / 1000);
+    const updatedAt = startSec - 3 * 3600;
+    vi.mocked(getCaches).mockResolvedValue(new Map(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [
+      getYieldSupplementalFamilyCacheKey(family),
+      { value: buildYieldSupplementalFamilyCache([], updatedAt), updatedAt },
+    ])));
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, {
+      catchUpMinMarkerAgeSec: 4 * 3600,
+    });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe("skipped_neutral");
+    expect(metadata).toMatchObject({ reason: "supplemental-catch-up-not-due", artifactProven: true });
+    expect(metadata.provenFamilies).toHaveLength(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length);
+    expect(isProvenSatisfiedNeutralSkipReason(metadata.reason)).toBe(true);
+    expect(result.productivity).toMatchObject({ productive: false });
+    expect(fetchMorphoVaultSources).not.toHaveBeenCalled();
+  });
+
+  it.each(["missing", "malformed", "stale", "future", "invalid-row"])(
+    "does not claim artifact satisfaction for a %s family", async (kind) => {
+      const now = Math.floor(Date.now() / 1000);
+      const updatedAt = now - 3600;
+      const rows = new Map(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [
+        getYieldSupplementalFamilyCacheKey(family),
+        { value: buildYieldSupplementalFamilyCache([], updatedAt), updatedAt },
+      ]));
+      const key = getYieldSupplementalFamilyCacheKey(SUPPLEMENTAL_SOURCE_FAMILY_KEYS[0]);
+      if (kind === "missing") rows.delete(key);
+      else if (kind === "malformed") rows.set(key, { value: "{}", updatedAt });
+      else if (kind === "invalid-row") rows.set(key, {
+        value: JSON.stringify({ version: 1, updatedAt, source: "sync-yield-supplemental", sourceCount: 0, data: [{}] }),
+        updatedAt,
+      });
+      else {
+        const timestamp = kind === "future" ? now + 60 : now - 4 * 3600;
+        rows.set(key, { value: buildYieldSupplementalFamilyCache([], timestamp), updatedAt: timestamp });
+      }
+      vi.mocked(getCaches).mockResolvedValue(rows);
+      const result = await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, {
+        catchUpMinMarkerAgeSec: 4 * 3600,
+      });
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata).toMatchObject({ reason: "supplemental-catch-up-marker-not-due", artifactProven: false });
+      expect(isProvenSatisfiedNeutralSkipReason(metadata.reason)).toBe(false);
+    },
+  );
+
+  it("propagates failed catch-up readback instead of proving output exists", async () => {
+    vi.mocked(getCaches).mockRejectedValueOnce(new Error("D1 unavailable"));
+    await expect(syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, {
+      catchUpMinMarkerAgeSec: 4 * 3600,
+    })).rejects.toThrow("D1 unavailable");
   });
 
   it("runs the catch-up once the newest family marker is older than the cadence", async () => {

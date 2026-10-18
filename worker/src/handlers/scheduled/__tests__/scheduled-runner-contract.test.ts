@@ -20,8 +20,8 @@ import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
 } from "../../../lib/public-dataset-snapshot-budget";
-import { SLOT_RUNNER_LOADER_BY_KEY } from "../../scheduled";
-import { fetchPancakeSwapPools } from "../../../cron/dex-liquidity/fetch-pancakeswap";
+import { PUBLIC_SLOT_RUNNER_LOADERS } from "../public-runners";
+import { HEAVY_SLOT_RUNNER_LOADERS } from "../heavy-runners";
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((a, b) => a.localeCompare(b));
@@ -42,10 +42,10 @@ describe("scheduled runner contract", () => {
     expect(isScheduledTaskDueAt("quarterHourly", "unknown-job", monday)).toBe(true);
   });
 
-  it("names missing GRAPH degradation on heavy DEX stage recovery", async () => {
-    expect(await fetchPancakeSwapPools(null)).toMatchObject({
-      ok: false, degraded: true, errors: ["missing GRAPH_API_KEY"],
-    });
+  it("keeps heavy inline DEX recovery within the existing connection peak", () => {
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find(
+      (entry) => entry.job === "sync-dex-liquidity" && entry.scheduleKey === "halfHourlyChartsOffset",
+    )).toMatchObject({ maxConnections: 5 });
   });
   it("owns only the three revised heavy plans without adding expressions", () => {
     expect(Object.values(SCHEDULED_SLOT_PLANS).filter((plan) => plan.worker === "heavy")
@@ -84,11 +84,16 @@ describe("scheduled runner contract", () => {
   });
   it("keeps scheduled plans, slot runners, and cron definitions in sync", () => {
     const planKeys = Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[];
-    const runnerKeys = Object.keys(SLOT_RUNNER_LOADER_BY_KEY) as CronScheduleKey[];
-
-    expect(sorted(runnerKeys)).toEqual(sorted(planKeys));
+    const loaders = { ...PUBLIC_SLOT_RUNNER_LOADERS, ...HEAVY_SLOT_RUNNER_LOADERS };
+    expect(sorted(Object.keys(loaders))).toEqual(sorted(planKeys));
+    for (const role of ["public", "heavy"] as const) {
+      const roleLoaders = role === "public" ? PUBLIC_SLOT_RUNNER_LOADERS : HEAVY_SLOT_RUNNER_LOADERS;
+      const ownedKeys = Object.values(SCHEDULED_SLOT_PLANS)
+        .filter((plan) => plan.worker === role).map((plan) => plan.scheduleKey);
+      expect(sorted(Object.keys(roleLoaders))).toEqual(sorted(ownedKeys));
+    }
     for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
-      expect(SLOT_RUNNER_LOADER_BY_KEY[plan.scheduleKey]).toEqual(expect.any(Function));
+      expect(loaders[plan.scheduleKey]).toEqual(expect.any(Function));
     }
 
     const plannedStatusJobs = new Set(

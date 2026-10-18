@@ -54,6 +54,24 @@ describe("api endpoint registry", () => {
     }
   });
 
+  it("registers cron detail as an uncached operator-only GET endpoint", () => {
+    const path = "/api/status-cron-detail";
+    expect(getEndpointDefinitionByKey("status-cron-detail")).toMatchObject({
+      path, methods: ["GET"], adminRequired: true, mutatingAdmin: false,
+      cacheBypass: true, publicApiAccess: "exempt", siteDataAccess: "denied",
+    });
+    expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => endpoint.key)).toContain("status-cron-detail");
+    expect(isAdminPath(path)).toBe(true);
+    expect(isCacheBypassPath(path)).toBe(true);
+    expect(isMutatingAdminPath(path)).toBe(false);
+    expect(isSiteDataAllowedPath(path)).toBe(false);
+    expect(validateEndpointMethod(new URL(`${path}?job=sync-stablecoins`, "https://ops-api.pharos.watch"), "GET")).toBeNull();
+    expect(validateEndpointMethod(new URL(path, "https://ops-api.pharos.watch"), "POST")).toMatchObject({
+      allowedMethods: ["GET"],
+    });
+    expect(getProbePaths("public")).not.toContain(path);
+  });
+
   it("keeps credentialed build transport outside browser proxy access and public probes", () => {
     const path = "/api/stablecoin-detail-snapshot-inputs";
     expect(getEndpointDefinitionByKey("stablecoin-detail-snapshot-inputs")).toMatchObject({

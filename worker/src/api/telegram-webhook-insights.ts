@@ -1,6 +1,6 @@
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { formatTelegramAge } from "../lib/telegram/format-age";
 import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";

@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import { formatCurrency } from "@shared/lib/format";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { VerificationResult } from "./types";

@@ -128,7 +128,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     const running = runScheduledSlotWithFence(db, "depegResolverOffset", async () => {
       enter();
       await work;
-    }, { slotStartedAt: base, owner: "original", invocationId: "original", preSweepStale: false });
+    }, { slotStartedAt: base, owner: "original", invocationId: "original" });
     await entered;
 
     await vi.advanceTimersByTimeAsync(60_000);
@@ -556,7 +556,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     expect(
       sqlite
         .prepare(
-          `SELECT last_invocation_id, last_outcome, invocation_count
+          `SELECT last_invocation_id, last_outcome
          FROM worker_producer_heads`,
         )
         .all(),
@@ -686,7 +686,16 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       `SELECT metadata_json
          FROM worker_producer_history
         WHERE invocation_id = 'old-invocation'`,
-    ).get() as { metadata_json: string }).metadata_json))).toMatchObject({ reconciledAt: nowSec });
+    ).get() as { metadata_json: string }).metadata_json))).toMatchObject({
+      acceptedAttemptNo: 0, acceptedExecutionGeneration: 0,
+      acceptedExecutionSlotStartedAt: slotStartedAt, acceptedTerminalKey: expect.any(String),
+    });
+    expect(sqlite.prepare(
+      `SELECT json_extract(r.metadata, '$.reconciledAt') AS reconciled_at
+         FROM worker_producer_history h JOIN cron_runs r
+           ON r.idempotency_key = json_extract(h.metadata_json, '$.acceptedTerminalKey')
+        WHERE h.invocation_id = 'old-invocation'`,
+    ).get()).toEqual({ reconciled_at: nowSec });
     expect(sqlite.prepare(
       `SELECT last_invocation_id, last_outcome, last_invoked_at
          FROM worker_producer_heads

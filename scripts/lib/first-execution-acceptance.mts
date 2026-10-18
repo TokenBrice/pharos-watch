@@ -4,7 +4,7 @@ import { parseStrictCliArgs, runDirectCli } from "./cli-args.mjs";
 import type { PostDeployAcceptanceOutcome } from "./post-deploy-acceptance.mts";
 
 export interface FirstExecutionAcceptanceInput {
-  /** Saved /api/status payload, including crons[job].lastRun. */
+  /** Saved /api/status-cron-detail?job=<job> payload; runs[0] is the latest attempt with full metadata. */
   status: unknown;
   job: string;
   workerVersion: string;
@@ -25,7 +25,7 @@ function isTimestamp(value: unknown): value is number {
 
 /**
  * Evaluate existing collected evidence, without fetching, polling or changing state.
- * The collector retains the first relevant observation; lastRun alone cannot prove
+ * The collector retains the first relevant observation; the latest run alone cannot prove
  * that no earlier execution failed or that the selected execution was the first.
  */
 export function evaluateFirstExecutionAcceptance(input: FirstExecutionAcceptanceInput): FirstExecutionAcceptanceResult {
@@ -34,8 +34,9 @@ export function evaluateFirstExecutionAcceptance(input: FirstExecutionAcceptance
     throw new Error("Acceptance requires an explicit job, Worker version and positive Unix not-before time.");
   }
   if (!isRecord(status) || !isTimestamp(status.timestamp)) return { outcome: "pending", reason: "status-time-unavailable" };
-  const cron = isRecord(status.crons) ? status.crons[job] : null;
-  const run = isRecord(cron) && isRecord(cron.lastRun) ? cron.lastRun : null;
+  const cron = status.job === job && isRecord(status.cron) ? status.cron : null;
+  const latest = cron && Array.isArray(cron.runs) ? cron.runs[0] : null;
+  const run = isRecord(latest) ? latest : null;
   if (!run) return { outcome: "pending", reason: "run-missing" };
   const metadata = isRecord(run.metadata) ? run.metadata : null;
   if (!metadata?.workerVersion) return { outcome: "pending", reason: "worker-version-missing" };
