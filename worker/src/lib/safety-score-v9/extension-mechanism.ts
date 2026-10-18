@@ -7,6 +7,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { admitV10ReserveReportScope, resolveV10ScopedAssuranceFragments, shouldApplyV10ReserveReportScope } from "@shared/lib/safety-score-v9/reserve-scope";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
+import { parseIsoDateOrUtcInstantSec, reviewAdmissionSec } from "@shared/types/date-primitives";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import {
   V9MechanismRiskReviewSchema,
@@ -418,10 +419,10 @@ export function expandOverlayReview(
     }
     const curated = overlay.components[componentField];
     if (curated?.review && clockSec !== undefined && !isMechanismOverlayCurrent(curated.review, clockSec)) {
-      const reviewSec = Date.parse(curated.review.reviewedAt) / 1_000;
+      const reviewSec = parseIsoDateOrUtcInstantSec(curated.review.reviewedAt);
       review[componentField] = clockSec < reviewSec
         ? boundedFact(kebabCase(componentField), false)
-        : clockSec < reviewSec + DAY_SEC
+        : clockSec < reviewAdmissionSec(curated.review.reviewedAt)
           ? unsupportedFact(kebabCase(componentField))
           : { ...boundedFact(kebabCase(componentField), true), status: status("stale", kebabCase(componentField)) };
       continue;
@@ -461,19 +462,17 @@ const MECHANISM_REVIEW_OVERLAYS = createReviewedAssetRegistry({
   rows: mechanismEnvelope.overlays, schema: SafetyScoreV9MechanismReviewOverlaySchema, path: "mechanismReviews.overlays",
 });
 
-// The approved D1 fiat/tbill overlay standard re-bounds curated claims after
-// twelve months. Date-only reviews become score-bearing after their UTC day has
-// elapsed, preventing evidence published later that day from entering an earlier
-// point-in-time capture. Invalid or expired reviews fall back to the conservative
-// bounded-unknown evidence path (VER2-004).
+// Reviewed claims expire from their original evidence pin. Date-only reviews
+// wait until their UTC day has elapsed; exact UTC instants admit immediately.
+// Invalid or expired reviews retain the conservative compiler path (VER2-004).
 const MECHANISM_OVERLAY_MAX_AGE_SEC =
   V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
 const DAY_SEC = 86_400;
 
-function isMechanismOverlayCurrent(overlay: Pick<MechanismReviewOverlay, "reviewedAt">, clockSec: number): boolean {
-  const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00.000Z`) / 1_000;
-  if (!Number.isFinite(reviewedAtSec)) return false;
-  return reviewedAtSec + DAY_SEC <= clockSec && reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
+export function isMechanismOverlayCurrent(overlay: Pick<MechanismReviewOverlay, "reviewedAt">, clockSec: number): boolean {
+  const reviewedAtSec = parseIsoDateOrUtcInstantSec(overlay.reviewedAt);
+  return clockSec >= reviewAdmissionSec(overlay.reviewedAt)
+    && reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
 }
 
 /** A family label, inherited ticker, or reserve total cannot establish a holder claim. */
@@ -528,8 +527,8 @@ export function getSafetyScoreV9MechanismReviewGapDisposition(
   if (!overlay || overlay.archetype !== archetype) return null;
   const componentKeys = Object.entries(overlay.components).filter(([, component]) => {
     const reviewedAt = component.review?.reviewedAt ?? overlay.reviewedAt;
-    const reviewedAtSec = Date.parse(reviewedAt) / 1_000;
-    return Number.isFinite(reviewedAtSec) && reviewedAtSec <= clockSec && clockSec < reviewedAtSec + DAY_SEC;
+    const reviewedAtSec = parseIsoDateOrUtcInstantSec(reviewedAt);
+    return reviewedAtSec <= clockSec && clockSec < reviewAdmissionSec(reviewedAt);
   }).map(([key]) => key).sort();
   if (componentKeys.length === 0) return null;
   return {
@@ -563,7 +562,7 @@ export function getSafetyScoreV9MechanismReviewedUnavailableComponents(
 ): V9MechanismReviewedUnavailableComponent[] {
   const overlay = MECHANISM_REVIEW_OVERLAYS.get(assetId);
   if (!overlay || overlay.archetype !== archetype ||
-      Date.parse(overlay.reviewedAt) / 1000 > clockSec) return [];
+      parseIsoDateOrUtcInstantSec(overlay.reviewedAt) > clockSec) return [];
   // Mirrors `expandOverlayReview`: a projected profile component wins over the
   // curated row, so its adjudication never reaches a fact.
   const projectedComponents =
@@ -573,7 +572,7 @@ export function getSafetyScoreV9MechanismReviewedUnavailableComponents(
     if (projectedComponents?.[componentField] !== undefined) continue;
     if (!("applicability" in curated) || curated.applicability !== "unavailable") continue;
     const reviewedAt = curated.review?.reviewedAt ?? overlay.reviewedAt;
-    if (Date.parse(reviewedAt) / 1_000 > clockSec) continue;
+    if (parseIsoDateOrUtcInstantSec(reviewedAt) > clockSec) continue;
     rows.push({
       componentKey: componentField,
       rationale: curated.rationale,
@@ -599,7 +598,7 @@ export function getSafetyScoreV9MechanismOverlayEvidence(
   const historical = options.history ? MECHANISM_REVIEW_OVERLAYS.get(assetId) : null;
   const overlay = options.history
     ? historical && historical.archetype === archetype &&
-      Date.parse(historical.reviewedAt) / 1000 + DAY_SEC <= clockSec ? historical : null
+      reviewAdmissionSec(historical.reviewedAt) <= clockSec ? historical : null
     : currentMechanismOverlay(assetId, archetype, clockSec);
   return overlay
     ? {
@@ -620,7 +619,7 @@ export function getSafetyScoreV9MechanismComponentEvidence(
   const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
   if (!overlay) return [];
   return Object.entries(overlay.components).flatMap(([componentKey, component]) => {
-    if (!component.review || Date.parse(component.review.reviewedAt) / 1_000 + DAY_SEC > clockSec) return [];
+    if (!component.review || reviewAdmissionSec(component.review.reviewedAt) > clockSec) return [];
     return [{
       componentKey,
       reviewedAt: component.review.reviewedAt,

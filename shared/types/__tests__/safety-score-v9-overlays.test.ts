@@ -94,6 +94,43 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({ ...malformed, overlays: [{ ...mechanismOverlays.overlays[0], reviewedAt: "2026-02-31" }] }).success).toBe(false);
   });
 
+  it.each(["2026-10-18", "2026-10-18T12:30:01Z", "2026-10-18T12:30:01.125Z", "2024-02-29T00:00:00.1Z"])(
+    "accepts strict review pin %s for overlays and independent components", (reviewedAt) => {
+      const row = structuredClone(mechanismFixture.overlays[0]!);
+      const componentKey = Object.keys(row.components)[0]!;
+      const components = {
+        ...row.components,
+        [componentKey]: { ...row.components[componentKey as keyof typeof row.components], review: {
+          reviewedAt, reviewer: "Fixture reviewer", rationale: "Pinned component evidence.", sources: row.sources,
+        } },
+      };
+      expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({
+        ...mechanismFixture, overlays: [{ ...row, reviewedAt, components }],
+      }).success).toBe(true);
+    },
+  );
+
+  it.each([
+    "2026-02-30T12:30:01Z", "2025-02-29T00:00:00Z", "0000-01-01T00:00:00Z",
+    "2026-10-18T24:00:00Z", "2026-10-18T12:60:00Z", "2026-10-18T12:30:60Z",
+    "2026-10-18T12:30:01+00:00", "2026-10-18T12:30:01-01:00", "2026-10-18T12:30Z",
+    "2026-10-18T12:30:01", "2026-10-18T12:30:01.1234Z", "2026-10-18 12:30:01Z",
+  ])("rejects malformed or non-UTC review pin %s at both scopes", (reviewedAt) => {
+    const row = mechanismFixture.overlays[0]!;
+    const componentKey = Object.keys(row.components)[0]!;
+    expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({
+      ...mechanismFixture, overlays: [{ ...row, reviewedAt }],
+    }).success).toBe(false);
+    expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({
+      ...mechanismFixture, overlays: [{ ...row, components: {
+        ...row.components,
+        [componentKey]: { ...row.components[componentKey as keyof typeof row.components], review: {
+          reviewedAt, reviewer: "Fixture reviewer", rationale: "Pinned component evidence.", sources: row.sources,
+        } },
+      } }],
+    }).success).toBe(false);
+  });
+
   it("rejects transfer rows without a canonical deployment", () => {
     expect(SafetyScoreV9ReviewedTransferFileSchema.safeParse(transferFixture).success).toBe(true);
     const malformed = structuredClone(transferFixture) as Record<string, unknown> & {

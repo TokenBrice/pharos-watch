@@ -181,7 +181,7 @@ it owns no reason-code classifier. The pre-expiry view likewise calls production
 exported `resolveReviewedReserveRows()` branch instead of copying reserve-admission
 rules.
 
-Date-only mechanism reviews are admitted only after their UTC day has elapsed (the elapsed-UTC-day guard in `worker/src/lib/safety-score-v9/extension-mechanism.ts`), so curate with the evidence date, never the capture date: a same-day promotion starts with the next capture and temporarily re-attributes the component `method-unsupported`.
+Mechanism overlays and component reviews use their actual evidence pin, never the capture clock. Date-only reviews wait until the next UTC midnight and temporarily re-attribute the same-day admission gap `method-unsupported`; exact UTC timestamps admit at that instant, not earlier. Both retain the 365-day expiry from the original review start (`worker/src/lib/safety-score-v9/extension-mechanism.ts`).
 
 Work one whole `claimGroupId` (one asset and `workType`) at a time. Read the embedded
 work-type definition and recommended skill, then verify all four boundaries:

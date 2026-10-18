@@ -437,6 +437,27 @@ describe("Safety Score v9 archetype backing adapters", () => {
     }
   });
 
+  it("admits an exact-timestamp shortfall immediately and expires from the original instant", () => {
+    const measuredAt = "2026-10-18T12:30:01.125Z";
+    const pinSec = Date.parse(measuredAt) / 1_000;
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+    const review = {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: { ...measurementPin, measuredAt, ratio: 0.64,
+        status: knownStatus("evidence:vault-census", "mechanism.required") },
+    };
+    for (const asOfSec of [pinSec - 0.001, pinSec + maxAgeSec]) {
+      const input = { ...asset(), asOfSec };
+      expect(evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1))
+        .toEqual(evaluateV9Backing(input, reviews.algorithmic, V9_CANDIDATE_POLICY_V1));
+    }
+    for (const asOfSec of [pinSec, pinSec + maxAgeSec - 0.001]) {
+      const input = { ...asset(), asOfSec };
+      expect(evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1).score)
+        .toBeCloseTo(evaluateV9Backing(input, reviews.algorithmic, V9_CANDIDATE_POLICY_V1).score! * 0.64, 8);
+    }
+  });
+
   it("treats undated or unevidenced ratios as unknown rather than perpetual adverse measurements", () => {
     const baseline = evaluateV9Backing(asset(), reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
     const measurement = {

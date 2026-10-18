@@ -6,6 +6,7 @@ import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-ga
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
+import { reviewAdmissionSec } from "@shared/types/date-primitives";
 import {
   V9EvidenceGapQueueV2Schema,
   type V9EvidenceGapQueueEntryV2,
@@ -261,16 +262,27 @@ function countBy<T>(values: readonly T[], keyOf: (value: T) => string): Array<{ 
     .sort((left, right) => right.count - left.count || left.key.localeCompare(right.key));
 }
 
-export function mechanismOverlayCaptureDayWarnings(captureClockSec: number): string[] {
-  const captureDay = new Date(captureClockSec * 1_000).toISOString().slice(0, 10);
-  const assetIds = mechanismReviewOverlays.overlays
-    .filter((overlay) => overlay.reviewedAt === captureDay)
-    .map((overlay) => overlay.assetId)
-    .sort((left, right) => left.localeCompare(right));
-  if (assetIds.length === 0) return [];
-  return [
-    `mechanism review dated ${captureDay} is inadmissible until the next UTC day at this capture clock; assets: ${assetIds.join(", ")}`,
-  ];
+export function mechanismOverlayAdmissionWarnings(
+  captureClockSec: number,
+  overlays: readonly {
+    assetId: string; reviewedAt: string; components: Record<string, { review?: { reviewedAt: string }; [field: string]: unknown } | undefined>;
+  }[] = mechanismReviewOverlays.overlays,
+): string[] {
+  const warnings: string[] = [];
+  for (const overlay of overlays) {
+    const reviews = [
+      { field: "reviewedAt", reviewedAt: overlay.reviewedAt },
+      ...Object.entries(overlay.components).flatMap(([key, component]) =>
+        component?.review ? [{ field: `components.${key}.review.reviewedAt`, reviewedAt: component.review.reviewedAt }] : []),
+    ];
+    for (const review of reviews) {
+      const admissionSec = reviewAdmissionSec(review.reviewedAt);
+      if (admissionSec > captureClockSec) {
+        warnings.push(`${overlay.assetId}: mechanism ${review.field} ${review.reviewedAt} is inadmissible until ${new Date(admissionSec * 1_000).toISOString()} at this capture clock`);
+      }
+    }
+  }
+  return warnings.sort();
 }
 
 function cardScoreProjection(card: SafetyScoreV9Card) {
@@ -559,7 +571,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   const taskIds = registryItems.map((item) => item.taskId);
   if (new Set(taskIds).size !== taskIds.length) throw new Error("Generated missing-data task IDs are not unique");
   const claimGroupCount = new Set(allItems.map((item) => item.claimGroupId)).size;
-  const warnings = mechanismOverlayCaptureDayWarnings(candidate.asOfSec);
+  const warnings = mechanismOverlayAdmissionWarnings(candidate.asOfSec);
   return {
     schemaVersion: 2,
     title: "Safety Score v9 missing-data registry",

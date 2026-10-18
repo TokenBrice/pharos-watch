@@ -7,6 +7,8 @@ import { CAPTURE_SUMMARY_SUFFIX, parseMechanismCaptureSummary } from "../../scri
 import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
 import type { R2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
+import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
 import {
   assertCliUsage,
   parseCliInteger,
@@ -36,7 +38,7 @@ import {
 import { parseSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
 export interface SafetyScoreV9FutureDatedReview {
   assetId: string;
-  field: "reviewedAt" | "compositionAsOf";
+  field: "reviewedAt" | "compositionAsOf" | "mechanism.reviewedAt" | `mechanism.components.${string}.review.reviewedAt`;
   date: string;
 }
 
@@ -49,7 +51,13 @@ export interface SafetyScoreV9FutureDatedReview {
  * data reviewed today therefore manufactures large phantom score drops that
  * read exactly like a regression. Surface them before the operator diffs.
  */
-export function findFutureDatedCuratedReviews(clockSec: number, metaById = ACTIVE_META_BY_ID): SafetyScoreV9FutureDatedReview[] {
+export function findFutureDatedCuratedReviews(
+  clockSec: number,
+  metaById = ACTIVE_META_BY_ID,
+  mechanismOverlays: readonly {
+    assetId: string; reviewedAt: string; components: Record<string, { review?: { reviewedAt: string }; [field: string]: unknown } | undefined>;
+  }[] = mechanismReviewOverlaysAsset.overlays,
+): SafetyScoreV9FutureDatedReview[] {
   const found: SafetyScoreV9FutureDatedReview[] = [];
   for (const [assetId, meta] of metaById) {
     const review = (meta as { reserveReview?: { reviewedAt?: string; compositionAsOf?: string } }).reserveReview;
@@ -59,6 +67,18 @@ export function findFutureDatedCuratedReviews(clockSec: number, metaById = ACTIV
       if (typeof date !== "string" || date.length === 0) continue;
       const sec = Date.parse(`${date}T00:00:00.000Z`) / 1_000;
       if (Number.isFinite(sec) && sec > clockSec) found.push({ assetId, field, date });
+    }
+  }
+  for (const overlay of mechanismOverlays) {
+    if (!metaById.has(overlay.assetId)) continue;
+    if (parseIsoDateOrUtcInstantSec(overlay.reviewedAt) > clockSec) {
+      found.push({ assetId: overlay.assetId, field: "mechanism.reviewedAt", date: overlay.reviewedAt });
+    }
+    for (const [key, component] of Object.entries(overlay.components)) {
+      const date = component?.review?.reviewedAt;
+      if (date && parseIsoDateOrUtcInstantSec(date) > clockSec) {
+        found.push({ assetId: overlay.assetId, field: `mechanism.components.${key}.review.reviewedAt`, date });
+      }
     }
   }
   return found.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.field.localeCompare(b.field));
@@ -74,9 +94,9 @@ export function formatFutureDatedReviewError(
     `${rows.length} curated review date(s) postdate the capture clock ${clockIso}:`,
     ...lines,
     "",
-    "Those reviews are rejected at this clock, which drops each asset's curated",
-    "reserve composition and collapses its backing pillar. Any score drop you see",
-    "for them is an artifact of replaying an old capture against newer curation,",
+    "Those reviews are rejected at this clock, withdrawing the affected curated",
+    "reserve composition or mechanism claims. Any score drop caused by those",
+    "withdrawals is an artifact of replaying an old capture against newer curation,",
     "not a regression. Take a newer capture instead: --published-at does not move",
     "the fact-set clock, which comes from the capture.",
     "Pass --allow-future-reviews to replay anyway and read those movers as invalid.",

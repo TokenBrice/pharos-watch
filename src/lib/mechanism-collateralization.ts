@@ -13,7 +13,7 @@ export interface MechanismCollateralizationView {
   notApplicableRationale: string | null;
   /** Committed liquidation capacity over supply; null when unmeasured or N/A. */
   liquidationCapacityRatio: number | null;
-  /** ISO date the evidence was pinned. */
+  /** Calendar date or exact UTC instant at which the evidence was pinned. */
   reviewedAt: string;
   sourceLabel: string;
   sourceUrl: string;
