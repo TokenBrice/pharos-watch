@@ -1,5 +1,7 @@
 # Pharos Stability Index (PSI)
 
+> **Agent navigation** — Start with [Formula](#formula) and [Condition Bands](#condition-bands). Grep the matching heading for Components · Calibration Examples · Input Data · Cron & Storage · API · Frontend · Digest Integration instead of reading wholesale.
+
 Composite ecosystem health score (0–100) measuring how stable the stablecoin market is right now. Computed every 30 minutes.
 
 ## Methodology Versioning

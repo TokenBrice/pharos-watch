@@ -61,7 +61,7 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | symptom | [Blacklist gap checks](./runbooks/blacklist-sync.md) |
 | symptom | [Blocked digest edition](./runbooks/blocked-digest-edition.md) |
 | symptom | [Scheduled delivery stall](./runbooks/cron-delivery-stall.md) |
-| symptom | [Cron slot abandonment](./runbooks/cron-slot-abandonment.md) |
+| symptom | [Cron slot abandonment](./runbooks/cron-slot-abandonment.md#first-checks) |
 | symptom | [D1 connectivity, capacity and telemetry pressure](./runbooks/db-connectivity.md) |
 | symptom | [Mint/burn integrity diagnosis](./runbooks/mint-burn-integrity.md) |
 | symptom | [Stablecoin cache or publication failure](./runbooks/stablecoins-cache.md) |

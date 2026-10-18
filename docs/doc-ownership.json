@@ -203,6 +203,7 @@
         "docs/live-reserves.md",
         "docs/process/live-reserves-appendix.md",
         "docs/process/protocol-api-mechanism-refresh.md",
+        "docs/process/redemption-route-evidence.md",
         "docs/redemption-backstops.md"
       ],
       "docs": [
@@ -222,7 +223,8 @@
         {"path": "docs/live-reserves.md", "anchor": "frontend-consumers"},
         "docs/access-lookthrough.md",
         {"path": "docs/redemption-backstops.md", "anchor": "methodology-versioning"},
-        "docs/process/protocol-api-mechanism-refresh.md"
+        "docs/process/protocol-api-mechanism-refresh.md",
+        "docs/process/redemption-route-evidence.md"
       ],
       "rules": ["Reserve provenance describes evidence actually read, not merely the configured feed; preserve snapshot admission and retained-attempt distinctions.", "Published serial/basket edges own the map; review leads never create edges without current claim identity and measured weight or reviewed serial/mechanism semantics."]
     },
@@ -256,7 +258,8 @@
         { "path": "docs/runbooks/yield-history-cleanup-writer-pause.md", "runbook": { "label": "Yield history cleanup and writer pause", "kind": "procedure" } },
         { "path": "docs/runbooks/yield-rankings-stale-or-missing.md", "runbook": { "label": "Yield rankings stale or missing", "kind": "symptom" } },
         { "path": "docs/runbooks/yield-supplemental-snapshot.md", "runbook": { "label": "Yield supplemental snapshot failure", "kind": "symptom" } },
-        "docs/yield-intelligence-operations.md"
+        {"path": "docs/yield-intelligence-operations.md", "anchor": "runtime-guardrails"},
+        {"path": "docs/yield-intelligence-operations.md", "anchor": "failure-semantics"}
       ],
       "rules": ["Keep source observation, publication, and read-time freshness distinct; missing yield evidence is not a measured zero."]
     },
@@ -461,7 +464,7 @@
         "docs/process/adr-26-workflows-measurements.md",
         "docs/process/worker-runtime-experiments.md",
         { "path": "docs/runbooks/cron-delivery-stall.md", "runbook": { "label": "Scheduled delivery stall", "kind": "symptom" } },
-        { "path": "docs/runbooks/cron-slot-abandonment.md", "runbook": { "label": "Cron slot abandonment", "kind": "symptom" } },
+        { "path": "docs/runbooks/cron-slot-abandonment.md", "anchor": "first-checks", "runbook": { "label": "Cron slot abandonment", "kind": "symptom" } },
         { "path": "docs/runbooks/lease-and-breaker-recovery.md", "runbook": { "label": "Lease and circuit-breaker recovery", "kind": "procedure" } },
         { "path": "docs/runbooks/db-connectivity.md", "anchor": "capacity-signals" },
         { "path": "docs/runbooks/blocked-digest-edition.md", "runbook": { "label": "Blocked digest edition", "kind": "symptom" } }
@@ -595,15 +598,18 @@
       "background": [
         { "path": "docs/architecture.md", "anchor": "adr-3" },
         {"path": "docs/depeg-detection.md", "anchor": "thresholds--constants"},
-        "docs/dews.md",
+        {"path": "docs/dews.md", "anchor": "score-formula"},
+        {"path": "docs/dews.md", "anchor": "threat-bands"},
         {"path": "docs/data-flow-map.md", "anchor": "dews-internal-publication-contract"},
         {"path": "docs/depeg-resolver.md", "anchor": "methodology-versioning"},
         {"path": "docs/dex-liquidity.md", "anchor": "dex-liquidity-score"},
         {"path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry"},
-        "docs/stability-index.md",
+        {"path": "docs/stability-index.md", "anchor": "formula"},
+        {"path": "docs/stability-index.md", "anchor": "condition-bands"},
         {"path": "docs/mint-burn-flows.md", "anchor": "scoring"},
         "docs/process/ddrr-calibration.md",
-        "docs/process/mechanism-overlay-evidence-standard.md",
+        {"path": "docs/process/mechanism-overlay-evidence-standard.md", "anchor": "evidence-classes"},
+        {"path": "docs/process/mechanism-overlay-evidence-standard.md", "anchor": "component-applicability-states"},
         {"path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning"},
         "docs/chain-health.md",
         "docs/bluechip-ratings.md",
@@ -650,6 +656,7 @@
         "docs/process/safety-score-curation-expiry-sweep.md",
         "docs/process/safety-score-equivalence-harness.md",
         "docs/process/safety-score-v9-readiness.md",
+        "docs/process/report-cards-evidence-log.md",
         "docs/process/shock-coverage-refresh.md",
         "docs/safety-score-map.md",
         "docs/tape-page.md"
@@ -676,7 +683,8 @@
         {"path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it"},
         "docs/process/safety-score-curation-expiry-sweep.md",
         "docs/process/safety-score-v9-readiness.md",
-        "docs/process/shock-coverage-refresh.md"
+        "docs/process/shock-coverage-refresh.md",
+        "docs/process/report-cards-evidence-log.md"
       ],
       "checks": ["npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
       "testOwnership": [
@@ -990,14 +998,16 @@
         {"path": "docs/chains-page.md", "anchor": "chains-contract"},
         {"path": "docs/chains-page.md", "anchor": "chainschain-contract"},
         {"path": "docs/chains-page.md", "anchor": "api-and-freshness"},
-        "docs/data-visualization.md",
+        {"path": "docs/data-visualization.md", "anchor": "encoding"},
+        {"path": "docs/data-visualization.md", "anchor": "stablecoin-detail-primitives"},
         "docs/design-tokens.md",
         {"path": "docs/editorial-style.md", "anchor": "voice"},
         {"path": "docs/funding-page.md", "anchor": "data-model"},
         {"path": "docs/funding-page.md", "anchor": "editorial-and-presentation-contract"},
         {"path": "docs/learn-page.md", "anchor": "case-studies"},
         {"path": "docs/learn-page.md", "anchor": "mechanisms"},
-        "docs/og-images.md",
+        {"path": "docs/og-images.md", "anchor": "1-route-cards"},
+        {"path": "docs/og-images.md", "anchor": "ci-guardrails"},
         "docs/pharos-urn.md",
         {"path": "docs/portfolio-page.md", "anchor": "data-contract"},
         {"path": "docs/portfolio-page.md", "anchor": "persistence-and-sharing"},
@@ -1039,7 +1049,8 @@
       "background": [
         {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "binding-inventory"},
-        "docs/blacklist-tracker.md"
+        {"path": "docs/blacklist-tracker.md", "anchor": "public-exposure-contract"},
+        {"path": "docs/blacklist-tracker.md", "anchor": "storage-semantics"}
       ],
       "alsoRead": ["worker/AGENTS.md"],
       "testOwnership": [
@@ -1071,7 +1082,8 @@
       "risk": "low",
       "tier": "fallback",
       "sources": ["docs/**", "README.md", "CONTRIBUTING.md"],
-      "docs": ["docs/README.md", "docs/doc-ownership.json"],
+      "docs": ["docs/README.md"],
+      "background": ["docs/doc-ownership.json"],
       "testOwnership": [
         {
           "sources": ["docs/**", "README.md", "scripts/lib/doc-ownership-registry.mts", "scripts/lib/doc-markdown.mts", "package.json"],

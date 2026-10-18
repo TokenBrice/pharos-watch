@@ -2,7 +2,7 @@
 
 Modeled redemption-route coverage for tracked stablecoins. This subsystem estimates how credibly a holder can exit to par or near-par outside secondary-market DEX liquidity, then exposes that estimate through a standalone snapshot API. Since redemption `v4.3` the legacy `effectiveExitScore` blend is retired: same-notional exit is published by the Safety Score V9 Exit pillar alone, which composes the same route-scoring primitives from `shared/lib/exit-route-scoring.ts`.
 
-> **Agent navigation** — Grep headings: Cron Schedule · Scoring Model · Captured local-fiat costs · Physical-to-USD Exit · Exact-request execution certificates · Config Registry · Reviewed channel suspension · Output-key identity contract · Capacity Models · Provider / Source Definitions · Database Schema · API Endpoint · Frontend Consumers. Coverage and dated route reviews are evidence context; current configs and structured methodology changelogs own the inventory and history.
+> **Agent navigation** — Grep headings: Coverage · Cron Schedule · Scoring Model · Captured local-fiat costs · Physical-to-USD Exit · Exact-request execution certificates · Config Registry · Reviewed channel suspension · Output-key identity contract · Capacity Models · Provider / Source Definitions · Database Schema · API Endpoint · Frontend Consumers. Current configs own the inventory; structured methodology changelogs own release history.
 
 ---
 
@@ -51,30 +51,6 @@ For example, [OUSD partner redemption](https://tempo.xyz/developers/docs/guide/o
 Current configs retain the exact source-backed distinctions for Ondo USDon versus separately gated USDC, native XAUt versus physical/dollar delivery, native wrappers versus parent issuer routes, and funded claims versus requests. Consult their sources rather than treating a historical coverage list as current.
 
 `npm run audit:coverage -- --domain=redemption-backstops --report <path>` emits each config's literal/resolved capacity basis, reviewed fallback source and daily limit. Registry parity uses `scripts/maintenance/audit-redemption-registry-parity.ts --snapshot <path>` and `--compare <before.json> <after.json>`; all authored fields survive, object/row order is irrelevant, array order remains meaningful, and no synthetic capacity/score projection is emitted.
-
-### Existing-route bound review (2026-10-14)
-
-The [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns the review/release record. Config defaults, legal rights and numeric diagnostics cannot close executable-capacity, complete-cost or final-completion gaps. The source-specific records below retain exact citations or blockers not fully duplicated in config `docs`; they are not a current coverage census. Their source/review dates are provenance, never renewed runtime observations or proof of zero capacity.
-
-| Asset | Missing datum(s) under review | Source and date | Admission decision |
-| --- | --- | --- | --- |
-| USDY | Capacity | [InstantManager integration guide](https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration.md), checked 2026-10-14; retained exact-manager review 2026-10-07 | **No admissible evidence.** Registered-user/global limits, actual user sources and executable payout must be observed. The $1 minimum and 5% heuristic do not establish funded capacity. Existing atomic USDC terms do not resolve this gap. |
-| FRXUSD | Cost | [Exact USDC custodian source](https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10), verified 2026-03-01; retained fee pin 2026-10-07 | **No admissible static all-in bound.** Mutable `redeemFee < 1e18` bounds only the issuer fraction; a historical zero does not bound current deductions, rounding and gas. An independently admitted exact-request execution certificate is a separate runtime path. |
-| mTBILL | Capacity | [Midas atomic-redemption targets](https://midas-docs.gitbook.io/midas-docs/defi-integration/atomic-redemption.md), checked 2026-10-14; retained Final Terms review 2026-10-07 | **No admissible evidence.** The 50% atomic allocation is a target and liquidity is shared. Neither the existing 2% heuristic nor a tiny direct cash balance measures total executable capacity through the upstream facility. The reserve adapter declares no redemption telemetry. |
-| VBILL | Capacity; cost; settlement | [Securitize VBILL](https://securitize.io/primary-market/vaneck-vbill), checked 2026-10-14; [launch release](https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html), 2025-05-13 | **No admissible evidence.** Daily/24-hour liquidity and real-time-settlement marketing does not supply an operative guaranteed amount, complete fee schedule or completed-settlement maximum. NAV and subscription minimums are not exit-capacity bounds. |
-| sUSDat | Capacity | [Native unstaking process](https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview/staking-and-unstaking-process.md), checked 2026-10-14; retained observer review 2026-10-07 | **No admissible evidence.** Operator batch processing sells STRC and distributes actual USDat pro rata. Queue/idle balances and outstanding NFTs are diagnostics, not funded capacity for a new request; approximately 10 bps is not a fee ceiling. The existing observer remains diagnostic-only. |
-| YUSD (Aegis) | Cost | [Exact AegisMinting source](https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources), retained review 2026-10-09; [official source](https://github.com/Aegis-im/aegis-contracts/blob/master/contracts/AegisMinting.sol), checked 2026-10-14 | **No admissible all-in bound.** A configurable protocol-fee ceiling and historical fee setting do not measure current request cost plus gas. Separate manager approval is not an atomic request-to-receipt guarantee. YieldFi YUSD and sYUSD terms do not apply. |
-| HBD | Cost | [Hive HBD conversion](https://hive.io/hbd/), checked 2026-10-14; retained review 2026-10-09 | **No admissible all-in bound.** HBD-to-HIVE has no extra protocol conversion fee, but debt-ratio haircuts and the median-price payout window remain material. The reverse HIVE-to-HBD 5% fee does not apply to this route. |
-| UTY | Capacity; cost | [Base flows](https://docs.yieldpoint.io/protocol/architecture/flows.md) and [Base operations](https://docs.yieldpoint.io/protocol/integration/base-operations.md), checked 2026-10-14; retained review 2026-10-02 | **No admissible evidence.** The seven-day unlock is a minimum before claiming from a funded USDC buffer, not a completion/capacity guarantee. Neither the 30% heuristic nor spoke-chain yUTY fees bound the direct Base UTY route. |
-| HOLLAR | Cost | [Hydration HOLLAR/HSM](https://docs.hydration.net/products/hollar/), checked 2026-10-14 | **No admissible evidence.** Conditional HSM buyback pricing is not a complete redemption tariff. General trading/network fees and the opposite buy-HOLLAR direction cannot establish this route's all-in cost. |
-| suiUSDe | Cost | [Exact SDK collateral/action surface](https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/suiusde.ts), retained review 2026-08-13; [Sui launch article](https://www.sui.io/blog/esui-dollar-suiusde-deepbook-margin), checked 2026-10-14 | **No admissible evidence.** The SDK's mutable `defaultFee` needs a current deployment-specific read and complete execution cost. Generic Ethereum USDe terms and fee schedules are not a suiUSDe bound. |
-| gUSDTq | Settlement | [Exact Galaxy USDT Quality vault](https://app.morpho.org/ethereum/vault/0x71ffB6a81786eC285D429d531Cf655107B9D878d/galaxy-usdt-quality), checked 2026-10-14 | **No admissible documented completion maximum.** The missing datum belongs to the exact execution-certificate route, not a Nest NAV config. Current vault liquidity/management fees do not establish its settlement predicate; runtime certificate admission must own any clearance. |
-| alUSD | Cost | [Legacy V2 DAI Transmuter](https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter); [current V3 Transmuter](https://docs.alchemix.fi/user/concepts/transmuter), checked 2026-10-14 | **No admissible new bound for the configured V2 rail.** Its 1:1 conversion is not a complete all-in cost promise. V3 MYT receipts, maturity and early-exit fees describe a different deployment/output and must not overwrite V2 DAI terms. |
-| USDso | Capacity | [Somnia holder route](https://somnia.network/usdso-stablecoin), checked 2026-10-14; retained exact-custodian review 2026-10-03 | **No admissible config-only upgrade.** The existing escrow adapter measures backing but has no configured pause read and attributes status to static config. Historical frxUSD custody and a zero fee do not establish a currently open executable route. Keep the reviewed capacity gate. |
-| mMEV | Capacity; cost | [Issuer discontinuation notice](https://blog.midas.app/midas-in-april-2026-recap/), published 2026-04-30, discontinuation 2026-05-10; retained Final Terms review | **No admissible residual-route bound.** The wind-down notice and legacy 0.50% redemption term do not prove post-retirement executable capacity or complete residual-holder costs. A still-listed atomic-capacity target does not reopen the discontinued channel. |
-| USDFC | Capacity | [Native FIL redemption mechanics](https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption), checked 2026-10-14; retained route review 2026-10-03 | **No admissible config-only upgrade.** Current ActivePool debt/collateral, oracle, TCR/MCR and rate reads do not enumerate eligible Troves or prove request-sized redemption after Trove constraints. The favorable aggregate-debt curve must not override the reviewed capacity gap. |
-
-Consequently, these reviewed unknowns remain open; a new production run alone cannot turn them into known bounds. Exact-route telemetry or an independently admitted request-sized certificate can resolve a runtime item only when it measures the missing predicate, rather than reusing backing inventory, mutable historical settings or another route's terms. The separate FRXUSD execution-certificate item and gUSDTq certificate settlement are runtime integration concerns, not evidence supplied by this config review.
 
 ---
 
@@ -145,6 +121,8 @@ Some route families are intentionally capped even when their component mix score
 | `offchain-issuer` | 65  |
 
 An optional per-config `totalScoreCap` can apply an additional `config-cap`.
+
+Route-family classification and score caps do not establish execution. A native unwrap pays its exact output, not guaranteed downstream dollars or access to the parent's issuer rail. Holder/cohort restrictions, collateral valuation and queued request/claim gates survive classification; documented fast paths cannot make an ordinary queued route atomic.
 
 The exit-route observation envelope this producer emits is consumed by the Safety Score V9 Exit pillar, which is the only same-notional route grader. Redemption observations accept only `issuer-redemption` and `protocol-redemption` as potentially scoreable families; `eventual-redemption` is diagnostic-only. Reviewed `documented-terms` evidence uses a one-year review window. Reviewed opaque-fee observations can carry modeled capacity tagged with `feeEvidence: "undisclosed-reviewed"` while remaining producer-level non-score-eligible; a consumer must apply an explicit bounded-unknown fee policy rather than treating the route as cost-bounded. Derived full-supply rows evaluate a documented-variable fee against the same reviewed ceiling as hot-buffer routes (`costModel.feeBpsMax` or the Safety-only `v9RouteCostTerms` overlay, including its minimum and fixed charges); only a documented-variable fee without a ceiling keeps that tag. Route independence — and with it the pillar's bounded redundancy credit — is decided by the V9 Exit pillar from enumerated failure domains and physical resource keys.
 
@@ -271,6 +249,8 @@ Explicit stable `outputAssets` take precedence over offchain issuers' legacy fia
 
 Config modules own per-asset payout evidence and gaps. A single tracked payout scores output quality **100** at par only with captured valuation; a multi-output route retains conservative `stable-basket` quality **80** and weakest-price semantics, not invented equal weights or holder-choice branches. Known physical delivery remains non-comparable unless its separately reviewed metal-sale path is admitted.
 
+A holder route must bind the exact tracked asset and deployment, not a same-symbol token, legacy/replacement mint or unrelated wrapper. Administrative burns, borrower repayment, reserve management and secondary-market cash-out do not by themselves establish holder redemption.
+
 For example, [PYUSDx terms](https://www.moonpay.com/legal/pyusdx_terms) give onboarded eligible counterparties PYUSD, not a universal fiat claim; [Ondo's guide](https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md) separates instant USDon from inventory-conditioned USDC. Full-supply issuer/fund entitlements are eventual-only unless a funded buffer is independently established. Bank rights, subscription minima, NAV, daily thresholds and gate percentages supply neither current capacity nor completed receipt.
 
 Opaque composite/migration paths cannot be relabeled deterministic `stablecoin-redeem`/`psm-swap` merely to register documentary access. Solomon replacement USDv, Initia iUSD and legacy ICON bnUSD retain sourced unconfigured dispositions; known balances, 1:1 displays and institutional issuer terms do not establish exact end-to-end payout/execution. A configured institutional route likewise does not admit an unrelated native/wrapper rail.
@@ -296,47 +276,15 @@ Output identity is kind-specific and must remain stable from the configured rout
 
 The registry validator enforces configured identities, while the V9 review boundary rejects unknown identities and preserves a captured identity mismatch for diagnostics rather than rewriting the producer's observation. USD0 (`usd0-usual`) therefore keeps its reviewed mixed-collateral outputs `asset:usyc`, `asset:m`, and `asset:ustbl`; renaming them to tracked IDs or moving them to an unresolved namespace would silently break exact output matching and valuation.
 
-### July 2026 Output Reconciliation
-
-This retained review boundary is not a current roster. Family configs own each source and output decision; [output-key identity](#output-key-identity-contract) owns tracked/collateral/unresolved identities. A declared set must be complete: untracked members cannot be dropped to turn an unresolved basket into a priced one, and holder-selected alternatives cannot become proportional baskets. Current examples include dUSD's untracked vbUSDC/vbUSDT, satUSD's incomplete LST inventory and dEURO's known-but-unvalued bridge outputs.
-
-The following source-specific records remain because their exact citation is not duplicated in config `docs`; they are evidence context, not automatic current execution claims:
-
-| Route | Retained distinction | Primary evidence |
-| --- | --- | --- |
-| nTBILL, nBASIS, nWISDOM; nOPAL | Complete Nest payout sets remain config-owned; nOPAL adds USDT to USDC/pUSD. | [Nest available vaults](https://docs.nest.credit/about/available-vaults/) |
-| hyUSD | Active tracked deployment and full routable output census remain unresolved; V1 SOL and V2 SOL/BTC/USDC descriptions are not interchangeable. | [Architecture](https://docs.hylo.so/protocol-overview/multi-asset-architecture), [routing](https://docs.hylo.so/protocol-overview/dynamic-collateral-routing) |
-| srUSDe | Holder-selected USDe/sUSDe branches are not a basket. Same-run zero senior strategy cooldown is needed for atomic sUSDe; USDe cooldown is not final completion. | [Strata market](https://docs.strata.markets/markets/ethena-usde/srusde), [exact strategy](https://eth.blockscout.com/api/v2/smart-contracts/0x2b9796606c8480312a572742c00f606ef4adb107) |
-| cUSD | Proportional USDC/WTGXX output needs the complete same-run basket and timestamped WTGXX NAV, never synthetic $1. | [Cap vault](https://docs.cap.app/concepts/vault), [WTGXX feed](https://etherscan.io/address/0xD13cB763C43B5C058E7Ec40176962c5030F4EB49) |
-
-### September 2026 Noon Route Corrections
-
-The retained boundary separates issuer processing from completed payout and a request/claim handler's live period from a static issuer SLA. Current USN/sUSN terms and exact sources live in `shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts`. The dedicated observer binds the actual handler pointer and mutable period; the documented one-transaction fast path is not the ordinary queued holder route.
-
-### October 2026 Output and Coverage Review
-
-Known payout identity does not prove openness, valuation, funded capacity, an all-in fee ceiling or final completion. Untracked receipts retain their exact identity rather than aliasing aUSDC/aUSDT, iTRY or ZUSD to a tracked sibling; selected HSM/Mynt outputs are not pro-rata baskets. Legacy VNX suspension applies only to its exact channel, not an inferred reopening/suspension of its successor. GLDY's alternative payouts and Wintermute secondary sale remain separate.
-
-Source-specific evidence not otherwise retained in config docs:
-
-- [Kinesis physical redemption](https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver) establishes bullion delivery, not atomic USD realization; exact lots, costs, logistics and completion require their own evidence.
-- [eEARN vault](https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract) is an operator-processed USDC request/claim route; idle USDC is not a finite-completion guarantee.
-- [SoulPeg docs](https://docs.soulpeg.io/) do not establish a complete secondary-holder USDC withdrawal specification merely by promising reverse wrapper conversion.
-- [JPYC's Prepaid v1 notice](https://corporate.jpyc.co.jp/news/posts/prepaid-important-notice) ends v1-to-v2 exchange and plans no cash refund. Removal of that config is not removal of the distinct funds-transfer JPYC token. Likewise Indigo's removed USDA payout leg does not remove Anzens' separate issuer rail.
-
-### October 2026 route-evidence closure
-
-This linked evidence boundary preserves the distinction between direct observation, diagnostic state and eventual entitlement. Config sources and `v9RouteReviewTerms` own each asset's remaining gaps; [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns release chronology. Endpoint recovery or a new production run alone never renews positive evidence.
-
-- Legal full-position rights, issuer reserves, AUM and gate percentages are not funded immediate/scoring liquidity. Cash output is distinct from NAV input pricing; unspecified stablecoins, securities-in-kind and physical bullion cannot be blended into a guaranteed cash payout.
-- Direct USDfr observations measure only the restricted guarded par-state USDC lane; gas/all-in cost remains independent. apyUSD admits only funded owner-claimable apxUSD receipts with same-run valuation and mutable ceiling-rounded fees, eventual-only. Its queued category/20-day modelled horizon and three-day funded-claim minimum are not a completion maximum.
-- Monetrix request transfers versus claim burns, shared refill-dependent escrow, user/operator pauses and stored cooldown ends remain distinct. Saturn processing can skip requests and uses mutable process-time fees. These lanes stay diagnostic-only; balances, counts and initial runbook fees prove no new-holder throughput.
-- Measured exact reserve/route data does not establish full queued-claim coverage. Source-specific USYC authorized receiver, Spiko investor/day/FX and JLTXX cash-versus-securities conditions stay with their reviewed config; an observation cannot clear unmeasured sibling conditions.
-- GoldZip's ordinary physical route remains separate from its conditional, time-limited USDT issuer-change option. A customer-response deadline is not completion, and conflicting fee descriptions/unbounded transport, assay or sale costs remain gaps.
+The complete payout set is mandatory: untracked members cannot be dropped to create a priced basket, and holder-selected alternatives are not proportional baskets. Preserve exact untracked receipt identities rather than aliasing them to tracked siblings. Cash payout is distinct from NAV input pricing; identity alone proves neither valuation, openness, funded capacity, complete costs nor completed receipt. Physical delivery, a conditional issuer-change payout and a secondary sale remain separate paths.
 
 ### Capacity Models
 
 Capacity resolution is dispatched in `worker/src/lib/redemption-backstop/capacity.ts`. `static.ts` under `worker/src/lib/redemption-backstop-capacity/` owns the three discriminated static models; `reserve-sync.ts` and `executable-observer.ts` retain live admission. `worker/src/lib/redemption-backstop/sources.ts` orchestrates the entry build. `buildBoundedCapacityFields` in `profile.ts` shares supply/day/profile arithmetic; each model retains its own null, zero, confidence and horizon policy.
+
+Config defaults, legal full-position rights, AUM, gate percentages and numerical diagnostics cannot close executable-capacity, all-in-cost or final-completion gaps. Unknown capacity stays unavailable, never observed zero. Review dates do not become publisher dates; endpoint recovery, a config correction or a new production run alone cannot renew positive evidence. Only fresh exact-route evidence measuring the missing predicate, or a separately admitted exact-request certificate, can close that predicate without clearing unmeasured sibling conditions.
+
+Queued requests, funded owner-claimable receipts and operator processing are distinct. Idle balances, queue counts, refill-dependent escrow and initial fees do not establish new-holder throughput; cooldowns, claim minima, service averages and customer-response deadlines are not completion maxima. Issuer processing is not bank receipt. A measured delayed receipt may support eventual-only capacity, with its own output valuation, guards and costs, never an invented immediate buffer or completion SLA.
 
 | Capacity model          | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -384,7 +332,44 @@ The resulting row is tagged with one `sourceMode`:
 - `estimated` for static supply models or configured reserve-sync fallback ratios
 - `static` for fixed-USD models as well as unresolved/error diagnostic rows; use `resolutionState`, not source mode, to establish availability
 
-### Provider / Source Definitions
+### Docs / Notes
+
+- `docs` prefers explicit config-reviewed sources first (`docs[]` + `reviewedAt`), then live-reserve display links for reserve-sync routes, then the coin metadata's `proofOfReserves.url`, then preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
+- `docs.provenance` distinguishes reviewed route docs from fallback live-reserve, proof-of-reserves, or generic project-link sources so detail pages do not overstate evidence quality
+- `docs.reviewedAt` is the route-review date, not a claim that the rendered fallback link itself was the reviewed source; the detail card now shows review date and provenance together
+- `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
+- The registry check ratchets aggregate source-support coverage and emits per-config warnings when a `documented-bound` capacity route lacks explicit `route` or `capacity` support. These warnings are backlog controls, not hard CI errors, until the remaining documented-bound source-support gaps are cleaned up.
+- `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
+- `notes` merges config notes plus runtime notes such as stale reserve metadata expiry, conservative fallback use, or live fee fallback
+- `capsApplied` records any score caps triggered during scoring
+
+### Cost Modeling
+
+- `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
+- Explicit issuer statements that redemption charges no fee are modeled as a fixed `0` bps schedule rather than as an opaque or variable fee. This applies to the reviewed Spiko funds, Midas mF-ONE, JTRSY, YLDS, EUROP, EUSD, and USD3 routes; the registry validates the complete reviewed ID tables so additions and removals cannot silently drift.
+- HBD conversion has no extra conversion fee, but the debt-ratio haircut and 3.5-day median-price window leave all-in USD payout cost unquantified. Its reviewed formula disposition therefore carries no numeric zero-cost bound until current payout valuation accounts for those effects.
+- Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
+- Admitted live fees retain fractional basis points in publication, scenario costs and exact threshold comparisons; rounding belongs only to presentation, never fee statistics.
+- Every on-chain rate probe must explicitly pin the return-value decimal scale; missing scale fails configuration validation rather than silently publishing an unknown fee
+- Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound
+- `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
+- `feeDescription` is used to surface:
+  - dynamic formulas such as Liquity-style `min 50 bps + baseRate`
+  - conditional fee schedules such as borrower-vs-non-borrower redemptions
+  - flat minimums or bank/network charges that do not map cleanly to one global bps number
+  - cases where public docs were reviewed but no numeric redemption-fee schedule is published
+- If live formula telemetry is missing, the route falls back to the reviewed-formula bucket rather than pretending a fixed fee is known
+- `costScore` uses the active-user scenario by default when v4 fee-shape inputs are present; optional `costScenarioScores` exposes retail, active-user, and institutional route-size scores
+
+`resolveRedemptionCostBpsAtNotional` requires an observed exact fee quote, real authored maximum or fixed percentage basis. For notional N it uses `10_000 × (max(N × bps / 10_000, minFeeUsd) + gasOrBridgeCostUsd) / N`; `minFeeUsd` is a minimum charge, **not** additive flat cost, and a fee floor alone never establishes a complete ceiling. Above-budget costs retain the exact trace but do not establish raw zero inventory.
+
+Issuer/fund fee zero is scoped, never an all-in promise or universal holder entitlement. Different bank/network/partner deductions, investor cohorts, original-currency quota accounting and instant-versus-queued branches retain separate terms. “No spread”, an observed variable fee, a cooldown or claim availability cannot substitute for complete cost and final-receipt bounds.
+
+Private tariffs, holder-specific quotes, conditional bank receipt, calendar gates and unfunded queue completion remain explicit reviewed gaps. Never guess elapsed seconds from a conditional following-month-end promise or renew evidence after failed retrieval. Closing a fee field does not clear the independent DEX portfolio-coverage obligation.
+
+---
+
+## Provider / Source Definitions
 
 Provider identifiers are defined in `shared/lib/redemption-backstop-providers.ts` and describe where the capacity number came from, what confidence defaults apply, and whether the source can ever survive a severe-depeg gate.
 
@@ -461,43 +446,6 @@ Each row also carries:
   - V9 Exit derives route independence from disjoint failure domains and physical-resource keys instead of this tag
 
 **Documented zero versus undisclosed fees.** A quoted zero issuer charge is fixed `0` bps, not undisclosed-reviewed; numeric restatement remains per-entry source curation. Descriptive/formula fees without a genuine maximum remain unquantified. Neither a fee label nor a historic cohort count grants model confidence, all-in proceeds or positive same-notional credit.
-
-### Docs / Notes
-
-- `docs` prefers explicit config-reviewed sources first (`docs[]` + `reviewedAt`), then live-reserve display links for reserve-sync routes, then the coin metadata's `proofOfReserves.url`, then preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
-- `docs.provenance` distinguishes reviewed route docs from fallback live-reserve, proof-of-reserves, or generic project-link sources so detail pages do not overstate evidence quality
-- `docs.reviewedAt` is the route-review date, not a claim that the rendered fallback link itself was the reviewed source; the detail card now shows review date and provenance together
-- `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
-- The registry check ratchets aggregate source-support coverage and emits per-config warnings when a `documented-bound` capacity route lacks explicit `route` or `capacity` support. These warnings are backlog controls, not hard CI errors, until the remaining documented-bound source-support gaps are cleaned up.
-- `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
-- `notes` merges config notes plus runtime notes such as stale reserve metadata expiry, conservative fallback use, or live fee fallback
-- `capsApplied` records any score caps triggered during scoring
-
-### Cost Modeling
-
-- `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
-- Explicit issuer statements that redemption charges no fee are modeled as a fixed `0` bps schedule rather than as an opaque or variable fee. This applies to the reviewed Spiko funds, Midas mF-ONE, JTRSY, YLDS, EUROP, EUSD, and USD3 routes; the registry validates the complete reviewed ID tables so additions and removals cannot silently drift.
-- HBD conversion has no extra conversion fee, but the debt-ratio haircut and 3.5-day median-price window leave all-in USD payout cost unquantified. Its reviewed formula disposition therefore carries no numeric zero-cost bound until current payout valuation accounts for those effects.
-- Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
-- Admitted live fees retain fractional basis points in publication, scenario costs and exact threshold comparisons; rounding belongs only to presentation, never fee statistics.
-- Every on-chain rate probe must explicitly pin the return-value decimal scale; missing scale fails configuration validation rather than silently publishing an unknown fee
-- Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound
-- `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
-- `feeDescription` is used to surface:
-  - dynamic formulas such as Liquity-style `min 50 bps + baseRate`
-  - conditional fee schedules such as borrower-vs-non-borrower redemptions
-  - flat minimums or bank/network charges that do not map cleanly to one global bps number
-  - cases where public docs were reviewed but no numeric redemption-fee schedule is published
-- If live formula telemetry is missing, the route falls back to the reviewed-formula bucket rather than pretending a fixed fee is known
-- `costScore` uses the active-user scenario by default when v4 fee-shape inputs are present; optional `costScenarioScores` exposes retail, active-user, and institutional route-size scores
-
-`resolveRedemptionCostBpsAtNotional` requires an observed exact fee quote, real authored maximum or fixed percentage basis. For notional N it uses `10_000 × (max(N × bps / 10_000, minFeeUsd) + gasOrBridgeCostUsd) / N`; `minFeeUsd` is a minimum charge, **not** additive flat cost, and a fee floor alone never establishes a complete ceiling. Above-budget costs retain the exact trace but do not establish raw zero inventory.
-
-Issuer/fund fee zero is scoped, never an all-in promise or universal holder entitlement. Different bank/network/partner deductions, investor cohorts, original-currency quota accounting and instant-versus-queued branches retain separate terms. “No spread”, an observed variable fee, a cooldown or claim availability cannot substitute for complete cost and final-receipt bounds.
-
-Private tariffs, holder-specific quotes, conditional bank receipt, calendar gates and unfunded queue completion remain explicit reviewed gaps. Never guess elapsed seconds from a conditional following-month-end promise or renew evidence after failed retrieval. Closing a fee field does not clear the independent DEX portfolio-coverage obligation.
-
----
 
 ## Database Schema
 
@@ -616,53 +564,3 @@ The maintenance coverage audit requires a durable reviewed disposition for every
 `npm run audit:coverage -- --domain=redemption-coverage` always evaluates these reviewed-disposition findings. Default and `--check` modes have identical exit semantics (`0` for a valid reviewed backlog, `1` for findings); `--check` only changes presentation. `--strict-active-gaps` independently escalates default-inferred active gaps. A nonzero backlog is not itself a failing invariant, and none of these modes admits a runtime route.
 
 There is no dedicated redemption list page. The stablecoin detail page is the primary route-diagnostic surface; its contextual hints distinguish the standalone score from Safety Exit. Public methodology sections for both are owned under `/methodology/`.
-
-## Zero-route producer evidence review (PKT-12, 2026-10-14)
-
-The [v4.5 release record](https://pharos.watch/methodology/redemption-backstop-changelog/#changelog-v-4-5) owns the conservative config-correction chronology. A documented mechanism, legal entitlement, mint/burn interface or balance never substitutes for same-notional holder execution; unknown capacity stays unknown, not zero. Review dates do not become publisher dates.
-
-Exact asset identities remain separate: Anything Labs/Youves UUSD, Neutrl/Nexus NUSD, RISE/Ring USDR and legacy/replacement Solomon USDv cannot share inferred routes.
-
-### Unconfigured cohort: per-asset decisions
-
-The disposition registry owns configured-versus-unconfigured decisions. These retained source-specific gaps supplement it where an exact URL or blocker is not fully represented there; they add no route or runtime bound.
-
-| Exact asset ID | Primary evidence and source date | Why no row is admitted |
-| --- | --- | --- |
-| `usda-alpha-partner` | [Alpha Partners overview](https://ap-organization-1.gitbook.io/alpha-partners/overview.md) and [usage guide](https://ap-organization-1.gitbook.io/alpha-partners/core-features/usage-guidelines.md), undated | The current docs describe AP U-Card, not the tracked USDA token/contract. USDT card top-up and its fee do not establish USDA holder redemption, payout or settlement. |
-| `uusd-anything-labs` | [Issuer access guide](https://uusd.ai/get/), undated; [official token repository](https://github.com/uusdai/uusd) | PancakeSwap USDT trading and institutional allocations are not an issuer redemption obligation; administrative burn is not payout. |
-| `vcred-vcred` | [Issuer site](https://vcred.trade/), undated; [exact Hemi source](https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1), verified 2025-05-19 | Owner minting and ERC-20 burn/burnFrom pay no assets; “Coming soon” portfolio access does not establish redemption. |
-| `usdx-kava` | [Kava Mint help](https://help.app.kava.io/article/15-what-is-kava-mint), updated 2023-04-03 | The $1 repayment credit applies to the borrower's own Mint debt, not a general holder collateral payout. Borrowing interest is not a redemption fee. |
-| `usdv-solomon-v2` | [Replacement USDv acquire/redeem](https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/), undated; [authority disclosure](https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md), current as of 2026-09-04 | Approved-counterparty burn is described, but the approved payout asset and operative execution/fee/settlement terms are unspecified; wind-down is not funded capacity. Legacy USDv's USDC route belongs to another mint and cannot be borrowed. |
-| `nxusd-nereus` | [Current Nereus site](https://www.nereus.finance/), undated; [issuer's historical NXUSD article](https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020), May 2022 | Wirex holder redemption was historically advertised; current gateway, eligibility and payout are unverified. Do not re-use historical 0.5% fees or protocol batch limits as current holder capacity. |
-| `home-homecoin` | [Official DEX-pool guide](https://raw.githubusercontent.com/homecoin-finance/gitbook/master/resources/dex-pools.md) and [FAQ](https://raw.githubusercontent.com/homecoin-finance/gitbook/master/getting-started/faq.md), undated | HOME/3CRV trading and mortgage borrower flows establish neither a general holder claim against liens nor issuer redemption. |
-| `susd-hedgecore` | [Protocol architecture](https://docs.hedgecore.io/docs/whitepaper/protocol-architecture) and [contract directory](https://docs.hedgecore.io/docs/github/smart-contracts), undated | Owner/operator-authorized `earlyRedeem()` burns for USDC but is not an ordinary-holder route; `unlock()` only permits transfer. The issuer lists the sUSD contract as TBA, without corroborating the tracked BNB deployment; yield fees are not redemption fees. |
-| `pht-pht` | [APACX offramp](https://docs.apacx.io/user-guides/pht-onramp-and-offramp), undated; [MoneyBees terms](https://www.moneybees.ph/terms/), updated 2026-08-27 | APACX advertises OTC cash-out; MoneyBees describes trading, does not establish current PHT-specific acceptance and retains discretionary asset acceptance. This does not establish an issuer/agent redemption commitment. Its unquantified exchange-rate margin is not zero cost; customer limits are not route capacity. APACX's on-chain redeem is borrower repayment. |
-| `stusd-stoneyield` | [Token lifecycle](https://docs.stoneyield.io/docs/whitepaper/token-lifecycle) and [wrapper](https://docs.stoneyield.io/docs/protocol/stusd-wrapper), undated | Exceptional owner-only `earlyRedeem()` is not participant-callable; holder `unlock()` permits transfer rather than payout, and the wrapper is one-way. |
-| `isc-international-stable-currency` | [Reserve mechanics](https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics) and [key entities](https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities), undated | Reserve market purchases/sales and issuer mint/burn do not give holders a claim to reserve assets or an issuer redemption payout. |
-| `nusd-nexus` | [Synapse Bridge interface](https://contracts.synapseprotocol.com/bridge/synapsebridge), [nUSD deployment](https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/deploy/010_deploy_nUSD.ts) and [PoolConfig](https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/bridge/PoolConfig.sol), undated | `redeemAndRemove` is a real burn/node-processing flow, but exact tracked-token→pool/output binding is not established. Bridge-minted nUSD is not the separate nUSD-LP token; the displayed Ethereum DAI/USDC/USDT pool is not proof of this token's payout. Output failure can return nUSD; no fee/completion/capacity bound is established. |
-| `iusd-initia` | [Official iUSD FAQ](https://contents.initia.xyz/app/iusd-faq.json), undated | The FAQ describes iUSD→AUSD→LayerZero/Ethereum→USDC swap. A conceptual composite flow does not select a source-matched executable route or guarantee par USDC, eligibility, fees or completion. |
-| `lvusd-leverup` | [LVUSD docs](https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin), undated; [issuer design article](https://paragraph.com/@leverup/lvusd-stablecoin-design), 2026-08-28 | Depeg-triggered auctions/daily quotas describe conditional recovery, not an ordinary holder-call procedure. Quota, fee, completion and activation are unverified; vault reserves are not executable capacity. |
-| `zkusd-goal3` | [Goal3 docs](https://docs.goal3.xyz/) unavailable; [portal implementation](https://explorer.zksync.io/address/0xd3227d2b5c616dcf566ace0fec42507afef8e28d#contract), retained source review at block 72423600, 2026-10-10 23:27:13Z | Current primary issuer redemption terms are inaccessible. Reviewed portal deposit/mint/vesting mechanics establish no holder payout; historical third-party 1:1 descriptions cannot substitute. |
-| `usdr-ring` | [Ring overview](https://docs.ring.exchange/concepts/overview), [FewToken mechanics](https://docs.ring.exchange/concepts/few-protocol) and [tracked token source](https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913), undated; retained identity review 2026-10-02 | AMM trading, token burns and FewToken unwraps do not establish redemption of the tracked USDR against reserves or fiat. Do not conflate RISE USDR. |
-| `eurot-token-teknoloji` | [EUROT product](https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/), published 2023-10-11, modified 2024-07-28; [platform terms](https://www.token.com.tr/kullanim-kosullari/), published 2024-08-29 | Bitlo TRY conversion is an exchange trade at matched/user-selected prices, not the issuer's obligation to pay euros. Backing and platform commissions are not redemption terms. |
-
-## PKT-12 configured cohort: per-asset decisions
-
-Family configs and `v9RouteReviewTerms` own the live route inventory and reviewed gaps. These retained exceptions preserve exact citations or qualifications not fully represented there; they are not a cohort count or renewed admission. Source/review dates retain their original meaning.
-
-| Exact asset ID | Decision and remaining evidence gap | Primary source; retained review date |
-| --- | --- | --- |
-| `pusd-polymarket` | Left open: native USDC.e unwrap requires unpaused execution and current vault liquidity; no static capacity is added. | [pUSD](https://docs.polymarket.com/concepts/pusd); 2026-07-09 |
-| `sgho-aave` | Left open: GHO-native ERC-4626 exit needs admitted live vault evidence; it is not GHO's separate par exit. | [sGHO guide](https://aave.com/docs/aave-v3/guides/sgho); 2026-05-12 |
-| `cusd-cap` | Left open: proportional USDC/WTGXX route depends on live reserves, whitelist fees and invested/borrowed liquidity; no new bound. | [Cap minter](https://docs.cap.app/concepts/vault/minter.md); 2026-03-23 |
-| `susdf-falcon` | Left open: native USDf unwrap retains restriction/cooldown gates; idle USDf is not downstream dollars or a successful canonical certificate. | [sUSDf](https://docs.falcon.finance/earn/susdf-yield-bearing-token.md); 2026-10-03 |
-| `brz-transfero` | Left open: current regulated-partner claim lacks operative eligibility, complete fees, capacity and completed payout. October 13 issuer page does not revalidate historical 100-bps/full-supply terms; support tariff redirects to sign-in. | [Transfero BRZ](https://transfero.com/brz-stablecoin); 2026-03-23 |
-| `feusd-felix` | Left open: collateral branch execution/valuation remains necessary; aggregate branch evidence is not completed same-notional USD payout. | [Felix docs](https://usefelix.gitbook.io/docs/); 2026-03-23 |
-| `witry-brix` | Left open: iTRY output/cooldown can reset; TRY valuation and final completion unresolved, capacity unquantified. | [Brix docs](https://docs.brix.money/); 2026-10-05 |
-| `ussd-sonic-labs` | Left open: gated frxUSD custodian route needs fresh exact payout telemetry; historical zero issuer fee is not permanent all-in cost or capacity. | [BrandedCustodian source](https://sonicscan.org/address/0x8c3b4f5d9b0bb77efdbab6b1574ea1c78a45f91d); 2026-08-12 |
-| `usdq-quill` | Left open: WETH/wstETH/weETH/SCR is a collateral route, not a stablecoin/instant-vault rail; PKT-8 verdict retained. | [Quill docs](https://docs.quill.finance/); 2026-03-23 |
-
-### Supplemental named asset and verification boundary
-
-Solayer's source-owned request/QLP/USDC path remains queued, unquantified and holder-restricted, not atomic or an invented completion SLA; the family config retains its RFQ and eligibility sources. Conservative config review adds no fetches, lanes, fan-out or production execution proof. Runtime acceptance still requires fresh exact evidence and the normal publication gates.
