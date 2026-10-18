@@ -4,7 +4,7 @@ import { getCircuitRecord } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import type { CronResult, CronProgressReporter } from "../../../lib/cron-logger";
 import type { RpcParityProbeRunResult } from "../probe";
-import { readRpcParityStore } from "../../../lib/rpc-provider-parity/store";
+import { readRpcParityStore, RPC_PARITY_STORE_KEY } from "../../../lib/rpc-provider-parity/store";
 import { rpcParityCircuitOutcome, syncRpcProviderParity } from "../index";
 import { RPC_PARITY_TARGETS } from "../../../lib/rpc-provider-parity/targets";
 import { DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH } from "../../../lib/rpc-provider-budget";
@@ -119,6 +119,7 @@ describe("rpc parity job", () => {
       attempted: 4,
       headOk: 3,
       deadlineHit: false,
+      truncated: false,
       aborted: false,
       runsRetained: 1,
       circuit: "success",
@@ -167,14 +168,22 @@ describe("rpc parity job", () => {
     );
 
     expect(result?.status).toBe("degraded");
-    expect(metadataOf(result)).toMatchObject({ circuit: "neutral", circuitRecorded: false });
+    expect(metadataOf(result)).toMatchObject({
+      attempted: 0,
+      deadlineHit: true,
+      truncated: true,
+      reason: "rpc-parity-deadline-exhausted",
+      outputPublishedAt: null,
+      circuit: "neutral",
+      circuitRecorded: false,
+    });
     const circuit = await getCircuitRecord(db, CIRCUIT_SOURCE.DWELLIR_EVM);
     expect(circuit).toMatchObject({ consecutiveFailures: 0, lastSuccessAt: null, lastFailureAt: null });
     const store = await readRpcParityStore(db);
     expect(store.row?.runs[0].skipped).toEqual([{ chainId: "base", reason: "deadline" }]);
   });
 
-  it("reports a truncated run as degraded and still stores what was measured", async () => {
+  it("reports a bounded truncated observation as ok and retains incomplete coverage", async () => {
     const { db } = fixtures.open();
     const samples = [paritySample(RPC_PARITY_TARGETS[0].chainId)];
     const result = await syncRpcProviderParity(
@@ -185,11 +194,79 @@ describe("rpc parity job", () => {
       { probe: async () => probeResult({ samples, attempted: 1, headOk: 1, deadlineHit: true, skipped: [{ chainId: RPC_PARITY_TARGETS[1].chainId, reason: "deadline" }] }) },
     );
 
-    expect(result?.status).toBe("degraded");
-    expect(metadataOf(result)).toMatchObject({ attempted: 1, headOk: 1, deadlineHit: true, skipped: 1, runsRetained: 1 });
+    expect(result?.status).toBe("ok");
+    expect(result?.itemCount).toBe(1);
+    const metadata = metadataOf(result);
+    expect(metadata).toMatchObject({
+      attempted: 1, headOk: 1, deadlineHit: true, truncated: true,
+      skipped: 1, runsRetained: 1, circuit: "success",
+    });
+    expect(metadata).not.toHaveProperty("reason");
+    expect(metadata.outputPublishedAt).toBeGreaterThan(0);
     const store = await readRpcParityStore(db);
     expect(store.row?.runs).toHaveLength(1);
+    expect(store.row?.runs[0].samples).toMatchObject([{ chainId: RPC_PARITY_TARGETS[0].chainId, headOk: true }]);
     expect(store.row?.runs[0].skipped).toEqual([{ chainId: RPC_PARITY_TARGETS[1].chainId, reason: "deadline" }]);
+  });
+
+  it.each([
+    { attempted: 1, samples: [] },
+    { attempted: 0, samples: [paritySample(RPC_PARITY_TARGETS[0].chainId)] },
+  ])("does not accept deadline truncation without both attempt and sample evidence ($attempted attempts)", async ({ attempted, samples }) => {
+    const { db } = fixtures.open();
+    const result = await syncRpcProviderParity(
+      db,
+      { DWELLIR_API_KEY: API_KEY },
+      new AbortController().signal,
+      undefined,
+      { probe: async () => probeResult({ attempted, samples, deadlineHit: true }) },
+    );
+
+    expect(result?.status).toBe("degraded");
+    expect(metadataOf(result)).toMatchObject({
+      reason: "rpc-parity-deadline-exhausted", truncated: true, deadlineHit: true,
+    });
+  });
+
+  it("keeps a returned probe abort degraded despite collected deadline samples", async () => {
+    const { db } = fixtures.open();
+    const samples = [paritySample(RPC_PARITY_TARGETS[0].chainId)];
+    const result = await syncRpcProviderParity(
+      db,
+      { DWELLIR_API_KEY: API_KEY },
+      new AbortController().signal,
+      undefined,
+      { probe: async () => probeResult({ samples, attempted: 1, headOk: 1, deadlineHit: true, aborted: true }) },
+    );
+
+    expect(result?.status).toBe("degraded");
+    expect(metadataOf(result)).toMatchObject({ reason: "rpc-parity-probe-aborted", truncated: true });
+    const store = await readRpcParityStore(db);
+    expect(store.row?.runs[0].samples).toMatchObject([{ chainId: RPC_PARITY_TARGETS[0].chainId, headOk: true }]);
+  });
+
+  it("keeps store degradation actionable despite a sampled deadline run", async () => {
+    const { db } = fixtures.open();
+    await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(RPC_PARITY_STORE_KEY, "unreadable parity payload", PARITY_NOW_SEC)
+      .run();
+    const samples = [paritySample(RPC_PARITY_TARGETS[0].chainId)];
+    const result = await syncRpcProviderParity(
+      db,
+      { DWELLIR_API_KEY: API_KEY },
+      new AbortController().signal,
+      undefined,
+      { probe: async () => probeResult({ samples, attempted: 1, headOk: 1, deadlineHit: true }) },
+    );
+
+    expect(result?.status).toBe("degraded");
+    expect(metadataOf(result)).toMatchObject({
+      reason: "rpc-parity-store-degraded", truncated: true,
+      storeError: `unreadable ${RPC_PARITY_STORE_KEY} payload`,
+    });
+    const store = await readRpcParityStore(db);
+    expect(store.error).toBeNull();
+    expect(store.row?.runs[0].samples).toMatchObject([{ chainId: RPC_PARITY_TARGETS[0].chainId, headOk: true }]);
   });
 
   it("returns an error result instead of throwing when the probe itself fails", async () => {

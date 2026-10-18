@@ -1242,6 +1242,17 @@ describe("syncBlacklist", () => {
       expect(metadata.configLag[baseConfig.configKey]).toMatchObject({
         frontier: 1_049_999, safeHead: 20_000_000, lag: 18_950_001,
       });
+      expect(metadata.reason).toBe("blacklist-source-coverage-incomplete");
+      expect(metadata.coverageFailureConfigs).toContainEqual({
+        configKey: baseConfig.configKey,
+        outcome: "incomplete",
+        cursorKind: "evm_block",
+        frontier: 1_049_999,
+        safeHead: 20_000_000,
+        lag: 18_950_001,
+        samples: ["behind-safe-head"],
+      });
+      expect(metadata.coverageFailureConfigs.length).toBeLessThanOrEqual(6);
 
       const baseCalls = vi
         .mocked(fetchAlchemyLogs)

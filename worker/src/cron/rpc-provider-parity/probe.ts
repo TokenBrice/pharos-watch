@@ -46,10 +46,10 @@ import { headLagThresholdBlocks } from "../../lib/rpc-provider-parity/report";
 
 const RPC_PARITY_REQUEST_TIMEOUT_MS = 8_000;
 /**
- * A stationary-head 37-chain pass uses 648 calls / 536 Dwellir credits;
- * capped feasible windows allow at most 802 calls / 690 credits. Extrapolating
- * prior 102 s / 174 calls gives ~380–470 s, beyond this four-minute deadline;
- * slow tails deadline-skip, and hourly rotation shares the retained coverage.
+ * Measured full 37-chain passes fit within this four-minute cap; truncation is
+ * not a prerequisite for a normal sweep. The cap bounds slow-run wall time.
+ * Deadline-skipped chains remain explicit, and hourly rotation shares retained
+ * coverage without claiming that a truncated run observed every chain.
  */
 export const RPC_PARITY_RUN_BUDGET_MS = 4 * 60_000;
 const RPC_PARITY_MAX_RESPONSE_BYTES = 128 * 1024;

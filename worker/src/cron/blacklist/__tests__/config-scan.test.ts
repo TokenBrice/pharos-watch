@@ -171,12 +171,77 @@ describe("blacklist config scan accounting", () => {
     expect(first.configsSucceeded).toBe(0);
     expect(first.runtimeBudgetHit).toBe(false);
     expect(first.configLag[state.configKey]).toEqual({ cursorKind: "evm_block", frontier: 120, safeHead: 900, lag: 780 });
+    expect(first.coverageFailureConfigs).toEqual([{
+      configKey: state.configKey, outcome: "incomplete", cursorKind: "evm_block",
+      frontier: 120, safeHead: 900, lag: 780, samples: ["behind-safe-head"],
+    }]);
     mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({ ...evmResult(), scannedToBlock: 900, safeHead: 900 });
     const second = await scanBlacklistConfigs(scanArgs());
     expect(second.configsSucceeded).toBe(1);
     expect(state.cursorValue).toBe(900);
     expect(state.lastSucceededAt).toBeGreaterThan(10);
     expect(second.configLag[state.configKey]?.lag).toBe(0);
+    expect(second.coverageFailureConfigs).toEqual([]);
+  });
+
+  it("samples only the first six failed source scans without capping failure counts", async () => {
+    const states = Array.from({ length: 9 }, (_, index) =>
+      makeState(EVM_CONFIG, { configKey: `${EVM_CONFIG.configKey}-${index}` }),
+    );
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: states, zeroCursorConfigs: [] });
+    for (let index = 0; index < 8; index++) {
+      mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
+        ...evmResult(), safeHead: 900, incomplete: true, coverageOutcome: "incomplete",
+        failureSamples: ["behind-safe-head"],
+      });
+    }
+
+    const result = await scanBlacklistConfigs(scanArgs());
+
+    expect(result).toMatchObject({
+      configsAttempted: 9, configsSucceeded: 1,
+      coverageOutcomeCounts: { incomplete: 8, quiet: 1 },
+    });
+    expect(result.coverageFailureConfigs).toEqual(states.slice(0, 6).map((state) => ({
+      configKey: state.configKey, outcome: "incomplete", cursorKind: "evm_block",
+      frontier: 120, safeHead: 900, lag: 780, samples: ["behind-safe-head"],
+    })));
+  });
+
+  it("retains unavailable frontier evidence instead of inventing zero lag", async () => {
+    const state = makeState();
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
+      ...evmResult(), apiError: true, coverageOutcome: "provider_error",
+      scannedToBlock: null, safeHead: null, failureSamples: ["rpc-error"],
+    });
+
+    const result = await scanBlacklistConfigs(scanArgs());
+
+    expect(result.configsSucceeded).toBe(0);
+    expect(result.coverageFailureConfigs).toEqual([{
+      configKey: state.configKey, outcome: "provider_error", cursorKind: "evm_block",
+      frontier: null, safeHead: null, lag: null, samples: ["rpc-error"],
+    }]);
+  });
+
+  it("keeps Tron failure diagnostic units and source reason", async () => {
+    const state = makeState(TRON_CONFIG);
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.fetchTronEventsIncremental.mockResolvedValueOnce({
+      rows: [], maxBlock: 120, scannedToTimestamp: 120_000, safeHead: 900_000,
+      incomplete: true, apiError: false, topicCount: 1, coveredTopicCount: 0, providerCalls: 1,
+    });
+
+    const result = await scanBlacklistConfigs(scanArgs());
+
+    expect(result).toMatchObject({
+      configsAttempted: 1, configsSucceeded: 0, incompleteRuntimeConfigs: 1, runtimeBudgetHit: true,
+    });
+    expect(result.coverageFailureConfigs).toEqual([{
+      configKey: state.configKey, outcome: "incomplete", cursorKind: "tron_timestamp_ms",
+      frontier: 120_000, safeHead: 900_000, lag: 780_000, samples: ["trongrid-incomplete"],
+    }]);
   });
 
   it("records every remaining config when the budget is reached mid-loop", async () => {
@@ -223,6 +288,7 @@ describe("blacklist config scan accounting", () => {
       tronGridCircuitSkips: 1,
       configsAttempted: 1,
       coverageOutcomeCounts: { provider_skipped: 1 },
+      coverageFailureConfigs: [],
     });
     expect(mocks.finalizeBlacklistConfigAttempt).toHaveBeenCalledWith(
       expect.anything(),
@@ -247,6 +313,7 @@ describe("blacklist config scan accounting", () => {
       stateConflicts: 0,
       apiErrorClasses: { TypeError: 1 },
       coverageOutcomeCounts: { exception: 1 },
+      coverageFailureConfigs: [],
     });
     expect(result.apiErrorConfigs).toEqual([
       expect.objectContaining({ configKey: state.configKey, reason: "exception:TypeError" }),
