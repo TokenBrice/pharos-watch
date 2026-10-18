@@ -49,6 +49,7 @@ function cron(status: CronRunStatus = "ok", ageSec = 120, metadata?: Record<stri
   return {
     expectedIntervalSec: CRON_INTERVALS["sync-yield-data"],
     healthy: true,
+    confirmedOutputAt: null,
     runs: [{
       startedAt: NOW - ageSec,
       durationMs: 1000,

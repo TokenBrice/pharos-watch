@@ -25,6 +25,7 @@ function cron(overrides: Partial<CronStatus> = {}): CronStatus {
     }],
     expectedIntervalSec: 1_800,
     healthy: true,
+    confirmedOutputAt: null,
     ...overrides,
   };
 }

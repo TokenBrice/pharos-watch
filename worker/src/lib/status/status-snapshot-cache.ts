@@ -8,6 +8,7 @@ import { logWorkerEvent } from "../structured-log";
 /**
  * Shared admission for the self-check's persisted status snapshots. Each key has
  * its own writer and schema; a reader validates only the payload it needs.
+ * Payloads share a versioned generation envelope; each schema owns its version.
  */
 export interface FreshStatusSnapshot<T> {
   kind: "fresh";
@@ -27,7 +28,12 @@ export interface UnavailableStatusSnapshot {
 
 export type StatusSnapshotLoadResult<T> = FreshStatusSnapshot<T> | UnavailableStatusSnapshot;
 
-export async function loadStatusSnapshotPayload<T extends Record<string, unknown> & { producedAt: number }>(
+interface StatusSnapshotEnvelope {
+  version: number;
+  producedAt: number;
+}
+
+export async function loadStatusSnapshotPayload<T extends Record<string, unknown> & StatusSnapshotEnvelope>(
   db: D1Database,
   key: string,
   schema: ZodType<T>,
@@ -60,11 +66,11 @@ export async function loadStatusSnapshotPayload<T extends Record<string, unknown
 }
 
 /** Monotonic write (`setCacheIfNewer`); `false` when not written or the write failed. */
-export async function writeStatusSnapshotPayload(
+export async function writeStatusSnapshotPayload<T extends StatusSnapshotEnvelope>(
   db: D1Database,
   key: string,
   now: number,
-  payload: { producedAt: number },
+  payload: T,
 ): Promise<boolean> {
   try {
     const { written } = await setCacheIfNewer(db, key, JSON.stringify(payload), now);

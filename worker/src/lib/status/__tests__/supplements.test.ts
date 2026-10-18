@@ -74,6 +74,7 @@ function cronsWithPriceSourceHealth(priceSourceHealth: unknown): Record<string, 
     "sync-stablecoins": {
       expectedIntervalSec: 900,
       healthy: true,
+      confirmedOutputAt: null,
       runs: [{
         startedAt: NOW - 60,
         durationMs: 100,
@@ -92,6 +93,7 @@ function cronsWithDexLiquidityRuns(
     "sync-dex-liquidity": {
       runs,
       healthy: true,
+      confirmedOutputAt: null,
       expectedIntervalSec,
     },
   };

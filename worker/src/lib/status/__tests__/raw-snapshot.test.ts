@@ -37,7 +37,7 @@ function minimalRawStatus(): RawStatusComputation {
     causes: { availability: [], dataQuality: [], overall: [] },
     caches: {},
     crons: Object.fromEntries(Object.entries(CRON_INTERVALS).map(([job, expectedIntervalSec]) => [
-      job, { expectedIntervalSec, healthy: true, runs: [] },
+      job, { expectedIntervalSec, healthy: true, confirmedOutputAt: null, runs: [] },
     ])),
     budgetOnlySurfaces: [],
     dataQuality: makeDataQuality(),
