@@ -599,7 +599,7 @@ export async function markTelegramProcessedUpdateEffectStarted(
  * travels on the thrown error (never SQL text, bound parameters or update/claim
  * identifiers) and is reported on the Telegram structured log path.
  */
-export const TELEGRAM_TERMINAL_MARKER_FAILURE_CLASSES = [
+const TELEGRAM_TERMINAL_MARKER_FAILURE_CLASSES = [
   "fence_rejected",
   "sql_rejected",
   "zero_change",

@@ -45,13 +45,13 @@ import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from 
 import { buildSafetyScoreV9AcceptedProjections } from "./accepted-projections";
 
 // Only non-scheduled callers use this bounded fallback.
-export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
+const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 // Initial headroom for up to two 5s independent operations (commit check and
 // failed-attempt write) plus 5s cron settlement, not a measured persistence p99.
-export const SAFETY_SCORE_V9_PUBLICATION_SETTLEMENT_RESERVE_MS = 15_000;
-export const SAFETY_SCORE_V9_PUBLICATION_MINIMUM_BUDGET_MS = 10_000;
+const SAFETY_SCORE_V9_PUBLICATION_SETTLEMENT_RESERVE_MS = 15_000;
+const SAFETY_SCORE_V9_PUBLICATION_MINIMUM_BUDGET_MS = 10_000;
 const SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS = 5_000;
-export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
+const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
   "safety-score-v9-publication";
 
 type SafetyScoreV9PublicationFailureStage = Exclude<

@@ -51,7 +51,7 @@ export function projectCronRunOutcome(metadata: Record<string, unknown> | undefi
 }
 
 /** Default-summary attempt: drops metadata and bounds the error text. */
-export function toCronRunSummary(run: CronRunDetail): CronRunSummary {
+function toCronRunSummary(run: CronRunDetail): CronRunSummary {
   const { metadata: _metadata, error, ...summary } = run;
   return {
     ...summary,

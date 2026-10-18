@@ -1,6 +1,6 @@
 # Worker Infrastructure — Runtime Contracts Appendix
 
-> **Agent navigation** — Start with the [infrastructure entry](../worker-infrastructure.md). Read only the affected contract here: [bindings](#binding-inventory), [HTTP](#http-request-handling), [retention](#append-only-d1-retention-policy), [memory qualification](#module-initialization-memory-evidence), [task topology/new-job checklist](#scheduled-task-topology), [scheduling](#cron-scheduling), [Workflow sunset](#safety-score-v9-workflow-shadow-pilot), [logging/progress](#logcronrun-wrapper), [cache generations](#cache-table), [leases](#lease-integration-status), or [health/status](#health--status-endpoints). Feature guides own producer algorithms; source registries and generated blocks own inventories. Historical measurements are not current acceptance evidence.
+> **Agent navigation** — Start with the [infrastructure entry](../worker-infrastructure.md). Read only the affected contract here: [bindings](#binding-inventory), [HTTP](#http-request-handling), [retention](#append-only-d1-retention-policy), [memory qualification](#module-initialization-memory-evidence), [task topology/new-job checklist](#scheduled-task-topology), [scheduling](#cron-scheduling), [Workflow sunset](#safety-score-v9-workflow-shadow-pilot), [logging/progress](#logcronrun-wrapper), [cache generations](#cache-table), [leases](#lease-integration-status), or [health/status](#health--status-endpoints). [RPC trial evidence](#rpc-provider-trial-evidence) retains dated captures, not live policy. Feature guides own producer algorithms; source registries and generated blocks own inventories. Historical measurements are not current acceptance evidence.
 
 ## Binding Inventory
 
@@ -816,3 +816,45 @@ The admin timeline distinguishes unavailable history from a complete window: rea
 [`worker/src/lib/constants.ts`](../../worker/src/lib/constants.ts) owns current values; do not maintain a copied constant/value table here.
 
 The account-state manifest owns the intentionally disabled broad `api-rate-limit-ip` WAF rule. Broad floods can reach Worker ingress; route-specific native gates and per-key controls do not substitute for edge-wide volumetric protection.
+
+## RPC Provider Trial Evidence
+
+Historical observations only. [GET /api/rpc-provider-trial](../api-reference-admin.md#get-apirpc-provider-trial) owns the live report, freshness, retention and comparison contract. These bounded captures and replays neither establish current production availability nor replace its sufficiency gates.
+
+Worldchain's 2026-10-05 keyless comparator probe returned chain ID 480; USDC total supply and all 22 transaction-hash/log-index identities over the ten-block window ending at block 35,949,925 matched the official Alchemy public endpoint, with both endpoints read without authentication.
+
+The 2026-10-05T19:50Z HyperEVM numeric-state reproduction in `agents/dwellir-switch/raw/orch-hyperevm-alchemy-state.txt` found Dwellir = dRPC ≠ Alchemy in five head−64 samples with identical Dwellir/Alchemy block hashes, but all three agreed in five head−500 samples. Alchemy's value at block 47,756,020 equaled Dwellir's at later block 47,756,029: recent numeric `eth_call` tags returned newer-than-requested state on Alchemy. The 19:17Z historical supply match does not establish correctness near head.
+
+The 2026-10-05T19:15:06Z domain audit read H1, Multicall3, ArbSys and H2 on every one of the 37 targets. Only these two targets returned an L1-numbered Multicall3 result and a valid local ArbSys result; all other 34 deployed Multicall3 results were in their local head domain. XDC returned `0x` for both sentinels; BSC and zkSync's ArbSys calls returned RPC errors, not an available sentinel.
+
+| Nitro target | H1 | Multicall3 (L1) | ArbSys (L2) | H2 |
+| --- | ---: | ---: | ---: | ---: |
+| Arbitrum | 512,015,100 | 26,128,190 | 512,015,102 | 512,015,103 |
+| Robinhood | 81,024,812 | 26,128,192 | 81,024,815 | 81,024,816 |
+
+The 2026-10-15 read-only production cache decode measured 63 runs spanning 226,768 seconds (62.99 hours): 241,898 envelope bytes, 181,393 gzip bytes and 1,282,600 raw bytes. Raw freshness telemetry was 993,138 bytes (numeric values 495,175; call provenance 285,211; latest values 61,684); exact packed timings were 95,096 bytes. Top raw sample contributors were BSC 48,341, Tempo 40,778 and Celo 40,748 bytes. Removing all token values still left 93,340 gzip bytes; replaying the captured detailed samples to 168 runs required 632,790 envelope bytes. These are attribution experiments, not alternative encodings: preserving the counters separately avoids changing gate inputs or rounding measured latency to manufacture a seven-day detailed window.
+
+A bounded v7 replay of those captured samples across 168 hourly clocks retained all 168 counter runs (601,200 seconds / 167 hours) and 57 detailed runs within 244,494 envelope bytes / 2,357,688 raw bytes; gate tuples used 1,199,811 raw bytes. This is a local capacity replay, not newly observed production history.
+
+Reviewed comparator-only pins from serial 2026-10-15 reads (no production consumer routing changes):
+
+| Chain | Keyless comparator / provenance | Chain ID | Pinned window end | State/log checks |
+| --- | --- | ---: | --- | --- |
+| Celo | `https://forno.celo.org` ([Forno](https://docs.celo.org/build/tools/nodes/forno)) | 42220 | `0x4c6e8c1` | 3/3 supply matches; 3/3 empty ten-block log sets |
+| XDC | `https://erpc.xinfin.network` ([official endpoints](https://docs.xdc.network/xdcchain/developers/mainnetrpc/)) | 50 | `0x67586dc` | 3/3 supply matches; 3/3 empty ten-block log sets |
+| Robinhood | `https://robinhood-rpc.publicnode.com` ([provider listing](https://robinhood.publicnode.com/)) | 4663 | `0x54e2160` | 3/3 supply matches; 3/3 empty ten-block log sets |
+| Arc | `https://arc-rpc.publicnode.com` ([provider listing](https://arc.publicnode.com/)) | 5042 | `0x18d7b16` | 3/3 supply matches; all eight log identities matched in each read |
+
+Each endpoint answered `eth_blockNumber` and `eth_chainId`, followed by three serial pinned `totalSupply` / `eth_getLogs` pairs against Dwellir. Every comparator method returned HTTP 200; state/log latencies ranged 57–63/58–60 ms (Celo), 383–1,629/297–1,074 ms (XDC), 35–62/38–48 ms (Robinhood), and 41–89/38–79 ms (Arc). Empty windows establish method availability, not non-empty historical representation parity. These bounded local observations do not establish production availability or replace the 24-run gates.
+
+The 2026-10-05T19:17Z log reproduction showed Dwellir/Alchemy matching 16/22/24 log identities in three pinned windows ending at blocks 47,753,799/798/797. At block 47,753,790 all four providers returned hash `0xbfcfc3f34fd4226ca24620b5e719d0cac262b6638ea82206444aae5368006ed1`, but Dwellir/Alchemy included eight transactions versus dRPC/official native's seven. The native representation omitted synthetic transaction `0x7989bc119042f05c3ee4169493d883a0409035a8c31c560a37accafc1515d08a`, whose reth receipt contains one other-token transfer at index zero; four regular USDC log indices consequently differed by one (`0x11` versus `0x10`, for example) despite identical event payloads. This is a pinned, same-hash representation difference, not evidence of a lagging node or a near-head race. The earlier 28-identity dRPC match did not cover this difference. Log identities remain exact; no normalization or exclusion turns shifted/missing logs into a pass.
+
+The 2026-10-05T19:30Z live smoke of this probe completed in 31 seconds with 37/37 Dwellir heads, 187 credits, no deadline hit and no skipped chains. Both ArbSys freshness checks were fresh with zero block lag; HyperEVM's Alchemy state and exact log identities matched. Celo's comparator returned HTTP 400, so its state/log comparisons remained unchecked rather than positive parity evidence. This single-run measurement does not establish a worst-case runtime or replace the 24-run gates.
+
+The 2026-10-05T19:45Z smoke after adopting the shared chain-time tolerance also completed in 31 seconds, used 187 credits, read 37/37 Dwellir heads, and had no skipped chains or deadline hit. Arbitrum and Robinhood were fresh with their recorded 24- and six-block budgets. HyperEVM's exact logs matched Alchemy, but its pinned state comparison mismatched; that remains negative parity evidence, not a freshness failure or grounds to relax exact comparison. Celo's HTTP 400 left state/log unchecked, and Manta's comparator HTTP 429 left logs unchecked. These single-run observations do not establish a 24-run gate pass.
+
+The 2026-10-05T20:25Z smoke with the per-step comparator split completed in 40 seconds, used 189 Dwellir credits, read 37/37 Dwellir heads, and had no skipped chains or deadline hit. HyperEVM's dRPC numeric state and Alchemy exact logs both matched Dwellir; its latest sentinel and both Nitro ArbSys checks were fresh. HTTP 500 responses were observed, and Celo's comparator was correctly classified as `server-error`, leaving its state/log comparisons unchecked. This remains a single-run observation, not a 24-run gate verdict.
+
+The 2026-10-05T22:30Z initial dual-check smoke completed in 54 seconds with 517 Dwellir credits, 37/37 heads and samples, no skipped chains and no deadline hit. HyperEVM's dRPC historical state and Alchemy exact logs matched, while its token freshness remained indeterminate (`invalid-response`); Etherlink's token check returned `rpc-error`, and zkSync's returned `invalid-response`. Worldchain's comparator `server-error` and Manta's `rate-limited` response left logs unchecked. This smoke preceded the H2-only hash-fence adjustment and raw-wire retention guard. It establishes no 24-run gate verdict.
+
+The 2026-10-05T23:26Z two-target diagnostic rerun reproduced failures on the first numeric `totalSupply` call at each sentinel's R=H2+1: Etherlink returned `-32603` / “No state available for block 54982591”; Blast returned `-32000` / “header not found” for block 41216502. Both known-head hash reads succeeded and both sentinels were fresh. Those observations were originally counted in the mixed `latest` bucket; v6 classifies this case as `reference-unavailable`, indeterminate rather than provider failure or success. The historical raw scratch trace is no longer present; the retained original report cannot recover discarded methods/messages.

@@ -9,7 +9,7 @@ import type {
 
 export const PENDING_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;
 
-export function pendingDeadLetterKey(row: Pick<DeadLetterPendingRow, "id" | "delivery_generation">): string {
+function pendingDeadLetterKey(row: Pick<DeadLetterPendingRow, "id" | "delivery_generation">): string {
   if (!Number.isSafeInteger(row.id) || row.id < 0) {
     throw new Error("Telegram pending dead-letter id is invalid");
   }

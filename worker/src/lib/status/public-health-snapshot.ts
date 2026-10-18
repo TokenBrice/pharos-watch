@@ -9,7 +9,7 @@ import { loadStatusSnapshotPayload, writeStatusSnapshotPayload, type StatusSnaps
  * the operator assessment envelope in `status:raw-snapshot:v1`.
  */
 export const STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY = "status:public-health-snapshot:v1";
-export const STATUS_PUBLIC_HEALTH_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
+const STATUS_PUBLIC_HEALTH_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
 
 const StatusPublicHealthSnapshotPayloadSchema = z.object({
   version: z.literal(1),

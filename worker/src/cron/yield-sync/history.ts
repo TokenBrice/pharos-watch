@@ -386,7 +386,7 @@ export async function loadYieldHistorySnapshots(
   return { historyRows, prevTvlRows, prevBestRows, previousTvlRowsTruncated };
 }
 
-export async function deleteStaleYieldRows(db: D1Database, managedYieldIds: string[], startSec: number): Promise<void> {
+async function deleteStaleYieldRows(db: D1Database, managedYieldIds: string[], startSec: number): Promise<void> {
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
     frozenIdsList.length > 0 ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})` : "";
@@ -404,7 +404,7 @@ export async function deleteStaleYieldRows(db: D1Database, managedYieldIds: stri
   }
 }
 
-export async function deleteOrphanYieldRows(db: D1Database, managedYieldIds: string[]): Promise<void> {
+async function deleteOrphanYieldRows(db: D1Database, managedYieldIds: string[]): Promise<void> {
   const managedYieldIdSet = new Set(managedYieldIds);
   const existingIds = await db
     .prepare("SELECT /* pharos:yield-sync:yield-data-existing-ids */ DISTINCT stablecoin_id FROM yield_data")
@@ -696,7 +696,7 @@ export function buildHistoryKey(stablecoinId: string, sourceKey: string): string
   return `${stablecoinId}::${sourceKey}`;
 }
 
-export function isLegacyDeterministicOnChainSourceKey(
+function isLegacyDeterministicOnChainSourceKey(
   stablecoinId: string,
   sourceKey: string | null | undefined,
 ): boolean {
@@ -772,7 +772,7 @@ export function pickHistoryRowsForSource(
   return { rows: [], usedLegacyHistory: false };
 }
 
-export function normalizePreviousBestSourceKey(row: {
+function normalizePreviousBestSourceKey(row: {
   stablecoin_id: string;
   source_key: string | null;
   data_source: string;

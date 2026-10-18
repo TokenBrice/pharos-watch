@@ -225,10 +225,6 @@ describe("doc-ownership registry integrity", () => {
     // Existing out-of-scope sections only. Remove entries once bounded; new
     // primary sections must stay within 25KB.
     const legacySectionCeilings: Record<string, number> = {
-      // Release B added nullable flow/supply/PSI, nominal-price, and audit-verdict
-      // wire contracts; the 2026-10-07 hardening added served-generation yield
-      // identity, PSI omission arrays, and scheduler liveness. Retain its ratchet.
-      "docs/api-reference.md#public-endpoints": 44_368,
       "docs/digest-pipeline.md#generation": 32_770,
     };
     const remainingExceptions = new Set(Object.keys(legacySectionCeilings));

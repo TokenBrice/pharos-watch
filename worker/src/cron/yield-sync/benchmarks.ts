@@ -16,12 +16,6 @@ import {
 
 // Canonical definition lives in shared/lib/status-thresholds.ts.
 export { YIELD_BENCHMARK_SCORE_TTL_SEC };
-export {
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
-  benchmarkRecordAgeSeconds,
-  classifyYieldBenchmarkFreshness,
-  type YieldBenchmarkFreshness,
-} from "@shared/lib/yield-benchmark-freshness";
 
 export interface ParsedYieldBenchmarkMeta extends YieldBenchmarkMeta {
   lastMarketRate: number | null;

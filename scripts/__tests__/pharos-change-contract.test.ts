@@ -65,14 +65,14 @@ function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, meth
 const ROUTE_FIXTURES = [
   ["src/components/stablecoin-table.tsx", 20_359, 20_359],
   ["src/app/yield/page.tsx", 49_528, 49_528],
-  ["worker/src/cron/dex-liquidity/orchestrator.ts", 51_270, 51_270],
-  ["worker/src/api/yield-history.ts", 75_600, 75_600],
-  ["shared/lib/safety-score-v9/evaluate-asset.ts", 64_103, 64_103],
-  ["shared/lib/classification.ts", 46_819, 46_819],
+  ["worker/src/cron/dex-liquidity/orchestrator.ts", 43_300, 43_300],
+  ["worker/src/api/yield-history.ts", 70_779, 70_779],
+  ["shared/lib/safety-score-v9/evaluate-asset.ts", 64_211, 64_211],
+  ["shared/lib/classification.ts", 46_927, 46_927],
   ["functions/safety-scores/map.json.ts", 26_202, 30_995],
-  ["shared/data/stablecoins/coins/usdt-tether.json", 46_819, 46_819],
-  ["worker/src/telegram/webhook/telegram-webhook.ts", 90_024, 90_024],
-  ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 27_551, 27_551],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 46_927, 46_927],
+  ["worker/src/telegram/webhook/telegram-webhook.ts", 47_679, 47_679],
+  ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 27_532, 27_532],
 ] as const;
 
 interface ReadingSignature {
@@ -497,7 +497,7 @@ describe("reading selectors and context modes", () => {
         expect(docKeys(contract)).toEqual(expect.arrayContaining([
           "docs/process/cron-trigger-policy.md#source-of-truth",
           "docs/process/cron-trigger-policy.md#target",
-          "docs/worker-infrastructure.md#cron-scheduling",
+          "docs/worker-infrastructure.md#event-entry-lifecycle-and-admission",
           "docs/dex-liquidity.md#discovery-cron",
         ]));
         expect(docKeys(contract)).not.toContain("docs/process/cron-trigger-policy.md");

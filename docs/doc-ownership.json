@@ -153,6 +153,24 @@
         { "path": "docs/pricing-pipeline.md", "anchor": "primary-consensus" },
         { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }
       ],
+      "reading": [
+        {
+          "sources": ["worker/src/cron/sync-v9-supply-attribution.ts"],
+          "local": [
+            { "path": "docs/supply-snapshot.md", "anchor": "supply-admission-and-nullable-helpers" },
+            { "path": "docs/supply-snapshot.md", "anchor": "chain-observation-absence" },
+            { "path": "docs/supply-snapshot.md", "anchor": "reviewed-supply-contract-hardening" }
+          ]
+        },
+        {
+          "sources": ["worker/src/cron/snapshot-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
+          "local": [
+            { "path": "docs/supply-snapshot.md", "anchor": "algorithm" },
+            { "path": "docs/supply-snapshot.md", "anchor": "supply-admission-and-nullable-helpers" },
+            { "path": "docs/supply-snapshot.md", "anchor": "chain-observation-absence" }
+          ]
+        }
+      ],
       "background": [
         { "path": "docs/architecture.md", "anchor": "adr-8" },
         { "path": "docs/architecture.md", "anchor": "adr-28" },
@@ -224,7 +242,6 @@
         "scripts/maintenance/generate-dependency-coverage-audit.ts",
         "scripts/maintenance/reconcile-dependency-graph.ts",
         "scripts/ci/check-dependency-review-gaps.ts",
-        ".agents/skills/dependency-coverage-drain/**",
         ".codex/skills/dependency-coverage-drain/**",
         ".claude/skills/dependency-coverage-drain/**",
         "docs/runbooks/dependency-network.md",
@@ -466,24 +483,116 @@
         "docs/worker-infrastructure.md"
       ],
       "docs": [
-        "docs/api-endpoint-authoring.md",
+        { "path": "docs/api-endpoint-authoring.md", "anchor": "implementation-checklist" },
         { "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling-entry" },
-        "docs/security-governance.md",
-        { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
-        { "path": "docs/api-reference.md", "anchor": "public-endpoints" }
+        { "path": "docs/security-governance.md", "anchor": "token-in-url-discipline" },
+        { "path": "docs/api-reference.md", "anchor": "surface-split" },
+        { "path": "docs/api-reference.md", "anchor": "public-api-auth" }
       ],
       "reading": [
         {
-          "sources": ["worker/src/api/yield-history.ts", "worker/src/api/yield-rankings.ts"],
+          "sources": ["worker/src/api/**"],
           "local": [
-            "docs/api-endpoint-authoring.md",
-            { "path": "docs/api-reference.md", "anchor": "get-apiyield-history" },
-            { "path": "docs/api-reference.md", "anchor": "get-apiyield-rankings" },
+            { "path": "docs/api-endpoint-authoring.md", "anchor": "implementation-checklist" },
             { "path": "docs/api-reference.md", "anchor": "public-api-auth" },
             { "path": "docs/api-reference.md", "anchor": "surface-split" }
           ],
           "required": [{ "path": "docs/security-governance.md", "anchor": "token-in-url-discipline" }]
-        }
+        },
+        {
+          "sources": ["worker/src/telegram/**"],
+          "local": [
+            { "path": "docs/api-endpoint-authoring.md", "anchor": "auth-and-lanes" },
+            { "path": "docs/security-governance.md", "anchor": "token-in-url-discipline" }
+          ]
+        },
+        {
+          "sources": ["shared/lib/runtime-origins.ts", "shared/lib/site-csp.ts", "public/_headers", "public/_routes.json", "functions/_middleware.ts", "functions/_site-data/**", "docs/security-governance.md", "docs/operator-origin-access.md"],
+          "required": [
+            { "path": "docs/security-governance.md", "anchor": "csp-posture" },
+            { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" }
+          ]
+        },
+        { "sources": ["worker/src/api/events.ts", "worker/src/api/__tests__/events*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apievents" }] },
+        { "sources": ["worker/src/api/cache-handlers.ts", "worker/src/api/__tests__/cache-handlers*.ts"], "required": [
+          { "path": "docs/api-reference.md", "anchor": "get-apistablecoins" },
+          { "path": "docs/api-reference.md", "anchor": "get-apistablecoin-charts" },
+          { "path": "docs/api-reference.md", "anchor": "get-apiusds-status" },
+          { "path": "docs/api-reference.md", "anchor": "get-apibluechip-ratings" },
+          { "path": "docs/api-reference.md", "anchor": "get-apiyield-rankings" }
+        ] },
+        { "sources": ["worker/src/api/stablecoin-detail.ts", "worker/src/api/stablecoin-detail/**", "worker/src/api/__tests__/stablecoin-detail*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistablecoinid" }] },
+        { "sources": ["worker/src/api/stablecoin-detail/snapshot-inputs.ts"], "required": [{ "path": "docs/process/worker-infrastructure-appendix.md", "anchor": "internal-detail-snapshot-inputs" }] },
+        { "sources": ["worker/src/api/stablecoin-summary.ts", "worker/src/api/__tests__/stablecoin-summary*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistablecoin-summaryid" }] },
+        { "sources": ["worker/src/api/stablecoin-reserves.ts", "worker/src/api/__tests__/stablecoin-reserves*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistablecoin-reservesid" }] },
+        { "sources": ["worker/src/api/non-usd-share.ts", "worker/src/api/__tests__/non-usd-share*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apinon-usd-share" }] },
+        { "sources": ["worker/src/api/chains.ts", "worker/src/api/__tests__/chains*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apichains" }] },
+        { "sources": ["worker/src/api/blacklist.ts", "worker/src/api/__tests__/blacklist*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiblacklist" }] },
+        { "sources": ["worker/src/api/depeg-events.ts", "worker/src/api/__tests__/depeg-events*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidepeg-events" }] },
+        { "sources": ["worker/src/api/depeg-resolver.ts", "worker/src/api/__tests__/depeg-resolver.test.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidepeg-resolver" }] },
+        { "sources": ["worker/src/api/depeg-resolver-review.ts", "worker/src/api/__tests__/depeg-resolver-review*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidepeg-resolver-review" }] },
+        { "sources": ["worker/src/api/peg-summary.ts", "worker/src/api/__tests__/peg-summary*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apipeg-summary" }] },
+        { "sources": ["worker/src/api/dex-liquidity.ts", "worker/src/api/__tests__/dex-liquidity.test.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidex-liquidity" }] },
+        { "sources": ["worker/src/api/dex-liquidity-history.ts", "worker/src/api/__tests__/dex-liquidity-history*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidex-liquidity-history" }] },
+        { "sources": ["worker/src/api/supply-history.ts", "worker/src/api/__tests__/supply-history*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apisupply-history" }] },
+        { "sources": ["worker/src/api/daily-digest.ts", "worker/src/api/__tests__/daily-digest*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidaily-digest" }] },
+        { "sources": ["worker/src/api/digest-archive.ts", "worker/src/api/__tests__/digest-archive*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidigest-archive" }] },
+        { "sources": ["worker/src/api/digest-snapshot.ts", "worker/src/api/__tests__/digest-snapshot*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidigest-snapshot" }] },
+        { "sources": ["worker/src/api/snapshot.ts", "worker/src/api/__tests__/snapshot*.ts"], "required": [
+          { "path": "docs/api-reference.md", "anchor": "get-apisnapshotsindex" },
+          { "path": "docs/api-reference.md", "anchor": "get-apisnapshotsdatejson" },
+          { "path": "docs/api-reference.md", "anchor": "get-apisnapshotdatestablecoinid" }
+        ] },
+        { "sources": ["worker/src/api/health.ts", "worker/src/api/__tests__/health*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apihealth" }] },
+        { "sources": ["worker/src/api/public-status-history.ts", "worker/src/api/__tests__/public-status-history*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apipublic-status-history" }] },
+        { "sources": ["worker/src/telegram/webhook/telegram-pulse.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apitelegram-pulse" }] },
+        { "sources": ["worker/src/api/stability-index.ts", "worker/src/api/__tests__/stability-index*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistability-index" }] },
+        { "sources": ["worker/src/api/og.tsx", "worker/src/api/og-page/**", "worker/src/api/__tests__/og*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiog" }] },
+        { "sources": ["worker/src/api/report-cards-v9.ts", "worker/src/api/__tests__/report-cards-v9*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apireport-cardsv9" }] },
+        { "sources": ["worker/src/api/safety-grades.ts", "worker/src/api/__tests__/safety-grades*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apisafety-grades" }] },
+        { "sources": ["worker/src/api/dependency-graph.ts", "worker/src/api/__tests__/dependency-graph*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidependency-graphv1" }] },
+        { "sources": ["worker/src/api/dependency-scenarios.ts", "worker/src/api/__tests__/dependency-scenarios*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidependency-scenariosv1" }] },
+        { "sources": ["worker/src/api/redemption-backstops.ts", "worker/src/api/__tests__/redemption-backstops*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiredemption-backstops" }] },
+        { "sources": ["worker/src/api/safety-score-history.ts", "worker/src/api/__tests__/safety-score-history.test.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apisafety-score-history" }] },
+        { "sources": ["worker/src/api/safety-score-history-v2.ts", "worker/src/api/__tests__/safety-score-history-v2*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apisafety-score-history-v2" }] },
+        { "sources": ["worker/src/api/yield-rankings*.ts", "worker/src/api/__tests__/yield-rankings*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiyield-rankings" }] },
+        { "sources": ["worker/src/api/yield-adapter-manifest.ts", "worker/src/api/__tests__/yield-adapter-manifest*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiyield-adapter-manifest" }] },
+        { "sources": ["worker/src/api/yield-history.ts", "worker/src/api/__tests__/yield-history*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiyield-history" }] },
+        { "sources": ["worker/src/api/mint-burn-flows.ts", "worker/src/api/mint-burn-flows/**", "worker/src/api/__tests__/mint-burn-flows*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apimint-burn-flows" }] },
+        { "sources": ["worker/src/api/mint-burn-events.ts", "worker/src/api/__tests__/mint-burn-events*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apimint-burn-events" }] },
+        { "sources": ["worker/src/api/stress-signals.ts", "worker/src/api/__tests__/stress-signals*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistress-signals" }] },
+        { "sources": ["worker/src/api/donor-key-claims.ts", "worker/src/api/__tests__/donor-key-claims*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "post-apidonor-key-claims" }] },
+        { "sources": ["worker/src/api/feedback.ts", "worker/src/api/feedback/**", "worker/src/api/__tests__/feedback*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "post-apifeedback" }] },
+        { "sources": ["worker/src/api/status.ts", "worker/src/api/__tests__/status.test.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apistatus" }] },
+        { "sources": ["worker/src/api/status-cron-detail.ts", "worker/src/api/__tests__/status-cron-detail*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apistatus-cron-detail" }] },
+        { "sources": ["worker/src/api/status-history.ts", "worker/src/api/__tests__/status-history*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apistatus-history" }] },
+        { "sources": ["worker/src/api/reserve-attempt-history.ts", "worker/src/api/__tests__/reserve-attempt-history*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apireserve-attempt-history" }] },
+        { "sources": ["worker/src/api/request-source-stats.ts", "worker/src/api/__tests__/request-source-stats*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apirequest-source-stats" }] },
+        { "sources": ["worker/src/api/api-keys.ts", "worker/src/api/__tests__/api-keys*.ts"], "required": [
+          { "path": "docs/api-reference-admin.md", "anchor": "get-apiapi-keys" },
+          { "path": "docs/api-reference-admin.md", "anchor": "get-apiapi-keyslifecycle-summary" },
+          { "path": "docs/api-reference-admin.md", "anchor": "post-apiapi-keys" },
+          { "path": "docs/api-reference-admin.md", "anchor": "post-apiapi-keysidupdate" },
+          { "path": "docs/api-reference-admin.md", "anchor": "post-apiapi-keysiddeactivate" },
+          { "path": "docs/api-reference-admin.md", "anchor": "post-apiapi-keysidrotate" }
+        ] },
+        { "sources": ["worker/src/api/api-key-audit-log.ts", "worker/src/api/__tests__/api-key-audit-log*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apiapi-keysaudit-log" }] },
+        { "sources": ["worker/src/api/backfill-dews.ts", "worker/src/api/__tests__/backfill-dews*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apibackfill-dews" }] },
+        { "sources": ["worker/src/api/rpc-provider-trial.ts", "worker/src/api/__tests__/rpc-provider-trial*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apirpc-provider-trial" }] },
+        { "sources": ["worker/src/api/remediate-blacklist-amount-gaps.ts", "worker/src/api/__tests__/remediate-blacklist-amount-gaps*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "post-apiremediate-blacklist-amount-gaps" }] },
+        { "sources": ["worker/src/api/admin-action-log.ts", "worker/src/api/__tests__/admin-action-log*.ts"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "get-apiadmin-action-log" }] },
+        { "sources": ["worker/src/api/admin-actions.ts", "worker/src/api/__tests__/admin-actions*.ts"], "required": [
+          { "path": "docs/api-reference-admin.md", "anchor": "post-apitrigger-digest" },
+          { "path": "docs/api-reference-admin.md", "anchor": "post-apireset-blacklist-sync" },
+          { "path": "docs/api-reference-admin.md", "anchor": "get-apidebug-sync-state" }
+        ] },
+        { "sources": ["worker/src/telegram/mini-app/telegram-mini-app.ts"], "required": [
+          { "path": "docs/api-reference.md", "anchor": "post-apitelegram-mini-appsession" },
+          { "path": "docs/api-reference.md", "anchor": "post-apitelegram-mini-appmutate" }
+        ] },
+        { "sources": ["worker/src/telegram/webhook/telegram-webhook.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "post-apitelegram-webhook" }] },
+        { "sources": ["worker/src/telegram/adoption/telegram-adoption.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "post-pharoswatchbot-adoption" }] },
+        { "sources": ["worker/src/telegram/admin/**"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "post-apiadmin-telegram-broadcast" }] }
       ],
       "background": [
         "docs/security-governance.md",
@@ -491,6 +600,7 @@
         { "path": "docs/architecture.md", "anchor": "adr-7" },
         { "path": "docs/architecture.md", "anchor": "adr-27" },
         {"path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows"},
+        { "path": "docs/process/worker-infrastructure-appendix.md", "anchor": "rpc-provider-trial-evidence" },
         { "path": "docs/incident-response/safe-browsing-flag.md", "runbook": { "label": "Safe Browsing flag response", "kind": "procedure" } }
       ],
       "checks": ["npm run test:critical-contracts", "npm run check:frozen-invariants"],
@@ -545,8 +655,16 @@
           "required": [
             { "path": "docs/process/cron-trigger-policy.md", "anchor": "source-of-truth" },
             { "path": "docs/process/cron-trigger-policy.md", "anchor": "target" },
-            { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" },
+            { "path": "docs/worker-infrastructure.md", "anchor": "event-entry-lifecycle-and-admission" },
             { "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }
+          ]
+        },
+        {
+          "sources": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "worker/wrangler*.toml", "worker/src/index.heavy.ts", "worker/src/handlers/scheduled.ts", "worker/src/handlers/scheduled/**", "worker/src/lib/scheduled-slot-*.ts", "worker/src/lib/cron-*.ts", "docs/**"],
+          "required": [
+            { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" },
+            { "path": "docs/process/cron-trigger-policy.md", "anchor": "current-growth-gate" },
+            { "path": "docs/process/cron-trigger-policy.md", "anchor": "process-for-new-scheduled-work" }
           ]
         }
       ],
@@ -600,11 +718,118 @@
         "docs/runbooks/telegram-*.md"
       ],
       "docs": [
-        { "path": "docs/telegram-architecture.md", "anchor": "1-ingress" },
-        { "path": "docs/telegram-alerts.md", "anchor": "commands" },
-        { "path": "docs/telegram-alerts.md", "anchor": "dispatch" },
-        { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
-        { "path": "docs/telegram-mini-app.md", "anchor": "overview" }
+        { "path": "docs/telegram-architecture.md", "anchor": "seam-overview" },
+        { "path": "docs/telegram-architecture.md", "anchor": "structural-change-policy" }
+      ],
+      "reading": [
+        {
+          "sources": ["worker/src/cron/telegram/dispatch/**", "worker/src/cron/telegram/sources/**", "worker/src/cron/telegram/target-plans/**", "worker/src/cron/telegram/freeze/**"],
+          "local": [
+            { "path": "docs/telegram-alerts.md", "anchor": "dispatch" },
+            { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
+            { "path": "docs/telegram-alerts.md", "anchor": "pending-delivery-queue" }
+          ]
+        },
+        {
+          "sources": ["worker/src/cron/telegram/delivery/**", "worker/src/telegram/outbox/**", "worker/src/telegram/delivery/**", "shared/lib/telegram-delivery-policy.ts"],
+          "local": [
+            { "path": "docs/telegram-alerts.md", "anchor": "delivery-persistence" },
+            { "path": "docs/telegram-architecture.md", "anchor": "8-outbound-transport" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/commands/**", "worker/src/telegram/callbacks/**"],
+          "local": [
+            { "path": "docs/telegram-architecture.md", "anchor": "1-ingress" },
+            { "path": "docs/telegram-alerts.md", "anchor": "commands" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/mini-app/**", "src/app/pharoswatchbot/app/**", "shared/lib/telegram-mini-app*.ts"],
+          "local": [
+            { "path": "docs/telegram-mini-app.md", "anchor": "auth-model" },
+            { "path": "docs/telegram-mini-app.md", "anchor": "seam-rules" },
+            { "path": "docs/telegram-mini-app.md", "anchor": "contract-and-catalog-versioning" },
+            { "path": "docs/telegram-mini-app.md", "anchor": "client-state-and-control-semantics" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/store/**"],
+          "local": [
+            { "path": "docs/telegram-architecture.md", "anchor": "7-state--persistence" },
+            { "path": "docs/telegram-alerts.md", "anchor": "preset-watchlists" },
+            { "path": "docs/telegram-alerts.md", "anchor": "update-deduplication" }
+          ]
+        },
+        {
+          "sources": ["worker/src/cron/telegram/recap/**", "worker/src/telegram/recap/**"],
+          "local": [
+            { "path": "docs/telegram-alerts.md", "anchor": "personalized-daily-recap" },
+            { "path": "docs/telegram-alerts.md", "anchor": "pending-delivery-queue" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/admin/**"],
+          "local": [
+            { "path": "docs/telegram-architecture.md", "anchor": "5-dispatch--fan-out" },
+            { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
+            { "path": "docs/telegram-alerts.md", "anchor": "delivery-persistence" }
+          ],
+          "required": [{ "path": "docs/runbooks/telegram-admin-broadcast-safety.md" }]
+        },
+        {
+          "sources": ["worker/src/handlers/scheduled/*telegram*.ts", "worker/src/cron/telegram/maintenance/**", "worker/src/telegram/webhook/*registration*.ts", "worker/src/telegram/webhook/__tests__/*registration*.ts", "shared/lib/telegram-bot-registration.ts"],
+          "local": [
+            { "path": "docs/telegram-alerts.md", "anchor": "operational-notes" },
+            { "path": "docs/telegram-alerts.md", "anchor": "admin-visibility" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/adoption/**", "functions/pharoswatchbot-adoption.ts", "shared/lib/telegram-adoption-*.ts", "src/app/pharoswatchbot/page.tsx"],
+          "local": [
+            { "path": "docs/telegram-mini-app.md", "anchor": "frontend-main-page" },
+            { "path": "docs/telegram-mini-app.md", "anchor": "public-pulse-privacy-and-freshness" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/common/**", "shared/lib/telegram-alert-*.ts", "shared/lib/telegram-presets.ts"],
+          "local": [
+            { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
+            { "path": "docs/telegram-alerts.md", "anchor": "preset-watchlists" },
+            { "path": "docs/telegram-alerts.md", "anchor": "ticker-resolution" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/digest/**"],
+          "local": [
+            { "path": "docs/telegram-alerts.md", "anchor": "digest-appendices" },
+            { "path": "docs/digest-pipeline.md", "anchor": "telegram" }
+          ]
+        },
+        {
+          "sources": ["worker/src/telegram/webhook/chat-member.ts", "worker/src/telegram/webhook/__tests__/chat-member*.ts"],
+          "local": [
+            { "path": "docs/telegram-alerts.md", "anchor": "group-admin-gating" },
+            { "path": "docs/telegram-architecture.md", "anchor": "7-state--persistence" }
+          ]
+        },
+        {
+          "sources": ["docs/telegram-alerts.md"],
+          "local": [{ "path": "docs/telegram-alerts.md", "anchor": "overview" }]
+        },
+        {
+          "sources": ["docs/telegram-mini-app.md"],
+          "local": [{ "path": "docs/telegram-mini-app.md", "anchor": "overview" }]
+        },
+        {
+          "sources": ["worker/src/telegram/webhook/telegram-*.ts", "worker/src/telegram/webhook/__tests__/telegram-*.ts"],
+          "local": [
+            { "path": "docs/telegram-architecture.md", "anchor": "1-ingress" },
+            { "path": "docs/telegram-alerts.md", "anchor": "webhook-command-flow" },
+            { "path": "docs/telegram-alerts.md", "anchor": "group-admin-gating" },
+            { "path": "docs/telegram-alerts.md", "anchor": "update-deduplication" }
+          ]
+        }
       ],
       "background": [
         { "path": "docs/runbooks/telegram-no-delivery.md", "runbook": { "label": "Telegram delivery, backlog and bot-wide outages", "kind": "symptom" } },
@@ -857,7 +1082,7 @@
           "required": [{ "path": "docs/process/report-cards-appendix.md", "anchor": "bridge-in-flight-accounting" }]
         },
         {
-          "sources": ["worker/src/lib/safety-score-v9/publication*.ts", "worker/src/lib/safety-score-v9/compute*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts"],
+          "sources": ["worker/src/lib/safety-score-v9/publication*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts"],
           "required": [{ "path": "docs/process/report-cards-appendix.md", "anchor": "canonical-publication" }]
         },
         {
@@ -1368,6 +1593,14 @@
             { "path": "docs/telegram-architecture.md", "anchor": "seam-overview" },
             { "path": "docs/digest-pipeline.md", "anchor": "overview" }
           ]
+        },
+        {
+          "sources": ["worker/src/lib/blacklist-summary-service.ts", "worker/src/lib/__tests__/blacklist-summary*.ts"],
+          "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiblacklist-summary" }]
+        },
+        {
+          "sources": ["worker/src/handlers/scheduled/yield-coverage-audit-manual.ts"],
+          "required": [{ "path": "docs/api-reference-admin.md", "anchor": "post-apitrigger-yield-coverage-audit" }]
         }
       ],
       "background": [

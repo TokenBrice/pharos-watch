@@ -29,6 +29,8 @@ The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose desc
 
 ## Implementation Checklist
 
+Read the affected endpoint's section in [API Reference](./api-reference.md#public-endpoints), not the full generated endpoint inventory. This checklist applies to every handler; [Auth And Lanes](#auth-and-lanes) selects its authentication authority. Origin/CSP changes additionally require [Security Governance](./security-governance.md#csp-posture) and [Operator Origin Access](./operator-origin-access.md#repo-side-changes).
+
 1. Add or update a path helper in `shared/lib/api-endpoints/paths.ts`.
 2. Add an endpoint definition in `shared/lib/api-endpoints/definitions.ts` with the correct base metadata: method set, `adminRequired`, `mutatingAdmin`, `cacheBypass`, probe metadata, dependency hints, and status-page action metadata. Factory defaults differ by surface: public `GET` routes are public-API protected and website-data allowed; public `POST` routes are public-API exempt, website-data denied, and cache-bypassed; admin routes are public-API exempt and website-data denied. Set `publicApiAccess` or `siteDataAccess` only when the endpoint deliberately overrides its factory default.
 3. Bind the endpoint key to a handler in the appropriate `worker/src/routes/*-routes.ts` file, or add a dynamic route only when the path family cannot be represented as a static endpoint.

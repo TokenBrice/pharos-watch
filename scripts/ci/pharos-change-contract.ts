@@ -142,7 +142,7 @@ const CONTRACT_SENSITIVE_GLOBS = [
   "shared/data/methodology-changelogs/**", "shared/data/stablecoins/**",
   "shared/lib/safety-score-v9/**", "shared/data/safety-score-v9/**",
   "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/prepare-safety-score-v9-input.ts",
-  "worker/src/lib/safety-score-v9/publication*.ts", "worker/src/lib/safety-score-v9/compute*.ts",
+  "worker/src/lib/safety-score-v9/publication*.ts",
   "worker/migrations/**", "shared/contracts/**",
 ];
 
@@ -152,12 +152,12 @@ const CONTRACT_SENSITIVE_GLOBS = [
 export const ROUTE_CONTEXT_CEILINGS = {
   "local-frontend": 24_000,
   "domain-frontend": 68_000,
-  "worker-cron": 140_000,
-  "worker-api": 124_000,
+  "worker-cron": 104_000,
+  "worker-api": 76_000,
   scoring: 100_000,
   functions: 100_000,
   "registry-data": 56_000,
-  telegram: 100_000,
+  telegram: 72_000,
   migration: 28_000,
   docs: 108_000,
   "other-one-domain": 84_000,

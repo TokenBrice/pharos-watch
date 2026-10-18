@@ -109,8 +109,7 @@ export const CronInFlightSchema = z.object({
 export type CronInFlight = z.output<typeof CronInFlightSchema>;
 
 /** Current progress in the default summary; progress metadata is detail-only. */
-export const CronInFlightSummarySchema = CronInFlightSchema.omit({ metadata: true });
-export type CronInFlightSummary = z.output<typeof CronInFlightSummarySchema>;
+const CronInFlightSummarySchema = CronInFlightSchema.omit({ metadata: true });
 
 const CronStaleArtifactSchema = z.object({
   kind: z.enum(["expired-lease", "orphaned-progress"]),
@@ -182,7 +181,7 @@ export const CronStatusSchema = z.object({
 export type CronStatus = z.output<typeof CronStatusSchema>;
 
 /** Per-job detail (`/api/status-cron-detail`): same verdict with full run and progress metadata. */
-export const CronStatusDetailSchema = z.object({
+const CronStatusDetailSchema = z.object({
   ...CronStatusVerdictShape,
   runs: z.array(CronRunDetailSchema),
   inFlight: CronInFlightSchema.nullable().optional(),

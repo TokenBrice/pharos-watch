@@ -319,7 +319,7 @@ export function evaluateD1QuotaCauses(
 }
 
 /** Recognizes the ops-only quota vocabulary so merged causes are replaced, never duplicated. */
-export function isD1QuotaCause(cause: StatusCause): boolean {
+function isD1QuotaCause(cause: StatusCause): boolean {
   return D1_QUOTA_CAUSE_CODE_PATTERN.test(cause.code);
 }
 

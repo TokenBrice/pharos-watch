@@ -16,7 +16,9 @@ The platform header-wait limit and Pharos's stricter trigger-wide budget are own
 
 `CRON_GROWTH_HEADROOM_POLICY` and [ADR-10](../architecture.md#adr-10) own growth ceilings. Added logical work, fetch surface or connection pressure requires a follow-up ADR and consolidation/rebalance plan. Accounting/alias-only changes that add none of those require a note on the source policy, not a second narrative here. Failure-isolated recovery must remain independent of the invocation it recovers.
 
-### Current growth gate
+Read [Current growth gate](#current-growth-gate) before changing schedule topology, CPU placement, logical work, fetch surfaces or connection pressure, and [Process for new scheduled work](#process-for-new-scheduled-work) before adding a job. Existing job-local changes retain this target without requiring the full operating procedure.
+
+## Current growth gate
 
 Physical expressions, deduplicated fetch-capable entries and headroom-full (`5/6`) slots each have source-owned ceilings. A ceiling edit is policy change, not routine schedule work. The public/heavy union is the accounting boundary, never a separate allowance per script.
 

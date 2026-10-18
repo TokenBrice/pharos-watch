@@ -1,4 +1,4 @@
-import type { BatchMessage, TelegramSendErrorClass } from "../../../telegram/delivery/telegram";
+import type { TelegramSendErrorClass } from "../../../telegram/delivery/telegram";
 import type { TelegramPendingCapacitySnapshot } from "../../../telegram/outbox/pending-capacity";
 import type { PendingDeliveryState } from "../../../telegram/common/constants";
 import type { TelegramAlertType } from "@shared/types/status";
@@ -97,10 +97,6 @@ export interface PendingDrainResult {
 
 export type PendingCapacitySnapshot = TelegramPendingCapacitySnapshot;
 
-export type PendingCapacityReadResult =
-  | { status: "available"; value: PendingCapacitySnapshot }
-  | { status: "unknown"; errorClass: "query_failed" };
-
 export interface PendingRetryUpdate extends PendingDeliveryClaim {
   retryAfterSec: number | null;
   errorClass: TelegramSendErrorClass | null;
@@ -139,5 +135,3 @@ export function emptyDrainResult(): PendingDrainResult {
     notBeforeAt: null,
   };
 }
-
-export type PendingQueueMessage = BatchMessage;

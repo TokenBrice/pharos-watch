@@ -4,7 +4,7 @@ Applies to `worker/`.
 
 ## Read First
 
-- Read the router-selected owning and runtime sections: module initialization and connection budgeting, plus HTTP handling for API work or scheduling/trigger policy for cron, dispatch, lease, timeout and slot lifecycle work.
+- Read routed owner/runtime anchors: initialization/connections, API HTTP handling, or cron event-entry lifecycle. Schedule/dispatch/fence changes also read `docs/worker-infrastructure.md#cron-scheduling`.
 - Use the routed pipeline section of `docs/data-flow-map.md` when data flow changes.
 - Migration/deploy work: `docs/deployment-process.md` § “CI Deploy Sequence” and `worker/migrations/MANIFEST.md` § “Baseline (0000)” / § “Individual Migrations (current active files)”. Never reuse a migration sequence.
 - Safety Score: `docs/report-cards.md#v10-model`, `docs/process/safety-score-equivalence-harness.md` § “When to use it”, and `docs/process/safety-score-curation-expiry-sweep.md` § “1. Capture the current production input”.

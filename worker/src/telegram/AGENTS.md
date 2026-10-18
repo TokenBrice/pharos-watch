@@ -2,6 +2,8 @@
 
 Applies to `worker/src/telegram/` and its integration with `worker/src/cron/telegram/`.
 
+Read the router-selected behavior sections for the affected seam, not every command, Mini App and dispatch contract together. Route each affected file when crossing seams; follow its architecture links to the behavior authority before changing linked policy.
+
 ## Public Entries
 
 - Preserve the existing seam owners and dependency directions in `docs/telegram-architecture.md#seam-overview`.
