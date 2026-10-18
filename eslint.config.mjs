@@ -1,5 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import security from "eslint-plugin-security";
@@ -61,15 +63,45 @@ function isWithinPath(parentDir, candidatePath) {
   return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
+const repoRoot = dirname(fileURLToPath(import.meta.url));
+const contractsRoot = resolve(repoRoot, "shared/contracts");
+const contractsManifest = JSON.parse(readFileSync(resolve(contractsRoot, "package.json"), "utf8"));
+const contractsPublicImports = new Set(
+  Object.keys(contractsManifest.exports).map((subpath) => `${contractsManifest.name}/${subpath.slice(2)}`),
+);
+
+function physicalImportTarget(filename, specifier) {
+  if (specifier.startsWith(".")) return resolve(dirname(filename), specifier);
+  if (isAbsolute(specifier)) return resolve(specifier);
+  if (specifier.startsWith("@shared/")) return resolve(repoRoot, "shared", specifier.slice("@shared/".length));
+  if (specifier.startsWith("@/")) return resolve(repoRoot, "src", specifier.slice(2));
+  if (specifier.startsWith("shared/")) return resolve(repoRoot, specifier);
+  if (specifier.startsWith("file:")) return fileURLToPath(specifier);
+  return null;
+}
+
 function staticImportSpecifier(node) {
   if (node.type === "ImportDeclaration" || node.type === "ExportNamedDeclaration" || node.type === "ExportAllDeclaration") {
     return typeof node.source?.value === "string" ? node.source.value : null;
+  }
+  if (node.type === "TSImportType") {
+    return typeof node.source?.value === "string" ? node.source.value : null;
+  }
+  if (node.type === "TSExternalModuleReference") {
+    return typeof node.expression?.value === "string" ? node.expression.value : null;
   }
   if (node.type === "ImportExpression") {
     if (node.source.type === "TemplateLiteral" && node.source.expressions.length === 0) {
       return node.source.quasis[0].value.cooked;
     }
     return node.source.type === "Literal" && typeof node.source.value === "string" ? node.source.value : null;
+  }
+  if (node.type === "CallExpression" && node.callee.type === "Identifier" && node.callee.name === "require") {
+    const argument = node.arguments[0];
+    if (argument?.type === "TemplateLiteral" && argument.expressions.length === 0) {
+      return argument.quasis[0].value.cooked;
+    }
+    return argument?.type === "Literal" && typeof argument.value === "string" ? argument.value : null;
   }
   return null;
 }
@@ -89,12 +121,13 @@ const pharosBoundaryPlugin = {
         schema: [],
         messages: {
           broad: "Import runtime values from @shared/types/<submodule>; reserve @shared/types for import type.",
-          dependency: "shared/types modules must not import shared/lib modules.",
+          dependency: "shared/types and shared/contracts modules must not import shared/lib modules.",
         },
       },
       create(context) {
         const filename = context.filename;
-        const inSharedTypes = isWithinPath(resolve(process.cwd(), "shared/types"), filename)
+        const inSharedTypes = (isWithinPath(resolve(process.cwd(), "shared/types"), filename)
+          || isWithinPath(contractsRoot, filename))
           && !filename.replaceAll("\\", "/").includes("/__tests__/")
           && !/\.test\.tsx?$/.test(filename);
         function check(node) {
@@ -113,6 +146,56 @@ const pharosBoundaryPlugin = {
           }
         }
         return { ImportDeclaration: check, ExportNamedDeclaration: check, ExportAllDeclaration: check };
+      },
+    },
+    "contracts-imports": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          public: "Import contracts only through exact @pharos/contracts exported subpaths; package-root, private, alias and physical imports bypass the public API.",
+          dependency: "Contract sources may import only zod and relative modules within shared/contracts.",
+          dynamic: "Contract sources require literal module specifiers so their dependency boundary can be checked.",
+        },
+      },
+      create(context) {
+        const filename = context.filename;
+        // Package tests are consumers of the public exports, not package implementation.
+        const inContracts = isWithinPath(contractsRoot, filename)
+          && !filename.replaceAll("\\", "/").includes("/__tests__/")
+          && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename);
+        function check(node) {
+          if (node.type === "CallExpression" && (node.callee.type !== "Identifier" || node.callee.name !== "require")) return;
+          const specifier = staticImportSpecifier(node);
+          if (!specifier) {
+            if (inContracts && (node.type === "ImportExpression" || node.type === "CallExpression")) {
+              context.report({ node, messageId: "dynamic" });
+            }
+            return;
+          }
+          const target = physicalImportTarget(filename, specifier);
+          if (inContracts) {
+            if (specifier !== "zod" && !(specifier.startsWith(".") && target && isWithinPath(contractsRoot, target))) {
+              context.report({ node, messageId: "dependency" });
+            }
+          } else if (
+            ((specifier === contractsManifest.name || specifier.startsWith(`${contractsManifest.name}/`))
+              && !contractsPublicImports.has(specifier))
+            || specifier === "@shared/contracts" || specifier.startsWith("@shared/contracts/")
+            || (target && isWithinPath(contractsRoot, target))
+          ) {
+            context.report({ node, messageId: "public" });
+          }
+        }
+        return {
+          ImportDeclaration: check,
+          ExportNamedDeclaration: check,
+          ExportAllDeclaration: check,
+          ImportExpression: check,
+          CallExpression: check,
+          TSImportType: check,
+          TSExternalModuleReference: check,
+        };
       },
     },
     "no-zero-coercing-supply-helpers": {
@@ -426,6 +509,11 @@ const eslintConfig = defineConfig([
     files: ["{functions,shared,src,scripts}/**/*.{ts,tsx}", "worker/src/**/*.{ts,tsx}"],
     plugins: { pharos: pharosBoundaryPlugin },
     rules: { "pharos/shared-types-imports": "error" },
+  },
+  {
+    files: [...NON_WORKER_SOURCE_GLOBS, "worker/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: { "pharos/contracts-imports": "error" },
   },
   {
     files: NON_WORKER_SOURCE_GLOBS,

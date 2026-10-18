@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { ApiKeySummary } from "@shared/types";
+import type { ApiKeySummary } from "@pharos/contracts/api-keys";
 import {
   buildApiKeyExpiryWindow,
   buildApiKeyInventorySummary,

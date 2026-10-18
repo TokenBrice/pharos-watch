@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, RefreshCw } from "lucide-react";
-import type { CredentialLifecycleSummaryResponse } from "@shared/types";
+import type { CredentialLifecycleSummaryResponse } from "@pharos/contracts/api-keys";
 import { Button } from "@/components/ui/button";
 import { useCredentialLifecycleSummary } from "@/hooks/admin-api-hooks";
 import { cn } from "@/lib/utils";

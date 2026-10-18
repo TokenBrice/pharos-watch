@@ -1,5 +1,5 @@
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import type {
-  ApiRequestAttributionResponse,
   EndpointProbeResult,
   HealthResponse,
   StatusResponse,

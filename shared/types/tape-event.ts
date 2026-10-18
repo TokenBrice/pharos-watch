@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TAPE_EVENT_SEVERITY_VALUES, TAPE_EVENT_TRANSITION_VALUES } from "./tape-event-constants";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
-import { FreshnessStatusSchema } from "./api-meta";
+import { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
 
 // Wire schemas for the /api/events endpoint backed by the `tape_events` D1
 // table. The Zod-free display constants and simple types live in

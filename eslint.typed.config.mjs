@@ -66,7 +66,7 @@ export default tseslint.config(
     rules: UNSAFE_BOUNDARY_RULES,
   },
   {
-    files: ["shared/lib/**/*.ts", "functions/**/*.ts", "functions/**/*.tsx"],
+    files: ["shared/lib/**/*.ts", "shared/contracts/**/*.ts", "functions/**/*.ts", "functions/**/*.tsx"],
     ignores: IGNORES,
     languageOptions: {
       parser: tseslint.parser,
@@ -78,6 +78,7 @@ export default tseslint.config(
   {
     files: [
       "shared/lib/**/*.ts",
+      "shared/contracts/**/*.ts",
       "functions/**/*.ts",
       "functions/**/*.tsx",
       "src/lib/**/*.ts",

@@ -1,6 +1,6 @@
 import { REQUEST_SOURCE_FILL_CLASSES } from "@shared/lib/classification";
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
-import type { ApiRequestAttributionResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import { StatTile } from "@/components/stat-tile";
 import { AttributionBadge, AttributionPanel } from "./attribution-panel";
 

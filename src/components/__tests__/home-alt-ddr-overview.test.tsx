@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { HomeAltDdrOverview } from "@/components/home-alt-ddr-overview";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type * as FreshnessNotices from "@/components/query-freshness-notices";
-import { ApiMetaEnvelopeSchema, type ApiMetaEnvelope } from "@shared/types/api-meta";
+import { ApiMetaEnvelopeSchema, type ApiMetaEnvelope } from "@pharos/contracts/api-meta";
 import { applyDurationStaleness } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 

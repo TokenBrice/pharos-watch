@@ -14,6 +14,20 @@ import {
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { splitNullDelimited } from "../lib/changed-files.mts";
 
+describe("contracts workspace deployment selection", () => {
+  it("keeps source-only contracts in both deployed runtime surfaces", () => {
+    expect(classifyChangedFiles(["shared/contracts/api-meta.ts"])).toMatchObject({
+      pagesChanged: true,
+      pagesArtifactRequired: true,
+      pagesDeployRequired: true,
+      workerChanged: true,
+      workerDeployRequired: true,
+    });
+    expect(hasWorkerReleaseImpact(["shared/contracts/api-meta.ts"])).toBe(true);
+    expect(hasPagesPublishImpact(["shared/contracts/api-meta.ts"])).toBe(true);
+  });
+});
+
 describe("Pages artifact selection", () => {
   it.each([
     "src/app/page.tsx",

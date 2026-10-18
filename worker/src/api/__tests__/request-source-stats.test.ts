@@ -1,6 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ApiRequestAttributionResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import { handleRequestSourceStats } from "../request-source-stats";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 

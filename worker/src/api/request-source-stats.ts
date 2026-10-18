@@ -1,4 +1,4 @@
-import type { ApiRequestWorkerLane } from "@shared/types";
+import type { ApiRequestWorkerLane } from "@pharos/contracts/request-source";
 import { jsonResponse } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";
 import {

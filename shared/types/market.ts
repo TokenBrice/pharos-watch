@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DepegAuditVerdictSchema } from "./depeg-audit";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
-import { FreshnessAssessmentSchema } from "./api-meta";
+import { FreshnessAssessmentSchema } from "@pharos/contracts/api-meta";
 import {
   MethodologyEnvelopeSchema,
   NominalPriceReferenceSchema,

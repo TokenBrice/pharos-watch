@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ApiKeySummary } from "@shared/types";
+import type { ApiKeySummary } from "@pharos/contracts/api-keys";
 import {
   buildApiKeyInventoryView,
   type ApiKeyInventoryQuery,

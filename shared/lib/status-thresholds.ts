@@ -1,7 +1,7 @@
 import { CRON_INTERVALS } from "./cron-jobs";
 import type { ActivePriceCoverageGap, ActivePriceCoverageHealth, StablecoinPublicationHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
-import type { FreshnessStatusSchema } from "../types/api-meta";
+import type { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
 
 // --- Data freshness ratio boundaries ---
 // Canonical thresholds for age/interval ratio. Used by worker buildFreshnessMeta

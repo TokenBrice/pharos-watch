@@ -4,7 +4,7 @@ import type {
   ApiKeyMutationResponse,
   ApiKeyRotateResponse,
   ApiKeyTier,
-} from "@shared/types";
+} from "@pharos/contracts/api-keys";
 import {
   API_KEY_DEFAULT_EXPIRY_SEC,
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,

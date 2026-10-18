@@ -18,7 +18,7 @@ import {
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import type { ChainsFreshnessMeta } from "@shared/types/chains";
-import type { ApiDependencyMeta as ChainsDependencyMeta } from "@shared/types/api-meta";
+import type { ApiDependencyMeta as ChainsDependencyMeta } from "@pharos/contracts/api-meta";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;

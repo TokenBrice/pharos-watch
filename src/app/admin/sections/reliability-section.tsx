@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
+import type { EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { ApiKeyLoadTable } from "@/components/status/api-key-load-table";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";

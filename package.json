@@ -7,7 +7,8 @@
   },
   "license": "MIT",
   "workspaces": [
-    "worker"
+    "worker",
+    "shared/contracts"
   ],
   "engines": {
     "node": ">=24.16 <27"
@@ -38,7 +39,7 @@
     "start": "npm run serve:static-export",
     "lint": "eslint . --cache --cache-strategy content --cache-location .cache/eslint/ --max-warnings=0",
     "lint:changed": "node --import tsx scripts/ci/run-changed-eslint.ts",
-    "lint:typed": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.typed.config.mjs \"worker/src/**/*.{ts,tsx}\" \"shared/lib/**/*.ts\" \"functions/**/*.{ts,tsx}\" \"src/lib/**/*.{ts,tsx}\" \"src/hooks/**/*.{ts,tsx}\" --max-warnings=0",
+    "lint:typed": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.typed.config.mjs \"worker/src/**/*.{ts,tsx}\" \"shared/lib/**/*.ts\" \"shared/contracts/**/*.ts\" \"functions/**/*.{ts,tsx}\" \"src/lib/**/*.{ts,tsx}\" \"src/hooks/**/*.{ts,tsx}\" --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:tests": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit -p tsconfig.test-typecheck.json",
     "typecheck:worker": "cd worker && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit",
@@ -178,6 +179,7 @@
     "check:runtime-reachability": "node --import tsx scripts/ci/check-runtime-reachability.ts"
   },
   "dependencies": {
+    "@pharos/contracts": "*",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
     "@radix-ui/react-label": "^2.1.15",

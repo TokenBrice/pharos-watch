@@ -27,7 +27,7 @@ The shared schedule/runner registries own dispatch placement and budgets; see [C
 | Layer | Source owner | Boundary |
 | --- | --- | --- |
 | Frontend | `src/app/`, `src/components/`, `src/hooks/`, `src/lib/` | Static Next.js export; route contracts are linked from the [docs index](./README.md). |
-| Shared contracts | `shared/types/`, `shared/lib/`, `shared/data/stablecoins/` | Runtime-neutral schemas, metadata and computation shared by frontend, Worker and Pages Functions. |
+| Shared contracts | `shared/contracts/`, `shared/types/`, `shared/lib/`, `shared/data/stablecoins/` | Runtime-neutral schemas, metadata and computation shared by frontend, Worker and Pages Functions. |
 | Worker HTTP | `shared/lib/api-endpoints/`, `worker/src/routes/`, `worker/src/api/` | Descriptors own metadata; Worker route arrays bind handlers. [API Reference](./api-reference.md) owns HTTP contracts. |
 | Worker scheduling | `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, `worker/src/handlers/scheduled/`, `worker/src/cron/` | Registries own cadence, role and slot; [Worker Infrastructure](./worker-infrastructure.md#cron-scheduling) owns execution. |
 | Worker support | `worker/src/lib/` | Runtime-bound storage, auth, transport, leases and domain support; reusable cron stages belong in `worker/src/cron/shared/`. |
@@ -36,6 +36,8 @@ The shared schedule/runner registries own dispatch placement and budgets; see [C
 | D1 migrations | `worker/migrations/` | Apply backward-compatible migrations before new Worker deployment; lineage is `worker/migrations/MANIFEST.md`. Destructive cleanup is a separate reviewed rollout. |
 
 `shared/types/` owns schemas, wire vocabulary and pure identity/validation primitives and must not import `shared/lib/` (`pharos/shared-types-imports`). Derived runtime admission belongs in `shared/lib/`. Canonical chain, deployment and exit-route identities are owned by `shared/types/chain-identity.ts`, `shared/types/deployment-id.ts` and `shared/types/exit-route-identity.ts`; provider maps derive from those identities, not another registry.
+
+`shared/contracts/` is the private, source-only `@pharos/contracts` workspace for API metadata, API keys and request attribution. Its manifest exports only `@pharos/contracts/api-meta`, `@pharos/contracts/api-keys` and `@pharos/contracts/request-source`, with no root or wildcard export. Consumers use those exact subpaths, never physical or `@shared/contracts` bypasses (`pharos/contracts-imports`); implementation imports stay relative within the package except for the root-pinned Zod dependency. It retains the `shared/types` prohibition on importing `shared/lib/`. Other domain schemas remain in `shared/types/`; no compatibility re-exports expose the moved contracts there.
 
 `shared/types/status/` separates status domains. `shared/types/status.ts` remains the compatibility barrel for frontend and Worker consumers, including lazy schema loaders. Domain modules import lower-level siblings directly, never that barrel; internal schema primitives stay private.
 
@@ -128,7 +130,7 @@ The worker codebase deliberately uses `!= null` (loose equality) as the standard
 
 ## TypeScript Target Constraints
 
-Both the root tsconfig and worker tsconfig target ES2022, but the worker config pins `lib: ["ES2021"]`. Shared modules in `shared/lib/` compile under both configs and may use ES2022 *syntax* (nullish assignment `??=`, logical assignment `||=`, top-level `await`, etc.) — but not the ES2022 *library* surface (`Array.at()`, `Object.hasOwn()`, …), which does not typecheck under the worker config — and must remain runtime-neutral — no DOM APIs, no Node-only APIs, no Cloudflare-only APIs.
+Both the root tsconfig and worker tsconfig target ES2022, but the worker config pins `lib: ["ES2021"]`. Shared modules in `shared/lib/` and `shared/contracts/` compile under both configs and may use ES2022 *syntax* (nullish assignment `??=`, logical assignment `||=`, top-level `await`, etc.) — but not the ES2022 *library* surface (`Array.at()`, `Object.hasOwn()`, …), which does not typecheck under the worker config — and must remain runtime-neutral — no DOM APIs, no Node-only APIs, no Cloudflare-only APIs.
 
 See [ADR-1](#adr-1) for the separate compilation roots and transitive shared-file coverage.
 
@@ -152,7 +154,9 @@ Read an individual decision rather than the entire record collection: [ADR-1](#a
 - **ADR-1 — Root tsconfig excludes `worker/`.** Ambient-type clashes between Cloudflare/Node globals and the frontend DOM library motivated separate compilation configs; that is historical motivation, not a claim that today's combined build was tested. The root `tsconfig.json` excludes `worker/`. Worker roots are `src` and `scripts` under `worker/tsconfig.json`; shared files are typechecked when reached through imports, not by including every unrelated shared source or test. Shared runtime logic belongs in runtime-neutral `shared/lib/`, never Worker- or DOM-only APIs, and obeys the [TypeScript Target Constraints](#typescript-target-constraints).
 #### ADR-2
 
-- **ADR-2 — `@shared/*` alias boundary.** Frontend, Worker, and Pages Functions import shared runtime/types through `@shared/*`, not relative cross-boundary paths. ESLint's `pharos/require-shared-alias` rejects relative imports resolving into root `shared/` from `src/`, `worker/`, and `functions/`; `shared/lib/` internals retain relative imports. The worker/frontend direction bans remain separate (see Worker import boundary waiver above for the single named exception).
+- **ADR-2 — Shared import boundary.** Frontend, Worker, and Pages Functions import unpackaged shared runtime/types through `@shared/*`, not relative cross-boundary paths. ESLint's `pharos/require-shared-alias` rejects relative imports resolving into root `shared/` from `src/`, `worker/`, and `functions/`; `shared/lib/` internals retain relative imports for unpackaged shared modules. The source-only contracts workspace instead requires its exact exported `@pharos/contracts/<topic>` entrypoints, including from `shared/lib/`; `pharos/contracts-imports` rejects package-root/private paths and alias/physical bypasses and confines implementation dependencies to package-local relative imports and Zod. The worker/frontend direction bans remain separate (see Worker import boundary waiver above for the single named exception).
+
+  Source-graph checks resolve declared local workspace exports to their source modules and traverse them for unused exports, critical-test ownership, architecture boundaries and runtime reachability. Third-party packages remain external leaves; erased type-only edges remain erased in runtime graphs.
 #### ADR-3
 
 - **ADR-3 — Methodology versioning is numeric-decimal, not semver minor.** Methodology versions increase as decimals with at most two decimal digits: after `v9.46`, use `v9.47` or `v10.0`, never `v9.461`; after `v5.9`, use `v5.91` or `v6.0`, never `5.10` as the successor of `5.9`. The `5.9`/`5.10` case is an explanatory example, not a recorded incident: the repaired ordering case was `6.09` versus `6.1` (`6b5964f5c`). Compare versions numerically. `createMethodologyVersion` rejects changelog versions activated on or after 2026-09-07 with a third decimal digit; earlier entries remain valid history.

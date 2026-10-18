@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiMetaEnvelopeSchema, ApiMetaSchema } from "../api-meta";
+import { ApiMetaEnvelopeSchema, ApiMetaSchema } from "@pharos/contracts/api-meta";
 
 describe("ApiMetaSchema", () => {
   it("parses freshness metadata with dependency status details", () => {

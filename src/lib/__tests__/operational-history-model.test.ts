@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ApiKeyAuditEntry } from "@shared/types";
+import type { ApiKeyAuditEntry } from "@pharos/contracts/api-keys";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 import {
   buildOperationalActivityView,

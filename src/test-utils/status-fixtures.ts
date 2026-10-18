@@ -1,7 +1,7 @@
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageHealth,
-  ApiRequestAttributionResponse,
   EndpointProbeResult,
   HealthResponse,
   StatusResponse,

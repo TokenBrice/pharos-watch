@@ -2,7 +2,7 @@ import { chunkArray } from "./collections";
 import { findDynamicEndpointDescriptor, getEndpointDefinition } from "./api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "./request-source-marker";
 import { SITE_ORIGIN } from "./runtime-origins";
-import type { ApiRequestConsumerClass } from "../types/request-source";
+import type { ApiRequestConsumerClass } from "@pharos/contracts/request-source";
 
 export const REQUEST_ATTRIBUTION_RETENTION_DAYS = 35;
 export const REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC = 3600;

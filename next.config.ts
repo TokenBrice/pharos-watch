@@ -7,6 +7,7 @@ const rechartsVendorPattern =
 const baseConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
+  transpilePackages: ["@pharos/contracts"],
   images: { unoptimized: true },
   reactStrictMode: true,
   experimental: {

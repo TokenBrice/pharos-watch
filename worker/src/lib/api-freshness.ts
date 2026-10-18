@@ -12,7 +12,7 @@ import {
   CACHE_AVAILABILITY_MAX_AGE_SEC as CACHE_FRESHNESS_THRESHOLDS,
   getCacheFreshnessLane,
 } from "@shared/lib/api-freshness";
-import type { ApiMeta } from "@shared/types/api-meta";
+import type { ApiMeta } from "@pharos/contracts/api-meta";
 import type { CacheStatus } from "@shared/types/status";
 import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";
 import {

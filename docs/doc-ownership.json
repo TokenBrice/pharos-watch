@@ -1208,7 +1208,7 @@
         { "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }
       ],
       "alsoRead": ["shared/AGENTS.md"],
-      "rules": ["Use @shared/lib/... and @shared/types... for imports across runtime boundaries into root shared/; within production shared/lib/, use relative imports instead of @shared/* aliases."]
+      "rules": ["Use @shared/lib/... and @shared/types... for imports across runtime boundaries into root shared/; within production shared/lib/, use relative imports instead of @shared/* aliases.", "Import wire contracts only through the exact @pharos/contracts/{api-meta,api-keys,request-source} subpaths; shared/contracts/ depends on nothing outside itself except zod."]
     },
     {
       "id": "documentation",
@@ -1229,7 +1229,7 @@
   ],
   "exclusions": [
     { "sources": ["shared/data/stablecoins/coins/.gitkeep"], "reason": "Directory sentinel only; read the stablecoin registry contract for real entries." },
-    { "sources": ["shared/test-utils/**", "shared/types/__tests__/**", "src/__tests__/**", "src/test/**", "src/test-utils/**", "worker/src/__mocks__/**", "worker/src/__tests__/**", "worker/scripts/__tests__/**", "worker/scripts/data/**"], "reason": "Implementation-only tests and fixtures; read the matched parent contract." },
+    { "sources": ["shared/test-utils/**", "shared/types/__tests__/**", "shared/contracts/__tests__/**", "src/__tests__/**", "src/test/**", "src/test-utils/**", "worker/src/__mocks__/**", "worker/src/__tests__/**", "worker/scripts/__tests__/**", "worker/scripts/data/**"], "reason": "Implementation-only tests and fixtures; read the matched parent contract." },
     { "sources": ["src/assets/**", "worker/assets/**"], "reason": "Implementation-only generated or licensed assets; read the matched design or font contract." }
   ]
 }

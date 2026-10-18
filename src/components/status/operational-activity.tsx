@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ApiKeyAuditEntry } from "@shared/types";
+import type { ApiKeyAuditEntry } from "@pharos/contracts/api-keys";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";

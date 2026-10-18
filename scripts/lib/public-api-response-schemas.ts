@@ -1,6 +1,6 @@
 import { DependencyScenariosResponseSchema } from "@shared/types/dependency-scenarios";
 import { z } from "zod";
-import { ApiMetaEnvelopeSchema } from "@shared/types/api-meta";
+import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 
 import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import { ChainsResponseSchema } from "@shared/types/chains";

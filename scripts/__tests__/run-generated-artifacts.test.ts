@@ -6,6 +6,21 @@ import { describe, expect, it, vi } from "vitest";
 import {
   runGeneratedArtifacts,
 } from "../maintenance/run-generated-artifacts";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+
+describe("contracts workspace generated-artifact inputs", () => {
+  it.each(["shared/contracts/api-meta.ts", "scripts/lib/public-api-response-schemas.ts"])(
+    "invalidates OpenAPI and its dependent API reference for %s",
+    (file) => {
+      expect(selectChangedGeneratedArtifactIds([file])).toEqual(expect.arrayContaining(["openapi", "api-reference"]));
+    },
+  );
+
+  it("retains schema-input selection for the catalog after the package move", () => {
+    expect(selectChangedGeneratedArtifactIds(["shared/contracts/request-source.ts"])).toContain("stablecoin-catalog");
+    expect(selectChangedGeneratedArtifactIds(["shared/types/core.ts"])).toContain("stablecoin-catalog");
+  });
+});
 
 describe("generated-artifact runner lifecycle selection", () => {
   it.each(["sitemap-dates", "runbook-index,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "./mint-burn-signals";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
-import { ApiMetaEnvelopeSchema, FreshnessStatusSchema } from "./api-meta";
+import { ApiMetaEnvelopeSchema, FreshnessStatusSchema } from "@pharos/contracts/api-meta";
 
 export {
   NET_FLOW_DIRECTION_24H_VALUES,

@@ -1,7 +1,7 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { DONOR_KEY_CLAIM_FAILURE_REASONS, DonorKeyClaimResponseSchema, type DonorKeyClaimFailureReason } from "@shared/types/api-keys";
-import type { DonorKeyClaimRequest, DonorKeyClaimResponse } from "@shared/types";
+import { DONOR_KEY_CLAIM_FAILURE_REASONS, DonorKeyClaimResponseSchema, type DonorKeyClaimFailureReason } from "@pharos/contracts/api-keys";
+import type { DonorKeyClaimRequest, DonorKeyClaimResponse } from "@pharos/contracts/api-keys";
 import { ApiFetchError, apiFetch } from "@/lib/api";
 
 /**

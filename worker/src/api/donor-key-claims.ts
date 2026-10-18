@@ -14,7 +14,7 @@ import {
   API_ACCESS_X_HANDLE,
   DONOR_KEY_CLAIMS_OPEN,
 } from "@shared/lib/public-api-contract";
-import { DonorKeyClaimRequestSchema, type DonorKeyClaimFailureReason, type DonorKeyClaimResponse } from "@shared/types/api-keys";
+import { DonorKeyClaimRequestSchema, type DonorKeyClaimFailureReason, type DonorKeyClaimResponse } from "@pharos/contracts/api-keys";
 import { parseSiweMessage, validateSiweMessage } from "viem/siwe";
 import { verifyMessage } from "viem/utils";
 import { buildTrustedApiKeyInsertStatement } from "../lib/api-key-admin";

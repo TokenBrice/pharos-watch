@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { ApiKeyAuditEntry } from "@shared/types";
+import type { ApiKeyAuditEntry } from "@pharos/contracts/api-keys";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 import { OperationalActivity, type OperationalActivitySourceState } from "../operational-activity";
 

@@ -1,5 +1,5 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
-import type { ApiRequestAttributionResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import { StatTile } from "@/components/stat-tile";
 import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";

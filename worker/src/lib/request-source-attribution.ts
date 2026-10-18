@@ -17,7 +17,7 @@ import type {
   ApiRequestAttributionTimeBucket,
   ApiRequestConsumerClass,
   ApiRequestWorkerLane,
-} from "@shared/types";
+} from "@pharos/contracts/request-source";
 
 export { isRequestSourceAttributionDisabled } from "@shared/lib/request-attribution";
 
