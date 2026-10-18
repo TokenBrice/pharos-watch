@@ -9,8 +9,9 @@ import {
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
+import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
-import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
+import type { DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { StatusLevel } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
@@ -290,11 +291,67 @@ function evaluateCircuitStatus(input: AvailabilityEvaluationInput): Partial<Stat
   return ruleResult(status, causes);
 }
 
+const D1_QUOTA_CAUSE_CODE_PATTERN = /^d1_rows_(?:read|written)_quota_/;
+
+function d1QuotaCause(
+  metricKey: "rowsRead" | "rowsWritten",
+  metric: D1QuotaMetric,
+): StatusCause | null {
+  if (metric.thresholdState !== "watch" && metric.thresholdState !== "warning") return null;
+  const label = metricKey === "rowsRead" ? "rows read" : "rows written";
+  const machineKey = metricKey === "rowsRead" ? "rows_read" : "rows_written";
+  return makeCause(
+    "availability",
+    `d1_${machineKey}_quota_${metric.thresholdState}`,
+    metric.thresholdState === "warning" ? "warning" : "info",
+    `Projected monthly D1 ${label} (trailing 24h × 30) are ${metric.utilizationPercent}% of the paid included allowance. Ops-only cost signal; public health is unaffected.`,
+    {
+      metric: metricKey === "rowsRead" ? "d1RowsReadQuotaPercent" : "d1RowsWrittenQuotaPercent",
+      value: metric.utilizationPercent ?? undefined,
+      threshold: metric.crossedThresholdPercent ?? D1_QUOTA_THRESHOLDS.watchPercent,
+    },
+  );
+}
+
+/**
+ * Billing-quota causes are ops-only (owner decision D10): they carry named
+ * machine reasons for operators but never contribute an availability status.
+ */
+export function evaluateD1QuotaCauses(
+  quota: D1QuotaAssessment | null | undefined,
+): StatusCause[] {
+  if (!quota) return [];
+  const causes = [
+    d1QuotaCause("rowsRead", quota.rowsRead),
+    d1QuotaCause("rowsWritten", quota.rowsWritten),
+  ];
+  return causes.filter((cause): cause is StatusCause => cause != null);
+}
+
+/** Recognizes the ops-only quota vocabulary so merged causes are replaced, never duplicated. */
+export function isD1QuotaCause(cause: StatusCause): boolean {
+  return D1_QUOTA_CAUSE_CODE_PATTERN.test(cause.code);
+}
+
+/**
+ * Merges the current quota state into an existing availability cause list.
+ * The caller owns status: this never changes the availability/public verdict.
+ */
+export function mergeD1QuotaCauses(
+  causes: readonly StatusCause[],
+  quota: D1QuotaAssessment | null | undefined,
+): StatusCause[] {
+  return [
+    ...causes.filter((cause) => !isD1QuotaCause(cause)),
+    ...evaluateD1QuotaCauses(quota),
+  ];
+}
+
 function evaluateD1Status(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const status = input.publicHealth.d1CapacityImpactStatus;
-  let cause: StatusCause | null = null;
+  const causes: StatusCause[] = [];
   if (input.publicHealth.d1CapacityQueryError) {
-    cause = makeCause("availability", "d1_capacity_query_failed", "info", "D1 capacity diagnostics are temporarily unavailable.");
+    causes.push(makeCause("availability", "d1_capacity_query_failed", "info", "D1 capacity diagnostics are temporarily unavailable."));
   } else {
     const capacity = input.publicHealth.d1Capacity;
     if (capacity && capacity.thresholdState !== "normal") {
@@ -302,16 +359,16 @@ function evaluateD1Status(input: AvailabilityEvaluationInput): Partial<StatusRul
         capacity.daysUntilExhaustion == null
           ? "Exhaustion forecast is not yet available."
           : `Projected exhaustion is ${capacity.daysUntilExhaustion} days away.`;
-      cause = makeCause(
+      causes.push(makeCause(
         "availability",
         `d1_capacity_${capacity.thresholdState}`,
         capacity.thresholdState === "critical" ? "critical" : "warning",
         `D1 database utilization is ${capacity.utilizationPercent}% (${capacity.thresholdState}). ${exhaustion}`,
         { metric: "d1CapacityUtilizationPercent", value: capacity.utilizationPercent, threshold: capacity.crossedThresholdPercent ?? 60 },
-      );
+      ));
     }
   }
-  return ruleResult(status, cause ? [cause] : []);
+  return ruleResult(status, causes);
 }
 
 type CronDiagnosticsInput = Pick<
@@ -918,6 +975,10 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   d1_capacity_warning: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
   d1_capacity_critical: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
   d1_capacity_query_failed: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
+  d1_rows_read_quota_watch: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
+  d1_rows_read_quota_warning: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
+  d1_rows_written_quota_watch: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
+  d1_rows_written_quota_warning: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
 };
 
 /**

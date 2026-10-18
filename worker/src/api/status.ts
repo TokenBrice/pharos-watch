@@ -14,7 +14,7 @@ import { computeRawStatus } from "../lib/status-evaluation";
 import { loadCronHealth } from "../lib/status/cron-health";
 import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
-import { evaluateSchedulerLiveness, rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
+import { evaluateSchedulerLiveness, mergeD1QuotaCauses, rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
 import { buildStatusSummary } from "../lib/status/summary";
 import {
   loadStatusRawSnapshot,
@@ -329,6 +329,12 @@ export function handleStatus({
         loadWorkerVersions(db),
       ]);
       persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
+      // D1 billing-quota floors are ops-only: they join the admin cause lists
+      // here, after the usage supplement is known, and never change a status.
+      const availabilityCauses = mergeD1QuotaCauses(
+        raw.causes.availability,
+        supplements.d1Usage?.quota ?? null,
+      );
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
       const snapshotErrorSection = statusSnapshotSectionError(snapshotFallbackReason, snapshotError);
@@ -368,7 +374,11 @@ export function handleStatus({
         rawOverallStatus: raw.rawOverallStatus,
         overallStatus: effectiveOverallStatus,
         confidence: raw.confidence,
-        causes: raw.causes,
+        causes: {
+          ...raw.causes,
+          availability: availabilityCauses,
+          overall: synthesizeOverallCauses(availabilityCauses, raw.causes.dataQuality),
+        },
         state: resolvedState,
         staleness: resolvedStaleness,
         probe,
