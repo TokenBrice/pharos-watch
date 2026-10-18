@@ -326,6 +326,16 @@ export interface DexLiquidityStageRecoveryOutcome {
   stageResult?: DexRecoveryStageResult;
 }
 
+export const DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON = "scoring-stage-producer-running";
+
+/** The existing readiness deadline expired while the source lease was live. */
+class DexScoringStageProducerRunningError extends Error {
+  constructor(readonly sourceSlotStartedAt: number) {
+    super(`DEX scoring source producer is still running for source slot ${sourceSlotStartedAt}`);
+    this.name = "DexScoringStageProducerRunningError";
+  }
+}
+
 export async function consumeDexLiquidityScoringStage(
   db: D1Database,
   signal?: AbortSignal,
@@ -335,8 +345,9 @@ export async function consumeDexLiquidityScoringStage(
     publishShadowTargets?: boolean;
     stageReadyDeadlineMs?: number;
     deadline?: SlotDeadline;
-    /** When provided, a terminally failed or never-started source stage is
-     *  re-run inline for the exact expected slot instead of failing the run. */
+    /** Recovery configuration for an exact failed/missing slot. Reconstruction
+     * additionally requires Graph capability, the source-job lease and deadline;
+     * scheduled heavy intentionally lacks Graph credentials and fails preflight. */
     stageRecovery?: DexLiquidityStageRecoveryInput;
   } = {},
 ): Promise<CronResult> {
@@ -348,17 +359,38 @@ export async function consumeDexLiquidityScoringStage(
   let staged: LoadedDexLiquidityScoringStage;
   let recovery: DexLiquidityStageRecoveryOutcome | null = null;
   if (expectedSourceSlotStartedAt != null && options.stageReadyDeadlineMs != null) {
-    ({ staged, recovery } = await loadDexLiquidityScoringStageForConsumer(
-      db,
-      {
-        expectedSourceSlotStartedAt,
-        readyDeadlineMs: options.stageReadyDeadlineMs,
-        recovery: options.stageRecovery ?? null,
-        deadline: options.deadline,
-      },
-      reportProgress,
-      signal,
-    ));
+    try {
+      ({ staged, recovery } = await loadDexLiquidityScoringStageForConsumer(
+        db,
+        {
+          expectedSourceSlotStartedAt,
+          readyDeadlineMs: options.stageReadyDeadlineMs,
+          recovery: options.stageRecovery ?? null,
+          deadline: options.deadline,
+        },
+        reportProgress,
+        signal,
+      ));
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      if (!(error instanceof DexScoringStageProducerRunningError)
+        || error.sourceSlotStartedAt !== expectedSourceSlotStartedAt) throw error;
+      return withDexD1CostMetadata(createCronResult({
+        status: "skipped_neutral",
+        itemCount: 0,
+        metadata: {
+          reason: DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
+          sourceSlotStartedAt: expectedSourceSlotStartedAt,
+          readinessDeadlineMs: options.stageReadyDeadlineMs,
+          persistence: {
+            generationId: null,
+            skipped: true,
+            skippedReason: DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
+          },
+        },
+        productivity: { productive: false, reason: DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON },
+      }), d1Cost);
+    }
   } else {
     staged = await loadDexLiquidityScoringStage(
       db,
@@ -567,9 +599,9 @@ const DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC = 14 * 60;
  * Wait for the exact source slot through the shared readiness primitive, but
  * stop waiting the moment the slot's stage is provably terminal: a failed
  * generation, or an errored stage run with no live lease. Terminal slots are
- * either re-run inline (recovery credentials provided — the scheduled :16
- * consumer) or fail fast with a machine-readable reason instead of burning the
- * readiness deadline on a stage that can no longer appear.
+ * either re-run inline by a capability-equipped caller (Graph preflight, stage
+ * lease and remaining deadline required), or fail fast. Passing recovery config
+ * does not establish Graph capability; scheduled heavy intentionally lacks it.
  */
 async function loadDexLiquidityScoringStageForConsumer(
   db: D1Database,
@@ -584,6 +616,7 @@ async function loadDexLiquidityScoringStageForConsumer(
 ): Promise<{ staged: LoadedDexLiquidityScoringStage; recovery: DexLiquidityStageRecoveryOutcome | null }> {
   const { expectedSourceSlotStartedAt } = options;
   let stopReason: DexLiquidityStageRecoveryReason | null = null;
+  let producerLiveAtLastProbe = false;
   try {
     const staged = await loadDexLiquidityScoringStageWhenReady(
       db,
@@ -592,6 +625,7 @@ async function loadDexLiquidityScoringStageForConsumer(
         readyDeadlineMs: options.readyDeadlineMs,
         onMissing: async (waitSignal) => {
           const probe = await probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, waitSignal);
+          producerLiveAtLastProbe = probe.activeStageRun;
           // A live producer is never overwritten: keep waiting for it.
           if (probe.activeStageRun) return "wait";
           const generationFailed = probe.manifestState === "failed";
@@ -613,6 +647,15 @@ async function loadDexLiquidityScoringStageForConsumer(
     return { staged, recovery: null };
   } catch (error) {
     rethrowIfAborted(error, signal);
+    if (
+      error instanceof MissingDexLiquidityScoringStageError
+      && error.expectedSourceSlotStartedAt === expectedSourceSlotStartedAt
+      && stopReason === null
+      && producerLiveAtLastProbe
+      && Date.now() >= options.readyDeadlineMs
+    ) {
+      throw new DexScoringStageProducerRunningError(expectedSourceSlotStartedAt);
+    }
     const reason = stopReason;
     if (!(error instanceof MissingDexLiquidityScoringStageError) ||
       error.expectedSourceSlotStartedAt !== expectedSourceSlotStartedAt || reason == null) throw error;
