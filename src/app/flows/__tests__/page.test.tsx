@@ -24,7 +24,7 @@ vi.mock("@/components/feature-page-shell", () => ({
 }));
 vi.mock("@/components/flow-chart", () => ({ FlowChart: () => null }));
 vi.mock("@/components/flow-table", () => ({ FlowTable: () => null }));
-vi.mock("@/components/flow-brrr-overview", () => ({ FlowBrrrOverview: () => null }));
+vi.mock("@/components/flow-gauge-hero", () => ({ FlowGaugeHero: () => null }));
 vi.mock("@/components/faq-section", () => ({ FaqSection: () => null }));
 vi.mock("@/components/control-pill-toggle", () => ({
   ControlPillToggle: ({ onChange }: { onChange: (hours: number) => void }) => (
@@ -77,7 +77,7 @@ afterEach(() => {
 });
 
 describe("FlowsClient", () => {
-  it("defers the 30-day variant until selected and reuses the weekly chart for the overview", () => {
+  it("defers the 30-day variant until selected and reuses the weekly chart for the 7-day receipt", () => {
     render(<FlowsClient faqItems={[]} />);
     expect(useMintBurnFlowsMock).toHaveBeenCalledWith(24);
     expect(useMintBurnFlowsMock).toHaveBeenCalledWith(168, { enabled: true });

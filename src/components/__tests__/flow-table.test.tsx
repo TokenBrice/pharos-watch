@@ -97,4 +97,32 @@ describe("FlowTable", () => {
     expect(html).not.toContain("$0.00");
     expect(html).toContain("Signed net unavailable");
   });
+
+  it("ranks worst pressure against the 30-day norm first, with NR last", () => {
+    const html = renderToStaticMarkup(
+      <FlowTable
+        coins={[
+          { ...coin, stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: 12, pressureShiftState: "improving" },
+          { ...coin, stablecoinId: "dai-makerdao", symbol: "DAI", pressureShiftScore: null, pressureShiftState: "nr" },
+          { ...coin, stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: -60, pressureShiftState: "worsening" },
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    const order = ["USDT", "USDC", "DAI"].map((symbol) => html.indexOf(`Open ${symbol} flow detail`));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it("names coverage-unknown nets once per column instead of a * on each cell", () => {
+    // A payload without `valuation` is coverage-unknown on every window.
+    const html = renderToStaticMarkup(<FlowTable coins={[coin]} isLoading={false} />);
+
+    expect((html.match(/data-reason-codes="valuation-unknown"/g) ?? []).length).toBe(4);
+    expect(html).toContain("Unverified");
+    expect(html).not.toMatch(/align-super[^>]*>\*</);
+    // The per-cell reason stays available to assistive tech.
+    expect(html).toContain("(coverage unknown)");
+  });
 });

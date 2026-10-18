@@ -33,10 +33,6 @@ vi.mock("@/components/flow-table", () => ({
   ),
 }));
 
-vi.mock("@/components/flow-brrr-overview", () => ({
-  FlowBrrrOverview: () => <div>overview</div>,
-}));
-
 vi.mock("@/components/query-error-notice", () => ({
   QueryErrorNotice: () => null,
 }));
@@ -110,7 +106,9 @@ describe("FlowsPage", () => {
 
     const html = renderToStaticMarkup(<FlowsPage />);
 
-    expect(html).toContain(syncWarning);
+    // The sync warning is a hero status chip (detail in its popover), never a body callout.
+    expect(html).toContain('data-reason-codes="freshness-degraded"');
+    expect(html).toContain("Sync delayed");
     expect(html).not.toContain("Data may be delayed");
   });
 
@@ -124,7 +122,7 @@ describe("FlowsPage", () => {
     expect(html).toContain("-42|worsening|burning");
   });
 
-  it("still shows the generic stale-data banner when no sync-specific warning exists", () => {
+  it("names a delayed read as a hero chip, not a body banner, when no sync-specific warning exists", () => {
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
       if (hours === 168) {
         return makeQueryResult({
@@ -146,10 +144,12 @@ describe("FlowsPage", () => {
     const html = renderToStaticMarkup(<FlowsPage />);
 
     expect(html).not.toContain("Mint/burn sync freshness is degraded");
-    expect(html).toContain("Live refresh is running behind");
+    expect(html).not.toContain("Live refresh is running behind");
+    expect(html).toContain('data-reason-codes="data-health-degraded age"');
+    expect(html).toContain("Data delayed");
   });
 
-  it("shows the generic stale-data banner when fresh API metadata accompanies a retry error", () => {
+  it("names a failed refresh over saved data as a hero chip when fresh API metadata accompanies a retry error", () => {
     const refreshError = new Error("network");
 
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
@@ -172,8 +172,9 @@ describe("FlowsPage", () => {
 
     const html = renderToStaticMarkup(<FlowsPage />);
 
-    expect(html).toContain("Refresh failed; showing saved data");
-    expect(html).not.toContain("Showing an older snapshot");
+    expect(html).not.toContain("Refresh failed; showing saved data");
+    expect(html).toContain('data-reason-codes="data-health-degraded refresh"');
+    expect(html).not.toContain("Older snapshot");
   });
 
 });

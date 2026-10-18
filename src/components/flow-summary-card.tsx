@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { MintingPressureArcGauge } from "@/components/minting-pressure-gauge";
-import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
+import { getLiteralMintingPressureReading, type LiteralMintingPressureUnavailableReason } from "@shared/lib/mint-burn-signals";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
@@ -82,6 +82,29 @@ function UnreportedStat() {
   );
 }
 
+function describeMintingPressureUnavailable(
+  reason: LiteralMintingPressureUnavailableReason,
+  window24h: ReturnType<typeof resolveMintBurnValuation>,
+): { title: string; description: string } {
+  switch (reason) {
+    case "valuation-partial":
+      return {
+        title: "Minting pressure not rated",
+        description: `${describeUnpricedEvents(window24h)}, so the volumes are lower bounds and no minting-pressure reading is published.`,
+      };
+    case "valuation-unknown":
+      return {
+        title: "Minting pressure not rated",
+        description: "Valuation coverage of the 24h window is unknown, so no minting-pressure reading is published.",
+      };
+    case "no-24h-volume":
+      return {
+        title: "No 24h mint or burn volume",
+        description: "There is nothing to weigh, so no minting-pressure reading is published.",
+      };
+  }
+}
+
 export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const query = useMintBurnFlows();
   const { data, isLoading } = query;
@@ -119,21 +142,16 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const pressureSignal = getFlowPressureUi(pressureState, "summary");
   const baselineDailyNetUsd = resolveBaselineDailyNetUsd(coin);
   const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
-  // Volumes are known-valuation subtotals: with unpriced events the dial weighs
-  // lower bounds, so the caption says so instead of implying a measured balance.
-  const volumeCaption = window24h.completeness === "complete"
-    ? "The gauge uses raw 24h mint and burn volume balance"
-    : window24h.completeness === "partial"
-      ? `Lower-bound volumes: ${describeUnpricedEvents(window24h)}`
-      : "Lower-bound volumes: valuation coverage unknown";
-  // A dial with a needle asserts a measurement. When no 24h volume was counted
-  // there is nothing to weigh, so the quadrant takes the same empty-state
-  // treatment the flow-history feed two modules below already uses.
-  const hasMintingPressure =
-    getLiteralMintingPressureScore({
-      mintVolume24hUsd: coin.mintVolume24hUsd,
-      burnVolume24hUsd: coin.burnVolume24hUsd,
-    }) != null;
+  // A dial with a needle asserts a measurement. With no counted 24h volume, or
+  // with either side not fully valued (a balance of lower bounds is no bound,
+  // v6.27), the quadrant takes the same empty-state treatment the flow-history
+  // feed two modules below already uses, naming why.
+  const mintingPressure = getLiteralMintingPressureReading({
+    mintVolume24hUsd: coin.mintVolume24hUsd,
+    burnVolume24hUsd: coin.burnVolume24hUsd,
+    mintCompleteness: window24h.mintCompleteness,
+    burnCompleteness: window24h.burnCompleteness,
+  });
 
   // Figma coin template: quadrant layout with hairline-divided regions —
   // [Minting Pressure gauge | Net window grid] over [Pressure Shift | Avg
@@ -196,27 +214,21 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             </span>
           </div>
           <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 sm:px-5">
-            {hasMintingPressure ? (
+            {mintingPressure.score != null ? (
               <>
-                <MintingPressureArcGauge
-                  mintVolume24hUsd={coin.mintVolume24hUsd}
-                  burnVolume24hUsd={coin.burnVolume24hUsd}
-                />
+                <MintingPressureArcGauge score={mintingPressure.score} />
                 <p className="mt-3 max-w-[36ch] text-pretty text-center text-xs leading-relaxed text-muted-foreground">
-                  {volumeCaption}
+                  The gauge uses raw 24h mint and burn volume balance
                 </p>
               </>
             ) : (
-              <EmptyStateIllustration
-                kind="no-data"
-                title={window24h.completeness === "partial" ? "No priced 24h mint or burn volume" : "No 24h mint or burn volume"}
-                description={
-                  window24h.completeness === "partial"
-                    ? `${describeUnpricedEvents(window24h)}, so no minting-pressure reading is published.`
-                    : "There is nothing to weigh, so no minting-pressure reading is published."
-                }
-                className="py-2"
-              />
+              <div data-reason-codes={mintingPressure.unavailableReason}>
+                <EmptyStateIllustration
+                  kind="no-data"
+                  {...describeMintingPressureUnavailable(mintingPressure.unavailableReason, window24h)}
+                  className="py-2"
+                />
+              </div>
             )}
           </div>
         </div>

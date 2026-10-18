@@ -35,8 +35,10 @@ import {
   type FlowTableSortKey,
 } from "@/components/flow-table-logic";
 import { MethodologyHint } from "@/components/methodology-hint";
+import { OpsStatusChip } from "@/components/ops-status-chip";
 import { FlowSignedNetValue, FlowVolumeValue } from "@/components/flow-valuation-value";
-import { resolveCoinNetFlow, resolvePressureUnavailableNote } from "@shared/lib/mint-burn-coin-helpers";
+import { resolveCoinNetFlow, type MintBurnNetWindow } from "@shared/lib/mint-burn-coin-helpers";
+import { RUN_LINE_EXCLUSION_LABELS, resolveRunLineExclusionReason } from "@/lib/flow-run-line-model";
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 
@@ -45,23 +47,73 @@ interface FlowTableProps {
   isLoading: boolean;
 }
 
-const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
-  { id: "coin", label: "Coin", className: "w-[126px] max-w-[126px] sm:w-[150px] sm:max-w-[150px]" },
-  {
-    id: "pressure",
-    label: "Pressure vs 30D",
-    headerAdornment: <MethodologyHint topic="pressureShift" />,
-    sortKey: "pressure",
-    className: "w-[130px] text-right",
-  },
-  { id: "net24h", label: "Net 24h", sortKey: "net24h", className: "w-[108px] text-right" },
-  { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden w-[112px] text-right sm:table-cell" },
-  { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden w-[112px] text-right sm:table-cell" },
-  { id: "net7d", label: "Net 7d", sortKey: "net7d", className: "hidden w-[112px] text-right md:table-cell" },
-  { id: "net30d", label: "Net 30d", sortKey: "net30d", className: "hidden w-[112px] text-right lg:table-cell" },
-  { id: "net90d", label: "Net 90d", sortKey: "net90d", className: "hidden w-[112px] text-right xl:table-cell" },
-  { id: "largest", label: "Largest event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
-] as const;
+const UNKNOWN_MARKED_WINDOWS = ["24h", "7d", "30d", "90d"] as const satisfies readonly MintBurnNetWindow[];
+type UnknownCounts = Record<(typeof UNKNOWN_MARKED_WINDOWS)[number], number>;
+
+/**
+ * Coverage-unknown nets (legacy hours aggregated before valuation completeness
+ * was recorded) keep their known-valuation value. The state is named once per
+ * column as a chip with the count, rather than as a `*` on nearly every cell.
+ */
+function UnknownCoverageChip({ count, total, windowLabel }: { count: number; total: number; windowLabel: string }) {
+  return (
+    <OpsStatusChip label="Unverified" reasonCodes={["valuation-unknown"]} className="px-1.5 text-3xs">
+      <p>
+        {count} of {total} {windowLabel} nets include hours aggregated before valuation completeness was recorded, so
+        their coverage is unknown. Each shows its known-valuation net; the screen-reader reading marks the affected
+        cells.
+      </p>
+      <p className="text-muted-foreground">These hours age out of the window; nothing reconstructs them.</p>
+    </OpsStatusChip>
+  );
+}
+
+function buildFlowTableColumns(unknown: UnknownCounts, total: number): readonly DataTableColumn<FlowTableSortKey>[] {
+  const chip = (window: keyof UnknownCounts, windowLabel: string) =>
+    unknown[window] > 0 ? <UnknownCoverageChip count={unknown[window]} total={total} windowLabel={windowLabel} /> : undefined;
+  return [
+    { id: "coin", label: "Coin", className: "w-[126px] max-w-[126px] sm:w-[150px] sm:max-w-[150px]" },
+    {
+      id: "pressure",
+      label: "Pressure vs 30d",
+      headerAdornment: <MethodologyHint topic="pressureShift" />,
+      sortKey: "pressure",
+      className: "w-[124px] text-right sm:w-[156px]",
+    },
+    { id: "net24h", label: "Net 24h", headerAdornment: chip("24h", "24h"), sortKey: "net24h", className: "w-[108px] text-right" },
+    { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden w-[112px] text-right sm:table-cell" },
+    { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden w-[112px] text-right sm:table-cell" },
+    { id: "net7d", label: "Net 7d", headerAdornment: chip("7d", "7-day"), sortKey: "net7d", className: "hidden w-[112px] text-right md:table-cell" },
+    {
+      id: "net30d",
+      label: "Net 30d",
+      headerAdornment: chip("30d", "30-day"),
+      sortKey: "net30d",
+      className: unknown["30d"] > 0 ? "hidden w-[188px] text-right lg:table-cell" : "hidden w-[112px] text-right lg:table-cell",
+    },
+    {
+      id: "net90d",
+      label: "Net 90d",
+      headerAdornment: chip("90d", "90-day"),
+      sortKey: "net90d",
+      className: unknown["90d"] > 0 ? "hidden w-[188px] text-right xl:table-cell" : "hidden w-[112px] text-right xl:table-cell",
+    },
+    { id: "largest", label: "Largest event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
+  ];
+}
+
+function countUnknownNets(coins: readonly MintBurnCoinFlow[]): UnknownCounts {
+  const counts: UnknownCounts = { "24h": 0, "7d": 0, "30d": 0, "90d": 0 };
+  for (const coin of coins) {
+    for (const window of UNKNOWN_MARKED_WINDOWS) {
+      const net = resolveCoinNetFlow(coin, window);
+      if (net.valueUsd != null && net.completeness === "unknown") counts[window] += 1;
+    }
+  }
+  return counts;
+}
+
+const LOADING_COLUMNS = buildFlowTableColumns({ "24h": 0, "7d": 0, "30d": 0, "90d": 0 }, 0);
 
 function FlowNetCell({
   net,
@@ -90,6 +142,7 @@ function FlowNetCell({
           format={formatSignedCurrency}
           colorClassName={getNetColor}
           className={cn(isPartial && "opacity-60")}
+          unknownMarker="sr-only"
         />
         {isPartial && <span className="text-xs text-muted-foreground">partial</span>}
       </div>
@@ -119,7 +172,8 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
     sortedRows: sorted,
   } = useSortedTableRows<MintBurnCoinFlow, FlowTableSortKey>(
     coins,
-    { defaultKey: "net24h", defaultDirection: "desc" },
+    // Worst pressure first: the table answers "who is stressed?".
+    { defaultKey: "pressure", defaultDirection: "asc" },
     compareFlowRows,
   );
   const logos = logosById;
@@ -127,11 +181,12 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
 
   const idleCount = sorted.filter(hasNoObserved24hActivity).length;
   const visibleRows = showIdle ? sorted : sorted.filter((coin) => !hasNoObserved24hActivity(coin));
+  const columns = buildFlowTableColumns(countUnknownNets(visibleRows), visibleRows.length);
 
   const toolbar = (
     <TableToolbarFrame
-      eyebrow="Per-Coin Flows"
-      description="Minting and redemption per coin on each configured issuance chain, ranked by net 24h flow."
+      eyebrow="Per-coin flows"
+      description="Minting and redemption per coin on each configured issuance chain, worst pressure against its 30-day norm first."
     />
   );
 
@@ -140,11 +195,11 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
       <DataTableShell
         tableId="mint-burn-flow"
         testId="mint-burn-flow-table"
-        columns={FLOW_TABLE_COLUMNS}
+        columns={LOADING_COLUMNS}
         striped
         topSlot={toolbar}
       >
-        <DataTableLoadingRows columns={FLOW_TABLE_COLUMNS} rowCount={5} />
+        <DataTableLoadingRows columns={LOADING_COLUMNS} rowCount={5} />
       </DataTableShell>
     );
   }
@@ -153,9 +208,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
     <DataTableShell
       tableId="mint-burn-flow"
       testId="mint-burn-flow-table"
-      columns={FLOW_TABLE_COLUMNS}
+      columns={columns}
       striped
-      tableClassName="min-w-[364px] table-fixed"
+      tableClassName="min-w-[358px] table-fixed"
       topSlot={toolbar}
       sort={{
         sortKey,
@@ -170,7 +225,8 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             const label = stablecoinLabel({ id: coin.stablecoinId, symbol: coin.symbol });
             const pressureScore = getPressureScore(coin);
             const pressureState = getPressureState(coin);
-            const pressureUnavailableNote = resolvePressureUnavailableNote(coin);
+            // Same reason vocabulary as the run line's stubs (one authority).
+            const nrReason = resolveRunLineExclusionReason(coin);
             const coverageBadge = getCoverageBadge(coin);
             const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
             const pressureDisplay = pressureScore != null
@@ -222,11 +278,11 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span>NR</span>
+                              <span title={RUN_LINE_EXCLUSION_LABELS[nrReason]} data-reason-codes={nrReason}>
+                                NR<span className="sr-only"> ({RUN_LINE_EXCLUSION_LABELS[nrReason]})</span>
+                              </span>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              {pressureUnavailableNote ?? "Needs at least 7 days of data plus current activity"}
-                            </TooltipContent>
+                            <TooltipContent>{RUN_LINE_EXCLUSION_LABELS[nrReason]}</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}
@@ -238,6 +294,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     format={formatSignedCurrency}
                     colorClassName={getNetColor}
                     className="pharos-numeric text-sm font-semibold"
+                    unknownMarker="sr-only"
                   />
                 </TableCell>
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
@@ -261,6 +318,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     net={resolveCoinNetFlow(coin, "7d")}
                     format={formatSignedCurrency}
                     colorClassName={getNetColor}
+                    unknownMarker="sr-only"
                   />
                 </TableCell>
                 <FlowNetCell
@@ -296,7 +354,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
       })}
       {idleCount > 0 && (
         <TableRow rowIntent="static">
-          <TableCell colSpan={FLOW_TABLE_COLUMNS.length} className="py-3 text-center text-sm text-muted-foreground">
+          <TableCell colSpan={columns.length} className="py-3 text-center text-sm text-muted-foreground">
             <button
               type="button"
               onClick={() => setShowIdle((value) => !value)}
@@ -311,7 +369,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
         </TableRow>
       )}
       {sorted.length === 0 && (
-        <DataTableEmptyRow colSpan={FLOW_TABLE_COLUMNS.length}>
+        <DataTableEmptyRow colSpan={columns.length}>
           No mint/burn events in this period.
         </DataTableEmptyRow>
       )}

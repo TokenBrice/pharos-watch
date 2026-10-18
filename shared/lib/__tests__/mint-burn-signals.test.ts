@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLiteralMintingPressureScore, getNetFlowDirection24h, getPressureShiftState } from "../mint-burn-signals";
+import { formatBankRunGaugeScore, getLiteralMintingPressureReading, getNetFlowDirection24h, getPressureShiftState } from "../mint-burn-signals";
 
 describe("mint-burn-signals", () => {
   it("classifies 24h net flow direction", () => {
@@ -25,28 +25,48 @@ describe("mint-burn-signals", () => {
     expect(getPressureShiftState(10.01)).toBe("improving");
   });
 
+  const complete = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
+  const literalScore = (mintVolume24hUsd: number, burnVolume24hUsd: number) =>
+    getLiteralMintingPressureReading({ mintVolume24hUsd, burnVolume24hUsd, ...complete }).score;
+
   it("computes literal minting pressure from raw 24h mint vs burn balance", () => {
-    expect(
-      getLiteralMintingPressureScore({
-        mintVolume24hUsd: 105,
-        burnVolume24hUsd: 95,
-      }),
-    ).toBeCloseTo(5, 6);
-    expect(
-      getLiteralMintingPressureScore({
-        mintVolume24hUsd: 0,
-        burnVolume24hUsd: 100,
-      }),
-    ).toBe(-100);
+    expect(literalScore(105, 95)).toBeCloseTo(5, 6);
+    expect(literalScore(0, 100)).toBe(-100);
   });
 
-  it("returns null literal minting pressure when there is no 24h activity", () => {
+  it("returns NR literal minting pressure when there is no 24h activity", () => {
+    expect(getLiteralMintingPressureReading({ mintVolume24hUsd: 0, burnVolume24hUsd: 0, ...complete })).toEqual({
+      score: null,
+      unavailableReason: "no-24h-volume",
+    });
+  });
+
+  it("withholds literal minting pressure when either side is not fully valued (v6.27)", () => {
+    // Lower-bound subtotals must never publish "balanced" (or any) reading.
     expect(
-      getLiteralMintingPressureScore({
+      getLiteralMintingPressureReading({
+        mintVolume24hUsd: 100,
+        burnVolume24hUsd: 100,
+        mintCompleteness: "complete",
+        burnCompleteness: "partial",
+      }),
+    ).toEqual({ score: null, unavailableReason: "valuation-partial" });
+    expect(
+      getLiteralMintingPressureReading({
         mintVolume24hUsd: 0,
         burnVolume24hUsd: 0,
+        mintCompleteness: "partial",
+        burnCompleteness: "complete",
       }),
-    ).toBeNull();
+    ).toEqual({ score: null, unavailableReason: "valuation-partial" });
+    expect(
+      getLiteralMintingPressureReading({
+        mintVolume24hUsd: 100,
+        burnVolume24hUsd: 0,
+        mintCompleteness: "unknown",
+        burnCompleteness: "complete",
+      }),
+    ).toEqual({ score: null, unavailableReason: "valuation-unknown" });
   });
 
   it("gives inactivity precedence over nonzero flow", () => {
@@ -55,7 +75,13 @@ describe("mint-burn-signals", () => {
   });
 
   it("distinguishes balanced activity from mint-only activity", () => {
-    expect(getLiteralMintingPressureScore({ mintVolume24hUsd: 100, burnVolume24hUsd: 100 })).toBe(0);
-    expect(getLiteralMintingPressureScore({ mintVolume24hUsd: 100, burnVolume24hUsd: 0 })).toBe(100);
+    expect(literalScore(100, 100)).toBe(0);
+    expect(literalScore(100, 0)).toBe(100);
+  });
+
+  it("prints the gauge with one rounding and an explicit sign", () => {
+    expect(formatBankRunGaugeScore(-5.64)).toBe("\u22126");
+    expect(formatBankRunGaugeScore(12.4)).toBe("+12");
+    expect(formatBankRunGaugeScore(-0.4)).toBe("0");
   });
 });

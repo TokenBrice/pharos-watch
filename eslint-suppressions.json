@@ -49,11 +49,6 @@
       "count": 2
     }
   },
-  "src/components/flow-brrr-overview.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
   "src/components/horizon-constellation.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 1

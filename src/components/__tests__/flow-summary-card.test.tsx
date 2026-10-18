@@ -78,7 +78,11 @@ describe("FlowSummaryCard", () => {
     expect(screen.getByText(/pressure shift unavailable/i)).toBeTruthy();
     // Baseline average daily net is withheld when the baseline valuation is partial.
     expect(container.textContent).not.toContain("+$1.00M");
-    expect(screen.getByText(/Lower-bound volumes: 4 mint \/ 0 burn events unpriced/i)).toBeTruthy();
+    // v6.27: a balance of lower-bound volumes is NR with its reason, never a dial reading.
+    expect(screen.getByText("Minting pressure not rated")).toBeTruthy();
+    expect(screen.getByText(/4 mint \/ 0 burn events unpriced, so the volumes are lower bounds/i)).toBeTruthy();
+    expect(container.querySelector('[data-reason-codes="valuation-partial"]')).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /Minting pressure gauge at/ })).toBeNull();
     // Complete 7d window keeps its value.
     expect(container.textContent).toContain("-$5.00M");
   });

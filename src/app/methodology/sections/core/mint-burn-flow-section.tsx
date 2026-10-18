@@ -219,6 +219,11 @@ export function MintBurnFlowMethodologySection() {
                       this way; the daily digest drops the gauge only when that weight could move it across a band edge
                     </li>
                     <li>
+                      <span className="text-foreground">Literal minting pressure</span> &mdash; stablecoin pages also show
+                      the raw 24h mint-versus-burn volume balance. Since v6.27 it is NR, with its reason, unless both sides
+                      are fully valued: a balance of lower-bound volumes is not a measurement
+                    </li>
+                    <li>
                       <span className="text-foreground">Ingestion safety</span> &mdash; sync state advances only to the
                       shared safe coverage frontier when some event definitions or block timestamps are incomplete;
                       established coverage is marked lagging by cadence-derived block progress, or unknown when the

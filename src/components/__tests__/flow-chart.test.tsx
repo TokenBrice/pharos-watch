@@ -8,6 +8,8 @@ import { FlowChart } from "@/components/flow-chart";
 const chartState = vi.hoisted(() => ({
   data: [] as Array<Record<string, number | boolean | null>>,
   connectNulls: undefined as boolean | undefined,
+  hatchedFrom: [] as number[],
+  stopDot: null as { x: number; y: number } | null,
 }));
 
 vi.mock("@/hooks/use-chart-container-ready", () => ({
@@ -41,7 +43,15 @@ vi.mock("recharts", () => ({
   },
   Tooltip: () => null,
   ReferenceLine: () => null,
-  ReferenceArea: () => null,
+  ReferenceArea: ({ x1, fill }: { x1: number; fill?: string }) => {
+    if (fill?.startsWith("url(")) chartState.hatchedFrom.push(x1);
+    return null;
+  },
+  DefaultZIndexes: { label: 2000 },
+  ReferenceDot: ({ x, y }: { x: number; y: number }) => {
+    chartState.stopDot = { x, y };
+    return null;
+  },
 }));
 
 describe("FlowChart", () => {
@@ -82,6 +92,8 @@ describe("FlowChart", () => {
   });
 
   it("draws no net for a partial-valuation bucket and stops the cumulative line there", () => {
+    chartState.hatchedFrom = [];
+    chartState.stopDot = null;
     const firstHour = 3_600_000;
     render(
       <FlowChart
@@ -114,5 +126,8 @@ describe("FlowChart", () => {
       "Partial valuation: net unavailable",
     ]);
     expect(screen.getByText(/1 hourly bucket has unpriced events/i)).toBeTruthy();
+    // The withheld net is a hatched column over its bucket, and the line's last proven point is marked.
+    expect(chartState.hatchedFrom).toEqual([(firstHour + 3_600) * 1000 - 1_800_000]);
+    expect(chartState.stopDot).toEqual({ x: firstHour * 1000, y: 7 });
   });
 });
