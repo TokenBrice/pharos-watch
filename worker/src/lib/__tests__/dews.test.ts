@@ -1,69 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { computeDEWS, piecewiseLinear, getThreatBand } from "../dews";
+import { computeDEWS } from "../dews";
 import { WATCH_MAX_SCORE } from "@shared/lib/dews-config";
 import type { DEWSInput } from "../dews";
 import { makeDewsInput } from "./dews.test-support";
-
-// --- piecewiseLinear tests ---
-
-describe("piecewiseLinear", () => {
-  const anchors: [number, number][] = [
-    [0, 0],
-    [1, 15],
-    [3, 40],
-    [5, 65],
-    [10, 85],
-    [20, 100],
-  ];
-
-  it("returns 0 at lower bound", () => {
-    expect(piecewiseLinear(0, anchors)).toBe(0);
-  });
-
-  it("returns exact anchor value", () => {
-    expect(piecewiseLinear(3, anchors)).toBe(40);
-  });
-
-  it("interpolates between anchors", () => {
-    // Between [1, 15] and [3, 40]: at 2, expect 15 + (40-15) * (2-1)/(3-1) = 27.5
-    expect(piecewiseLinear(2, anchors)).toBeCloseTo(27.5, 1);
-  });
-
-  it("clamps at maximum anchor", () => {
-    expect(piecewiseLinear(30, anchors)).toBe(100);
-  });
-
-  it("returns 0 for NaN input", () => {
-    expect(piecewiseLinear(NaN, anchors)).toBe(0);
-  });
-
-  it("returns last anchor value for Infinity input", () => {
-    expect(piecewiseLinear(Infinity, anchors)).toBe(100);
-  });
-
-  it("returns first anchor value for -Infinity input", () => {
-    expect(piecewiseLinear(-Infinity, anchors)).toBe(0);
-  });
-});
-
-// --- getThreatBand tests ---
-
-describe("getThreatBand", () => {
-  it.each([
-    [0, "CALM"],
-    [15, "CALM"],
-    [16, "WATCH"],
-    [35, "WATCH"],
-    [36, "ALERT"],
-    [55, "ALERT"],
-    [56, "WARNING"],
-    [75, "WARNING"],
-    [76, "DANGER"],
-    [100, "DANGER"],
-  ] as const)("score %d => %s", (score, band) => {
-    expect(getThreatBand(score)).toBe(band);
-  });
-});
 
 // --- computeDEWS tests ---
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinData } from "@shared/types/market";
-import { buildDewsScoringResult } from "../../../lib/dews/scoring";
-import { loadDewsSourceState } from "../../../lib/dews/source-state";
-import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { buildDewsScoringResult } from "../scoring";
+import { loadDewsSourceState } from "../source-state";
+import { CONTRACT_CONFIGS } from "../../blacklist-contracts";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 /**

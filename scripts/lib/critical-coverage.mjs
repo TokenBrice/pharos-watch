@@ -21,10 +21,10 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES = [
   "worker/src/cron/sync-stablecoins/",
   "worker/src/cron/depeg-detection/",
   "worker/src/cron/depeg-resolver/",
-  "worker/src/cron/dews/",
   "worker/src/lib/address-price-providers/",
   "worker/src/lib/authoritative-price-sources/",
   "worker/src/lib/depeg-resolver-",
+  "worker/src/lib/dews/",
 ];
 const HIGH_STAKES_COVERAGE_CANDIDATE_FILES = new Set([
   "worker/src/cron/sync-stablecoins.ts",
