@@ -14,8 +14,8 @@ import {
 
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
-import { assertSlotDeadline, createSlotDeadline, type SlotDeadline } from "./cron-timeouts";
-import { settleAfterAbort } from "./cron-abort-settlement";
+import { assertSlotDeadline, createSlotDeadline, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS, type SlotDeadline } from "./cron-timeouts";
+import { retainUntilDeadline, settleAfterAbort } from "./cron-abort-settlement";
 import { resolveScheduledSlotPolicy, scheduledSlotSilenceSql } from "./scheduled-slot-policy";
 import type { ScheduledSlotPolicy } from "./scheduled-slot-policy";
 
@@ -638,6 +638,7 @@ async function runScheduledSlotLifecycle(
   slotController: AbortController,
   checkpoint: () => void,
   onAdmitted: () => void,
+  onWorkSettlement: (drained: boolean) => void,
 ): Promise<ScheduledSlotExecutionResult> {
   const owner = opts.owner ?? createLeaseOwner(slotKey);
   const policy = resolveScheduledSlotPolicy(slotKey);
@@ -736,9 +737,12 @@ async function runScheduledSlotLifecycle(
 
   let workDrained = true;
   try {
+    onWorkSettlement(false);
     const outcome = await settleAfterAbort(() => fn(slotController.signal, executionFence), slotController.signal, {
-      observer: true, platformDeadlineMs: opts.deadline?.platformDeadlineMs,
+      observer: true, platformDeadlineMs: opts.deadline
+        ? opts.deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS : undefined,
     });
+    onWorkSettlement(outcome.status !== "aborted" || outcome.settled);
     clearTimeout(deadlineTimer ?? undefined);
     if (outcome.status === "aborted") {
       workDrained = outcome.settled;
@@ -838,12 +842,14 @@ export async function runScheduledSlotWithFence(
   const owner = opts.owner ?? createLeaseOwner(slotKey);
   const controller = new AbortController();
   let admitted = false;
+  let workDrained = true;
   const checkpoint = () => assertSlotDeadline(deadline, controller.signal);
   const timeout = setTimeout(() => controller.abort(
     new ScheduledSlotDeadlineExceededError(slotKey, opts.slotStartedAt),
   ), deadline.remainingMs());
   const work = runScheduledSlotLifecycle(db, slotKey, fn, { ...opts, owner, deadline },
-    controller, checkpoint, () => { admitted = true; }).catch(async (error: unknown) => {
+    controller, checkpoint, () => { admitted = true; }, (drained) => { workDrained = drained; }).catch(async (error: unknown) => {
+      if (!workDrained) throw error;
       // Also handles a claim/marker that committed after the caller timed out.
       // Never terminate an executing child: its ledger and lease remain the
       // recovery authority until it settles or the shared stale policy fires.
@@ -885,9 +891,8 @@ export async function runScheduledSlotWithFence(
     const observed = work.catch((error: unknown) => {
       logWorkerEventArgs("lib", "warn", "[cron-slot] Late fenced lifecycle settled:", error);
     });
-    opts.waitUntil?.(settleAfterAbort(() => observed, controller.signal, {
-      platformDeadlineMs: deadline.platformDeadlineMs,
-    }));
+    opts.waitUntil?.(retainUntilDeadline(observed,
+      deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS));
     throw outcome.error ?? outcome.reason;
   } catch (error) {
     logWorkerEvent({

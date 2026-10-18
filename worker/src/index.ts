@@ -7,11 +7,12 @@ const worker = {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    const eventEntryMs = Date.now();
     const [{ handleScheduledEvent }, { PUBLIC_SLOT_RUNNER_LOADERS }] = await Promise.all([
       import("./handlers/scheduled"),
       import("./handlers/scheduled/public-runners"),
     ]);
-    return handleScheduledEvent(event, env, ctx, "public", PUBLIC_SLOT_RUNNER_LOADERS);
+    return handleScheduledEvent(event, env, ctx, "public", PUBLIC_SLOT_RUNNER_LOADERS, eventEntryMs);
   },
 };
 

@@ -47,6 +47,26 @@ describe("cron progress cleanup", () => {
     expect(JSON.parse(history.metadata_json)).toEqual({ mxLedgerV: 1, mxLedger0: "ledger" });
   });
 
+  it.each(["ok", "degraded", "error"] as const)("persists a %s terminal when consumer evidence exceeds its metadata budget", async (status) => {
+    const { sqlite, db } = fixtures.open();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stale = Array.from({ length: 1_000 }, () => ({ generationId: "generation-a" }));
+    await logCronRun(db, "test-over-budget", async () => ({
+      status, itemCount: 0,
+      metadata: JSON.stringify({ reason: "source-incomplete", outputPublishedAt: null, stale }),
+    }));
+    const runs = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = 'test-over-budget'").all() as Array<{
+      status: string; metadata: string;
+    }>;
+    expect(runs).toHaveLength(1);
+    expect(runs[0].status).toBe(status);
+    expect(JSON.parse(runs[0].metadata)).toMatchObject({
+      reason: "source-incomplete", outputPublishedAt: null, stale,
+      persistenceCompaction: { overBudget: true, budgetBytes: DEFAULT_CRON_METADATA_BUDGET_BYTES },
+    });
+    expect(new TextEncoder().encode(runs[0].metadata).length).toBeGreaterThan(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+  });
+
   it("redacts signed URLs from thrown and resolved cron errors before persistence", async () => {
     const { sqlite, db } = fixtures.open();
     const signedUrl = "https://provider.example/data?token=super-secret";

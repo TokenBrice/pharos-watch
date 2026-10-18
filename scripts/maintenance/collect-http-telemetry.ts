@@ -53,8 +53,10 @@ export function parseHttpTelemetryArgs(argv: string[], now = Date.now()): { help
   assertCliUsage((values.from === undefined) === (values.to === undefined), "--from and --to must be supplied together");
   const parseTime = (value: unknown, fallback: number) => {
     if (value === undefined) return fallback;
-    assertCliUsage(typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value), "timestamps must be timezone-qualified ISO timestamps");
-    const parsed = Date.parse(value as string);
+    const timestamp = typeof value === "string" ? value : "";
+    assertCliUsage(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(timestamp.slice(0, 19))
+      && /^(?:Z|[+-]\d{2}:\d{2}|\.\d+Z|\.\d+[+-]\d{2}:\d{2})$/.test(timestamp.slice(19)), "timestamps must be timezone-qualified ISO timestamps");
+    const parsed = Date.parse(timestamp);
     assertCliUsage(Number.isFinite(parsed), "invalid timestamp");
     return parsed;
   };

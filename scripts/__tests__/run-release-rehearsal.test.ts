@@ -69,6 +69,11 @@ describe("Worker release packaging", () => {
         const outdir = args[args.indexOf("--outdir") + 1]!;
         mkdirSync(outdir, { recursive: true });
         writeFileSync(join(outdir, "index.js"), "export default {};\n");
+        // Packaging now requires emitted reachability evidence for the heavy
+        // role, just as real Wrangler dry-runs emit a nonempty source map.
+        writeFileSync(join(outdir, "index.js.map"), JSON.stringify({
+          version: 3, sources: ["../../src/index.heavy.ts", "../../src/handlers/scheduled.ts"],
+        }));
         return { status: 0 };
       } }).status).toBe(0);
       expect(calls).toHaveLength(2);

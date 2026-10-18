@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CRON_JOB_DEFINITIONS } from "../../../shared/lib/cron-jobs";
 import { summarizeWorkerEvidence, renderWorkerEvidenceTable } from "../worker-evidence-report.mjs";
 import { assembleIncidentBundle, captureWorkerIncidentBundle, joinIncidentEvidence } from "../worker-incident-bundle.mjs";
-import { createReadOnlyProfileDb, profileStatusRoute } from "../worker-status-profile.mjs";
+import { createReadOnlyProfileDb, profileStatusRoute } from "../../../worker/scripts/worker-status-profile.mjs";
 
 const DAY = 86400;
 
@@ -103,7 +103,7 @@ describe("read-only status profiling", () => {
   });
 
   it("reports missing D1 metadata as unavailable, not zero measured cost", async () => {
-    const result = await profileStatusRoute({}, {
+    const result = await profileStatusRoute({
       query: async () => ({ results: [] }),
       handler: async ({ db }: { db: { prepare(sql: string): { all(): Promise<unknown> } } }) => {
         await db.prepare("SELECT 1").all();

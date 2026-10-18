@@ -221,7 +221,7 @@ describe("mint/burn per-config attempt state", () => {
     });
   });
 
-  it("exempts an active provider deferral from blocking the pass", async () => {
+  it("requires an actual attempt even while a provider deferral is active", async () => {
     const cached = JSON.stringify({
       version: 1,
       updatedAt: 1_000,
@@ -235,10 +235,8 @@ describe("mint/burn per-config attempt state", () => {
         },
       },
     });
-    const db = mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]);
-
     const deferred = await updateMintBurnAttemptState({
-      db,
+      db: mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]),
       jobName: "job",
       lane: "extended",
       enabledConfigKeys: ["config-0"],
@@ -249,10 +247,52 @@ describe("mint/burn per-config attempt state", () => {
 
     expect(deferred.summary.providerDeferredThisRun).toBe(1);
     expect(deferred.coverageCycle).toMatchObject({
+      status: "cycle-in-progress",
+      incompleteConfigs: 1,
+      providerDeferredConfigs: 1,
+      coverageCycleSec: null,
+    });
+
+    const attempted = await updateMintBurnAttemptState({
+      db: mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]),
+      jobName: "job",
+      lane: "extended",
+      enabledConfigKeys: ["config-0"],
+      configBreakdown: [{ key: "config-0", attempted: true, skippedReason: null }],
+      activeProviderDeferrals: new Map(),
+      nowSec: 6_100,
+    });
+
+    expect(attempted.coverageCycle).toMatchObject({
       status: "complete",
       incompleteConfigs: 0,
-      providerDeferredConfigs: 1,
-      coverageCycleSec: 5_000,
+      coverageCycleSec: 5_100,
+    });
+  });
+
+  it("never treats an absent attempt record as coverage", async () => {
+    const cached = JSON.stringify({
+      version: 1,
+      updatedAt: 1_000,
+      cycle: { startedAt: 1_000, lastCompletedAt: null, lastDurationSec: null },
+      entries: {},
+    });
+    const db = mockD1([cachedRow("mint-burn:attempt-state:job", cached, 1_000)]);
+
+    const result = await updateMintBurnAttemptState({
+      db,
+      jobName: "job",
+      lane: "extended",
+      enabledConfigKeys: ["config-0"],
+      configBreakdown: [{ key: "config-0", attempted: false, skippedReason: "extended-deferred-under-pressure" }],
+      activeProviderDeferrals: new Map(),
+      nowSec: 6_000,
+    });
+
+    expect(result.coverageCycle).toMatchObject({
+      status: "cycle-in-progress",
+      incompleteConfigs: 1,
+      coverageCycleSec: null,
     });
   });
 

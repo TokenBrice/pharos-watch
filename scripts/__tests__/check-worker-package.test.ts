@@ -77,7 +77,10 @@ describe("check-worker-package", () => {
 
   it.each([
     "../../src/api/og.tsx",
+    "./.././src/api/og.tsx",
+    `${"./../".repeat(10_000)}src/api/og.tsx`,
     "../../worker/src/api/telegram-webhook.ts",
+    "/repo/worker/src/api/og.tsx",
     "../../worker/src/handlers/http/request-dispatch.ts",
     "../../worker/src/routes/public-routes.ts",
     "../../src/handlers/http/request-dispatch.ts",
@@ -98,6 +101,23 @@ describe("check-worker-package", () => {
       return result;
     });
     expect(checkWorkerPackage({ run })).toEqual({ status: 1 });
+  });
+
+  it.each([
+    "../../shared/lib/api-endpoints/definitions.ts",
+    "./.././shared/lib/api-endpoints/definitions.ts",
+    "../../shared/lib/api-freshness.ts",
+    "../../shared/lib/api-query-history.ts",
+    "../../shared/lib/api-cache-profiles.ts",
+    "../../worker/src/lib/api-response.ts",
+    "../../src/lib/api-schema.ts",
+    "../../src/lib/api-cache-read.ts",
+    "../../src/lib/api-methodology.ts",
+    "../../node_modules/zod/v4/core/api.js",
+    "../../node_modules/example/src/api/helpers.js",
+  ])("permits shared API primitives in the heavy graph (%s)", (source) => {
+    writeFileSync(join(root, "worker.js.map"), JSON.stringify({ sources: [source] }));
+    expect(checkHeavyReachability(root)).toBe(true);
   });
 
   it.each(["font.ttf", "font.otf", "font.woff", "font.woff2", "render.wasm"])(

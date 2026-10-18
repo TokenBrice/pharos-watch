@@ -442,7 +442,7 @@ describe("detectDepegEvents", () => {
         }],
       },
       {
-        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
         rows: [{
           stablecoin_id: "usdt-tether",
           dex_price_usd: 0.55,
@@ -450,17 +450,10 @@ describe("detectDepegEvents", () => {
           source_pool_count: 5,
           source_total_tvl: 5_000_000,
           updated_at: now - 60,
-        }],
-      },
-      {
-        match: "price_sources_json",
-        rows: [{
-          stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
             { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.55, tvl: 3_000_000 },
             { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.551, tvl: 2_000_000 },
           ]),
-          updated_at: now - 60,
         }],
       },
     ]);
@@ -758,7 +751,7 @@ describe("detectDepegEvents", () => {
         }],
       },
       {
-        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
         rows: [{
           stablecoin_id: "usdt-tether",
           dex_price_usd: 0.985,
@@ -766,17 +759,10 @@ describe("detectDepegEvents", () => {
           source_pool_count: 4,
           source_total_tvl: 4_000_000,
           updated_at: now - 60,
-        }],
-      },
-      {
-        match: "price_sources_json",
-        rows: [{
-          stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
             { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.985, tvl: 2_000_000 },
             { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.9845, tvl: 2_000_000 },
           ]),
-          updated_at: now - 60,
         }],
       },
     ]);
@@ -812,7 +798,7 @@ describe("detectDepegEvents", () => {
         }],
       },
       {
-        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
         rows: [{
           stablecoin_id: "usdt-tether",
           dex_price_usd: 0.9993,
@@ -820,18 +806,11 @@ describe("detectDepegEvents", () => {
           source_pool_count: 6,
           source_total_tvl: 2_143_513,
           updated_at: now - 60,
-        }],
-      },
-      {
-        match: "price_sources_json",
-        rows: [{
-          stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
             { protocol: "bunni-ethereum", sourceFamily: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
             { protocol: "uniswap-v4-ethereum", sourceFamily: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
             { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
           ]),
-          updated_at: now - 60,
         }],
       },
     ]);
@@ -890,7 +869,7 @@ describe("detectDepegEvents", () => {
         }],
       },
       {
-        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
         rows: [{
           stablecoin_id: "usdt-tether",
           dex_price_usd: 0.9439,
@@ -898,18 +877,11 @@ describe("detectDepegEvents", () => {
           source_pool_count: 6,
           source_total_tvl: 19_900_000,
           updated_at: now - 60,
-        }],
-      },
-      {
-        match: "price_sources_json",
-        rows: [{
-          stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
             { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.9438, tvl: 11_000_000 },
             { protocol: "pancakeswap", sourceFamily: "pancakeswap", chain: "bsc", price: 0.9461, tvl: 5_000_000 },
             { protocol: "uniswap-v4", sourceFamily: "uniswap-v4", chain: "ethereum", price: 0.9442, tvl: 3_000_000 },
           ]),
-          updated_at: now - 60,
         }],
       },
     ]);
@@ -942,7 +914,7 @@ describe("detectDepegEvents", () => {
     const db = mockD1([
       { match: "depeg_events", rows: [] },
       {
-        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
         rows: [{
           stablecoin_id: "usdt-tether",
           dex_price_usd: 0.9993,
@@ -950,18 +922,11 @@ describe("detectDepegEvents", () => {
           source_pool_count: 6,
           source_total_tvl: 2_143_513,
           updated_at: now - 60,
-        }],
-      },
-      {
-        match: "price_sources_json",
-        rows: [{
-          stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
             { protocol: "bunni-ethereum", sourceFamily: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
             { protocol: "uniswap-v4-ethereum", sourceFamily: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
             { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
           ]),
-          updated_at: now - 60,
         }],
       },
     ]);

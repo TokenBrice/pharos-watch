@@ -183,11 +183,15 @@ function makePrimaryPricingDb(options: PrimaryPricingDbOptions | MockTableConfig
     reserveRows,
     extraTables = [],
   } = Array.isArray(options) ? { extraTables: options } : options;
+  const sourceJsonById = new Map((poolSources ?? []).map((row) => [row.stablecoin_id, row.price_sources_json]));
+  const combinedDexRows = (dexRows ?? []).map((row) => ({
+    ...row,
+    price_sources_json: sourceJsonById.get(row.stablecoin_id) ?? null,
+  }));
   return mockD1([
     ...extraTables,
     { match: "circuit", rows: [], allowUnused: true },
-    ...(dexRows ? [{ match: "dex_price_usd", rows: dexRows }] : []),
-    ...(poolSources ? [{ match: "price_sources_json", rows: poolSources }] : []),
+    ...(dexRows || poolSources ? [{ match: "FROM dex_prices", rows: combinedDexRows }] : []),
     ...(reserveRows ? [{ match: "FROM reserve_composition c", rows: reserveRows }] : []),
     { match: "FROM dex_prices", rows: [], allowUnused: true },
     { match: "FROM dex_price_challenger_snapshots", rows: [], allowUnused: true },

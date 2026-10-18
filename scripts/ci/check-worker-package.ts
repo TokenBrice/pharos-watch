@@ -105,10 +105,17 @@ export function checkHeavyReachability(directory: string): boolean {
         ) throw new Error("missing sources array");
         for (const source of map.sources as string[]) {
           sourceCount++;
-          const normalized = source.replaceAll("\\", "/");
+          const slashed = source.replaceAll("\\", "/");
+          let offset = 0;
+          while (true) {
+            if (slashed.startsWith("./", offset)) offset += 2;
+            else if (slashed.startsWith("../", offset)) offset += 3;
+            else break;
+          }
+          const normalized = slashed.slice(offset);
           if (
-            /(?:^|\/)(?:worker\/)?src\/(?:api\/|routes\/|handlers\/http\/|router\.[cm]?[jt]sx?$|handlers\/scheduled\/public-runners\.[cm]?[jt]s$)/.test(normalized) ||
-            /(?:^|\/)(?:api|og|telegram-webhook|fonts?)(?:\/|[.-])/.test(normalized) ||
+            /(?:(?:^|\/)worker\/|^)src\/(?:api\/|routes\/|handlers\/http\/|router\.[cm]?[jt]sx?$|handlers\/scheduled\/public-runners\.[cm]?[jt]s$)/.test(normalized) ||
+            /(?:^|\/)fonts?\//.test(normalized) ||
             /\.(?:wasm|ttf|otf|woff2?)(?:$|\?)/i.test(normalized) ||
             /(?:^|\/)(?:@resvg|satori|yoga-wasm-web)(?:\/|$)/.test(normalized)
           ) reject(source);

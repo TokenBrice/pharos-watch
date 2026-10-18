@@ -16,6 +16,7 @@ import {
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
   shouldSkipCronProgress,
+  SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
   type ResolvedCronTimeoutBudget,
 } from "./cron-timeouts";
 import {
@@ -541,7 +542,8 @@ export async function logCronRun(
     timeoutHandle = setTimeout(() => ac.abort(timeoutError), timeoutMs);
     const outcome = await settleAfterAbort(() => fn(operationSignal, reportProgress), operationSignal, {
       observer: true,
-      platformDeadlineMs: options?.deadline?.platformDeadlineMs,
+      platformDeadlineMs: options?.deadline
+        ? options.deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS : undefined,
     });
     clearTimeout(timeoutHandle ?? undefined);
     if (outcome.status === "aborted") {

@@ -44,10 +44,10 @@ import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
-import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
+import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS } from "../../lib/cron-timeouts";
 import { runSafetyMapProducerKick } from "../../cron/safety-map-producer-kick";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
-import { settleAfterAbort } from "../../lib/cron-abort-settlement";
+import { retainUntilDeadline, settleAfterAbort } from "../../lib/cron-abort-settlement";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
 const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
@@ -477,7 +477,8 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   });
   const sweepOutcome = await settleAfterAbort(() => sweep, sweepSignal, { platformDeadlineMs: sweepDeadlineMs });
   if (sweepOutcome.status === "aborted") {
-    runtime.ctx.waitUntil(settleAfterAbort(() => observedSweep, sweepSignal, { platformDeadlineMs: sweepDeadlineMs }));
+    runtime.ctx.waitUntil(retainUntilDeadline(observedSweep,
+      Math.min(runtime.deadline.platformDeadlineMs, sweepDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS)));
     logWorkerEvent({ scope: "handler", level: "warn", event: "scheduled-slot-sweep-deadline",
       message: "Global stale-slot sweep reached its bounded deadline",
       metadata: { reason: "scheduled-slot-sweep-deadline", sweepDeadlineMs } });

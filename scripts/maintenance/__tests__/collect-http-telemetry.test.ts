@@ -128,6 +128,14 @@ describe("HTTP telemetry CLI", () => {
     expect(parseHttpTelemetryArgs(["--help"], clock).help).toBe(true);
     expect(parseHttpTelemetryArgs(["--from", window.from, "--to", window.to], clock).window).toEqual(window);
   });
+  it("preserves fractional-second and signed-offset timestamp matching", () => {
+    for (const from of ["2026-10-18T10:00:00Z", "2026-10-18T10:00:00.123456Z", "2026-10-18T11:00:00+01:00", "2026-10-18T09:00:00.123456-01:00"]) {
+      expect(parseHttpTelemetryArgs(["--from", from, "--to", window.to], clock).window.from).toBe(new Date(from).toISOString());
+    }
+    for (const suffix of [".Z", ".+01:00", ".123", ".123Zextra", ".123+0100", ".123" + "1".repeat(10000) + "x"]) {
+      expect(() => parseHttpTelemetryArgs(["--from", `2026-10-18T10:00:00${suffix}`, "--to", window.to], clock)).toThrow();
+    }
+  });
   it("rejects unknown, duplicate, unpaired, overlong, reversed, recent and timezone-free options", () => {
     for (const args of [["--unknown"], ["--from", window.from], ["--to", window.to, "--to", window.to],
       ["--from", "2026-10-16T00:00:00Z", "--to", window.to], ["--from", window.to, "--to", window.from],

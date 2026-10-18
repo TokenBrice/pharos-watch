@@ -26,9 +26,6 @@ export const WORKER_WATCH_OPTION_SCHEMA = Object.freeze([
   ["--cf-access-client-secret", "cfAccessClientSecret", "value"],
   ["--max-buffer-mb", "maxBufferMb", "integer"], ["--json", "json", "boolean"],
   ["--skip-health", "skipHealth", "boolean"],
-  ["--profile-status", "profileStatus", "boolean"],
-  ["--incident-bundle", "incidentBundle", "boolean"],
-  ["--out-dir", "outDir", "value"], ["--archive-dir", "archiveDir", "value"],
   ["--local", "remote", "false"],
 ]);
 
@@ -53,10 +50,6 @@ function usage() {
     "  --max-buffer-mb <n>      Max stdout buffer for wrangler D1 queries (default: 32)",
     "  --local                  Use local D1 instead of --remote",
     "  --skip-health            Do not fetch /api/health",
-    "  --profile-status         Profile the real status handler read-only using remote D1 metadata",
-    "  --incident-bundle        Capture yesterday and assemble a bounded 21-day incident archive",
-    "  --out-dir <path>         Bundle output directory (default: agents/worker-incidents)",
-    "  --archive-dir <path>     Previous bundle directory to extend (local evidence only)",
     "  --json                   Print JSON only",
     "  --help                   Show this help",
   ].join("\n");
@@ -76,7 +69,6 @@ export function parseWorkerWatchArgs(argv) {
   };
 
   const { values } = parseStrictCliArgs(argv, {
-    conflicts: [["profile-status", "incident-bundle"]],
     options: Object.fromEntries(WORKER_WATCH_OPTION_SCHEMA.map(([flag, , kind]) => [
       flag.slice(2), { type: kind === "boolean" || kind === "false" ? "boolean" : "string" },
     ])),
@@ -441,18 +433,6 @@ export async function collectWorkerCronSnapshot(args, {
 
 export async function runCli(argv = process.argv.slice(2)) {
   const args = parseWorkerWatchArgs(argv);
-  if (args.profileStatus) {
-    const { profileStatusRoute } = await import("./worker-status-profile.mjs");
-    const result = await profileStatusRoute(args);
-    console.log(JSON.stringify(result, null, 2));
-    return result.coverage === "complete" ? 0 : 1;
-  }
-  if (args.incidentBundle) {
-    const { captureWorkerIncidentBundle } = await import("./worker-incident-bundle.mjs");
-    const result = await captureWorkerIncidentBundle(args);
-    console.log(JSON.stringify(result, null, 2));
-    return result.collectionFailed ? 1 : 0;
-  }
   const report = await collectWorkerCronSnapshot(args);
   if (args.json) console.log(JSON.stringify(report, null, 2));
   else printHuman(report);

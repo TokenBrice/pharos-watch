@@ -1,4 +1,5 @@
 import { register } from "tsx/esm/api";
+import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 
 // Run the actual source handler against a SELECT-only D1 transport. Never persist status/self-check state.
 export function createReadOnlyProfileDb(query, receipts) {
@@ -28,7 +29,7 @@ export function createReadOnlyProfileDb(query, receipts) {
   return { ...db, withSession: () => db };
 }
 
-export async function profileStatusRoute(args = {}, { env = process.env, fetchImpl = fetch, now = () => new Date(), handler, trackerFactory, query } = {}) {
+export async function profileStatusRoute({ env = process.env, fetchImpl = fetch, now = () => new Date(), handler, trackerFactory, query } = {}) {
   register();
   const receipts = [];
   if (!query) {
@@ -50,8 +51,8 @@ export async function profileStatusRoute(args = {}, { env = process.env, fetchIm
       return body.result[0];
     };
   }
-  handler ??= (await import("../../worker/src/api/status.ts")).handleStatus;
-  trackerFactory ??= (await import("../../worker/src/lib/d1-cost.ts")).createD1CostTracker;
+  handler ??= (await import("../src/api/status.ts")).handleStatus;
+  trackerFactory ??= (await import("../src/lib/d1-cost.ts")).createD1CostTracker;
   const tracker = trackerFactory(createReadOnlyProfileDb(query, receipts));
   const started = performance.now();
   const response = await handler({ db: tracker.db, request: new Request("https://ops-api.pharos.watch/api/status"), trustedAdmin: true });
@@ -77,3 +78,11 @@ export async function profileStatusRoute(args = {}, { env = process.env, fetchIm
     limitations: ["Local source handler, not deployed HTTP/colo wall time", "No optional Cloudflare/price-provider credentials supplied", "Self-check cost is the latest persisted observation, not executed by this command"],
   };
 }
+
+runDirectCli(import.meta.url, async () => {
+  const { values } = parseStrictCliArgs(process.argv.slice(2));
+  if (writeCliHelpIfRequested(values, "Usage: npm run ops:worker-status-profile -- [--help]\nRead-only source status-handler D1 profile; requires CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_DATABASE_ID and CLOUDFLARE_API_TOKEN.")) return;
+  const result = await profileStatusRoute();
+  console.log(JSON.stringify(result, null, 2));
+  process.exitCode = result.coverage === "complete" ? 0 : 1;
+}, { label: "Worker status profile" });

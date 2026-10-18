@@ -6,6 +6,7 @@ import { makeCaptureDb, type DbCall } from "../../../lib/__tests__/cron-progress
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import type { ScheduledExecutionFence } from "../../../lib/scheduled-slot-fence";
+import type { Env, HeavyEnv } from "../../../lib/env";
 import { loadProducerHeads } from "../../../lib/producer-history";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -144,5 +145,34 @@ describe("scheduled runtime context", () => {
     expect(sqlite.prepare("SELECT terminal_source FROM scheduled_child_attempts").get()).toEqual({ terminal_source: "real" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
     expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1 })]);
+  });
+
+  it.each(["public", "heavy"] as const)("captures the %s deadline origin before lazy imports", async (role) => {
+    vi.useFakeTimers();
+    const entryMs = 1_800_000_000_000;
+    vi.setSystemTime(entryMs);
+    vi.resetModules();
+    const handleScheduledEvent = vi.fn(async () => {});
+    vi.doMock("../../../handlers/scheduled", () => {
+      vi.setSystemTime(entryMs + 2_000);
+      return { handleScheduledEvent };
+    });
+    vi.doMock("../../../handlers/scheduled/public-runners", () => ({ PUBLIC_SLOT_RUNNER_LOADERS: {} }));
+    vi.doMock("../../../handlers/scheduled/heavy-runners", () => ({ HEAVY_SLOT_RUNNER_LOADERS: {} }));
+    try {
+      // Dynamic imports are deliberate: this fixture exercises lazy initialization.
+      const entry = role === "public" ? await import("../../../index") : await import("../../../index.heavy");
+      const event = { cron: "0 * * * *", scheduledTime: entryMs } as ScheduledEvent;
+      const env = { DB: makeCaptureDb([]) } as Env & HeavyEnv;
+      const ctx = {} as ExecutionContext;
+      await entry.default.scheduled(event, env, ctx);
+      expect(Date.now()).toBe(entryMs + 2_000);
+      expect(handleScheduledEvent).toHaveBeenCalledWith(event, env, ctx, role, {}, entryMs);
+    } finally {
+      vi.doUnmock("../../../handlers/scheduled");
+      vi.doUnmock("../../../handlers/scheduled/public-runners");
+      vi.doUnmock("../../../handlers/scheduled/heavy-runners");
+      vi.resetModules();
+    }
   });
 });

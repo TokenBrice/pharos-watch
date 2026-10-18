@@ -343,9 +343,12 @@ export async function updateMintBurnAttemptState(input: {
     };
     const incompleteConfigs = input.enabledConfigKeys.filter((key) => {
       const entry = state.entries[key];
-      if (!entry) return false;
-      if ((entry.providerDeferredUntil ?? 0) > input.nowSec) return false;
-      return entry.lastAttemptedAt == null || entry.lastAttemptedAt < cycle.startedAt;
+      // ADR-29: absent or never-attempted evidence is not coverage. A provider
+      // deferral is recorded evidence, not an attempt, so it cannot complete the
+      // pass either — only an observed attempt (including a proven up-to-date
+      // scan) inside the cycle does.
+      if (!entry || entry.lastAttemptedAt == null) return true;
+      return entry.lastAttemptedAt < cycle.startedAt;
     }).length;
     const providerDeferredConfigs = input.enabledConfigKeys.filter(
       (key) => ((state.entries[key]?.providerDeferredUntil ?? 0) > input.nowSec),

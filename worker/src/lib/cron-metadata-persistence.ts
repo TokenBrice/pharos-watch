@@ -106,7 +106,7 @@ export function compactCronMetadataForPersistence(
   const diagnostics: Record<string, unknown> = {};
   const compaction = {
     schemaVersion: 2, budgetBytes, originalBytes, originalTopLevelKeys: entries.length,
-    retainedTopLevelDiagnostics: 0, omittedTopLevelDiagnostics: 0,
+    retainedTopLevelDiagnostics: 0, omittedTopLevelDiagnostics: 0, overBudget: false,
   };
   retained.persistenceCompaction = compaction;
   let compacted: string;
@@ -144,7 +144,13 @@ export function compactCronMetadataForPersistence(
     compacted = JSON.stringify(retained);
   }
   if (utf8Bytes(compacted) > budgetBytes) {
-    throw new Error(`cron-metadata-consumer-evidence-over-budget:${job ?? "default"}:${budgetBytes}`);
+    // Terminal accounting must survive even when contractual evidence alone exceeds policy.
+    // Keep every consumer key and expose the exception instead of failing the terminal write.
+    compaction.overBudget = true;
+    compacted = JSON.stringify(retained);
+    console.warn("[cron-metadata] Consumer evidence exceeds persistence budget", {
+      job: job ?? "default", budgetBytes, persistedBytes: utf8Bytes(compacted),
+    });
   }
   return { metadata: compacted, originalBytes, persistedBytes: utf8Bytes(compacted), compacted: true };
 }

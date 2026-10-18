@@ -1,16 +1,16 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-utils/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   CACHE_RETENTION_POLICIES, RETENTION_NON_APPEND_TABLES, retentionPolicyRegistry,
-} from "../retention-policy";
+} from "@shared/lib/retention-policy";
 import {
   RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT,
   RETENTION_SMALL_DELETE_BATCH_LIMIT, RETENTION_SMALL_DELETE_RUN_LIMIT,
-} from "../../../worker/src/lib/bounded-prune";
+} from "../../../lib/bounded-prune";
 
-const root = path.resolve(__dirname, "../../..");
+const root = path.resolve(__dirname, "../../../../..");
 const { sqlite } = createLatestSchemaSqlite();
 afterAll(() => sqlite.close());
 const registry = retentionPolicyRegistry({

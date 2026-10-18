@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { parseStrictCliArgs, requireCliString, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { CronRunStatusSchema } from "../../shared/types/status/cron.ts";
 
 // Reporting preserves stored terminal status; synthetic is an orthogonal provenance count.
@@ -61,3 +63,14 @@ export function renderWorkerEvidenceTable(summary) {
     "", `Publication generation states: ${JSON.stringify(summary.publicationStates)}`,
   ].join("\n");
 }
+
+runDirectCli(import.meta.url, () => {
+  const { values } = parseStrictCliArgs(process.argv.slice(2), { options: {
+    fixture: { type: "string" }, json: { type: "boolean" },
+  } });
+  if (writeCliHelpIfRequested(values, "Usage: npm run ops:worker-evidence-report -- --fixture <snapshot.json> [--json]\nRender literal terminal and output evidence from a saved cron watcher snapshot.")) return;
+  const snapshot = JSON.parse(readFileSync(requireCliString(values.fixture, "--fixture"), "utf8"));
+  if (!Array.isArray(snapshot.recentRuns)) throw new Error("Worker snapshot recentRuns must be an array");
+  const summary = summarizeWorkerEvidence(snapshot.recentRuns, snapshot.publicationGenerations);
+  console.log(values.json ? JSON.stringify(summary, null, 2) : renderWorkerEvidenceTable(summary));
+});

@@ -64,12 +64,17 @@ describe("event-entry scheduled lifecycle", () => {
     await failure;
     expect(Date.now() - entryMs).toBe(SCHEDULED_SLOT_JOB_BUDGET_MS);
     expect(body).not.toHaveBeenCalled();
+    expect(tails).toHaveLength(1);
+    let tailSettled = false;
+    const retained = Promise.all(tails).then(() => { tailSettled = true; });
+    await Promise.resolve();
+    expect(tailSettled).toBe(false);
     if (stage === "claim") {
       expect(db.getSlot("quarterHourly", slotStartedAt)).toBeUndefined();
       expect(console.error).toHaveBeenCalledWith(expect.stringContaining('"disposition":"delivered-not-admitted"'));
     }
     stalled.release();
-    await Promise.all(tails);
+    await retained;
     expect(body).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(db.getSlot("quarterHourly", slotStartedAt)).toMatchObject({ state: "finished", result_status: "error" }));
     expect(JSON.parse(db.getSlot("quarterHourly", slotStartedAt)!.metadata!)).toMatchObject({

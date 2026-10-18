@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { createD1Client } from "../lib/remote-d1.ts";
 import { readCronDelivery } from "./cron-delivery.mjs";
 import { summarizeWorkerEvidence, renderWorkerEvidenceTable } from "./worker-evidence-report.mjs";
+import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 
 const DAY = 86400;
 const LIMIT = 50000;
@@ -117,3 +118,17 @@ export async function captureWorkerIncidentBundle(args, { env = process.env, now
   ].join("\n"));
   return { coverage: bundle.coverage, missingDays: bundle.missingDays, collectionFailed, output: outDir };
 }
+
+runDirectCli(import.meta.url, async () => {
+  const { values } = parseStrictCliArgs(process.argv.slice(2), { options: {
+    database: { type: "string", default: "stablecoin-db" }, local: { type: "boolean" },
+    "out-dir": { type: "string" }, "archive-dir": { type: "string" },
+  } });
+  if (writeCliHelpIfRequested(values, "Usage: npm run ops:worker-incidents -- [--database <name>] [--local] [--out-dir <path>] [--archive-dir <path>]\nCapture yesterday and roll forward a bounded 21-day read-only incident evidence archive.")) return;
+  const result = await captureWorkerIncidentBundle({
+    database: values.database, remote: values.local !== true,
+    outDir: values["out-dir"], archiveDir: values["archive-dir"],
+  });
+  console.log(JSON.stringify(result, null, 2));
+  process.exitCode = result.collectionFailed ? 1 : 0;
+}, { label: "Worker incident evidence" });

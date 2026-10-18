@@ -272,8 +272,6 @@ export function createScheduledRuntimeContext(
       if (!descriptor.statusTracked) {
         throw new Error(`${scheduled.scheduleKey}/${job} is budget-only and cannot use runLeasedCron`);
       }
-      const timeoutBudget = resolveCronTimeoutBudget(job, { deadline: runtime.deadline });
-      const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
       const combinedSlotSignal = runtime.slotSignal && slotAbortSignal
         ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
         : runtime.slotSignal ?? slotAbortSignal;
@@ -282,7 +280,8 @@ export function createScheduledRuntimeContext(
         // Contract C: opt this runtime into the Dwellir supplemental endpoints
         // (memoized, fail-closed) before the job body can read chainRpcs.
         await ensureDwellirEndpointsEnabled(runtime);
-        assertSlotDeadline(runtime.deadline, combinedSlotSignal);
+        const timeoutBudget = resolveCronTimeoutBudget(job, { deadline: runtime.deadline });
+        const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
         try {
           return await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
             const slotMeta = {
@@ -344,6 +343,9 @@ export function createScheduledRuntimeContext(
             const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
               // This update also persists the required attempt's lease owner;
               // unlike optional progress detail, it must precede child work.
+              await reportProgress({
+                stage: "started", message: `Starting ${job}`, leaseOwner, metadata: slotMeta,
+              });
               await reportProgress({
                 stage: "lease-acquired", message: `Lease acquired for ${job}`, leaseOwner, metadata: slotMeta,
               });
@@ -409,11 +411,11 @@ export function createScheduledRuntimeContext(
         } finally {
           // Contract C: drain this isolate's Dwellir credits after the job body
           // settles; flushing never throws, so it cannot change the job result.
-          ctx.waitUntil(settleAfterAbort(
+          await settleAfterAbort(
             () => flushDwellirCredits(db, Math.floor(Date.now() / 1000)),
             AbortSignal.timeout(runtime.deadline.remainingMs()),
             { platformDeadlineMs: runtime.deadline.platformDeadlineMs },
-          ));
+          );
         }
       });
     },

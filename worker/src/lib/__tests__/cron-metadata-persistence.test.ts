@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   compactCronMetadataForPersistence,
   MAX_PERSISTED_CRON_METADATA_BYTES,
@@ -8,6 +8,7 @@ import {
 import { buildResourcePressure } from "../cron-resource-pressure";
 
 describe("compactCronMetadataForPersistence", () => {
+  afterEach(() => vi.restoreAllMocks());
   it("uses explicit per-job exceptions without raising the default budget", () => {
     expect(getCronMetadataBudgetBytes("unregistered-job")).toBe(DEFAULT_CRON_METADATA_BUDGET_BYTES);
     expect(getCronMetadataBudgetBytes("sync-dex-liquidity")).toBe(16 * 1_024);
@@ -158,8 +159,22 @@ describe("compactCronMetadataForPersistence", () => {
     expect(JSON.parse(result.metadata!).sources).toEqual(sources);
   });
 
-  it("never silently drops contractual evidence that exceeds its job budget", () => {
-    const metadata = JSON.stringify({ stale: Array.from({ length: 1_000 }, () => ({ generationId: "generation-a" })) });
-    expect(() => compactCronMetadataForPersistence(metadata)).toThrow("cron-metadata-consumer-evidence-over-budget:default:8192");
+  it.each([undefined, "cron-sentinel"])("retains over-budget consumer evidence with an explicit marker and warning (%s)", (job) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stale = Array.from({ length: 3_000 }, () => ({ generationId: "generation-a" }));
+    const result = compactCronMetadataForPersistence(JSON.stringify({ stale, outputPublishedAt: null,
+      payload: "optional".repeat(10_000) }), undefined, job);
+    expect(result.persistedBytes).toBeGreaterThan(getCronMetadataBudgetBytes(job));
+    expect(result.persistedBytes).toBe(new TextEncoder().encode(result.metadata!).length);
+    const parsed = JSON.parse(result.metadata!);
+    expect(parsed.stale).toEqual(stale);
+    expect(parsed.outputPublishedAt).toBeNull();
+    expect(parsed.persistenceCompaction).toMatchObject({ overBudget: true,
+      budgetBytes: getCronMetadataBudgetBytes(job), retainedTopLevelDiagnostics: 0,
+      omittedTopLevelDiagnostics: 1 });
+    expect(parsed.diagnostics).toEqual({});
+    expect(warn).toHaveBeenCalledExactlyOnceWith("[cron-metadata] Consumer evidence exceeds persistence budget", {
+      job: job ?? "default", budgetBytes: getCronMetadataBudgetBytes(job), persistedBytes: result.persistedBytes,
+    });
   });
 });

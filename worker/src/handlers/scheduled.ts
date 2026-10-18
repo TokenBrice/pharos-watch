@@ -35,8 +35,8 @@ export async function handleScheduledEvent(
   ctx: ExecutionContext,
   workerRole: ScheduledWorkerRole,
   runnerLoaders: Partial<Record<CronScheduleKey, SlotRunnerLoader>>,
+  slotBudgetStartedAtMs: number,
 ): Promise<void> {
-  const slotBudgetStartedAtMs = Date.now();
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
   if (!slotPlan) {
     const error = buildUnknownScheduleError(event.cron);

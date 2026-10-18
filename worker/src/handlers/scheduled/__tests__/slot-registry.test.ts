@@ -47,6 +47,13 @@ async function runSlot(scheduleKey: CronScheduleKey): Promise<{
     scheduleKey,
     cron: plan.triggerSchedules[0],
     invocationId: "registry-invocation",
+    // RS-02 admits daily snapshots before leasing. This empty fixture must
+    // represent a due catch-up, not the runtime helper's pre-08:00 default,
+    // so the full registry-chain assertion still exercises every member.
+    ...(scheduleKey === "quarterHourly" ? {
+      slotStartedAt: Date.UTC(2025, 0, 1, 9) / 1000,
+      scheduledTimeMs: Date.UTC(2025, 0, 1, 9),
+    } : {}),
     jobAttemptNo: 1,
     runLeasedCron: vi.fn(async (job: string) => {
       leased.push(job);

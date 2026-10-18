@@ -208,8 +208,8 @@ function prepareGenericSurfacePublications(
 
 /**
  * Persists an idempotent invocation row and its path-scoped latest head.
- * Retained-history counts are aggregated only by loadProducerHeads, so retries,
- * terminal replacements and pruning never require completion-path recounts.
+ * History triggers maintain retained counters transactionally, so retries,
+ * terminal replacements and pruning never require history recounts.
  */
 export function prepareProducerOutcomeStatements(
   db: D1Database, input: RecordProducerOutcomeInput, guard?: ProducerTerminalGuard,
@@ -396,8 +396,8 @@ export async function loadProducerHeads(
            FROM json_each(?)
        )`
     : "";
-  // The identity/productive index ranges each selected head once for both counts.
-  // Count retained rows, not a wall-clock cutoff: capped pruning may leave older rows.
+  // Migration 0272 maintains exact retained counts inside history mutations,
+  // including retention deletes. Status reads never scan invocation history.
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -406,16 +406,15 @@ export async function loadProducerHeads(
               heads.last_completed_at, heads.last_outcome, heads.last_error,
               heads.last_productive_invocation_id, heads.last_productive_at,
               heads.last_productive_item_count, heads.last_publication_at,
-              COUNT(history.productive) AS invocation_count,
-              COUNT(CASE WHEN history.productive = 1 THEN 1 END) AS productive_count
+              COALESCE(counts.invocation_count, 0) AS invocation_count,
+              COALESCE(counts.productive_count, 0) AS productive_count
          FROM worker_producer_heads heads
-         LEFT JOIN worker_producer_history history
-           ON history.schedule_key = heads.schedule_key
-          AND history.job = heads.job
-          AND history.producer_path = heads.producer_path
-          AND history.producer_kind = heads.producer_kind
+         LEFT JOIN worker_producer_retained_counts counts
+           ON counts.schedule_key = heads.schedule_key
+          AND counts.job = heads.job
+          AND counts.producer_path = heads.producer_path
+          AND counts.producer_kind = heads.producer_kind
          ${identityWhere}
-        GROUP BY heads.schedule_key, heads.job, heads.producer_path, heads.producer_kind
         ORDER BY heads.schedule_key, heads.producer_path, heads.job, heads.producer_kind`,
       )
       .bind(...(identities ? [JSON.stringify(identities.map((identity) => [

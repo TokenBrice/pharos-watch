@@ -68,6 +68,38 @@ describe("runPruneCronHistory", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_repair_tasks").get()).toEqual({ count: 30_001 });
   });
 
+  it.each([
+    { requestRows: 25_001, issuanceRows: 0, deleted: 25_001, requestsLeft: 0, issuanceLeft: 0, truncated: false },
+    { requestRows: 30_000, issuanceRows: 70_001, deleted: 100_000, requestsLeft: 0, issuanceLeft: 1, truncated: true },
+    { requestRows: 100_001, issuanceRows: 1, deleted: 100_000, requestsLeft: 1, issuanceLeft: 1, truncated: true },
+  ])("preserves the 100k shared self-serve ceiling and request-table priority ($requestRows/$issuanceRows)", async ({
+    requestRows, issuanceRows, deleted, requestsLeft, issuanceLeft, truncated,
+  }) => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - TWO_DAYS_SEC;
+    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < ?)
+      INSERT INTO api_key_request_rate_limit_v2 (scope, subject_hash, bucket_start, last_seen_at)
+      SELECT 'submission_ip', printf('request-%06d', id), ?, ? FROM n`).run(requestRows, cutoff - 1, now);
+    if (issuanceRows > 0) {
+      sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < ?)
+        INSERT INTO api_key_self_serve_issuance_limits (scope, subject_hash, bucket_start, updated_at)
+        SELECT 'submission_ip_daily', printf('issuance-%06d', id), ?, ? FROM n`).run(issuanceRows, cutoff - 1, now);
+    }
+    insert(sqlite, "INSERT INTO api_key_request_rate_limit_v2 (scope, subject_hash, bucket_start, last_seen_at) VALUES ('submission_ip', 'boundary', ?, ?)", cutoff, now);
+    insert(sqlite, "INSERT INTO api_key_self_serve_issuance_limits (scope, subject_hash, bucket_start, updated_at) VALUES ('submission_ip_daily', 'boundary', ?, ?)", cutoff, now);
+
+    const result = await runPruneCronHistory(db);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      selfServeRateLimitsDeleted: deleted,
+      retentionTruncated: { selfServeRateLimits: truncated },
+    });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_request_rate_limit_v2 WHERE bucket_start < ?").get(cutoff)).toEqual({ count: requestsLeft });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_self_serve_issuance_limits WHERE bucket_start < ?").get(cutoff)).toEqual({ count: issuanceLeft });
+    expect(sqlite.prepare("SELECT subject_hash FROM api_key_request_rate_limit_v2 WHERE bucket_start = ?").all(cutoff)).toEqual([{ subject_hash: "boundary" }]);
+    expect(sqlite.prepare("SELECT subject_hash FROM api_key_self_serve_issuance_limits WHERE bucket_start = ?").all(cutoff)).toEqual([{ subject_hash: "boundary" }]);
+  });
+
   it("throws before D1 work when the cron signal is already aborted", async () => {
     const { db } = createTestDb();
     const controller = new AbortController();

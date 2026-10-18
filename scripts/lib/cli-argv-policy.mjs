@@ -71,6 +71,8 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/update-critical-coverage-baseline.ts"),
     strict("scripts/maintenance/verify-failure-scenarios.ts"),
     strict("scripts/maintenance/wait-pages-release-marker.ts"),
+    strict("scripts/maintenance/worker-evidence-report.mjs"),
+    strict("scripts/maintenance/worker-incident-bundle.mjs"),
     strict("worker/scripts/audit-mint-burn-conservation-admission.ts"),
     strict("worker/scripts/calibrate-v9-resource.ts"),
     strict("worker/scripts/capture-report-cards-fixed-input.ts"),
@@ -101,6 +103,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/report-live-reserve-config-changes.ts"),
     strict("worker/scripts/safety-score-movement-ledger.ts"),
     strict("worker/scripts/yield-history-cleanup.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
+    strict("worker/scripts/worker-status-profile.mjs"),
   ]),
   exemptions: Object.freeze([
     exempt("scripts/build-data/build-client-registry.mjs", "build"),

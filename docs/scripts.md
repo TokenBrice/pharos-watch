@@ -203,16 +203,18 @@ API smoke validates the complete redemption response with `RedemptionBackstopsRe
 
 `ops:watch-worker-cron` and `ops:night-watch-worker` preserve literal `ok`, `degraded`, `error`, `skipped_neutral` and `skipped_locked` counts; `synthetic` counts only the orthogonal `stale-slot-reconciled` subset. Unknown stored statuses retain their own bucket. Productive and publication counts use explicit columns, with unknown counts separate; terminal success is never substituted for publication. Synthetic children group by invocation and slot as “1 started + N not-started”, with execution-unknown children separate; grouping never changes their stored error status. Generation-ledger states are a separate table/count, not extra publications inferred from a terminal.
 
+`npm run ops:worker-evidence-report -- --fixture agents/worker-cron-snapshot.json` renders the same literal-status/output table from a saved watcher JSON snapshot; add `--json` for the computed summary. All three standalone tools use strict CLI parsing. The profiler lives in `worker/scripts/` because it executes Worker source; generic maintenance reporting does not import `worker/src/`.
+
 Read-only status D1 profiling (run from the root):
 
 ```sh
-node --import tsx scripts/maintenance/watch-worker-cron.mjs --profile-status
+npm run ops:worker-status-profile
 ```
 
 Export `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` with D1 read permission. This executes the **actual source `/api/status` handler** with explicit trusted operator authorization over a SELECT-only D1 REST transport and the Worker's `d1-cost` seam. It reports statement count, nullable rows read/server SQL duration, local end-to-end duration, HTTP/section completeness and latest persisted `status-self-check` `d1Cost` with its observation clock. It does not execute the mutating self-check. The adapter retains metadata for `first()` reads, while the seam preserves its own partial-coverage reasons. This is not a production HTTP/colo latency measurement: source revision, local REST RTT and omitted optional provider credentials are explicit limitations. Exit `1` means incomplete route cost evidence, not zero cost. No status payload, SQL, credentials or provider error bodies are emitted.
 
 ```sh
-node --import tsx scripts/maintenance/watch-worker-cron.mjs --incident-bundle \
+npm run ops:worker-incidents -- \
   --out-dir agents/worker-incidents --archive-dir agents/previous-worker-incidents
 ```
 

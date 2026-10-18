@@ -262,12 +262,13 @@ describe("reserve recovery mode", () => {
     }));
     expect(mocks.createRuntime.mock.calls[0]![2].deadline).toBe(value.deadline);
     expect(mocks.createRuntime.mock.calls[0]![2].executionFence).toBe(value.executionFence);
-    expect(mocks.sweep.mock.calls[1]![1]).not.toHaveProperty("staleAfterSec");
+    expect(mocks.sweep).toHaveBeenCalledTimes(1);
+    expect(mocks.sweep.mock.calls[0]![1]).toMatchObject({ slotKey: "fourHourlyReserveSync", limit: 1 });
+    expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("staleAfterSec");
     expect(mocks.prepare).toHaveBeenCalledWith(value.db, {
       staleAfterSec: resolveScheduledSlotPolicy("fourHourlyReserveSync").slotSilenceSec, limit: 1,
     });
     expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
-      "sweeping-stale-slots",
       "recovering-reserve-config",
       "preparing-reserve-checkpoint",
       "replaying-reserve-checkpoint",
@@ -359,7 +360,7 @@ describe("reserve recovery mode", () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(result.jobsErrored).toBe(1);
     expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
-      "sweeping-stale-slots", "recovering-reserve-config",
+      "recovering-reserve-config",
     ]);
     expect(mocks.claim).not.toHaveBeenCalled();
   });

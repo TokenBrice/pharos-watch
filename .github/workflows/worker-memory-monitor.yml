@@ -158,8 +158,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN }}
         run: >-
-          node --import tsx scripts/maintenance/watch-worker-cron.mjs
-          --incident-bundle --out-dir "${{ runner.temp }}/worker-incidents"
+          npm run ops:worker-incidents --
+          --out-dir "${{ runner.temp }}/worker-incidents"
           --archive-dir "${{ runner.temp }}/worker-incidents-previous"
       - name: Preserve incident evidence before collection verdict
         if: ${{ always() }}

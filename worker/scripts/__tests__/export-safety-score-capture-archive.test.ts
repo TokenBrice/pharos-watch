@@ -168,7 +168,7 @@ describe("Safety Score capture archive export", () => {
 
   it("surfaces a productive publication run missing from both the attempt journal and the archive index", async () => {
     const { sqlite } = fixtures.open();
-    const from = Date.parse("2026-10-01T00:00:00Z") / 1000, to = Date.parse("2026-10-08T00:00:00Z") / 1000;
+    const from = Date.parse("2026-10-01T00:00:00Z") / 1000;
     const generationId = `report-cards:v9:v1:${"d".repeat(64)}`;
     insertCronRun(sqlite, { startedAt: from + 300, metadata: JSON.stringify({ publication: { publicationGenerationId: generationId } }) });
     const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
@@ -189,7 +189,7 @@ describe("Safety Score capture archive export", () => {
 
   it("deduplicates one generation reported by both evidence sources and by two productive runs", async () => {
     const { sqlite } = fixtures.open();
-    const from = Date.parse("2026-10-01T00:00:00Z") / 1000, to = Date.parse("2026-10-08T00:00:00Z") / 1000;
+    const from = Date.parse("2026-10-01T00:00:00Z") / 1000;
     const generationId = `report-cards:v9:v1:${"e".repeat(64)}`;
     const row = indexRow({ generation_id: generationId, published_at: from + 200 });
     sqlite.prepare(`INSERT INTO safety_score_publication_attempts

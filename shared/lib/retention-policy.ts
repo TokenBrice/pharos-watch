@@ -87,11 +87,13 @@ export function cronHistoryRetentionPolicies(
     safetyScoreCaptureArchive: policy("safety_score_capture_archive", "published_at", SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC, {
       orderBy: "published_at ASC, generation_id ASC",
     }),
+    // Keep the historical 100k shared run ceiling; only statements use the
+    // smaller 5k batch size. These are not 20k small-run retention families.
     selfServeRequestRateLimits: policy("api_key_request_rate_limit_v2", "bucket_start", 2 * DAY, {
-      batchLimit: limits.smallBatchLimit, budgetGroup: "selfServeRateLimits",
+      batchLimit: limits.smallBatchLimit, runLimit: limits.runLimit, budgetGroup: "selfServeRateLimits",
     }),
     selfServeIssuanceRateLimits: policy("api_key_self_serve_issuance_limits", "bucket_start", 2 * DAY, {
-      batchLimit: limits.smallBatchLimit, budgetGroup: "selfServeRateLimits",
+      batchLimit: limits.smallBatchLimit, runLimit: limits.runLimit, budgetGroup: "selfServeRateLimits",
     }),
   };
 }
@@ -351,6 +353,7 @@ export const RETENTION_NON_APPEND_TABLES: Readonly<Record<string, string>> = {
   telegram_transport_failure_observations: "five-minute keyed/upserted outage observations",
   telegram_watcher_lifecycle_events_daily: "upserted daily transition counters",
   worker_producer_heads: "current producer summaries",
+  worker_producer_retained_counts: "trigger-maintained current retained-history counters per producer identity; zero rows persist with heads, no independent age delete",
   yield_coverage_review_dispositions: "mutable reviewed evidence dispositions",
   yield_data: "current selected-source yield state",
   yield_publication_generations: "mutable generation/pointer lifecycle",

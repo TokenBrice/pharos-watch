@@ -228,8 +228,10 @@ publication/reason/quality, mode, stale rows and source evidence, `resourcePress
 truncation flags, coverage, ledger and scheduler identity. `breakerKeys` remains an exact list because the
 reserve summary renders names; `activePriceCoverage` retains full missing IDs/state because the next run
 and public health reconstruct streaks from it. These two fields must not become counts. If contractual
-evidence alone exceeds its job exception, admission fails explicitly with
-`cron-metadata-consumer-evidence-over-budget`; it never silently drops evidence or writes an oversized row.
+evidence alone exceeds its job exception, terminal persistence still proceeds with
+`persistenceCompaction.overBudget: true` and a warning log naming the job, budget and actual persisted
+bytes. Consumer evidence is never dropped to meet the budget, and a budget exception cannot prevent
+terminal accounting. Normally compacted rows carry `overBudget: false`.
 
 `cron_runs.metadata` is the sole rich terminal payload. Producer history keeps only `mxLedger*` activation
 evidence plus accepted-terminal arbitration scalars; the child-attempt table stores fencing columns, not
