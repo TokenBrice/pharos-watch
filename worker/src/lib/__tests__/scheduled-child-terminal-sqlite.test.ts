@@ -3,6 +3,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { markScheduledChildStarted, scheduledChildAttemptKey, writeScheduledChildTerminal, type ScheduledChildIdentity, type ScheduledChildTerminalInput } from "../scheduled-child-terminal";
 import { logCronRun } from "../cron-logger";
 import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
+import { loadProducerHeads } from "../producer-history";
 
 const fixtures = createLatestSchemaFixtureTracker();
 function setup() {
@@ -83,7 +84,7 @@ describe("scheduled child transactional terminal arbitration", () => {
     const result = await writeScheduledChildTerminal(db, { ...terminal(identity), token: "same-retry-token" });
     expect(result.accepted).toBe(true);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs").get()).toEqual({ count: 1 });
-    expect(sqlite.prepare("SELECT invocation_count FROM worker_producer_heads").get()).toEqual({ invocation_count: 1 });
+    expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1 })]);
   });
 
   it("rolls back claim and terminal when producer projection fails", async () => {
@@ -105,7 +106,7 @@ describe("scheduled child transactional terminal arbitration", () => {
     await markScheduledChildStarted(db, replay, 1003);
     expect((await writeScheduledChildTerminal(db, { ...terminal(replay), completedAt: 1004 })).accepted).toBe(true);
     expect(sqlite.prepare("SELECT outcome FROM worker_producer_history").get()).toEqual({ outcome: "ok" });
-    expect(sqlite.prepare("SELECT invocation_count FROM worker_producer_heads").get()).toEqual({ invocation_count: 1 });
+    expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1 })]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs").get()).toEqual({ count: 2 });
   });
 

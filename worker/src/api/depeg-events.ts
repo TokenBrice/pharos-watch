@@ -30,6 +30,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
+import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
@@ -238,6 +239,9 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       queryComment: "pharos:depeg-events",
       conditions,
       filterBindings,
+      countStatements: parsedPagination.includeTotal
+        ? prepareDepegEventsCountStatements(db, stablecoinId, active)
+        : undefined,
       mapRow: (row) => rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections),
       searchParams: params,
       pagination,
