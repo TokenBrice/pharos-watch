@@ -53,20 +53,26 @@ describe("generate-cron-doc-view", () => {
     expect(block).toContain("not leased by the scheduled wrapper");
   });
 
-  it("inserts and independently refreshes both generated blocks without changing authored prose", () => {
-    const doc = "# Worker Infrastructure\n\n## Cron Scheduling\n\nAuthored scheduling.\n\n## Shared Database Helpers\n\nAuthored database.\n";
+  it("inserts and independently refreshes generated blocks in their owning documents", () => {
+    const doc = "# Worker Infrastructure\n\n## Cron Scheduling\n\nAuthored scheduling.\n";
+    const appendix = "# Runtime Contracts Appendix\n\n## Cron Scheduling\n\nAuthored lifecycle.\n";
     const cadence = renderCronDocView(triggers);
     const tasks = renderScheduledTaskTopology();
-    const withCadence = replaceCronDocView(doc, cadence);
-    const next = replaceCronDocView(withCadence, tasks, "tasks");
-    for (const marker of [START_MARKER, END_MARKER, TASK_START_MARKER, TASK_END_MARKER]) {
-      expect(next.split(marker)).toHaveLength(2);
+    const nextDoc = replaceCronDocView(doc, cadence);
+    const nextAppendix = replaceCronDocView(appendix, tasks, "tasks");
+    for (const marker of [START_MARKER, END_MARKER]) {
+      expect(nextDoc.split(marker)).toHaveLength(2);
+      expect(nextAppendix).not.toContain(marker);
     }
-    expect(next).toContain("Authored scheduling.");
-    expect(next).toContain("Authored database.");
-    expect(next.indexOf(TASK_START_MARKER)).toBeGreaterThan(next.indexOf("Authored scheduling."));
-    expect(next.indexOf(TASK_END_MARKER)).toBeLessThan(next.indexOf("## Shared Database Helpers"));
-    expect(replaceCronDocView(replaceCronDocView(next, cadence), tasks, "tasks")).toBe(next);
+    for (const marker of [TASK_START_MARKER, TASK_END_MARKER]) {
+      expect(nextAppendix.split(marker)).toHaveLength(2);
+      expect(nextDoc).not.toContain(marker);
+    }
+    expect(nextDoc).toContain("Authored scheduling.");
+    expect(nextAppendix).toContain("Authored lifecycle.");
+    expect(nextAppendix.indexOf(TASK_END_MARKER)).toBeLessThan(nextAppendix.indexOf("## Cron Scheduling"));
+    expect(replaceCronDocView(nextDoc, cadence)).toBe(nextDoc);
+    expect(replaceCronDocView(nextAppendix, tasks, "tasks")).toBe(nextAppendix);
   });
 
   it("rejects missing, reversed or duplicate generated-task markers", () => {
@@ -80,6 +86,6 @@ describe("generate-cron-doc-view", () => {
     ]) {
       expect(() => replaceCronDocView(doc, tasks, "tasks")).toThrow("Expected exactly one complete scheduled-task-topology");
     }
-    expect(() => replaceCronDocView("no insertion heading", tasks, "tasks")).toThrow("Shared Database Helpers");
+    expect(() => replaceCronDocView("no insertion heading", tasks, "tasks")).toThrow("Cron Scheduling");
   });
 });

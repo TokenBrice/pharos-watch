@@ -4,12 +4,36 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCliUsage, parseCliInteger, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const usage = "Usage: node scripts/maintenance/qualify-worker-memory.mjs --out-dir <new-directory> [--runs 5]\nOffline diagnostic only: cold heavy entry/charts loader, warm compute/store/archive, accepted readers. No cap or qualification policy changes; no remote calls.";
+
+export async function assertQualificationHeavyEntry(worker) {
+  if (typeof worker?.scheduled !== "function") throw new Error("invalid-heavy-entry");
+  if (worker.fetch === undefined) return;
+  if (typeof worker.fetch !== "function") throw new Error("invalid-heavy-fetch");
+  // The only permitted fetch surface is the private placed executor. Probe
+  // without credentials: no D1 or productive execution is admitted.
+  const response = await worker.fetch(new Request("https://memory-qualification.invalid/"), {});
+  const body = await response.json();
+  if (response.status !== 401 || body?.error !== "placed-executor-unauthorized") {
+    throw new Error("invalid-heavy-fetch");
+  }
+}
+
+export function assertQualificationHeavyGraph(inputs) {
+  for (const input of inputs) {
+    const path = input.replaceAll("\\", "/");
+    if (
+      /(?:^|\/)worker\/src\/(?:api\/|routes\/|handlers\/http\/|router\.[jt]s)/.test(path) ||
+      /(?:^|\/)(?:@resvg|satori|yoga-wasm-web|fonts?)(?:\/|$)/.test(path) ||
+      /\.(?:wasm|ttf|otf|woff2?)$/i.test(path)
+    ) throw new Error(`invalid-heavy-http-graph:${input}`);
+  }
+}
 
 // Generated probe intentionally defers literal module imports: measuring each
 // module-loading boundary is impossible if static imports initialize it first.
@@ -27,8 +51,10 @@ function phase(name, detail = {}) {
 }
 phase('node-start');
 const entry = await import('./worker/src/index.heavy.ts');
-if (typeof entry.default.scheduled !== 'function' || 'fetch' in entry.default) throw new Error('invalid-heavy-entry');
+if (typeof entry.default.scheduled !== 'function') throw new Error('invalid-heavy-entry');
 phase('cold-heavy-entry');
+await (${assertQualificationHeavyEntry.toString()})(entry.default);
+phase('private-fetch-validated');
 const { HEAVY_SLOT_RUNNER_LOADERS } = await import('./worker/src/handlers/scheduled/heavy-runners.ts');
 await HEAVY_SLOT_RUNNER_LOADERS.halfHourlyChartsOffset();
 phase('cold-charts-loader');
@@ -78,7 +104,8 @@ export async function qualifyWorkerMemory(argv) {
   flush();
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|HOME|TMPDIR|TMP|TEMP|LANG|LANGUAGE|LC_[A-Z_]+)$/.test(key)));
   function child(name, args, protocol = {}) {
-    const result = spawnSync(process.execPath, args, { cwd: root, env: { ...env, ...protocol }, encoding: "utf8", timeout: 360_000, maxBuffer: 16 * 1024 * 1024 });
+    const offlinePreload = pathToFileURL(resolve(root, "worker/scripts/lib/v9-resource-offline.mjs")).href;
+    const result = spawnSync(process.execPath, ["--import", offlinePreload, ...args], { cwd: root, env: { ...env, ...protocol }, encoding: "utf8", timeout: 360_000, maxBuffer: 16 * 1024 * 1024 });
     writeFileSync(resolve(directory, `${name}.stdout`), result.stdout ?? "");
     writeFileSync(resolve(directory, `${name}.stderr`), result.stderr ?? "");
     const evidence = { name, status: result.status, signal: result.signal, error: result.error?.message ?? null };
@@ -120,6 +147,7 @@ export async function qualifyWorkerMemory(argv) {
       banner: { js: "globalThis.__zod_globalConfig = { jitless: true };" },
     });
     writeFileSync(resolve(directory, "probe.metafile.json"), JSON.stringify(built.metafile));
+    assertQualificationHeavyGraph(Object.keys(built.metafile.inputs));
     report.build = { configSha256: createHash("sha256").update(config).digest("hex"), esbuild: esbuild.version };
     for (let run = 1; run <= runs; run++) {
       for (const [mode, flags] of [["natural", ["--max-old-space-size=128"]], ["observed", ["--max-old-space-size=256", "--expose-gc"]]]) {
@@ -132,7 +160,7 @@ export async function qualifyWorkerMemory(argv) {
             ...(workload === "readers" ? { PHAROS_QUALIFICATION_DATABASE: resolve(directory, `compute/hard-cap-${run}.sqlite`) } : {}),
           });
           const samples = readFileSync(output, "utf8").trim().split("\n").filter(Boolean).map(line => JSON.parse(line));
-          const requiredPhases = ["node-start", "cold-heavy-entry", "cold-charts-loader", ...(workload === "readers" ? ["accepted-baseline-reader", "accepted-lender-reader", "accepted-readers-co-resident"] : []), "complete"];
+          const requiredPhases = ["node-start", "cold-heavy-entry", "private-fetch-validated", "cold-charts-loader", ...(workload === "readers" ? ["accepted-baseline-reader", "accepted-lender-reader", "accepted-readers-co-resident"] : []), "complete"];
           if (!ok || requiredPhases.some(phase => !samples.some(sample => sample.phase === phase))) report.failures.push({ reason: "missing-phase", name });
           flush();
         }

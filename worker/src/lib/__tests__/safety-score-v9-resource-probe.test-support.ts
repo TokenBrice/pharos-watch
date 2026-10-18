@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { computeSafetyScoreV9 } from "../../cron/compute-safety-score-v9";
+import { offlineTransferMaterialityDependencies } from "./safety-score-v9-resource-offline.test-support";
 
 // No fixture/migration imports: this graph is the measured application closure.
 const output = process.env.PHAROS_RESOURCE_OUTPUT!;
@@ -46,7 +47,7 @@ try {
       activeAssetIds: input.activeAssetIds, baseInputGenerationId: input.baseInputGenerationId,
       registryFingerprint: input.registryFingerprint, scoringClockSec: input.clockSec,
       providerSupplyInput: input, chainRpcs: new Map(),
-    });
+    }, offlineTransferMaterialityDependencies);
     observer?.("prep-complete");
   }
   for (cycle = 1; cycle <= 2; cycle += 1) {

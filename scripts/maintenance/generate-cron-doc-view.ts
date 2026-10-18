@@ -15,6 +15,7 @@ import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../li
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DOC_PATH = "docs/worker-infrastructure.md";
+const TASK_DOC_PATH = "docs/process/worker-infrastructure-appendix.md";
 const HEADING = "## Cron Scheduling\n";
 export const START_MARKER = "<!-- GENERATED-START: cron-doc-view -->";
 export const END_MARKER = "<!-- GENERATED-END: cron-doc-view -->";
@@ -119,12 +120,11 @@ export function replaceCronDocView(doc: string, block: string, section: "cadence
   const start = doc.indexOf(startMarker);
   const end = doc.indexOf(endMarker);
   if (start === -1 && end === -1) {
-    const anchor = section === "cadence" ? HEADING : "## Shared Database Helpers\n";
-    const heading = doc.indexOf(anchor);
-    if (heading === -1 || doc.indexOf(anchor, heading + anchor.length) !== -1) {
-      throw new Error(`Expected exactly one ${section === "cadence" ? "Cron Scheduling" : "Shared Database Helpers"} heading`);
+    const heading = doc.indexOf(HEADING);
+    if (heading === -1 || doc.indexOf(HEADING, heading + HEADING.length) !== -1) {
+      throw new Error("Expected exactly one Cron Scheduling heading");
     }
-    const insertion = section === "cadence" ? heading + anchor.length : heading;
+    const insertion = section === "cadence" ? heading + HEADING.length : heading;
     return `${doc.slice(0, insertion)}\n${block}\n\n${doc.slice(insertion)}`;
   }
   if (start === -1 || end < start
@@ -138,23 +138,30 @@ export function replaceCronDocView(doc: string, block: string, section: "cadence
 export function runCronDocViewCli(argv: readonly string[], repoRoot = ROOT): void {
   const { values } = parseStrictCliArgs(argv, { options: { check: { type: "boolean" } } });
   if (writeCliHelpIfRequested(values, USAGE)) return;
-  const path = resolve(repoRoot, DOC_PATH);
-  const existing = readFileSync(path, "utf8");
-  const cadenceDoc = replaceCronDocView(existing, renderCronDocView(loadCronDocTriggers(repoRoot)));
-  const next = replaceCronDocView(cadenceDoc, renderScheduledTaskTopology(), "tasks");
+  const views = [
+    { docPath: DOC_PATH, block: renderCronDocView(loadCronDocTriggers(repoRoot)), section: "cadence" as const },
+    { docPath: TASK_DOC_PATH, block: renderScheduledTaskTopology(), section: "tasks" as const },
+  ].map(({ docPath, block, section }) => {
+    const path = resolve(repoRoot, docPath);
+    const existing = readFileSync(path, "utf8");
+    return { docPath, path, existing, next: replaceCronDocView(existing, block, section) };
+  });
   if (values.check === true) {
-    if (next !== existing) {
-      throw new Error(`${DOC_PATH} cron view is out of date. Run node --import tsx scripts/maintenance/generate-cron-doc-view.ts`);
+    const stale = views.filter(({ existing, next }) => next !== existing);
+    if (stale.length > 0) {
+      throw new Error(`${stale.map(({ docPath }) => docPath).join(", ")} cron view is out of date. Run node --import tsx scripts/maintenance/generate-cron-doc-view.ts`);
     }
-    console.log(`${DOC_PATH} cron view is current`);
+    console.log("Cron cadence and task topology views are current");
     return;
   }
-  if (next === existing) {
-    console.log(`${DOC_PATH} cron view unchanged`);
-    return;
+  for (const { docPath, path, existing, next } of views) {
+    if (next === existing) {
+      console.log(`${docPath} cron view unchanged`);
+      continue;
+    }
+    writeFileSync(path, next, "utf8");
+    console.log(`${docPath} cron view regenerated`);
   }
-  writeFileSync(path, next, "utf8");
-  console.log(`${DOC_PATH} cron view regenerated`);
 }
 
 runDirectCli(import.meta.url, () => runCronDocViewCli(process.argv.slice(2)), {

@@ -121,7 +121,7 @@ export function parseLcov(content) {
     if (!sf) continue;
     const file = normalizePath(sf.slice(3));
 
-    let lf = 0;
+    let lf = null;
     let lh = 0;
     let brf = null;
     let brh = null;
@@ -132,11 +132,14 @@ export function parseLcov(content) {
       if (line.startsWith("BRH:")) brh = Number.parseInt(line.slice(4), 10);
     }
 
-    if (Number.isFinite(lf) && lf > 0) {
+    // A type-only module reports an explicit `LF:0` record. It has no
+    // executable line that could be uncovered, so it is fully covered rather
+    // than absent; a record without an `LF:` line is still skipped.
+    if (lf !== null && Number.isFinite(lf) && lf >= 0) {
       map.set(file, {
         lf,
         lh,
-        pct: (lh / lf) * 100,
+        pct: lf === 0 ? 100 : (lh / lf) * 100,
         brf,
         brh,
         branchPct: Number.isFinite(brf) && brf > 0 && Number.isFinite(brh) ? (brh / brf) * 100 : null,

@@ -552,7 +552,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     buildLifecycle: "maintenance-only",
     checkCommand: "node --import tsx scripts/maintenance/generate-cron-doc-view.ts --check",
     command: "node --import tsx scripts/maintenance/generate-cron-doc-view.ts",
-    outputPaths: ["docs/worker-infrastructure.md"],
+    outputPaths: ["docs/worker-infrastructure.md", "docs/process/worker-infrastructure-appendix.md"],
     phase: 0,
     script: "scripts/maintenance/generate-cron-doc-view.ts",
     sourcePaths: [

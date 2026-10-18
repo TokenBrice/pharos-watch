@@ -19,6 +19,7 @@ import {
   CRITICAL_FILES,
   collectCriticalCoverageCandidates,
   collectCriticalCoverageWaiverReviewQueue,
+  parseLcov,
   validateCriticalCoverageWaiverMetadata,
   validateCriticalCoverageBaseline,
 } from "../lib/critical-coverage.mjs";
@@ -119,6 +120,36 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/price-consensus.ts",
       "worker/src/lib/publication-contract.ts",
     ]);
+  });
+
+
+  it("treats an explicit zero-line lcov record as fully covered but still drops records without an LF line", () => {
+    const parsed = parseLcov([
+      "TN:",
+      "SF:worker/src/lib/dews/contracts.ts",
+      "FNF:0",
+      "FNH:0",
+      "LF:0",
+      "LH:0",
+      "BRF:0",
+      "BRH:0",
+      "end_of_record",
+      "",
+      "TN:",
+      "SF:worker/src/lib/partial-record.ts",
+      "end_of_record",
+      "",
+    ].join("\n"));
+
+    expect(parsed.get("worker/src/lib/dews/contracts.ts")).toEqual({
+      lf: 0,
+      lh: 0,
+      pct: 100,
+      brf: 0,
+      brh: 0,
+      branchPct: null,
+    });
+    expect(parsed.has("worker/src/lib/partial-record.ts")).toBe(false);
   });
 
 

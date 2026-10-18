@@ -17,16 +17,19 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     {
       id: "usdc-circle",
       symbol: "USDC",
+      flags: { yieldBearing: false },
       contracts: [{ chain: "ethereum", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 }],
     },
     {
       id: "usdt-tether",
       symbol: "USDT",
+      flags: { yieldBearing: false },
       contracts: [{ chain: "ethereum", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6 }],
     },
     {
       id: "eurc-circle",
       symbol: "EURC",
+      flags: { yieldBearing: false },
       contracts: [{ chain: "base", address: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42", decimals: 6 }],
     },
   ];

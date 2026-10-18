@@ -94,7 +94,7 @@ import { createDexProgressReporter, type DexProgressReporter } from "./orchestra
 import { acknowledgeDexSourcePagination, type PendingDexSourcePaginationUpdate } from "./source-pagination-state";
 import { boundMeasuredTargetFunnelGroups, boundTelemetryEntries } from "./route-telemetry";
 import { consumeDexLiquidityStage, type DexLiquidityStageConsumerOptions, type DexLiquidityStageLifecycle } from "./lifecycle/consume";
-import { DEX_D1_COST_EXCLUSIONS, withDexD1CostMetadata } from "./lifecycle/d1-cost";
+import { DEX_D1_COST_EXCLUSIONS } from "./lifecycle/d1-cost";
 import type { DexLiquidityStageRecoveryOutcome } from "./lifecycle/recovery";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
