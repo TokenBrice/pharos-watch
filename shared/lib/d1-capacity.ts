@@ -286,12 +286,14 @@ export function assessD1Capacity(
   );
   // Keep the recent hourly extremes so a transient allocation swing (seen as
   // 560-770 MB intra-day in production) stays visible instead of collapsing
-  // into a single retained-size point.
+  // into a single retained-size point. Observations are time-sorted, so the
+  // extremes must be scanned rather than taken from the array ends.
   const intradayObservations = normalized.filter(
     (observation) => observation.observedAt >= current.observedAt - D1_CAPACITY_HOURLY_MIN_MAX_WINDOW_SEC,
   );
-  const intradayMin = intradayObservations[0]!.databaseSizeBytes;
-  const intradayMax = intradayObservations[intradayObservations.length - 1]!.databaseSizeBytes;
+  const intradaySizes = intradayObservations.map((observation) => observation.databaseSizeBytes);
+  const intradayMin = Math.min(...intradaySizes);
+  const intradayMax = Math.max(...intradaySizes);
 
   return {
     observedAt: current.observedAt,

@@ -141,7 +141,7 @@ describe("assessD1QuotaUsage", () => {
   });
 
   it("keeps unavailable usage unavailable instead of inventing zero", () => {
-    const result = assessD1QuotaUsage({ rowsRead24h: null, rowsWritten24h: 1_500_000 });
+    const result = assessD1QuotaUsage({ rowsRead24h: null, rowsWritten24h: 1_000_000 });
 
     expect(result.rowsRead).toEqual({
       observed24h: null,
@@ -153,7 +153,7 @@ describe("assessD1QuotaUsage", () => {
       nextThresholdPercent: null,
     });
     expect(result.rowsWritten.thresholdState).toBe("normal");
-    expect(result.rowsWritten.utilizationPercent).toBeCloseTo(90, 2);
+    expect(result.rowsWritten.utilizationPercent).toBeCloseTo(60, 2);
   });
 
   it("treats malformed observations as unavailable rather than healthy zero", () => {
