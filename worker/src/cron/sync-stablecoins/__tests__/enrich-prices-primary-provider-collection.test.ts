@@ -22,8 +22,7 @@ vi.mock("../../../lib/depeg-helpers", () => ({
     staleRows: [],
     malformedRows: [],
   })),
-  loadDexPriceRows: vi.fn(async () => new Map()),
-  loadDexPriceSources: vi.fn(async () => new Map()),
+  loadDexPrices: vi.fn(async () => ({ dexPriceRows: new Map(), dexPriceSources: new Map() })),
 }));
 
 const TEST_ASSET: PeggedAsset = {

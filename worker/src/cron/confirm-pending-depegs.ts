@@ -7,8 +7,7 @@ import { CIRCUIT_SOURCE, MAX_OPEN_DEPEG_EVENTS, POOL_CHALLENGE_MIN_TVL } from ".
 import { executeAtomicBatch } from "../lib/db";
 import {
   loadDexPoolChallengers,
-  loadDexPriceRows,
-  loadDexPriceSources,
+  loadDexPrices,
   logOpenDepegEventLimitReached,
 } from "../lib/depeg-helpers";
 import {
@@ -91,8 +90,7 @@ export async function confirmPendingDepegs(
   } = derivePegRates(assets, ACTIVE_META_BY_ID, fxFallbackRates);
 
   throwIfAborted(signal);
-  const dexPriceRows = await loadDexPriceRows(db);
-  const dexPriceSources = await loadDexPriceSources(db, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC);
+  const { dexPriceRows, dexPriceSources } = await loadDexPrices(db, now, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC);
 
   throwIfAborted(signal);
   const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, now);

@@ -7,8 +7,7 @@ import { throwIfAborted } from "../../lib/abort";
 import {
   DEPEG_EVENTS_DEPEGROW_COLUMNS,
   loadDexPoolChallengers,
-  loadDexPriceRows,
-  loadDexPriceSources,
+  loadDexPrices,
   logOpenDepegEventLimitReached,
 } from "../../lib/depeg-helpers";
 import {
@@ -35,9 +34,7 @@ export async function hydrateDepegDetection(
   const now = syncStart;
 
   throwIfAborted(signal);
-  const dexPriceRows = await loadDexPriceRows(db);
-  throwIfAborted(signal);
-  const dexPriceSources = await loadDexPriceSources(db, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC);
+  const { dexPriceRows, dexPriceSources } = await loadDexPrices(db, now, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC);
   throwIfAborted(signal);
   const dexPoolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, now);
   throwIfAborted(signal);

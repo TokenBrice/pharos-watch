@@ -27,9 +27,9 @@ import {
 } from "../../lib/redstone";
 import {
   createDexPriceSourceLoadTelemetry,
-  loadDexPriceRows,
-  loadDexPriceSources,
+  loadDexPrices,
   type DexPriceSourceLoadTelemetry,
+  type LoadedDexPrices,
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
@@ -46,8 +46,8 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 const CRVUSD_PRICE_AGGREGATOR = "0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7";
 const CRVUSD_PRICE_SELECTOR = "0xa035b1fe"; // price() — returns crvUSD price in USD scaled by 1e18
 
-export type PrimaryDexRows = Awaited<ReturnType<typeof loadDexPriceRows>>;
-export type PrimaryDexPriceSources = Awaited<ReturnType<typeof loadDexPriceSources>>;
+export type PrimaryDexRows = LoadedDexPrices["dexPriceRows"];
+export type PrimaryDexPriceSources = LoadedDexPrices["dexPriceSources"];
 
 
 interface ReserveNavRow extends ReserveNavSnapshotRow {
@@ -245,8 +245,7 @@ export async function buildPrimaryPricePlan(
   const metaById = new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
   const nowSec = Math.floor(Date.now() / 1000);
   const dexPriceSourceTelemetry = createDexPriceSourceLoadTelemetry();
-  const dexRows = await loadDexPriceRows(db);
-  const dexPriceSources = await loadDexPriceSources(db, undefined, dexPriceSourceTelemetry);
+  const { dexPriceRows: dexRows, dexPriceSources } = await loadDexPrices(db, nowSec, undefined, dexPriceSourceTelemetry);
   const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
   const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
   const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
