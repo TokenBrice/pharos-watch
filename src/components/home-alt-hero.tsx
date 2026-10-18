@@ -15,10 +15,9 @@ import { selectHomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 import { formatCurrency, formatLongDate } from "@shared/lib/format";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
-import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { HomeMarketStateLine } from "@/components/home-market-state-line";
 import { trackFreshDataReady } from "@/lib/analytics";
-import { describeRetainedHomepageLane, useHomepageEvidence } from "@/lib/homepage-evidence";
+import { useHomepageEvidence } from "@/lib/homepage-evidence";
 
 // OTHERS cohort dot — violet pulled from the shared chart palette.
 const OTHERS_PURPLE = CHART_PALETTE[1];
@@ -116,35 +115,12 @@ export function HomeAltHero({
               {visibleSnapshot?.totalUsd != null ? formatCurrency(visibleSnapshot.totalUsd, 1) : "—"}
             </p>
             <p className="pharos-meta min-h-4">
-              {selection.source === "fallback" && selectedDate
-                ? `Fallback · as of ${selectedDate}`
-                : selection.source === "live"
-                  ? `Live · as of ${selectedDate}`
-                  : selection.source === "retained"
-                    ? browserRetained && marketMeta
-                      ? `${stablecoinsQuery.error ? "Refresh failed · " : ""}${describeRetainedHomepageLane(marketMeta)}`
-                      : `${stablecoinsQuery.error ? "Refresh failed" : liveHealth.state === "stale" ? "Stale" : liveHealth.state === "degraded" ? "Degraded" : "Freshness unavailable"} · ${selectedDate ? `as of ${selectedDate}` : "generation unavailable"}`
-                    : "Live market data unavailable"}
+              {selectedDate ? `As of ${selectedDate}` : visibleSnapshot ? null : "Updating"}
             </p>
             {visibleSnapshot && !supplyComplete ? (
               <p className="pharos-meta">
                 {describeHomepageSupplyCoverage(visibleSnapshot)}
               </p>
-            ) : null}
-            {selection.source === "live" || selection.source === "retained" || stablecoinsQuery.error || (stablecoinsQuery.data && !liveSnapshot) ? (
-              <QueryFreshnessNotices
-                error={stablecoinsQuery.error}
-                hasData={liveSnapshot !== null}
-                onRetry={() => void stablecoinsQuery.refetch()}
-                queries={[{
-                  preset: "stablecoins",
-                  label: "Market snapshot",
-                  dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
-                  hasData: liveSnapshot !== null,
-                  meta,
-                  error: stablecoinsQuery.error,
-                }]}
-              />
             ) : null}
           </div>
         </div>

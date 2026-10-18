@@ -34,9 +34,9 @@ describe("HomeMarketStateLine compact lanes", () => {
       incidents: { data: null, meta: { ...meta("peg-summary"), updatedAt: null, ageSeconds: null, status: "unknown", reason: "source-read-failed" } },
     }, dataUpdatedAt: now, error: null, isLoading: false });
     render(<HomeMarketStateLine nowMs={now} />);
-    expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("(stale)");
+    expect(screen.getByRole("link", { name: /PSI/ }).textContent).not.toMatch(/stale|retained/i);
     expect(screen.getByText("Bedrock").className).toContain("text-foreground");
-    expect(screen.getByRole("link", { name: /Active depegs/ }).textContent).toContain("unavailable");
+    expect(screen.getByRole("link", { name: /Active depegs/ }).textContent).toContain("—");
   });
 
   it("keeps a successful zero independent from a failed PSI lane", () => {
@@ -45,14 +45,14 @@ describe("HomeMarketStateLine compact lanes", () => {
       incidents: { data: { activeDepegCount: 0 }, meta: meta("peg-summary") },
     }, dataUpdatedAt: now, error: null, isLoading: false });
     render(<HomeMarketStateLine nowMs={now} />);
-    expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("unavailable");
+    expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("—");
     expect(screen.getByRole("link", { name: /active depegs/ }).textContent).toContain("0active depegs");
   });
 
   it("never turns a failed read into calm or zero", () => {
     useHomepageSnapshotMock.mockReturnValue({ data: undefined, dataUpdatedAt: 0, error: new Error("failed"), isLoading: false });
     render(<HomeMarketStateLine nowMs={now} />);
-    expect(screen.getAllByText("unavailable")).toHaveLength(2);
+    expect(screen.getAllByText("—")).toHaveLength(2);
     expect(screen.queryByText("0")).toBeNull();
   });
 });

@@ -6,6 +6,8 @@ interface Props {
   name: string;
   children: ReactNode;
   supportingText?: string;
+  /** Replaces the default notice; the error is still logged. */
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -30,6 +32,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
   }
 
   render() {
+    if (this.state.hasError && this.props.fallback !== undefined) return this.props.fallback;
     if (this.state.hasError) {
       const canRetry = this.state.retryCount < MAX_RETRIES;
       return (

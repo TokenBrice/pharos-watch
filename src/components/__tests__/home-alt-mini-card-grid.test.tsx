@@ -98,7 +98,7 @@ describe("HomeAltMiniCardGrid digest visibility", () => {
     const { tree, client } = setupSlot(400);
     client.setQueryData(["digest-promo"], { latest: null, previousEditions: [] });
     render(tree);
-    expect(screen.getByText("Daily digest is unavailable — read the latest on Telegram")).toBeTruthy();
+    expect(screen.getByText("Read the latest edition on Telegram")).toBeTruthy();
     expect(screen.queryByText(/Previous headline/)).toBeNull();
     expect(screen.getByRole("link", { name: "Read on Telegram" })).toBeTruthy();
   });

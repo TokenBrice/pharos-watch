@@ -1,9 +1,10 @@
 import { HorizonConstellation } from "@/components/horizon-constellation";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
-import { HORIZON_PRE_LAUNCH_STABLECOINS } from "@/lib/horizon-constellation-layout";
+import { HORIZON_PRE_LAUNCH_STABLECOINS, HORIZON_UNPHASED_STABLECOINS } from "@/lib/horizon-constellation-layout";
 
 export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null {
-  const total = HORIZON_PRE_LAUNCH_STABLECOINS.length;
+  // Same census as /upcoming/: phased coins plus the opt-in Unphased cell.
+  const total = HORIZON_PRE_LAUNCH_STABLECOINS.length + HORIZON_UNPHASED_STABLECOINS.length;
   if (total === 0) return null;
 
   return (
@@ -33,6 +34,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
 
       <div className="pharos-card-shell overflow-hidden">
         <HorizonConstellation
+          includeUnphased
           widePhaseClassName="flex flex-col items-center gap-4 px-3 py-5"
           narrowPhaseClassName="flex items-center gap-2 px-3 py-[2px] sm:gap-3 sm:px-4 sm:py-3.5"
         />

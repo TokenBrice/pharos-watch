@@ -42,11 +42,6 @@ export function reconcileHomepageEvidence(
   return { data, retainedLanes };
 }
 
-export function describeRetainedHomepageLane(meta: HomepageLaneMeta): string {
-  const generation = meta.updatedAt === null ? "generation unavailable" : new Date(meta.updatedAt * 1000).toISOString();
-  return `Retained · as of ${generation} · stale after ${meta.freshBudgetSec / 60} min`;
-}
-
 export function useHomepageEvidence(
   live: HomepageSnapshot | undefined,
   nowMs?: number,

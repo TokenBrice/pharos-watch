@@ -108,12 +108,6 @@ export function SupplyMovesCard(): React.JSX.Element {
         </>
       }
       state={state}
-      notice={{
-        label: "Supply move data",
-        dataUpdatedAt: query.dataUpdatedAt,
-        queries: [{ preset: "stablecoins", dataUpdatedAt: query.dataUpdatedAt, meta: query.meta, error: query.error, hasData: data !== undefined }],
-        onRetry: () => void query.refetch(),
-      }}
       loadingContent={<Skeleton className="h-32 w-full" />}
       emptyContent={
         <div className="flex flex-1 items-center justify-center text-center pharos-meta">

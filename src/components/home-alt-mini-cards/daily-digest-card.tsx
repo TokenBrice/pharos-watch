@@ -22,7 +22,7 @@ export function DailyDigestCard(): React.JSX.Element {
   const latest = data?.latest;
   const title = latest
     ? compactDigestText(latest.digestTitle) ?? "Daily Digest"
-    : "Daily digest is unavailable — read the latest on Telegram";
+    : "Read the latest edition on Telegram";
   const editionPrefix = latest?.editionNumber ? `#${latest.editionNumber}` : null;
   const previousEditions = data?.previousEditions ?? [];
   const text = latest?.excerpt;
@@ -60,7 +60,8 @@ export function DailyDigestCard(): React.JSX.Element {
           className="left-8 right-5 top-8 h-[152px] border-border/45 bg-card/90 pt-3"
         />
         <div className="absolute inset-x-4 bottom-[-2.25rem] top-[4.625rem] overflow-hidden rounded-xl border border-border/65 bg-card/95 p-4">
-          <h4 className={`${digestDisplay.className} text-sm font-semibold uppercase leading-snug tracking-wide`}>
+          {/* No projection: a plain CTA line, not an edition headline. */}
+          {latest ? <h4 className={`${digestDisplay.className} text-sm font-semibold uppercase leading-snug tracking-wide`}>
             {editionPrefix ? (
               <>
                 <span className="text-teal-700 dark:text-teal-400">{editionPrefix}</span>
@@ -69,7 +70,7 @@ export function DailyDigestCard(): React.JSX.Element {
             ) : (
               title
             )}
-          </h4>
+          </h4> : <p className="text-sm text-muted-foreground">{title}</p>}
           {text ? (
             <p className={`${digestDisplay.className} mt-2 text-xs leading-relaxed text-muted-foreground`}>
               {text}

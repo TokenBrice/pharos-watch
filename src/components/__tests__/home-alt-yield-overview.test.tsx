@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 const useYieldRankingsSummaryMock = vi.fn();
 const refetchMock = vi.fn();
@@ -20,7 +20,6 @@ import { HomeAltYieldOverview } from "@/components/home-alt-yield-overview";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
-import { formatDataHealthTimestamp } from "@/lib/data-health";
 
 function makeSummaryRow(id: string, symbol: string, apy30d: number, pys: number | null) {
   return {
@@ -122,7 +121,8 @@ describe("HomeAltYieldOverview", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
-  it("preserves retained yield values and offers retry after a failed refresh", () => {
+  // Homepage rule (docs/homepage.md): yield health never renders as a warning.
+  it("preserves retained yield values after a failed refresh without a notice or retry", () => {
     useYieldRankingsSummaryMock.mockReturnValue({
       data: makeSummaryPayload({ coveredCount: 2, trackedCount: 3 }),
       isLoading: false, error: new Error("refresh failed"),
@@ -130,46 +130,41 @@ describe("HomeAltYieldOverview", () => {
     render(<HomeAltYieldOverview />);
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     expect(screen.getByText("3.65%")).toBeDefined();
-    expect(screen.getAllByRole("status").some((notice) => /saved data/i.test(notice.textContent ?? ""))).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(refetchMock).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
   });
 
-  it("qualifies stale producer metadata using the actual publication rather than the recent query fetch", () => {
-    const publishedAt = NOW / 1000 - 15_000;
+  it("renders stale producer metadata without a warning", () => {
     useYieldRankingsSummaryMock.mockReturnValue({
       data: makeSummaryPayload({ coveredCount: 2, trackedCount: 3 }),
       isLoading: false, dataUpdatedAt: NOW,
-      meta: { updatedAt: publishedAt, ageSeconds: 15_000, status: "stale",
+      meta: { updatedAt: NOW / 1000 - 15_000, ageSeconds: 15_000, status: "stale",
         assessedAt: NOW / 1000, freshBudgetSec: 7_200, degradedBudgetSec: 14_400 },
     });
-    render(<HomeAltYieldOverview />);
+    const view = render(<HomeAltYieldOverview />);
     expect(screen.getByText("3.65%")).toBeDefined();
-    const notice = screen.getByRole("status");
-    expect(notice.textContent).toMatch(/older snapshot/i);
-    expect(notice.textContent).toContain(formatDataHealthTimestamp(publishedAt * 1000, "en-US", "UTC"));
-    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(view.container.textContent).not.toMatch(/older snapshot/i);
   });
 
-  it("keeps values visible while exposing published API quality warnings", () => {
+  it("keeps values visible without surfacing published API quality warnings", () => {
     const data = makeSummaryPayload({ coveredCount: 2, trackedCount: 3 });
     const warning = { code: "benchmark-unavailable", message: "USD reference evidence unavailable", reasons: ["reference-source-missing"] };
     data.warnings = [warning];
     useYieldRankingsSummaryMock.mockReturnValue({ data, isLoading: false });
-    render(<HomeAltYieldOverview />);
+    const view = render(<HomeAltYieldOverview />);
     expect(screen.getByText("3.65%")).toBeDefined();
-    const warnings = screen.getByLabelText("Yield API warnings");
-    expect(warnings.textContent).toContain(warning.message);
-    expect(warnings.textContent).toContain(warning.reasons[0]);
+    expect(screen.queryByLabelText("Yield API warnings")).toBeNull();
+    expect(view.container.textContent).not.toContain(warning.message);
   });
 
-  it("offers retry when initial rankings are unavailable", () => {
+  it("shows a neutral placeholder when initial rankings are unavailable", () => {
     useYieldRankingsSummaryMock.mockReturnValue({
       data: undefined, isLoading: false, dataUpdatedAt: 0, error: new Error("unavailable"),
     });
     render(<HomeAltYieldOverview />);
     expect(screen.queryByText("3.65%")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(refetchMock).toHaveBeenCalledOnce();
+    expect(screen.getByText("Updating")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
   });
 });

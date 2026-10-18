@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { HomeSectionErrorBoundary } from "@/components/home-section-error-boundary";
 import { ShortcutsSection } from "@/components/shortcuts-section";
 import { LazySection } from "@/components/lazy-section";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -341,25 +341,25 @@ export function HomeAltClient() {
 
       <BelowFold forced={hashTargetSection === "ddr"} reserveClassName="min-h-[1340px] lg:min-h-[626px]">
         <div className="mt-8 sm:mt-10">
-          <SectionErrorBoundary name="depeg forecasting overview">
+          <HomeSectionErrorBoundary name="depeg forecasting overview">
             <HomeAltDdrOverview />
-          </SectionErrorBoundary>
+          </HomeSectionErrorBoundary>
         </div>
       </BelowFold>
 
       <BelowFold forced={hashTargetSection === "yield"} reserveClassName="min-h-[564px] lg:min-h-[489px]">
         <div className="mt-8 sm:mt-10">
-          <SectionErrorBoundary name="yield intelligence overview">
+          <HomeSectionErrorBoundary name="yield intelligence overview">
             <HomeAltYieldOverview />
-          </SectionErrorBoundary>
+          </HomeSectionErrorBoundary>
         </div>
       </BelowFold>
 
       <BelowFold forced={hashTargetSection === "status"} reserveClassName="min-h-[83px] lg:min-h-[53px]">
         <div className="mt-8 sm:mt-10">
-          <SectionErrorBoundary name="status and telegram overview">
+          <HomeSectionErrorBoundary name="status and telegram overview">
             <HomeAltStatusTelegram />
-          </SectionErrorBoundary>
+          </HomeSectionErrorBoundary>
         </div>
       </BelowFold>
     </div>

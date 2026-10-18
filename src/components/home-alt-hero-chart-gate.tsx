@@ -13,7 +13,7 @@ const HomeAltHeroLiveChart = dynamic(
   () => import("@/components/home-alt-hero-live-chart").then((mod) => mod.HomeAltHeroLiveChart),
   {
     ssr: false,
-    loading: HomeAltHeroChartFallback,
+    loading: () => <HomeAltHeroChartFallback />,
   },
 );
 

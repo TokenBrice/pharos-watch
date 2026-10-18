@@ -6,8 +6,6 @@ import { ListFilter } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
-import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import type { ApiMeta } from "@/lib/api";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -64,7 +62,6 @@ interface ForecastItem {
   medianSec: number | null;
   remainingAsOf: number | null;
   medianResolveAt: number | null;
-  stale: boolean;
   degradedReason: string | null;
   severity: number;
 }
@@ -92,7 +89,6 @@ function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
     medianSec: benchmarked ? duration.medianSec : null,
     remainingAsOf: benchmarked ? duration.remainingAsOf : null,
     medianResolveAt: benchmarked ? duration.medianResolveAt : null,
-    stale: row.live.stale,
     degradedReason: row.live.degradedReason,
     severity: rowSeverity(row),
   };
@@ -115,9 +111,9 @@ function DurationCell({ item }: { item: ForecastItem }) {
     return (
       <span
         className="font-mono text-2xs font-semibold tabular-nums text-muted-foreground"
-        title={`Locked estimate as of ${formatUtcTimestamp(item.remainingAsOf) ?? "unknown"}; median deadline ${formatUtcTimestamp(item.medianResolveAt) ?? "unknown"}${item.degradedReason ? `; ${item.degradedReason}` : ""}`}
+        title={`Locked estimate as of ${formatUtcTimestamp(item.remainingAsOf) ?? "unknown"}; median deadline ${formatUtcTimestamp(item.medianResolveAt) ?? "unknown"}${item.degradedReason === "duration-exceeded" ? "; median deadline passed" : ""}`}
       >
-        {item.degradedReason === "duration-exceeded" ? "overdue" : item.stale ? "stale" : "locked"} ~{formatDurationSec(item.medianSec)}
+        {item.degradedReason === "duration-exceeded" ? "overdue" : "locked"} ~{formatDurationSec(item.medianSec)}
       </span>
     );
   }
@@ -187,7 +183,7 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
 
 // --- header --------------------------------------------------------------
 
-function SectionHeader({ stat }: { stat: { value: number; label: string } }) {
+function SectionHeader({ stat }: { stat: { value: number | null; label: string } }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-start justify-between gap-3">
@@ -196,7 +192,7 @@ function SectionHeader({ stat }: { stat: { value: number; label: string } }) {
         </p>
         <div className="flex shrink-0 items-center gap-3 pt-1">
           <span className="hidden text-sm text-muted-foreground sm:inline">
-            <span className="pharos-numeric font-semibold text-foreground">{stat.value}</span> {stat.label}
+            <span className="pharos-numeric font-semibold text-foreground">{stat.value ?? "—"}</span> {stat.label}
           </span>
           <span aria-hidden="true" className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" />
           <HomeAltTrackerLink
@@ -368,51 +364,19 @@ function TrackRecordZone({
   );
 }
 
-function SourceStatus({ label, computedAt, degradedReason, usable, error, dataUpdatedAt, meta, onRetry, loading }: {
+// Neutral source stamp: the homepage never renders data-health UI
+// (docs/homepage.md), so retained/degraded snapshots read like live ones.
+function SourceStatus({ label, computedAt, usable, loading }: {
   label: string;
   computedAt: number | undefined;
-  degradedReason: string | null | undefined;
   usable: boolean;
-  error: unknown;
-  dataUpdatedAt: number;
-  meta: ApiMeta | null | undefined;
-  onRetry: () => void;
   loading: boolean;
 }) {
+  const asOf = usable ? formatUtcTimestamp(computedAt) : null;
   return (
-    <div className="mb-3 space-y-2">
-      <p className="text-xs text-muted-foreground">
-        {label}: {loading ? "Loading" : !usable ? "Unavailable" : error || degradedReason ? "Retained snapshot" : "Available snapshot"}
-        {" · "}as of {formatUtcTimestamp(computedAt) ?? "unavailable"}
-        {degradedReason ? ` · ${degradedReason}` : ""}
-      </p>
-      <QueryFreshnessNotices
-        error={error}
-        hasData={usable}
-        onRetry={onRetry}
-        queries={[{
-          preset: label === "Resolver" ? "depegResolver" : "depegResolverReview",
-          dataUpdatedAt,
-          hasData: usable,
-          error,
-          meta: computedAt != null ? {
-            ...(meta?.updatedAt != null ? {
-              warning: meta.warning,
-              dependencies: meta.dependencies,
-              assessedAt: meta.assessedAt,
-              freshBudgetSec: meta.freshBudgetSec,
-              degradedBudgetSec: meta.degradedBudgetSec,
-            } : {}),
-            updatedAt: computedAt,
-            ageSeconds: meta?.ageSeconds ?? 0,
-            status: degradedReason === "stale-cache" || meta?.status === "stale" ? "stale" : degradedReason ? "degraded" : meta?.status === "degraded" ? "degraded" : "fresh",
-          } : meta,
-        }]}
-      />
-      {!usable && !error && !loading ? (
-        <button type="button" className="pharos-focus-ring text-xs text-primary hover:underline" onClick={onRetry}>Retry {label.toLowerCase()}</button>
-      ) : null}
-    </div>
+    <p className="mb-3 text-xs text-muted-foreground">
+      {label} · {loading || !asOf ? "Updating" : `as of ${asOf}`}
+    </p>
   );
 }
 
@@ -459,7 +423,8 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
 
   const stat = ddrUsable
     ? { value: items.filter((item) => item.tier != null).length, label: "published forecasts" }
-    : { value: headline?.lockedPredictionCount ?? 0, label: "graded" };
+    // R1: no usable reviewer headline is an unavailable count, never zero graded.
+    : { value: headline?.lockedPredictionCount ?? null, label: "graded" };
 
   const forecastSpan = resolverReviewerEnabled ? "lg:col-span-3" : "lg:col-span-5";
   const trackSpan = resolverEnabled ? "lg:col-span-2" : "lg:col-span-5";
@@ -477,18 +442,14 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
           {resolverEnabled ? (
             <div className={cn("p-4 sm:p-5", forecastSpan)}>
               <SourceStatus label="Resolver" computedAt={resolverData?._meta.computedAt}
-                degradedReason={resolverData?._meta.degradedReason} usable={ddrUsable} error={resolverError}
-                dataUpdatedAt={resolver.dataUpdatedAt} meta={resolver.meta} loading={!resolverData && !resolverError}
-                onRetry={() => { void resolver.refetch(); }} />
+                usable={ddrUsable} loading={!resolverData && !resolverError} />
               {ddrUsable ? <ForecastZone items={items} logoMap={logoMap} /> : null}
             </div>
           ) : null}
           {resolverReviewerEnabled ? (
             <div className={cn("flex flex-col bg-muted/20 p-4 sm:p-5", trackSpan)}>
               <SourceStatus label="Reviewer" computedAt={resolverReviewData?._meta.computedAt}
-                degradedReason={resolverReviewData?._meta.degradedReason} usable={ddrrUsable} error={resolverReviewError}
-                dataUpdatedAt={resolverReview.dataUpdatedAt} meta={resolverReview.meta} loading={!resolverReviewData && !resolverReviewError}
-                onRetry={() => { void resolverReview.refetch(); }} />
+                usable={ddrrUsable} loading={!resolverReviewData && !resolverReviewError} />
               {ddrrUsable && headline ? <TrackRecordZone
                 accuracyValue={accuracyValue}
                 scored={scored}

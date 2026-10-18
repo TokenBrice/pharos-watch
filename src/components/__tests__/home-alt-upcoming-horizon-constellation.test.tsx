@@ -13,9 +13,12 @@ const horizonFixture = vi.hoisted(() =>
   })),
 );
 
+const unphasedFixture = vi.hoisted((): { id: string; name: string; symbol: string }[] => []);
+
 vi.mock("@/lib/horizon-constellation-layout", async (importOriginal) => ({
   ...(await importOriginal<typeof HorizonConstellationLayoutModule>()),
   HORIZON_PRE_LAUNCH_STABLECOINS: horizonFixture,
+  HORIZON_UNPHASED_STABLECOINS: unphasedFixture,
 }));
 
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
@@ -34,6 +37,16 @@ describe("HomeAltUpcomingHorizonConstellation", () => {
     expect(screen.getAllByText("+5")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "5 more announced stablecoins" }).getAttribute("href")).toMatch(/^\/upcoming\/?$/);
     expect(screen.getByRole("link", { name: "Open tracker" }).getAttribute("href")).toMatch(/^\/upcoming\/?$/);
+  });
+
+  it("counts unphased coins so the teaser total matches the /upcoming/ tracker", () => {
+    unphasedFixture.push({ id: "u-0", name: "Unphased 0", symbol: "U0" }, { id: "u-1", name: "Unphased 1", symbol: "U1" });
+    try {
+      render(<HomeAltUpcomingHorizonConstellation />);
+      expect(screen.getByText("15")).toBeTruthy();
+    } finally {
+      unphasedFixture.splice(0);
+    }
   });
 
   it("renders nothing for an empty registry", () => {

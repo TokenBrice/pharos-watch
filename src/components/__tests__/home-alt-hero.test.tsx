@@ -56,26 +56,27 @@ describe("HomeAltHero producer freshness", () => {
     expect(screen.queryByText("share unavailable")).toBeNull();
   });
 
-  it("reserves Live for a fresh successful producer generation", () => {
+  // Homepage rule (docs/homepage.md): producer health never renders as a
+  // warning; figures carry a neutral producer-generation stamp only.
+  it("stamps a fresh producer generation without state words", () => {
     useStablecoinsMock.mockReturnValue({
       data, dataUpdatedAt: NOW, error: null, refetch: vi.fn(),
       meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
     });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText(/^Live · as of/)).toBeTruthy();
+    expect(screen.getByText(/^As of October 10, 2026/)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
   });
 
   it.each([
-    ["old producer", { updatedAt: (NOW - DATA_HEALTH_PRESETS.stablecoins.staleTime * (FRESHNESS_RATIOS.DEGRADED + 1)) / 1000, ageSeconds: 0, status: "fresh" }, NOW, /^Stale ·/, /older snapshot/],
-    ["degraded producer", { updatedAt: NOW / 1000, ageSeconds: 0, status: "degraded" }, NOW, /^Degraded ·/, /quality warning/],
-    ["missing authority", undefined, 0, /^Freshness unavailable ·/, /initial data/],
-  ] satisfies [string, ApiMeta | undefined, number, RegExp, RegExp][])("retains %s data without calling a new receipt live", (_case, meta, dataUpdatedAt, label, warning) => {
+    ["old producer", { updatedAt: (NOW - DATA_HEALTH_PRESETS.stablecoins.staleTime * (FRESHNESS_RATIOS.DEGRADED + 1)) / 1000, ageSeconds: 0, status: "fresh" }, NOW],
+    ["degraded producer", { updatedAt: NOW / 1000, ageSeconds: 0, status: "degraded" }, NOW],
+    ["missing authority", undefined, 0],
+  ] satisfies [string, ApiMeta | undefined, number][])("keeps %s data visible without a warning", (_case, meta, dataUpdatedAt) => {
     useStablecoinsMock.mockReturnValue({ data, dataUpdatedAt, error: null, meta, refetch: vi.fn() });
-    render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText(label)).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toMatch(warning);
-    expect(screen.queryByText(/^Live ·/)).toBeNull();
+    const view = render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(view.container.textContent).not.toMatch(/Stale|Degraded|Freshness unavailable|Refresh failed|Retained|Live ·/);
     expect(screen.getAllByText(/^\$100(?:\.0)?$/).length).toBeGreaterThan(0);
   });
 
@@ -86,44 +87,43 @@ describe("HomeAltHero producer freshness", () => {
   ] satisfies [string, ApiMeta | undefined][])("does not treat a recent receipt as producer time with %s metadata", (_case, meta) => {
     useStablecoinsMock.mockReturnValue({ data, dataUpdatedAt: NOW, meta, error: null, refetch: vi.fn() });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.queryByText(/^Live ·/)).toBeNull();
-    expect(screen.getByText("Freshness unavailable · generation unavailable")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toMatch(/initial data/);
-    expect(screen.queryByText(/as of October 10, 2026/)).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText(/as of October 10, 2026/i)).toBeNull();
     expect(screen.getAllByText(/^\$100(?:\.0)?$/).length).toBeGreaterThan(0);
   });
 
-  it("labels retained figures after a failed refresh and exposes their producer update", () => {
+  it("keeps retained figures after a failed refresh without a failure notice", () => {
     useStablecoinsMock.mockReturnValue({
       data, dataUpdatedAt: NOW, error: new Error("refresh failed"), refetch: vi.fn(),
       meta: { updatedAt: NOW / 1000 - 60, ageSeconds: 60, status: "fresh" },
     });
-    render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText(/^Refresh failed · as of/)).toBeTruthy();
-    expect(screen.queryByText(/^Live ·/)).toBeNull();
-    expect(screen.getAllByRole("status").some((notice) => /Last successful update/.test(notice.textContent ?? ""))).toBe(true);
+    const view = render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
+    expect(screen.getByText(/^As of/)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+    expect(view.container.textContent).not.toMatch(/Refresh failed|Last successful update/);
   });
 
-  it("expires the static fallback while the page remains mounted", () => {
+  it("expires the static fallback to a neutral placeholder while the page remains mounted", () => {
     const asOfMs = NOW - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS;
     const boundaryFallback = buildLiveHomepageHeroSnapshot(data, asOfMs / 1000);
     useStablecoinsMock.mockReturnValue({ data: undefined, dataUpdatedAt: 0, error: null, refetch: vi.fn() });
     render(<HomeAltHero snapshot={boundaryFallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText(/^Fallback · as of/)).toBeTruthy();
+    expect(screen.getByText(/^As of/)).toBeTruthy();
     act(() => { vi.advanceTimersByTime(60_000); });
-    expect(screen.queryByText(/^Fallback ·/)).toBeNull();
-    expect(screen.getByText("Live market data unavailable")).toBeTruthy();
+    expect(screen.queryByText(/^As of/)).toBeNull();
+    expect(screen.getByText("Updating")).toBeTruthy();
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
-  it("ages a healthy producer generation during a long-lived page session", () => {
+  it("ages a healthy producer generation during a long-lived page session without a warning", () => {
     useStablecoinsMock.mockReturnValue({
       data, dataUpdatedAt: NOW, error: null, refetch: vi.fn(),
       meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
     });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
     act(() => { vi.advanceTimersByTime(DATA_HEALTH_PRESETS.stablecoins.staleTime * (FRESHNESS_RATIOS.DEGRADED + 1)); });
-    expect(screen.queryByText(/^Live ·/)).toBeNull();
-    expect(screen.getByText(/^Stale ·/)).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toMatch(/older snapshot/);
+    expect(screen.queryByText(/^Stale ·/)).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

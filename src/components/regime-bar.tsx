@@ -8,6 +8,7 @@ import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "@shared/l
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
+import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { PsiBeaconMicro } from "@/components/psi-beacon/psi-beacon-micro";
 
@@ -93,16 +94,15 @@ function useRegimeModel() {
 
   const displayedPsi = getDisplayedPsi(current);
   const band = displayedPsi.band;
-  const { health, isCurrent, retainedLabel } = beacon;
+  const { isCurrent } = beacon;
   return {
     current,
     history: lightData?.history,
     band,
     score: displayedPsi.score,
     displayBasis: getDisplayedPsiBasis(current),
-    health,
     isCurrent,
-    retainedLabel,
+    asOfLabel: formatDataHealthTimestamp(current.computedAt * 1000, "en-US", "UTC"),
     // Legacy rows and unvalidated caches can carry a band outside the closed vocabulary.
     color: isCurrent && isConditionBand(band) ? PSI_HEX_COLORS[band] : PSI_UNKNOWN_BAND_HEX,
     isElevated: isCurrent && (band === "FRACTURE" || band === "CRISIS" || band === "MELTDOWN"),
@@ -117,7 +117,8 @@ function regimeLabel(model: RegimeModel): string {
   const reading = `${sentenceCaseBand(model.band)}, PSI ${Math.round(model.score)}, ${model.displayBasis}`;
   return model.isCurrent
     ? `Market regime: ${reading}`
-    : `Current market regime unavailable. ${model.health.message} ${model.retainedLabel}: ${reading}`;
+    // Global chrome carries no data-health state words (docs/homepage.md#data-health): a neutral date only.
+    : `Market regime as of ${model.asOfLabel}: ${reading}`;
 }
 
 /**
@@ -153,7 +154,7 @@ export function RegimeBar() {
 
   if (!model) return <div className="fixed left-0 right-0 top-0 z-regime h-[3px] max-w-[100vw]" aria-hidden="true" />;
 
-  const { current, band, score, displayBasis, isCurrent, retainedLabel, color, isElevated, useDarkText } = model;
+  const { current, band, score, displayBasis, isCurrent, asOfLabel, color, isElevated, useDarkText } = model;
   const components = current.components;
   const daysInBand = model.history?.length
     ? getPsiBandStreak(model.history, current.computedAt, band)
@@ -170,7 +171,7 @@ export function RegimeBar() {
         isElevated && "animate-[pharos-regime-pulse_1.5s_ease-in-out_infinite]",
       )}
       style={{ backgroundColor: color }}
-      title={`Market regime: the line's color tracks the Pharos Stability Index (PSI) band, currently ${isCurrent ? sentenceCaseBand(band) : "unavailable"}.`}
+      title={`Market regime: the line's color tracks the Pharos Stability Index (PSI) band, ${isCurrent ? `currently ${sentenceCaseBand(band)}` : `as of ${asOfLabel}`}.`}
     >
       {/* grid-template-rows animates the expand/collapse (height:auto can't transition). */}
       <div
@@ -186,7 +187,7 @@ export function RegimeBar() {
             "flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pt-1.5 pb-1 text-xs leading-snug",
             useDarkText ? "text-gray-900/90" : "text-white/90",
           )}>
-            {!isCurrent && <span>Current regime unavailable · {retainedLabel}</span>}
+            {!isCurrent && <span>As of {asOfLabel}</span>}
             <span className="inline-flex items-center gap-1.5">
               <PsiBeaconMicro score={score} retained={!isCurrent} />
               <span className="font-semibold">{sentenceCaseBand(band)}</span>

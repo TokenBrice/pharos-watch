@@ -299,16 +299,22 @@ describe.each(SURFACES)(
       expect(screen.queryByRole("status")).toBeNull();
     });
 
-    it("renders unavailable without a healthy or empty claim", () => {
+    // Homepage rule (docs/homepage.md): no data-health UI, ever.
+    it("renders unavailable as a neutral placeholder without a healthy or empty claim", () => {
       renderState("unavailable");
-      expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+      expect(screen.queryAllByText(/^Updating$|rankings are updating/).length).toBeGreaterThan(0);
       expect(screen.queryAllByText(emptyText)).toHaveLength(0);
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
     });
 
-    it("keeps retained data visible with a stale warning", () => {
+    it("keeps retained data visible without a stale warning", () => {
       renderState("stale-with-data");
-      expect(screen.getByRole("status").textContent).toMatch(/saved data|older snapshot|last available data/);
       expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
     });
   },
 );
@@ -389,29 +395,30 @@ describe("RecentFreezesCard authoritative totals", () => {
   });
 });
 
-describe.each(SURFACES.slice(0, 6))("$Component.name producer health", ({ Component, configure, emptyText }) => {
+describe.each(SURFACES.slice(0, 6))("$Component.name producer health stays off the homepage", ({ Component, configure, emptyText }) => {
   it.each([
-    ["old generation", { updatedAt: UPDATED_AT / 1000 - 7 * 86400, ageSeconds: 7 * 86400, status: "fresh" }, /older snapshot/],
-    ["quality warning", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", warning: "199 pharos source degraded" }, /quality warning/],
-    ["non-fresh dependency", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", dependencies: { source: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "stale" } } }, /quality warning/],
-  ] as const)("warns for a successful response with %s despite a fresh receipt", (_case, meta, warning) => {
+    ["old generation", { updatedAt: UPDATED_AT / 1000 - 7 * 86400, ageSeconds: 7 * 86400, status: "fresh" }],
+    ["quality warning", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", warning: "199 pharos source degraded" }],
+    ["non-fresh dependency", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", dependencies: { source: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "stale" } } }],
+  ] as const)("renders a successful response with %s without a homepage warning", (_case, meta) => {
     configure("ready");
     for (const hook of [useActiveDepegEventsMock, usePegSummaryMock, useMintBurnFlowsMock, useStabilityIndexMock, useStablecoinsMock, useBlacklistEventsPageMock, useBlacklistSummaryMock]) {
       const result = hook.getMockImplementation()?.();
       if (result) hook.mockReturnValue({ ...result, dataUpdatedAt: UPDATED_AT, meta });
     }
-    render(<Component />);
-    expect(screen.getByRole("status").textContent).toMatch(warning);
+    const view = render(<Component />);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(view.container.textContent).not.toMatch(/quality warning|older snapshot/i);
   });
 
-  it("does not discard producer warnings on an observed empty result", () => {
+  it("renders an observed empty result under a degraded producer without a warning", () => {
     configure("empty");
     for (const hook of [useActiveDepegEventsMock, usePegSummaryMock, useMintBurnFlowsMock, useStabilityIndexMock, useStablecoinsMock, useBlacklistEventsPageMock, useBlacklistSummaryMock]) {
       const result = hook.getMockImplementation()?.();
       if (result) hook.mockReturnValue({ ...result, meta: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "degraded" } satisfies ApiMeta });
     }
     render(<Component />);
-    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
   });
 });

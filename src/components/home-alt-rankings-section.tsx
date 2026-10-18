@@ -14,8 +14,6 @@ import {
   buildHomepageOptionalViewModel,
 } from "@/components/homepage-client-view-model";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
-import { QueryStateNotice } from "@/components/query-state-notice";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
@@ -102,21 +100,6 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
     error: stablecoinsQuery.error,
     isEmpty: stablecoinsData?.peggedAssets.length === 0,
   });
-  const failedQueries = [
-    { label: "market", query: stablecoinsQuery, hasData: stablecoinsData !== undefined },
-    { label: "peg", query: pegSummaryQuery, hasData: pegSummaryData !== undefined },
-    { label: "liquidity", query: dexLiquidityQuery, hasData: dexLiquidity !== undefined },
-    { label: "safety", query: reportCardsQuery, hasData: reportCardsData !== undefined },
-  ].filter((entry) => entry.query.error != null);
-  const failureState = failedQueries.some((entry) => !entry.hasData) ? "unavailable" : "stale-with-data";
-  const failureLabel =
-    failedQueries.length > 0 ? `${failedQueries.map((entry) => entry.label).join(", ")} ranking data` : "ranking data";
-  const failedUpdatedTimes = failedQueries.map((entry) => entry.query.dataUpdatedAt).filter((value) => value > 0);
-  const failedDataUpdatedAt = failedUpdatedTimes.length > 0 ? Math.min(...failedUpdatedTimes) : 0;
-  const retryFailedQueries = () => {
-    for (const entry of failedQueries) void entry.query.refetch();
-  };
-
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -125,7 +108,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
             Stablecoin Overview
           </h2>
           {stablecoinsState === "unavailable" ? (
-            <p className="text-sm text-muted-foreground">Stablecoin rankings are temporarily unavailable.</p>
+            <p className="text-sm text-muted-foreground">Stablecoin rankings are updating.</p>
           ) : (
             <p className="text-sm text-muted-foreground">
               Showing <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
@@ -134,7 +117,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
                 : filters.activeUniverse === "variants"
                   ? "tracked variants, excluded from core market aggregates"
                   : "active catalog listings, with variants tracked separately"}{" "}
-              with live market data — inactive lifecycle states excluded,{" "}
+              with market data — inactive lifecycle states excluded,{" "}
               <Link
                 href="/screener/"
                 className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
@@ -162,15 +145,6 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           <ToggleGroupItem value="catalog">All</ToggleGroupItem>
         </ToggleGroup>
       </header>
-      {failedQueries.length > 0 ? (
-        <QueryStateNotice
-          state={failureState}
-          label={failureLabel}
-          dataUpdatedAt={failedDataUpdatedAt}
-          onRetry={retryFailedQueries}
-        />
-      ) : null}
-      <SafetyScoreV9StatusNotice response={reportCardsData} />
       {stablecoinsState !== "unavailable" ? (
         <StablecoinTable
           data={stablecoinsData?.peggedAssets}

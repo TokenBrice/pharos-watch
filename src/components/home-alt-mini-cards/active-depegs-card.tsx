@@ -70,12 +70,6 @@ export function ActiveDepegsCard(): React.JSX.Element {
     error: pegSummaryQuery.error,
     isEmpty: activeCount === 0,
   });
-  const retry = () => {
-    void activeQuery.refetch();
-    void pegSummaryQuery.refetch();
-  };
-  const updatedTimes = [activeQuery.dataUpdatedAt, pegSummaryQuery.dataUpdatedAt].filter((value) => value > 0);
-  const dataUpdatedAt = updatedTimes.length > 0 ? Math.min(...updatedTimes) : 0;
 
   return (
     <PulseCard
@@ -84,16 +78,6 @@ export function ActiveDepegsCard(): React.JSX.Element {
       expandLabel="Open Depeg monitor"
       label="Active depegs"
       state={state}
-      notice={{
-        label: "Active depeg monitoring",
-        dataUpdatedAt,
-        queries: [
-          { preset: "pegSummary", label: "Active incident count", dataUpdatedAt: pegSummaryQuery.dataUpdatedAt, meta: pegSummaryQuery.meta, error: pegSummaryQuery.error, hasData: pegSummaryData !== undefined },
-          { preset: "depegEvents", label: "Incident details", dataUpdatedAt: activeQuery.dataUpdatedAt, meta: activeQuery.meta, error: activeQuery.error, hasData: data !== undefined },
-        ],
-        onRetry: retry,
-        compact: true,
-      }}
       loadingContent={
         <>
           <Skeleton className="h-12 w-28" />
@@ -113,11 +97,11 @@ export function ActiveDepegsCard(): React.JSX.Element {
         <RailHeroFigureTransition rail="depeg">
           <span className={`rounded-md pharos-numeric text-4xl font-bold tracking-tight text-foreground ${flashClass}`}>{activeCount ?? "—"}</span>
         </RailHeroFigureTransition>
-        <span className="text-xs text-muted-foreground">
-          {activeCount === null
-            ? "peg summary unavailable"
-            : `confirmed ${activeCount === 1 ? "depeg" : "depegs"} right now`}
-        </span>
+        {activeCount !== null ? (
+          <span className="text-xs text-muted-foreground">
+            {`confirmed ${activeCount === 1 ? "depeg" : "depegs"} right now`}
+          </span>
+        ) : null}
         <UniverseChip
           universe="pegCatalog"
           value={catalogCount == null ? undefined : `${catalogCount.toLocaleString()} coins`}

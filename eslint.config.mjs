@@ -541,6 +541,45 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // The homepage never renders data-health UI (docs/homepage.md#data-health):
+    // data renders as-is, no data is a neutral placeholder, and ops state lives
+    // in admin/alerts. Re-applies the ADR-2 patterns because flat config
+    // replaces this rule's options for overlapping files.
+    files: [
+      "src/app/page.tsx",
+      "src/components/home-*.{ts,tsx}",
+      "src/components/homepage-*.{ts,tsx}",
+      "src/components/home-alt-mini-cards/**/*.{ts,tsx}",
+      "src/components/home-alt-callouts/**/*.{ts,tsx}",
+    ],
+    ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...frontendToWorkerRestrictedImportPatterns,
+            {
+              group: [
+                "**/stale-data-banner",
+                "**/query-freshness-notices",
+                "**/query-error-notice",
+                "**/data-health-banner",
+                "**/query-state-notice",
+                "**/yield/yield-data-health",
+                "**/safety-score-v9-status-notice",
+                "**/ops-status-chip",
+                "**/section-error-boundary",
+              ],
+              message:
+                "The homepage never renders data-health warnings (docs/homepage.md#data-health): render data as-is, or a neutral placeholder when there is none (use HomeSectionErrorBoundary for crash fallbacks). Ops state lives in admin/alerts.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Caller spelling is a separate boundary from the Worker/frontend bans.
     // shared/ internals retain relative imports, and local shared dirs are not
     // the root runtime-neutral boundary.
@@ -607,11 +646,10 @@ const eslintConfig = defineConfig([
     files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
     ignores: [
       "**/__tests__/**",
-      // Own palettes: the Telegram mini-app sets its own color-scheme, the
-      // tape wire stream and the flow-machine illustrations are editorial art.
+      // Own palettes: the Telegram mini-app sets its own color-scheme and the
+      // tape wire stream is editorial art.
       "src/app/pharoswatchbot/**",
       "src/lib/tape-class-style.ts",
-      "src/components/flow-machine-scene-*.tsx",
       "src/components/home-alt-mini-cards/daily-digest-card.tsx",
       "**/*.test.{ts,tsx}",
       "**/*.spec.{ts,tsx}",
