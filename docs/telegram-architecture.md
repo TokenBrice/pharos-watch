@@ -151,19 +151,17 @@ Structural boundaries:
 - `admin-telegram-broadcast.ts` is the operator write surface, using Dispatch targeting and Queue lifecycle. [Broadcast safety](./runbooks/telegram-admin-broadcast-safety.md) owns canary/TTL authority; [operator queries](./runbooks/telegram-operator-queries.md) owns read-only incident access. There is no supported operator replay/clear/pause mutation.
 
 **Owned files.**
-- `worker/src/cron/dispatch-telegram-alerts.ts` — orchestration/entrypoint.
-- `worker/src/cron/dispatch-telegram-source-lifecycle.ts`, `dispatch-telegram-queue-paths.ts` — baseline/recovery and queue-only paths.
-- `worker/src/cron/dispatch-telegram-authoritative-path.ts`, `dispatch-telegram-authoritative-planning.ts` — source resolution, planning and handoff coordination.
-- `worker/src/cron/dispatch-telegram-alerts-fanout.ts`, `dispatch-telegram-fanout-plan.ts`, `dispatch-telegram-subscribers.ts`, `dispatch-telegram-routing.ts` — input pages, recipient routing and rendering.
-- `worker/src/cron/dispatch-telegram-events.ts`, `dispatch-telegram-predicates.ts`, `dispatch-telegram-state.ts`, `dispatch-telegram-result.ts` — detection, predicates, snapshots and outcome contract.
-- `worker/src/cron/telegram-alert-target-plans.ts`, `telegram-alert-target-plans/*`, `telegram-alert-target-plan-contract.ts`, `telegram-alert-job-target-outcomes.ts` — durable manifest, bounds, expiry and exclusive target outcomes.
-- `worker/src/cron/telegram-alert-source-events.ts`, `telegram-alert-source-memberships.ts`, `telegram-alert-event-lineage.ts`, `dispatch-telegram-pending-lifecycle.ts` — source resolution, item lineage and shared lifecycle.
-- `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-target-status.ts` — source/context I/O and projections.
-- `worker/src/cron/telegram-alert-freeze.ts`, `telegram-freeze-outbox.ts` — immutable freeze source/cohort.
-- `worker/src/cron/telegram-recap-planner.ts`; `worker/src/lib/telegram/recap-store.ts`, `recap-facts.ts`, `recap-ranking.ts`, `recap-formatting.ts` — recap planning/persistence and pure facts/rank/format.
+- `worker/src/cron/telegram/dispatch/` — alerts entrypoint, authoritative planning/handoff orchestration, source and queue lifecycle, recipient pages/routing, predicates, state and result contract.
+- `worker/src/cron/telegram/sources/` — event detection, changes, snapshots, context, safety reasons, immutable source events/memberships and item lineage.
+- `worker/src/cron/telegram/target-plans/` — direct concrete modules for source state, cohort horizon, materialization, delivery handoff, read model and coordinator; `telegram-alert-target-plan-contract.ts` owns bounds and payload contracts.
+- `worker/src/cron/telegram/delivery/` — pending queue lifecycle plus exclusive job-target delivery outcomes and target-status projections; see Queue below.
+- `worker/src/cron/telegram/freeze/` — immutable freeze source/cohort outbox with its separate schema.
+- `worker/src/cron/telegram/recap/` — deterministic DB-only recap planner; persistence and pure facts/rank/format stay in `worker/src/lib/telegram/recap-store.ts`, `recap-facts.ts`, `recap-ranking.ts`, `recap-formatting.ts`.
+- `worker/src/cron/telegram/maintenance/` — degradation watchdog, inactive cleanup and retention cleanup; physical triggers stay owned by `shared/lib/cron-jobs.ts`.
+- Each cron seam keeps its suites/support in a matching `__tests__/` directory. Consumers import concrete modules directly, with no compatibility barrels. Source/planning hands exact targets to Delivery; Freeze retains its separate immutable outbox and Recap its separate planner. Shared queue/store/transport policy stays in its existing library owner.
+- `worker/src/cron/digest/telegram-transport.ts` — digest channel-edition publication, outside risk targeting.
 - `worker/src/lib/telegram/quiet-hours.ts` — shared quiet-hours predicate and callback timezone validation.
-- `worker/src/cron/telegram-degradation-watchdog.ts`; `worker/src/handlers/scheduled/five-minute-telegram.ts` — watchdog and serial orchestration.
-- `worker/src/cron/telegram-inactive-cleanup.ts`, `telegram-retention-cleanup.ts` — housekeeping; physical trigger owned by `shared/lib/cron-jobs.ts`.
+- `worker/src/handlers/scheduled/five-minute-telegram.ts` — serial orchestration with deferred imports of cron entrypoints.
 - `worker/src/api/admin-telegram-broadcast.ts` — operator broadcast, not webhook Ingress.
 
 **Allowed inbound dependencies.** Worker scheduled-event router, Worker admin route entrypoints. Not Ingress, not Callback routing.
@@ -184,8 +182,7 @@ Structural boundaries:
 **Responsibility.** Own queue enqueue/provenance, claims, current-preference revalidation, effect fence, retry/backoff, terminal projection, dead letters, expiry, and blocked-chat lifecycle. [Delivery persistence](./telegram-alerts.md#delivery-persistence) owns the behavioral contract. Only confirmed rejection may return the exact sending generation to pending; ambiguity never auto-replays. Confirmed migration archives the old effect before the shared chat-ID migration.
 
 **Owned files.**
-- `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
-- `worker/src/cron/telegram-pending/*` (claim/drain, backoff, cleanup, dead-letter, preference revalidation, recap terminal projection, lifecycle helpers)
+- `worker/src/cron/telegram/delivery/` (direct claim/drain, backoff, cleanup, dead-letter, preference revalidation, recap terminal projection, lifecycle, outcome and target-status modules; no barrel)
 - `worker/src/lib/telegram/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL) and `worker/src/lib/telegram/pending-capacity.ts` (capacity/watchdog read model)
 - `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/lib/telegram/constants.ts` re-exports the established Worker import surface.
 

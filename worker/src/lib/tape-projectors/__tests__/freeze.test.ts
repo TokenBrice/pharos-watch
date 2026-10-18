@@ -6,7 +6,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { projectFreezeBlocked, projectFreezeDestroyed, projectFreezeUnblocked } from "../freeze";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";
-import { FREEZE_RECOVERY_WINDOW_SEC, loadFreshFreezeAlerts } from "../../../cron/telegram-alert-freeze";
+import { FREEZE_RECOVERY_WINDOW_SEC, loadFreshFreezeAlerts } from "../../../cron/telegram/freeze/telegram-alert-freeze";
 import { insertBlacklistRows } from "../../../cron/blacklist/persistence";
 import { makeBlacklistRow as makeFixtureBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import type { BlacklistPersistedRow } from "../../blacklist/shared";

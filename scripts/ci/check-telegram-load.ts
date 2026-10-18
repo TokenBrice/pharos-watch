@@ -226,15 +226,15 @@ export function evaluateQueryPlan(check: QueryPlanCheckDefinition, details: stri
 
 const TELEGRAM_PENDING_DRAIN_SOURCE_PATH = resolve(
   process.cwd(),
-  "worker/src/cron/telegram-pending/drain.ts",
+  "worker/src/cron/telegram/delivery/drain.ts",
 );
 const TELEGRAM_SUBSCRIBERS_SOURCE_PATH = resolve(
   process.cwd(),
-  "worker/src/cron/dispatch-telegram-subscribers.ts",
+  "worker/src/cron/telegram/dispatch/dispatch-telegram-subscribers.ts",
 );
 const TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH = resolve(
   process.cwd(),
-  "worker/src/cron/dispatch-telegram-alerts-fanout.ts",
+  "worker/src/cron/telegram/dispatch/dispatch-telegram-alerts-fanout.ts",
 );
 const TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH = resolve(
   process.cwd(),
@@ -705,7 +705,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         PENDING_DRAIN_ATTEMPTS_PER_RUN,
       ],
       requiredDetails: ["idx_tpa_delivery_reconcile", "idx_tajt_pending_status"],
-      note: "Executes the SQL from selectPendingClaimCandidateIds() in telegram-pending/drain.ts. SQLite uses the delivery-state reconciliation index for pending candidates and the target status index for the terminal-target dedupe exclusion; this guards the production claim drain against a regression to a full table scan.",
+      note: "Executes the SQL from selectPendingClaimCandidateIds() in telegram/delivery/drain.ts. SQLite uses the delivery-state reconciliation index for pending candidates and the target status index for the terminal-target dedupe exclusion; this guards the production claim drain against a regression to a full table scan.",
     },
     {
       id: "pending-backoff-aggregate",

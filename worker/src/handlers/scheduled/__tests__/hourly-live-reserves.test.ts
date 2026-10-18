@@ -60,7 +60,7 @@ import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { makeLiveReserveCheckpoint } from "../../../lib/__tests__/scheduled-recovery-checkpoint.test-support";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
-import { SNAPSHOT_KEYS } from "../../../cron/telegram-alert-snapshots";
+import { SNAPSHOT_KEYS } from "../../../cron/telegram/sources/telegram-alert-snapshots";
 import { getReserveProducerPriority } from "../../../lib/reserve-producer-priority";
 import {
   finishLiveReserveCheckpoint,

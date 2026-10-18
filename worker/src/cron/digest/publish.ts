@@ -38,7 +38,7 @@ import {
   mapTelegramDigestPermittedDelivery,
   runTelegramDigestDeliveryWithPermit,
   type TelegramDigestPermittedDelivery,
-} from "../telegram-digest-transport";
+} from "./telegram-transport";
 import {
   scanTelegramDigestWrapper,
   scanTwitterDigestWrapper,

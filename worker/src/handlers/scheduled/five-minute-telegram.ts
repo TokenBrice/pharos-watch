@@ -12,7 +12,7 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/l
 // import() at dispatch time, like the compile-time public-runners map.
 // Heavy entrypoints cannot reach this lane; public isolates still defer its
 // job initialization until dispatch. Only types may be imported statically.
-import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
+import type { TelegramDispatchSharedState } from "../../cron/telegram/dispatch/dispatch-telegram-alerts";
 import type * as TelegramRegistrationModule from "../../lib/telegram/webhook-registration";
 import type { TelegramRecapRolloutCleanupResult } from "../../lib/telegram/recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
@@ -193,7 +193,7 @@ function buildTelegramSlotGroups(
       job: "dispatch-telegram-alerts",
       errorMessage: "[cron] dispatch-telegram-alerts failed:",
       run: async (signal, reportProgress) => {
-        const { dispatchTelegramAlerts } = await import("../../cron/dispatch-telegram-alerts");
+        const { dispatchTelegramAlerts } = await import("../../cron/telegram/dispatch/dispatch-telegram-alerts");
         await ensureRecapRolloutCleanup();
         const startedAtMs = Date.now();
         Object.assign(sharedTelegramState, {
@@ -284,7 +284,7 @@ function buildTelegramSlotGroups(
             }),
           };
         }
-        const { planTelegramPersonalizedRecaps } = await import("../../cron/telegram-recap-planner");
+        const { planTelegramPersonalizedRecaps } = await import("../../cron/telegram/recap/telegram-recap-planner");
         const planned = await planTelegramPersonalizedRecaps(runtime.db, signal, {
           rolloutPolicy: recapRollout,
           softDeadlineMs: recapBudgetMs,
@@ -306,7 +306,7 @@ function buildTelegramSlotGroups(
       job: "telegram-degradation-watchdog",
       errorMessage: "[cron] telegram-degradation-watchdog failed:",
       run: async (signal) => {
-        const { runTelegramDegradationWatchdog } = await import("../../cron/telegram-degradation-watchdog");
+        const { runTelegramDegradationWatchdog } = await import("../../cron/telegram/maintenance/telegram-degradation-watchdog");
         return runTelegramDegradationWatchdog(runtime.db, signal, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           safetySourceAssessment: sharedTelegramState.safetySourceAssessment,

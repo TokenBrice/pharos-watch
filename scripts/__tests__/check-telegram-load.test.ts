@@ -275,6 +275,15 @@ describe("Telegram status-path budgets", () => {
     expect(hasTelegramLoadGuardImpact(["shared/lib/telegram-alert-families.ts"])).toBe(true);
   });
 
+  it.each([
+    "worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts",
+    "worker/src/cron/telegram/sources/dispatch-telegram-events.ts",
+    "worker/src/cron/telegram/delivery/drain.ts",
+    "worker/src/cron/telegram/target-plans/telegram-alert-target-plan-contract.ts",
+  ])("selects the load guard for relocated cron source %s", (source) => {
+    expect(hasTelegramLoadGuardImpact([source])).toBe(true);
+  });
+
   it("defines a reviewed budget for every status read path", () => {
     const statusPathChecks = buildQueryPlanChecks().filter(
       (check) => check.category === "pulse-status" || check.category === "lifecycle",

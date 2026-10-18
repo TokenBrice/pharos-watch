@@ -11,8 +11,8 @@ import { handleSetupBranch } from "../telegram-webhook-setup";
 import { applySettingToSubscriptions, loadSubscriptionRowsByChat, upsertSubscriberAndSubscriptions } from "../telegram-store/subscriptions";
 import { describeSubscriptionSettings } from "../telegram-webhook-messages";
 import { buildPendingAlertEnqueueStatement } from "../../lib/telegram/pending-queue";
-import { revalidatePendingAlertPreferences } from "../../cron/telegram-pending/preference-revalidation";
-import type { PendingAlertRow } from "../../cron/telegram-pending/types";
+import { revalidatePendingAlertPreferences } from "../../cron/telegram/delivery/preference-revalidation";
+import type { PendingAlertRow } from "../../cron/telegram/delivery/types";
 import {
   fetchSpy, handleTelegramWebhook, makeCallbackRequest,
   resetTelegramWebhookTest, sentMessageBody,

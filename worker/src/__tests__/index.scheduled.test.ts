@@ -200,8 +200,8 @@ vi.mock("../lib/telegram/recap-store", async (importOriginal) => {
     cancelQueuedTelegramRecapsForRollout: cronMocks.cancelQueuedTelegramRecapsForRollout,
   };
 });
-vi.mock("../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
-vi.mock("../cron/telegram-degradation-watchdog", () => ({
+vi.mock("../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
+vi.mock("../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
 }));
 vi.mock("../api/telegram-store/disambiguation", () => ({
@@ -319,10 +319,10 @@ vi.mock("../cron/prune-status-probe-runs", () => ({ runPruneStatusProbeRuns: cro
 vi.mock("../cron/prune-cron-history", () => ({ runPruneCronHistory: cronMocks.runPruneCronHistory }));
 vi.mock("../lib/repair-tasks", () => ({ runWorkerRepairTaskRunner: cronMocks.runWorkerRepairTaskRunner }));
 vi.mock("../cron/prune-detail-cache", () => ({ runPruneDetailCache: cronMocks.runPruneDetailCache }));
-vi.mock("../cron/telegram-inactive-cleanup", () => ({
+vi.mock("../cron/telegram/maintenance/telegram-inactive-cleanup", () => ({
   runTelegramInactiveCleanup: cronMocks.runTelegramInactiveCleanup,
 }));
-vi.mock("../cron/telegram-retention-cleanup", () => ({
+vi.mock("../cron/telegram/maintenance/telegram-retention-cleanup", () => ({
   runTelegramRetentionCleanup: cronMocks.runTelegramRetentionCleanup,
 }));
 vi.mock("../cron/mint-burn-growth-watchdog", () => ({
