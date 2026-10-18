@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { aggregateChains, type ChainAggregatorInput } from "../chains/aggregator";
+import { CLIENT_TRACKED_META_BY_ID } from "../stablecoins/client-registry";
+import { TRACKED_STABLECOINS } from "../stablecoins/registry";
 
 function makeInput(overrides: Partial<ChainAggregatorInput> = {}): ChainAggregatorInput {
   return {
@@ -34,6 +36,15 @@ function makeInput(overrides: Partial<ChainAggregatorInput> = {}): ChainAggregat
 }
 
 describe("aggregateChains", () => {
+  it("preserves the complete chain metadata field contract in the compact list projection", () => {
+    expect([...CLIENT_TRACKED_META_BY_ID.keys()]).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id));
+    for (const coin of TRACKED_STABLECOINS) {
+      const projected = CLIENT_TRACKED_META_BY_ID.get(coin.id)!;
+      expect(projected.flags.backing, `${coin.id}.backing`).toBe(coin.flags.backing);
+      expect(projected.commodityOunces, `${coin.id}.commodityOunces`).toBe(coin.commodityOunces);
+    }
+  });
+
   it("aggregates chain totals and computes deltas", () => {
     const result = aggregateChains(makeInput());
     const eth = result.chains.find((c) => c.id === "ethereum");

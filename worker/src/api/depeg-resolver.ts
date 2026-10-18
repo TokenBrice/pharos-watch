@@ -28,7 +28,7 @@ import {
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import { loadLatestPublicationManifest } from "../lib/depeg-resolver-publication-store";
 import { loadPredictionErrata } from "../lib/depeg-resolver-errata-store";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import type { DdrPublicationManifest } from "../lib/depeg-resolver-publication-store";
 import type { DdrPredictionErratum } from "@shared/types/depeg-resolver";

@@ -80,62 +80,62 @@ describe("runtime reachability policies", () => {
   });
 
 
-  it("rejects a DOM-only shared module reached by a scheduled runner", async () => {
-    const root = makeRoot();
-    writeText(root, "worker/src/handlers/scheduled.ts", 'const loaders = { bad: () => import("./scheduled/bad") };\n');
-    writeText(root, "worker/src/handlers/scheduled/bad.ts", 'import { href } from "@shared/lib/browser";\nexport { href };\n');
-    writeText(root, "shared/lib/browser.ts", "export const href = window.location.href;\n");
+  function writeScheduledFixture(root: string): void {
+    writeText(root, "worker/src/handlers/scheduled.ts", "export const dispatch = true;\n");
+    for (const role of ["public", "heavy"]) {
+      writeText(root, `worker/src/handlers/scheduled/${role}-runners.ts`,
+        `export const loaders = { ok: () => import("./${role}-ok") };\n`);
+      writeText(root, `worker/src/handlers/scheduled/${role}-ok.ts`, "export const ok = true;\n");
+    }
+  }
 
+  it.each(["public", "heavy"])("rejects a DOM-only shared module reached by a %s runner", async (role) => {
+    const root = makeRoot();
+    writeScheduledFixture(root);
+    writeText(root, `worker/src/handlers/scheduled/${role}-ok.ts`,
+      'import { href } from "@shared/lib/browser";\nexport { href };\n');
+    writeText(root, "shared/lib/browser.ts", "export const href = window.location.href;\n");
     const result = await checkRuntimeReachabilityPolicy(policy("scheduled"), root);
     expect(result.configurationErrors).toEqual([]);
-    expect(result.entrypointCount).toBe(2);
+    expect(result.entrypointCount).toBe(5);
     expect(result.violations).toContainEqual({
-      entrypoint: "worker/src/handlers/scheduled/bad.ts",
-      forbidden: "shared/lib/browser.ts",
-      kind: "reachable",
+      entrypoint: `worker/src/handlers/scheduled/${role}-ok.ts`,
+      forbidden: "shared/lib/browser.ts", kind: "reachable",
     });
   });
 
-  it("rejects a missing scheduled loader source", async () => {
+  it("rejects missing dispatcher and role-map sources", async () => {
     const root = makeRoot();
-
     const result = await checkRuntimeReachabilityPolicy(policy("scheduled"), root);
-
     expect(result.entrypointCount).toBe(0);
     expect(result.configurationErrors).toEqual([
       "Configured scheduled loader source is missing: worker/src/handlers/scheduled.ts",
+      "Configured scheduled loader source is missing: worker/src/handlers/scheduled/public-runners.ts",
+      "Configured scheduled loader source is missing: worker/src/handlers/scheduled/heavy-runners.ts",
     ]);
   });
 
-  it("rejects a scheduled loader with no dynamic-import entrypoints", async () => {
+  it.each(["public", "heavy"])("rejects a %s map with no dynamic-import entrypoints", async (role) => {
     const root = makeRoot();
-    writeText(root, "worker/src/handlers/scheduled.ts", "export const scheduled = true;\n");
-
+    writeScheduledFixture(root);
+    writeText(root, `worker/src/handlers/scheduled/${role}-runners.ts`, "export const loaders = {};\n");
     const result = await checkRuntimeReachabilityPolicy(policy("scheduled"), root);
-
-    expect(result.entrypointCount).toBe(1);
+    expect(result.entrypointCount).toBe(4);
     expect(result.configurationErrors).toEqual([
-      "Configured scheduled loader source has no dynamic-import entrypoints: worker/src/handlers/scheduled.ts",
+      `Configured scheduled loader source has no dynamic-import entrypoints: worker/src/handlers/scheduled/${role}-runners.ts`,
     ]);
   });
 
   it("rejects a forbidden import directly from the scheduled handler", async () => {
     const root = makeRoot();
-    writeText(
-      root,
-      "worker/src/handlers/scheduled.ts",
-      'import { href } from "@shared/lib/browser";\nconst loaders = { ok: () => import("./scheduled/ok") };\nexport { href, loaders };\n',
-    );
-    writeText(root, "worker/src/handlers/scheduled/ok.ts", "export const ok = true;\n");
+    writeScheduledFixture(root);
+    writeText(root, "worker/src/handlers/scheduled.ts", 'export { href } from "@shared/lib/browser";\n');
     writeText(root, "shared/lib/browser.ts", "export const href = window.location.href;\n");
-
     const result = await checkRuntimeReachabilityPolicy(policy("scheduled"), root);
-
     expect(result.configurationErrors).toEqual([]);
     expect(result.violations).toContainEqual({
       entrypoint: "worker/src/handlers/scheduled.ts",
-      forbidden: "shared/lib/browser.ts",
-      kind: "reachable",
+      forbidden: "shared/lib/browser.ts", kind: "reachable",
     });
   });
 

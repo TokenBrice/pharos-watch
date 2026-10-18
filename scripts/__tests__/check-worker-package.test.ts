@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkWorkerPackage } from "../ci/check-worker-package";
+import { checkHeavyReachability, checkWorkerPackage } from "../ci/check-worker-package";
 
 describe("check-worker-package", () => {
   let root: string;
@@ -18,9 +18,9 @@ describe("check-worker-package", () => {
     const directory = args.at(-1)!;
     mkdirSync(join(directory, "chunks"), { recursive: true });
     writeFileSync(join(directory, "chunks", "worker.js"), source);
-    // Maps and binary assets are not retained JavaScript source.
-    writeFileSync(join(directory, "worker.js.map"), "\u20ac");
-    writeFileSync(join(directory, "font.ttf"), "\u20ac");
+    writeFileSync(join(directory, "worker.js.map"), JSON.stringify({
+      version: 3, sources: ["../../src/index.heavy.ts", "../../src/handlers/scheduled.ts"], sourcesContent: ["\u20ac"],
+    }));
     return { status: 0 };
   }
   it("packages both configs into distinct directories", () => {
@@ -63,6 +63,62 @@ describe("check-worker-package", () => {
     expect(run).toHaveBeenCalledTimes(Number(failedIndex) + 1);
     expect(error).toHaveBeenCalledWith(expect.stringContaining("Use equivalent \\uXXXX escapes"));
     expect(error).toHaveBeenCalledWith(expect.stringContaining("docs/worker-infrastructure.md#module-initialization"));
+  });
+
+  it.each([
+    "../../src/api/og.tsx",
+    "../../worker/src/api/telegram-webhook.ts",
+    "../../worker/src/handlers/http/request-dispatch.ts",
+    "../../worker/src/routes/public-routes.ts",
+    "../../src/handlers/http/request-dispatch.ts",
+    "../../src/routes/public-routes.ts",
+    "../../src/handlers/scheduled/public-runners.ts",
+    "../../worker/src/router.ts",
+    "../../assets/fonts/Inter.ttf",
+    "../../node_modules/@resvg/resvg-wasm/index.js",
+    "../../node_modules/yoga-wasm-web/dist/yoga.wasm",
+    "..\\..\\worker\\src\\api\\health.ts",
+  ])("rejects heavy source reachability for %s", (source) => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const run = vi.fn((_command: string, args: string[]) => {
+      const result = emit(args);
+      if (args.includes("wrangler.heavy.toml")) {
+        writeFileSync(join(args.at(-1)!, "worker.js.map"), JSON.stringify({ sources: [source] }));
+      }
+      return result;
+    });
+    expect(checkWorkerPackage({ run })).toEqual({ status: 1 });
+  });
+
+  it.each(["font.ttf", "font.otf", "font.woff", "font.woff2", "render.wasm"])(
+    "rejects heavy binary rendering asset %s", (asset) => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      mkdirSync(join(root, "chunks"), { recursive: true });
+      writeFileSync(join(root, "worker.js.map"), JSON.stringify({ sources: ["src/index.heavy.ts"] }));
+      writeFileSync(join(root, "chunks", asset), "");
+      expect(checkHeavyReachability(root)).toBe(false);
+    },
+  );
+
+  it.each([null, "not JSON", "{}", '{"sources":[]}', '{"sources":[42]}'])(
+    "fails closed when source-map evidence is missing or invalid (%s)", (map) => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      if (map !== null) writeFileSync(join(root, "worker.js.map"), map);
+      expect(checkHeavyReachability(root)).toBe(false);
+    },
+  );
+
+  it("permits HTTP sources and rendering assets only in the public package", () => {
+    const run = vi.fn((_command: string, args: string[]) => {
+      const result = emit(args);
+      if (args.includes("wrangler.toml")) {
+        writeFileSync(join(args.at(-1)!, "worker.js.map"), JSON.stringify({ sources: ["../../src/api/og.tsx"] }));
+        writeFileSync(join(args.at(-1)!, "font.ttf"), "");
+        writeFileSync(join(args.at(-1)!, "render.wasm"), "");
+      }
+      return result;
+    });
+    expect(checkWorkerPackage({ run })).toEqual({ status: 0 });
   });
 
 });

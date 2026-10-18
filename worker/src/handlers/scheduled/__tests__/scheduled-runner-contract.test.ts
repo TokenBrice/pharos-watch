@@ -20,7 +20,8 @@ import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
 } from "../../../lib/public-dataset-snapshot-budget";
-import { SLOT_RUNNER_LOADER_BY_KEY } from "../../scheduled";
+import { PUBLIC_SLOT_RUNNER_LOADERS } from "../public-runners";
+import { HEAVY_SLOT_RUNNER_LOADERS } from "../heavy-runners";
 import { fetchPancakeSwapPools } from "../../../cron/dex-liquidity/fetch-pancakeswap";
 
 function sorted(values: Iterable<string>): string[] {
@@ -84,11 +85,16 @@ describe("scheduled runner contract", () => {
   });
   it("keeps scheduled plans, slot runners, and cron definitions in sync", () => {
     const planKeys = Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[];
-    const runnerKeys = Object.keys(SLOT_RUNNER_LOADER_BY_KEY) as CronScheduleKey[];
-
-    expect(sorted(runnerKeys)).toEqual(sorted(planKeys));
+    const loaders = { ...PUBLIC_SLOT_RUNNER_LOADERS, ...HEAVY_SLOT_RUNNER_LOADERS };
+    expect(sorted(Object.keys(loaders))).toEqual(sorted(planKeys));
+    for (const role of ["public", "heavy"] as const) {
+      const roleLoaders = role === "public" ? PUBLIC_SLOT_RUNNER_LOADERS : HEAVY_SLOT_RUNNER_LOADERS;
+      const ownedKeys = Object.values(SCHEDULED_SLOT_PLANS)
+        .filter((plan) => plan.worker === role).map((plan) => plan.scheduleKey);
+      expect(sorted(Object.keys(roleLoaders))).toEqual(sorted(ownedKeys));
+    }
     for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
-      expect(SLOT_RUNNER_LOADER_BY_KEY[plan.scheduleKey]).toEqual(expect.any(Function));
+      expect(loaders[plan.scheduleKey]).toEqual(expect.any(Function));
     }
 
     const plannedStatusJobs = new Set(

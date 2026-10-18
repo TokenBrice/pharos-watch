@@ -122,19 +122,20 @@ function resolveEntrypoints(
   }
   if (selector.kind === "scheduled-loaders") {
     const source = toRepoPath(root, selector.source);
-    if (!isFile(resolve(root, source))) {
-      return {
-        configurationErrors: [`Configured scheduled loader source is missing: ${source}`],
-        entrypoints: [],
-      };
+    const sources = [source, ...selector.loaderSources.map((path) => toRepoPath(root, path))];
+    const configurationErrors = sources.filter((path) => !isFile(resolve(root, path)))
+      .map((path) => `Configured scheduled loader source is missing: ${path}`);
+    const entrypoints = sources.filter((path) => isFile(resolve(root, path)));
+    for (const loaderSource of selector.loaderSources) {
+      const normalized = toRepoPath(root, loaderSource);
+      if (!isFile(resolve(root, normalized))) continue;
+      const loaders = scheduledLoaderEntrypoints(root, normalized);
+      if (loaders.length === 0) {
+        configurationErrors.push(`Configured scheduled loader source has no dynamic-import entrypoints: ${normalized}`);
+      }
+      entrypoints.push(...loaders);
     }
-    const loaders = scheduledLoaderEntrypoints(root, source);
-    return {
-      configurationErrors: loaders.length === 0
-        ? [`Configured scheduled loader source has no dynamic-import entrypoints: ${source}`]
-        : [],
-      entrypoints: [source, ...loaders],
-    };
+    return { configurationErrors, entrypoints: [...new Set(entrypoints)] };
   }
   const rootPath = resolve(root, selector.root);
   if (!existsSync(rootPath) || !statSync(rootPath).isDirectory()) {

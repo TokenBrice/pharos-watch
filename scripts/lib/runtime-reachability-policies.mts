@@ -1,6 +1,6 @@
 export type EntrypointSelector =
   | { kind: "paths"; paths: readonly string[] }
-  | { kind: "scheduled-loaders"; source: string }
+  | { kind: "scheduled-loaders"; source: string; loaderSources: readonly string[] }
   | { kind: "source-files"; root: string }
   | { kind: "use-client"; root: string };
 
@@ -54,7 +54,10 @@ export const RUNTIME_REACHABILITY_POLICIES = [
   },
   {
     id: "scheduled",
-    entrypoints: { kind: "scheduled-loaders", source: "worker/src/handlers/scheduled.ts" },
+    entrypoints: { kind: "scheduled-loaders", source: "worker/src/handlers/scheduled.ts", loaderSources: [
+      "worker/src/handlers/scheduled/public-runners.ts",
+      "worker/src/handlers/scheduled/heavy-runners.ts",
+    ] },
     forbidden: { kind: "react-dom-shared", root: "shared/lib" },
     failureHeading: "Scheduled Worker runtime reachability failed",
     remediation: "Move browser-only code out of the shared runtime graph used by scheduled handlers.",

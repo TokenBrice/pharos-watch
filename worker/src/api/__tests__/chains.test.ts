@@ -1,7 +1,7 @@
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { mockRegistry } from "../../test-helpers/cron";
+import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
@@ -10,7 +10,7 @@ import {
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 
-vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRuntimeRegistry({
   stablecoins: [
     { id: "usdt-tether", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
     { id: "usdc-circle", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
@@ -18,11 +18,6 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins/aggregate-registry", () => ({
-  CORE_AGGREGATE_ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle", "dai-makerdao"]),
-  CORE_AGGREGATE_ACTIVE_STABLECOINS: [],
-  CORE_AGGREGATE_ACTIVE_META_BY_ID: new Map(),
-}));
 
 import { handleChains } from "../chains";
 

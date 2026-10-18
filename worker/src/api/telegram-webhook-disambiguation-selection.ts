@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTelegramAlertType } from "@shared/types/status";
 import type { ResolvedCoin } from "../lib/telegram/alerts";
 import type {
