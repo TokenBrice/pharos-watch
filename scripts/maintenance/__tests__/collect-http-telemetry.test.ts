@@ -42,8 +42,8 @@ describe("HTTP telemetry summaries", () => {
   });
 
   it("does not invent latency or turn a missing HTTP status into availability", () => {
-    expect(summarizeHttpRoute(bucket, [status(200, 5)], latency(5, null))).toMatchObject({ status: "unavailable", reason: "ttfb-unavailable", edgeTtfbP95Ms: null, estimatedRequests: 5 });
-    expect(summarizeHttpRoute(bucket, [status(0, 5)], latency(5, 10))).toMatchObject({ status: "unavailable", reason: "http-status-unavailable", estimated5xxRate: null });
+    expect(summarizeHttpRoute(bucket, [status(200, 5)], latency(5, null))).toMatchObject({ status: "partial", reason: "ttfb-unavailable", edgeTtfbP95Ms: null, estimatedRequests: 5 });
+    expect(summarizeHttpRoute(bucket, [status(0, 5)], latency(5, 10))).toMatchObject({ status: "partial", reason: "http-status-unavailable", estimated5xxRate: null });
     expect(() => summarizeHttpRoute(bucket, [status(200, -1)], latency(1, 10))).toThrow();
     expect(() => summarizeHttpRoute(bucket, [status(200, 1, 0)], latency(1, 10))).toThrow();
   });
@@ -51,10 +51,10 @@ describe("HTTP telemetry summaries", () => {
 
 describe("HTTP telemetry collection", () => {
   it("queries all discovered paths per normalized route for a true pooled server p95", async () => {
-    const fetchImpl = mockedFetch(envelope(paths(...bucket.paths)), envelope({ s0: [status(200, 9), status(503, 1)], l0: latency(10, 517) }));
+    const fetchImpl = mockedFetch(envelope(paths(...bucket.paths)), envelope({ s0: [status(200, 9), status(503, 1)] }), envelope({ l0: latency(10, 517) }));
     const report = await collectHttpTelemetry({ token: "private-token", zoneId, window, now, fetchImpl });
     expect(report.status).toBe("available");
-    expect(report.source).toMatchObject({ queriesAttempted: 2, discoveredPaths: 2, sampling: "adaptive-estimates", latency: "edge-time-to-first-byte-ms", window });
+    expect(report.source).toMatchObject({ queriesAttempted: 3, discoveredPaths: 2, sampling: "adaptive-estimates", latency: "edge-time-to-first-byte-ms", window });
     expect(report.routes).toHaveLength(1);
     expect(report.routes[0]).toMatchObject({ discoveredPathCount: 2, estimated5xxRate: 0.1, edgeTtfbP95Ms: 517 });
     const [url, init] = fetchImpl.mock.calls[1];
@@ -63,7 +63,10 @@ describe("HTTP telemetry collection", () => {
     const request = JSON.parse(String(init?.body)) as { query: string; variables: Record<string, string> };
     expect(request.variables).toEqual({ zone: zoneId, ...window });
     expect(request.query).toContain(`clientRequestPath_in: ${JSON.stringify(bucket.paths)}`);
-    expect(request.query).toContain("edgeTimeToFirstByteMsP95");
+    expect(request.query).not.toContain("edgeTimeToFirstByteMsP95");
+    const latencyRequest = JSON.parse(String(fetchImpl.mock.calls[2][1]?.body)) as { query: string };
+    expect(latencyRequest.query).toContain("edgeTimeToFirstByteMsP95");
+    expect(latencyRequest.query).toContain(`clientRequestPath_in: ${JSON.stringify(bucket.paths)}`);
     expect(request.query).toContain("edgeResponseStatus");
     expect(request.query).toContain('requestSource: "eyeball"');
     for (const host of HTTP_TELEMETRY_POLICY.hosts) expect(request.query).toContain(host);
@@ -85,10 +88,10 @@ describe("HTTP telemetry collection", () => {
     expect(report).toMatchObject({ status: "unavailable", reason: "no-observed-http-responses", routes: [] });
   });
 
-  it("fails closed on HTTP, GraphQL, wrong-zone and malformed evidence without leaking provider messages", async () => {
+  it("fails closed on HTTP, GraphQL, wrong-zone and malformed evidence without leaking credentials or HTTP bodies", async () => {
     const cases = [
       { fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(new Response("private-provider-message", { status: 403 })), reason: "cloudflare-http-403" },
-      { fetchImpl: mockedFetch({ errors: [{ message: "private-provider-message" }], data: null }), reason: "cloudflare-graphql-errors" },
+      { fetchImpl: mockedFetch({ errors: [{ message: "request secret rejected" }], data: null }), reason: "cloudflare-graphql-errors" },
       { fetchImpl: mockedFetch({ data: { viewer: { zones: [] } } }), reason: "zone-unavailable" },
       { fetchImpl: mockedFetch(envelope({ paths: [{ dimensions: {} }] })), reason: "invalid-path-rows" },
       { fetchImpl: mockedFetch({ unexpected: true }), reason: "zone-unavailable" },
@@ -97,27 +100,58 @@ describe("HTTP telemetry collection", () => {
       const report = await collectHttpTelemetry({ token: "secret", zoneId, window, fetchImpl, now });
       expect(report).toMatchObject({ status: "unavailable", reason, routes: [] });
       expect(JSON.stringify(report)).not.toContain("private-provider-message");
+      expect(JSON.stringify(report)).not.toContain("secret");
+      if (reason === "cloudflare-graphql-errors") expect(report.reasonDetails).toEqual(["request [redacted] rejected"]);
     }
   });
 
-  it("preserves route failures and missing latency as unavailable", async () => {
+  it("preserves route failures as unavailable and missing latency as partial", async () => {
     const fetchImpl = mockedFetch(envelope(paths("/api/stablecoins")), { errors: [{ message: "private-provider-message" }], data: null });
     const report = await collectHttpTelemetry({ token: "secret", zoneId, window, fetchImpl, now });
     expect(report).toMatchObject({ status: "unavailable", reason: "route-evidence-unavailable" });
     expect(report.routes[0]).toMatchObject({ status: "unavailable", reason: "cloudflare-graphql-errors", estimatedRequests: null, estimated5xxRate: null });
-    const missing = await collectHttpTelemetry({ token: "secret", zoneId, window, now, fetchImpl: mockedFetch(envelope(paths("/api/stablecoins")), envelope({ s0: [status(200, 1)], l0: latency(1, null) })) });
-    expect(missing.routes[0]).toMatchObject({ reason: "ttfb-unavailable", edgeTtfbP95Ms: null, estimatedRequests: 1 });
+    const missing = await collectHttpTelemetry({ token: "secret", zoneId, window, now, fetchImpl: mockedFetch(envelope(paths("/api/stablecoins")), envelope({ s0: [status(200, 1)] }), envelope({ l0: latency(1, null) })) });
+    expect(missing).toMatchObject({ status: "partial", reason: "route-evidence-partial" });
+    expect(missing.routes[0]).toMatchObject({ status: "partial", reason: "ttfb-unavailable", edgeTtfbP95Ms: null, estimatedRequests: 1 });
   });
 
   it("bounds query alias cardinality and performs batches serially", async () => {
     const rawPaths = ["/api/stablecoins", "/api/yield-rankings", "/api/health", "/api/status", "/api/stablecoin/usdt-tether", "/api/stablecoin-summary/usdt-tether", "/api/stablecoin-reserves/usdt-tether", "/api/og/page/home", "/api/snapshots/2026-10-18.json"];
-    const results = Object.fromEntries(Array.from({ length: HTTP_TELEMETRY_POLICY.routesPerQuery }, (_, i) => [[`s${i}`, [status(200, 1)]], [`l${i}`, latency(1, 5)]]).flat());
-    const fetchImpl = mockedFetch(envelope(paths(...rawPaths)), envelope(results), envelope({ s0: [status(200, 1)], l0: latency(1, 5) }));
+    const statuses = Object.fromEntries(Array.from({ length: HTTP_TELEMETRY_POLICY.routesPerQuery }, (_, i) => [`s${i}`, [status(200, 1)]]));
+    const latencies = Object.fromEntries(Array.from({ length: HTTP_TELEMETRY_POLICY.routesPerQuery }, (_, i) => [`l${i}`, latency(1, 5)]));
+    const fetchImpl = mockedFetch(envelope(paths(...rawPaths)), envelope(statuses), envelope(latencies), envelope({ s0: [status(200, 1)] }), envelope({ l0: latency(1, 5) }));
     const report = await collectHttpTelemetry({ token: "secret", zoneId, window, fetchImpl, now });
     expect(report.status).toBe("available");
     expect(report.routes).toHaveLength(9);
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
     expect(String(fetchImpl.mock.calls[1][1]?.body)).not.toContain("s8:");
+  });
+
+  it("resolves the zone from its hostname when the optional zone ID is absent", async () => {
+    const fetchImpl = mockedFetch({ success: true, result: [{ id: zoneId, name: "pharos.watch" }] }, envelope(paths("/api/stablecoins")), envelope({ s0: [status(200, 5)] }), envelope({ l0: latency(5, 12) }));
+    const report = await collectHttpTelemetry({ token: "secret", window, fetchImpl, now });
+    expect(report.status).toBe("available");
+    expect(report.source).toMatchObject({ zoneId, zoneResolution: "hostname-lookup", queriesAttempted: 3 });
+    expect(fetchImpl.mock.calls[0]).toMatchObject(["https://api.cloudflare.com/client/v4/zones?name=pharos.watch&per_page=2", { redirect: "error", headers: { Authorization: "Bearer secret" } }]);
+  });
+
+  it("does not turn unavailable or ambiguous zone lookup into zero traffic", async () => {
+    for (const body of [{ success: true, result: [] }, { success: false, result: null }, { success: true, result: [{ id: zoneId, name: "another.example" }] }]) {
+      const fetchImpl = mockedFetch(body);
+      const report = await collectHttpTelemetry({ token: "secret", window, fetchImpl, now });
+      expect(report).toMatchObject({ status: "unavailable", reason: "zone-lookup-unavailable", routes: [] });
+      expect(report.source.zoneId).toBeNull();
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("retains status counts when the real zone entitlement denies TTFB quantiles", async () => {
+    const message = `zone '${zoneId}' does not have access to the field 'edgetimetofirstbytemsp95' from the path`;
+    const fetchImpl = mockedFetch(envelope(paths("/api/stablecoins")), envelope({ s0: [status(200, 9), status(503, 1)] }), { data: null, errors: [{ message }] });
+    const report = await collectHttpTelemetry({ token: "secret", zoneId, window, fetchImpl, now });
+    expect(report).toMatchObject({ status: "partial", reason: "route-evidence-partial", reasonDetails: [message] });
+    expect(report.routes[0]).toMatchObject({ status: "partial", reason: "ttfb-field-not-entitled", estimatedRequests: 10, estimated5xxResponses: 1, estimated5xxRate: 0.1, edgeTtfbP95Ms: null, latencyEstimatedRequests: null });
+    expect(report.routes[0].statusCounts).toHaveLength(2);
   });
 });
 
