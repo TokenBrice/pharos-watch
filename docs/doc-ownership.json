@@ -745,6 +745,12 @@
         "scripts/maintenance/__tests__/fixtures/worker-memory/**",
         "scripts/maintenance/cron-delivery.mjs",
         ".github/workflows/worker-memory-monitor.yml",
+        "scripts/maintenance/night-watch-worker.mjs",
+        "scripts/maintenance/watch-worker-cron.mjs",
+        "scripts/maintenance/worker-evidence-report.mjs",
+        "scripts/maintenance/worker-incident-bundle.mjs",
+        "scripts/maintenance/worker-status-profile.mjs",
+        "docs/process/lane-freshness-matrix.md",
         "docs/runbooks/**",
         "docs/runbooks/blacklist-sync.md",
         "docs/runbooks/dated-source-age-caps.md",
@@ -762,6 +768,8 @@
         {"path": "docs/status-dashboard.md", "anchor": "resource-pressure-evidence"},
         {"path": "docs/deployment-process.md", "anchor": "github-deploy-inputs"},
         {"path": "docs/scripts.md", "anchor": "operator-cli-contract"},
+        "docs/process/lane-freshness-matrix.md",
+        {"path": "docs/scripts.md", "anchor": "worker-incident-evidence-and-status-profile"},
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
       "background": [
@@ -776,8 +784,12 @@
         { "path": "docs/runbooks/blacklist-sync.md", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
         { "path": "docs/runbooks/review-renewal.md", "runbook": { "label": "Scoped review renewal", "kind": "procedure" } }
       ],
-      "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts"],
+      "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts scripts/maintenance/__tests__/worker-evidence-report.test.ts scripts/__tests__/night-watch-worker.test.ts scripts/__tests__/watch-worker-cron.test.ts"],
       "testOwnership": [
+        {
+          "sources": ["scripts/maintenance/worker-*.mjs", "scripts/maintenance/watch-worker-cron.mjs", "scripts/maintenance/night-watch-worker.mjs", "docs/process/lane-freshness-matrix.md"],
+          "tests": ["scripts/maintenance/__tests__/worker-evidence-report.test.ts", "scripts/__tests__/night-watch-worker.test.ts", "scripts/__tests__/watch-worker-cron.test.ts"]
+        },
         {
           "sources": ["scripts/maintenance/monitor-worker-memory.ts", "scripts/maintenance/__tests__/fixtures/worker-memory/**", ".github/workflows/worker-memory-monitor.yml"],
           "tests": ["scripts/maintenance/__tests__/monitor-worker-memory.test.ts"]

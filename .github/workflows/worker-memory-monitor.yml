@@ -3,6 +3,7 @@ name: Worker Memory Monitor
 on:
   schedule:
     - cron: "43 * * * *"
+    - cron: "17 1 * * *" # Daily bounded incident evidence, after the UTC day closes.
   workflow_dispatch:
     inputs:
       from:
@@ -17,6 +18,7 @@ on:
 permissions:
   contents: read
 
+  actions: read
 concurrency:
   group: worker-memory-monitor
   cancel-in-progress: false
@@ -118,3 +120,66 @@ jobs:
             process.exitCode = 1;
           }
           NODE
+
+  incidents:
+    name: Capture 21-day Worker incident evidence
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '17 1 * * *') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-generated: "false"
+          bootstrap-history: "false"
+          install-playwright-chromium: "false"
+          install-playwright-firefox: "false"
+      - name: Restore latest rolling evidence archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/worker-incidents-previous"
+          artifact_id="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')"
+          if [[ -n "$artifact_id" ]]; then
+            gh api "repos/$GH_REPO/actions/artifacts/$artifact_id/zip" > "$RUNNER_TEMP/worker-incidents-previous.zip"
+            unzip -q "$RUNNER_TEMP/worker-incidents-previous.zip" -d "$RUNNER_TEMP/worker-incidents-previous"
+          fi
+      - name: Capture deployment delivery child and publication evidence
+        if: ${{ always() && !cancelled() }}
+        id: incidents
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN }}
+        run: >-
+          node --import tsx scripts/maintenance/watch-worker-cron.mjs
+          --incident-bundle --out-dir "${{ runner.temp }}/worker-incidents"
+          --archive-dir "${{ runner.temp }}/worker-incidents-previous"
+      - name: Preserve incident evidence before collection verdict
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: worker-incidents-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/worker-incidents/bundle.json
+            ${{ runner.temp }}/worker-incidents/report.md
+          if-no-files-found: error
+          retention-days: 21
+      - name: Append incident completeness summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -f "$RUNNER_TEMP/worker-incidents/report.md" ]]; then
+            cat "$RUNNER_TEMP/worker-incidents/report.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Incident collection failed
+        if: ${{ always() && steps.incidents.outcome != 'success' }}
+        run: |
+          echo "::error::Worker incident collection failed; retained completeness labels distinguish unavailable from empty evidence."
+          exit 1
