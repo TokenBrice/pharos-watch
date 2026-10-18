@@ -50,6 +50,14 @@ describe("priority operator CLI parsers", () => {
     expect(() => parseD1InsightsArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
   });
 
+  it.each(["--database", "--config", "--limit", "--period", "--sort-by", "--output"])(
+    "rejects flag-like values for D1 insights option %s", (flag) => {
+      for (const argv of [[flag, "--dry-run"], [`${flag}=--dry-run`]]) {
+        expect(() => parseD1InsightsArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+      }
+    },
+  );
+
   it("requires exactly one freeze target and rejects option-like typos", () => {
     expect(parseFreezeStablecoinArgs(["--dry-run", "usdc-circle"])).toEqual({
       coinId: "usdc-circle",

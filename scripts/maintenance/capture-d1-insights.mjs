@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
+import { CliUsageError, parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
 
 const DEFAULT_DATABASE = "stablecoin-db";
 const DEFAULT_CONFIG = "worker/wrangler.toml";
@@ -36,7 +36,7 @@ Options:
 }
 
 export function parseD1InsightsArgs(argv) {
-  const { values } = parseStrictCliArgs(argv, {
+  const { values, tokens } = parseStrictCliArgs(argv, {
     options: {
       database: { type: "string", default: DEFAULT_DATABASE },
       config: { type: "string", default: DEFAULT_CONFIG },
@@ -47,6 +47,11 @@ export function parseD1InsightsArgs(argv) {
       "dry-run": { type: "boolean" },
     },
   });
+  for (const token of tokens) {
+    if (token.kind === "option" && typeof token.value === "string" && token.value.startsWith("--")) {
+      throw new CliUsageError(`${token.rawName} requires a value`);
+    }
+  }
   if (values.help) {
     printHelp();
     process.exit(0);
