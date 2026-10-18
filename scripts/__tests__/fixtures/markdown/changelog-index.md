@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-10-12 to 2026-10-18
+
+Safety Score reaches 10.22 with Morpho lender books as Backing, and the site adopts one product grammar.
+
+- **Safety Score 10.22**: Releases 10.18 to 10.22 ship. 10.18 activates Redemption 4.5 and Liquidity 6.95, 10.19 adds Morpho lender collateral books to Backing, and 10.22 admits mechanism evidence at exact UTC pins.
+- **One product grammar**: Type, headers and chrome unify; semantic state colours and one chart theme replace hand-coded scales. The home becomes an instrument cluster, coin pages lead with answer, action and evidence, and /learn/ retires.
+- **Scene-based maps**: /chains/ becomes Harbor, a countable isometric scene, and the dependency hairball gives way to a layered Watershed view, both built on a scene kit extracted from the Cemetery.
+- **Public status page**: Status is rebuilt around components and incidents, cron causes name the jobs behind them, and healthy work no longer reports as failure. The ops admin now answers whether anyone needs to act.
+- **Share cards and Safety Map**: Share cards render from live data instead of stale screenshots, the Safety Map poster is redrawn for feed-scale legibility, and the Safety Scores page shows supply-weighted grades.
+- **Evidence corrections**: 64 batch listings are refined to primary sources, VGBP is re-admitted, DOLA's reserve, backstop and freeze evidence is corrected after the Inverse review, and a cUSD-cap failure scenario is approved.
+- **RPC and feed repairs**: Dwellir becomes primary for Ethereum state, Arbitrum logs, Polygon, Tempo and Plasma, Uniswap v4 discovery is restored, and USDai, Frankencoin, SBC and BRLV feeds are repaired.
+- **Worker memory and tests**: The V9 publication Workflow retires, publication admits once under the Worker heap, and memory kills are observed. About 4,500 low-value test cases and the pre-push receipt mandate are removed.
+
 ## 2026-10-05 to 2026-10-11
 
 Safety Score advances from 10.04 to 10.16 and GENIUS Act coverage reaches all 396 active coins.
