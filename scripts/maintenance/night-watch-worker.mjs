@@ -7,6 +7,7 @@ import { register as registerCommonJs } from "tsx/cjs/api";
 import { register as registerEsm } from "tsx/esm/api";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
 import { getCronQualityReasons } from "../../shared/lib/cron-quality-reasons.ts";
+import { CliUsageError, parseStrictCliArgs, parseCliInteger, runCliEntrypoint } from "../lib/cli-args.mjs";
 import { summarizeWorkerEvidence, renderWorkerEvidenceTable } from "./worker-evidence-report.mjs";
 import {
   collectWorkerCronSnapshot,
@@ -32,6 +33,22 @@ const DEFAULT_INTERVAL_MINUTES = 15;
 const DEFAULT_METADATA_BYTES = WORKER_WATCH_DEFAULTS.metadataBytes;
 const DEFAULT_SAMPLE_LIMIT = 120;
 const CYCLE_MS = 4 * 60 * 60 * 1000;
+
+const NIGHT_WATCH_OPTION_SCHEMA = [
+  ["cycles", "cycles", "integer"], ["start", "start", "iso"], ["end", "end", "iso"],
+  ["interval-minutes", "intervalMinutes", "integer"],
+  ["include-status", "includeStatus", "boolean"],
+  ["include-status-history", "includeStatusHistory", "boolean"],
+  ["include-d1", "includeD1", "boolean"], ["include-worker-tail", "includeWorkerTail", "boolean"],
+  ["database", "database", "string"], ["api-url", "apiUrl", "string"],
+  ["admin-api-url", "adminApiUrl", "string"], ["metadata-bytes", "metadataBytes", "integer"],
+  ["sample-limit", "sampleLimit", "integer"], ["output", "outputPath", "string"],
+  ["evidence-json", "evidenceJsonPath", "string"], ["checkpoint-jsonl", "checkpointJsonlPath", "string"],
+  ["no-resume", "resume", "false"], ["fixture", "fixturePath", "string"],
+  ["dry-run", "dryRun", "boolean"], ["local", "remote", "false"],
+  ["cf-access-client-id", "cfAccessClientId", "string"],
+  ["cf-access-client-secret", "cfAccessClientSecret", "string"], ["json", "json", "boolean"],
+];
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT_DIR = resolve(dirname(__filename), "../..");
@@ -70,15 +87,10 @@ function usage() {
   ].join("\n");
 }
 
-function parseInteger(value, label) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) throw new Error(`${label} must be a positive integer`);
-  return parsed;
-}
 
 function parseIso(value, label) {
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) throw new Error(`${label} must be an ISO timestamp`);
+  if (!Number.isFinite(date.getTime())) throw new CliUsageError(`${label} must be an ISO timestamp`);
   return date.toISOString();
 }
 
@@ -109,98 +121,28 @@ export function parseArgs(argv, now = new Date()) {
     cfAccessClientSecret: process.env.CF_ACCESS_CLIENT_SECRET ?? "",
   };
 
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    const next = () => {
-      const value = argv[++index];
-      if (!value) throw new Error(`${arg} requires a value`);
-      return value;
-    };
-
-    switch (arg) {
-      case "--cycles":
-        args.cycles = parseInteger(next(), "--cycles");
-        break;
-      case "--start":
-        args.start = parseIso(next(), "--start");
-        break;
-      case "--end":
-        args.end = parseIso(next(), "--end");
-        break;
-      case "--interval-minutes":
-        args.intervalMinutes = parseInteger(next(), "--interval-minutes");
-        break;
-      case "--include-status":
-        args.includeStatus = true;
-        break;
-      case "--include-status-history":
-        args.includeStatusHistory = true;
-        break;
-      case "--include-d1":
-        args.includeD1 = true;
-        break;
-      case "--include-worker-tail":
-        args.includeWorkerTail = true;
-        break;
-      case "--database":
-        args.database = next();
-        break;
-      case "--api-url":
-        args.apiUrl = next();
-        break;
-      case "--admin-api-url":
-        args.adminApiUrl = next();
-        break;
-      case "--metadata-bytes":
-        args.metadataBytes = parseInteger(next(), "--metadata-bytes");
-        break;
-      case "--sample-limit":
-        args.sampleLimit = parseInteger(next(), "--sample-limit");
-        break;
-      case "--output":
-        args.outputPath = next();
-        break;
-      case "--evidence-json":
-        args.evidenceJsonPath = next();
-        break;
-      case "--checkpoint-jsonl":
-        args.checkpointJsonlPath = next();
-        break;
-      case "--no-resume":
-        args.resume = false;
-        break;
-      case "--fixture":
-        args.fixturePath = next();
-        break;
-      case "--dry-run":
-        args.dryRun = true;
-        break;
-      case "--local":
-        args.remote = false;
-        break;
-      case "--cf-access-client-id":
-        args.cfAccessClientId = next();
-        break;
-      case "--cf-access-client-secret":
-        args.cfAccessClientSecret = next();
-        break;
-      case "--json":
-        args.json = true;
-        break;
-      case "--help":
-        console.log(usage());
-        process.exit(0);
-        break;
-      default:
-        throw new Error(`Unknown option: ${arg}`);
-    }
+  const { values } = parseStrictCliArgs(argv, {
+    options: Object.fromEntries(NIGHT_WATCH_OPTION_SCHEMA.map(([flag, , kind]) => [
+      flag, { type: kind === "boolean" || kind === "false" ? "boolean" : "string" },
+    ])),
+  });
+  if (values.help) {
+    console.log(usage());
+    process.exit(0);
+  }
+  for (const [flag, key, kind] of NIGHT_WATCH_OPTION_SCHEMA) {
+    const value = values[flag];
+    if (value === undefined) continue;
+    args[key] = kind === "false" ? false
+      : kind === "integer" ? parseCliInteger(value, { name: `--${flag}`, min: 1 })
+      : kind === "iso" ? parseIso(value, `--${flag}`) : value;
   }
 
-  if (args.cycles !== 1 && args.cycles !== 2) throw new Error("--cycles must be 1 or 2");
+  if (args.cycles !== 1 && args.cycles !== 2) throw new CliUsageError("--cycles must be 1 or 2");
   if (args.includeStatusHistory && !args.includeStatus) args.includeStatus = true;
   const startMs = new Date(args.start).getTime();
   const end = args.end ?? new Date(startMs + args.cycles * CYCLE_MS).toISOString();
-  if (new Date(end).getTime() <= startMs) throw new Error("--end must be after --start");
+  if (new Date(end).getTime() <= startMs) throw new CliUsageError("--end must be after --start");
   return { ...args, end };
 }
 
@@ -935,8 +877,5 @@ export async function runCli(argv, stdout = process.stdout) {
 }
 
 if (process.argv[1] === __filename) {
-  runCli(process.argv.slice(2)).catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
+  void runCliEntrypoint(() => runCli(process.argv.slice(2)), { usage: usage() });
 }

@@ -9,8 +9,8 @@ import { buildChainRpcs } from "../../../lib/chain-registry";
 import {
   getStableObservationBlockNumber,
   observeExecutableRedemptionRoute,
-  type ExecutableRedemptionReadClient,
 } from "../executable-redemption-observers";
+import type { ExecutableRedemptionReadClient } from "../executable-redemption-read-client";
 import { EIP1967_IMPLEMENTATION_SLOT } from "../onchain-identity";
 import { EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/redemption-backstop-capacity";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";

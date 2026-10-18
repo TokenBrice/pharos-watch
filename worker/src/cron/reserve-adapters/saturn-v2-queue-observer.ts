@@ -2,7 +2,7 @@ import { parseAbi } from "viem/utils";
 import type { EvmRpcOptions } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
 import { abiObservation } from "./evm-observation-plan";
-import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor, type ExecutableRedemptionReadClient, type ExecutableRedemptionObservation } from "./executable-redemption-observers";
+import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor, type ExecutableRedemptionReadClient, type ExecutableRedemptionObservation } from "./executable-redemption-read-client";
 
 const SHARE = "0xd166337499e176bbc38a1fbd113ab144e5bd2df7";
 const QUEUE = "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e";

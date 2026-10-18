@@ -40,20 +40,25 @@ describe("Mint Authority review audit CLI", () => {
     expect(parseArgs(["--json", "--report", "audit.json", "--generated-at", generatedAt, "--live", "--live-limit", "2"]))
       .toEqual({ generatedAt, format: "json", reportPath: "audit.json", live: true, liveLimit: 2 });
     expect(parseArgs(["--json", "--markdown"]).format).toBe("markdown");
+    expect(parseArgs(["--live-limit=2", "--json", "--generated-at=" + generatedAt]))
+      .toMatchObject({ liveLimit: 2, generatedAt, format: "json" });
   });
 
   it.each([
-    { argv: ["--format", "json"], error: "Unknown argument: --format" },
-    { argv: ["--out", "audit.json"], error: "Unknown argument: --out" },
-    { argv: ["--unknown"], error: "Unknown argument: --unknown" },
-    { argv: ["--report"], error: "--report requires a path" },
-    { argv: ["--generated-at"], error: "--generated-at requires an ISO timestamp" },
-    { argv: ["--live-limit"], error: "--live-limit must be a positive integer" },
-    { argv: ["--live-limit", "0"], error: "--live-limit must be a positive integer" },
-    { argv: ["--live-limit", "1.5"], error: "--live-limit must be a positive integer" },
-    { argv: ["--live-limit", "invalid"], error: "--live-limit must be a positive integer" },
-  ])("rejects invalid usage: $argv", ({ argv, error }) => {
-    expect(() => parseArgs(argv)).toThrow(error);
+    { argv: ["--format", "json"] },
+    { argv: ["--out", "audit.json"] },
+    { argv: ["--unknown"] },
+    { argv: ["--report"] },
+    { argv: ["--generated-at"] },
+    { argv: ["--live-limit"] },
+    { argv: ["--live-limit", "0"] },
+    { argv: ["--live-limit", "1.5"] },
+    { argv: ["--live-limit", "invalid"] },
+    { argv: ["--report=one", "--report=two"] },
+    { argv: ["--json", "--json"] },
+    { argv: ["extra"] },
+  ])("rejects invalid usage: $argv", ({ argv }) => {
+    expect(() => parseArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
   });
 
   it.each(["--help", "-h"])("documents the shared flags for %s", (flag) => {

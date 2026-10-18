@@ -8,6 +8,7 @@ import type {
 import {
   buildDdrrCalibrationReport,
   isTrustedDdrrApiKeyDestination,
+  parseArgs,
   runCli,
 } from "../maintenance/generate-ddrr-calibration-report";
 
@@ -156,6 +157,22 @@ function response(rows: DdrrRow[]): DdrrResponse {
 }
 
 describe("generate-ddrr-calibration-report", () => {
+  it("retains calibration defaults, equals-form options and ordered format selection", () => {
+    expect(parseArgs([])).toMatchObject({
+      prod: false, inputPath: null, apiBase: null, url: null, format: "markdown",
+      reportPath: "agents/ddrr-calibration-report.md", stdout: false, generatedAt: null,
+    });
+    expect(parseArgs(["--api-base=https://example.test", "--limit=3", "--json", "--markdown", "--stdout"]))
+      .toMatchObject({ apiBase: "https://example.test", sampleLimit: 3, format: "markdown", stdout: true });
+  });
+
+  it.each([
+    ["--unknown"], ["--input"], ["--limit=0"], ["--limit=2x"], ["--prod", "--prod"],
+    ["--prod", "--url=https://example.test"], ["extra"],
+  ])("rejects invalid calibration usage %j", (...argv) => {
+    expect(() => parseArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
   it("requires both row and independent-coin support before recommending a retune", () => {
     for (const [rows, coins, recommendation] of [[49, 20, "hold"], [50, 19, "hold"], [50, 20, "candidate"]] as const) {
       const report = buildDdrrCalibrationReport(response(Array.from({ length: rows }, (_, i) =>

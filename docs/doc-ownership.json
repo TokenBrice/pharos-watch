@@ -737,6 +737,7 @@
       "sources": [
         "worker/src/lib/status/**",
         "worker/src/lib/status-evaluation.ts",
+        "worker/src/lib/status-reliability-shared.ts",
         "worker/src/lib/public-health-assessment.ts",
         "src/lib/status/**",
         "src/lib/status-dashboard-model.ts",

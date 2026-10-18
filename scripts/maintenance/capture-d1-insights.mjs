@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
 
 const DEFAULT_DATABASE = "stablecoin-db";
 const DEFAULT_CONFIG = "worker/wrangler.toml";
@@ -34,63 +35,31 @@ Options:
 `);
 }
 
-function parseArgs(argv) {
-  const options = {
-    database: DEFAULT_DATABASE,
-    config: DEFAULT_CONFIG,
-    limit: DEFAULT_LIMIT,
-    periods: [],
-    sortBy: [],
-    output: null,
-    dryRun: false,
+export function parseD1InsightsArgs(argv) {
+  const { values } = parseStrictCliArgs(argv, {
+    options: {
+      database: { type: "string", default: DEFAULT_DATABASE },
+      config: { type: "string", default: DEFAULT_CONFIG },
+      limit: { type: "string", default: String(DEFAULT_LIMIT) },
+      period: { type: "string", multiple: true },
+      "sort-by": { type: "string", multiple: true },
+      output: { type: "string" },
+      "dry-run": { type: "boolean" },
+    },
+  });
+  if (values.help) {
+    printHelp();
+    process.exit(0);
+  }
+  return {
+    database: values.database,
+    config: values.config,
+    limit: parseCliInteger(values.limit, { name: "--limit", min: 1 }),
+    periods: values.period ?? [],
+    sortBy: values["sort-by"] ?? [],
+    output: values.output ?? null,
+    dryRun: values["dry-run"] === true,
   };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--help" || arg === "-h") {
-      printHelp();
-      process.exit(0);
-    }
-    if (arg === "--dry-run") {
-      options.dryRun = true;
-      continue;
-    }
-    if (arg === "--database") {
-      options.database = requireValue(argv, ++i, arg);
-      continue;
-    }
-    if (arg === "--config") {
-      options.config = requireValue(argv, ++i, arg);
-      continue;
-    }
-    if (arg === "--limit") {
-      const limit = Number(requireValue(argv, ++i, arg));
-      if (!Number.isInteger(limit) || limit <= 0) throw new Error("--limit must be a positive integer");
-      options.limit = limit;
-      continue;
-    }
-    if (arg === "--period") {
-      options.periods.push(requireValue(argv, ++i, arg));
-      continue;
-    }
-    if (arg === "--sort-by") {
-      options.sortBy.push(requireValue(argv, ++i, arg));
-      continue;
-    }
-    if (arg === "--output") {
-      options.output = requireValue(argv, ++i, arg);
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-  return options;
-}
-
-function requireValue(argv, index, flag) {
-  const value = argv[index];
-  if (!value || value.startsWith("--")) {
-    throw new Error(`${flag} requires a value`);
-  }
-  return value;
 }
 
 function buildCaptureSpecs(options) {
@@ -256,7 +225,7 @@ function annotateRows(payload, commentIndex) {
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseD1InsightsArgs(process.argv.slice(2));
   const captures = buildCaptureSpecs(options);
   const generatedAt = new Date().toISOString();
   const outputPath = options.output
@@ -308,7 +277,4 @@ async function main() {
   console.log(`[d1-insights] wrote ${outputPath}`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+runDirectCli(import.meta.url, main);

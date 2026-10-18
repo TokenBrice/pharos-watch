@@ -15,17 +15,10 @@ import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import type { StatusLevel } from "../status-reliability-shared";
+import { maxStatus, SEVERITY, type StatusLevel } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import type { CronFindingJobs } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
-import { maxStatus } from "./evaluation-state";
-
-const STATUS_SEVERITY: Record<StatusLevel, number> = {
-  healthy: 0,
-  degraded: 1,
-  stale: 2,
-};
 
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed
@@ -97,7 +90,7 @@ function evaluateStatusRuleSet<Input>(
   for (const rule of rules) {
     const result = rule(input);
     if (result == null) continue;
-    if (result.status != null && STATUS_SEVERITY[result.status] > STATUS_SEVERITY[status]) {
+    if (result.status != null && SEVERITY[result.status] > SEVERITY[status]) {
       status = result.status;
     }
     if (result.causes != null) causes.push(...result.causes);

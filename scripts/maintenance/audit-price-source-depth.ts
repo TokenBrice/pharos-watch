@@ -3,11 +3,10 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { StablecoinMeta } from "@shared/types";
-import { toErrorMessage } from "@shared/lib/error-utils";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import {
   circulatingForStablecoinRow,
   extractStablecoinRows,
@@ -19,7 +18,6 @@ import {
   numberValue,
   PROD_ORIGIN,
   PROD_STABLECOINS_URL,
-  parseCoverageAuditCliArgs,
   readJsonFile,
   runCoverageAuditCli,
   uniqueStrings,
@@ -756,37 +754,45 @@ export function renderPriceSourceDepthAuditMarkdown(audit: PriceSourceDepthAudit
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  return parseCoverageAuditCliArgs(argv, {
-    createOptions: (): CliOptions => ({
-      source: null,
-      inputDir: null,
-      pegSummaryPath: null,
-      stablecoinsPath: null,
-      activeStablecoinsPath: null,
-      format: "markdown",
-      reportPath: null,
-      writeAgentsBaseline: false,
-      generatedAt: null,
-    }),
-    includeGeneratedAt: true,
-    generatedAtMissingMessage: "--generated-at requires an ISO timestamp or 'now'",
-    options: [
-      { flag: "--prod", kind: "boolean", apply: (options) => { options.source = "prod"; } },
-      { flag: "--input", kind: "value", missingMessage: "--input requires a directory path", apply: (options, value) => { options.source = "input"; options.inputDir = value!; } },
-      { flag: "--peg-summary", kind: "value", missingMessage: "--peg-summary requires a file path", apply: (options, value) => { options.source = "input"; options.pegSummaryPath = value!; } },
-      { flag: "--stablecoins", kind: "value", missingMessage: "--stablecoins requires a file path", apply: (options, value) => { options.source = "input"; options.stablecoinsPath = value!; } },
-      { flag: "--active-stablecoins", kind: "value", missingMessage: "--active-stablecoins requires a file path", apply: (options, value) => { options.activeStablecoinsPath = value!; } },
-      { flag: "--write-agents-baseline", kind: "boolean", apply: (options) => { options.writeAgentsBaseline = true; options.format = "json"; } },
-    ],
-    validate: (options) => {
-      if (!options.source) {
-        throw new Error("Choose --prod or --input <dir> / --peg-summary <file> --stablecoins <file>.");
-      }
-      if (options.source === "input" && !options.inputDir && (!options.pegSummaryPath || !options.stablecoinsPath)) {
-        throw new Error("Input mode requires --input <dir> or both --peg-summary and --stablecoins.");
-      }
+  const { values, tokens } = parseStrictCliArgs(argv, {
+    options: {
+      prod: { type: "boolean" }, input: { type: "string" },
+      "peg-summary": { type: "string" }, stablecoins: { type: "string" },
+      "active-stablecoins": { type: "string" }, "write-agents-baseline": { type: "boolean" },
+      json: { type: "boolean" }, markdown: { type: "boolean" },
+      report: { type: "string" }, "generated-at": { type: "string" },
     },
   });
+  if (values.help) {
+    process.stdout.write("Usage: npm run audit:price-source-depth -- [--prod | --input <dir> | --peg-summary <file> --stablecoins <file>] [--active-stablecoins <file>] [--json | --markdown] [--report <path>] [--generated-at <iso-or-now>] [--write-agents-baseline]\n");
+    process.exit(0);
+  }
+  const options: CliOptions = {
+    source: null,
+    inputDir: typeof values.input === "string" ? values.input : null,
+    pegSummaryPath: typeof values["peg-summary"] === "string" ? values["peg-summary"] : null,
+    stablecoinsPath: typeof values.stablecoins === "string" ? values.stablecoins : null,
+    activeStablecoinsPath: typeof values["active-stablecoins"] === "string" ? values["active-stablecoins"] : null,
+    format: "markdown",
+    reportPath: typeof values.report === "string" ? values.report : null,
+    writeAgentsBaseline: values["write-agents-baseline"] === true,
+    generatedAt: typeof values["generated-at"] === "string" ? values["generated-at"] : null,
+  };
+  // Retain the existing ordered source/format selection after strict tokenization.
+  for (const token of tokens) {
+    if (token.kind !== "option") continue;
+    if (token.name === "prod") options.source = "prod";
+    if (["input", "peg-summary", "stablecoins"].includes(token.name)) options.source = "input";
+    if (token.name === "json" || token.name === "write-agents-baseline") options.format = "json";
+    if (token.name === "markdown") options.format = "markdown";
+  }
+  if (!options.source) {
+    throw new CliUsageError("Choose --prod or --input <dir> / --peg-summary <file> --stablecoins <file>.");
+  }
+  if (options.source === "input" && !options.inputDir && (!options.pegSummaryPath || !options.stablecoinsPath)) {
+    throw new CliUsageError("Input mode requires --input <dir> or both --peg-summary and --stablecoins.");
+  }
+  return options;
 }
 
 function generatedAtFromPayload(payload: unknown): string | null {
@@ -861,12 +867,6 @@ export async function runCli(
   });
 }
 
-runDirectCli(import.meta.url, () => runCli().then(
-  (exitCode) => {
-    process.exitCode = exitCode;
-  },
-  (error: unknown) => {
-    console.error(toErrorMessage(error));
-    process.exitCode = 1;
-  },
-));
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

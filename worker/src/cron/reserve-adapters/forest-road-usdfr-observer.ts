@@ -2,7 +2,7 @@ import { keccak256, parseAbi, stringToHex } from "viem/utils";
 import { REDEMPTION_EXIT_CURVE_REQUESTS_USD } from "@shared/lib/exit-route-capacity-point";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import { abiObservation, type AnyEvmObservationField } from "./evm-observation-plan";
-import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor } from "./executable-redemption-observers";
+import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor } from "./executable-redemption-read-client";
 
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const CONTROLLER = "0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c";

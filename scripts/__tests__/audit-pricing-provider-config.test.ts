@@ -4,10 +4,23 @@ import {
   auditBinance,
   auditBitstamp,
   auditCoinbase,
+  parsePricingProviderAuditArgs,
   runPricingProviderAudit,
 } from "../maintenance/audit-pricing-provider-config";
 
 describe("audit-pricing-provider-config", () => {
+  it("parses provider audit options before any live reads", () => {
+    expect(parsePricingProviderAuditArgs([])["live-source-shapes"]).toBeUndefined();
+    expect(parsePricingProviderAuditArgs(["--live-source-shapes"])["live-source-shapes"]).toBe(true);
+    expect(parsePricingProviderAuditArgs(["-h"]).help).toBe(true);
+  });
+
+  it.each([["--unknown"], ["extra"], ["--live-source-shapes", "--live-source-shapes"]])(
+    "rejects invalid provider audit usage %j", (...argv) => {
+      expect(() => parsePricingProviderAuditArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+    },
+  );
+
   it("treats Binance regional blocking as a skipped successful live audit", async () => {
     const fetchImpl = vi.fn(async () => new Response("blocked", { status: 451 }));
 

@@ -8,7 +8,7 @@ import type { EvmRpcOptions } from "../evm-rpc";
 import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import type { ExitExecutionModelReview } from "@shared/types/exit-route";
-import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-observers";
+import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-read-client";
 import type { AdapterContext } from "../../cron/reserve-adapters/types";
 
 import type { ConsumedReserveInput } from "@shared/types/reserve-input";
