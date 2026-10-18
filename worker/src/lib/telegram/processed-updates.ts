@@ -594,6 +594,37 @@ export async function markTelegramProcessedUpdateEffectStarted(
   }
 }
 
+/**
+ * Bounded, machine-readable vocabulary for a failed terminal marker. The class
+ * travels on the thrown error (never SQL text, bound parameters or update/claim
+ * identifiers) and is reported on the Telegram structured log path.
+ */
+export const TELEGRAM_TERMINAL_MARKER_FAILURE_CLASSES = [
+  "fence_rejected",
+  "sql_rejected",
+  "zero_change",
+] as const;
+
+export type TelegramTerminalMarkerFailureClass = (typeof TELEGRAM_TERMINAL_MARKER_FAILURE_CLASSES)[number];
+
+const TERMINAL_MARKER_FAILURE_CLASS = Symbol("telegramTerminalMarkerFailureClass");
+
+function tagTelegramTerminalMarkerFailure(error: unknown, failureClass: TelegramTerminalMarkerFailureClass): Error {
+  const tagged = error instanceof Error ? error : new Error("Telegram webhook terminal marker failed");
+  if (Object.isExtensible(tagged)) {
+    Object.defineProperty(tagged, TERMINAL_MARKER_FAILURE_CLASS, { value: failureClass });
+  }
+  return tagged;
+}
+
+export function classifyTelegramTerminalMarkerFailure(error: unknown): TelegramTerminalMarkerFailureClass | null {
+  if (error == null || typeof error !== "object") return null;
+  if (!(TERMINAL_MARKER_FAILURE_CLASS in error)) return null;
+  const value = error[TERMINAL_MARKER_FAILURE_CLASS];
+  if (typeof value !== "string") return null;
+  return TELEGRAM_TERMINAL_MARKER_FAILURE_CLASSES.find((failureClass) => failureClass === value) ?? null;
+}
+
 export async function markTelegramProcessedUpdateProcessed(
   db: D1Database,
   input: {
@@ -604,9 +635,11 @@ export async function markTelegramProcessedUpdateProcessed(
     errorClass?: string | null;
   },
 ): Promise<void> {
-  const result = await db
-    .prepare(
-      `UPDATE telegram_processed_updates
+  let result: D1Result<unknown>;
+  try {
+    result = await db
+      .prepare(
+        `UPDATE telegram_processed_updates
           SET status = 'processed',
               processed_at = ?,
               error_class = ?,
@@ -618,18 +651,24 @@ export async function markTelegramProcessedUpdateProcessed(
           AND (intent_mutates = 0 OR mutation_applied_at IS NOT NULL)
           AND claim_owner = ?
           AND claim_generation = ?`,
-    )
-    .bind(
-      input.nowSec,
-      input.errorClass ?? null,
-      input.nowSec,
-      input.updateId,
-      input.claimOwner,
-      input.claimGeneration,
-    )
-    .run();
+      )
+      .bind(
+        input.nowSec,
+        input.errorClass ?? null,
+        input.nowSec,
+        input.updateId,
+        input.claimOwner,
+        input.claimGeneration,
+      )
+      .run();
+  } catch (error) {
+    throw tagTelegramTerminalMarkerFailure(error, "sql_rejected");
+  }
   if (d1ChangeCount(result) !== 1) {
-    throw new Error("Telegram update terminal marker lost ownership");
+    throw tagTelegramTerminalMarkerFailure(
+      new Error("Telegram update terminal marker lost ownership"),
+      "zero_change",
+    );
   }
 }
 

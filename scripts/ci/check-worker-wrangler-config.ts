@@ -12,6 +12,7 @@ const PAIRED_RUNTIME_FIELDS = [
   { section: "root", key: "compatibility_flags" },
   { section: "root", key: "minify" },
   { section: "root", key: "keep_names" },
+  { section: "root", key: "upload_source_maps" },
   { section: "alias", key: "#pharos-full-catalog" },
   { section: "limits", key: "cpu_ms" },
   { section: "observability", key: "enabled" },
@@ -52,6 +53,7 @@ export function evaluateWorkerWranglerConfig(
   expectValue("version_metadata", "binding", '"CF_VERSION_METADATA"');
   expectValue("d1_databases", "binding", '"DB"');
   expectValue("d1_databases", "database_id", '"8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"');
+  expectValue("root", "upload_source_maps", "true");
   expectValue("limits", "cpu_ms", "300000");
   expectValue("observability", "head_sampling_rate", role === "public" ? "0.1" : "1");
   expectValue("observability", "enabled", "true");

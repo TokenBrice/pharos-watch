@@ -6,6 +6,9 @@ workers_dev = false
 preview_urls = false
 minify = true
 keep_names = true
+# Cloudflare stores the uploaded map privately and uses it to de-minify stack
+# traces in Workers Logs; it is never served as a Pages asset.
+upload_source_maps = true
 
 [alias]
 "#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"

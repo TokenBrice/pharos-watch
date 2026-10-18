@@ -47,6 +47,16 @@ describe("check-worker-package", () => {
     expect(checkWorkerPackage({ run: () => ({ status: null }) })).toEqual({ status: 1 });
   });
 
+  it("fails closed when the Pages artifact would publish source maps", () => {
+    const run = vi.fn();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    mkdirSync(join(root, "out", "_next", "static", "chunks"), { recursive: true });
+    writeFileSync(join(root, "out", "_next", "static", "chunks", "page.js.map"), "{}");
+    expect(checkWorkerPackage({ run })).toEqual({ status: 1 });
+    expect(run).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("never emit source maps into Pages assets"));
+  });
+
   it.each([
     [0, "\u0100"],
     [0, "\u2019"],

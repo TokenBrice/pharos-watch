@@ -12,6 +12,7 @@ compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
 minify = true
 keep_names = true
+upload_source_maps = true
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true },
   { pattern = "site-api.pharos.watch", custom_domain = true },
@@ -62,6 +63,8 @@ describe("check-worker-wrangler-config", () => {
       toml.replace("preview_urls = false", "preview_urls = true"),
       toml.replace('name = "stablecoin-heavy"', 'name = "stablecoin-api"'),
       toml.replace('main = "src/index.heavy.ts"', 'main = "src/index.ts"'),
+      toml.replace("upload_source_maps = true", "upload_source_maps = false"),
+      toml.replace(/^upload_source_maps = true\n/m, ""),
       toml.replace('[alias]', 'routes = []\n[alias]'),
       `${toml}\n[[ratelimits]]\nname = "HTTP"\n`,
       toml.replace('binding = "SAFETY_CAPTURE_ARCHIVE"', 'binding = "WRONG_ARCHIVE"'),
@@ -98,6 +101,7 @@ describe("check-worker-wrangler-config", () => {
     ["compatibility_flags", /^compatibility_flags\s*=.*$/m, 'compatibility_flags = ["nodejs_compat"]'],
     ["minify", /^minify\s*=.*$/m, "minify = false"],
     ["keep_names", /^keep_names\s*=.*$/m, "keep_names = false"],
+    ["upload_source_maps", /^upload_source_maps\s*=.*$/m, "upload_source_maps = false"],
   ])("rejects paired runtime drift in %s without reading documentation", (key, pattern, replacement) => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-paired-date-test-"));
     try {
@@ -110,6 +114,40 @@ describe("check-worker-wrangler-config", () => {
       const report = checkWorkerWranglerConfig(publicPath, heavyPath);
       expect(report.failed).toBe(true);
       expect(report.issues.some((issue) => issue.includes("Paired runtime configuration differs") && issue.includes(key))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+  it.each(["public", "heavy"] as const)("requires private source maps on %s", (workerRole) => {
+    const toml = workerRole === "public" ? VALID_CONFIG : readFileSync("worker/wrangler.heavy.toml", "utf8");
+    expect(evaluateWorkerWranglerConfig(toml, { workerRole })).toEqual({ failed: false, issues: [] });
+    for (const mutation of [
+      toml.replace("upload_source_maps = true", "upload_source_maps = false"),
+      toml.replace(/^upload_source_maps = true\n/m, ""),
+    ]) {
+      const report = evaluateWorkerWranglerConfig(mutation, { workerRole });
+      expect(report.issues).toContain(`${workerRole} [root].upload_source_maps must be true.`);
+    }
+  });
+  it("rejects a mismatched source-map posture between roles", () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-source-maps-"));
+    try {
+      const publicPath = join(directory, "public.toml");
+      const heavyPath = join(directory, "heavy.toml");
+      writeFileSync(publicPath, readFileSync("worker/wrangler.toml", "utf8"));
+      writeFileSync(
+        heavyPath,
+        readFileSync("worker/wrangler.heavy.toml", "utf8")
+          .replace("upload_source_maps = true", "upload_source_maps = false"),
+      );
+      const report = checkWorkerWranglerConfig(publicPath, heavyPath);
+      expect(report.failed).toBe(true);
+      expect(report.issues).toContain("heavy [root].upload_source_maps must be true.");
+      expect(
+        report.issues.some(
+          (issue) => issue.includes("Paired runtime configuration differs") && issue.includes("upload_source_maps"),
+        ),
+      ).toBe(true);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

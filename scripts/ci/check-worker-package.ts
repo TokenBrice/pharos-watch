@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+
+const PAGES_ARTIFACT_DIRECTORY = "out";
 
 interface WorkerPackageRunResult {
   status?: number | null;
@@ -12,6 +14,36 @@ interface WorkerPackageRunResult {
 
 interface WorkerPackageOptions {
   run?: (command: string, args: string[], options: { cwd: string; stdio: "inherit" }) => WorkerPackageRunResult;
+}
+
+function findSourceMaps(directory: string): string[] {
+  const maps: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      maps.push(...findSourceMaps(path));
+    } else if (entry.isFile() && entry.name.endsWith(".map")) {
+      maps.push(path);
+    }
+  }
+  return maps;
+}
+
+/**
+ * `upload_source_maps = true` is a deployment-time private upload: Cloudflare
+ * retains the map for Workers Logs and never serves it. The Pages artifact is
+ * public, so a map emitted under `out/` would publish Worker source.
+ */
+function checkPrivateSourceMaps(repoRoot: string): boolean {
+  const pagesRoot = resolve(repoRoot, PAGES_ARTIFACT_DIRECTORY);
+  if (!existsSync(pagesRoot)) return true;
+  const [sourceMap] = findSourceMaps(pagesRoot);
+  if (!sourceMap) return true;
+  console.error(
+    `Pages artifact ${pagesRoot} contains a source map (${sourceMap}). ` +
+    "Worker source maps are uploaded privately by Cloudflare; never emit source maps into Pages assets.",
+  );
+  return false;
 }
 
 function checkLatin1Scripts(directory: string): boolean {
@@ -47,6 +79,7 @@ function checkLatin1Scripts(directory: string): boolean {
 
 export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {}): WorkerPackageRunResult {
   const repoRoot = process.cwd();
+  if (!checkPrivateSourceMaps(repoRoot)) return { status: 1 };
   for (const [role, config] of [["public", "wrangler.toml"], ["heavy", "wrangler.heavy.toml"]]) {
     const outputDirectory = resolve(repoRoot, `.cache/release-check/worker-bundle-${role}`);
     rmSync(outputDirectory, { force: true, recursive: true });

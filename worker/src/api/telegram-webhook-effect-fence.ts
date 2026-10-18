@@ -11,7 +11,10 @@ import {
   unixNow,
   type TelegramWebhookOperationIntent,
 } from "./telegram-webhook-store";
-import { canonicalTelegramWebhookIntentBytes } from "../lib/telegram/processed-updates";
+import {
+  canonicalTelegramWebhookIntentBytes,
+  classifyTelegramTerminalMarkerFailure,
+} from "../lib/telegram/processed-updates";
 import { logTelegramEvent } from "../lib/telegram/log";
 import {
   resolveUpdateChatId,
@@ -154,16 +157,25 @@ export class TelegramWebhookEffectFence {
   }
 
   async finish(errorClass: string | null = null): Promise<void> {
-    if (!this.intent) {
-      await this.plan(createTelegramWebhookIntent("ingress:no-effect", { disposition: "ignored" }));
+    try {
+      if (!this.intent) {
+        await this.plan(createTelegramWebhookIntent("ingress:no-effect", { disposition: "ignored" }));
+      }
+      await markTelegramProcessedUpdateProcessed(this.db, {
+        updateId: this.updateId,
+        nowSec: unixNow(),
+        claimOwner: this.claim.owner,
+        claimGeneration: this.claim.generation,
+        errorClass,
+      });
+    } catch (error) {
+      logTelegramEvent({
+        message: "telegram webhook terminal marker failed",
+        action: "processed-update-terminal-marker",
+        reasonClass: classifyTelegramTerminalMarkerFailure(error) ?? "fence_rejected",
+      });
+      throw error;
     }
-    await markTelegramProcessedUpdateProcessed(this.db, {
-      updateId: this.updateId,
-      nowSec: unixNow(),
-      claimOwner: this.claim.owner,
-      claimGeneration: this.claim.generation,
-      errorClass,
-    });
   }
 
   async fail(errorClass: string | null): Promise<void> {
