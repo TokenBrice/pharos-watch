@@ -8,6 +8,7 @@ import { withBudgetMetadata } from "../../lib/cron-progress";
 import {
   setMintBurnRunState,
   type MintBurnAttemptCoverageSummary,
+  type MintBurnCoverageCycleSummary,
   type MintBurnRunStateRow,
 } from "./run-state";
 import type { MintBurnRunConfigPhaseResult } from "./run-configs";
@@ -43,6 +44,8 @@ export interface CompleteMintBurnRunInput {
   phase: MintBurnRunConfigPhaseResult;
   criticalContractsEnabled: number;
   attemptCoverage: MintBurnAttemptCoverageSummary;
+  /** Extended-lane full-pass verdict; `null` for the critical/all lanes. */
+  coverageCycle: MintBurnCoverageCycleSummary | null;
   runDrilldown: { cacheKey: string; persistenceFailed: boolean };
   signal?: AbortSignal;
 }
@@ -71,9 +74,14 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     input.criticalContractsEnabled > 0 ? phase.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
   const conservationFailures = phase.configBreakdown.filter((summary) => summary.conservationFailure).length;
   const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
+  // The extended lane is judged on full-pass completion inside the expected
+  // window, never on a per-config attempt age: a rotated roster that drains
+  // 39–44 of 129 configs per run is healthy while the pass is still inside the
+  // window. `cycle-in-progress` (no completed pass yet) stays neutral.
+  const coverageCycleStalled = input.coverageCycle?.status === "stalled";
   const degradedSignal = conservationFailures > 0 || (
     input.lane === "extended"
-      ? phase.apiErrors > 1 || input.attemptCoverage.staleAttemptCount > 0
+      ? phase.apiErrors > 1 || coverageCycleStalled
       : criticalCoverageRatio < 1 || phase.apiErrors > 1);
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
@@ -92,7 +100,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     status === "ok"
     && (
       conservationFailures > 0
-      || input.attemptCoverage.staleAttemptCount > 0
+      || coverageCycleStalled
       || input.attemptCoverage.persistenceFailed
       || input.runDrilldown.persistenceFailed
     )
@@ -275,7 +283,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     ) ? Math.floor(Date.now() / 1000) : null,
     ...(status !== "ok" ? {
       reason: conservationFailures > 0 ? "mint-burn-conservation-failure"
-        : input.attemptCoverage.staleAttemptCount > 0 ? "mint-burn-stale-attempts"
+        : coverageCycleStalled ? "mint-burn-coverage-cycle-stalled"
         : runStatePersistenceFailed || input.attemptCoverage.persistenceFailed || input.runDrilldown.persistenceFailed
           ? "mint-burn-state-persistence-failed"
           : nullPriceBacklogError != null ? "mint-burn-null-price-backlog-unavailable"
@@ -332,6 +340,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     runDrilldownPersistenceFailed: input.runDrilldown.persistenceFailed,
     resumeConfigKey: input.resumeConfigKey,
     attemptCoverage: input.attemptCoverage,
+    ...(input.coverageCycle ? { coverageCycle: input.coverageCycle } : {}),
     laggingConfigs,
     coverageRatio,
     runtimeBudgetHit: phase.runtimeBudgetHit,
