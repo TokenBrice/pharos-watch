@@ -42,6 +42,7 @@ import {
 } from "./xaut-supply-observer";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 import { runBudgetedSupplyAttributionAssets } from "./supply-attribution-capture-budget";
+import type { SafetyScoreV9SupplyAttributionGeneration } from "./supply-attribution-generation";
 import { createSupplyAttributionPerformance, type SupplyAttributionPhase, type SupplyAttributionPerformance } from "./supply-attribution-diagnostics";
 import {
   aggregateSupplyUsd,
@@ -67,6 +68,7 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   executionWindow?: V9ExecutionWindow;
   db?: D1Database;
   onBodyRead?: BodyReadObserver;
+  priorGeneration?: Pick<SafetyScoreV9SupplyAttributionGeneration, "outcomesById"> | null;
 }
 
 type SupplyAttributionValue = Exclude<
@@ -391,6 +393,23 @@ export async function captureSafetyScoreV9SupplyAttribution(
   const descriptors = supplyAttributionAssetDescriptors().filter(
     descriptor => expectedAssetIdSet.has(descriptor.assetId),
   );
+  const priorOutcomes = options.priorGeneration?.outcomesById;
+  const wasStarved = (descriptor: SupplyAttributionAssetDescriptor): boolean => {
+    const outcome = priorOutcomes?.[descriptor.assetId];
+    return outcome?.status === "rejected" && outcome.captureFailureReason === "capture-window-exhausted";
+  };
+  let startIndex = Math.floor(fixedInput.clockSec / SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC);
+  if (descriptors.some(wasStarved)) {
+    // Resume the promoted cohort after the highest canonical index actually
+    // attempted last run. A fixed tie order can alternate early assets forever.
+    // While an asset stays starved, attempts consume the circular starved prefix;
+    // this cursor advances past attempted indexes instead of restarting it.
+    for (let index = 0; index < descriptors.length; index++) {
+      if (priorOutcomes?.[descriptors[index].assetId] && !wasStarved(descriptors[index])) {
+        startIndex = index + 1;
+      }
+    }
+  }
   const results = await runBudgetedSupplyAttributionAssets(
     descriptors,
     async (descriptor, assetSignal, assetDeadlineMs) => {
@@ -421,11 +440,10 @@ export async function captureSafetyScoreV9SupplyAttribution(
     },
     {
       signal, executionWindow: options.executionWindow,
-      // Keep short disclosure/deployment observers ahead of history backfills,
-      // and wM's possible maturity wait last. Rotate equal-priority assets for
-      // fairness without allowing a slow backfill to starve the quick cohort.
-      startIndex: Math.floor(fixedInput.clockSec / SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC),
-      assetPriority: descriptor => descriptor.executionPriority,
+      // Unattempted assets outrank cost tiers next run, including wM. Otherwise
+      // preserve quick-first ordering and deterministic within-tier rotation.
+      startIndex,
+      assetPriority: descriptor => wasStarved(descriptor) ? -1 : descriptor.executionPriority,
       assetTimeoutMs: descriptor => descriptor.assetId === "wm-m0"
         ? SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs
         : SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
