@@ -272,7 +272,7 @@ export async function observeCcipPending(input: {
       return header;
     };
     const authenticatedOrigins = new Set<string>();
-    const authenticateOrigin = async (lane: Lane, priorLane: CcipPendingCheckpoint["lanes"][number] | undefined) => {
+    const authenticateOrigin = async (lane: Lane) => {
       const witness = lane.sourceStartWitness;
       if (!witness) {
         if (lane.source.chainId === "monad") fail("history-origin-witness-unavailable");
@@ -285,33 +285,11 @@ export async function observeCcipPending(input: {
       const origin = await identityHeader(witness.chainId, witness.blockNumber);
       if (!origin) fail("history-unavailable");
       if (origin.hash !== witness.blockHash || origin.timestamp !== witness.blockTimestamp) fail("history-origin-reorg");
-      // A schema-3, exact-source checkpoint is written only after authenticating
-      // this creation transaction and receipt. Their immutable facts survive
-      // provider retention; the canonical origin and current identity do not.
-      if (priorLane) {
-        if (priorLane.initialSequence !== witness.initialSequence) fail("history-origin-sequence-mismatch");
-        authenticatedOrigins.add(key);
-        return;
-      }
-      const [rawTransaction, rawReceipt] = await rpc(witness.chainId, [
-        { method: "eth_getTransactionByHash", params: [witness.transactionHash] },
-        { method: "eth_getTransactionReceipt", params: [witness.transactionHash] },
-      ]);
-      const transaction = z.object({
-        hash: z.string().regex(WORD), blockHash: z.string().regex(WORD),
-        blockNumber: z.string().regex(/^0x[0-9a-f]+$/), to: z.null(),
-        from: z.string().regex(/^0x[0-9a-f]{40}$/), nonce: z.string().regex(/^0x[0-9a-f]+$/),
-        input: z.string().regex(HEX),
-      }).safeParse(rawTransaction);
-      const receipt = ReceiptSchema.extend({ contractAddress: z.string().regex(/^0x[0-9a-f]{40}$/) }).safeParse(rawReceipt);
-      if (!transaction.success || !receipt.success) fail("history-origin-witness-invalid");
-      const tx = transaction.data, rc = receipt.data;
-      if (tx.hash !== witness.transactionHash || rc.transactionHash !== tx.hash ||
-        tx.blockHash !== origin.hash || rc.blockHash !== origin.hash ||
-        BigInt(tx.blockNumber) !== BigInt(origin.number) || BigInt(rc.blockNumber) !== BigInt(origin.number) ||
-        tx.from !== witness.deployer || BigInt(tx.nonce).toString() !== witness.nonce ||
-        rc.contractAddress !== lane.onRampAddress || sha256Hex(tx.input) !== witness.initcodeSha256 ||
-        getContractAddress({ from: tx.from as `0x${string}`, nonce: BigInt(tx.nonce) }).toLowerCase() !== lane.onRampAddress) fail("history-origin-witness-invalid");
+      // Transaction input and successful creation receipt are immutable reviewed
+      // evidence, not historical RPC reads claimed for this capture. Bind that
+      // review to canonical history and the independently checked current runtime.
+      if (witness.reviewedReceipt.contractAddress !== lane.onRampAddress ||
+        getContractAddress({ from: witness.deployer as `0x${string}`, nonce: BigInt(witness.nonce) }).toLowerCase() !== lane.onRampAddress) fail("history-origin-witness-invalid");
       authenticatedOrigins.add(key);
     };
     const discoveryBodies = new Map<string, unknown>();
@@ -472,7 +450,7 @@ export async function observeCcipPending(input: {
         if (row.chainSelector !== BigInt(lane.destination.chainSelector) || row.sourceChainSelector !== BigInt(lane.source.chainSelector) || row.onRamp.toLowerCase() !== lane.onRampAddress) fail("lane-identity-mismatch");
       }
       const nextCall = nextSequenceCall(lane);
-      await authenticateOrigin(lane, checkpoint.lanes[i]);
+      await authenticateOrigin(lane);
       const initializing = !checkpoint.lanes[i];
       if (initializing) {
         const previous = await identityHeader(lane.source.chainId, lane.sourceStartBlock - 1);
