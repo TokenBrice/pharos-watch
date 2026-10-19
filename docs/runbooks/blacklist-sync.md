@@ -30,6 +30,52 @@ For an abandonment, inspect `metadata.progressStage`, `progressUpdatedAt`, `prog
 
 ## Remediation
 
+### Config-scoped historical topic recovery
+
+Use `worker/scripts/replay-blacklist-config-history.ts` after a corrected event-family configuration has shipped but its chain+contract cursor already passed the missed events. It enumerates the **current configured topics**, not every historical implementation's ABI. This is not a cursor reset: the inclusive window must end at or below that deployment's current EVM cursor, and the tool never changes sync state. Do not use `reset-blacklist-sync` for this recovery.
+
+PR #1510 (`acbbb3364`) corrected PAXG/Ethereum's `FreezeAddress(address)` / `UnfreezeAddress(address)` coverage and USDT/Avalanche's `BlockPlaced` / `BlockReleased` / `DestroyedBlockedFunds` family. Replay PAXG from block **25,232,808**, where the proxy upgraded to the implementation that emits the current family (first observed current-family freeze: 25,547,674); earlier `AddressFrozen` / `AddressUnfrozen` history was already tracked. Replay Avalanche USDT from deployment block **4,663,628**; the prior legacy-family configuration did not match that deployment.
+
+From the repository root, set `BLACKLIST_REPLAY_RPC_URL` to the appropriate chain's trusted RPC URL (use an archive endpoint for historical amounts). The RPC must support complete `eth_getLogs`, block headers, and hash-pinned EIP-1898 `eth_call` with `requireCanonical`; unsupported historical balance reads remain NULL, never become current-state guesses. The command validates `eth_chainId` before scanning. Do not put keyed URLs in command arguments or committed evidence.
+
+Capture the chosen deployment's current cursor with these **read-only** commands, then run the exact dry-run invocation. Each end block is captured once, remains explicit, and is rechecked against D1 by the replay:
+
+```bash
+DEPLOYMENT=ethereum-0x45804880de22913dafe09f4980848ece6ecbaf78
+PAXG_TO_BLOCK=$(mise exec -- npx wrangler d1 execute stablecoin-db --config worker/wrangler.toml --remote --json --command \
+  "SELECT COALESCE(cursor_value,last_block) AS to_block FROM blacklist_sync_state WHERE config_key='$DEPLOYMENT'" \
+  | jq -er '.[0].results[0].to_block | select(type == "number")')
+# Export BLACKLIST_REPLAY_RPC_URL for Ethereum before this command.
+# 25,232,808 is the Upgraded(0x7da4c5d9…fa543) block that introduced FreezeAddress/UnfreezeAddress.
+mise exec -- npx tsx worker/scripts/replay-blacklist-config-history.ts \
+  --config-key "$DEPLOYMENT" \
+  --from-block 25232808 --to-block "$PAXG_TO_BLOCK" --dry-run
+
+DEPLOYMENT=avalanche-0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7
+AVALANCHE_USDT_TO_BLOCK=$(mise exec -- npx wrangler d1 execute stablecoin-db --config worker/wrangler.toml --remote --json --command \
+  "SELECT COALESCE(cursor_value,last_block) AS to_block FROM blacklist_sync_state WHERE config_key='$DEPLOYMENT'" \
+  | jq -er '.[0].results[0].to_block | select(type == "number")')
+# Switch BLACKLIST_REPLAY_RPC_URL to Avalanche before this command.
+mise exec -- npx tsx worker/scripts/replay-blacklist-config-history.ts \
+  --config-key "$DEPLOYMENT" \
+  --from-block 4663628 --to-block "$AVALANCHE_USDT_TO_BLOCK" --dry-run
+```
+
+Review `currentTopics`, `missingEventIds`, event counts, `unresolvedAmountCount`, affected balance count, and `evidenceSha256`. Dry-run performs RPC reads and D1 SELECTs only: it does not write D1, files, audits, caches, balances, or cursors. The default 100,000-block pages use the runtime's complete-range RPC splitter; a failed/capped page, unresolved timestamp, or canonical decode failure aborts the entire replay before writes. Canonical identity deduplication also recognizes legacy decimal/hex log-index spellings; existing rows are never changed.
+
+For application:
+
+1. Preview and arm the existing writer pause with `mise exec -- npx tsx worker/scripts/rebuild-blacklist-current-balances.ts --remote --arm-writer-pause --execute --confirm rebuild-blacklist-current-balances`. Wait until the `sync-blacklist` lease is inactive. This replay does not arm or clear the pause itself.
+2. Obtain a fresh bookmark with `mise exec -- npx wrangler d1 time-travel info stablecoin-db --config worker/wrangler.toml --json`.
+3. Repeat the reviewed dry-run command with the **same config and block bounds**, replacing `--dry-run` with `--execute --confirm worker/scripts/replay-blacklist-config-history.ts --time-travel-bookmark '<current-bookmark>'`. Execute each chain separately with its own RPC URL and fresh bookmark. The tool checks the bookmark before provider work and immediately before publication.
+4. Require `status=verified`, `insertedEventCount=missingEventCount`, and unchanged `cursorBefore` / `cursorAfter`. A no-op rerun reports `status=unchanged` without writes. Review the `admin_action_audit` action `replay-blacklist-config-history`, its run ID/evidence SHA-256, and inserted rows' `reconciliation_run_id`, `reconciliation_manifest_id`, `provenance_source`, and `provenance_observed_at`. Historical amounts are emitted values or proven pre-block balances; missing evidence stays NULL. Non-USD historical USD amounts remain unavailable without an attributed quote.
+5. Inspect affected contract-scoped current-balance identities and a newly computed `/api/blacklist-summary`; only then preview and execute `--clear-writer-pause` with the rebuild CLI's same confirmation.
+
+One atomic D1 file import contains the audit, missing-only canonical inserts, per-row provenance, affected contract-scoped balance upserts, and canonical summary/producer-gap/request-gap cache invalidation. Like other file-import maintenance, it briefly blocks D1 writes. A SQL guard rechecks the cursor generation, writer pause, inactive sync lease, and missing identities inside that transaction; a race rolls everything back. The balance fold reads each affected address's full retained lifecycle, including events after the replay window, so an old replay cannot replace a later destroy with an earlier freeze. Runtime balance identity/value/upsert helpers retain unrelated contracts and preserve last-successful values on provider failure. If a run errors or its outcome is uncertain, inspect the audit and read back inserted run IDs before retrying; never clear the pause based only on a failed command.
+
+The durable audit details report `status=applied`, the SQL-counted `insertedEventCount`, zero remaining `missingEventCount`, and the original `plannedMissingEventCount`; these are finalized inside the same transaction, before the CLI's separate verified readback. Replay retains EURC mirror-zero events as `circle_mirror_zero_balance` audit rows and excludes them from balance capture, matching ingestion. A latest destroy without a proven amount skips the balance upsert entirely, preserving any resolved snapshot and its status.
+
+
 ### Frozen Night Watch reconciliation
 
 Use the guarded reconciliation only for the immutable `night-watch-usdt-tron-2026-07-09` manifest. It contains the exact 86 confirmed events after the audited cursor through `2026-07-09T20:28:03Z`: 72 blacklist additions, 3 removals, and 11 destroys totaling `8,874,287.612325 USDT`. The tool never invokes the global reset path.

@@ -4,22 +4,17 @@ import type { BlacklistRow } from "../../lib/blacklist/shared";
 import { blacklistEventIdentity, blacklistEventIdentitySql } from "@shared/lib/blacklist-event-order";
 import { canonicalBlacklistAddress } from "@shared/lib/tron-address";
 
-export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], signal?: AbortSignal): Promise<number> {
-  throwIfAborted(signal);
-  if (rows.length === 0) return 0;
-
-  const stmts = rows.map((row) =>
-    db
-      .prepare(
-        `/* blacklist-persistence-insert-events */
+/** Shared by the scheduled writer and guarded operator history replay. */
+export function buildBlacklistEventInsert(row: BlacklistRow): { sql: string; bindings: (string | number | null)[] } {
+  return {
+    sql: `/* blacklist-persistence-insert-events */
          INSERT OR IGNORE INTO blacklist_events
          (id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, suppression_reason, amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider, explorer_tx_url, explorer_address_url)
          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
          WHERE NOT EXISTS (
            SELECT 1 FROM blacklist_events WHERE (${blacklistEventIdentitySql()}) = ?
          )`,
-      )
-      .bind(
+    bindings: [
         row.id,
         row.stablecoin,
         row.chain_id,
@@ -46,7 +41,16 @@ export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], 
         row.explorer_tx_url,
         row.explorer_address_url,
         blacklistEventIdentity(row),
-      ),
-  );
+    ],
+  };
+}
+
+export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], signal?: AbortSignal): Promise<number> {
+  throwIfAborted(signal);
+  if (rows.length === 0) return 0;
+  const stmts = rows.map((row) => {
+    const { sql, bindings } = buildBlacklistEventInsert(row);
+    return db.prepare(sql).bind(...bindings);
+  });
   return batchExecute(db, stmts, { signal });
 }

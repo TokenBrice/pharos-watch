@@ -110,6 +110,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/reconcile-ddr-finalized-chronology.ts"),
     strict("worker/scripts/reconcile-night-watch-blacklist.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict("worker/scripts/repair-tron-blacklist-amounts.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
+    strict("worker/scripts/replay-blacklist-config-history.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict("worker/scripts/replay-safety-score-v9.ts"),
     strict("worker/scripts/report-live-reserve-config-changes.ts"),
     strict("worker/scripts/safety-score-movement-ledger.ts"),
