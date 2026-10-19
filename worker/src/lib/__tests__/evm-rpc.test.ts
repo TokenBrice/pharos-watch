@@ -118,6 +118,27 @@ describe("evm-rpc helpers", () => {
     vi.restoreAllMocks();
   });
 
+  it("reports admitted physical requests and batch sizes without URL paths or credentials", async () => {
+    const chainRpcs = chainRpcsWith("ethereum", [registryEndpoint("https://rpc.example/private?secret=hidden")]);
+    const onRpcRequest = vi.fn();
+    chainRpcs.get("ethereum")!.onRpcRequest = onRpcRequest;
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: "0x64" }));
+    expect(await fetchEvmBlockNumber("ethereum", { chainRpcs })).toBe(100);
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse([
+      { id: 1, result: "0x6000" }, { id: 2, result: "0x6001" },
+    ]));
+    expect(await fetchEvmRpcBatch("ethereum", [
+      { method: "eth_getCode", params: ["0xA", "latest"] },
+      { method: "eth_getCode", params: ["0xB", "latest"] },
+    ], { chainRpcs })).toEqual(["0x6000", "0x6001"]);
+    expect(onRpcRequest.mock.calls.map(([request]) => request)).toEqual([
+      { providerOrigin: "https://rpc.example", method: "eth_blockNumber", rpcCalls: 1, signal: undefined },
+      { providerOrigin: "https://rpc.example", method: "batch", rpcCalls: 2, signal: undefined },
+    ]);
+    await fetchEvmBlockNumber("ethereum", { chainRpcs, beforeRequest: () => false });
+    expect(onRpcRequest).toHaveBeenCalledTimes(2);
+  });
+
   it.each(["ink", "berachain"])("routes CCIP hash-pinned state and historical logs through authenticated, metered Dwellir first on %s", async (chain) => {
     const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
     const dwellir = chainRpcs.get(chain)!.endpoints.find(endpoint => endpoint.operator === "dwellir")!;

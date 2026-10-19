@@ -11,7 +11,7 @@ import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
+import { emitSupplyAttributionDiagnostic, type SupplyAttributionPhase } from "./supply-attribution-diagnostics";
 
 // Discovery window width is independent of provider eth_getLogs limits: Scan
 // returns identifiers, never an exhaustive quantity. Dense windows subdivide;
@@ -63,6 +63,7 @@ export async function observeLayerZeroOftPending(input: {
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   checkpoint?: LayerZeroOftPendingCheckpoint;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
+  onPhase?: (phase: SupplyAttributionPhase) => void;
 }): Promise<
   | { status: "accepted"; amount: string; proof: Proof; responseSha256: string; checkpoint: LayerZeroOftPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: LayerZeroOftPendingCheckpoint }
@@ -70,6 +71,7 @@ export async function observeLayerZeroOftPending(input: {
   let context: Partial<SupplyAttributionAttemptDiagnostic> = {};
   const emit = (detail: Partial<SupplyAttributionAttemptDiagnostic>) => emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "layerzero-oft", sourceId: input.source.sourceId, ...context, ...detail });
   try {
+    input.onPhase?.("pending-authentication");
     if (!LayerZeroOftPendingReadSchema.safeParse(input.source).success) fail("review-invalid");
     const source = input.source, options = { chainRpcs: input.chainRpcs, signal: input.signal };
     const sourceDigest = sha256Hex(stableJsonStringifyV1(source));
@@ -227,16 +229,27 @@ export async function observeLayerZeroOftPending(input: {
         uint(await state(index, side.oappAddress, toFunctionSelector("decimalConversionRate()"))) !== 10n ** BigInt(side.localDecimals - source.sharedDecimals)) fail("oft-identity");
     }
     const pathStates: Array<{ outbound: bigint; inbound: bigint; lazy: bigint; outboundCall: string }> = [];
+    // Many pathways share the same predecessor. Authenticate it once per attempt;
+    // current pins and page-end rechecks below deliberately remain fresh reads.
+    const checkpointHeaders = new Map<string, EvmBlockHeader>();
+    const checkpointHeader = async (chainId: string, number: number) => {
+      const key = `${chainId}:${number}`;
+      const cached = checkpointHeaders.get(key);
+      if (cached) return cached;
+      const header = await fetchEvmBlockHeader(chainId, number, options);
+      if (header) checkpointHeaders.set(key, header);
+      return header;
+    };
     for (let index = 0; index < source.pathways.length; index++) {
       const path = source.pathways[index]!, a = source.sides[path.sourceIndex]!, b = source.sides[path.destinationIndex]!, checkpoint = cp.pathways[index]!;
       const cursor = checkpoint.sent, pin = input.headers[path.sourceIndex]!, destinationPin = input.headers[path.destinationIndex]!;
       if (cursor.nextBlock < a.deploymentBlock || cursor.nextBlock > pin.number + 1 ||
         (cursor.anchor === null) !== (cursor.anchorHash === null) ||
         (cursor.anchor === null ? cursor.nextBlock !== a.deploymentBlock || checkpoint.sentNonce !== "0" || checkpoint.messages.length !== 0 : cursor.anchor !== cursor.nextBlock - 1)) fail("history-gap");
-      if (cursor.anchor !== null && (await fetchEvmBlockHeader(a.chainId, cursor.anchor, options))?.hash !== cursor.anchorHash) fail("checkpoint-reorg");
+      if (cursor.anchor !== null && (await checkpointHeader(a.chainId, cursor.anchor))?.hash !== cursor.anchorHash) fail("checkpoint-reorg");
       if ((checkpoint.destinationAnchor === null) !== (checkpoint.destinationAnchorHash === null) ||
         (checkpoint.destinationAnchor !== null && (checkpoint.destinationAnchor > destinationPin.number ||
-          (await fetchEvmBlockHeader(b.chainId, checkpoint.destinationAnchor, options))?.hash !== checkpoint.destinationAnchorHash))) fail("checkpoint-reorg");
+          (await checkpointHeader(b.chainId, checkpoint.destinationAnchor))?.hash !== checkpoint.destinationAnchorHash))) fail("checkpoint-reorg");
       const seenNonces = new Set<string>();
       for (const message of checkpoint.messages) {
         const nonce = BigInt(message.nonce), payload = message.payload;
@@ -310,6 +323,7 @@ export async function observeLayerZeroOftPending(input: {
       })) fail("delivery-unproved");
       return false;
     };
+    input.onPhase?.("pending-history");
     // Refresh old pending commitments before advancing history; delivered
     // messages are removed only with both endpoint and application receipts.
     for (let index = 0; index < cp.pathways.length; index++) {

@@ -392,10 +392,12 @@ async function fetchJsonRpcResult<T>(
   params: unknown[],
   options?: EvmRpcOptions,
   policy?: JsonRpcResultPolicy<T>,
+  chainId?: string,
 ): Promise<T | null> {
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
   const failures: string[] = [];
+  const onRpcRequest = chainId ? options?.chainRpcs?.get(chainId)?.onRpcRequest : undefined;
 
   for (const rpcUrl of urls) {
     if (isTronRpcUrl(rpcUrl) && requiresHistoricalEvmState(method, params)) continue;
@@ -427,6 +429,7 @@ async function fetchJsonRpcResult<T>(
           beforeRequest: () => {
             if (options?.beforeRequest?.(rpcUrl) === false) return false;
             meterDwellirRpcRequest(rpcUrl, 1);
+            onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin, method, rpcCalls: 1, signal: options?.signal });
             return true;
           },
           retryMode: "network-only",
@@ -563,6 +566,7 @@ async function runEvmRpcBatch<Value>(
 
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
+  const onRpcRequest = chainId ? options?.chainRpcs?.get(chainId)?.onRpcRequest : undefined;
   endpoints: for (const rpcUrl of urls) {
     if (isTronRpcUrl(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
     if (logEndpoints && isDwellirRpcUrl(rpcUrl) && !logEndpoints.some((endpoint) => endpoint.url === rpcUrl)) continue;
@@ -594,6 +598,9 @@ async function runEvmRpcBatch<Value>(
             beforeRequest: () => {
               if (options?.beforeRequest?.(rpcUrl) === false) return false;
               meterDwellirRpcRequest(rpcUrl, noBatch ? 1 : calls.length);
+              onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin,
+                method: noBatch ? calls[requestIndex]!.method : calls.length === 1 ? calls[0]!.method : "batch",
+                rpcCalls: noBatch ? 1 : calls.length, signal: options?.signal });
               return true;
             },
             retryMode: "network-only",
@@ -729,7 +736,7 @@ export async function fetchEvmCallHexAtBlock(
     rejectedReason: () => {
       return "null result";
     },
-  });
+  }, chainId);
 
   return result as `0x${string}` | null;
 }
@@ -755,6 +762,7 @@ export async function fetchEvmCodeStatusAtBlock(
         value === "0x" || isHexResult(value as string),
       rejectedReason: () => "invalid bytecode",
     },
+    chainId,
   );
   if (result == null) return { status: "unavailable" };
   if (result === "0x") return { status: "absent" };
@@ -797,6 +805,7 @@ export async function fetchEvmStorageAtBlock(
       acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
       rejectedReason: () => "null storage",
     },
+    chainId,
   );
   return result as `0x${string}` | null;
 }
@@ -827,6 +836,7 @@ export async function fetchEvmMulticall3Aggregate3AtBlock(
         const returnData = await fetchJsonRpcResult<`0x${string}`>(
           urls, "eth_call", [callObject, blockTag], options,
           { acceptResult: (value): value is `0x${string}` => typeof value === "string" && value.length % 2 === 0 && /^0x[0-9a-fA-F]*$/.test(value) },
+          chainId,
         );
         if (returnData === null && call.allowFailure === false) return null;
         results.push({ label: call.label, success: returnData !== null, returnData: returnData ?? "0x" });
@@ -935,7 +945,7 @@ export async function fetchEvmBlockNumber(chainId: string, options?: EvmRpcOptio
   const urls = requestRpcUrls(chainId, options, "latest");
   if (urls.length === 0) return null;
 
-  const result = await fetchJsonRpcResult<string>(urls, "eth_blockNumber", [], options);
+  const result = await fetchJsonRpcResult<string>(urls, "eth_blockNumber", [], options, undefined, chainId);
   return parseHexInteger(result ?? undefined);
 }
 
@@ -959,6 +969,7 @@ export async function fetchEvmBlockTimestamp(
       },
       rejectedReason: () => "block has no valid positive timestamp",
     },
+    chainId,
   );
 
   return parseHexInteger(block?.timestamp);
@@ -1008,6 +1019,7 @@ export async function fetchEvmBlockHeader(
       },
       rejectedReason: () => "block header has invalid number, hash, or timestamp",
     },
+    chainId,
   );
   return acceptedHeader;
 }

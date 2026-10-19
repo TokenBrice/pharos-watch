@@ -42,6 +42,7 @@ import {
 } from "./xaut-supply-observer";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 import { runBudgetedSupplyAttributionAssets } from "./supply-attribution-capture-budget";
+import { createSupplyAttributionPerformance, type SupplyAttributionPhase, type SupplyAttributionPerformance } from "./supply-attribution-diagnostics";
 import {
   aggregateSupplyUsd,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
@@ -57,6 +58,7 @@ export interface SafetyScoreV9SupplyAttributionCapture {
   journalRecords: SupplyAttributionJournalV1[];
   diagnosticsById?: Record<string, SupplyAttributionAttemptDiagnostic[]>;
   failureReasonById?: Record<string, SupplyAttributionCaptureFailureReason>;
+  performanceById?: Record<string, SupplyAttributionPerformance>;
 }
 
 export interface SafetyScoreV9SupplyAttributionCaptureOptions {
@@ -102,6 +104,7 @@ interface SupplyAttributionAssetDescriptor {
     db?: D1Database;
     onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
     onBodyRead?: BodyReadObserver;
+    onPhase?: (phase: SupplyAttributionPhase) => void;
   }) => Promise<SupplyAttributionObservationAttempt>;
 }
 
@@ -138,7 +141,7 @@ function supplyAttributionAssetDescriptors():
       assetId, executionPriority: 1, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
-      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead }),
+      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead, onPhase }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead, onPhase }),
     })),
     {
       assetId: "wm-m0",
@@ -238,6 +241,7 @@ async function runSupplyAttributionAssetCapture(input: {
   rejectionCode?: SupplyAttributionRejectionCode;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onBodyRead?: BodyReadObserver;
+  onPhase?: (phase: SupplyAttributionPhase) => void;
   diagnostics?: SupplyAttributionAttemptDiagnostic[];
 }): Promise<void> {
   const attemptedAtSec = Math.floor(Date.now() / 1_000);
@@ -264,6 +268,7 @@ async function runSupplyAttributionAssetCapture(input: {
             db: input.db,
             onDiagnostic: input.onDiagnostic,
             onBodyRead: input.onBodyRead,
+            onPhase: input.onPhase,
           })
         : {
             status: "rejected",
@@ -365,6 +370,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
   // Kept outside child task results so an authenticated prefix survives a
   // timeout/abort that discards the child's eventual return value.
   const diagnosticsById: Record<string, SupplyAttributionAttemptDiagnostic[]> = {};
+  const performanceById: Record<string, SupplyAttributionPerformance> = {};
   const retainDiagnostic = (assetId: string, diagnostic: SupplyAttributionAttemptDiagnostic) => {
     const validated = SupplyAttributionAttemptDiagnosticSchema.parse(diagnostic);
     const rows = diagnosticsById[assetId] ??= [];
@@ -391,16 +397,26 @@ export async function captureSafetyScoreV9SupplyAttribution(
       const assetAttributionById: V9SupplyAttributionById = {};
       const assetJournalRecords: SupplyAttributionJournalV1[] = [];
       const assetDiagnostics = diagnosticsById[descriptor.assetId] ??= [];
+      const performance = createSupplyAttributionPerformance();
+      performanceById[descriptor.assetId] = performance.data;
+      try {
       await runSupplyAttributionAssetCapture({
-        descriptor, fixedInput, chainRpcs, signal: assetSignal,
+        descriptor, fixedInput, chainRpcs: performance.withRpcDiagnostics(chainRpcs, assetSignal), signal: assetSignal,
         executionWindow: options.executionWindow, db: options.db,
         assetDeadlineMs,
         observationClockSec, attributionById: assetAttributionById,
         journalRecords: assetJournalRecords,
-        onDiagnostic: diagnostic => retainDiagnostic(descriptor.assetId, diagnostic),
+        onDiagnostic: diagnostic => {
+          retainDiagnostic(descriptor.assetId, diagnostic);
+          performance.recordDiagnostic(diagnostic);
+        },
+        onPhase: performance.setPhase,
         onBodyRead: options.onBodyRead,
         diagnostics: assetDiagnostics,
       });
+      } finally {
+        performance.finish();
+      }
       return { attributionById: assetAttributionById, journalRecords: assetJournalRecords };
     },
     {
@@ -442,6 +458,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
     journalRecords,
     diagnosticsById,
     failureReasonById,
+    performanceById,
   };
 }
 
