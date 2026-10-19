@@ -66,7 +66,7 @@ const ROUTE_FIXTURES = [
   ["src/components/stablecoin-table.tsx", 20_359, 20_359],
   ["src/app/yield/page.tsx", 49_528, 49_528],
   ["worker/src/cron/dex-liquidity/orchestrator.ts", 43_300, 43_300],
-  ["worker/src/api/yield-history.ts", 70_779, 70_779],
+  ["worker/src/api/yield-history.ts", 70_767, 70_767],
   ["shared/lib/safety-score-v9/evaluate-asset.ts", 64_211, 64_211],
   ["shared/lib/classification.ts", 46_927, 46_927],
   ["functions/safety-scores/map.json.ts", 26_202, 30_995],
