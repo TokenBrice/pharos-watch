@@ -63,6 +63,7 @@
 | 0273     | `0273_report_cards_v9_materializations.sql`              | Add generation/version/source-digest-bound admitted V9 public JSON manifests and bounded immutable fragments; accepted writes commit atomically, with same-identity lazy rollout backfill. |
 | 0274     | `0274_report_cards_v9_site_representations.sql`          | Add table and coin-scoped Safety Score immutable manifests/fragments, committed under the accepted publication fence with live health composition. |
 | 0275     | `0275_request_source_sampled_stats.sql`                 | Reader-first additive source sample tables (time-leading primary keys only) and default-zero per-key source-regime marker; existing writers unchanged. |
+| 0276     | `0276_reserve_continuation_executions.sql`                | Add public Queue delivery execution fences and separately foreign-keyed child terminal claims; no fabricated cron slots or checkpoint rewrite. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 

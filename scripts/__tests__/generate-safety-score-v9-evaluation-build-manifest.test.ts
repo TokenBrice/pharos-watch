@@ -170,6 +170,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
       "worker/src/lib/scheduled-slot-reconciliation.ts",
       "worker/src/lib/cron-logger.ts",
       "shared/lib/scheduled-runner-registry.ts",
+      "shared/types/reserve-continuation.ts",
     ]) {
       expect(paths).not.toContain(path);
     }

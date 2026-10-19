@@ -19,7 +19,7 @@ import { retainUntilDeadline, settleAfterAbort } from "./cron-abort-settlement";
 import { resolveScheduledSlotPolicy, scheduledSlotSilenceSql } from "./scheduled-slot-policy";
 import type { ScheduledSlotPolicy } from "./scheduled-slot-policy";
 
-export interface ScheduledExecutionFence {
+interface ExecutionFenceIdentity {
   readonly scheduleKey: string;
   readonly slotStartedAt: number;
   readonly invocationId: string;
@@ -27,6 +27,11 @@ export interface ScheduledExecutionFence {
   readonly generation: number;
   readonly workerRole: ScheduledWorkerRole;
 }
+
+export type ScheduledExecutionFence = ExecutionFenceIdentity & (
+  | { readonly kind?: "scheduled"; readonly deliveryId?: never }
+  | { readonly kind: "reserve-continuation"; readonly deliveryId: string }
+);
 
 export interface ScheduledSlotExecutionOptions {
   slotStartedAt: number;

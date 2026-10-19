@@ -26,6 +26,9 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   retireSupersededLiveReserveCheckpoints: mocks.retire,
   releaseUnstartedLiveReserveRecoveryClaim: mocks.release,
 }));
+vi.mock("../../../lib/reserve-continuation-reconciliation", () => ({
+  reconcileReserveContinuations: vi.fn(async () => 0),
+}));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
 }));

@@ -19,6 +19,7 @@ import {
   type ReserveProducerPriority,
 } from "../../lib/reserve-producer-priority";
 import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
+import { reconcileReserveContinuations } from "../../lib/reserve-continuation-reconciliation";
 
 type ReserveRecoveryMode = "off" | "recover";
 
@@ -62,6 +63,7 @@ async function runReserveRecovery(
       metadata: { mode, disposition: "disabled", checkpointsClaimed: 0 },
     });
   }
+  await reconcileReserveContinuations(runtime.db, signal);
   const priority = await getReserveProducerPriority(runtime.db);
   if (priority) return createCronResult({
     status: priorityPollStatus(priority), itemCount: 0,
@@ -181,6 +183,7 @@ async function runReserveRecovery(
   await reportProgress({ stage: "replaying-reserve-checkpoint" });
   const { runFourHourlyReserveSyncSlot } = await import("./four-hourly-reserves");
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
+  runtime.pendingReserveContinuation = summary.reserveContinuation;
   const admissionReason = summary.jobs?.find((job) =>
     job.reason === "producer-slot-priority" || job.reason === "same-role-slot-co-tenancy")?.reason;
   const admissionPriority = admissionReason && summary.jobsErrored === 0 && summary.jobsDegraded === 0
