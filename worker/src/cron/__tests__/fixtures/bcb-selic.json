@@ -1,0 +1,17 @@
+{
+  "provenance": {
+    "recordedFailures": "2026-10-19 residual-bcb-http-probes.json: SGS11 and SGS1178 each timed out after 22.01s with zero bytes. The SOAP HTML below is the recorded official BCB HTTP500 response, replayed at HTTP200 to exercise content admission; it is not an observed SGS1178 HTTP200 response.",
+    "successCases": "Authored deterministic SGS response-shape fixtures, not recorded successful production observations. SGS1178 operational acceptance requires an actual current publisher-dated response.",
+    "errorEnvelope": "Previously observed SGS HTTP200 error shape retained from fetch-tbill-rate regressions at 1eee9b0."
+  },
+  "transportFailure": {
+    "series": [11, 1178],
+    "curlCode": 28,
+    "seconds": 22.01,
+    "responseBytes": 0
+  },
+  "daily": [{ "data": "24/06/2026", "valor": "0.050747" }],
+  "annualized": [{ "data": "24/06/2026", "valor": "13.65" }],
+  "errorEnvelope": { "erro": { "statusCode": 500, "detail": "Internal error" } },
+  "html": "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>500 Internal Server Error</title>\n</head><body>\n<h1>Internal Server Error</h1>\n<p>The server encountered an internal error or\nmisconfiguration and was unable to complete\nyour request.</p>\n<p>Please contact the server administrator,\n suporte.ti@bcb.gov.br and inform them of the time the error occurred,\nand anything you might have done that may have\ncaused the error.</p>\n<p>More information about this error may be available\nin the server error log.</p>\n</body></html>\n"
+}

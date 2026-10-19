@@ -10,7 +10,7 @@ import {
   serializeRiskFreeRatesCache,
 } from "./yield-sync/cache";
 import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./yield-sync/benchmarks";
-import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC, benchmarkRecordAgeSeconds } from "@shared/lib/yield-benchmark-freshness";
+import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC, benchmarkRecordAgeSeconds, classifyYieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 import { throwIfAborted } from "../lib/abort";
 import { loadRiskFreeRateRegistryWithState } from "./yield-sync/state";
 import { isRecord, numberValue } from "@shared/lib/type-guards";
@@ -36,7 +36,7 @@ import { tryBojCallRate } from "./tbill-sources/boj";
 import { tryRbaCashRateTarget } from "./tbill-sources/rba";
 import { trySixSar3mcCsv } from "./tbill-sources/six";
 import { tryBanxicoCetes } from "./tbill-sources/banxico";
-import { tryBcbSelic } from "./tbill-sources/bcb";
+import { tryBcbSelic, tryBcbSelicAnnualized } from "./tbill-sources/bcb";
 import { tryBocCorra } from "./tbill-sources/boc";
 import { tryCbrtTlref } from "./tbill-sources/cbrt";
 import { tryCbrKeyRate } from "./tbill-sources/cbr";
@@ -628,10 +628,30 @@ async function tryGbpBenchmark({ signal }: { signal?: AbortSignal }) {
 
 async function tryBrlBenchmark({ signal }: { signal?: AbortSignal }) {
   const responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] = [];
-  const parsed = await tryBcbSelic(signal, diagnostic => {
-    responseDiagnostics.push({ provider: "bcb-selic", ...diagnostic });
-  });
-  return parsed ? { ...parsed, source: "bcb-selic", responseDiagnostics } : { result: null, responseDiagnostics };
+  // Same authority and instrument, different authored units. Never parallelize
+  // these or let a reachable but stale SGS11 observation suppress SGS1178.
+  for (const [source, fetch] of [
+    ["bcb-selic", tryBcbSelic],
+    ["bcb-selic-1178", tryBcbSelicAnnualized],
+  ] as const) {
+    throwIfAborted(signal);
+    const parsed = await fetch(signal, diagnostic => {
+      responseDiagnostics.push({ provider: source, ...diagnostic });
+    });
+    throwIfAborted(signal);
+    if (!parsed) continue;
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (classifyYieldBenchmarkFreshness(
+      { ageSeconds: 0, isFallback: false, fallbackMode: null },
+      { recordDate: parsed.recordDate, maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.BRL, nowSec },
+    ) === "healthy") {
+      return { ...parsed, source, responseDiagnostics };
+    }
+    const diagnostic = responseDiagnostics[responseDiagnostics.length - 1];
+    diagnostic.failure = (benchmarkRecordAgeSeconds(parsed.recordDate, nowSec) ?? -1) < 0
+      ? "future-record" : "stale-record";
+  }
+  return { result: null, responseDiagnostics };
 }
 
 // Descriptor order is the serialized registry/cache order. AUD intentionally fetches
