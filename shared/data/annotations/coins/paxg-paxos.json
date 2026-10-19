@@ -1,3 +1,4 @@
 [
-  {"date":"2019-09-05","kind":"regulatory","label":"PAXG launch, the first NYDFS-approved tokenized gold","severity":"med"}
+  {"date":"2019-09-05","kind":"regulatory","label":"PAXG launch, the first NYDFS-approved tokenized gold","severity":"med"},
+  {"date":"2026-06-25","kind":"governance","label":"PAXG extends to Solana, its first deployment beyond Ethereum","severity":"low","href":"https://www.paxos.com/blog/bringing-paxg-to-solana","note":"2026-06-25: Paxos extends PAXG to Solana as a Token-2022 mint with Sunrise DeFi; Ethereum holders can bridge via the Paxos platform or LayerZero Stargate."}
 ]

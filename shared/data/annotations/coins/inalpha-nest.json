@@ -1,0 +1,3 @@
+[
+  {"date":"2026-02-19","kind":"mint-burn-spike","label":"Queued redemption burns ~9.96M inALPHA shares on Plume for ~10.09M pUSD","severity":"high","href":"https://explorer.plume.org/tx/0x8ab7c5e53d95dbd2d58d566163a3f89cc9e7de3dcb4c46dc52c213bf41abc47f","note":"2026-02-19: Nest AtomicSolverV3 redeemSolve settled queued withdrawals for two holders on Plume, burning 9,958,777.68 inALPHA shares for 10,088,450.93 pUSD through Teller 0x20428f90. Later reads show under two shares outstanding; the accountant price was last set 2026-02-23."}
+]

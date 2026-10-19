@@ -166,6 +166,12 @@ import source150 from "./coins/zeusd-zoth.json";
 import source151 from "./coins/idrt-rupiah-token.json";
 import source152 from "./coins/msusd-metronome.json";
 import source153 from "./coins/usdai-usd-ai.json";
+import source154 from "./coins/inalpha-nest.json";
+import source155 from "./coins/mglobal-midas-fasanara.json";
+import source156 from "./coins/rusd-royal-dollar.json";
+import source157 from "./coins/stkgho-umbrella-aave.json";
+import source158 from "./coins/usdfc-secured-finance.json";
+import source159 from "./coins/vndc-jade-labs.json";
 
 type CuratedAnnotationSource = Readonly<Record<string, unknown>>;
 type CuratedAnnotationSourceAsset = readonly CuratedAnnotationSource[];
@@ -324,6 +330,12 @@ const CURATED_SOURCES: Readonly<Record<string, CuratedAnnotationSourceAsset>> = 
   "idrt-rupiah-token": source151,
   "msusd-metronome": source152,
   "usdai-usd-ai": source153,
+  "inalpha-nest": source154,
+  "mglobal-midas-fasanara": source155,
+  "rusd-royal-dollar": source156,
+  "stkgho-umbrella-aave": source157,
+  "usdfc-secured-finance": source158,
+  "vndc-jade-labs": source159,
 };
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);

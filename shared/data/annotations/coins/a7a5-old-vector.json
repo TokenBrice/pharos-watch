@@ -1,5 +1,6 @@
 [
   {"date":"2025-05-01","kind":"regulatory","label":"UK sanctions A7A5 issuer network","severity":"high","note":"2025-05: UK sanctions A7A5 network"},
   {"date":"2025-07-01","kind":"regulatory","label":"EU sanctions A7A5, direct token-level restriction","severity":"high","note":"2025-07: EU sanctions A7A5"},
-  {"date":"2025-08-14","kind":"regulatory","label":"OFAC sanctions A7A5 issuer Old Vector","severity":"high","href":"https://home.treasury.gov/news/press-releases","note":"2025-08-14: OFAC designates A7 LLC and Old Vector for sanctions-evasion infrastructure"}
+  {"date":"2025-08-14","kind":"regulatory","label":"OFAC sanctions A7A5 issuer Old Vector","severity":"high","href":"https://home.treasury.gov/news/press-releases","note":"2025-08-14: OFAC designates A7 LLC and Old Vector for sanctions-evasion infrastructure"},
+  {"date":"2026-07-23","kind":"regulatory","label":"EU 21st package adds four A7 network listings, bans 14 crypto platforms","severity":"high","href":"https://www.consilium.europa.eu/en/press/press-releases/2026/07/23/21st-package-of-sanctions-eu-hits-russian-energy-financial-services-and-crypto-hard/","note":"2026-07-23: The Council adopted the 21st Russia package, adding 4 designations tied to the cross-border A7 network behind A7A5, including its new links to Africa, and extending the transaction ban to 14 crypto-related platforms in Georgia, Panama, the UAE, the Marshall Islands, Kyrgyzstan and Belarus. The release does not name the A7 entities or platforms."}
 ]

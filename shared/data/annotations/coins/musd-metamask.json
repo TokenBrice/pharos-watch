@@ -1,3 +1,4 @@
 [
-  {"date":"2025-07-30","kind":"governance","label":"MetaMask mUSD launch, the first major wallet-native stablecoin","severity":"med","href":"https://consensys.io/blog/metamask-introduces-musd"}
+  {"date":"2025-07-30","kind":"governance","label":"MetaMask mUSD launch, the first major wallet-native stablecoin","severity":"med","href":"https://consensys.io/blog/metamask-introduces-musd"},
+  {"date":"2026-06-30","kind":"governance","label":"MetaMask Money Account launches, routing deposits into an mUSD vault on Monad","severity":"low","href":"https://metamask.io/news/introducing-metamask-money-account","note":"2026-06-30: MetaMask introduces Money Account; deposits convert to mUSD and are routed into MetaMask's mUSD DeFi vault on Monad, with MetaMask Card spending drawn from the same balance"}
 ]
