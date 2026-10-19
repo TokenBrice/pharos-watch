@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 const useYieldRankingsSummaryMock = vi.fn();
 const refetchMock = vi.fn();
@@ -49,7 +49,7 @@ function makeSummaryRow(id: string, symbol: string, apy30d: number, pys: number 
 }
 
 function makeSummaryPayload(
-  safetySnapshot: { coveredCount: number; trackedCount: number } | null,
+  safetySnapshot: { coveredCount: number; trackedCount: number | null } | null,
 ): YieldRankingsSummaryResponse {
   return {
     projection: "summary",
@@ -119,6 +119,25 @@ describe("HomeAltYieldOverview", () => {
     // "2/2 covered" — the exact case where nothing was covered.
     expect(screen.queryByText(/^\/\d+$/)).toBeNull();
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("preserves unknown coverage when a Safety snapshot has no measured denominator", () => {
+    const data = makeSummaryPayload({ coveredCount: 0, trackedCount: null });
+    data.provenance!.safetySnapshot = {
+      kind: "degraded",
+      coveredCount: 0,
+      trackedCount: null,
+      coverageRatio: null,
+      reason: "safety-score-publication-missing",
+    };
+    useYieldRankingsSummaryMock.mockReturnValue({ data, isLoading: false });
+
+    render(<HomeAltYieldOverview />);
+
+    const coverage = within(screen.getByText("Coverage").parentElement!);
+    expect(coverage.getByText("—")).toBeTruthy();
+    expect(coverage.queryByText(/^\/\d+$/)).toBeNull();
+    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
   });
 
   // Homepage rule (docs/homepage.md): yield health never renders as a warning.

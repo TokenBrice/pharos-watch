@@ -28,6 +28,10 @@ softening rules for discovery surfaces do not apply here.
 - **After the client, as server content:** `DepegEventArchivePreview`, then `FaqSection`.
 - **Archive route:** `src/app/depeg/archive/page.tsx` renders the complete `DepegEventArchive`.
 - **Per-event pages:** `src/app/depeg/[event]/page.tsx`.
+  Metadata, `NewsArticle` description, synopsis and event summary use the canonical
+  `classifyDepegClosure` result: only recovered and legacy-recovered records claim
+  recovery. Coverage loss, superseded direction, removed tracking and unknown
+  closure remain tracking closures; an end timestamp alone is not recovery.
 
 ---
 
@@ -152,6 +156,13 @@ known live, pending, floor, warning and danger states retain precedence. Nullabl
 DEWS and deviation metrics sort last in both directions, separately from observed zero.
 
 The multi-column grid starts at `lg`; below it, stacked cards preserve every field.
+
+Peg occupancy beside Peg Health is a **recorded-window peg occupancy estimate**.
+Its visible caption and row accessible description disclose that terminal tracking
+closure can leave unobserved time: the percentage proves neither recovery nor
+continuous observation. Board rows do not infer a closure reason from live status
+or an event count; this qualification also applies to legacy/unknown provenance.
+The presentation does not change PegScore or producer percentages.
 
 ### URL filter contract
 

@@ -31,6 +31,7 @@ const APY_OUTLIER_SHARE = 0.08;
 const APY_OUTLIER_RATIO = 1.35;
 
 interface ApyAxisConfig {
+  domainMin: number;
   domainMax: number;
   clipThreshold: number | null;
   clippedCount: number;
@@ -157,6 +158,7 @@ export function declutterScatterMarkers<T extends DeclutterablePoint>(
 export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisConfig {
   if (apys.length === 0) {
     return {
+      domainMin: 0,
       domainMax: Math.max(APY_AXIS_MIN, roundUp(riskFreeRate + 4, APY_AXIS_STEP)),
       clipThreshold: null,
       clippedCount: 0,
@@ -164,6 +166,9 @@ export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisCon
   }
 
   const sorted = [...apys].sort((a, b) => a - b);
+  // Keep the entire losing tail on the same linear scale; only the upper tail
+  // has a disclosed display rail.
+  const domainMin = Math.min(0, roundDown(sorted[0] * 1.08, APY_AXIS_STEP));
   const naturalMax = sorted[sorted.length - 1];
   const paddedMax = roundUp(Math.max(riskFreeRate + 4, naturalMax * 1.08), APY_AXIS_STEP);
   const q75 = percentileLinear(sorted, 75) ?? 0;
@@ -179,6 +184,7 @@ export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisCon
 
   if (!shouldClip) {
     return {
+      domainMin,
       domainMax: Math.max(APY_AXIS_MIN, paddedMax),
       clipThreshold: null,
       clippedCount: 0,
@@ -186,6 +192,7 @@ export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisCon
   }
 
   return {
+    domainMin,
     domainMax: Math.max(APY_AXIS_MIN, candidateThreshold),
     clipThreshold: candidateThreshold,
     clippedCount,

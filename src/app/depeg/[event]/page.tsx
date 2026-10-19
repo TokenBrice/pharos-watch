@@ -38,6 +38,7 @@ import {
   formatEventPrice,
   formatEventTimestamp,
   formatEventUtcTime,
+  getDepegEventClosurePresentation,
 } from "@/lib/depeg-event-display";
 import { getDepegEditorial, qualifiesForEditorialBriefing } from "./editorials";
 import { CASE_STUDY_BY_DEPEG_SLUG } from "@/lib/case-studies";
@@ -111,8 +112,9 @@ function ProvenanceLine({ event }: { event: DepegEventEntry }) {
 function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; includeTime: boolean }) {
   const startPrice = formatEventPrice(event.startPrice);
   const peakPrice = formatEventPrice(event.peakPrice);
-  const recoveryPrice = formatEventPrice(event.recoveryPrice);
-  const durationSec = event.endedAt ? event.endedAt - event.startedAt : null;
+  const { closure, label: closureLabel, isRecovery } = getDepegEventClosurePresentation(event);
+  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice) : null;
+  const durationSec = event.endedAt != null ? event.endedAt - event.startedAt : null;
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
       <div>
@@ -130,10 +132,14 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Ended</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{isRecovery ? "Recovered" : closure === "open" ? "Ended" : "Tracking closed"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {event.endedAt ? formatEventTimestamp(event.endedAt, includeTime) : "Ongoing"}
+          {event.endedAt != null ? formatEventTimestamp(event.endedAt, includeTime) : "Ongoing"}
         </dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Outcome</dt>
+        <dd className="font-medium text-foreground">{closureLabel}</dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Duration</dt>

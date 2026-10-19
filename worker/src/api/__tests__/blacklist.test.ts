@@ -1,10 +1,15 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { handleBlacklist } from "../blacklist";
 
-afterEach(() => vi.useRealTimers());
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  vi.useRealTimers();
+  fixtures.closeAll();
+});
 
 describe("handleBlacklist", () => {
   const row = makeBlacklistRow();
@@ -193,14 +198,33 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(400);
   });
 
-  it("binds address search filters case-insensitively", async () => {
-    const db = mockD1([{ match: "blacklist_events", rows: [] }]);
+  it.each(["a".repeat(48), "a".repeat(49), "a".repeat(200), "a".repeat(201), "%", "_", "\\", "\u8cc7\u7523"])(
+    "matches literal address substrings with no q length cap for %j", async (q) => {
+      const { sqlite, db } = fixtures.open();
+      const rows = [`before-${q.toUpperCase()}-after`, `before-${q}-after`, `before-${q.slice(0, -1)}-after`]
+        .map((address, index) => makeBlacklistRow({
+          id: `literal-${index}`, address, tx_hash: `tx-${index}`, timestamp: 1_700_000_000 + index,
+        }));
+      for (const row of rows) {
+        const columns = Object.keys(row);
+        sqlite.prepare(`INSERT INTO blacklist_events (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`)
+          .run(...Object.values(row));
+      }
+      const url = new URL("https://x/api/blacklist?includeTotal=true");
+      url.searchParams.set("q", ` ${q.toUpperCase()} `);
+      const body = await readJsonResponse<{ events: { id: string }[]; total: number; totalExact: boolean }>(
+        await handleBlacklist(db, url), 200,
+      );
+      expect(body.events.map((event) => event.id)).toEqual(["literal-1", "literal-0"]);
+      expect(body.total).toBe(2);
+      expect(body.totalExact).toBe(true);
 
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?q=0xAbC"));
-    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
-    expect(res.status).toBe(200);
-    expect(dataBinds).toContain("%0xabc%");
-  });
+      url.searchParams.set("q", `${q.slice(0, -1)}!`);
+      const missing = await readJsonResponse<{ events: unknown[]; total: number }>(await handleBlacklist(db, url), 200);
+      expect(missing.events).toEqual([]);
+      expect(missing.total).toBe(0);
+    },
+  );
 
   it("derives freshness from sync-blacklist cron timestamp", async () => {
     vi.useFakeTimers();

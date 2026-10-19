@@ -1,4 +1,4 @@
-import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "../api-query-history";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS, type SupplyHistoryWindow } from "../api-query-history";
 import type { OgPageSlug } from "../og-route-cards";
 
 const DEX_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.defaultDays;
@@ -68,8 +68,12 @@ export const API_PATHS = {
   dexLiquidityHistoryProbe: (stablecoinId: string) =>
     buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId }),
   supplyHistoryBase: () => "/api/supply-history",
-  supplyHistory: (stablecoinId: string, days?: number) =>
-    buildQueryPath("/api/supply-history", { stablecoin: stablecoinId, days }),
+  supplyHistory: (stablecoinId: string, window?: SupplyHistoryWindow) =>
+    buildQueryPath("/api/supply-history", {
+      stablecoin: stablecoinId,
+      days: window === "all" ? undefined : window,
+      range: window === "all" ? "all" : undefined,
+    }),
   dailyDigest: () => "/api/daily-digest",
   digestArchive: () => "/api/digest-archive",
   digestPromo: () => "/api/digest-promo",

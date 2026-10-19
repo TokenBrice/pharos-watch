@@ -1,5 +1,6 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
+import type { SupplyHistoryWindow } from "@shared/lib/api-query-history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
@@ -73,8 +74,6 @@ export type { NonUsdSharePoint } from "@shared/types/market";
 
 /** First-paint window selected by the stablecoin detail market charts. */
 export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
-/** Expanded window fetched only when a detail chart selects 1Y or All. */
-export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
 
 
 
@@ -622,9 +621,9 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     createLazySchema<SupplyHistoryPoint[]>(
       async () => (await import("@shared/types/market")).SupplyHistoryResponseSchema,
     ),
-    (stablecoinId: string, days: number = 1825) => ({
-      queryKey: ["supply-history", stablecoinId, days] as const,
-      path: API_PATHS.supplyHistory(stablecoinId, days),
+    (stablecoinId: string, window: SupplyHistoryWindow = 1825) => ({
+      queryKey: ["supply-history", stablecoinId, window] as const,
+      path: API_PATHS.supplyHistory(stablecoinId, window),
       producerIntervalMs: CRON_SUPPLY_SNAPSHOT,
     }),
   ),

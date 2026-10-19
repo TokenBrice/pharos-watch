@@ -123,9 +123,25 @@ describe("DepegControlBoard", () => {
   it("renders unknown peg occupancy as unavailable rather than zero or perfect stability", () => {
     renderBoard([makeRow({ pegScore: null, pegPct: null })]);
     const row = screen.getByRole("button", { name: /open susd depeg detail/i });
-    expect(within(row).getByText("- at peg")).toBeTruthy();
-    expect(within(row).queryByText("0.0% at peg")).toBeNull();
-    expect(within(row).queryByText("100.0% at peg")).toBeNull();
+    expect(within(row).getByText("-")).toBeTruthy();
+    const description = document.getElementById(row.getAttribute("aria-describedby")!)!;
+    expect(description.textContent).toMatch(/-\s*recorded-window peg occupancy estimate/i);
+    expect(description.textContent).not.toMatch(/0\.0%|100\.0%/);
+  });
+
+  it.each([
+    { pegPct: 62.1, activeDepeg: false, currentDeviationBps: 0 },
+    { pegPct: 100, activeDepeg: false, currentDeviationBps: null },
+    { pegPct: 0, activeDepeg: true, currentDeviationBps: -500 },
+  ])("keeps occupancy %s record-derived even without terminal closure provenance", (coin) => {
+    renderBoard([makeRow(coin)]);
+    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const description = document.getElementById(row.getAttribute("aria-describedby")!)!;
+    expect(description.textContent).toContain(`${coin.pegPct.toFixed(1)}%`);
+    expect(description.textContent).toMatch(/recorded-window peg occupancy estimate/i);
+    expect(description.textContent).toMatch(/tracking closure can leave unobserved time/i);
+    expect(description.textContent).toMatch(/not proof of recovery or continuous observation/i);
+    expect(within(row).queryByText(/recovered|coverage lost|asset removed|direction superseded/i)).toBeNull();
   });
   it("renders rows without side-stripe or blanket severity tint and keeps units explicit", () => {
     renderBoard([makeRow()]);

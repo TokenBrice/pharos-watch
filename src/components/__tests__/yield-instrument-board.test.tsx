@@ -79,6 +79,16 @@ const rowRenderers = [
 ] as const;
 
 describe("YieldInstrumentBoard", () => {
+  it.each([
+    { apy30d: 4.3, spread: "+0.60 pp" },
+    { apy30d: 2.5, spread: "-1.20 pp" },
+    { apy30d: 3.699, spread: "+0.00 pp" },
+  ])("labels the collapsed board benchmark difference in pp: $spread", ({ apy30d, spread }) => {
+    const { container } = renderBoard({ ...baseRow, apy30d });
+    expect(container.textContent).toContain(`${spread} vs USD 3M T-Bill`);
+    expect(screen.getByText(`30-day APY: ${apy30d.toFixed(2)}%`)).toBeTruthy();
+  });
+
   it.each(rowRenderers)("routes dynamically covered USDC to the honest fallback on %s", (_name, renderRow) => {
     renderRow({ ...baseRow, id: "usdc-circle", symbol: "USDC" });
     expect(screen.getByRole("link", { name: "View yield opportunities for USDC" }).getAttribute("href"))
@@ -332,7 +342,7 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
     // frame (3.5): a Sweet Spot chip proves the EUR rate was used.
     renderBoard(eurRowWithoutRate(), false, { benchmarks: REGISTRY_WITH_EUR });
     expect(screen.getByText("Sweet Spot")).toBeTruthy();
-    expect(screen.getByText("+0.1% vs EUR 3M compounded €STR")).toBeTruthy();
+    expect(screen.getByText("+0.06 pp vs EUR 3M compounded €STR")).toBeTruthy();
     expect(screen.getByRole("img", { name: /benchmark 1.9 percent/ })).toBeTruthy();
   });
 

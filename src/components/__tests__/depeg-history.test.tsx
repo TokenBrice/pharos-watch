@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { DepegHistory } from "@/components/depeg-history";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 import { makeEvent } from "./depeg.test-support";
 
 const { useInfiniteDepegEventsMock } = vi.hoisted(() => ({
@@ -16,6 +16,7 @@ vi.mock("@/hooks/use-depeg-events", () => ({
 
 afterEach(() => {
   useInfiniteDepegEventsMock.mockReset();
+  vi.restoreAllMocks();
 });
 
 
@@ -56,13 +57,13 @@ describe("DepegHistory provenance badges", () => {
     const view = render(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.getByText(/Loading full history.*1 \/ 2 incidents/)).toBeTruthy();
     expect(screen.queryByText("Worst depeg")).toBeNull();
-    expect(screen.queryByText("Current streak")).toBeNull();
+    expect(screen.queryByText("Recorded recovery")).toBeNull();
     expect(screen.queryByLabelText("Go to next page")).toBeNull();
     mockEvents([...events, makeEvent({ id: 2, peakDeviationBps: -350, endedAt: null })]);
     view.rerender(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.queryByText(/Loading full history/)).toBeNull();
     expect(screen.getByText("Worst depeg").parentElement?.textContent).toContain("-350 bps");
-    expect(screen.getByText("Current streak").parentElement?.textContent).toContain("Depegged now");
+    expect(screen.getByText("Recorded recovery").parentElement?.textContent).toContain("Depegged now");
   });
 
   it("never presents the cursor API's inexact page total as the incident count", () => {
@@ -117,6 +118,64 @@ describe("DepegHistory provenance badges", () => {
     expect(screen.getByTestId("event-source").textContent).toContain("live");
     expect(screen.queryByTestId("event-pending-reason")).toBeNull();
     expect(screen.queryByTestId("event-confirmed-by")).toBeNull();
+  });
+});
+
+describe("DepegHistory closure and occupancy claims", () => {
+  const now = 1_800_000_000;
+  const day = 86_400;
+  const recent90d: NonNullable<PegSummaryCoin["recent90d"]> = {
+    windowDays: 90, pegPct: 87.5, observedDays: 72, incidentCount: 2,
+    thresholdCrossingCount: 3, worstDeviationBps: -300, coverageLimited: true,
+  };
+
+  it.each([
+    ["coverage-lost-supply", 1, /coverage lost/i],
+    ["superseded-direction", 1, /direction superseded/i],
+    ["orphan-tracking-removed", 1, /asset removed/i],
+    [null, null, /recovery unconfirmed/i],
+  ] as const)("does not resurrect an older recovery after %s", (closeReason, recoveryPrice, reason) => {
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    mockEvents([
+      makeEvent({ id: 1, startedAt: now - 60 * day, endedAt: now - 50 * day, closeReason: "recovered-primary" }),
+      makeEvent({ id: 2, startedAt: now - 20 * day, endedAt: now - 10 * day, closeReason, recoveryPrice }),
+    ]);
+    render(<DepegHistory stablecoinId="usdc-circle" recent90d={recent90d} />);
+    const recovery = screen.getByText("Recorded recovery").parentElement!;
+    expect(recovery.textContent).toMatch(/tracking closed/i);
+    expect(recovery.textContent).toMatch(reason);
+    expect(recovery.textContent).toMatch(/continuity unavailable/i);
+    expect(screen.queryByText(/\d+d (at peg|since last recorded recovery)/)).toBeNull();
+    const occupancy = screen.getByRole("group", { name: /recent 90-day recorded-window peg occupancy/i });
+    expect(occupancy.textContent).toMatch(/87\.5%.*recorded-window peg occupancy estimate/i);
+    expect(occupancy.textContent).toMatch(/72d.*calculation basis/i);
+    const description = document.getElementById(occupancy.getAttribute("aria-describedby")!)!;
+    expect(description.textContent).toMatch(/not proof of recovery or continuous observation/i);
+    expect(description.textContent).toMatch(/unobserved time/i);
+  });
+
+  it.each(["recovered-primary", "recovered-dex", "recovered-native", null, undefined] as const)(
+    "qualifies time since recorded recovery for %s without claiming continuous at-peg coverage",
+    (closeReason) => {
+      vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+      mockEvents([makeEvent({ startedAt: now - 20 * day, endedAt: now, closeReason })]);
+      render(<DepegHistory stablecoinId="usdc-circle" recent90d={recent90d} />);
+      expect(screen.getByText(/0d since last recorded recovery/)).toBeTruthy();
+      expect(screen.queryByText(/\d+d at peg/)).toBeNull();
+      expect(screen.getByRole("group", { name: /recorded-window peg occupancy/i }).textContent).toMatch(/87\.5%.*estimate/i);
+    },
+  );
+
+  it("qualifies occupancy without inferring a latest closure from incomplete history", () => {
+    mockEvents([makeEvent({ closeReason: "coverage-lost-supply", recoveryPrice: null })], {
+      isFullyLoaded: false, isAutoLoadCapped: true,
+    });
+    render(<DepegHistory stablecoinId="usdc-circle" recent90d={recent90d} />);
+    expect(screen.queryByText("Recorded recovery")).toBeNull();
+    expect(screen.queryByText(/Tracking closed \(/)).toBeNull();
+    const occupancy = screen.getByRole("group", { name: /recorded-window peg occupancy/i });
+    expect(occupancy.textContent).toMatch(/87\.5%.*estimate/i);
+    expect(document.getElementById(occupancy.getAttribute("aria-describedby")!)?.textContent).toMatch(/unobserved time/i);
   });
 });
 

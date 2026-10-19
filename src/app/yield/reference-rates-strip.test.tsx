@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
 import type {
   YieldBenchmarkMeta,
@@ -61,12 +61,75 @@ const safetySnapshot: YieldSafetySnapshotMeta = {
 
 describe("ReferenceRatesStrip", () => {
   beforeEach(() => {
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    });
     vi.useFakeTimers({ now: FAKE_NOW });
   });
 
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    [7199, false],
+    [7200, false],
+    [7201, true],
+    [null, false],
+  ] as const)("warns only beyond the pool-input budget (age=%s)", (ageSeconds, stale) => {
+    render(<ReferenceRatesStrip poolInputMeta={{ ...poolInputMeta, ageSeconds, updatedAt: ageSeconds === null ? null : FAKE_NOW / 1000 - ageSeconds }} />);
+    const age = screen.getByText(ageSeconds === null ? "Pool input age unavailable" : /Pool input age \d+m/);
+    fireEvent.focus(age);
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip.textContent).toMatch(/7200 seconds/);
+    expect(/stale/i.test(tooltip.textContent ?? "")).toBe(stale);
+  });
+
+  it("renders unavailable Safety coverage without inventing a percentage", () => {
+    render(<ReferenceRatesStrip safetySnapshot={{
+      ...safetySnapshot,
+      kind: "degraded",
+      coverageRatio: null,
+      trackedCount: null,
+      coveredCount: 0,
+      reason: "safety-score-publication-missing",
+    }} />);
+
+    const unavailable = screen.getByText("Safety coverage unavailable");
+    expect(screen.getByText("Data freshness")).toBeTruthy();
+    expect(screen.queryByText(/^(0|100)%$/)).toBeNull();
+    fireEvent.focus(unavailable);
+    expect(screen.getByRole("tooltip").textContent).toBe("safety-score-publication-missing");
+  });
+
+  it("keeps measured zero Safety coverage distinct from unavailable", () => {
+    render(<ReferenceRatesStrip safetySnapshot={{
+      ...safetySnapshot,
+      kind: "degraded",
+      coverageRatio: 0,
+      coveredCount: 0,
+      reason: "safety-snapshot-coverage",
+    }} />);
+
+    expect(screen.getByText("0%")).toBeTruthy();
+    expect(screen.queryByText("Safety coverage unavailable")).toBeNull();
+  });
+
+  it("retains measured coverage and the reason for a held accepted Safety snapshot", () => {
+    render(<ReferenceRatesStrip safetySnapshot={{
+      ...safetySnapshot,
+      kind: "degraded",
+      reason: "safety-snapshot-held",
+    }} />);
+
+    const coverage = screen.getByText("91%");
+    expect(screen.queryByText("Safety coverage unavailable")).toBeNull();
+    fireEvent.focus(coverage.parentElement!);
+    expect(screen.getByRole("tooltip").textContent).toBe("safety-snapshot-held");
   });
 
   it("renders one row per benchmark with the currency code, symbol, rate, and stripped benchmark label", () => {

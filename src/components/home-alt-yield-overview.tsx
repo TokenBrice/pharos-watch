@@ -25,6 +25,7 @@ import {
   type YieldViewModelRow,
 } from "@/lib/yield-view-model";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
+import type { YieldSafetySnapshotMeta } from "@shared/types/yield";
 
 // The /yield/ page opens on this risk band; the home card answers for the same view.
 const LANDING_BAND_LABEL =
@@ -59,7 +60,7 @@ interface OverviewData {
  */
 function buildOverview(
   rankings: YieldRankingSummary[],
-  snapshot: { coveredCount: number; trackedCount: number } | null,
+  snapshot: YieldSafetySnapshotMeta | null,
 ): Omit<OverviewData, "medianApy"> {
   const universe = prepareYieldUniverse(dedupeYieldRankings(rankings), null);
   const visibleRows = selectVisibleYieldRows(universe, {});

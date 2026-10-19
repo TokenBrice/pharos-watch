@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useRef } from "react";
+import { useMemo, useCallback, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -54,6 +54,7 @@ import {
   resolveYieldWorkbenchFallbackNotice,
 } from "@shared/lib/yield-workbench-fallback";
 import type { YieldBenchmarkRegistry } from "@shared/types";
+import { isOpportunityDerivedSafety, YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
 
 interface HeroHighlightRowProps {
   label: string;
@@ -62,7 +63,7 @@ interface HeroHighlightRowProps {
   symbol: string;
   value: string;
   unit: string;
-  context: string;
+  context: ReactNode;
   onClick: () => void;
 }
 
@@ -160,18 +161,24 @@ function formatHeroRiskContext(
   row: YieldViewModelRow,
   riskFreeRate: number,
   benchmarks: YieldBenchmarkRegistry | null | undefined,
-): string {
+): ReactNode {
   // E5: judge the hero zone against the row's own benchmark — a missing row
   // rate resolves from the registry by benchmarkKey before the USD frame.
   const benchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const zone = resolveYieldZone(row.safetyScore, row.apy30d, benchmark.rate);
-  const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} safety` : "Safety NR";
+  const opportunitySafety = isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
+  const safetyLabel = opportunitySafety ? "opportunity safety" : "safety";
+  const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} ${safetyLabel}` : opportunitySafety ? "Opportunity safety NR" : "Safety NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
   const warningCount = row.warningSignals.length;
   const parts = [safety, pys, posture, `${warningCount} warning${warningCount === 1 ? "" : "s"}`];
   if (zone !== null) parts.unshift(YIELD_ZONE_LABELS[zone]);
-  return parts.join(" · ");
+  return (
+    <span title={opportunitySafety ? YIELD_OPPORTUNITY_SAFETY_DESCRIPTION : undefined}>
+      {parts.join(" · ")}
+    </span>
+  );
 }
 
 function SelectorHandoffNotice({ visible }: { visible: boolean }) {
@@ -602,7 +609,7 @@ export function YieldClient() {
             {visibleRows.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2 text-2xs text-muted-foreground">
-                  <span>X: Safety score · Y: APY · outliers are capped</span>
+                  <span>X: Row / opportunity safety · Y: APY · upper outliers are capped</span>
                   <a
                     href="#data"
                     className="pharos-focus-ring shrink-0 rounded-sm font-medium text-foreground underline underline-offset-2"

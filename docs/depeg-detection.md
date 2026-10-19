@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.34`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.35`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -454,6 +454,22 @@ detail-history presentation lives in `docs/stablecoin-detail-page.md`.
 streak/current-event metrics over full available history. It does not use
 PegScore's four-year clamp; do not present its full-history occupancy/span as
 the scored window.
+
+The latest chronological terminal boundary is classified with `classifyDepegClosure`
+before deriving recovery age. `currentStreakDays` is available only for recovered
+or legacy-recovered closures, including a genuine zero-day recovery; coverage loss,
+superseded direction, removed tracking and unknown closure withhold it rather than
+falling back to an older recovery. `latestClosure` preserves that distinction in
+the view model. An open event remains a separate current-event state.
+
+Detail history labels this duration **since last recorded recovery**, not an
+uninterrupted at-peg streak. Both board `pegPct` and detail `recent90d.pegPct` are
+visibly and accessibly qualified as record-derived occupancy estimates. The
+recent window's `observedDays` is the calculation basis, not proof of continuous
+observations; tracking closure can leave unobserved post-closure time. Specific
+latest-closure disclosures require complete detail history. These are presentation
+qualifications only: the shared scorer, recent-stat calculations and numeric
+producer contracts are unchanged.
 
 ## Peg Score (`peg-score.ts`)
 

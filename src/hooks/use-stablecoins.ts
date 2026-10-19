@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { StablecoinListResponse, SupplyHistoryPoint } from "@shared/types";
+import type { SupplyHistoryWindow } from "@shared/lib/api-query-history";
 import {
   asMetaQueryOptions,
   createRegisteredApiPollingQueryOptions,
@@ -28,12 +29,12 @@ export function useStablecoins(overrides?: QueryControlOverrides) {
 
 export function supplyHistoryQueryOptions(
   id: string,
-  days?: number,
+  window?: SupplyHistoryWindow,
   overrides?: QueryControlOverrides,
 ) {
   return asMetaQueryOptions<SupplyHistoryPoint[]>(
     createRegisteredApiPollingQueryOptions<SupplyHistoryPoint[]>(
-      FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(id, days),
+      FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(id, window),
       { enabled: !!id, ...overrides },
     ),
   );
@@ -41,10 +42,10 @@ export function supplyHistoryQueryOptions(
 
 export function useSupplyHistory(
   id: string,
-  days?: number,
+  window?: SupplyHistoryWindow,
   overrides?: QueryControlOverrides,
 ) {
-  const query = unwrapApiQueryWithMetaResult(useQuery(supplyHistoryQueryOptions(id, days, overrides)));
+  const query = unwrapApiQueryWithMetaResult(useQuery(supplyHistoryQueryOptions(id, window, overrides)));
   const meta = query.meta ?? {
     updatedAt: null,
     ageSeconds: null,

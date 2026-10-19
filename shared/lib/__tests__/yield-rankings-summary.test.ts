@@ -4,7 +4,7 @@ import {
   YieldRankingSummarySchema,
   YieldRankingsSummaryResponseSchema,
 } from "@shared/types/yield-summary";
-import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 
 function deterministicToken(seed: number, length: number): string {
   const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -223,6 +223,37 @@ function makeDetailedResponse(count: number): YieldRankingsResponse {
 
 
 describe("projectYieldRankingsSummary", () => {
+  it.each([null, 0, 0.91])("preserves unavailable versus measured Safety coverage through both wire schemas: %s", (coverageRatio) => {
+    const detailed = makeDetailedResponse(1);
+    const snapshot = {
+      kind: "degraded" as const,
+      coverageRatio,
+      coveredCount: coverageRatio == null || coverageRatio === 0 ? 0 : 91,
+      trackedCount: coverageRatio == null ? null : 100,
+      reason: coverageRatio == null ? "safety-score-publication-missing" : "safety-snapshot-held",
+      source: "safety-score-v9-publication" as const,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
+    };
+    detailed.provenance = {
+      selectionMethod: "confidence-weighted",
+      benchmark: detailed.benchmarks!.USD,
+      dlPools: { mode: "unavailable", updatedAt: null, ageSeconds: null, poolCount: 0, fallbackMode: "unavailable" },
+      safetySnapshot: snapshot,
+      liveSafetyHydration: snapshot,
+    };
+
+    const full = YieldRankingsResponseSchema.parse(JSON.parse(JSON.stringify(detailed)));
+    const summary = YieldRankingsSummaryResponseSchema.parse(JSON.parse(JSON.stringify(projectYieldRankingsSummary(full))));
+    for (const response of [full, summary]) {
+      expect(response.provenance?.safetySnapshot.coverageRatio).toBe(coverageRatio);
+      expect(response.provenance?.safetySnapshot.trackedCount).toBe(coverageRatio == null ? null : 100);
+      expect(response.provenance?.liveSafetyHydration?.coverageRatio).toBe(coverageRatio);
+      expect(response.provenance?.liveSafetyHydration?.trackedCount).toBe(coverageRatio == null ? null : 100);
+    }
+  });
+
   it("emits a strict page projection without detail-only ranking fields", () => {
     const detailed = makeDetailedResponse(1);
     const summary = projectYieldRankingsSummary(detailed);

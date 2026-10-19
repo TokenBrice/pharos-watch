@@ -605,5 +605,18 @@ describe("condenseReserveSlices", () => {
     expect(shown[0]).toMatchObject({ label: "Repo (2 slices)", pct: 50, role: "Repo" });
     expect(rest.map((s) => s.key)).toEqual(["g", "h"]);
     expect(restPct).toBe(10);
+    expect(rest.map((s) => s.risk)).toEqual(["very-low", "low"]);
+    expect([...shown, ...rest].reduce((sum, s) => sum + s.pct, 0)).toBe(100);
+  });
+
+  it("keeps same-class mixed-risk reviewed remainder separate and preserves authored totals", () => {
+    const slices = [
+      slice("a", 40), slice("b", 20), slice("c", 12), slice("d", 10), slice("e", 8),
+      slice("cash A", 6, "Cash"), slice("cash B", 3.8, "Cash", "low"),
+    ];
+    const { shown, rest, restPct } = condenseReserveSlices(slices);
+    expect(rest).toEqual(slices.slice(5));
+    expect(restPct).toBe(9.8);
+    expect([...shown, ...rest].reduce((sum, s) => sum + s.pct, 0)).toBe(99.8);
   });
 });

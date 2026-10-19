@@ -33,6 +33,7 @@ import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { getLogoSrc } from "@/lib/logos";
 import { clampScore } from "@shared/lib/math";
+import { formatYieldApyDelta } from "@/lib/yield-presentation";
 
 // ---------------------------------------------------------------------------
 // Visual-indicator primitives. The board mirrors the depeg control board: each
@@ -333,8 +334,7 @@ function YieldInstrumentRowBase({
           <div className="mt-1 truncate font-mono text-3xs text-muted-foreground">
             {excess != null ? (
               <span>
-                {excess >= 0 ? "+" : ""}
-                {excess.toFixed(1)}% vs {resolvedBenchmark.label}
+                {formatYieldApyDelta(excess)} vs {resolvedBenchmark.label}
               </span>
             ) : (
               <span>{resolvedBenchmark.label}</span>

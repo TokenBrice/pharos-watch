@@ -6,12 +6,14 @@ export interface StablecoinHistoryQueryOptions {
   minDays: number;
   maxDays: number;
   rangePolicy?: NumericRangePolicy;
+  allowAllRange?: boolean;
 }
 
 export interface StablecoinHistoryQuery {
   stablecoinId: string;
-  days: number;
+  days: number | null;
   cutoff: number;
+  range?: "all";
 }
 
 export function parseStablecoinHistoryQuery(
@@ -26,6 +28,17 @@ export function parseStablecoinHistoryQuery(
   const resolved = resolveOrReject(stablecoinId);
   if (resolved instanceof Response) {
     return resolved;
+  }
+
+  if (opts.allowAllRange && url.searchParams.has("range")) {
+    if (url.searchParams.get("range") !== "all") {
+      return errorResponse(400, "Invalid range: expected 'all'");
+    }
+    if (url.searchParams.has("days")) {
+      return errorResponse(400, "Specify either range=all or days, not both");
+    }
+    // No day bound: supply's reader omits the lower predicate altogether.
+    return { stablecoinId: resolved.canonicalId, days: null, cutoff: 0, range: "all" };
   }
 
   const days = parseIntParam(
@@ -55,7 +68,7 @@ interface StablecoinHistoryContext<TRow, THistory> {
 interface StablecoinHistoryHandlerConfig<TRow, THistory, TBody = THistory[]> {
   query: StablecoinHistoryQueryOptions;
   cacheControl: string;
-  fetchRows: (ctx: { db: D1Database; stablecoinId: string; cutoff: number }) => Promise<TRow[]>;
+  fetchRows: (ctx: { db: D1Database; stablecoinId: string; cutoff: number; range?: "all" }) => Promise<TRow[]>;
   mapRow: (row: TRow) => THistory;
   buildBody?: (
     ctx: StablecoinHistoryContext<TRow, THistory>,
@@ -82,6 +95,7 @@ export async function handleStablecoinHistoryRequest<TRow, THistory, TBody = THi
     db,
     stablecoinId: parsed.stablecoinId,
     cutoff: parsed.cutoff,
+    ...(parsed.range ? { range: parsed.range } : {}),
   });
   const history = rows.map(config.mapRow);
 

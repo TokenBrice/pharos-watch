@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   filterUnprojectedTapeEvents,
   insertTapeEvents,
@@ -9,11 +8,11 @@ import {
 import { mapTapeEventRow, parseDateStringToEpochSec } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";
 
-const databases: DatabaseSync[] = [];
+const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  for (const sqlite of databases.splice(0)) sqlite.close();
+  fixtures.closeAll();
 });
 
 function event(sourceRowId: string): TapeEventInsert {
@@ -39,34 +38,7 @@ function event(sourceRowId: string): TapeEventInsert {
 }
 
 function createTapeDatabase(): { db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  databases.push(sqlite);
-  sqlite.exec(`
-    CREATE TABLE tape_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_id TEXT NOT NULL,
-      type TEXT NOT NULL,
-      severity TEXT NOT NULL,
-      ts INTEGER NOT NULL,
-      ends_at INTEGER,
-      coin_id TEXT,
-      issuer_id TEXT,
-      peg_currency TEXT,
-      chain TEXT,
-      title TEXT NOT NULL,
-      summary TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      source_table TEXT NOT NULL,
-      source_row_id TEXT NOT NULL,
-      transition TEXT NOT NULL,
-      source_url TEXT,
-      methodology_version TEXT,
-      created_at INTEGER NOT NULL
-    );
-    CREATE UNIQUE INDEX idx_tape_source_key
-      ON tape_events(source_table, source_row_id, transition);
-  `);
-  return { db: createSqliteD1(sqlite) };
+  return fixtures.open();
 }
 
 describe("Tape event store static-catalog probes", () => {
@@ -139,4 +111,44 @@ describe("Tape event read boundary", () => {
       transition: inserted.transition,
     });
   });
+
+  it.each(["a".repeat(48), "a".repeat(49), "a".repeat(200), "%", "_", "\\", "\u8cc7\u7523"])(
+    "matches literal substrings across searchable columns for %j", async (q) => {
+      const { db } = createTapeDatabase();
+      await insertTapeEvents(db, [
+        { ...event("title"), title: `before ${q.toUpperCase()} after` },
+        { ...event("summary"), summary: `before ${q.toUpperCase()} after` },
+        { ...event("coin"), coinId: `before-${q.toUpperCase()}-after` },
+        { ...event("distractor"), title: `before ${q.slice(0, -1)} after` },
+      ]);
+      const options = { limit: 10, cursor: null, includeTotal: true } as const;
+      const result = await queryTapeEvents(db, { ...options, filters: { q } });
+      expect(result.rows.map((row) => row.event_id)).toEqual(["event-coin", "event-summary", "event-title"]);
+      expect(result.total).toBe(3);
+      expect(result.hasMore).toBe(false);
+
+      const missing = await queryTapeEvents(db, { ...options, filters: { q: `missing-${q}` } });
+      expect(missing.rows).toEqual([]);
+      expect(missing.total).toBe(0);
+    },
+  );
+
+  it.each(["depeg", "de_peg", "a".repeat(1_000)])(
+    "matches only literal dot-delimited type prefixes for %j", async (prefix) => {
+      const { db } = createTapeDatabase();
+      await insertTapeEvents(db, [
+        { ...event("child"), type: `${prefix}.opened` },
+        { ...event("nested"), type: `${prefix.toUpperCase()}.opened.updated` },
+        { ...event("bare"), type: prefix },
+        { ...event("not-delimited"), type: `${prefix}extra.opened` },
+        { ...event("not-leading"), type: `other.${prefix}.opened` },
+        { ...event("wildcard-decoy"), type: `${prefix.includes("_") ? prefix.replace(/_/g, "x") : "other"}.opened` },
+      ]);
+      const result = await queryTapeEvents(db, {
+        filters: { typePrefixes: [prefix] }, limit: 10, cursor: null, includeTotal: true,
+      });
+      expect(result.rows.map((row) => row.event_id)).toEqual(["event-nested", "event-child"]);
+      expect(result.total).toBe(2);
+    },
+  );
 });

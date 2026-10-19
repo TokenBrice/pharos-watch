@@ -11,6 +11,11 @@ import type { ReserveRisk } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { formatReserveSharePct } from "@/components/reserve-risk-swatch";
 
+type ReserveTreemapDatum = Omit<ReserveCompositionSlice, "risk"> & {
+  risk: ReserveRisk | null;
+  hideLabel?: boolean;
+};
+
 /* Break a cell label on word boundaries instead of mid-word ("Deposits at
  * Sy…"). Lines hold whole words up to maxChars; running out of lines appends
  * an ellipsis after the last whole word. Only a single word longer than the
@@ -43,9 +48,10 @@ interface TreemapCellProps {
   width: number;
   height: number;
   label: string;
-  risk: ReserveRisk;
+  risk: ReserveRisk | null;
   pct: number;
   depth?: number;
+  hideLabel?: boolean;
 }
 
 /* Label geometry. Text is inset from the tile edge rather than run to it, and a
@@ -61,16 +67,17 @@ const MIN_LABEL_HEIGHT = 32;
 const MIN_LABEL_AREA = 3400;
 const MIN_LABEL_CHARS = 6;
 
-function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCellProps) {
+function TreemapCell({ x, y, width, height, label, risk, pct, depth, hideLabel }: TreemapCellProps) {
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
 
-  const fill = RISK_COLORS[risk];
-  const labelFill = RESERVE_TREEMAP_LABEL_COLOR;
+  const fill = risk === null ? "none" : RISK_COLORS[risk];
+  const labelFill = risk === null ? "var(--color-foreground)" : RESERVE_TREEMAP_LABEL_COLOR;
   // 11 px floor: smaller tiles wrap or drop the label (tooltip) rather than shrink it.
   const fontSize = 11;
   const maxChars = Math.floor((width - LABEL_INSET * 2) / (fontSize * CHAR_WIDTH_EM));
   const showLabel =
+    !hideLabel &&
     width >= MIN_LABEL_WIDTH &&
     height >= MIN_LABEL_HEIGHT &&
     width * height >= MIN_LABEL_AREA &&
@@ -91,10 +98,16 @@ function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCe
 
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} rx={4} fill={fill} stroke="var(--color-card)" strokeWidth={2} />
+      <title>{`${label} · ${formatReserveSharePct(pct)}${risk === null ? "" : ` · ${RESERVE_RISK_PRESENTATION[risk].longLabel}`}`}</title>
+      <rect
+        x={x} y={y} width={width} height={height} rx={4} fill={fill}
+        stroke={risk === null ? "var(--color-muted-foreground)" : "var(--color-card)"}
+        strokeWidth={risk === null ? 1 : 2}
+        strokeDasharray={risk === null ? "4 3" : undefined}
+      />
       {/* The tier's accent as an inset outline: the legend swatch carries the same
           fill + accent border, so a tile always has a swatch it visibly matches. */}
-      {width > 8 && height > 8 && (
+      {risk !== null && width > 8 && height > 8 && (
         <rect
           x={x + 1.5}
           y={y + 1.5}
@@ -146,21 +159,31 @@ function ReserveTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: Array<{ payload: ReserveCompositionSlice }>;
+  payload?: Array<{ payload: ReserveTreemapDatum }>;
 }) {
   if (!payload?.[0]) return null;
   const { label, pct, risk, detail } = payload[0].payload;
   return (
     <PharosChartTooltip active={active}>
       <TooltipLabel>{label}</TooltipLabel>
-      <TooltipRow color={RISK_ACCENT_COLORS[risk]} label={RESERVE_RISK_PRESENTATION[risk].longLabel} value={formatReserveSharePct(pct)} />
+      <TooltipRow
+        color={risk === null ? undefined : RISK_ACCENT_COLORS[risk]}
+        label={risk === null ? "Not covered by the reviewed composition" : RESERVE_RISK_PRESENTATION[risk].longLabel}
+        value={formatReserveSharePct(pct)}
+      />
       {detail ? <div className="mt-1 max-w-56 text-xs text-muted-foreground">{detail}</div> : null}
     </PharosChartTooltip>
   );
 }
 
-export function ReserveTreemapChart({ data }: { data: readonly ReserveCompositionSlice[] }) {
+export function ReserveTreemapChart({
+  data, unreviewedPct = 0, labelLimit = Infinity,
+}: { data: readonly ReserveCompositionSlice[]; unreviewedPct?: number; labelLimit?: number }) {
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
+  const layoutData: ReserveTreemapDatum[] = data.map((slice, index) => ({ ...slice, hideLabel: index >= labelLimit }));
+  if (unreviewedPct > 0) {
+    layoutData.push({ key: "unreviewed", label: "Unreviewed remainder", pct: unreviewedPct, risk: null, detail: null });
+  }
 
   return (
     <div ref={ref} className="h-full min-w-0 overflow-hidden">
@@ -169,7 +192,7 @@ export function ReserveTreemapChart({ data }: { data: readonly ReserveCompositio
           <Treemap
             width={width}
             height={height}
-            data={data.map((slice) => ({ ...slice, size: slice.pct }))}
+            data={layoutData.map((slice) => ({ ...slice, size: slice.pct }))}
             dataKey="size"
             nameKey="label"
             content={(props) => {

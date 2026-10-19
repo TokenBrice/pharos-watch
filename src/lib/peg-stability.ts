@@ -3,9 +3,10 @@ import { formatTrackingSpanSeconds } from "@shared/lib/format";
 import { computePegScore } from "@shared/lib/peg-score";
 import { DAY_SECONDS } from "@/lib/constants";
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
+import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
 
 interface PegStabilityMetrics {
-  /** Percentage of tracked history at peg (0–100) */
+  /** Record-derived peg occupancy estimate (0–100), not proof of continuous observation */
   pegPct: number | null;
   /** Human-readable tracking span (e.g. "3y 8m") */
   trackingSpan: string;
@@ -15,8 +16,10 @@ interface PegStabilityMetrics {
   eventCount: number;
   /** Worst (most extreme) peak deviation in bps, signed */
   worstDeviationBps: number | null;
-  /** Days since last event ended, or null if currently depegged or no events */
+  /** Days since the latest recorded recovery, not a continuously observed at-peg streak */
   currentStreakDays: number | null;
+  /** Latest terminal boundary, including non-recovery tracking closures */
+  latestClosure: DepegClosureClassification | null;
   /** Whether there is an ongoing depeg event right now */
   depeggedNow: boolean;
 }
@@ -51,15 +54,21 @@ export function computePegStability(
   const pegMetrics = computePegScore(events, earliestSec, nowSec);
   const limited = historySpanSec < WEEK_SECONDS;
 
-  // Current streak: days since last closed event ended
+  // Inspect the latest terminal boundary before considering recovery; never skip
+  // a tracking closure and resurrect an older recovered episode.
   const depeggedNow = pegMetrics.activeDepeg;
-  let currentStreakDays: number | null = null;
-  if (!depeggedNow && events.length > 0) {
-    const lastEnded = events.filter((e) => e.endedAt !== null).reduce((m, e) => Math.max(m, e.endedAt!), -Infinity);
-    if (lastEnded > 0) {
-      currentStreakDays = Math.floor((nowSec - lastEnded) / DAY_SECONDS);
+  let latestClosed: DepegEvent | null = null;
+  for (const event of events) {
+    if (event.endedAt == null || event.endedAt > nowSec) continue;
+    if (latestClosed == null || event.endedAt >= latestClosed.endedAt!) {
+      latestClosed = event;
     }
   }
+  const latestClosure = latestClosed ? classifyDepegClosure(latestClosed) : null;
+  const recovered = latestClosure === "recovered" || latestClosure === "legacy_recovered";
+  const currentStreakDays = !depeggedNow && recovered && latestClosed
+    ? Math.floor((nowSec - latestClosed.endedAt!) / DAY_SECONDS)
+    : null;
 
   return {
     pegPct: pegMetrics.pegPct,
@@ -68,6 +77,7 @@ export function computePegStability(
     eventCount: pegMetrics.eventCount,
     worstDeviationBps: pegMetrics.worstDeviationBps,
     currentStreakDays,
+    latestClosure,
     depeggedNow,
   };
 }

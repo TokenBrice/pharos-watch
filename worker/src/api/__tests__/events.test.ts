@@ -298,6 +298,24 @@ describe("handleEvents", () => {
     expect(body.total).toBe(expected.length);
   });
 
+  it.each(["type", "class"])("applies literal dot-delimited %s prefixes without a length ceiling", async (param) => {
+    for (const prefix of ["de_peg", "a".repeat(1_000)]) {
+      const db = eventDb([
+        `${prefix}.opened`, `${prefix.toUpperCase()}.opened.updated`, prefix,
+        `${prefix}extra.opened`, `other.${prefix}.opened`,
+        `${prefix.includes("_") ? prefix.replace(/_/g, "x") : "other"}.opened`,
+      ].map((type, index) => makeRow({
+        id: index + 1, event_id: `prefix-${index}`, source_row_id: String(index), type,
+      })));
+      const url = new URL("https://x/api/events?includeTotal=true");
+      url.searchParams.set(param, param === "type" ? `${prefix}.*` : prefix);
+      const body = TapeEventsResponseSchema.parse(await readJsonResponse(await handleEvents(db, url), 200));
+      expect(body.events.map((event) => event.id)).toEqual(["prefix-1", "prefix-0"]);
+      expect(body.total).toBe(2);
+      expect(body.droppedRows).toBe(0);
+    }
+  });
+
   it("includes both timestamp bounds and excludes neighboring rows", async () => {
     const db = eventDb([999, 1000, 2000, 2001].map((ts, index) =>
       makeRow({ id: index + 1, event_id: `time-${ts}`, source_row_id: String(index), ts })));
@@ -374,6 +392,31 @@ describe("handleEvents", () => {
     expect(body.events.map((event) => event.id)).toEqual(expected);
     expect(body.total).toBe(expected.length);
   });
+
+  it.each(["a".repeat(48), "a".repeat(49), "a".repeat(200), "%", "_", "\\", "\u8cc7\u7523"])(
+    "serves literal q matches and exact totals at admitted boundaries for %j", async (q) => {
+      const db = eventDb([
+        { title: `before ${q.toUpperCase()} after` },
+        { summary: `before ${q.toUpperCase()} after` },
+        { coin_id: `before-${q.toUpperCase()}-after` },
+        { title: `before ${q.slice(0, -1)} after` },
+      ].map((overrides, index) => makeRow({
+        id: index + 1, event_id: `literal-${index}`, source_row_id: String(index), ...overrides,
+      })));
+      const url = new URL("https://x/api/events?includeTotal=true");
+      url.searchParams.set("q", ` ${q.toUpperCase()} `);
+      const body = TapeEventsResponseSchema.parse(await readJsonResponse(await handleEvents(db, url), 200));
+      expect(body.events.map((event) => event.id)).toEqual(["literal-2", "literal-1", "literal-0"]);
+      expect(body.total).toBe(3);
+      expect(body.totalExact).toBe(true);
+      expect(body.droppedRows).toBe(0);
+
+      url.searchParams.set("q", `${q.slice(0, -1)}!`);
+      const missing = TapeEventsResponseSchema.parse(await readJsonResponse(await handleEvents(db, url), 200));
+      expect(missing.events).toEqual([]);
+      expect(missing.total).toBe(0);
+    },
+  );
 
   it("rejects overlong q filters with 400", async () => {
     const res = await handleEvents(mockD1([]), new URL(`https://x/api/events?q=${"a".repeat(201)}`));

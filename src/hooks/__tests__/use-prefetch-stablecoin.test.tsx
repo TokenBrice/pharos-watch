@@ -10,7 +10,7 @@ import { usePrefetchStablecoin } from "../use-prefetch-stablecoin";
 import { useStablecoinDetailViewModel } from "../use-stablecoin-detail-view-model";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
 import { useSupplyHistory } from "../use-stablecoins";
-import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS, STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
+import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 
 vi.mock("@/components/lazy-section", () => ({ LazySection: ({ children }: { children: ReactNode }) => <>{children}</> }));
 vi.mock("@/components/mcap-chart", () => ({ McapChart: () => <div /> }));
@@ -46,7 +46,7 @@ describe("usePrefetchStablecoin", () => {
     const prefetch = renderHook(() => usePrefetchStablecoin(), { wrapper });
     act(() => prefetch.result.current("usdt-tether"));
     const firstPaintKey = ["supply-history", "usdt-tether", STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS];
-    const expandedKey = ["supply-history", "usdt-tether", STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS];
+    const expandedKey = ["supply-history", "usdt-tether", range === "All" ? "all" : 365];
     await waitFor(() => expect(client.getQueryState(firstPaintKey)?.status).toBe("success"));
     expect(requests).toHaveLength(1);
     expect(requests[0]).toContain("/api/supply-history?stablecoin=usdt-tether&days=90");
@@ -65,7 +65,7 @@ describe("usePrefetchStablecoin", () => {
     fireEvent.click(screen.getByRole("button", { name: range }));
     await waitFor(() => expect(client.getQueryState(expandedKey)?.status).toBe("success"));
     expect(requests.filter((url) => url.includes("/supply-history"))).toEqual([
-      expect.stringContaining("days=90"), expect.stringContaining("days=1825"),
+      expect.stringContaining("days=90"), expect.stringContaining(range === "All" ? "range=all" : "days=365"),
     ]);
     expect(client.getQueryData(firstPaintKey)).toBe(prefetched);
     chart.unmount();

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { YieldHealthCard } from "@/components/status/yield-health";
 import type { YieldHealthSummary } from "@shared/types";
@@ -169,6 +169,24 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
 }
 
 describe("YieldHealthCard", () => {
+
+  it("keeps unavailable Safety coverage unknown instead of displaying measured zero", () => {
+    render(<YieldHealthCard health={makeHealth({
+      safetyCoverage: {
+        coveredCount: 0,
+        trackedCount: null,
+        coverageRatio: null,
+        threshold: 0.75,
+        status: "unknown",
+        reason: "safety-score-publication-missing",
+      },
+    })} />);
+
+    const tile = within(screen.getByText("Safety coverage").parentElement!);
+    expect(tile.getByText("-")).toBeTruthy();
+    expect(tile.getByText("unknown")).toBeTruthy();
+    expect(tile.queryByText(/^(0|100)(\.0)?%$/)).toBeNull();
+  });
 
   it("renders per-family supplemental health counts", () => {
     render(<YieldHealthCard health={makeHealth()} />);

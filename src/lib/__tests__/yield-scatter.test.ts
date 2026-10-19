@@ -47,6 +47,7 @@ describe("declutterScatterMarkers", () => {
 describe("computeApyAxis", () => {
   it("clips rare extreme APY outliers so one point does not dominate the chart", () => {
     expect(computeApyAxis([0.4, 1.2, 2.5, 3.8, 4.4, 5.1, 5.7, 6.1, 6.8, 7.3, 8.5, 24.9], 3.7)).toEqual({
+      domainMin: 0,
       domainMax: 11,
       clipThreshold: 11,
       clippedCount: 1,
@@ -55,9 +56,26 @@ describe("computeApyAxis", () => {
 
   it("keeps a linear axis when the upper range is broadly occupied", () => {
     expect(computeApyAxis([1.1, 2.4, 3.2, 4.7, 5.9, 7.1, 8.4, 9.2, 10.3, 11.1, 12.4, 13.2], 3.7)).toEqual({
+      domainMin: 0,
       domainMax: 15,
       clipThreshold: null,
       clippedCount: 0,
     });
+  });
+
+  it.each([
+    { apys: [-5, -2, -0.1], min: -6 },
+    { apys: [-1.9549203966, 0, 5], min: -3 },
+    { apys: [-1_000, 2, 8], min: -1_080 },
+    { apys: [], min: 0 },
+  ])("keeps the complete lower tail on a continuous domain: $apys", ({ apys, min }) => {
+    const axis = computeApyAxis(apys, 3.7);
+    expect(axis.domainMin).toBe(min);
+    expect(axis.domainMax).toBeGreaterThanOrEqual(8);
+    expect(axis.clippedCount).toBe(0);
+    for (const apy of apys) {
+      expect(apy).toBeGreaterThanOrEqual(axis.domainMin);
+      expect(apy).toBeLessThanOrEqual(axis.domainMax);
+    }
   });
 });
