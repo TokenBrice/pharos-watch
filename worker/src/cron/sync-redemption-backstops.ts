@@ -39,6 +39,7 @@ import { mapWithConcurrency } from "../lib/concurrency";
 import { fnv1aHash } from "../lib/hash";
 import type { EvmRpcOptions } from "../lib/evm-rpc";
 import { safeErrorMessage } from "../lib/safe-error-message";
+import { EvmCodeIdentityError } from "../lib/evm-code-identity-error";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
 
@@ -244,7 +245,10 @@ export async function syncRedemptionBackstops(
       throwIfAborted(signal);
       logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failed = true;
-      failureReason = { code: "route-resolution-failed", message: safeErrorMessage(error, 240).slice(0, 240) };
+      failureReason = {
+        code: error instanceof EvmCodeIdentityError ? error.rejectionCode : "route-resolution-failed",
+        message: safeErrorMessage(error, 240).slice(0, 240),
+      };
       const config = configById.get(stablecoinId);
       if (config) {
         resolved = buildFailedRedemptionBackstopEntry(stablecoinId, config, now);

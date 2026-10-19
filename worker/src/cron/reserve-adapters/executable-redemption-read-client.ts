@@ -8,6 +8,7 @@ import type { ExecutableRedemptionObserverId } from "@shared/types/redemption";
 import type { LiveReserveRedemptionTelemetryKnownFields } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
+import { EvmCodeIdentityError } from "../../lib/evm-code-identity-error";
 import { codeIdentityChecks, executeEvmObservationPlan } from "./evm-observation-plan";
 import type {
   AnyEvmObservationField,
@@ -109,12 +110,7 @@ export async function readStateWithPlan<Fields extends readonly AnyEvmObservatio
     storageLabel: (identity) => `${coinId}-redemption-implementation-${identity.address}`,
   });
   if (identityResult.status === "rejected") {
-    fail(
-      coinId,
-      identityResult.kind === "storage"
-        ? `implementation identity drift at ${identityResult.address}`
-        : `code identity drift at ${identityResult.address}`,
-    );
+    throw new EvmCodeIdentityError(coinId, identityResult, blockNumber);
   }
 
   return executeEvmObservationPlan({
