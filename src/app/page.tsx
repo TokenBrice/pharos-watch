@@ -69,8 +69,9 @@ export default async function HomePage() {
         <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={HERO_FALLBACK_SELECTED_AT_MS} />
       </HomepageEvidenceProvider>
       <HomeBlogBanner />
-      <HomeAltClient />
-      <HomeMediaStrip />
+      <HomeAltClient>
+        <HomeMediaStrip />
+      </HomeAltClient>
     </div>
   );
 }

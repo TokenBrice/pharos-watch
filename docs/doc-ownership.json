@@ -356,7 +356,7 @@
       "id": "about-page",
       "label": "About page contract",
       "risk": "medium",
-      "sources": ["src/app/about/**", "src/components/about/**", "docs/about-page.md"],
+      "sources": ["src/app/about/**", "src/components/about/**", "src/lib/media-appearances.ts", "public/media/**", "docs/about-page.md"],
       "docs": [{ "path": "docs/about-page.md", "anchor": "section-contract" }],
       "rules": ["Keep public data-source descriptions aligned with the implemented sources."]
     },

@@ -4,7 +4,7 @@ import { MEDIA_APPEARANCES } from "@/lib/media-appearances";
 import { formatProseList } from "@shared/lib/format";
 
 // A slim credibility line for the homepage tail, sized to match the status bar
-// above it. Static content only — the full dated list lives on /about/#media.
+// below it. Static content only — the full dated list lives on /about/#media.
 export function HomeMediaStrip(): React.JSX.Element {
   const hosts = MEDIA_APPEARANCES.map((appearance) => appearance.host);
 
