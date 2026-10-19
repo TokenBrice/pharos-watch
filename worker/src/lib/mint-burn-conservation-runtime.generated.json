@@ -1044,16 +1044,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "usdkg-gold-dollar",
-      "address": "0xe820c06321e60d36257c666643fa5436643445e3",
-      "decimals": 6,
-      "disposition": "unsupported",
-      "unsupportedReason": "unpaired-supply-path:issue",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "usdnr-nerona",
       "address": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
       "decimals": 6,

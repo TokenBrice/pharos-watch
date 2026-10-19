@@ -99,6 +99,10 @@ The same cleanup rule applies to Worker-side integration clients. Telegram deliv
 
 ---
 
+### Native Hive provider phase
+
+The public `sync-stablecoins` primary phase awaits existing provider waves before the native Hive observer and then consensus. Its CG HIVE/USD dependency shares the existing batch; serial native reads add no overlap to the declared 4/6 peak. `HIVE_MARKET_POLICY` bounds ten RPCs/two nodes, three seconds per call, twenty seconds overall and one MiB per body under inherited cancellation; each body drains before the next call. [ADR-41](./architecture.md#adr-41) records approval and pending production capacity acceptance.
+
 ## Cron Budgeting
 
 

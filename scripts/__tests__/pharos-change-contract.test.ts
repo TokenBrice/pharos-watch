@@ -428,6 +428,20 @@ describe("reading selectors and context modes", () => {
     expect(docKeys(contract)).toEqual(expect.arrayContaining(["docs/report-cards.md#api", "docs/report-cards.md#consumers"]));
   });
 
+  it("routes AI-summary data to editorial authoring and the actual-file claim validator", () => {
+    const file = "data/ai-summaries.json";
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("stablecoin-registry");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      "docs/process/adding-a-stablecoin.md#6b-editorial-summary",
+      "docs/editorial-style.md#registers-by-surface",
+    ]));
+    expectIntegrityObligations(contract, false);
+    const commands = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
+    expect(commands.join("\n")).toContain("shared/lib/__tests__/ai-summary-claims.test.ts");
+  });
+
   it.each([
     ["worker/src/lib/safety-score-v9/supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
     ["worker/src/cron/sync-v9-supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],

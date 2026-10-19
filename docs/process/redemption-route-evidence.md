@@ -30,6 +30,11 @@ The [structured redemption history](https://pharos.watch/methodology/redemption-
 
 Consequently, these reviewed unknowns remain open; a new production run alone cannot turn them into known bounds. Exact-route telemetry or an independently admitted request-sized certificate can resolve a runtime item only when it measures the missing predicate, rather than reusing backing inventory, mutable historical settings or another route's terms. The separate FRXUSD execution-certificate item and gUSDTq certificate settlement are runtime integration concerns, not evidence supplied by this config review.
 
+### WUSD operational route review (2026-10-19)
+
+The [issuer deployment and access guide](https://developer.wspn.io/5768563m0.md) advertises corporate USD/WUSD conversion; the [quote API](https://developer.wspn.io/248520713e0.md) documents single-use, 30-second quotes, not a standing par observation. The advertised mainnet `wallet.wspn.io` failed DNS before a quote-only request reached HTTP; [public DNS](https://dns.google/resolve?name=wallet.wspn.io&type=A) returned NXDOMAIN after its CNAME. Current redemption is **unverified**, not proven closed everywhere. The [bank-withdrawal guide](https://developer.wspn.io/6223538m0.md) requires administrative approval: documentation and sandbox examples prove neither an executable production quote nor completed payout. No new route, capacity or price is admitted.
+
+
 
 ## Output and route-evidence reviews
 

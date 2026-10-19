@@ -40,12 +40,14 @@ The schema enforces the invariant: both `frozenAt` and `obituary` are required w
 
 Some worker subsystems maintain their own per-coin tables. Remove the frozen coin's entry from each:
 
-- `worker/src/lib/mint-burn-contracts-data.ts` — remove from `MINT_BURN_CONFIG_SPECS` if present.
+- `worker/src/lib/mint-burn-contracts-data.ts` — remove from `MINT_BURN_CONFIG_SPECS` if present, remove the matching identity from `mint-burn-conservation-reviewed.json`, and regenerate its runtime projection. The conservation test rejects orphan sidecar entries; historical research and D1 rows remain.
 - `worker/src/lib/blacklist-contracts.ts` — remove from `CONTRACT_CONFIGS` if present.
 - `shared/lib/bluechip-slugs.ts` — remove from `BLUECHIP_SLUG_MAP` if present.
 - `worker/src/lib/yield-config/yield-config-pools.ts` — remove from `YIELD_POOL_MAP` if present; `yield-config.ts` derives/re-exports it.
 - `worker/src/lib/yield-config/yield-config-variants.ts` — remove from `YIELD_VARIANT_MAP` if present. The yield registry runtime test covers pools, variants, on-chain sources and the manifest; a leftover variant entry makes the yield coverage audit report a permanent `variant-pool` missing-pool pin for a coin that can never resolve again.
 - `shared/data/coverage-dispositions/redemption-coverage-dispositions.ts` — remove the coin's reviewed row. Reviewed dispositions are only valid for active unconfigured stablecoins, so `npm run check:stablecoin-data` blocks on a row whose coin is no longer active; the frozen lifecycle default classification takes over from there.
+- `worker/src/lib/stablecoin-publication-coverage.ts` — remove the coin's `STABLECOIN_PRICE_GAP_REVIEWS` row as part of the active→frozen transition; an inactive-ID review is invalid, not retained history. Run `worker/src/lib/__tests__/stablecoin-publication-coverage.test.ts` and `public-health-assessment.test.ts`.
+- `worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts` — remove from `LOW_VOLUME_CG_FALLBACK_IDS` if present. Its adjacent `__tests__/enrich-prices-coingecko-low-volume-pass.test.ts` enforces active membership and the unchanged seven-day source-age policy.
 - `src/lib/compare-pages.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin.
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.
 - **`liveReservesConfig` block in the coin's own meta JSON.** If the frozen coin has a `liveReservesConfig` field on its `StablecoinMeta`, **delete that field**. Otherwise the live-reserves cron's `ACTIVE_STABLECOINS.filter(coin.liveReservesConfig)` would still include the coin once the registry filter widens (it is currently safe because `ACTIVE_STABLECOINS` excludes frozen, but removing the config eliminates ambiguity and matches the "no live data sources" intent of the freeze).
@@ -90,7 +92,7 @@ npm run prebuild  # refreshes build artifacts, including live detail snapshots
 
 ### 5. Update docs
 
-- Add a changelog entry under `src/data/changelogs/` for the current week.
+- Record the change in that week's entry under `src/data/changelogs/` once the Monday–Sunday week is complete (Sunday or later); see [Changelog publishing](./process/blog-publishing.md#changelog).
 - Confirm the count of "tracked stablecoins" in `/about` and any docs is current. `/about` reads through `src/lib/stablecoin-static-data.ts`; `npm run bootstrap:generated` materializes its compile-input projection from the validated registry.
 - **Per-domain methodology version constants are NOT bumped.** Frozen status is a lifecycle policy, not a scoring change. If the freeze is tied to a specific methodology revision (rare), bump that constant in a separate commit with its own changelog entry.
 

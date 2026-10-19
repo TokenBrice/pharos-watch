@@ -15,6 +15,13 @@ import {
  * without an accompanying predicate update (or vice versa) this test fails.
  */
 describe("pricing-source registry ↔ policy contract", () => {
+  it("keeps native Hive non-authoritative, non-replayable, and pool-challenge eligible", () => {
+    expect(isReplaySafePriceSource("hive-native-cg")).toBe(false);
+    expect(getPriceCacheMaxAgeSec("hive-native-cg", 3600)).toBe(0);
+    expect(hasDepegAuthoritativeSource(["hive-native-cg", "coingecko"])).toBe(false);
+    expect(countDepegAuthoritativeSources(["hive-native-cg"])).toBe(0);
+    expect(isPoolChallengeEligibleConsensus(["hive-native-cg"])).toBe(true);
+  });
   it("treats unknown / falsy sources as non-replay-safe and non-eligible", () => {
     expect(isReplaySafePriceSource(null)).toBe(false);
     expect(isReplaySafePriceSource(undefined)).toBe(false);

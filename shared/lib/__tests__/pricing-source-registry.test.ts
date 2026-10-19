@@ -13,8 +13,20 @@ import {
   isPoolChallengeEligibleConsensus,
   isReplaySafePriceSource,
 } from "../pricing-source-policy";
+import { PRICE_SOURCE_HEALTH_BUCKET_KEYS } from "../../types/pricing-source-health";
 
 describe("pricing source registry", () => {
+  it("registers Hive as a dependency-capped soft cross-rate, not independent CG corroboration", () => {
+    expect(getPricingSourceRegistryEntry("hive-native-cg")).toMatchObject({
+      trustTier: "soft_aggregator", depegSourceFamily: "coingecko", defaultWeight: 2,
+      maxTrustedAgeSec: 900, requiresObservedAt: true, isReplaySafe: false,
+      isProtocolOverride: false, bypassesSoftValidationGuardrails: false,
+      canBeDepegAuthoritative: false, canSingleSourceDepegAuthoritative: false,
+      capabilities: { hasBidAsk: true, hasTradeAge: true, hasUpstreamTimestamp: false },
+    });
+    expect(getPricingSourceLabel("hive-native-cg")).toBe("Hive internal market \u00d7 CoinGecko HIVE/USD");
+    expect(PRICE_SOURCE_HEALTH_BUCKET_KEYS).toContain("hive-native-cg");
+  });
   it("retrieves every registry entry by its own key", () => {
     for (const entry of PRICING_SOURCE_REGISTRY) {
       expect(getPricingSourceRegistryEntry(entry.key)).toBe(entry);

@@ -46,6 +46,18 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
+          <strong className="text-foreground">Native HBD market evidence (v6.53).</strong>{" "}
+          Effective October 19, 2026.{" "}
+          Hive internal market (HBD/HIVE) quotes divide an independently fresh CoinGecko HIVE/USD price by the
+          two-sided native midpoint. Admission requires at least 500 HBD on each side within 2% of midpoint,
+          narrow spread and recent non-self turnover. This is one CoinGecko-dependent observation, not two
+          independent votes or a guaranteed conversion price. It remains soft, single-source without independent
+          agreement, subject to normal validation and pool challenge, and requires depeg confirmation.
+          A near-par direct CoinGecko HBD quote can still win that family over a depegged native quote.
+          Missing or stale evidence yields no native price; neither publication nor retry refreshes either leg.
+        </p>
+
+        <p>
           <strong className="text-foreground">Observed SOFID market prices (v6.48).</strong>{" "}
           SOFID&apos;s nominal protocol-par override is retired so its existing exact-identity CoinGecko/Kraken
           consensus can reach price and peg consumers. Original clocks remain; Kraken still uses local-fetch

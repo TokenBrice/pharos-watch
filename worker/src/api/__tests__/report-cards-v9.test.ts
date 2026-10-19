@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -9,6 +10,7 @@ import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC } from "../../lib/api-freshness-age";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-materialization";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
@@ -19,6 +21,43 @@ import { handleReportCardsV9 } from "../report-cards-v9";
 import { getRouteMatch } from "../../routes/registry";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";
 import * as publicationCodec from "../../lib/safety-score-v9/publication-codec";
+import { withRepresentationEtag } from "../../lib/api-response";
+import { sha256HexFromUtf8Chunks } from "../../lib/hash";
+
+function instrumentReads(db: D1Database, delayMs = 0) {
+  const reads: { sql: string; bindings: unknown[] }[] = [];
+  const reader = new Proxy(db, { get(target, key) {
+    if (key !== "prepare") return Reflect.get(target, key);
+    return (sql: string) => {
+      const wrap = (statement: D1PreparedStatement, bindings: unknown[]): D1PreparedStatement =>
+        new Proxy(statement, { get(target, key) {
+          if (key === "bind") return (...values: unknown[]) => wrap(target.bind(...values as never[]), values);
+          if (key === "first" || key === "all") return async (...args: unknown[]) => {
+            reads.push({ sql, bindings });
+            if (delayMs > 0) await delay(delayMs);
+            return Reflect.apply(Reflect.get(target, key), target, args);
+          };
+          return Reflect.get(target, key);
+        } });
+      return wrap(db.prepare(sql), []);
+    };
+  } });
+  return { reader, reads };
+}
+
+async function seedCohort() {
+  const { sqlite, db } = database();
+  // Full wire-card shapes, with resolved research text, not a byte-only blob.
+  const cards = Array.from({ length: 397 }, (_, index) => {
+    const card: SafetyScoreV9CurrentCard = makeReportCardsV9Card({ id: `fixture-${index.toString().padStart(3, "0")}` });
+    card.witnessTexts = [`Asset ${index}: ${"Reviewed control and reserve evidence. ".repeat(220)}`];
+    card.evidence.reasons = [{ code: "unresolved-control-identity", message: "~0", path: "control:incidentState" }];
+    return card;
+  });
+  const publication = makeWorkerSafetyScoreV9Publication({ cards });
+  await persistSafetyScoreV9Publication(db, currentInput(publication));
+  return { sqlite, db, publication };
+}
 
 const databases: DatabaseSync[] = [];
 function database() {
@@ -52,6 +91,95 @@ async function assertServedEquivalent(db: D1Database) {
 }
 
 describe("materialized V9 response", () => {
+  it("bounds 397-card fragment round trips under D1 latency without changing bytes, identity or ETag", async () => {
+    const { sqlite, db, publication } = await seedCohort();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(publication.publishedAtSec * 1000);
+    const manifest = readManifest(sqlite);
+    expect(manifest.bytes).toBeGreaterThan(4 * 1024 * 1024);
+    expect(manifest.fragments.length).toBeGreaterThan(16);
+    const source = await loadActiveSafetyScoreSource(db);
+    expect(source.kind).toBe("v9");
+    const { reader, reads } = instrumentReads(db, 10);
+    const response = await handleReportCardsV9(reader);
+    expect(response.status).toBe(200);
+    const fragmentReads = reads.filter(read => read.sql.includes("SELECT ordinal, body"));
+    expect(reads.length).toBe(1 + fragmentReads.length);
+    expect(fragmentReads.length).toBeLessThanOrEqual(Math.ceil(manifest.bytes / (4 * 1024 * 1024 - V9_PUBLIC_FRAGMENT_MAX_BYTES)));
+    expect(fragmentReads.length).toBeLessThan(Math.ceil(manifest.fragments.length / 4));
+    let expectedOffset = 0;
+    for (const read of fragmentReads) {
+      expect(read.bindings.slice(0, 3)).toEqual([publication.publicationGenerationId, manifest.version, manifest.payloadSha256]);
+      const [offset, end] = read.bindings.slice(-2) as number[];
+      expect(offset).toBe(expectedOffset);
+      expect(end).toBeGreaterThan(offset);
+      expect(manifest.fragments.slice(offset, end).reduce((bytes: number, fragment: { bytes: number }) => bytes + fragment.bytes, 0))
+        .toBeLessThanOrEqual(4 * 1024 * 1024);
+      expectedOffset = end!;
+    }
+    expect(expectedOffset).toBe(manifest.fragments.length);
+    const expectedWire = `{"publicationHealth":${JSON.stringify(currentInput(publication).publicationHealth)}` +
+      sqlite.prepare("SELECT body FROM safety_score_public_fragments ORDER BY ordinal").all().map(row => row.body).join("");
+    const actualWire = await response.text();
+    expect(actualWire).toBe(expectedWire);
+    expect(JSON.parse(actualWire)).toEqual(source.snapshot);
+    const expectedEtag = withRepresentationEtag(new Response(null, { headers: { "Cache-Control": "public, max-age=60" } }), ["report-cards-v9", {
+      version: manifest.version, generationId: publication.publicationGenerationId, sha256: manifest.sha256,
+    }, currentInput(publication).publicationHealth]).headers.get("ETag");
+    expect(expectedEtag).not.toBeNull();
+    expect(response.headers.get("ETag")).toBe(expectedEtag);
+  });
+
+  it("coalesces the maximum 128 small fragments by bytes, not a fixed row count", async () => {
+    const { sqlite, db } = await seed();
+    const manifest = readManifest(sqlite);
+    const body = sqlite.prepare("SELECT body FROM safety_score_public_fragments ORDER BY ordinal").all().map(row => row.body).join("");
+    const fragments = Array.from({ length: 128 }, (_, index) =>
+      body.slice(Math.floor(index * body.length / 128), Math.floor((index + 1) * body.length / 128)));
+    manifest.fragments = fragments.map(text => ({ bytes: Buffer.byteLength(text, "utf8"), sha256: sha256HexFromUtf8Chunks([text]) }));
+    sqlite.exec("DELETE FROM safety_score_public_fragments");
+    const insert = sqlite.prepare("INSERT INTO safety_score_public_fragments VALUES (?, ?, ?, ?, ?)");
+    fragments.forEach((text, ordinal) => insert.run(manifest.safetyScoreIdentity.publicationGenerationId,
+      manifest.version, manifest.payloadSha256, ordinal, text));
+    sqlite.prepare("UPDATE safety_score_public_manifests SET manifest = ?").run(stableJsonStringifyV1(manifest));
+    const { reader, reads } = instrumentReads(db);
+    const response = await handleReportCardsV9(reader);
+    expect(response.status).toBe(200);
+    expect(reads.length).toBe(2);
+    expect(reads[1]!.bindings.slice(-2)).toEqual([0, 128]);
+    expect(await response.text()).toContain(body);
+  });
+
+  it.each(["missing", "wrong-hash", "wrong-order", "body-hash"])("rejects late %s corruption before headers across coalesced reads", async mode => {
+    const { sqlite, db } = await seedCohort();
+    const manifest = readManifest(sqlite);
+    const last = manifest.fragments.length - 1;
+    if (mode === "body-hash") {
+      manifest.sha256 = "f".repeat(64);
+      sqlite.prepare("UPDATE safety_score_public_manifests SET manifest = ?").run(stableJsonStringifyV1(manifest));
+    } else if (mode === "missing") {
+      const original = db.prepare.bind(db);
+      let removed = false;
+      // Remove after the joined count read, not before admission.
+      vi.spyOn(db, "prepare").mockImplementation(sql => {
+        if (!removed && sql.includes("SELECT ordinal, body")) {
+          removed = true;
+          sqlite.prepare("DELETE FROM safety_score_public_fragments WHERE ordinal = ?").run(last);
+        }
+        return original(sql);
+      });
+    } else if (mode === "wrong-hash") {
+      sqlite.prepare("UPDATE safety_score_public_fragments SET body = 'X' || substr(body, 2) WHERE ordinal = ?").run(last);
+    } else {
+      sqlite.prepare("UPDATE safety_score_public_fragments SET ordinal = 127 WHERE ordinal = ?").run(last);
+    }
+    const response = await handleReportCardsV9(db);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ reason: mode === "body-hash" ? "v9-public-body-integrity-invalid"
+      : mode === "wrong-hash" ? "v9-public-fragment-integrity-invalid" : "v9-public-fragments-missing" });
+  });
+
   it("preserves rated, NR, technical pipeline gaps and partial-pillar evidence across the full cohort", async () => {
     const { db } = database();
     const cards = [
@@ -254,7 +382,7 @@ describe("materialized V9 response", () => {
   });
 
   it("keeps one coherent selected generation when acceptance changes during fragment reads", async () => {
-    const { db, sqlite, publication } = await seed();
+    const { db, sqlite, publication } = await seedCohort();
     const oldRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
     const expected = ReportCardsV9CurrentResponseSchema.parse(await (await handleReportCardsV9(db)).json());
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });

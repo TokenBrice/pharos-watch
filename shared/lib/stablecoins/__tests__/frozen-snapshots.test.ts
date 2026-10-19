@@ -34,6 +34,26 @@ describe("frozen-snapshots", () => {
     });
   });
 
+  it("retains unavailable final price clocks alongside positive USDKG residual supply", () => {
+    const snapshot = FROZEN_SNAPSHOTS_BY_ID.get("usdkg-gold-dollar")!;
+    expect(FROZEN_SNAPSHOTS.filter((entry) => entry.id === snapshot.id)).toHaveLength(1);
+    expect(snapshot.capturedAt).toBe("2026-10-19T06:29:52.208980Z");
+    const [readback] = parseFrozenSnapshots(JSON.parse(JSON.stringify([snapshot])), "readback");
+    expect(readback).toEqual(snapshot);
+    expect(readback.peggedAssetRow).toMatchObject({
+      price: null,
+      priceSource: "missing",
+      priceConfidence: null,
+      priceUpdatedAt: null,
+      priceObservedAt: null,
+      priceObservedAtMode: null,
+      priceSyncedAt: null,
+      supplySource: "defillama",
+      circulating: { peggedUSD: 50_000_000 },
+      chainCirculating: { Ethereum: { current: 3_000_000 }, Tron: { current: 47_000_000 } },
+    });
+  });
+
   it("rejects an entry whose top-level id mismatches peggedAssetRow.id", () => {
     expect(() =>
       parseFrozenSnapshots(

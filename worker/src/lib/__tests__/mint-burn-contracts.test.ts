@@ -273,7 +273,6 @@ describe("mint-burn-contracts Ethereum transfer expansion", () => {
     { stablecoinId: "eurau-allunity", symbol: "EURAU", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "dusd-alto", symbol: "DUSD", address: "0x63d74d22e689c715a04f2c13962b1f77f443d35b", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "ftusd-flying-tulip", symbol: "ftUSD", address: "0xf7d85ec4e7710f71992752eac2111312e73e9c9c", decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000 },
-    { stablecoinId: "usdkg-gold-dollar", symbol: "USDKG", address: "0xe820c06321e60d36257c666643fa5436643445e3", decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "chfau-allunity", symbol: "CHFAU", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "mxnb-juno", symbol: "MXNB", address: "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "cjpy-yamato", symbol: "CJPY", address: "0x1cfa5641c01406ab8ac350ded7d735ec41298372", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
