@@ -52,7 +52,9 @@ export async function runBudgetedSupplyAttributionAssets<TAsset, TResult>(
         results[index] = { status: "rejected", reason: "capture-window-exhausted" };
         continue;
       }
-      const assetTimeoutMs = Math.min(options.assetTimeoutMs?.(assets[index]) ?? budget.assetTimeoutMs, remainingMs);
+      const requestedTimeoutMs = options.assetTimeoutMs?.(assets[index]) ?? budget.assetTimeoutMs;
+      const timeoutReason = remainingMs < requestedTimeoutMs ? "capture-window-clipped" : "asset-timeout";
+      const assetTimeoutMs = Math.min(requestedTimeoutMs, remainingMs);
       const assetDeadlineMs = Date.now() + assetTimeoutMs;
       const timeout = createTimeoutSignal({
         timeoutMs: assetTimeoutMs,
@@ -63,11 +65,11 @@ export async function runBudgetedSupplyAttributionAssets<TAsset, TResult>(
         const value = await observe(assets[index], timeout.signal, assetDeadlineMs);
         throwIfAborted(options.signal);
         results[index] = timeout.isTimedOut()
-          ? { status: "rejected", reason: "asset-timeout" }
+          ? { status: "rejected", reason: timeoutReason }
           : { status: "completed", value };
       } catch {
         throwIfAborted(options.signal);
-        results[index] = { status: "rejected", reason: timeout.isTimedOut() ? "asset-timeout" : "observer-failed" };
+        results[index] = { status: "rejected", reason: timeout.isTimedOut() ? timeoutReason : "observer-failed" };
       } finally {
         timeout.dispose();
       }

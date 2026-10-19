@@ -411,11 +411,14 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(
 async function observeReviewedEconomicDeploymentPartitionInternal(input: {
   assetId: string; fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>; scoringClockSec: number; chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   dwellirNative?: DwellirNativeCapability;
+  assetDeadlineMs?: number;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onBodyRead?: BodyReadObserver;
   onPhase?: (phase: SupplyAttributionPhase) => void;
 }): Promise<ReviewedEconomicSupplyObservationAttempt> {
   let failedRouteId: string | null = null;
+  const startedAtMs = Date.now();
+  const currentCaptureClock = () => input.scoringClockSec + Math.max(0, Math.floor((Date.now() - startedAtMs) / 1_000));
   let bodyOrigin: string | null = null;
   let bodyMethod = "conversion";
   try {
@@ -509,12 +512,22 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         if (head === null || lag <= 0 || head < lag) return false;
         // A reviewed lag is not a finality proof: rollup finalized heads can
         // trail it. Holdings and in-flight history must share an actually finalized pin.
-        const finalized = finalizedChains.has(row.chainId)
+        const preferFinalized = plan.deployments.filter(other => other.chainId === row.chainId)
+          .every(other => other.read.kind === "evm-total-supply" && other.read.pinPolicy === "finalized-preferred");
+        let finalized = finalizedChains.has(row.chainId) || preferFinalized
           ? await fetchEvmBlockHeader(row.chainId, "finalized", options) : null;
+        if (finalized && preferFinalized) {
+          const canonical = await fetchEvmBlockHeader(row.chainId, finalized.number, options);
+          if (!canonical || canonical.hash !== finalized.hash || canonical.timestamp !== finalized.timestamp ||
+            finalized.number > head || finalized.timestamp > input.scoringClockSec) finalized = null;
+        }
         if (finalizedChains.has(row.chainId) && !finalized) return false;
         if (finalized) finalizedHeaders.set(row.chainId, finalized);
         const block = await rewindEvmBlockHeaderToScoringClock({
-          initialBlockNumber: Math.min(head - lag, finalized?.number ?? head - lag), scoringClockSec: input.scoringClockSec, signal: input.signal,
+          ...(preferFinalized && finalized ? { initialHeader: finalized } : {
+            initialBlockNumber: Math.min(head - lag, finalized?.number ?? head - lag),
+          }),
+          scoringClockSec: input.scoringClockSec, signal: input.signal,
           fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, options),
         });
         if (!block) return false;
@@ -536,6 +549,21 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         });
         if (!aligned) return false;
         headers.set(chainId, aligned);
+      }
+      // Reserve the rest of this admitted child window, not a wider freshness
+      // policy. Near-expiry pins reject before quantities/history are collected.
+      const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+      const freshnessClock = currentCaptureClock() + (input.assetDeadlineMs === undefined ? 0
+        : Math.max(0, Math.ceil((input.assetDeadlineMs - Date.now()) / 1_000)));
+      for (const [chainId, header] of headers) {
+        if (freshnessClock - header.timestamp > policy.observationMaxAgeSec) {
+          failedRouteId = `anchor:${chainId}:capture-freshness-window-insufficient`;
+          emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "economic-deployment", sourceId: input.assetId,
+            chainId, phase: "pinning", method: "capture-window", hardEvidenceFailure: true,
+            failurePredicate: "capture-freshness-window-insufficient", pinObservedAtSec: header.timestamp,
+            operands: { freshnessClock, maxAgeSec: policy.observationMaxAgeSec } });
+          return false;
+        }
       }
       return true;
     };
@@ -805,6 +833,14 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       }
     }
     input.onPhase?.("derive");
+    const finalClockSec = currentCaptureClock();
+    const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+    const stale = [...observations, ...inFlight].find(row => finalClockSec - row.observedAtSec > policy.observationMaxAgeSec);
+    if (stale || finalClockSec - referencePrice.observedAtSec > policy.referencePriceMaxAgeSec ||
+      conversions.some(row => finalClockSec - row.observedAtSec > policy.observationMaxAgeSec)) {
+      return { status: "rejected", rejectionCode: "deployment-observation-skew",
+        failedRouteId: stale?.id ?? plan.sourceId };
+    }
     const attribution = deriveReviewedEconomicDeploymentPartition({ plan, baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration, registryFingerprint: input.fixedInput.registryFingerprint, clockSec: input.scoringClockSec, aggregate: { supplyUsd: aggregateUsd, observedAtSec: aggregate.observedAtSec, sourceGeneration: input.fixedInput.sourceGeneration }, referencePrice, conversions, observations, inFlight, onDiagnostic: input.onDiagnostic });
     if (attribution) {
       const contradiction = economicProviderSupplyContradictionChain(attribution, input.fixedInput.chainCirculatingById[input.assetId] ?? {});

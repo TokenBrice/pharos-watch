@@ -146,7 +146,7 @@ function supplyAttributionAssetDescriptors():
       assetId, executionPriority: 1, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
-      observe: ({ fixedInput, scoringClockSec, chainRpcs, dwellirNative, signal, db, onDiagnostic, onBodyRead, onPhase }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, dwellirNative, signal, db, onDiagnostic, onBodyRead, onPhase }),
+      observe: ({ fixedInput, scoringClockSec, chainRpcs, dwellirNative, signal, db, assetDeadlineMs, onDiagnostic, onBodyRead, onPhase }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, dwellirNative, signal, db, assetDeadlineMs, onDiagnostic, onBodyRead, onPhase }),
     })),
     {
       assetId: "wm-m0",
@@ -401,7 +401,8 @@ export async function captureSafetyScoreV9SupplyAttribution(
   const priorOutcomes = options.priorGeneration?.outcomesById;
   const wasStarved = (descriptor: SupplyAttributionAssetDescriptor): boolean => {
     const outcome = priorOutcomes?.[descriptor.assetId];
-    return outcome?.status === "rejected" && outcome.captureFailureReason === "capture-window-exhausted";
+    return outcome?.status === "rejected" &&
+      (outcome.captureFailureReason === "capture-window-exhausted" || outcome.captureFailureReason === "capture-window-clipped");
   };
   let startIndex = Math.floor(fixedInput.clockSec / SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC);
   if (descriptors.some(wasStarved)) {
@@ -410,7 +411,8 @@ export async function captureSafetyScoreV9SupplyAttribution(
     // While an asset stays starved, attempts consume the circular starved prefix;
     // this cursor advances past attempted indexes instead of restarting it.
     for (let index = 0; index < descriptors.length; index++) {
-      if (priorOutcomes?.[descriptors[index].assetId] && !wasStarved(descriptors[index])) {
+      const outcome = priorOutcomes?.[descriptors[index].assetId];
+      if (outcome && !(outcome.status === "rejected" && outcome.captureFailureReason === "capture-window-exhausted")) {
         startIndex = index + 1;
       }
     }
@@ -446,8 +448,8 @@ export async function captureSafetyScoreV9SupplyAttribution(
     },
     {
       signal, executionWindow: options.executionWindow,
-      // Unattempted assets outrank cost tiers next run, including wM. Otherwise
-      // preserve quick-first ordering and deterministic within-tier rotation.
+      // Unattempted and globally clipped assets outrank cost tiers next run.
+      // Genuine local timeouts remain attempts, not starvation.
       startIndex,
       assetPriority: descriptor => wasStarved(descriptor) ? -1 : descriptor.executionPriority,
       assetTimeoutMs: descriptor => descriptor.assetId === "wm-m0"

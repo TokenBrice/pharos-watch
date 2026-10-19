@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
+import { decodeAbiParameters, encodeAbiParameters, getContractAddress, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { CcipPendingCheckpointSchema, CcipPendingReadSchema, type CcipPendingCheckpoint, type CcipPendingRead, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
-import { CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON, type ChainRpcConfig } from "../chain-registry";
+import type { ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, usableCcipRpcEndpoints, type EvmBlockHeader, type RecentFinalizedRpcPin } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
@@ -198,6 +198,7 @@ export async function observeCcipPending(input: {
     input.onPhase?.("pending-authentication");
     if (!CcipPendingReadSchema.safeParse(input.source).success) fail("source-invalid");
     const sourceDigest = sha256Hex(stableJsonStringifyV1(input.source));
+    const checkpointVersion = input.source.lanes.some(lane => lane.sourceStartWitness) ? 3 : 2;
     const cacheKey = `safety-score-v9:ccip-pending:v1:${sourceDigest}`;
     const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
     const chains = [...new Set(input.source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))];
@@ -220,13 +221,14 @@ export async function observeCcipPending(input: {
     // Old lane-serial checkpoints are not admitted by the shared-page scheduler.
     // Bootstrap afresh rather than interpreting their partial roster as complete.
     const decoded: unknown = input.checkpoint ?? (cached ? JSON.parse(cached.value) : null);
-    if (decoded !== null && !(typeof decoded === "object" && "schemaVersion" in decoded && decoded.schemaVersion === 1)) {
+    if (decoded !== null && !(typeof decoded === "object" && "schemaVersion" in decoded &&
+      (decoded.schemaVersion === 1 || (checkpointVersion === 3 && decoded.schemaVersion === 2)))) {
       const parsed = CcipPendingCheckpointSchema.safeParse(decoded);
-      if (!parsed.success || parsed.data.sourceDigest !== sourceDigest || parsed.data.nextChainIndex >= chains.length ||
+      if (!parsed.success || parsed.data.schemaVersion !== checkpointVersion || parsed.data.sourceDigest !== sourceDigest || parsed.data.nextChainIndex >= chains.length ||
         parsed.data.lanes.length > input.source.lanes.length || parsed.data.lanes.some((lane, i) => lane.id !== input.source.lanes[i]!.id)) fail("checkpoint-invalid");
       checkpoint = parsed.data;
     } else {
-      checkpoint = { schemaVersion: 2, sourceDigest, nextChainIndex: 0, lanes: [] };
+      checkpoint = { schemaVersion: checkpointVersion, sourceDigest, nextChainIndex: 0, lanes: [] };
     }
     // Repeated migrated lanes share exact immutable, hash-pinned reads within
     // this attempt. Never reuse runtime/state authentication across attempts.
@@ -249,7 +251,7 @@ export async function observeCcipPending(input: {
         const recentStatePin = recentPins.get(chain);
         const result = await fetchEvmRpcBatch(chain, missing, { ...options, recentStatePin,
           observedHeadBlock: recentStatePin?.finalized.number });
-        if (!result || result.length !== missing.length || result.some(value => value === undefined || value === null)) fail(chain === "monad" && missing.some(request => (request.method === "eth_call" || request.method === "eth_getCode") && request.params[1] !== null && typeof request.params[1] === "object" && "blockHash" in request.params[1]) ? CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON : "rpc-unavailable");
+        if (!result || result.length !== missing.length || result.some(value => value === undefined || value === null)) fail("rpc-unavailable");
         for (let i = 0; i < result.length; i++) {
           const position = positions[i]!, key = keys[position]!;
           values[position] = result[i];
@@ -268,6 +270,41 @@ export async function observeCcipPending(input: {
       const header = await fetchEvmBlockHeader(chain, number, { ...options, observedHeadBlock: recentPins.get(chain)?.finalized.number });
       if (header) identityHeaders.set(key, header);
       return header;
+    };
+    const authenticatedOrigins = new Set<string>();
+    const authenticateOrigin = async (lane: Lane) => {
+      const witness = lane.sourceStartWitness;
+      if (!witness) {
+        if (lane.source.chainId === "monad") fail("history-origin-witness-unavailable");
+        return;
+      }
+      if (witness.kind === "unavailable") fail(witness.reason);
+      const key = sha256Hex(stableJsonStringifyV1(witness));
+      if (authenticatedOrigins.has(key)) return;
+      if (witness.reviewedAtSec > input.clockSec) fail("history-origin-witness-not-current");
+      const origin = await identityHeader(witness.chainId, witness.blockNumber);
+      if (!origin) fail("history-unavailable");
+      if (origin.hash !== witness.blockHash || origin.timestamp !== witness.blockTimestamp) fail("history-origin-reorg");
+      const [rawTransaction, rawReceipt] = await rpc(witness.chainId, [
+        { method: "eth_getTransactionByHash", params: [witness.transactionHash] },
+        { method: "eth_getTransactionReceipt", params: [witness.transactionHash] },
+      ]);
+      const transaction = z.object({
+        hash: z.string().regex(WORD), blockHash: z.string().regex(WORD),
+        blockNumber: z.string().regex(/^0x[0-9a-f]+$/), to: z.null(),
+        from: z.string().regex(/^0x[0-9a-f]{40}$/), nonce: z.string().regex(/^0x[0-9a-f]+$/),
+        input: z.string().regex(HEX),
+      }).safeParse(rawTransaction);
+      const receipt = ReceiptSchema.extend({ contractAddress: z.string().regex(/^0x[0-9a-f]{40}$/) }).safeParse(rawReceipt);
+      if (!transaction.success || !receipt.success) fail("history-origin-witness-invalid");
+      const tx = transaction.data, rc = receipt.data;
+      if (tx.hash !== witness.transactionHash || rc.transactionHash !== tx.hash ||
+        tx.blockHash !== origin.hash || rc.blockHash !== origin.hash ||
+        BigInt(tx.blockNumber) !== BigInt(origin.number) || BigInt(rc.blockNumber) !== BigInt(origin.number) ||
+        tx.from !== witness.deployer || BigInt(tx.nonce).toString() !== witness.nonce ||
+        rc.contractAddress !== lane.onRampAddress || sha256Hex(tx.input) !== witness.initcodeSha256 ||
+        getContractAddress({ from: tx.from as `0x${string}`, nonce: BigInt(tx.nonce) }).toLowerCase() !== lane.onRampAddress) fail("history-origin-witness-invalid");
+      authenticatedOrigins.add(key);
     };
     const discoveryBodies = new Map<string, unknown>();
     const discover = async (url: string, maxResponseBytes: number) => {
@@ -427,28 +464,38 @@ export async function observeCcipPending(input: {
         if (row.chainSelector !== BigInt(lane.destination.chainSelector) || row.sourceChainSelector !== BigInt(lane.source.chainSelector) || row.onRamp.toLowerCase() !== lane.onRampAddress) fail("lane-identity-mismatch");
       }
       const nextCall = nextSequenceCall(lane);
+      await authenticateOrigin(lane);
       const initializing = !checkpoint.lanes[i];
       if (initializing) {
         const previous = await identityHeader(lane.source.chainId, lane.sourceStartBlock - 1);
         if (!previous) fail("history-unavailable");
         const block = { blockHash: previous.hash, requireCanonical: true };
-        const code = await rpc(lane.source.chainId, [lane.onRampAddress, lane.source.tokenPoolAddress].map(address => ({ method: "eth_getCode", params: [address, block] })));
-        if (code[0] !== "0x" && code[1] !== "0x") fail("history-start-unproved");
-        let initialSequence = "1";
-        if (code[0] !== "0x") {
-          const next = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextCall }, block] }]);
-          if (typeof next[0] !== "string" || !WORD.test(next[0]) || BigInt(next[0]) < 1n || BigInt(next[0]) >= 2n ** 64n) fail("send-census-mismatch");
-          initialSequence = BigInt(next[0]).toString();
+        let initialSequence: string, originEvidence: unknown;
+        if (lane.sourceStartWitness?.kind === "reviewed-creation") {
+          initialSequence = lane.sourceStartWitness.initialSequence;
+          originEvidence = lane.sourceStartWitness;
+        } else {
+          const code = await rpc(lane.source.chainId, [lane.onRampAddress, lane.source.tokenPoolAddress].map(address => ({ method: "eth_getCode", params: [address, block] })));
+          if (code[0] !== "0x" && code[1] !== "0x") fail("history-start-unproved");
+          initialSequence = "1";
+          if (code[0] !== "0x") {
+            const next = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextCall }, block] }]);
+            if (typeof next[0] !== "string" || !WORD.test(next[0]) || BigInt(next[0]) < 1n || BigInt(next[0]) >= 2n ** 64n) fail("send-census-mismatch");
+            initialSequence = BigInt(next[0]).toString();
+          }
+          originEvidence = code;
         }
         checkpoint.lanes.push({ id: lane.id, initialSequence, lastSequence: (BigInt(initialSequence) - 1n).toString(), messages: [],
           sent: { nextBlock: lane.sourceStartBlock, anchor: previous.number, anchorHash: previous.hash,
-            digest: sha256Hex(stableJsonStringifyV1({ domain: "ccip-send-history-v1", previous, initialSequence, code })) },
+            digest: sha256Hex(stableJsonStringifyV1({ domain: `ccip-send-history-v${checkpointVersion}`, previous, initialSequence, originEvidence })) },
           // A pinned exhaustive state read, not a negative indexer/log claim,
           // supplies the initial destination baseline. Later logs scan deltas.
           executed: { nextBlock: destPin.number + 1, anchor: destPin.number, anchorHash: destPin.hash, digest: sha256Hex(stableJsonStringifyV1(destPin)) },
         });
       }
       const cp = checkpoint.lanes[i]!;
+      if (lane.sourceStartWitness?.kind === "reviewed-creation" &&
+        cp.initialSequence !== lane.sourceStartWitness.initialSequence) fail("history-origin-sequence-mismatch");
       if (BigInt(cp.initialSequence) < 1n || BigInt(cp.lastSequence) < BigInt(cp.initialSequence) - 1n ||
         new Set(cp.messages.map(message => message.sequence)).size !== cp.messages.length ||
         new Set(cp.messages.map(message => message.messageId)).size !== cp.messages.length ||
@@ -634,6 +681,11 @@ export async function observeCcipPending(input: {
       proofs.push({ id: lane.id, sourcePoolAddress: lane.source.tokenPoolAddress, destinationPoolAddress: lane.destination.tokenPoolAddress,
         sourceChainSelector: lane.source.chainSelector, destinationChainSelector: lane.destination.chainSelector,
         initialSequence: cp.initialSequence, lastSequence: cp.lastSequence, pendingCount: cp.messages.length,
+        ...(lane.sourceStartWitness?.kind === "reviewed-creation" ? { historyOrigin: {
+          method: "reviewed-creation" as const, witnessDigest: sha256Hex(stableJsonStringifyV1(lane.sourceStartWitness)),
+          blockNumber: lane.sourceStartWitness.blockNumber, blockHash: lane.sourceStartWitness.blockHash,
+          reviewedAtSec: lane.sourceStartWitness.reviewedAtSec,
+        } } : {}),
         failedCount: cp.messages.filter(message => message.executionState === 3).length, amount: amount.toString() });
     }
     const serialized = stableJsonStringifyV1(checkpoint);

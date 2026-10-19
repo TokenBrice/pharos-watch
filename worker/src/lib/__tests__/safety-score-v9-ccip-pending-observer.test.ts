@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
+import { decodeAbiParameters, encodeAbiParameters, getContractAddress, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { CcipPendingReadSchema, type CcipPendingCheckpoint, type CcipPendingRead, type EconomicSupplyObservation, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
@@ -101,6 +101,49 @@ function input(read = source(), checkpoint?: CcipPendingCheckpoint) {
       position: "registry" as const, stateHistory: "archive" as const, logsHistory: "full" as const }],
   }]));
   return { source: read, clockSec: 1000, headers: new Map(chains.map(chain => [chain, { number: pinNumber, timestamp: 1000, hash: word(pinNumber) }])), chainRpcs, checkpoint };
+}
+function witnessedSource(version: "1.6" | "2.0.0" = "1.6") {
+  const read = source(version), lane = read.lanes[0]!;
+  const deployer = addr(70), nonce = "3", initcode = "0x6001600055";
+  lane.onRampAddress = getContractAddress({ from: deployer, nonce: BigInt(nonce) }).toLowerCase();
+  lane.sourceStartWitness = {
+    kind: "reviewed-creation", chainId: lane.source.chainId, tokenAddress: lane.source.tokenAddress,
+    tokenPoolAddress: lane.source.tokenPoolAddress, onRampAddress: lane.onRampAddress,
+    runtimeCodeSha256: lane.onRampRuntimeCodeSha256, blockNumber: 100, blockHash: word(100),
+    blockTimestamp: 1000, transactionHash: word(9000), deployer, nonce,
+    initcodeSha256: sha256Hex(initcode), initialSequence: "1", sequenceSemantics: `ccip-${version}-constructor-zero`,
+    sourceCodeSha256: sha256Hex("reviewed-constructor"), evidenceUrls: ["https://issuer.example/verified-source"],
+    reviewedAtSec: 1000, reviewer: "test-reviewer",
+  };
+  sent = version === "1.6" ? [{ ...send(1), address: lane.onRampAddress }] : [];
+  expectedNext = version === "1.6" ? 2 : 1;
+  const original = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+  vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
+    const values = [];
+    for (const request of requests) {
+      if ((request.method === "eth_call" || request.method === "eth_getCode") &&
+        request.params[1] && typeof request.params[1] === "object" &&
+        "blockHash" in request.params[1] && request.params[1].blockHash === word(99)) {
+        throw new Error("Archive state deliberately unavailable");
+      }
+      if (request.method === "eth_getTransactionByHash") {
+        values.push({ hash: word(9000), blockHash: word(100), blockNumber: "0x64", to: null, from: deployer, nonce: "0x3", input: initcode });
+      } else if (request.method === "eth_getTransactionReceipt" && request.params[0] === word(9000)) {
+        values.push({ transactionHash: word(9000), status: "0x1", blockNumber: "0x64", blockHash: word(100), contractAddress: lane.onRampAddress, logs: [] });
+      } else if (request.method === "eth_call" && version === "2.0.0" &&
+        typeof request.params[0] === "object" && request.params[0] !== null &&
+        "data" in request.params[0] && typeof request.params[0].data === "string" &&
+        request.params[0].data.startsWith(toFunctionSelector("getSourceChainConfig(uint64)"))) {
+        values.push(encodeAbiParameters(parseAbiParameters("(address,bool,bytes[],address[],address[])"), [[addr(50), true, [`0x${lane.onRampAddress.slice(2).padStart(64, "0")}`], [], []]]));
+      } else {
+        const result = await original(chain, [request], options);
+        if (!result) return null;
+        values.push(result[0]);
+      }
+    }
+    return values;
+  });
+  return read;
 }
 beforeEach(() => {
   vi.resetAllMocks(); sent = [send(1)]; executed = []; states = {}; expectedNext = 2;
@@ -223,13 +266,49 @@ describe("authenticated CCIP pending quantities", () => {
     expect(await observeCcipPending({ ...input(), onDiagnostic })).toEqual({ status: "rejected", reason: "log-invalid" });
     expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ observer: "ccip", chainId: "ethereum", hardEvidenceFailure: true, failurePredicate: branch === "schema" ? "asLog-schema" : branch === "topics" ? "topic-count" : "matched-payload-cap", operands: expect.objectContaining({ address: log.address, topicCount: log.topics.length, dataLength: log.data.length, transactionHash: log.transactionHash, logIndex: log.logIndex }) }));
   });
-  it("names the Monad canonical-hash archive prerequisite without substituting state", async () => {
+  it("keeps unavailable current Monad state rejected without asking for an archive purchase", async () => {
     const read = source(); read.chainId = "monad"; read.lanes[0]!.source.chainId = "monad";
     vi.mocked(fetchEvmRpcBatch).mockResolvedValue(null);
     const onDiagnostic = vi.fn();
-    expect(await observeCcipPending({ ...input(read), onDiagnostic })).toEqual({ status: "rejected", reason: "monad-canonical-hash-archive-required" });
-    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ chainId: "monad", method: "eth_getCode", hardEvidenceFailure: true, failurePredicate: "monad-canonical-hash-archive-required" }));
+    expect(await observeCcipPending({ ...input(read), onDiagnostic })).toEqual({ status: "rejected", reason: "rpc-unavailable" });
+    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ chainId: "monad", method: "eth_getCode", hardEvidenceFailure: true, failurePredicate: "rpc-unavailable" }));
     expect(vi.mocked(fetchEvmRpcBatch).mock.calls[0]![1][0]!.params[1]).toEqual({ blockHash: word(pinNumber), requireCanonical: true });
+  });
+  it.each(["1.6", "2.0.0"] as const)("authenticates a reviewed %s birth without historical state", async version => {
+    const read = witnessedSource(version);
+    const result = await observeCcipPending(input(read));
+    expect(result).toMatchObject({ status: "accepted", checkpoint: { schemaVersion: 3 },
+      proof: { lanes: [{ initialSequence: "1", historyOrigin: { method: "reviewed-creation", blockNumber: 100 } }] } });
+    expect(logRanges.some(range => range.chain === "ethereum" && range.from === 100)).toBe(true);
+  });
+  it.each(["initcode", "nonce", "deployer", "blockHash", "runtime", "initialSequence"] as const)("rejects altered origin %s", async field => {
+    const read = witnessedSource(), witness = read.lanes[0]!.sourceStartWitness!;
+    if (witness.kind !== "reviewed-creation") throw new Error("fixture");
+    if (field === "initcode") witness.initcodeSha256 = "0".repeat(64);
+    if (field === "nonce") witness.nonce = "4";
+    if (field === "deployer") witness.deployer = addr(71);
+    if (field === "blockHash") witness.blockHash = word(101);
+    if (field === "runtime") witness.runtimeCodeSha256 = "0".repeat(64);
+    if (field === "initialSequence") Object.assign(witness, { initialSequence: "2" });
+    expect((await observeCcipPending(input(read))).status).toBe("rejected");
+  });
+  it("rejects a disabled witness and a forged starting counter, not zero pending", async () => {
+    const read = witnessedSource();
+    const result = await observeCcipPending(input(read));
+    if (result.status !== "accepted") throw new Error("fixture");
+    result.checkpoint.lanes[0]!.initialSequence = "2";
+    expect(await observeCcipPending(input(read, result.checkpoint))).toMatchObject({ status: "rejected", reason: "history-origin-sequence-mismatch" });
+    read.lanes[0]!.sourceStartWitness = { kind: "unavailable", reason: "history-origin-witness-unavailable" };
+    expect(await observeCcipPending(input(read))).toMatchObject({ status: "rejected", reason: "history-origin-witness-unavailable" });
+  });
+  it("rebuilds incompatible v2 witnessed history and rejects missing sends", async () => {
+    const read = witnessedSource();
+    const result = await observeCcipPending(input(read));
+    if (result.status !== "accepted") throw new Error("fixture");
+    result.checkpoint.schemaVersion = 2;
+    sent = [];
+    expect((await observeCcipPending(input(read, result.checkpoint))).status).toBe("rejected");
+    expect(logRanges.filter(range => range.from === 100)).toHaveLength(2);
   });
   it("reports durable cursor advancement rather than timestamp-only checkpoint writes", async () => {
     pinNumber = 20000; finalized = pinNumber;
