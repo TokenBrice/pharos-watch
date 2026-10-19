@@ -747,12 +747,13 @@ describe("syncLiveReserves", () => {
           lastSuccessAttemptId: previousLastSuccessAttemptId,
         },
       });
+      const readNow = Math.floor(Date.now() / 1000);
       return {
         result,
         lastSuccessAt,
         previousLastSuccessAttemptId,
-        resolved: await resolveReserveResult(db, coin.id, now),
-        scoringReserves: (await loadFreshIndependentLiveReserveMap(db, now)).get(coin.id),
+        resolved: await resolveReserveResult(db, coin.id, readNow),
+        scoringReserves: (await loadFreshIndependentLiveReserveMap(db, readNow)).get(coin.id),
         state: await db.prepare(
           "SELECT last_status, last_success_at, last_success_attempt_id, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?",
         ).bind(coin.id).first<{
