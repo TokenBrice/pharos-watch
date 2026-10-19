@@ -9,6 +9,7 @@ import {
 import {
   degraded,
   makeApiRequestAttributionResponse,
+  makeAttributionMeasurement,
   makeHealthyHealthResponse,
   makeHealthyReliabilityStatusResponse,
   makeHealthyStatusResponse,
@@ -139,6 +140,24 @@ describe("reliability issue model", () => {
       severity: "healthy",
       issueCount: 0,
     });
+  });
+
+  it("keeps sampling precision and inconsistent key bases as evidence gaps, not healthy zero traffic", () => {
+    const stats = requestStats();
+    stats.totals.measurement.totalRequests = makeAttributionMeasurement({
+      kind: "estimated", coverage: "unknown", reason: "low-sample", standardError: null,
+      probabilityStrata: [{ inverseRate: 64, observedSampleCount: 0 }],
+    });
+    stats.keyedPublicApi.measurement.totalRequests = makeAttributionMeasurement({
+      kind: "unavailable", coverage: "unknown", reason: "invalid-key-regime", standardError: null,
+    });
+    const model = buildReliabilityWorkspaceModel(input({ requestSourceStats: stats }));
+    expect(model.evidenceGaps).toEqual(expect.arrayContaining([
+      expect.objectContaining({ mode: "demand", code: "low-sample" }),
+      expect.objectContaining({ mode: "demand", code: "invalid-key-regime" }),
+    ]));
+    expect(model.modeSummaries.find((mode) => mode.id === "impact")?.severity).toBe("healthy");
+    expect(model.modeSummaries.find((mode) => mode.id === "demand")?.severity).toBe("unknown");
   });
 
   it("surfaces absent inactive evidence in the workspace summary", () => {

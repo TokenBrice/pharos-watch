@@ -1,8 +1,7 @@
 import { REQUEST_SOURCE_FILL_CLASSES } from "@shared/lib/classification";
-import { formatCompactCount, formatPercent } from "@shared/lib/format";
-import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
+import type { ApiRequestAttributionResponse, AttributionMeasurement } from "@pharos/contracts/request-source";
 import { StatTile } from "@/components/stat-tile";
-import { AttributionBadge, AttributionPanel } from "./attribution-panel";
+import { AttributionBadge, AttributionMeasurementNote, AttributionPanel, formatAttributionValue } from "./attribution-panel";
 
 function formatBucketLabel(bucketStart: number): string {
   return new Date(bucketStart * 1000).toLocaleTimeString("en-US", {
@@ -40,11 +39,11 @@ function ShareBar({
   );
 }
 
-function metricRow(label: string, value: number) {
+function metricRow(label: string, value: number, measurement: AttributionMeasurement) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="pharos-numeric text-foreground">{formatCompactCount(value)}</span>
+      <span className="pharos-numeric text-foreground">{formatAttributionValue(value, measurement)}</span>
     </div>
   );
 }
@@ -75,14 +74,14 @@ export function RequestSourceAttributionCard({
           <code className="rounded-sm bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">/_site-data/*</code>{" "}
           and{" "}
           <code className="rounded-sm bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">api.pharos.watch</code>.
-          Site demand includes Pages cache hits plus website-owned public API keys; external excludes those keys.
+          Site demand includes Pages deliveries plus website-owned public API keys; external excludes those keys.
         </>
       }
       badges={
         totals ? (
           <>
-            <AttributionBadge tone="sky">Site {formatPercent(totals.siteSharePct, 1)}</AttributionBadge>
-            <AttributionBadge tone="watch">External {formatPercent(totals.externalSharePct, 1)}</AttributionBadge>
+            <AttributionBadge tone="sky">Site {formatAttributionValue(totals.siteSharePct, totals.measurement.siteSharePct, true)}</AttributionBadge>
+            <AttributionBadge tone="watch">External {formatAttributionValue(totals.externalSharePct, totals.measurement.externalSharePct, true)}</AttributionBadge>
           </>
         ) : null
       }
@@ -94,10 +93,11 @@ export function RequestSourceAttributionCard({
     >
       {totals && siteDelivery ? (
         <div className="space-y-4">
+          <AttributionMeasurementNote measurement={totals.measurement.totalRequests} />
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile variant="tile" label="Total demand" value={formatCompactCount(totals.totalRequests)} />
-            <StatTile variant="tile" label="Site" value={formatCompactCount(totals.siteRequests)} />
-            <StatTile variant="tile" label="External" value={formatCompactCount(totals.externalRequests)} />
+            <StatTile variant="tile" label="Total demand" value={formatAttributionValue(totals.totalRequests, totals.measurement.totalRequests)} />
+            <StatTile variant="tile" label="Site" value={formatAttributionValue(totals.siteRequests, totals.measurement.siteRequests)} />
+            <StatTile variant="tile" label="External" value={formatAttributionValue(totals.externalRequests, totals.measurement.externalRequests)} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -105,22 +105,22 @@ export function RequestSourceAttributionCard({
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Site delivery</div>
                 <div className="text-xs text-muted-foreground">
-                  {formatCompactCount(siteDelivery.totalSiteRequests)} site requests
+                  {formatAttributionValue(siteDelivery.totalSiteRequests, siteDelivery.measurement.totalSiteRequests)} site requests
                 </div>
               </div>
               <div className="space-y-2">
-                {metricRow("Pages cache hits", siteDelivery.pagesCacheHits)}
-                {metricRow("Pages proxy fetches", siteDelivery.pagesUpstreamFetches)}
-                {metricRow("Pages timeouts", siteDelivery.pagesUpstreamTimeouts)}
-                {metricRow("Pages upstream errors", siteDelivery.pagesUpstreamErrors)}
-                {metricRow("Public API site requests", siteDelivery.publicApiSiteRequests)}
+                {metricRow("Pages cache hits (historical)", siteDelivery.pagesCacheHits, siteDelivery.measurement.pagesCacheHits)}
+                {metricRow("Pages proxy fetches", siteDelivery.pagesUpstreamFetches, siteDelivery.measurement.pagesUpstreamFetches)}
+                {metricRow("Captured Pages timeouts", siteDelivery.pagesUpstreamTimeouts, siteDelivery.measurement.pagesUpstreamTimeouts)}
+                {metricRow("Captured Pages upstream errors", siteDelivery.pagesUpstreamErrors, siteDelivery.measurement.pagesUpstreamErrors)}
+                {metricRow("Public API site requests", siteDelivery.publicApiSiteRequests, siteDelivery.measurement.publicApiSiteRequests)}
               </div>
             </div>
 
             <div className="rounded-xl border border-border/60 bg-background/45 p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Worker lanes</div>
-                <div className="text-xs text-muted-foreground">Actual worker load</div>
+                <div className="text-xs text-muted-foreground">{lanes.some((lane) => lane.measurement.totalRequests.kind !== "observed") ? "Estimated worker load" : "Recorded worker load"}</div>
               </div>
               <div className="space-y-2">
                 {lanes.length > 0 ? lanes.map((lane) => (
@@ -129,15 +129,15 @@ export function RequestSourceAttributionCard({
                       <div>
                         <div className="text-sm text-foreground">{formatLaneLabel(lane.lane)}</div>
                         <div className="text-2xs text-muted-foreground">
-                          site {formatPercent(lane.siteSharePct, 1)} · external {formatPercent(lane.externalSharePct, 1)}
+                          site {formatAttributionValue(lane.siteSharePct, lane.measurement.siteSharePct, true)} · external {formatAttributionValue(lane.externalSharePct, lane.measurement.externalSharePct, true)}
                         </div>
                       </div>
-                      <div className="pharos-numeric text-sm text-foreground">{formatCompactCount(lane.totalRequests)}</div>
+                      <div className="pharos-numeric text-sm text-foreground">{formatAttributionValue(lane.totalRequests, lane.measurement.totalRequests)}</div>
                     </div>
                     <ShareBar siteSharePct={lane.siteSharePct} externalSharePct={lane.externalSharePct} className="mt-2" />
                   </div>
                 )) : (
-                  <div className="text-sm text-muted-foreground">No worker-lane data recorded in this window.</div>
+                  <div className="text-sm text-muted-foreground">No sampled observations for worker lanes in this window.</div>
                 )}
               </div>
             </div>
@@ -147,7 +147,7 @@ export function RequestSourceAttributionCard({
             <div className="rounded-xl border border-border/60 bg-background/45 p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Top route groups</div>
-                <div className="text-xs text-muted-foreground">Sorted by 24h volume</div>
+                <div className="text-xs text-muted-foreground">Top {routes.length} observed route groups; full-window totals above</div>
               </div>
               <div className="space-y-2">
                 {routes.length > 0 ? routes.map((route) => (
@@ -158,21 +158,21 @@ export function RequestSourceAttributionCard({
                         <div className="text-2xs text-muted-foreground">{route.routeKey}</div>
                       </div>
                       <div className="text-right">
-                        <div className="pharos-numeric text-sm text-foreground">{formatCompactCount(route.totalRequests)}</div>
-                        <div className="text-2xs text-muted-foreground">ext {formatPercent(route.externalSharePct, 1)}</div>
+                        <div className="pharos-numeric text-sm text-foreground">{formatAttributionValue(route.totalRequests, route.measurement.totalRequests)}</div>
+                        <div className="text-2xs text-muted-foreground">ext {formatAttributionValue(route.externalSharePct, route.measurement.externalSharePct, true)}</div>
                       </div>
                     </div>
                     <ShareBar siteSharePct={route.siteSharePct} externalSharePct={route.externalSharePct} className="mt-2" />
                   </div>
                 )) : (
-                  <div className="text-sm text-muted-foreground">No route groups recorded in this window.</div>
+                  <div className="text-sm text-muted-foreground">No sampled observations for route groups in this window.</div>
                 )}
               </div>
             </div>
 
             <div className="rounded-xl border border-border/60 bg-background/45 p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="text-sm font-medium text-foreground">Recent time buckets</div>
+                <div className="text-sm font-medium text-foreground">Latest 8 observed buckets</div>
                 <div className="text-xs text-muted-foreground">{bucketSizeMinutes != null ? `${bucketSizeMinutes}m rollup` : "—"}</div>
               </div>
               <div className="space-y-2">
@@ -180,7 +180,7 @@ export function RequestSourceAttributionCard({
                   <div key={bucket.bucketStart} className="space-y-1">
                     <div className="flex items-center justify-between gap-2 text-2xs">
                       <span className="pharos-numeric text-muted-foreground">{formatBucketLabel(bucket.bucketStart)}</span>
-                      <span className="pharos-numeric text-foreground">{formatCompactCount(bucket.totalRequests)}</span>
+                      <span className="pharos-numeric text-foreground">{formatAttributionValue(bucket.totalRequests, bucket.measurement.totalRequests)}</span>
                     </div>
                     <ShareBar
                       siteSharePct={bucket.siteSharePct}
@@ -188,7 +188,7 @@ export function RequestSourceAttributionCard({
                     />
                   </div>
                 )) : (
-                  <div className="text-sm text-muted-foreground">No time buckets recorded in this window.</div>
+                  <div className="text-sm text-muted-foreground">No sampled observations for time buckets in this window.</div>
                 )}
               </div>
             </div>

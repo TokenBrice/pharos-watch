@@ -7,7 +7,7 @@ import type {
 import type { ApiKeyAuditLogResponse, ApiKeyListResponse, CredentialLifecycleSummaryResponse } from "@pharos/contracts/api-keys";
 import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import { ApiKeyAuditLogResponseSchema, ApiKeyListResponseSchema, CredentialLifecycleSummaryResponseSchema } from "@pharos/contracts/api-keys";
-import { ApiRequestAttributionResponseSchema } from "@pharos/contracts/request-source";
+import { ApiRequestAttributionResponseSchema, REQUEST_SOURCE_MEASUREMENT_VERSION } from "@pharos/contracts/request-source";
 import { StatusCronDetailResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "@shared/types/status";
 import { AdminActionAuditLogResponseSchema, type AdminActionAuditLogResponse } from "@/lib/actions-workbench-model";
 import { CRON_1MIN } from "@/lib/cron-intervals";
@@ -132,12 +132,13 @@ export const ADMIN_API_QUERY_DESCRIPTORS = {
     {
       queryKey: [
         "request-source-stats",
+        REQUEST_SOURCE_MEASUREMENT_VERSION,
         REQUEST_SOURCE_DEFAULTS.hours,
         REQUEST_SOURCE_DEFAULTS.bucketSec,
         REQUEST_SOURCE_DEFAULTS.routeLimit,
         REQUEST_SOURCE_DEFAULTS.apiKeyLimit,
       ] as const,
-      path: API_PATHS.requestSourceStats({ ...REQUEST_SOURCE_DEFAULTS }),
+      path: API_PATHS.requestSourceStats({ measurementVersion: REQUEST_SOURCE_MEASUREMENT_VERSION, ...REQUEST_SOURCE_DEFAULTS }),
     },
     ApiRequestAttributionResponseSchema,
   ),

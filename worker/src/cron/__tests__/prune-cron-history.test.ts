@@ -34,7 +34,7 @@ function toUtcDateString(timestampSec: number): string {
 }
 
 describe("runPruneCronHistory", () => {
-  it("executes the sixteen registry entries in four binding calls and reports every cap", async () => {
+  it("executes the eighteen registry entries in four binding calls and reports every cap", async () => {
     const { db } = createTestDb();
     const batch = vi.spyOn(db, "batch");
     const result = await runPruneCronHistory(db);
@@ -44,10 +44,31 @@ describe("runPruneCronHistory", () => {
       "cronRuns", "producerHistory", "repairTasks", "canaryRuns", "recoveryCheckpoints",
       "selectorSnapshotDailyQuota", "blockTimestampCache", "slotExecutions",
       "apiRequestConsumerStats", "siteDataRequestStats", "apiKeyRequestStats",
+      "apiRequestSourceSamples", "siteDataRequestSamples",
       "safetyScoreJournal", "safetyScoreAttempts", "safetyScoreCaptureArchive",
       "selfServeRequestRateLimits", "selfServeIssuanceRateLimits",
     ]));
     expect(Object.values(metadata.retentionTruncated).every((flag) => flag === false)).toBe(true);
+  });
+
+  it.each([
+    ["api_request_source_samples", "apiRequestSourceSamples", "'public-api', 'external', 'unkeyed', 64, 1"],
+    ["site_data_request_samples", "siteDataRequestSamples", "'pages-upstream-fetch', 'site-api', 64, 1"],
+  ])("bounds the 35-day sampled drain for %s and retains its exact cutoff", async (table, key, dimensions) => {
+    const { db, sqlite } = createTestDb();
+    const cutoff = Math.floor(Date.now() / 1000) - THIRTY_FIVE_DAYS_SEC;
+    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 20001)
+      INSERT INTO ${table} SELECT ?, printf('route-%06d', id), '/api/test', ${dimensions} FROM n`).run(cutoff - 1);
+    sqlite.prepare(`INSERT INTO ${table} VALUES (?, 'boundary', '/api/test', ${dimensions})`).run(cutoff);
+    const result = await runPruneCronHistory(db);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      [`${key}Deleted`]: 20_000,
+      cutoffRequestTelemetrySec: cutoff,
+      retentionTruncated: { [key]: true },
+      requestTelemetryCappedAtLimit: { [key]: true },
+    });
+    expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table} WHERE bucket_start < ?`).get(cutoff)).toEqual({ count: 1 });
+    expect(sqlite.prepare(`SELECT route_key FROM ${table} WHERE bucket_start = ?`).all(cutoff)).toEqual([{ route_key: "boundary" }]);
   });
 
   it("surfaces a missing repair table rather than treating the failed batch as empty", async () => {

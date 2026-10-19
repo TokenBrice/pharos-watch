@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import { ApiKeyLoadTable } from "../api-key-load-table";
+import { makeApiRequestAttributionResponse, makeAttributionMeasurement } from "@/test-utils/status-fixtures";
+
+afterEach(cleanup);
 
 function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiRequestAttributionResponse {
   return {
+    ...makeApiRequestAttributionResponse(),
     generatedAt: 1_700_000_000,
     window: {
       from: 1_699_913_600,
@@ -23,6 +27,7 @@ function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiR
       totalRequests: 1000,
       siteSharePct: 60,
       externalSharePct: 40,
+      measurement: makeApiRequestAttributionResponse().totals.measurement,
     },
     siteDelivery: {
       totalSiteRequests: 600,
@@ -31,6 +36,7 @@ function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiR
       pagesUpstreamTimeouts: 20,
       pagesUpstreamErrors: 10,
       publicApiSiteRequests: 120,
+      measurement: makeApiRequestAttributionResponse().siteDelivery.measurement,
     },
     lanes: [],
     routes: [],
@@ -46,6 +52,7 @@ function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiR
       omittedKeys: 1,
       omittedRequests: 20,
       truncated: true,
+      measurement: makeApiRequestAttributionResponse().keyedPublicApi.measurement,
     },
     apiKeys: [
       {
@@ -59,6 +66,10 @@ function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiR
         requestCount: 150,
         shareOfKeyedRequestsPct: 68.18,
         shareOfTotalPublicApiRequestsPct: 30,
+        measurement: {
+          requestCount: makeAttributionMeasurement(), shareOfKeyedRequestsPct: makeAttributionMeasurement(),
+          shareOfTotalPublicApiRequestsPct: makeAttributionMeasurement(),
+        },
       },
       {
         apiKeyId: 9,
@@ -71,6 +82,10 @@ function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiR
         requestCount: 50,
         shareOfKeyedRequestsPct: 22.73,
         shareOfTotalPublicApiRequestsPct: 10,
+        measurement: {
+          requestCount: makeAttributionMeasurement(), shareOfKeyedRequestsPct: makeAttributionMeasurement(),
+          shareOfTotalPublicApiRequestsPct: makeAttributionMeasurement(),
+        },
       },
     ],
     scope: {
@@ -98,6 +113,7 @@ describe("ApiKeyLoadTable", () => {
             omittedKeys: 0,
             omittedRequests: 0,
             truncated: false,
+            measurement: makeApiRequestAttributionResponse().keyedPublicApi.measurement,
           },
           apiKeys: [],
         })}
@@ -113,5 +129,38 @@ describe("ApiKeyLoadTable", () => {
 
     rerender(<ApiKeyLoadTable stats={null} error="upstream failed" />);
     expect(screen.getByText("upstream failed")).toBeTruthy();
+  });
+  it("keeps recorded key load while labeling an estimated public denominator", () => {
+    const stats = makeStats();
+    const mixed = makeAttributionMeasurement({
+      kind: "mixed", recordedCount: 220, observedSampleCount: 35,
+      probabilityStrata: [{ inverseRate: 64, observedSampleCount: 35 }], standardError: 375,
+    });
+    stats.keyedPublicApi.measurement.totalRequests = mixed;
+    stats.keyedPublicApi.measurement.keyedSharePct = mixed;
+    stats.apiKeys[0].measurement.shareOfTotalPublicApiRequestsPct = mixed;
+    render(<ApiKeyLoadTable stats={stats} />);
+    expect(screen.getByText(/Mixed recorded and estimated basis/)).toBeTruthy();
+    expect(screen.getByText("Est. 30.0%")).toBeTruthy();
+    expect(screen.getByText("150")).toBeTruthy();
+    expect(screen.getByText(/Per-key counts and keyed shares are recorded, unsampled/)).toBeTruthy();
+  });
+
+  it("renders an unavailable keyed denominator without substituting zero", () => {
+    const stats = makeStats();
+    const unavailable = makeAttributionMeasurement({ kind: "unavailable", coverage: "unknown", reason: "invalid-key-regime", standardError: null });
+    stats.keyedPublicApi.totalRequests = null;
+    stats.keyedPublicApi.unkeyedRequests = null;
+    stats.keyedPublicApi.keyedSharePct = null;
+    stats.keyedPublicApi.measurement.totalRequests = unavailable;
+    stats.keyedPublicApi.measurement.unkeyedRequests = unavailable;
+    stats.keyedPublicApi.measurement.keyedSharePct = unavailable;
+    stats.apiKeys[0].shareOfTotalPublicApiRequestsPct = null;
+    stats.apiKeys[0].measurement.shareOfTotalPublicApiRequestsPct = unavailable;
+    render(<ApiKeyLoadTable stats={stats} />);
+    expect(screen.getByText(/Unavailable: invalid-key-regime/)).toBeTruthy();
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(0);
+    expect(screen.getByText("150")).toBeTruthy();
+    expect(screen.queryByText(/No authenticated API-key load/)).toBeNull();
   });
 });

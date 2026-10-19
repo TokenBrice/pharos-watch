@@ -147,12 +147,13 @@ export const API_PATHS = {
   reserveAttemptHistory: (params?: { coin?: string; limit?: number }) =>
     buildQueryPath("/api/reserve-attempt-history", { coin: params?.coin, limit: params?.limit }),
   requestSourceStatsBase: () => "/api/request-source-stats",
-  requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number; apiKeyLimit?: number }) =>
+  requestSourceStats: (params: { measurementVersion: number; hours?: number; bucketSec?: number; routeLimit?: number; apiKeyLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {
-      hours: params?.hours,
-      bucketSec: params?.bucketSec,
-      routeLimit: params?.routeLimit,
-      apiKeyLimit: params?.apiKeyLimit,
+      measurementVersion: params.measurementVersion,
+      hours: params.hours,
+      bucketSec: params.bucketSec,
+      routeLimit: params.routeLimit,
+      apiKeyLimit: params.apiKeyLimit,
     }),
   apiKeys: () => "/api/api-keys",
   credentialLifecycleSummary: () => "/api/api-keys/lifecycle-summary",

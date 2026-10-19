@@ -5,7 +5,7 @@ import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { StatusPill } from "./severity-pill";
-import { AttributionBadge, AttributionPanel } from "./attribution-panel";
+import { AttributionBadge, AttributionMeasurementNote, AttributionPanel, formatAttributionValue } from "./attribution-panel";
 import { defineStatusColumns, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
 
@@ -58,9 +58,9 @@ export function ApiKeyLoadTable({
       badges={
         summary ? (
           <>
-            <AttributionBadge tone="sky">Keyed {formatPercent(summary.keyedSharePct, 1)}</AttributionBadge>
+            <AttributionBadge tone="sky">Keyed {formatAttributionValue(summary.keyedSharePct, summary.measurement.keyedSharePct, true)}</AttributionBadge>
             <AttributionBadge>
-              {formatCompactCount(summary.keyedRequests)} / {formatCompactCount(summary.totalRequests)} public-api
+              {formatCompactCount(summary.keyedRequests)} recorded / {formatAttributionValue(summary.totalRequests, summary.measurement.totalRequests)} public-api
               requests
             </AttributionBadge>
           </>
@@ -72,7 +72,13 @@ export function ApiKeyLoadTable({
       loadingLabel="Loading API key load..."
       emptyLabel="No keyed public API data yet."
     >
-      {summary == null ? null : summary.keyedRequests <= 0 || apiKeys.length === 0 ? (
+      {summary == null ? null : (
+        <div className="space-y-3">
+          <AttributionMeasurementNote measurement={summary.measurement.totalRequests} />
+          <p className="text-xs text-muted-foreground">
+            Per-key counts and keyed shares are recorded, unsampled. Public API shares use recorded keyed plus directly estimated unkeyed demand; this denominator can differ from the Worker lane estimate.
+          </p>
+          {summary.keyedRequests <= 0 || apiKeys.length === 0 ? (
         <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
           No authenticated API-key load recorded in this window.
         </div>
@@ -80,7 +86,7 @@ export function ApiKeyLoadTable({
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <StatTile variant="tile" label="Keyed requests" value={formatCompactCount(summary.keyedRequests)} />
-            <StatTile variant="tile" label="Unkeyed public API" value={formatCompactCount(summary.unkeyedRequests)} />
+            <StatTile variant="tile" label="Unkeyed public API" value={formatAttributionValue(summary.unkeyedRequests, summary.measurement.unkeyedRequests)} />
             <StatTile variant="tile" label="Keys in window" value={formatCompactCount(summary.totalKeys)} />
           </div>
 
@@ -128,7 +134,7 @@ export function ApiKeyLoadTable({
                       {formatPercent(row.shareOfKeyedRequestsPct, 1)}
                     </TableCell>
                     <TableCell className="py-2 align-top pharos-numeric text-foreground">
-                      {formatPercent(row.shareOfTotalPublicApiRequestsPct, 1)}
+                      {formatAttributionValue(row.shareOfTotalPublicApiRequestsPct, row.measurement.shareOfTotalPublicApiRequestsPct, true)}
                     </TableCell>
                     <TableCell className="py-2 align-top pharos-numeric text-muted-foreground">
                       {formatCompactCount(row.rateLimitPerMinute)}/min
@@ -142,6 +148,8 @@ export function ApiKeyLoadTable({
                 );
               })}
           </DataTableShell>
+        </div>
+          )}
         </div>
       )}
     </AttributionPanel>
