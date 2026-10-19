@@ -128,6 +128,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         expectedAssetIds: ["xaut-tether"],
         attributionById: {},
         journalRecords: [journal],
+        performanceById: { "xaut-tether": { elapsedMs: 123, evmRpcRequests: 2 } },
       });
 
       const first = await syncSafetyScoreV9SupplyAttribution(
@@ -144,6 +145,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         diagnosticRejectedCount: 1,
         blockingRejectedAssetIds: [],
         blockingRejectedCount: 0,
+        latencySummary: { assets: { "xaut-tether": { elapsedMs: 123, evmRpcRequests: 2 } } },
       });
       expect(mocks.capture).toHaveBeenCalledTimes(1);
       expect(

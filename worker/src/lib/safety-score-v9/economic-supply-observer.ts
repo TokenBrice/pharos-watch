@@ -23,7 +23,7 @@ import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/r
 import { observeCcipPending } from "./ccip-pending-observer";
 import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseTextWithinLimitWithSignal, type BodyReadObserver } from "../response-body";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
+import { emitSupplyAttributionDiagnostic, type SupplyAttributionPhase } from "./supply-attribution-diagnostics";
 
 export const ECONOMIC_SUPPLY_BODY_CAPS = Object.freeze({ conversion: 256 * 1024, xrplGatewayBalances: 1024 * 1024, xrplLedger: 128 * 1024 });
 
@@ -401,6 +401,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
   assetId: string; fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>; scoringClockSec: number; chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onBodyRead?: BodyReadObserver;
+  onPhase?: (phase: SupplyAttributionPhase) => void;
 }): Promise<ReviewedEconomicSupplyObservationAttempt> {
   let failedRouteId: string | null = null;
   let bodyOrigin: string | null = null;
@@ -416,6 +417,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     const aggregateUsd = getCirculatingRawOrNull(aggregate ?? {});
     if (aggregateUsd === null || aggregate?.observedAtSec == null) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: null };
     const observations: EconomicSupplyObservation[] = [], inFlight: EconomicSupplyObservation[] = [], conversions: EconomicSupplyReference[] = [];
+    input.onPhase?.("reference");
     if (plan.referencePriceSource) { failedRouteId = plan.referencePriceSource.sourceId; bodyOrigin = new URL(plan.referencePriceSource.url).origin; }
     const referencePrice: EconomicSupplyReference | null = plan.referencePriceSource
       ? await readReviewedApiAmount(plan.referencePriceSource, input.signal, input.onBodyRead)
@@ -476,6 +478,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       if (row) addEvmRead(row, rule.id, rule.account);
     }
     const pinEvmHeaders = async (): Promise<boolean> => {
+      input.onPhase?.("pinning");
       const options = { chainRpcs: input.chainRpcs, signal: input.signal };
       for (const row of plan.deployments) {
         if (!evmCallsByChain.has(row.chainId) || headers.has(row.chainId)) continue;
@@ -518,6 +521,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     const readEvm = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
       if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null) return null;
       if (headers.size === 0 && !await pinEvmHeaders()) return null;
+      input.onPhase?.("holdings");
       const header = headers.get(row.chainId);
       if (!header) return null;
       failedRouteId = row.routeId ?? row.deploymentKey;
@@ -595,13 +599,14 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     ): Promise<EconomicSupplyObservation | null> => {
       const pins = source.sides.map(side => headers.get(side.chainId));
       if (pins.some(pin => pin === undefined)) { failedRouteId = `${id}:pin-missing`; return null; }
-      const result = await observeLayerZeroOftPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic });
+      const result = await observeLayerZeroOftPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
       if (result.status !== "accepted") { failedRouteId = `${id}:${result.reason}`; return null; }
       const header = pins[0]!;
       return { id, deploymentKey, amount: result.amount, observedAtSec: header.timestamp,
         anchor: String(header.number), anchorHash: header.hash,
         responseSha256: result.responseSha256, layerZeroOftPendingProof: result.proof };
     };
+    input.onPhase?.("holdings");
     for (const row of plan.deployments) {
       throwIfAborted(input.signal); failedRouteId = row.routeId ?? row.deploymentKey;
       let observation: EconomicSupplyObservation | null = null;
@@ -671,6 +676,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       if (!observation) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
       observations.push(observation);
     }
+    input.onPhase?.("conversions");
     for (const source of plan.conversionSources) {
       failedRouteId = source.sourceId; bodyMethod = "conversion";
       bodyOrigin = "url" in source ? new URL(source.url).origin : null;
@@ -680,6 +686,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       if (!conversion || Number(conversion.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: source.sourceId };
       conversions.push(conversion);
     }
+    input.onPhase?.("pending");
     for (const escrow of plan.escrows) {
       for (const receipt of escrow.receiptClaimSources) {
         failedRouteId = receipt.deploymentKey; bodyOrigin = new URL(receipt.source.url).origin; bodyMethod = "conversion";
@@ -695,7 +702,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         if (escrow.inFlightSource.kind === "evm-ccip-pending") {
           const source = escrow.inFlightSource;
           const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
-            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic });
+            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
           if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
           const header = headers.get(source.chainId)!;
           pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
@@ -745,7 +752,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           inFlight.push(pending);
         } else if (source.kind === "evm-ccip-pending") {
           const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
-            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic });
+            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
           if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
           const header = headers.get(source.chainId);
           if (!header) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:pin-missing" };
@@ -763,12 +770,14 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
       }
     }
+    input.onPhase?.("recheck");
     for (const [chainId, header] of headers) {
       const rechecked = await fetchEvmBlockHeader(chainId, header.number, { chainRpcs: input.chainRpcs, signal: input.signal });
       if (!rechecked || rechecked.number !== header.number || rechecked.hash !== header.hash || rechecked.timestamp !== header.timestamp) {
         return { status: "rejected", rejectionCode: "deployment-state-invalid", failedRouteId: `anchor:${chainId}` };
       }
     }
+    input.onPhase?.("derive");
     const attribution = deriveReviewedEconomicDeploymentPartition({ plan, baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration, registryFingerprint: input.fixedInput.registryFingerprint, clockSec: input.scoringClockSec, aggregate: { supplyUsd: aggregateUsd, observedAtSec: aggregate.observedAtSec, sourceGeneration: input.fixedInput.sourceGeneration }, referencePrice, conversions, observations, inFlight, onDiagnostic: input.onDiagnostic });
     if (attribution) {
       const contradiction = economicProviderSupplyContradictionChain(attribution, input.fixedInput.chainCirculatingById[input.assetId] ?? {});

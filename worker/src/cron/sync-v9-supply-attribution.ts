@@ -290,6 +290,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       priorGenerationStatus,
       bootstrapProgressAssetIds: progress,
       captureFailureReasonsById: capture.failureReasonById ?? {},
+      latencySummary: { assets: capture.performanceById ?? {} },
       resourcePressure,
       ...(qualityReasons.length ? { quality: {
         reason: qualityReasons[0], reasons: qualityReasons,

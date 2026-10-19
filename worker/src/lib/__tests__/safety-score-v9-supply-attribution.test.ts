@@ -56,6 +56,8 @@ import { createSafetyScoreV9SupplyAttributionGeneration } from "../safety-score-
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import { deriveXautRepresentationGroupSupplyAttribution } from "../safety-score-v9/xaut-supply-attribution-contract";
 import { makeXautObservation } from "../../test-helpers/v9-fixed-input";
+import { createSupplyAttributionPerformance, emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
+import { compactCronMetadataForPersistence } from "../cron-metadata-persistence";
 
 const XAUT_AGGREGATE_SUPPLY_USD = 2_480_000_000;
 const OBSERVED_AT_SEC = 1_774_000_000;
@@ -79,6 +81,72 @@ function xautFixedInput(
   } as unknown as ReportCardsFixedInput;
 }
 
+
+it("retains bounded asset timings, physical EVM attempts and the last authenticated cursor through compaction", () => {
+  vi.useFakeTimers();
+  try {
+    vi.setSystemTime(1_000);
+    const performance = createSupplyAttributionPerformance();
+    const original = chainRpcs();
+    const observed = performance.withRpcDiagnostics(original)!;
+    const [chainId, config] = [...observed][0]!;
+    expect(observed).toBe(original);
+    config.onRpcRequest?.({ providerOrigin: "https://other.example", method: "batch", rpcCalls: 99, signal: new AbortController().signal });
+    vi.setSystemTime(1_100);
+    performance.setPhase("pending-authentication");
+    for (let i = 0; i < 5; i++) config.onRpcRequest?.({
+      providerOrigin: `https://rpc${i}.example`, method: "batch", rpcCalls: 4,
+    });
+    vi.setSystemTime(1_400);
+    performance.setPhase("pending-history");
+    emitSupplyAttributionDiagnostic(performance.recordDiagnostic, {
+      observer: "ccip", sourceId: "fixture", laneId: "lane", beforeCursor: "100",
+      afterCursor: "200", targetCursor: "300", persisted: true,
+    });
+    vi.setSystemTime(1_600);
+    performance.finish();
+    expect(original.get(chainId)?.onRpcRequest).toBeUndefined();
+    expect(performance.data).toMatchObject({
+      elapsedMs: 600, evmRpcRequests: 5, evmRpcCalls: 20, unlistedProviderRequests: 2,
+      phaseElapsedMs: { observation: 100, "pending-authentication": 300, "pending-history": 200 },
+      lastRpc: { chainId, providerOrigin: "https://rpc4.example", method: "batch" },
+      lastCursor: { before: "100", after: "200", target: "300", persisted: true },
+    });
+    expect(Object.keys(performance.data.providers)).toHaveLength(3);
+    const latencySummary = { assets: { fixture: performance.data } };
+    const compacted = compactCronMetadataForPersistence(JSON.stringify({
+      reason: "supply-attribution-blocking-rejections", latencySummary, oversizedDiagnostic: "x".repeat(20_000),
+    }), undefined, "sync-v9-supply-attribution");
+    expect(compacted.compacted).toBe(true);
+    expect(JSON.parse(compacted.metadata!).latencySummary).toEqual(latencySummary);
+    expect(compacted.persistedBytes).toBeLessThanOrEqual(8192);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("retains elapsed time and in-flight RPC context when a child times out", async () => {
+  vi.useFakeTimers();
+  try {
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockImplementation(async (input) => {
+      input.onPhase("pending-authentication");
+      const [config] = input.chainRpcs.values();
+      config.onRpcRequest({ providerOrigin: "https://slow.example", method: "eth_getCode", rpcCalls: 1, signal: input.signal });
+      await new Promise((_, reject) => input.signal.addEventListener("abort", () => reject(input.signal.reason), { once: true }));
+    });
+    const pending = captureSafetyScoreV9SupplyAttribution(xautFixedInput(), chainRpcs());
+    await vi.advanceTimersByTimeAsync(30_001);
+    const result = await pending;
+    expect(result.failureReasonById?.["xaut-tether"]).toBe("asset-timeout");
+    expect(result.performanceById?.["xaut-tether"]).toMatchObject({
+      elapsedMs: 30_000, evmRpcRequests: 1,
+      phaseElapsedMs: { "pending-authentication": 30_000 },
+      lastRpc: { providerOrigin: "https://slow.example", method: "eth_getCode" },
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+});
 
 describe("Safety Score V9 lock/mint supply attribution", () => {
   beforeEach(() => {

@@ -124,6 +124,26 @@ it("batches exact current-pin authentication without reusing state across attemp
   expect(f.batch.mock.calls.length).toBe(before * 2);
 });
 
+it("authenticates shared checkpoint anchors once per attempt but never reuses them across attempts", async () => {
+  const f = fixture([]);
+  f.source.pathways.push({ sourceIndex: 1, destinationIndex: 0 });
+  const first = await f.run();
+  expect(first.status).toBe("accepted");
+  if (first.status !== "accepted") throw new Error("fixture did not bootstrap");
+  f.setPin(101);
+  f.headers.mockClear();
+  expect((await f.run(first.checkpoint)).status).toBe("accepted");
+  for (const chain of ["ethereum", "base"]) {
+    expect(f.headers.mock.calls.filter(([id, block]) => id === chain && block === 100)).toHaveLength(1);
+    // Current pin and post-observation rechecks remain independent of the cache.
+    expect(f.headers.mock.calls.filter(([id, block]) => id === chain && block === 101).length).toBeGreaterThan(1);
+  }
+  const original = f.headers.getMockImplementation()!;
+  f.headers.mockImplementation(async (chain, block, options) => chain === "ethereum" && block === 100
+    ? { ...header(100), hash: word(999n) } : original(chain, block, options));
+  expect(await f.run(first.checkpoint)).toMatchObject({ status: "rejected", reason: "checkpoint-reorg" });
+});
+
 it("records a completed prefix commit when the asset expires during the D1 write", async () => {
   const f = fixture([
     { nonce: 1n, amountSD: 0n, state: "unverified", height: 100 },

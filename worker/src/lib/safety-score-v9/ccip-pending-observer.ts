@@ -10,7 +10,7 @@ import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, usableCcipRpcEndpoints, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
+import { emitSupplyAttributionDiagnostic, type SupplyAttributionPhase } from "./supply-attribution-diagnostics";
 
 // ABI authorities: CCIP 1.5 commit 5e7b2096586bc32c6e975fc13f4c411eb687f833
 // and CCIP 1.6 commit 2114b90f39c82c052e05af7c33d42c1ae98f4180, Internal.sol.
@@ -183,6 +183,7 @@ export async function observeCcipPending(input: {
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   checkpoint?: CcipPendingCheckpoint;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
+  onPhase?: (phase: SupplyAttributionPhase) => void;
 }): Promise<
   | { status: "accepted"; amount: string; proof: Proof; responseSha256: string; checkpoint: CcipPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: CcipPendingCheckpoint }
@@ -193,6 +194,7 @@ export async function observeCcipPending(input: {
   const emit = (detail: Partial<SupplyAttributionAttemptDiagnostic>) => emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "ccip", sourceId: input.source.sourceId, ...context, ...detail });
   const savedCursors = new Map<string, number>();
   try {
+    input.onPhase?.("pending-authentication");
     if (!CcipPendingReadSchema.safeParse(input.source).success) fail("source-invalid");
     const sourceDigest = sha256Hex(stableJsonStringifyV1(input.source));
     const cacheKey = `safety-score-v9:ccip-pending:v1:${sourceDigest}`;
@@ -459,6 +461,7 @@ export async function observeCcipPending(input: {
       // cancellation can resume this prefix, never admit it as a census.
       if (initializing) await persistCheckpoint();
     }
+    input.onPhase?.("pending-history");
     type Scan = { lane: Lane; cp: CcipPendingCheckpoint["lanes"][number]; sent: boolean; topic: `0x${string}` };
     const scansByChain = chains.map(chain => input.source.lanes.flatMap((lane, i): Scan[] => {
       const cp = checkpoint!.lanes[i]!, scans: Scan[] = [];
@@ -574,6 +577,7 @@ export async function observeCcipPending(input: {
     // Discovery corroborates the final census; it does not authenticate the
     // on-chain history cursor. Save verified pages before potentially slow
     // indexer/receipt work, while retaining every discovery gate for admission.
+    input.onPhase?.("pending-discovery");
     for (let i = 0; i < input.source.lanes.length; i++) {
       const lane = input.source.lanes[i]!, cp = checkpoint.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!;
       context = { laneId: lane.id, chainId: lane.source.chainId, pinObservedAtSec: sourcePin.timestamp, phase: "discovery" };

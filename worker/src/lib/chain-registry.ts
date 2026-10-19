@@ -47,6 +47,8 @@ export interface ChainRpcConfig {
   /** Ordered registry endpoints (including admitted promotions), then supplemental endpoints. */
   endpoints: readonly RpcEndpoint[];
   explorerUrl: string;
+  /** Invocation-local telemetry; called only after a physical EVM request is admitted. */
+  onRpcRequest?: (request: { providerOrigin: string; method: string; rpcCalls: number; signal?: AbortSignal }) => void;
 }
 
 function rpcConfig(chainId: string, type: ChainRpcConfig["type"], endpoints: readonly RpcEndpoint[]): ChainRpcConfig {
