@@ -30,7 +30,8 @@ export async function shouldQuarantineDecodeFailure(
     const parsed = prior ? JSON.parse(prior.value) as { attempts?: unknown } : null;
     const attempts = (typeof parsed?.attempts === "number" ? parsed.attempts : 0) + 1;
     const quarantined = attempts >= DECODE_RETRY_LIMIT;
-    await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    await db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
       .bind(cacheKey, JSON.stringify({
         attempts,
         quarantined,

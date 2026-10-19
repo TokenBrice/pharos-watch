@@ -64,7 +64,8 @@ export async function quarantineBlacklistDecodeFailure(
     // Retain bounded identity/payload evidence indefinitely for repair, without
     // letting a corrupt provider payload exceed D1's row limit and hold the frontier.
     const retained = boundedEvidence(evidence);
-    await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    await db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
       .bind(key, JSON.stringify({ attempts, observation, quarantined, reason,
         disposition: quarantined ? "decode-retry-exhausted" : "decode-retry",
         evidence: retained.fields, evidenceTruncated: retained.truncated }), Math.floor(Date.now() / 1000))

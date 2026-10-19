@@ -70,7 +70,6 @@ const TELEGRAM_WRITE_DEFAULTS: MockTableConfig[] = [
   { match: "UPDATE OR IGNORE telegram_", rows: [] },
   { match: "DELETE FROM telegram_", rows: [] },
   { match: "INSERT INTO cache", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
   { match: "UPDATE cache", rows: [] },
   { match: "DELETE FROM cache", rows: [] },
 ];

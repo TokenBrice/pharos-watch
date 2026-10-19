@@ -266,7 +266,7 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeMyChatMemberRequest(), "test-secret", "bot-token");
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache"))).toBe(false);
   });
 
   it("atomically claims a group welcome before concurrent sends", async () => {

@@ -123,7 +123,7 @@ function watchdogDb(
       first: previousValue === null ? null : { value: previousValue, updated_at: 1_000 },
     },
     {
-      match: "INSERT OR REPLACE INTO cache",
+      match: "INSERT INTO cache",
       rows: [],
       runMeta: { changes: 1 },
       allowUnused: options.allowUnusedWrite === true,
@@ -132,7 +132,7 @@ function watchdogDb(
 }
 
 function lastSnapshotWrite(db: { getHistory: () => Array<{ sql: string; binds: unknown[] }> }): string | null {
-  const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+  const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
   const value = writes[writes.length - 1]?.binds[1];
   return typeof value === "string" ? value : null;
 }
@@ -250,7 +250,7 @@ describe("DEX exit-route turnover watchdog", () => {
 
     const result = await runDexExitRouteTurnoverWatchdog(db);
     const metadata = JSON.parse(String(result.metadata));
-    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache"));
 
     expect(result.status).toBe("ok");
     expect(metadata).toMatchObject({
@@ -518,6 +518,6 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       reason: "no-new-published-dex-generation",
     });
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache"))).toBe(false);
   });
 });

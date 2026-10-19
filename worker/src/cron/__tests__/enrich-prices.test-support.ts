@@ -68,7 +68,7 @@ function makeEnrichPricesDb(
     [
       ...tables,
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null, allowUnused: true },
-      { match: "INSERT OR REPLACE INTO cache", rows: [], allowUnused: true },
+      { match: "INSERT INTO cache", rows: [], allowUnused: true },
     ],
     { ...options, assertMatchesUsed: true },
   );
@@ -198,7 +198,7 @@ function makePrimaryPricingDb(options: PrimaryPricingDbOptions | MockTableConfig
     { match: "FROM dex_price_challengers", rows: [], allowUnused: true },
     { match: "FROM dex_liquidity", rows: [], allowUnused: true },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null, allowUnused: true },
-    { match: "INSERT OR REPLACE INTO cache", rows: [], allowUnused: true },
+    { match: "INSERT INTO cache", rows: [], allowUnused: true },
   ], { assertMatchesUsed: true });
 }
 

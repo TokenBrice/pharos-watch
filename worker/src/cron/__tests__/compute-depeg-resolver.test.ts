@@ -109,7 +109,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM dex_liquidity", rows: [] },
       { match: "FROM dex_liquidity_history", rows: [] },
       { match: "FROM redemption_backstop_runs", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [] },
     ]);
@@ -152,7 +152,7 @@ describe("computeDepegResolver", () => {
     const ddrCacheWrite = db
       .getHistory()
       .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+        (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
       );
     if (!ddrCacheWrite) throw new Error("Missing DDR snapshot cache write");
     return JSON.parse(ddrCacheWrite.binds[1] as string).payload;
@@ -365,7 +365,7 @@ describe("computeDepegResolver", () => {
         ],
       },
       { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const { stores } = storesFor();
@@ -464,7 +464,7 @@ describe("computeDepegResolver", () => {
           },
         ],
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     await computeDepegResolver({
@@ -499,7 +499,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       { match: "FROM cache WHERE key = ?", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const result = await computeDepegResolver({
@@ -533,7 +533,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       { match: "FROM cache WHERE key = ?", throwError: new Error("cache unavailable"), rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     await computeDepegResolver({
@@ -561,7 +561,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const result = await computeDepegResolver({
@@ -632,7 +632,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     await computeDepegResolver({
@@ -687,7 +687,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const result = await computeDepegResolver({
@@ -757,7 +757,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     await computeDepegResolver({
@@ -820,7 +820,7 @@ describe("computeDepegResolver", () => {
       },
       ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     await computeDepegResolver({
@@ -1183,7 +1183,7 @@ describe("computeDepegResolver", () => {
               ? []
               : [{ key: "ddr:quarantine-alerted-event-ids", value: markerValue, updated_at: NOW_SEC - 900 }],
         },
-        { match: "INSERT OR REPLACE INTO cache", rows: [] },
+        { match: "INSERT INTO cache", rows: [] },
         {
           match: "INSERT INTO worker_repair_tasks",
           rows: [],
@@ -1196,7 +1196,7 @@ describe("computeDepegResolver", () => {
         .getHistory()
         .filter(
           (entry) =>
-            entry.sql.includes("INSERT OR REPLACE INTO cache") && String(entry.binds[0]).startsWith(keyPrefix),
+            entry.sql.includes("INSERT INTO cache") && String(entry.binds[0]).startsWith(keyPrefix),
         );
 
     const runOptions = {

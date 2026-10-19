@@ -106,7 +106,7 @@ describe("runDexScreenerPass", () => {
       0,
     );
 
-    const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
     const exactWrite = circuitWrites.find((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
 
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
@@ -155,7 +155,7 @@ describe("runDexScreenerPass", () => {
       ],
     });
 
-    const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
     const exactWrite = circuitWrites.find((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
       state: "closed",
@@ -341,7 +341,7 @@ describe("DexScreener observed response diagnostics", () => {
     expect(result.resolved).toBe(0);
     expect(result.diagnostics).toEqual([expect.objectContaining({ source: "dexscreener-exact", ok: true,
       success: true, candidateCount: 1, responseRowCount: pairs.length, resolvedCount: 0 })]);
-    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
     expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
   });

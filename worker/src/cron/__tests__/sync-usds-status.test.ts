@@ -11,7 +11,6 @@ import { syncUsdsStatus } from "../sync-usds-status";
 const DEFAULT_USDS_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "INSERT INTO cache", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
 ];
 
 const mockD1 = createMockD1Preset(DEFAULT_USDS_D1_TABLES);

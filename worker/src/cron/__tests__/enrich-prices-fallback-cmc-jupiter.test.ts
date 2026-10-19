@@ -349,7 +349,7 @@ describe("enrichMissingPrices", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -395,7 +395,7 @@ describe("enrichMissingPrices", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({

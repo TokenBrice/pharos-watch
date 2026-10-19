@@ -46,7 +46,7 @@ function fakeDb(failureRows: FakeFailureRow[] = [], producerPublishedAt?: number
           return null;
         },
         run: async () => {
-          if (sql.startsWith("INSERT OR REPLACE INTO cache")) {
+          if (sql.startsWith("INSERT INTO cache")) {
             cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number });
           } else if (sql.startsWith("DELETE FROM cache WHERE key IN")) {
             deletedCacheKeys.push(...(args as string[]));

@@ -108,6 +108,120 @@ async function observeDewsPublication(sqlite: DatabaseSync, db: D1Database, nowS
 }
 
 describe("persistDewsResults", () => {
+  it("updates every latest-row field in place while preserving publication and sparse history clocks", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ids = ["usdc-circle", "usdt-tether"];
+    const persist = (rows: DewsComputedRow[], clock: number) => persistDewsResults({
+      db, results: rows, eligibleIds: new Set(ids), degradedSources: [], nowSec: clock,
+    });
+    try {
+      await persist(ids.map((id) => buildDewsRow(id)), nowSec - 120);
+      const identity = sqlite.prepare("SELECT rowid FROM stress_signals_latest WHERE stablecoin_id = ?")
+        .get(ids[0]!);
+      const changed = {
+        ...buildDewsRow(ids[0]!, 44), band: "ALERT",
+        signals: { supply: { value: 40, available: true, weight: 1 } },
+        baseScore: 40, finalScore: 44, sourceAges: { supply: 15 },
+      } as DewsComputedRow;
+      await persist([changed, buildDewsRow(ids[1]!)], nowSec);
+      const latest = sqlite.prepare("SELECT * FROM stress_signals_latest WHERE stablecoin_id = ?").get(ids[0]!)!;
+      expect(latest).toEqual({
+        stablecoin_id: ids[0], computed_at: nowSec, score: 44, band: "ALERT", updated_at: nowSec,
+        signals_json: JSON.stringify({
+          signals: changed.signals, amplifiers: changed.amplifiers,
+          baseScore: changed.baseScore, finalScore: changed.finalScore,
+          effectiveWeights: changed.effectiveWeights, evidenceKinds: changed.evidenceKinds,
+          insufficientEvidenceReason: changed.insufficientEvidenceReason,
+          dataQualityScore: changed.dataQualityScore, topContributors: changed.topContributors,
+          sourceAges: changed.sourceAges,
+        }),
+      });
+      expect(sqlite.prepare("SELECT rowid FROM stress_signals_latest WHERE stablecoin_id = ?").get(ids[0]!))
+        .toEqual(identity);
+      expect(sqlite.prepare(
+        "SELECT computed_at, score FROM stress_signal_publication_rows WHERE stablecoin_id = ? ORDER BY computed_at",
+      ).all(ids[0]!)).toEqual([
+        { computed_at: nowSec - 120, score: 12 }, { computed_at: nowSec, score: 44 },
+      ]);
+      expect(sqlite.prepare("SELECT computed_at, score FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at")
+        .all(ids[0]!)).toEqual([
+          { computed_at: nowSec - 120, score: 12 }, { computed_at: nowSec, score: 44 },
+        ]);
+      // Latest has always been unconditional; pointer CAS remains the authority
+      // that prevents an older attempt from becoming the served generation.
+      await persist([changed, buildDewsRow(ids[1]!)], nowSec - 60);
+      expect(sqlite.prepare("SELECT computed_at, updated_at FROM stress_signals_latest WHERE stablecoin_id = ?")
+        .get(ids[0]!)).toEqual({ computed_at: nowSec - 60, updated_at: nowSec - 60 });
+      expect(await readDewsPublishedGenerationResult(db, nowSec)).toMatchObject({ computedAt: nowSec });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(["score", "band", "signals"] as const)("reseals changed identities without rewriting identical rows (%s)", async (field) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const snapshotDate = 1_800_000_000;
+    const initial = ["unchanged", "changed", "departed"].map((id) => buildDewsRow(id));
+    try {
+      await reconcileDailyDewsHistorySnapshot(db, initial, snapshotDate);
+      const unchanged = sqlite.prepare("SELECT rowid, * FROM stress_signal_history WHERE stablecoin_id = 'unchanged'").get();
+      sqlite.exec(`CREATE TABLE daily_write_audit (operation TEXT NOT NULL, stablecoin_id TEXT NOT NULL);
+        CREATE TRIGGER audit_daily_update AFTER UPDATE ON stress_signal_history BEGIN
+          INSERT INTO daily_write_audit VALUES ('update', NEW.stablecoin_id); END;
+        CREATE TRIGGER audit_daily_delete AFTER DELETE ON stress_signal_history BEGIN
+          INSERT INTO daily_write_audit VALUES ('delete', OLD.stablecoin_id); END;
+        CREATE TRIGGER audit_daily_insert AFTER INSERT ON stress_signal_history BEGIN
+          INSERT INTO daily_write_audit VALUES ('insert', NEW.stablecoin_id); END;`);
+      const changed = buildDewsRow("changed");
+      if (field === "score") changed.score = 44;
+      if (field === "band") changed.band = "ALERT";
+      if (field === "signals") changed.signals = { ...changed.signals, supply: { value: 22, available: true } };
+      const results = [buildDewsRow("unchanged"), changed, buildDewsRow("new")];
+      expect(await reconcileDailyDewsHistorySnapshot(db, results, snapshotDate)).toEqual({
+        rewritten: true, previousOwnedRowCount: 3, sealedRowCount: 3,
+      });
+      expect(readDailyHistoryIds(sqlite, snapshotDate)).toEqual(["changed", "new", "unchanged"]);
+      expect(sqlite.prepare("SELECT rowid, * FROM stress_signal_history WHERE stablecoin_id = 'unchanged'").get())
+        .toEqual(unchanged);
+      expect(sqlite.prepare("SELECT * FROM daily_write_audit ORDER BY operation").all()).toEqual([
+        { operation: "delete", stablecoin_id: "departed" },
+        { operation: "insert", stablecoin_id: "new" },
+        { operation: "update", stablecoin_id: "changed" },
+      ]);
+      const stored = sqlite.prepare("SELECT score, band, signals_json FROM stress_signal_history WHERE stablecoin_id = 'changed'").get()!;
+      expect(stored.score).toBe(changed.score);
+      expect(stored.band).toBe(changed.band);
+      expect(JSON.parse(String(stored.signals_json)).signals).toEqual(changed.signals);
+      // Exact-ID early return is deliberately unchanged: daily values are not
+      // refreshed just because a later run computed different same-day scores.
+      results[1] = buildDewsRow("changed", 99);
+      expect(await reconcileDailyDewsHistorySnapshot(db, results, snapshotDate)).toMatchObject({ rewritten: false });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM daily_write_audit").get()).toEqual({ count: 3 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps daily upserts inside D1's bound limit across multiple statements", async () => {
+    const statements: string[] = [];
+    const { sqlite, db } = createLatestSchemaSqlite({
+      onRun: (sql) => {
+        if (sql.includes("stress-history-daily-seal")) statements.push(sql);
+      },
+    });
+    const rows = Array.from({ length: 41 }, (_, index) => buildDewsRow(`coin-${index}`));
+    try {
+      expect(await reconcileDailyDewsHistorySnapshot(db, rows, 1_800_000_000))
+        .toMatchObject({ rewritten: true, sealedRowCount: 41 });
+      expect(statements).toHaveLength(3);
+      expect(statements.map((sql) => sql.match(/\?/g)?.length)).toEqual([100, 100, 5]);
+      expect(readDailyHistoryIds(sqlite, 1_800_000_000)).toHaveLength(41);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("quarantines latest rows without erasing history or accepted buffers, then heals", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const nowSec = Math.floor(Date.now() / 1000);

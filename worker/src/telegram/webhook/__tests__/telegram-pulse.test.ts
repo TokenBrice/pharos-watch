@@ -40,7 +40,6 @@ function mockD1(
     { match: "FROM telegram_usage_daily", rows: [], first: null },
     { match: "FROM telegram_adoption_retention_daily", rows: [] },
     { match: "INSERT INTO telegram_adoption_retention_daily", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
     { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
   ], options);
 }
@@ -575,7 +574,7 @@ describe("publishTelegramPulseSnapshotWithOutcome", () => {
     expect(outcome.pulse.activeWatchers).toBe(12);
 
     const markerWrites = inner.getHistory().filter(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === HEAVY_MARKER_KEY,
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === HEAVY_MARKER_KEY,
     );
     expect(markerWrites).toEqual([]);
   });

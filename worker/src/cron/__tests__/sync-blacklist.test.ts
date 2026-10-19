@@ -208,7 +208,7 @@ const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "INSERT INTO cache", rows: [] },
   { match: "DELETE FROM cache WHERE key = ?", rows: [] },
   { match: "FROM blacklist_current_balances", rows: [] },
   { match: "INSERT INTO blacklist_current_balances", rows: [] },

@@ -46,7 +46,6 @@ function mockD1(
     { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
     { match: "INSERT INTO telegram_usage_daily", rows: [] },
     { match: "INSERT INTO cache", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   ], options);
 }

@@ -1509,12 +1509,12 @@ describe("buildDepegResolverReviewSnapshot", () => {
     vi.useFakeTimers();
     vi.setSystemTime((ELIGIBLE_AT + 3600) * 1000);
     const db = reviewDb([], [
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(1)) });
 
     const result = await computeAndStoreDepegResolverReview(db, undefined, { storeContracts: stores });
-    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache"));
 
     expect(result.itemCount).toBe(1);
     expect(cacheWrite?.binds[0]).toBe("depeg-resolver-review:snapshot");

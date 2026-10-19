@@ -281,11 +281,27 @@ describe("db utility helpers", () => {
     const { db, calls } = makeDb();
     await setCache(db, "stablecoins", '{"x":1}');
 
-    const write = calls.find((c) => c.sql.includes("INSERT OR REPLACE INTO cache"));
+    const write = calls.find((c) => c.sql.includes("INSERT INTO cache"));
     expect(write).toBeDefined();
     expect(write?.args[0]).toBe("stablecoins");
     expect(write?.args[1]).toBe('{"x":1}');
     expect(write?.args[2]).toBe(Math.floor(Date.now() / 1000));
+  });
+
+  it.each(["replace", "if-newer"] as const)("retries %s conflict writes without changing their clock", async (mode) => {
+    const { db, calls, executedQueries } = makeDb({ transientFailures: { "INSERT INTO cache": 1 } });
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const pending = mode === "replace"
+      ? setCache(db, "current", "value")
+      : setCacheIfNewer(db, "current", "value", updatedAt);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await pending;
+    expect(executedQueries.filter((sql) => sql.includes("INSERT INTO cache"))).toHaveLength(2);
+    const writes = calls.filter((call) => call.sql.includes("INSERT INTO cache"));
+    expect(writes.map((write) => write.args)).toEqual([
+      ["current", "value", updatedAt], ["current", "value", updatedAt],
+    ]);
+    expect(writes.every((write) => write.sql.includes("ON CONFLICT(key) DO UPDATE"))).toBe(true);
   });
 
   it("preserves newer cache values but permits an equal-timestamp replacement", async () => {
@@ -446,7 +462,7 @@ describe("db utility helpers", () => {
       ["future-priced-asset", nowSec],
     ]);
     expect(executedQueries.some((sql) => sql.includes("MIN(snapshot_date)"))).toBe(false);
-    expect(calls.some((call) => call.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(true);
+    expect(calls.some((call) => call.sql.includes("INSERT INTO cache"))).toBe(true);
   });
 
   it("merges stale cached price anchors with supply-history anchors", async () => {

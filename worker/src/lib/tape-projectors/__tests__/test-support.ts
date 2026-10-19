@@ -8,7 +8,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-
  */
 const TAPE_WRITE_TABLES: MockTableConfig[] = [
   { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "INSERT INTO cache", rows: [] },
 ];
 
 export function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
@@ -31,7 +31,7 @@ export function tapeCacheWriteBinds(db: MockD1Database, cursorKey: string): unkn
     .getHistory()
     .filter(
       (entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.sql.includes("INSERT INTO cache") &&
         entry.binds[0] === `tape-projector:cursor:${cursorKey}`,
     )
     .map((entry) => entry.binds);

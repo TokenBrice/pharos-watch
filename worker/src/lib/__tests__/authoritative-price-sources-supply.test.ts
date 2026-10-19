@@ -151,7 +151,7 @@ describe("resolveVaultNavSupplyPrice", () => {
     const db = mockD1([
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
       { match: "FROM authoritative_vault_rates", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ], { assertMatchesUsed: true });
 
     expect(await resolveVaultNavSupplyPrice("eearn-ember", previousPayload(nowSec), db)).toBeNull();

@@ -23,7 +23,7 @@ export const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
   { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
   { match: "SELECT key FROM cache WHERE key LIKE", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "INSERT INTO cache", rows: [] },
   { match: "DELETE FROM cache", rows: [] },
   { match: "DELETE FROM reserve_composition_history", rows: [] },
   { match: "DELETE FROM reserve_sync_attempt_history", rows: [] },

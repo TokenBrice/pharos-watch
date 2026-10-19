@@ -1141,7 +1141,7 @@ describe("handlePegSummary", () => {
         throwError: new Error("cache read failed"),
       },
       { match: "FROM cache WHERE key = ?", rows: [], first: null },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
       { match: "depeg_events", rows: [] },
       { match: "dex_prices", rows: [] },
       { match: "supply_history", rows: [] },

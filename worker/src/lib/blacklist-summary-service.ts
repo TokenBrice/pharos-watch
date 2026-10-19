@@ -492,7 +492,8 @@ async function readBlacklistSummarySnapshot(db: D1Database): Promise<CachedBlack
 async function writeBlacklistSummarySnapshot(db: D1Database, snapshot: CachedBlacklistSummarySnapshot): Promise<void> {
   await db
     .prepare(
-      "/* blacklist-summary-snapshot-write */ INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+      `/* blacklist-summary-snapshot-write */ INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     )
     .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot), snapshot.materializedAt)
     .run();

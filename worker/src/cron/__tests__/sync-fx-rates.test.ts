@@ -882,7 +882,7 @@ describe("syncFxRates", () => {
     const db = makeFxRatesDb({
       extraTables: [
         {
-          match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+          match: "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
           matchBinds: ["fx-oxr-last-attempt", String(nowSec), nowSec],
           rows: [],
           throwError: new Error("telemetry write failed"),
@@ -993,7 +993,7 @@ describe("syncFxRates", () => {
     const realtimeCircuitWrite = db
       .getHistory()
       .find((entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.sql.includes("INSERT INTO cache") &&
         entry.binds[0] === `circuit:${CIRCUIT_SOURCE.FX_REALTIME}`,
       );
     expect(realtimeCircuitWrite).toBeDefined();

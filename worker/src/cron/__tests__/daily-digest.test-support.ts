@@ -303,7 +303,7 @@ function makeDailyDigestTables(): MockTableConfig[] {
       "INSERT INTO daily_digest",
       "INSERT OR IGNORE INTO cache",
       "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
-      "INSERT OR REPLACE INTO cache",
+      "INSERT INTO cache",
       "DELETE FROM cache",
     ].map(empty),
     first("SELECT value, updated_at FROM cache WHERE key = ?", null),

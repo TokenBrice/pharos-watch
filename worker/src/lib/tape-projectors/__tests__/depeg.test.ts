@@ -152,7 +152,7 @@ describe("depeg projector", () => {
     expect(scans[0]?.binds).toEqual([2]);
     const cacheWrites = db
       .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+      .filter((entry) => entry.sql.includes("INSERT INTO cache")
         && entry.binds[0] === "tape-projector:peak-worsened-seen");
     expect(JSON.parse(String(cacheWrites[0]?.binds[1]))).toEqual({
       "1": 450,
@@ -210,7 +210,7 @@ describe("depeg projector", () => {
     expect(scans[1]?.binds).toEqual([DEFAULT_BATCH_LIMIT, DEFAULT_BATCH_LIMIT]);
     const cacheWrites = db
       .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+      .filter((entry) => entry.sql.includes("INSERT INTO cache")
         && entry.binds[0] === "tape-projector:peak-worsened-seen");
     const seen = JSON.parse(String(cacheWrites[0]?.binds[1])) as Record<string, number>;
     expect(Object.keys(seen)).toHaveLength(DEFAULT_BATCH_LIMIT + 1);

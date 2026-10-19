@@ -185,7 +185,7 @@ describe("dews projector", () => {
     expect(result.advanced).toBe(SEC + 100);
     const watermarkWrites = db
       .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
+      .filter((entry) => entry.sql.includes("INSERT INTO cache"))
       .map((entry) => entry.binds);
     expect(watermarkWrites).toEqual([
       ["tape-projector:cursor:dews.escalated", String(SEC + 900), expect.any(Number)],
@@ -213,6 +213,6 @@ describe("dews projector", () => {
     await projectDewsBandTransitions(db, { dryRun: true });
 
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO surface_publication_generations"))).toBe(false);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache"))).toBe(false);
   });
 });

@@ -62,7 +62,7 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(2);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "non_usd_share_publication_failed" });
     expect(db.getHistory().some((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "snapshot-supply:last-write"
+      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "snapshot-supply:last-write"
     )).toBe(true);
   });
 
@@ -119,7 +119,7 @@ describe("snapshotSupply", () => {
     }));
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
     expect(db.getHistory().some((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds.includes("snapshot-supply:last-write")
+      entry.sql.includes("INSERT INTO cache") && entry.binds.includes("snapshot-supply:last-write")
     )).toBe(false);
   });
 
@@ -651,7 +651,7 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(2);
     expect(db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toHaveLength(1);
     const markerWrite = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === "snapshot-supply:last-write"
     );
     expect(JSON.parse(String(markerWrite?.binds[1]))).toMatchObject({
@@ -823,7 +823,7 @@ describe("snapshotSupply", () => {
     expect(batches[0]!.map((statement) => (statement as { sql?: string }).sql)).toEqual(expect.arrayContaining([
       expect.stringContaining("DELETE FROM supply_history"),
       expect.stringContaining("INSERT OR REPLACE INTO supply_history"),
-      expect.stringContaining("INSERT OR REPLACE INTO cache"),
+      expect.stringContaining("INSERT INTO cache"),
     ]));
   });
 });

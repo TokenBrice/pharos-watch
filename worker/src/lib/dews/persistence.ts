@@ -7,7 +7,7 @@ import {
   batchExecute,
   buildInClause,
   executeAtomicBatch,
-  prepareMultiRowInsertStatements,
+  D1_MAX_BOUND_PARAMETERS,
 } from "../db";
 import { chunkArray } from "../collections";
 import { writeFreshnessSentinel } from "../db-cache";
@@ -24,7 +24,13 @@ const DEWS_TABLES = new Set([
 ]);
 
 const DEWS_GENERATION_ROW_TARGETS = {
-  latest: { sql: "/* pharos:dews:stress-latest-upsert */\n         INSERT OR REPLACE INTO stress_signals_latest\n           (stablecoin_id, computed_at, score, band, signals_json, updated_at)\n         VALUES (?, ?, ?, ?, ?, ?)", includeUpdatedAt: true },
+  latest: { sql: `/* pharos:dews:stress-latest-upsert */
+         INSERT INTO stress_signals_latest
+           (stablecoin_id, computed_at, score, band, signals_json, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(stablecoin_id) DO UPDATE SET
+           computed_at = excluded.computed_at, score = excluded.score, band = excluded.band,
+           signals_json = excluded.signals_json, updated_at = excluded.updated_at`, includeUpdatedAt: true },
   publication: { sql: "/* pharos:dews:publication-row-insert */\n         INSERT OR REPLACE INTO stress_signal_publication_rows\n           (stablecoin_id, computed_at, score, band, signals_json)\n         VALUES (?, ?, ?, ?, ?)", includeUpdatedAt: false },
 } as const;
 
@@ -209,7 +215,8 @@ export async function reconcileDailyDewsHistorySnapshot(
     };
   }
 
-  const deleteOwnedRows = chunkArray([...existingOwnedIds], D1_SAFE_SQL_IN_CHUNK_SIZE).map((ids) =>
+  const departedIds = [...existingOwnedIds].filter((id) => !expectedIds.has(id));
+  const deleteOwnedRows = chunkArray(departedIds, D1_SAFE_SQL_IN_CHUNK_SIZE).map((ids) =>
     db
       .prepare(
         `/* pharos:dews:stress-history-daily-replace */
@@ -225,12 +232,20 @@ export async function reconcileDailyDewsHistorySnapshot(
     result.band,
     buildStressSignalsEnvelope(result),
   ]);
-  const insertStatements = prepareMultiRowInsertStatements(
-    db,
-    `/* pharos:dews:stress-history-daily-seal */
-     INSERT OR REPLACE INTO stress_signal_history
-       (stablecoin_id, snapshot_date, score, band, signals_json)`,
-    insertRows,
+  // A daily row has no advancing run clock. Retained identical rows can stay
+  // untouched when another member joins/leaves the exact admitted identity set.
+  const insertStatements = chunkArray(insertRows, Math.floor(D1_MAX_BOUND_PARAMETERS / 5)).map((rows) =>
+    db.prepare(
+      `/* pharos:dews:stress-history-daily-seal */
+       INSERT INTO stress_signal_history
+         (stablecoin_id, snapshot_date, score, band, signals_json)
+       VALUES ${rows.map(() => "(?, ?, ?, ?, ?)").join(", ")}
+       ON CONFLICT(stablecoin_id, snapshot_date) DO UPDATE SET
+         score = excluded.score, band = excluded.band, signals_json = excluded.signals_json
+       WHERE stress_signal_history.score IS NOT excluded.score
+          OR stress_signal_history.band IS NOT excluded.band
+          OR stress_signal_history.signals_json IS NOT excluded.signals_json`,
+    ).bind(...rows.flat()),
   );
   await executeAtomicBatch(db, [...deleteOwnedRows, ...insertStatements], { signal });
 
