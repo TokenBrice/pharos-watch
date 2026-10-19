@@ -120,75 +120,87 @@ function prepareComputeFixture(directory: string) {
   writeFileSync(resolve(directory, "publication.json"), JSON.stringify(source));
 }
 
+async function prepareSupplyAttributionReplayFixture() {
+  const fixture = setup();
+  // The current wM catalog has newly discovered routes without reviewed code
+  // identities. Use the supported XAUT packet for these real-child-CLI replays.
+  const base = makeV9FixedInput({ assetId: "xaut-tether", clockSec: 1_800_000_000, aggregateCirculating: { peggedGOLD: 2_480_000_000 } });
+  const attribution = deriveXautRepresentationGroupSupplyAttribution({
+    aggregateSupplyUsd: 2_480_000_000,
+    registryFingerprint: base.registryFingerprint,
+    scoringClockSec: base.clockSec,
+    observation: makeXautObservation({ clockSec: base.clockSec }),
+  });
+  if (!attribution) throw new Error("Could not derive XAUT supply attribution");
+  const fixedInput = normalizeFixedInput({
+    ...base,
+    safetyScoreV9SupplyAttributionById: { "xaut-tether": attribution },
+  });
+  const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: base.clockSec }).pipeline.candidate;
+  const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 2, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
+  const invoke = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });
+  writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
+  writeFileSync(resolve(fixture.directory, "capture.json"), JSON.stringify(base));
+  const entry = await buildSafetyScoreV9PublicationReplayCapture(candidate, fixedInput, null);
+  const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
+  const newerEntry = await buildReportCardsFixedInputCacheEntry(createReplayFixedInput(base.clockSec + 1800));
+  const db = new DatabaseSync(fixture.databasePath);
+  try {
+    for (const [key, value] of [[entry.key, entry.value], [SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, baseEntry.value], [newerEntry.key, newerEntry.value],
+      [SAFETY_SCORE_V9_CACHE_KEYS.publication, await serializeSafetyScoreV9Publication(candidate)],
+      [SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, stableJsonStringifyV1(source.publicationHealth)]]) {
+      db.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)").run(key, value, base.clockSec);
+    }
+  } finally { db.close(); }
+  const fetchShim = resolve(fixture.directory, "fetch.mjs");
+  writeFileSync(fetchShim, `globalThis.fetch = async () => { throw new Error('Plan must use the atomic D1 snapshot, not HTTP'); };`);
+  const plan = () => spawnSync(process.execPath, ["--import", "tsx", "--import", fetchShim, "worker/scripts/compute-dependency-scenarios.ts", "--mode", "plan", "--out-dir", fixture.directory], {
+    encoding: "utf8", timeout: 30_000,
+    env: { ...process.env, PATH: `${resolve(fixture.directory, "bin")}:${process.env.PATH}`, PHAROS_API_KEY: "", SCENARIO_TEST_DB: fixture.databasePath, SCENARIO_TEST_EVENTS: resolve(fixture.directory, "events.jsonl") },
+  });
+  return { ...fixture, base, candidate, entry, invoke, plan };
+}
+
 describe("dependency scenario accepted-publication verification stamp", () => {
-  it("reproduces accepted compute-time supply attribution rather than the stripped base capture", async () => {
-    const fixture = setup();
-    // The current wM catalog has newly discovered routes without reviewed code
-    // identities. Use the supported XAUT packet for this real-child-CLI replay.
-    const base = makeV9FixedInput({ assetId: "xaut-tether", clockSec: 1_800_000_000, aggregateCirculating: { peggedGOLD: 2_480_000_000 } });
-    const attribution = deriveXautRepresentationGroupSupplyAttribution({
-      aggregateSupplyUsd: 2_480_000_000,
-      registryFingerprint: base.registryFingerprint,
-      scoringClockSec: base.clockSec,
-      observation: makeXautObservation({ clockSec: base.clockSec }),
-    });
-    if (!attribution) throw new Error("Could not derive XAUT supply attribution");
-    const fixedInput = normalizeFixedInput({
-      ...base,
-      safetyScoreV9SupplyAttributionById: { "xaut-tether": attribution },
-    });
-    const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: base.clockSec }).pipeline.candidate;
-    const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 2, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
-    const invoke = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });
-    writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
-    writeFileSync(resolve(fixture.directory, "capture.json"), JSON.stringify(base));
-    const incomplete = invoke();
+  it("rejects a stripped base capture that lacks accepted compute-time supply attribution", async () => {
+    const fixture = await prepareSupplyAttributionReplayFixture();
+    const incomplete = fixture.invoke();
     expect(incomplete.status).not.toBe(0);
     expect(incomplete.stderr).toContain("factSetDigest");
     expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(false);
-    const entry = await buildSafetyScoreV9PublicationReplayCapture(candidate, fixedInput, null);
-    const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
-    const newerEntry = await buildReportCardsFixedInputCacheEntry(createReplayFixedInput(base.clockSec + 1800));
-    const db = new DatabaseSync(fixture.databasePath);
-    try {
-      for (const [key, value] of [[entry.key, entry.value], [SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, baseEntry.value], [newerEntry.key, newerEntry.value],
-        [SAFETY_SCORE_V9_CACHE_KEYS.publication, await serializeSafetyScoreV9Publication(candidate)],
-        [SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, stableJsonStringifyV1(source.publicationHealth)]]) {
-        db.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)").run(key, value, base.clockSec);
-      }
-    } finally { db.close(); }
-    const fetchShim = resolve(fixture.directory, "fetch.mjs");
-    writeFileSync(fetchShim, `globalThis.fetch = async () => { throw new Error('Plan must use the atomic D1 snapshot, not HTTP'); };`);
-    const plan = () => spawnSync(process.execPath, ["--import", "tsx", "--import", fetchShim, "worker/scripts/compute-dependency-scenarios.ts", "--mode", "plan", "--out-dir", fixture.directory], {
-      encoding: "utf8", timeout: 30_000,
-      env: { ...process.env, PATH: `${resolve(fixture.directory, "bin")}:${process.env.PATH}`, PHAROS_API_KEY: "", SCENARIO_TEST_DB: fixture.databasePath, SCENARIO_TEST_EVENTS: resolve(fixture.directory, "events.jsonl") },
-    });
-    const planned = plan();
+  }, 30_000);
+  it("reproduces accepted compute-time supply attribution from the atomic D1 snapshot", async () => {
+    const fixture = await prepareSupplyAttributionReplayFixture();
+    const planned = fixture.plan();
     expect(planned.status, planned.stderr).toBe(0);
     expect(fixture.events()).toHaveLength(1);
-    const complete = invoke();
+    const complete = fixture.invoke();
     expect(complete.status, complete.stderr).toBe(0);
     expect(JSON.parse(complete.stdout).acceptedPublicationVerified).toBe(true);
     const replayPath = resolve(fixture.directory, "replay.json");
-    const replay = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/replay-safety-score-v9.ts", "--input", resolve(fixture.directory, "capture.json"), "--output", replayPath, "--published-at", String(base.clockSec)], { encoding: "utf8", timeout: 30_000 });
+    const replay = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/replay-safety-score-v9.ts", "--input", resolve(fixture.directory, "capture.json"), "--output", replayPath, "--published-at", String(fixture.base.clockSec)], { encoding: "utf8", timeout: 30_000 });
     expect(replay.status, replay.stderr).toBe(0);
-    expect(JSON.parse(readFileSync(replayPath, "utf8")).pipeline.candidate.publicationGenerationId).toBe(candidate.publicationGenerationId);
+    expect(JSON.parse(readFileSync(replayPath, "utf8")).pipeline.candidate.publicationGenerationId).toBe(fixture.candidate.publicationGenerationId);
+  }, 30_000);
+  it.each([
+    ["retention clock", "accepted-publication-replay-retention-clock-mismatch"],
+    ["publication generation", "accepted-publication-replay-capture-generation-mismatch"],
+    ["missing publication", "accepted-publication-snapshot-unavailable"],
+  ] as const)("rejects an accepted snapshot with %s mismatch", async (defect, reason) => {
+    const fixture = await prepareSupplyAttributionReplayFixture();
     const changedDb = new DatabaseSync(fixture.databasePath);
     try {
-      changedDb.prepare("UPDATE cache SET updated_at = updated_at + 1 WHERE key = ?").run(entry.key);
-      const mismatchedClock = plan();
-      expect(mismatchedClock.status).not.toBe(0);
-      expect(mismatchedClock.stderr).toContain("accepted-publication-replay-retention-clock-mismatch");
-      changedDb.prepare("UPDATE cache SET updated_at = updated_at - 1 WHERE key = ?").run(entry.key);
-      const changedCandidate = { ...candidate, publicationGenerationId: `report-cards:v9:v1:${"f".repeat(64)}` };
-      changedDb.prepare("UPDATE cache SET value = ? WHERE key = ?").run(await serializeSafetyScoreV9Publication(changedCandidate), SAFETY_SCORE_V9_CACHE_KEYS.publication);
-      const mismatchedGeneration = plan();
-      expect(mismatchedGeneration.status).not.toBe(0);
-      expect(mismatchedGeneration.stderr).toContain("accepted-publication-replay-capture-generation-mismatch");
-      changedDb.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.publication);
-      const missingPublication = plan();
-      expect(missingPublication.status).not.toBe(0);
-      expect(missingPublication.stderr).toContain("accepted-publication-snapshot-unavailable");
+      if (defect === "retention clock") {
+        changedDb.prepare("UPDATE cache SET updated_at = updated_at + 1 WHERE key = ?").run(fixture.entry.key);
+      } else if (defect === "publication generation") {
+        const changedCandidate = { ...fixture.candidate, publicationGenerationId: `report-cards:v9:v1:${"f".repeat(64)}` };
+        changedDb.prepare("UPDATE cache SET value = ? WHERE key = ?").run(await serializeSafetyScoreV9Publication(changedCandidate), SAFETY_SCORE_V9_CACHE_KEYS.publication);
+      } else {
+        changedDb.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.publication);
+      }
+      const rejected = fixture.plan();
+      expect(rejected.status).not.toBe(0);
+      expect(rejected.stderr).toContain(reason);
     } finally { changedDb.close(); }
   }, 30_000);
   it("rejects a missing stamp before touching the remote store", () => {
