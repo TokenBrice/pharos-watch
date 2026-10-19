@@ -224,6 +224,10 @@ npm run audit:coverage -- --domain=mechanism-archetype
 npm test -- shared/lib/__tests__/stablecoin-id-registry.test.ts
 ```
 
+`npm run check:stablecoin-data` also checks active-asset review consistency across declared parents (`variantOf` and `mintAuthority.inheritedFrom`). A child reviewed `false` cannot have a parent reviewed `true`, `possible`, or `inherited`. An `inherited` child whose declared parents all resolve `false` is rejected when it has no positive-size reserve candidate: an exposed linked coin, an explicit `blacklistable` / `blacklistabilityExposure` signal, or a custodial asset class (cash, bank deposits, securities, repo, managed funds, credit, or allocated commodity). Own-token reserve legs and zero-size slices cannot supply that candidate. Missing reviews remain coverage errors, not assumed `false` statuses.
+
+These are stale-parent guards, not a reserve-majority calculator. A candidate slice does not prove the strictly-more-than-50% test, distinguish DAO-only collateral from issuer/custodian controls, or replace a measured, sourced inheritance basis under the [FreezeWatch exposure methodology](./blacklist-tracker.md#public-exposure-contract). Reserve-only reviews without a declared parent still require that human evidence review.
+
 Then validate the complete artifact graph:
 
 ```bash
