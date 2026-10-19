@@ -320,9 +320,11 @@ describe("methodology registry", () => {
   it("pins native Hive admission to its forward-only release boundary", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries[0];
-    expect(release).toMatchObject({ version: "6.53", date: "2026-10-19", effectiveAt: 1_792_454_400, reconstructed: false });
+    expect(release).toMatchObject({ version: "6.53", date: "2026-10-19", effectiveAt: 1_792_368_000, reconstructed: false });
     expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.52");
     expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.53");
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-19 00:00 UTC (release date; 1792368000)");
+    expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
   });
 
   it("retains the v10.19 Morpho release cut", () => {

@@ -8,11 +8,13 @@ describe("native Hive public methodology", () => {
     const html = renderToStaticMarkup(<PricingPipelineMethodologySection />);
     expect(html).toContain("Native HBD market evidence (v6.53)");
     expect(html).toContain("Hive internal market (HBD/HIVE)");
+    expect(html).toContain("Effective October 19, 2026.");
     expect(html).toContain("not two");
     expect(html).toContain("requires depeg confirmation");
     const summary = PRICING_PIPELINE_SECTION_CONTENT.markdownParagraphs.join(" ");
     expect(summary).toContain("one CoinGecko-dependent soft observation");
     expect(summary).toContain("not two independent votes");
+    expect(summary).toContain("2026-10-19 00:00 UTC; 1792368000");
     expect(summary).toContain("no supply changes or historical backfill");
   });
 });

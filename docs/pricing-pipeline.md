@@ -47,6 +47,8 @@ Fixed-clock price/supply/valuation/coverage comparison remains a release prerequ
 
 ## Native Hive HBD market
 
+Pricing v6.53 is effective **2026-10-19 00:00 UTC** (`1792368000`). This release-date boundary does not claim completed production acceptance or backfill historical observations.
+
 `hive-native-cg` submits `HIVE/USD ÷ midpoint(HBD/HIVE)` to ordinary primary consensus. Its exact CoinGecko `hive` parent rides the existing batch, never supply or a second HBD vote. The parent requires an upstream timestamp within five minutes, allowing at most 60 seconds future skew. A fresh publication cannot refresh either leg.
 
 The [observer policy](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/lib/hive-market-price.ts) owns admission: fresh non-regressing heads, bounded same-node sampling, narrow spread, at least 500 HBD per side within 2% of midpoint, and at least 1,000 HBD proven non-self daily turnover with recent book-consistent activity. Posted inventory is not pool TVL; capped or indistinguishable duplicate fills prove only a lower bound.

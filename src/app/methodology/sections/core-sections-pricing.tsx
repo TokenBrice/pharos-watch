@@ -47,6 +47,7 @@ export function PricingPipelineMethodologySection() {
 
         <p>
           <strong className="text-foreground">Native HBD market evidence (v6.53).</strong>{" "}
+          Effective October 19, 2026.{" "}
           Hive internal market (HBD/HIVE) quotes divide an independently fresh CoinGecko HIVE/USD price by the
           two-sided native midpoint. Admission requires at least 500 HBD on each side within 2% of midpoint,
           narrow spread and recent non-self turnover. This is one CoinGecko-dependent observation, not two
