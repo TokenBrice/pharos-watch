@@ -129,10 +129,10 @@ export function prepareCacheUpsert(
   db: D1Database,
   entry: CacheEntryWrite & { updatedAt: number }, mode: CacheUpsertMode = "replace",
 ): D1PreparedStatement {
-  return db.prepare(mode === "if-newer" ? `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+  return db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-         WHERE cache.updated_at <= excluded.updated_at`
-    : "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)").bind(entry.key, entry.value, entry.updatedAt);
+         ${mode === "if-newer" ? "WHERE cache.updated_at <= excluded.updated_at" : ""}`
+  ).bind(entry.key, entry.value, entry.updatedAt);
 }
 
 export async function setCachesAt(

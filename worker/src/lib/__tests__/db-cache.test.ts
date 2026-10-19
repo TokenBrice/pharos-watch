@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { getCache, getPriceCache, readCacheWithPolicy, savePriceCache, setCacheIfAbsent, type CachePolicy } from "../db-cache";
+import {
+  getCache, getPriceCache, prepareCacheUpsert, readCacheWithPolicy, savePriceCache,
+  setCacheIfAbsent, setCacheIfNewer, setCachesAt, type CachePolicy,
+} from "../db-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -28,6 +31,55 @@ describe("setCacheIfAbsent", () => {
     expect(sqlite.prepare(
       "SELECT value, updated_at FROM cache WHERE key = 'write-once'",
     ).get()).toEqual({ value: "first", updated_at: 100 });
+  });
+});
+
+describe("cache conflict updates", () => {
+  it("overwrites every value and clock unconditionally without replacing an existing key", async () => {
+    const { sqlite, db } = fixtures.open();
+    await prepareCacheUpsert(db, { key: "current", value: "initial", updatedAt: 200 }).run();
+    sqlite.prepare("INSERT INTO cache VALUES ('rowid-anchor', '{}', 1)").run();
+    const original = sqlite.prepare("SELECT rowid FROM cache WHERE key = 'current'").get();
+    for (const [value, updatedAt] of [["older", 100], ["equal", 100], ["equal", 300]] as const) {
+      await prepareCacheUpsert(db, { key: "current", value, updatedAt }).run();
+      expect(await getCache(db, "current")).toEqual({ value, updatedAt });
+      expect(sqlite.prepare("SELECT rowid FROM cache WHERE key = 'current'").get()).toEqual(original);
+    }
+  });
+
+  it("retains inclusive if-newer admission and advances unchanged-payload freshness", async () => {
+    const { db } = fixtures.open();
+    await setCacheIfNewer(db, "current", "initial", 200);
+    expect(await setCacheIfNewer(db, "current", "older", 199))
+      .toEqual({ written: false, skippedBecauseNewer: true });
+    expect(await getCache(db, "current")).toEqual({ value: "initial", updatedAt: 200 });
+    expect(await setCacheIfNewer(db, "current", "equal", 200))
+      .toEqual({ written: true, skippedBecauseNewer: false });
+    expect(await setCacheIfNewer(db, "current", "equal", 201))
+      .toEqual({ written: true, skippedBecauseNewer: false });
+    expect(await getCache(db, "current")).toEqual({ value: "equal", updatedAt: 201 });
+  });
+
+  it("rolls back earlier current-row updates when a later batched update fails", async () => {
+    const { sqlite, db } = fixtures.open();
+    await setCachesAt(db, [{ key: "first", value: "old" }, { key: "second", value: "old" }], 200);
+    sqlite.exec(`CREATE TRIGGER reject_second_cache_update BEFORE UPDATE ON cache
+      WHEN NEW.key = 'second' BEGIN SELECT RAISE(ABORT, 'cache update rejected'); END`);
+    await expect(setCachesAt(db, [
+      { key: "first", value: "new" }, { key: "second", value: "new" },
+    ], 100)).rejects.toThrow("cache update rejected");
+    expect(await getCache(db, "first")).toEqual({ value: "old", updatedAt: 200 });
+    expect(await getCache(db, "second")).toEqual({ value: "old", updatedAt: 200 });
+  });
+
+  it("does not start a default-mode batch after cancellation", async () => {
+    const { db } = fixtures.open();
+    const prepare = vi.spyOn(db, "prepare");
+    const controller = new AbortController();
+    controller.abort(new Error("cache publication aborted"));
+    await expect(setCachesAt(db, [{ key: "current", value: "new" }], 100, { signal: controller.signal }))
+      .rejects.toThrow("cache publication aborted");
+    expect(prepare).not.toHaveBeenCalled();
   });
 });
 

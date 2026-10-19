@@ -280,7 +280,8 @@ async function writeTapeTerminalEvidenceCache(
   };
   try {
     await db
-      .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
       .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY, JSON.stringify(payload), Math.floor(Date.now() / 1000))
       .run();
     throwIfAborted(signal);

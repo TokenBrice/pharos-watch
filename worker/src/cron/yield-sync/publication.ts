@@ -400,7 +400,7 @@ export async function publishYieldRowsAtomically(
       .bind("yield-rankings", cacheValue, input.startSec),
     db
       .prepare(
-        `INSERT OR REPLACE INTO yield_data (
+        `INSERT INTO yield_data (
             stablecoin_id, source_key, symbol, current_apy, apy_base, apy_reward, apy_7d, apy_30d,
             yield_source, yield_type, source_pool, source_tvl_usd, data_source,
             safety_score, safety_grade, pharos_yield_score, yield_to_risk, excess_yield, yield_stability,
@@ -438,7 +438,23 @@ export async function publishYieldRowsAtomically(
             json_extract(value, '$.publication_generation_id'),
             json_extract(value, '$.publication_state')
           FROM json_each(?)
-          WHERE ${cacheFreshGuard}`,
+          WHERE ${cacheFreshGuard}
+          ON CONFLICT(stablecoin_id, source_key) DO UPDATE SET
+            symbol = excluded.symbol, current_apy = excluded.current_apy,
+            apy_base = excluded.apy_base, apy_reward = excluded.apy_reward,
+            apy_7d = excluded.apy_7d, apy_30d = excluded.apy_30d,
+            yield_source = excluded.yield_source, yield_type = excluded.yield_type,
+            source_pool = excluded.source_pool, source_tvl_usd = excluded.source_tvl_usd,
+            data_source = excluded.data_source, safety_score = excluded.safety_score,
+            safety_grade = excluded.safety_grade, pharos_yield_score = excluded.pharos_yield_score,
+            yield_to_risk = excluded.yield_to_risk, excess_yield = excluded.excess_yield,
+            yield_stability = excluded.yield_stability, apy_variance_30d = excluded.apy_variance_30d,
+            apy_min_30d = excluded.apy_min_30d, apy_max_30d = excluded.apy_max_30d,
+            exchange_rate = excluded.exchange_rate, exchange_rate_prev = excluded.exchange_rate_prev,
+            warning_signals = excluded.warning_signals, is_best = excluded.is_best,
+            updated_at = excluded.updated_at,
+            publication_generation_id = excluded.publication_generation_id,
+            publication_state = excluded.publication_state`,
       )
       .bind(yieldDataRowsJson, input.generationId),
     db

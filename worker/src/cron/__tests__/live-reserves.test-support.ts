@@ -7,7 +7,7 @@ import {
   type MockD1Database,
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
-import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-checkpoint-primitives";
 
 export const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
@@ -23,7 +23,7 @@ export const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
   { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
   { match: "SELECT key FROM cache WHERE key LIKE", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "INSERT INTO cache", rows: [] },
   { match: "DELETE FROM cache", rows: [] },
   { match: "DELETE FROM reserve_composition_history", rows: [] },
   { match: "DELETE FROM reserve_sync_attempt_history", rows: [] },

@@ -305,7 +305,8 @@ describe("handleStatus", () => {
     expect(body.summary.degradedCrons).toBe(1);
     const degradedCause = body.causes.availability.find((cause) => cause.code === "degraded_cron_warning");
     expect(degradedCause?.value).toBe(1);
-    expect(degradedCause?.message).toContain("1 cron job(s)");
+    expect(degradedCause?.message).toContain("1 cron job(s) have fresh degraded terminal attempts reporting incomplete required work.");
+    expect(degradedCause?.message).not.toContain("output quality warnings");
     expect(body.causes.overall.find((cause) => cause.code === "degraded_cron_warning")?.value).toBe(1);
   });
 

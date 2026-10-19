@@ -558,7 +558,7 @@ describe("authoritative-price-sources", () => {
     expect(override?.observedAt).toBe(nowSec - 3600);
     expect(stats.cachedRateFallbacks).toBe(1);
     const circuitWrite = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`);
+      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`);
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({ consecutiveFailures: 1 });
     expect(stats.assetAttempts).toEqual([
       expect.objectContaining({
@@ -628,7 +628,7 @@ describe("authoritative-price-sources", () => {
       await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
       expect((await pending).get("gtusdc-gauntlet")?.source).toBe("protocol-redeem-cached-rate");
       expect(db.getHistory().filter((entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+        entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       )).toHaveLength(0);
     } finally {
       vi.useRealTimers();

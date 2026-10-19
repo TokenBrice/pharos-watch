@@ -3,13 +3,13 @@
   "product": "BRLA",
   "profile": "brla-v1",
   "officialIndexUrl": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
-  "reportUrl": "https://file.notion.so/f/f/7cc5d753-b4f1-4267-9ad1-3e6bd0141d8d/8494e9ac-19af-4dfb-b05c-ba1aba60b30c/Avenia_-_Transparency_Report_-_20260831_(Audit_Attestation).pdf",
-  "reportSha256": "3224842808ee5ceac75f51cf09cc6250681570855ee858a675d76e5ada82c9a7",
-  "reportByteLength": 586295,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:59:59+00:00",
+  "reportUrl": "https://file.notion.com/f/f/7cc5d753-b4f1-4267-9ad1-3e6bd0141d8d/6674dccd-e58f-4da9-a3d1-c4ae0d676fea/Avenia_-_Transparency_Report_-_20260930_(Audit_Attestation).pdf",
+  "reportSha256": "fae95580de235d577bbfd92b384d33b9bde0c8105b16180aeb18edf6ed6602f4",
+  "reportByteLength": 887263,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:59:59+00:00",
   "reportTimeZone": "UTC (as printed in the assurance report; the enclosed Transparency Report prints 21:00:00 BRT)",
-  "reportIssuedAt": "2026-09-16T14:14:54-03:00",
+  "reportIssuedAt": "2026-10-16T13:50:19-03:00",
   "attestor": "UHY Bendoraytes & Cia Auditores Independentes",
   "engagement": "Independent auditors' reasonable assurance engagement under NBC TO 3000 (ISAE 3000 equivalent)",
   "conclusion": "unmodified",
@@ -18,19 +18,19 @@
     {
       "code": "cash-and-cash-equivalents",
       "label": "BRL cash and cash equivalents held at named Brazilian financial institutions",
-      "amount": "55450919.48"
+      "amount": "72064692.29"
     },
     {
       "code": "repurchase-agreements",
       "label": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
-      "amount": "107999999.90"
+      "amount": "60103684.97"
     }
   ],
   "liabilities": [
     {
       "code": "polygon",
       "label": "Polygon PoS Chain BRLA redeemable tokens",
-      "amount": "19752048.94"
+      "amount": "18468833.82"
     },
     {
       "code": "moonbeam",
@@ -40,21 +40,21 @@
     {
       "code": "celo",
       "label": "Celo Chain BRLA redeemable tokens",
-      "amount": "110510325.92"
+      "amount": "108418360.97"
     },
     {
       "code": "gnosis",
       "label": "Gnosis Chain BRLA redeemable tokens",
-      "amount": "2499015.44"
+      "amount": "2586671.80"
     }
   ],
-  "reportedAssetTotal": "163450919.38",
-  "computedAssetTotal": "163450919.38",
-  "reportedLiabilityTotal": "132765684.39",
+  "reportedAssetTotal": "132168377.26",
+  "computedAssetTotal": "132168377.26",
+  "reportedLiabilityTotal": "129478160.68",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.07.0",
-    "normalizedTextSha256": "173b337044198ec3cf8ec962059495a82e3004809a3985135306726c8c1e0c9c",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "526107ca729a4104f8348672d7392e122237e10344815529df52f60437dd9adf",
     "pageCount": 5
   },
   "assuranceTier": "independent-assurance"

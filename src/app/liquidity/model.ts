@@ -3,6 +3,7 @@ import type { DexLiquidityData, DexLiquidityMap, PegCurrency } from "@shared/typ
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import type { LiquidityRow } from "@/components/liquidity-table";
+import { parseDataHealthWarnings } from "@/lib/data-health";
 
 export const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -34,19 +35,14 @@ const WARNING_DETAIL_SUFFIX = /\s*\([^()]*\)\s*$/;
 const DRIFT_WARNING_PATTERN = /^Latest sync-dex-liquidity run shows (?:medium|high) quality drift$/;
 
 export function formatLiquidityWarningMessage(warning: string): string {
-  try {
-    return warning
-      .split(/,\s*(?=\d{3}\s+-)/)
-      .map((entry) => {
-        // Machine detail stays in the API warning string (and its `title`
-        // tooltip); the banner itself only shows user-facing copy.
-        const summary = (entry.match(/"(.+)"/)?.[1] ?? entry.trim()).replace(WARNING_DETAIL_SUFFIX, "").trim();
-        return DRIFT_WARNING_PATTERN.test(summary) ? "Some liquidity data is being re-verified" : summary;
-      })
-      .join(" ");
-  } catch {
-    return warning;
-  }
+  return parseDataHealthWarnings(warning)
+    .map(({ message }) => {
+      // Keep liquidity's existing concise copy; transport and reason details
+      // remain in metadata rather than leaking HTTP punctuation into the chip.
+      const summary = message.replace(WARNING_DETAIL_SUFFIX, "").trim();
+      return DRIFT_WARNING_PATTERN.test(summary) ? "Some liquidity data is being re-verified" : summary;
+    })
+    .join(" ");
 }
 
 function computeLiquidityStats(

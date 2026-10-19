@@ -699,6 +699,69 @@ describe("fetchTbillRate", () => {
     expect(metadata.fallbackMode).toBe("eur:ecb-failed-retained");
   });
 
+  it.each([
+    ["application/json", JSON.stringify({ erro: { statusCode: 500, detail: "Internal error" } })],
+    ["text/html", "<html><title>Bad request!</title><body>Your request was rejected.</body></html>"],
+  ])("retains original BRL market provenance for a BCB HTTP-200 %s error body", async (contentType, body) => {
+    mockTbillByUrl({
+      "api.bcb.gov.br": new Response(body, { status: 200, headers: { "Content-Type": contentType } }),
+    });
+    const observedAt = 1782216000;
+    const retainedRate = 13.649989315282562;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.72,
+          recordDate: "2026-06-23",
+          fetchedAt: observedAt,
+          source: "fred-dgs3mo",
+        }),
+        BRL: makeBenchmarkCacheEntry({
+          key: "BRL",
+          rate: retainedRate,
+          recordDate: "2026-06-23",
+          fetchedAt: observedAt,
+          source: "bcb-selic",
+        }),
+      }, observedAt),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const retained = {
+      rate: retainedRate,
+      recordDate: "2026-06-23",
+      fetchedAt: observedAt,
+      source: "bcb-selic",
+      isFallback: true,
+      fallbackMode: "bcb-selic-failed-retained",
+      lastMarketRate: retainedRate,
+      lastMarketRecordDate: "2026-06-23",
+      lastMarketFetchedAt: observedAt,
+      lastMarketSource: "bcb-selic",
+    };
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("brl:bcb-selic-failed-retained");
+    expect(metadata.brlResponseAttempts).toEqual([
+      {
+        provider: "bcb-selic",
+        status: 200,
+        contentType,
+        bodyBytes: new TextEncoder().encode(body).length,
+        parsed: false,
+        recordDate: null,
+        failure: contentType === "application/json" ? "upstream-error" : "parse-failed",
+        ...(contentType === "application/json" ? { upstreamStatus: 500 } : {}),
+      },
+    ]);
+    expect(latestStructuredCachePayload().benchmarks.BRL).toMatchObject(retained);
+    expect(metadata.retainedFallbackBenchmarks).toEqual([
+      expect.objectContaining({ key: "BRL", retained: true, fetchedAt: observedAt, lastMarketFetchedAt: observedAt }),
+    ]);
+    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:BRL", false);
+  });
+
   it("retains the last CHF benchmark when the SIX SARON fetch fails", async () => {
     mockTbillByUrl({
       "oauth/token": null,

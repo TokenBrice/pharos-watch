@@ -280,7 +280,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     } } }, { data: { nav: 119 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-basis-vault/calculated-price"] = { data: {
       grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: fixture.fees,
-      claimableFeesAdjusted: true, errors: fixture.errors,
+      claimableFeesAdjusted: true, unrealizedDividends: 0, errors: fixture.errors,
     } };
     const attempt = runAdapter("nest-vault-positions", "nbasis-nest", {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
@@ -307,7 +307,7 @@ describe("fetchNestVaultPositionsReserves", () => {
       }] }],
     } } }, { data: { nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-basis-vault/calculated-price"] = { data: {
-      grossCalculatedNav: 120, calculatedNav: 119, claimableFees: 1, claimableFeesAdjusted: true,
+      grossCalculatedNav: 120, calculatedNav: 119, claimableFees: 1, claimableFeesAdjusted: true, unrealizedDividends: 0,
     } };
     const attempt = runAdapter("nest-vault-positions", "nbasis-nest", {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
@@ -426,7 +426,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     } } }, { data: { nav: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = { data: {
       grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: fixture.fees,
-      claimableFeesAdjusted: true,
+      claimableFeesAdjusted: true, unrealizedDividends: 0,
     } };
     const attempt = runAdapter("nest-vault-positions", "nopal-nest", {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
@@ -439,6 +439,87 @@ describe("fetchNestVaultPositionsReserves", () => {
     expect(result.metadata).toMatchObject({ totalReserveUsd: 120, calculatedNavUsd: 119,
       claimableFeesUsd: 1, pendingWithdrawalUsd: 20, unknownExposurePct: 100 });
     expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
+    expectWarnings(result, []);
+  });
+
+  it("reconciles the saved nOPAL $60,000 dividend gap without assigning a held-asset identity", async () => {
+    const fixture = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "nest-dividends-2026-10-18.json"), "utf8")) as {
+      positions: unknown;
+      calculatedPrice: { data: { grossCalculatedNav: number; calculatedNav: number; claimableFees: number } };
+    };
+    const network = nestNetwork("nopal-nest", fixture.positions,
+      { data: { nav: fixture.calculatedPrice.data.calculatedNav } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = fixture.calculatedPrice;
+    const { result } = await runAdapter("nest-vault-positions", "nopal-nest", {
+      network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
+    });
+    const gross = fixture.calculatedPrice.data.grossCalculatedNav;
+    const dividend = result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:unrealized-dividends");
+    expect(dividend).toMatchObject({ name: "Nest unrealized dividend receivables", risk: "high" });
+    expect(dividend).not.toHaveProperty("coinId");
+    expect(dividend).not.toHaveProperty("depType");
+    expect(dividend).not.toHaveProperty("assetClass");
+    expect(dividend!.pct * gross / 100).toBeCloseTo(60_000, 6);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: FIXTURE_NOW,
+      freshnessMode: "verified",
+      totalReserveUsd: gross,
+      grossNavUsd: gross,
+      calculatedNavUsd: fixture.calculatedPrice.data.calculatedNav,
+      claimableFeesUsd: fixture.calculatedPrice.data.claimableFees,
+      unrealizedDividendsUsd: 60_000,
+      settledPositionUsd: expect.closeTo(114_248_764.55020815, 6),
+      pendingWithdrawalUsd: expect.closeTo(8_782_731.729332542, 6),
+      reconciledNavCoverageRatio: expect.closeTo(1, 10),
+      details: {
+        calculatedPriceUrl: "https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price",
+        reconciliationKind: "settled-plus-pending-plus-dividends-equals-gross-nav-less-fees-equals-net-nav",
+      },
+    });
+    const unknownUsd = 51_904_441.01303975 + 39_200_715.45721803 + 11_571_316.763970664
+      + 5_107_762.4085464375 + 8_782_731.729332542 + 60_000;
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(unknownUsd / gross * 100, 10);
+    expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
+    expectWarnings(result, []);
+  });
+
+  it.each([
+    { label: "explicit zero", dividends: 0, settled: 100, gross: 120, net: 119, nav: 119, accepted: true },
+    { label: "numeric-string dividends", dividends: "60000", settled: 100, gross: 60_120, net: 60_119, nav: 60_119, accepted: true },
+    { label: "absent dividends", dividends: undefined, settled: 100, gross: 120, net: 119, nav: 119, accepted: false },
+    { label: "null dividends", dividends: null, settled: 100, gross: 120, net: 119, nav: 119, accepted: false },
+    { label: "malformed dividends", dividends: "unknown", settled: 100, gross: 120, net: 119, nav: 119, accepted: false },
+    { label: "negative dividends", dividends: -60_000, settled: 100, gross: 120, net: 119, nav: 119, accepted: false },
+    { label: "nonfinite dividends", dividends: Infinity, settled: 100, gross: 120, net: 119, nav: 119, accepted: false },
+    { label: "dividends already in settled holdings", dividends: 60_000, settled: 60_100, gross: 60_120, net: 60_119, nav: 60_119, accepted: false },
+    { label: "dividends added twice to gross", dividends: 60_000, settled: 100, gross: 120_120, net: 120_119, nav: 120_119, accepted: false },
+    { label: "incorrect net fees", dividends: 60_000, settled: 100, gross: 60_120, net: 60_120, nav: 60_120, accepted: false },
+    { label: "contradictory published NAV", dividends: 60_000, settled: 100, gross: 60_120, net: 60_119, nav: 70_000, accepted: false },
+  ])("keeps dividend reconciliation fail-closed: $label", async (fixture) => {
+    const network = nestNetwork("nopal-nest", { data: { positions: {
+      liquidAssets: [{ symbol: "USDC", position: { value: fixture.settled }, pendingTransactions: [
+        { type: "PendingWithdrawal", amount: 20, price: 1, value: 20 },
+      ] }], yieldAssets: [],
+    } } }, { data: { nav: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = { data: {
+      grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: 1,
+      claimableFeesAdjusted: true, unrealizedDividends: fixture.dividends,
+    } };
+    const attempt = runAdapter("nest-vault-positions", "nopal-nest", {
+      network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
+    });
+    if (!fixture.accepted) {
+      await expect(attempt).rejects.toThrow(/unrealized dividends|reconcil|does not match the published NAV/);
+      return;
+    }
+    const { result } = await attempt;
+    expect(result.metadata).toMatchObject({
+      unrealizedDividendsUsd: Number(fixture.dividends), totalReserveUsd: fixture.gross,
+      reconciledNavCoverageRatio: 1, sourceTimestamp: FIXTURE_NOW,
+    });
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo((20 + Number(fixture.dividends)) / fixture.gross * 100, 10);
     expectWarnings(result, []);
   });
 

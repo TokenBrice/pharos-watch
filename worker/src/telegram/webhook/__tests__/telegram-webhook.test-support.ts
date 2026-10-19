@@ -209,7 +209,6 @@ const LIFECYCLE_DB_EXTRA_TABLES: MockTableConfig[] = [
 ];
 const TELEGRAM_WEBHOOK_HARNESS_FALLBACKS: MockTableConfig[] = [
   { match: "INSERT INTO cache", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
   { match: "UPDATE cache", rows: [] },
   { match: "DELETE FROM cache", rows: [] },
   { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [] },

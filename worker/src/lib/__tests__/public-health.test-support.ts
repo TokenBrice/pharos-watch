@@ -76,6 +76,7 @@ export function makePublicHealth(
       attemptedAtSec: Math.floor(Date.now() / 1000) - 30,
     },
     safetyScorePublicationUnavailableReason: null,
+    safetyScoreImpactStatus: "healthy",
     stablecoinPublication: {
       status: "complete",
       expectedActiveCount: 0,

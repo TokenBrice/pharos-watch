@@ -296,7 +296,7 @@ function buildDashboardSections({ data, browserProbeSummary, cronGroups, running
           : delivery.health === "degraded"
             ? verdictValue("watch")
             : verdictValue("ok")),
-      summary: `${delivery.healthReason} ${commsModel.audience.deliverableChats == null ? "Alert-ready audience unknown." : `${commsModel.audience.deliverableChats} alert-ready chats.`}`,
+      summary: `${delivery.healthReason} ${commsModel.audience.deliverableChats == null ? "Eligible alert audience unknown." : `Eligible alert audience: ${commsModel.audience.deliverableChats} chats (not a delivery count).`}`,
     },
   ];
 }

@@ -29,7 +29,7 @@ function cachedRow(cacheKey: string, value: string, updatedAt: number) {
 
 function stateWrite(db: MockD1Database, cacheKey: string) {
   return db.getHistory().find((entry) =>
-    entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === cacheKey
+    entry.sql.includes("INSERT INTO cache") && entry.binds[0] === cacheKey
   );
 }
 

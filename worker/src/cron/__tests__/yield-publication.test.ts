@@ -41,6 +41,68 @@ import { evaluateYieldSources } from "../yield-sync/evaluation";
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
 
+describe("yield current-row conflict updates", () => {
+  it("writes every non-key column, including nulls and generation clocks, without replacing keys", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const row = {
+      stablecoin_id: "usdc-circle", source_key: "defillama:one", symbol: "USDC",
+      current_apy: 5, apy_base: 4, apy_reward: 1, apy_7d: 4.9, apy_30d: 4.8,
+      yield_source: "One", yield_type: "lending-vault", source_pool: "pool-one",
+      source_tvl_usd: 2_000_000, data_source: "defillama",
+      safety_score: 82, safety_grade: "A-", pharos_yield_score: 28,
+      yield_to_risk: 3, excess_yield: 0.6, yield_stability: 0.9,
+      apy_variance_30d: 0.2, apy_min_30d: 4, apy_max_30d: 6,
+      exchange_rate: 1.1, exchange_rate_prev: 1.09, warning_signals: '["old"]',
+      is_best: 1, updated_at: 100, publication_generation_id: "first", publication_state: "published",
+    };
+    try {
+      await publishYieldRowsAtomically(db, {
+        rankingsPayload: { publication: { generationId: "first" } }, startSec: 100, generationId: "first",
+        yieldDataRows: [row, { ...row, source_key: "defillama:two" }],
+        historyRows: [], decisionRows: [], decisionAlternativeRows: [],
+      });
+      const identity = sqlite.prepare("SELECT rowid FROM yield_data WHERE source_key = 'defillama:one'").get();
+      const replacement = {
+        ...row, symbol: "NEW", current_apy: -1, apy_base: null, apy_reward: null,
+        apy_7d: 2, apy_30d: 3, yield_source: "Changed", yield_type: "nav-appreciation",
+        source_pool: null, source_tvl_usd: null, data_source: "protocol-api",
+        safety_score: null, safety_grade: null, pharos_yield_score: null,
+        yield_to_risk: null, excess_yield: null, yield_stability: null,
+        apy_variance_30d: null, apy_min_30d: null, apy_max_30d: null,
+        exchange_rate: null, exchange_rate_prev: null, warning_signals: null,
+        is_best: 0, updated_at: 200, publication_generation_id: "second", publication_state: "published",
+      };
+      expect(await publishYieldRowsAtomically(db, {
+        rankingsPayload: { publication: { generationId: "second" } }, startSec: 200, generationId: "second",
+        yieldDataRows: [replacement], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
+      })).toMatchObject({ written: true, skippedBecauseNewer: false });
+      expect(sqlite.prepare("SELECT * FROM yield_data WHERE source_key = 'defillama:one'").get()).toEqual(replacement);
+      expect(sqlite.prepare("SELECT rowid FROM yield_data WHERE source_key = 'defillama:one'").get()).toEqual(identity);
+      expect(sqlite.prepare("SELECT * FROM yield_data WHERE source_key = 'defillama:two'").get())
+        .toEqual({ ...row, source_key: "defillama:two" });
+      const sentinel = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get()!;
+      expect(sentinel.updated_at).toBe(200);
+      expect(JSON.parse(String(sentinel.value))).toMatchObject({ generationId: "second", updatedAt: 200 });
+
+      const before = sqlite.prepare("SELECT * FROM yield_data ORDER BY source_key").all();
+      sqlite.exec(`CREATE TRIGGER reject_current_update BEFORE UPDATE ON yield_data
+        WHEN NEW.source_key = 'defillama:one' BEGIN SELECT RAISE(ABORT, 'current update rejected'); END`);
+      await expect(publishYieldRowsAtomically(db, {
+        rankingsPayload: { publication: { generationId: "failed" } }, startSec: 300, generationId: "failed",
+        yieldDataRows: [{ ...replacement, updated_at: 300, publication_generation_id: "failed" }],
+        historyRows: [], decisionRows: [], decisionAlternativeRows: [],
+      })).rejects.toThrow("current update rejected");
+      expect(sqlite.prepare("SELECT * FROM yield_data ORDER BY source_key").all()).toEqual(before);
+      expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'yield-rankings'").get())
+        .toEqual({ updated_at: 200 });
+      expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get())
+        .toEqual(sentinel);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
 describe("publishYieldCoordinatorResults", () => {
   function parseJsonBind<T>(entry: { binds: unknown[] } | undefined, index = 0): T {
     return JSON.parse(String(entry?.binds[index] ?? "[]")) as T;
@@ -263,7 +325,7 @@ describe("publishYieldCoordinatorResults", () => {
       true,
     );
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO yield_data"))).toBe(false);
   });
 
   it.each([0, 1])("does not mutate a winner when an equal-second or older attempt loses (%s)", async (offset) => {
@@ -400,7 +462,7 @@ describe("publishYieldCoordinatorResults", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO yield_data"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(
       history.some(
@@ -421,7 +483,7 @@ describe("publishYieldCoordinatorResults", () => {
       expect(metadata.publishFailure ?? "").toContain("database locked");
     }
     const history = db.getHistory();
-    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
+    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT INTO yield_data"));
     const rows = parseJsonBind<Array<{ publication_state: string }>>(yieldDataInsert);
     expect(rows[0]?.publication_state).toBe("published");
   });
@@ -490,7 +552,7 @@ describe("publishYieldCoordinatorResults", () => {
       casSkipped: false,
     });
     const history = db.getHistory();
-    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
+    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT INTO yield_data"));
     const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT INTO yield_history"));
     const cacheWrite = history.find((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
     const yieldRows =
@@ -536,7 +598,7 @@ describe("publishYieldCoordinatorResults", () => {
 
     expect(result).toMatchObject({ ok: true, degradationReasons });
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO yield_data"))).toBe(true);
     const sentinel = history.find((entry) => entry.binds[0] === "freshness:yield-data");
     const rankings = history.find((entry) => entry.binds[0] === "yield-rankings" && entry.binds.length === 3);
     expect(JSON.parse(String(sentinel?.binds[1]))).toMatchObject({

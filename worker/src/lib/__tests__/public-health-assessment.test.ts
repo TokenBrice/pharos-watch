@@ -261,11 +261,13 @@ describe("assessPublicHealth Safety Score publication", () => {
     expect(scoreComponent(result)).toMatchObject({ state: "degraded" });
     expect(scoreComponent(result).reasons).toContain("safety-score-publication-held:redemption-stale");
     expect(result.overallStatus).not.toBe("healthy");
+    expect(result.safetyScoreImpactStatus).toBe("degraded");
   });
 
   it("keeps fresh accepted publication operational", async () => {
     const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, { safetyScorePublication: current }), now);
     expect(scoreComponent(result)).toMatchObject({ state: "operational", reasons: [] });
+    expect(result.safetyScoreImpactStatus).toBe("healthy");
   });
 
   it("grades accepted age, not a newer attempted publication clock", async () => {
@@ -273,6 +275,7 @@ describe("assessPublicHealth Safety Score publication", () => {
       safetyScorePublication: { ...current, acceptedAtSec: now - API_FRESHNESS_MAX_AGE_SEC.reportCards - 1, attemptedAtSec: now },
     }), now);
     expect(scoreComponent(result)).toMatchObject({ state: "degraded", reasons: ["safety-score-publication:stale"] });
+    expect(result.safetyScoreImpactStatus).toBe("degraded");
   });
 
   it("keeps a failed publication-health read unavailable without yield", async () => {
@@ -282,6 +285,7 @@ describe("assessPublicHealth Safety Score publication", () => {
     expect(result.safetyScorePublication).toBeNull();
     expect(scoreComponent(result)).toMatchObject({ state: "degraded", reasons: ["safety-score-publication-read-failed"] });
     expect(getPublicHealthEvidenceReadFailures(result)).toContain("safety-score-publication:read-failed");
+    expect(result.safetyScoreImpactStatus).toBe("degraded");
   });
 
   it("does not admit missing publication or a future accepted clock", async () => {
@@ -289,6 +293,7 @@ describe("assessPublicHealth Safety Score publication", () => {
       const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, { safetyScorePublication: publication }), now);
       expect(scoreComponent(result).state).toBe("degraded");
       expect(result.safetyScorePublication).toBeNull();
+      expect(result.safetyScoreImpactStatus).toBe("degraded");
     }
   });
 });
@@ -622,8 +627,8 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
-  it("keeps an acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async () => {
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "usdkg-gold-dollar", "hbd-hive"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     for (const compact of [false, true]) {
       const nowSec = review.expiresAt - 1;
       const metadata = makePriceCoverageMetadata(nowSec, review.stablecoinId, 800, true, compact, MATERIAL_MARKET_CAP_USD);

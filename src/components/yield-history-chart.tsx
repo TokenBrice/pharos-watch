@@ -19,6 +19,7 @@ import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart
 import { CHART_GRID_DASH, CHART_GRID_STROKE } from "@/lib/chart-theme";
 import { toTimestampMs } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { formatDataHealthWarning } from "@/lib/data-health";
 import {
   BRAND_ACCENT,
   DEFAULT_DAYS,
@@ -79,7 +80,7 @@ export function YieldHistoryChart({
       <QueryErrorNotice error={source.error} hasData={source.hasData} onRetry={source.onRetry} />
       {source.warning ? (
         <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-          {source.warning}
+          {formatDataHealthWarning(source.warning)}
           {!source.error ? <button type="button" onClick={source.onRetry} className="pharos-focus-ring ml-2 underline">Retry</button> : null}
         </div>
       ) : null}

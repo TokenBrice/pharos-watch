@@ -470,7 +470,7 @@ type YieldHistoryTestRow = {
 };
 
 function getPublishedYieldRows(db: MockHistoryDb): YieldDataTestRow[] {
-  const entry = db.getHistory().find((item) => item.sql.includes("INSERT OR REPLACE INTO yield_data"));
+  const entry = db.getHistory().find((item) => item.sql.includes("INSERT INTO yield_data"));
   return entry ? (JSON.parse(String(entry.binds[0] ?? "[]")) as YieldDataTestRow[]) : [];
 }
 

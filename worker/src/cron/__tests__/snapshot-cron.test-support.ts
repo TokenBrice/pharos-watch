@@ -170,7 +170,7 @@ export function makeSupplySnapshotDb(input: MockTableConfig[] | SnapshotDbOption
     { match: "UPDATE supply_history SET price", rows: [] },
     { match: "DELETE FROM supply_history", rows: [] },
     { match: "INSERT OR REPLACE INTO supply_history", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "INSERT INTO cache", rows: [] },
   ]);
 }
 
@@ -178,7 +178,7 @@ export function makeChainSupplySnapshotDb(input: MockTableConfig[] | SnapshotDbO
   return mockD1([
     ...snapshotDbTables(input),
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "INSERT INTO cache", rows: [] },
     { match: "DELETE FROM chain_supply_history", rows: [] },
     { match: "INSERT OR REPLACE INTO chain_supply_history", rows: [] },
   ]);

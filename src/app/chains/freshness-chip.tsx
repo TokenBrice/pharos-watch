@@ -2,6 +2,7 @@
 
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import type { ApiMeta } from "@/lib/api";
+import { formatDataHealthWarning } from "@/lib/data-health";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
@@ -38,7 +39,7 @@ export function ChainsFreshnessChip({ meta }: { meta: ApiMeta | null | undefined
           not rated (NR) until a fresh publication lands.
         </p>
       ) : null}
-      {meta.warning ? <p>{meta.warning}</p> : null}
+      {meta.warning ? <p>{formatDataHealthWarning(meta.warning)}</p> : null}
       <p className="text-muted-foreground">
         {meta.updatedAt != null ? `Supply snapshot ${formatElapsedSeconds(meta.ageSeconds ?? 0)} old` : "Snapshot time unknown"}; fresh
         budget {Math.round(freshBudgetSec / 60)} min.

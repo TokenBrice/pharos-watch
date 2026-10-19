@@ -1,9 +1,7 @@
 /**
- * Stage A: checkpoint start, ownership-gated domain begin, then atomic authority
- * and history (6 SQL / 3 RTT for scheduled success). Stage B may batch checkpoint
- * and begin only after proving exact-owner SQL gating, crash recovery before and
- * after commit, and ambiguous acknowledgements. Never batch a coin's begin with
- * its success: that would make its pending-attempt fence tautological.
+ * Scheduled begin atomically orders checkpoint CAS -> pending domain attempt.
+ * Authority and histories remain a separate transaction after adapter I/O:
+ * never batch begin with success, which would make the pending fence tautological.
  */
 import { WORKER_FROZEN_IDS, WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
@@ -16,6 +14,10 @@ import { buildInClause, executeAtomicBatch } from "../db";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import { throwIfAborted } from "../abort";
 import { sha256Hex } from "../hash";
+import {
+  buildLiveReserveCheckpointItemStartedStatement,
+  ScheduledCheckpointOwnershipLostError,
+} from "../scheduled-checkpoint-primitives";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
   type LiveReserveHistoryPruneResult,
@@ -68,10 +70,28 @@ export async function beginReserveSyncAttempt(
 ): Promise<void> {
   const config = WORKER_TRACKED_META_BY_ID.get(record.stablecoinId)?.liveReservesConfig;
   const persisted = { ...record, configFingerprint: record.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null) };
+  if (record.checkpointProgress && !record.checkpoint) throw new Error("Reserve checkpoint progress requires an owner");
   await runWithOverloadRetry(async () => {
-    if (record.deadlineMs != null && Date.now() > record.deadlineMs) throw new Error("Reserve attempt start deadline expired");
-    const result = await buildReserveSyncAttemptStartStatement(db, persisted).run();
-    if ((result.meta.changes ?? 0) === 0) throw new Error("Reserve attempt start lost checkpoint ownership or deadline");
+    if (record.deadlineMs != null && Date.now() >= record.deadlineMs) throw new Error("Reserve attempt start deadline expired");
+    if (record.checkpoint && record.checkpointProgress) {
+      const [checkpointResult, beginResult] = await db.batch([
+        buildLiveReserveCheckpointItemStartedStatement(db, record.checkpoint, {
+          ...record.checkpointProgress,
+          itemKey: record.stablecoinId,
+          domainAttemptId: record.attemptId,
+          nowSec: record.attemptedAt,
+          deadlineMs: record.deadlineMs,
+        }),
+        buildReserveSyncAttemptStartStatement(db, persisted),
+      ]);
+      if ((checkpointResult.meta.changes ?? 0) !== 1) {
+        throw new ScheduledCheckpointOwnershipLostError(record.checkpoint);
+      }
+      if ((beginResult.meta.changes ?? 0) !== 1) throw new Error("Reserve attempt start lost checkpoint ownership or deadline");
+    } else {
+      const result = await buildReserveSyncAttemptStartStatement(db, persisted).run();
+      if ((result.meta.changes ?? 0) === 0) throw new Error("Reserve attempt start lost checkpoint ownership or deadline");
+    }
   });
 }
 

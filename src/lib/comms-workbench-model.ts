@@ -338,6 +338,17 @@ export function buildCommsWorkbenchModel(input: {
       : rawFreshRetryQueued;
   const retryTotal = sumKnown([freshRetryQueued, pendingRetryQueued]);
   const rateLimited = readOptionalBoolean(metadata?.pendingRateLimited);
+  const safetyAlertsSuppressed = readOptionalBoolean(metadata?.safetyAlertsSuppressed);
+  const safetySourceState = readMetadataString(metadata?.safetyAlertSourceState);
+  const reserveAlertsSuppressed = readOptionalBoolean(metadata?.reserveAlertsSuppressed);
+  const reserveSourceState = readMetadataString(metadata?.reserveAlertSourceState);
+  const suppressionReasons: string[] = [];
+  if (safetyAlertsSuppressed === true) {
+    suppressionReasons.push(`Safety alerts are suppressed because their source input is ${safetySourceState ?? "unknown"}.`);
+  }
+  if (reserveAlertsSuppressed === true) {
+    suppressionReasons.push(`Reserve alerts are suppressed because their source input is ${reserveSourceState ?? "unknown"}.`);
+  }
 
   let health: CommsDeliveryHealth;
   let healthReason: string;
@@ -352,8 +363,7 @@ export function buildCommsWorkbenchModel(input: {
     backlogAssessment === "attention" ||
     rateLimited === true ||
     (retryTotal ?? 0) > 0 ||
-    readOptionalBoolean(metadata?.safetyAlertsSuppressed) === true ||
-    readOptionalBoolean(metadata?.reserveAlertsSuppressed) === true
+    suppressionReasons.length > 0
   ) {
     health = "degraded";
     healthReason =
@@ -363,7 +373,9 @@ export function buildCommsWorkbenchModel(input: {
           ? "Telegram rate limiting affected the latest dispatch."
           : (retryTotal ?? 0) > 0
             ? "The latest dispatch queued delivery retries."
-            : "The latest dispatch reported a degraded outcome.";
+            : suppressionReasons.length > 0
+              ? suppressionReasons.join(" ")
+              : "The latest dispatch reported a degraded outcome.";
   } else if (
     !telegramBot ||
     !lastDispatch ||
@@ -466,10 +478,10 @@ export function buildCommsWorkbenchModel(input: {
         pendingDroppedTtlExpired: readOptionalNumber(metadata?.pendingDroppedTtlExpired),
         cappedAtLimit: readOptionalBoolean(metadata?.cappedAtLimit),
         snapshotSeeded: readOptionalBoolean(metadata?.snapshotSeeded),
-        safetyAlertsSuppressed: readOptionalBoolean(metadata?.safetyAlertsSuppressed),
-        safetySourceState: readMetadataString(metadata?.safetyAlertSourceState),
-        reserveAlertsSuppressed: readOptionalBoolean(metadata?.reserveAlertsSuppressed),
-        reserveSourceState: readMetadataString(metadata?.reserveAlertSourceState),
+        safetyAlertsSuppressed,
+        safetySourceState,
+        reserveAlertsSuppressed,
+        reserveSourceState,
       },
       perAlertType,
       recoveryLinks,

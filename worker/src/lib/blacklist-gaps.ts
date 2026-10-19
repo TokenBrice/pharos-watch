@@ -160,7 +160,8 @@ async function writeMetricsCacheRow(
     metrics,
   };
   await db
-    .prepare("/* blacklist-gap-metrics-cache-write */ INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .prepare(`/* blacklist-gap-metrics-cache-write */ INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
     .bind(getBlacklistGapMetricsCacheKey(options, kind), JSON.stringify(payload), freshnessAt)
     .run();
 }

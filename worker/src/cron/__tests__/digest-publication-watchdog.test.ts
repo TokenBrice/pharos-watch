@@ -89,7 +89,7 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
               return null;
             },
             async run() {
-              if (sql.startsWith("INSERT OR REPLACE INTO cache")) {
+              if (sql.startsWith("INSERT INTO cache")) {
                 cache.set(String(args[0]), {
                   value: String(args[1]),
                   updated_at: Number(args[2]),

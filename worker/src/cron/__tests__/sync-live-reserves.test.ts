@@ -5,7 +5,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { breakerKeyForConfig, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import { createAdapterLatencyCollector } from "../sync-live-reserves-core";
@@ -425,14 +425,24 @@ describe("syncLiveReserves", () => {
     expect(metadata.warningCount).toBeGreaterThanOrEqual(configuredCoinCount);
   });
 
-  it("records a skipped sync state and reports degraded (not error) when the circuit holds every coin", async () => {
+  it.each(["open", "half-open"])("retains %s breaker admission/probe handling after the bulk read", async (state) => {
     shouldAttemptFetchMock.mockResolvedValue(false);
     mockAdapterRegistry(async () => {
       throw new Error("adapter should not run when circuit is open");
     });
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
+    const db = mockD1([{
+      match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+      rows: SYNC_ORDERED_CONFIGURED_COINS.map((coin) => ({
+        key: `circuit:${breakerKeyForConfig(coin.liveReservesConfig!)}`,
+        value: JSON.stringify({
+          state, consecutiveFailures: 3, lastFailureAt: Math.floor(Date.now() / 1000),
+          lastSuccessAt: null, openedAt: Math.floor(Date.now() / 1000),
+        }),
+        updated_at: Math.floor(Date.now() / 1000),
+      })),
+    }]);
     const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     // An all-circuit-open run synced nothing but had no genuine failures and no
@@ -442,6 +452,9 @@ describe("syncLiveReserves", () => {
     expect(result?.itemCount).toBe(0);
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
     expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
+    expect(shouldAttemptFetchMock).toHaveBeenCalledTimes(new Set(
+      SYNC_ORDERED_CONFIGURED_COINS.map((coin) => breakerKeyForConfig(coin.liveReservesConfig!)),
+    ).size);
   });
 
   it("records circuit breaker outcome only once per unique breakerKey per run", async () => {
@@ -773,7 +786,7 @@ describe("syncLiveReserves", () => {
       },
     ]);
     const cleanupEvent = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-artifact-cleanup-failed"
     ));
     expect(cleanupEvent).toBeDefined();
@@ -896,7 +909,7 @@ describe("syncLiveReserves", () => {
     expect(result?.status).toBe("ok");
     expect(recoverNoCandidateMock).toHaveBeenCalledTimes(1);
     const recoveryFailureEvent = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-breaker-recovery-failed"
     ));
     expect(recoveryFailureEvent).toBeDefined();
@@ -933,7 +946,7 @@ describe("syncLiveReserves", () => {
     expect(metadata.historyPrune).toBeUndefined();
     expect(metadata.historyPruneSkipped).toBe(false);
     const pruneFailureEvent = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-prune-failed"
     ));
     expect(pruneFailureEvent).toBeDefined();

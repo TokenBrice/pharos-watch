@@ -20,6 +20,7 @@ import {
   fetchReviewedDeploymentSolanaObservation,
   fetchSafetyScoreV9SolanaRpc,
   observeReviewedEvmDeployment,
+  findEvmBlockHeaderInTimestampWindow,
 } from "../safety-score-v9/supply-observation-primitives";
 
 
@@ -27,6 +28,50 @@ import {
 describe("Safety Score V9 supply observation primitives", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("stops at the first in-window hash-bearing header", async () => {
+    const initialHeader = { number: 1000, timestamp: 2000, hash: `0x${"a".repeat(64)}` as const };
+    const fetchHeader = vi.fn(async (number: number) => ({ ...initialHeader, number, timestamp: 2000 - (1000 - number) * 12 }));
+    const result = await findEvmBlockHeaderInTimestampWindow({
+      initialHeader, earliestTimestamp: 1800, latestTimestamp: 1920, fetchHeader,
+    });
+    expect(result).toEqual({ ...initialHeader, number: 992, timestamp: 1904 });
+    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual([999, 998, 996, 992]);
+  });
+
+  it("refines an overshot window without selecting an older or newer pin", async () => {
+    const initialHeader = { number: 1000, timestamp: 2000, hash: `0x${"a".repeat(64)}` as const };
+    const fetchHeader = vi.fn(async (number: number) => ({ ...initialHeader, number, timestamp: 2000 - (1000 - number) * 12 }));
+    expect(await findEvmBlockHeaderInTimestampWindow({
+      initialHeader, earliestTimestamp: 1930, latestTimestamp: 1940, fetchHeader,
+    })).toEqual({ ...initialHeader, number: 995, timestamp: 1940 });
+    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual([999, 998, 996, 992, 994, 995]);
+  });
+
+  it.each(["missing", "wrong number", "nonmonotonic", "no block in window"] as const)(
+    "fails closed on a %s window search", async failure => {
+      const initialHeader = { number: 10, timestamp: 2000, hash: `0x${"a".repeat(64)}` as const };
+      const fetchHeader = vi.fn(async (number: number) => failure === "missing" ? null : ({
+        ...initialHeader, number: failure === "wrong number" ? number + 1 : number,
+        timestamp: failure === "nonmonotonic" ? 2001 : number >= 5 ? 2000 : 1800,
+      }));
+      expect(await findEvmBlockHeaderInTimestampWindow({
+        initialHeader, earliestTimestamp: 1850, latestTimestamp: 1970, fetchHeader,
+      })).toBeNull();
+      expect(fetchHeader.mock.calls.length).toBeLessThanOrEqual(8);
+    },
+  );
+
+  it("reuses an already in-window header and propagates cancellation before any lookup", async () => {
+    const initialHeader = { number: 10, timestamp: 1900, hash: `0x${"a".repeat(64)}` as const };
+    const fetchHeader = vi.fn();
+    const input = { initialHeader, earliestTimestamp: 1850, latestTimestamp: 1970, fetchHeader };
+    expect(await findEvmBlockHeaderInTimestampWindow(input)).toBe(initialHeader);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(findEvmBlockHeaderInTimestampWindow({ ...input, signal: controller.signal })).rejects.toThrow();
+    expect(fetchHeader).not.toHaveBeenCalled();
   });
 
   it("preserves fail-closed decoding", () => {

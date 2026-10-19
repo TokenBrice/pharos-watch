@@ -17,7 +17,7 @@ Operational freshness configuration is shared via `worker/src/lib/mint-burn-heal
 
 Scheduled/http handlers apply env overrides on top of these defaults (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/http/request-dispatch.ts`). Public `/api/health` now keys mint/burn freshness to the critical-lane sync timestamp / run status (the same semantics exposed by `/api/mint-burn-flows`) so quiet majors do not falsely mark the health surface stale just because no new events occurred.
 
-Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intentionally allow one missed 30-minute critical-lane slot before warning. User-facing freshness is `fresh <= 60m`, `degraded <= 90m`, `stale > 90m`, which keeps the public warning surface aligned with `/status` cron-health grace windows instead of flagging a single late slot as an incident.
+Public `/api/mint-burn-flows` freshness assesses the confirmed critical-lane flow-generation clock using the shared availability ratios, not the latest attempt or cache write. The effective budgets are returned in `_meta.freshBudgetSec` / `degradedBudgetSec` (currently 8h / 12h); these endpoint availability bands are separate from lane escalation and the tighter Safety Score consumer budget used only by flight-to-quality.
 
 Fresh and cached flow responses without a sync timestamp retain their body sync warnings and return `Cache-Control: no-store`, `X-Data-Age: unavailable`, and HTTP `Warning: 199`. Neither response-generation time nor cache-write time substitutes for the missing sync clock.
 
@@ -76,6 +76,10 @@ exception, while coins with an Ethereum contract retain the Ethereum default. Th
 without letting the side map drift silently from `MINT_BURN_CONFIG_SPECS`.
 
 Public `/api/mint-burn-flows` and the daily digest collector use the same canonical V9 flight-to-quality classification. `B-` or better is `safe`; `C+`, `C`, and `C-` are neutral; grades below `C-` are `risky`. Classification requires a complete current `safety-score-v9-publication` identity and becomes unavailable when the accepted publication is missing, held, stale, malformed, or identity-mismatched instead of falling back to a hardcoded safe-haven list.
+
+Aggregate FTQ carries one classification source and machine-readable `gauge.classificationReason`. When classification is unavailable, `flightToQuality` and `flightIntensity` are both `null`, never an inactive/zero observation. Its independent `_meta.dependencies.flightToQuality` entry names the accepted Safety Score publication's `generationId`, original `updatedAt`, assessed age, status/reason and `freshBudgetSec`. That consumer budget is two publication refresh intervals (currently 1h / 3,600 seconds), sourced from `SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC`; a fresh flow generation does not renew it.
+
+Fresh materializations, cached reads and fallback reads expose the same FTQ state, dependency evidence, `sync.classificationWarning` and HTTP advisory. Every aggregate cache read re-admits the small canonical index, including previously unavailable entries. A newly admitted identity reclassifies the stored 24h coin nets under the existing valuation gates, removes the old classification warning, and never changes the flow observation or sync clock. Missing/held/stale/index-read-failed sources remain explicitly unavailable. Per-coin responses do not load Safety Scores or carry this market-wide dependency.
 
 Per-config adapter provenance is now surfaced through coin `coverage` metadata:
 - `adapterKinds` — active decoding families for the coin (`transfer-zero-address`, `custom-events`, `mixed`)
@@ -458,13 +462,15 @@ Frontend consumers read the additive `valuation` fields through `resolveMintBurn
 - **Pressure shift**: a partial 24h window or baseline renders `NR` with a partial-valuation reason and sorts last. The baseline average daily net is withheld only when the baseline itself is partial.
 - **Gross volumes**: a non-complete side renders as a `≥` lower bound (known-valuation subtotal).
 - **Client-side sums** (overview/receipt totals, home mini card, chart re-bucketing): any null or partial component makes the summed signed net unavailable; leaders and sorts rank only displayable nets, never bounds. A summed net keeps a one-sided bound only when every withheld component is bounded on the same side and no component is coverage-unknown; the 24h aggregate derives its bound from the same per-side range as its direction. The aggregate chart draws no bar for a partial bucket, stops the cumulative line at the first one, and lists bucket valuation in its accessible table; the compare chart omits such hours.
-- **Gauge**: `flightToQuality: null` renders an "FTQ unavailable" chip; `partialValuationInputs > 0` re-labels the beam and adds the `Partial valuation` chip (v6.23 semantics: coins withheld from the score).
+- **Gauge**: unavailable Safety Score classification takes precedence over valuation-null and renders an "FTQ unavailable" chip with its actual reason, named Safety Score dependency and independent budget/accepted source clock. A null FTQ with an admitted classification retains the missing-valuation explanation. `partialValuationInputs > 0` re-labels the beam and adds the `Partial valuation` chip (v6.23 semantics: coins withheld from the score).
 - **Literal minting pressure** (v6.27): NR with its reason whenever either 24h side is `partial` or `unknown`; the detail card shows the reason instead of a dial.
 - No frontend CSV/NDJSON export carries mint/burn flow values.
 
 ### Dashboard Integration
 
 `FlowSummaryCard` (`src/components/flow-summary-card.tsx`) keys its direction chip from the valuation-gated 24h direction (see [Valuation Completeness Rendering](#valuation-completeness-rendering)) and renders the literal `Minting Pressure (24h)` dial only from a fully valued window; otherwise it names the NR reason. Bank Run Gauge band labels remain the baseline-relative pressure vocabulary.
+
+Detail health monitors the coin flow lane only when it renders (coin row, loading or failure), and scopes its evidence to the coin totals it displays. The optional market-wide FTQ dependency and its matching advisory do not degrade a coin's flow section; ingestion, valuation, transport, other dependency warnings and the original flow-generation budget remain applicable. UI disclosures format HTTP Warning text as human prose while preserving raw transport metadata and machine-readable reasons.
 
 ---
 

@@ -609,7 +609,41 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       expect(generation.observedAssetIds).toEqual(generation.expectedAssetIds);
       expect(generation.acceptedAssetIds).toEqual(["xaut-tether"]);
       expect(generation.outcomesById["wm-m0"]).toMatchObject({
-        status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+        status: "rejected", rejectionCode: "deployment-state-unavailable", captureFailureReason: "asset-timeout",
+      });
+    } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
+
+  it("records capture exhaustion as unavailable evidence without claiming observed skew", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(SOURCE_CLOCK_SEC * 1_000);
+    try {
+      const input = {
+        ...makeV9FixedInput({ assetId: "srusd-reservoir", clockSec: SOURCE_CLOCK_SEC }),
+        chainCirculatingById: {},
+      };
+      const observer = vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt");
+      const capture = await captureSafetyScoreV9SupplyAttribution(input, undefined, undefined, {
+        clockMode: "source",
+        executionWindow: {
+          slotStartedAtSec: SOURCE_CLOCK_SEC,
+          deadlineMs: Date.now() + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs,
+          minimumRemainingMs: 0,
+        },
+      });
+      expect(observer).not.toHaveBeenCalled();
+      expect(capture.failureReasonById?.["srusd-reservoir"]).toBe("capture-window-exhausted");
+      expect(capture.journalRecords.find(record => record.assetId === "srusd-reservoir"))
+        .toMatchObject({
+          rejectionCode: "deployment-state-unavailable",
+          admissionCode: "supply-attribution.admission.rejected-upstream",
+        });
+      const generation = createSafetyScoreV9SupplyAttributionGeneration({
+        fixedInput: input, capture, capturedAtSec: SOURCE_CLOCK_SEC,
+      });
+      expect(generation.outcomesById["srusd-reservoir"]).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-state-unavailable",
+        captureFailureReason: "capture-window-exhausted",
       });
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
   });
@@ -661,11 +695,16 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       expect(diagnostics.length).toBeLessThanOrEqual(128);
       expect(diagnostics.some(row => row.hardEvidenceFailure)).toBe(hardFailure);
       expect(capture.failureReasonById?.["srusd-reservoir"]).toBe("asset-timeout");
+      expect(capture.journalRecords.find(record => record.assetId === "srusd-reservoir"))
+        .toMatchObject({
+          rejectionCode: "deployment-state-unavailable",
+          admissionCode: "supply-attribution.admission.rejected-upstream",
+        });
       const generation = createSafetyScoreV9SupplyAttributionGeneration({
         fixedInput: input, capture, capturedAtSec: Math.floor(Date.now() / 1_000),
       });
       expect(generation.outcomesById["srusd-reservoir"]).toMatchObject({
-        status: "rejected", captureFailureReason: "asset-timeout", diagnostics,
+        status: "rejected", rejectionCode: "deployment-state-unavailable", captureFailureReason: "asset-timeout", diagnostics,
       });
       expect(parseSafetyScoreV9SupplyAttributionGeneration(
         serializeSafetyScoreV9SupplyAttributionGeneration(generation),

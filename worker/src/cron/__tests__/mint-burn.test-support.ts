@@ -130,7 +130,7 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
       ],
     },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: options.cacheRows ?? [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "INSERT INTO cache", rows: [] },
     { match: "DELETE FROM cache WHERE key >= ? AND key < ?", rows: [] },
     { match: "supply_history", rows: [] },
     { match: "mint_burn_hourly", rows: [] },

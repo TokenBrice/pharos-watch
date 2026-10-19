@@ -10,7 +10,8 @@ export interface BenchmarkResponseDiagnostic {
   bodyBytes: number;
   parsed: boolean;
   recordDate: string | null;
-  failure: "transport-failed" | "http-status" | "empty-body" | "parse-failed" | null;
+  failure: "transport-failed" | "http-status" | "empty-body" | "parse-failed" | "upstream-error" | null;
+  upstreamStatus?: number;
 }
 export interface BenchmarkProviderAttemptDiagnostic extends BenchmarkResponseDiagnostic {
   provider: string;

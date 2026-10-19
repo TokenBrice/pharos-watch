@@ -3,6 +3,8 @@ import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/t
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
 import {
   makeActivePriceCoverage,
+  makeCompleteTelegramBotStatus,
+  makeDispatchMetadata,
   makeHealthyHealthResponse,
   makeHealthyStatusResponse,
   makeMissingActiveAsset,
@@ -343,6 +345,28 @@ describe("status dashboard model", () => {
     });
   });
 
+  it.each(["healthy", "degraded"] as const)("keeps Safety divergence visible only while effective status still lags (%s)", (effectiveStatus) => {
+    const cause: StatusCause = {
+      code: "safety_score_publication_held", layer: "availability", severity: "warning",
+      message: "Safety Score publication is held while required inputs recover (redemption-stale).",
+    };
+    const data = makeHealthyStatusResponse();
+    data.overallStatus = effectiveStatus;
+    data.rawOverallStatus = "degraded";
+    data.availabilityStatus = "degraded";
+    data.causes = { availability: [cause], dataQuality: [], overall: [cause] };
+    const healthData = makeHealthyHealthResponse();
+    healthData.status = "degraded";
+    healthData.warnings = ["safety-score-publication-held"];
+    const model = buildModel(data, { healthData });
+    expect(model.issueGroups.impacting).toContainEqual(expect.objectContaining({
+      code: "safety_score_publication_held", publicImpacting: true,
+    }));
+    const notice = model.notices.find((entry) => entry.id === "public-health");
+    if (effectiveStatus === "healthy") expect(notice?.detail).toContain("Public /api/health differs from /api/status");
+    else expect(notice?.detail).not.toContain("Public /api/health differs from /api/status");
+  });
+
   it("surfaces missing Comms telemetry as Unavailable attention", () => {
     const data = { ...makeHealthyStatusResponse(), telegramBot: null };
     const model = buildModel(data);
@@ -350,6 +374,18 @@ describe("status dashboard model", () => {
 
     expect(comms).toMatchObject({ value: "Unavailable", valueClassName: "text-muted-foreground" });
     expect(comms?.summary).toContain("Telegram delivery telemetry is unavailable");
+  });
+
+  it("names source suppression and labels eligible chats separately from delivery counts", () => {
+    const data = makeHealthyStatusResponse();
+    data.telegramBot = { ...makeCompleteTelegramBotStatus(), deliverableChats: 783 };
+    data.crons["dispatch-telegram-alerts"].latestRunFacts = makeDispatchMetadata({
+      safetyAlertsSuppressed: true, safetyAlertSourceState: "stale",
+    });
+    const comms = buildModel(data).attentionSections.find((section) => section.id === "comms");
+    expect(comms?.summary).toContain("Safety alerts are suppressed because their source input is stale.");
+    expect(comms?.summary).toContain("Eligible alert audience: 783 chats (not a delivery count).");
+    expect(comms?.summary).not.toContain("dispatch reported a degraded outcome");
   });
 
   it("surfaces scheduled-slot running query failures as watch-level operator notices", () => {

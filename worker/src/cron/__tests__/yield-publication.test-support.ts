@@ -22,7 +22,7 @@ const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
   { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
   { match: "ranked_linked_generations", rows: [] },
   { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
-  { match: "INSERT OR REPLACE INTO yield_data", rows: [] },
+  { match: "INSERT INTO yield_data", rows: [] },
   { match: "INSERT INTO yield_history", rows: [] },
   { match: "INSERT OR REPLACE INTO yield_source_decisions", rows: [] },
   { match: "INSERT OR REPLACE INTO yield_source_decision_alternatives", rows: [] },

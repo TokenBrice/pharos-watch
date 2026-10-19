@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
+import type { MintBurnFlowsResponse, PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -15,6 +15,7 @@ import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { deriveDataHealth } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
+import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
   return makePegSummaryCoinBase({
@@ -117,6 +118,86 @@ describe("stablecoin detail view-model builder", () => {
     params.queries.dexLiquidity.data!["xsgd-straitsx"].warning = null;
     params.queries.dexLiquidity.meta!.updatedAt = now / 1000 - 13 * 4 * 3600;
     expect(health().state).toBe("stale");
+  });
+
+  it.each(["source-stale", "publication-held"])("scopes coin flow health away from optional market FTQ: %s", (reason) => {
+    const now = Date.now();
+    const classificationWarning = `Flight-to-quality classification unavailable: Safety Score dependency (${reason}); budget 1h.`;
+    const transportWarning = `199 - "${classificationWarning}"`;
+    const data: MintBurnFlowsResponse = {
+      gauge: {
+        score: 0, band: "NEUTRAL", intensitySemantics: "signed-v2",
+        flightToQuality: null, flightIntensity: null, classificationSource: "unavailable",
+        classificationReason: reason, safetyScoreIdentity: null, trackedCoins: 1, trackedMcapUsd: 100,
+      },
+      coins: [makeMintBurnFlowCoin({ stablecoinId: "usdt-tether", symbol: "USDT" })],
+      hourly: [], updatedAt: now / 1000,
+      sync: { lastSuccessfulSyncAt: now / 1000, freshnessStatus: "fresh", criticalLaneHealthy: true,
+        warning: null, classificationWarning },
+    };
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: { flows: {
+      data, enabled: true, dataUpdatedAt: now,
+      meta: {
+        updatedAt: now / 1000 - 60, ageSeconds: 60, status: "fresh",
+        freshBudgetSec: 28800, degradedBudgetSec: 43200, warning: transportWarning,
+        dependencies: {
+          flightToQuality: { status: "unavailable", reason, updatedAt: now / 1000 - 4000,
+            freshBudgetSec: 3600, generationId: "accepted-safety-publication" },
+        },
+      },
+    } } });
+    const query = () => buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+      .find((entry) => entry.preset === "mintBurnFlows")!;
+    const health = () => deriveDataHealth({ ...DATA_HEALTH_PRESETS.mintBurnFlows, ...query() }, now);
+    expect(health().state).toBe("fresh");
+    expect(query().hasData).toBe(true);
+    expect(query().meta?.dependencies?.flightToQuality).toBeUndefined();
+    expect(params.supplemental.flows.meta?.warning).toBe(transportWarning);
+    expect(query().meta?.updatedAt).toBe(now / 1000 - 60);
+
+    // Unknown warnings and other dependency findings still apply to rendered totals.
+    params.supplemental.flows.meta!.warning = `${transportWarning}, 199 - "Coin valuation needs review (a,b)"`;
+    expect(health().state).toBe("degraded");
+    expect(query().meta?.warning).toBe('199 - "Coin valuation needs review (a,b)"');
+    params.supplemental.flows.meta!.warning = transportWarning;
+    params.supplemental.flows.meta!.dependencies!.ingestion = { status: "degraded", reason: "incomplete-scan" };
+    expect(health().degradationReason).toBe("source");
+    delete params.supplemental.flows.meta!.dependencies!.ingestion;
+    data.sync!.warning = "Critical flow lane is lagging";
+    expect(health().state).toBe("degraded");
+    expect(query().meta?.warning).toContain("Critical flow lane is lagging");
+    data.sync!.warning = null;
+
+    params.supplemental.flows.error = new Error("flow transport failed");
+    expect(health().degradationReason).toBe("refresh");
+    params.supplemental.flows.error = null;
+    params.supplemental.flows.meta!.updatedAt = now / 1000 - 43201;
+    expect(health().state).toBe("stale");
+    // A legacy warning without typed scope is never silently dismissed.
+    params.supplemental.flows.meta!.updatedAt = now / 1000 - 60;
+    delete params.supplemental.flows.meta!.dependencies!.flightToQuality;
+    expect(health().state).toBe("degraded");
+  });
+
+  it("does not monitor a successful aggregate with no rendered coin flow lane", () => {
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: { flows: {
+      enabled: true, dataUpdatedAt: Date.now(),
+      data: {
+        gauge: { score: null, band: null, intensitySemantics: "signed-v2", flightToQuality: null,
+          flightIntensity: null, classificationSource: "unavailable", trackedCoins: 0, trackedMcapUsd: 0 },
+        coins: [], hourly: [], updatedAt: Date.now() / 1000,
+      },
+      meta: { status: "degraded", warning: '199 - "Optional market classification unavailable"' },
+    } } });
+    const flowQuery = () => buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+      .find((entry) => entry.preset === "mintBurnFlows");
+    expect(flowQuery()).toBeUndefined();
+    params.supplemental.flows.data = undefined;
+    params.supplemental.flows.isLoading = true;
+    expect(flowQuery()).toMatchObject({ hasData: false, isLoading: true });
+    params.supplemental.flows.isLoading = false;
+    params.supplemental.flows.error = new Error("flow read failed");
+    expect(flowQuery()).toMatchObject({ hasData: false, error: params.supplemental.flows.error });
   });
 
   it("ages reserves from independent producer/source budgets, never a fresh request receipt", () => {

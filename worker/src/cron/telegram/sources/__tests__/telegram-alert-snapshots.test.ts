@@ -17,7 +17,7 @@ import {
 } from "../telegram-alert-snapshots";
 
 const DEFAULT_TELEGRAM_SNAPSHOT_D1_TABLES: MockTableConfig[] = [
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "INSERT INTO cache", rows: [] },
 ];
 
 function mockD1(tables: MockTableConfig[] = []) {
@@ -239,7 +239,7 @@ describe("writeSnapshots", () => {
     });
 
     expect(batchSizes).toEqual([6]);
-    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
     expect(writes.map((entry) => entry.binds[0])).toEqual([
       SNAPSHOT_KEYS.dews,
       SNAPSHOT_KEYS.dewsAlertable,
@@ -273,7 +273,7 @@ describe("writeSnapshots", () => {
     expect(batchSizes).toEqual([7]);
     const keys = db
       .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
+      .filter((entry) => entry.sql.includes("INSERT INTO cache"))
       .map((entry) => entry.binds[0]);
     expect(keys).toContain(SNAPSHOT_KEYS.safety);
   });

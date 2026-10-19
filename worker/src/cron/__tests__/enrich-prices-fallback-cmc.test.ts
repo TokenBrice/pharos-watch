@@ -139,7 +139,7 @@ describe("enrichMissingPrices", () => {
     if (admitted) {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(result.resolved).toBe(1);
-      const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "cmc_last_fetch");
+      const write = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "cmc_last_fetch");
       expect(JSON.parse(String(write?.binds[1]))).toEqual({ version: 1, kind: "success" });
       expect(write?.binds[2]).toBe(Date.parse(now) / 1000); // actual completion time, never bucket time
     } else {
@@ -156,7 +156,7 @@ describe("enrichMissingPrices", () => {
     ]);
     const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
     expect(result.resolved).toBe(0);
-    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "cmc_last_fetch");
+    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "cmc_last_fetch");
     expect(writes).toHaveLength(1);
     expect(JSON.parse(String(writes[0].binds[1]))).toEqual({ version: 1, kind: "rate-limited" });
   });
@@ -252,7 +252,7 @@ describe("enrichMissingPrices", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -614,7 +614,7 @@ describe("enrichMissingPrices", () => {
     await expect(runCmcPass(firstAssets, "test-cmc-key", undefined, initialDb))
       .resolves.toMatchObject({ resolved: 1 });
     const verifiedCacheWrite = initialDb.getHistory().find(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+      (entry) => entry.sql.includes("INSERT INTO cache") &&
         entry.binds[0] === "cmc_verified_targeted_quotes:v1",
     );
     expect(verifiedCacheWrite).toBeDefined();
@@ -972,7 +972,7 @@ describe("enrichMissingPrices", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -1020,7 +1020,7 @@ describe("enrichMissingPrices", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -1086,7 +1086,7 @@ describe("enrichMissingPrices", () => {
     });
     const cacheWrite = db
       .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "cmc_last_fetch");
+      .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "cmc_last_fetch");
     expect(JSON.parse(String(cacheWrite?.binds[1]))).toEqual({ version: 1, kind: "rate-limited" });
   });
 });

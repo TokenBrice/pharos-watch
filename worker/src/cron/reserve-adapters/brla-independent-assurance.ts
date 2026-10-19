@@ -19,7 +19,7 @@ import { reserveDegradedWarning } from "./warnings";
 const ADAPTER_KEY = "brla-independent-assurance";
 
 /**
- * Reviewed 2026-09-21: pinned Notion block identity for the August 31, 2026 UHY
+ * Reviewed 2026-10-19: pinned Notion block identity for the September 30, 2026 UHY
  * reasonable-assurance report on the official BRLA transparency page. The
  * runtime re-resolves the signed download URL through loadPageChunk /
  * getSignedFileUrls and fails closed on any page-block drift; the bytes are
@@ -43,11 +43,11 @@ export const BRLA_NOTION_PIN = {
   ],
   yearBlockId: "3047f28f-0ae4-80b4-90cd-dd40ecf60481",
   yearTitle: "2026",
-  reportBlockId: "3dd7f28f-0ae4-80cc-82e6-c77ddef59fbe",
-  attachmentTitle: "Avenia - Transparency Report - 20260831 (Audit Attestation).pdf",
+  reportBlockId: "3fb7f28f-0ae4-8083-9016-e7b53db36574",
+  attachmentTitle: "Avenia - Transparency Report - 20260930 (Audit Attestation).pdf",
   attachmentSource:
-    "attachment:8494e9ac-19af-4dfb-b05c-ba1aba60b30c:Avenia_-_Transparency_Report_-_20260831_(Audit_Attestation).pdf",
-  attachmentId: "8494e9ac-19af-4dfb-b05c-ba1aba60b30c",
+    "attachment:6674dccd-e58f-4da9-a3d1-c4ae0d676fea:Avenia_-_Transparency_Report_-_20260930_(Audit_Attestation).pdf",
+  attachmentId: "6674dccd-e58f-4da9-a3d1-c4ae0d676fea",
 } as const;
 
 const BRLA_REPORT_FILE_PATTERN = /^Avenia - Transparency Report - (\d{8}) \(Audit Attestation\)\.pdf$/;
@@ -116,7 +116,7 @@ async function loadNotionChunk(
 
 /**
  * Verifies the official Notion transparency page still resolves the reviewed
- * August 31, 2026 attachment and returns a fresh signed download URL. Every
+ * September 30, 2026 attachment and returns a fresh signed download URL. Every
  * pinned identity (root page, root child tree, 2026 header, report block,
  * attachment) must match exactly; any drift fails closed.
  */
@@ -185,11 +185,12 @@ export async function verifyBrlaNotionDiscovery(args: {
       latestBlockId = block.id;
     }
   }
-  if (latestReportDate == null || latestReportDate > "20260831") {
+  const reviewedReportDate = args.manifest.reportDate.replaceAll("-", "");
+  if (latestReportDate == null || latestReportDate > reviewedReportDate) {
     throw new Error(`${ADAPTER_KEY}: ${latestReportDate == null ? "no dated reports" : `newer unreviewed report ${latestReportDate}`} on official index`);
   }
-  if (latestBlockId !== BRLA_NOTION_PIN.reportBlockId) {
-    throw new Error(`${ADAPTER_KEY}: reviewed August report is not the latest report on official index`);
+  if (latestReportDate !== reviewedReportDate || latestBlockId !== BRLA_NOTION_PIN.reportBlockId) {
+    throw new Error(`${ADAPTER_KEY}: reviewed report is not the latest report on official index`);
   }
   const reportBlock = parseNotionBlock(yearBlocks[BRLA_NOTION_PIN.reportBlockId]);
   if (!reportBlock || reportBlock.type !== "file" || reportBlock.title !== BRLA_NOTION_PIN.attachmentTitle) {
@@ -255,7 +256,7 @@ const BRLA_CLASSIFICATIONS: Record<string, BrlaAssetClassification> = {
     name: "BRL cash and cash equivalents held at named Brazilian financial institutions",
     risk: "very-low",
     assetClass: "cash",
-    issuerOrObligor: "Stark Bank, Woovi, BTG Pactual, Itaú Unibanco, XP Investimentos, Banco Inter",
+    issuerOrObligor: "Stark Bank, Woovi, BTG Pactual, Ita\u00fa Unibanco, XP Investimentos",
     riskFactors: ["counterparty", "liquidity", "custody", "concentration"],
     liquidityHorizon: "immediate",
   },
@@ -263,7 +264,7 @@ const BRLA_CLASSIFICATIONS: Record<string, BrlaAssetClassification> = {
     name: "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
     risk: "low",
     assetClass: "repo",
-    issuerOrObligor: "XP Investimentos; diversified Brazilian corporate debentures as collateral",
+    issuerOrObligor: "BTG Pactual and XP Investimentos; Brazilian corporate debentures as collateral",
     riskFactors: ["credit", "counterparty", "liquidity", "custody", "market"],
     liquidityHorizon: "one-day",
   },

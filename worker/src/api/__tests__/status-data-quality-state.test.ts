@@ -4,6 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { computeRawStatus } from "../../lib/status-evaluation";
+import { assessPublicHealth, buildPublicHealthResponse } from "../../lib/public-health-assessment";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { StatusResponseSchema } from "@shared/types/status";
+import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 
 import {
   handleStatus,
@@ -11,6 +17,7 @@ import {
   makeCronRow,
   cleanupStatusTest,
   buildStatusD1Scenario,
+  makeMinimalLiveStatusRows,
   fixtureMakeApiRequest,
   fixtureCRON_INTERVALS,
   fixtureACTIVE_STABLECOINS,
@@ -100,6 +107,82 @@ describe("handleStatus", () => {
     vi.spyOn(Date, "now").mockReturnValue(Date.now());
   });
   afterEach(cleanupStatusTest);
+
+  it.each(["fresh", "boundary", "stale", "outage", "held", "missing-accepted", "missing", "read-failed", "future"] as const)(
+    "shares the public Safety floor and named cause through raw admin status (%s)", async (kind) => {
+      const now = Math.floor(Date.now() / 1000);
+      const budget = API_FRESHNESS_MAX_AGE_SEC.reportCards;
+      const acceptedAge = kind === "boundary" ? budget
+        : kind === "stale" ? budget + 1
+        : kind === "outage" ? budget * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER + 1
+        : kind === "future" ? -3600 : 60;
+      const held = kind === "held" || kind === "missing-accepted";
+      const publication: V9PublicationHealth = {
+        schemaVersion: 2, status: held ? "held" : "current",
+        acceptedPublicationGenerationId: kind === "missing-accepted" ? null : "safety-route-generation",
+        acceptedAtSec: kind === "missing-accepted" ? null : now - acceptedAge,
+        attemptedAtSec: kind === "future" ? now + 3600 : now,
+        heldSinceSec: held ? now - 30 : null,
+        reasons: held ? [{ code: "redemption-stale" }] : [],
+      };
+      const db = buildStatusD1Scenario({
+        sections: ["sentinel", "publication", "derived", "reserves", "statusState", "cronState"],
+        overrides: [
+          ...makeMinimalLiveStatusRows(now, null, true).filter((row) =>
+            row.match !== "dex_liquidity" && row.match !== "yield_data" && row.match !== "blacklist_events"),
+          {
+            match: "FROM cache WHERE key = ?", matchBinds: ["report-cards:v9:publication-health"], rows: [],
+            first: kind === "missing" ? null : {
+              value: stableJsonStringifyV1(publication), updated_at: publication.attemptedAtSec,
+            },
+            ...(kind === "read-failed" ? { throwError: new Error("publication health unavailable") } : {}),
+          },
+          { match: "SELECT (? - MAX(updated_at)) as age", rows: [], first: { age: 60 } },
+          // The bulk cache read above includes the DEX generation subquery;
+          // these nulls describe only separate publication-ledger reads.
+          { match: "FROM dex_liquidity_publication_generations", rows: [], first: null },
+          { match: "FROM yield_publication_generations", rows: [], first: null },
+          // The aggregate contains SELECT 1 in its mirror filter; do not let
+          // the DB sentinel stand in for an actual, complete gap observation.
+          { match: "blacklist-gap-aggregate", rows: [], first: {
+            total: 0, missing: 0, missing_recent: 0, oldest_gap_age_sec: null,
+            never_attempted: 0, repeated_failures: 0, unrecoverable: 0,
+          } },
+        ],
+      });
+      const assessment = await assessPublicHealth(db, now);
+      const publicHealth = buildPublicHealthResponse(assessment, now);
+      const res = await handleStatus({
+        db, trustedAdmin: true,
+        request: fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" }),
+      });
+      const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+      const expectedStatus = kind === "fresh" || kind === "boundary" ? "healthy"
+        : kind === "outage" ? "stale" : "degraded";
+      expect(assessment.safetyScoreImpactStatus).toBe(expectedStatus);
+      expect(body.availabilityStatus, JSON.stringify(body.causes.availability)).toBe(expectedStatus);
+      expect(body.rawOverallStatus).toBe(expectedStatus);
+      const safetyCauses = body.causes.availability.filter((cause) => cause.code.startsWith("safety_score_publication_"));
+      if (expectedStatus === "healthy") {
+        expect(safetyCauses).toEqual([]);
+        expect(publicHealth.components?.find((component) => component.id === "safety-scores")?.state).toBe("operational");
+      } else {
+        const expectedCode = kind === "missing-accepted" ? "safety_score_publication_missing"
+          : kind === "held" ? "safety_score_publication_held"
+          : kind === "stale" || kind === "outage" ? "safety_score_publication_stale"
+          : "safety_score_publication_unavailable";
+        expect(safetyCauses).toEqual([expect.objectContaining({
+          code: expectedCode, severity: expectedStatus === "stale" ? "critical" : "warning",
+        })]);
+        expect(body.causes.overall).toContainEqual(safetyCauses[0]);
+        expect(publicHealth.components?.find((component) => component.id === "safety-scores")?.state)
+          .toBe(kind === "outage" ? "outage" : "degraded");
+      }
+      if (kind === "read-failed") expect(safetyCauses[0]?.message).toContain("safety-score-publication-read-failed");
+      if (kind === "held") expect(safetyCauses[0]?.message).toContain("redemption-stale");
+    },
+  );
+
   it("marks on-chain monitor unavailable instead of forcing stale data quality", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({

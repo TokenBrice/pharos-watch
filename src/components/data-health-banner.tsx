@@ -2,6 +2,7 @@
 
 import {
   formatDataHealthTimestamp,
+  formatDataHealthWarning,
   mergeHealthStates,
   type DataHealthInfo,
 } from "@/lib/data-health";
@@ -9,6 +10,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import { DATA_HEALTH_COLORS } from "@shared/lib/classification";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
 
 interface DataHealthBannerProps {
   entries: DataHealthInfo[];
@@ -48,9 +50,15 @@ export function DataHealthBanner({
       ? formatElapsedSeconds(explicitBudget)
       : entry.meta?.updatedAt === null ? "unknown" : formatElapsedSeconds(FRESHNESS_RATIOS.FRESH * entry.staleTime / 1000);
     const reason = entry.meta && "reason" in entry.meta ? entry.meta.reason : undefined;
-    const dependencies = Object.values(entry.meta?.dependencies ?? {})
-      .flatMap((dependency) => dependency.reason ? [dependency.reason] : []);
-    return `${entry.label}: ${entry.dataUpdatedAt > 0 ? `saved generation ${formatTimestamp(entry.dataUpdatedAt)}` : "producer generation unknown"}; freshness budget ${budget}; reason ${reason ?? entry.degradationReason ?? entry.state}.${dependencies.length ? `\n${dependencies.join("\n")}` : ""}${entry.meta?.warning ? `\n${entry.meta.warning}` : ""}`;
+    const dependencies = Object.entries(entry.meta?.dependencies ?? {}).map(([key, dependency]) => {
+      const name = key === MINT_BURN_FTQ_DEPENDENCY_KEY ? "Safety Score publication (flight-to-quality)" : key;
+      const source = dependency.updatedAt != null
+        ? formatTimestamp(dependency.updatedAt * 1000) : "unknown";
+      const dependencyBudget = dependency.freshBudgetSec != null
+        ? formatElapsedSeconds(dependency.freshBudgetSec) : "unknown";
+      return `${name}: ${dependency.status}; source generation ${source}${dependency.generationId ? ` (${dependency.generationId})` : ""}; dependency freshness budget ${dependencyBudget}; reason ${dependency.reason ?? dependency.status}.`;
+    });
+    return `${entry.label}: ${entry.dataUpdatedAt > 0 ? `saved generation ${formatTimestamp(entry.dataUpdatedAt)}` : "producer generation unknown"}; freshness budget ${budget}; reason ${reason ?? entry.degradationReason ?? entry.state}.${dependencies.length ? `\n${dependencies.join("\n")}` : ""}${entry.meta?.warning ? `\n${formatDataHealthWarning(entry.meta.warning)}` : ""}`;
   }).join("\n") : "";
   if (entries.length === 0 && !persistent) return null;
 
@@ -71,7 +79,7 @@ export function DataHealthBanner({
 
   const nonFresh = entries.filter((entry) => entry.state !== "fresh");
   const warningDetails = nonFresh
-    .flatMap((entry) => entry.meta?.warning ? [`${entry.label}: ${entry.meta.warning}`] : []).join("\n");
+    .flatMap((entry) => entry.meta?.warning ? [`${entry.label}: ${formatDataHealthWarning(entry.meta.warning)}`] : []).join("\n");
   const catchUps = nonFresh.flatMap((entry) => (entry.catchUp ? [entry.catchUp] : []));
   const allCatchingUp = merged.state === "degraded" && catchUps.length === nonFresh.length;
 

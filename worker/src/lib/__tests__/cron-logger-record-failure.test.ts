@@ -62,7 +62,7 @@ describe("recordCronFailure", () => {
     });
     expect(warnSpy).toHaveBeenCalled();
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache"));
     expect(insert?.binds[0]).toBe("cron:event:sync-fx-rates:openexchange-rates-fetch-failed");
     const payload = JSON.parse(String(insert?.binds[1]));
     expect(payload.metadata.error.length).toBeLessThanOrEqual(503);
@@ -71,7 +71,7 @@ describe("recordCronFailure", () => {
 
   it("does not throw when durable cron event persistence fails", async () => {
     const db = mockD1([
-      { match: "INSERT OR REPLACE INTO cache", rows: [], throwError: new Error("D1 unavailable") },
+      { match: "INSERT INTO cache", rows: [], throwError: new Error("D1 unavailable") },
     ]);
 
     await expect(

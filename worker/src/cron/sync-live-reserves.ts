@@ -3,6 +3,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { sealAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
 import { throwIfAborted } from "../lib/abort";
+import { getCircuitRecordsForSources } from "../lib/circuit-breaker";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { getRequestResourceSnapshot } from "./reserve-adapters/request";
 import { reportCronProgress } from "../lib/cron-progress";
@@ -42,9 +43,8 @@ import {
 import {
   advanceLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
-  markLiveReserveCheckpointItemStarted,
-  type ScheduledCheckpointIdentity,
 } from "../lib/scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../lib/scheduled-checkpoint-primitives";
 import {
   didReserveSyncAttemptBecomeAuthoritative,
 } from "../lib/live-reserves/store";
@@ -139,9 +139,29 @@ async function runReserveCoinQueue(args: {
   const breakerKeys = new Set<string>();
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
+  // One authoritative allowlist read per slice. Only closed or successfully
+  // observed missing rows bypass per-key reads; open/half-open/invalid records
+  // still use shouldAttemptFetch at admission, including its probe mutations.
+  const configuredBreakerKeys = [...new Set(args.orderedCoins.map((coin) => breakerKeyForConfig(coin.liveReservesConfig!)))];
+  const breakerReadStartedMs = Date.now();
+  try {
+    const { records, invalidSources } = await getCircuitRecordsForSources(args.db, configuredBreakerKeys);
+    const invalidBreakerKeys = new Set(invalidSources);
+    for (const key of configuredBreakerKeys) {
+      if (!invalidBreakerKeys.has(key) && (!records[key] || records[key].state === "closed")) {
+        breakerCanFetch.set(key, true);
+      }
+    }
+  } catch (error) {
+    throwIfAborted(args.signal);
+    // A failed bulk read grants nothing: use the original per-key admission.
+    logWorkerEventArgs("handler", "warn",
+      `[sync-live-reserves] Breaker preload failed; retaining per-key admission: ${toErrorMessage(error)}`);
+  }
+  const breakerPreloadMs = Date.now() - breakerReadStartedMs;
   const total = args.orderedCoins.length;
   const phaseTimings = { adapter: 0, d1CoinPersistence: 0, stages: {
-    checkpoint: 0, breakerRead: 0, beginWrite: 0, failureWrite: 0, authoritativeWrite: 0, progress: 0,
+    checkpoint: 0, breakerRead: breakerPreloadMs, beginWrite: 0, failureWrite: 0, authoritativeWrite: 0, progress: 0,
   } };
   let lastProgressAtMs = 0;
   let lastProgressItemsDone = -1;
@@ -260,21 +280,13 @@ async function runReserveCoinQueue(args: {
       deadlineMs: args.runStartedMs + args.budgetConfig.runBudgetMs - args.budgetConfig.finalizationMarginMs,
       checkpoint: args.checkpoint,
       stageTimings: phaseTimings.stages,
-      ...(args.checkpoint
-        ? {
-            onAttemptStarted: (attemptId: string) =>
-              markLiveReserveCheckpointItemStarted(args.db, args.checkpoint!, {
-                itemKey: coin.id,
-                domainAttemptId: attemptId,
-                itemsDone: globalIndex,
-                deadlineMs: args.runStartedMs + args.budgetConfig.runBudgetMs - args.budgetConfig.finalizationMarginMs,
-                itemsTotal: args.fullQueue.length,
-                ...(args.recovering
-                  ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
-                  : {}),
-              }),
-          }
-        : {}),
+      checkpointProgress: args.checkpoint ? {
+        itemsDone: globalIndex,
+        itemsTotal: args.fullQueue.length,
+        ...(args.recovering
+          ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
+          : {}),
+      } : undefined,
     });
     counts.attemptedCoins++;
     phaseTimings.adapter += result.adapterDurationMs;

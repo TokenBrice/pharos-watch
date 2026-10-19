@@ -329,6 +329,13 @@ describe("parseBcbSelicSeries", () => {
     expect(parseBcbSelicSeries("[]")).toBeNull();
   });
 
+  it.each([
+    JSON.stringify({ erro: { statusCode: 500, detail: "Internal error" } }),
+    "<html><title>Bad request!</title><body>Your request was rejected.</body></html>",
+  ])("rejects an HTTP-200 provider error body instead of inventing a rate: %s", (payload) => {
+    expect(parseBcbSelicSeries(payload)).toBeNull();
+  });
+
   it("returns null on malformed JSON", () => {
     expect(parseBcbSelicSeries("not json")).toBeNull();
   });

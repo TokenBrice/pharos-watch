@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ApiMeta } from "@/lib/api";
 import { ApiFetchError } from "@/lib/api";
-import { deriveDataHealth, mergeHealthStates, type DataHealthInfo } from "@/lib/data-health";
+import { deriveDataHealth, formatDataHealthWarning, mergeHealthStates, parseDataHealthWarnings, type DataHealthInfo } from "@/lib/data-health";
 
 const NOW = Date.parse("2026-08-29T12:00:00.000Z");
 const STALE_TIME = 15 * 60_000;
@@ -27,6 +27,52 @@ function meta(overrides: Partial<ApiMeta> = {}): ApiMeta {
     ...overrides,
   } as ApiMeta;
 }
+
+describe("HTTP Warning presentation", () => {
+  it("removes protocol syntax but preserves commas, newlines, escapes, and machine reasons", () => {
+    const first = '199 - "Quality drift (assets=USDC, USDT)\nReview \\"source\\" evidence"';
+    const second = '110 api.pharos.watch "Response is stale" "Mon, 19 Oct 2026 23:00:00 GMT"';
+    const raw = `${first}, ${second}`;
+    expect(formatDataHealthWarning(raw)).toBe('Quality drift (assets=USDC, USDT)\nReview "source" evidence\nResponse is stale');
+    expect(parseDataHealthWarnings(raw).map((entry) => entry.raw)).toEqual([first, second]);
+  });
+
+  it("keeps plain warning prose and mixed plain advisories intact", () => {
+    const plain = "Source partial, totals retained\nRetry is available";
+    expect(formatDataHealthWarning(plain)).toBe(plain);
+    expect(formatDataHealthWarning(`199 - "Classification unavailable", ${plain}`))
+      .toBe(`Classification unavailable\n${plain}`);
+  });
+
+  it.each([
+    '199 - "unterminated',
+    '199 - "trailing escape\\',
+    '199 - "message" unexpected',
+    '199 - "message""date"',
+    '199 - "message" "unterminated date',
+    '199 - "message" "date" "extra"',
+  ])("preserves malformed warning syntax: %s", (raw) => {
+    expect(formatDataHealthWarning(raw)).toBe(raw);
+  });
+
+  it("decodes empty and long escaped messages without regex backtracking", () => {
+    expect(formatDataHealthWarning('199 - ""')).toBe("");
+    const escaped = "\\\\".repeat(10_000);
+    expect(formatDataHealthWarning(`199 - "${escaped}"`)).toBe("\\".repeat(10_000));
+    const malformed = `199 - "${escaped}`;
+    expect(formatDataHealthWarning(malformed)).toBe(malformed);
+  });
+
+  it("does not mutate raw metadata used by refresh and age classification", () => {
+    const raw = '199 - "Latest sync-dex-liquidity run failed; serving last successful dataset (failedSources=a,b)"';
+    const inputMeta = meta({ warning: raw });
+    expect(formatDataHealthWarning(raw)).not.toContain("199 -");
+    expect(inputMeta.warning).toBe(raw);
+    expect(deriveDataHealth({
+      label: "Liquidity", hasData: true, dataUpdatedAt: NOW, staleTime: STALE_TIME, meta: inputMeta,
+    }, NOW).degradationReason).toBe("refresh");
+  });
+});
 
 describe("deriveDataHealth", () => {
   it.each([

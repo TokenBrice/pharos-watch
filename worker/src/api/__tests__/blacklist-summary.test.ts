@@ -27,7 +27,7 @@ function makeBlacklistSummaryFallbackTables() {
       first: null,
     })),
     { match: "SELECT id, stablecoin, chain_id, address, config_key, contract_address", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "INSERT INTO cache", rows: [] },
     // P3-16 item 4 / BMT-23 rider: cold request materialization uses a durable D1 claim.
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",

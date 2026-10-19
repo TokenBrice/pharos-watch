@@ -131,7 +131,6 @@ describe("telegram usage analytics", () => {
       { match: "FROM telegram_adoption_daily", rows: [] },
       { match: "FROM telegram_adoption_retention_daily", rows: [] },
       { match: "INSERT INTO telegram_adoption_retention_daily", rows: [] },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
       { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
     ]);
 

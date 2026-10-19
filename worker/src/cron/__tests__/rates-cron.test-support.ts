@@ -571,7 +571,6 @@ export function makeFxRatesDb({
     { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
     { match: "INSERT OR IGNORE INTO cache", rows: [] },
     { match: "INSERT INTO cache", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
     { match: "UPDATE cache", rows: [] },
   ]);
 }

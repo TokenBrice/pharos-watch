@@ -104,12 +104,13 @@ describe("buildCommsWorkbenchModel", () => {
           nearTtl: 1,
         },
       },
-      dispatchCron: dispatchCron(makeDispatchMetadata()),
+      dispatchCron: dispatchCron(makeDispatchMetadata({ safetyAlertsSuppressed: true, safetyAlertSourceState: "stale" })),
       nowSeconds: NOW_SECONDS,
     });
 
     expect(model.delivery.backlogAssessment).toBe("attention");
     expect(model.delivery.health).toBe("degraded");
+    expect(model.delivery.healthReason).toBe("Oldest queued delivery reached the 15-minute policy threshold.");
     expect(model.delivery.backlogReasons).toHaveLength(3);
     expect(model.delivery.backlogPolicy).toMatchObject({
       oldestAgeSec: 900,
@@ -163,6 +164,54 @@ describe("buildCommsWorkbenchModel", () => {
     expect(model.delivery.recoveryLinks.map((link) => link.href)).toContain("/admin/actions/");
     expect(model.delivery.recoveryLinks.some((link) => link.href.includes("telegram-no-delivery.md#rate-limit-storm"))).toBe(true);
     expect(model.delivery.recoveryLinks.some((link) => link.href.includes("telegram-no-delivery.md"))).toBe(true);
+  });
+
+  it.each([
+    [{ safetyAlertsSuppressed: true, safetyAlertSourceState: "stale" }, "Safety alerts are suppressed because their source input is stale."],
+    [{ reserveAlertsSuppressed: true, reserveAlertSourceState: "unavailable" }, "Reserve alerts are suppressed because their source input is unavailable."],
+    [{
+      safetyAlertsSuppressed: true, safetyAlertSourceState: "held",
+      reserveAlertsSuppressed: true, reserveAlertSourceState: "stale",
+    }, "Safety alerts are suppressed because their source input is held. Reserve alerts are suppressed because their source input is stale."],
+    [{ safetyAlertsSuppressed: true, safetyAlertSourceState: undefined }, "Safety alerts are suppressed because their source input is unknown."],
+  ] as const)("explains source suppression without reporting a failed ok dispatch (%j)", (metadata, reason) => {
+    const model = buildCommsWorkbenchModel({
+      telegramBot: makeCompleteTelegramBotStatus(),
+      dispatchCron: dispatchCron(makeDispatchMetadata(metadata)),
+      nowSeconds: NOW_SECONDS,
+    });
+    expect(model.delivery.health).toBe("degraded");
+    expect(model.delivery.healthReason).toBe(reason);
+    expect(model.delivery.latestDispatch.status).toBe("ok");
+    expect(model.delivery.permanentFailures.total).toBe(0);
+    expect(model.delivery.retries.totalQueued).toBe(0);
+  });
+
+  it.each([
+    ["error", {}, "failed", "The latest dispatch failed."],
+    ["ok", { freshPermanentFailures: 1 }, "failed", "1 permanent failure was recorded in the latest dispatch."],
+    ["ok", { freshRetryQueued: 1 }, "degraded", "The latest dispatch queued delivery retries."],
+    ["ok", { pendingRateLimited: true }, "degraded", "Telegram rate limiting affected the latest dispatch."],
+  ] as const)("preserves delivery failure and retry precedence over suppression (%s, %j)", (status, metadata, health, reason) => {
+    const model = buildCommsWorkbenchModel({
+      telegramBot: makeCompleteTelegramBotStatus(),
+      dispatchCron: dispatchCron(makeDispatchMetadata({
+        safetyAlertsSuppressed: true, safetyAlertSourceState: "stale", ...metadata,
+      }), status),
+      nowSeconds: NOW_SECONDS,
+    });
+    expect(model.delivery.health).toBe(health);
+    expect(model.delivery.healthReason).toBe(reason);
+  });
+
+  it("reserves degraded-dispatch copy for an actual degraded terminal outcome", () => {
+    const model = buildCommsWorkbenchModel({
+      telegramBot: makeCompleteTelegramBotStatus(),
+      dispatchCron: dispatchCron(makeDispatchMetadata(), "degraded"),
+      nowSeconds: NOW_SECONDS,
+    });
+    expect(model.delivery.health).toBe("degraded");
+    expect(model.delivery.healthReason).toBe("The latest dispatch reported a degraded outcome.");
   });
 
   it("treats an absent fresh retry counter as zero only on an ok dispatch with its sibling present", () => {

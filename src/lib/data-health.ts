@@ -48,6 +48,71 @@ const STATE_PRIORITY: Record<DataHealthState, number> = {
   fresh: 1,
 };
 
+function decodeDataHealthWarning(raw: string): string {
+  const prefix = raw.match(/^\d{3}\s+\S+\s+"/);
+  if (!prefix) return raw;
+  let index = prefix[0].length - 1;
+  const readQuoted = (): string | null => {
+    if (raw[index] !== '"') return null;
+    index += 1;
+    let text = "";
+    while (index < raw.length) {
+      const char = raw[index++];
+      if (char === '"') return text;
+      if (char === "\\") {
+        if (index === raw.length) return null;
+        text += raw[index++];
+      } else {
+        text += char;
+      }
+    }
+    return null;
+  };
+  const message = readQuoted();
+  if (message === null) return raw;
+  const messageEnd = index;
+  while (index < raw.length && /\s/.test(raw[index])) index += 1;
+  if (index < raw.length) {
+    // The optional final quoted string is an HTTP warn-date, not product copy.
+    if (index === messageEnd || readQuoted() === null) return raw;
+    while (index < raw.length && /\s/.test(raw[index])) index += 1;
+  }
+  return index === raw.length ? message : raw;
+}
+
+/** Keep transport syntax in metadata, never in reader-facing warning copy. */
+export function parseDataHealthWarnings(warning: string): { raw: string; message: string }[] {
+  if (!/^\s*\d{3}\s+\S+\s+"/.test(warning)) return [{ raw: warning, message: warning }];
+  const entries: string[] = [];
+  let start = 0;
+  let quoted = false;
+  let escaped = false;
+  let protocolEntry = true;
+  for (let index = 0; index < warning.length; index += 1) {
+    const char = warning[index];
+    if (escaped) {
+      escaped = false;
+    } else if (quoted && char === "\\") {
+      escaped = true;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (!quoted && (char === "," || char === "\n")) {
+      const nextIsProtocol = /^\s*\d{3}\s+\S+\s+"/.test(warning.slice(index + 1));
+      if (protocolEntry || nextIsProtocol) {
+        entries.push(warning.slice(start, index).trim());
+        start = index + 1;
+        protocolEntry = nextIsProtocol;
+      }
+    }
+  }
+  entries.push(warning.slice(start).trim());
+  return entries.filter(Boolean).map((raw) => ({ raw, message: decodeDataHealthWarning(raw) }));
+}
+
+export function formatDataHealthWarning(warning: string): string {
+  return parseDataHealthWarnings(warning).map(({ message }) => message).join("\n");
+}
+
 function isUnavailableError(error: unknown): boolean {
   return error instanceof ApiFetchError && error.status === 503;
 }

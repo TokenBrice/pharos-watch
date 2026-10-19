@@ -13,6 +13,8 @@ import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@sha
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { resolveReserveFeedReviews } from "../../lib/reserve-feed-reviews";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
+import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
 stubCryptoForAuth();
 
@@ -307,6 +309,21 @@ function fixtureMockD1(
     rows: [dewsPointer],
     first: dewsPointer,
   };
+  const hasSafetyPublicationFixture = tables.some((table) => table.matchBinds?.includes("report-cards:v9:publication-health"));
+  const safetyPublicationAt = Math.floor(Date.now() / 1000) - 30;
+  const safetyPublicationFixture = {
+    match: "FROM cache WHERE key = ?",
+    matchBinds: ["report-cards:v9:publication-health"],
+    rows: [],
+    first: {
+      value: stableJsonStringifyV1({
+        ...makeHealthyHealthResponse().safetyScorePublication!,
+        acceptedAtSec: safetyPublicationAt, attemptedAtSec: safetyPublicationAt,
+      }),
+      updated_at: safetyPublicationAt,
+    },
+    allowUnused: true,
+  };
   return mockD1(
     [
       ...(!tables.some((table) => table.match.includes("AS last_any")) ? [{
@@ -322,6 +339,7 @@ function fixtureMockD1(
       }] : []),
       ...(!includeStatusDefaults || hasPublicationFixture ? [] : [{ ...publicationFixture, allowUnused: true }]),
       ...(!includeStatusDefaults || hasDewsPointerFixture ? [] : [{ ...dewsPointerFixture, allowUnused: true }]),
+      ...(!includeStatusDefaults || hasSafetyPublicationFixture ? [] : [safetyPublicationFixture]),
       ...(!tables.some((table) => table.match.includes("worker_scheduled_checkpoints")) ? [{
         match: "FROM worker_scheduled_checkpoints", rows: [], first: null, allowUnused: true,
       }] : []),

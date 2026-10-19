@@ -722,7 +722,7 @@ describe("snapshotChainSupply", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "snapshot-chain-supply:last-write",
+          entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "snapshot-chain-supply:last-write",
       );
     expect(JSON.parse(String(markerWrite?.binds[1]))).toMatchObject({
       snapshotDate,
@@ -774,7 +774,7 @@ describe("snapshotChainSupply", () => {
       expect.arrayContaining([
         expect.stringContaining("DELETE FROM chain_supply_history"),
         expect.stringContaining("INSERT OR REPLACE INTO chain_supply_history"),
-        expect.stringContaining("INSERT OR REPLACE INTO cache"),
+        expect.stringContaining("INSERT INTO cache"),
       ]),
     );
   });

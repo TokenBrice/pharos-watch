@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
+import { formatDataHealthWarning } from "@/lib/data-health";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
@@ -191,7 +192,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       <QueryErrorNotice error={view.refreshError} hasData />
       {view.apiWarning ? (
         <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-          {view.apiWarning}
+          {formatDataHealthWarning(view.apiWarning)}
         </div>
       ) : null}
       <div className="space-y-3">

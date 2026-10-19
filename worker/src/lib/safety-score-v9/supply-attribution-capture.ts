@@ -423,9 +423,9 @@ export async function captureSafetyScoreV9SupplyAttribution(
         descriptor: descriptors[index], fixedInput, signal, observationClockSec,
         attributionById, journalRecords,
         diagnostics: diagnosticsById[descriptors[index].assetId],
-        rejectionCode: result.reason === "observer-failed"
-          ? "deployment-state-unavailable"
-          : "deployment-observation-window-insufficient",
+        // Capture admission/deadline failures contain no temporal-skew proof.
+        // The generation retains the exact budget failure separately.
+        rejectionCode: "deployment-state-unavailable",
       });
     }
   }

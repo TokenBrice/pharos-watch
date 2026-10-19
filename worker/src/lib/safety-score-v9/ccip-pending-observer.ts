@@ -302,6 +302,53 @@ export async function observeCcipPending(input: {
       return values;
     };
     let discoveryDigest = sha256Hex("ccip-indexer-discovery-v2");
+    // Authenticate the same reviewed reads in chain-local batches instead of
+    // hundreds of lane-serial HTTP round trips. This is only an attempt-local
+    // transport cache: the lane loop below still validates every exact value
+    // and owns failure attribution. Failed batches remain uncached.
+    const authenticationReads = new Map<string, Map<string, Parameters<typeof fetchEvmRpcBatch>[1][number]>>();
+    // Do not read ahead of the durable bootstrap prefix: a future lane's
+    // cancellation must not prevent earlier lanes from saving authenticated work.
+    for (const lane of input.source.lanes.slice(0, Math.max(1, checkpoint.lanes.length))) {
+      for (const [side, ramp, remote] of [
+        [lane.source, lane.onRampAddress, lane.destination],
+        [lane.destination, lane.offRampAddress, lane.source],
+      ] as const) {
+        const block = { blockHash: input.headers.get(side.chainId)!.hash, requireCanonical: true };
+        const peerBlock = side.peerBindingPin
+          ? { blockHash: side.peerBindingPin.hash, requireCanonical: true } : block;
+        const args = encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(remote.chainSelector)]);
+        const requests: Parameters<typeof fetchEvmRpcBatch>[1][number][] = [
+          ...[ramp, side.tokenPoolAddress].map(address => ({ method: "eth_getCode", params: [address, block] })),
+          { method: "eth_call", params: [{ to: side.tokenPoolAddress, data: call("getToken()") }, block] },
+          { method: "eth_call", params: [{ to: side.tokenAddress, data: call("decimals()") }, block] },
+          { method: "eth_call", params: [{ to: side.tokenPoolAddress, data: call("getRemoteToken(uint64)", args) }, peerBlock] },
+          { method: "eth_call", params: [{ to: side.tokenPoolAddress, data: call("getRemotePools(uint64)", args) }, peerBlock] },
+          ...(side.peerBindingPin ? [{ method: "eth_getCode", params: [side.tokenPoolAddress, peerBlock] }] : []),
+        ];
+        if (side === lane.source || lane.version !== "1.6") {
+          requests.push({ method: "eth_call", params: [{ to: ramp, data: call("getStaticConfig()") }, block] });
+        }
+        if (side === lane.destination && lane.version !== "1.5") {
+          requests.push({ method: "eth_call", params: [{ to: ramp, data: call("getSourceChainConfig(uint64)", args) }, block] });
+        }
+        let byKey = authenticationReads.get(side.chainId);
+        if (!byKey) { byKey = new Map(); authenticationReads.set(side.chainId, byKey); }
+        for (const request of requests) byKey.set(`${side.chainId}:${stableJsonStringifyV1(request)}`, request);
+      }
+    }
+    for (const [chain, byKey] of authenticationReads) {
+      const entries = [...byKey];
+      for (let from = 0; from < entries.length; from += 32) {
+        throwIfAborted(input.signal);
+        const chunk = entries.slice(from, from + 32);
+        const results = await fetchEvmRpcBatch(chain, chunk.map(([, request]) => request), options);
+        if (!results || results.length !== chunk.length) continue;
+        for (let i = 0; i < results.length; i++) {
+          if (results[i] !== null && results[i] !== undefined) pinnedReads.set(chunk[i]![0], results[i]);
+        }
+      }
+    }
     const proofs: Proof["lanes"] = [];
     for (let i = 0; i < input.source.lanes.length; i++) {
       const lane = input.source.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!, destPin = input.headers.get(lane.destination.chainId)!;

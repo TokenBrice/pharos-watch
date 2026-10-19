@@ -197,7 +197,8 @@ async function recordBlockOutcome(
       ? TRON_ORDER_PARKED_RETRY_DELAY_SEC
       : Math.min(TRON_ORDER_MAX_RETRY_DELAY_SEC,
         TRON_ORDER_BASE_RETRY_DELAY_SEC * 2 ** Math.min(7, Math.max(0, args.priorAttempts)));
-    await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    await db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
       .bind(key, JSON.stringify({ attempts: args.priorAttempts + 1, dueAt: args.nowSec + delaySec }), args.nowSec)
       .run();
   } catch (error) {

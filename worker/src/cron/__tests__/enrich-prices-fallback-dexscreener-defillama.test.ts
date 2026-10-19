@@ -88,7 +88,7 @@ describe("enrichMissingPrices", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
       );
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
@@ -210,7 +210,7 @@ describe("enrichMissingPrices", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -279,7 +279,7 @@ describe("enrichMissingPrices", () => {
 
     const circuitWrites = db
       .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
+      .filter((entry) => entry.sql.includes("INSERT INTO cache"))
       .filter((entry) => String(entry.binds[0]) === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
 
     expect(circuitWrites.length).toBeGreaterThan(0);

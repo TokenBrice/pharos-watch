@@ -25,7 +25,7 @@ describe("DataHealthBanner", () => {
     const failed = render(failure);
     expect(failed).toContain("Refresh failed; showing saved data");
     expect(failed).not.toContain("Data quality warning");
-    expect(failed).toContain('title="Liquidity: 199 - &quot;Latest sync-dex-liquidity run failed;');
+    expect(failed).toContain('title="Liquidity: Latest sync-dex-liquidity run failed;');
     expect(failed.replace(/title="[^"]*"/g, "")).not.toContain("failedSources=");
     expect(render(`110 - "Response is stale", ${failure}`, 9)).toContain("Refresh failed; showing saved data");
     expect(render(failure, 13)).toContain("Showing an older snapshot");
@@ -34,6 +34,8 @@ describe("DataHealthBanner", () => {
     expect(quality).toContain("Data quality warning");
     expect(quality).toContain("qualityDriftFlags=major-tvl-cliff:usds-sky");
     expect(quality.replace(/title="[^"]*"/g, "")).not.toContain("qualityDriftFlags=");
+    expect(failed).not.toContain("199 -");
+    expect(quality).not.toContain("199 -");
   });
 
   it("names the lagging source instead of a stall when totals were rebuilt within budget", () => {
@@ -59,5 +61,35 @@ describe("DataHealthBanner", () => {
     // Totals that are themselves out of budget keep the stall wording.
     expect(render({ observedAt: nowSec - 50 * 3600, sources })).not.toContain("catching up");
     expect(render(null)).not.toContain("catching up");
+  });
+
+  it("names independent dependency clocks and budgets without leaking HTTP syntax", () => {
+    const nowMs = Date.UTC(2026, 9, 19, 23);
+    const warning = '199 - "Flight-to-quality classification unavailable (source-stale, Safety Score budget 1h)"';
+    const flowMeta = {
+      updatedAt: nowMs / 1000 - 120, ageSeconds: 120, status: "fresh" as const,
+      freshBudgetSec: 28800, degradedBudgetSec: 43200, warning,
+      dependencies: {
+        flightToQuality: { updatedAt: nowMs / 1000 - 4000, ageSeconds: 4000, status: "stale" as const,
+          reason: "source-stale", freshBudgetSec: 3600, generationId: "accepted-safety-generation" },
+      },
+    };
+    const entries = [
+      deriveDataHealth({ label: "Mint/Burn Flows", dataUpdatedAt: nowMs, staleTime: 3600_000, hasData: true, meta: flowMeta }, nowMs),
+      deriveDataHealth({ label: "Live Reserves", dataUpdatedAt: nowMs, staleTime: 3600_000, hasData: true,
+        meta: { updatedAt: nowMs / 1000, ageSeconds: 0, status: "fresh",
+          dependencies: { reserveEvidence: { status: "fresh", reason: "live; sync:ok; fetch budget 172800 seconds; source budget 604800 seconds" } } } }, nowMs),
+    ];
+    const markup = renderToStaticMarkup(<DataHealthBanner persistent entries={entries} />);
+    expect(markup).toContain("Data quality warning");
+    expect(markup).toContain("freshness budget 8h");
+    expect(markup).toContain("Safety Score publication (flight-to-quality): stale");
+    expect(markup).toContain("dependency freshness budget 1h");
+    expect(markup).toContain("accepted-safety-generation");
+    expect(markup).toContain("reason source-stale");
+    expect(markup).toContain("live; sync:ok; fetch budget 172800 seconds");
+    expect(markup).toContain("source budget 604800 seconds");
+    expect(markup).not.toContain("199 -");
+    expect(flowMeta.warning).toBe(warning);
   });
 });

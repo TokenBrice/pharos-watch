@@ -54,7 +54,7 @@ function circuitCacheKeysTouched(db: { getHistory: () => Array<{ sql: string; bi
     .filter((entry) =>
       (
         entry.sql.includes("FROM cache WHERE key = ?") ||
-        entry.sql.includes("INSERT OR REPLACE INTO cache") ||
+        entry.sql.includes("INSERT INTO cache") ||
         entry.sql.includes("DELETE FROM cache WHERE key = ?")
       ) &&
       typeof entry.binds[0] === "string"
@@ -327,7 +327,7 @@ describe("circuit-breaker", () => {
 
       const write = db
         .getHistory()
-        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+        .find((entry) => entry.sql.includes("INSERT INTO cache"));
       expect(write?.binds[0]).toBe("circuit:src");
       expect(JSON.parse(String(write?.binds[1]))).toMatchObject({
         state: "closed",
@@ -475,7 +475,7 @@ describe("circuit-breaker", () => {
       await recoverBreakerOnNoCandidate(db, "src");
       const write = db
         .getHistory()
-        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+        .find((entry) => entry.sql.includes("INSERT INTO cache"));
       expect(write?.binds[0]).toBe("circuit:src");
       expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
     });
@@ -486,7 +486,7 @@ describe("circuit-breaker", () => {
       await recoverBreakerOnNoCandidate(db, "src");
       const write = db
         .getHistory()
-        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+        .find((entry) => entry.sql.includes("INSERT INTO cache"));
       expect(write).toBeUndefined();
     });
 
@@ -497,7 +497,7 @@ describe("circuit-breaker", () => {
       await recoverBreakerOnNoCandidate(db, "src");
       const write = db
         .getHistory()
-        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+        .find((entry) => entry.sql.includes("INSERT INTO cache"));
       expect(write?.binds[0]).toBe("circuit:src");
       expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
     });

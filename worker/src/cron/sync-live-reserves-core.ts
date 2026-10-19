@@ -10,7 +10,7 @@ import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "../lib/abort";
-import type { ScheduledCheckpointIdentity } from "../lib/scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../lib/scheduled-checkpoint-primitives";
 import {
   buildReserveSyncStateRecord,
   breakerKeyForConfig,
@@ -35,6 +35,7 @@ import {
 } from "../lib/live-reserves/store";
 import { parseReserveCompositionRow } from "../lib/live-reserves/store-row-decoding";
 import { evaluateLiveReserveAdmission } from "../lib/live-reserves/store-snapshot-state";
+import type { ReserveSyncAttemptStartRecord } from "../lib/live-reserves/store-shared";
 
 import { PRIMARY_FALLBACK_USED_WARNING_CODE } from "./reserve-adapter-runner";
 export { PRIMARY_FALLBACK_USED_WARNING_CODE } from "./reserve-adapter-runner";
@@ -343,6 +344,7 @@ export async function syncReserveCoin(args: {
   d1FinalizeTimeoutMs: number;
   deadlineMs?: number;
   checkpoint?: ScheduledCheckpointIdentity;
+  checkpointProgress?: ReserveSyncAttemptStartRecord["checkpointProgress"];
   stageTimings?: NonNullable<LiveReservePhaseTimings["stages"]>;
   onAttemptStarted?: (attemptId: string) => Promise<void>;
   onAttemptPending?: (attemptId: string) => Promise<void>;
@@ -412,10 +414,8 @@ export async function syncReserveCoin(args: {
     }
   };
 
-  // Fence the durable scheduler checkpoint before exposing the domain attempt
-  // as pending. A crash in between leaves a harmless checkpoint reference to
-  // a nonexistent attempt; the opposite order could leave an untracked pending
-  // attempt that recovery cannot clear with an exact compare-and-swap.
+  // Scheduled begins order checkpoint CAS and domain pending in one transaction.
+  // Standalone hooks still precede begin; no adapter runs until durable admission.
   await timeStage("checkpoint", async () => { await args.onAttemptStarted?.(attemptId); });
   const beginStartedMs = Date.now();
   try {
@@ -428,6 +428,7 @@ export async function syncReserveCoin(args: {
       configFingerprint: computeLiveReserveConfigFingerprint(config),
       deadlineMs: args.deadlineMs,
       checkpoint: args.checkpoint,
+      checkpointProgress: args.checkpointProgress,
     }));
   } finally {
     d1DurationMs += Date.now() - beginStartedMs;

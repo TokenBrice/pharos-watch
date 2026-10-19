@@ -811,7 +811,18 @@ Pricing emitted provenance is not necessarily circuit identity: `shared/lib/pric
 
 The baseline migration owns the generic `cache` schema; [`worker/migrations/MANIFEST.md`](../../worker/migrations/MANIFEST.md) owns lineage. Feature docs and writers own key inventories. Do not infer a publication contract from a cache key's presence.
 
-`worker/src/lib/db-cache.ts` owns access helpers. `setCacheIfAbsent()` preserves the first durable clock; `setCacheIfNewer()` admits **equal-clock** replacement/retry (`existing.updated_at <= runClock`) and rejects only older clocks. It is not body/generation identity. `getCaches()` deduplicates ≤100 unique keys into one query/snapshot and rejects larger requests instead of internally chunking.
+`worker/src/lib/db-cache.ts` owns access helpers. Generic writes use `INSERT ... ON CONFLICT(key) DO UPDATE`, avoiding delete/reinsert primary-key index churn. Default `prepareCacheUpsert()` / `setCache()` / `setCachesAt()` writes remain unconditional, including an older or equal incoming timestamp; unchanged payloads still advance their supplied freshness clock. `setCacheIfAbsent()` preserves the first durable clock; `setCacheIfNewer()` admits **equal-clock** replacement/retry (`existing.updated_at <= runClock`) and rejects only older clocks. It is not body/generation identity. `getCaches()` deduplicates ≤100 unique keys into one query/snapshot and rejects larger requests instead of internally chunking.
+
+### Current-row write accounting
+
+DEWS latest rows conflict-update on `stablecoin_id`, assigning every non-key column including `computed_at` and `updated_at`. Its sparse history, immutable publication buffer, pointer fence and publication cadence are unchanged; an unchanged score is not permission to skip a new observation. Yield current rows likewise conflict-update on `(stablecoin_id, source_key)` inside the existing generation-fenced atomic publication; [yield persistence](../yield-intelligence.md#persistence-and-publication) owns its stricter cache CAS and sentinel.
+
+DEWS daily snapshots still skip when the admitted identity set is unchanged. When membership changes, the reseal deletes only departed owned IDs and conflict-updates retained rows only if `score`, `band` or the exact `signals_json` bytes differ. These rows carry a UTC-day key, not a per-run freshness clock; identical retained rows therefore need no write. Frozen/quarantined evidence, the exact-set readback, D1 bind limits and the atomic delete/upsert boundary remain unchanged.
+
+The remaining runtime blacklist metrics/snapshot, identity cursor, quarantine/retry and DDR terminal-evidence cache writers use the same unconditional conflict-update semantics, retaining their original clocks, error handling and transaction boundaries. Operator-only pause scripts and test seed SQL are not recurring producer writers.
+
+D1 `meta.rows_written` includes index maintenance, not just changed logical rows. Estimate only the primary-key index churn avoided for existing keys until complete-run binding metadata proves more; new keys still require insertion and mutable indexed columns still cost writes. Adaptive query samples overlap imperfectly with database-level usage and are not an additive billing ledger. Capture complete producer runs and matching hourly database totals, then a full post-release 24-hour quota window and seven-day trend before claiming sustained savings. Neither clock suppression, retention/cadence changes, attribution loss nor index removal is part of this storage-only cutover; destructive index cleanup requires the separately operated rollout in the [deployment contract](../deployment-process.md#concurrency-and-rollback-scope).
+
 
 ### Multi-key generations
 

@@ -15,7 +15,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 
 const mockD1 = createMockD1Preset([
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "INSERT INTO cache", rows: [] },
 ]);
 
 afterEach(() => {
@@ -323,7 +323,7 @@ describe("fetchSupplementalPriceData", () => {
 
     const circuitWrites = db
       .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
+      .filter((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
     expect(circuitWrites.length).toBeGreaterThanOrEqual(1);
     expect(JSON.parse(String(circuitWrites[circuitWrites.length - 1]?.binds[1]))).toMatchObject({
       state: "closed",
@@ -382,7 +382,7 @@ describe("fetchSupplementalPriceData", () => {
 
     const circuitWrite = db
       .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
+      .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 1,

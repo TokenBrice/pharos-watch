@@ -54,7 +54,6 @@ export function makeMiniAppDb(
     { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
     { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
     { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
     { match: "INSERT INTO cache", rows: [] },
     { match: "UPDATE cache", rows: [] },
     { match: "DELETE FROM cache", rows: [] },

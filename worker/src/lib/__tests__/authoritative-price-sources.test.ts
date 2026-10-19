@@ -141,7 +141,7 @@ describe("authoritative-price-sources", () => {
     ]);
     expect(fetchEvmBlockNumberMock).toHaveBeenCalledTimes(1);
     expect(db.getHistory().some(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+      (entry) => entry.sql.includes("INSERT INTO cache")
         && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.AZND_CURVE_POOL}`,
     )).toBe(false);
   });
@@ -170,7 +170,7 @@ describe("authoritative-price-sources", () => {
     expect(overrides.size).toBe(0);
     expect(stats).toMatchObject({ attemptedCount: 1, failedCount: 1 });
     const circuitWrite = db.getHistory().find(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+      (entry) => entry.sql.includes("INSERT INTO cache")
         && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.AZND_CURVE_POOL}`,
     );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -344,7 +344,7 @@ describe("authoritative-price-sources", () => {
     expect(stats.skippedCircuitOpen).toBe(0);
     expect(overrides.has("sgho-aave")).toBe(lastSucceeds);
     const writes = db.getHistory().filter((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`);
+      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`);
     expect(writes).toHaveLength(1);
     expect(JSON.parse(String(writes[0].binds[1]))).toMatchObject({
       state: "closed", consecutiveFailures: lastSucceeds ? 0 : 1,
@@ -379,7 +379,7 @@ describe("authoritative-price-sources", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -415,7 +415,7 @@ describe("authoritative-price-sources", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -447,7 +447,7 @@ describe("authoritative-price-sources", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -484,7 +484,7 @@ describe("authoritative-price-sources", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -544,7 +544,7 @@ describe("authoritative-price-sources", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
@@ -915,7 +915,7 @@ describe("authoritative-price-sources", () => {
       .getHistory()
       .filter(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.sql.includes("INSERT INTO cache") &&
           entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(circuitWrites).toHaveLength(1);

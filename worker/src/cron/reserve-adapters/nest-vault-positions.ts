@@ -341,6 +341,8 @@ export async function fetchNestVaultPositionsReserves(
   let grossNavUsd: number | null = null;
   let calculatedNavUsd: number | null = null;
   let claimableFeesUsd: number | null = null;
+  let unrealizedDividendsUsd: number | null = null;
+  let calculatedPriceUrl: string | null = null;
   if (pendingWithdrawalUsd > 0) {
     // Pending withdrawals are admitted per reviewed vault only: nBASIS limits
     // them to Superstate USCC redemption receivables, while nOPAL redemptions
@@ -361,19 +363,24 @@ export async function fetchNestVaultPositionsReserves(
       && !withdrawalReviewed(transaction))) {
       throw new Error(`nest-vault-positions cannot reconcile positive ${coin.symbol} pending withdrawals`);
     }
+    calculatedPriceUrl = new URL("calculated-price", params.priceUrl).href;
     const calculated = await fetchJsonWithRetry<{ data?: {
       grossCalculatedNav?: unknown; calculatedNav?: unknown; claimableFees?: unknown;
-      claimableFeesAdjusted?: unknown; errors?: unknown;
-    } }>(new URL("calculated-price", params.priceUrl).href, signal, 12_000, ctx);
+      unrealizedDividends?: unknown; claimableFeesAdjusted?: unknown; errors?: unknown;
+    } }>(calculatedPriceUrl, signal, 12_000, ctx);
     const data = calculated.data;
     grossNavUsd = parsePositiveNumericLike(data?.grossCalculatedNav);
     calculatedNavUsd = parsePositiveNumericLike(data?.calculatedNav);
     claimableFeesUsd = parseFiniteNumber(data?.claimableFees, { label: "Nest reconciliation claimable fees", min: 0 });
+    // Nest includes accrued yield in NAV and exposes unrealizedDividends
+    // separately from /positions. Require the explicit nonnegative amount,
+    // including an observed zero; gross reconciliation admits it exactly once.
+    unrealizedDividendsUsd = readNonNegativeNumericLike(data?.unrealizedDividends, "unrealized dividends");
     const hasErrors = [positions.data?.errors, data?.errors]
       .some((errors) => errors !== undefined && (!Array.isArray(errors) || errors.length > 0));
     if (hasErrors || grossNavUsd == null || calculatedNavUsd == null
       || claimableFeesUsd == null || claimableFeesUsd < 0 || data?.claimableFeesAdjusted !== true
-      || Math.abs(grossNavUsd - settledPositionUsd - pendingDepositUsd - pendingWithdrawalUsd) > 0.01
+      || Math.abs(grossNavUsd - settledPositionUsd - pendingDepositUsd - pendingWithdrawalUsd - unrealizedDividendsUsd) > 0.01
       || Math.abs(grossNavUsd - claimableFeesUsd - calculatedNavUsd) > 0.01) {
       throw new Error("nest-vault-positions pending withdrawal NAV reconciliation failed");
     }
@@ -392,13 +399,16 @@ export async function fetchNestVaultPositionsReserves(
       );
     }
   }
-  const settledCoverageUsd = settledPositionUsd + pendingDepositUsd + pendingWithdrawalUsd;
+  // No calculated-price read means no separately admitted dividend contributor,
+  // not a claim that the vault has zero unrealized dividends.
+  const reconciledDividendsUsd = unrealizedDividendsUsd != null ? unrealizedDividendsUsd : 0;
+  const settledCoverageUsd = settledPositionUsd + pendingDepositUsd + pendingWithdrawalUsd + reconciledDividendsUsd;
   const navReconciliationResidualUsd =
     grossNavUsd == null && navUsd != null && navUsd > 0 && settledCoverageUsd < navUsd
       ? navUsd - settledCoverageUsd
       : null;
   const unknownValue = settledValues.reduce((sum, value) => sum + (value.unknown ? value.value : 0), 0)
-    + pendingDepositUsd + pendingWithdrawalUsd + (navReconciliationResidualUsd ?? 0);
+    + pendingDepositUsd + pendingWithdrawalUsd + reconciledDividendsUsd + (navReconciliationResidualUsd ?? 0);
   const values = mergeSliceValues([
     ...settledValues,
     ...(pendingWithdrawalUsd > 0
@@ -416,6 +426,14 @@ export async function fetchNestVaultPositionsReserves(
           sourceKey: "nest-vault-positions:pending-deposits",
           value: pendingDepositUsd,
           name: "Nest pending deposits",
+          risk: "high" as const,
+        }]
+      : []),
+    ...(reconciledDividendsUsd > 0
+      ? [{
+          sourceKey: "nest-vault-positions:unrealized-dividends",
+          value: reconciledDividendsUsd,
+          name: "Nest unrealized dividend receivables",
           risk: "high" as const,
         }]
       : []),
@@ -453,17 +471,18 @@ export async function fetchNestVaultPositionsReserves(
         ...(reconcilePending
           ? {
               reconciliationKind: grossNavUsd != null
-                ? "settled-plus-pending-equals-gross-nav-less-fees-equals-net-nav"
+                ? "settled-plus-pending-plus-dividends-equals-gross-nav-less-fees-equals-net-nav"
                 : coin.id === "nbasis-nest"
                 ? "settled-plus-pending-deposits-compared-with-nav"
                 : "settled-plus-pending-deposits-plus-residual-equals-nav",
               pendingTransactions,
             }
           : {}),
+        ...(calculatedPriceUrl != null ? { calculatedPriceUrl } : {}),
       },
       totalReserveUsd,
       settledPositionUsd,
-      ...(grossNavUsd != null ? { grossNavUsd, calculatedNavUsd, claimableFeesUsd } : {}),
+      ...(grossNavUsd != null ? { grossNavUsd, calculatedNavUsd, claimableFeesUsd, unrealizedDividendsUsd } : {}),
       ...(reconcilePending ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
       ...(navReconciliationResidualUsd != null ? { navReconciliationResidualUsd } : {}),
       unknownExposurePct,

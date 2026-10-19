@@ -13,6 +13,9 @@ export const FreshnessAssessmentSchema = z.object({
 export const ApiDependencyMetaSchema = z.object({
   updatedAt: z.number().nullable().optional(),
   ageSeconds: z.number().nullable().optional(),
+  /** Independent consumer budget and accepted generation, not the parent response clock. */
+  freshBudgetSec: z.number().finite().nonnegative().optional(),
+  generationId: z.string().nullable().optional(),
   status: z.enum([...FRESHNESS_STATUS_VALUES, "unavailable"]),
   reason: z.string().nullish(),
 });

@@ -10,10 +10,10 @@ import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getRpcAuthHeaders, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl } from "../public-rpc-registry";
-import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
+import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, findEvmBlockHeaderInTimestampWindow, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 import { observeL2MessengerPending } from "./l2-messenger-pending-observer";
@@ -499,18 +499,18 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       // Independent finalized heads can differ by several minutes. Select a
       // coherent historical window before reading any quantities; never move
       // the oldest pin forward, relax skew/freshness, or redate an observation.
-      const latestCoherentSec = Math.min(...[...headers.values()].map(header => header.timestamp)) +
+      const earliestCoherentSec = Math.min(...[...headers.values()].map(header => header.timestamp));
+      const latestCoherentSec = earliestCoherentSec +
         V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
       for (const [chainId, header] of headers) {
         if (header.timestamp <= latestCoherentSec) continue;
         failedRouteId = `anchor:${chainId}`;
-        const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(chainId, latestCoherentSec, {
-          latestBlockNumber: header.number,
-          blockTimestampByNumber: new Map([[header.number, header.timestamp]]),
-        }, options);
-        if (blockNumber === null || blockNumber > header.number) return false;
-        const aligned = await fetchEvmBlockHeader(chainId, blockNumber, options);
-        if (!aligned || aligned.number !== blockNumber || aligned.timestamp > latestCoherentSec) return false;
+        const aligned = await findEvmBlockHeaderInTimestampWindow({
+          initialHeader: header, earliestTimestamp: earliestCoherentSec,
+          latestTimestamp: latestCoherentSec, signal: input.signal,
+          fetchHeader: number => fetchEvmBlockHeader(chainId, number, options),
+        });
+        if (!aligned) return false;
         headers.set(chainId, aligned);
       }
       return true;

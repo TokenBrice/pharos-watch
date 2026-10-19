@@ -9,7 +9,7 @@ import { OpsStatusChip } from "@/components/ops-status-chip";
 import { UniverseChip } from "@/components/universe-chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildRunLineModel, selectRunLineDrivers, type RunLineModel } from "@/lib/flow-run-line-model";
-import type { DataHealthInfo } from "@/lib/data-health";
+import { formatDataHealthWarning, type DataHealthInfo } from "@/lib/data-health";
 import { buildGaugeVerdict } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -18,6 +18,7 @@ import { formatCurrency, formatElapsedSeconds, formatSignedCurrency, getNetColor
 import { aggregateCoinFlows24h } from "@shared/lib/mint-burn-coin-helpers";
 import { formatBankRunGaugeScore } from "@shared/lib/mint-burn-signals";
 import type { MintBurnCoinFlow, MintBurnFlowsResponse, MintBurnGauge } from "@shared/types";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
 
 const SYNC_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
@@ -58,9 +59,9 @@ function DataHealthChip({ health }: { health: DataHealthInfo }) {
   return (
     <OpsStatusChip label={label} reasonCodes={codes}>
       <p>{health.message}</p>
-      {health.meta?.warning ? <p>{health.meta.warning}</p> : null}
+      {health.meta?.warning ? <p>{formatDataHealthWarning(health.meta.warning)}</p> : null}
       <p className="text-muted-foreground">
-        Budget: fresh within {formatElapsedSeconds(budgetSec)}
+        Flow observation budget: fresh within {formatElapsedSeconds(budgetSec)}
         {health.ageMs != null ? ` · generation ${formatElapsedSeconds(health.ageMs / 1000)} old` : " · generation time unknown"}.
       </p>
     </OpsStatusChip>
@@ -101,6 +102,8 @@ function GaugeStatusChips({
   const withheld = gauge?.partialValuationInputs ?? 0;
   const weightsMissing = gauge?.mcapUnavailableCoins ?? 0;
   const budgetMin = Math.round(API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows / 60);
+  const ftqDependency = dataHealth?.meta?.dependencies?.[MINT_BURN_FTQ_DEPENDENCY_KEY];
+  const classificationReason = gauge?.classificationReason ?? ftqDependency?.reason ?? "classification-unavailable";
   return (
     <>
       {gauge && gauge.score == null ? (
@@ -147,19 +150,31 @@ function GaugeStatusChips({
           </p>
         </OpsStatusChip>
       ) : null}
-      {gauge?.flightToQuality === null ? (
+      {gauge?.classificationSource === "unavailable" ? (
+        <OpsStatusChip label="FTQ unavailable" reasonCodes={["classification-unavailable", classificationReason]}>
+          <p>{sync?.classificationWarning
+            ? formatDataHealthWarning(sync.classificationWarning)
+            : `Flight-to-quality classification is unavailable because the Safety Score source could not be admitted (${classificationReason}).`}</p>
+          {ftqDependency ? (
+            <p className="text-muted-foreground">
+              Safety Score dependency budget: {ftqDependency.freshBudgetSec != null
+                ? formatElapsedSeconds(ftqDependency.freshBudgetSec) : "unknown"}
+              {ftqDependency.updatedAt != null
+                ? ` · accepted publication ${SYNC_TIME_FORMAT.format(new Date(ftqDependency.updatedAt * 1000))} UTC`
+                : " · source generation unknown"}
+              {ftqDependency.ageSeconds != null ? ` · source ${formatElapsedSeconds(ftqDependency.ageSeconds)} old` : ""}.
+            </p>
+          ) : null}
+        </OpsStatusChip>
+      ) : gauge?.flightToQuality === null ? (
         <OpsStatusChip label="FTQ unavailable" reasonCodes={["valuation-incomplete"]}>
           <p>Missing valuation could change the flight-to-quality verdict, so none is published.</p>
-        </OpsStatusChip>
-      ) : gauge?.classificationSource === "unavailable" && sync?.classificationWarning ? (
-        <OpsStatusChip label="FTQ unavailable" reasonCodes={["classification-unavailable"]}>
-          <p>{sync.classificationWarning}</p>
         </OpsStatusChip>
       ) : null}
       {dataHealth && !sync?.warning ? <DataHealthChip health={dataHealth} /> : null}
       {sync?.warning ? (
         <OpsStatusChip label="Sync delayed" reasonCodes={[`freshness-${sync.freshnessStatus}`]}>
-          <p>{sync.warning}</p>
+          <p>{formatDataHealthWarning(sync.warning)}</p>
           <p className="text-muted-foreground">
             Budget: {budgetMin} min from the last critical-lane sync
             {sync.lastSuccessfulSyncAt != null

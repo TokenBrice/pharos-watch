@@ -9,7 +9,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "BRL cash and cash equivalents plus overnight repurchase agreements collateralized by Brazilian corporate debentures; the August 31, 2026 reserve and circulation totals received reasonable assurance from UHY Bendoraytes",
+  "collateral": "BRL cash and cash equivalents plus overnight repurchase agreements collateralized by Brazilian corporate debentures; the September 30, 2026 reserve and circulation totals received reasonable assurance from UHY Bendoraytes",
   "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem through Avenia after approved KYC, with BRL sale proceeds paid by PIX to matching account-holder details. Platform terms describe two-business-day settlement with external-delay exceptions, not an unconditional bank-credit SLA; native multichain deployment without wrapping.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "365",
@@ -23,17 +23,18 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-16",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-16",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Claude curation campaign 2026-09-21 (Resv03)",
+      "reviewer": "Pharos production-green reserve review 2026-10-19",
       "confidence": "verified",
       "sources": [
         {
-          "label": "UHY BRLA Transparency Report - August 31, 2026",
-          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3dd7f28f-0ae4-80cc-82e6-c77ddef59fbe"
+          "label": "UHY BRLA Transparency Report - September 30, 2026 (dated October 15, digitally signed October 16)",
+          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3fb7f28f-0ae4-8083-9016-e7b53db36574"
         }
       ]
     }

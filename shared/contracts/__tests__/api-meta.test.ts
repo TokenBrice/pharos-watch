@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiMetaEnvelopeSchema, ApiMetaSchema } from "@pharos/contracts/api-meta";
+import { ApiDependencyMetaSchema, ApiMetaEnvelopeSchema, ApiMetaSchema } from "@pharos/contracts/api-meta";
 
 describe("ApiMetaSchema", () => {
   it("parses freshness metadata with dependency status details", () => {
@@ -19,6 +19,22 @@ describe("ApiMetaSchema", () => {
     });
 
     expect(parsed.dependencies?.reportCards.status).toBe("fresh");
+  });
+
+  it("retains independent dependency budget and accepted generation without requiring them on legacy entries", () => {
+    const dependency = {
+      updatedAt: 1777550000,
+      ageSeconds: 5000,
+      status: "stale",
+      reason: "source-stale",
+      freshBudgetSec: 3600,
+      generationId: "safety-publication-accepted",
+    };
+    expect(ApiDependencyMetaSchema.parse(dependency)).toEqual(dependency);
+    expect(ApiDependencyMetaSchema.parse({ status: "unavailable", reason: "source-missing" }))
+      .toEqual({ status: "unavailable", reason: "source-missing" });
+    expect(ApiDependencyMetaSchema.safeParse({ ...dependency, freshBudgetSec: -1 }).success).toBe(false);
+    expect(ApiDependencyMetaSchema.safeParse({ ...dependency, freshBudgetSec: Infinity }).success).toBe(false);
   });
 
   it("rejects unknown top-level freshness statuses", () => {

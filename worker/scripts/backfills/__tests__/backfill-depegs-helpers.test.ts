@@ -244,7 +244,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
           updated_at: Math.floor(Date.now() / 1000),
         },
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-15");
@@ -274,7 +274,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
           updated_at: Math.floor(Date.now() / 1000),
         },
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
@@ -286,7 +286,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
       },
     ]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache"));
     expect(JSON.parse(cacheWrite?.binds[1] as string)).toEqual({
       "2025-06-14": { cnh: 7.2 },
     });
@@ -307,7 +307,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
@@ -333,7 +333,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
@@ -355,14 +355,14 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     expect(
       await fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14"),
     ).toEqual({ ARS: [] });
     expect(
-      firstDb.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")),
+      firstDb.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache")),
     ).toBe(false);
 
     mockFetch([
@@ -378,7 +378,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     expect(
@@ -390,7 +390,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
       }],
     });
     const cacheWrite = secondDb.getHistory().find(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"),
+      (entry) => entry.sql.includes("INSERT INTO cache"),
     );
     expect(JSON.parse(cacheWrite?.binds[1] as string)).toEqual({
       "2025-06-14": { ars: 1_180 },
@@ -411,11 +411,11 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     await fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14");
-    const cacheWrite = firstDb.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const cacheWrite = firstDb.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache"));
     const cachedValue = cacheWrite?.binds[1];
     expect(typeof cachedValue).toBe("string");
     expect(JSON.parse(cachedValue as string)).toEqual({ "2025-06-14": {} });
@@ -449,7 +449,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     await expect(
@@ -491,7 +491,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
     ]);
 
     const fetchPromise = fetchHistoricalSecondaryFxRates(db, ["ARS"], "2025-06-14", "2025-06-20");

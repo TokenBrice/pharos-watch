@@ -23,7 +23,7 @@ const MINI_APP_MVP_ALLOWED_UPDATES = [
   "chosen_inline_result",
 ] as const;
 const CACHE_SELECT_MATCH = "SELECT value, updated_at FROM cache WHERE key = ?";
-const CACHE_WRITE_MATCH = "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)";
+const CACHE_WRITE_MATCH = "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)";
 const PROFILE_BACKOFF_METHODS = ["setMyName", "setMyShortDescription", "setMyDescription"] as const;
 
 type CacheRow = { value: string; updated_at: number };
@@ -280,7 +280,7 @@ describe("reconcileTelegramMenuButton", () => {
     const write = db
       .getHistory()
       .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "telegram:menu-reconciled",
+        (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "telegram:menu-reconciled",
       );
     expect(write?.binds[1]).toBe(expectedMenuCacheValue());
   });
@@ -559,7 +559,7 @@ describe("reconcileTelegramProfileRegistration", () => {
       .getHistory()
       .find(
         (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "telegram:reconcile:429:setMyName",
+          entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "telegram:reconcile:429:setMyName",
       );
     expect(backoffWrite?.binds[1]).toBe("60");
   });

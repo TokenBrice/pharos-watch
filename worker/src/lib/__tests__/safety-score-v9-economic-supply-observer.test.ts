@@ -114,17 +114,16 @@ describe("reviewed economic supply observation", () => {
       f.plan.deployments.push({ ...first, deploymentKey: `base:${first.address}`, chainId: "base" });
       const oldest = CLOCK - (scenario === "stale oldest pin" ? 1801 : 300);
       const target = oldest + 120;
-      const alignedTime = target + (scenario === "future aligned pin" ? 1 : 0);
-      vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (chain, number) => ({
-        number: number === "finalized" ? 100 : number, hash: HASH,
-        timestamp: chain === "ethereum" ? oldest : number === 90 ? alignedTime : CLOCK - 60,
-      }));
-      const lookup = vi.spyOn(evmRpc, "resolveClosestBlockAtOrBeforeTimestamp")
-        .mockResolvedValue(scenario === "lookup unavailable" ? null : 90);
+      vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (chain, number) => {
+        const height = number === "finalized" ? 100 : number;
+        if (chain === "base" && height !== 100 && scenario === "lookup unavailable") return null;
+        return {
+          number: height, hash: HASH,
+          timestamp: chain === "ethereum" ? oldest : scenario === "future aligned pin"
+            ? CLOCK - 60 : CLOCK - 60 - (100 - height) * 24,
+        };
+      });
       const result = await f.run();
-      expect(lookup).toHaveBeenCalledWith("base", target, {
-        latestBlockNumber: 100, blockTimestampByNumber: new Map([[100, CLOCK - 60]]),
-      }, expect.objectContaining({ chainRpcs: f.chainRpcs }));
       if (scenario !== "coherent") {
         expect(result.status).toBe("rejected");
         if (scenario !== "stale oldest pin") expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
@@ -134,11 +133,16 @@ describe("reviewed economic supply observation", () => {
         aggregate: { observedAtSec: CLOCK - 60 },
         observations: [
           expect.objectContaining({ anchor: "100", observedAtSec: oldest }),
-          expect.objectContaining({ anchor: "90", observedAtSec: target }),
+          expect.objectContaining({ anchor: "92", observedAtSec: target - 72 }),
         ],
       } });
       expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls.map(call => [call[0], call[2]]))
-        .toEqual([["ethereum", 100], ["base", 90]]);
+        .toEqual([["ethereum", 100], ["base", 92]]);
+      // Stop at the first in-window header and reuse it for the state reads;
+      // the only repeat of that number is the mandatory final reorg check.
+      expect(vi.mocked(evmRpc.fetchEvmBlockHeader).mock.calls
+        .filter(([chain]) => chain === "base").map(([, number]) => number))
+        .toEqual([100, 99, 98, 96, 92, 92]);
     },
   );
 

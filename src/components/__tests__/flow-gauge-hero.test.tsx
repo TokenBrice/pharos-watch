@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FlowGaugeHero } from "@/components/flow-gauge-hero";
 import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
@@ -122,5 +122,49 @@ describe("FlowGaugeHero", () => {
 
     expect(container.querySelector('[data-reason-codes="data-health-degraded source"]')?.textContent).toContain("Source warning");
     expect(container.textContent).not.toContain("Data quality warning");
+  });
+
+  it.each(["source-stale", "publication-held"])("explains classification-null before valuation-null and retains its dependency budget: %s", (reason) => {
+    const warning = `199 - "Flight-to-quality classification unavailable: Safety Score source (${reason}); budget 1h."`;
+    const { container } = render(
+      <FlowGaugeHero
+        gauge={gauge({ flightToQuality: null, flightIntensity: null, classificationSource: "unavailable", classificationReason: reason })}
+        coins={coins}
+        sync={{ lastSuccessfulSyncAt: 1_790_000_000, freshnessStatus: "fresh", warning: null,
+          classificationWarning: warning, criticalLaneHealthy: true }}
+        dataHealth={{
+          label: "Mint/Burn Flows", state: "degraded", message: "A source dependency is unavailable.",
+          dataUpdatedAt: 1_790_000_000_000, ageMs: 120_000, staleTime: 3_600_000, degradationReason: "source",
+          meta: { updatedAt: 1_790_000_000, ageSeconds: 120, status: "fresh", freshBudgetSec: 28800, warning,
+            dependencies: { flightToQuality: { status: "unavailable", reason,
+              updatedAt: 1_789_996_000, ageSeconds: 4000, freshBudgetSec: 3600, generationId: "accepted-generation" } } },
+        }}
+      />,
+    );
+    expect(container.querySelector('[data-reason-codes="valuation-incomplete"]')).toBeNull();
+    expect(container.querySelector(`[data-reason-codes="classification-unavailable ${reason}"]`)).toBeTruthy();
+    // "Active" also labels the independent tracked-universe chip, not an FTQ verdict.
+    expect(screen.getByRole("button", { name: /^Universe: Active,/ })).toBeTruthy();
+    expect(screen.queryByText("Flight to quality")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /FTQ unavailable/ }));
+    expect(screen.getByText(/Flight-to-quality classification unavailable: Safety Score source/)).toBeTruthy();
+    expect(screen.getByText(/Safety Score dependency budget: 1h/)).toBeTruthy();
+    expect(document.body.textContent).not.toContain("199 -");
+    expect(document.body.textContent).not.toContain("Missing valuation could change");
+  });
+
+  it("retains the valuation-specific FTQ reason when classification is admitted", () => {
+    const { container } = render(
+      <FlowGaugeHero
+        gauge={gauge({ flightToQuality: null, flightIntensity: null,
+          classificationSource: "safety-score-v9-publication", classificationReason: null })}
+        coins={coins}
+        sync={null}
+      />,
+    );
+    expect(container.querySelector('[data-reason-codes="valuation-incomplete"]')).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /FTQ unavailable/ }));
+    expect(screen.getByText("Missing valuation could change the flight-to-quality verdict, so none is published.")).toBeTruthy();
+    expect(screen.queryByText(/Safety Score dependency budget/)).toBeNull();
   });
 });

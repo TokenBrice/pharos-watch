@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DEX_GLOBAL_KEY, type DexLiquidityData, type DexLiquidityMap } from "@shared/types/market";
-import { buildLiquidityViewModel } from "./model";
+import { buildLiquidityViewModel, formatLiquidityWarningMessage } from "./model";
 
 function makeLiquidity(overrides: Partial<DexLiquidityData> = {}): DexLiquidityData {
   return {
@@ -46,6 +46,14 @@ function makeLiquidity(overrides: Partial<DexLiquidityData> = {}): DexLiquidityD
 }
 
 describe("liquidity page model", () => {
+  it("shares HTTP warning decoding without changing liquidity-specific quality copy", () => {
+    expect(formatLiquidityWarningMessage('199 - "Latest sync-dex-liquidity run shows high quality drift (assets=a,b)"'))
+      .toBe("Some liquidity data is being re-verified");
+    const warning = '199 - "Provider delayed,\nread retained", 110 - "Response is stale"';
+    expect(formatLiquidityWarningMessage(warning)).toBe("Provider delayed,\nread retained Response is stale");
+    expect(formatLiquidityWarningMessage(warning)).not.toContain("199 -");
+  });
+
   it("keeps visible rows filtered while computing summary stats from the full liquidity map", () => {
     const [usdScored, usdUnrated] = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === "USD");
     const eurScored = ACTIVE_STABLECOINS.find((coin) => coin.flags.pegCurrency === "EUR");

@@ -119,6 +119,53 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     expect(network.requests.every(row => !row.url.includes("graphql"))).toBe(true);
     expect(network.rpcCalls.some(row => row.data.startsWith(toFunctionSelector("allocation(bytes32)")))).toBe(false);
   });
+  it("batches complete market tuples and reuses block-bound reads/code within a slice", async () => {
+    const f = fixture(primeRows);
+    const network = installAdapterNetwork(f.spec);
+    const ioLimiter = createAdapterIoLimiter();
+    const io = vi.spyOn(ioLimiter, "run");
+    const requestCache = new Map<string, Promise<unknown>>();
+    const ctx = { chainRpcs: network.chainRpcs, requestCache, ioLimiter };
+    const signal = new AbortController().signal;
+    const first = await observeMorphoLenderBook(f.coin, f.config, signal, ctx);
+    expect(first.status).toBe("ok");
+    // Forty exact tuple/position/accounting calls fit two <=32-call waves,
+    // rather than eight independent per-market requests.
+    expect(io.mock.calls.filter(([label]) => label === "lender-book-batch:ethereum")).toHaveLength(7);
+    expect(io.mock.calls.filter(([label]) => label === `lender-book-code:ethereum:${MULTICALL3_ADDRESS}`)).toHaveLength(1);
+    const firstRequests = network.requests.length;
+    io.mockClear();
+    const second = await observeMorphoLenderBook(f.coin, f.config, signal, ctx);
+    expect(second).toEqual(first);
+    // Re-reading the same immutable book still rechecks its header; it cannot
+    // reuse the final canonicality check merely because the payload is cached.
+    expect(network.requests.length - firstRequests).toBe(1);
+    expect(io.mock.calls.map(([label]) => label)).toEqual(["lender-book-recheck:ethereum"]);
+    requestCache.clear();
+    io.mockClear();
+    expect((await observeMorphoLenderBook(f.coin, f.config, signal, ctx)).status).toBe("ok");
+    expect(io.mock.calls.some(([label]) => label.startsWith("lender-book-code:"))).toBe(true);
+  });
+
+  it("does not reuse code or state across different finalized block hashes", async () => {
+    const f = fixture(primeRows);
+    const firstNetwork = installAdapterNetwork(f.spec);
+    const requestCache = new Map<string, Promise<unknown>>();
+    const signal = new AbortController().signal;
+    expect((await observeMorphoLenderBook(f.coin, f.config, signal, {
+      chainRpcs: firstNetwork.chainRpcs, requestCache,
+    })).status).toBe("ok");
+    const changedPin = { ...PIN, hash: `0x${"ab".repeat(32)}` };
+    requestCache.set("morpho-book:finalized:ethereum", Promise.resolve(changedPin));
+    f.spec.block = changedPin;
+    f.spec.code![f.vault] = "0x";
+    const nextNetwork = installAdapterNetwork(f.spec);
+    expect(await observeMorphoLenderBook(f.coin, f.config, signal, {
+      chainRpcs: nextNetwork.chainRpcs, requestCache,
+    })).toMatchObject({ status: "unavailable", reason: "identity-mismatch" });
+    expect(nextNetwork.requests.length).toBeGreaterThan(0);
+  });
+
   it("does not add four off-NAV one-unit Yield residuals to its seven current claims", async () => {
     // Exact claim amounts from census-yield.md §2.2; synthetic immutable market
     // tuples intentionally isolate current enumeration from historical positions.
@@ -500,6 +547,29 @@ describe("MetaMorpho source-defined integer accrual", () => {
     expect(result.status).toBe("ok");
     if (result.status === "ok") expect(result.deployments[0].markets[0].includedAssetsRaw).toBe(expected.toString());
     expect(network.rpcCalls.some(call => call.contract === IRM && call.selector === toFunctionSelector("borrowRateView((address,address,address,address,uint256),(uint128,uint128,uint128,uint128,uint128,uint128))"))).toBe(true);
+  });
+  it("batches eligible IRM probes only after the complete pinned market-state wave", async () => {
+    const rows = Array.from({ length: 8 }, (_, index) => market(100n, index + 1, {
+      state: packed([100n, 100_000_000n, 50n, 50_000_000n, BigInt(PIN.timestamp - 100), 0n]),
+    }));
+    const f = fixture(rows, "bbqusdc-steakhouse", "meta");
+    const network = installAdapterNetwork(f.spec);
+    const ioLimiter = createAdapterIoLimiter();
+    const io = vi.spyOn(ioLimiter, "run");
+    const result = await observeMorphoLenderBook(f.coin, f.config, new AbortController().signal, {
+      chainRpcs: network.chainRpcs, requestCache: new Map(), ioLimiter,
+    });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.deployments[0].markets).toHaveLength(8);
+      expect(result.deployments[0].reconciliationResidualRaw).toBe("0");
+    }
+    expect(io.mock.calls.filter(([label]) => label === "lender-book-batch:ethereum")).toHaveLength(5);
+    const rateSelector = toFunctionSelector("borrowRateView((address,address,address,address,uint256),(uint128,uint128,uint128,uint128,uint128,uint128))");
+    const rates = network.rpcCalls.filter(call => call.selector === rateSelector);
+    expect(rates).toHaveLength(8);
+    const firstRate = network.rpcCalls.findIndex(call => call.selector === rateSelector);
+    expect(network.rpcCalls.slice(0, firstRate).filter(call => call.selector === toFunctionSelector("market(bytes32)"))).toHaveLength(8);
   });
   it("retains virtual assets/shares and floor rounding, including tiny positions", () => {
     expect(accruedMorphoLenderAssets({ supplyAssets: 10n, supplyShares: 10n, borrowAssets: 0n, fee: 0n,

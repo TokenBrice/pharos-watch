@@ -1,4 +1,4 @@
-import type { ScheduledCheckpointIdentity } from "../scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../scheduled-checkpoint-primitives";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { WORKER_ACTIVE_STABLECOINS, hasWorkerLiveReserves, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
@@ -134,6 +134,8 @@ export interface ReserveSyncAttemptStartRecord {
   configFingerprint?: string | null;
   deadlineMs?: number;
   checkpoint?: ScheduledCheckpointIdentity;
+  /** Scheduled begin batches the exact frontier CAS before exposing pending state. */
+  checkpointProgress?: { itemsDone: number; itemsTotal: number; recoveryLeaseUntil?: number };
 }
 
 export interface LiveReserveHistoryPruneResult {

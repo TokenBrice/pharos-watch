@@ -51,7 +51,8 @@ export async function reconcileBlacklistIdentities(db: D1Database, signal?: Abor
         });
       }
     }
-    await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    await db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
       .bind(key, page.length === PAGE_SIZE ? page[page.length - 1]!.id : "", Math.floor(Date.now() / 1000)).run();
   }
 }

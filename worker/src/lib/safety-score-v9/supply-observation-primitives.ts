@@ -207,6 +207,52 @@ export async function rewindEvmBlockHeaderToScoringClock(input: {
   return null;
 }
 
+/** Find any safe header in the inclusive window, not the closest timestamp.
+ * Exponential bracketing stays near the supplied safe head; binary refinement
+ * is needed only when a probe jumps over the whole window. Return the fetched
+ * hash-bearing header so callers do not perform a second numbered lookup.
+ */
+export async function findEvmBlockHeaderInTimestampWindow(input: {
+  initialHeader: EvmBlockHeader;
+  earliestTimestamp: number;
+  latestTimestamp: number;
+  fetchHeader: (blockNumber: number) => Promise<EvmBlockHeader | null>;
+  signal?: AbortSignal;
+}): Promise<EvmBlockHeader | null> {
+  let newer = input.initialHeader;
+  if (input.earliestTimestamp > input.latestTimestamp) return null;
+  throwIfAborted(input.signal);
+  if (newer.timestamp <= input.latestTimestamp) {
+    return newer.timestamp >= input.earliestTimestamp ? newer : null;
+  }
+  const anchor = newer.number;
+  let offset = 1;
+  while (newer.number > 0) {
+    const number = Math.max(0, anchor - offset);
+    throwIfAborted(input.signal);
+    const header = await input.fetchHeader(number);
+    if (!header || header.number !== number || header.timestamp > newer.timestamp) return null;
+    if (header.timestamp <= input.latestTimestamp) {
+      if (header.timestamp >= input.earliestTimestamp) return header;
+      let older = header;
+      while (older.number + 1 < newer.number) {
+        const mid = older.number + Math.floor((newer.number - older.number) / 2);
+        throwIfAborted(input.signal);
+        const candidate = await input.fetchHeader(mid);
+        if (!candidate || candidate.number !== mid ||
+          candidate.timestamp < older.timestamp || candidate.timestamp > newer.timestamp) return null;
+        if (candidate.timestamp > input.latestTimestamp) newer = candidate;
+        else if (candidate.timestamp < input.earliestTimestamp) older = candidate;
+        else return candidate;
+      }
+      return null;
+    }
+    newer = header;
+    offset = Math.min(anchor, offset * 2);
+  }
+  return null;
+}
+
 export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
   assetId: string;
   aggregateSupplyUsd: number;
