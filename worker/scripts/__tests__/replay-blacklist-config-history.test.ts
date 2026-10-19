@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
@@ -38,9 +39,9 @@ function setup(logs: AlchemyLogEntry[] = [log()]) {
     throw new Error(`Unexpected ${method}`);
   });
   const dependencies: ReplayDependencies = { d1, rpc, now: () => NOW * 1000,
-    verifyBookmark: vi.fn(() => true), loadLogs: vi.fn(async () => ({ logs, timestamps: new Map(logs.map((entry) => [Number(entry.blockNumber), NOW - 100])) })) };
+    captureRestorePoint: vi.fn(() => "captured-bookmark"), loadLogs: vi.fn(async () => ({ logs, timestamps: new Map(logs.map((entry) => [Number(entry.blockNumber), NOW - 100])) })) };
   const options = parseReplayArgs(args);
-  const execute = () => runConfigHistoryReplay({ ...options, apply: true, timeTravelBookmark: "bookmark" }, dependencies);
+  const execute = () => runConfigHistoryReplay({ ...options, apply: true }, dependencies);
   const insert = (entry: AlchemyLogEntry, id?: string) => {
     const row = parseEvmLogsWithCoverage(config, [entry], new Map([[Number(entry.blockNumber), NOW - 100]])).rows[0]!;
     if (id) row.id = id;
@@ -52,11 +53,11 @@ function setup(logs: AlchemyLogEntry[] = [log()]) {
 }
 
 describe("configured blacklist history replay", () => {
-  it("defaults to read-only and requires both confirmation and a bookmark for execution", () => {
+  it("defaults to read-only and requires execution confirmation without an operator bookmark", () => {
     expect(parseReplayArgs(args)).toMatchObject({ apply: false, configKey: config.configKey, fromBlock: 100, toBlock: 200 });
     expect(() => parseReplayArgs([...args, "--execute"])).toThrow(/live mutation requires/);
-    expect(() => parseReplayArgs([...args, "--execute", "--confirm", SCRIPT_NAME])).toThrow(/time-travel-bookmark/);
-    expect(parseReplayArgs([...args, "--execute", "--confirm", SCRIPT_NAME, "--time-travel-bookmark", "bookmark"]).apply).toBe(true);
+    expect(parseReplayArgs([...args, "--execute", "--confirm", SCRIPT_NAME]).apply).toBe(true);
+    expect(() => parseReplayArgs([...args, "--time-travel-bookmark", "obsolete-bookmark"])).toThrow(/Unknown option/);
     expect(parseReplayArgs(["-h"]).help).toBe(true);
   });
   it("rejects unknown configs, non-EVM configs, invalid windows, unknown/duplicate options and conflicting modes", () => {
@@ -81,6 +82,8 @@ describe("configured blacklist history replay", () => {
     const before = fixture.sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
     const result = await runConfigHistoryReplay(fixture.options, fixture.dependencies);
     expect(result).toMatchObject({ mode: "dry-run", missingEventCount: 1, insertedEventCount: 0, affectedBalanceCount: 1 });
+    expect(result.timeTravelBookmark).toBeNull();
+    expect(fixture.dependencies.captureRestorePoint).not.toHaveBeenCalled();
     expect(fixture.imports).toEqual([]);
     expect(fixture.sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_events").get()).toEqual({ n: 0 });
     expect(fixture.sqlite.prepare("SELECT COUNT(*) AS n FROM admin_action_audit").get()).toEqual({ n: 0 });
@@ -105,6 +108,7 @@ describe("configured blacklist history replay", () => {
       VALUES ('unrelated','USDT','avalanche','0xother','other-config','0xother',99,99,'current_balance','resolved',1,1,0)`);
     const retained = ledgerRows(fixture.sqlite);
     const result = await fixture.execute();
+    expect(fixture.dependencies.captureRestorePoint).toHaveBeenCalledExactlyOnceWith("stablecoin-db");
     expect(result).toMatchObject({ status: "verified", insertedEventCount: 1, cursorBefore: 200, cursorAfter: 200 });
     const saved = fixture.sqlite.prepare("SELECT * FROM blacklist_events").get();
     expect(saved).toMatchObject({ config_key: config.configKey, contract_address: config.contractAddress,
@@ -116,6 +120,9 @@ describe("configured blacklist history replay", () => {
     expect(details).toMatchObject({ tool: SCRIPT_NAME, runId: result.runId, evidenceSha256: result.evidenceSha256,
       configKey: config.configKey, status: "applied", insertedEventCount: 1, missingEventCount: 0, plannedMissingEventCount: 1 });
     expect(details.evidence.logs).toHaveLength(1);
+    expect(details.timeTravelBookmark).toBe("captured-bookmark");
+    expect(details.evidence.timeTravelBookmark).toBe("captured-bookmark");
+    expect(createHash("sha256").update(JSON.stringify(details.evidence)).digest("hex")).toBe(result.evidenceSha256);
     expect(audit.details_json).not.toContain("secret-key");
     expect(fixture.sqlite.prepare("SELECT amount_native,source,config_key FROM blacklist_current_balances WHERE address = ?").get(ADDRESS))
       .toEqual({ amount_native: 12.5, source: "destroy_event", config_key: config.configKey });
@@ -183,7 +190,7 @@ describe("configured blacklist history replay", () => {
       if (method === "eth_call") return `0x${(balanceReads++ === 0 ? 2n * 10n ** 18n : 0n).toString(16).padStart(64, "0")}`;
       return fixture.rpc(method, params);
     };
-    await runConfigHistoryReplay({ ...fixture.options, configKey: paxg.configKey, apply: true, timeTravelBookmark: "bookmark" }, fixture.dependencies);
+    await runConfigHistoryReplay({ ...fixture.options, configKey: paxg.configKey, apply: true }, fixture.dependencies);
     expect(fixture.sqlite.prepare("SELECT amount_native,amount_usd_at_event,amount_source FROM blacklist_events").get())
       .toEqual({ amount_native: 2, amount_usd_at_event: null, amount_source: "historical_balance" });
     expect(fixture.sqlite.prepare("SELECT amount_native,amount_usd,source,config_key FROM blacklist_current_balances").get())
@@ -208,7 +215,7 @@ describe("configured blacklist history replay", () => {
       if (method === "eth_call") return `0x${"0".repeat(64)}`;
       return fixture.rpc(method, params);
     };
-    const result = await runConfigHistoryReplay({ ...fixture.options, configKey: eurc.configKey, apply: true, timeTravelBookmark: "bookmark" }, fixture.dependencies);
+    const result = await runConfigHistoryReplay({ ...fixture.options, configKey: eurc.configKey, apply: true }, fixture.dependencies);
     expect(result).toMatchObject({ insertedEventCount: 1, affectedBalanceCount: 0 });
     expect(fixture.sqlite.prepare("SELECT amount_native,suppression_reason FROM blacklist_events").get())
       .toEqual({ amount_native: 0, suppression_reason: "circle_mirror_zero_balance" });
@@ -226,7 +233,7 @@ describe("configured blacklist history replay", () => {
     expect(await fixture.execute()).toMatchObject({ affectedBalanceCount: 0, insertedEventCount: 1 });
     expect(ledgerRows(fixture.sqlite)).toEqual(before);
   });
-  it("requires pause/no active lease and a still-current bookmark before writes", async () => {
+  it("requires pause/no active lease and a successful restore-point capture before writes", async () => {
     const fixture = setup();
     fixture.sqlite.prepare("DELETE FROM cache WHERE key = ?").run(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY);
     await expect(fixture.execute()).rejects.toThrow(/pause is not armed/);
@@ -236,15 +243,45 @@ describe("configured blacklist history replay", () => {
     await expect(fixture.execute()).rejects.toThrow(/lease is active/);
     expect(fixture.imports).toEqual([]);
     fixture.sqlite.exec("DELETE FROM cron_leases");
-    fixture.dependencies.verifyBookmark = vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(false);
-    await expect(fixture.execute()).rejects.toThrow(/D1 changed after preflight/);
+    fixture.dependencies.captureRestorePoint = vi.fn(() => { throw new Error("restore-point capture failed"); });
+    await expect(fixture.execute()).rejects.toThrow(/restore-point capture failed/);
     expect(fixture.imports).toEqual([]);
+  });
+  it("captures after provider work and prints the restore point before import, without rejecting unrelated D1 writes", async () => {
+    const fixture = setup();
+    const messages: string[] = [];
+    fixture.dependencies.log = (message) => { messages.push(message); };
+    fixture.dependencies.captureRestorePoint = vi.fn(() => {
+      expect(fixture.dependencies.loadLogs).toHaveBeenCalledOnce();
+      expect(fixture.rpc).toHaveBeenCalledWith("eth_call", expect.any(Array));
+      expect(fixture.imports).toEqual([]);
+      // Busy, unrelated D1 writers are not a concurrency conflict for the scoped SQL guard.
+      fixture.sqlite.exec("UPDATE cache SET updated_at = updated_at + 1 WHERE key = 'unrelated-cache'");
+      return "restore-point-before-import";
+    });
+    const executeStatements = fixture.d1.executeStatements;
+    fixture.d1.executeStatements = (statements, prefix) => {
+      expect(messages.map((message) => JSON.parse(message))).toContainEqual({
+        status: "restore-point-captured", configKey: config.configKey, timeTravelBookmark: "restore-point-before-import",
+      });
+      executeStatements(statements, prefix);
+    };
+    const result = await fixture.execute();
+    expect(result).toMatchObject({ status: "verified", timeTravelBookmark: "restore-point-before-import" });
+    expect(fixture.dependencies.captureRestorePoint).toHaveBeenCalledOnce();
+  });
+  it.each(["", "   "])("refuses a missing restore-point bookmark %j before writes", async (bookmark) => {
+    const fixture = setup();
+    fixture.dependencies.captureRestorePoint = vi.fn(() => bookmark);
+    await expect(fixture.execute()).rejects.toThrow(/capture returned no bookmark/);
+    expect(fixture.imports).toEqual([]);
+    expect(fixture.sqlite.prepare("SELECT COUNT(*) AS n FROM admin_action_audit").get()).toEqual({ n: 0 });
   });
   it("rolls back audit, events, balances and cache invalidation when a writer races preflight", async () => {
     const fixture = setup([log("destroy")]);
-    fixture.dependencies.verifyBookmark = vi.fn().mockImplementationOnce(() => true).mockImplementationOnce(() => {
+    fixture.dependencies.captureRestorePoint = vi.fn(() => {
       fixture.sqlite.prepare("UPDATE blacklist_sync_state SET attempt_generation = 1").run();
-      return true;
+      return "captured-after-cursor-race";
     });
     const cachesBefore = derivedCacheRows(fixture.sqlite);
     await expect(fixture.execute()).rejects.toThrow(/CHECK constraint failed/);
