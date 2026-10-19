@@ -348,6 +348,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         expectedAssetIds: ["xaut-tether"],
         attributionById: {},
         journalRecords: [journal],
+        failureReasonById: { "xaut-tether": "capture-window-exhausted" },
       });
 
       const result = await syncSafetyScoreV9SupplyAttribution(
@@ -366,6 +367,19 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         blockingRejectedAssetIds: ["xaut-tether"],
         blockingRejectedCount: 1,
       });
+      const cached = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string };
+      const priorGeneration = parseSafetyScoreV9SupplyAttributionGeneration(cached.value);
+      expect(priorGeneration.outcomesById["xaut-tether"]).toMatchObject({
+        status: "rejected", captureFailureReason: "capture-window-exhausted",
+      });
+      vi.setSystemTime((nowSec + 14 * 60) * 1_000);
+      await syncSafetyScoreV9SupplyAttribution(db, new Map());
+      expect(mocks.capture).toHaveBeenCalledTimes(2);
+      expect(mocks.capture).toHaveBeenLastCalledWith(
+        fixedInput, expect.any(Map), undefined,
+        expect.objectContaining({ priorGeneration }),
+      );
     } finally {
       sqlite.close();
     }

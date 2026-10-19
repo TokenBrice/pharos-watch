@@ -14,7 +14,7 @@
  */
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
-import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
+import { midasNetwork, MIDAS_CAPTURE_NOW } from "./midas-mtbill.test-support";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import QCAD_BALANCES_CAPTURE from "./fixtures/qcad-balances-2026-10-07.json";
 import TETHER_TRANSPARENCY_CAPTURE from "./fixtures/tether-transparency.json";
@@ -616,16 +616,15 @@ CORPUS_CASES["river-protocol-info"] = {
   },
 };
 
-// September 14 issuer captures. OUSG keeps synthetic, explicitly scoped NAV
-// and redemption responses alongside the real dated portfolio HTML.
-const MIDAS_MTBILL_ENDPOINT = "https://api-prod.midas.app/api/transparency?token=mTBILL";
+// Registry-pinned October 19 discovery, immutable October 16 SAVE object and
+// exact historical portfolio; fixture failure is never replaced by latest.
 CORPUS_CASES["midas-mtbill"] = {
   coinId: "mtbill-midas",
-  nowSec: Math.floor(Date.parse(MIDAS_MTBILL_CAPTURE.updatedAt) / 1000) + 120,
-  network: { json: { [MIDAS_MTBILL_ENDPOINT]: MIDAS_MTBILL_CAPTURE } },
+  nowSec: MIDAS_CAPTURE_NOW,
+  network: midasNetwork(),
   drift: {
-    label: "the issuer portfolio timestamp is dropped",
-    network: { json: { [MIDAS_MTBILL_ENDPOINT]: { ...MIDAS_MTBILL_CAPTURE, updatedAt: undefined } } },
+    label: "the exact historical portfolio is absent",
+    network: midasNetwork({ historical: {} }),
     outcome: "error",
   },
 };

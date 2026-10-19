@@ -72,7 +72,7 @@ Both public and heavy scripts retain the same `300000` ms CPU cap, runtime compa
 
 Cloudflare currently limits each invocation to six simultaneous outbound requests that are still waiting for response headers. A request stops occupying that header-wait slot once headers arrive. Pharos deliberately uses a stricter trigger-wide six-connection model in its static scheduler budget so nested and chained fetch phases cannot accidentally overlap at the platform ceiling. See the [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) and the [April 2026 connection-limit change](https://developers.cloudflare.com/changelog/post/2026-04-09-relaxed-connection-limiting/).
 
-The scheduler is structured around that conservative repo constraint:
+Conservative scheduler rules:
 
 - heavy lanes get isolated trigger slots (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`, `sync-dex-liquidity-stage`)
 - shared slots bundle only related work
@@ -98,6 +98,10 @@ Mint/burn conservation audits pool boundary-header, hash-pinned supply and bound
 The same cleanup rule applies to Worker-side integration clients. Telegram delivery, X posting, and GitHub feedback submission should consume or cancel response bodies before returning so transports do not retain unread streams or unbounded response bytes.
 
 ---
+
+### Native Hive provider phase
+
+The public `sync-stablecoins` primary phase awaits existing provider waves before the native Hive observer and then consensus. Its CG HIVE/USD dependency shares the existing batch; serial native reads add no overlap to the declared 4/6 peak. `HIVE_MARKET_POLICY` bounds ten RPCs/two nodes, three seconds per call, twenty seconds overall and one MiB per body under inherited cancellation; each body drains before the next call. [ADR-41](./architecture.md#adr-41) records approval and pending production capacity acceptance.
 
 ## Cron Budgeting
 
@@ -125,6 +129,8 @@ Schema-v1 reports retain source windows (labelled `default` or `explicit`), per-
 | Discovery run/coin/refresh | `worker/src/cron/dex-discovery/orchestrator.ts`, `worker/src/cron/dex-discovery/refresh-stale-pools.ts` | Shared run deadline contains per-coin and serial refresh slices; circuit/provider failure ends the refresh pass, not all cohort crawling. Leave persistence tail headroom. |
 | Provider pacing | `worker/src/lib/rate-limit.ts`, `worker/src/cron/dex-discovery/staged-pool.ts`, `worker/src/cron/dex-discovery/crawl-horizon-pools.ts` | Stage timeouts fit the coin deadline; Horizon has its own request-start pacing. |
 | Reserve run/attempt/finalization | `worker/src/cron/sync-live-reserves-config.ts` (`LiveReserveSyncBudgetConfig`), `worker/src/cron/reserve-adapters/concurrency.ts`, `worker/src/cron/reserve-adapters/request.ts` | Serialized coin loop, bounded adapter I/O; insufficient attempt budget defers untouched cursor tail. Finalization/cleanup leaves wrapper/logging headroom. [Resource evidence](#per-job-resource-evidence) owns cache estimates; observers bypass cache sharing, not I/O/body accounting. [Live Reserves](./live-reserves.md) owns recovery/admission. |
+
+Reserve continuations use a 300-second wall allowance with an explicit 125-coin ceiling, still in the 30-second sub-hourly CPU class. The existing 20-second attempt, 30-second D1 finalization, five-second margin and observed-cost admission remain; inherited deadlines clip the entire allowance. A 93-coin/223.203-second replay fits with the 55-second admission floor, but is a conditional packing model, not production CPU or SLO proof. The reviewed cap's CPU estimate is 28.75 seconds; require measured headroom and both-role memory outcomes. Redemption/watchdog still require a fresh invocation.
 
 ### Telegram planning budgets
 

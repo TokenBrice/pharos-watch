@@ -45,6 +45,8 @@ Instrument identity, complete measurement perimeter and matching units constrain
 
 Forest Road USDfr uses physical token supply plus accrued unissued senior/fee claims as the reserve-liability denominator. Its physical, unissued and effective amounts remain separate diagnostics; this reserve accounting does not replace provider circulating-supply ingestion. See the Forest Road boundary in the linked appendix.
 
+mTBILL's version-two source binding uses an authorized registry-committed SAVE checkpoint plus the matching historical issuer portfolio, disclosed as issuer-reported composition. Its signed date/aggregate does not make API position rows independent assurance. Original checkpoint freshness and the explicit unlinked residual are retained; [source accounting and activation boundaries](process/live-reserves-appendix.md#issuer-balance-sheets-and-reviewed-reports) apply.
+
 Spark Legacy V1 inventory requires all five native Ethereum, Arbitrum, Base, Optimism and Unichain vaults, with chain-qualified holdings and independent block pins; the oldest pin sets aggregate freshness. Spark and Forest Road use version-two reserve bindings so retained Ethereum-only Spark inventory or physical-only Forest Road liability snapshots no longer match the current configuration.
 
 ### Snapshot admission gates
@@ -82,7 +84,7 @@ Retired bindings return 404 while the coin, curated research and retained eviden
 
 `computeReserveCompositionOverview()` and the [status reserve-health contract](./status-dashboard.md#live-reserve-sync-health) own the overview fields, strict-corruption fail-closed count, attempt-over-stale priority, acknowledgement cohorts and recovery-cursor presentation.
 
-Follow-up continuation is normal, not a degraded reserve attempt. The four-hour producer and existing five-minute recovery lane share one checkpoint frontier; admitted work is sliced by remaining wall time and the physical invocation's CPU class. Untouched checkpoint-owned suffixes do not overwrite per-coin attempt health. Redemption and the watchdog run as a fresh-budget cohort tail after queue exhaustion, never repeatedly behind partial heads. The persisted checkpoint completion clock includes that tail. `STATUS_RESERVE_COHORT_SLO` in `shared/lib/status-thresholds.ts` owns the 30-minute full-cohort target: ops warns on an open cohort beyond it or a seven-day nearest-rank completion p95 beyond it; ordinary continuation does not lower reserve coverage status.
+Follow-up continuation is normal, not a degraded reserve attempt. The four-hour producer and one-minute recovery lane (historical durable key `fiveMinuteReserveRecovery`) share one checkpoint frontier; admitted work is sliced by remaining wall time and the physical invocation's CPU class. Untouched checkpoint-owned suffixes do not overwrite per-coin attempt health. Redemption and the watchdog run as a fresh-budget cohort tail after queue exhaustion, never repeatedly behind partial heads. The persisted checkpoint completion clock includes that tail. `STATUS_RESERVE_COHORT_SLO` in `shared/lib/status-thresholds.ts` owns the 30-minute full-cohort target: ops warns on an open cohort beyond it or a seven-day nearest-rank completion p95 beyond it; ordinary continuation does not lower reserve coverage status.
 
 ---
 

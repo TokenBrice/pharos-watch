@@ -13,6 +13,7 @@ import {
   getCronSlotStartedAtForSchedule,
   isProvenSatisfiedNeutralSkipReason,
 } from "../cron-jobs";
+import { isReserveConfigRecoverySlot, V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "../cron-cadences";
 
 function isHourlyCpuTrigger(schedule: string): boolean {
   return /^(?:[0-5]?\d) \* \* \* \*$/.test(schedule);
@@ -36,6 +37,24 @@ describe("cron job schedule metadata", () => {
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "reserve-recovery")).toMatchObject({
       scheduleKey: "fiveMinuteReserveRecovery", maxConnections: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY,
     });
+  });
+
+  it("retains the durable reserve identity with one-minute polls and five-minute config opportunities", () => {
+    expect(CRON_SCHEDULE_DEFINITIONS.fiveMinuteReserveRecovery).toEqual({
+      schedule: "* * * * *", intervalSec: 60, offsetSec: 0, cpuPlacement: "sub-hourly-allowed",
+    });
+    expect(CRON_TRIGGER_SCHEDULES.fiveMinuteReserveRecovery).toEqual(["* * * * *"]);
+    expect(CRON_JOB_DEFINITIONS.find((job) => job.job === "reserve-recovery")).toMatchObject({
+      intervalSec: 60, group: "one-minute", scheduleKey: "fiveMinuteReserveRecovery",
+    });
+    expect(V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-live-reserves"]).toBe(14400);
+    expect(Array.from({ length: 60 }, (_, minute) => minute)
+      .filter((minute) => isReserveConfigRecoverySlot(minute * 60)))
+      .toEqual([1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56]);
+    expect(isReserveConfigRecoverySlot(Number.NaN)).toBe(false);
+    expect(isReserveConfigRecoverySlot(61)).toBe(false);
+    expect(getCronSlotStartedAtForSchedule("fiveMinuteReserveRecovery", Date.parse("2026-10-19T04:22:44Z")))
+      .toBe(Date.parse("2026-10-19T04:22:00Z") / 1000);
   });
 
   it("accounts for optional concurrent D1 telemetry without changing status aliases or the later peak", () => {

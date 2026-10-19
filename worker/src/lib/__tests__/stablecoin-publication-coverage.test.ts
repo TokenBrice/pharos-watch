@@ -101,6 +101,14 @@ describe("classifyStablecoinPublicationGap", () => {
 });
 
 describe("evaluateStablecoinActivePriceCoverage", () => {
+  it.each([null, 0.98662])("clears HBD missing-price coverage only after an observed native price is published: %s", (price) => {
+    const result = evaluateStablecoinActivePriceCoverage([{
+      id: "hbd-hive", price, priceSource: "hive-native-cg", priceObservedAt: 1_792_391_396,
+      priceObservedAtMode: "local_fetch", circulating: { peggedUSD: 32_000_000 },
+    }], ["hbd-hive"], { nowSec: 1_792_391_400, priceGapReviews: STABLECOIN_PRICE_GAP_REVIEWS });
+    expect(result.missingPriceCount).toBe(price == null ? 1 : 0);
+    expect(result.pricedActiveCount).toBe(price == null ? 0 : 1);
+  });
   it.each([
     { caps: [100, 200], total: 300 },
     { caps: [100, null], total: null },
@@ -370,7 +378,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "usdkg-gold-dollar", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = evaluateStablecoinActivePriceCoverage(
@@ -419,6 +427,22 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       previousCoverage: acknowledged,
     });
     expect(priced).toMatchObject({ complete: true, pricedActiveIds: ids, acknowledgedGapCount: 0, missingPriceCount: 0 });
+  });
+
+  it("excludes frozen USDKG from the active census even when upstream retains its row", () => {
+    const id = "usdkg-gold-dollar";
+    const activeIds = ACTIVE_STABLECOINS.map((coin) => coin.id);
+    expect(activeIds).not.toContain(id);
+    expect(STABLECOIN_PRICE_GAP_REVIEWS.some((review) => review.stablecoinId === id)).toBe(false);
+    const coverage = evaluateStablecoinActivePriceCoverage([
+      ...activeIds.map((activeId) => ({ id: activeId, price: 1 })),
+      { id, price: null, circulating: { peggedUSD: 50_000_000 } },
+    ], activeIds, { nowSec: Date.UTC(2026, 9, 19, 12) / 1000 });
+    expect(coverage).toMatchObject({ complete: true, missingPriceCount: 0 });
+    expect(coverage.pricedActiveIds).not.toContain(id);
+    expect(coverage.missingActiveIds).not.toContain(id);
+    expect(coverage.invalidGapReviewIds).not.toContain(id);
+    expect(coverage.expiredGapReviewIds).not.toContain(id);
   });
 
   it("bounds the M0-family source-gap reviews to seven days without waiving publication or inventing prices", () => {
@@ -538,11 +562,11 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     },
   );
 
-  it("retires the recovered TRYB review while freshly acknowledging PHT, VCRED and USDKG", () => {
-    const ids = ["tryb-bilira", "pht-pht", "vcred-vcred", "usdkg-gold-dollar"];
+  it("retires the recovered TRYB review while acknowledging active PHT and VCRED", () => {
+    const ids = ["tryb-bilira", "pht-pht", "vcred-vcred"];
     const reviews = STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => ids.includes(entry.stablecoinId));
-    expect(reviews.map((review) => review.stablecoinId).sort()).toEqual(["pht-pht", "usdkg-gold-dollar", "vcred-vcred"]);
-    const nowSec = Date.UTC(2026, 9, 19) / 1000;
+    expect(reviews.map((review) => review.stablecoinId).sort()).toEqual(["pht-pht", "vcred-vcred"]);
+    const nowSec = Date.UTC(2026, 9, 19, 12) / 1000;
     const coverage = evaluateStablecoinActivePriceCoverage(
       ids.map((id) => ({ id, price: id === "tryb-bilira" ? 0.0203935242416747 : null })),
       ids,
@@ -550,8 +574,8 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     );
     expect(coverage).toMatchObject({
       pricedActiveIds: ["tryb-bilira"],
-      missingActiveIds: ["pht-pht", "vcred-vcred", "usdkg-gold-dollar"],
-      acknowledgedGapIds: ["pht-pht", "vcred-vcred", "usdkg-gold-dollar"],
+      missingActiveIds: ["pht-pht", "vcred-vcred"],
+      acknowledgedGapIds: ["pht-pht", "vcred-vcred"],
       expiredGapReviewIds: [],
       invalidGapReviewIds: [],
       alertEligibleIds: [],
@@ -569,6 +593,31 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
     expect(missingAgain.alertEligibleIds).toEqual(["tryb-bilira"]);
     expect(missingAgain.acknowledgedGapIds).toEqual([]);
+  });
+
+  it.each([
+    ["pht-pht", Date.UTC(2026, 9, 25, 23, 45) / 1000],
+    ["vcred-vcred", Date.UTC(2026, 9, 25, 23, 45) / 1000],
+    ["wusd-worldwide", Date.UTC(2026, 9, 23) / 1000],
+  ] as const)("corrects %s evidence without extending its decision deadline or changing lifecycle", (id, expiresAt) => {
+    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === id)!;
+    expect(coin).toBeDefined();
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
+    expect(review).toMatchObject({
+      owner: "ops", expiresAt, reviewedAt: Date.UTC(2026, 9, 19, 7, 21, 45) / 1000,
+    });
+    if (id === "wusd-worldwide") {
+      expect(review.reason).toContain("unverified");
+      expect(review.sources).toContain("https://dns.google/resolve?name=wallet.wspn.io&type=A");
+      expect(coin.notices?.[0].message).toContain("historical on-chain evidence at block 112793798");
+      expect(coin.contracts).toHaveLength(3);
+    } else if (id === "vcred-vcred") {
+      expect(coin.mechanismArchetypeReview?.disposition).toBe("unresolved");
+      expect(coin.mechanismArchetype).toBeUndefined();
+    } else {
+      expect(review.reason).toContain("$46,409.29");
+      expect(review.reason).toContain("$9,753.36");
+    }
   });
 
   it("fails closed on malformed review ownership, evidence, identity, and dates", () => {

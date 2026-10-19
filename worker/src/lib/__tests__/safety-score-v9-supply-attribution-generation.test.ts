@@ -16,6 +16,8 @@ import {
 import {
   deriveReviewedDeploymentUnitPartition,
   type ReviewedDeploymentSupplyObservation,
+  CENTRIFUGE_BURN_MINT_ASSET_IDS,
+  REVIEWED_ECONOMIC_SUPPLY_PLANS,
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
@@ -32,6 +34,7 @@ import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   serializeSafetyScoreV9SupplyAttributionGeneration,
 } from "../safety-score-v9/supply-attribution-generation";
+import type { SafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation";
 import {
   makeV9FixedInput,
   v9TestClockSec,
@@ -47,6 +50,7 @@ import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared
 import * as wmObserver from "../safety-score-v9/wm-supply-observer";
 import * as xautObserver from "../safety-score-v9/xaut-supply-observer";
 import * as economicObserver from "../safety-score-v9/economic-supply-observer";
+import * as centrifugeObserver from "../safety-score-v9/centrifuge-supply-observer";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 
 const SOURCE_CLOCK_SEC = v9TestClockSec();
@@ -775,6 +779,89 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
           expect(order).toEqual(["xaut-tether", "wm-m0"]);
           expect(capture.journalRecords.map(record => record.assetId)).toEqual(["xaut-tether", "wm-m0"]);
         }
+      }
+    } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
+
+  it.each([180_000, 1])("attempts every tier within N=cohort-size runs under sustained %ims exhaustion", async windowMs => {
+    vi.useFakeTimers();
+    try {
+      const quickIds = ["xaut-tether", ...CENTRIFUGE_BURN_MINT_ASSET_IDS];
+      const historyIds = [...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys()];
+      const canonicalIds = [...quickIds, ...historyIds, "wm-m0"];
+      const input = {
+        ...fixtures.acceptedFixture.fixedInput,
+        activeAssetIds: canonicalIds,
+        aggregateCirculatingById: Object.fromEntries(canonicalIds.map(id => [id, {
+          circulating: { peggedUSD: 1_000 }, observedAtSec: SOURCE_CLOCK_SEC,
+        }])),
+        chainCirculatingById: {},
+      };
+      let order: string[] = [];
+      const reject = async (assetId: string, signal?: AbortSignal) => {
+        order.push(assetId);
+        await sleepWithSignal(quickIds.includes(assetId) ? 1 : 180_000, signal);
+        return { status: "rejected" as const, rejectionCode: "deployment-state-unavailable" as const, failedRouteId: null, rejectedSourceObservedAtSec: null };
+      };
+      vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt")
+        .mockImplementation(({ signal }) => reject("xaut-tether", signal));
+      vi.spyOn(centrifugeObserver, "observeCentrifugeReviewedDeploymentUnitPartitionAttempt")
+        .mockImplementation(({ assetId, signal }) => reject(assetId, signal));
+      vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt")
+        .mockImplementation(({ assetId, signal }) => reject(assetId, signal));
+      vi.spyOn(wmObserver, "observeWmReviewedDeploymentUnitPartitionAttempt")
+        .mockImplementation(({ signal }) => reject("wm-m0", signal));
+      const rpcs = new Map([["ethereum", {
+        chainId: "ethereum", chainName: "Ethereum", type: "evm" as const, endpoints: [], explorerUrl: "",
+      }]]);
+      const attemptsByRun: string[][] = [];
+      let priorGeneration: SafetyScoreV9SupplyAttributionGeneration | null = null;
+      // Fixed source clock throughout: fairness must not depend on new buckets.
+      // The 1ms case permits exactly one attempt, catching binary-aging cycles.
+      const bound = canonicalIds.length;
+      for (let run = 0; run < bound * 2; run++) {
+        let retryOrder: string[] | undefined;
+        let nextGeneration: SafetyScoreV9SupplyAttributionGeneration | undefined;
+        for (let retry = 0; retry < 2; retry++) {
+          order = [];
+          vi.setSystemTime((SOURCE_CLOCK_SEC + run * 900 + retry) * 1_000);
+          const start = Date.now();
+          const pending = captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, {
+            clockMode: "wall", priorGeneration,
+            executionWindow: {
+              slotStartedAtSec: Math.floor(start / 1_000),
+              deadlineMs: start + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + windowMs,
+              minimumRemainingMs: 0,
+            },
+          });
+          await vi.runAllTimersAsync();
+          const capture = await pending;
+          expect(capture.journalRecords.map(record => record.assetId)).toEqual(canonicalIds);
+          expect(Object.values(capture.failureReasonById ?? {})).toContain("capture-window-exhausted");
+          for (const id of order.filter(id => historyIds.includes(id))) {
+            expect(capture.failureReasonById?.[id]).toBe("asset-timeout");
+          }
+          if (retryOrder) expect(order).toEqual(retryOrder);
+          retryOrder = [...order];
+          nextGeneration = parseSafetyScoreV9SupplyAttributionGeneration(
+            serializeSafetyScoreV9SupplyAttributionGeneration(createSafetyScoreV9SupplyAttributionGeneration({
+              fixedInput: input, capture, capturedAtSec: Math.floor(Date.now() / 1_000),
+            })),
+          );
+        }
+        attemptsByRun.push(retryOrder!);
+        priorGeneration = nextGeneration!;
+        if (run === 0 && windowMs === 180_000) {
+          expect(retryOrder!.slice(0, quickIds.length).sort()).toEqual([...quickIds].sort());
+          expect(retryOrder).not.toContain("wm-m0");
+        }
+        if (run >= bound - 1) {
+          expect([...new Set(attemptsByRun.slice(-bound).flat())].sort()).toEqual([...canonicalIds].sort());
+        }
+      }
+      if (windowMs === 180_000) {
+        expect([...new Set(attemptsByRun.slice(0, 2).flat())].sort()).toEqual([...canonicalIds].sort());
+        expect(attemptsByRun[1]).toContain("wm-m0");
       }
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
   });

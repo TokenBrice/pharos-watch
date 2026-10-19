@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import bcbFixtures from "./fixtures/bcb-selic.json";
 
 import { mockFetchRetry } from "../../test-helpers/cron";
 import {
@@ -30,7 +31,7 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 import { parseBanxicoSeries } from "../tbill-sources/banxico";
-import { parseBcbSelicSeries } from "../tbill-sources/bcb";
+import { parseBcbSelicSeries, parseBcbSelicAnnualizedSeries } from "../tbill-sources/bcb";
 import { parseBoeSoniaCompoundedIndexCsv } from "../tbill-sources/boe";
 import { parseBojCallRateJson } from "../tbill-sources/boj";
 import { parseBocValetSeries } from "../tbill-sources/boc";
@@ -339,6 +340,42 @@ describe("parseBcbSelicSeries", () => {
   it("returns null on malformed JSON", () => {
     expect(parseBcbSelicSeries("not json")).toBeNull();
   });
+});
+
+describe("SGS1178 effective annualized Selic", () => {
+  it("keeps annual percent units and does not compound a second time", () => {
+    expect(parseBcbSelicAnnualizedSeries(JSON.stringify(bcbFixtures.annualized))).toEqual({
+      recordDate: "2026-06-24", rate: 13.65,
+    });
+    expect(parseBcbSelicSeries(JSON.stringify(bcbFixtures.daily))?.rate).toBeCloseTo(13.638253562615565, 12);
+    expect(parseBcbSelicAnnualizedSeries('[{"data":"24/06/2026","valor":"13,65"}]')?.rate).toBe(13.65);
+  });
+
+  it.each(["0", "-1", "20.01", "13.65garbage", "13.65%", "1e1", "1,234.56", "", ".13", "13.", ",13", "13,", "13..65", "13,,65"])(
+    "rejects placeholders, out-of-bounds rates and ambiguous units: %s", value => {
+      expect(parseBcbSelicAnnualizedSeries(JSON.stringify([{ data: "24/06/2026", valor: value }]))).toBeNull();
+    },
+  );
+
+  it("rejects a long malformed decimal with either source-unit parser", () => {
+    const payload = JSON.stringify([{ data: "24/06/2026", valor: `${"1".repeat(16 * 1024)}x` }]);
+    expect(parseBcbSelicSeries(payload)).toBeNull();
+    expect(parseBcbSelicAnnualizedSeries(payload)).toBeNull();
+  });
+
+  it.each(["31/02/2026", "29/02/2026", "32/06/2026", "24/13/2026", "2026-06-24", "", null])(
+    "rejects malformed or missing publisher dates: %s", data => {
+      for (const parse of [parseBcbSelicSeries, parseBcbSelicAnnualizedSeries]) {
+        expect(parse(JSON.stringify([{ data, valor: "0.050747" }]))).toBeNull();
+      }
+    },
+  );
+
+  it.each([JSON.stringify(bcbFixtures.errorEnvelope), bcbFixtures.html, "not json", "[]"])(
+    "fails closed for recorded error shapes and malformed bodies", body => {
+      expect(parseBcbSelicAnnualizedSeries(body)).toBeNull();
+    },
+  );
 });
 
 describe("parseBocValetSeries", () => {

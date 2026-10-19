@@ -24,8 +24,13 @@ describe("live reserve execution budgets", () => {
     });
   });
 
-  it("sizes five-minute slices to both measured wall throughput and the 30-second CPU class", () => {
+  it("extends continuation wall time without raising the reviewed 125-coin CPU cap", () => {
     const config = resolveLiveReserveSyncBudgetConfig(LIVE_RESERVE_CONTINUATION_BUDGETS);
+    expect(config.runBudgetMs).toBe(300_000);
+    expect(config.minimumAttemptBudgetMs).toBe(55_000);
+    expect(config.adapterTimeoutMs).toBe(20_000);
+    expect(config.d1FinalizeTimeoutMs).toBe(30_000);
+    expect(config.finalizationMarginMs).toBe(5_000);
     expect(config.maxCoinsPerSlice).toBe(125);
     expect(config.maxCoinsPerSlice * LIVE_RESERVE_SLICE_COST.wallMsPerCoin + config.minimumAttemptBudgetMs)
       .toBeLessThanOrEqual(config.runBudgetMs);

@@ -26,6 +26,22 @@ Publication incompleteness degrades only for unknown coverage, an unnamed count 
 
 ## Primary Consensus
 
+### Native Hive order book
+
+`worker/src/lib/hive-market-price.ts` owns `HIVE_MARKET_POLICY` (generation 1); `shared/types/hive-market-price.ts` owns the packet and rejection vocabulary. The launch policy is owner-approved, not statistically calibrated for continuous availability. The source is an ordinary primary observation, never a witness-feed/conversion-price override.
+
+- Read `condenser_api.get_dynamic_global_properties` → `get_order_book([500])` → `get_ticker([])` → `get_recent_trades([1000])` → head serially. One node supplies the entire sample. `api.hive.blog` precedes one `api.deathwing.me` failover for transport, malformed-response or stale-head faults only. No Dwellir Hive market capability is established; no third node or cross-node evidence join is admitted.
+- Per-call headers/body deadline is three seconds, whole observer allowance twenty seconds under inherited cancellation/optional absolute deadline, maximum ten physical calls and one MiB per response. Sample duration must be at most thirty seconds; heads must be non-regressing, at most sixty seconds old and at most fifteen seconds future-dated. This is bounded moving-state evidence, not an atomic book.
+- `real_price` is decimal HBD/HIVE on both sides; validate against the HBD-base bid/HIVE-base ask orientation. Depth sums remaining integer `hbd` milliunits once, never original `order_price` inventory or both equivalent legs. Spread must be at most 1%; each side must prove 500 HBD inside the inclusive ±2% midpoint band. A still-open band at the 500-row cap below the floor is `depth_unproven`; a completed below-floor side is `insufficient_depth`.
+- Chain dates parse as UTC. Count the HBD payment leg once, exclude self-trades and count distinct full fill tuples, not distinct timestamps. The API has no fill ID: identical tuples retain an ambiguity count and contribute once to the conservative lower bound, not fabricated independent turnover. The inclusive trailing-day lower bound must reach 1,000 HBD; a truncated/duplicate-ambiguous below-floor window is `volume_unproven`. Latest non-self trade must be within fifteen minutes and within 2% of midpoint. Ticker volume is diagnostic only: no equality tolerance can make separate-block/self-trade-inclusive reads substitute for the required proof.
+- Require the current invocation's exact `hive` CG/USD parent, finite/positive with explicit upstream time, signed age at most 300 seconds and future skew at most sixty seconds. Recheck at composition. Missing/stale dependency gives `hive_usd_unavailable` / `hive_usd_stale`, never nominal USD/USDT parity. Effective `local_fetch` time is `min(bookRetrievedAt, parent.observedAt)`; ordinary source freshness caps age at 900 seconds.
+- Operator `providerDiagnostics[].nativeMarket` and top-level `nativeMarket` preserve source/node/methods, head/book clocks, depth/completeness, trade age/volume, parent, formula, policy/generation and rejection reason on success as well as failure. Size-guard rungs retain the bounded packet; the terminal envelope explicitly marks evidence omitted. No raw arrays/credentials persist. One aggregate Hive circuit outcome follows a physical attempt; valid shallow-market rejection is not transport failure and does not poison CG.
+
+The shared rejection schema additionally names RPC timeout/error, rate limit, invalid response, stale head, expired sample, empty/crossed book, excess spread, insufficient volume, stale/divergent trade, abort and deadline. Registration or acknowledgement never clears missing-price coverage. Retain HBD's low-volume fallback and temporary gap review; remove the review only after actual acceptance, or allow its existing expiry, never silently renew it.
+
+Production acceptance joins deployed Worker version, run/generation, packet and HBD row for the first **public** `sync-stablecoins` execution and the next 24 hours. Recompute contemporaneous cross-rates, verify every gate and conservative confidence/clocks, measure admission versus transport success/rejections, and verify unchanged 4/6 peak, bounded duration/body cleanup and no new abandonment/CPU-memory regression. Capacity and rollback authority: [ADR-41](../architecture.md#adr-41). No migration or historical backfill.
+
+
 
 ### Reused Solomon provider identity
 

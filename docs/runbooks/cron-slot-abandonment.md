@@ -64,7 +64,7 @@ Before treating a downstream `not_started` row as required work, check its exact
 
 Run the Wrangler SQL examples below from `worker/`, where `wrangler.toml` declares `stablecoin-db`.
 
-Reserve recovery `producer-slot-priority` / `heavy-slot-co-tenancy` rows are neutral admission deferrals, not publication proof or abandonment. Inspect the protected slot's state and finished clock and the actual `blockedBy` holder, not the requester owner or lease key. Missing producer delivery remains protected; follow the delivery-stall procedure rather than manufacturing a slot or resetting a checkpoint. Incompatible debt retires only against a newer real finished full cohort with exact `superseded_by_json`; an operator-only cohort cannot supersede it. See [lease safety](./lease-and-breaker-recovery.md#safety-precondition).
+Reserve recovery `producer-slot-priority` / `same-role-slot-co-tenancy` rows are neutral admission deferrals, not publication proof or abandonment; `heavy-slot-co-tenancy` is historical evidence. Inspect the protected slot's state/finished clock and actual `blockedBy` holder, not the requester or lease key. Missing producer delivery remains protected; diagnose delivery rather than manufacture a slot or reset a checkpoint. Incompatible debt retires only against a newer real finished full cohort with exact `superseded_by_json`; an operator-only cohort cannot supersede it. See [lease safety and scheduling acceptance](./lease-and-breaker-recovery.md#safety-precondition).
 
 Synthetic abandonment and deploy-interruption rows persist `degraded_reason` alongside `metadata.reason`.
 Error text preserves the operational abandonment prefix and appends `[reason]`; neutral deploy
