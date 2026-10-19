@@ -94,7 +94,7 @@ export async function fetchUsdvJupiterPrice(context: LivePriceContext, signal?: 
   if (depthOut * 100n < smallOut * 1000n * 95n || depthOut * 100n > smallOut * 1000n * 105n) return reject("quote-depth");
   const slots = [small.contextSlot, depth.contextSlot, Number(small.routePlan[0].swapInfo.updateContextSlot), Number(depth.routePlan[0].swapInfo.updateContextSlot)];
   if (slots.some((slot) => !Number.isSafeInteger(slot) || slot <= 0) || slots[2] > slots[0] || slots[3] > slots[1]) return reject("quote-slot");
-  // Catch-up loop: an RPC -32010 (min context slot not reached) or an answered state whose
+  // Catch-up loop: an RPC -32016 (min context slot not reached) or an answered state whose
   // context slot still trails the quotes is endpoint lag, not bad state. Only that lag is
   // retryable — bounded, endpoint-rotated, inside the candidate deadline — so every guard
   // below stays unchanged and persistent lag still fails closed.
@@ -109,7 +109,7 @@ export async function fetchUsdvJupiterPrice(context: LivePriceContext, signal?: 
         const slot = r.body.result.context?.slot;
         if (Number.isSafeInteger(slot) && slot >= maxSlot) state = r.body.result;
         else lagging = true;
-      } else if (r?.response.ok && r.body.error?.code === -32010) lagging = true;
+      } else if (r?.response.ok && r.body.error?.code === -32016) lagging = true;
     }
     if (!state && !lagging) break;
   }
