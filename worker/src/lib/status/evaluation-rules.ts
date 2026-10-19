@@ -10,7 +10,7 @@ import {
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { PUBLIC_CIRCUIT_IMPACT_QUORUM } from "@shared/lib/public-health";
-import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC, CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
@@ -399,7 +399,7 @@ function evaluateWatchTailDiagnostics(input: WatchTailInput): Partial<StatusRule
     causes.push(makeCause("availability", "watch_unhealthy_crons_present", "info", named.message, { metric: "watchUnhealthyCrons", value: input.watchUnhealthyCrons, threshold: 1, subjects: named.subjects }));
   }
   if (input.degradedCronRuns > 0) {
-    const named = withJobs(`${input.degradedCronRuns} cron job(s) report incomplete work or output quality warnings.`, input.cronFindingJobs?.degraded);
+    const named = withJobs(`${input.degradedCronRuns} cron job(s) have fresh degraded terminal attempts reporting incomplete required work.`, input.cronFindingJobs?.degraded);
     causes.push(makeCause("availability", "degraded_cron_warning", "info", named.message, { metric: "degradedCrons", value: input.degradedCronRuns, threshold: 1, subjects: named.subjects }));
   }
   return ruleResult("healthy", causes);
@@ -470,8 +470,36 @@ export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["sch
   return { status, causes };
 }
 
+function evaluateSafetyScoreStatus(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
+  const status = input.publicHealth.safetyScoreImpactStatus;
+  if (status === "healthy") return null;
+  const publication = input.publicHealth.safetyScorePublication;
+  const unavailableReason = input.publicHealth.safetyScorePublicationUnavailableReason;
+  const code = unavailableReason || !publication
+    ? "safety_score_publication_unavailable"
+    : publication.acceptedAtSec == null
+      ? "safety_score_publication_missing"
+      : publication.status === "held"
+        ? "safety_score_publication_held"
+        : "safety_score_publication_stale";
+  const reason = unavailableReason || !publication
+    ? `Safety Score publication evidence is unavailable (${unavailableReason ?? "safety-score-publication-unavailable"}).`
+    : publication.acceptedAtSec == null
+      ? "No accepted Safety Score publication is available."
+      : publication.status === "held"
+        ? `Safety Score publication is held while required inputs recover (${publication.reasons.map((entry) => entry.code).join(", ") || "safety-score-publication-held"}).`
+        : "The accepted Safety Score publication is past its public freshness budget.";
+  const accepted = publication?.acceptedAtSec == null
+    ? ""
+    : ` Last accepted generation ${publication.acceptedPublicationGenerationId ?? "unknown"} at ${publication.acceptedAtSec}; freshness budget ${API_FRESHNESS_MAX_AGE_SEC.reportCards}s.`;
+  return ruleResult(status, [makeCause(
+    "availability", code, status === "stale" ? "critical" : "warning", `${reason}${accepted}`,
+  )]);
+}
+
 const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput>[] = [
   (input) => input.publicHealth.schedulerLiveness ? evaluateSchedulerLiveness(input.publicHealth.schedulerLiveness) : null,
+  evaluateSafetyScoreStatus,
   (input) => {
       const status = input.publicHealth.cacheImpactStatus;
       const unavailableCauses: StatusCause[] = [];

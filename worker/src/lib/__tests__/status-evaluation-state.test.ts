@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS, STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
-import { getCircuitImpactStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM } from "@shared/lib/public-health";
+import { getCircuitImpactStatus, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import type { PublicHealthAssessment } from "../public-health-assessment";
@@ -108,6 +109,66 @@ describe("status evaluation policy", () => {
     const cause = result.causes.find((entry) => entry.code === "open_circuit_groups");
     if (openCircuitCount === 2) expect(cause).toBeUndefined();
     else expect(cause).toMatchObject({ threshold: PUBLIC_CIRCUIT_IMPACT_QUORUM, value: 3 });
+  });
+
+  it.each([
+    [API_FRESHNESS_MAX_AGE_SEC.reportCards, "healthy"],
+    [API_FRESHNESS_MAX_AGE_SEC.reportCards + 1, "degraded"],
+    [API_FRESHNESS_MAX_AGE_SEC.reportCards * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER, "degraded"],
+    [API_FRESHNESS_MAX_AGE_SEC.reportCards * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER + 1, "stale"],
+  ] as const)("uses the public Safety floor at accepted age %i (%s)", (ageSec, expected) => {
+    const now = Math.floor(Date.now() / 1000);
+    const publication = {
+      ...makePublicHealth().safetyScorePublication!,
+      acceptedAtSec: now - ageSec, attemptedAtSec: now,
+    };
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth("healthy", {
+      safetyScorePublication: publication,
+      safetyScoreImpactStatus: getPublicSafetyScoreStatus(publication, now),
+    })));
+    expect(result.status).toBe(expected);
+    const cause = result.causes.find((entry) => entry.code === "safety_score_publication_stale");
+    if (expected === "healthy") expect(cause).toBeUndefined();
+    else {
+      expect(cause).toMatchObject({ severity: expected === "stale" ? "critical" : "warning", layer: "availability" });
+      expect(cause?.message).toContain(publication.acceptedPublicationGenerationId!);
+      expect(cause?.message).toContain(`at ${publication.acceptedAtSec}`);
+      expect(cause?.message).toContain(`freshness budget ${API_FRESHNESS_MAX_AGE_SEC.reportCards}s`);
+    }
+  });
+
+  it.each<[string, Partial<NonNullable<PublicHealthAssessment["safetyScorePublication"]>> | null, string | null]>([
+    ["safety_score_publication_unavailable", null, "safety-score-publication-read-failed"],
+    ["safety_score_publication_missing", {
+      status: "held", acceptedAtSec: null, acceptedPublicationGenerationId: null,
+      heldSinceSec: Math.floor(Date.now() / 1000) - 30, reasons: [{ code: "redemption-stale" }],
+    }, null],
+    ["safety_score_publication_held", {
+      status: "held", heldSinceSec: Math.floor(Date.now() / 1000) - 30, reasons: [{ code: "redemption-stale" }],
+    }, null],
+  ])("names %s instead of trusting healthy caches or watch-tier crons", (code, publicationOverrides, unavailableReason) => {
+    const publication = publicationOverrides == null ? null : {
+      ...makePublicHealth().safetyScorePublication!, ...publicationOverrides,
+    };
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(makePublicHealth("healthy", {
+      safetyScorePublication: publication,
+      safetyScorePublicationUnavailableReason: unavailableReason,
+      safetyScoreImpactStatus: "degraded",
+    })));
+    expect(result.status).toBe("degraded");
+    expect(result.causes).toContainEqual(expect.objectContaining({ code, severity: "warning" }));
+    if (code === "safety_score_publication_held") expect(result.causes[0]?.message).toContain("redemption-stale");
+  });
+
+  it("describes only the fresh degraded required attempts behind the cron diagnostic count", () => {
+    const result = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({
+      degradedCronRuns: 6, cronFindingJobs: { degraded: ["compute-safety-score-v9"] },
+    }));
+    expect(result.status).toBe("healthy");
+    expect(result.causes).toContainEqual(expect.objectContaining({
+      code: "degraded_cron_warning", value: 6, severity: "info",
+      message: "6 cron job(s) have fresh degraded terminal attempts reporting incomplete required work. Jobs: compute-safety-score-v9.",
+    }));
   });
 
   it.each([

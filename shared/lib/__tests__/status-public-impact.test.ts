@@ -20,6 +20,15 @@ describe("transitionHasPublicImpact", () => {
       expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "info" })])).toBe(false);
     },
   );
+  it.each([
+    "safety_score_publication_unavailable", "safety_score_publication_missing",
+    "safety_score_publication_held", "safety_score_publication_stale",
+  ])("treats %s as public impact without promoting informational causes", (code) => {
+    expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "warning" })])).toBe(true);
+    expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "critical" })])).toBe(true);
+    expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "info" })])).toBe(false);
+  });
+
   it("keeps incomplete active-price coverage warning-only", () => {
     expect(transitionHasPublicImpact([cause()])).toBe(false);
   });

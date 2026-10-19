@@ -80,7 +80,7 @@ The pure `status-dashboard-model.ts` and memoized `use-critical-ops-model.ts` re
 
 Cron semantics belong to [Cron health model](#cron-health-model); `deriveCronVerdict` in `src/lib/cron-workbench-model.ts` owns the operator verdict. Registry group/cadence/impact and next primary opportunity are not physical-trigger membership or catch-up promises. Public-critical jobs past twice cadence or with ≥2 failures need action; single/watch failures, warnings and public-critical findings are Watch; successful admin-watch findings stay neutral. Fresh in-flight evidence is Running without replacing the previous terminal outcome; unknown is Unavailable. A neutral skip never lends time/runtime to an inherited failure. Bounded history retains required-attempt/readback evidence rather than hiding it behind newer skips. Slot metadata distinguishes successful, degraded, errored and neutral children so best-effort continuation cannot hide failed children. Budget-only surfaces remain separate from `crons`; orphaned progress/expired leases are stale artifacts, not running work.
 
-For optional Telegram telemetry, missing means Unknown. The sole legacy exception is absent `freshRetryQueued` on a completed-ok dispatch with `pendingRetryQueued` present, which means zero fresh retries. Delivery health and audience coverage stay separate.
+For optional Telegram telemetry, missing means Unknown. The sole legacy exception is absent `freshRetryQueued` on a completed-ok dispatch with `pendingRetryQueued` present, which means zero fresh retries. Delivery health and audience eligibility stay separate: the eligible alert audience counts chats that can receive matching alerts, not attempted, failed or delivered messages. Safety/reserve source suppression can degrade the workspace even when the latest dispatch is `ok`; its reason names each suppressed family and the recorded source state instead of claiming the dispatch itself degraded. Dispatch errors and permanent failures still take precedence, followed by backlog, rate limiting and retries. Suppression remains fail-closed.
 
 ### Endpoint groups
 
@@ -101,6 +101,8 @@ Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 `worker/src/lib/status-reliability-shared.ts` owns the shared severity ordering (`SEVERITY`) and `maxStatus` aggregation primitive. Evaluation rules and state helpers import that lower-level authority directly; rules do not depend on evaluation state.
 
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
+
+The assessment exposes its already-computed `safetyScoreImpactStatus` to the raw admin availability rules. `getPublicSafetyScoreStatus()` remains the sole Safety availability authority: accepted publication age, not attempted age, controls the floor using the existing public budget and outage grace. Admin causes distinguish `safety_score_publication_unavailable`, `safety_score_publication_missing`, `safety_score_publication_held`, and `safety_score_publication_stale`; available accepted generations retain their identity, clock and freshness budget in the cause. These warning/critical causes are public-impacting in Triage. A held publication names the actual hold reason codes. Raw availability and raw overall inherit this floor; persisted effective status still follows the existing hysteresis.
 
 `PUBLIC_CIRCUIT_IMPACT_QUORUM` in `shared/lib/public-health.ts` is the sole source-wide circuit quorum
 authority (3), shared by public grading and admin cause thresholds. Public circuit reasons retain the full
@@ -211,7 +213,7 @@ The admin detail summary prefers that column over legacy metadata and appends a 
 unknown jobs or column-only rows; canonical quality findings append without replacing specialized
 summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
-warnings. Errors and freshness remain independently evaluated.
+warnings. The counted finding describes fresh degraded terminal attempts reporting incomplete required work, not output-quality findings on successful attempts. Errors and freshness remain independently evaluated.
 
 ### Cron metadata persistence budget
 
@@ -357,7 +359,7 @@ The hourly **Worker Memory Monitor** GitHub artifact/incident supplies [external
 
 ## Availability status
 
-Computed from public cache impact, public mint/burn impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
+Computed from public cache impact, public mint/burn impact, public Safety Score publication impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
 
 Scheduler delivery is an independent availability axis: the newest actual start across `fiveMinuteReserveRecovery`, `fiveMinuteTelegramAlerts`, and `digestTriggerPoll` must be within the shared 600-second warning / 1200-second stale budgets (strictly greater than the boundary escalates). `scheduled_delivery_stalled` is warning/critical; missing, future, or unreadable starts yield `scheduler_liveness_unavailable` and a degraded floor, never healthy. Overall MAX is diagnostic only: an hourly slot cannot mask five-minute delivery loss. Partial lane loss stays diagnostic while another canonical lane starts. See [delivery stall runbook](./runbooks/cron-delivery-stall.md).
 
@@ -368,12 +370,14 @@ Heavy delivery is a separate gate, resolved from plans with `worker: "heavy"` in
 - `stale` if any of:
   - any shared cache impact is `stale`
   - the public mint/burn lane is `stale`
+  - the shared Safety Score publication floor is `stale` (the public Safety component is in outage)
   - D1 capacity threshold state is `critical`
   - any availability-critical cron has two or more consecutive failed runs
   - `availabilityImpactingUnhealthyCrons >= 2`
 - `degraded` if any of:
   - any shared cache impact is `degraded`
   - the public mint/burn lane is `degraded` (once the lane has emitted real sync telemetry)
+  - the shared Safety Score publication floor is `degraded` (held, missing/unavailable publication evidence, or accepted scores past their existing freshness budget)
   - circuit or critical mint/burn health evidence could not be read (`circuit_query_failed`, `mint_burn_health_query_failed`)
   - D1 capacity threshold state is `warning`, or the D1 capacity assessment could not be read
   - `openCircuitGroups >= 3`
@@ -397,7 +401,7 @@ Counted cron causes (`cron_error_runs`, `unhealthy_crons_present`, `multiple_unh
 
 Runbook links are intentionally sparse. `withRunbook()` in `worker/src/lib/status/evaluation-rules.ts` attaches `runbookUrl` only for registered cause codes; `RUNBOOK_BY_CODE` is the owning map. Public-impact causes such as `cache_ratio_*`, `mint_burn_public_*`, `open_circuit_groups`, and `cron_error_runs` can appear without a Runbook link.
 
-Each cron definition now carries `statusImpact: "critical" | "watch"` in `shared/lib/cron-jobs.ts`. Only critical lanes can degrade `availabilityStatus`; watch-tier cron failures stay operator-visible through cron rows, info causes, `summary.watchUnhealthyCrons`, and `summary.cronErrors`.
+Each cron definition now carries `statusImpact: "critical" | "watch"` in `shared/lib/cron-jobs.ts`. Only critical lanes can degrade `availabilityStatus` through cron availability; watch-tier cron failures stay operator-visible through cron rows, info causes, `summary.watchUnhealthyCrons`, and `summary.cronErrors`. Independent public output floors still apply: a watch-tier Safety producer cannot leave admin availability healthy while its accepted Safety publication is held, unavailable or stale.
 
 FX source freshness is also cadence-aware now. `/api/health` and `/api/status` still expose `fx-rates.sourceStatus`, but intraday sources use age windows while ECB/secondary daily sources compare their published source date against the next expected business-day or calendar-day rollover. Business-daily ECB references now use the TARGET closing-day calendar as part of that rollover check, so Good Friday, Easter Monday, New Year's Day, Labour Day, Christmas Day, and Boxing Day do not produce false lag warnings. Realtime OXR / Chainlink overlays no longer erase a fresh daily fiat source date when they are only refining the current daily reference stack, and commodity pegs can now refresh from the fresh `stablecoins` cache when `gold-api.com` is unavailable from Workers, so the status surface does not fall into false intraday staleness during later provider outages. One-step daily lag stays operator-visible as `degraded`, while only `stale` FX sources are excluded from downstream price validation.
 

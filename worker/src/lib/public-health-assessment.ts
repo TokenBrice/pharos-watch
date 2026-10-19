@@ -126,6 +126,7 @@ export interface PublicHealthAssessment {
   d1CapacityQueryError: string | null;
   safetyScorePublication?: HealthResponse["safetyScorePublication"];
   safetyScorePublicationUnavailableReason?: string | null;
+  safetyScoreImpactStatus: HealthResponse["status"];
   stablecoinPublication: StablecoinPublicationHealth;
   stablecoinPublicationImpactStatus: HealthResponse["status"];
   activePriceCoverage: ActivePriceCoverageHealth;
@@ -618,6 +619,7 @@ export async function assessPublicHealth(
       activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
       safetyScorePublication: null,
       safetyScorePublicationUnavailableReason: "db-unavailable",
+      safetyScoreImpactStatus: getPublicSafetyScoreStatus(null, now),
       activePriceCoverageImpactStatus: "healthy",
       schedulerLiveness,
       schedulerLivenessImpactStatus,
@@ -903,6 +905,7 @@ export async function assessPublicHealth(
     ...(yieldSafetyAvailability.queryErrors ? { yieldSafetyQueryErrors: yieldSafetyAvailability.queryErrors } : {}),
     safetyScorePublication,
     safetyScorePublicationUnavailableReason,
+    safetyScoreImpactStatus,
     stablecoinPublication,
     stablecoinPublicationImpactStatus,
     activePriceCoverage,
