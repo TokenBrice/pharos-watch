@@ -865,7 +865,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "TON jetton master EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f ('Ethena USDe', tonapi.io whitelisted, queried 2026-07-20) reports mintable=true with admin 0:ab8feb26323e8940202f6fe04fc2531aef520003ba4adca35a15c54e75e602ea (EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7, active account). DefiLlama attributes TON USDe supply to this jetton as the bridging representation; LayerZero's OFT registry does not enumerate TON, and the admin account's internal signer set is not enumerable via public APIs, controller identity recorded, composition unverified.",
+        "reviewNote": "TON jetton master EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f ('Ethena USDe', tonapi.io whitelisted, queried 2026-07-20) reports mintable=true with admin 0:ab8feb26323e8940202f6fe04fc2531aef520003ba4adca35a15c54e75e602ea (EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7, active account). DefiLlama attributes TON USDe supply to this jetton as the bridging representation; LayerZero's OFT registry does not enumerate TON, and the admin account's internal signer set is not enumerable via public APIs, controller identity recorded, composition unverified. Holder-wallet control re-read 2026-10-19 from the TONAPI-verified jetton-minter.fc source: the admin can send op::call_to to any holder jetton wallet carrying op::set_status (lock or unlock), op::transfer, or op::burn, the source comment reading 'can be used to lock, unlock or reedem funds'; error::contract_locked rejects locked-wallet actions. get_jetton_data at the same read reports mintable=true and the unchanged admin. This is a holder-targeted lock and forced-transfer/burn capability on the TON representation only.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -889,6 +889,10 @@
           {
             "label": "Jetton admin account on TONAPI",
             "url": "https://tonviewer.com/EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7"
+          },
+          {
+            "label": "TONAPI verified USDe jetton-minter source (call_to / set_status), read 2026-10-19",
+            "url": "https://tonapi.io/v2/blockchain/accounts/EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f/inspect"
           }
         ]
       },

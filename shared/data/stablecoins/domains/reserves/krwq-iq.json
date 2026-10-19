@@ -86,9 +86,13 @@
       {
         "label": "KRWQ Base treasury Safe",
         "url": "https://base.blockscout.com/address/0xA3E0B562C6FD7D6F570B2afC2Cc4e240226D8B54?tab=contract"
+      },
+      {
+        "label": "KRWQ issuer release, 2026-02-24: began acquiring Korean government bonds held at Shinhan Securities, tokenized through Etherfuse Stablebonds (no amount disclosed)",
+        "url": "https://www.prnewswire.com/news-releases/krwq-acquires-korean-government-bonds-with-shinhan-securities-together-with-etherfuse-302696216.html"
       }
     ],
-    "rationale": "The September 15 issuer response and on-chain reads reproduce USDC $90,102.080832, frxUSD $482,631.869317 and Base treasury USDC $105,708.960000. The existing rounded composition is unchanged. Verified Ethereum custodian implementations and live getters bind both holders to canonical KRWQ and their exact collateral tokens. The Base treasury Safe has the same five signers and 3-of-5 threshold as the Ethereum custodian-owner Safe at the reviewed blocks. The adapter pins the three reviewed holders and checks live custodian token bindings; Safe control is dated research, not continuously monitored. Owner recovery functions permit withdrawal of collateral. The planned Korean Treasury Bond sleeve is not an observed holding; circulating-liability scope remains unresolved.",
+    "rationale": "The September 15 issuer response and on-chain reads reproduce USDC $90,102.080832, frxUSD $482,631.869317 and Base treasury USDC $105,708.960000. The existing rounded composition is unchanged. Verified Ethereum custodian implementations and live getters bind both holders to canonical KRWQ and their exact collateral tokens. The Base treasury Safe has the same five signers and 3-of-5 threshold as the Ethereum custodian-owner Safe at the reviewed blocks. The adapter pins the three reviewed holders and checks live custodian token bindings; Safe control is dated research, not continuously monitored. Owner recovery functions permit withdrawal of collateral. The planned Korean Treasury Bond sleeve is not an observed holding; circulating-liability scope remains unresolved. A February 24, 2026 issuer release said KRWQ had begun acquiring Korean government bonds held at Shinhan Securities and tokenized through Etherfuse's Stablebond framework, without disclosing an amount; the custodian-assets endpoint read on 2026-10-19 still reported only USDC, frxUSD and Base treasury USDC, with no bond position.",
     "compositionBasis": "KRWQ live custodian asset values normalized by current USD value",
     "compositionAsOf": "2026-09-14",
     "scope": "full-composition",

@@ -17,7 +17,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit, statutory auditor appointed in the Spiko SICAV prospectus. The AMF publishes a June 30, 2026 semiannual SICAV financial statement covering SAFO and its USD share; that statement is not an independent audit opinion. A current dated, independently signed SAFO auditor report was not established in this review.",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor appointed in the Spiko SICAV prospectus. The AMF publishes a June 30, 2026 semiannual SICAV financial statement covering SAFO and its USD share; that statement is not an independent audit opinion. A current dated, independently signed SAFO auditor report was not established in this review. Under the Spiko SICAV prospectus (August 2026 edition, Articles 24 and 26), the statutory auditor certifies the financial statements and the financial year ends on the last Paris trading day of December; SAFO launched in March 2026, so the first annual accounts covering SAFO close at the December 2026 year-end.",
     "attestorTier": "big4",
     "cadence": "annual",
     "attestorJurisdiction": "France"

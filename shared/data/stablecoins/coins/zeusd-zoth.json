@@ -86,7 +86,7 @@
     {
       "type": "danger",
       "title": "Severe residual depeg",
-      "message": "By late June 2026, ZeUSD market pricing and public liquidity remained far below the $1 peg after the 2025 exploit history, with supply reduced to a small residual base. Treat ZeUSD as a high-risk legacy/depeg case unless current issuer redemption and reserve evidence is independently revalidated."
+      "message": "By late June 2026, ZeUSD market pricing and public liquidity remained far below the $1 peg after the 2025 exploit history. The paused V1 contract still reported about 27.6M ZeUSD outstanding at Ethereum block 26227614 (19 October 2026), and Pharos's near-par peg reading rests on a single price source rather than a traded market. Treat ZeUSD as a high-risk legacy/depeg case unless current issuer redemption and reserve evidence is independently revalidated."
     }
   ],
   "mechanismArchetypeReview": {

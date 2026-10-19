@@ -13,7 +13,8 @@ Write `StablecoinAiSummary` entries in `data/ai-summaries.json`; `shared/types/e
 ## Editorial Contract
 
 - Interpret the central design trade-off and what Pharos evidence reveals; do not repeat classification badges or dashboard numbers.
-- Prefer durable relative wording for market cap, APY, TVL, event counts, and stress bands. A retained static adoption/funding/holder/TVL/supply/market-cap fact needs a displayed source, fact date, chain scope, and denominator.
+- Pharos is the summary's only source: summaries carry no `sources` field. Every claim must be backed by the base coin, a sidecar, or live analytics shown on the page, each of which carries its own provenance. Evidence that exists only outside Pharos goes into the owning sidecar first (with its dated sources) or the claim is dropped; a summary is never the sole home of a fact.
+- Prefer durable relative wording for market cap, APY, TVL, event counts, and stress bands. A retained static adoption/funding/holder/TVL/supply/market-cap fact needs a backing Pharos module, fact date, chain scope, and denominator.
 - Never call addresses users/holders without a defined method, compare unlike financing and token-supply quantities, or invent certainty for missing evidence.
 - Read `shared/lib/methodology-versions/current-version.json` for the current methodology and `ReportCardGradeSchema` in `shared/types/report-card-grade.ts` for grade vocabulary; `shared/types/safety-score-v9-public.ts` owns pillar keys. Missing reviewed evidence is NR, not safety.
 - AI drafts set actual `authoredBy`, `model`, `updatedAt`, and `factsAsOf`; only a named reviewer may add `reviewedBy`/`reviewedAt` after approving the exact text.
@@ -28,4 +29,4 @@ The permanent QA producer reads four live endpoint families (report cards, stres
 3. Draft the schema-valid entry and present it for review when approval is requested. Keep one main claim per sentence and close on the durable constraint.
 4. After edits, run `npm run typecheck` and `npx vitest run shared/lib/__tests__/ai-summary-claims.test.ts`; the latter validates the actual edited data file, including claim tokens and calendar dates. Run the existing term-markup tests when changing markup behavior. For queue work, rerun `npm run candidates:ai-summaries` and confirm refreshed entries leave the selected severity bands.
 
-Report changed IDs, evidence dates/sources, review state, remaining candidates, and validation.
+Report changed IDs, backing Pharos evidence and dates, review state, remaining candidates, and validation.

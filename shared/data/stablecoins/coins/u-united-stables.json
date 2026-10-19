@@ -15,7 +15,27 @@
     "url": "https://u.tech/por",
     "provider": "Chainlink U Reserves feed on BNB Chain (0xFa8e834DD2200923C706e6438d9030dB029B0c18; reference data directory identifies Stablemint Labs, third-party off-chain reserves, 18 decimals and an 86,400-second heartbeat). Ceffu separately provides digital-asset custody and MirrorX settlement; custody is not reserve-to-liability assurance.",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-11",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "review",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Pharos reserve research 2026-10-19 (August Moore CPA ISAE 3000 report PDF reviewed; supply reconciled for BNB Smart Chain, Ethereum and Tron, not Robinhood)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "United Stables Reserves Report as at August 31 2026 with Moore CPA Limited ISAE 3000 limited-assurance report (signed September 11 2026)",
+          "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20Aug_19082026.pdf"
+        },
+        {
+          "label": "United Stables monthly independent assurance reports",
+          "url": "https://u.tech/transparency/audit-report/"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "336",

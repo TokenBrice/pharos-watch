@@ -38,7 +38,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
-    "provider": "Bridge public pathUSD transparency API (issuer-reported circulating supply, reserve amounts and collateralization; no pathUSD-specific independent assurance report verified)",
+    "provider": "Bridge public pathUSD transparency API (issuer-reported circulating supply, reserve amounts and collateralization; no pathUSD-specific independent assurance report verified; Bridge's issuance FAQ says only that audits and transparency reports \"will be issued quarterly\", checked 2026-10-19)",
     "attestorTier": "self",
     "cadence": "real-time",
     "attestorJurisdiction": "United States"

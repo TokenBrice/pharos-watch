@@ -9,7 +9,7 @@
     "rwa": true
   },
   "collateral": "Sonic frxUSD held 1:1 by the USSD BrandedCustodian contract on Sonic. USSD inherits frxUSD's upstream reserve exposure rather than directly holding Frax's tokenized Treasury and approved-stablecoin portfolio.",
-  "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Holders first unwrap USSD to frxUSD; any further redemption is through Frax or authorized providers, not directly with Sonic. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",
+  "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Holders first unwrap USSD to frxUSD; any further redemption is through Frax or authorized providers, not directly with Sonic. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure. Sonic's USSD docs state minting carries no fee, and the BrandedCustodian's redeemFee parameter reads zero. USSD itself pays holders no yield: Sonic Labs's March 9, 2026 launch post says the yield from the backing assets is designed to flow back into the Sonic network, where it could support buybacks and ecosystem incentives as usage grows.",
   "mechanismArchetype": "tbill",
   "llamaId": "356",
   "detailProvider": "coingecko",
@@ -37,6 +37,10 @@
     {
       "label": "Docs",
       "url": "https://docs.soniclabs.com/sonic/ussd"
+    },
+    {
+      "label": "Launch announcement (2026-03-09)",
+      "url": "https://www.soniclabs.com/blog/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/"
     }
   ],
   "jurisdiction": {

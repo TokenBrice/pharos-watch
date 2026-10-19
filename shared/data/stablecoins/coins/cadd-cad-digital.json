@@ -116,12 +116,5 @@
       "description": "Canada's first regulated CAD-backed stablecoin launches with backing from Shopify, National Bank of Canada, Wealthsimple, and others.",
       "source": "CoinDesk"
     }
-  ],
-  "notices": [
-    {
-      "type": "info",
-      "title": "Active coverage pending",
-      "message": "CADD launched May 4, 2026 but remains excluded from active runtime surfaces until CoinGecko or DefiLlama publishes usable live price and supply data."
-    }
   ]
 }

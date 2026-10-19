@@ -33,11 +33,16 @@
       {
         "label": "United Stables terms and conditions",
         "url": "https://u.tech/terms/"
+      },
+      {
+        "label": "United Stables Reserves Report as at August 31 2026 with Moore CPA Limited ISAE 3000 limited-assurance report (signed September 11 2026)",
+        "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20Aug_19082026.pdf"
       }
     ],
-    "rationale": "The issuer API accessed 2026-09-30 remains genuinely single-bucket at source: totalReserve $1,540,127,120.98 and totalToken $1,497,830,391.63, updatedAt 2026-09-30T05:37:40.598Z, ripcord false. It discloses no constituent balances, contracts, custody allocation, or stablecoin weights. The contractual cash, Treasury and fiat-referenced stablecoin envelope remains a variable mix. Accepted mint or redemption assets do not prove positive holdings.",
+    "rationale": "The issuer API accessed 2026-09-30 remains genuinely single-bucket at source: totalReserve $1,540,127,120.98 and totalToken $1,497,830,391.63, updatedAt 2026-09-30T05:37:40.598Z, ripcord false. It discloses no constituent balances, contracts, custody allocation, or stablecoin weights. The contractual cash, Treasury and fiat-referenced stablecoin envelope remains a variable mix. Accepted mint or redemption assets do not prove positive holdings. Supplementary note 2026-10-19: the issuer's Reserves Report as at 2026-08-31, under a Moore CPA Limited ISAE 3000 limited-assurance conclusion signed 2026-09-11, does split that month's reserves by category: $1,284,976,249 of reserve assets against 1,275,499,208 U (100.74%), comprising stablecoins $418,354,080 (USDC, USDT and USD1; $389,453,533 held at an exchange), cash and cash equivalents $360,683,508 (including $278,574,977 at an asset manager, partly money market fund units), Binance RWUSD $304,175,870 (a principal-protected yield product held as a Binance account balance, redeemable for USDC subject to Binance quotas and fees, not transferable outside Binance and not a claim on any underlying asset) and tokenised U.S. Treasury fund units $201,762,791. Moore's emphasis of matter states it gives no assurance on the stability of the par-valued stablecoin and RWUSD balances. That dated monthly snapshot is not applied to the live single-bucket row above.",
     "compositionBasis": "Aggregate issuer PoR at 2026-09-30T05:37:40.598Z; single-bucket source with no asset-level composition",
     "compositionAsOf": "2026-09-30",
+    "compositionSource": "live-adapter",
     "scope": "full-composition",
     "knownUnknownExposure": "All reserve value is reported as one variable basket; asset weights, stablecoin identities, banking counterparties, custodians, and liquidity terms are undisclosed.",
     "knownUnknownExposurePct": 100,

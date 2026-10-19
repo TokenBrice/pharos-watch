@@ -5,10 +5,10 @@
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-08-18",
-    "reason": "Upstream CoinGecko/DefiLlama circulating supply for SILK has been invalid (roughly 12x understated) since 2026-08-05, blocking the exact active supply-publication contract; owner decision of 2026-08-18 withholds SILK from the active set until the upstream source recovers.",
-    "reviewBy": "2026-09-18",
+    "reason": "CoinGecko/DefiLlama circulating supply for SILK has been invalid (about 12x understated) since 2026-08-05; owner decision of 2026-08-18 withholds SILK until a source recovers. Recheck 2026-10-19: CoinGecko stale since 2026-08-17; DefiLlama marks SILK dead from 2026-09-01.",
+    "reviewBy": "2026-11-19",
     "source": {
-      "label": "DefiLlama stablecoin detail for SILK",
+      "label": "DefiLlama stablecoin detail for SILK (deadFrom 2026-09-01)",
       "url": "https://stablecoins.llama.fi/stablecoin/113"
     }
   },

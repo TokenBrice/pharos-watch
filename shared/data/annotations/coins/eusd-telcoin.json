@@ -1,3 +1,4 @@
 [
-  {"date":"2025-12-26","kind":"regulatory","label":"eUSD launch, the first US-chartered bank stablecoin (Telcoin/Nebraska)","severity":"high","href":"https://www.businesswire.com/news/home/20251226357792/en/Telcoin-Begins-Digital-Asset-Banking-Operations-with-Launch-of-eUSD-Stablecoin"}
+  {"date":"2025-12-26","kind":"regulatory","label":"eUSD launch, the first US-chartered bank stablecoin (Telcoin/Nebraska)","severity":"high","href":"https://www.businesswire.com/news/home/20251226357792/en/Telcoin-Begins-Digital-Asset-Banking-Operations-with-Launch-of-eUSD-Stablecoin"},
+  {"date":"2026-06-23","kind":"governance","label":"Telcoin Wallet opens US individual bank accounts tied to eUSD balances","severity":"low","href":"https://www.telco.in/en/newsroom/2026-06-23/telcoin-launches-first-regulated-on-chain-bank-accounts-in-the-us","note":"2026-06-23: Telcoin Digital Asset Bank said US-resident users can open an individual account in the latest Telcoin Wallet release that is directly tied to their eUSD balance; yield on eUSD balances and debit cards were announced for later point releases."}
 ]

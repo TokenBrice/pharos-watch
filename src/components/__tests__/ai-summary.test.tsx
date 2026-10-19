@@ -24,27 +24,16 @@ describe("AiSummary", () => {
     expect(link.getAttribute("data-prefetch")).toBe("auto");
   });
 
-  it("renders optional labeled sources without inventing review provenance", () => {
+  it("does not invent review provenance for AI drafts", () => {
     render(<AiSummary
       title="Evidence correction"
-      text="A sourced summary."
+      text="A draft summary."
       updatedAt="2026-08-09"
       authoredBy="ai"
       model="gpt-test"
       factsAsOf="2026-08-09"
-      sources={[
-        { label: "Product documentation", url: "https://example.com/docs" },
-        { label: "Timestamped reserve API", url: "https://example.com/api" },
-      ]}
     />);
 
-    expect(screen.getByText("Sources")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Product documentation" }).getAttribute("href")).toBe(
-      "https://example.com/docs",
-    );
-    expect(screen.getByRole("link", { name: "Timestamped reserve API" }).getAttribute("href")).toBe(
-      "https://example.com/api",
-    );
     expect(document.body.textContent).toContain("drafted by gpt-test");
     expect(document.body.textContent).not.toContain("reviewed by");
   });
@@ -101,13 +90,9 @@ describe("AiSummary", () => {
         factsAsOf: "2026-09-01",
       }]}
       claimValues={{ "report-card.grade": "<script>alert(1)</script>" }}
-      sources={[{ label: "Primary evidence", url: "https://example.com/evidence" }]}
     />);
 
     expect(document.body.textContent).toContain("The current grade is N/A.");
     expect(document.querySelector("script")).toBeNull();
-    expect(screen.getByRole("link", { name: "Primary evidence" }).getAttribute("href")).toBe(
-      "https://example.com/evidence",
-    );
   });
 });

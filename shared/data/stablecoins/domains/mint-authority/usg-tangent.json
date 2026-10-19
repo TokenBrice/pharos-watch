@@ -226,7 +226,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Ethereum block 25531083: isPegKeeper(x) = true for 0xf89615f75c8161dc185c03020240905f6b66bad9 (verified contract PegKeeperV2) and 0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e (verified contract Peg_Keeper_V2); the complete SetIsPegKeeper log history is those two grants at block 24570211 and no revocations. isMinter and isIRProducer are false for both."
+        "evidence": "Ethereum block 25531083: isPegKeeper(x) = true for 0xf89615f75c8161dc185c03020240905f6b66bad9 (verified contract PegKeeperV2) and 0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e (verified contract Peg_Keeper_V2); the complete SetIsPegKeeper log history is those two grants at block 24570211 and no revocations. isMinter and isIRProducer are false for both. Supply follow-up at Ethereum block 26227605 (2026-10-19T15:45:47Z): balanceOf returned exactly 20,000,000 USG for each peg keeper against totalSupply 43,824,789.45, so 40,000,000 USG (about 91.3% of totalSupply) sits preminted in the two peg-keeper contracts and about 3.82M USG is outside them. Read via Ethereum PublicNode RPC eth_call on the USG token 0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1."
       }
     ],
     "economicCapSemantics": "unbounded",

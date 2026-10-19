@@ -16,7 +16,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-07-22",
     "reviewer": "GPT SOL-NR-B wave6",
-    "rationale": "KRWQ's issuer reserve endpoint reports the current reserve assets and an over-100% reserve ratio, while issuer materials describe KYC-gated centralized issuance and redemption. The KRW reference and mixed reserve assets indicate an issuer-managed reserve claim rather than a USD peg or an algorithmic design.",
+    "rationale": "KRWQ's issuer reserve endpoint reports the current reserve assets and an over-100% reserve ratio, while issuer materials describe KYC-gated centralized issuance and redemption. The KRW reference and mixed reserve assets indicate an issuer-managed reserve claim rather than a USD peg or an algorithmic design. The October 30, 2025 launch release names IQ as the launching party, in partnership with Frax; the whitepaper describes KRWQ as a collaboration between the two and names no separate legal issuing entity.",
     "sources": [
       {
         "label": "KRWQ custodian-assets API",
@@ -25,6 +25,14 @@
       {
         "label": "KRWQ transparency dashboard",
         "url": "https://krwq.cash/transparency"
+      },
+      {
+        "label": "IQ launch release, 2025-10-30: IQ, in partnership with Frax, announces KRWQ",
+        "url": "https://www.prnewswire.com/news-releases/krwq-the-first-korean-won-stablecoin-on-base-302599239.html"
+      },
+      {
+        "label": "KRWQ whitepaper, section 4.3 (Frax and IQ partnership)",
+        "url": "https://krwq.cash/whitepaper.pdf"
       }
     ]
   },

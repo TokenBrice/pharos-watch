@@ -65,7 +65,7 @@
     "deathDate": "2025-06-26",
     "recordedAt": "2026-06-21",
     "epitaph": "Inter Protocol sunset by governance",
-    "obituary": "Agoric governance approved Inter Protocol's wind-down in mid-2025, disabled new IST minting, and completed the sunset process on June 26, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
+    "obituary": "In April 2025 a governance proposal to sunset Inter Protocol cited declining market appetite for decentralized stablecoins, rising operational complexity and costs, and a refocus on Agoric's Orchestration work and the BLD token. Agoric's on-chain signaling Proposal 93 passed on May 1, 2025, starting a planned 60-day wind-down: no new vault openings or IST minting, a liquidation fee set to zero so vault users could repay IST and reclaim collateral, and weekly liquidation-ratio increases to close any remaining vaults. The sunset process completed on June 26, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
     "sourceUrl": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",
     "sourceLabel": "Agoric community sunset proposal"
   }

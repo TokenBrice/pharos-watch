@@ -76,9 +76,17 @@
       {
         "label": "OpenEden USDO reserve asset inventory",
         "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
+      },
+      {
+        "label": "Chainlink feed directory, Base: USDO Reserves (usdo-por), reserveAsset U.S. Treasury Bills, porSource Wallet Address Manager (read 2026-10-19)",
+        "url": "https://reference-data-directory.vercel.app/feeds-ethereum-mainnet-base-1.json"
+      },
+      {
+        "label": "Chainlink USDO Reserves feed proxy on Base, latestRoundData read at block 52817725 (2026-10-19)",
+        "url": "https://basescan.org/address/0x5218Ebeb96bD2bAFe21F9b143f5672552629ba79"
       }
     ],
-    "rationale": "Issuer API source 2026-10-07T08:00:19.096Z, accessed 2026-10-07T20:47:18.580729Z, reports $15,537,989.483383574 reserves and 15,275,117.334802557 USDO with a 101.7209% ratio. Positive constituents normalize to TBILL 78.95194721%, BUIDL 9.64028307%, RLUSD 8.62380556%, VBILL 2.63169331%, and USDC 0.15227084%. USYC, BENJI, pending-USDC and uAmount are observed zero and create no positive holdings. The ratio reconciles only reported usdoAmount, not every queued claim; pendingReserverAssetsRedeem and gap fields are unresolved context, not additional inventory. This is issuer accounting, not independent financial assurance or proof of redemption openness.",
+    "rationale": "Issuer API source 2026-10-07T08:00:19.096Z, accessed 2026-10-07T20:47:18.580729Z, reports $15,537,989.483383574 reserves and 15,275,117.334802557 USDO with a 101.7209% ratio. Positive constituents normalize to TBILL 78.95194721%, BUIDL 9.64028307%, RLUSD 8.62380556%, VBILL 2.63169331%, and USDC 0.15227084%. USYC, BENJI, pending-USDC and uAmount are observed zero and create no positive holdings. The ratio reconciles only reported usdoAmount, not every queued claim; pendingReserverAssetsRedeem and gap fields are unresolved context, not additional inventory. This is issuer accounting, not independent financial assurance or proof of redemption openness. Chainlink feed coverage measured 2026-10-19: Chainlink's Base feed directory lists the usdo-por feed (proxy 0x5218ebeb96bd2bafe21f9b143f5672552629ba79) with reserve asset U.S. Treasury Bills and porSource Wallet Address Manager. At Base block 52817725 its latestRoundData answer was 14,188,778.570757 (18 decimals), updated 2026-10-19T00:03:33Z. The issuer API snapshot dated 2026-10-19T08:00:18.584Z reported $15,556,010.22 reserves against 15,256,774.83 USDO; TBILL ($12,252,338.73), BUIDL ($1,499,432.10) and VBILL ($409,325.00) total $14,161,095.83, and the RLUSD and USDC buffer $1,394,914.39. The feed answer therefore sits below USDO supply and close to the Treasury-fund holdings alone, consistent with a feed that excludes the stablecoin buffer; it is not a full-basket reserve figure and should not be read as a reserve-to-supply ratio.",
     "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
     "compositionAsOf": "2026-10-07",
     "scope": "full-composition",

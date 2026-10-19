@@ -1,3 +1,4 @@
 [
+  {"date":"2025-05-01","kind":"governance","label":"Agoric Proposal 93 passes: 60-day Inter Protocol wind-down, IST minting halted","severity":"high","href":"https://main.api.agoric.net/cosmos/gov/v1/proposals/93","note":"2025-05-01: Agoric signaling Proposal 93 (submitted 2025-04-28) passed at voting end, mandating a planned 60-day Inter Protocol wind-down: no new vaults or IST minting, liquidation fee set to 0, weekly liquidation-ratio increases to close remaining vaults, and a June 30 shutdown target."},
   {"date":"2025-06-30","kind":"governance","label":"Inter Protocol sunset: IST redemption grace period ends","severity":"high","href":"https://agoric.com/blog/getting-started/ist/","note":"2025-06-30: Inter Protocol sunset; IST redemption grace period ends."}
 ]

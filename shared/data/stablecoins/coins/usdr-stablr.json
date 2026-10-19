@@ -55,7 +55,7 @@
     {
       "type": "danger",
       "title": "Minting and redemption suspended",
-      "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting USDR and EURR. Minting and redemption were suspended, 8.35M unbacked USDR were minted, and StablR stated USDR/EURR were not fully backed at the 1:1 ratio required under MiCAR while recovery work continued."
+      "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting USDR and EURR. Minting and redemption remain suspended under StablR's Recovery Plan. StablR's August 25, 2026 notice puts unauthorised, unbacked USDR in circulation at about 14.33M and states that properly issued tokens remain fully backed by segregated reserves."
     }
   ],
   "marketAvailability": "legacy-or-wind-down",
@@ -66,8 +66,8 @@
   "obituary": {
     "causeOfDeath": "counterparty-failure",
     "deathDate": "2026-05",
-    "epitaph": "A two-signer mint key broke the backing",
-    "obituary": "StablR suspended USDR minting and redemption after a May 24, 2026 cybersecurity incident let an attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR exploit. StablR disclosed that the affected tokens were temporarily not backed 1:1 under MiCAR while recovery work continued. With no public restoration of minting, redemption, or full backing confirmed, Pharos freezes USDR as an archived incident asset rather than treating it as an active redeemable stablecoin.",
+    "epitaph": "One compromised mint key broke the backing",
+    "obituary": "StablR suspended USDR minting and redemption after a May 24, 2026 cybersecurity incident let an attacker mint unbacked USDR as part of a coordinated USDR/EURR exploit. StablR disclosed that the affected tokens were temporarily not backed 1:1 under MiCAR, announced on May 29 that its Board had activated its Recovery Plan, and on August 25 put unauthorised USDR in circulation at about 14.33M while stating that properly issued tokens remained fully backed. With no public restoration of minting, redemption, or full backing confirmed, Pharos freezes USDR as an archived incident asset rather than treating it as an active redeemable stablecoin.",
     "sourceUrl": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations",
     "sourceLabel": "StablR cybersecurity incident disclosure"
   }

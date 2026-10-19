@@ -9,11 +9,23 @@
       {
         "date": "2026-05-24",
         "status": "active",
-        "summary": "A compromised StablR mint/governance key let the attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
+        "summary": "A compromised StablR mint/governance key let the attacker mint unbacked USDR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension. Initial reporting put the unbacked USDR at 8.35M; StablR's August 25, 2026 notice puts unauthorised USDR in circulation at about 14.33M (and EURR at about 6.41M), states that properly issued tokens remain fully backed by reserves held in segregated accounts, and reports no further unauthorised minting. StablR's May 29, 2026 notice states that its Board has activated the company's Recovery Plan, without giving an activation date; its October 19, 2026 notice confirms minting and redemption remain suspended. StablR has not publicly disclosed how access was obtained or the signer threshold of the compromised key; the 2/2 multisig controls recorded here are post-incident live reads.",
         "sources": [
           {
             "label": "StablR official incident notice",
             "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
+          },
+          {
+            "label": "StablR Recovery Plan activation notice (2026-05-29)",
+            "url": "https://www.stablr.com/insights/important-notice-to-stablr-token-holders-recovery-plan-activation"
+          },
+          {
+            "label": "StablR incident notification (2026-08-25): unauthorised token amounts and backing",
+            "url": "https://www.stablr.com/insights/notification-update-25-08-2026"
+          },
+          {
+            "label": "StablR incident notification (2026-10-19): suspension continues",
+            "url": "https://www.stablr.com/insights/notification-update-19-10-2026"
           },
           {
             "label": "CoinDesk - StablR unbacked-token mint",

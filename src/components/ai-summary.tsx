@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { IntentLink } from "@/components/intent-link";
 import { buildAiDisclosureLine, formatAiSummaryIsoDate } from "@/components/ai-disclosure";
 import { AiSummaryProse } from "@/components/ai-summary-prose";
@@ -21,7 +20,6 @@ export function AiSummary({
   reviewedBy,
   reviewedAt,
   factsAsOf,
-  sources,
   claimTokens,
   claimValues,
 }: AiSummaryProps) {
@@ -47,25 +45,6 @@ export function AiSummary({
           <p className="mt-3 inline-flex rounded-full border border-border/60 bg-muted/30 px-2.5 py-0.5 text-xs text-muted-foreground">
             Claims as of {claimsDateline}
           </p>
-        ) : null}
-        {sources?.length ? (
-          <div className="mt-4 border-t border-border/40 pt-3">
-            <p className="pharos-kicker">
-              Sources
-            </p>
-            <ul className="mt-1.5 flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs">
-              {sources.map((source) => (
-                <li key={source.url}>
-                  <Link
-                    href={source.url}
-                    className="pharos-focus-ring rounded-sm text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
-                  >
-                    {source.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
         ) : null}
         {/* Provenance footer: one sentence-case line (dateline + disclosure),
             the policy link at the far edge, in the dossier footer grammar. */}
