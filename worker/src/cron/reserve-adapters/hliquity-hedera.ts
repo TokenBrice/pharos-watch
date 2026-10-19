@@ -109,11 +109,11 @@ async function fetchFrankfurterChfUsd(
 export function adaptHliquityHederaState(state: HliquityHederaState): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
 
-  const totalCollateralTinybar = state.troveCollateralRaw + state.stabilityPoolCollateralRaw;
-  const totalCollateralHbar = decimalNumberFromBigInt(totalCollateralTinybar, HBAR_DECIMALS);
+  // getEntireSystemColl includes ActivePool + DefaultPool, not depositor-owned SP gains.
+  const systemTroveCollateralHbar = decimalNumberFromBigInt(state.troveCollateralRaw, HBAR_DECIMALS);
   const totalDebtHchf = decimalNumberFromBigInt(state.debtRaw, HCHF_DECIMALS);
   const supplyHchf = decimalNumberFromBigInt(state.supplyRaw, HCHF_DECIMALS);
-  if (!Number.isFinite(totalCollateralHbar) || totalCollateralHbar <= 0) {
+  if (!Number.isFinite(systemTroveCollateralHbar) || systemTroveCollateralHbar <= 0) {
     throw new Error(`${ADAPTER_KEY}: measured HBAR collateral is not a finite positive quantity`);
   }
   if (!Number.isFinite(totalDebtHchf) || totalDebtHchf <= 0) {
@@ -133,7 +133,7 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
   }
 
   const totalCollateralUsd =
-    state.hbarPriceUsd != null && state.hbarPriceUsd > 0 ? totalCollateralHbar * state.hbarPriceUsd : undefined;
+    state.hbarPriceUsd != null && state.hbarPriceUsd > 0 ? systemTroveCollateralHbar * state.hbarPriceUsd : undefined;
   const totalLiabilitiesUsd = totalDebtHchf * state.chfUsdRate;
   const collateralizationRatio =
     totalCollateralUsd != null && totalCollateralUsd > 0 ? totalCollateralUsd / totalLiabilitiesUsd : undefined;
@@ -171,8 +171,8 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
   const slices = slicesFromValues([
     {
       sourceKey: `${ADAPTER_KEY}:hbar`,
-      name: "HBAR collateral (Troves + Stability Pool)",
-      value: totalCollateralUsd ?? totalCollateralHbar,
+      name: "HBAR collateral (system Troves)",
+      value: totalCollateralUsd ?? systemTroveCollateralHbar,
       risk: "high" as ReserveSlice["risk"],
       assetClass: "cryptoasset" as const,
     },
@@ -187,13 +187,13 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
     priceFeedAddress: PRICE_FEED_EVM_ADDRESS,
     hchfTokenAddress: HCHF_TOKEN_EVM_ADDRESS,
     troveCollateralRaw: state.troveCollateralRaw.toString(),
-    stabilityPoolCollateralRaw: state.stabilityPoolCollateralRaw.toString(),
+    depositorOwnedStabilityPoolCollateralRaw: state.stabilityPoolCollateralRaw.toString(),
     debtRaw: state.debtRaw.toString(),
     supplyRaw: state.supplyRaw.toString(),
     protocolPriceRaw: state.protocolPriceRaw?.toString() ?? null,
     tcrRaw: state.tcrRaw?.toString() ?? null,
     mcrRaw: state.mcrRaw?.toString() ?? null,
-    totalCollateralHbar: totalCollateralHbar,
+    systemTroveCollateralHbar,
     debtHchf: totalDebtHchf,
     hbarPriceUsd: state.hbarPriceUsd ?? null,
     chfUsdRate: state.chfUsdRate,
@@ -235,10 +235,11 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
  * Reads HLiquity's Liquity-style CDP reserve on Hedera through the public
  * mirror node: the latest record-stream block is pinned, and a same-block
  * census of TroveManager.getEntireSystemColl(), getEntireSystemDebt(), MCR(),
- * getTCR(priceFeed.fetchPrice()), StabilityPool.getETH() and the HCHF token
- * totalSupply() is executed with every call addressed to that block. HBAR is
- * valued at the DefiLlama market price and HCHF debt at the ECB CHF/USD
- * reference rate; a missing or stale franc rate fails the attempt closed.
+ * getTCR(priceFeed.fetchPrice()) and the HCHF token totalSupply() is executed
+ * with every call addressed to that block. StabilityPool.getETH() is read
+ * only as a depositor-owned diagnostic, not backing for outstanding HCHF.
+ * System Trove HBAR is valued at the DefiLlama market price and HCHF debt at
+ * the ECB CHF/USD reference rate; a missing or stale franc rate fails closed.
  */
 export async function fetchHliquityHederaReserves(
   _coin: ReserveAdapterCoin,

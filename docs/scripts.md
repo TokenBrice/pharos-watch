@@ -182,6 +182,8 @@ Generated clocks intentionally differ: coin sitemap `lastmod` follows the newest
 
 Automatic selection matches source/output changes and propagates dependencies, then filters `checkable` and `ciDriftCheck`. Explicit `--only` can still check a `ciDriftCheck: false` projection. Registry `requiredBrowsers` owns browser setup.
 
+The compact catalog generator loads shared TypeScript classifiers through `tsx`: write with `node --import tsx scripts/build-data/build-client-registry.mjs` and check with `node --import tsx scripts/build-data/build-client-registry.mjs --check`. Both modes cover every output of the `stablecoin-client-registry` artifact, including per-coin details, not just the browser list; its registered output paths are the authoritative inventory.
+
 | Artifact family | Read its owner |
 | --- | --- |
 | Scene atlas/OG composition | [Scene Kit](./data-visualization.md#scene-kit), `scripts/lib/scene-atlas.ts` and `scripts/lib/scene-og.ts` |

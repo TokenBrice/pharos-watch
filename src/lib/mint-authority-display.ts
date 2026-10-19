@@ -4,9 +4,9 @@ import {
   MINT_AUTHORITY_SCORE_DESCRIPTORS,
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,
   MINT_AUTHORITY_STATUS_CONFIG,
+  resolveMintAuthorityStatusKind,
   type MintAuthorityScoreFilterValue,
   type MintAuthorityStatusConfig,
-  type MintAuthorityStatusKind,
 } from "@shared/lib/classification";
 
 
@@ -76,59 +76,6 @@ export function resolveMintAuthorityScoreDisplay(
   };
 }
 
-function hasActiveMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
-  return (summary.controls ?? []).some(
-    (control) =>
-      (control.authorityType === "safe" || control.authorityType === "multisig") &&
-      control.directMintAbility !== "none",
-  );
-}
-
-function hasDirectNonMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
-  return (summary.controls ?? []).some(
-    (control) =>
-      control.directMintAbility === "direct" &&
-      control.authorityType !== "safe" &&
-      control.authorityType !== "multisig",
-  );
-}
-
-export function resolveMintAuthorityStatusKind(
-  summary?: MintAuthorityCoverageSummary | null,
-): MintAuthorityStatusKind {
-  if (!summary || summary.mintPath === "unknown") {
-    return "unknown";
-  }
-
-  if (summary.mintPath === "wrapped-or-variant-inherited") {
-    return "inherited-authority";
-  }
-
-  if (
-    summary.mintPath === "immutable-user-collateralized" &&
-    (summary.authorityPosture === "none-resolved" || summary.authorityPosture === "none-resolved-mint")
-  ) {
-    return "no-privileged-mint";
-  }
-
-  if (summary.mintPath === "bridge-or-oft-synthetic") {
-    return "bridge-mint";
-  }
-
-  if (hasActiveMultisigMintControl(summary)) {
-    return "multisig-mint";
-  }
-
-  if (
-    summary.mintPath === "issuer-direct-mint" ||
-    summary.mintPath === "offchain-attested-minter" ||
-    hasDirectNonMultisigMintControl(summary)
-  ) {
-    return "issuer-or-backend-mint";
-  }
-
-  return "governed-mint";
-}
 
 export function resolveMintAuthorityStatus(
   summary?: MintAuthorityCoverageSummary | null,

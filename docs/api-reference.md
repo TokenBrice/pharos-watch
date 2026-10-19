@@ -176,6 +176,8 @@ Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full
 
 Yield source freshness is separate from publication freshness. Unknown observation evidence must not be replaced with publication time or treated as refreshed merely because the snapshot was newly served. Source and comparison-anchor ages advance at read time; selected `sourceRisk.sourceAgeSeconds` follows authoritative provenance, while alternate ages advance from the publication clock and preserve unavailable ages.
 
+Full, summary, and coin rankings also recompute `provenance.dlPools.ageSeconds` from the pool input's original `updatedAt` at serve time, independently of yield publication age. A null pool clock remains a null age, even if the stored age was numeric. The reference-rates strip warns only above twice the pool-input producer interval (currently 7,200 seconds from the hourly cadence); its tooltip exposes the effective budget. Neither serving nor republishing yield data renews that input clock.
+
 Yield history may include a top-level `warning` explaining publication-cutoff fallback. A point with unreadable stored warnings returns `warningSignals: []` with `warningSignalsStatus: "unreadable"`; that marker is not a clean warning assessment. Each point's `pysReproducibility` is `exact`, `not-scored`, `legacy-partial`, or `invalid`: only `exact` affirms reproduction from the publish-time input snapshot, while legacy/absent evidence and invalid snapshots remain explicit.
 
 **Selected endpoints with generic freshness `_meta`:**
@@ -380,6 +382,14 @@ Producer-written `blacklist-summary` snapshots also publish optional `refresh: {
 | `supplyChainGuard` | object | Chain-dropout evidence with `reason: "supply-chain-dropout"`, `status: "repaired" \| "quarantined" \| "unavailable" \| "chains-unavailable"`, optional `quarantinedSince` / `concurrentGainUsd`, and `chains[]`. Each chain includes `chainLabel`, optional `chainId`, nullable `listCurrentUsd`, `baselineUsd`, `baselineObservedAt`, `baselineSource: "state" \| "seed" \| "list-prev-day"`, and `resolution: "onchain-total-supply" \| "defillama-chain-history" \| "carried-baseline" \| "unavailable"`, with optional `repairedCurrentUsd` / `observedAt`. |
 | `supplyChainGuard.chains[].observedAtKind` | `"upstream" \| "local-read"` | Optional clock kind for chain repair evidence. Native issuer `onchain-total-supply` repairs use `"local-read"` with the sync-start run clock; DefiLlama chart repairs use `"upstream"` with the point date. Without quarantine, aggregate `supplyObservedAt` uses the oldest admitted upstream chart repair clock; native-only repairs preserve the incoming list clock or its absence, and mixed repairs use only chart clocks. Withheld repairs discard the repair clock/kind before any carried-baseline or unavailable outcome. An absent kind on older provenance is unknown, not proof of an upstream clock. |
 
+## Literal Event Search
+
+`GET /api/events?q=...` matches a literal substring of the title, summary, or coin ID; `GET /api/blacklist?q=...` matches a literal address substring. Both trim and lowercase `q` before matching against SQLite-lowercased columns. Percent (`%`), underscore (`_`), and backslash are ordinary characters, not search wildcards. SQLite's existing ASCII case-folding behavior is retained; this is not Unicode case-insensitive search.
+
+Tape keeps its 200-character normalized `q` limit (`400` above it); blacklist intentionally has no handler-level `q` length cap, so a 201-character query is admitted there. Neither search is truncated to work around D1's `LIKE` pattern ceiling.
+
+Tape `type=freeze.*` and `class=freeze` select the literal dot-delimited prefix `freeze.` case-insensitively: they include `freeze.blacklisted`, not bare `freeze` or `freezeframe.blacklisted`. Underscores in admitted lowercase slug segments remain literal. Prefix matching does not impose a new length cap or use SQL pattern wildcards.
+
 ## Public Endpoints
 
 On `https://api.pharos.watch`, these routes require `X-API-Key` unless marked `Authentication: exempt`. [OpenAPI schemas](https://pharos.watch/openapi.json) describe bodies; `shared/lib/api-endpoints/definitions.ts` owns auth/cache flags.
@@ -395,6 +405,8 @@ Aggregate FTQ also publishes `gauge.classificationReason` and independent `_meta
 DEX [price publication](./dex-liquidity.md#dex-price-cross-validation). Malformed coverage is quarantined per asset/point, retaining independent measurements. Price admission, nullable fields and the separate 24h clock do not alter liquidity `X-Data-Age`.
 `GET /api/mint-burn-flows` valuation-gated nullable fields: aggregate `coins[]`: `netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, `netFlowDirection24h`; `chains[].netFlow24hUsd`, `hourly[].netFlowUsd`, `gauge.flightToQuality`, `gauge.flightIntensity`; per-coin `netFlowUsd`, `chains[].netFlowUsd`. [Valuation completeness (v6.23)](./mint-burn-flows.md#valuation-completeness) owns gates, exact/partial/legacy semantics and gauge reweighting. `valuation` shapes: coin `{ window24h, baseline, netFlow7d, netFlow30d, netFlow90d, netFlow7dBound?, netFlow30dBound?, netFlow90dBound? }` (v6.25 bounds: `{ kind: "lower" | "upper", valueUsd }` or `null`; a proven one-sided bound on a withheld net); aggregate chain/hourly completeness labels; per-coin totals/chains `{ completeness, mintCompleteness, burnCompleteness, unpricedMintEventCount, unpricedBurnEventCount }`. Absent records are `unknown`, never complete.
 `GET /api/stablecoin-charts` retains invalid/omitted buckets as null, explicit zero as zero; see [chart publication](./supply-snapshot.md#supply-pipeline).
+
+`GET /api/supply-history?stablecoin=<id>&range=all` returns every retained daily row for one admitted coin in chronological order, with no sliding day cutoff. It uses the same inclusive completed-snapshot fence and producer freshness headers as bounded history, preserving nullable observations and observed zero. Omit `days` in this mode: supplying both is rejected. Missing `range` keeps the existing `days` contract (default 365, bounds 1–5000); empty or non-`all` range values return `400`. The website's `1Y` requests `days=365`, while `All` uses a distinct `range=all` query/cache identity. Ship the additive Worker admission before the Pages cutover; an old Worker ignores this parameter and silently serves its bounded default.
 
 <!-- GENERATED-START: public-endpoints -->
 <!-- Generated by scripts/maintenance/generate-api-reference.ts from public/openapi.json and shared/lib/api-endpoints/definitions.ts. -->
@@ -424,7 +436,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/bluechip-ratings` | Bluechip ratings | Risk | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity` | DEX liquidity | Liquidity | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity-history` | DEX liquidity history | Liquidity, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
-| GET | `/api/supply-history` | Supply history | History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
+| GET | `/api/supply-history` | Supply history | History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer); `range` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/daily-digest` | Daily digest | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-archive` | Digest archive | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-snapshot` | Digest snapshot | Digest | `X-API-Key` required | `date` (query, required, string) | 200, 400, 401, 429, 503 |
@@ -586,7 +598,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.34"
+  "currentVersion": "6.35"
 }
 ```
 
@@ -624,7 +636,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.34"
+  "currentVersion": "6.35"
 }
 ```
 
@@ -674,7 +686,7 @@ Historical supply series for a stablecoin. [Full endpoint contract](https://phar
 
 - **Operation ID:** `supplyHistory`
 - **Path:** `/api/supply-history`
-- **Parameters:** `stablecoin` (query, required, string); `days` (query, optional, integer)
+- **Parameters:** `stablecoin` (query, required, string); `days` (query, optional, integer); `range` (query, optional, string)
 - **Success response schema:** [`SupplyHistoryResponse`](https://pharos.watch/openapi.json#/components/schemas/SupplyHistoryResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
@@ -1040,8 +1052,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.34",
-  "methodologyVersion": "6.34"
+  "currentVersion": "6.35",
+  "methodologyVersion": "6.35"
 }
 ```
 

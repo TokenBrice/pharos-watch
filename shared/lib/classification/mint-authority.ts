@@ -1,3 +1,4 @@
+import type { MintAuthorityCoverageSummary } from "../../types/stablecoin-client-meta";
 import type { V9MintPostureBand } from "../safety-score-v9/mint-posture";
 import { V9_MINT_POSTURE_BAND_ORDER } from "../safety-score-v9/mint-posture";
 import { projectDescriptors } from "./descriptors";
@@ -10,6 +11,60 @@ export type MintAuthorityStatusKind =
   | "bridge-mint"
   | "inherited-authority"
   | "unknown";
+
+function hasActiveMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
+  return (summary.controls ?? []).some(
+    (control) =>
+      (control.authorityType === "safe" || control.authorityType === "multisig") &&
+      control.directMintAbility !== "none",
+  );
+}
+
+function hasDirectNonMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
+  return (summary.controls ?? []).some(
+    (control) =>
+      control.directMintAbility === "direct" &&
+      control.authorityType !== "safe" &&
+      control.authorityType !== "multisig",
+  );
+}
+
+export function resolveMintAuthorityStatusKind(
+  summary?: MintAuthorityCoverageSummary | null,
+): MintAuthorityStatusKind {
+  if (!summary || summary.mintPath === "unknown") {
+    return "unknown";
+  }
+
+  if (summary.mintPath === "wrapped-or-variant-inherited") {
+    return "inherited-authority";
+  }
+
+  if (
+    summary.mintPath === "immutable-user-collateralized" &&
+    (summary.authorityPosture === "none-resolved" || summary.authorityPosture === "none-resolved-mint")
+  ) {
+    return "no-privileged-mint";
+  }
+
+  if (summary.mintPath === "bridge-or-oft-synthetic") {
+    return "bridge-mint";
+  }
+
+  if (hasActiveMultisigMintControl(summary)) {
+    return "multisig-mint";
+  }
+
+  if (
+    summary.mintPath === "issuer-direct-mint" ||
+    summary.mintPath === "offchain-attested-minter" ||
+    hasDirectNonMultisigMintControl(summary)
+  ) {
+    return "issuer-or-backend-mint";
+  }
+
+  return "governed-mint";
+}
 
 type MintAuthorityTone = "emerald" | "sky" | "amber" | "violet" | "slate";
 /** Published V9 mint posture band, plus the not-rated bucket. */

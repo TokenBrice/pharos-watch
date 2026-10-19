@@ -242,6 +242,8 @@ Liquidity v6.94 uses retained, base-pool-excluded TVL throughout Curve metapool 
 
 Liquidity v6.95 adds pinned reviewed targets on already-active Pancake V3 and Uniswap V3 families while retaining quote-time identity, freshness and execution checks and keeping shadow pools score-ineligible. CHFSAFO's exact Aquarius identity is supplemental non-exhaustive coverage; an absent liquidity row schedules maintenance, not observed zero. Weights, budgets, cadence and retained-TVL basis are unchanged. Fresh producer observations and final fixed-clock comparison remain required. Activation: 2026-10-14 12:40 UTC (release cut; 1791981600).
 
+Global headline TVL, protocol and chain breakdowns, and volume-coverage TVL denominators use one retained pool population deduplicated across coins, without a second global protocol clamp or rescaling observed volume. Existing per-pool exclusions and per-coin secondary-source caps remain; retained valuations are not certified economically correct. Liquidity v6.96 adds a TVL-measurement epoch so methodology steps are not interpreted as market moves.
+
 PKT-5 owner ruling of 2026-10-14: no shadow DEX family met its documented maturity gates, and none activated. This no-admission outcome adds no runtime or curation change and leaves Safety v10.18 accepted-pair equivalence unchanged.
 
 

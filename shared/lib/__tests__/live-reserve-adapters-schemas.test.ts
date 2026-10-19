@@ -14,6 +14,7 @@ import mxnt from "../../data/stablecoins/coins/mxnt-tether.json";
 import usdfc from "../../data/stablecoins/coins/usdfc-secured-finance.json";
 import meusd from "../../data/stablecoins/coins/meusd-mezo.json";
 import frnt from "../../data/stablecoins/coins/frnt-wyoming.json";
+import hchf from "../../data/stablecoins/coins/hchf-hedera-swiss-franc.json";
 
 describe("baseLiveReserveConfigSchema", () => {
   it("accepts an operator suspension with ISO dates and rejects malformed ones", () => {
@@ -234,14 +235,14 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["erc4626-single-asset"].configValidation.allowedVersions).toEqual([1, 2]);
   });
 
-  it.each(["spark-usdc-v1-inventory", "forest-road-reserve-manager"] as const)(
+  it.each(["spark-usdc-v1-inventory", "forest-road-reserve-manager", "hliquity-hedera"] as const)(
     "requires a new config fingerprint for corrected %s reserve accounting",
     (adapterKey) => {
       expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].configValidation.allowedVersions).toEqual([2]);
     },
   );
 
-  it.each([usdfc, meusd, frnt])("invalidates retained pre-correction snapshots for $id", (coin) => {
+  it.each([usdfc, meusd, frnt, hchf])("invalidates retained pre-correction snapshots for $id", (coin) => {
     const config = LiveReservesConfigSchema.parse(coin.liveReservesConfig);
     expect(config.version).toBe(2);
     const previous = { ...config, version: 1 };

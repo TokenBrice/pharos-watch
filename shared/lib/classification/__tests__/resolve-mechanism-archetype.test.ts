@@ -44,12 +44,13 @@ describe("resolveMechanismArchetype", () => {
     expect(result).toBe("synthetic-delta-neutral");
   });
 
-  it("returns null when parent has no archetype", () => {
+  it("does not fall back to a child's own archetype when the existing parent is unclassified", () => {
     const parent = makeCoin({ id: "parent-coin" });
     const child = makeCoin({
       id: "child-coin",
       variantOf: "parent-coin",
       variantKind: "savings-passthrough",
+      mechanismArchetype: "tbill",
     });
     const result = resolveMechanismArchetype(child, makeRegistry([parent]));
     expect(result).toBeNull();

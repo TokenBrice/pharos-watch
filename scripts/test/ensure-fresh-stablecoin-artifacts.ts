@@ -68,7 +68,7 @@ export default async function ensureFreshStablecoinArtifacts(): Promise<void> {
             console.log("[vitest-setup] regenerated stale shared/data/stablecoins/coins.generated.json");
           }
         } else {
-          execFileSync(process.execPath, [join(REPO_ROOT, artifact.script)], { cwd: REPO_ROOT, stdio: "pipe" });
+          execFileSync(process.execPath, ["--import", "tsx", join(REPO_ROOT, artifact.script)], { cwd: REPO_ROOT, stdio: "pipe" });
           console.log("[vitest-setup] rebuilt stale stablecoin client registry artifacts");
         }
       },

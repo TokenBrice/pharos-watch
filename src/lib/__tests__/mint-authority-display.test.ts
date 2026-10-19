@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
-import { resolveMintAuthorityStatus, resolveMintAuthorityStatusKind, resolveMintAuthorityScoreDisplay } from "../mint-authority-display";
+import { resolveMintAuthorityStatus, resolveMintAuthorityScoreDisplay } from "../mint-authority-display";
 
 function summary(overrides: Partial<MintAuthorityCoverageSummary> = {}): MintAuthorityCoverageSummary {
   return {
@@ -11,60 +11,13 @@ function summary(overrides: Partial<MintAuthorityCoverageSummary> = {}): MintAut
   };
 }
 
-describe("resolveMintAuthorityStatusKind", () => {
+describe("resolveMintAuthorityStatus", () => {
   it.each(["manual-review", "unknown"] as const)("keeps unresolved native issuance Unknown at %s confidence", (confidence) => {
     const unresolved = summary({ mintPath: "unknown", authorityPosture: "unknown", confidence, controls: [] });
-    expect(resolveMintAuthorityStatusKind(unresolved)).toBe("unknown");
     expect(resolveMintAuthorityStatus(unresolved)).toMatchObject({ label: "Unknown", available: false });
     expect(resolveMintAuthorityStatus(unresolved).detail).not.toContain("Minting is user or protocol based");
   });
 
-  it("pins every status branch and precedence edge", () => {
-    expect(resolveMintAuthorityStatusKind(null)).toBe("unknown");
-    expect(
-      resolveMintAuthorityStatusKind(
-        summary({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "none-resolved",
-        }),
-      ),
-    ).toBe("inherited-authority");
-    expect(
-      resolveMintAuthorityStatusKind(
-        summary({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved",
-        }),
-      ),
-    ).toBe("no-privileged-mint");
-    expect(
-      resolveMintAuthorityStatusKind(
-        summary({
-          mintPath: "bridge-or-oft-synthetic",
-          controls: [{ authorityType: "safe", directMintAbility: "direct" }],
-        }),
-      ),
-    ).toBe("bridge-mint");
-    expect(
-      resolveMintAuthorityStatusKind(
-        summary({
-          mintPath: "issuer-direct-mint",
-          controls: [{ authorityType: "safe", directMintAbility: "can-authorize" }],
-        }),
-      ),
-    ).toBe("multisig-mint");
-    expect(resolveMintAuthorityStatusKind(summary({ mintPath: "offchain-attested-minter" }))).toBe(
-      "issuer-or-backend-mint",
-    );
-    expect(
-      resolveMintAuthorityStatusKind(
-        summary({
-          controls: [{ authorityType: "eoa", directMintAbility: "direct" }],
-        }),
-      ),
-    ).toBe("issuer-or-backend-mint");
-    expect(resolveMintAuthorityStatusKind(summary())).toBe("governed-mint");
-  });
 });
 
 describe("operationally governed mint display", () => {

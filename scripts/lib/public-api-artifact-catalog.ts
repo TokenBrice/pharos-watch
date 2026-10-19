@@ -159,7 +159,14 @@ export const SUPPLY_HISTORY_DAYS_PARAM = {
   name: "days",
   in: "query",
   schema: { type: "integer", minimum: 1, maximum: 5000 },
-  description: "Historical lookback window in days. Defaults to 365.",
+  description: "Historical lookback window in days. Defaults to 365 when range is absent. Mutually exclusive with range=all.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const SUPPLY_HISTORY_RANGE_PARAM = {
+  name: "range",
+  in: "query",
+  schema: { type: "string", enum: ["all"] },
+  description: "Return every retained daily row for the admitted stablecoin, under the completed-snapshot fence, without a sliding day cutoff. Omit days when using range=all; empty or other range values are rejected.",
 } as const satisfies PublicApiArtifactParameter;
 
 export const NON_USD_SHARE_DAYS_PARAM = {
@@ -771,14 +778,21 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "supply-history",
     summary: "Supply history",
-    description: "Historical supply series for a stablecoin.",
+    description: "Historical supply series for a stablecoin. Bounded days defaults to 365; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved.",
     tags: ["History"],
     responseSchema: "SupplyHistoryResponse",
-    parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM],
-    postman: {
-      order: 0,
-      query: { stablecoin: "{{stablecoinId}}", days: "365" },
-    },
+    parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM, SUPPLY_HISTORY_RANGE_PARAM],
+    postman: [
+      {
+        order: 0,
+        query: { stablecoin: "{{stablecoinId}}", days: "365" },
+      },
+      {
+        name: "Supply history (all retained)",
+        order: 0,
+        query: { stablecoin: "{{stablecoinId}}", range: "all" },
+      },
+    ],
   },
   {
     key: "safety-score-history",

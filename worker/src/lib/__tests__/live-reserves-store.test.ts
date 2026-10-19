@@ -6,6 +6,8 @@ import {
   LIVE_SLICES,
   makeReservesDb,
   mockReserveD1 as mockD1,
+  reserveCompositionInput,
+  reserveSyncStateInput,
   reserveCompositionRow,
   reserveSyncRow,
 } from "./live-reserves-store.test-support";
@@ -15,6 +17,7 @@ import {
 } from "../live-reserves/store-overview";
 import { getMaxSyncAge } from "../live-reserves/store-read";
 import { resolveReserveResult } from "../live-reserves/store-views";
+import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
@@ -162,6 +165,37 @@ describe("live-reserves-store", () => {
 
     expect(result?.mode).toBe("curated-fallback");
     expect(result?.liveAt).toBeUndefined();
+  });
+
+  it.each([1, 2])("admits only corrected HCHF backing from retained binding v%i", async (version) => {
+    const id = "hchf-hedera-swiss-franc";
+    const coin = WORKER_TRACKED_META_BY_ID.get(id)!;
+    const config = coin.liveReservesConfig!;
+    expect(config.version).toBe(2);
+    const configFingerprint = computeLiveReserveConfigFingerprint({ ...config, version });
+    const slices = [{ sourceKey: "hliquity-hedera:hbar", name: "HBAR", pct: 100, risk: "high" as const }];
+    const metadata = { freshnessMode: "not-applicable" as const };
+    const record = reserveCompositionInput("hchf-retained", {
+      stablecoinId: id, source: "hliquity-hedera", slices, metadata,
+      adapterSourceModel: "single-bucket", configFingerprint,
+    });
+    const state = reserveSyncStateInput("hchf-retained", { stablecoinId: id, adapterKey: "hliquity-hedera" });
+    const admission = evaluateLiveReserveAdmission(record, state, coin, 1_200);
+    expect(admission.eligible).toBe(version === 2);
+    expect(admission.reasons).toEqual(version === 1 ? ["config-mismatch"] : []);
+
+    const db = makeReservesDb({
+      composition: {
+        stablecoin_id: id, source: "hliquity-hedera", slices: JSON.stringify(slices),
+        config_fingerprint: configFingerprint, metadata: JSON.stringify(metadata),
+        adapter_source_model: "single-bucket", adapter_evidence_class: "independent",
+      },
+      syncState: { stablecoin_id: id, adapter_key: "hliquity-hedera" },
+    });
+    const detail = await resolveReserveResult(db, id, 1_200);
+    expect(detail?.mode).toBe(version === 2 ? "live" : "curated-fallback");
+    expect(detail?.liveAt).toBe(version === 2 ? 1_000 : undefined);
+    expect(detail?.metadata).toEqual(version === 2 ? metadata : undefined);
   });
 
   it("returns live data only when composition and sync state agree on the last successful snapshot", async () => {

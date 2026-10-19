@@ -44,6 +44,8 @@ The live mint component assesses native issuance on canonical deployments and co
 
 Mint controls and mutable mint-logic upgrade paths on active multi-deployment assets bind to reviewed native deployments. Structured bridge controls compile once per referenced route; absent structured evidence retains conservative route-derived controls. [Classification](./classification.md#mint-authority-taxonomy) owns the taxonomy boundary; [catalog authoring](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns schema enforcement.
 
+Curated route badges and compact list/filter status use the same runtime-neutral `resolveMintAuthorityStatusKind` in `shared/lib/classification/mint-authority.ts`. An unknown path remains Unknown even with reviewed controls or verified confidence; this taxonomy correction does not change the published mint component, posture band, or numeric Safety methodology.
+
 Published issuance diagnostics distinguish known adverse facts from missing proof: `active-incident` renders **Failed gate / Active incident**, not Missing evidence. Reader reason labels and statuses share `src/lib/mint-issuance-diagnostics.ts`; scoring and the published reason code are unchanged.
 
 FUSD's exSat deployment is reviewed native issuance, with the same issuer EOA and immediate ProxyAdmin failure domains as its EVM siblings. Its gateway's fresh-message-ID minter can issue without authenticated bridge proof, while the runtime-matched TokenBridgeSender currently only burns/transfers supplied tokens and remains Bridge Risk machinery with a separate upgrade contingency. The exSat contract pauser's signing topology is unresolved; neither a new deployment nor runtime correspondence establishes independent signers, complete execution scope, or incident absence. The separately retained Solana FUSD/FUSDLP liability-identity conflict stays unknown.
@@ -338,7 +340,7 @@ Retired score cutoffs were Hardened 80–100, Governed 65–79, Managed 50–64,
 
 ## Historical Surfaces
 
-Detail pages formerly displayed that standalone score, band, component breakdown and caps. Current homepage/screener/detail mint scores use the published Economic Control mint component; `/coverage/` retains curated route-review breadth. `resolveMintAuthorityStatusKind()` in `src/lib/mint-authority-display.ts` labels curated route metadata, not numeric score bins. No current raw `mintAuthorityScore` input survives the retired lane.
+Detail pages formerly displayed that standalone score, band, component breakdown and caps. Current homepage/screener/detail mint scores use the published Economic Control mint component; `/coverage/` retains curated route-review breadth. `resolveMintAuthorityStatusKind()` in `shared/lib/classification/mint-authority.ts` labels curated route metadata, not numeric score bins. No current raw `mintAuthorityScore` input survives the retired lane.
 
 ## Maintenance Checklist
 
