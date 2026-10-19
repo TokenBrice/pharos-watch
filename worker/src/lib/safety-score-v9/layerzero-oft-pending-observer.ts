@@ -1,3 +1,4 @@
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { z } from "zod";
 import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -8,7 +9,7 @@ import { rethrowIfAborted, throwIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
 import { USER_AGENT } from "../constants";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader, type EvmRpcOptions } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic, type SupplyAttributionPhase } from "./supply-attribution-diagnostics";
@@ -61,6 +62,8 @@ type Proof = NonNullable<EconomicSupplyObservation["layerZeroOftPendingProof"]>;
 export async function observeLayerZeroOftPending(input: {
   source: LayerZeroOftPendingRead; headers: readonly EvmBlockHeader[];
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
+  /** Retain the caller's original capture clock, never a renewed read clock. */
+  clockSec: number;
   checkpoint?: LayerZeroOftPendingCheckpoint;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onPhase?: (phase: SupplyAttributionPhase) => void;
@@ -74,6 +77,7 @@ export async function observeLayerZeroOftPending(input: {
     input.onPhase?.("pending-authentication");
     if (!LayerZeroOftPendingReadSchema.safeParse(input.source).success) fail("review-invalid");
     const source = input.source, options = { chainRpcs: input.chainRpcs, signal: input.signal };
+    const pinOptions = new Map<string, EvmRpcOptions>();
     const sourceDigest = sha256Hex(stableJsonStringifyV1(source));
     const cacheKey = `safety-score-v9:layerzero-oft-pending:v2:${sourceDigest}`;
     if (input.headers.length !== source.sides.length) fail("pin-missing");
@@ -106,7 +110,7 @@ export async function observeLayerZeroOftPending(input: {
       const key = pinnedKey(chain, method, params);
       if (key !== null && pinnedReads.has(key)) return pinnedReads.get(key);
       context = { ...context, chainId: chain, method, phase: "rpc", providerOrigin: null };
-      const result = await fetchEvmRpcBatch(chain, [{ method, params }], options);
+      const result = await fetchEvmRpcBatch(chain, [{ method, params }], pinOptions.get(chain) ?? options);
       if (!result || result.length !== 1) fail("rpc-unavailable");
       if (key !== null && result[0] !== null && result[0] !== undefined) pinnedReads.set(key, result[0]);
       return result[0];
@@ -183,6 +187,12 @@ export async function observeLayerZeroOftPending(input: {
       emit({});
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock ||
         !pinned || pinned.hash !== pin.hash || pinned.timestamp !== pin.timestamp) fail("pin-not-finalized");
+      pinOptions.set(side.chainId, { ...options, observedHeadBlock: finalized.number,
+        recentStatePin: {
+          chainId: side.chainId, header: pin, finalized, observedAtSec: input.clockSec,
+          maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+        },
+      });
       // Transport exact current-pin authentication in bounded batches, retaining
       // the validations below and never caching unavailable or cross-attempt state.
       const block = { blockHash: pin.hash, requireCanonical: true };
@@ -214,7 +224,7 @@ export async function observeLayerZeroOftPending(input: {
       for (let from = 0; from < entries.length; from += 32) {
         throwIfAborted(input.signal);
         const chunk = entries.slice(from, from + 32);
-        const values = await fetchEvmRpcBatch(side.chainId, chunk.map(([, request]) => request), options);
+        const values = await fetchEvmRpcBatch(side.chainId, chunk.map(([, request]) => request), pinOptions.get(side.chainId) ?? options);
         if (!values || values.length !== chunk.length) continue;
         for (let i = 0; i < values.length; i++) {
           if (values[i] !== null && values[i] !== undefined) pinnedReads.set(chunk[i]![0], values[i]);

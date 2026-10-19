@@ -10,7 +10,7 @@ import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getRpcAuthHeaders, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result, type EvmRpcOptions, type RecentFinalizedRpcPin } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, findEvmBlockHeaderInTimestampWindow, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
@@ -76,7 +76,7 @@ async function readReviewedApiAmount(source: NonNullable<ReviewedEconomicSupplyP
 async function readReviewedErc4626Conversion(
   source: Extract<ReviewedEconomicSupplyPlan["conversionSources"][number], { kind: string }>,
   header: EvmBlockHeader | undefined, clockSec: number,
-  chainRpcs: Map<string, ChainRpcConfig>, signal?: AbortSignal,
+  chainRpcs: Map<string, ChainRpcConfig>, signal?: AbortSignal, recentStatePin?: RecentFinalizedRpcPin,
 ): Promise<EconomicSupplyReference | null> {
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
   if (!header || header.timestamp > clockSec || clockSec - header.timestamp > policy.referencePriceMaxAgeSec) return null;
@@ -89,7 +89,7 @@ async function readReviewedErc4626Conversion(
     { method: "eth_call", params: [{ to: source.vaultAddress,
       data: toFunctionSelector("convertToAssets(uint256)") + (10n ** BigInt(source.shareDecimals)).toString(16).padStart(64, "0") }, block] },
   ];
-  const results = await fetchEvmRpcBatch(source.chainId, calls, { chainRpcs, signal });
+  const results = await fetchEvmRpcBatch(source.chainId, calls, { chainRpcs, signal, recentStatePin, observedHeadBlock: recentStatePin?.finalized.number });
   if (!results || results.length !== calls.length || typeof results[0] !== "string" ||
     !/^0x[0-9a-f]+$/i.test(results[0]) || results[0].length % 2 !== 0 ||
     sha256Hex(results[0].toLowerCase()) !== source.vaultRuntimeCodeSha256 ||
@@ -129,6 +129,7 @@ const curveCall = (signature: string, args: `0x${string}`) => toFunctionSelector
 export async function observeCurveLzPending(input: {
   source: CurveLzPendingRead; headers: readonly EvmBlockHeader[];
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal;
+  clockSec: number;
   checkpoint?: CurveLzPendingCheckpoint; db?: D1Database;
 }): Promise<
   | { status: "accepted"; amount: string; proof: NonNullable<EconomicSupplyObservation["curvePendingProof"]>; responseSha256: string; checkpoint: CurveLzPendingCheckpoint }
@@ -137,6 +138,9 @@ export async function observeCurveLzPending(input: {
   const sourceDigest = sha256Hex(stableJsonStringifyV1(input.source));
   const cacheKey = `safety-score-v9:curve-lz-pending:v1:${sourceDigest}`;
   const options = { chainRpcs: input.chainRpcs, signal: input.signal };
+  const pinOptions = new Map<string, EvmRpcOptions>();
+  const batch: typeof fetchEvmRpcBatch = (chain, calls, base) =>
+    fetchEvmRpcBatch(chain, calls, { ...base, ...pinOptions.get(chain ?? "") });
   let checkpoint: CurveLzPendingCheckpoint | undefined;
   function fail(reason: string): never { throw new Error(`curve-pending:${reason}`); }
   try {
@@ -160,6 +164,12 @@ export async function observeCurveLzPending(input: {
       const side = input.source.sides[i]!, pin = input.headers[i]!;
       const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", options);
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock) fail("pin-not-finalized");
+      pinOptions.set(side.chainId, { observedHeadBlock: finalized.number,
+        recentStatePin: {
+          chainId: side.chainId, header: pin, finalized, observedAtSec: input.clockSec,
+          maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+        },
+      });
       for (const cursor of [cp.directions[i]!.sent, cp.directions[1 - i]!.received]) {
         if (cursor.nextBlock < side.deploymentBlock || cursor.nextBlock > pin.number + 1 ||
           (cursor.anchor === null) !== (cursor.anchorHash === null) ||
@@ -175,12 +185,12 @@ export async function observeCurveLzPending(input: {
         side.outboundNonceRead, ...side.sendLibraries,
       ];
       const block = { blockHash: pin.hash, requireCanonical: true };
-      const codes = await fetchEvmRpcBatch(side.chainId, contracts.map(row => ({ method: "eth_getCode", params: [row.address, block] })), options);
+      const codes = await batch(side.chainId, contracts.map(row => ({ method: "eth_getCode", params: [row.address, block] })), options);
       if (!codes || codes.length !== contracts.length || codes.some((code, j) =>
         typeof code !== "string" || !/^0x[0-9a-f]+$/i.test(code) || code.length % 2 !== 0 ||
         sha256Hex(code.toLowerCase()) !== contracts[j]!.runtimeCodeSha256)) fail("runtime-mismatch");
       const remote = input.source.sides[1 - i]!;
-      const identities = await fetchEvmRpcBatch(side.chainId, [
+      const identities = await batch(side.chainId, [
         { method: "eth_call", params: [{ to: side.bridgeAddress, data: toFunctionSelector("LZ_ENDPOINT()") }, block] },
         { method: "eth_call", params: [{ to: side.bridgeAddress, data: toFunctionSelector("LZ_CHAIN_ID()") }, block] },
       ], options);
@@ -198,7 +208,7 @@ export async function observeCurveLzPending(input: {
         const from = cursor.nextBlock, end = Math.min(pin.number, from + CURVE_HISTORY_PAGE_BLOCKS - 1);
         const endHeader = await fetchEvmBlockHeader(side.chainId, end, options);
         if (!endHeader) fail("history-unavailable");
-        const responses = await fetchEvmRpcBatch(side.chainId, [{
+        const responses = await batch(side.chainId, [{
           method: "eth_getLogs", params: [{
             address: sent ? side.sendLibraries.map(row => row.address) : side.bridgeAddress,
             topics: [sent ? [CURVE_PACKET_TOPIC, CURVE_PACKET_SENT_TOPIC] : CURVE_EVENT_TOPICS],
@@ -259,7 +269,7 @@ export async function observeCurveLzPending(input: {
             direction.messages.push({ nonce: nonce.toString(), receiver: receiver.toLowerCase(), amount: amount.toString(), transactionHash: transactionHash as string, state: "sent", timestamp: null });
             // recover() is unlogged at the application; authenticate its exact
             // consumed nonce from the transaction that emitted this packet.
-            const txResult = await fetchEvmRpcBatch(side.chainId, [{ method: "eth_getTransactionByHash", params: [transactionHash] }], options);
+            const txResult = await batch(side.chainId, [{ method: "eth_getTransactionByHash", params: [transactionHash] }], options);
             const tx = txResult?.[0] as { hash?: unknown; to?: unknown; input?: unknown } | undefined;
             if (!tx || tx.hash !== transactionHash || typeof tx.to !== "string" || typeof tx.input !== "string") fail("send-transaction-unavailable");
             if (tx.to.toLowerCase() === side.bridgeAddress && tx.input.startsWith(toFunctionSelector("recover(uint64,address,uint256)"))) {
@@ -317,13 +327,13 @@ export async function observeCurveLzPending(input: {
       const direction = cp.directions[i]!, source = input.source.sides[i]!, destination = input.source.sides[1 - i]!;
       const sourceBlock = { blockHash: input.headers[i]!.hash, requireCanonical: true };
       const destinationBlock = { blockHash: input.headers[1 - i]!.hash, requireCanonical: true };
-      const nonce = await fetchEvmRpcBatch(source.chainId, [{ method: "eth_call", params: [{ to: source.outboundNonceRead.address, data: source.outboundNonceRead.callData }, sourceBlock] }], options);
+      const nonce = await batch(source.chainId, [{ method: "eth_call", params: [{ to: source.outboundNonceRead.address, data: source.outboundNonceRead.callData }, sourceBlock] }], options);
       if (!nonce || typeof nonce[0] !== "string" || !CURVE_WORD.test(nonce[0]) || BigInt(nonce[0]) !== BigInt(direction.sentNonce)) fail("send-census-mismatch");
       const recovered = new Set<string>();
       for (const message of direction.messages) {
         if (message.state !== "sent") {
           const args = encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(message.nonce)]);
-          const commitment = await fetchEvmRpcBatch(destination.chainId, [{
+          const commitment = await batch(destination.chainId, [{
             method: "eth_call", params: [{ to: destination.bridgeAddress, data: curveCall(`${message.state}(uint64)`, args) }, destinationBlock],
           }], options);
           const payload = curvePayload(message.receiver, message.amount);
@@ -345,13 +355,13 @@ export async function observeCurveLzPending(input: {
       // bridge events, including a stored/reverted endpoint payload.
       const path = `0x${source.bridgeAddress.slice(2)}${destination.bridgeAddress.slice(2)}` as `0x${string}`;
       const args = encodeAbiParameters(parseAbiParameters("uint16,bytes"), [source.lzChainId, path]);
-      const inbound = await fetchEvmRpcBatch(destination.chainId, [{ method: "eth_call", params: [{ to: destination.endpointAddress, data: curveCall("getInboundNonce(uint16,bytes)", args) }, destinationBlock] }], options);
+      const inbound = await batch(destination.chainId, [{ method: "eth_call", params: [{ to: destination.endpointAddress, data: curveCall("getInboundNonce(uint16,bytes)", args) }, destinationBlock] }], options);
       if (!inbound || typeof inbound[0] !== "string" || !CURVE_WORD.test(inbound[0])) fail("inbound-unavailable");
       const inboundNonce = BigInt(inbound[0]), receivedNonce = BigInt(direction.receivedNonce);
       if (inboundNonce < receivedNonce || inboundNonce > BigInt(direction.sentNonce) || inboundNonce > receivedNonce + 1n) fail("delivery-census-mismatch");
       if (inboundNonce === receivedNonce + 1n) {
         const message = direction.messages.find(row => BigInt(row.nonce) === inboundNonce && row.state === "sent");
-        const stored = await fetchEvmRpcBatch(destination.chainId, [{ method: "eth_call", params: [{ to: destination.endpointAddress, data: curveCall("storedPayload(uint16,bytes)", args) }, destinationBlock] }], options);
+        const stored = await batch(destination.chainId, [{ method: "eth_call", params: [{ to: destination.endpointAddress, data: curveCall("storedPayload(uint16,bytes)", args) }, destinationBlock] }], options);
         if (!message || !stored || typeof stored[0] !== "string") fail("delivery-census-mismatch");
         const [length, receiver, hash] = decodeAbiParameters(parseAbiParameters("uint64,address,bytes32"), stored![0] as `0x${string}`);
         if (length !== 64n || receiver.toLowerCase() !== destination.bridgeAddress || hash !== keccak256(curvePayload(message!.receiver, message!.amount))) fail("stored-payload-mismatch");
@@ -436,6 +446,14 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       return [source.chainId];
     }));
     const headers = new Map<string, EvmBlockHeader>();
+    const finalizedHeaders = new Map<string, EvmBlockHeader>();
+    const statePin = (chainId: string): RecentFinalizedRpcPin | undefined => {
+      const header = headers.get(chainId), finalized = finalizedHeaders.get(chainId);
+      return header && finalized ? { chainId, header, finalized,
+        observedAtSec: input.scoringClockSec,
+        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+      } : undefined;
+    };
     const cosmosPins = new Map<string, CosmosBankPin>();
     const readCosmos = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
       if (row.read.kind !== "cosmos-bank-supply" || row.address !== row.read.denom) return null;
@@ -492,6 +510,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         const finalized = finalizedChains.has(row.chainId)
           ? await fetchEvmBlockHeader(row.chainId, "finalized", options) : null;
         if (finalizedChains.has(row.chainId) && !finalized) return false;
+        if (finalized) finalizedHeaders.set(row.chainId, finalized);
         const block = await rewindEvmBlockHeaderToScoringClock({
           initialBlockNumber: Math.min(head - lag, finalized?.number ?? head - lag), scoringClockSec: input.scoringClockSec, signal: input.signal,
           fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, options),
@@ -527,7 +546,8 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       failedRouteId = row.routeId ?? row.deploymentKey;
       if (account !== undefined && !/^0x[0-9a-f]{40}$/.test(account)) return null;
       if (row.holdingKind === "native-gas" && account !== undefined) {
-        const result = await fetchEvmRpcBatch(row.chainId, [{ method: "eth_getBalance", params: [account, { blockHash: header.hash, requireCanonical: true }] }], { chainRpcs: input.chainRpcs, signal: input.signal });
+        const recentStatePin = statePin(row.chainId);
+        const result = await fetchEvmRpcBatch(row.chainId, [{ method: "eth_getBalance", params: [account, { blockHash: header.hash, requireCanonical: true }] }], { chainRpcs: input.chainRpcs, signal: input.signal, recentStatePin, observedHeadBlock: recentStatePin?.finalized.number });
         const value = result?.[0];
         if (typeof value !== "string" || !/^0x[0-9a-f]+$/i.test(value)) return null;
         const wei = BigInt(value).toString().padStart(19, "0");
@@ -543,6 +563,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         const batch = await fetchEvmMulticall3Aggregate3AtBlock(row.chainId, calls, header.number, {
           chainRpcs: input.chainRpcs, signal: input.signal,
           stateBlockHash: header.hash, multicallFallbackBlockHash: header.hash,
+          recentStatePin: statePin(row.chainId), observedHeadBlock: finalizedHeaders.get(row.chainId)?.number,
         });
         for (let index = 0; index < calls.length; index += 2) {
           evmResultsById.set(calls[index].label, batch ? [batch[index], batch[index + 1]] : null);
@@ -563,13 +584,17 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       const options = { chainRpcs: input.chainRpcs, signal: input.signal };
       const finalized = await fetchEvmBlockHeader(source.chainId, "finalized", options);
       if (!finalized || finalized.number < header.number) return null;
+      const stateOptions: EvmRpcOptions = { ...options, observedHeadBlock: finalized.number, recentStatePin: {
+        chainId: source.chainId, header, finalized, observedAtSec: input.scoringClockSec,
+        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+      } };
       // EIP-1898 binds every state read to the exact already-observed escrow
       // block hash. Unsupported hash-pinned reads reject; no latest fallback.
       const block = { blockHash: header.hash, requireCanonical: true };
       const state = await fetchEvmRpcBatch(source.chainId, [
         { method: "eth_getCode", params: [source.bridgeAddress, block] },
         { method: "eth_call", params: [{ to: source.bridgeAddress, data: source.messageCountSelector }, block] },
-      ], options);
+      ], stateOptions);
       if (!state || state.length !== 2 || typeof state[0] !== "string" ||
         !/^0x[0-9a-f]+$/i.test(state[0]) || state[0].length % 2 !== 0 ||
         sha256Hex(state[0].toLowerCase()) !== source.bridgeRuntimeCodeSha256 ||
@@ -579,7 +604,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         { method: "eth_call", params: [{ to: source.bridgeAddress, data: source.messageIdSelector + index.toString(16).padStart(64, "0") }, block] },
         { method: "eth_call", params: [{ to: source.bridgeAddress, data: source.pendingAmountSelector + messageId.slice(2) }, block] },
       ]);
-      const messages = calls.length === 0 ? [] : await fetchEvmRpcBatch(source.chainId, calls, options);
+      const messages = calls.length === 0 ? [] : await fetchEvmRpcBatch(source.chainId, calls, stateOptions);
       if (!messages || messages.length !== calls.length) return null;
       let amount = 0n;
       for (let index = 0; index < source.messageIds.length; index++) {
@@ -599,7 +624,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     ): Promise<EconomicSupplyObservation | null> => {
       const pins = source.sides.map(side => headers.get(side.chainId));
       if (pins.some(pin => pin === undefined)) { failedRouteId = `${id}:pin-missing`; return null; }
-      const result = await observeLayerZeroOftPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
+      const result = await observeLayerZeroOftPending({ source, headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
       if (result.status !== "accepted") { failedRouteId = `${id}:${result.reason}`; return null; }
       const header = pins[0]!;
       return { id, deploymentKey, amount: result.amount, observedAtSec: header.timestamp,
@@ -681,7 +706,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       failedRouteId = source.sourceId; bodyMethod = "conversion";
       bodyOrigin = "url" in source ? new URL(source.url).origin : null;
       const conversion = "kind" in source
-        ? await readReviewedErc4626Conversion(source, headers.get(source.chainId), input.scoringClockSec, input.chainRpcs, input.signal)
+        ? await readReviewedErc4626Conversion(source, headers.get(source.chainId), input.scoringClockSec, input.chainRpcs, input.signal, statePin(source.chainId))
         : await readReviewedApiAmount(source, input.signal, input.onBodyRead);
       if (!conversion || Number(conversion.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: source.sourceId };
       conversions.push(conversion);
@@ -712,7 +737,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           const source = escrow.inFlightSource;
           const pins = source.sides.map(side => headers.get(side.chainId));
           if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
-          const result = await observeCurveLzPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+          const result = await observeCurveLzPending({ source, headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
           if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
           const header = pins[0]!;
           pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
@@ -722,7 +747,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           const source = escrow.inFlightSource;
           const pins = [headers.get(source.chainId), headers.get(source.l2ChainId)];
           if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
-          const result = await observeL2MessengerPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic });
+          const result = await observeL2MessengerPending({ source, headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic });
           if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
           const header = pins[0]!;
           pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,

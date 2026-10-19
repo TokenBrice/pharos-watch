@@ -47,6 +47,8 @@ Forest Road USDfr uses physical token supply plus accrued unissued senior/fee cl
 
 Spark Legacy V1 inventory requires all five native Ethereum, Arbitrum, Base, Optimism and Unichain vaults, with chain-qualified holdings and independent block pins; the oldest pin sets aggregate freshness. Spark and Forest Road use version-two reserve bindings so retained Ethereum-only Spark inventory or physical-only Forest Road liability snapshots no longer match the current configuration.
 
+EVM transport prefers Dwellir only when its declared method and history capability cover the exact read. Existing finalized Morpho lender-book, sfrxUSD cross-chain and finalized-tag xDAI observations pass their original header, finalized head, capture clock and unchanged age budget to the resolver. xDAI's `safe` mode, generic `pinnedBlockPlan` head-number/header anchors and standalone executable-redemption head pins remain unclassified historical state; a numeric pin, recent timestamp or canonical hash alone never proves finality. The executable redemption read client preserves authenticated options supplied by its caller without manufacturing them, and arbitrary historical or mixed-pin reads still require capable historical providers.
+
 ### Snapshot admission gates
 
 The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], freshness }`, where `freshness` is the `assessReserveSnapshotFreshness()` result that decided the `stale` gate (`null` without a snapshot or coin). All gates must pass for independent reserve scoring:

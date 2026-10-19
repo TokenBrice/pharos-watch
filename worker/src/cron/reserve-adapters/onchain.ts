@@ -6,6 +6,7 @@ import {
   fetchEvmCallHexAtBlock,
   fetchEtherscanProxyHex,
   fetchEvmRpcBatchDetailed,
+  usableCcipRpcEndpoints,
   toBlockTag,
   type EvmMulticall3Result,
   type EvmRpcBatchError,
@@ -17,7 +18,6 @@ import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { fetchJsonPostWithRetry } from "./request";
-import { logScanRpcEndpoints } from "../../lib/chain-registry";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 type EvmCallInput = Pick<EvmInput, "chain"> & { rpcMode?: EvmInput["rpcMode"] };
@@ -293,11 +293,14 @@ export async function fetchOnchainLogs(options: OnchainLogsOptions): Promise<Onc
       let calls = 0;
       const logs: OnchainLogEntry[] = [];
       const pendingRanges: Array<{ from: number; to: number }> = [{ from: options.fromBlock, to: options.toBlock }];
-      const spans = logScanRpcEndpoints(options.ctx?.chainRpcs?.get(options.chain))
-        .flatMap((endpoint) => endpoint.maxLogBlockSpan == null ? [] : [endpoint.maxLogBlockSpan]);
-      const maxSpan = Math.min(...spans);
       while (pendingRanges.length > 0) {
         const range = pendingRanges.pop()!;
+        // Size for the first capable provider at this actual range start.
+        // A later provider's smaller span must not preempt the preferred route.
+        const maxSpan = options.ctx?.chainRpcs
+          ? usableCcipRpcEndpoints(options.chain, options.ctx.chainRpcs, {
+            kind: "logs", fromBlock: range.from, toBlock: range.from,
+          })[0]?.maxLogBlockSpan ?? Infinity : Infinity;
         if (range.to - range.from + 1 > maxSpan) {
           pendingRanges.push({ from: range.from + maxSpan, to: range.to });
           range.to = range.from + maxSpan - 1;

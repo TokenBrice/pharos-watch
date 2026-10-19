@@ -94,6 +94,8 @@ export async function readStateWithPlan<Fields extends readonly AnyEvmObservatio
   ctx: AdapterContext | undefined,
   signal: AbortSignal,
 ): Promise<EvmObservationSnapshot<Fields>> {
+  // Pass the caller's exact options through both identity and quantity reads.
+  // A numbered/header pin alone must never be relabeled finalized here.
   const identityResult = await codeIdentityChecks(client, identities, {
     blockNumber,
     rpcOptions,

@@ -1,10 +1,11 @@
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { concat, decodeAbiParameters, decodeEventLog, decodeFunctionData, encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, parseAbiParameters, toFunctionSelector, toHex, toRlp } from "viem/utils";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { L2MessengerPendingCheckpointSchema, L2MessengerPendingReadSchema, type L2MessengerPendingCheckpoint, type L2MessengerPendingProof, type L2MessengerPendingRead } from "@shared/types/safety-score-v9-l2-messenger-pending";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader, type EvmRpcBatchCall } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader, type EvmRpcBatchCall, type EvmRpcOptions } from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
@@ -102,6 +103,8 @@ function tokenPayload(source: L2MessengerPendingRead, data: `0x${string}`, depos
 export async function observeL2MessengerPending(input: {
   source: L2MessengerPendingRead; headers: readonly EvmBlockHeader[];
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
+  /** Original capture clock, never renewed by a state read. */
+  clockSec: number;
   checkpoint?: L2MessengerPendingCheckpoint;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
 }): Promise<
@@ -119,10 +122,11 @@ export async function observeL2MessengerPending(input: {
     const cacheKey = `safety-score-v9:l2-messenger-pending:v2:${sourceDigest}`;
     const chains = [source.chainId, source.l2ChainId], starts = [source.l1StartBlock, source.l2StartBlock];
     const options = { chainRpcs: input.chainRpcs, signal: input.signal };
+    const pinOptions = new Map<number, EvmRpcOptions>();
     const rpc = async (index: number, calls: EvmRpcBatchCall[]) => {
       throwIfAborted(input.signal);
       context = { ...context, chainId: chains[index]!, method: calls[0]?.method ?? "unknown", phase: "rpc" };
-      const result = await fetchEvmRpcBatch(chains[index]!, calls, options);
+      const result = await fetchEvmRpcBatch(chains[index]!, calls, pinOptions.get(index) ?? options);
       if (!result || result.length !== calls.length) fail("rpc-unavailable");
       return result!;
     };
@@ -136,6 +140,12 @@ export async function observeL2MessengerPending(input: {
       context = { chainId: chains[i]!, phase: "pin-authentication", method: "eth_getBlockByNumber", pinObservedAtSec: pin.timestamp, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});
       if (!finalized || finalized.number < pin.number || pin.number < starts[i]! || !canonical || canonical.hash !== pin.hash || canonical.timestamp !== pin.timestamp) fail("pin-not-finalized");
+      pinOptions.set(i, { ...options, observedHeadBlock: finalized.number,
+        recentStatePin: {
+          chainId: chains[i]!, header: pin, finalized, observedAtSec: input.clockSec,
+          maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+        },
+      });
       const contracts = source.contracts.filter(row => row.chainId === chains[i]);
       const identities = source.identityReads.filter(row => row.chainId === chains[i]);
       const result = await read(i, pin, [

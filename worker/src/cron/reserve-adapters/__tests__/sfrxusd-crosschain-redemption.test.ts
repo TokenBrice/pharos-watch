@@ -26,6 +26,7 @@ import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/s
 import * as crosschainObserver from "../sfrxusd-crosschain-redemption";
 import type { SfrxusdCrosschainV9RouteAttempt } from "../../../lib/sfrxusd-crosschain-redemption-route";
 import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
+import { expectRecentPinRouting } from "../../../test-helpers/recent-pin-routing";
 
 const ABI = parseAbi([
   "function paused() view returns (bool)",
@@ -608,6 +609,12 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       },
     });
     if (attempt.status !== "accepted") throw new Error("expected accepted packet");
+    const options = vi.mocked(readClient.multicall).mock.calls[0][3]!;
+    expect(options.recentStatePin).toMatchObject({ chainId: "ethereum",
+      header: { number: ETHEREUM_BLOCK, hash: `0x${"a".repeat(64)}` },
+      finalized: { number: ETHEREUM_BLOCK }, observedAtSec: NOW,
+      maxAgeSec: params.maxFinalizedBlockAgeSec });
+    await expectRecentPinRouting(options);
     expect(attempt.state.contractIdentities).toHaveLength(11);
     expect(
       attempt.state.contractIdentities.filter(

@@ -21,6 +21,7 @@ import {
   parseXautTransparencyDisclosure,
 } from "../safety-score-v9/xaut-supply-observer";
 
+import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const BLOCK_NUMBER = 25_601_844;
 const BLOCK_TIME_SEC = 1_784_887_019;
 const BLOCK_HASH = `0x${"ab".repeat(32)}` as const;
@@ -230,6 +231,12 @@ describe("XAUT representation-group supply observer", () => {
       BLOCK_NUMBER,
       expect.objectContaining({ chainRpcs: expect.any(Map) }),
     );
+    const options = vi.mocked(dependencies.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]!;
+    expect(options.recentStatePin).toEqual({ chainId: "ethereum",
+      header: { number: BLOCK_NUMBER, hash: BLOCK_HASH, timestamp: BLOCK_TIME_SEC },
+      finalized: { number: BLOCK_NUMBER, hash: BLOCK_HASH, timestamp: BLOCK_TIME_SEC },
+      observedAtSec: BLOCK_TIME_SEC + 100, maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC });
+    await expectRecentPinRouting(options);
     expect(dependencies.fetchEvmBlockHeader).toHaveBeenNthCalledWith(
       1,
       "ethereum",

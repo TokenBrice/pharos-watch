@@ -14,6 +14,7 @@ import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attri
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
+import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const CLOCK = 1790850000;
 const HASH: `0x${string}` = `0x${"a".repeat(64)}`;
 const OWNER = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -82,6 +83,8 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.observations).toEqual([expect.objectContaining({ deploymentKey: f.plan.deployments[0]!.deploymentKey, amount: "100000000", anchor: "100", anchorHash: HASH, observedAtSec: CLOCK - 60 })]);
     expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
     expect(result.attribution.unattributedSupplyUsd).toBe(0);
+    // Reviewed safety lag is not an authenticated finalized head.
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
   });
 
   it("batches same-chain supplies and balance exclusions at one pin without mixing amounts", async () => {
@@ -355,6 +358,20 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
     expect(result.attribution.unattributedSupplyUsd).toBe(1);
     expect(result.attribution.inFlight[0]).toMatchObject({ amount: "1000000", anchor: "100", anchorHash: HASH });
+  });
+  it("propagates only the existing finalized holding pin and original economic clock", async () => {
+    const f = pendingFixture();
+    expect((await f.run()).status).toBe("accepted");
+    const options = vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]!;
+    expect(options.recentStatePin).toEqual({ chainId: "ethereum",
+      header: { number: 100, timestamp: CLOCK - 60, hash: HASH },
+      finalized: { number: 100, timestamp: CLOCK - 60, hash: HASH },
+      observedAtSec: CLOCK, maxAgeSec: 1800 });
+    expect(options.observedHeadBlock).toBe(100);
+    for (const [, , stateOptions] of vi.mocked(evmRpc.fetchEvmRpcBatch).mock.calls) {
+      expect(stateOptions?.recentStatePin?.observedAtSec).toBe(CLOCK);
+    }
+    await expectRecentPinRouting(options);
   });
 
   it.each(["missing", "identity", "count", "code", "finalized head unavailable"])("rejects an unavailable or unauthenticated pending %s read", async failure => {
@@ -873,7 +890,7 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
       if (call.data.startsWith(toFunctionSelector("failed(uint64)"))) return [keccak256(payload)];
       throw new Error("Unexpected RPC method");
     });
-    const input = { source, headers: [{ number: 100, timestamp: CLOCK - 60, hash: HASH }, { number: 100, timestamp: CLOCK - 60, hash: HASH }], chainRpcs: new Map<string, ChainRpcConfig>() };
+    const input = { source, clockSec: CLOCK, headers: [{ number: 100, timestamp: CLOCK - 60, hash: HASH }, { number: 100, timestamp: CLOCK - 60, hash: HASH }], chainRpcs: new Map<string, ChainRpcConfig>() };
     return { input, send, receive, sent, received, rejectCommitment() { badCommitment = true; } };
   }
 
@@ -881,6 +898,14 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
     const f = curveFixture(); f.send(0); f.receive(0); f.send(1); f.receive(1, "Failed");
     const result = await observeCurveLzPending(f.input);
     expect(result).toMatchObject({ status: "accepted", amount: "2000000", proof: { pins: [expect.objectContaining({ chainId: "ethereum" }), expect.objectContaining({ chainId: "base" })] } });
+  });
+  it("passes Curve's authenticated current pin without classifying other history as recent", async () => {
+    const f = curveFixture();
+    expect((await observeCurveLzPending(f.input)).status).toBe("accepted");
+    const options = vi.mocked(evmRpc.fetchEvmRpcBatch).mock.calls[0][2]!;
+    expect(options.recentStatePin).toMatchObject({ chainId: "ethereum",
+      header: f.input.headers[0], finalized: f.input.headers[0], observedAtSec: CLOCK, maxAgeSec: 1800 });
+    await expectRecentPinRouting(options);
   });
 
   it("counts an authenticated source send not yet delivered to the destination", async () => {

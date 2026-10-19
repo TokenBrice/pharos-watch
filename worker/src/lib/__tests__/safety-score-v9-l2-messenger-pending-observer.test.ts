@@ -9,6 +9,7 @@ import { ReviewedEconomicSupplyPlanSchema, type EconomicSupplyObservation, type 
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
 import { getCache, setCache } from "../db-cache";
+import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 
 vi.mock("../evm-rpc", () => ({ fetchEvmBlockHeader: vi.fn(), fetchEvmRpcBatch: vi.fn() }));
 vi.mock("../db-cache", () => ({ getCache: vi.fn(), setCache: vi.fn() }));
@@ -101,7 +102,7 @@ function arbDeposit(amount: bigint, nonce = 0n, height = 1) {
   store("ethereum", [deliveredLog, inboxLog, initiated]);
 }
 async function observe(checkpoint?: Parameters<typeof observeL2MessengerPending>[0]["checkpoint"]) {
-  return observeL2MessengerPending({ source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), checkpoint });
+  return observeL2MessengerPending({ clockSec: 102000, source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), checkpoint });
 }
 beforeEach(() => {
   vi.mocked(getCache).mockResolvedValue(null); vi.mocked(setCache).mockClear();
@@ -163,6 +164,15 @@ beforeEach(() => {
 });
 
 describe("canonical messenger pending liabilities", () => {
+  it("carries authenticated messenger pins but never upgrades predecessor state", async () => {
+    expect((await observe()).status).toBe("accepted");
+    const options = vi.mocked(fetchEvmRpcBatch).mock.calls[0][2]!;
+    expect(options.recentStatePin).toEqual({ chainId: source.chainId,
+      header: header(source.chainId, pinHeight), finalized: header(source.chainId, finalityHeight),
+      observedAtSec: 102000, maxAgeSec: 1800 });
+    expect(options.observedHeadBlock).toBe(finalityHeight);
+    await expectRecentPinRouting(options);
+  });
   it("excludes a finalized and successfully relayed withdrawal", async () => {
     opTransfer(false, 37n); finalized = true; withdrawalRelayed = true;
     const result = await observe();
@@ -266,7 +276,7 @@ describe("bounded dense bridge histories", () => {
     delivered = true;
     const controller = new AbortController(), onDiagnostic = vi.fn();
     vi.mocked(setCache).mockImplementationOnce(async () => { controller.abort(new Error("child timeout")); });
-    await expect(observeL2MessengerPending({ source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal, onDiagnostic })).rejects.toThrow("child timeout");
+    await expect(observeL2MessengerPending({ clockSec: 102000, source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal, onDiagnostic })).rejects.toThrow("child timeout");
     expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({ observer: "l2-messenger", laneId: "deposit", beforeCursor: "1:-1", persisted: true, authenticatedCursorAdvanced: true, incompleteBootstrap: true, hardEvidenceFailure: false }));
     expect(onDiagnostic.mock.calls.every(([value]) => !value.hardEvidenceFailure)).toBe(true);
   });
@@ -274,7 +284,7 @@ describe("bounded dense bridge histories", () => {
     const first = await observe();
     if (first.status !== "accepted") throw new Error("fixture");
     const onDiagnostic = vi.fn();
-    await observeL2MessengerPending({ source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), db: {} as D1Database, checkpoint: first.checkpoint, onDiagnostic });
+    await observeL2MessengerPending({ clockSec: 102000, source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), db: {} as D1Database, checkpoint: first.checkpoint, onDiagnostic });
     expect(setCache).toHaveBeenCalled();
     expect(onDiagnostic.mock.calls.every(([value]) => !value.authenticatedCursorAdvanced)).toBe(true);
   });

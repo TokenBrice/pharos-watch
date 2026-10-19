@@ -254,7 +254,7 @@ async function finalizedHeaderAtScoringClock(
   chainRpcs: Map<string, ChainRpcConfig>,
   dependencies: XautObserverDependencies,
   signal?: AbortSignal,
-): Promise<EvmBlockHeader | null> {
+): Promise<{ header: EvmBlockHeader; finalized: EvmBlockHeader } | null> {
   const options = rpcOptions(chainRpcs, signal);
   const header = await dependencies.fetchEvmBlockHeader(
     XAUT_CANONICAL_CHAIN_ID,
@@ -262,7 +262,7 @@ async function finalizedHeaderAtScoringClock(
     options,
   );
   if (!header) return null;
-  return rewindEvmBlockHeaderToScoringClock({
+  const pinned = await rewindEvmBlockHeaderToScoringClock({
     initialHeader: header,
     scoringClockSec,
     signal,
@@ -272,6 +272,7 @@ async function finalizedHeaderAtScoringClock(
       options,
     ),
   });
+  return pinned ? { header: pinned, finalized: header } : null;
 }
 
 export async function observeXautRepresentationGroupSupplyAttributionAttempt(
@@ -348,13 +349,14 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
     return reject("transparency-liability-state-invalid", null);
   }
   throwIfAborted(input.signal);
-  const blockHeader = await finalizedHeaderAtScoringClock(
+  const pin = await finalizedHeaderAtScoringClock(
     input.scoringClockSec,
     input.chainRpcs,
     dependencies,
     input.signal,
   );
-  if (!blockHeader) return reject("finalized-block-unavailable", null);
+  if (!pin) return reject("finalized-block-unavailable", null);
+  const blockHeader = pin.header;
   if (
     input.scoringClockSec - blockHeader.timestamp >
     XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
@@ -362,7 +364,13 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
     return reject("observation-stale", null, blockHeader.timestamp);
   }
 
-  const options = rpcOptions(input.chainRpcs, input.signal);
+  const options = {
+    ...rpcOptions(input.chainRpcs, input.signal),
+    recentStatePin: { chainId: XAUT_CANONICAL_CHAIN_ID, header: blockHeader,
+      finalized: pin.finalized, observedAtSec: input.scoringClockSec,
+      maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC },
+    observedHeadBlock: pin.finalized.number,
+  };
   const calls = [
     {
       label: "canonical-total-supply",

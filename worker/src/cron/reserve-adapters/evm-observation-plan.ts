@@ -35,6 +35,7 @@ export async function pinnedBlockPlan(options: {
     ),
   };
   const observedBlock = await runAdapterIo(options.ctx, `evm-block:${options.chain}`, async () => {
+    // A head-number/header anchor does not authenticate finalized state.
     const number = await fetchEvmBlockNumber(options.chain, rpcOptions);
     if (number == null || !Number.isSafeInteger(number) || number < 0) {
       throw new Error(`Unable to pin ${options.chain} observation block`);

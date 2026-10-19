@@ -48,6 +48,13 @@ describe("pinnedBlockPlan", () => {
     expect((await pinnedBlockPlan({ chain, signal, ctx: plan.ctx })).observedBlock).toEqual(plan.observedBlock);
     expect(fetchEvmBlockNumber).toHaveBeenCalledTimes(1);
     expect(fetchEvmBlockHeader).toHaveBeenCalledWith(chain, 100, expect.objectContaining({ signal }));
+    expect(plan.ctx).not.toHaveProperty("recentStatePin");
+    for (const [, , , , options] of vi.mocked(fetchEvmUint256AtBlock).mock.calls) {
+      expect(options?.recentStatePin).toBeUndefined();
+    }
+    for (const [, , , options] of vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mock.calls) {
+      expect(options?.recentStatePin).toBeUndefined();
+    }
   });
 
   it("fails closed when the numbered anchor header cannot be established", async () => {

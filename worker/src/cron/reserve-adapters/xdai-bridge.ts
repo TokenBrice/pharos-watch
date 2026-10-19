@@ -14,6 +14,7 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
   type EvmBlockHeader,
+  type RecentFinalizedRpcPin,
 } from "../../lib/evm-rpc";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import { decodeStrictAddressWord } from "./abi-decode";
@@ -140,6 +141,7 @@ function addressRpcOptions(
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
   deadlineMs: number,
+  recentStatePin?: RecentFinalizedRpcPin,
 ) {
   const isEthereum = chain === ETHEREUM_CHAIN;
   const rpcUrl = isEthereum ? params.ethereumRpcUrl : params.gnosisRpcUrl;
@@ -151,6 +153,8 @@ function addressRpcOptions(
     maxRetries: 0,
     deadlineMs,
     chainRpcs: ctx?.chainRpcs,
+    recentStatePin,
+    observedHeadBlock: recentStatePin?.finalized.number,
   };
 }
 
@@ -293,6 +297,7 @@ function pinnedMulticallReader(
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
   deadlineMs: number,
+  recentStatePin: RecentFinalizedRpcPin | undefined,
 ): (calls: readonly EvmObservationTransportCall[]) => ReturnType<typeof fetchEvmMulticall3Aggregate3AtBlock> {
   return (calls) => runAdapterIo(
     ctx,
@@ -306,7 +311,7 @@ function pinnedMulticallReader(
         allowFailure: entry.allowFailure,
       })),
       block.number,
-      addressRpcOptions(chain, params, signal, ctx, deadlineMs),
+      addressRpcOptions(chain, params, signal, ctx, deadlineMs, recentStatePin),
     ),
     { signal },
   );
@@ -318,6 +323,7 @@ async function readForeignBridgeOtherSide(
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
   deadlineMs: number,
+  recentStatePin: RecentFinalizedRpcPin | undefined,
 ): Promise<string> {
   const raw = await runAdapterIo(
     ctx,
@@ -327,7 +333,7 @@ async function readForeignBridgeOtherSide(
       params.foreignBridgeAddress,
       FOREIGN_BRIDGE_OTHER_SIDE_STORAGE_SLOT,
       block.number,
-      addressRpcOptions(ETHEREUM_CHAIN, params, signal, ctx, deadlineMs),
+      addressRpcOptions(ETHEREUM_CHAIN, params, signal, ctx, deadlineMs, recentStatePin),
     ),
     { signal },
   );
@@ -612,6 +618,12 @@ export async function fetchXdaiBridgeReserves(
   if (timestampSkewSec > maxCrossChainSkewSec) {
     throw new Error(`${ADAPTER_KEY}: cross-chain finalized block timestamp skew ${timestampSkewSec}s exceeds ${maxCrossChainSkewSec}s`);
   }
+  const recentPin = (chainId: string, header: XdaiBridgeBlock, finalized: XdaiBridgeBlock): RecentFinalizedRpcPin | undefined =>
+    finalized.finalityTag === "finalized" ? { chainId, header, finalized,
+      observedAtSec: nowSec, maxAgeSec: params.maxBlockAgeSec ?? DEFAULTS.maxBlockAgeSec,
+    } : undefined;
+  const ethereumPin = recentPin(ETHEREUM_CHAIN, ethereumBlock, ethereumAnchor);
+  const gnosisPin = recentPin(GNOSIS_CHAIN, gnosisBlock, gnosisAnchor);
 
   const [ethereum, gnosis] = await Promise.all([
     executeEvmObservationPlan({
@@ -622,7 +634,7 @@ export async function fetchXdaiBridgeReserves(
         metadata: (block) => ({ ethereumBlock: block }),
       },
       read: (calls, block) => pinnedMulticallReader(
-        ETHEREUM_CHAIN, block, params, signal, ctx, deadlineMs,
+        ETHEREUM_CHAIN, block, params, signal, ctx, deadlineMs, ethereumPin,
       )(calls),
     }),
     executeEvmObservationPlan({
@@ -633,11 +645,11 @@ export async function fetchXdaiBridgeReserves(
         metadata: (block) => ({ gnosisBlock: block }),
       },
       read: (calls, block) => pinnedMulticallReader(
-        GNOSIS_CHAIN, block, params, signal, ctx, deadlineMs,
+        GNOSIS_CHAIN, block, params, signal, ctx, deadlineMs, gnosisPin,
       )(calls),
     }),
   ]);
-  const foreignBridgeOtherSide = await readForeignBridgeOtherSide(params, ethereumBlock, signal, ctx, deadlineMs);
+  const foreignBridgeOtherSide = await readForeignBridgeOtherSide(params, ethereumBlock, signal, ctx, deadlineMs, ethereumPin);
   const storageIdentityError = expectedAddress(
     foreignBridgeOtherSide,
     params.homeBridgeAddress,
