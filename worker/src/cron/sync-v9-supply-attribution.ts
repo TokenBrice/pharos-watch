@@ -204,6 +204,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       notBeforeSec: startedAtSec,
       executionWindow,
       db,
+      priorGeneration,
       onBodyRead: evidence => {
         resourcePressure.observedAt = Math.floor(Date.now() / 1_000);
         if (evidence.intakeBytes !== null) {
