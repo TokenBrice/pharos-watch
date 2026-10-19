@@ -32,6 +32,9 @@ Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-co
 - Set `expiresAt > reviewedAt` and keep the acknowledgement within the documented roughly 30-day review policy. The resolver validates date shape and ordering, not that duration cap; enforce the policy during review. Renewal is a new review decision, not automatic date extension.
 - Preserve any `weeklyUtcWindow` that limits applicability. An out-of-window review acknowledges nothing, even before its expiry.
 - Never substitute an invented quote, lower a price-validation floor, or change source freshness to close the gap. If the source recovers, the normal price pipeline clears the gap without a new acknowledgement.
+- After verifying recovery through an admitted source with its real observation clock, remove an obsolete expired review instead of renewing an acknowledgement the asset no longer needs. Preserve source-specific freshness and admission guards; a merely numeric upstream response is not recovery.
+- For unresolved venue divergence, record the rejected quote and the alternative venue's identity/depth limits, keep the gap missing, and use only a short explicit source-review deadline. An acknowledgement does not establish that the divergence is harmless or admit either venue.
+- If current official evidence announces termination, name the lifecycle owner's archive/freeze decision and deadline explicitly. A temporary review changes no lifecycle fields, proves no redemption, and must not become a substitute for that decision.
 
 ### Reserve-feed reviews
 
