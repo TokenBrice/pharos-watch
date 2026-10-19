@@ -3,6 +3,9 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
+import { fetchHiveNativeHbdPrice } from "../../lib/hive-market-price";
+import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
+import { createPricingAssetAttempt } from "../../lib/pricing-provider-diagnostics";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -77,6 +80,7 @@ export interface PrimaryPricePlan {
     redstone: boolean;
     curve: boolean;
     curveOracle: boolean;
+    hiveMarket: boolean;
   };
 }
 
@@ -99,6 +103,7 @@ export interface PrimaryConsensusQuoteMaps {
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navPrices: Map<string, NavTelemetryQuote>;
+  hiveNativeQuote: HiveNativePriceQuote | null;
 }
 
 export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMaps {
@@ -121,6 +126,7 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     curveOraclePrice: null,
     curveOracleObservedAt: null,
     navPrices: new Map(),
+    hiveNativeQuote: null,
   };
 }
 
@@ -301,6 +307,7 @@ export async function buildPrimaryPricePlan(
         redstone: false,
         curve: false,
         curveOracle: false,
+        hiveMarket: false,
       },
     };
   }
@@ -315,6 +322,7 @@ export async function buildPrimaryPricePlan(
     redstoneAllowed,
     curveAllowed,
     curveOracleAllowed,
+    hiveMarketAllowed,
   ] = await Promise.all([
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER),
@@ -325,6 +333,7 @@ export async function buildPrimaryPricePlan(
     shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ORACLE),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.HIVE_MARKET),
   ]);
 
   if (
@@ -342,6 +351,7 @@ export async function buildPrimaryPricePlan(
   }
 
   const geckoIds = [...new Set(candidates.map((asset) => asset.geckoId).filter(isUsableGeckoId))];
+  if (candidates.some((asset) => asset.id === "hbd-hive") && !geckoIds.includes("hive")) geckoIds.push("hive");
 
   const candidateSymbolsUpper = [...new Set(candidates.map((asset) => asset.symbol.toUpperCase()))];
   const coinbaseSymbols = candidateSymbolsUpper.filter((symbol) => coinbaseKnownSet.has(symbol));
@@ -377,6 +387,7 @@ export async function buildPrimaryPricePlan(
       redstone: redstoneAllowed,
       curve: curveAllowed,
       curveOracle: curveOracleAllowed,
+      hiveMarket: hiveMarketAllowed,
     },
   };
 }
@@ -614,6 +625,35 @@ export async function collectPrimaryProviderQuotes(params: {
   await mapWithConcurrency(fetches, 2, (run) => run());
   throwIfAborted(signal);
 
+  // The native observer starts only after every earlier provider/body drains.
+  // Its CG parent is dependency-only and never becomes a stablecoin candidate.
+  let hiveNativeQuote: HiveNativePriceQuote | null = null;
+  if (plan.candidates.some((asset) => asset.id === "hbd-hive") && sourceAllowed.hiveMarket) {
+    const parent = sourceAllowed.cg ? cgQuotes.get("hive") : undefined;
+    const result = await fetchHiveNativeHbdPrice(parent ? { id: "hive", ...parent } : undefined, { signal, generation: nowSec });
+    hiveNativeQuote = result.quote;
+    const reason = result.diagnostic.rejectionReason;
+    providerDiagnostics.push({
+      source: "hive-native-cg", stage: "primary", endpoint: result.diagnostic.node ?? "hive-market",
+      status: null, ok: result.transportHealthy, success: result.quote != null,
+      candidateCount: 1, resolvedCount: result.quote ? 1 : 0,
+      ...(reason ? { rejectionReasonCounts: { [result.transportHealthy ? "price-rejected" : "upstream-error"]: 1 } } : {}),
+      nativeMarket: result.diagnostic,
+      assetAttempts: [createPricingAssetAttempt({
+        assetId: "hbd-hive", adapter: "hive-native-cg", state: "attempted",
+        result: result.quote ? "resolved" : result.transportHealthy ? "rejected" : "failed",
+        ...(reason ? { rejectionClass: reason } : {}),
+        candidateAt: nowSec, observedAt: result.quote?.observedAt ?? null,
+      })],
+    });
+    // Parent absence is not a Hive outage, and each native sample has one
+    // aggregate circuit outcome, never one D1 write per physical RPC.
+    if (result.diagnostic.rpcCount > 0 && reason !== "aborted" && reason !== "deadline_exceeded") {
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.HIVE_MARKET, result.transportHealthy);
+    }
+    throwIfAborted(signal);
+  }
+
   return {
     quoteMaps: {
       cgQuotes,
@@ -634,6 +674,7 @@ export async function collectPrimaryProviderQuotes(params: {
       curveOraclePrice,
       curveOracleObservedAt,
       navPrices,
+      hiveNativeQuote,
     },
     providerDiagnostics,
   };

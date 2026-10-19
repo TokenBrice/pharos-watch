@@ -43,6 +43,8 @@ export class V9PublicMaterializationUnavailableError extends Error {
 }
 const unavailable = (reason: string): never => { throw new V9PublicMaterializationUnavailableError(reason); };
 const V9_MATERIALIZATION_REPAIR_LEASE_SEC = 60;
+// Read budget only: staging retains its independent four-fragment write envelope.
+const V9_PUBLIC_FRAGMENT_READ_MAX_BYTES = 4 * 1024 * 1024;
 
 /** Admit the cohort once, then expand/serialize only one representation at a time. */
 function* buildV9PublicMaterializations(
@@ -451,26 +453,34 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
     const encoder = new TextEncoder();
     const hash = createHash("sha256");
     let bytes = 0;
-    // Bounded sequential reads; no unbounded parallel fan-out/result transfer.
-    for (let offset = 0; offset < manifest.fragments.length; offset += 4) {
+    // Pack by admitted bytes instead of paying one D1 round trip per four rows.
+    // Keep result transfers bounded and serial; never fan out the whole artifact.
+    for (let offset = 0; offset < manifest.fragments.length;) {
+      let end = offset;
+      let readBytes = 0;
+      while (end < manifest.fragments.length &&
+          readBytes + manifest.fragments[end]!.bytes <= V9_PUBLIC_FRAGMENT_READ_MAX_BYTES) {
+        readBytes += manifest.fragments[end++]!.bytes;
+      }
       const bindings: (string | number)[] = [identity.publicationGenerationId, manifest.version, manifest.payloadSha256];
       if (representationKey) bindings.push(representationKey);
-      bindings.push(offset, Math.min(offset + 4, manifest.fragments.length));
+      bindings.push(offset, end);
       // SAFETY: The table and optional clause are chosen from fixed literals; representationKey and all other values are bound.
       const result = await db.prepare(`SELECT ordinal, body FROM ${representationKey ? "safety_score_site_fragments" : "safety_score_public_fragments"}
         WHERE generation_id = ? AND projection_version = ? AND payload_sha256 = ?
         ${representationKey ? "AND representation_key = ?" : ""}
         AND ordinal >= ? AND ordinal < ? ORDER BY ordinal`).bind(...bindings).all<{ ordinal: number; body: string }>();
-      if (!result.success || result.results.length !== Math.min(4, manifest.fragments.length - offset)) return unavailable("v9-public-fragments-missing");
+      if (!result.success || result.results.length !== end - offset) return unavailable("v9-public-fragments-missing");
       for (const fragment of result.results) {
         const expected = manifest.fragments[fragments.length];
         if (!expected || fragment.ordinal !== fragments.length || typeof fragment.body !== "string") return unavailable("v9-public-fragments-order-invalid");
-        const size = encoder.encode(fragment.body).byteLength;
+        const size = Buffer.byteLength(fragment.body, "utf8");
         if (size !== expected.bytes || size > V9_PUBLIC_FRAGMENT_MAX_BYTES || sha256HexFromUtf8Chunks([fragment.body]) !== expected.sha256) return unavailable("v9-public-fragment-integrity-invalid");
         bytes += size;
         hash.update(fragment.body);
         fragments.push(fragment.body);
       }
+      offset = end;
     }
     if (bytes !== manifest.bytes || hash.digest("hex") !== manifest.sha256) return unavailable("v9-public-body-integrity-invalid");
     const publicationHealth = resolveSafetyScoreV9EffectivePublicationHealth({ publicationGenerationId: identity.publicationGenerationId, publishedAtSec: manifest.publishedAtSec }, health);

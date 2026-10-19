@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import bcbFixtures from "./fixtures/bcb-selic.json";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { mockCircuitOutcomeRecord, mockFetchRetry } from "../../test-helpers/cron";
 import {
@@ -64,6 +65,7 @@ const FRESH_FRED_ROUTES: BenchmarkFetchRoutes = {
   "markets.newyorkfed.org": Response.json({
     refRates: [{ type: "EFFR", effectiveDate: FRESH_FRED_OBSERVATION_DATE, percentRate: 4.33 }],
   }),
+  "api.bcb.gov.br": Response.json(bcbFixtures.daily),
 };
 
 function mockTbillByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {
@@ -700,8 +702,8 @@ describe("fetchTbillRate", () => {
   });
 
   it.each([
-    ["application/json", JSON.stringify({ erro: { statusCode: 500, detail: "Internal error" } })],
-    ["text/html", "<html><title>Bad request!</title><body>Your request was rejected.</body></html>"],
+    ["application/json", JSON.stringify(bcbFixtures.errorEnvelope)],
+    ["text/html", bcbFixtures.html],
   ])("retains original BRL market provenance for a BCB HTTP-200 %s error body", async (contentType, body) => {
     mockTbillByUrl({
       "api.bcb.gov.br": new Response(body, { status: 200, headers: { "Content-Type": contentType } }),
@@ -743,23 +745,159 @@ describe("fetchTbillRate", () => {
     };
     expect(result.status).toBe("degraded");
     expect(metadata.reason).toBe("brl:bcb-selic-failed-retained");
-    expect(metadata.brlResponseAttempts).toEqual([
-      {
-        provider: "bcb-selic",
-        status: 200,
-        contentType,
-        bodyBytes: new TextEncoder().encode(body).length,
-        parsed: false,
-        recordDate: null,
-        failure: contentType === "application/json" ? "upstream-error" : "parse-failed",
-        ...(contentType === "application/json" ? { upstreamStatus: 500 } : {}),
-      },
-    ]);
+    expect(metadata.brlResponseAttempts).toEqual(["bcb-selic", "bcb-selic-1178"].map(provider => ({
+      provider,
+      status: 200,
+      contentType,
+      bodyBytes: new TextEncoder().encode(body).length,
+      parsed: false,
+      recordDate: null,
+      failure: contentType === "application/json" ? "upstream-error" : "html-body",
+      ...(contentType === "application/json" ? { upstreamStatus: 500 } : {}),
+    })));
     expect(latestStructuredCachePayload().benchmarks.BRL).toMatchObject(retained);
     expect(metadata.retainedFallbackBenchmarks).toEqual([
       expect.objectContaining({ key: "BRL", retained: true, fetchedAt: observedAt, lastMarketFetchedAt: observedAt }),
     ]);
     expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:BRL", false);
+  });
+
+  it.each(["transport", "stale", "future", "html", "error", "zero", "bad-date"])(
+    "tries same-instrument SGS1178 sequentially after SGS11 %s failure", async failure => {
+      const calls: string[] = [];
+      const primary = failure === "transport" ? null
+        : failure === "html" ? new Response(bcbFixtures.html)
+        : failure === "error" ? Response.json(bcbFixtures.errorEnvelope)
+        : Response.json([{ data: failure === "stale" ? "19/06/2026"
+          : failure === "future" ? "26/06/2026" : failure === "bad-date" ? "31/02/2026" : "24/06/2026",
+          valor: failure === "zero" ? "0.00" : "0.050747" }]);
+      mockTbillByUrl({
+        "api.bcb.gov.br": url => url.includes("sgs.1178/") ? Response.json(bcbFixtures.annualized) : primary,
+      }, calls);
+
+      const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(result.status).toBe("ok");
+      expect(metadata.brlSource).toBe("bcb-selic-1178");
+      expect(metadata.brlRate).toBe(13.65);
+      expect(metadata.brlResponseAttempts).toEqual([
+        expect.objectContaining({ provider: "bcb-selic", failure: {
+          transport: "transport-failed", stale: "stale-record", future: "future-record",
+          html: "html-body", error: "upstream-error", zero: "parse-failed", "bad-date": "parse-failed",
+        }[failure] }),
+        expect.objectContaining({ provider: "bcb-selic-1178", parsed: true, failure: null, recordDate: "2026-06-24" }),
+      ]);
+      expect(calls.filter(url => url.includes("api.bcb.gov.br"))).toEqual([
+        expect.stringContaining("sgs.11/"), expect.stringContaining("sgs.1178/"),
+      ]);
+      for (const request of vi.mocked(fetchWithRetry).mock.calls.filter(([url]) => String(url).includes("api.bcb.gov.br"))) {
+        expect(request[3]).toMatchObject({ maxResponseBytes: 16 * 1024 });
+      }
+      expect(vi.mocked(recordOutcome).mock.calls.filter(([, key]) => key === "TREASURY_RATES:BRL"))
+        .toEqual([[db, "TREASURY_RATES:BRL", true]]);
+      expect(metadata.usdSource).toBe("fred-dgs3mo");
+      expect(metadata.eurSource).toBe("ecb-estr-3m");
+      const entry = latestStructuredCachePayload().benchmarks.BRL!;
+      expect(entry).toMatchObject({
+        key: "BRL", label: "BRL SELIC over", currency: "BRL", source: "bcb-selic-1178",
+        rate: 13.65, recordDate: "2026-06-24", isFallback: false, fallbackMode: null,
+        lastMarketRate: 13.65, lastMarketSource: "bcb-selic-1178",
+        fetchedAt: FROZEN_NOW.getTime() / 1000, lastMarketFetchedAt: FROZEN_NOW.getTime() / 1000,
+      });
+      // Round-trip through the real registry reader and shared freshness authority.
+      installCacheByKey(vi.mocked(getCache), {
+        risk_free_rates: makeCacheRow(cacheWritePayload("risk_free_rates"), FROZEN_NOW.getTime() / 1000),
+      });
+      const loaded = await loadRiskFreeRateRegistryWithState(db);
+      expect(loaded.registry.BRL?.source).toBe("bcb-selic-1178");
+      expect(loaded.cacheState).toBe("valid");
+      const benchmark = loaded.registry.BRL!;
+      const freshnessOptions = {
+        recordDate: benchmark.recordDate,
+        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.BRL,
+        nowSec: Date.now() / 1000,
+      };
+      expect(classifyYieldBenchmarkFreshness(benchmark, freshnessOptions)).toBe("healthy");
+      expect(classifyYieldBenchmarkFreshness({ ...benchmark, ageSeconds: 48 * 3600 }, freshnessOptions)).toBe("healthy");
+      expect(classifyYieldBenchmarkFreshness({ ...benchmark, ageSeconds: 48 * 3600 + 1 }, freshnessOptions)).toBe("stale");
+    },
+  );
+
+  it.each([
+    ["19/06/2026", "stale-record"], ["26/06/2026", "future-record"],
+  ])("rejects SGS1178 publisher date %s without refreshing prior annualized-source clocks", async (data, failure) => {
+    const observedAt = 1782216000;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        BRL: makeBenchmarkCacheEntry({
+          key: "BRL", source: "bcb-selic-1178", rate: 13.65, recordDate: "2026-06-23", fetchedAt: observedAt,
+        }),
+      }, observedAt),
+    });
+    mockTbillByUrl({
+      "api.bcb.gov.br": url => url.includes("sgs.1178/") ? Response.json([{ data, valor: "13.65" }]) : null,
+    });
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.brlResponseAttempts[1]).toMatchObject({ parsed: true, failure });
+    expect(latestStructuredCachePayload().benchmarks.BRL).toMatchObject({
+      source: "bcb-selic-1178", recordDate: "2026-06-23", fetchedAt: observedAt,
+      lastMarketSource: "bcb-selic-1178", lastMarketRecordDate: "2026-06-23", lastMarketFetchedAt: observedAt,
+      isFallback: true, fallbackMode: "bcb-selic-failed-retained",
+    });
+    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:BRL", false);
+  });
+
+  it("admits the inclusive five-day publisher boundary and skips SGS1178", async () => {
+    vi.setSystemTime(new Date("2026-06-25T00:00:00Z"));
+    const calls: string[] = [];
+    mockTbillByUrl({ "api.bcb.gov.br": Response.json([{ data: "20/06/2026", valor: "0.050747" }]) }, calls);
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(JSON.parse(result.metadata ?? "{}").brlSource).toBe("bcb-selic");
+    expect(calls.some(url => url.includes("sgs.1178/"))).toBe(false);
+    expect(classifyYieldBenchmarkFreshness(
+      { ageSeconds: 0, isFallback: false, fallbackMode: null },
+      { recordDate: "2026-06-20", nowSec: Date.now() / 1000 + 1, maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.BRL },
+    )).toBe("stale");
+  });
+
+  it.each([
+    ["2026-06-25T23:55:00Z", "bcb-selic-1178"],
+    ["2026-06-25T23:54:59Z", null],
+  ])("uses the shared five-minute future-skew allowance at %s", async (now, source) => {
+    vi.setSystemTime(new Date(now));
+    mockTbillByUrl({
+      "api.bcb.gov.br": url => url.includes("sgs.1178/") ? Response.json([{ data: "26/06/2026", valor: "13.65" }]) : null,
+    });
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(JSON.parse(result.metadata ?? "{}").brlSource).toBe(source);
+  });
+
+  it("bounds response MIME diagnostics and never persists an error body", async () => {
+    const mime = `text/${"x".repeat(200)}`;
+    mockTbillByUrl({
+      "api.bcb.gov.br": new Response(bcbFixtures.html, { headers: { "Content-Type": `${mime}; charset=utf-8` } }),
+    });
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.brlResponseAttempts).toHaveLength(2);
+    for (const attempt of metadata.brlResponseAttempts) {
+      expect(attempt).toMatchObject({ failure: "html-body", contentType: mime.slice(0, 100) });
+    }
+    expect(result.metadata).not.toContain("<html>");
+    expect(result.metadata).not.toContain("suporte.ti");
+  });
+
+  it("does not start SGS1178 or publish when the inherited deadline aborts SGS11", async () => {
+    const controller = new AbortController();
+    const calls: string[] = [];
+    mockTbillByUrl({
+      "api.bcb.gov.br": () => { controller.abort(new Error("slot deadline")); return null; },
+    }, calls);
+    await expect(fetchTbillRate(db, controller.signal, BANXICO_TEST_ENV)).rejects.toThrow("slot deadline");
+    expect(calls.filter(url => url.includes("api.bcb.gov.br"))).toHaveLength(1);
+    expect(vi.mocked(recordOutcome).mock.calls.some(([, key]) => key === "TREASURY_RATES:BRL")).toBe(false);
+    expect(vi.mocked(setCache).mock.calls.some(([, key]) => key === "risk_free_rates")).toBe(false);
   });
 
   it("retains the last CHF benchmark when the SIX SARON fetch fails", async () => {

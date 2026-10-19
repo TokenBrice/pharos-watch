@@ -3,6 +3,24 @@ import { definePricingSource, PRICING_SOURCE_PRESETS } from "./pricing-source-re
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "../types/live-reserve-adapter-policy";
 
 export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
+  definePricingSource(PRICING_SOURCE_PRESETS.softAggregator, {
+    key: "hive-native-cg",
+    label: "Hive internal market \u00d7 CoinGecko HIVE/USD",
+    shortLabel: "Hive \u00d7 CG",
+    depegSourceFamily: "coingecko",
+    maxTrustedAgeSec: 15 * 60,
+    defaultWeight: 2,
+    requiresObservedAt: true,
+    isReplaySafe: false,
+    isProtocolOverride: false,
+    bypassesSoftValidationGuardrails: false,
+    capabilities: {
+      hasBidAsk: true,
+      hasTradeAge: true,
+      hasUpstreamTimestamp: false,
+      isLastTradeOnly: false,
+    },
+  }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardMarket, {
     key: "cg-ticker",
     label: "CoinGecko ticker",

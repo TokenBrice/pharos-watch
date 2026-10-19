@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:64c2590de33b0154222b4fdd7ecfcd356f1243d16cff5c9e38fc1bb12cc98371",
+  "sourceChecksum": "sha256:7af27c9698be1b82b82231db03459f9f6668fcd4263ddaf6d264007b8d8cc415",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,7 +16,7 @@
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:2d37f72954c8afb42e05192ebae734499d9a6dd34e40959cc05f2d077e78c622",
+      "checksum": "sha256:f61cd3f367374aa22fb89dc727ae9565651e318d2464aebd6f1f7823299e523a",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     },
     {
@@ -26,8 +26,8 @@
     }
   ],
   "recordsOrderedBy": "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending (rows without a peak after rows with one), then symbol ascending, then id ascending (symbol and id compared by UTF-16 code unit)",
-  "rowCount": 113,
-  "updatedAt": "2026-09-23",
+  "rowCount": 114,
+  "updatedAt": "2026-10-19",
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -59,6 +59,39 @@
     "recordedAt": "UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded."
   },
   "rows": [
+    {
+      "id": "usdkg-gold-dollar",
+      "name": "USDKG",
+      "symbol": "USDKG",
+      "llamaId": "409",
+      "logoUrl": "https://pharos.watch/logos/usdkg-gold-dollar.jpg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "regulatory",
+      "causeLabel": "Regulatory",
+      "deathDate": "2026-10-05",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 50345033,
+      "epitaph": "Cabinet order ended the gold-backed dollar",
+      "obituary": "USDKG announced on October 5, 2026 that issuance, circulation and blockchain operations would cease under Kyrgyz Cabinet Order 639-t dated August 20. The order directed liquidation of its issuer, EVA. Holders were directed to hello@usdkg.com to arrange fiat or USDT exchange, with no published payout duration. The issuer announced plans to consolidate and burn tokens and suspend the Ethereum and Tron contracts; completed burns and full holder repayment have not been established. Pharos preserves the token's historical market record as a frozen archive.",
+      "sourceUrl": "https://x.com/USDKG_Official/status/2107193447363010779",
+      "sourceLabel": "USDKG termination announcement, October 5, 2026",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "tron",
+          "address": "TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
+          "decimals": 6
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe820c06321e60d36257c666643fa5436643445e3",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/usdkg-gold-dollar/",
+      "mechanismArchetype": "rwa-credit-fund",
+      "recordedAt": "2026-10-19"
+    },
     {
       "id": "cdxusd-cod3x",
       "name": "Cod3x USD",

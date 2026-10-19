@@ -42,7 +42,6 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "hbd-hive",
   // 2026-10-06: observed CG quotes remain within the seven-day budget,
   // while strict primary freshness rejects these low-volume tickers.
-  "usdkg-gold-dollar",
   "fusd-freedom-dollar",
   "chfau-allunity",
   // 2026-10-12: these observed quotes are hours old, inside the unchanged

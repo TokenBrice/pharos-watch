@@ -9,6 +9,13 @@ vi.mock("next/link", async () => {
 });
 
 describe("About structured-data documentation links", () => {
+  it("discloses the native Hive market and its conservative CoinGecko dependency in static HTML", () => {
+    const html = renderToStaticMarkup(<AboutPageContent />);
+    expect(html).toContain("Hive internal market (HBD/HIVE)");
+    expect(html).toContain("CoinGecko HIVE/USD conversion dependency");
+    expect(html).toContain("not two independent votes");
+    expect(html).toContain('href="https://developers.hive.io/apidefinitions/#condenser_api.get_order_book"');
+  });
   it("points API and catalog mentions directly at Reference without changing entity identities", () => {
     const html = renderToStaticMarkup(<AboutPageContent />);
     const nodes = Array.from(html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs),
