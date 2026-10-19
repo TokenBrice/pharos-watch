@@ -11,7 +11,7 @@ import { LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS } from "@shared/types/live
 import source from "@shared/data/stablecoins/coins/mtbill-midas.json";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext } from "../types";
-import { fetchMidasMtbillReserves } from "../midas-mtbill";
+import { fetchMidasMtbillReserves, MidasIpfsGatewayError } from "../midas-mtbill";
 import { installAdapterNetwork, expectValidAdapterOutput, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 import { midasNetwork, midasClaimData, MIDAS_CAPTURE_NOW, MIDAS_CHECKPOINT_SEC, type MidasTestDocument } from "./midas-mtbill.test-support";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
@@ -30,6 +30,8 @@ const config = source.liveReservesConfig as LiveReservesConfig;
 const ustb = "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')";
 const registry = fixture.registry;
 const fresh = MIDAS_CAPTURE_NOW;
+const gatewayUrls = ["https://gateway.pinata.cloud/ipfs/", "https://ipfs.filebase.io/ipfs/", "https://ipfs.io/ipfs/"]
+  .map((gateway) => `${gateway}${fixture.attestationCid}`);
 function fetchPacket(networkSpec: AdapterNetworkSpec = midasNetwork(), nowSec = fresh, ctx: Partial<AdapterContext> = {}, signal = AbortSignal.timeout(5_000)) {
   const network = installAdapterNetwork(networkSpec);
   return { network, result: fetchMidasMtbillReserves(coin, config, signal, { chainRpcs: network.chainRpcs, nowSec, ...ctx }) };
@@ -40,7 +42,7 @@ function book(document: MidasTestDocument): Record<string, unknown> {
 function checkpointMetadata(document: MidasTestDocument): Record<string, unknown> {
   return book(document)._metadata as Record<string, unknown>;
 }
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
 describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
   it("verifies the recorded UnixFS root rather than the raw gzip/JSON hashes, binds the exact book and retains its original clock", async () => {
@@ -80,6 +82,94 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
     ]);
     expect(createHash("sha256").update(Buffer.from(fixture.gzipBase64, "base64")).digest("hex")).toBe(fixture.gzipSha256);
     expect(fixture.gzipSha256).not.toBe("47c1850417f4d5ceb1ebe78f0d2b319af6b0bd0b9497f481922f356158c8028c");
+  });
+
+  it("falls back serially after Pinata 429 and a second gateway 503 without same-host retries or Retry-After waits", async () => {
+    const spec = midasNetwork();
+    let cancelled = false;
+    spec.json![gatewayUrls[0]] = () => new Response(new ReadableStream({
+      cancel() { cancelled = true; },
+    }), { status: 429, headers: { "retry-after": "120" } });
+    spec.json![gatewayUrls[1]] = () => {
+      expect(cancelled).toBe(true);
+      return new Response("unavailable", { status: 503 });
+    };
+    const { result, network } = fetchPacket(spec);
+    const output = await result;
+    expect(output.metadata?.sourceTimestamp).toBe(MIDAS_CHECKPOINT_SEC);
+    expect(network.requests.filter(({ url }) => url.includes("/ipfs/")).map(({ url }) => url)).toEqual(gatewayUrls);
+    expect(network.unmatched).toEqual([]);
+  });
+
+  it("verifies each gateway's UnixFS content and bounds streamed bodies before falling back", async () => {
+    const spec = midasNetwork();
+    spec.json![gatewayUrls[0]] = () => new Response(new Uint8Array([31, 139, 8]));
+    let cancelled = false;
+    spec.json![gatewayUrls[1]] = () => new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new Uint8Array(128 * 1024 + 1)); },
+      cancel() { cancelled = true; },
+    }));
+    const last = spec.json![gatewayUrls[2]];
+    spec.json![gatewayUrls[2]] = (request: Request) => {
+      expect(cancelled).toBe(true);
+      return typeof last === "function" ? last(request) : last;
+    };
+    const { result, network } = fetchPacket(spec);
+    await expect(result).resolves.toBeDefined();
+    expect(network.requests.filter(({ url }) => url.includes("/ipfs/"))).toHaveLength(3);
+  });
+
+  it("returns a typed exhausted-gateway failure without reading the historical portfolio", async () => {
+    const spec = midasNetwork();
+    for (const url of gatewayUrls) spec.json![url] = () => new Response("rate limited", { status: 429 });
+    const { result, network } = fetchPacket(spec);
+    const error = await result.catch((failure: unknown) => failure);
+    expect(error).toBeInstanceOf(MidasIpfsGatewayError);
+    expect(error).toMatchObject({ code: "save-ipfs-gateways-exhausted",
+      failures: gatewayUrls.map((url) => ({ gateway: url.replace(fixture.attestationCid, ""), detail: expect.stringContaining("HTTP 429") })) });
+    expect(network.requests.some(({ url }) => url.includes("by-timestamp"))).toBe(false);
+    expect(network.requests.filter(({ url }) => url.includes("/ipfs/"))).toHaveLength(3);
+  });
+
+  it("times out a stalled gateway body at five seconds and then reads the next gateway", async () => {
+    vi.useFakeTimers();
+    const spec = midasNetwork();
+    let cancelled = false;
+    spec.json![gatewayUrls[0]] = () => new Response(new ReadableStream({ cancel() { cancelled = true; } }));
+    const { result, network } = fetchPacket(spec, fresh, { attemptDeadlineMs: Date.now() + 20_000 }, new AbortController().signal);
+    const observed = expect(result).resolves.toBeDefined();
+    await vi.advanceTimersByTimeAsync(5_000);
+    await observed;
+    expect(cancelled).toBe(true);
+    expect(network.requests.filter(({ url }) => url.includes("/ipfs/")).map(({ url }) => url)).toEqual(gatewayUrls.slice(0, 2));
+  });
+
+  it("clips gateway body intake to the inherited attempt deadline and admits no later gateway", async () => {
+    vi.useFakeTimers();
+    const spec = midasNetwork();
+    let cancelled = false;
+    spec.json![gatewayUrls[0]] = () => new Response(new ReadableStream({ cancel() { cancelled = true; } }));
+    const { result, network } = fetchPacket(spec, fresh, { attemptDeadlineMs: Date.now() + 50 }, new AbortController().signal);
+    const observed = expect(result).rejects.toThrow("save-deadline-exceeded");
+    await vi.advanceTimersByTimeAsync(50);
+    await observed;
+    expect(cancelled).toBe(true);
+    expect(network.requests.filter(({ url }) => url.includes("/ipfs/")).map(({ url }) => url)).toEqual(gatewayUrls.slice(0, 1));
+    expect(network.requests.some(({ url }) => url.includes("by-timestamp"))).toBe(false);
+  });
+
+  it.each([301, 302, 307, 308])("rejects HTTP %i from the exact historical endpoint using Workers-supported manual redirects", async (status) => {
+    const spec = midasNetwork();
+    const url = "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-16T10%3A00";
+    spec.json![url] = (request: Request) => {
+      expect(request.redirect).toBe("manual");
+      return new Response(fixture.historicalBody, { status, headers: {
+        location: "https://api-prod.midas.app/api/transparency?token=mTBILL",
+      } });
+    };
+    const { result, network } = fetchPacket(spec);
+    await expect(result).rejects.toThrow(`HTTP ${status}`);
+    expect(network.requests.filter(({ url: requested }) => requested.includes("transparency")).map(({ url: requested }) => requested)).toEqual([url]);
   });
 
   it("keeps the source cap inclusive at three days and never extends it to document expiry", async () => {
