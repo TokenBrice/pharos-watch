@@ -72,11 +72,11 @@
         "url": "https://wormhole.com/case-studies/securitize"
       },
       {
-        "label": "Wave-2 Securitize ACRED authoritative deployment and bridge-address feed",
+        "label": "Securitize ACRED authoritative deployment and bridge-address feed",
         "url": "https://public-feed.securitize.io/asset-info?symbol=ACRED"
       },
       {
-        "label": "Wave-2 publicly verified SecuritizeBridge implementation source (not a pinned proxy-state certificate)",
+        "label": "Publicly verified SecuritizeBridge implementation source (not a pinned proxy-state certificate)",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853"
       },
       {

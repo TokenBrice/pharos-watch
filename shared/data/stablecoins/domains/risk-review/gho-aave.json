@@ -1,7 +1,7 @@
 {
   "id": "gho-aave",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Aave GHO introduction",
@@ -24,11 +24,71 @@
         "url": "https://aave.com/docs/ecosystem/gho"
       },
       {
-        "label": "Ethereum PublicNode RPC (blocks 26088256 and 26224763)",
+        "label": "Ethereum PublicNode RPC (prior observations at blocks 26088256, 26224763 and 26224853)",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum archive RPC: block 26224853",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Arbitrum archive RPC: block 516207779",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Plasma archive RPC: block 35450263",
+        "url": "https://api-plasma-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Monad RPC: block 114684949",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Aave Ethereum GHO deployment registry",
+        "url": "https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoEthereum.sol"
+      },
+      {
+        "label": "Aave Arbitrum GHO deployment registry",
+        "url": "https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoArbitrum.sol"
+      },
+      {
+        "label": "Aave Plasma GHO deployment registry",
+        "url": "https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoPlasma.sol"
+      },
+      {
+        "label": "Aave Monad GHO deployment registry",
+        "url": "https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoMonad.sol"
+      },
+      {
+        "label": "Verified canonical GhoToken source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f"
+      },
+      {
+        "label": "Aave Labs Horizon issuer-permissioned collateral architecture",
+        "url": "https://governance.aave.com/t/arfc-horizon-s-rwa-instance/21898"
+      },
+      {
+        "label": "Lombard LBTC and BTC.b backing and custody",
+        "url": "https://docs.lombard.finance/learn/products/assets"
+      },
+      {
+        "label": "Lombard eBTC/LBTC design (2024)",
+        "url": "https://www.lombard.finance/blog/ether-fi-and-lombard-partner-to-bring-the-first-bitcoin-lrt-to-market"
+      },
+      {
+        "label": "Lombard exact Ethereum LBTC and BTC.b deployments",
+        "url": "https://docs.lombard.finance/learn/transparency/smart-contracts"
+      },
+      {
+        "label": "FBTC exact Ethereum deployment",
+        "url": "https://docs.fbtc.com/developers/smart-contracts"
+      },
+      {
+        "label": "FBTC institutional custody and authority roles",
+        "url": "https://docs.fbtc.com/security/roles"
       }
     ],
-    "evidence": "GHO has no observed direct holder-targeted or upgradeable-token control on its material Ethereum deployment. At Ethereum block26224853, canonical0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f has zero ERC1967 implementation/admin slots; verified GhoToken burn(uint256) reduces only msg.sender's balance. Facilitator management cannot grant arbitrary-holder burn. The reserve-majority test uses branch issuance/debt rather than total collateral TVL, retaining prefunded own-GHO legs only in the denominator. Same-block699m supply reconciles to eight facilitator levels. Mainnet GhoReserve0x54c58157def387a880ae62332d1445f03adbe7e9 holds265992236.825097 own GHO and has only GSM_USDC0x3a3868898305f04bec7fea77becff04c13444112/getUsed0.034676 and GSM_USDT0x882285e62656b9623af136ce3078c6bdcc33f5e3/getUsed44007763.140227. Receipt asset() getters establish Circle USDC and Tether USDT. Arbitrum block516207779/hash0x20f1448b90a7b309eaa3230a67e8b68b79583ae5e8ebb4d578e8c8d8e1a0aa21; Plasma block35450263/hash0xce731766679643718274a4d36cf6d527febc72e5372cd80f54198a17f3f3113d; Monad block114684949/hash0x3b1989c422aa898d0ee2e19eae46d2117aa7b9e3641cead325a3a4f9b97be124, all2026-10-19T06:34:03Z: each remote reserve has exactly one GSM. Uses8041492.167861/42988820.360806/49566534.621521 and idle own-GHO41958507.832139/7011179.639194/433465.378479 reconcile to the50m branch allocations. Remote receipt underlyings are respectively0xaf88d065e77c8cc2239327c5edb3a432268e5831(USDC),0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb(USDT),0x754704bc059f8c67012fed69bc8a327a5aafb603(USDC). Ethereum GhoDirectMinter.POOL/GHO_A_TOKEN identify Core0x00907f9921424583e7ffbfedf84f92b7b2be4977, Lido0x18efe565a5373f430e2f809b97de30335b3ad96a, Horizon0x946281a2d0dd6e650d08f74833323d66ae4c8b12, holding31440874.639186/11297571.695580/35787300.775397 own GHO. Therefore measured issuer-exposed drawn GSM debt is20.68735484%, and the conservative upper bound including every other drawn unit is43.64504481%, using699m including own-token legs. The exact figure inside that interval requires borrower-level debt×collateral-exposure joins; it cannot change the No verdict on this denominator. The earlier 11.158754% current characterization, 55.937098% unresolved-reserve claim, and claim that the Lido market only contains WETH/wstETH are not supported by these current reads: the Lido pool also lists USDC, USDS, sUSDe and other assets. Sources: https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoEthereum.sol and GhoArbitrum.sol/GhoPlasma.sol/GhoMonad.sol; https://eth.blockscout.com/api/v2/smart-contracts/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; https://ethereum-rpc.publicnode.com; https://arb1.arbitrum.io/rpc; https://rpc.plasma.to; https://rpc.monad.xyz. Headers at all numeric pins were checked for matching hashes. These are near-synchronous cross-chain reads, not one atomic cross-chain snapshot.",
+    "evidence": "GHO is Upstream because qualifying drawn-debt exposure exceeds 50%, without a direct holder-targeted control on its material Ethereum token. Ethereum block 26224853, hash 0xf24389560dd687185760608b795c7901721583fec1d4343791db22d6b485d084, is dated 2026-10-19T06:32:47Z. Canonical 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f has zero ERC1967 implementation/admin slots; verified GhoToken burn(uint256) burns only msg.sender's balance. Facilitator management cannot grant arbitrary-holder burn. The canonical CCIP pool 0x06179f7c1be40863405f374e7f5f8806c728660a holds 63542027.484672 GHO, 9.090419% of 699000000 gross issuance; the remaining Ethereum balance is material. Arbitrum, Plasma and Monad token supplies are respectively 42771936.134532, 10687913.728837 and 4876316.482542 GHO, each below 10% of gross issuance. GHO declares no parent claim. The reserve test weights drawn debt, not unused mint capacity or idle prefunded GHO. Same-block getFacilitatorsList/getFacilitator reconcile eight levels to 699000000 GHO: Core 135000000, Lido 45000000, Horizon 59000000, mainnet GSMs 310000000, Plasma/Arbitrum/Monad 50000000 each, flash minter zero. Mainnet GhoReserve 0x54c58157def387a880ae62332d1445f03adbe7e9 holds 265992236.825097 idle GHO; getEntities exhausts GSM_USDC 0x3a3868898305f04bec7fea77becff04c13444112 and GSM_USDT 0x882285e62656b9623af136ce3078c6bdcc33f5e3, with getUsed(address) 0.034676 and 44007763.140227 GHO. Their UNDERLYING_ASSET receipt asset() getters identify Circle USDC and Tether USDT. Remote pins are Arbitrum 516207779/hash 0x20f1448b90a7b309eaa3230a67e8b68b79583ae5e8ebb4d578e8c8d8e1a0aa21, Plasma 35450263/hash 0xce731766679643718274a4d36cf6d527febc72e5372cd80f54198a17f3f3113d and Monad 114684949/hash 0x3b1989c422aa898d0ee2e19eae46d2117aa7b9e3641cead325a3a4f9b97be124, all 2026-10-19T06:34:03Z. Each remote reserve has exactly one GSM. Their drawn amounts are 8041492.167861, 42988820.360806 and 49566534.621521 GHO; idle balances are 41958507.832139, 7011179.639194 and 433465.378479, reconciling each 50000000 allocation. Receipt asset() identifies respectively USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831, USDT 0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb and USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Total drawn GSM exposure is 144604610.325091 GHO, all qualifying. Ethereum GhoDirectMinter.POOL/GHO_A_TOKEN identify Core Pool 0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2/aToken 0x00907f9921424583e7ffbfedf84f92b7b2be4977, Lido Pool 0x4e033931ad43597d96d6bcc25c280717730b58b1/aToken 0x18efe565a5373f430e2f809b97de30335b3ad96a and Horizon Pool 0xae05cd22df81871bc7cc2a04becfb516bfe332c8/aToken 0x946281a2d0dd6e650d08f74833323d66ae4c8b12. Their idle GHO balances are 31440874.639186, 11297571.695580 and 35787300.775397. getReserveData(GHO) identifies variable-debt tokens 0x786dbff3f1292ae8f92ea68cf93c30b34b1ed04b, 0x18577f0f4a0b2ee6f4048db51c7acd8699f97db8 and 0xdec2401c9b0b2e480e627e2a712c11addbf46e3e; pinned totalSupply reads give drawn debt including accrued interest of 103764346.844286, 42866134.493526 and 24310702.771540 GHO. Core/Lido stable debt is zero. The primary debt denominator is therefore 315545794.434443 GHO. Collateral composition is a market-level approximation for Core/Lido, not a borrower-level join: enumerate all 67/9/11 reserves, value aToken totalSupply at the same-block AaveOracle getAssetPrice and reserve decimals (all three BASE_CURRENCY_UNIT values are 100000000), and retain collateral with positive liquidation threshold or an eMode that permits both that collateral and GHO borrowing. Category IDs 1 through 255 were checked in each market; no zero-threshold reserve adds a GHO collateral path. This includes legacy zero-LTV collateral still backing existing debt, but excludes USDC/USDS supply-only rows in Lido and GHO self inventory; own-token collateral, if present, would remain denominator-only. The 54/6/8 eligible collateral sets total $23469146078.221947/$254717345.268996/$151022231.166477. Conservative qualifying values are $10502044093.468841/$46046.895936/$151022231.166477, or 44.74830085%/0.01807764%/100%. Count USDC, USDT, WBTC, cbBTC, cbETH, LBTC, FBTC, BTC.b, PYUSD, EURC, XAUt and syrupUSDT on issuer/custodian grounds. DAI, sDAI, USDS, FRAX, USDe, sUSDe, eUSDe and their eligible principal-token claims count categorically on their qualifying issuer/custodian-control basis, not pro-rated by each token's reserve share: sUSDe has direct issuer controls; Sky and USDe qualify through their reserve exposure. The exact Ethereum LBTC 0x8236a87084f8b84306f72007f36f2618a5634494 and BTC.b 0xb0f70c0bd6fd87dbeb7c10dc692a2a6106817072 match Lombard's custody-backed deployment registry; FBTC 0xc96de26018a54d51c097160568752c4e3bd6c364 matches its issuer's institutional-custody registry. Same-block SY()->yieldToken() maps all ten eligible principal tokens to USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3, sUSDe 0x9d39a5de30e57443bff2a8307a4256c8797a3497 or eUSDe 0x90d2af7d622ca3141efa4d8f1f24d86e5974cc8f; eUSDe.asset() is USDe. The $6228334.986294 eBTC collateral at 0x657e8c867d8b37dcc18fa4caead9c45eb088c642 stays denominator-only because its current complete underlying allocation is unmeasured; a historical LBTC design announcement alone does not establish that allocation. WETH, wstETH, other DAO/protocol-only ETH staking/restaking claims, tBTC, LUSD and governance tokens do not qualify. Horizon's entire eligible set is issuer-controlled tokenized RWA: USTB, USCC, USYC, JTRSY, JAAA, VBILL, ACRED and mGLOBAL; ACRED has zero supplied value. Consequently Horizon's 100% qualifying fraction does not require a borrower-composition approximation. Weighting GSM exposure and each market's drawn debt by these conservative fractions gives 215355844.382530/315545794.434443 = 68.24868155% qualifying exposure under the market-level proxy; counting all eBTC as qualifying raises this proxy to 68.25740846%. The exact Core/Lido borrower-weighted point is unmeasured. Crucially, GSMs plus Horizon alone give a measured lower bound of 53.53115652% even if every Core/Lido borrower has zero qualifying collateral, so the >50% result does not depend on that approximation or eBTC classification. A facilitator-principal sensitivity subtracts all 393921136.785072 idle prefunded GHO from 699000000 issuance: net Core/Lido/Horizon draw is 103559125.360814/33702428.304420/23212699.224603, giving total net draw 305078863.214928. On this denominator GSMs alone are 47.39909176%, GSMs plus Horizon establish at least 55.00784544%, and the same conservative collateral proxy gives 70.19966866% (70.20867713% if eBTC fully qualifies). The larger primary denominator includes accrued debt and liquidity supplied outside the direct-minter allocations; neither accounting basis retains idle inventory as drawn debt. The gross-issuance ratios 20.68735484% GSM exposure and 43.64504481% non-idle issuance are not debt-weighted reserve bounds and cannot establish No. Headers at all numeric pins matched their hashes; the cross-chain observations are near-synchronous, not atomic. Current reads use https://api-ethereum-mainnet.n.dwellir.com, https://api-arbitrum-mainnet-archive.n.dwellir.com, https://api-plasma-mainnet.n.dwellir.com and https://rpc.monad.xyz. Earlier supporting RPC references remain https://ethereum-rpc.publicnode.com, https://arb1.arbitrum.io/rpc and https://rpc.plasma.to; deployment registries are https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoEthereum.sol and GhoArbitrum.sol/GhoPlasma.sol/GhoMonad.sol, with canonical verified source at https://eth.blockscout.com/api/v2/smart-contracts/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
