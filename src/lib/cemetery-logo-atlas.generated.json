@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "5ea065ecfb79",
+  "revision": "6e54974a1b7f",
   "cellSize": 48,
   "columns": 16,
   "rows": 14,
@@ -798,188 +798,188 @@
         450
       ]
     },
-    "usdl-lift-dollar-2025-12": {
+    "usdkg-gold-dollar": {
       "color": [
         300,
         450
       ],
       "gray": [
         350,
+        450
+      ]
+    },
+    "usdl-lift-dollar-2025-12": {
+      "color": [
+        400,
+        450
+      ],
+      "gray": [
+        450,
         450
       ]
     },
     "usdl-liquid-loans-usdl-2025-06": {
       "color": [
-        300,
+        400,
         450
       ],
       "gray": [
-        350,
+        450,
         450
       ]
     },
     "usdm-mountain-protocol-usdm-2025-08": {
       "color": [
-        400,
+        500,
         450
       ],
       "gray": [
-        450,
+        550,
         450
       ]
     },
     "usdn-neutrino-usd-2022-04": {
       "color": [
-        500,
+        600,
         450
       ],
       "gray": [
-        550,
+        650,
         450
       ]
     },
     "usdp-usdp-stablecoin-2023-06": {
       "color": [
-        600,
+        700,
         450
       ],
       "gray": [
-        650,
+        750,
         450
       ]
     },
     "usdr-real-usd-2023-10": {
       "color": [
-        700,
-        450
-      ],
-      "gray": [
-        750,
-        450
-      ]
-    },
-    "usdr-stablr": {
-      "color": [
         0,
         500
       ],
       "gray": [
         50,
+        500
+      ]
+    },
+    "usdr-stablr": {
+      "color": [
+        100,
+        500
+      ],
+      "gray": [
+        150,
         500
       ]
     },
     "usds-sperax-usd-2023-02": {
       "color": [
-        100,
+        200,
         500
       ],
       "gray": [
-        150,
+        250,
         500
       ]
     },
     "usds-spiceusd-2022-09": {
       "color": [
-        200,
+        300,
         500
       ],
       "gray": [
-        250,
+        350,
         500
       ]
     },
     "usdv-verified-usd-2024-12": {
       "color": [
-        300,
+        400,
         500
       ],
       "gray": [
-        350,
+        450,
         500
       ]
     },
     "usdx-kava-usdx-2022-06": {
       "color": [
-        400,
+        500,
         500
       ],
       "gray": [
-        450,
+        550,
         500
       ]
     },
     "usdx-stables-labs-usdx-2025-11": {
       "color": [
-        500,
+        600,
         500
       ],
       "gray": [
-        550,
+        650,
         500
       ]
     },
     "ush-hedge-usd-2024-06": {
       "color": [
-        600,
+        700,
         500
       ],
       "gray": [
-        650,
+        750,
         500
       ]
     },
     "usn-usn-2022-10": {
       "color": [
-        700,
-        500
-      ],
-      "gray": [
-        750,
-        500
-      ]
-    },
-    "usnbt-nubits-2018-03": {
-      "color": [
         0,
         550
       ],
       "gray": [
         50,
+        550
+      ]
+    },
+    "usnbt-nubits-2018-03": {
+      "color": [
+        100,
+        550
+      ],
+      "gray": [
+        150,
         550
       ]
     },
     "usnd-nerite": {
       "color": [
-        100,
+        200,
         550
       ],
       "gray": [
-        150,
+        250,
         550
       ]
     },
     "usp-usp-stablecoin-2023-02": {
       "color": [
-        200,
+        300,
         550
       ],
       "gray": [
-        250,
+        350,
         550
       ]
     },
     "uspd-us-permissionless-dollar-2025-12": {
       "color": [
-        300,
-        550
-      ],
-      "gray": [
-        350,
-        550
-      ]
-    },
-    "usr-resolv": {
-      "color": [
         400,
         550
       ],
@@ -988,7 +988,7 @@
         550
       ]
     },
-    "ust-terrausd-2022-05": {
+    "usr-resolv": {
       "color": [
         500,
         550
@@ -998,7 +998,7 @@
         550
       ]
     },
-    "usx-dforce": {
+    "ust-terrausd-2022-05": {
       "color": [
         600,
         550
@@ -1008,7 +1008,7 @@
         550
       ]
     },
-    "uxd-uxd-stablecoin-2024-08": {
+    "usx-dforce": {
       "color": [
         700,
         550
@@ -1018,7 +1018,7 @@
         550
       ]
     },
-    "vai-vai-2021-09": {
+    "uxd-uxd-stablecoin-2024-08": {
       "color": [
         0,
         600
@@ -1028,7 +1028,7 @@
         600
       ]
     },
-    "volt-volt-protocol-2022-08": {
+    "vai-vai-2021-09": {
       "color": [
         100,
         600
@@ -1038,7 +1038,7 @@
         600
       ]
     },
-    "vst-vesta-stable-2023-09": {
+    "volt-volt-protocol-2022-08": {
       "color": [
         200,
         600
@@ -1048,7 +1048,7 @@
         600
       ]
     },
-    "wemix-dollar-wemix": {
+    "vst-vesta-stable-2023-09": {
       "color": [
         300,
         600
@@ -1058,7 +1058,7 @@
         600
       ]
     },
-    "xai-silo-finance": {
+    "wemix-dollar-wemix": {
       "color": [
         400,
         600
@@ -1068,7 +1068,7 @@
         600
       ]
     },
-    "xtusd-xt": {
+    "xai-silo-finance": {
       "color": [
         500,
         600
@@ -1078,7 +1078,7 @@
         600
       ]
     },
-    "xusd-stream-finance-xusd-2025-11": {
+    "xtusd-xt": {
       "color": [
         600,
         600
@@ -1088,7 +1088,7 @@
         600
       ]
     },
-    "yu-yu-2025-11": {
+    "xusd-stream-finance-xusd-2025-11": {
       "color": [
         700,
         600
@@ -1098,7 +1098,7 @@
         600
       ]
     },
-    "yusd-yusd-stablecoin-2023-12": {
+    "yu-yu-2025-11": {
       "color": [
         0,
         650
@@ -1108,13 +1108,23 @@
         650
       ]
     },
-    "zusd-gmo-zusd-2025-06": {
+    "yusd-yusd-stablecoin-2023-12": {
       "color": [
         100,
         650
       ],
       "gray": [
         150,
+        650
+      ]
+    },
+    "zusd-gmo-zusd-2025-06": {
+      "color": [
+        200,
+        650
+      ],
+      "gray": [
+        250,
         650
       ]
     }

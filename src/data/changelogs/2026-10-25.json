@@ -1,0 +1,19 @@
+{
+  "dateRange": {
+    "from": "2026-10-19",
+    "to": "2026-10-25"
+  },
+  "headline": "USDKG enters the frozen archive after its issuer's termination announcement.",
+  "summary": [
+    {
+      "label": "USDKG frozen archive",
+      "tag": "coverage",
+      "description": "USDKG leaves active tracking after its October 5 termination announcement under Kyrgyz Cabinet Order 639-t. Its detail history and a single cemetery record remain available. The saved snapshot retains $50M in observed residual supply and no final price; holders were directed to email for fiat or USDT exchange, without evidence that burns or repayment are complete.",
+      "href": "/stablecoin/usdkg-gold-dollar/"
+    }
+  ],
+  "stats": {
+    "totalCommits": 1
+  },
+  "commits": []
+}

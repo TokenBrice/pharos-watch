@@ -95,7 +95,6 @@ describe("runCoingeckoLowVolumePass", () => {
 
   it.each<LowVolumeRecoveryCase>([
     ...([
-      ["usdkg-gold-dollar", "usdkg", 1.001, 1791222170],
       ["fusd-freedom-dollar", "freedom-dollar", 0.997906, 1790853290],
       ["chfau-allunity", "allunity-chf", 1.2, 1791267900],
     ] as const).map(([id, geckoId, price, observedAt]) => {
