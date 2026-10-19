@@ -4,7 +4,7 @@
 
 ## Overview
 
-The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph as a layered **Watershed** diagram (the default desktop view), an alternate force-directed **Network** view, and ranked upstream hubs with direct dependent exposure. Exposure mode adds structural look-through results and separate offline modeled scenarios; the shared failure domains board displays publication groups and existing priced effects. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
+The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph as a force-directed **Network** graph (the default view), an alternate layered **Watershed** diagram on desktop, and ranked upstream hubs with direct dependent exposure. Exposure mode adds structural look-through results and separate offline modeled scenarios; the shared failure domains board displays publication groups and existing priced effects. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
 
 Source entrypoints: `src/app/dependency-map/` owns route composition and authored copy; `src/lib/dependency-watershed/` owns the Watershed model; `src/lib/contagion-layout.ts` owns Network construction/layout. Both views consume the accepted graph and shared exposure semantics, not independent scoring models.
 
@@ -129,11 +129,11 @@ Absent groups mean not published; `[]` means a published empty census. Published
 
 ## Watershed
 
-The Watershed is the default desktop (`md` and up) view. **Network** keeps the force graph for one release cycle; the choice is stored as `view` and preserves every other parameter. Watershed is the default, except that a URL carrying Network-only Explore state (`focus`, `trace`, `type` or `limit`, such as the detail page's `?focus=<coinId>` link) with a non-default value opens Network (the defaults `focus=all`, `type=all`, `limit=200` written by a previous Network visit do not); `view` is written only when it differs from that default. Below `md` the map shows the basin list above the Network graph. The detail-page snapshot keeps the force layout.
+**Network** (the force graph) is the default view. The **Watershed** is an opt-in desktop (`md` and up) view; the choice is stored as `view=watershed` and preserves every other parameter, and `view` is omitted for the Network default. Below `md` the map shows the basin list above the Network graph. The detail-page snapshot keeps the force layout.
 
 `buildWatershedModel` (`src/lib/dependency-watershed/model.ts`) is pure and deterministic: the same publication always yields the same layout, whatever the edge order.
 
-The alternate Network component and its d3-force solver load only when the responsive/URL-selected Network view or a genuine Watershed failure fallback mounts. Default desktop hydration starts with Watershed rather than transiently mounting Network. URL defaults live in the solver-free `contagion-graph-constants.ts` module so reading a view choice cannot pull in d3-force. Layout, chunk cancellation and collision limits are unchanged.
+The Network component and its d3-force solver load lazily when the Network view (the default) or a genuine Watershed failure fallback mounts. URL defaults live in the solver-free `contagion-graph-constants.ts` module so reading a view choice cannot pull in d3-force. Layout, chunk cancellation and collision limits are unchanged.
 
 - **Inputs:** published nodes and edges only. An edge needs both endpoints published; a malformed share becomes an unknown basket share. USD uses the publication-bound `circulatingUsdAtEvaluation` (the Exposure basis), not the market-cap proxy used by the hero and board.
 - **Cycles fail closed.** An iterative Tarjan check runs first. A non-trivial strongly connected component or self-loop returns `{ ok: false, reason: "cycle", members }`, and the route renders the Network view under the notice **Layered view unavailable: the published graph contains a dependency cycle (A → B → A)**. No edge is broken or dropped to force a layering.
