@@ -329,12 +329,12 @@ describe("money-llamma adapter", () => {
     const arbitrumUrl = primaryRpcUrl(run.network.chainRpcs.get("arbitrum")) ?? "";
     expect(arbitrumUrl).not.toBe("");
     // 2 048 collateral reads plus the active band's MONEY read for WBTC and
-    // 3 WETH reads = 2 052 band reads on top of the two block reads and the
+    // 3 WETH reads = 2 052 band reads on top of one validated latest header and the
     // head/operators/metadata rounds. They must fit two Multicall3 pages
     // (2 000 calls each); per-band or 500-call batching would make this
     // count larger.
     const arbitrumPosts = run.network.requests.filter((request) => request.url.startsWith(arbitrumUrl)).length;
-    expect(arbitrumPosts).toBe(2 + 3 + 2);
+    expect(arbitrumPosts).toBe(1 + 3 + 2);
     expect(run.network.rpcCalls.filter((call) =>
       !call.viaMulticall && (call.selector === BANDS_Y_SELECTOR || call.selector === BANDS_X_SELECTOR)
     )).toHaveLength(0);

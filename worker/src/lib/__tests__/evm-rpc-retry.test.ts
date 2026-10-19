@@ -89,8 +89,8 @@ describe.each(["single", "batch", "no-batch"] as const)("physical RPC retries: %
     const beforeRequest = vi.fn((requestedUrl: string) => requestedUrl !== url);
 
     expect(await invoke(transport, { chainRpcs, beforeRequest, maxRetries: 0 })).toBeNull();
-    expect(fetchMock.mock.calls.map(([requestedUrl]) => requestedUrl)).toEqual([registryUrl]);
-    expect(beforeRequest.mock.calls).toEqual([[registryUrl], [url]]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(beforeRequest.mock.calls).toEqual([[url]]);
     expect(recordCredits).not.toHaveBeenCalled();
     if (transport === "single") {
       expect(vi.mocked(console.warn).mock.calls.some(([message]) => String(message).includes("request admission denied"))).toBe(true);
@@ -99,7 +99,7 @@ describe.each(["single", "batch", "no-batch"] as const)("physical RPC retries: %
     fetchMock.mockClear();
     expect(await invoke(transport, { chainRpcs, beforeRequest: () => true, maxRetries: 0 }))
       .toEqual(transport === "single" ? 16n : ["0x10"]);
-    expect(fetchMock.mock.calls.map(([requestedUrl]) => requestedUrl)).toEqual([registryUrl, url]);
+    expect(fetchMock.mock.calls.map(([requestedUrl]) => requestedUrl)).toEqual([url]);
     expect(recordCredits.mock.calls).toEqual([[1]]);
   });
 
@@ -109,7 +109,7 @@ describe.each(["single", "batch", "no-batch"] as const)("physical RPC retries: %
     expect(await invoke(transport, {
       beforeRequest, extraRpcUrls: ["https://first.invalid", "https://second.invalid"],
     })).toBeNull();
-    expect(beforeRequest.mock.calls).toEqual([["https://first.invalid"]]);
+    expect(beforeRequest.mock.calls).toEqual([[url]]);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(recordCredits).not.toHaveBeenCalled();
   });

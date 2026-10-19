@@ -248,8 +248,8 @@ interface TronConstantContractResponse {
 }
 
 /**
- * One TronGrid constant-contract read, returning the first result word or null
- * when the address is malformed or the contract reverts. Callers fold every
+ * One supported constant-contract read, preferring admitted Dwellir to TronGrid.
+ * Returns null when the address is malformed or the contract reverts. Callers fold every
  * null into the same withhold-the-route decision.
  */
 async function readTronWord(
@@ -259,32 +259,39 @@ async function readTronWord(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<string | null> {
+  if (ctx?.observedBlock?.chain === "tron") return null;
   const contractHex = await tronBase58ToHex(contractBase58);
   if (!contractHex) return null;
 
   const headers: Record<string, string> = {};
   if (ctx?.trongridApiKey) headers["TRON-PRO-API-KEY"] = ctx.trongridApiKey;
 
-  const json = await fetchJsonPostWithRetry<TronConstantContractResponse>(
-    TRON_CONSTANT_CONTRACT_URL,
-    {
-      owner_address: TRON_ZERO_OWNER_ADDRESS_HEX41,
-      contract_address: `41${contractHex.slice(2)}`,
-      function_selector: functionSelector,
-      parameter,
-      visible: false,
-    },
-    signal,
-    10_000,
-    ctx,
-    { headers },
-  );
-
-  if (json.result?.result !== true) return null;
-  const word = json.constant_result?.[0];
-  return typeof word === "string" && word.length === TRON_WORD_HEX_LENGTH && /^[0-9a-f]+$/i.test(word)
-    ? word.toLowerCase()
-    : null;
+  const request = {
+    owner_address: TRON_ZERO_OWNER_ADDRESS_HEX41,
+    contract_address: `41${contractHex.slice(2)}`,
+    function_selector: functionSelector,
+    parameter,
+    visible: false,
+  };
+  for (const provider of ctx?.dwellirNative ? ["dwellir", "trongrid"] : ["trongrid"]) {
+    try {
+      const json = provider === "dwellir"
+        ? await ctx!.dwellirNative!.readJson<TronConstantContractResponse>(
+          "tron", "/wallet/triggerconstantcontract", signal, ctx, request,
+        )
+        : await fetchJsonPostWithRetry<TronConstantContractResponse>(
+          TRON_CONSTANT_CONTRACT_URL, request, signal, 10_000, ctx, { headers },
+        );
+      if (json.result?.result !== true) continue;
+      const word = json.constant_result?.[0];
+      if (typeof word === "string" && word.length === TRON_WORD_HEX_LENGTH && /^[0-9a-f]+$/i.test(word)) {
+        return word.toLowerCase();
+      }
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+    }
+  }
+  return null;
 }
 
 function decodeTronWordUint(word: string | null): bigint | null {
@@ -303,7 +310,7 @@ interface UsddPsmProbe {
 }
 
 /**
- * Same-run TronGrid reads of the USDD PSM's identity, buy switch, exit fee and
+ * Same-run constant reads of the USDD PSM's identity, buy switch, exit fee and
  * paying USDT balance. Any failed, reverted or malformed read resolves to null
  * so the caller withholds redemption telemetry rather than publishing an
  * unproven route.

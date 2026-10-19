@@ -227,6 +227,34 @@ describe("Centrifuge reviewed deployment observer", () => {
     }
   });
 
+  it("finishes finalized Solana first and rewinds newer EVM pins into its actual clock window", async () => {
+    const deps = dependencies();
+    const solanaTime = CLOCK_SEC - 240;
+    deps.fetchSolanaObservation.mockResolvedValue({ ...solanaObservation(), blockTimeSec: solanaTime });
+    deps.fetchEvmBlockNumber.mockImplementation(async chainId => {
+      expect(deps.fetchSolanaObservation).toHaveBeenCalledTimes(1);
+      return BLOCK_BY_CHAIN[chainId] ?? null;
+    });
+    deps.fetchEvmBlockHeader.mockImplementation(async (chainId, number) => {
+      if (number === "finalized") return null;
+      const route = routeForChain(chainId), identity = expectedCentrifugeDeploymentIdentity(ASSET_ID, route.routeId);
+      if (!identity || identity.runtime !== "evm") throw new Error("fixture");
+      const safeHead = BLOCK_BY_CHAIN[chainId]! - identity.safeBlockLag;
+      return { number, timestamp: CLOCK_SEC - 30 - (safeHead - number) * 12, hash: `0x${"a".repeat(64)}` };
+    });
+    const result = await observe(deps);
+    expect(result).not.toBeNull();
+    expect(result!.deployments.find(row => row.chainId === "solana")).toMatchObject({ rawSupply: "0", blockTimeSec: solanaTime });
+    const times = result!.deployments.map(row => row.blockTimeSec);
+    expect(Math.max(...times) - Math.min(...times)).toBeLessThanOrEqual(120);
+  });
+  it("rejects when the safe EVM head is older than the non-rewindable Solana interval", async () => {
+    const deps = dependencies();
+    deps.fetchEvmBlockHeader.mockImplementation(async (_chain, number) => number === "finalized" ? null :
+      { number, timestamp: CLOCK_SEC - 400, hash: `0x${"a".repeat(64)}` });
+    expect(await observe(deps)).toBeNull();
+    expect(deps.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
   it("captures the complete EVM and Solana burn/mint inventory atomically", async () => {
     const deps = dependencies();
     const attribution = await observe(deps);

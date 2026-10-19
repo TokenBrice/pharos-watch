@@ -9,6 +9,8 @@ import {
   runAdapter,
   type AdapterNetworkSpec,
 } from "./reserve-adapter.test-support";
+import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 
 const TRON_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron";
 const TRON_HISTORY = "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=tron";
@@ -218,6 +220,43 @@ describe("fetchUsddDataPlatformReserves", () => {
 });
 
 describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
+  it.each(["success", "fallback", "disabled", "pinned"] as const)(
+    "keeps native PSM constant routing operation-scoped: %s", async mode => {
+      const base = DWELLIR_NATIVE_ENDPOINTS.find(endpoint => endpoint.network === "tron")!.baseUrl;
+      const { spec } = tronNetwork();
+      const words = defaultPsmWords();
+      const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+        network: { ...spec, json: { ...spec.json, [`${base}/wallet/triggerconstantcontract`]: async (request: Request) => {
+          expect(request.headers.get("X-Api-Key")).toBe("native-test-key-placeholder");
+          expect(request.headers.get("TRON-PRO-API-KEY")).toBeNull();
+          const body = await request.clone().json() as TronCallBody;
+          return mode === "fallback" ? { result: { result: false } }
+            : { result: { result: true }, constant_result: [words[body.function_selector!]] };
+        } } },
+        ctx: {
+          dwellirNative: createDwellirNativeCapability("native-test-key-placeholder",
+            mode === "disabled" ? new Set(["tron"]) : undefined),
+          trongridApiKey: "tron-test-key",
+          ...(mode === "pinned" ? { observedBlock: { chain: "tron", number: 100, timestamp: 1000 } } : {}),
+        },
+        nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+      });
+      const calls = network.fetchSpy.getHistory().filter(request => request.url.includes("triggerconstantcontract"));
+      const nativeCalls = calls.filter(request => request.url.startsWith(base));
+      const incumbentCalls = calls.filter(request => request.url === TRON_GRID);
+      expect(nativeCalls).toHaveLength(mode === "success" || mode === "fallback" ? 5 : 0);
+      expect(incumbentCalls).toHaveLength(mode === "fallback" || mode === "disabled" ? 5 : 0);
+      expect(incumbentCalls.every(request => request.headers["tron-pro-api-key"] === "tron-test-key" &&
+        !request.headers["x-api-key"])).toBe(true);
+      if (mode === "pinned") expect(result.metadata?.redemption).toBeUndefined();
+      else expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 33_195_883.987282, capacityKind: "live-direct" });
+      for (const selector of Object.keys(words)) {
+        const attempts = calls.filter(request => JSON.parse(request.body!).function_selector === selector);
+        if (mode === "success" || mode === "fallback") expect(attempts[0]?.url).toBe(`${base}/wallet/triggerconstantcontract`);
+      }
+    },
+  );
+
   it("publishes the GemJoin's USDT balance as live-direct PSM capacity", async () => {
     const { spec } = tronNetwork();
     const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {

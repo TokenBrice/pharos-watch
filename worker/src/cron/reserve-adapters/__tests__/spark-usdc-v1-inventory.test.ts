@@ -98,7 +98,6 @@ describe("Spark V1 local receipt inventory", () => {
     }));
     const overrides: Record<string, AdapterRpcValue> = {};
     for (const anchor of anchors.slice(1)) {
-      overrides[`${anchor.chain}:eth_blockNumber`] = BigInt(anchor.number);
       overrides[`${anchor.chain}:eth_getBlockByNumber`] = anchor;
     }
     const { result, network } = read(overrides, anchors[0]);

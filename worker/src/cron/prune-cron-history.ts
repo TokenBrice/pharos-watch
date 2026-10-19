@@ -25,6 +25,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     cronRuns, producerHistory, repairTasks, canaryRuns, recoveryCheckpoints,
     selectorSnapshotDailyQuota, blockTimestampCache, slotExecutions,
     apiRequestConsumerStats, siteDataRequestStats, apiKeyRequestStats,
+    apiRequestSourceSamples, siteDataRequestSamples,
     safetyScoreJournal, safetyScoreAttempts, safetyScoreCaptureArchive,
   } = results;
   const selfServeRateLimitsDeleted = results.selfServeRequestRateLimits.pruned + results.selfServeIssuanceRateLimits.pruned;
@@ -60,10 +61,14 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       apiRequestConsumerStatsDeleted: apiRequestConsumerStats.pruned,
       siteDataRequestStatsDeleted: siteDataRequestStats.pruned,
       apiKeyRequestStatsDeleted: apiKeyRequestStats.pruned,
+      apiRequestSourceSamplesDeleted: apiRequestSourceSamples.pruned,
+      siteDataRequestSamplesDeleted: siteDataRequestSamples.pruned,
       requestTelemetryCappedAtLimit: {
         apiRequestConsumerStats: apiRequestConsumerStats.cappedAtLimit,
         siteDataRequestStats: siteDataRequestStats.cappedAtLimit,
         apiKeyRequestStats: apiKeyRequestStats.cappedAtLimit,
+        apiRequestSourceSamples: apiRequestSourceSamples.cappedAtLimit,
+        siteDataRequestSamples: siteDataRequestSamples.cappedAtLimit,
       },
       cutoffCronRunsSec: cutoff("cronRuns"),
       cutoffRepairTasksSec: cutoff("repairTasks"),

@@ -193,7 +193,7 @@ Admin-only per-coin attempt timeline for the live-reserve sync lane, querying `r
 
 ### `GET /api/request-source-stats`
 
-Admin-only site-vs-external demand attribution summary. Aggregates minute-bucketed request counts into a requested window so operators can estimate what share of total request demand is coming from the website itself versus external consumers.
+Admin-only, Access-protected, `no-store` operational demand measurement. **Reader-first release:** writers still record existing counters; this reader also understands additive sampled stores for the separately deployed writer cutover. This is not a public scoring methodology change.
 
 The top-line `site` bucket combines:
 
@@ -201,12 +201,13 @@ The top-line `site` bucket combines:
 - `api.pharos.watch` requests attributed to browser evidence (`Origin` / `Referer` / frontend `Accept` marker + same-site fetch metadata)
 - `api.pharos.watch` requests authenticated with API keys carrying the legacy `trafficClass="site"` label (no longer writable; see `POST /api/api-keys/:id/update`)
 
-The top-line `external` bucket is `api.pharos.watch` traffic not classified as site. Admin-only routes and `/api/telegram-webhook` remain excluded. The response also includes worker-lane telemetry so operators can distinguish total demand from actual `public-api` vs `site-api` worker load.
+The top-line `external` bucket is `api.pharos.watch` traffic not classified as site. Admin routes and `/api/telegram-webhook` remain excluded. Worker-lane `site-api` work overlaps Pages demand and is never added again to top-line totals.
 
 **Query parameters**
 
 | Param         | Type      | Default | Description                                                             |
 | ------------- | --------- | ------- | ----------------------------------------------------------------------- |
+| `measurementVersion` | `integer` | required | Must be exactly `2`; absent/unsupported values return `400` with reason `attribution-measurement-version-required`. Old admin tabs must reload. |
 | `hours`       | `integer` | `24`    | Window size in hours (`1`–`840`, currently 35 days)                     |
 | `bucketSec`   | `integer` | `3600`  | Time-bucket rollup size in seconds (`60`–`86400`)                       |
 | `routeLimit`  | `integer` | `20`    | Max per-route rows returned in the route breakdown (`1`-`100`)          |
@@ -214,7 +215,14 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 
 Malformed numeric params return `400`; out-of-range numeric params are clamped to the documented bounds.
 
-**Response shape:** `ApiRequestAttributionResponse` (defined in `shared/contracts/request-source.ts`, exported as `@pharos/contracts/request-source`)
+**Response shape:** `ApiRequestAttributionResponse` in `shared/contracts/request-source.ts` (`@pharos/contracts/request-source`). Required `measurementVersion: 2` and `policyId: "request-source-bernoulli-64-v1"` identify operational telemetry, not scoring methodology. Each aggregate/row has a required `measurement` object keyed by its count/share fields:
+
+- `kind`: `observed`, `estimated`, `mixed`, or `unavailable`; sampled contributions can never be labeled observed.
+- `recordedCount`: unsampled legacy/per-key observations; `observedSampleCount` and `probabilityStrata[{inverseRate,observedSampleCount}]`: selected observations, not expanded counts. Weighted count = recorded count + `SUM(sample_count * inverse_rate)`; variance estimate = `SUM(sample_count * inverse_rate * (inverse_rate - 1))`.
+- `coverage`: `best-effort` or `unknown`, never a capture-completeness guarantee. `reason` is nullable and machine-readable (`low-sample`, `no-observations`, `invalid-key-regime`, `legacy-keyed-exceeds-source`). `standardError` is null for unavailable or fewer than 30 sampled events; otherwise counts use square-root variance and shares use a delta-method percentage-point error.
+- Empty sampled observations may have point estimate zero with `estimated/low-sample`, not proof of zero requests. Failed reads return an error, never a populated zero response. Pages transport timeout/error observations and per-key counts remain unsampled; ordinary source/delivery contributions may be estimated after writer activation.
+
+All queries use the same `[from,to)` observation window and preserve minute resolution. Full-window totals do not depend on route/key limits or the UI's latest-eight-bucket display. Shares are derived after summing weighted inputs, not averaged or clamped.
 
 `ApiRequestAttributionResponse` includes:
 
@@ -228,6 +236,8 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 - `keyedPublicApi` — summary of authenticated protected `public-api` traffic (`keyedRequests`, `unkeyedRequests`, share percentages, total keys in window, and truncation metadata)
 - `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
 - `scope` — measurement-inclusion flags for total site demand, worker load, and retired Pages cache-hit telemetry; `includesPagesProxyCacheHits` is always `true`, not evidence that cache-hit rows exist in the window
+
+Key summaries use recorded `api_key_request_stats.request_count`. The default-zero `source_v2_request_count` identifies the later source writer regime (old writers leave it zero). Legacy unkeyed demand is legacy public traffic minus `SUM(request_count-source_v2_request_count)`; new unkeyed demand comes directly from sampled `authentication_class='unkeyed'` rows. Their sum plus recorded keyed load owns each key's public share denominator, which can differ from the independently estimated Worker lane total. Impossible legacy subtraction or a marker outside `0..request_count` makes unkeyed/total/share values null with typed unavailable metadata; recorded key counts, keyed shares, omission totals and unrelated demand remain visible. No subtraction-and-clamp fallback is used.
 
 ### `GET /api/api-keys`
 
@@ -547,7 +557,7 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
 
 ### `GET /api/rpc-provider-trial`
 
-Operator-only report for Dwellir RPC parity and the scoped primary/log-routing canary. It answers three questions from one read:
+Operator-only report for Dwellir RPC parity and method-scoped routing readiness. It answers three questions from one read:
 
 - credit ledger — this UTC month's local Dwellir credits against the configured cap (`budget`): attempted EVM JSON-RPC members (including retries, errors and no-response attempts) plus received native HTTP responses. This is conservative admission accounting, not the vendor's billed responses, which exclude error members; see [Metered supplemental provider budgets](./worker-and-api-limits.md#metered-supplemental-provider-budgets)
 - `dwellir-evm` circuit state, so an operator can see whether the trial is currently demoted or held open (`circuit`)
@@ -596,7 +606,7 @@ This section owns the live report, freshness, retention and comparison contract.
 
 `comparator` names the newest primary head/lag/state baseline, or the planned baseline when no samples exist. `logsComparator` names its separate logs baseline (the same reference on ordinary targets); explicit `null` records an unavailable reviewed logs pin. `comparatorsByStep` lists the actual references behind each method's retained observations, including failed calls and legacy recorded comparisons, so a window spanning a comparator change is not attributed solely to the newest host. State `lastMismatch` and `lastComparatorFailure` also carry the reference actually read. A split target's comparator latency is a composite of its step-specific baselines, not a single provider measurement.
 
-`routing.statePlacement` is a read-only scheduled-routing readiness snapshot: `primary`, `supplemental-first`, `supplemental`, or `unavailable` when the key/budget is unusable or the circuit is not closed/half-open. `supplemental-first` puts Dwellir ahead of census-state Alchemy without creating registry eligibility. Placement and global log eligibility come from `DWELLIR_STATE_PLACEMENT` / `DWELLIR_LOG_SCAN_CHAINS`; `routing.logScan` additionally requires full log history and orders Dwellir first independently of state placement. Ethereum is state-primary but remains outside the global log allowlist; Arbitrum is admitted for both. CCIP's observer-specific Ink/Berachain/Plasma route is not global log eligibility. Mint/burn stays Alchemy-first with separately admitted Ethereum/Arbitrum/Base Dwellir fallback. `DWELLIR_ROUTING_DISABLED_CHAINS` demotes listed chains to supplemental-last and removes Dwellir log eligibility. This is configured policy plus observed admission readiness, not proof that a consumer used Dwellir or a request-path RPC map. The read does not advance an open circuit to half-open; a cooled open circuit may be admitted by the next scheduled run.
+`routing.statePlacement` is `preferred` when scheduled key/budget/circuit admission permits Dwellir and the chain is not disabled, otherwise `unavailable`. Preference is method/pin-scoped, not inventory membership or proof of a physical request. `routing.logScan` reports full-history log capability under that admission; retained-only Monad ranges still need an explicit interval/head check at the resolver. `DWELLIR_ROUTING_DISABLED_CHAINS` excludes listed production routes. CCIP state/log selection is independent, and page widths follow the first eligible provider. The read does not advance an open circuit to half-open; the next scheduled run may admit a cooled circuit. [ADR-40](./architecture.md#adr-40) records owner-approved capacity preference, not a claim that every trial gate passes or Dwellir is uniformly faster. Parity retains canonical independent incumbents, never compares Dwellir with itself and never automatically promotes providers.
 
 `lastFailures` retains the newest five failed-call diagnostics per chain across both operators, newest first: `operator`, `step`, `method`, `blockParam` (tag/hex quantity/number, `fromBlock-toBlock` for `eth_getLogs`, or null; strings at most 64 characters), `httpStatus`, `rpcCode`, `message`, `errorClass`, and call clock `atSec`. Messages are sanitized with the safe-error helper, redact the actual configured header and URL-query authentication material before truncation, and are at most 160 characters. No URLs, keys, headers or full request/body payloads are retained. Older rows have no fabricated failure detail.
 

@@ -4,6 +4,7 @@ import {
   createSupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createDwellirNativeCapability } from "../../lib/dwellir-native";
 import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionSource,
@@ -131,9 +132,11 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         performanceById: { "xaut-tether": { elapsedMs: 123, evmRpcRequests: 2 } },
       });
 
+      const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
       const first = await syncSafetyScoreV9SupplyAttribution(
         db,
         new Map(),
+        undefined, undefined, dwellirNative,
       );
       expect(first.status).toBe("ok");
       expect(first.productivity?.reason).toBe(
@@ -148,6 +151,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         latencySummary: { assets: { "xaut-tether": { elapsedMs: 123, evmRpcRequests: 2 } } },
       });
       expect(mocks.capture).toHaveBeenCalledTimes(1);
+      expect(mocks.capture.mock.calls[0]?.[3]).toMatchObject({ dwellirNative });
       expect(
         sqlite
           .prepare(

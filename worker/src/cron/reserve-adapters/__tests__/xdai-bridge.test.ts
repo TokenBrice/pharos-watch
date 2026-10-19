@@ -3,6 +3,8 @@ import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserv
 import { admitV10ReserveObservation } from "@shared/lib/safety-score-v9/reserve-scope";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
+import * as evmRpc from "../../../lib/evm-rpc";
+import { expectRecentPinRouting } from "../../../test-helpers/recent-pin-routing";
 const ADDRESSES = {
   foreign: "0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016",
   home: "0x7301CFA0e1756B71869E93d4E4Dca5C7d0Eb0AA6",
@@ -220,6 +222,22 @@ describe("xdai-bridge adapter", () => {
     expect(admitV10ReserveObservation({ ...input, observation: skewed }).rejectionCodes).toContain("block-skew");
     const zero = structuredClone(observation); zero.ratio!.denominator = "0";
     expect(admitV10ReserveObservation({ ...input, observation: zero }).admitted).toBe(false);
+  });
+  it.each(["finalized", "safe"] as const)("propagates only genuinely finalized xDAI pins: %s", async finalityTag => {
+    const batch = vi.spyOn(evmRpc, "fetchEvmMulticall3Aggregate3AtBlock");
+    try {
+      await fetchFixture(installXdaiNetwork(), { finalityTag });
+      const options = batch.mock.calls[0][3]!;
+      if (finalityTag === "safe") {
+        expect(options.recentStatePin).toBeUndefined();
+      } else {
+        expect(options.recentStatePin).toMatchObject({ chainId: "ethereum", header: ETHEREUM_BLOCK,
+          finalized: ETHEREUM_BLOCK, observedAtSec: NOW_SEC, maxAgeSec: 1800 });
+        await expectRecentPinRouting(options);
+      }
+    } finally {
+      batch.mockRestore();
+    }
   });
 
   it("fails closed when a bridge identity getter drifts", async () => {

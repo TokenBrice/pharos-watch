@@ -341,6 +341,7 @@ table	api_key_self_serve_issuance_limits
 table	api_key_self_serve_revocations
 table	api_keys
 table	api_request_consumer_stats
+table	api_request_source_samples
 table	authoritative_vault_rates
 table	blacklist_amount_repair_queue
 table	blacklist_current_balances
@@ -440,6 +441,7 @@ table	safety_score_site_manifests
 table	safety_score_v9_supply_attribution_journal
 table	scheduled_child_attempts
 table	selector_snapshot_daily_quota
+table	site_data_request_samples
 table	site_data_request_stats
 table	stability_index
 table	stability_index_samples

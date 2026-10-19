@@ -42,6 +42,19 @@ describe("reserve log span bounds", () => {
       { address: options.contract, topics: [], fromBlock: "0x4e21", toBlock: "0x4e21" },
     ]);
   });
+  it("sizes pages for Dwellir rather than a smaller later fallback span", async () => {
+    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValue({ results: [[]], errors: [] });
+    const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: "test" });
+    const configured = chainRpcs.get("gnosis")!;
+    chainRpcs.set("gnosis", { ...configured, endpoints: configured.endpoints.map(endpoint =>
+      endpoint.operator === "dwellir" ? endpoint : { ...endpoint, maxLogBlockSpan: 1000 }) });
+    expect(await fetchOnchainLogs({ ...options, toBlock: 18_001, ctx: { chainRpcs } }))
+      .toMatchObject({ complete: true, calls: 2 });
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map(call => call[1][0].params[0])).toEqual([
+      { address: options.contract, topics: [], fromBlock: "0x1", toBlock: "0x2710" },
+      { address: options.contract, topics: [], fromBlock: "0x2711", toBlock: "0x4651" },
+    ]);
+  });
   it("retries unexecuted members within the existing sequential split budget", async () => {
     vi.mocked(fetchEvmRpcBatchDetailed)
       .mockResolvedValueOnce({ results: [null], errors: [{ index: 0, code: -32000, message: "batch not executed: member 1 (eth_getLogs) violated the log range policy" }] })

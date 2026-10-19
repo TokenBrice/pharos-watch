@@ -65,6 +65,9 @@ describe("Exposure mode", () => {
       return <DependencyHero workspace={workspace} model={model} cards={cards} dependencyEdges={data.edges} mcapMap={mcapMap} methodologyVersion={data.methodologyVersion} publishedAt={data.updatedAt} />;
     }
     render(<Harness />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
     fireEvent.click(await screen.findByRole("button", { name: /^Exposure$/ }));
     expect(screen.getByRole("button", { name: /^Explore$/ })).toBeTruthy();
     expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();

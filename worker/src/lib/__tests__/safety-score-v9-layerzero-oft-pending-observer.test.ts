@@ -12,6 +12,7 @@ import * as dbCache from "../db-cache";
 import { observeLayerZeroOftPending } from "../safety-score-v9/layerzero-oft-pending-observer";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
 
+import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const CLOCK = 1791184659;
 const word = (value: bigint): `0x${string}` => `0x${value.toString(16).padStart(64, "0")}`;
 const address = (value: number): `0x${string}` => `0x${value.toString(16).padStart(40, "0")}`;
@@ -103,11 +104,20 @@ function fixture(sends: Send[] = [{ nonce: 1n, amountSD: 1234567n, state: "unver
   return { source, messages, discoveries, receipts, batch, headers, fetcher,
     setPin(value: number) { pin = value; finalized = value; }, setFinalized(value: number) { finalized = value; },
     setNonces(values: { outbound?: bigint; inbound?: bigint; lazy?: bigint }) { outbound = values.outbound ?? outbound; inbound = values.inbound ?? inbound; lazy = values.lazy ?? lazy; },
-    run(checkpoint?: Parameters<typeof observeLayerZeroOftPending>[0]["checkpoint"]) { return observeLayerZeroOftPending({ source, headers: [header(pin), header(pin)], chainRpcs: new Map<string, ChainRpcConfig>(), checkpoint }); },
+    run(checkpoint?: Parameters<typeof observeLayerZeroOftPending>[0]["checkpoint"]) { return observeLayerZeroOftPending({ clockSec: CLOCK, source, headers: [header(pin), header(pin)], chainRpcs: new Map<string, ChainRpcConfig>(), checkpoint }); },
   };
 }
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { sqliteFixtures.closeAll(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+it("makes authenticated OFT pins recent-state eligible while predecessor state remains historical", async () => {
+  const f = fixture([]);
+  expect((await f.run()).status).toBe("accepted");
+  const options = f.batch.mock.calls[0][2]!;
+  expect(options.recentStatePin).toEqual({ chainId: "ethereum", header: header(100),
+    finalized: header(100), observedAtSec: CLOCK, maxAgeSec: 1800 });
+  expect(options.observedHeadBlock).toBe(100);
+  await expectRecentPinRouting(options);
+});
 
 it("batches exact current-pin authentication without reusing state across attempts", async () => {
   const f = fixture([]);
@@ -157,10 +167,8 @@ it("records a completed prefix commit when the asset expires during the D1 write
     // D1 completed the write; setCache normally checks its signal afterward.
     signal?.throwIfAborted();
   });
-  await expect(observeLayerZeroOftPending({
-    source: f.source, headers: [header(2_000_099), header(2_000_099)],
-    chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal, onDiagnostic,
-  })).rejects.toThrow("asset-timeout-during-commit");
+  await expect(observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(2_000_099), header(2_000_099)],
+  chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal, onDiagnostic, })).rejects.toThrow("asset-timeout-during-commit");
   expect(saved).toHaveBeenCalledTimes(1);
   expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({
     phase: "authenticated-prefix-persisted", afterCursor: "1000100",
@@ -187,11 +195,9 @@ it("persists an authenticated prefix before a later discovery timeout", async ()
     }
     return original(raw, init);
   });
-  await expect(observeLayerZeroOftPending({
-    source: f.source, headers: [header(2_000_099), header(2_000_099)],
-    chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal,
-    onDiagnostic,
-  })).rejects.toThrow("test timeout");
+  await expect(observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(2_000_099), header(2_000_099)],
+  chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal,
+  onDiagnostic, })).rejects.toThrow("test timeout");
   expect(saved).toHaveBeenCalledTimes(1);
   expect(JSON.parse(saved.mock.calls[0]![2]).pathways[0]).toMatchObject({
     sentNonce: "1", sent: { nextBlock: 1_000_100, anchor: 1_000_099 },
@@ -216,7 +222,7 @@ it("anchors omitted delivered messages on every lane before a prefix is saved", 
     if (String(raw).includes("/pathway/") && ++windows === 2) throw new Error("later failure");
     return original(raw, init);
   });
-  await observeLayerZeroOftPending({ source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db: {} as D1Database });
+  await observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db: {} as D1Database });
   expect(saved).toHaveBeenCalledTimes(1);
   const prefix = JSON.parse(saved.mock.calls[0]![2]);
   expect(prefix.pathways[0]).toMatchObject({ sentNonce: "1", messages: [] });
@@ -239,7 +245,7 @@ it("does not save a liability-removing prefix when its destination pin changed",
     if (chain === "base" && height === 100 && ++destinationReads >= 3) return { ...header(height), hash: word(999n) };
     return originalHeader(chain, height, options);
   });
-  expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db: {} as D1Database })).toMatchObject({ status: "rejected", reason: "pin-reorg" });
+  expect(await observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db: {} as D1Database })).toMatchObject({ status: "rejected", reason: "pin-reorg" });
   expect(saved).not.toHaveBeenCalled();
 });
 
@@ -302,7 +308,7 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
   });
   it("retries a transient discovery omission without persisting an unauthenticated cursor", async () => {
     const f = fixture(), { db } = sqliteFixtures.open();
-    const run = () => observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db });
+    const run = () => observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db });
     const original = f.fetcher.getMockImplementation()!;
     f.fetcher.mockImplementationOnce(async () => new Response(JSON.stringify({ data: [] })));
     expect(await run()).toEqual({ status: "rejected", reason: "send-census-mismatch" });
@@ -326,12 +332,12 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
       if (String(raw).includes("/pathway/") && ++windows === 2) return new Response(JSON.stringify({ data: [] }));
       return original(raw, init);
     });
-    expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db }))
+    expect(await observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db }))
       .toMatchObject({ status: "rejected", reason: "send-census-mismatch" });
     const key = `safety-score-v9:layerzero-oft-pending:v2:${sha256Hex(stableJsonStringifyV1(f.source))}`;
     expect(JSON.parse((await dbCache.getCache(db, key))!.value).pathways[0])
       .toMatchObject({ sentNonce: "1", sent: { nextBlock: 1_000_100, anchor: 1_000_099 } });
-    expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db }))
+    expect(await observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db }))
       .toMatchObject({ status: "accepted", amount: "10000000000000" });
     expect(windows).toBe(3);
   });
@@ -345,7 +351,7 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
         sentNonce: "0", destinationAnchor: 100, destinationAnchorHash: header(100).hash, messages: [],
       }],
     }));
-    expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db }))
+    expect(await observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db }))
       .toMatchObject({ status: "accepted", amount: "1234567000000000000" });
     expect(f.fetcher).toHaveBeenCalledTimes(1);
     expect(JSON.parse((await dbCache.getCache(db, key))!.value).pathways[0])
@@ -465,7 +471,7 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
   });
   it("propagates cancellation", async () => {
     const f = fixture(); const controller = new AbortController(); controller.abort();
-    await expect(observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
+    await expect(observeLayerZeroOftPending({ clockSec: CLOCK, source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it.each(["independent-liability", "lock-mint"])("admits %s pending only with every holding-bound OFT proof pin", async family => {

@@ -55,10 +55,9 @@ export async function fetchStarknetTotalSupply(options: {
 
   const dwellirUrl = DWELLIR_NATIVE_ENDPOINTS.find((entry) => entry.network === "starknet")!.baseUrl;
   const rpcUrls = [...new Set([
+    ...(options.ctx?.dwellirNative ? [dwellirUrl] : []),
     options.rpcUrl, options.fallbackRpcUrl, ...STARKNET_RPC_URLS,
-  ].filter((url): url is string => typeof url === "string" && url.length > 0 &&
-    (!options.ctx?.dwellirNative || url !== dwellirUrl)))];
-  if (options.ctx?.dwellirNative) rpcUrls.push(dwellirUrl);
+  ].filter((url): url is string => typeof url === "string" && url.length > 0))];
   let lastError: unknown = null;
 
   for (const rpcUrl of rpcUrls) {

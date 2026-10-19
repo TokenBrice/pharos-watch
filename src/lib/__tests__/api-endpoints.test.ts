@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  API_PATHS,
   DYNAMIC_ENDPOINT_DESCRIPTORS,
   getEndpointDefinitionByKey,
   getSiteDataAccess,
@@ -23,8 +24,21 @@ import {
 } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { ENDPOINT_ASSERTIONS, assertPathCoverage, resolveContractSmokePaths } from "../../../scripts/maintenance/smoke-api.mjs";
+import { ADMIN_API_QUERY_DESCRIPTORS } from "../admin-api-query-descriptors";
 
 describe("api endpoint registry", () => {
+  it("explicitly opts request attribution readers into measurement v2", () => {
+    const url = new URL(ADMIN_API_QUERY_DESCRIPTORS.requestSourceStats.path as string, "https://ops-api.pharos.watch");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      measurementVersion: "2", hours: "24", bucketSec: "3600", routeLimit: "5", apiKeyLimit: "25",
+    });
+  });
+
+  it("forwards the caller's attribution measurement version without importing response schemas", () => {
+    const url = new URL(API_PATHS.requestSourceStats({ measurementVersion: 3 }), "https://ops-api.pharos.watch");
+    expect(url.searchParams.get("measurementVersion")).toBe("3");
+  });
+
   it("publishes runnable probes in the correct security groups", () => {
     const publicPaths = getProbePaths("public");
     const adminPaths = getProbePaths("admin");

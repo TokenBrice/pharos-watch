@@ -1,4 +1,4 @@
-import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
+import { REQUEST_SOURCE_POLICY_ID, type AttributionMeasurement, type ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageHealth,
@@ -357,6 +357,13 @@ export function makeScheduledSlotEventMarkerQueryFailedStatusResponse(
 
 export { makeHealthyHealthResponse };
 
+export function makeAttributionMeasurement(overrides: Partial<AttributionMeasurement> = {}): AttributionMeasurement {
+  return {
+    kind: "observed", observedSampleCount: 0, recordedCount: 0, probabilityStrata: [],
+    coverage: "best-effort", reason: null, standardError: 0, ...overrides,
+  };
+}
+
 type ApiRequestAttributionResponseOverrides = {
   generatedAt?: number;
   window?: Partial<ApiRequestAttributionResponse["window"]>;
@@ -369,6 +376,8 @@ export function makeApiRequestAttributionResponse(
   overrides: ApiRequestAttributionResponseOverrides = {},
 ): ApiRequestAttributionResponse {
   return {
+    measurementVersion: 2,
+    policyId: REQUEST_SOURCE_POLICY_ID,
     generatedAt: overrides.generatedAt ?? 1_700_000_000,
     window: {
       from: 1_699_913_600,
@@ -386,6 +395,11 @@ export function makeApiRequestAttributionResponse(
       totalRequests: 0,
       siteSharePct: 0,
       externalSharePct: 0,
+      measurement: {
+        siteRequests: makeAttributionMeasurement(), externalRequests: makeAttributionMeasurement(),
+        totalRequests: makeAttributionMeasurement(), siteSharePct: makeAttributionMeasurement(),
+        externalSharePct: makeAttributionMeasurement(),
+      },
       ...overrides.totals,
     },
     siteDelivery: {
@@ -395,6 +409,11 @@ export function makeApiRequestAttributionResponse(
       pagesUpstreamTimeouts: 0,
       pagesUpstreamErrors: 0,
       publicApiSiteRequests: 0,
+      measurement: {
+        totalSiteRequests: makeAttributionMeasurement(), pagesCacheHits: makeAttributionMeasurement(),
+        pagesUpstreamFetches: makeAttributionMeasurement(), pagesUpstreamTimeouts: makeAttributionMeasurement(),
+        pagesUpstreamErrors: makeAttributionMeasurement(), publicApiSiteRequests: makeAttributionMeasurement(),
+      },
       ...overrides.siteDelivery,
     },
     lanes: [],
@@ -411,6 +430,11 @@ export function makeApiRequestAttributionResponse(
       omittedKeys: 0,
       omittedRequests: 0,
       truncated: false,
+      measurement: {
+        keyedRequests: makeAttributionMeasurement(), unkeyedRequests: makeAttributionMeasurement(),
+        totalRequests: makeAttributionMeasurement(), keyedSharePct: makeAttributionMeasurement(),
+        unkeyedSharePct: makeAttributionMeasurement(),
+      },
       ...overrides.keyedPublicApi,
     },
     apiKeys: [],
