@@ -15,6 +15,11 @@ describe("parseDwellirRoutingDisabledChains", () => {
     expect([...parseDwellirRoutingDisabledChains(undefined)]).toEqual([]);
   });
 
+  it("recognizes all reviewed native network rollback IDs", () => {
+    expect([...parseDwellirRoutingDisabledChains(" Aptos, MOVEMENT, tron, Starknet, aptos ")])
+      .toEqual(["aptos", "movement", "tron", "starknet"]);
+  });
+
   it("logs one structured warning for all unknown IDs without admitting them", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

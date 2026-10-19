@@ -10,6 +10,8 @@ import * as credits from "../rpc-provider-budget";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { syncMintBurnConfig } from "../../cron/mint-burn/sync-config";
 
+import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
+import { buildAlchemyUrl } from "../alchemy-logs";
 type Call = { id: number; method: string; params: unknown[] };
 const word = (value: number) => `0x${value.toString(16).padStart(64, "0")}`;
 const unavailable = { error: { code: -32602, message: "provider unavailable" } };
@@ -45,38 +47,39 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(JSON.parse(String(fetcher.mock.calls[0][1].body)).params[0]).toMatchObject({ fromBlock: "0x1", toBlock: "0xc350" });
   });
 
-  it.each(["ethereum", "base", "arbitrum"])("falls back from Alchemy to metered 10k pages on %s", async (chain) => {
+  it.each(["ethereum", "base", "arbitrum"])("falls back from Dwellir to incumbent Alchemy on %s", async (chain) => {
     const endpoints = admitted(chain);
-    expect(endpoints.map((endpoint) => endpoint.operator)).toEqual(["alchemy", "dwellir"]);
+    expect(endpoints.map((endpoint) => endpoint.operator)).toEqual(["dwellir", "alchemy"]);
     const meter = vi.spyOn(credits, "recordDwellirCredits");
     const fetcher = recorder((url, call) => call.method === "eth_blockNumber" ? { result: "0xc350" }
       : url === endpoints[0].url ? unavailable : { result: [] });
     const budget = createBudget(20);
-    expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, budget)).toMatchObject({ complete: true, scannedToBlock: 50_000, calls: 6 });
+    expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, budget))
+      .toMatchObject({ complete: true, scannedToBlock: 50_000, calls: 2 });
     const pages = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call)
-      .filter((call) => call.method === "eth_getLogs").slice(1).map((call) => call.params[0] as { fromBlock: string; toBlock: string });
-    expect(pages).toHaveLength(5);
-    expect(pages.map((page) => Number(page.toBlock) - Number(page.fromBlock) + 1)).toEqual([10_000, 10_000, 10_000, 10_000, 10_000]);
-    expect(budget.count).toBe(8);
-    expect(meter.mock.calls).toEqual([[1], [1], [1], [1], [1], [1]]);
-    expect(new Headers(fetcher.mock.calls[2][1].headers).get("X-Api-Key")).toBe("dwellir-test");
+      .filter((call) => call.method === "eth_getLogs").map(logRange);
+    expect(pages.map((page) => Number(page.toBlock) - Number(page.fromBlock) + 1)).toEqual([10_000, 50_000]);
+    expect(budget.count).toBe(4);
+    expect(meter.mock.calls).toEqual([[1], [1]]);
+    expect(new Headers(fetcher.mock.calls[0][1].headers).get("X-Api-Key")).toBe("dwellir-test");
+    expect(new Headers(fetcher.mock.calls[2][1].headers).get("X-Api-Key")).toBeNull();
   });
 
-  it.each(["ethereum", "arbitrum", "base"])("keeps successful %s scans Alchemy-only even after Dwellir admission", async (chain) => {
+  it.each(["ethereum", "arbitrum", "base"])("keeps successful %s scans Dwellir-only with 10k pages", async (chain) => {
     const endpoints = admitted(chain);
     const meter = vi.spyOn(credits, "recordDwellirCredits");
     const fetcher = recorder((_, call) => ({ result: call.method === "eth_blockNumber" ? "0xc350" : [] }));
     expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, createBudget(20)))
-      .toMatchObject({ complete: true, scannedToBlock: 50_000, calls: 1 });
+      .toMatchObject({ complete: true, scannedToBlock: 50_000, calls: 5 });
     expect(fetcher.mock.calls.every(([url]) => url === endpoints[0].url)).toBe(true);
-    expect(meter).not.toHaveBeenCalled();
+    expect(meter).toHaveBeenCalledTimes(6);
   });
 
-  it("reuses the initial provider head across the extended roster without increasing the request budget", async () => {
+  it("reuses the initial preferred-provider head across the extended roster while accounting for smaller pages", async () => {
     const endpoints = admitted("ethereum");
     const fetcher = recorder((_, call) => ({ result: call.method === "eth_blockNumber" ? "0xc350" : [] }));
     const endpointHeads = new Map<string, number>();
-    const budget = createBudget(200);
+    const budget = createBudget(1000);
     expect(await getMintBurnBlockNumber(endpoints, budget, undefined, endpointHeads)).toBe(50_000);
     for (let i = 0; i < 65; i++) {
       for (let event = 0; event < 2; event++) {
@@ -84,7 +87,7 @@ describe("mint/burn ordered RPC fallback", () => {
           .toMatchObject({ complete: true, scannedToBlock: 50_000 });
       }
     }
-    expect(budget.count).toBe(131);
+    expect(budget.count).toBe(651);
     const calls = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call);
     expect(calls.filter((call) => call.method === "eth_blockNumber")).toHaveLength(1);
     expect(fetcher.mock.calls.every(([url]) => url === endpoints[0].url)).toBe(true);
@@ -111,17 +114,14 @@ describe("mint/burn ordered RPC fallback", () => {
     const fetcher = recorder((url, call) => {
       if (call.method === "eth_blockNumber") return { result: "0xc350" };
       const range = call.params[0] as { fromBlock: string; toBlock: string };
-      if (url === endpoints[0].url) {
-        if (Number(range.toBlock) - Number(range.fromBlock) > 25_000) return { error: { code: -32005, message: "block range limit exceeded" } };
-        return Number(range.fromBlock) === 1 ? { result: [] } : unavailable;
-      }
-      return Number(range.fromBlock) === 25_001 ? { result: [] } : unavailable;
+      if (url === endpoints[0].url && Number(range.fromBlock) === 1) return { result: [] };
+      return unavailable;
     });
     expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, createBudget(20)))
-      .toMatchObject({ complete: false, scannedToBlock: 35_000 });
-    expect(fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call)
-      .filter((call) => call.method === "eth_getLogs").slice(3)
-      .map((call) => Number(logRange(call).fromBlock))).toEqual([25_001, 35_001]);
+      .toMatchObject({ complete: false, scannedToBlock: 10_000 });
+    const pages = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call)
+      .filter((call) => call.method === "eth_getLogs");
+    expect(pages.map((call) => Number(logRange(call).fromBlock))).toEqual([1, 10_001, 10_001]);
   });
 
   it.each(["ethereum", "arbitrum", "base"])("does not advance %s's empty-scan cursor past a fallback head lagging by more than the safety margin", async (chain) => {
@@ -149,8 +149,8 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(fallbackPages.every((call) => Number(logRange(call).toBlock) <= fallbackHead)).toBe(true);
   });
 
-  it.each(["ethereum", "base", "arbitrum", "optimism"])("never reaches disabled or unreviewed %s Dwellir", async (chain) => {
-    const map = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test", dwellirRoutingDisabledChains: new Set(["ethereum", "base", "arbitrum"]) });
+  it.each(["ethereum", "base", "arbitrum", "optimism"])("never reaches disabled %s Dwellir", async (chain) => {
+    const map = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test", dwellirRoutingDisabledChains: new Set(["ethereum", "base", "arbitrum", "optimism"]) });
     const endpoints = mintBurnRpcEndpoints(chain, "alchemy-test", map);
     expect(endpoints).toHaveLength(1);
     const fetcher = recorder(() => unavailable);
@@ -159,15 +159,17 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(fetcher.mock.calls.every(([url]) => !url.includes("dwellir"))).toBe(true);
   });
 
-  it.each(["ethereum", "arbitrum", "base"])("requires archive state and full logs for %s fallback", (chain) => {
+  it.each(DWELLIR_CHAINS.filter(chain => chain.logsHistory === "full" && buildAlchemyUrl(chain.chainId, "alchemy-test"))
+    .map(chain => chain.chainId))("prefers supported full-history %s logs independently of state history", chain => {
+    expect(admitted(chain).map(endpoint => endpoint.operator)).toEqual(["dwellir", "alchemy"]);
+  });
+
+  it("does not route unsupported log history through Dwellir", () => {
     const map = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test" });
-    const config = map.get(chain)!;
-    for (const capabilities of [{ stateHistory: "recent" as const }, { logsHistory: "none" as const }]) {
-      const restricted = new Map(map);
-      restricted.set(chain, { ...config, endpoints: config.endpoints.map((endpoint) =>
-        endpoint.operator === "dwellir" ? { ...endpoint, ...capabilities } : endpoint) });
-      expect(mintBurnRpcEndpoints(chain, "alchemy-test", restricted).map((endpoint) => endpoint.operator)).toEqual(["alchemy"]);
-    }
+    const config = map.get("base")!;
+    map.set("base", { ...config, endpoints: config.endpoints.map(endpoint =>
+      endpoint.operator === "dwellir" ? { ...endpoint, logsHistory: "none" } : endpoint) });
+    expect(mintBurnRpcEndpoints("base", "alchemy-test", map).map(endpoint => endpoint.operator)).toEqual(["alchemy"]);
   });
 
   it("falls back for heads and hash-bound timestamps, rejecting a mismatching fork", async () => {
@@ -204,6 +206,31 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(fetcher.mock.calls.map(([url]) => url)).toEqual([endpoints[0].url, endpoints[1].url, endpoints[0].url, endpoints[1].url, endpoints[0].url, endpoints[1].url]);
     expect(budget.count).toBe(6);
     expect(meter.mock.calls).toEqual([[2], [2], [2]]);
+  });
+
+  it("uses recent-only BSC Dwellir for headers but not arbitrary historical conservation state", async () => {
+    const endpoints = admitted("bsc");
+    expect(endpoints[0]).toMatchObject({ operator: "dwellir", stateHistory: "recent", logsHistory: "full" });
+    const original = MINT_BURN_CONFIGS.find(config => config.stablecoinId === "gusd-gemini")!;
+    const config = { ...original, chain: { ...original.chain, chainId: "bsc", evmChainId: 56 } };
+    const entry = { ...getMintBurnConservationRuntimeEntry(original)!, chainId: "bsc" };
+    const fetcher = recorder((_, call) => {
+      if (call.method === "eth_getBlockByNumber") {
+        const opening = call.params[0] === "0x64";
+        return { result: { number: opening ? "0x64" : "0x66", timestamp: opening ? "0x3e8" : "0x400",
+          hash: word(opening ? 10 : 12) } };
+      }
+      return { result: word(100) };
+    });
+    const result = await fetchConservationBoundaries({ requests: [{ key: "bsc", config, fromBlock: 101, toBlock: 102 }],
+      rpcEndpointsByChain: new Map([["bsc", endpoints]]), budget: createBudget(20), checkedAt: 1100, lawFor: () => entry });
+    expect(result.get("bsc")).toMatchObject({ status: "ready" });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([endpoints[0].url, endpoints[1].url, endpoints[0].url]);
+    for (const [url, options] of fetcher.mock.calls) {
+      const calls = JSON.parse(String(options.body)) as Call[];
+      if (url === endpoints[0].url) expect(calls.every(call => call.method === "eth_getBlockByNumber")).toBe(true);
+      else expect(calls.every(call => call.params[1] !== "latest")).toBe(true);
+    }
   });
 
   it.each(["budget", "deadline"])("preserves the conservation %s reason when fallback cannot start", async (kind) => {

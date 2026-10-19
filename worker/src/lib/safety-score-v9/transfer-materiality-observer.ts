@@ -20,6 +20,7 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 import type { EvmRpcOptions } from "../evm-rpc";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
+import type { DwellirNativeCapability } from "../dwellir-native";
 
 export const TRANSFER_MATERIALITY_CAPTURE_BUDGET = Object.freeze({
   maxAssets: 96,
@@ -153,6 +154,7 @@ async function observeChainDeployments(
   dependencies: ObserverDependencies,
   signal?: AbortSignal,
   evmBudget?: Pick<EvmRpcOptions, "deadlineMs" | "beforeRequest">,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<Map<string, SafetyScoreV9TransferMaterialityObservation>> {
   const rejectedRows = () => new Map(targets.map((target) => [target.deploymentKey, rejected(target.deploymentKey)]));
   if (chainId === "solana") {
@@ -209,7 +211,7 @@ async function observeChainDeployments(
       for (const url of urls) {
         try {
           const supply = await dependencies.fetchMoveFungibleAssetSupply(
-            target.address, signal ?? new AbortController().signal, url, undefined, {
+            target.address, signal ?? new AbortController().signal, url, dwellirNative ? { dwellirNative } : undefined, {
               clockSec: scoringClockSec, expectedChainId: chainId === "aptos" ? 1 : 126,
               identityKind: target.assetId === "sfrxusd-frax" ? "oft-package" : "metadata-address",
               maxResponseBytes: TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxResponseBytes,
@@ -363,6 +365,7 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
   registryFingerprint: string;
   scoringClockSec: number;
   chainRpcs: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   /** The exact prepared supply input; complete provider partitions need no duplicate census. */
   providerSupplyInput?: Pick<SafetyScoreV9CompilerInput,
     "clockSec" | "baseInputGenerationId" | "registryFingerprint" | "aggregateCirculatingById" | "chainCirculatingById">;
@@ -519,7 +522,7 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
               evmRequests++;
               return true;
             },
-          });
+          }, input.dwellirNative);
         return { targets, observed: timeout.isTimedOut() || Date.now() > chainDeadlineMs ? null : observed };
       } catch {
         return { targets, observed: null };

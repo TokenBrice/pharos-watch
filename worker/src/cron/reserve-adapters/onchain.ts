@@ -469,7 +469,8 @@ interface TronTriggerConstantContractResponse {
 }
 
 /**
- * Latest-state TRC-20 totalSupply() via TronGrid wallet/triggerconstantcontract.
+ * Latest-state TRC-20 totalSupply() via an admitted Dwellir constant read,
+ * falling back to TronGrid wallet/triggerconstantcontract.
  * It cannot honor a TRON observedBlock; such requests fail closed. A pin on a
  * different chain is not a pin for this read. Other read failures resolve to
  * null so callers can retain their success/failure aggregation.
@@ -494,7 +495,7 @@ export async function fetchTronErc20TotalSupply(
     parameter: "",
     visible: false,
   };
-  for (const provider of ctx?.dwellirNative ? ["trongrid", "dwellir"] : ["trongrid"]) {
+  for (const provider of ctx?.dwellirNative ? ["dwellir", "trongrid"] : ["trongrid"]) {
     throwIfAborted(signal);
     try {
       const json = provider === "dwellir"

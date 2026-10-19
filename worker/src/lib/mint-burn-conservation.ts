@@ -12,7 +12,6 @@ import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import conservationRuntimeLookup from "./mint-burn-conservation-runtime.generated.json";
 import type { RpcEndpoint } from "./chain-registry";
-import { MINT_BURN_DWELLIR_FALLBACK_CHAINS } from "./mint-burn-pipeline/rpc";
 
 const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO = `0x${"0".repeat(64)}`;
@@ -726,8 +725,7 @@ export async function fetchConservationBoundaries(input: {
 
   for (const [chainId, requests] of groups) {
     throwIfAborted(signal);
-    const endpoints = input.rpcEndpointsByChain.get(chainId)?.filter((endpoint) => endpoint.operator !== "dwellir"
-      || (MINT_BURN_DWELLIR_FALLBACK_CHAINS[chainId] && !endpoint.routingDisabled));
+    const endpoints = input.rpcEndpointsByChain.get(chainId)?.filter((endpoint) => !endpoint.routingDisabled);
     if (!endpoints?.length) {
       fail(requests.map(({ key }) => key), "audit-rpc-unavailable");
       continue;
@@ -838,7 +836,7 @@ export async function fetchConservationBoundaries(input: {
         }
       }
     }
-    await phase(endpoints, supplyCalls);
+    await phase(endpoints.filter((endpoint) => endpoint.operator !== "dwellir" || endpoint.stateHistory === "archive"), supplyCalls);
     await phase(endpoints, headerCalls.map(({ block, call, keys }) => ({
       call, keys,
       accept(value) {

@@ -22,7 +22,7 @@ import { fetchEvmEventsIncremental, RPC_LOG_SCAN_WINDOWS } from "../blacklist/ev
 import { ethereumConfig } from "../blacklist/__tests__/balance.test-support";
 
 /**
- * Non-allowlisted BSC logs, blacklist balances and non-cohort mint/burn exclude Dwellir.
+ * Supported logs prefer Dwellir; unsupported logs and explicit balance lanes exclude it.
  *
  * Every case below runs the real transports against a recorded fetch while a
  * Dwellir-enabled registry is present, so an excluded-operator leak is
@@ -113,7 +113,7 @@ describe("blacklist log scan", () => {
     vi.restoreAllMocks();
   });
 
-  it("scans the Alchemy registry endpoint with the alchemy window and never requests Dwellir", async () => {
+  it("scans Dwellir first using its inclusive supported log window", async () => {
     const chainRpcs = buildChainRpcs("alchemy-test", "drpc-test", { dwellirApiKey: DWELLIR_API_KEY });
     const bsc = getChainRpc(chainRpcs, "bsc")!;
     expect(bsc.endpoints.filter((endpoint) => endpoint.operator === "dwellir").map((endpoint) => endpoint.url)).toEqual([
@@ -140,14 +140,16 @@ describe("blacklist log scan", () => {
     expect(result.usedRpcLogs).toBe(true);
     const logScans = fetchMock.getHistory().filter(({ body }) => body?.includes("eth_getLogs"));
     expect(logScans).toHaveLength(1);
-    expect([...new Set(hostsOf(fetchMock))]).toEqual([registryHosts(bsc)[0]!]);
-    expect(scanWindowOf(logScans[0]!)).toBe(BSC_FROM_BLOCK + RPC_LOG_SCAN_WINDOWS.bsc!.alchemy - 1);
+    expect([...new Set(hostsOf(fetchMock))]).toEqual([
+      new URL(bsc.endpoints.find(endpoint => endpoint.operator === "dwellir")!.url).host,
+    ]);
+    expect(scanWindowOf(logScans[0]!)).toBe(BSC_FROM_BLOCK + 10_000 - 1);
   });
 
-  it("keeps the fallback window for a public primary and never requests Dwellir", async () => {
-    const chainRpcs = buildChainRpcs(undefined, "drpc-test", { dwellirApiKey: DWELLIR_API_KEY });
+  it("keeps the fallback window for a public primary without admission", async () => {
+    const chainRpcs = buildChainRpcs(undefined, "drpc-test");
     const bsc = getChainRpc(chainRpcs, "bsc")!;
-    expect(supplementalRpcEndpoints(bsc)).toHaveLength(1);
+    expect(supplementalRpcEndpoints(bsc)).toHaveLength(0);
 
     const fetchMock = mockFetch([{
       match: () => true,
@@ -173,9 +175,12 @@ describe("blacklist log scan", () => {
     expect([...new Set(hostsOf(fetchMock))]).toEqual([registryHosts(bsc)[0]!]);
   });
 
-  it("stops at allowed log endpoints instead of falling through to unallowlisted Dwellir", async () => {
+  it("never requests Dwellir when the required log history is unsupported", async () => {
     const chainRpcs = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: DWELLIR_API_KEY });
-    const bsc = getChainRpc(chainRpcs, "bsc")!;
+    const original = getChainRpc(chainRpcs, "bsc")!;
+    const bsc = { ...original, endpoints: original.endpoints.map(endpoint =>
+      endpoint.operator === "dwellir" ? { ...endpoint, logsHistory: "none" as const } : endpoint) };
+    chainRpcs.set("bsc", bsc);
     const [alchemyHost, fallbackHost] = logScanRpcEndpoints(bsc).map((endpoint) => new URL(endpoint.url).host);
     const dwellirHost = new URL(bsc.endpoints.find((endpoint) => endpoint.operator === "dwellir")!.url).host;
     expect(dwellirHost).toContain(DWELLIR_HOST_SUFFIX);
@@ -217,7 +222,7 @@ describe("blacklist balance reads", () => {
     const chainRpcs = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: DWELLIR_API_KEY });
     const config = chainId === "bsc" ? bscBlacklistConfig() : ethereumConfig;
     expect(getChainRpc(chainRpcs, chainId)!.endpoints.find((endpoint) => endpoint.operator === "dwellir"))
-      .toMatchObject({ position: chainId === "bsc" ? "supplemental" : "registry" });
+      .toBeDefined();
 
     const fetchMock = mockFetch([{
       match: () => true,
@@ -243,11 +248,12 @@ describe("blacklist balance reads", () => {
   it("skips a supplemental-only chain config without opening any request", async () => {
     const chainRpcs = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: DWELLIR_API_KEY });
     const bsc = getChainRpc(chainRpcs, "bsc")!;
-    const dwellirEndpoints = supplementalRpcEndpoints(bsc);
-    expect(dwellirEndpoints).toHaveLength(1);
+    const supplementalOnlyEndpoints = bsc.endpoints.filter(endpoint => endpoint.operator === "dwellir")
+      .map(endpoint => ({ ...endpoint, position: "supplemental" as const }));
+    expect(supplementalOnlyEndpoints).toHaveLength(1);
     const supplementalOnly = new Map<string, ChainRpcConfig>([["bsc", {
       ...bsc,
-      endpoints: dwellirEndpoints,
+      endpoints: supplementalOnlyEndpoints,
     }]]);
 
     const fetchMock = mockFetch([], { requireMatch: true });
@@ -274,18 +280,17 @@ describe("mint/burn conservation boundaries", () => {
     vi.restoreAllMocks();
   });
 
-  it("batch-reads a non-cohort chain's Alchemy URL and never requests Dwellir", async () => {
+  it("batch-reads supported Optimism conservation state through Dwellir first", async () => {
     const chainRpcs = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: DWELLIR_API_KEY });
     expect(getChainRpc(chainRpcs, "optimism")!.endpoints[0]).toMatchObject({
       operator: "dwellir", position: "registry", stateHistory: "archive", logsHistory: "full",
     });
     const endpoints = mintBurnRpcEndpoints("optimism", "alchemy-test", chainRpcs);
-    expect(endpoints.map((endpoint) => endpoint.operator)).toEqual(["alchemy"]);
-    const alchemyUrl = buildAlchemyUrl("optimism", "alchemy-test")!;
-    const alchemyHost = new URL(alchemyUrl).host;
+    expect(endpoints.map((endpoint) => endpoint.operator)).toEqual(["dwellir", "alchemy"]);
+    const dwellirHost = new URL(endpoints[0].url).host;
 
     const fetchMock = mockFetch([{
-      match: alchemyHost,
+      match: dwellirHost,
       respond: rpcRespond((method, params) => {
         if (method !== "eth_getBlockByNumber") return { result: word(100n) };
         const block = params[0];
@@ -307,7 +312,7 @@ describe("mint/burn conservation boundaries", () => {
     });
 
     expect(evidence.get("gusd")).toMatchObject({ status: "ready" });
-    expect([...new Set(hostsOf(fetchMock))]).toEqual([alchemyHost]);
+    expect([...new Set(hostsOf(fetchMock))]).toEqual([dwellirHost]);
   });
 });
 
@@ -330,7 +335,7 @@ describe("supplemental endpoint exclusion", () => {
     const openFetch = mockFetch([{ match: () => true, respond: rpcRespond(answer) }], { requireMatch: true });
     const leaked = await fetchEvmCallHexAtBlock(chainId, to, BALANCE_CALL, "latest", { chainRpcs });
     expect(leaked).toBe(word(7n));
-    expect(hostsOf(openFetch)).toEqual((chainId === "bsc" ? [...incumbents, dwellirUrl] : [dwellirUrl]).map((url) => new URL(url).host));
+    expect(hostsOf(openFetch)).toEqual([new URL(dwellirUrl).host]);
 
     const closedFetch = mockFetch([{ match: () => true, respond: rpcRespond(answer) }], { requireMatch: true });
     const excluded = await fetchEvmCallHexAtBlock(chainId, to, BALANCE_CALL, "latest", {

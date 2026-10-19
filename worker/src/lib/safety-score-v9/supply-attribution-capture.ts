@@ -17,6 +17,7 @@ import {
 } from "@shared/types/safety-score-v9-supply-attribution";
 import { rethrowIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
+import type { DwellirNativeCapability } from "../dwellir-native";
 import type { V9ExecutionWindow } from "../v9-slot-window";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
@@ -67,6 +68,7 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   notBeforeSec?: number;
   executionWindow?: V9ExecutionWindow;
   db?: D1Database;
+  dwellirNative?: DwellirNativeCapability;
   onBodyRead?: BodyReadObserver;
   priorGeneration?: Pick<SafetyScoreV9SupplyAttributionGeneration, "outcomesById"> | null;
 }
@@ -100,6 +102,7 @@ interface SupplyAttributionAssetDescriptor {
     registryFingerprint: string;
     scoringClockSec: number;
     chainRpcs: Map<string, ChainRpcConfig>;
+    dwellirNative?: DwellirNativeCapability;
     signal?: AbortSignal;
     executionWindow?: V9ExecutionWindow;
     assetDeadlineMs?: number;
@@ -143,7 +146,7 @@ function supplyAttributionAssetDescriptors():
       assetId, executionPriority: 1, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
-      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead, onPhase }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead, onPhase }),
+      observe: ({ fixedInput, scoringClockSec, chainRpcs, dwellirNative, signal, db, onDiagnostic, onBodyRead, onPhase }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, dwellirNative, signal, db, onDiagnostic, onBodyRead, onPhase }),
     })),
     {
       assetId: "wm-m0",
@@ -233,6 +236,7 @@ async function runSupplyAttributionAssetCapture(input: {
   descriptor: SupplyAttributionAssetDescriptor;
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   signal?: AbortSignal;
   executionWindow?: V9ExecutionWindow;
   assetDeadlineMs?: number;
@@ -264,6 +268,7 @@ async function runSupplyAttributionAssetCapture(input: {
             registryFingerprint: input.fixedInput.registryFingerprint,
             scoringClockSec,
             chainRpcs: input.chainRpcs,
+            dwellirNative: input.dwellirNative,
             signal: input.signal,
             executionWindow: input.executionWindow,
             assetDeadlineMs: input.assetDeadlineMs,
@@ -422,6 +427,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
       await runSupplyAttributionAssetCapture({
         descriptor, fixedInput, chainRpcs: performance.withRpcDiagnostics(chainRpcs, assetSignal), signal: assetSignal,
         executionWindow: options.executionWindow, db: options.db,
+        dwellirNative: options.dwellirNative,
         assetDeadlineMs,
         observationClockSec, attributionById: assetAttributionById,
         journalRecords: assetJournalRecords,

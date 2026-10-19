@@ -13,6 +13,8 @@ import { admissionCodeForSupplyAttributionRejection, computeSupplyAttributionJou
 import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { createDwellirNativeCapability } from "../dwellir-native";
+import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 
 import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const CLOCK = 1790850000;
@@ -787,7 +789,7 @@ describe("identity-bound non-EVM economic supply", () => {
         else if (path.includes("Metadata")) result = { type: "0x1::fungible_asset::Metadata", data: { decimals: failure === "decimals" ? 18 : 6 } };
         else if (path.includes("ObjectCore")) result = { type: "0x1::object::ObjectCore", data: { transfer_events: { guid: { id: { addr: failure === "identity" ? "0x123" : metadataAddress } } } } };
         else result = { chain_id: chainId === "aptos" ? 1 : 126, ledger_version: failure === "pin" ? undefined : "100",
-          ledger_timestamp: failure === "timestamp" ? undefined : String((CLOCK - 60) * 1_000_000) };
+          oldest_ledger_version: "1", ledger_timestamp: failure === "timestamp" ? undefined : String((CLOCK - 60) * 1_000_000) };
       } else {
         if (path.includes("getMasterchainInfo")) result = { ok: true, result: { last: pin } };
         else if (path.includes("lookupBlock")) result = { ok: true, result: pin };
@@ -808,6 +810,18 @@ describe("identity-bound non-EVM economic supply", () => {
       observations: [expect.objectContaining({ amount: "100000000", anchor: chainId === "ton" ? String(pin.seqno) : "100", observedAtSec: CLOCK - 60 })],
       deployments: [expect.objectContaining({ currentSupplyUsd: 100 })],
     } });
+  });
+  it.each(["aptos", "movement"] as const)("passes admitted native context into %s's identity-bound supply read", async chainId => {
+    const f = nonEvmFixture(chainId);
+    const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
+    const result = await observeReviewedEconomicDeploymentPartitionAttempt({
+      assetId: f.assetId, fixedInput: f.fixedInput, chainRpcs: f.chainRpcs, scoringClockSec: CLOCK, dwellirNative,
+    });
+    expect(result.status).toBe("accepted");
+    const base = DWELLIR_NATIVE_ENDPOINTS.find(endpoint => endpoint.network === chainId)!.baseUrl;
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe(base);
+    expect(vi.mocked(fetch).mock.calls.every(([url, init]) => String(url).startsWith(base) &&
+      new Headers(init?.headers).get("X-Api-Key") === "native-test-key-placeholder")).toBe(true);
   });
   it.each(["aptos", "ton"] as const)("rejects %s wrong metadata, missing chronology and decimals", async chainId => {
     for (const failure of ["identity", "pin", "timestamp", "decimals"]) {

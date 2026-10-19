@@ -3,6 +3,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import type { DwellirNativeCapability } from "../lib/dwellir-native";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { buildNativeSafetyScoreV9Capture } from "../lib/safety-score-v9/capture";
 import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9/native-input";
@@ -148,6 +149,7 @@ export async function prepareSafetyScoreV9Input(
   chainRpcs: Map<string, ChainRpcConfig> = new Map(),
   workerMetadata?: V9WorkerProvenance,
   slotDeadline?: SlotDeadline,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const preparationDeadlineMs = Math.min(Date.now() + DEFAULT_CRON_TIMEOUT_MS,
@@ -235,6 +237,7 @@ export async function prepareSafetyScoreV9Input(
         registryFingerprint: input.registryFingerprint,
         scoringClockSec: input.clockSec,
         chainRpcs,
+        dwellirNative,
         providerSupplyInput: input,
         signal,
         deadlineMs: preparationDeadlineMs,

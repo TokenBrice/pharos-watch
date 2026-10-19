@@ -43,6 +43,7 @@ import {
   patchXautObservation,
 } from "../../test-helpers/v9-fixed-input";
 import { captureSafetyScoreV9SupplyAttribution } from "../safety-score-v9/supply-attribution-capture";
+import { createDwellirNativeCapability } from "../dwellir-native";
 import { safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
 import { runBudgetedSupplyAttributionAssets } from "../safety-score-v9/supply-attribution-capture-budget";
 import { sleepWithSignal } from "../abort";
@@ -708,8 +709,10 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         hardEvidenceFailure: false, failurePredicate: "history-incomplete",
       };
       const onBodyRead = vi.fn();
+      const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
       vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt")
-        .mockImplementation(async ({ onDiagnostic, onBodyRead: observeBody, signal }) => {
+        .mockImplementation(async ({ onDiagnostic, onBodyRead: observeBody, signal, dwellirNative: observedNative }) => {
+          expect(observedNative).toBe(dwellirNative);
           onDiagnostic?.(diagnostic);
           observeBody?.({ intakeBytes: 32, declaredBytes: null, outcome: "accepted" });
           if (hardFailure) {
@@ -724,7 +727,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         });
       const pending = captureSafetyScoreV9SupplyAttribution(input, new Map([["ethereum", {
         chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
-      }]]), undefined, { clockMode: "source", onBodyRead });
+      }]]), undefined, { clockMode: "source", onBodyRead, dwellirNative });
       await vi.runAllTimersAsync();
       const capture = await pending;
       expect(onBodyRead).toHaveBeenCalledExactlyOnceWith({

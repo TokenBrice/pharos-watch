@@ -4,6 +4,7 @@ import type { PegSummaryCoin } from "@shared/types/peg";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { DEFAULT_CRON_TIMEOUT_MS } from "@shared/lib/scheduled-runner-registry";
 import { createSlotDeadline } from "../../lib/cron-timeouts";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 
 const ASSET_ID = "usdc-circle";
 const CLOCK_SEC = 1_783_891_200;
@@ -247,7 +248,8 @@ describe("prepareSafetyScoreV9Input", () => {
   });
 
   it("writes an envelope-v2 capture and its seed under one v9-input identity", async () => {
-    const result = await prepareSafetyScoreV9Input(makeDb());
+    const dwellirNative: DwellirNativeCapability = { readJson: vi.fn() };
+    const result = await prepareSafetyScoreV9Input(makeDb(), undefined, undefined, new Map(), undefined, undefined, dwellirNative);
 
     expect(mockCommitCaptureControl).toHaveBeenCalledTimes(1);
     const [, entries] = mockCommitCaptureControl.mock.calls[0]!;
@@ -293,6 +295,7 @@ describe("prepareSafetyScoreV9Input", () => {
         (envelope.safetyScoreIdentity as { baseInputGenerationId: string }).baseInputGenerationId,
       registryFingerprint: observedTransferInput.registryFingerprint,
       scoringClockSec: observedTransferInput.scoringClockSec,
+      dwellirNative,
     }));
 
     const metadata = JSON.parse(String(result.metadata));

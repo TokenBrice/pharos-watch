@@ -9,6 +9,7 @@ import { CurveLzPendingCheckpointSchema, type CurveLzPendingCheckpoint, type Cur
 import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getRpcAuthHeaders, type ChainRpcConfig } from "../chain-registry";
+import type { DwellirNativeCapability } from "../dwellir-native";
 import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result, type EvmRpcOptions, type RecentFinalizedRpcPin } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
@@ -409,6 +410,7 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(
 
 async function observeReviewedEconomicDeploymentPartitionInternal(input: {
   assetId: string; fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>; scoringClockSec: number; chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
+  dwellirNative?: DwellirNativeCapability;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onBodyRead?: BodyReadObserver;
   onPhase?: (phase: SupplyAttributionPhase) => void;
@@ -647,7 +649,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       } else if (row.read.kind === "move-fa-supply" && ["aptos", "movement"].includes(row.chainId) && row.address !== null && row.decimals !== null) {
         const url = input.chainRpcs.get(row.chainId)?.endpoints[0]?.url ?? getPublicRpcUrl(row.chainId);
         if (url) {
-          const result = await fetchMoveFungibleAssetSupply(row.address, input.signal ?? new AbortController().signal, url, undefined, {
+          const result = await fetchMoveFungibleAssetSupply(row.address, input.signal ?? new AbortController().signal, url, input.dwellirNative ? { dwellirNative: input.dwellirNative } : undefined, {
             clockSec: input.scoringClockSec, expectedChainId: row.read.ledgerChainId,
             identityKind: row.read.identityKind, expectedMetadataAddress: row.read.metadataAddress, expectedDecimals: row.decimals,
           });
