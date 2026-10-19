@@ -91,6 +91,21 @@ export function collectReliabilityEvidenceGaps(input: ReliabilityWorkspaceInput)
       kind: "missing",
     });
   }
+  if (!input.requestSourceError && input.requestSourceStats) {
+    const measurements = [
+      ["requestSourcePrecision", "Demand measurement", input.requestSourceStats.totals.measurement.totalRequests],
+      ["requestSourceKeyedBasis", "Public API key denominator", input.requestSourceStats.keyedPublicApi.measurement.totalRequests],
+    ] as const;
+    for (const [rawCode, label, measurement] of measurements) {
+      if (measurement.reason == null) continue;
+      add({
+        mode: "demand", label, rawCode, code: measurement.reason, kind: "missing",
+        message: measurement.kind === "unavailable"
+          ? `Attribution basis is unavailable (${measurement.reason}); recorded key counts remain visible.`
+          : `Attribution precision is unavailable (${measurement.reason}); missing samples do not prove no traffic.`,
+      });
+    }
+  }
 
   (
     Object.entries(input.data.sectionErrors) as Array<

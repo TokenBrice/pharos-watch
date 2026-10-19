@@ -2,6 +2,31 @@ import type { ReactNode } from "react";
 import { PublicSignalCard } from "./public-signal-card";
 import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
+import { REQUEST_SOURCE_LOW_SAMPLE_MINIMUM, type AttributionMeasurement } from "@pharos/contracts/request-source";
+import { formatCompactCount, formatPercent } from "@shared/lib/format";
+
+export function formatAttributionValue(value: number | null, measurement: AttributionMeasurement, percent = false): string {
+  if (value == null || measurement.kind === "unavailable") return "Unavailable";
+  const estimated = measurement.kind === "estimated" || measurement.kind === "mixed";
+  if (estimated && measurement.observedSampleCount === 0 && measurement.recordedCount === 0) {
+    return "No sampled observations";
+  }
+  return `${estimated ? "Est. " : ""}${percent ? formatPercent(value, 1) : formatCompactCount(value)}${measurement.reason === "low-sample" ? " · Low sample" : ""}`;
+}
+
+export function AttributionMeasurementNote({ measurement }: { measurement: AttributionMeasurement }) {
+  return (
+    <p className="text-xs text-muted-foreground">
+      {measurement.kind === "unavailable" ? `Unavailable: ${measurement.reason}. ` : null}
+      {measurement.kind === "mixed" ? "Mixed recorded and estimated basis. " : null}
+      {measurement.probabilityStrata.length > 0 ? (
+        <>Observed samples: {formatCompactCount(measurement.observedSampleCount)} ({measurement.probabilityStrata.map((row) => `1/${row.inverseRate}: ${row.observedSampleCount}`).join("; ")}). </>
+      ) : "Recorded counters; no sampled observations. "}
+      {measurement.reason === "low-sample" ? `Low sample: precision unavailable below ${REQUEST_SOURCE_LOW_SAMPLE_MINIMUM} sampled events. ` : null}
+      Best-effort capture, not a complete request ledger. Missing observations do not prove no traffic.
+    </p>
+  );
+}
 
 /**
  * The chrome shared by the two request-attribution cards — "Site vs external

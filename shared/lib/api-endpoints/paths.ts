@@ -1,5 +1,6 @@
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "../api-query-history";
 import type { OgPageSlug } from "../og-route-cards";
+import { REQUEST_SOURCE_MEASUREMENT_VERSION } from "@pharos/contracts/request-source";
 
 const DEX_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.defaultDays;
 const YIELD_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.defaultDays;
@@ -149,6 +150,7 @@ export const API_PATHS = {
   requestSourceStatsBase: () => "/api/request-source-stats",
   requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number; apiKeyLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {
+      measurementVersion: REQUEST_SOURCE_MEASUREMENT_VERSION,
       hours: params?.hours,
       bucketSec: params?.bucketSec,
       routeLimit: params?.routeLimit,
