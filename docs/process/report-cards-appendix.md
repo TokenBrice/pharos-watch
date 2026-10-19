@@ -371,7 +371,7 @@ Alignment brackets backward from the safe head, stopping at the first hash-beari
 
 OFT side identity and pathway peer/nonce reads likewise use deduplicated ≤32-request current-canonical-hash batches, with original validated-read fallback and no cross-attempt reuse. CCIP persists authenticated history before indexer/receipt corroboration; all discovery validations and the source-order digest still gate admission. Completed CCIP/OFT prefix writes are commit barriers: child cancellation cannot interrupt the D1 commit or suppress its progress receipt. Cancellation is rethrown immediately afterward; the asset stays rejected and partially authenticated pages are never flushed.
 
-Dense CCIP log responses commit a complete block-boundary prefix after at most one 32-header authentication batch; every log in the last included block is retained. The next cursor is the first deferred block, whose suffix is fetched and authenticated on subsequent pages/attempts. This bounds time to durable progress without widening the eight-page, response, child-deadline, finality, freshness or census gates. A prefix never supplies a pending total; only complete history plus the existing discovery and reconciliation proofs can admit attribution.
+Dense CCIP pages commit up to 32 authenticated event blocks; whole-block suffixes resume from the saved cursor, never as a partial census.
 
 Only authenticated finalized pins carry recent-state metadata and original clocks. Lag-only and different historical pins remain historical.
 
