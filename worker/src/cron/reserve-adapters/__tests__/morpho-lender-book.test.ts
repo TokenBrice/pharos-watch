@@ -16,6 +16,8 @@ import { CONFIGURED_COINS } from "../../sync-live-reserves-shared";
 import { getReserveAdapter } from "../index";
 import { installAdapterNetwork, resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 
+import * as evmRpc from "../../../lib/evm-rpc";
+import { expectRecentPinRouting } from "../../../test-helpers/recent-pin-routing";
 const ZERO = "0x0000000000000000000000000000000000000000";
 const LOAN = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const CORE = "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb";
@@ -107,6 +109,14 @@ const primeRows: MarketFixture[] = [
 });
 
 describe("Morpho NAV-accounted lender-book producer", () => {
+  it("passes the existing finalized lender pin and capture clock to recent-state routing", async () => {
+    const batch = vi.spyOn(evmRpc, "fetchEvmMulticall3Aggregate3AtBlock");
+    expect((await observe()).result.status).toBe("ok");
+    const options = batch.mock.calls[0][3]!;
+    expect(options.recentStatePin).toEqual({ chainId: "ethereum", header: PIN, finalized: PIN,
+      observedAtSec: PIN.timestamp + 60, maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.observationMaxAgeSec });
+    await expectRecentPinRouting(options);
+  });
   it("emits the PIN Prime eight-market exact total and preserves one-unit dust", async () => {
     const { result, network } = await observe(fixture(primeRows));
     expect(result.status).toBe("ok");

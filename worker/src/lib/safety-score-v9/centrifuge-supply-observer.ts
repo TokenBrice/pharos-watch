@@ -61,6 +61,7 @@ async function observeCentrifugeEvmDeployment(
   chainRpcs: Map<string, ChainRpcConfig>,
   dependencies: CentrifugeObserverDependencies,
   signal?: AbortSignal,
+  observationWindow?: { earliestTimestamp: number; latestTimestamp: number },
 ): Promise<ReviewedDeploymentObservationResult> {
   return observeReviewedEvmDeployment({
     routeId,
@@ -70,6 +71,7 @@ async function observeCentrifugeEvmDeployment(
     chainRpcs,
     dependencies,
     signal,
+    observationWindow,
     identity: (deploymentRouteId) => {
       const identity = expectedCentrifugeDeploymentIdentity(assetId, deploymentRouteId);
       return identity?.runtime === "evm" ? identity : undefined;
@@ -143,8 +145,9 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
     registryFingerprint: input.registryFingerprint,
     scoringClockSec: input.scoringClockSec,
     signal: input.signal,
+    alignToSolana: true,
     identityRuntime: (routeId) => expectedCentrifugeDeploymentIdentity(input.assetId, routeId)?.runtime ?? null,
-    observeEvm: (route) => observeCentrifugeEvmDeployment(
+    observeEvm: (route, observationWindow) => observeCentrifugeEvmDeployment(
       input.assetId,
       route.routeId,
       route.chainId,
@@ -153,6 +156,7 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
       input.chainRpcs,
       dependencies,
       input.signal,
+      observationWindow,
     ),
     observeSolana: (route) => dependencies.fetchSolanaObservation(
       input.assetId,

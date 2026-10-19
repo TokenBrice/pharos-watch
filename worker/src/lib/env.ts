@@ -1,4 +1,5 @@
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
+import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { logWorkerEvent } from "./structured-log";
 
 export interface WorkerVersionMetadata {
@@ -144,7 +145,10 @@ export function parseCsvEnv(value: string | undefined): string[] {
 /** Normalize operator rollback IDs and report all unknown entries once per parse. */
 export function parseDwellirRoutingDisabledChains(value: string | undefined): ReadonlySet<string> {
   const requested = new Set(parseCsvEnv(value).map((chain) => chain.toLowerCase()));
-  const knownChains = new Set(DWELLIR_CHAINS.map((chain) => chain.chainId));
+  const knownChains = new Set([
+    ...DWELLIR_CHAINS.map((chain) => chain.chainId),
+    ...DWELLIR_NATIVE_ENDPOINTS.map((endpoint) => endpoint.network),
+  ]);
   const unknownChains = [...requested].filter((chain) => !knownChains.has(chain));
   if (unknownChains.length > 0) {
     logWorkerEvent({

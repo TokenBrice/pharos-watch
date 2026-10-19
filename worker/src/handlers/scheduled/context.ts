@@ -53,16 +53,17 @@ async function applyDwellirEndpoints(runtime: ScheduledRuntimeContext): Promise<
   if (!budget.usable) return;
   if (!(await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.DWELLIR_EVM))) return;
 
+  const disabledChains = parseDwellirRoutingDisabledChains(runtime.env.DWELLIR_ROUTING_DISABLED_CHAINS);
   const keyedChainRpcs = buildChainRpcs(runtime.env.ALCHEMY_API_KEY, runtime.env.DRPC_API_KEY, {
     dwellirApiKey: runtime.env.DWELLIR_API_KEY,
-    dwellirRoutingDisabledChains: parseDwellirRoutingDisabledChains(runtime.env.DWELLIR_ROUTING_DISABLED_CHAINS),
+    dwellirRoutingDisabledChains: disabledChains,
   });
   // Copied in place so every holder observes the same admitted routing policy.
   for (const [chainId, config] of keyedChainRpcs) {
     runtime.chainRpcs.set(chainId, config);
   }
   // Native readers share this exact admission decision; no second authority.
-  runtime.dwellirNative = createDwellirNativeCapability(apiKey);
+  runtime.dwellirNative = createDwellirNativeCapability(apiKey, disabledChains);
 }
 
 function ensureDwellirEndpointsEnabled(runtime: ScheduledRuntimeContext): Promise<void> {

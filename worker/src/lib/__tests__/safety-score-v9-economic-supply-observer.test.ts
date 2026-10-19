@@ -13,7 +13,10 @@ import { admissionCodeForSupplyAttributionRejection, computeSupplyAttributionJou
 import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { createDwellirNativeCapability } from "../dwellir-native";
+import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 
+import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const CLOCK = 1790850000;
 const HASH: `0x${string}` = `0x${"a".repeat(64)}`;
 const OWNER = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -82,8 +85,56 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.observations).toEqual([expect.objectContaining({ deploymentKey: f.plan.deployments[0]!.deploymentKey, amount: "100000000", anchor: "100", anchorHash: HASH, observedAtSec: CLOCK - 60 })]);
     expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
     expect(result.attribution.unattributedSupplyUsd).toBe(0);
+    // Reviewed safety lag is not an authenticated finalized head.
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
   });
 
+  it("replaces the reviewed heuristic with authenticated finalized state, never a latest substitution", async () => {
+    const f = fixture();
+    f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 15059, pinPolicy: "finalized-preferred" };
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(20000);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
+      const height = number === "finalized" ? 19000 : number;
+      return { number: height, hash: HASH, timestamp: height === 4941 ? CLOCK - 1847 : CLOCK - 900 };
+    });
+    const result = await f.run();
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      baseInputGenerationId: f.fixedInput.baseInputGenerationId,
+      aggregate: { observedAtSec: CLOCK - 60 },
+      observations: [expect.objectContaining({ anchor: "19000", observedAtSec: CLOCK - 900 })],
+    } });
+    expect(evmRpc.fetchEvmBlockHeader).not.toHaveBeenCalledWith("ethereum", 4941, expect.anything());
+  });
+  it("retains the reviewed lag fallback when finalized proof is unavailable", async () => {
+    const f = fixture();
+    f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 2, pinPolicy: "finalized-preferred" };
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: {
+      observations: [expect.objectContaining({ anchor: "100" })],
+    } });
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
+  });
+  it.each([1847, 1790])("rejects %is-old pins without enough capture headroom before reading quantities", async age => {
+    const f = fixture();
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - age, hash: HASH }));
+    const result = await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, assetDeadlineMs: Date.now() + 30_000 });
+    expect(result).toMatchObject({ status: "rejected" });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
+  it("ages original observations through final derivation instead of renewing their clocks", async () => {
+    const f = fixture();
+    let elapsed = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => CLOCK * 1000 + elapsed);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1790, hash: HASH }));
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) => {
+      elapsed = 20_000;
+      return calls.map(call => ({ label: call.label, success: true, returnData: word(call.label.endsWith(":decimals") ? 6n : 100000000n) }));
+    });
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-observation-skew" });
+  });
   it("batches same-chain supplies and balance exclusions at one pin without mixing amounts", async () => {
     const f = fixture();
     const first = f.plan.deployments[0]!;
@@ -276,7 +327,8 @@ describe("reviewed economic supply observation", () => {
     const f = fixture(); f.plan.referencePriceSource = apiSource("reference");
     const body = apiBody(); body.data.observedAt = time;
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(body)));
-    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode:
+      time === CLOCK - 86400 ? "deployment-observation-skew" : "packet-reconciliation-failed" });
   });
 
   it.each(["malformed JSON", "HTTP error"])("fails closed on reviewed API %s", async failure => {
@@ -355,6 +407,20 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
     expect(result.attribution.unattributedSupplyUsd).toBe(1);
     expect(result.attribution.inFlight[0]).toMatchObject({ amount: "1000000", anchor: "100", anchorHash: HASH });
+  });
+  it("propagates only the existing finalized holding pin and original economic clock", async () => {
+    const f = pendingFixture();
+    expect((await f.run()).status).toBe("accepted");
+    const options = vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]!;
+    expect(options.recentStatePin).toEqual({ chainId: "ethereum",
+      header: { number: 100, timestamp: CLOCK - 60, hash: HASH },
+      finalized: { number: 100, timestamp: CLOCK - 60, hash: HASH },
+      observedAtSec: CLOCK, maxAgeSec: 1800 });
+    expect(options.observedHeadBlock).toBe(100);
+    for (const [, , stateOptions] of vi.mocked(evmRpc.fetchEvmRpcBatch).mock.calls) {
+      expect(stateOptions?.recentStatePin?.observedAtSec).toBe(CLOCK);
+    }
+    await expectRecentPinRouting(options);
   });
 
   it.each(["missing", "identity", "count", "code", "finalized head unavailable"])("rejects an unavailable or unauthenticated pending %s read", async failure => {
@@ -735,7 +801,7 @@ describe("validated XRPL issued-currency observations", () => {
     expect(result.attribution.observations[0]!.responseSha256).toBe(sha256Hex(gatewayText + ledgerText));
   });
   it.each(["malformed", "negative", "unvalidated", "hash mismatch", "missing time", "stale time"])("rejects XRPL %s", async failure => {
-    expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "packet-reconciliation-failed" : "deployment-state-unavailable" });
+    expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "deployment-observation-skew" : "deployment-state-unavailable" });
   });
   it.each(["gateway_balances", "ledger"])("rejects capped XRPL %s bodies and cancels HTTP errors before parsing", async method => {
     for (const failure of ["overflow", "http-error"]) {
@@ -770,7 +836,7 @@ describe("identity-bound non-EVM economic supply", () => {
         else if (path.includes("Metadata")) result = { type: "0x1::fungible_asset::Metadata", data: { decimals: failure === "decimals" ? 18 : 6 } };
         else if (path.includes("ObjectCore")) result = { type: "0x1::object::ObjectCore", data: { transfer_events: { guid: { id: { addr: failure === "identity" ? "0x123" : metadataAddress } } } } };
         else result = { chain_id: chainId === "aptos" ? 1 : 126, ledger_version: failure === "pin" ? undefined : "100",
-          ledger_timestamp: failure === "timestamp" ? undefined : String((CLOCK - 60) * 1_000_000) };
+          oldest_ledger_version: "1", ledger_timestamp: failure === "timestamp" ? undefined : String((CLOCK - 60) * 1_000_000) };
       } else {
         if (path.includes("getMasterchainInfo")) result = { ok: true, result: { last: pin } };
         else if (path.includes("lookupBlock")) result = { ok: true, result: pin };
@@ -791,6 +857,18 @@ describe("identity-bound non-EVM economic supply", () => {
       observations: [expect.objectContaining({ amount: "100000000", anchor: chainId === "ton" ? String(pin.seqno) : "100", observedAtSec: CLOCK - 60 })],
       deployments: [expect.objectContaining({ currentSupplyUsd: 100 })],
     } });
+  });
+  it.each(["aptos", "movement"] as const)("passes admitted native context into %s's identity-bound supply read", async chainId => {
+    const f = nonEvmFixture(chainId);
+    const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
+    const result = await observeReviewedEconomicDeploymentPartitionAttempt({
+      assetId: f.assetId, fixedInput: f.fixedInput, chainRpcs: f.chainRpcs, scoringClockSec: CLOCK, dwellirNative,
+    });
+    expect(result.status).toBe("accepted");
+    const base = DWELLIR_NATIVE_ENDPOINTS.find(endpoint => endpoint.network === chainId)!.baseUrl;
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe(base);
+    expect(vi.mocked(fetch).mock.calls.every(([url, init]) => String(url).startsWith(base) &&
+      new Headers(init?.headers).get("X-Api-Key") === "native-test-key-placeholder")).toBe(true);
   });
   it.each(["aptos", "ton"] as const)("rejects %s wrong metadata, missing chronology and decimals", async chainId => {
     for (const failure of ["identity", "pin", "timestamp", "decimals"]) {
@@ -873,7 +951,7 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
       if (call.data.startsWith(toFunctionSelector("failed(uint64)"))) return [keccak256(payload)];
       throw new Error("Unexpected RPC method");
     });
-    const input = { source, headers: [{ number: 100, timestamp: CLOCK - 60, hash: HASH }, { number: 100, timestamp: CLOCK - 60, hash: HASH }], chainRpcs: new Map<string, ChainRpcConfig>() };
+    const input = { source, clockSec: CLOCK, headers: [{ number: 100, timestamp: CLOCK - 60, hash: HASH }, { number: 100, timestamp: CLOCK - 60, hash: HASH }], chainRpcs: new Map<string, ChainRpcConfig>() };
     return { input, send, receive, sent, received, rejectCommitment() { badCommitment = true; } };
   }
 
@@ -881,6 +959,14 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
     const f = curveFixture(); f.send(0); f.receive(0); f.send(1); f.receive(1, "Failed");
     const result = await observeCurveLzPending(f.input);
     expect(result).toMatchObject({ status: "accepted", amount: "2000000", proof: { pins: [expect.objectContaining({ chainId: "ethereum" }), expect.objectContaining({ chainId: "base" })] } });
+  });
+  it("passes Curve's authenticated current pin without classifying other history as recent", async () => {
+    const f = curveFixture();
+    expect((await observeCurveLzPending(f.input)).status).toBe("accepted");
+    const options = vi.mocked(evmRpc.fetchEvmRpcBatch).mock.calls[0][2]!;
+    expect(options.recentStatePin).toMatchObject({ chainId: "ethereum",
+      header: f.input.headers[0], finalized: f.input.headers[0], observedAtSec: CLOCK, maxAgeSec: 1800 });
+    await expectRecentPinRouting(options);
   });
 
   it("counts an authenticated source send not yet delivered to the destination", async () => {

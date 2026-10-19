@@ -16,7 +16,16 @@ export function authenticateCcipPendingObservation(source: CcipPendingRead, obse
         return !holding || holding.anchor !== String(pin.anchor) || holding.anchorHash !== pin.anchorHash || holding.observedAtSec !== pin.observedAtSec; }))) return false;
   const anchor = proof.pins.find(pin => pin.chainId === source.chainId);
   if (!anchor || observation.anchor !== String(anchor.anchor) || observation.anchorHash !== anchor.anchorHash || observation.observedAtSec !== anchor.observedAtSec) return false;
-  return proof.lanes.every((row, i) => { const lane = source.lanes[i]!; return row.id === lane.id && row.sourcePoolAddress === lane.source.tokenPoolAddress &&
+  return proof.lanes.every((row, i) => {
+    const lane = source.lanes[i]!, witness = lane.sourceStartWitness;
+    if (witness?.kind === "unavailable") return false;
+    if (witness?.kind === "reviewed-creation") {
+      if (!row.historyOrigin || row.historyOrigin.method !== witness.kind ||
+        row.historyOrigin.witnessDigest !== sha256Hex(stableJsonStringifyV1(witness)) ||
+        row.historyOrigin.blockNumber !== witness.blockNumber || row.historyOrigin.blockHash !== witness.blockHash ||
+        row.historyOrigin.reviewedAtSec !== witness.reviewedAtSec || row.initialSequence !== witness.initialSequence) return false;
+    } else if (row.historyOrigin) return false;
+    return row.id === lane.id && row.sourcePoolAddress === lane.source.tokenPoolAddress &&
     row.destinationPoolAddress === lane.destination.tokenPoolAddress && row.sourceChainSelector === lane.source.chainSelector &&
     row.destinationChainSelector === lane.destination.chainSelector && BigInt(row.lastSequence) >= BigInt(row.initialSequence) - 1n && row.failedCount <= row.pendingCount; }) &&
     proof.lanes.reduce((sum, row) => sum + BigInt(row.amount), 0n).toString() === observation.amount;

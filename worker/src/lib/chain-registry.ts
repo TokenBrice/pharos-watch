@@ -19,8 +19,8 @@ export {
 export type RpcOperator = "alchemy" | "dwellir" | "drpc" | "public";
 export type RpcEndpointPosition = "registry" | "supplemental";
 /** "archive": any historical block. "recent": latest/safe/finalized tags and near-head only. */
-export type RpcStateHistory = DwellirChainEntry["stateHistory"];
-export type RpcLogsHistory = DwellirChainEntry["logsHistory"];
+export type RpcStateHistory = DwellirChainEntry["stateHistory"] | "unknown";
+export type RpcLogsHistory = DwellirChainEntry["logsHistory"] | "unknown";
 
 export interface RpcEndpoint {
   /** Never contains a key; keys travel as request headers only. */
@@ -32,11 +32,12 @@ export interface RpcEndpoint {
   readonly logsHistory: RpcLogsHistory;
   /** Maximum inclusive eth_getLogs block span; absence preserves caller defaults. */
   readonly maxLogBlockSpan?: number;
+  readonly finalizedTagUnsupported?: boolean;
   /** Send JSON-RPC calls as sequential single objects, never batch arrays. */
   readonly noBatch?: boolean;
   /** ISO date of the capability probe (Dwellir entries). */
   readonly verifiedAt?: string;
-  /** Runtime operator rollback: retain state fallback, disable promoted/log routing. */
+  /** Operational rollback: exclude this Dwellir route from production selection. */
   readonly routingDisabled?: boolean;
 }
 
@@ -99,10 +100,6 @@ const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
   ink: "ink-mainnet",
   berachain: "berachain-mainnet",
 };
-/** Eligibility is not entitlement proof for susdat's historical EIP-1898 pin.
- * Provision and verify a canonical-hash archive before adding another route;
- * latest or numbered-state fallbacks cannot satisfy this prerequisite. */
-export const CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON = "monad-canonical-hash-archive-required" as const;
 
 /** Existing supply-profile RPC; 10,000-block historical ramp logs and canonical
  * hash-pinned pool code verified 2026-10-06. No new credential is required. */
@@ -189,7 +186,7 @@ const ALCHEMY_LOG_BLOCK_SPANS: Readonly<Record<string, number>> = {
   "opt-mainnet": 2_000_000,
 };
 
-/** Today's registry behaviour: every endpoint is archive-capable with full log history. */
+/** Registry membership is not proof of arbitrary state or log retention. */
 function registryEndpoint(url: string, operator: RegistryRpcOperator): RpcEndpoint {
   const maxLogBlockSpan = operator === "alchemy"
     ? ALCHEMY_LOG_BLOCK_SPANS[new URL(url).hostname.split(".")[0]!]
@@ -199,8 +196,8 @@ function registryEndpoint(url: string, operator: RegistryRpcOperator): RpcEndpoi
     operator,
     keyed: operator !== "public",
     position: "registry",
-    stateHistory: "archive",
-    logsHistory: "full",
+    stateHistory: "unknown",
+    logsHistory: "unknown",
     ...(maxLogBlockSpan ? { maxLogBlockSpan } : {}),
   };
 }
@@ -228,32 +225,6 @@ const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 
-export type DwellirStatePlacement = "primary" | "supplemental-first";
-
-export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, DwellirStatePlacement>> = {
-  ethereum: "primary",
-  mantle: "primary",
-  sonic: "primary",
-  gnosis: "primary",
-  tempo: "primary",
-  // Archive history observed, not vendor-guaranteed. Historical reads rely on a
-  // pruned node erroring so they fall back to public; parity checks near-head only.
-  plasma: "primary",
-  base: "primary",
-  arbitrum: "primary",
-  optimism: "primary",
-  avalanche: "primary",
-  // Archive host since 2026-10-11; logs stay off the log allowlist (two log timeouts in 41 runs).
-  polygon: "primary",
-  linea: "supplemental-first",
-  scroll: "supplemental-first",
-  unichain: "supplemental-first",
-  worldchain: "supplemental-first",
-  megaeth: "supplemental-first",
-  stable: "supplemental-first",
-};
-
-export const DWELLIR_LOG_SCAN_CHAINS: ReadonlySet<string> = new Set(["gnosis", "base", "arbitrum", "optimism", "avalanche"]);
 
 /** Single attachment authority; callers must admit the scheduled runtime first. */
 function appendDwellirEndpoints(
@@ -271,13 +242,8 @@ function appendDwellirEndpoints(
     const url = dwellirRpcUrl(entry);
     registerRpcAuth("dwellir", url, { "X-Api-Key": apiKey });
     const routingDisabled = disabledChains?.has(entry.chainId) === true;
-    const placement = routingDisabled ? undefined : DWELLIR_STATE_PLACEMENT[entry.chainId];
     const endpoints = config?.endpoints.filter((row) => row.operator !== "dwellir") ?? [];
-    const promoted = placement === "primary" && endpoints.some((row) => row.position === "registry");
-    const firstSupplemental = placement === "supplemental-first"
-      ? endpoints.findIndex((row) => row.position === "supplemental")
-      : -1;
-    const insertionIndex = promoted ? 0 : firstSupplemental >= 0 ? firstSupplemental : endpoints.length;
+    const promoted = !routingDisabled && endpoints.some((row) => row.position === "registry");
     const endpoint: RpcEndpoint = {
       url,
       operator: "dwellir",
@@ -287,11 +253,13 @@ function appendDwellirEndpoints(
       logsHistory: entry.logsHistory,
       verifiedAt: entry.verifiedAt,
       maxLogBlockSpan: entry.maxLogBlockSpan,
+      ...(entry.finalizedTagUnsupported ? { finalizedTagUnsupported: true } : {}),
       routingDisabled,
     };
 
     if (config) {
-      endpoints.splice(insertionIndex, 0, endpoint);
+      if (routingDisabled) endpoints.push(endpoint);
+      else endpoints.unshift(endpoint);
       config.endpoints = endpoints;
       continue;
     }
@@ -447,31 +415,18 @@ export function hasRegistryRpc(config: ChainRpcConfig | undefined): boolean {
   return config?.endpoints.some((endpoint) => endpoint.position === "registry") ?? false;
 }
 
-/** Supplemental endpoints in order; historicalBlock excludes near-head-only endpoints. */
-export function supplementalRpcEndpoints(
-  config: ChainRpcConfig | undefined,
-  options?: { historicalBlock?: boolean },
-): readonly RpcEndpoint[] {
-  const supplemental = (config?.endpoints ?? []).filter((endpoint) => endpoint.position === "supplemental");
-  if (!options?.historicalBlock) return supplemental;
-  return supplemental.filter((endpoint) => endpoint.stateHistory === "archive");
+/** Supplemental candidates only; method/pin eligibility belongs to the read resolver. */
+export function supplementalRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
+  return (config?.endpoints ?? []).filter(endpoint => endpoint.position === "supplemental");
 }
 
-/** Reviewed Dwellir logs first, independent of state placement; incumbents retain their order. */
+/** Full-history logs on existing inventory chains; retained ranges need explicit resolver context. */
 export function logScanRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
+  if (!hasRegistryRpc(config)) return [];
   const endpoints = config?.endpoints.filter((endpoint) => endpoint.operator === "dwellir"
-    ? DWELLIR_LOG_SCAN_CHAINS.has(config.chainId) && !endpoint.routingDisabled && endpoint.logsHistory === "full"
+    ? !endpoint.routingDisabled && endpoint.logsHistory === "full"
     : endpoint.position === "registry") ?? [];
-  const dwellirIndex = endpoints.findIndex((endpoint) => endpoint.operator === "dwellir");
+  const dwellirIndex = endpoints.findIndex(endpoint => endpoint.operator === "dwellir");
   if (dwellirIndex > 0) endpoints.unshift(...endpoints.splice(dwellirIndex, 1));
   return endpoints;
-}
-
-/** CCIP's reviewed hash-pinned state and historical-ramp-log routes, not a global log promotion. */
-export function ccipRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
-  const incumbents = registryRpcEndpoints(config).filter((endpoint) => endpoint.operator !== "dwellir");
-  if (config?.chainId !== "ink" && config?.chainId !== "berachain" && config?.chainId !== "plasma") return incumbents;
-  const dwellir = config.endpoints.find((endpoint) => endpoint.operator === "dwellir"
-    && !endpoint.routingDisabled && endpoint.stateHistory === "archive" && endpoint.logsHistory === "full");
-  return dwellir ? [dwellir, ...incumbents] : incumbents;
 }

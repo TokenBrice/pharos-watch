@@ -1034,7 +1034,31 @@
                 "onRampRuntimeCodeSha256": "1be713a3fd35ad9ef77f2106e5f6a666244746a777b9f18cab24eab012e71c76",
                 "offRampAddress": "0x4914044f8d787bd5dc7528f00775d850dc54477e",
                 "offRampRuntimeCodeSha256": "9359014acff2153d4fbfe4b09b866c32c1ea104c4bfa4384610215124bd1cfcf",
-                "sourceStartBlock": 97598317
+                "sourceStartBlock": 97598317,
+                "sourceStartWitness": {
+                  "kind": "reviewed-creation",
+                  "chainId": "monad",
+                  "tokenAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+                  "tokenPoolAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
+                  "onRampAddress": "0x26f997167d936acd054f2132f03e1cea18044397",
+                  "runtimeCodeSha256": "1be713a3fd35ad9ef77f2106e5f6a666244746a777b9f18cab24eab012e71c76",
+                  "blockNumber": 97598317,
+                  "blockHash": "0x52b05a8021a94e335f13984452982e39cee51d8af10c9b7e9892c75e99799842",
+                  "blockTimestamp": 1787220732,
+                  "transactionHash": "0xab4061122e4398b09e3d90d83295e0fa324fda2fc9e4b713a05bf4c7a38eb2f6",
+                  "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
+                  "nonce": "827",
+                  "initcodeSha256": "a9fcb488d41fe991f5cebdba8a4390b49f52786a412e70b6cde17c2939981ba9",
+                  "initialSequence": "1",
+                  "sequenceSemantics": "ccip-2.0.0-constructor-zero",
+                  "sourceCodeSha256": "5230269448a4222556534466a475030da19806a7d1b456af369a35e99c642a43",
+                  "evidenceUrls": [
+                    "https://sourcify.dev/server/v2/contract/143/0x26f997167d936acd054f2132f03e1cea18044397?fields=creationBytecode,runtimeBytecode,sources,compilation,abi",
+                    "https://monadscan.com/tx/0xab4061122e4398b09e3d90d83295e0fa324fda2fc9e4b713a05bf4c7a38eb2f6"
+                  ],
+                  "reviewedAtSec": 1792396527,
+                  "reviewer": "pharos-research"
+                }
               },
               {
                 "id": "susdat-saturn:monad:bsc:1.6:0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3",
@@ -1059,7 +1083,31 @@
                 "onRampRuntimeCodeSha256": "d8b4ee19339312abafbd87f33b213abd2795ad6fbae2a76f5dc90ffbe55735de",
                 "offRampAddress": "0xa27056438ffa1f286ab197488808692f0db93f8b",
                 "offRampRuntimeCodeSha256": "3b9fcd9852d70eeb5fd2c3cb51f2fd4fa8a761af6f47b2a65d4a659bec7b8ca5",
-                "sourceStartBlock": 86685107
+                "sourceStartBlock": 29585544,
+                "sourceStartWitness": {
+                  "kind": "reviewed-creation",
+                  "chainId": "monad",
+                  "tokenAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+                  "tokenPoolAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
+                  "onRampAddress": "0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3",
+                  "runtimeCodeSha256": "d8b4ee19339312abafbd87f33b213abd2795ad6fbae2a76f5dc90ffbe55735de",
+                  "blockNumber": 29585544,
+                  "blockHash": "0x0903ccdda17b68da5cfb51b3c86fc7f4ff33e5c1521508ad2696e9113b6c2368",
+                  "blockTimestamp": 1760715877,
+                  "transactionHash": "0xa3b6839fa4c2e3e82d3cc19b4c167755dc9d6025268309c863e4c2e2b6b44644",
+                  "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
+                  "nonce": "36",
+                  "initcodeSha256": "fae6dd46495b519a802b38ab058455cd65eb9f6be964a1cdc3e628082e8e7a80",
+                  "initialSequence": "1",
+                  "sequenceSemantics": "ccip-1.6-constructor-zero",
+                  "sourceCodeSha256": "93b5dcbb8bb095a825aed1ff4c9b8eed1e70962f700f7cf1f6af0652471448c4",
+                  "evidenceUrls": [
+                    "https://monadscan.com/address/0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3#code",
+                    "https://monadscan.com/tx/0xa3b6839fa4c2e3e82d3cc19b4c167755dc9d6025268309c863e4c2e2b6b44644"
+                  ],
+                  "reviewedAtSec": 1792396527,
+                  "reviewer": "pharos-research"
+                }
               },
               {
                 "id": "susdat-saturn:monad:ethereum:2.0.0:0x26f997167d936acd054f2132f03e1cea18044397",
@@ -1084,7 +1132,31 @@
                 "onRampRuntimeCodeSha256": "1be713a3fd35ad9ef77f2106e5f6a666244746a777b9f18cab24eab012e71c76",
                 "offRampAddress": "0x408428bca0e24a25ac8baac1b70f64af257717c3",
                 "offRampRuntimeCodeSha256": "8516792ff6d9b3d0d9fb02896b266acd82ca6747c3327a165fe3090b5c0ac0c7",
-                "sourceStartBlock": 97598317
+                "sourceStartBlock": 97598317,
+                "sourceStartWitness": {
+                  "kind": "reviewed-creation",
+                  "chainId": "monad",
+                  "tokenAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+                  "tokenPoolAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
+                  "onRampAddress": "0x26f997167d936acd054f2132f03e1cea18044397",
+                  "runtimeCodeSha256": "1be713a3fd35ad9ef77f2106e5f6a666244746a777b9f18cab24eab012e71c76",
+                  "blockNumber": 97598317,
+                  "blockHash": "0x52b05a8021a94e335f13984452982e39cee51d8af10c9b7e9892c75e99799842",
+                  "blockTimestamp": 1787220732,
+                  "transactionHash": "0xab4061122e4398b09e3d90d83295e0fa324fda2fc9e4b713a05bf4c7a38eb2f6",
+                  "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
+                  "nonce": "827",
+                  "initcodeSha256": "a9fcb488d41fe991f5cebdba8a4390b49f52786a412e70b6cde17c2939981ba9",
+                  "initialSequence": "1",
+                  "sequenceSemantics": "ccip-2.0.0-constructor-zero",
+                  "sourceCodeSha256": "5230269448a4222556534466a475030da19806a7d1b456af369a35e99c642a43",
+                  "evidenceUrls": [
+                    "https://sourcify.dev/server/v2/contract/143/0x26f997167d936acd054f2132f03e1cea18044397?fields=creationBytecode,runtimeBytecode,sources,compilation,abi",
+                    "https://monadscan.com/tx/0xab4061122e4398b09e3d90d83295e0fa324fda2fc9e4b713a05bf4c7a38eb2f6"
+                  ],
+                  "reviewedAtSec": 1792396527,
+                  "reviewer": "pharos-research"
+                }
               },
               {
                 "id": "susdat-saturn:monad:ethereum:1.6:0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3",
@@ -1109,7 +1181,31 @@
                 "onRampRuntimeCodeSha256": "d8b4ee19339312abafbd87f33b213abd2795ad6fbae2a76f5dc90ffbe55735de",
                 "offRampAddress": "0x26d3681dfc9e4c8c79cfbf461adec8a21d5d73c5",
                 "offRampRuntimeCodeSha256": "9ef2d98fbf7cbbf47e5062c23d1ed1da5547d89976ab66081343b92f3b82095a",
-                "sourceStartBlock": 86685107
+                "sourceStartBlock": 29585544,
+                "sourceStartWitness": {
+                  "kind": "reviewed-creation",
+                  "chainId": "monad",
+                  "tokenAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+                  "tokenPoolAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
+                  "onRampAddress": "0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3",
+                  "runtimeCodeSha256": "d8b4ee19339312abafbd87f33b213abd2795ad6fbae2a76f5dc90ffbe55735de",
+                  "blockNumber": 29585544,
+                  "blockHash": "0x0903ccdda17b68da5cfb51b3c86fc7f4ff33e5c1521508ad2696e9113b6c2368",
+                  "blockTimestamp": 1760715877,
+                  "transactionHash": "0xa3b6839fa4c2e3e82d3cc19b4c167755dc9d6025268309c863e4c2e2b6b44644",
+                  "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
+                  "nonce": "36",
+                  "initcodeSha256": "fae6dd46495b519a802b38ab058455cd65eb9f6be964a1cdc3e628082e8e7a80",
+                  "initialSequence": "1",
+                  "sequenceSemantics": "ccip-1.6-constructor-zero",
+                  "sourceCodeSha256": "93b5dcbb8bb095a825aed1ff4c9b8eed1e70962f700f7cf1f6af0652471448c4",
+                  "evidenceUrls": [
+                    "https://monadscan.com/address/0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3#code",
+                    "https://monadscan.com/tx/0xa3b6839fa4c2e3e82d3cc19b4c167755dc9d6025268309c863e4c2e2b6b44644"
+                  ],
+                  "reviewedAtSec": 1792396527,
+                  "reviewer": "pharos-research"
+                }
               }
             ]
           }
@@ -2987,7 +3083,8 @@
           "routeId": "robinhood:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 15059
+            "safeBlockLag": 15059,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "witry-brix-token",
           "conversionSourceId": null

@@ -8,6 +8,7 @@ import type { ExecutableRedemptionObserverId } from "@shared/types/redemption";
 import type { LiveReserveRedemptionTelemetryKnownFields } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
+import { EvmCodeIdentityError } from "../../lib/evm-code-identity-error";
 import { codeIdentityChecks, executeEvmObservationPlan } from "./evm-observation-plan";
 import type {
   AnyEvmObservationField,
@@ -94,6 +95,8 @@ export async function readStateWithPlan<Fields extends readonly AnyEvmObservatio
   ctx: AdapterContext | undefined,
   signal: AbortSignal,
 ): Promise<EvmObservationSnapshot<Fields>> {
+  // Pass the caller's exact options through both identity and quantity reads.
+  // A numbered/header pin alone must never be relabeled finalized here.
   const identityResult = await codeIdentityChecks(client, identities, {
     blockNumber,
     rpcOptions,
@@ -107,12 +110,7 @@ export async function readStateWithPlan<Fields extends readonly AnyEvmObservatio
     storageLabel: (identity) => `${coinId}-redemption-implementation-${identity.address}`,
   });
   if (identityResult.status === "rejected") {
-    fail(
-      coinId,
-      identityResult.kind === "storage"
-        ? `implementation identity drift at ${identityResult.address}`
-        : `code identity drift at ${identityResult.address}`,
-    );
+    throw new EvmCodeIdentityError(coinId, identityResult, blockNumber);
   }
 
   return executeEvmObservationPlan({

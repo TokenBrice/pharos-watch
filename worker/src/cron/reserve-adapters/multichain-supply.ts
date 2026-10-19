@@ -286,9 +286,9 @@ async function readIncludedSupply(
     }
     case "aptos-fungible-asset": {
       if (entry.chain !== "aptos") return fail(`reader aptos-fungible-asset does not serve chain ${entry.chain}`);
-      // A registry `aptos` endpoint takes precedence over the public REST base.
+      // Retain the configured incumbent after any admitted native preference.
       const restUrl = registryRpcUrls(ctx?.chainRpcs?.get("aptos"))[0] ?? APTOS_PUBLIC_REST_URL;
-      const asset = await fetchMoveFungibleAssetSupply(contract.address, signal, restUrl, ctx);
+      const asset = await fetchMoveFungibleAssetSupply(contract.address, signal, restUrl, ctx, undefined, "aptos");
       if (!asset) return fail("fungible-asset ledger read failed");
       return admit(asset.rawSupply, asset.decimals, asset.ledgerTimestampSec ?? nowSec);
     }

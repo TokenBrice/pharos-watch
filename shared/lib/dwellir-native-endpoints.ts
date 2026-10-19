@@ -5,7 +5,8 @@ export const DWELLIR_NATIVE_ENDPOINTS = [
     baseUrl: "https://api-aptos-mainnet.n.dwellir.com/v1",
     protocol: "aptos-rest",
     expectedChainId: 1,
-    requiresRetainedLedgerFloor: false,
+    // Availability is retained state, not an archive entitlement.
+    requiresRetainedLedgerFloor: true,
   },
   {
     network: "movement",
