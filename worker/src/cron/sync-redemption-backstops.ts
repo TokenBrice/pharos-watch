@@ -244,7 +244,7 @@ export async function syncRedemptionBackstops(
       throwIfAborted(signal);
       logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failed = true;
-      failureReason = { code: "route-resolution-failed", message: safeErrorMessage(error, 200).slice(0, 240) };
+      failureReason = { code: "route-resolution-failed", message: safeErrorMessage(error, 240).slice(0, 240) };
       const config = configById.get(stablecoinId);
       if (config) {
         resolved = buildFailedRedemptionBackstopEntry(stablecoinId, config, now);

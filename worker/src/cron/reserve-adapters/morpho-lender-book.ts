@@ -187,9 +187,8 @@ class PinnedReader {
   }
   async code(target: string): Promise<void> {
     if (this.codeHashes[target]) return;
-    const hash = await this.readCodeHash(target);
-    if (hash == null) fail("identity-mismatch");
-    this.codeHashes[target] = hash;
+    const codeHash = (await this.readCodeHash(target)) ?? fail("identity-mismatch");
+    this.codeHashes[target] = codeHash;
   }
   async read(calls: EvmMulticall3Call[]): Promise<(string | null)[]> {
     for (const row of calls) this.selectors.add(row.callData.slice(0, 10));
