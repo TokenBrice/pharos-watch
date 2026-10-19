@@ -243,7 +243,7 @@ describe("pinned supplemental research RPC", () => {
 
   it.each([
     { chain: "ethereum", span: 10_000, provider: "dwellir" },
-    { chain: "monad", span: 1_000, provider: "dwellir" },
+    { chain: "monad", span: 10_000, provider: "dwellir" },
     { chain: "astar", span: 1_024, provider: "dwellir" },
     { chain: "base", span: 10_000, provider: "dwellir" },
     { chain: "arc", span: 10_000, provider: "dwellir" },
