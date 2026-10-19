@@ -58,10 +58,6 @@ export interface StablecoinAiSummary {
   reviewedAt?: string;
   factsAsOf?: string;
   claimTokens?: readonly AiSummaryClaimToken[];
-  sources?: Array<{
-    label: string;
-    url: `http${string}`;
-  }>;
 }
 
 export type StablecoinAiSummariesById = Record<string, StablecoinAiSummary>;
