@@ -13,6 +13,25 @@ const startedAt = NOW_SEC - 10 * 86400;
 const key: DdrStratumKey = { direction: "below", depth: "catastrophic", structural: "fragile", currency: "USD" };
 
 describe("DDR historical context", () => {
+  it.each([
+    ["6.95", "6.92", false],
+    ["6.95", "6.94", true],
+    ["3.2", "3.1", true],
+  ] as const)("admits 7d/30d TVL by stored epochs %s/%s without suppressing volume", async (current, historical, comparable) => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at, methodology_version) VALUES ('usdc-circle', 'USDC', 200, 300, 80, ?, ?)")
+      .run(NOW_SEC, current);
+    const insert = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version) VALUES ('usdc-circle', 100, 100, ?, 'primary', 0.9, ?)");
+    for (const days of [7, 30]) insert.run(NOW_SEC - days * 86400, historical);
+    const loaded = await loadDdrContext(db, [activeRow()], NOW_SEC);
+    expect(loaded.kind).toBe("ok");
+    if (loaded.kind !== "ok") throw new Error(loaded.reason);
+    expect(loaded.context.liqTvlChange7dByCoin.get("usdc-circle")).toBe(comparable ? 100 : undefined);
+    expect(loaded.context.liqTvlChange30dByCoin.get("usdc-circle")).toBe(comparable ? 100 : undefined);
+    expect(loaded.context.liqVolumeChange30dByCoin.get("usdc-circle")).toBe(200);
+    expect(loaded.context.liqByCoin.get("usdc-circle")?.liquidity_score).toBe(80);
+  });
   it("loads timed onset and later severity without leaking final peaks into earlier landmarks", async () => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);

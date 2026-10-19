@@ -4,12 +4,31 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillDEWS } from "../backfill-dews";
 import { BACKTEST_ANCHORS } from "../../lib/backtest-anchors";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 stubCryptoForAuth();
 
 const DAY = 86_400;
 
 describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
+  it("keeps retained calibration scores immutable across the TVL-basis release", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const anchor = BACKTEST_ANCHORS[0];
+    const snapshotDate = anchor.onsetAt - 3 * DAY;
+    try {
+      sqlite.prepare("INSERT INTO stress_signal_history (stablecoin_id, snapshot_date, score, band, signals_json) VALUES (?, ?, 67, 'WARNING', ?)")
+        .run(anchor.stablecoinId, snapshotDate, JSON.stringify({ liquidity: { value: 80, available: true } }));
+      const before = sqlite.prepare("SELECT * FROM stress_signal_history").all();
+      const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews?mode=backtest-metrics"), trustedAdmin: true });
+      const body = await readJsonResponse<{ perAnchor: Array<{ stablecoinId: string; detected: boolean; leadTimeDays: number | null }> }>(response, 200);
+      expect(body.perAnchor.find((row) => row.stablecoinId === anchor.stablecoinId)).toMatchObject({
+        detected: true, leadTimeDays: 3,
+      });
+      expect(sqlite.prepare("SELECT * FROM stress_signal_history").all()).toEqual(before);
+    } finally {
+      sqlite.close();
+    }
+  });
   it("returns detection rate, lead time percentiles (days), and per-anchor detail", async () => {
     // Seed canned stress_signal_history rows for each anchor. The SQL already
     // pushes `band IN ('ALERT','WARNING','DANGER')` + LIMIT 1 into D1, so the

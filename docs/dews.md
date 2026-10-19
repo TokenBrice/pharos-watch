@@ -8,7 +8,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.34`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.35`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -107,7 +107,9 @@ Smoothed (averaged) with the previous cycle's reading only when that reading was
 
 7-day change in liquidity score and TVL from `dex_liquidity_history`.
 
-Both live hydration and historical reconstruction use the shared trend-baseline selector: the nearest row to the seven-day target with positive TVL and `coverage_confidence >= 0.5`, within an inclusive 36-hour tolerance. A closer ineligible row cannot mask an older eligible row. Score, TVL and date come from that same admitted row; without one, both historical anchors are null and S_liq is unavailable. This is a purpose-specific admission rule, not removal or reclassification of weak public DEX history; durability/digest retain their stricter ≥0.75 gates.
+Both live hydration and historical reconstruction use shared nearest-observation admission: positive TVL and `coverage_confidence >= 0.5`, within an inclusive 36-hour tolerance of the seven-day target. A closer ineligible row cannot mask an older eligible row. The historical liquidity score and its date retain that independently selected observation. The TVL anchor additionally requires the same `liquidityTvlBasisEpoch` as the stored current observation; it can select a different compatible row within the same tolerance, or remain null without discarding the score anchor. Same-epoch minor versions remain comparable. Explicit legacy identities belong to epoch 0; missing version projections or a missing current observation cannot establish TVL comparability. Durability/digest retain their stricter >=0.75 gates and separate score-identity rules.
+
+Live history hydration receives the actually admitted per-coin current liquidity rows after their independent load; diagnostic failures are replayed in the original source order. Historical reconstruction first chooses its nearest eligible historical current anchor without an epoch comparator, then gates the weekly TVL anchor against that selected row's stored version, never today's runtime constant. A TVL-basis change alone does not make the historical score unavailable. Corrected input availability can change new DEWS scores or bands; stored scores and calibration history are not recomputed.
 
 Live DEX history reads start at `now − 7 days − 36 hours` (8.5 days). Historical reconstruction's DEX-only read starts at `min(event UTC days) − 14 days − 36 hours` (15.5 days), covering the earliest seven-day evaluation's weekly anchor. Supply-history bounds and event/current-day buckets remain unchanged. Code, next-free Depeg/DEWS methodology version and approved replay evidence must release together; rollback restores an approved code/version pair, never retags archived scores.
 

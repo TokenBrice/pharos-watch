@@ -15,7 +15,7 @@ export function PegScoreDewsMethodologySection() {
       title={PEGSCORE_DEWS_SECTION_CONTENT.title}
       versionBadge={{ label: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL }}
       changelogPath={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH}
-      versionNote="Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition or score-affecting input semantics change."
+      versionNote="Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition or score-affecting input semantics (including TVL-measurement comparability) change."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.pegscoreDews.changelogHover}
     >
       <PegScoreDewsOverview />

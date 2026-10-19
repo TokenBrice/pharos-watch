@@ -168,6 +168,7 @@ describe("buildCurveStableswapExecutionModel", () => {
       });
       expect(rejections).toEqual([]);
       const metric = metrics.get("usdc-circle")!;
+      expect(metric.topPools[0]?.extra?.measurement?.balanceMeasured).toBe(true);
       applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
       metric.volumeAvailability = summarizeRetainedPoolVolume(
         metric.topPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
@@ -210,6 +211,9 @@ describe("buildCurveStableswapExecutionModel", () => {
     applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
     expect(metric.totalTvlUsd).toBe(2_000_000);
     expect(metric.qualityAdjustedTvl).toBe(1_700_000);
+    expect(metric.effectiveTvl).toBe(1_700_000);
+    expect(metric.totalTvlForBalance).toBe(0);
+    expect(metric.topPools[0]?.extra?.measurement?.balanceMeasured).toBe(false);
     expect(metric.topPools[0]?.extra?.balanceRatio).toBeUndefined();
     expect(metric.topPools[0]?.extra?.balanceDetails).toBeUndefined();
   });

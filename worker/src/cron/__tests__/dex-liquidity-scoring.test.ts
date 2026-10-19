@@ -597,11 +597,12 @@ describe("dex-liquidity scoring", () => {
     expect(globalAgg.poolCount).toBe(15);
     expect(globalAgg.totalVol24h).toBe(404_000);
     expect(globalAgg.totalVol7d).toBe(272_000);
-    expect(globalAgg.totalTvl).toBeCloseTo(330_000, 6);
-    expect(globalAgg.protocolTvl.sushiswap).toBe(100_000);
-    expect(globalAgg.chainTvl.ethereum).toBeCloseTo(222_982.632, 3);
-    expect(globalAgg.chainTvl.arbitrum).toBeCloseTo(19_648.947, 3);
-    expect(globalAgg.chainTvl.base).toBeCloseTo(87_368.421, 3);
+    // Per-coin caps remain, but no second global clamp rewrites the retained population.
+    expect(globalAgg.totalTvl).toBeCloseTo(420_000, 6);
+    expect(globalAgg.protocolTvl.sushiswap).toBe(190_000);
+    expect(globalAgg.chainTvl.ethereum).toBe(252_667);
+    expect(globalAgg.chainTvl.arbitrum).toBe(37_333);
+    expect(globalAgg.chainTvl.base).toBe(130_000);
   });
 
   it("excludes inactive tracked metrics from scores, retained pools, and global aggregates", async () => {
@@ -1438,6 +1439,51 @@ describe("dex-liquidity scoring", () => {
       cappedPoolCount: 1,
       cappedProtocols: 1,
       reducedTvlUsd: 50_000,
+    });
+  });
+
+  it.each([true, false])("keeps global retained TVL coherent above protocol caps (complete volume: %s)", async (complete) => {
+    const usdc = initMetrics("usdc-circle", "USDC");
+    const usdt = initMetrics("usdt-tether", "USDT");
+    const [ethereum, base] = withReadings([
+      makePool({ poolId: "ethereum:trusted", project: "curve", chain: "ethereum", tvlUsd: 80_000_000, source: "dl" }),
+      makePool({ poolId: "base:trusted", project: "curve", chain: "base", tvlUsd: 80_000_000, source: "direct_api" }),
+    ]);
+    if (!complete) base!.volumeReading = undefined;
+    usdc.topPools = [ethereum!, base!, ...withReadings([
+      makePool({ poolId: "ethereum:blocked", project: "near-intents", tvlUsd: 20_000_000 }),
+      makePool({ poolId: "base:low-flow", project: "curve", chain: "base", tvlUsd: 120_000_000, volumeUsd1d: 1 }),
+    ])];
+    usdt.topPools = [{ ...ethereum! }]; // Same physical pool attributed to another coin.
+
+    const result = await computeStablecoinScores(
+      makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]),
+      new Map([["usdc-circle", usdc], ["usdt-tether", usdt]]),
+      new Map([["curve", 100_000_000]]),
+      undefined,
+      SCORING_CLOCK_SEC,
+    );
+
+    expect(result.globalAgg).toMatchObject({
+      totalTvl: 160_000_000,
+      totalVol24h: complete ? 2_000_000 : null,
+      poolCount: 2,
+      chainCount: 2,
+      protocolTvl: { curve: 160_000_000 },
+      chainTvl: { ethereum: 80_000_000, base: 80_000_000 },
+    });
+    expect(result.globalAgg.volumeAvailability["24h"]).toMatchObject({
+      retainedTvlUsd: 160_000_000,
+      admittedTvlUsd: complete ? 160_000_000 : 80_000_000,
+      partialGrossUsd: complete ? 2_000_000 : 1_000_000,
+      volumeCoverage: complete ? 1 : 0.5,
+    });
+    expect(result.retainedPoolsByStablecoin.get("usdc-circle")?.map((pool) => pool.tvlUsd)).toEqual([80_000_000, 80_000_000]);
+    expect(result.diagnostics.globalProtocolOverCapUsd).toBe(60_000_000);
+    expect(result.diagnostics.protocolCapReductions.reducedTvlUsd).toBe(0);
+    expect(result.diagnostics.fallbackCounters).toMatchObject({
+      retainedExclusionBlockedDex: 1,
+      retainedExclusionLargePoolLowVolume: 1,
     });
   });
 

@@ -17,6 +17,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DEX_UNSUPPORTED_CHAIN_WAIVER_REASON, getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
+import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;
@@ -29,6 +30,7 @@ export interface DexHistoryRow {
   snapshot_date: number;
   coverage_class: string | null;
   coverage_confidence: number | null;
+  methodology_version: string | null;
 }
 
 export interface DexPriceRow {
@@ -298,17 +300,41 @@ export function normalizeTopPools(
   return pools;
 }
 
-// Select the nearest eligible daily observation within the caller's tolerance
-// (12h daily / 36h weekly). Keep extra fields paired with that exact row.
+// A historical current anchor (backfill) or an independent score/volume
+// observation has no TVL comparator yet. It still uses the same admission,
+// nearest-date and tolerance policy as a TVL trend.
+export function selectLiquidityObservation<T extends DexHistoryRow>(
+  history: T[],
+  targetSec: number,
+  toleranceSec: number,
+): T | null {
+  return selectHistoryObservation(history, targetSec, toleranceSec, null);
+}
+
+// TVL comparisons require the stored current identity, never the runtime
+// methodology. Explicit NULL is legacy epoch 0; an omitted projection is not.
 export function selectTrendBaseline<T extends DexHistoryRow>(
   history: T[],
   targetSec: number,
   toleranceSec: number,
+  currentMethodologyVersion: string | null,
+): T | null {
+  if (currentMethodologyVersion === undefined) return null;
+  return selectHistoryObservation(history, targetSec, toleranceSec, liquidityTvlBasisEpoch(currentMethodologyVersion));
+}
+
+function selectHistoryObservation<T extends DexHistoryRow>(
+  history: T[],
+  targetSec: number,
+  toleranceSec: number,
+  currentEpoch: number | null,
 ): T | null {
   let best: T | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const row of history) {
+    if (currentEpoch != null && (row.methodology_version === undefined ||
+      liquidityTvlBasisEpoch(row.methodology_version) !== currentEpoch)) continue;
     try {
       if (normalizeDexLiquidityEvidence(row).coverageConfidence < TREND_BASELINE_CONFIDENCE_MIN) continue;
     } catch {

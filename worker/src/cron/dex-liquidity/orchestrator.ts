@@ -1067,7 +1067,6 @@ async function scoreDexLiquidityPoolState(
     globalAgg,
     retainedPoolsByStablecoin,
     priceObservations: sourceState.priceObservations,
-    protocolTvlCaps: sourceState.protocolTvlCaps,
     diagnostics,
     stagedMergedCount: poolState.stagedMergedCount,
     stagedSkippedCount: poolState.stagedSkippedCount,

@@ -21,6 +21,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
 import {
   getDexLiquidityTrendTolerances,
+  selectLiquidityObservation,
   selectTrendBaseline,
   type DexHistoryRow,
 } from "../../lib/dex-liquidity-response";
@@ -70,7 +71,7 @@ export interface DdrLoadedContext {
   supplyByCoin: Map<string, { date: number; usd: number }[]>;
   mintBurnHourlyByCoin: Map<string, DdrMintBurnHourlyRow[]>;
   dewsByCoin: Map<string, { stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>;
-  liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; total_tvl_usd: number | null; total_volume_24h_usd: number | null; updated_at: number }>;
+  liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; total_tvl_usd: number | null; total_volume_24h_usd: number | null; updated_at: number; methodology_version: string | null }>;
   liqTvlChange7dByCoin: Map<string, number>;
   liqTvlChange30dByCoin: Map<string, number>;
   liqVolumeChange30dByCoin: Map<string, number>;
@@ -463,7 +464,7 @@ export async function loadDdrContext(
 
   const liqResult = await queryRowsChunked("dex_liquidity", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
-      `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, total_volume_24h_usd, volume_availability_json, updated_at FROM dex_liquidity ` +
+      `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, total_volume_24h_usd, volume_availability_json, updated_at, methodology_version FROM dex_liquidity ` +
         `WHERE stablecoin_id IN (${inClauseSql}) ` +
         `AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
@@ -476,6 +477,7 @@ export async function loadDdrContext(
       total_volume_24h_usd: number | null;
       volume_availability_json?: string | null;
       updated_at: number;
+      methodology_version: string | null;
     }>());
   const liqRows = liqResult.rows.map(({ volume_availability_json, ...row }) => ({
     ...row,
@@ -485,7 +487,7 @@ export async function loadDdrContext(
 
   const liqHistResult = await queryRowsChunked("dex_liquidity_history", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
-      `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, snapshot_date, coverage_class, coverage_confidence ` +
+      `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, snapshot_date, coverage_class, coverage_confidence, methodology_version ` +
         `FROM dex_liquidity_history ` +
         `WHERE stablecoin_id IN (${inClauseSql}) AND snapshot_date >= ? ` +
         `ORDER BY stablecoin_id, snapshot_date DESC`,
@@ -511,7 +513,7 @@ export async function loadDdrContext(
   for (const row of liqRows) {
     const currentTvl = row.total_tvl_usd;
     const history = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
-    const baseline7d = selectTrendBaseline(history, target7d, trend7dToleranceSec) as DdrDexHistoryRow | null;
+    const baseline7d = selectTrendBaseline(history, target7d, trend7dToleranceSec, row.methodology_version);
     if (
       currentTvl != null &&
       Number.isFinite(currentTvl) &&
@@ -523,7 +525,7 @@ export async function loadDdrContext(
         ((currentTvl - baseline7d.total_tvl_usd) / baseline7d.total_tvl_usd) * 100,
       );
     }
-    const baseline30d = selectTrendBaseline(history, target30d, trend7dToleranceSec) as DdrDexHistoryRow | null;
+    const baseline30d = selectTrendBaseline(history, target30d, trend7dToleranceSec, row.methodology_version);
     if (
       currentTvl != null &&
       Number.isFinite(currentTvl) &&
@@ -536,16 +538,17 @@ export async function loadDdrContext(
       );
     }
     const currentVolume = row.total_volume_24h_usd;
+    const volumeBaseline30d = selectLiquidityObservation(history, target30d, trend7dToleranceSec);
     if (
-      baseline30d &&
-      baseline30d.total_volume_24h_usd != null &&
-      baseline30d.total_volume_24h_usd > 0 &&
+      volumeBaseline30d &&
+      volumeBaseline30d.total_volume_24h_usd != null &&
+      volumeBaseline30d.total_volume_24h_usd > 0 &&
       currentVolume != null &&
       Number.isFinite(currentVolume)
     ) {
       liqVolumeChange30dByCoin.set(
         row.stablecoin_id,
-        ((currentVolume - baseline30d.total_volume_24h_usd) / baseline30d.total_volume_24h_usd) * 100,
+        ((currentVolume - volumeBaseline30d.total_volume_24h_usd) / volumeBaseline30d.total_volume_24h_usd) * 100,
       );
     }
   }

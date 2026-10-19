@@ -9,6 +9,18 @@ describe("summarizeCronMetadata", () => {
     expect(summary.some((line) => line.includes("streak"))).toBe(false);
     expect(summary).toContain("reason status-self-check-persistence-failed");
   });
+
+  it("separates observed global excess from actual per-coin cap reductions", () => {
+    expect(summarizeCronMetadata("sync-dex-liquidity", {
+      sourceCoverage: {
+        globalProtocolOverCapUsd: 60,
+        protocolCapReductions: { cappedPoolCount: 1, reducedTvlUsd: 50 },
+      },
+    })).toEqual([
+      "protocol caps 1 pools, 50 TVL reduced",
+      "global protocol TVL excess 60 observed (not reduced)",
+    ]);
+  });
   it("summarizes unknown-job resource evidence without inventing heap or platform outcomes", () => {
     const resourcePressure = {
       phase: "read", observedAt: 100, bodyCapBytes: 4, cacheCapBytes: null,

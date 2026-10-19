@@ -13,9 +13,12 @@ import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import type * as DbModule from "../../lib/db";
 import { computeDexDeploymentSupplyCoverage } from "../../lib/report-cards-snapshot-inputs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
+import { computeStablecoinScores } from "../dex-liquidity/scoring";
+import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
 import {
   buildDexLiquidityPublicationGenerationId,
   DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE,
@@ -1039,6 +1042,47 @@ describe("dex-liquidity persistence", () => {
         state: "published", written_row_count: 7, current_row_count: 7,
         created_at: now - 100, published_at: now - 50, failed_at: null, failure_reason: null,
       });
+    } finally {
+      fixtures.closeAll();
+    }
+  });
+
+  it("persists the uncapped global headline and volume denominators from the same retained population", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    try {
+      const { sqlite, db } = fixtures.open();
+      const actual = await vi.importActual<typeof DbModule>("../../lib/db");
+      vi.mocked(batchExecute).mockImplementation(actual.batchExecute);
+      vi.mocked(executeAtomicBatch).mockImplementation(actual.executeAtomicBatch);
+      const now = 1_800_000_000;
+      const usdc = initMetrics("usdc-circle", "USDC");
+      const usdt = initMetrics("usdt-tether", "USDT");
+      usdc.topPools = ["ethereum", "base"].map((chain) => makePool({
+        poolId: `${chain}:trusted`, project: "curve", chain, tvlUsd: 80_000_000,
+        volumeReading: { volume24hUsd: 1_000_000, volume7dUsd: 7_000_000, observedAtSec: now - 60 },
+      }));
+      usdt.topPools = [{ ...usdc.topPools[0]! }];
+      const metrics = new Map([["usdc-circle", usdc], ["usdt-tether", usdt]]);
+      const result = await computeStablecoinScores(db, metrics, new Map([["curve", 100_000_000]]), undefined, now);
+      await persistScores(db, metrics, result.scores, result.globalAgg, now);
+
+      const row = sqlite.prepare(`SELECT total_tvl_usd, total_volume_24h_usd, protocol_tvl_json,
+        chain_tvl_json, volume_availability_json, methodology_version, publication_state
+        FROM dex_liquidity WHERE stablecoin_id = '__global__'`).get() as {
+          total_tvl_usd: number; total_volume_24h_usd: number; protocol_tvl_json: string;
+          chain_tvl_json: string; volume_availability_json: string; methodology_version: string; publication_state: string;
+        };
+      expect(row).toMatchObject({
+        total_tvl_usd: 160_000_000, total_volume_24h_usd: 2_000_000,
+        methodology_version: LIQUIDITY_METHODOLOGY_VERSION, publication_state: "published",
+      });
+      expect(JSON.parse(row.protocol_tvl_json)).toEqual({ curve: 160_000_000 });
+      expect(JSON.parse(row.chain_tvl_json)).toEqual({ ethereum: 80_000_000, base: 80_000_000 });
+      for (const window of ["24h", "7d"]) {
+        expect(JSON.parse(row.volume_availability_json)[window]).toMatchObject({
+          retainedTvlUsd: 160_000_000, admittedTvlUsd: 160_000_000, volumeCoverage: 1,
+        });
+      }
     } finally {
       fixtures.closeAll();
     }

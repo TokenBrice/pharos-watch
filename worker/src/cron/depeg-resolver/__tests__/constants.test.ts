@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
   DDR_SNAPSHOT_TTL_SEC,
@@ -51,6 +52,7 @@ describe("resolver source-owned time budgets", () => {
       liqByCoin: new Map([[active.stablecoinId, {
         stablecoin_id: active.stablecoinId, liquidity_score: 10, concentration_hhi: 0.9,
         total_tvl_usd: 10, total_volume_24h_usd: 5, updated_at: NOW_SEC - DEX_LIQUIDITY_MAX_AGE_SEC - extraAge,
+        methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
       }]]),
     });
     const [row] = resolveDdrIncidents(context, NOW_SEC);

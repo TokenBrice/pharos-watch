@@ -148,6 +148,8 @@ function publishShapedRankingsPayload() {
 interface MakeDbOptions {
   failDexLiquidity?: boolean;
   failDexPricesMissingTable?: boolean;
+  dexMethodologyVersion?: string | null;
+  dexHistoryMethodologyVersion?: string | null;
   dexPriceRows?: Array<{
     stablecoin_id: string;
     dex_price_usd: number;
@@ -260,6 +262,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
               liquidity_score: 80,
               total_tvl_usd: 1_500_000,
               updated_at: Math.floor(Date.now() / 1000),
+              methodology_version: opts.dexMethodologyVersion ?? null,
             },
           ]) as T[],
         };
@@ -286,6 +289,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
               liquidity_score: 73,
               total_tvl_usd: 1_200_000,
               coverage_confidence: 0.5,
+              methodology_version: opts.dexHistoryMethodologyVersion ?? null,
             },
           ] as T[],
         };
@@ -544,19 +548,21 @@ describe("computeAndStoreDEWS", () => {
     await expect(computeAndStoreDEWS(makeDb([]), controller.signal)).rejects.toThrow("dews aborted");
   });
 
-  it("loads 7d liquidity history from snapshot_date/liquidity_score/total_tvl_usd", async () => {
-    const sqlSeen: string[] = [];
-    const db = makeDb(sqlSeen);
+  it.each([
+    [null, null, 1_200_000],
+    ["6.95", "6.94", 1_200_000],
+    ["6.95", "6.92", null],
+  ] as const)("passes weekly score and comparable TVL anchors to scoring (%s/%s)", async (current, historical, tvl7dAgo) => {
+    const db = makeDb([], { dexMethodologyVersion: current, dexHistoryMethodologyVersion: historical });
 
     const result = await computeAndStoreDEWS(db);
 
     expect(result.itemCount).toBe(1);
-    expect(sqlSeen.some((sql) => sql.includes("snapshot_date, liquidity_score, total_tvl_usd"))).toBe(true);
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         liquidityScore7dAgo: 73,
-        tvl7dAgo: 1_200_000,
+        tvl7dAgo,
       }),
     );
   });

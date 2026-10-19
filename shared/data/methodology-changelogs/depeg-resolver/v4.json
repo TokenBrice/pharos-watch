@@ -1,5 +1,21 @@
 [
   {
+    "version": "4.8",
+    "title": "TVL trend evidence respects stored liquidity measurement epochs",
+    "date": "2026-10-19",
+    "effectiveAt": 1792368000,
+    "summary": "DDR admits 7-day and 30-day TVL changes only when the historical baseline and stored current liquidity row share a TVL-measurement epoch. A measurement-policy step is unavailable trend evidence, not an observed exit collapse.",
+    "impact": [
+      "Current and historical DEX reads retain methodology_version. The shared TVL selector skips incompatible epochs but keeps same-epoch minor versions, confidence and inclusive tolerance gates, nearest-date policy, and original observation clocks.",
+      "Explicit legacy identities retain epoch 0; omitted current or historical version projections cannot silently become legacy evidence.",
+      "Independent liquidity scores and 30-day volume trends remain available when TVL comparability fails. Corrected TVL evidence can change new assessments or future forecast verdicts, without changing resolution weights, duration landmarks or support thresholds.",
+      "This release accompanies DEWS 6.35 and the ordered liquidity hotfix. Sealed predictions, first-publication payloads, duration training history and reviewer calibration rows are not rewritten.",
+      "Activation is provisionally 2026-10-19 00:00 UTC (1792368000); confirm effectiveAt at release. Fixed-clock mover review and the first natural production execution remain pending; no successful replay or runtime-health result is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.7",
     "title": "Timed-only duration history and independent reviewer coverage",
     "date": "2026-10-10",

@@ -5,6 +5,8 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
 import { isDexLiquidityDegraded } from "../orchestrator-metadata";
 import type { FullScoreResult, GlobalAgg } from "../types";
+import { processPoolMetrics } from "../process-pools";
+import { rebuildMetricsFromPools } from "../scoring-helpers";
 import { makePool } from "./scoring-test-builders";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
@@ -57,9 +59,9 @@ function makeAnalysisInput(overrides: Partial<Parameters<typeof analyzeDexLiquid
     globalAgg: BASE_GLOBAL_AGG,
     retainedPoolsByStablecoin: new Map(),
     priceObservations: new Map(),
-    protocolTvlCaps: new Map(),
     diagnostics: {
       protocolCapReductions: {},
+      globalProtocolOverCapUsd: 0,
     },
     stagedMergedCount: 0,
     stagedSkippedCount: 0,
@@ -115,6 +117,46 @@ function makeCronMetadata(params: {
 }
 
 describe("analyzeDexLiquidityPostScoring", () => {
+  it.each(["full-pool", "base-pool-excluded"] as const)(
+    "keeps Curve %s balance telemetry consistent with scoring coverage",
+    async (balanceTvlScope) => {
+      const address = "0x1111111111111111111111111111111111111111";
+      const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+      const { metrics } = processPoolMetrics({
+        pools: [{
+          pool: address, chain: "ethereum", project: "curve", symbol: "USDC-USDT",
+          tvlUsd: 10_000_000, volumeUsd1d: 250_000, volumeUsd7d: 1_750_000,
+          stablecoin: true, underlyingTokens: [usdc], apyBase: 1, apyReward: 0,
+          apy: 1, sigma: 0, exposure: "multi", count: 100,
+        }],
+        dexProjects: new Set(["curve"]), chainAddressToId: new Map([[`ethereum:${usdc}`, "usdc-circle"]]),
+        symbolToChainScopedIds: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(),
+        curvePoolMap: new Map([[`ethereum:${address}`, {
+          poolAddress: address, A: 200, balanceRatio: 0.1, tvl: 10_000_000,
+          registryId: "factory", isMetaPool: true, metapoolAdjustedTvl: 2_000_000,
+          balanceTvlScope, contributionTvlScope: "base-pool-excluded",
+          creationTs: 0, balanceDetails: [], tokenPrices: {},
+        }]]),
+      });
+      const pools = metrics.get("usdc-circle")!.topPools;
+      const rebuilt = rebuildMetricsFromPools(pools);
+      const measured = balanceTvlScope === "base-pool-excluded";
+      const measuredTvl = measured ? 2_000_000 : 0;
+      const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        scoreResults: new Map([["usdc-circle", {
+          ...BASE_SCORE_RESULT, tvl: rebuilt.totalTvlUsd, effectiveTvl: rebuilt.effectiveTvl,
+          balanceMeasuredTvlUsd: rebuilt.totalTvlForBalance,
+        }]]),
+        retainedPoolsByStablecoin: new Map([["usdc-circle", pools]]),
+      }));
+      expect(pools[0]?.extra?.measurement?.balanceMeasured).toBe(measured);
+      expect(rebuilt.totalTvlForBalance).toBe(measuredTvl);
+      expect(analysis.sourceCoverage.measuredBalanceTvlBySourceFamily.dl ?? 0).toBe(measuredTvl);
+      expect(analysis.sourceCoverage.measuredBalanceCoveragePct).toBe(measured ? 1 : 0);
+      expect(analysis.sourceCoverage.coinsWithoutMeasuredBalances).toBe(measured ? 0 : 1);
+    },
+  );
+
   it("does not treat the ticker-only policy cutover as a coverage outage, but still guards real losses", async () => {
     const fixtures = createLatestSchemaFixtureTracker();
     const { sqlite, db } = fixtures.open();

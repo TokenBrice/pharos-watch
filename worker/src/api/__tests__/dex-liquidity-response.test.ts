@@ -16,8 +16,8 @@ describe("stored trend evidence admission", () => {
     { coverage_class: "primary", coverage_confidence: Number.NaN },
   ])("skips invalid coverage before selecting a baseline ($coverage_class/$coverage_confidence)", (coverage) => {
     const valid = { stablecoin_id: "usdc-circle", total_tvl_usd: 100, snapshot_date: 999,
-      coverage_class: "primary", coverage_confidence: 0.5 };
-    expect(selectTrendBaseline([{ ...valid, ...coverage, snapshot_date: 1_000 }, valid], 1_000, 10)).toBe(valid);
+      coverage_class: "primary", coverage_confidence: 0.5, methodology_version: null };
+    expect(selectTrendBaseline([{ ...valid, ...coverage, snapshot_date: 1_000 }, valid], 1_000, 10, null)).toBe(valid);
   });
 });
 
@@ -195,6 +195,7 @@ describe("selectTrendBaseline", () => {
         snapshot_date: targetSec - 60,
         coverage_class: "primary",
         coverage_confidence: 0.4,
+        methodology_version: null,
       },
       {
         stablecoin_id: "usdt-tether",
@@ -202,6 +203,7 @@ describe("selectTrendBaseline", () => {
         snapshot_date: targetSec - 120,
         coverage_class: "primary",
         coverage_confidence: 0.9,
+        methodology_version: null,
       },
       {
         stablecoin_id: "usdt-tether",
@@ -209,25 +211,55 @@ describe("selectTrendBaseline", () => {
         snapshot_date: targetSec + 30,
         coverage_class: "primary",
         coverage_confidence: 0.9,
+        methodology_version: null,
       },
     ];
 
-    expect(selectTrendBaseline(history, targetSec, 12 * 3600)).toEqual(history[2]);
+    expect(selectTrendBaseline(history, targetSec, 12 * 3600, null)).toEqual(history[2]);
   });
 
   it("includes exact confidence and tolerance boundaries but excludes nonpositive TVL", () => {
     const target = 1_700_000_000;
     const candidate = {
       stablecoin_id: "usdt-tether", total_tvl_usd: 100, snapshot_date: target + 60,
-      coverage_class: "primary", coverage_confidence: 0.5,
+      coverage_class: "primary", coverage_confidence: 0.5, methodology_version: null,
     };
     expect(selectTrendBaseline([
       { ...candidate, snapshot_date: target, total_tvl_usd: 0 },
       { ...candidate, snapshot_date: target, total_tvl_usd: -1 },
       { ...candidate, snapshot_date: target, coverage_confidence: 0.499 },
       candidate,
-    ], target, 60)).toEqual(candidate);
-    expect(selectTrendBaseline([{ ...candidate, snapshot_date: target + 61 }], target, 60)).toBeNull();
+    ], target, 60, null)).toEqual(candidate);
+    expect(selectTrendBaseline([{ ...candidate, snapshot_date: target + 61 }], target, 60, null)).toBeNull();
+  });
+
+  it.each([
+    ["6.95", "6.92", false],
+    ["6.95", "6.94", true],
+    ["6.92", "6.91", false],
+    [null, null, true],
+    [null, "3.2", true],
+    ["6.95", null, false],
+  ] as const)("compares TVL epochs for current=%s history=%s", (current, historical, compatible) => {
+    const row = { stablecoin_id: "usdt-tether", total_tvl_usd: 100, snapshot_date: 1000,
+      coverage_class: "primary", coverage_confidence: 0.9, methodology_version: historical };
+    expect(selectTrendBaseline([row], 1000, 60, current)).toBe(compatible ? row : null);
+  });
+
+  it("skips a nearer cross-epoch row without changing the nearest-date policy", () => {
+    const row = { stablecoin_id: "usdt-tether", total_tvl_usd: 100, snapshot_date: 1000,
+      coverage_class: "primary", coverage_confidence: 0.9, methodology_version: "6.92" };
+    const compatible = { ...row, snapshot_date: 990, methodology_version: "6.94" };
+    expect(selectTrendBaseline([row, compatible], 1000, 60, "6.95")).toBe(compatible);
+  });
+
+  it("never interprets omitted current or historical version projections as explicit legacy NULL", () => {
+    const unprojected = { stablecoin_id: "usdt-tether", total_tvl_usd: 100, snapshot_date: 1000,
+      coverage_class: "primary", coverage_confidence: 0.9 };
+    // @ts-expect-error A stored legacy row must explicitly project methodology_version: null.
+    expect(selectTrendBaseline([unprojected], 1000, 60, null)).toBeNull();
+    // @ts-expect-error A comparator identity is mandatory, even for legacy rows.
+    expect(selectTrendBaseline([{ ...unprojected, methodology_version: null }], 1000, 60)).toBeNull();
   });
 });
 

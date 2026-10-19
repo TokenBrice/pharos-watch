@@ -12,15 +12,15 @@ export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.7";
 export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = methodologyLabel(CHAIN_HEALTH_METHODOLOGY_VERSION);
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = "/methodology/chain-health-changelog/";
 
-export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.34";
+export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.35";
 export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = methodologyLabel(DEPEG_DEWS_METHODOLOGY_VERSION);
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-changelog/";
 
-export const DDR_METHODOLOGY_VERSION = "4.7";
+export const DDR_METHODOLOGY_VERSION = "4.8";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 
-export const LIQUIDITY_METHODOLOGY_VERSION = "6.95";
+export const LIQUIDITY_METHODOLOGY_VERSION = "6.96";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 

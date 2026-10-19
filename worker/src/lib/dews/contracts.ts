@@ -36,6 +36,7 @@ export interface DexLiquidityRow {
   liquidity_score: number | null;
   total_tvl_usd: number | null;
   updated_at: number | null;
+  methodology_version: string | null;
 }
 
 export interface DexLiquidityDependencyDiagnostics {

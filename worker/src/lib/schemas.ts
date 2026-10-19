@@ -230,29 +230,12 @@ export const DexLiquidityCronMetadataSchema = z.object({
       measuredBalanceTvlBySourceFamily: z.record(z.string(), z.number()).optional(),
       priceObservationCoinsBySourceFamily: z.record(z.string(), z.number()).optional(),
       sourceDegradedFamilies: z.array(z.string()).optional(),
+      globalProtocolOverCapUsd: z.number().optional(),
       protocolCapReductions: z
         .object({
           cappedPoolCount: z.number().optional(),
           cappedProtocols: z.number().optional(),
           reducedTvlUsd: z.number().optional(),
-          topProtocols: z
-            .array(
-              z.object({
-                protocol: z.string(),
-                preCapTvlUsd: z.number(),
-                postCapTvlUsd: z.number(),
-                reducedTvlUsd: z.number(),
-              }),
-            )
-            .optional(),
-          topStablecoins: z
-            .array(
-              z.object({
-                stablecoinId: z.string(),
-                reducedTvlUsd: z.number(),
-              }),
-            )
-            .optional(),
         })
         .optional(),
       qualityDriftFlags: z.array(z.string()).optional(),
