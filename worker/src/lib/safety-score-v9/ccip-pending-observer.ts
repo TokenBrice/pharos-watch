@@ -27,6 +27,8 @@ const WORD = /^0x[0-9a-f]{64}$/;
 const HEX = /^0x[0-9a-f]*$/;
 const PAGE_BLOCKS = 2000;
 const PAGES_PER_ATTEMPT = 8;
+// Commit dense log pages after one existing header-authentication batch.
+const LOG_BLOCKS_PER_COMMIT = 32;
 const MAX_CHECKPOINT_BYTES = 128 * 1024;
 // CCIP permits 30/32 KiB application data before ABI overhead: https://docs.chain.link/ccip/evm/service-limits
 const MAX_LOG_DATA_LENGTH = 2 + 2 * 64 * 1024;
@@ -532,12 +534,10 @@ export async function observeCcipPending(input: {
       // Size for the first capable provider, not the widest fallback. Never skip
       // an unsupported prefix or treat capability refusal as a completed page.
       const pageBlocks = Math.min(narrowedSpans.get(chain) ?? Infinity, declaredSpan ?? PAGE_BLOCKS);
-      const end = Math.min(pin.number, from + pageBlocks - 1);
-      const scans = backlog.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= end);
+      let end = Math.min(pin.number, from + pageBlocks - 1);
+      let scans = backlog.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= end);
       const addresses = [...new Set(scans.map(scan => scan.sent ? scan.lane.onRampAddress : scan.lane.offRampAddress))];
       const topics = [...new Set(scans.map(scan => scan.topic))];
-      const endHeader = await fetchEvmBlockHeader(chain, end, { ...options, observedHeadBlock });
-      if (!endHeader) fail("history-unavailable");
       const result = await fetchEvmRpcBatch(chain, [{ method: "eth_getLogs", params: [{ address: addresses, topics: [topics],
         fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }], { ...options, observedHeadBlock });
       const raw = result?.[0];
@@ -550,7 +550,8 @@ export async function observeCcipPending(input: {
         continue;
       }
       if (!Array.isArray(raw) || raw.length > 2048) fail("history-capacity");
-      const logs = raw.map(log => asLog(log, true)), blockHashes = new Map<string, string>();
+      let logs = raw.map(log => asLog(log, true));
+      const blockHashes = new Map<string, string>();
       let previousPosition = -1;
       for (const log of logs) {
         const height = Number(BigInt(log.blockNumber)), index = Number(BigInt(log.logIndex)), position = height * 1000000 + index;
@@ -563,7 +564,21 @@ export async function observeCcipPending(input: {
         if (previous !== undefined && previous !== log.blockHash) fail("event-anchor-mismatch");
         blockHashes.set(log.blockNumber, log.blockHash);
       }
+      // A bounded RPC range can still contain hundreds of event blocks. Prove
+      // and commit a complete block-boundary prefix before the child expires,
+      // rather than re-authenticating the same uncommitted page every run.
+      // The suffix is requested again from the saved cursor, never discarded
+      // or counted as complete. Keep every log in the last included block.
       const blocks = [...blockHashes];
+      if (blocks.length > LOG_BLOCKS_PER_COMMIT) {
+        end = Number(BigInt(blocks[LOG_BLOCKS_PER_COMMIT]![0])) - 1;
+        blocks.length = LOG_BLOCKS_PER_COMMIT;
+        logs = logs.filter(log => Number(BigInt(log.blockNumber)) <= end);
+        scans = scans.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= end);
+        narrowedSpans.set(chain, end - from + 1);
+      }
+      const endHeader = await fetchEvmBlockHeader(chain, end, { ...options, observedHeadBlock });
+      if (!endHeader) fail("history-unavailable");
       for (let offset = 0; offset < blocks.length; offset += 32) {
         const chunk = blocks.slice(offset, offset + 32);
         const headers = await rpc(chain, chunk.map(([number]) => ({ method: "eth_getBlockByNumber", params: [number, false] })));
