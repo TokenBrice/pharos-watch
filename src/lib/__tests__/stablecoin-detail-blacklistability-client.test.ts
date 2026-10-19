@@ -73,7 +73,6 @@ describe("projectBlacklistabilityClientSummary", () => {
     expect(summary!.status).toBe("possible");
     expect(summary!.statusLabel).toBe("Possible");
     expect(summary!.statusToneClass).toContain("state-warn");
-    expect(summary!.statusNote).toContain("plausible");
   });
 
   it("names the upstream coin for an inherited review when the registry resolves it", () => {

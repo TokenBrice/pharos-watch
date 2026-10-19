@@ -111,10 +111,12 @@ describe("FreezeSeizureModule", () => {
     expect(section?.textContent).toContain(SUMMARY.statusLabel);
   });
 
-  it("draws a possible freeze path as not established, never as not freezable", () => {
-    renderModule({ summary: { ...SUMMARY, status: "possible", statusLabel: "Possible" } });
+  it("projects the Possible classification into the visible and spoken rail", () => {
+    const summary = { ...SUMMARY, status: "possible" as const, statusLabel: "Possible" };
+    renderModule({ summary });
     const drawn = rail();
-    expect(drawn.textContent).toContain("Not established");
+    expect(drawn.textContent).toContain(summary.statusLabel);
+    expect(drawn.getAttribute("aria-label")).toContain(summary.statusLabel.toLowerCase());
     expect(drawn.textContent).not.toMatch(/freezable/i);
     expect(drawn.getAttribute("aria-label")).not.toMatch(/freezable/i);
   });

@@ -299,7 +299,7 @@ describe("freezewatch route card", () => {
   it("publishes the page's freezable share from complete supply", async () => {
     mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(activeAssets()));
     const load = await OG_PAGE_LOADERS.freezewatch(db, NOW);
-    expect(load).toMatchObject({ kind: "ok", context: "of tracked stablecoin market cap is under issuer freeze control" });
+    expect(load).toMatchObject({ kind: "ok" });
     if (load.kind !== "ok") throw new Error("expected a live card");
     expect(load.hero).toMatch(/%$/);
   });

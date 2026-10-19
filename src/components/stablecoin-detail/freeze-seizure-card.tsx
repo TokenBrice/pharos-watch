@@ -104,10 +104,9 @@ function Figure({ children }: { children: ReactNode }) {
 }
 
 /**
- * The power stations. `possible` is drawn as a dashed "Not established" chip:
- * a plausible path is neither a freeze power nor its absence. `inherited`
- * draws the upstream asset as its own station feeding the power, when the
- * parent is named.
+ * The power stations. `possible` names confirmed direct exposure without
+ * claiming a current holder-targeted freeze power. `inherited` draws the
+ * upstream asset as its own station feeding the power, when the parent is named.
  */
 function buildPowerStations(summary: BlacklistabilityClientSummary): Station[] {
   switch (summary.status) {
@@ -129,8 +128,8 @@ function buildPowerStations(summary: BlacklistabilityClientSummary): Station[] {
       return [{
         key: "power",
         label: "Power",
-        chips: [{ key: "power", content: "Not established", icon: ShieldQuestion, tone: "unknown" }],
-        spoken: "Freeze power: not established",
+        chips: [{ key: "power", content: summary.statusLabel, icon: ShieldQuestion, tone: "unknown" }],
+        spoken: `Freeze exposure: ${summary.statusLabel.toLowerCase()}`,
       }];
     case "inherited": {
       const power: Station = {
