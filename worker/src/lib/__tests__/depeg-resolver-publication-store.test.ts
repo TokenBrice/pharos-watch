@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { DDR_HASH_DOMAINS, stableJsonHashV1 } from "@shared/lib/depeg-resolver/hash";
 import {
   loadFirstPublicationMembership,
@@ -60,6 +60,7 @@ describe("DDR publication payload storage", () => {
     ).toEqual({ payload_snapshot_token: "ddrpub:test:1" });
     expect(second.basePayloadHash).not.toBe(first.basePayloadHash);
 
+    const prepare = vi.spyOn(db, "prepare");
     const latest = await loadLatestPublicationManifest(db);
     expect(latest).toMatchObject({ snapshotToken: "ddrpub:test:2", snapshotSequence: 2, basePayloadHash: second.basePayloadHash });
     const payload = JSON.parse(latest!.basePayloadJson) as {
@@ -69,6 +70,16 @@ describe("DDR publication payload storage", () => {
     expect(payload.methodology.asOf).toBe(200900);
     expect(payload._meta.lineage.trainingWindow).toEqual({ start: 100900, end: 200900 });
     expect(stableJsonHashV1(DDR_HASH_DOMAINS.publicationManifest, payload)).toBe(latest!.basePayloadHash);
+    for (const [table, index] of [
+      ["depeg_resolver_publication_snapshots_v2", "idx_ddr_publication_snapshots_v2_published"],
+      ["depeg_resolver_publication_snapshot_refs", "idx_ddr_publication_snapshot_refs_published"],
+    ] as const) {
+      const query = prepare.mock.calls.find(([sql]) => sql.includes(`FROM ${table} s`) && sql.includes("ORDER BY"))?.[0];
+      expect(query).toBeDefined();
+      const plan = db.sqlite.prepare(`EXPLAIN QUERY PLAN ${query}`).all() as Array<{ detail: string }>;
+      expect(plan.some((row) => row.detail.includes(index))).toBe(true);
+      expect(plan.some((row) => row.detail.includes("USE TEMP B-TREE"))).toBe(false);
+    }
   }));
 
   it("stores a new payload when the published content changed", async () => withSqliteD1(async (db) => {
