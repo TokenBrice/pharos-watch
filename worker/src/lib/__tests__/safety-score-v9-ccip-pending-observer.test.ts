@@ -547,6 +547,51 @@ describe("authenticated CCIP pending quantities", () => {
     expect(resumed.status).toBe("accepted");
     expect(logRanges.filter(range => range.chain === "ethereum").every(range => range.from >= 16100)).toBe(true);
   });
+  it("commits a dense page after one header batch and resumes every deferred log", async () => {
+    pinNumber = 199;
+    sent = Array.from({ length: 200 }, (_, i) => send(i + 1, 10n, 100 + Math.floor(i / 2)));
+    expectedNext = 201;
+    const controller = new AbortController(), onDiagnostic = vi.fn();
+    vi.mocked(setCache).mockImplementation(async (_db, _key, value) => {
+      const checkpoint: CcipPendingCheckpoint = JSON.parse(value);
+      if (checkpoint.lanes[0]!.sent.nextBlock > 100) controller.abort(new Error("child-deadline"));
+    });
+    await expect(observeCcipPending({
+      ...input(), db: {} as D1Database, signal: controller.signal, onDiagnostic,
+    })).rejects.toThrow("child-deadline");
+    const writes = vi.mocked(setCache).mock.calls;
+    const saved: CcipPendingCheckpoint = JSON.parse(writes[writes.length - 1]![2]);
+    // Both logs in the last authenticated block survive; the 33rd block does not.
+    expect(saved.lanes[0]!.sent.nextBlock).toBe(132);
+    expect(saved.lanes[0]!.lastSequence).toBe("64");
+    expect(saved.lanes[0]!.messages).toHaveLength(64);
+    const authenticatedBlocks = vi.mocked(fetchEvmRpcBatch).mock.calls.flatMap(([, requests]) =>
+      requests.filter(request => request.method === "eth_getBlockByNumber"));
+    expect(authenticatedBlocks).toHaveLength(32);
+    expect(onDiagnostic.mock.calls.some(([value]) =>
+      value.persisted && value.authenticatedCursorAdvanced && value.afterCursor === "132")).toBe(true);
+    logRanges = [];
+    const resumed = await observeCcipPending(input(source(), saved));
+    expect(resumed).toMatchObject({ status: "accepted", amount: "2000" });
+    if (resumed.status !== "accepted") throw new Error(resumed.reason);
+    expect(resumed.checkpoint.lanes[0]!.lastSequence).toBe("200");
+    expect(resumed.checkpoint.lanes[0]!.sent.nextBlock).toBe(200);
+    expect(logRanges.filter(range => range.chain === "ethereum").every(range => range.from >= 132)).toBe(true);
+  });
+  it("keeps dense history incomplete within eight pages and rejects a forged deferred block", async () => {
+    pinNumber = 399;
+    sent = Array.from({ length: 300 }, (_, i) => send(i + 1, 10n, 100 + i));
+    expectedNext = 301;
+    const first = await observeCcipPending(input());
+    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    expect(first).not.toHaveProperty("amount");
+    if (first.status !== "rejected" || !first.checkpoint) throw new Error("Missing dense-page checkpoint");
+    expect(first.checkpoint.lanes[0]!.sent.nextBlock).toBe(356);
+    expect(logRanges).toHaveLength(8);
+    sent[256] = { ...sent[256]!, blockHash: word(9999) };
+    expect(await observeCcipPending(input(source(), first.checkpoint)))
+      .toMatchObject({ status: "rejected", reason: "event-anchor-mismatch" });
+  });
   it("re-authenticates runtime at a new attempt's pin instead of trusting the checkpoint", async () => {
     const first = await observeCcipPending(input());
     if (first.status !== "accepted") throw new Error(first.reason);
