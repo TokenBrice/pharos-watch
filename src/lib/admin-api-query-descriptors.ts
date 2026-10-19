@@ -138,7 +138,7 @@ export const ADMIN_API_QUERY_DESCRIPTORS = {
         REQUEST_SOURCE_DEFAULTS.routeLimit,
         REQUEST_SOURCE_DEFAULTS.apiKeyLimit,
       ] as const,
-      path: API_PATHS.requestSourceStats({ ...REQUEST_SOURCE_DEFAULTS }),
+      path: API_PATHS.requestSourceStats({ measurementVersion: REQUEST_SOURCE_MEASUREMENT_VERSION, ...REQUEST_SOURCE_DEFAULTS }),
     },
     ApiRequestAttributionResponseSchema,
   ),
