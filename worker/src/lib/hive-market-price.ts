@@ -26,7 +26,7 @@ function object(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 function positive(value: unknown): number {
-  if (typeof value !== "string" || !/^\d+(?:\.\d+)?$/.test(value)) reject("invalid_response");
+  if (typeof value !== "string" || !/^\d+(?:\.\d+|)$/.test(value)) reject("invalid_response");
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) reject("invalid_response");
   return n;

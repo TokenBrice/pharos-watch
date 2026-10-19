@@ -85,7 +85,7 @@ describe("Hive native market admission", () => {
     expect(result.diagnostic.askDepthComplete).toBe(false);
     expect(result.diagnostic.rejectionReason).toBe(amount === 1000 ? null : "depth_unproven");
   });
-  it.each(["NaN", "Infinity", "-1", "5e-2", "", " 0.0499"])("rejects non-decimal price %j", async (price) => {
+  it.each(["NaN", "Infinity", "-1", "5e-2", "", " 0.0499", ".0499", "0.", "0.0499.0"])("rejects non-decimal price %j", async (price) => {
     const data = sample(); data.book.bids[0].real_price = price;
     mockSample(data);
     expect((await fetchHiveNativeHbdPrice(parent())).diagnostic.rejectionReason).toBe("invalid_response");
