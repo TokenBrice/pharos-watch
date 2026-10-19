@@ -272,7 +272,7 @@ export async function observeCcipPending(input: {
       return header;
     };
     const authenticatedOrigins = new Set<string>();
-    const authenticateOrigin = async (lane: Lane) => {
+    const authenticateOrigin = async (lane: Lane, priorLane: CcipPendingCheckpoint["lanes"][number] | undefined) => {
       const witness = lane.sourceStartWitness;
       if (!witness) {
         if (lane.source.chainId === "monad") fail("history-origin-witness-unavailable");
@@ -285,6 +285,14 @@ export async function observeCcipPending(input: {
       const origin = await identityHeader(witness.chainId, witness.blockNumber);
       if (!origin) fail("history-unavailable");
       if (origin.hash !== witness.blockHash || origin.timestamp !== witness.blockTimestamp) fail("history-origin-reorg");
+      // A schema-3, exact-source checkpoint is written only after authenticating
+      // this creation transaction and receipt. Their immutable facts survive
+      // provider retention; the canonical origin and current identity do not.
+      if (priorLane) {
+        if (priorLane.initialSequence !== witness.initialSequence) fail("history-origin-sequence-mismatch");
+        authenticatedOrigins.add(key);
+        return;
+      }
       const [rawTransaction, rawReceipt] = await rpc(witness.chainId, [
         { method: "eth_getTransactionByHash", params: [witness.transactionHash] },
         { method: "eth_getTransactionReceipt", params: [witness.transactionHash] },
@@ -464,7 +472,7 @@ export async function observeCcipPending(input: {
         if (row.chainSelector !== BigInt(lane.destination.chainSelector) || row.sourceChainSelector !== BigInt(lane.source.chainSelector) || row.onRamp.toLowerCase() !== lane.onRampAddress) fail("lane-identity-mismatch");
       }
       const nextCall = nextSequenceCall(lane);
-      await authenticateOrigin(lane);
+      await authenticateOrigin(lane, checkpoint.lanes[i]);
       const initializing = !checkpoint.lanes[i];
       if (initializing) {
         const previous = await identityHeader(lane.source.chainId, lane.sourceStartBlock - 1);

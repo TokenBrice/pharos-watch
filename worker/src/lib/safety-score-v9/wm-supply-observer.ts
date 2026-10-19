@@ -96,6 +96,7 @@ async function observeWmEvmDeployment(
   chainRpcs: Map<string, ChainRpcConfig>,
   dependencies: WmObserverDependencies,
   signal?: AbortSignal,
+  observationWindow?: { earliestTimestamp: number; latestTimestamp: number },
 ): Promise<ReviewedDeploymentObservationResult> {
   return observeReviewedEvmDeployment({
     routeId,
@@ -105,6 +106,7 @@ async function observeWmEvmDeployment(
     chainRpcs,
     dependencies,
     signal,
+    observationWindow,
     identity: (deploymentRouteId) => {
       const identity = expectedWmDeploymentIdentity(deploymentRouteId);
       return identity?.runtime === "evm" ? identity : undefined;
@@ -185,19 +187,22 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...dependencyOverrides };
   const evmObservations = new Map<string, ReviewedDeploymentObservationResult>();
   const solanaObservations = new Map<string, ReviewedDeploymentSupplyObservation | null>();
+  let repairWindow: { earliestTimestamp: number; latestTimestamp: number } | undefined;
   const observationInput = {
     assetId: "wm-m0",
     aggregateSupplyUsd: input.aggregateSupplyUsd,
     registryFingerprint: input.registryFingerprint,
     scoringClockSec: input.scoringClockSec,
     signal: input.signal,
+    // Capture non-rewindable finalized accounts before the serial EVM reads.
+    alignToSolana: true,
     identityRuntime: (routeId) => expectedWmDeploymentIdentity(routeId)?.runtime ?? null,
     observeEvm: async (route) => {
       const cached = evmObservations.get(route.routeId);
       if (cached) return cached;
       const result = await observeWmEvmDeployment(
         route.routeId, route.chainId, route.contractAddress, input.scoringClockSec,
-        input.chainRpcs, dependencies, input.signal,
+        input.chainRpcs, dependencies, input.signal, repairWindow,
       );
       evmObservations.set(route.routeId, result);
       return result;
@@ -223,28 +228,33 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
     captureEndedAtSec: latest, observedAtSec: latest, deployments: observations,
   });
   if (issue?.code !== "cross-chain-skew") return attempt;
-  const minimumTime = latest - V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
-  // Finalized account state cannot be fetched historically. Only a lagging EVM
-  // safe head can mature into this already-captured cross-chain envelope.
-  if ([...solanaObservations.values()].some(row => row && row.blockTimeSec < minimumTime)) return attempt;
-  const laggingRouteIds = [...evmObservations].filter(([, result]) =>
-    result.status === "accepted" && result.observation.blockTimeSec < minimumTime,
-  ).map(([routeId]) => routeId);
-  const requiredWaitMs = (minimumTime - earliest) * 1_000;
+  const skew = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
+  const solanaTimes = [...solanaObservations.values()].flatMap(row => row ? [row.blockTimeSec] : []);
+  // Solana cannot rewind, but newer EVM peers can. Do not force the slowest
+  // safe head to catch up to the newest peer when an older coherent window fits.
+  const minimumTime = solanaTimes.length > 0 ? Math.max(...solanaTimes) - skew : earliest;
+  const earliestTimestamp = Math.max(earliest, minimumTime);
+  repairWindow = { earliestTimestamp, latestTimestamp: Math.min(earliestTimestamp + skew, input.scoringClockSec) };
+  if (solanaTimes.some(time => time < repairWindow!.earliestTimestamp || time > repairWindow!.latestTimestamp)) return attempt;
+  const requiredWaitMs = Math.max(0, minimumTime - earliest) * 1_000;
   throwIfAborted(input.signal);
-  if (laggingRouteIds.length === 0) return attempt;
-  const waitMs = Math.min(requiredWaitMs + WM_SKEW_REPAIR_MARGIN_MS, WM_SKEW_REPAIR_MAX_WAIT_MS);
-  const window = input.executionWindow;
-  if (requiredWaitMs > WM_SKEW_REPAIR_MAX_WAIT_MS || !window ||
-    !Number.isFinite(window.deadlineMs) || !Number.isFinite(window.minimumRemainingMs) ||
-    window.minimumRemainingMs < 0 || window.deadlineMs - Date.now() - waitMs < window.minimumRemainingMs ||
-    (input.assetDeadlineMs !== undefined && (!Number.isFinite(input.assetDeadlineMs) ||
-      input.assetDeadlineMs - Date.now() - waitMs < WM_SKEW_REPAIR_RPC_RESERVE_MS))) {
-    return { status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
-      failedRouteId: attempt.failedRouteId };
+  if (requiredWaitMs > 0) {
+    const waitMs = Math.min(requiredWaitMs + WM_SKEW_REPAIR_MARGIN_MS, WM_SKEW_REPAIR_MAX_WAIT_MS);
+    const window = input.executionWindow;
+    if (requiredWaitMs > WM_SKEW_REPAIR_MAX_WAIT_MS || !window ||
+      !Number.isFinite(window.deadlineMs) || !Number.isFinite(window.minimumRemainingMs) ||
+      window.minimumRemainingMs < 0 || window.deadlineMs - Date.now() - waitMs < window.minimumRemainingMs ||
+      (input.assetDeadlineMs !== undefined && (!Number.isFinite(input.assetDeadlineMs) ||
+        input.assetDeadlineMs - Date.now() - waitMs < WM_SKEW_REPAIR_RPC_RESERVE_MS))) {
+      return { status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+        failedRouteId: attempt.failedRouteId };
+    }
+    await sleepWithSignal(waitMs, input.signal);
   }
-  await sleepWithSignal(waitMs, input.signal);
-  for (const routeId of laggingRouteIds) evmObservations.delete(routeId);
+  for (const [routeId, result] of evmObservations) {
+    if (result.status === "accepted" && (result.observation.blockTimeSec < repairWindow.earliestTimestamp ||
+      result.observation.blockTimeSec > repairWindow.latestTimestamp)) evmObservations.delete(routeId);
+  }
   // Exactly one repair pass. Every reread revalidates the original inventory,
   // hash-pinned state and identity; unchanged siblings keep their true clocks.
   return observeReviewedDeploymentUnitPartitionAttempt(observationInput);

@@ -281,6 +281,47 @@ describe("authenticated CCIP pending quantities", () => {
       proof: { lanes: [{ initialSequence: "1", historyOrigin: { method: "reviewed-creation", blockNumber: 100 } }] } });
     expect(logRanges.some(range => range.chain === "ethereum" && range.from === 100)).toBe(true);
   });
+  it.each(["1.6", "2.0.0"] as const)("reuses authenticated %s creation facts after transaction retention expires", async version => {
+    const read = witnessedSource(version);
+    const first = await observeCcipPending(input(read));
+    if (first.status !== "accepted") throw new Error("fixture");
+    const original = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+    vi.mocked(fetchEvmRpcBatch).mockClear().mockImplementation(async (chain, requests, options) =>
+      requests.some(request => request.method === "eth_getTransactionByHash" ||
+        (request.method === "eth_getTransactionReceipt" && request.params[0] === word(9000)))
+        ? null : original(chain, requests, options));
+    vi.mocked(fetchEvmBlockHeader).mockClear();
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({ status: "accepted" });
+    expect(fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", 100, expect.anything());
+    expect(vi.mocked(fetchEvmRpcBatch).mock.calls.flatMap(([, requests]) => requests)
+      .some(request => request.method === "eth_getTransactionByHash")).toBe(false);
+    // A missing or incompatible prefix must still perform the original proof.
+    expect(await observeCcipPending(input(read))).toMatchObject({ status: "rejected", reason: "rpc-unavailable" });
+    first.checkpoint.schemaVersion = 2;
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({ status: "rejected", reason: "rpc-unavailable" });
+  });
+  it.each(["unavailable", "reorg"] as const)("rechecks the canonical creation header on checkpoint reuse: %s", async scenario => {
+    const read = witnessedSource();
+    const first = await observeCcipPending(input(read));
+    if (first.status !== "accepted") throw new Error("fixture");
+    const original = vi.mocked(fetchEvmBlockHeader).getMockImplementation()!;
+    vi.mocked(fetchEvmBlockHeader).mockImplementation(async (chain, number, options) =>
+      chain === "ethereum" && number === 100
+        ? scenario === "unavailable" ? null : { number, hash: word(999), timestamp: 1000 }
+        : original(chain, number, options));
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({
+      status: "rejected", reason: scenario === "unavailable" ? "history-unavailable" : "history-origin-reorg",
+    });
+  });
+  it("rejects an altered reviewed witness rather than reusing another source's authenticated origin", async () => {
+    const read = witnessedSource();
+    const first = await observeCcipPending(input(read));
+    if (first.status !== "accepted") throw new Error("fixture");
+    const witness = read.lanes[0]!.sourceStartWitness!;
+    if (witness.kind !== "reviewed-creation") throw new Error("fixture");
+    witness.initcodeSha256 = "0".repeat(64);
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({ status: "rejected", reason: "checkpoint-invalid" });
+  });
   it.each(["initcode", "nonce", "deployer", "blockHash", "runtime", "initialSequence"] as const)("rejects altered origin %s", async field => {
     const read = witnessedSource(), witness = read.lanes[0]!.sourceStartWitness!;
     if (witness.kind !== "reviewed-creation") throw new Error("fixture");

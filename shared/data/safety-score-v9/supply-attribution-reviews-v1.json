@@ -2780,7 +2780,8 @@
           "routeId": "ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 145
+            "safeBlockLag": 145,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "xgld-unitas-token",
           "conversionSourceId": null
