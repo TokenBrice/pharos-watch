@@ -124,7 +124,8 @@ function header(value: unknown, expectedNumber?: number): Header {
     && typeof h.timestamp === "string" && /^0x[0-9a-f]+$/i.test(h.timestamp) && Number.isSafeInteger(Number(h.timestamp)),
   "Malformed RPC block header");
   assert(expectedNumber == null || Number(h.number) === expectedNumber, "RPC returned the wrong block height");
-  return h as Header;
+  // RPC blocks also carry large transaction arrays; only these proven header fields belong in repeated audit observations.
+  return { number: h.number, hash: h.hash, timestamp: h.timestamp };
 }
 
 /** Same complete-range splitter and current topic registry as normal EVM sync; no explorer row cap. */
@@ -176,7 +177,9 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
   const config = requireConfig(options.configKey);
   assert(Number.isSafeInteger(options.fromBlock) && options.fromBlock >= 0 && Number.isSafeInteger(options.toBlock)
     && options.toBlock >= options.fromBlock && Number.isSafeInteger(options.chunkBlocks) && options.chunkBlocks > 0, "Invalid replay block window");
-  const d1 = dependencies.d1 ?? createRemoteD1Client(options.database);
+  const d1 = dependencies.d1 ?? createRemoteD1Client(options.database, {
+    failedSqlDirectory: resolve(WORKER_CWD, "../agents/blacklist-history-replay-failures"),
+  });
   const cursor = loadCursor(d1, config);
   const cursorBefore = cursor.cursor_value ?? cursor.last_block;
   assert(options.toBlock <= cursorBefore, `Refusing window beyond current cursor ${cursorBefore}; normal sync owns the frontier`);

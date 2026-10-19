@@ -15,15 +15,16 @@ const WORKER_CWD = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export function createWorkerD1Client(
   database: string,
   target: D1Target = "remote",
-  options: { cwd?: string } = {},
+  options: { cwd?: string; failedSqlDirectory?: string } = {},
 ): D1Client {
   return createD1Client(database, {
     cwd: options.cwd ?? WORKER_CWD,
     maxBuffer: 64 * 1024 * 1024,
     target,
+    failedSqlDirectory: options.failedSqlDirectory,
   });
 }
 
-export function createRemoteD1Client(database: string): RemoteD1Client {
-  return createWorkerD1Client(database, "remote");
+export function createRemoteD1Client(database: string, options: { failedSqlDirectory?: string } = {}): RemoteD1Client {
+  return createWorkerD1Client(database, "remote", options);
 }

@@ -76,6 +76,10 @@ The restore point is recovery evidence, **not** a global D1 concurrency token. O
 
 The durable audit details report `status=applied`, the SQL-counted `insertedEventCount`, zero remaining `missingEventCount`, and the original `plannedMissingEventCount`; these are finalized inside the same transaction, before the CLI's separate verified readback. Replay retains EURC mirror-zero events as `circle_mirror_zero_balance` audit rows and excludes them from balance capture, matching ingestion. A latest destroy without a proven amount skips the balance upsert entirely, preserving any resolved snapshot and its status.
 
+Block evidence retains only validated block number, hash and timestamp, not whole RPC block responses or transaction arrays. Repeating those arrays in historical/current balance observations can push the audit `INSERT` past D1's [100,000-byte per-statement limit](https://developers.cloudflare.com/d1/platform/limits/), even when the event count is small.
+
+On an import failure, replay includes Wrangler's captured stdout/stderr (including JSON error details) in its error and retains its credential-free SQL at `agents/blacklist-history-replay-failures/<run>/statements.sql` with owner-only file permissions. Keep this file and the printed restore point for diagnosis; successful imports remove their SQL directory, and dry-runs create none. Inspect the exact error and read back the audit/run identity before retrying. Do not bypass the scoped guard by applying the retained file directly to production; rerun the guarded CLI after resolving the reported cause.
+
 
 ### Frozen Night Watch reconciliation
 

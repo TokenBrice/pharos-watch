@@ -134,6 +134,33 @@ describe("configured blacklist history replay", () => {
     expect(await fixture.execute()).toMatchObject({ status: "unchanged", missingEventCount: 0 });
     expect(fixture.imports).toHaveLength(writes);
   });
+  it("projects RPC block responses so repeated header evidence stays below D1's statement limit", async () => {
+    const fixture = setup();
+    fixture.dependencies.rpc = async (method, params) => {
+      if (method === "eth_getBlockByNumber") return {
+        number: params[0] === "latest" ? "0x12c" : params[0], hash: HASH, timestamp: `0x${NOW.toString(16)}`,
+        transactions: Array.from({ length: 2_000 }, () => HASH),
+        unusedProviderField: "not-header-evidence",
+      };
+      return fixture.rpc(method, params);
+    };
+    const executeStatements = fixture.d1.executeStatements;
+    fixture.d1.executeStatements = (statements, prefix) => {
+      const auditInsert = statements[0]!.split(";\n")[0]!;
+      expect(Buffer.byteLength(auditInsert)).toBeLessThan(100_000);
+      executeStatements(statements, prefix);
+    };
+    await fixture.execute();
+    const audit = fixture.sqlite.prepare("SELECT details_json FROM admin_action_audit").get() as { details_json: string };
+    const evidence = JSON.parse(audit.details_json).evidence;
+    expect(evidence.currentHead).toEqual({ number: "0x12c", hash: HASH, timestamp: `0x${NOW.toString(16)}` });
+    expect(evidence.observations).toHaveLength(2);
+    for (const observation of evidence.observations) {
+      expect(Object.keys(observation.block).sort()).toEqual(["hash", "number", "timestamp"]);
+    }
+    expect(audit.details_json).not.toContain("transactions");
+    expect(audit.details_json).not.toContain("unusedProviderField");
+  });
   it("keeps historical amounts null when pinned archive reads fail; never substitutes current balances", async () => {
     const fixture = setup();
     fixture.dependencies.rpc = async (method, params) => {
