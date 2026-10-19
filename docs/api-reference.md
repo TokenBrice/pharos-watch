@@ -557,8 +557,8 @@ Normalized issuer freeze, unfreeze, blacklist, and destruction events with optio
 
 ```json
 {
-  "currentVersion": "4.4",
-  "currentVersionLabel": "v4.4"
+  "currentVersion": "4.5",
+  "currentVersionLabel": "v4.5"
 }
 ```
 

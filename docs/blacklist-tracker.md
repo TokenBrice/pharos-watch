@@ -6,7 +6,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.4`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.5`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -74,7 +74,7 @@ upstream exposure.
 4. **Upstream: no direct Yes/Possible, and a qualifying parent or reserve basis.** A holder claim
    inherits a declared parent (`variantOf` or `mintAuthority.inheritedFrom`) whose reviewed status is
    Yes, Possible or Upstream. Full CEX custody of reserves also qualifies. Otherwise, **strictly >50%**
-   of the measured reserve composition must terminate in issuer/custodian control under the test below.
+   of measured external backing must terminate in issuer/custodian control under the test below.
 5. **No: none of those tests establishes exposure.** Deposit/entry-only gates and caps, permanently
    abdicated setters, mint-only authority, and increase-only rebases are not holder-facing controls.
    While a primary stablecoin transfers freely, its redemption rails (PSMs, issuer redemption desks,
@@ -93,8 +93,8 @@ not pro-rated by the collateral token's own exposed fraction. DAO/protocol-gover
 (including DAO-only upgrades/pauses and LSTs such as stETH/wstETH or jitoSOL) does not count.
 For CDP/lending coins, weight each market's debt by the qualifying value fraction of its collateral;
 reserve-backed coins use published reserve composition. Split LP/basket rows by constituent value.
-Own-token/self legs remain in the denominator but never the numerator. Self legs are the coin itself
-and its own wrappers/savings shares; a different token from the same issuer counts at its own status.
+Exclude the coin and its own wrappers/savings shares from both numerator and denominator: they are
+not external backing. Different tokens from the same issuer count at their own status.
 State the denominator and qualifying percentage; give pro-rated or alternative-denominator
 sensitivities when they would change the >50% result, without substituting them for the primary metric.
 

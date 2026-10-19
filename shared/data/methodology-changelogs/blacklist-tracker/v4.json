@@ -1,5 +1,21 @@
 [
   {
+    "version": "4.5",
+    "title": "External-backing denominator for Upstream exposure",
+    "date": "2026-10-19",
+    "effectiveAt": 1792368000,
+    "summary": "Excludes the coin's own token and its own wrappers/savings shares from both sides of the strict >50% Upstream reserve test. Self legs are not external backing; the test now aligns with the reserve card's external-asset look-through.",
+    "impact": [
+      "After splitting LP/basket rows by constituent value, remove self legs from both the qualifying numerator and the denominator. Measure issuer/custodian exposure against the remaining external backing, rather than allowing own-token legs to dilute that exposure.",
+      "This replaces v4.4's denominator-only treatment of self legs. Reserve-card valuation already looks through crvUSD YieldBasis LPs to their external BTC backing; FreezeWatch now uses the same external-backing scope.",
+      "The threshold remains strictly greater than 50%. CDP/lending books remain debt-weighted; other reserve-backed tokens use published composition. Qualifying collateral counts categorically when its exposure terminates in issuer/custodian control; DAO-only controls remain excluded, custodied commodities count, different same-issuer tokens retain their own status, and unmeasurable reserves never establish Upstream.",
+      "Five active coins change from No to Upstream: crvUSD (crvusd-curve), DOLA (dola-inverse-finance), sDOLA (sdola-inverse-finance), reUSD (reusd-resupply) and sreUSD (sreusd-resupply). The changes include the newly qualifying external backing and its downstream parent/collateral claims.",
+      "Across 396 active coins, the buckets move from 212 Yes / 56 Upstream / 109 Possible / 19 No to 212 Yes / 61 Upstream / 109 Possible / 14 No. No direct Yes or Possible classification changes."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.4",
     "title": "Evidence-led FreezeWatch exposure decision procedure",
     "date": "2026-10-19",

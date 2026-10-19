@@ -26,10 +26,22 @@
       {
         "label": "Scope Hubble feed OraclePrices account",
         "url": "https://explorer.solana.com/address/3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"
+      },
+      {
+        "label": "Published Hubble SDK 8.0.5 Anchor account definitions",
+        "url": "https://unpkg.com/@hubbleprotocol/hubble-sdk@8.0.5/dist/borrowing.json"
+      },
+      {
+        "label": "Finalized Solana reserve-account observation",
+        "url": "https://explorer.solana.com/block/458825181"
+      },
+      {
+        "label": "Hubble USDC PSM reserve accounting account",
+        "url": "https://explorer.solana.com/address/7AvwRQhSKtUUbEcP4eqYZbbKWgYyygehAqEp68nnc747"
       }
     ],
-    "evidence": "Solana is the sole material deployment (100% in the 2026-10-19 census). At finalized Solana slot 458729831 (2026-10-19T06:14:56Z), USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX remains an 82-byte legacy Tokenkeg SPL mint with freezeAuthority=null and supply 1,128,212.239999 USDH. Immutable Tokenkeg requires holder/delegate authorization for transfers and burns and cannot restore a disabled mint freeze authority. Borrowing-program upgrade authority and the remaining mint authority are not controls over existing holder transfers. Hubble documents USDH as censorship-resistant; no declared parent exists. The reserveReview's pinned issuance-path reconciliation at slot 434386680 measured 1,069,376.821209 USDC deposited/minted by the PSM plus 62,876.204453 CDP-backed USDH, normalizing to 94.4468% and 5.5532% of the debt denominator. Hubble's own PSM documentation explicitly acknowledges that its USDC reserve can be frozen. Even excluding the entire CDP branch from the numerator, including all native/LST collateral and the USDH self-leg of kUSDH-USDC LP, the exposed debt share is at least 94.4468%, strictly above 50%. Thus there is no direct holder freeze control, but retain Upstream, not No. The majority measurement is the existing pinned reserve capture, not a claim that every reserve balance was remeasured in this review.",
-    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "evidence": "USDH remains Upstream through a measured external-debt exposure lower bound, without direct holder-freeze authority. Solana is the only material deployment (100% of the 2026-10-19 supply census). A fresh finalized getMultipleAccounts read at Solana slot 458825181 covers the USDH mint, USDC PSM reserve and all three configured borrowing-market accounts. The 82-byte legacy Tokenkeg mint USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX has freezeAuthority=null; immutable SPL Token transfers/burns require holder/delegate authorization and cannot restore a disabled freeze authority. Mint authority and Hubble program upgrades do not themselves restrict existing holder transfers. No parent is declared. Published Hubble SDK 8.0.5 Anchor definitions match the account discriminators: PsmReserve 7AvwRQhSKtUUbEcP4eqYZbbKWgYyygehAqEp68nnc747 has depositedStablecoin and mintedUsdh both 1,063,611.036431; this is program accounting, not an SPL token-account balance. BorrowingMarketState stablecoinBorrowed is 45,231.848379 USDH for YSp9bJpQom2HA7VThxYZX9pNwrcBH88NBcBNWs5yskR, 2.057245 for B6gckY3KmWR2u1gwruE55Hxoj5uqiTTtuXLbE6Bu7bZq and 19,161.927954 for the kUSDH-USDC market 2catbAPzCLX6YZA1axobPEYwbNo1XQaqhvWrZfR4Yxms. Thus full issuance-path debt is 1,128,006.870009 USDH. The PSM's USDC exposure alone supplies 1,063,611.036431 qualifying debt-equivalent; Hubble explicitly documents that its USDC reserve can be frozen. Under v4.5 any USDH self leg inside kUSDH-USDC collateral is excluded from both numerator and denominator. Its exact current constituent-value/debt-equivalent split is unmeasured, so no exact self-netted percentage is invented. The external denominator is bounded above by 1,128,006.870009 USDH; keeping every CDP branch out of the numerator proves at least 94.29118427% qualifying external exposure even on that larger denominator ceiling, strictly above 50%. Excluding the self portion can only strengthen this floor. The historical v4.4 slot-434386680 sensitivity was 1,069,376.821209 PSM USDC plus 62,876.204453 CDP-backed USDH, or 94.4468% qualifying on a self-inclusive issuance-path denominator. The current result is independently re-read accounting, not a renewal of those August collateral weights or a new whole-vault reserve attestation.",
+    "reviewer": "FreezeWatch v4.5 self-leg review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
