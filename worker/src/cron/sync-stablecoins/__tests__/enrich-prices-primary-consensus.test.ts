@@ -19,6 +19,20 @@ function createStats(): PriceValidationStats {
 }
 
 describe("buildPrimaryConsensusResults", () => {
+  it("keeps the valid native candidate through family collapse and final peg validation, only for HBD", () => {
+    const nowSec = 1_800_000_000;
+    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    quoteMaps.cgQuotes.set("hive_dollar", { price: 2.25, observedAt: nowSec, observedAtMode: "upstream" });
+    quoteMaps.hiveNativeQuote = { price: 0.98662, observedAt: nowSec - 4, observedAtMode: "local_fetch" };
+    const results = new Map<string, PrimaryPriceResult>();
+    buildPrimaryConsensusResults({
+      candidates: [{ id: "hbd-hive", name: "HBD", symbol: "HBD", geckoId: "hive_dollar", pegType: "peggedUSD" }, { id: "test-usd", name: "Other", symbol: "OTHER", pegType: "peggedUSD" }],
+      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec,
+      resolveDlListQuote: () => undefined, results, stats: createStats(),
+    });
+    expect(results.get("hbd-hive")).toMatchObject({ source: "hive-native-cg", price: 0.98662, confidence: "single-source", observedAt: nowSec - 4, observedAtMode: "local_fetch" });
+    expect(results.has("test-usd")).toBe(false);
+  });
   describe("DEX aggregate leg", () => {
     const nowSec = 1_790_629_276;
     const usdc: PeggedAsset = { id: "usdc-circle", name: "USD Coin", symbol: "USDC", pegType: "peggedUSD" };

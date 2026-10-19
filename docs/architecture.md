@@ -337,6 +337,14 @@ Read an individual decision rather than the entire record collection: [ADR-1](#a
 
   Both active slots share the existing job lease, whole-asset cursor and publication surfaces, with the actual producer schedule/path stored on each generation. Existing slot/child fences and global job admission handle duplicate deliveries and up-to-15-minute propagation overlap without lease or fence resets. ADR-38 ownership is unchanged; additional offsets do not create a guaranteed isolate boundary. Capacity scheduling activates no cohort and proves no production CPU/heap fit. Canonical union/setup/worst-fallback, independent proof, replay, rotation/freshness and first-production resource evidence remain mandatory before Base V3-first activation. See [the owning capacity design and rollback](process/worker-infrastructure-appendix.md#measured-execution-capacity-expansion).
 
+#### ADR-41
+
+**Relations:** added-fetch-surface review under [ADR-10](#adr-10) · **Approval:** owner-approved Hive public-node surface and launch policy, 2026-10-19 · **Acceptance:** pending first public execution and 24-hour observation
+
+- **ADR-41 — Serialize native Hive pricing within existing publication.** Keep `sync-stablecoins` on the **public** quarter-hourly plan (not the heavy Worker). The CoinGecko HIVE parent joins the existing batch; `collectPrimaryProviderQuotes()` awaits all provider waves before one serial native observer and then consensus. Declared job peak stays four of six connections, with no cron, slot, D1 cache or per-trade writes. Consolidation uses the existing publication rather than another trigger or Queue/Workflow lifecycle.
+- The observer bounds ten physical RPCs, three seconds per call, twenty seconds overall and one MiB per body, composed with inherited cancellation. Raw arrays are bounded by 500 orders/side and 1,000 trades and do not persist. Research calls measured 360–535 ms on hive.blog and 49–134 ms on deathwing; those sequential samples are not production CPU/heap or p95 evidence. Public quotas remain undocumented. One aggregate circuit outcome and generation-linked diagnostic packet reuse existing persistence.
+- [Native Hive acceptance](process/pricing-pipeline-appendix.md#native-hive-order-book) owns the first-run/full-day evidence and rejection-rate distinction. Roll back collection and live registration together if those gates fail; retain historical labels through the retired-source mechanism, never publish par, loosen gates, delete history or alter supply. There is no schema reversal or Worker-role migration.
+
 ### Superseded Records
 
 #### ADR-5

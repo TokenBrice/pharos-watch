@@ -29,7 +29,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.52`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.53`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -44,6 +44,16 @@ Fixed-clock price/supply/valuation/coverage comparison remains a release prerequ
 
 
 ---
+
+## Native Hive HBD market
+
+`hive-native-cg` submits `HIVE/USD ÷ midpoint(HBD/HIVE)` to ordinary primary consensus. Its exact CoinGecko `hive` parent rides the existing batch, never supply or a second HBD vote. The parent requires an upstream timestamp within five minutes, allowing at most 60 seconds future skew. A fresh publication cannot refresh either leg.
+
+The [observer policy](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/lib/hive-market-price.ts) owns admission: fresh non-regressing heads, bounded same-node sampling, narrow spread, at least 500 HBD per side within 2% of midpoint, and at least 1,000 HBD proven non-self daily turnover with recent book-consistent activity. Posted inventory is not pool TVL; capped or indistinguishable duplicate fills prove only a lower bound.
+
+The derived source uses soft-aggregator tier/weight 2 and the CoinGecko family, describing dependency-capped trust rather than the native venue type. Equal tier/weight lets a valid cross-rate survive family collapse against an out-of-bounds direct HBD mark before peg validation. Near-par direct CG can still beat a native depeg. Alone, or with only direct CG, confidence remains single-source and depeg trust `confirm_required`. No protocol override, replay safety or validation/pool-challenge exemption is granted.
+
+The effective observation clock is the earlier of book retrieval and parent upstream time, conservatively `local_fetch` because the book has no native observation clock. Both clocks, policy and generation remain in bounded operator metadata. Failed gates omit only the native candidate. Existing HBD low-volume fallback, supply and historical observations remain unchanged. See the [implementation contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/pricing-pipeline-appendix.md#native-hive-order-book) for limits and rollout.
 
 ## Primary Consensus
 
@@ -63,6 +73,7 @@ Inline GeckoTerminal corroboration remains disabled at the Worker memory boundar
 | --- | ---: | --- | --- |
 | CoinGecko `/simple/price` | 2 | `worker/src/lib/coingecko-simple-price.ts` | One live primary fetch surface per 15-minute publication; uses upstream `last_updated_at` when available and rejects stale rows. |
 | CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Curated exchange-ticker corroboration for the tracked Kinesis assets. |
+| Hive market × CG HIVE/USD | 2 | `worker/src/lib/hive-market-price.ts` | Depth-gated, CG-dependent primary cross-rate; not independent CG corroboration. |
 | DefiLlama stablecoins list | 1 | Typed quote from the intake response | Local primary input on every 15-minute publication; no second request. |
 | Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input retained in 15-minute consensus. |
 | Kraken spot | 2 | `worker/src/lib/cex-tickers.ts` | Explicit-pair venue input with alias-safe symbol mapping. |

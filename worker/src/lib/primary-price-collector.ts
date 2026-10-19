@@ -1,4 +1,5 @@
 import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
+import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { isHardPricingTrustTier } from "@shared/lib/pricing-source-policy";
@@ -115,6 +116,7 @@ export interface PrimaryCollectedQuotes {
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navQuote?: NavTelemetryQuote;
+  hiveNativeQuote?: HiveNativePriceQuote;
   protocolSources?: DexProtocolSourceQuote[];
   dexAggregateQuote?: DexAggregateQuote;
 }
@@ -226,6 +228,13 @@ export function buildPrimarySourceCandidates(
   const sources: SourcePrice[] = [];
 
   const baseSources = [
+    buildSourcePrice({
+      source: "hive-native-cg",
+      price: asset.id === "hbd-hive" ? collected.hiveNativeQuote?.price : null,
+      observedAt: collected.hiveNativeQuote?.observedAt,
+      observedAtMode: collected.hiveNativeQuote?.observedAtMode,
+      nowSec,
+    }),
     buildSourcePrice({
       source: "coingecko",
       price: collected.cgPrice,

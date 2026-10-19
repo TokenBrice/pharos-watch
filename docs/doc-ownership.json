@@ -137,6 +137,7 @@
         "worker/src/cron/snapshot-chain-supply.ts",
         "worker/src/cron/sync-v9-supply-attribution.ts",
         "worker/src/lib/price*.ts",
+        "worker/src/lib/hive-market-price.ts",
         "worker/src/lib/address-price-providers/**",
         "worker/src/lib/authoritative-price-sources/**",
         "shared/lib/pricing-*.ts",
@@ -178,6 +179,7 @@
         "docs/about-page.md",
         {"path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows"},
         {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health"},
+        {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "native-hive-order-book"},
         { "path": "docs/runbooks/stablecoins-cache.md", "runbook": { "label": "Stablecoin cache or publication failure", "kind": "symptom" } }
       ],
       "checks": ["npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
@@ -678,6 +680,7 @@
         { "path": "docs/architecture.md", "anchor": "adr-26" },
         { "path": "docs/architecture.md", "anchor": "adr-38" },
         { "path": "docs/architecture.md", "anchor": "adr-39" },
+        { "path": "docs/architecture.md", "anchor": "adr-41" },
         "docs/process/adr-20-25-cron-incident-evidence.md",
         {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
         {"path": "docs/data-flow-map.md", "anchor": "risk-and-reserve-flows"},

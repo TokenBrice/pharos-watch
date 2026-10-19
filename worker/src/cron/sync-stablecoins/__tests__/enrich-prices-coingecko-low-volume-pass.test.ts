@@ -57,6 +57,23 @@ describe("LOW_VOLUME_CG_FALLBACK_IDS registry invariant", () => {
 });
 
 describe("runCoingeckoLowVolumePass", () => {
+  it("does not overwrite an admitted native primary quote or refresh its original clock", async () => {
+    const asset = makePeggedAsset({ id: "hbd-hive", price: 0.98662, priceSource: "hive-native-cg",
+      priceObservedAt: 1_792_391_396, priceObservedAtMode: "local_fetch", priceConfidence: "single-source",
+      supplySource: "coingecko-fallback", supplyObservedAt: 1_792_000_000 });
+    mockCoingeckoPrices({ hive_dollar: 2.25 }, 1_792_391_400);
+    expect(await runCoingeckoLowVolumePass([asset], null, undefined)).toMatchObject({ resolved: 0 });
+    expect(asset).toMatchObject({ price: 0.98662, priceSource: "hive-native-cg", priceObservedAt: 1_792_391_396, supplyObservedAt: 1_792_000_000 });
+    expect(fetchCoingeckoSimplePrices).not.toHaveBeenCalled();
+  });
+
+  it("leaves a rejected native attempt missing when the fallback CG HBD mark is out of bounds", async () => {
+    vi.useFakeTimers(); vi.setSystemTime(1_792_391_400_000);
+    const asset = makePeggedAsset({ id: "hbd-hive", price: null });
+    mockCoingeckoPrices({ hive_dollar: 2.25 }, 1_792_391_400);
+    expect(await runCoingeckoLowVolumePass([asset], null, undefined)).toMatchObject({ resolved: 0 });
+    expect(asset.price).toBeNull();
+  });
   it.each([
     ["future beyond fallback skew", 121, false],
     ["exact future skew boundary", 120, true],

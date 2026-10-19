@@ -1,4 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import type { HiveMarketDiagnostic } from "@shared/types/hive-market-price";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { readResponseSnippetWithTimeout } from "./response-body";
 
@@ -8,6 +9,7 @@ export type PricingProviderDiagnosticSource =
   | "bitstamp"
   | "coinbase"
   | "coingecko"
+  | "hive-native-cg"
   | "cg-ticker"
   | "defillama-list"
   | "defillama-contract"
@@ -96,6 +98,7 @@ export interface PricingProviderAttemptDiagnostic {
   snippet?: string;
   retryAfterSec?: number;
   assetAttempts?: PricingAssetAttemptRecord[];
+  nativeMarket?: HiveMarketDiagnostic;
 }
 
 const MAX_SNIPPET_CHARS = 240;

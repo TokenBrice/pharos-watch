@@ -101,6 +101,14 @@ describe("classifyStablecoinPublicationGap", () => {
 });
 
 describe("evaluateStablecoinActivePriceCoverage", () => {
+  it.each([null, 0.98662])("clears HBD missing-price coverage only after an observed native price is published: %s", (price) => {
+    const result = evaluateStablecoinActivePriceCoverage([{
+      id: "hbd-hive", price, priceSource: "hive-native-cg", priceObservedAt: 1_792_391_396,
+      priceObservedAtMode: "local_fetch", circulating: { peggedUSD: 32_000_000 },
+    }], ["hbd-hive"], { nowSec: 1_792_391_400, priceGapReviews: STABLECOIN_PRICE_GAP_REVIEWS });
+    expect(result.missingPriceCount).toBe(price == null ? 1 : 0);
+    expect(result.pricedActiveCount).toBe(price == null ? 0 : 1);
+  });
   it.each([
     { caps: [100, 200], total: 300 },
     { caps: [100, null], total: null },
