@@ -91,11 +91,22 @@ export async function observeLayerZeroOftPending(input: {
     }
     if (cp.pathways.reduce((sum, lane) => sum + lane.messages.length, 0) > MAX_MESSAGES) fail("checkpoint-capacity");
     const savedCursors = cp.pathways.map(lane => lane.sent.nextBlock);
+    const pinnedReads = new Map<string, unknown>();
+    const pinnedKey = (chain: string, method: string, params: unknown[]) => {
+      const block = params[1];
+      return (method === "eth_call" || method === "eth_getCode") &&
+        block !== null && typeof block === "object" && "blockHash" in block &&
+        "requireCanonical" in block && block.requireCanonical === true
+        ? `${chain}:${stableJsonStringifyV1({ method, params })}` : null;
+    };
     const rpc = async (chain: string, method: string, params: unknown[]) => {
       throwIfAborted(input.signal);
+      const key = pinnedKey(chain, method, params);
+      if (key !== null && pinnedReads.has(key)) return pinnedReads.get(key);
       context = { ...context, chainId: chain, method, phase: "rpc", providerOrigin: null };
       const result = await fetchEvmRpcBatch(chain, [{ method, params }], options);
       if (!result || result.length !== 1) fail("rpc-unavailable");
+      if (key !== null && result[0] !== null && result[0] !== undefined) pinnedReads.set(key, result[0]);
       return result[0];
     };
     const state = async (index: number, to: string, data: string) => rpc(source.sides[index]!.chainId, "eth_call", [{ to, data }, { blockHash: input.headers[index]!.hash, requireCanonical: true }]);
@@ -120,13 +131,16 @@ export async function observeLayerZeroOftPending(input: {
       }
       const serialized = stableJsonStringifyV1(cp);
       if (serialized.length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
-      if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
+      // A fully authenticated prefix is a commit barrier. Cancellation stops
+      // subsequent reads, not this already-earned durable write or its receipt.
+      if (input.db) await setCache(input.db, cacheKey, serialized);
       for (let index = 0; index < cp.pathways.length; index++) {
         const path = source.pathways[index]!, cursor = cp.pathways[index]!.sent.nextBlock, pin = input.headers[path.sourceIndex]!;
         if (cursor === savedCursors[index]) continue;
         emit({ laneId: String(index), chainId: source.sides[path.sourceIndex]!.chainId, method: "authenticated-history", phase: "authenticated-prefix-persisted", beforeCursor: String(savedCursors[index]), afterCursor: String(cursor), targetCursor: String(pin.number + 1), pinObservedAtSec: pin.timestamp, persisted: input.db !== undefined, authenticatedCursorAdvanced: cursor > savedCursors[index]!, incompleteBootstrap: cp.pathways.some((lane, i) => lane.sent.nextBlock < input.headers[source.pathways[i]!.sourceIndex]!.number + 1) });
         savedCursors[index] = cursor;
       }
+      throwIfAborted(input.signal);
       return serialized;
     };
     const scan = async (url: string): Promise<{ data: ScanMessage[]; nextToken?: string }> => {
@@ -167,6 +181,43 @@ export async function observeLayerZeroOftPending(input: {
       emit({});
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock ||
         !pinned || pinned.hash !== pin.hash || pinned.timestamp !== pin.timestamp) fail("pin-not-finalized");
+      // Transport exact current-pin authentication in bounded batches, retaining
+      // the validations below and never caching unavailable or cross-attempt state.
+      const block = { blockHash: pin.hash, requireCanonical: true };
+      const requests = new Map<string, Parameters<typeof fetchEvmRpcBatch>[1][number]>();
+      const add = (method: string, params: unknown[]) => {
+        requests.set(pinnedKey(side.chainId, method, params)!, { method, params });
+      };
+      const addCall = (to: string, data: string) => add("eth_call", [{ to, data }, block]);
+      for (const address of [side.oappAddress, side.endpointAddress]) add("eth_getCode", [address, block]);
+      for (const [to, signature] of [
+        [side.oappAddress, "endpoint()"], [side.endpointAddress, "eid()"],
+        [side.oappAddress, "token()"], [side.tokenAddress, "decimals()"],
+        [side.oappAddress, "sharedDecimals()"], [side.oappAddress, "decimalConversionRate()"],
+      ]) addCall(to!, toFunctionSelector(signature!));
+      for (const path of source.pathways) {
+        const a = source.sides[path.sourceIndex]!, b = source.sides[path.destinationIndex]!;
+        if (path.sourceIndex === index) {
+          addCall(a.oappAddress, call("peers(uint32)", "uint32", [b.eid]));
+          addCall(a.endpointAddress, call("outboundNonce(address,uint32,bytes32)", "address,uint32,bytes32", [a.oappAddress, b.eid, addressWord(b.oappAddress)]));
+        }
+        if (path.destinationIndex === index) {
+          addCall(b.oappAddress, call("peers(uint32)", "uint32", [a.eid]));
+          const args = [b.oappAddress, a.eid, addressWord(a.oappAddress)];
+          addCall(b.endpointAddress, call("inboundNonce(address,uint32,bytes32)", "address,uint32,bytes32", args));
+          addCall(b.endpointAddress, call("lazyInboundNonce(address,uint32,bytes32)", "address,uint32,bytes32", args));
+        }
+      }
+      const entries = [...requests];
+      for (let from = 0; from < entries.length; from += 32) {
+        throwIfAborted(input.signal);
+        const chunk = entries.slice(from, from + 32);
+        const values = await fetchEvmRpcBatch(side.chainId, chunk.map(([, request]) => request), options);
+        if (!values || values.length !== chunk.length) continue;
+        for (let i = 0; i < values.length; i++) {
+          if (values[i] !== null && values[i] !== undefined) pinnedReads.set(chunk[i]![0], values[i]);
+        }
+      }
       await authenticateRuntime(index, pin.hash);
       if (await state(index, side.oappAddress, toFunctionSelector("endpoint()")) !== addressWord(side.endpointAddress) ||
         uint(await state(index, side.endpointAddress, toFunctionSelector("eid()"))) !== BigInt(side.eid) ||

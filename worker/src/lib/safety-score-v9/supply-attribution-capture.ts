@@ -86,6 +86,7 @@ type SupplyAttributionObservationAttempt =
 
 interface SupplyAttributionAssetDescriptor {
   assetId: string;
+  executionPriority: number;
   sourceId: SupplyAttributionJournalV1["sourceId"];
   sourceOriginClass: SupplyAttributionJournalV1["sourceOriginClass"];
   routeInventoryDigest: () => string | null;
@@ -109,6 +110,7 @@ function supplyAttributionAssetDescriptors():
   return [
     {
       assetId: XAUT_ASSET_ID,
+      executionPriority: 0,
       sourceId:
         SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET[XAUT_ASSET_ID],
       sourceOriginClass: "issuer-disclosure-plus-onchain",
@@ -119,6 +121,7 @@ function supplyAttributionAssetDescriptors():
     ...CENTRIFUGE_BURN_MINT_ASSET_IDS.map(
       (assetId): SupplyAttributionAssetDescriptor => ({
         assetId,
+        executionPriority: 0,
         sourceId:
           SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET[assetId],
         sourceOriginClass: "onchain-observation",
@@ -132,13 +135,14 @@ function supplyAttributionAssetDescriptors():
       }),
     ),
     ...[...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys()].map((assetId): SupplyAttributionAssetDescriptor => ({
-      assetId, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
+      assetId, executionPriority: 1, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
       observe: ({ fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead }),
     })),
     {
       assetId: "wm-m0",
+      executionPriority: 2,
       sourceId: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET["wm-m0"],
       sourceOriginClass: "onchain-observation",
       routeInventoryDigest:
@@ -401,10 +405,11 @@ export async function captureSafetyScoreV9SupplyAttribution(
     },
     {
       signal, executionWindow: options.executionWindow,
-      // Retries of the same exact input keep the same execution order. Each
-      // consecutive producer bucket gives a different asset the first chance
-      // before the shared capture deadline; result indexes remain unchanged.
+      // Keep short disclosure/deployment observers ahead of history backfills,
+      // and wM's possible maturity wait last. Rotate equal-priority assets for
+      // fairness without allowing a slow backfill to starve the quick cohort.
       startIndex: Math.floor(fixedInput.clockSec / SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC),
+      assetPriority: descriptor => descriptor.executionPriority,
       assetTimeoutMs: descriptor => descriptor.assetId === "wm-m0"
         ? SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs
         : SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
