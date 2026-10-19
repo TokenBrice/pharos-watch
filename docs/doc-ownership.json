@@ -74,6 +74,7 @@
         "shared/lib/stablecoin-id-registry.ts",
         "shared/lib/classification.ts",
         "shared/lib/psi-historical-assets.ts",
+        "data/ai-summaries.json",
         "data/failure-scenarios.json",
         "shared/types/failure-scenarios.ts",
         "shared/lib/failure-scenarios.ts",
@@ -101,10 +102,25 @@
         "docs/process/stablecoin-research-sidecars.md",
         "docs/process/failure-scenarios.md"
       ],
+      "reading": [
+        {
+          "sources": ["data/ai-summaries.json"],
+          "local": [
+            { "path": "docs/process/adding-a-stablecoin.md", "anchor": "6b-editorial-summary" },
+            { "path": "docs/editorial-style.md", "anchor": "registers-by-surface" }
+          ]
+        }
+      ],
+      "testOwnership": [
+        {
+          "sources": ["data/ai-summaries.json"],
+          "tests": ["shared/lib/__tests__/ai-summary-claims.test.ts"]
+        }
+      ],
       "background": ["docs/listing-policy.md", "docs/about-page.md", "docs/shadow-stablecoins.md", "docs/freezing-stablecoins.md"],
       "alsoRead": ["shared/data/stablecoins/AGENTS.md"],
       "checks": [
-        "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts",
+        "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts shared/lib/__tests__/ai-summary-claims.test.ts",
         "npm run check:failure-scenarios",
         "npx vitest run shared/lib/__tests__/failure-scenarios.test.ts scripts/maintenance/__tests__/verify-failure-scenarios.test.ts"
       ],
@@ -137,6 +153,7 @@
         "worker/src/cron/snapshot-chain-supply.ts",
         "worker/src/cron/sync-v9-supply-attribution.ts",
         "worker/src/lib/price*.ts",
+        "worker/src/lib/hive-market-price.ts",
         "worker/src/lib/address-price-providers/**",
         "worker/src/lib/authoritative-price-sources/**",
         "shared/lib/pricing-*.ts",
@@ -178,6 +195,7 @@
         "docs/about-page.md",
         {"path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows"},
         {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health"},
+        {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "native-hive-order-book"},
         { "path": "docs/runbooks/stablecoins-cache.md", "runbook": { "label": "Stablecoin cache or publication failure", "kind": "symptom" } }
       ],
       "checks": ["npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
@@ -678,6 +696,7 @@
         { "path": "docs/architecture.md", "anchor": "adr-26" },
         { "path": "docs/architecture.md", "anchor": "adr-38" },
         { "path": "docs/architecture.md", "anchor": "adr-39" },
+        { "path": "docs/architecture.md", "anchor": "adr-41" },
         "docs/process/adr-20-25-cron-incident-evidence.md",
         {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
         {"path": "docs/data-flow-map.md", "anchor": "risk-and-reserve-flows"},
@@ -1508,6 +1527,8 @@
         "data/logos.json",
         "public/logos/**",
         "public/chains/**",
+        "public/datasets/stablecoin-cemetery.*",
+        "public/og-cemetery.png",
         "shared/lib/public-docs.ts",
         "shared/lib/og-route-cards.ts",
         "shared/lib/og-route-glyphs.ts",

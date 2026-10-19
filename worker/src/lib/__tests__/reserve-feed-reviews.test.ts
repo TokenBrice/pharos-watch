@@ -70,6 +70,20 @@ describe("reserve feed review policy", () => {
       { warnings: [{ code: "new-failure", message: "new", severity: "warning", effect: "degraded" }] },
     ] satisfies Partial<ReserveSyncStateRecord>[]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
   });
+  it("leaves October 21 expiry and Gemini dates unchanged and never acknowledges v2 failures", async () => {
+    const expiry = Date.parse("2026-10-21T14:19:23Z") / 1000;
+    expect(review.expiresAt).toBe(expiry);
+    const gemini = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "gusd-gemini")!;
+    expect(gemini.reviewedAt).toBe(review.reviewedAt);
+    expect(gemini.expiresAt).toBe(expiry);
+    expect(await matchReserveFeedReview(mockD1(), state(), expiry - 1)).toEqual(review);
+    expect(await matchReserveFeedReview(mockD1(), state(), expiry)).toBeNull();
+    for (const reason of ["stale-save-checkpoint", "save-proof-identity", "save-signed-content-digest", "save-cid-layout-or-content-mismatch", "save-pin-changed", "save-historical-scope"]) {
+      expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:onchain-evm: midas-mtbill:${reason}` }), now)).toBeNull();
+      // Distinct reason tokens also defend against incorrectly retained v1 transport labels.
+      expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:http-json: midas-mtbill:${reason}` }), now)).toBeNull();
+    }
+  });
   it("inherits circuit-open only from the latest non-skipped matching attempt", async () => {
     const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
       stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,

@@ -3,6 +3,7 @@ import { z } from "zod";
 export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "coingecko+defillama-list",
   "coingecko",
+  "hive-native-cg",
   "coingecko-low-volume",
   "coingecko-native-implied",
   "defillama",

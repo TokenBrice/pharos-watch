@@ -15,6 +15,18 @@ const USD_CONTEXT: PriceValidationContext = {
 };
 
 describe("validatePrimaryPriceCandidate — severe downside with directional corroboration", () => {
+  it("does not let the native CG-dependent leg bypass severe-downside or temporal-jump guards", () => {
+    expect(validatePrimaryPriceCandidate({
+      price: 0.38, source: "hive-native-cg", confidence: "single-source",
+      agreeSources: ["hive-native-cg"], candidatePrices: { "hive-native-cg": 0.38, coingecko: 0.39 },
+      validationContext: { ...USD_CONTEXT, stablecoinId: "hbd-hive" },
+    })).toMatchObject({ accepted: false, reason: "severe_downside_requires_corroboration" });
+    expect(validatePrimaryPriceCandidate({
+      price: 0.7, source: "hive-native-cg", confidence: "single-source", agreeSources: ["hive-native-cg"],
+      validationContext: { ...USD_CONTEXT, stablecoinId: "hbd-hive" },
+      previousTrustedPrice: { price: 1, source: "coingecko", confidence: "single-source", observedAt: null, agreeSources: ["coingecko"] },
+    })).toMatchObject({ accepted: false, reason: "temporal_jump_requires_corroboration" });
+  });
   it("rejects an uncorroborated AZND exact-pool severe downside", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.38,

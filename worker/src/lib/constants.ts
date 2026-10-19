@@ -102,6 +102,8 @@ export const RBA_F1_MONEY_MARKET_CSV_URL = "https://www.rba.gov.au/statistics/ta
 export const BANXICO_CETES_28D_URL = "https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno";
 /** Banco Central do Brasil SGS — SELIC over (series 11), latest daily observation as JSON. */
 export const BCB_SELIC_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json";
+/** Same effective SELIC over instrument, already annualized on a 252-business-day basis. */
+export const BCB_SELIC_ANNUALIZED_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.1178/dados/ultimos/1?formato=json";
 /** Bank of Canada Valet — overnight repo rate (V122530), latest observation as JSON. */
 export const BOC_CORRA_URL = "https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1";
 /** Central Bank of Russia DailyInfo SOAP endpoint for KeyRateXML observations. */

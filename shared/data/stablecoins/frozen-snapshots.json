@@ -1561,5 +1561,69 @@
       }
     ]
   }
-}
+},
+  {
+    "id": "usdkg-gold-dollar",
+    "capturedAt": "2026-10-19T06:29:52.208980Z",
+    "peggedAssetRow": {
+      "id": "usdkg-gold-dollar",
+      "name": "USDKG",
+      "symbol": "USDKG",
+      "geckoId": "usdkg",
+      "pegType": "peggedUSD",
+      "pegMechanism": "fiat-backed",
+      "price": null,
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "priceUpdatedAt": null,
+      "priceObservedAt": null,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": null,
+      "consensusSources": [],
+      "agreeSources": [],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 50000000
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 50000000
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 50000000
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 50000000
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": 3000000,
+          "circulatingPrevDay": 3000000,
+          "circulatingPrevWeek": 3000000,
+          "circulatingPrevMonth": 3000000
+        },
+        "Tron": {
+          "current": 47000000,
+          "circulatingPrevDay": 47000000,
+          "circulatingPrevWeek": 47000000,
+          "circulatingPrevMonth": 47000000
+        }
+      },
+      "chains": [
+        "Tron",
+        "Ethereum"
+      ],
+      "contracts": [
+        {
+          "chain": "tron",
+          "address": "TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
+          "decimals": 6
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe820c06321e60d36257c666643fa5436643445e3",
+          "decimals": 6
+        }
+      ]
+    }
+  }
 ]

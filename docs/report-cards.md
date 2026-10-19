@@ -112,7 +112,7 @@ Archive tooling (`worker/scripts/export-safety-score-capture-archive.ts`) lists 
 
 `GET /api/report-cards/v9` is the full live Safety Score API. `GET /api/dependency-graph/v1` exposes a free, no-key graph projection of the same accepted publication, not another scoring authority.
 
-The handler authenticates the accepted representation and live health, never recomputes scores or falls back to V8. Missing/invalid required evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. Retired unversioned and preview routes return `404`.
+The handler coalesces generation-bound reads, verifying integrity and live health before `200`. Missing/invalid evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. No rescoring or V8 fallback; retired unversioned/preview routes return `404`.
 
 A current response emits `X-Safety-Score-Status: current`. A held response serves the last accepted ratings, emits `X-Safety-Score-Status: held`, uses the accepted timestamp for freshness, and forces `Cache-Control: no-store`.
 

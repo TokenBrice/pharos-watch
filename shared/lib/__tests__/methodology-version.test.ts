@@ -256,7 +256,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.52");
+    expect(methodology.currentLabel).toBe("v6.53");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -272,7 +272,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 6).map((candidate) => candidate.version)).toEqual(["6.52", "6.51", "6.50", "6.49", "6.48", "6.47"]);
+    expect(methodology.entries.slice(0, 7).map((candidate) => candidate.version)).toEqual(["6.53", "6.52", "6.51", "6.50", "6.49", "6.48", "6.47"]);
   });
 
   it.each([
@@ -309,12 +309,22 @@ describe("methodology registry", () => {
 
   it("pins quarter-hour short-lived price recovery to the next UTC release boundary", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
-    const release = methodology.entries[0];
+    const release = methodology.entries.find((candidate) => candidate.version === "6.52")!;
     expect(release).toMatchObject({
       version: "6.52", date: "2026-10-16", effectiveAt: 1_792_195_200, reconstructed: false,
     });
     expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.51");
     expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.52");
+  });
+
+  it("pins native Hive admission to its forward-only release boundary", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    const release = methodology.entries[0];
+    expect(release).toMatchObject({ version: "6.53", date: "2026-10-19", effectiveAt: 1_792_368_000, reconstructed: false });
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.52");
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.53");
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-19 00:00 UTC (release date; 1792368000)");
+    expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
   });
 
   it("retains the v10.19 Morpho release cut", () => {

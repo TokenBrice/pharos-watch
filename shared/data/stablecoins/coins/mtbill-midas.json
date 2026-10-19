@@ -96,7 +96,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "midas-mtbill",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "mtbill-midas",
     "display": {
@@ -105,8 +105,9 @@
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://api-prod.midas.app/api/transparency?token=mTBILL"
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
       }
     }
   },
