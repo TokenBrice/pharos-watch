@@ -74,6 +74,7 @@
         "shared/lib/stablecoin-id-registry.ts",
         "shared/lib/classification.ts",
         "shared/lib/psi-historical-assets.ts",
+        "data/ai-summaries.json",
         "data/failure-scenarios.json",
         "shared/types/failure-scenarios.ts",
         "shared/lib/failure-scenarios.ts",
@@ -101,10 +102,25 @@
         "docs/process/stablecoin-research-sidecars.md",
         "docs/process/failure-scenarios.md"
       ],
+      "reading": [
+        {
+          "sources": ["data/ai-summaries.json"],
+          "local": [
+            { "path": "docs/process/adding-a-stablecoin.md", "anchor": "6b-editorial-summary" },
+            { "path": "docs/editorial-style.md", "anchor": "registers-by-surface" }
+          ]
+        }
+      ],
+      "testOwnership": [
+        {
+          "sources": ["data/ai-summaries.json"],
+          "tests": ["shared/lib/__tests__/ai-summary-claims.test.ts"]
+        }
+      ],
       "background": ["docs/listing-policy.md", "docs/about-page.md", "docs/shadow-stablecoins.md", "docs/freezing-stablecoins.md"],
       "alsoRead": ["shared/data/stablecoins/AGENTS.md"],
       "checks": [
-        "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts",
+        "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts shared/lib/__tests__/ai-summary-claims.test.ts",
         "npm run check:failure-scenarios",
         "npx vitest run shared/lib/__tests__/failure-scenarios.test.ts scripts/maintenance/__tests__/verify-failure-scenarios.test.ts"
       ],
