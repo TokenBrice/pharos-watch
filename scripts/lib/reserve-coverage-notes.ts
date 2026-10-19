@@ -20,7 +20,8 @@ export interface LiveReserveSourceQualityNote {
  * evidence of access, never substitutes for reserve accounting dates. Historical
  * sidecar pins remain historical. A plausible lead is not admitted live coverage.
  * The audit warns for inactive keys and effective live bindings; remove a note
- * when its binding is actually activated, including static-validated bindings.
+ * when its coin leaves the active cohort or its binding is actually activated,
+ * including static-validated bindings.
  */
 export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourceQualityNote> = {
   "usdy-ondo-finance": {
@@ -134,14 +135,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     freshnessEvidence: "Reviewed 2026-10-07: Mellow JSON has lido-earn-usd aggregateTVL, without reserve checkpoint or subvault weights. APY updated_at dates APY, not portfolio holdings.",
     scoreGradePlausible: false,
     note: "Tracked ShareManager is not the separate ERC-4626 Vault. Require same-block two-subvault holdings, fees, pending queues and allocated/active-share denominator. Redemption queue telemetry does not supply composition; do not assume USDC cash or bind the wrong vault identity.",
-  },
-  "usdkg-gold-dollar": {
-    sourceUrl: "https://www.usdkg.com/",
-    sourceQuality: "static-validated",
-    expectedAdapterFamily: "post-cessation outstanding-liability and remaining-reserve disclosure reader",
-    freshnessEvidence: "Reviewed 2026-10-07: transparency is 404; the official homepage announces termination under Order 639-t dated 2026-08-20. The November 2025 Kreston PDF remains historical.",
-    scoreGradePlausible: false,
-    note: "Require post-cessation outstanding liabilities and remaining gold/cash accounting; route and lifecycle review belongs to the catalog owners. The report predates issued supply and cessation. Neither smart-contract audits nor a fresh download renew its reserve basis.",
   },
   "msusd-metronome": {
     sourceUrl: "https://docs.metronome.io/metronome-synth/contracts.md",

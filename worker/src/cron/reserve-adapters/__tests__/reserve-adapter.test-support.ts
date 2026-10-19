@@ -138,8 +138,9 @@ export interface AdapterNetworkSpec {
    * `eth_getBalance` uses the target address. Prefix either with its method
    * name when a route must be restricted to that method. Block methods route
    * here too: `"eth_blockNumber"` overrides the head, and
-   * `"eth_getBlockByNumber:0x3d0"` answers that tag with a block header whose
-   * gaps fall back to `block` (other routed values fall back to the anchor).
+   * `"eth_getBlockByNumber:latest"` (or a numeric tag such as `0x3d0`) answers
+   * that tag with a partial header whose gaps fall back to `block`. Explicit
+   * null answers remain unavailable instead of using the default anchor.
    */
   rpc?: Record<string, AdapterRpcValue>;
   /** `eth_getCode` answers keyed by (optionally chain-prefixed) address. */
@@ -240,6 +241,10 @@ function parseRpcKey(key: string): RpcKeyParts {
   for (const rawSegment of key.split(":")) {
     const segment = rawSegment.trim();
     if (segment.length === 0) continue;
+    if (segment === "latest" || segment === "safe" || segment === "finalized") {
+      parts.data = segment;
+      continue;
+    }
     if (segment.startsWith("0x")) {
       const body = segment.slice(2);
       if (body.length === 40) parts.contract = segment.toLowerCase();
@@ -529,6 +534,7 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
           block: tag || "latest",
           viaMulticall: false,
         });
+        if (routed.matched && routed.result === null) return routed;
         // Table routes answer partial headers; the wire shape (with parentHash)
         // is only built by blockHeaderAnswer itself.
         const routedHeader = routed.matched && routed.result !== null && typeof routed.result === "object"

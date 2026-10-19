@@ -28,11 +28,12 @@ export function SafetyScoresOverview() {
         not measured safe-book credit. v10.19 activated at the 2026-10-14 22:00 UTC release cut.
       </p>
       <p>
-        Methodology v10.21 aligns safe EVM supply-attribution heads before reading quantities, retaining required finality.
-        Newer heads rewind within the existing 120-second cross-chain skew bound; the oldest pin never moves
-        forward, and the 30-minute age budget, canonical hashes and original clocks remain required. Previously
-        skew-rejected partitions may become admissible and affect attribution or scores. Scoring formulas,
-        pillar weights and grade gates are unchanged; fresh accepted publication is needed to establish recovery.
+        Methodology v10.23 can authenticate a bridge&apos;s reviewed creation and initial sequence without old
+        state, but still requires its complete historical messages and current finalized liabilities. Supply
+        captures align non-rewindable Solana observations with safe EVM pins; explicitly reviewed chains may
+        prefer authenticated finalized pins over heuristic block delays. The 120-second skew and 30-minute
+        age limits, original source clocks and full conservation checks remain unchanged. Missing history
+        or stale issuer disclosures stay rejected. Fresh accepted publication, not a routing change, proves recovery.
       </p>
       <p>
         Exit compares every admissible route alone and every independently usable pair, then takes the best feasible

@@ -4681,12 +4681,34 @@
     ]
   },
   "mtbill-midas": {
-    "title": "Europe's T-Bill Token",
-    "text": "mTBILL is Midas's compliance-first answer to the tokenized {{term:treasury}}T-bill{{/term}} race: exposure held mainly through BlackRock's IB01 ETF with Swiss {{term:custody}}custody{{/term}} at Maerki Baumann, issued as a Liechtenstein FMA-approved MiFID II instrument and restricted to non-U.S. and non-UK retail. That is the exact bureaucratic architecture required to legally sell T-bill exposure to European professionals. Ankura Trust provides daily on-chain NAV {{term:attestation}}attestations{{/term}}, and the {{term:rwa}}RWA{{/term}} collateral quality with regulated-entity governance earns institutional credibility that most crypto-native tokenized treasury products lack. The 'not available to U.S. or UK retail persons' restriction is the mirror image of USTB and OUSG's American access gates, carving out a European institutional niche in a market dominated by U.S. issuers. Deployed across five chains, mTBILL functions as infrastructure in Midas's product stack and as stable collateral in third-party structured products. It is the European {{term:money-market-fund}}money-market-fund-like{{/term}} token for protocols that need regulatory certainty over DeFi composability. Pharos still leaves the card unrated: the tokenholder exit route is undisclosed and the reviewed reserve is a single ETF slice with no fund look-through, so the evidence is insufficient for a research rating.",
-    "updatedAt": "2026-09-07",
+    "title": "USTB-led Treasury exposure through Midas",
+    "text": "mTBILL is Midas's NAV-linked {{term:treasury}}Treasury-bill{{/term}} certificate, rather than a fixed-dollar payment token. The issuer's October 16, 2026 portfolio checkpoint reports mainly Superstate's USTB, a smaller BlackRock BUIDL position and an unclassified remainder. The SAVE registry anchors a signed portfolio date and aggregate value, while the historical issuer API supplies the named positions. This binding does not independently verify each holding, {{term:custody}}custody{{/term}} allocation or the full liabilities. The July 2026 final terms name Ankura Trust Company LLC as security agent. Midas describes daily NAV and collateral-eligibility monitoring, but the October 19 public-source review located no current dated examiner-signed full holdings-and-liabilities report. Pharos therefore treats the composition as issuer-reported evidence, without independent financial-assurance credit. The final terms specify USDC settlement with {{term:redemption}}redemption{{/term}} gates and possible holdbacks. Holders have a claim on the issuer rather than direct ownership of the underlying fund assets. Realizing the Treasury exposure still depends on issuer settlement and fund liquidity; publishing a checkpoint does not establish immediately available redemption capacity.",
+    "updatedAt": "2026-10-19",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07"
+    "model": "gpt-6.1-sol",
+    "factsAsOf": "2026-10-19",
+    "sources": [
+      {
+        "label": "Midas historical mTBILL portfolio: October 16, 2026 10:00 checkpoint, observed October 19",
+        "url": "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-16T10:00"
+      },
+      {
+        "label": "Midas SAVE checkpoint: October 16 portfolio date and aggregate, not signed composition rows",
+        "url": "https://gateway.pinata.cloud/ipfs/QmTAkogvfmoKB5wAns36vx4QwsmHJLDmnaR9qYXcvmvagj"
+      },
+      {
+        "label": "Midas SAVE integration: registry publication and issuer-origin evidence boundaries",
+        "url": "https://github.com/midas-apps/midas-por-v2/blob/80a4c32ea2c05933640f93cc936a0eb84fec6982/INTEGRATION.md"
+      },
+      {
+        "label": "Midas independent-reporting description: daily monitoring claimed; no current examiner-signed full report located in the October 19 review",
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/independent-reporting.md"
+      },
+      {
+        "label": "mTBILL final terms dated July 17, 2026: issuer claim, Ankura security agent and gated USDC settlement",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media"
+      }
+    ]
   },
   "rusd-reservoir": {
     "title": "Reservoir's Base Dollar",

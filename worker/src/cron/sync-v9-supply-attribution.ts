@@ -1,4 +1,5 @@
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import type { DwellirNativeCapability } from "../lib/dwellir-native";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
@@ -69,6 +70,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   executionWindow?: V9ExecutionWindow,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<CronResult> {
   const startedAtSec = Math.floor(Date.now() / 1_000);
   throwIfAborted(signal);
@@ -204,6 +206,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       notBeforeSec: startedAtSec,
       executionWindow,
       db,
+      dwellirNative,
       priorGeneration,
       onBodyRead: evidence => {
         resourcePressure.observedAt = Math.floor(Date.now() / 1_000);

@@ -54,7 +54,7 @@ function harness(id: string) {
     nowSec: CLOCK, dexRows: new Map(), dexPriceSources: new Map(),
     dexPriceSourceTelemetry: createDexPriceSourceLoadTelemetry(),
     geckoIds: [], coinbaseSymbols: [], krakenSymbols: [], shouldFetchBitstamp: false, redstoneSymbols: [], navPriceIds: [id],
-    sourceAllowed: { cg: false, cgTicker: false, binance: false, kraken: false, bitstamp: false, coinbase: false, redstone: false, curve: false, curveOracle: false },
+    sourceAllowed: { cg: false, cgTicker: false, binance: false, kraken: false, bitstamp: false, coinbase: false, redstone: false, curve: false, curveOracle: false, hiveMarket: false },
   };
   return { sqlite, db, meta, config, plan };
 }

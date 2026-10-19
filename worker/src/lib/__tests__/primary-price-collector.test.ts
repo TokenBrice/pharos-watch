@@ -25,6 +25,16 @@ function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): Primary
 }
 
 describe("buildPrimarySourceCandidates", () => {
+  it("admits only fresh typed native HBD quotes and does not create a DEX confidence profile", () => {
+    const nowSec = 1_800_000_000;
+    const collected = makeCollected({ hiveNativeQuote: { price: 0.98662, observedAt: nowSec - 4, observedAtMode: "local_fetch" } });
+    const result = buildPrimarySourceCandidates({ id: "hbd-hive", symbol: "HBD" }, collected, { nowSec });
+    expect(result.sources).toMatchObject([{ source: "hive-native-cg", price: 0.98662, weight: 2, observedAt: nowSec - 4, observedAtMode: "local_fetch" }]);
+    expect(result.priceSourceConfidenceProfile).toBeNull();
+    expect(buildPrimarySourceCandidates({ id: "other", symbol: "HBD" }, collected, { nowSec }).sources).toEqual([]);
+    expect(buildPrimarySourceCandidates({ id: "hbd-hive", symbol: "HBD" }, collected, { nowSec: nowSec + 901 }).sources).toEqual([]);
+    expect(buildPrimarySourceCandidates({ id: "hbd-hive", symbol: "HBD" }, makeCollected(), { nowSec }).sources).toEqual([]);
+  });
   it("withholds the aggregate DEX promotion when the only protocol candidate lacks hard corroboration", () => {
     const collected = makeCollected({
       cgPrice: 1.0,

@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type * as FetchRetryModule from "../../../lib/fetch-retry";
 
 const { fetchJsonWithRetryMock } = vi.hoisted(() => ({ fetchJsonWithRetryMock: vi.fn() }));
-vi.mock("../../../lib/fetch-retry", () => ({
+vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
+  ...await importOriginal<typeof FetchRetryModule>(),
   fetchJsonWithRetry: fetchJsonWithRetryMock,
 }));
 import { reserveDegradedWarning } from "../warnings";
+import { fetchOnchainUint256 } from "../onchain";
 import {
   addressObservation,
   boolObservation,
@@ -31,26 +34,36 @@ describe("pinnedBlockPlan", () => {
     vi.restoreAllMocks();
   });
 
-  it("uses the timestamp of the exact numbered header behind the observed head", async () => {
-    fetchJsonWithRetryMock
-      .mockResolvedValueOnce({ response: new Response(), body: { result: "0x10" } })
-      .mockResolvedValueOnce({
-        response: new Response(),
-        body: { result: { number: "0x10", timestamp: "0x64", hash } },
-      });
+  it("pins the number and timestamp from one validated latest header request", async () => {
+    fetchJsonWithRetryMock.mockResolvedValueOnce({
+      response: new Response(),
+      body: { result: { number: "0x10", timestamp: "0x64", hash } },
+    });
 
     const plan = await pinnedBlockPlan(options);
     expect(plan.observedBlock).toEqual({ chain: "rootstock", number: 16, timestamp: 100 });
     expect(plan.ctx.observedBlock).toBe(plan.observedBlock);
     const requests = fetchJsonWithRetryMock.mock.calls.map((call) => JSON.parse(call[1].body));
     expect(requests.map(({ method, params }) => ({ method, params }))).toEqual([
-      { method: "eth_blockNumber", params: [] },
-      { method: "eth_getBlockByNumber", params: ["0x10", false] },
+      { method: "eth_getBlockByNumber", params: ["latest", false] },
     ]);
+    fetchJsonWithRetryMock.mockResolvedValueOnce({
+      response: new Response(),
+      body: { result: word(7n) },
+    });
+    await expect(fetchOnchainUint256({
+      ...options,
+      ctx: plan.ctx,
+      contract: "0x1111111111111111111111111111111111111111",
+      data: "0x18160ddd",
+    })).resolves.toBe(7n);
+    expect(JSON.parse(fetchJsonWithRetryMock.mock.calls[1][1].body).params[1]).toBe("0x10");
   });
 
   it.each([
-    { number: "0x11", timestamp: "0x64", hash },
+    { timestamp: "0x64", hash },
+    { number: "invalid", timestamp: "0x64", hash },
+    { number: "0x20000000000000", timestamp: "0x64", hash },
     { number: "0x10", timestamp: "0x64" },
     { number: "0x10", timestamp: "0x64", hash: "0x1234" },
     { number: "0x10", timestamp: "invalid", hash },
@@ -58,21 +71,18 @@ describe("pinnedBlockPlan", () => {
     { number: "0x10", timestamp: "0x20000000000000", hash },
   ])("rejects unusable headers without substituting another clock: %j", async (header) => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    fetchJsonWithRetryMock
-      .mockResolvedValueOnce({ response: new Response(), body: { result: "0x10" } })
-      .mockResolvedValueOnce({ response: new Response(), body: { result: header } });
+    fetchJsonWithRetryMock.mockResolvedValueOnce({ response: new Response(), body: { result: header } });
 
     await expect(pinnedBlockPlan(options)).rejects.toThrow(/observation block header/);
-    expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(fetchJsonWithRetryMock.mock.calls[1][1].body).params).toEqual(["0x10", false]);
+    expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchJsonWithRetryMock.mock.calls[0][1].body).params).toEqual(["latest", false]);
   });
 
-  it("accepts a fallback exact-number header rather than the first provider's positive mismatched clock", async () => {
+  it("pins a valid fallback header without mixing the first provider's malformed header coordinates", async () => {
     fetchJsonWithRetryMock
-      .mockResolvedValueOnce({ response: new Response(), body: { result: "0x10" } })
       .mockResolvedValueOnce({
         response: new Response(),
-        body: { result: { number: "0x11", timestamp: "0xc8", hash } },
+        body: { result: { number: "invalid", timestamp: "0xc8", hash } },
       })
       .mockResolvedValueOnce({
         response: new Response(),
@@ -82,10 +92,10 @@ describe("pinnedBlockPlan", () => {
     const plan = await pinnedBlockPlan({ ...options, fallbackRpcUrl: "https://fallback.example" });
     expect(plan.observedBlock).toEqual({ chain: "rootstock", number: 16, timestamp: 100 });
     expect(fetchJsonWithRetryMock.mock.calls.map((call) => call[0])).toEqual([
-      "https://primary.example", "https://primary.example", "https://fallback.example",
+      "https://primary.example", "https://fallback.example",
     ]);
-    for (const call of fetchJsonWithRetryMock.mock.calls.slice(1)) {
-      expect(JSON.parse(call[1].body).params).toEqual(["0x10", false]);
+    for (const call of fetchJsonWithRetryMock.mock.calls) {
+      expect(JSON.parse(call[1].body).params).toEqual(["latest", false]);
     }
   });
 
@@ -100,10 +110,6 @@ describe("pinnedBlockPlan", () => {
     expect(fetchJsonWithRetryMock).not.toHaveBeenCalled();
 
     fetchJsonWithRetryMock
-      .mockResolvedValueOnce({
-        response: new Response(),
-        body: { result: `0x${retained.number.toString(16)}` },
-      })
       .mockResolvedValueOnce({
         response: new Response(),
         body: {

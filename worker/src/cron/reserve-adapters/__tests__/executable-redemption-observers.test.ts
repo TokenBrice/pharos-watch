@@ -734,7 +734,7 @@ describe("specialized executable redemption observers", () => {
           nowSec: NOW,
         },
       ),
-    ).rejects.toThrow(/code identity drift/);
+    ).rejects.toThrow(/implementation identity drift/);
   });
 
   it("uses exact dLEND maxWithdraw and available liquidity with the current unstaking fee", async () => {
@@ -809,7 +809,7 @@ describe("specialized executable redemption observers", () => {
     await expect(observeExecutableRedemptionRoute(
       "susn-noon", NOON_SUSN_VAULT, new AbortController().signal, undefined,
       { client: client("noon", { driftAddress: NOON_SUSN_VAULT_IMPL }), nowSec: NOW },
-    )).rejects.toThrow(/code identity drift/);
+    )).rejects.toThrow(/implementation identity drift/);
   });
 
   it("fails susn-noon closed on withdrawal-handler pointer drift", async () => {

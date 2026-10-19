@@ -8,6 +8,7 @@ import type * as RedemptionConfigsModule from "@shared/lib/redemption-backstops"
 import { CRON_INTERVALS, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY } from "@shared/lib/cron-jobs";
 import { createDeferredPromise } from "../../lib/__tests__/deferred.test-support";
 import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
+import { EvmCodeIdentityError } from "../../lib/evm-code-identity-error";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
@@ -302,6 +303,33 @@ describe("syncRedemptionBackstops", () => {
     expect(compacted.compacted).toBe(true);
     expect(JSON.parse(compacted.metadata ?? "{}").sourceFailureReasons).toEqual(metadata.sourceFailureReasons);
   });
+
+  it.each(["code-unavailable", "implementation-unavailable", "code-drift", "implementation-drift"] as const)(
+    "persists precise %s without losing unaffected routes", async (rejectionCode) => {
+      const now = Math.floor(Date.now() / 1000);
+      const error = new EvmCodeIdentityError("usdfr-forest-road", {
+        status: "rejected", rejectionCode, address: `0x${"1".repeat(40)}`, kind: "storage",
+      }, 26_224_349);
+      error.message += ` https://rpc.example/private-key token=private-token ${"x".repeat(400)}`;
+      resolveRedemptionBackstopEntryMock.mockImplementation(async (_db: unknown, asset: { id: string }) => {
+        if (asset.id === configuredIdsMock[0]) throw error;
+        return makeResolvedSnapshot(asset.id, now);
+      });
+      // Non-hoisted suite mocks must initialize before loading the cron module.
+      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      const failure = metadata.sourceFailureReasons[configuredIdsMock[0]];
+      expect(failure.code).toBe(rejectionCode);
+      expect(failure.message).toContain("block 26224349");
+      expect(failure.message.length).toBeLessThanOrEqual(240);
+      expect(failure.message).not.toMatch(/private-key|private-token/);
+      expect(metadata.failed).toBe(1);
+      expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1]).toHaveLength(configuredIdsMock.length);
+      expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.sourceFailureReasons)
+        .toEqual(metadata.sourceFailureReasons);
+    },
+  );
 
   it("bounds independent resolvers, publishes input order and isolates failures while advancing progress", async () => {
     const now = Math.floor(Date.now() / 1000);

@@ -6,6 +6,7 @@ import { fetchCoingeckoSimplePrices } from "../../../lib/coingecko-simple-price"
 import { shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset } from "../enrich-prices-shared";
+import * as hive from "../../../lib/hive-market-price";
 
 vi.mock("../../../lib/circuit-breaker", async (importOriginal) => {
   const actual = await importOriginal<typeof circuit>();
@@ -34,6 +35,53 @@ const TEST_ASSET: PeggedAsset = {
 };
 
 describe("critical publication provider collection", () => {
+  it("adds one HIVE batch dependency only for eligible HBD, never a candidate row", async () => {
+    const plain = await buildPrimaryPricePlan([TEST_ASSET], mockD1([]));
+    expect(plain.geckoIds).not.toContain("hive");
+    const hbd = { ...TEST_ASSET, id: "hbd-hive", geckoId: "hive_dollar" };
+    const plan = await buildPrimaryPricePlan([hbd, TEST_ASSET], mockD1([]));
+    expect(plan.geckoIds).toEqual(["hive_dollar", "test-usd", "hive"]);
+    expect(plan.candidates.map((asset) => asset.id)).toEqual(["hbd-hive", "test-usd"]);
+  });
+
+  it("serializes native collection behind CG and records one healthy outcome for shallow market evidence", async () => {
+    const db = mockD1([]);
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) => key === CIRCUIT_SOURCE.CG_PRICES || key === CIRCUIT_SOURCE.HIVE_MARKET);
+    const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "hbd-hive", geckoId: "hive_dollar" }, TEST_ASSET], db);
+    const evidence = await hive.fetchHiveNativeHbdPrice(undefined);
+    evidence.diagnostic.rpcCount = 2;
+    evidence.diagnostic.rejectionReason = "insufficient_depth";
+    const order: string[] = [];
+    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(async () => {
+      order.push("cg");
+      return { kind: "ok", value: new Map([["hive", { price: 0.05, observedAt: plan.nowSec, observedAtMode: "upstream" }], ["test-usd", { price: 1, observedAt: plan.nowSec, observedAtMode: "upstream" }]]) };
+    });
+    const native = vi.spyOn(hive, "fetchHiveNativeHbdPrice").mockImplementation(async (parent) => {
+      expect(parent).toMatchObject({ id: "hive", price: 0.05 });
+      order.push("hive");
+      return evidence;
+    });
+    const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
+    const result = await collectPrimaryProviderQuotes({ db, plan });
+    expect(order).toEqual(["cg", "hive"]);
+    expect(native).toHaveBeenCalledOnce();
+    expect(outcomes.mock.calls.map(([, key, ok]) => [key, ok])).toEqual([[CIRCUIT_SOURCE.CG_PRICES, true], [CIRCUIT_SOURCE.HIVE_MARKET, true]]);
+    expect(result.quoteMaps.cgQuotes.get("test-usd")?.price).toBe(1);
+    expect(result.quoteMaps.hiveNativeQuote).toBeNull();
+    expect(result.providerDiagnostics[0].assetAttempts?.[0]).toMatchObject({ result: "rejected", rejectionClass: "insufficient_depth" });
+  });
+
+  it("does not start a native request with denied CG or after inherited abort", async () => {
+    const db = mockD1([]);
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) => key === CIRCUIT_SOURCE.HIVE_MARKET);
+    const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "hbd-hive", geckoId: "hive_dollar" }], db);
+    const result = await collectPrimaryProviderQuotes({ db, plan });
+    expect(result.providerDiagnostics[0].nativeMarket).toMatchObject({ rpcCount: 0, rejectionReason: "hive_usd_unavailable" });
+    const native = vi.spyOn(hive, "fetchHiveNativeHbdPrice");
+    const controller = new AbortController(); controller.abort();
+    await expect(collectPrimaryProviderQuotes({ db, plan, signal: controller.signal })).rejects.toThrow();
+    expect(native).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -44,10 +92,10 @@ describe("critical publication provider collection", () => {
     vi.restoreAllMocks();
   });
 
-  it("keeps all nine primary provider circuits in the 15-minute plan", async () => {
+  it("keeps all ten primary provider circuits in the 15-minute plan", async () => {
     await buildPrimaryPricePlan([TEST_ASSET], {} as D1Database);
 
-    expect(shouldAttemptFetch).toHaveBeenCalledTimes(9);
+    expect(shouldAttemptFetch).toHaveBeenCalledTimes(10);
     expect(vi.mocked(shouldAttemptFetch).mock.calls.map(([, source]) => source)).toEqual([
       CIRCUIT_SOURCE.CG_PRICES,
       CIRCUIT_SOURCE.CG_TICKER,
@@ -58,6 +106,7 @@ describe("critical publication provider collection", () => {
       CIRCUIT_SOURCE.REDSTONE_PRICES,
       CIRCUIT_SOURCE.CURVE_ONCHAIN,
       CIRCUIT_SOURCE.CURVE_ORACLE,
+      CIRCUIT_SOURCE.HIVE_MARKET,
     ]);
   });
 

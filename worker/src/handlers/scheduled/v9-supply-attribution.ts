@@ -28,6 +28,7 @@ export function buildV9SupplyAttributionSlotGroups(runtime: ScheduledRuntimeCont
                   runtime.chainRpcs,
                   windowSignal,
                   window,
+                  runtime.dwellirNative,
                 ),
             ),
         ),

@@ -4,9 +4,6 @@ import type { ChainRpcConfig, RpcEndpoint } from "../chain-registry";
 import { throwIfAborted } from "../abort";
 import { budgetExhausted, type SubrequestBudget } from "../evm-logs";
 
-/** Reviewed scheduled fallback only; Alchemy remains first regardless of state placement. */
-export const MINT_BURN_DWELLIR_FALLBACK_CHAINS: Readonly<Record<string, true>> = { ethereum: true, arbitrum: true, base: true };
-
 export function mintBurnAlchemyEndpoint(url: string): RpcEndpoint {
   return { url, operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" };
 }
@@ -16,13 +13,11 @@ export function mintBurnRpcEndpoints(chainId: string, apiKey: string,
   chainRpcs?: ReadonlyMap<string, ChainRpcConfig>): readonly RpcEndpoint[] {
   const url = buildAlchemyUrl(chainId, apiKey);
   if (!url) throw new Error(`Failed to build ${chainId} Alchemy URL`);
-  const endpoints: RpcEndpoint[] = [mintBurnAlchemyEndpoint(url)];
-  if (MINT_BURN_DWELLIR_FALLBACK_CHAINS[chainId]) {
-    const dwellir = chainRpcs?.get(chainId)?.endpoints.find((endpoint) => endpoint.operator === "dwellir"
-      && !endpoint.routingDisabled && endpoint.stateHistory === "archive" && endpoint.logsHistory === "full");
-    if (dwellir) endpoints.push(dwellir);
-  }
-  return endpoints;
+  const dwellir = chainRpcs?.get(chainId)?.endpoints.find((endpoint) => endpoint.operator === "dwellir"
+    && !endpoint.routingDisabled && endpoint.logsHistory === "full");
+  // Log/header support does not imply arbitrary historical state. Conservation
+  // filters its separate hash-pinned state phase by stateHistory.
+  return dwellir ? [dwellir, mintBurnAlchemyEndpoint(url)] : [mintBurnAlchemyEndpoint(url)];
 }
 
 export async function getMintBurnBlockNumber(endpoints: readonly RpcEndpoint[], budget: SubrequestBudget,

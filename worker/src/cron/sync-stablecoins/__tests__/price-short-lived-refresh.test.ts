@@ -54,14 +54,14 @@ describe("short-lived fallback refresh", () => {
 
   it("skips reviewed gaps with stale source labels but keeps current source-owned composites", async () => {
     const reviewedGapIds = new Set([
-      "m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "usdkg-gold-dollar", "usdn-smardex",
+      "m-m0", "xo-exodus", "usdk-kast", "usda-avalon", "wusd-worldwide", "usdn-smardex",
     ]);
     await runShortLivedPriceRefresh({
       assets: [
         priced("m-m0", "coingecko+defillama-contract"), priced("xo-exodus", "coingecko+jupiter"),
         makePeggedAsset({ id: "usdk-kast", price: null }),
         { ...priced("usda-avalon", "defillama-contract"), price: null },
-        { ...priced("usdkg-gold-dollar", "jupiter"), price: null },
+        { ...priced("wusd-worldwide", "jupiter"), price: null },
         { ...priced("usdn-smardex", "defillama-contract+jupiter"), priceObservedAt: null,
           priceUpdatedAt: null, priceSyncedAt: null },
       ],

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { uint256, addressWord, chainRpcs } from "./safety-score-v9-supply-observation.test-support";
-import type { EvmMulticall3Call } from "../evm-rpc";
+import type { EvmMulticall3Call, EvmRpcOptions } from "../evm-rpc";
 import {
   buildXautTransparencySource,
   XAUT0_ADAPTER_ADDRESS,
@@ -21,6 +21,7 @@ import {
   parseXautTransparencyDisclosure,
 } from "../safety-score-v9/xaut-supply-observer";
 
+import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const BLOCK_NUMBER = 25_601_844;
 const BLOCK_TIME_SEC = 1_784_887_019;
 const BLOCK_HASH = `0x${"ab".repeat(32)}` as const;
@@ -68,6 +69,7 @@ function observerDependencies(onchain: OnchainSupplyOverrides = {}) {
   });
   const fetchEvmMulticall3Aggregate3AtBlock = vi.fn(async (
     chainId: string | undefined, calls: readonly EvmMulticall3Call[], block?: number | "latest",
+    _options?: EvmRpcOptions,
   ) => {
     if (chainId !== "ethereum" || block !== BLOCK_NUMBER) throw new Error("Unexpected XAUT block");
     const token = "0x68749665ff8d2d112fa859aa293f07a622782f38";
@@ -230,6 +232,12 @@ describe("XAUT representation-group supply observer", () => {
       BLOCK_NUMBER,
       expect.objectContaining({ chainRpcs: expect.any(Map) }),
     );
+    const options = vi.mocked(dependencies.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]!;
+    expect(options.recentStatePin).toEqual({ chainId: "ethereum",
+      header: { number: BLOCK_NUMBER, hash: BLOCK_HASH, timestamp: BLOCK_TIME_SEC },
+      finalized: { number: BLOCK_NUMBER, hash: BLOCK_HASH, timestamp: BLOCK_TIME_SEC },
+      observedAtSec: BLOCK_TIME_SEC + 100, maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC });
+    await expectRecentPinRouting(options);
     expect(dependencies.fetchEvmBlockHeader).toHaveBeenNthCalledWith(
       1,
       "ethereum",

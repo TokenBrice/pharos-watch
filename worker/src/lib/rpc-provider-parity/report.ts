@@ -6,7 +6,6 @@ import { loadDwellirBudgetState, type DwellirBudgetEnv } from "../rpc-provider-b
 import { logWorkerEvent } from "../structured-log";
 import { readRpcParityStore, RPC_PARITY_RETENTION_SEC, type RpcParityLatestState, type RpcParityStoredRun } from "./store";
 import { applyRpcParityGateHistory, type RpcParityGateRun } from "./gate-history";
-import { DWELLIR_STATE_PLACEMENT, DWELLIR_LOG_SCAN_CHAINS } from "../chain-registry";
 import { parseDwellirRoutingDisabledChains } from "../env";
 import {
   RPC_PARITY_TARGETS,
@@ -472,10 +471,8 @@ export async function loadRpcProviderTrialReport(
   // This endpoint observes admission; it does not advance a circuit into half-open.
   const admitted = budget.usable && (circuit?.state === "closed" || circuit?.state === "half-open");
   const routingForChain = (chainId: string): RpcParityChainSummary["routing"] => ({
-    statePlacement: !admitted ? "unavailable" : disabledChains.has(chainId) ? "supplemental"
-      : DWELLIR_STATE_PLACEMENT[chainId] ?? "supplemental",
-    logScan: admitted && !disabledChains.has(chainId) && DWELLIR_LOG_SCAN_CHAINS.has(chainId)
-      && dwellirEntryForChain(chainId)?.logsHistory === "full",
+    statePlacement: !admitted || disabledChains.has(chainId) ? "unavailable" : "preferred",
+    logScan: admitted && !disabledChains.has(chainId) && dwellirEntryForChain(chainId)?.logsHistory === "full",
   });
   if (store.error !== null) {
     return {

@@ -17,6 +17,8 @@ export interface DwellirChainEntry {
   readonly logsHistory: RpcLogsHistory;
   /** Maximum inclusive block count for one eth_getLogs request, separate from retention. */
   readonly maxLogBlockSpan?: number;
+  /** Explicit negative capability; numbered success does not establish finalized-tag support. */
+  readonly finalizedTagUnsupported?: boolean;
   readonly verifiedAt: string;
 }
 
@@ -73,7 +75,7 @@ export const DWELLIR_CHAINS: readonly DwellirChainEntry[] = [
   { chainId: "flow", host: "api-flow-evm-gateway-mainnet", evmChainId: 747, stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
   { chainId: "pulsechain", host: "api-pulse-mainnet", evmChainId: 369, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   // Vendor: 5,000-block node cap; logs remain unproven and are not admitted.
-  { chainId: "immutable-zkevm", host: "api-immutable-zkevm-mainnet", evmChainId: 13371, stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
+  { chainId: "immutable-zkevm", host: "api-immutable-zkevm-mainnet", evmChainId: 13371, stateHistory: "archive", logsHistory: "none", finalizedTagUnsupported: true, verifiedAt: "2026-10-05" },
   { chainId: "boba", host: "api-boba-mainnet", evmChainId: 288, stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
   { chainId: "astar", host: "api-astar", evmChainId: 592, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 1_024, verifiedAt: "2026-10-11" },
   { chainId: "taiko", host: "api-taiko-mainnet", evmChainId: 167000, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },

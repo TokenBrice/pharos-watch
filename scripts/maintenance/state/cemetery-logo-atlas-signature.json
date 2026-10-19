@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "5ea065ecfb799148de5f7c1d567c393d2079723cf1054136ba16c0853e5f0341",
+  "inputSha256": "6e54974a1b7fb0fe7cdf7dff799b405cad387e12f61ccce50bb67e9696a3dd98",
   "image": {
-    "sha256": "9146907d188f957f8a35baaac52335326ea086c00b7dbb5baf54ec0473f33ee8",
-    "bytes": 135636,
+    "sha256": "58b2e6ecff2eba59eddefa7723ec01c29733faa472c70e78c82327f866f3b898",
+    "bytes": 136016,
     "width": 798,
     "height": 698
   },
@@ -394,6 +394,11 @@
     {
       "logo": "/logos/cemetery/usdk.png",
       "sha256": "15bde948eb6f536f5f0ada54f3de21ab23ad4fcb9e173e535af335c0870f31c0",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/usdkg-gold-dollar.jpg",
+      "sha256": "55a5dc33855d89cce41ab08cbe079af16062b7336f9a1c05eca307db1767decc",
       "kernel": "lanczos3"
     },
     {
@@ -868,6 +873,10 @@
     {
       "id": "usdk-usdk-2023-06",
       "logo": "/logos/cemetery/usdk.png"
+    },
+    {
+      "id": "usdkg-gold-dollar",
+      "logo": "/logos/usdkg-gold-dollar.jpg"
     },
     {
       "id": "usdl-lift-dollar-2025-12",

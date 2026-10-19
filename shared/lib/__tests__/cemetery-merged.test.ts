@@ -24,6 +24,22 @@ describe("buildMergedCemetery", () => {
     }
   });
 
+  it("projects USDKG exactly once from its tracked frozen archive", () => {
+    const entries = merged.filter((entry) => entry.id === "usdkg-gold-dollar");
+    expect(entries).toHaveLength(1);
+    expect(DEAD_STABLECOINS.some((entry) => entry.id === "usdkg-gold-dollar")).toBe(false);
+    expect(entries[0]).toMatchObject({
+      name: "USDKG", symbol: "USDKG", pegCurrency: "USD", llamaId: "409",
+      causeOfDeath: "regulatory", deathDate: "2026-10-05", recordedAt: "2026-10-19",
+      logo: "/logos/usdkg-gold-dollar.jpg", mechanismArchetype: "rwa-credit-fund",
+      archivedDataAvailable: true, peakMcap: 50_345_033,
+      sourceUrl: "https://x.com/USDKG_Official/status/2107193447363010779",
+    });
+    const coin = FROZEN_STABLECOINS.find((entry) => entry.id === "usdkg-gold-dollar")!;
+    expect(entries[0].obituary).toBe(coin.obituary?.obituary);
+    expect(entries[0].contracts).toEqual(coin.contracts);
+  });
+
   it("projects synthetic obituary content independently of the catalog", () => {
     const result = frozenToDeadShape({
       id: "synthetic-frozen", name: "Synthetic", symbol: "SYN",

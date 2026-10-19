@@ -133,6 +133,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("builds chainRpcs registry-only until a job runs", () => {
@@ -176,7 +177,7 @@ describe("scheduled runtime Dwellir enablement", () => {
       stateHistory: "archive",
     });
     expect(ethereumEndpoints.slice(1).map((endpoint) => endpoint.operator)).toEqual(["alchemy", "public"]);
-    expect(logScanRpcEndpoints(runtime.chainRpcs.get("ethereum"))).toEqual(logScanRpcEndpoints(registryOnly.get("ethereum")));
+    expect(logScanRpcEndpoints(runtime.chainRpcs.get("ethereum"))).toEqual(ethereumEndpoints);
     expect(logScanRpcEndpoints(runtime.chainRpcs.get("arbitrum")).map((endpoint) => endpoint.operator))
       .toEqual(["dwellir", "alchemy", "public"]);
 
@@ -219,6 +220,21 @@ describe("scheduled runtime Dwellir enablement", () => {
       });
     }
     expect(warnings.filter((line) => line.includes("dwellir_routing_disabled_unknown_chains"))).toHaveLength(1);
+  });
+
+  it("propagates native rollback IDs through the same runtime admission", async () => {
+    const { db } = makeContextDb();
+    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY,
+      disabledChains: "Aptos, Movement, Tron, Starknet" });
+    await runJob(runtime);
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    for (const network of ["aptos", "movement", "tron", "starknet"] as const) {
+      await expect(runtime.dwellirNative!.readJson(network, "", new AbortController().signal))
+        .rejects.toThrow("routing disabled");
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(warnings.filter((line) => line.includes("dwellir_routing_disabled_unknown_chains"))).toHaveLength(0);
   });
 
   it("withholds Dwellir and never reads the ledger without a key", async () => {

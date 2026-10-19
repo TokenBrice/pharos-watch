@@ -1,54 +1,68 @@
-import { BCB_SELIC_URL, USER_AGENT } from "../../lib/constants";
+import { BCB_SELIC_URL, BCB_SELIC_ANNUALIZED_URL, USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,
-  parseRate,
+  parseIsoDateMs,
   parseSlashDmyToIso,
   type BenchmarkResponseDiagnostic,
 } from "./shared";
 
 const BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS = 252;
-const BCB_SELIC_MIN_DAILY_PERCENTAGE_RATE = 0;
-
-function isValidBcbSelicDailyRate(rate: number): boolean {
-  return Number.isFinite(rate) && rate > BCB_SELIC_MIN_DAILY_PERCENTAGE_RATE;
-}
+// /ultimos/1 is one small observation; bound error pages as well as valid JSON.
+const BCB_SELIC_MAX_RESPONSE_BYTES = 16 * 1024;
 
 function annualizeDailyPercentageRate(rate: number, businessDays: number): number {
   return ((1 + rate / 100) ** businessDays - 1) * 100;
 }
 
-/**
- * Parse a BCB SGS response. Shape:
- *   [{ data: "DD/MM/YYYY", valor: "0.050747" }]
- * BCB SGS series 11 returns SELIC over as a daily percentage, so annualize it
- * before storing the BRL benchmark alongside the other APY-compatible rates.
- */
-export function parseBcbSelicSeries(
+type SelicUnit = "daily-percent" | "annual-percent-base-252";
+
+function parseSelicSeries(
   json: string,
-  onUpstreamError?: (status: number) => void,
+  unit: SelicUnit,
+  onUpstreamError?: (status?: number) => void,
 ): { recordDate: string; rate: number } | null {
   try {
     const parsed: unknown = JSON.parse(json);
     if (!Array.isArray(parsed)) {
-      if (parsed !== null && typeof parsed === "object" && "erro" in parsed &&
-        parsed.erro !== null && typeof parsed.erro === "object" && "statusCode" in parsed.erro &&
-        typeof parsed.erro.statusCode === "number" && Number.isInteger(parsed.erro.statusCode) &&
-        parsed.erro.statusCode >= 400 && parsed.erro.statusCode <= 599) {
-        onUpstreamError?.(parsed.erro.statusCode);
+      if (parsed !== null && typeof parsed === "object" && "erro" in parsed) {
+        const error = parsed.erro;
+        const status = error !== null && typeof error === "object" && "statusCode" in error
+          ? error.statusCode : undefined;
+        onUpstreamError?.(typeof status === "number" && Number.isInteger(status) && status >= 400 && status <= 599
+          ? status : undefined);
       }
       return null;
     }
     if (parsed.length === 0) return null;
     for (let i = parsed.length - 1; i >= 0; i--) {
       const row = parsed[i];
-      const rate = parseRate(typeof row?.valor === "string" ? row.valor : null);
+      const value = typeof row?.valor === "string" ? row.valor.trim() : "";
+      // SGS uses decimal percentages, never fractions, exponents or numeric prefixes.
+      let validDecimal = value.length > 0;
+      let separatorSeen = false;
+      for (let j = 0; j < value.length; j++) {
+        const code = value.charCodeAt(j);
+        if (code >= 48 && code <= 57) continue;
+        if ((code === 46 || code === 44) && !separatorSeen && j > 0 && j < value.length - 1) {
+          separatorSeen = true;
+          continue;
+        }
+        validDecimal = false;
+        break;
+      }
+      if (!validDecimal) continue;
+      const rate = Number(value.replace(",", "."));
+      if (!Number.isFinite(rate) || rate <= 0) continue;
       const dataRaw = typeof row?.data === "string" ? row.data : null;
-      if (!isValidBcbSelicDailyRate(rate)) continue;
-      const annualizedRate = annualizeDailyPercentageRate(rate, BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS);
+      const annualizedRate = unit === "daily-percent"
+        ? annualizeDailyPercentageRate(rate, BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS)
+        : rate;
       if (!dataRaw || !isValidBenchmarkRate(annualizedRate)) continue;
       const recordDate = parseSlashDmyToIso(dataRaw);
-      if (!recordDate) continue;
+      // Date.parse normalizes impossible dates (e.g. February 30); reject those.
+      const timestamp = recordDate ? parseIsoDateMs(recordDate) : Number.NaN;
+      if (!recordDate || !Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== recordDate) continue;
       return { rate: annualizedRate, recordDate };
     }
     return null;
@@ -57,19 +71,59 @@ export function parseBcbSelicSeries(
   }
 }
 
-export async function tryBcbSelic(
+/** SGS11 effective overnight Selic, compounded over 252 business days. */
+export function parseBcbSelicSeries(
+  json: string,
+  onUpstreamError?: (status?: number) => void,
+) {
+  return parseSelicSeries(json, "daily-percent", onUpstreamError);
+}
+
+/** SGS1178 is the same effective Selic, already annualized; never compound twice. */
+export function parseBcbSelicAnnualizedSeries(
+  json: string,
+  onUpstreamError?: (status?: number) => void,
+) {
+  return parseSelicSeries(json, "annual-percent-base-252", onUpstreamError);
+}
+
+async function fetchSelic(
+  url: string,
+  parse: typeof parseBcbSelicSeries,
   signal?: AbortSignal,
   onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
 ): Promise<{ rate: number; recordDate: string } | null> {
+  let upstreamError = false;
   let upstreamStatus: number | undefined;
+  let htmlBody = false;
   return fetchAndParseBenchmark({
-    url: BCB_SELIC_URL,
+    url,
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    parse: body => parseBcbSelicSeries(body, status => { upstreamStatus = status; }),
+    maxResponseBytes: BCB_SELIC_MAX_RESPONSE_BYTES,
+    parse: body => {
+      htmlBody = /^\s*</.test(body);
+      return parse(body, status => { upstreamError = true; upstreamStatus = status; });
+    },
     warnLabel: "BCB SELIC",
     signal,
-    onDiagnostic: onDiagnostic ? diagnostic => onDiagnostic(
-      upstreamStatus === undefined ? diagnostic : { ...diagnostic, failure: "upstream-error", upstreamStatus },
-    ) : undefined,
+    onDiagnostic: diagnostic => onDiagnostic?.({
+      ...diagnostic,
+      ...(htmlBody && diagnostic.failure === "parse-failed" ? { failure: "html-body" as const } : {}),
+      ...(upstreamError ? { failure: "upstream-error" as const, ...(upstreamStatus != null ? { upstreamStatus } : {}) } : {}),
+    }),
   });
+}
+
+export function tryBcbSelic(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+) {
+  return fetchSelic(BCB_SELIC_URL, parseBcbSelicSeries, signal, onDiagnostic);
+}
+
+export function tryBcbSelicAnnualized(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+) {
+  return fetchSelic(BCB_SELIC_ANNUALIZED_URL, parseBcbSelicAnnualizedSeries, signal, onDiagnostic);
 }

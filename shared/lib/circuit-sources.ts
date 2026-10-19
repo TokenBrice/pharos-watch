@@ -8,6 +8,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   DL_YIELDS: { key: "defillama-yields", scope: "source-wide" },
   DL_PROTOCOLS: { key: "defillama-protocols", scope: "source-wide" },
   CG_PRICES: { key: "coingecko-prices", scope: "source-wide" },
+  HIVE_MARKET: { key: "hive-market", scope: "asset-scoped" },
   CG_DETAIL_PLATFORMS: { key: "coingecko-detail-platforms", scope: "source-wide" },
   CG_MCAP: { key: "coingecko-mcap", scope: "source-wide" },
   CG_ONCHAIN: { key: "coingecko-onchain", scope: "source-wide" },

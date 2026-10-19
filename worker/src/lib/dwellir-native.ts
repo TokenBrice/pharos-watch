@@ -17,11 +17,15 @@ export interface DwellirNativeCapability {
 }
 
 /** The caller owns admission; this transport never reads budget/circuit state. */
-export function createDwellirNativeCapability(apiKey: string): DwellirNativeCapability {
+export function createDwellirNativeCapability(
+  apiKey: string,
+  disabledNetworks?: ReadonlySet<string>,
+): DwellirNativeCapability {
   if (!apiKey.trim()) throw new Error("Dwellir native transport requires an admitted credential");
   return {
     async readJson<T>(network: DwellirNativeNetwork, path: string, signal: AbortSignal,
       ctx?: AdapterContext, body?: unknown, timeoutMs = 10_000): Promise<T> {
+      if (disabledNetworks?.has(network)) throw new Error(`Dwellir native routing disabled for ${network}`);
       const endpoint = DWELLIR_NATIVE_ENDPOINTS.find((entry) => entry.network === network)!;
       const isMoveRead = endpoint.protocol === "aptos-rest" && body === undefined && (
         path === "" || /^\/blocks\/by_version\/[0-9]+\?with_transactions=false$/.test(path) ||

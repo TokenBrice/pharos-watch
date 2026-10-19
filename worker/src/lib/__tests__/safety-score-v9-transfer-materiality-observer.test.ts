@@ -7,12 +7,13 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildChainRpcs, logScanRpcEndpoints } from "../chain-registry";
 import { observeSafetyScoreV9TransferMaterialityGeneration, TRANSFER_MATERIALITY_CAPTURE_BUDGET, transferMaterialityObserverResolvesRpc } from "../safety-score-v9/transfer-materiality-observer";
 import { exactInputBoundTransferMaterialityPacket, SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, type SafetyScoreV9TransferMaterialityGeneration } from "../safety-score-v9/transfer-materiality";
-import type { MoveFungibleAssetSupplyObservation } from "../../cron/reserve-adapters/token-supply";
+import type { fetchMoveFungibleAssetSupply, MoveFungibleAssetSupplyObservation } from "../../cron/reserve-adapters/token-supply";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { CENSUS_FIXTURE_META_BY_ID } from "./safety-score-v9-transfer-census.test-support";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { createDwellirNativeCapability } from "../dwellir-native";
 
 // Vitest hoists mock factories before static imports; load their fixture helpers inside the factories.
 
@@ -97,6 +98,22 @@ describe("complete independent-liability censuses", () => {
       assetId, meta: ACTIVE_META_BY_ID.get(assetId)!, generation,
       registryFingerprint: FINGERPRINT, baseInputGenerationId: BASE_ID, clockSec: CLOCK,
     });
+
+  it("passes only the admitted native capability into Move census reads", async () => {
+    const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
+    const move = vi.fn<typeof fetchMoveFungibleAssetSupply>().mockResolvedValue({
+      rawSupply: 0n, decimals: 6, ledgerVersion: "123456789", ledgerTimestampSec: CLOCK - 10,
+    });
+    await observeSafetyScoreV9TransferMaterialityGeneration({ ...input(), dwellirNative },
+      { ...censusDependencies(), fetchMoveFungibleAssetSupply: move });
+    expect(move).toHaveBeenCalled();
+    expect(move.mock.calls.every(call => call[3]?.dwellirNative === dwellirNative)).toBe(true);
+    move.mockClear();
+    await observeSafetyScoreV9TransferMaterialityGeneration(input(),
+      { ...censusDependencies(), fetchMoveFungibleAssetSupply: move });
+    expect(move).toHaveBeenCalled();
+    expect(move.mock.calls.every(call => call[3] === undefined)).toBe(true);
+  });
 
   it("uses archive supplemental-only RPCs without inventing registry capability", () => {
     const configured = buildChainRpcs(undefined, undefined, { dwellirApiKey: "test-dwellir" });

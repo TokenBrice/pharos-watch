@@ -146,6 +146,7 @@ class PinnedReader {
     readonly ctx: AdapterContext | undefined,
     readonly deadlineMs: number,
     readonly extraRpcUrls: string[],
+    readonly observedAtSec: number,
   ) {}
   options(): EvmRpcOptions {
     if (this.signal.aborted) fail("aborted");
@@ -156,6 +157,9 @@ class PinnedReader {
       extraRpcUrls: this.extraRpcUrls, timeoutMs: Math.min(12_000, remaining),
       deadlineMs: this.deadlineMs, maxRetries: 0, multicallBatchSize: bounds.rpcBatchCalls,
       stateBlockHash: this.pin.hash, multicallFallbackBlockHash: this.pin.hash,
+      observedHeadBlock: this.pin.number,
+      recentStatePin: { chainId: this.chain, header: this.pin, finalized: this.pin,
+        observedAtSec: this.observedAtSec, maxAgeSec: bounds.observationMaxAgeSec },
     };
   }
   async io<T>(label: string, work: (options: EvmRpcOptions) => Promise<T>): Promise<T> {
@@ -562,7 +566,7 @@ export async function observeMorphoLenderBook(
       // A shared pending pin may belong to another attempt's longer budget.
       const pin = await awaitPhaseRead(() => pinPromise, phaseSignal);
       if (!pin) fail("rpc-unavailable");
-      const reader = new PinnedReader(admitted.chain, pin, phaseSignal, ctx, deadlineMs, extraRpcUrls);
+      const reader = new PinnedReader(admitted.chain, pin, phaseSignal, ctx, deadlineMs, extraRpcUrls, Math.floor(startedMs / 1000));
       const parentTokens = (parent.contracts ?? []).filter(row => row.chain === admitted.chain)
         .map(row => canonicalEvmAddress(row.address)).filter((value): value is `0x${string}` => value !== null);
       const observed = await deployment(reader, vault, admitted.kind, parentTokens);
