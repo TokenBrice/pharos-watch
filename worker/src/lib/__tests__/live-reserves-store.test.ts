@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
 import {
   LIVE_SLICES,
   makeReservesDb,
@@ -898,6 +899,65 @@ describe("live-reserves-store", () => {
       expect(await computeReserveCompositionOverview(db, 10_200, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
         cohort: { slotStartedAt: 9600, completedAt: 10100, ageSec: 500,
           continuationPending: false, completedCohorts: 3, completionP95Sec: 1801 },
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("retains historical cohort breaches after a fast latest completion without counting replay attempts", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const now = 1_800_000_000;
+    const latestSlot = now - 1_000;
+    try {
+      // Forty-one four-hour roots: the 95th percentile is the third slowest.
+      for (let index = 0; index < 41; index++) {
+        const slotStartedAt = latestSlot - (40 - index) * 14_400;
+        const duration = [29_923, 15_829, 3_691][index] ?? 664;
+        await beginLiveReserveCheckpoint(db, { slotStartedAt, invocationId: `producer-${index}`, nowSec: slotStartedAt });
+        sqlite.prepare(`UPDATE worker_scheduled_checkpoints
+          SET state = 'completed', next_item_key = NULL, items_done = items_total,
+              completed_at = ? WHERE slot_started_at = ?`).run(slotStartedAt + duration, slotStartedAt);
+      }
+      // A second exhausted attempt of the slowest root must not add a sample.
+      sqlite.prepare(`INSERT INTO worker_scheduled_checkpoints
+        (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state,
+         next_item_key, items_done, items_total, created_at, updated_at, completed_at)
+        SELECT schedule_key, slot_started_at, job, 2, 'replay', queue_hash, state,
+               next_item_key, items_done, items_total, created_at, updated_at, completed_at + 60
+        FROM worker_scheduled_checkpoints ORDER BY slot_started_at LIMIT 1`).run();
+      expect(await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+        cohort: { slotStartedAt: latestSlot, completedAt: latestSlot + 664, ageSec: 664,
+          continuationPending: false, completedCohorts: 41, completionP95Sec: 3_691 },
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("ages completed cohort evidence out by its original root slot, not its later completion clock", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const now = 1_800_000_000;
+    const oldSlot = now - STATUS_RESERVE_COHORT_SLO.windowSec;
+    const latestSlot = now - 1_000;
+    try {
+      for (const slotStartedAt of [oldSlot, latestSlot]) {
+        await beginLiveReserveCheckpoint(db, { slotStartedAt, invocationId: `producer-${slotStartedAt}`, nowSec: slotStartedAt });
+        sqlite.prepare(`UPDATE worker_scheduled_checkpoints
+          SET state = 'completed', next_item_key = NULL, items_done = items_total,
+              completed_at = ? WHERE slot_started_at = ?`)
+          .run(slotStartedAt + (slotStartedAt === oldSlot ? 1_801 : 100), slotStartedAt);
+      }
+      expect(await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+        cohort: { completedCohorts: 2, completionP95Sec: 1_801 },
+      });
+      expect(await computeReserveCompositionOverview(db, now + 1, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+        cohort: { completedCohorts: 1, completionP95Sec: 100 },
+      });
+      expect(await computeReserveCompositionOverview(
+        db, latestSlot + STATUS_RESERVE_COHORT_SLO.windowSec + 1, resolveScheduledSlotPolicy("fourHourlyReserveSync"),
+      )).toMatchObject({
+        cohort: { completedCohorts: 0, completionP95Sec: null },
       });
     } finally {
       sqlite.close();

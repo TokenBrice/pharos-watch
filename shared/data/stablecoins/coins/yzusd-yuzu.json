@@ -165,7 +165,11 @@
         "[Morpho]_USDC": "medium",
         "[Re]_reUSD_LP": "high",
         "[Agora]_AUSD_LP": "high",
-        "[Re]_PT_reUSD": "high"
+        "[Re]_PT_reUSD": "high",
+        "[AAVE]_USDT": "medium",
+        "[Aave]_AUSD": "medium",
+        "[Global_Dollar]_USDG": "low",
+        "[Sky]_sUSDS_Loop": "high"
       },
       "coinIdMap": {
         "[Fluid]_fUSDT0": "usdt-tether",
@@ -295,7 +299,11 @@
         "[Morpho]_USDC": "Morpho USDC",
         "[Re]_reUSD_LP": "Re reUSD LP",
         "[Agora]_AUSD_LP": "Agora AUSD LP",
-        "[Re]_PT_reUSD": "Re reUSD principal-token position"
+        "[Re]_PT_reUSD": "Re reUSD principal-token position",
+        "[AAVE]_USDT": "Aave USDT (uppercase source label)",
+        "[Aave]_AUSD": "Aave AUSD",
+        "[Global_Dollar]_USDG": "Global Dollar USDG",
+        "[Sky]_sUSDS_Loop": "Sky sUSDS loop"
       },
       "sourceKeyMap": {
         "[Fluid]_fUSDT0": "accountable:yuzu:deployment:fluid-fusdt0",
@@ -345,7 +353,11 @@
         "[Morpho]_USDC": "accountable:yuzu:deployment:morpho-usdc",
         "[Re]_reUSD_LP": "accountable:yuzu:deployment:re-reusd-lp",
         "[Agora]_AUSD_LP": "accountable:yuzu:deployment:agora-ausd-lp",
-        "[Re]_PT_reUSD": "accountable:yuzu:deployment:re-pt-reusd"
+        "[Re]_PT_reUSD": "accountable:yuzu:deployment:re-pt-reusd",
+        "[AAVE]_USDT": "accountable:yuzu:deployment:aave-usdt-uppercase",
+        "[Aave]_AUSD": "accountable:yuzu:deployment:aave-ausd",
+        "[Global_Dollar]_USDG": "accountable:yuzu:deployment:global-dollar-usdg",
+        "[Sky]_sUSDS_Loop": "accountable:yuzu:deployment:sky-susds-loop"
       }
     }
   },
