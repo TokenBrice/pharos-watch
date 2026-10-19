@@ -630,12 +630,12 @@ async function tryBrlBenchmark({ signal }: { signal?: AbortSignal }) {
   const responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] = [];
   // Same authority and instrument, different authored units. Never parallelize
   // these or let a reachable but stale SGS11 observation suppress SGS1178.
-  for (const [source, fetch] of [
+  for (const [source, fetchCandidate] of [
     ["bcb-selic", tryBcbSelic],
     ["bcb-selic-1178", tryBcbSelicAnnualized],
   ] as const) {
     throwIfAborted(signal);
-    const parsed = await fetch(signal, diagnostic => {
+    const parsed = await fetchCandidate(signal, diagnostic => {
       responseDiagnostics.push({ provider: source, ...diagnostic });
     });
     throwIfAborted(signal);

@@ -39,7 +39,19 @@ function parseSelicSeries(
       const row = parsed[i];
       const value = typeof row?.valor === "string" ? row.valor.trim() : "";
       // SGS uses decimal percentages, never fractions, exponents or numeric prefixes.
-      if (!/^\d+(?:[.,]\d+)?$/.test(value)) continue;
+      let validDecimal = value.length > 0;
+      let separatorSeen = false;
+      for (let j = 0; j < value.length; j++) {
+        const code = value.charCodeAt(j);
+        if (code >= 48 && code <= 57) continue;
+        if ((code === 46 || code === 44) && !separatorSeen && j > 0 && j < value.length - 1) {
+          separatorSeen = true;
+          continue;
+        }
+        validDecimal = false;
+        break;
+      }
+      if (!validDecimal) continue;
       const rate = Number(value.replace(",", "."));
       if (!Number.isFinite(rate) || rate <= 0) continue;
       const dataRaw = typeof row?.data === "string" ? row.data : null;

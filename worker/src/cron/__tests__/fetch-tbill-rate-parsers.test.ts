@@ -351,11 +351,17 @@ describe("SGS1178 effective annualized Selic", () => {
     expect(parseBcbSelicAnnualizedSeries('[{"data":"24/06/2026","valor":"13,65"}]')?.rate).toBe(13.65);
   });
 
-  it.each(["0", "-1", "20.01", "13.65garbage", "13.65%", "1e1", "1,234.56", ""])(
+  it.each(["0", "-1", "20.01", "13.65garbage", "13.65%", "1e1", "1,234.56", "", ".13", "13.", ",13", "13,", "13..65", "13,,65"])(
     "rejects placeholders, out-of-bounds rates and ambiguous units: %s", value => {
       expect(parseBcbSelicAnnualizedSeries(JSON.stringify([{ data: "24/06/2026", valor: value }]))).toBeNull();
     },
   );
+
+  it("rejects a long malformed decimal with either source-unit parser", () => {
+    const payload = JSON.stringify([{ data: "24/06/2026", valor: `${"1".repeat(16 * 1024)}x` }]);
+    expect(parseBcbSelicSeries(payload)).toBeNull();
+    expect(parseBcbSelicAnnualizedSeries(payload)).toBeNull();
+  });
 
   it.each(["31/02/2026", "29/02/2026", "32/06/2026", "24/13/2026", "2026-06-24", "", null])(
     "rejects malformed or missing publisher dates: %s", data => {
